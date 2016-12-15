@@ -35,14 +35,23 @@ class Node;
 void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 %}
 
-%define api.token.prefix {TOK_}
 %token
-  END 0   "end of file"
-  COLON   ":"
-  SEMI    ";"
-  LBRACE  "{"
-  RBRACE  "}"
-  ASSIGN  "="
+  END 0    "end of file"
+  COLON    ":"
+  SEMI     ";"
+  LBRACE   "{"
+  RBRACE   "}"
+  LBRACKET "["
+  RBRACKET "]"
+  COMMA    ","
+  ASSIGN   "="
+  FSLASH   "/"
+  EQ       "=="
+  NE       "!="
+  LE       "<="
+  GE       ">="
+  LT       "<"
+  GT       ">"
 ;
 
 %token <std::string> IDENT "identifier"
@@ -58,6 +67,8 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 
 %printer { yyoutput << %%; } <*>;
 
+%left EQ NE LE GE LT GT
+
 %start program
 
 %%
@@ -69,7 +80,8 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : IDENT ":" IDENT block { $$ = new ast::Probe($1, $3, $4); }
+probe : IDENT ":" IDENT block              { $$ = new ast::Probe($1, $3, $4); }
+      | IDENT ":" IDENT "/" expr "/" block { $$ = new ast::Probe($1, $3, $5, $7); }
       ;
 
 block : "{" stmts "}"     { $$ = $2; }
@@ -83,8 +95,14 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
      | var "=" expr { $$ = new ast::AssignStatement($1, $3); }
      ;
 
-expr : INT   { $$ = new ast::Integer($1); }
-     | var   { $$ = $1; }
+expr : INT          { $$ = new ast::Integer($1); }
+     | var          { $$ = $1; }
+     | expr EQ expr { $$ = new ast::Binop($1, token::EQ, $3); }
+     | expr NE expr { $$ = new ast::Binop($1, token::NE, $3); }
+     | expr LE expr { $$ = new ast::Binop($1, token::LE, $3); }
+     | expr GE expr { $$ = new ast::Binop($1, token::GE, $3); }
+     | expr LT expr { $$ = new ast::Binop($1, token::LT, $3); }
+     | expr GT expr { $$ = new ast::Binop($1, token::GT, $3); }
      ;
 
 var : IDENT               { $$ = new ast::Variable($1); }

@@ -34,6 +34,14 @@ public:
   ExpressionList *vargs;
 };
 
+class Binop : public Expression {
+public:
+  Binop(Expression *left, int op, Expression *right) : left(left), right(right), op(op) { }
+  void print_ast(std::ostream &out, unsigned int depth = 0) const override;
+  Expression *left, *right;
+  int op;
+};
+
 class Statement : public Node {
 };
 using StatementList = std::vector<Statement *>;
@@ -56,11 +64,14 @@ public:
 class Probe : public Node {
 public:
   Probe(std::string &type, std::string &attach_point, StatementList *stmts)
-    : type(type), attach_point(attach_point), stmts(stmts) { }
+    : type(type), attach_point(attach_point), pred(nullptr), stmts(stmts) { }
+  Probe(std::string &type, std::string &attach_point, Expression *pred, StatementList *stmts)
+    : type(type), attach_point(attach_point), pred(pred), stmts(stmts) { }
   void print_ast(std::ostream &out, unsigned int depth = 0) const override;
 
   std::string type;
   std::string attach_point;
+  Expression *pred;
   StatementList *stmts;
 };
 using ProbeList = std::vector<Probe *>;
