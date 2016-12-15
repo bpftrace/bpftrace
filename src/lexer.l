@@ -25,7 +25,6 @@ using namespace ebpf::bpftrace;
 [\n\r]+                 { loc.lines(yyleng); loc.step(); }
 "//".*$  // Comments
 
-^"#".*$                 { return Parser::make_PREPROCESSOR(yytext, loc); }
 [_a-zA-Z][_a-zA-Z0-9]*  { return Parser::make_IDENT(yytext, loc); }
 [0-9]+                  { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
 0[xX][0-9a-fA-F]+       { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }

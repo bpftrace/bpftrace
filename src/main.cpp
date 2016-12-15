@@ -12,8 +12,6 @@ int main(int argc, char *argv[])
     result = driver.parse(argv[1]);
   }
 
-  for (auto &preproc : *(driver.root_->preprocs)) {
-    std::cout << preproc->line << std::endl;
-  }
+  driver.root_->print_ast(std::cout);
   return result;
 }

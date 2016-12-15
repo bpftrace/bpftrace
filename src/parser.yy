@@ -44,11 +44,9 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
   RBRACE  "}"
 ;
 
-%token <std::string> PREPROCESSOR "preprocessor"
 %token <std::string> IDENT "identifier"
 %token <int> INT "integer"
 
-%type <ast::PreProcessorList *> preprocs
 %type <ast::ProbeList *> probes
 %type <ast::StatementList *> block stmts
 %type <ast::Probe *> probe
@@ -61,17 +59,11 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 
 %%
 
-program : preprocs probes { driver.root_ = new ast::Program($1, $2); }
-        | probes
+program : probes { driver.root_ = new ast::Program($1); }
         ;
 
-preprocs : preprocs PREPROCESSOR { $$ = $1; $1->push_back(new ast::PreProcessor($2)); }
-         | PREPROCESSOR          { $$ = new ast::PreProcessorList;
-                                   $$->push_back(new ast::PreProcessor($1)); }
-
 probes : probes probe { $$ = $1; $1->push_back($2); }
-       | probe        { $$ = new ast::ProbeList;
-                        $$->push_back($1); }
+       | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
 probe : IDENT ":" IDENT block { $$ = new ast::Probe($1, $3, $4); }
