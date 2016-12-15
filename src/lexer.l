@@ -32,6 +32,7 @@ using namespace ebpf::bpftrace;
 ";"                     { return Parser::make_SEMI(loc); }
 "{"                     { return Parser::make_LBRACE(loc); }
 "}"                     { return Parser::make_RBRACE(loc); }
+"="                     { return Parser::make_ASSIGN(loc); }
 
 .                       { driver.error(loc, std::string("invalid character: ")+std::string(yytext)); yyterminate(); }
 

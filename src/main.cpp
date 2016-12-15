@@ -12,6 +12,8 @@ int main(int argc, char *argv[])
     result = driver.parse(argv[1]);
   }
 
-  driver.root_->print_ast(std::cout);
+  if (!result)
+    driver.root_->print_ast(std::cout);
+
   return result;
 }

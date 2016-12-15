@@ -42,6 +42,7 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
   SEMI    ";"
   LBRACE  "{"
   RBRACE  "}"
+  ASSIGN  "="
 ;
 
 %token <std::string> IDENT "identifier"
@@ -52,6 +53,8 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
+%type <ast::Variable *> var
+%type <ast::ExpressionList *> vargs
 
 %printer { yyoutput << %%; } <*>;
 
@@ -76,12 +79,21 @@ stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
       | stmt           { $$ = new ast::StatementList; $$->push_back($1); }
       ;
 
-stmt : expr { $$ = new ast::Statement($1); }
+stmt : expr         { $$ = new ast::ExprStatement($1); }
+     | var "=" expr { $$ = new ast::AssignStatement($1, $3); }
      ;
 
 expr : INT   { $$ = new ast::Integer($1); }
-     | IDENT { $$ = new ast::Identifier($1); }
+     | var   { $$ = $1; }
      ;
+
+var : IDENT               { $$ = new ast::Variable($1); }
+    | IDENT "[" vargs "]" { $$ = new ast::Variable($1, $3); }
+    ;
+
+vargs : vargs "," expr { $$ = $1; $1->push_back($3); }
+      | expr           { $$ = new ast::ExpressionList; $$->push_back($1); }
+      ;
 
 %%
 

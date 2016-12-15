@@ -6,36 +6,49 @@ namespace ast {
 
 void Integer::print_ast(std::ostream &out, unsigned int depth) const
 {
-  out << "int: " << n << std::endl;
+  std::string indent(depth, ' ');
+  out << indent << "int: " << n << std::endl;
 }
 
-void Identifier::print_ast(std::ostream &out, unsigned int depth) const
+void Variable::print_ast(std::ostream &out, unsigned int depth) const
 {
-  out << "ident: " << ident << std::endl;
+  std::string indent(depth, ' ');
+  out << indent << "var: " << ident << std::endl;
+  if (vargs != nullptr) {
+    for (Expression *expr : *vargs) {
+      expr->print_ast(out, depth+1);
+    }
+  }
 }
 
-void Statement::print_ast(std::ostream &out, unsigned int depth) const
+void ExprStatement::print_ast(std::ostream &out, unsigned int depth) const
 {
-  out << "stmt" << std::endl;
-  out << std::string(depth, ' ');
+  std::string indent(depth, ' ');
+  expr->print_ast(out, depth);
+}
+
+void AssignStatement::print_ast(std::ostream &out, unsigned int depth) const
+{
+  std::string indent(depth, ' ');
+  out << indent << "=" << std::endl;
+  var->print_ast(out, depth+1);
   expr->print_ast(out, depth+1);
 }
 
 void Probe::print_ast(std::ostream &out, unsigned int depth) const
 {
-  out << "Probe" << std::endl;
+  std::string indent(depth, ' ');
+  out << indent << "Probe" << std::endl;
   for (Statement *stmt : *stmts) {
-    out << std::string(depth, ' ');
     stmt->print_ast(out, depth+1);
   }
 }
 
 void Program::print_ast(std::ostream &out, unsigned int depth) const
 {
-  out << "Program" << std::endl;
-  ++depth;
+  std::string indent(depth, ' ');
+  out << indent << "Program" << std::endl;
   for (Probe *probe : *probes) {
-    out << std::string(depth, ' ');
     probe->print_ast(out, depth+1);
   }
 }
