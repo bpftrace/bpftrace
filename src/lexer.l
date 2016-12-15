@@ -34,6 +34,6 @@ using namespace ebpf::bpftrace;
 "}"                     { return Parser::make_RBRACE(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }
 
-.                       { driver.error(loc, std::string("invalid character: ")+std::string(yytext)); yyterminate(); }
+.                       { driver.error(loc, std::string("invalid character: ")+std::string(yytext)); exit(1); }
 
 %%
