@@ -30,8 +30,53 @@ void Binop::print_ast(std::ostream &out, unsigned int depth) const
     case ebpf::bpftrace::Parser::token::EQ:
       opstr = "==";
       break;
+    case ebpf::bpftrace::Parser::token::NE:
+      opstr = "!=";
+      break;
+    case ebpf::bpftrace::Parser::token::LE:
+      opstr = "<=";
+      break;
+    case ebpf::bpftrace::Parser::token::GE:
+      opstr = ">=";
+      break;
+    case ebpf::bpftrace::Parser::token::LT:
+      opstr = "<";
+      break;
+    case ebpf::bpftrace::Parser::token::GT:
+      opstr = ">";
+      break;
+    case ebpf::bpftrace::Parser::token::LAND:
+      opstr = "&&";
+      break;
+    case ebpf::bpftrace::Parser::token::LOR:
+      opstr = "||";
+      break;
+    case ebpf::bpftrace::Parser::token::PLUS:
+      opstr = "+";
+      break;
+    case ebpf::bpftrace::Parser::token::MINUS:
+      opstr = "-";
+      break;
+    case ebpf::bpftrace::Parser::token::MUL:
+      opstr = "*";
+      break;
+    case ebpf::bpftrace::Parser::token::DIV:
+      opstr = "/";
+      break;
+    case ebpf::bpftrace::Parser::token::MOD:
+      opstr = "%";
+      break;
+    case ebpf::bpftrace::Parser::token::BAND:
+      opstr = "&";
+      break;
+    case ebpf::bpftrace::Parser::token::BOR:
+      opstr = "|";
+      break;
+    case ebpf::bpftrace::Parser::token::BXOR:
+      opstr = "^";
+      break;
     default:
-      std::cerr << "Bad binop: " << op << std::endl;
+      opstr = "???";
       break;
   }
 

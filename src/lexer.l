@@ -34,15 +34,27 @@ using namespace ebpf::bpftrace;
 "}"                     { return Parser::make_RBRACE(loc); }
 "["                     { return Parser::make_LBRACKET(loc); }
 "]"                     { return Parser::make_RBRACKET(loc); }
+\//[ \t\n\r]*[\/\{]     { return Parser::make_ENDPRED(loc); } // If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV
 ","                     { return Parser::make_COMMA(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }
-"/"                     { return Parser::make_FSLASH(loc); }
 "=="                    { return Parser::make_EQ(loc); }
 "!="                    { return Parser::make_NE(loc); }
 "<="                    { return Parser::make_LE(loc); }
 ">="                    { return Parser::make_GE(loc); }
 "<"                     { return Parser::make_LT(loc); }
 ">"                     { return Parser::make_GT(loc); }
+"&&"                    { return Parser::make_LAND(loc); }
+"||"                    { return Parser::make_LOR(loc); }
+"+"                     { return Parser::make_PLUS(loc); }
+"-"                     { return Parser::make_MINUS(loc); }
+"*"                     { return Parser::make_MUL(loc); }
+"/"                     { return Parser::make_DIV(loc); }
+"%"                     { return Parser::make_MOD(loc); }
+"&"                     { return Parser::make_BAND(loc); }
+"|"                     { return Parser::make_BOR(loc); }
+"^"                     { return Parser::make_BXOR(loc); }
+"!"                     { return Parser::make_LNOT(loc); }
+"~"                     { return Parser::make_BNOT(loc); }
 
 .                       { driver.error(loc, std::string("invalid character: ")+std::string(yytext)); exit(1); }
 

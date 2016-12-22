@@ -43,15 +43,27 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
   RBRACE   "}"
   LBRACKET "["
   RBRACKET "]"
+  ENDPRED  "end predicate"
   COMMA    ","
   ASSIGN   "="
-  FSLASH   "/"
   EQ       "=="
   NE       "!="
   LE       "<="
   GE       ">="
   LT       "<"
   GT       ">"
+  LAND     "&&"
+  LOR      "||"
+  PLUS     "+"
+  MINUS    "-"
+  MUL      "*"
+  DIV      "/"
+  MOD      "%"
+  BAND     "&"
+  BOR      "|"
+  BXOR     "^"
+  LNOT     "!"
+  BNOT     "~"
 ;
 
 %token <std::string> IDENT "identifier"
@@ -67,7 +79,17 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 
 %printer { yyoutput << %%; } <*>;
 
-%left EQ NE LE GE LT GT
+%right ASSIGN
+%left LOR
+%left LAND
+%left BOR
+%left BXOR
+%left BAND
+%left EQ NE
+%left LE GE LT GT
+%left PLUS MINUS
+%left MUL DIV MOD
+%right LNOT BNOT
 
 %start program
 
@@ -81,7 +103,7 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        ;
 
 probe : IDENT ":" IDENT block              { $$ = new ast::Probe($1, $3, $4); }
-      | IDENT ":" IDENT "/" expr "/" block { $$ = new ast::Probe($1, $3, $5, $7); }
+      | IDENT ":" IDENT DIV expr ENDPRED block { $$ = new ast::Probe($1, $3, $5, $7); }
       ;
 
 block : "{" stmts "}"     { $$ = $2; }
@@ -95,14 +117,24 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
      | var "=" expr { $$ = new ast::AssignStatement($1, $3); }
      ;
 
-expr : INT          { $$ = new ast::Integer($1); }
-     | var          { $$ = $1; }
-     | expr EQ expr { $$ = new ast::Binop($1, token::EQ, $3); }
-     | expr NE expr { $$ = new ast::Binop($1, token::NE, $3); }
-     | expr LE expr { $$ = new ast::Binop($1, token::LE, $3); }
-     | expr GE expr { $$ = new ast::Binop($1, token::GE, $3); }
-     | expr LT expr { $$ = new ast::Binop($1, token::LT, $3); }
-     | expr GT expr { $$ = new ast::Binop($1, token::GT, $3); }
+expr : INT             { $$ = new ast::Integer($1); }
+     | var             { $$ = $1; }
+     | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
+     | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }
+     | expr LE expr    { $$ = new ast::Binop($1, token::LE, $3); }
+     | expr GE expr    { $$ = new ast::Binop($1, token::GE, $3); }
+     | expr LT expr    { $$ = new ast::Binop($1, token::LT, $3); }
+     | expr GT expr    { $$ = new ast::Binop($1, token::GT, $3); }
+     | expr LAND expr  { $$ = new ast::Binop($1, token::LAND,  $3); }
+     | expr LOR expr   { $$ = new ast::Binop($1, token::LOR,   $3); }
+     | expr PLUS expr  { $$ = new ast::Binop($1, token::PLUS,  $3); }
+     | expr MINUS expr { $$ = new ast::Binop($1, token::MINUS, $3); }
+     | expr MUL expr   { $$ = new ast::Binop($1, token::MUL,   $3); }
+     | expr DIV expr   { $$ = new ast::Binop($1, token::DIV,   $3); }
+     | expr MOD expr   { $$ = new ast::Binop($1, token::MOD,   $3); }
+     | expr BAND expr  { $$ = new ast::Binop($1, token::BAND,  $3); }
+     | expr BOR expr   { $$ = new ast::Binop($1, token::BOR,   $3); }
+     | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
      ;
 
 var : IDENT               { $$ = new ast::Variable($1); }
