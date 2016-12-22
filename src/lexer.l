@@ -34,6 +34,8 @@ using namespace ebpf::bpftrace;
 "}"                     { return Parser::make_RBRACE(loc); }
 "["                     { return Parser::make_LBRACKET(loc); }
 "]"                     { return Parser::make_RBRACKET(loc); }
+"("                     { return Parser::make_LPAREN(loc); }
+")"                     { return Parser::make_RPAREN(loc); }
 \//[ \t\n\r]*[\/\{]     { return Parser::make_ENDPRED(loc); } // If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV
 ","                     { return Parser::make_COMMA(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }

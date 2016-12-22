@@ -43,6 +43,8 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
   RBRACE   "}"
   LBRACKET "["
   RBRACKET "]"
+  LPAREN   "("
+  RPAREN   ")"
   ENDPRED  "end predicate"
   COMMA    ","
   ASSIGN   "="
@@ -119,6 +121,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
 
 expr : INT             { $$ = new ast::Integer($1); }
      | var             { $$ = $1; }
+     | "(" expr ")"    { $$ = $2; }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
      | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }
      | expr LE expr    { $$ = new ast::Binop($1, token::LE, $3); }
@@ -135,6 +138,8 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr BAND expr  { $$ = new ast::Binop($1, token::BAND,  $3); }
      | expr BOR expr   { $$ = new ast::Binop($1, token::BOR,   $3); }
      | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
+     | LNOT expr       { $$ = new ast::Unop(token::LNOT, $2); }
+     | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
      ;
 
 var : IDENT               { $$ = new ast::Variable($1); }

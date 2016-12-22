@@ -85,6 +85,26 @@ void Binop::print_ast(std::ostream &out, unsigned int depth) const
   right->print_ast(out, depth+1);
 }
 
+void Unop::print_ast(std::ostream &out, unsigned int depth) const
+{
+  std::string indent(depth, ' ');
+  std::string opstr;
+  switch (op) {
+    case ebpf::bpftrace::Parser::token::LNOT:
+      opstr = "!";
+      break;
+    case ebpf::bpftrace::Parser::token::BNOT:
+      opstr = "~";
+      break;
+    default:
+      opstr = "???";
+      break;
+  }
+
+  out << indent << opstr << std::endl;
+  expr->print_ast(out, depth+1);
+}
+
 void ExprStatement::print_ast(std::ostream &out, unsigned int depth) const
 {
   std::string indent(depth, ' ');

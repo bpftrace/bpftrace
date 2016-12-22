@@ -42,6 +42,14 @@ public:
   int op;
 };
 
+class Unop : public Expression {
+public:
+  Unop(int op, Expression *expr) : expr(expr), op(op) { }
+  void print_ast(std::ostream &out, unsigned int depth = 0) const override;
+  Expression *expr;
+  int op;
+};
+
 class Statement : public Node {
 };
 using StatementList = std::vector<Statement *>;
