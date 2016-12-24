@@ -10,4 +10,4 @@ flex_target(lexer lexer.l ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cc)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(bpftrace main.cpp ast.cpp parser.tab.cc lex.yy.cc)
+add_executable(bpftrace main.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp)

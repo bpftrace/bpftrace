@@ -1,144 +1,73 @@
 #include "ast.h"
-#include "parser.tab.hh"
 
 namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
-void Integer::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  out << indent << "int: " << n << std::endl;
+void Integer::accept(Visitor &v) {
+  v.visit(*this);
 }
 
-void Variable::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  out << indent << "var: " << ident << std::endl;
+void Variable::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
   if (vargs) {
     for (Expression *expr : *vargs) {
-      expr->print_ast(out, depth+1);
+      expr->accept(v);
     }
   }
+  --v.depth_;
 }
 
-void Binop::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  std::string opstr;
-  switch (op) {
-    case ebpf::bpftrace::Parser::token::EQ:
-      opstr = "==";
-      break;
-    case ebpf::bpftrace::Parser::token::NE:
-      opstr = "!=";
-      break;
-    case ebpf::bpftrace::Parser::token::LE:
-      opstr = "<=";
-      break;
-    case ebpf::bpftrace::Parser::token::GE:
-      opstr = ">=";
-      break;
-    case ebpf::bpftrace::Parser::token::LT:
-      opstr = "<";
-      break;
-    case ebpf::bpftrace::Parser::token::GT:
-      opstr = ">";
-      break;
-    case ebpf::bpftrace::Parser::token::LAND:
-      opstr = "&&";
-      break;
-    case ebpf::bpftrace::Parser::token::LOR:
-      opstr = "||";
-      break;
-    case ebpf::bpftrace::Parser::token::PLUS:
-      opstr = "+";
-      break;
-    case ebpf::bpftrace::Parser::token::MINUS:
-      opstr = "-";
-      break;
-    case ebpf::bpftrace::Parser::token::MUL:
-      opstr = "*";
-      break;
-    case ebpf::bpftrace::Parser::token::DIV:
-      opstr = "/";
-      break;
-    case ebpf::bpftrace::Parser::token::MOD:
-      opstr = "%";
-      break;
-    case ebpf::bpftrace::Parser::token::BAND:
-      opstr = "&";
-      break;
-    case ebpf::bpftrace::Parser::token::BOR:
-      opstr = "|";
-      break;
-    case ebpf::bpftrace::Parser::token::BXOR:
-      opstr = "^";
-      break;
-    default:
-      opstr = "???";
-      break;
-  }
-
-  out << indent << opstr << std::endl;
-  left->print_ast(out, depth+1);
-  right->print_ast(out, depth+1);
+void Binop::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
+  left->accept(v);
+  right->accept(v);
+  --v.depth_;
 }
 
-void Unop::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  std::string opstr;
-  switch (op) {
-    case ebpf::bpftrace::Parser::token::LNOT:
-      opstr = "!";
-      break;
-    case ebpf::bpftrace::Parser::token::BNOT:
-      opstr = "~";
-      break;
-    default:
-      opstr = "???";
-      break;
-  }
-
-  out << indent << opstr << std::endl;
-  expr->print_ast(out, depth+1);
+void Unop::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
+  expr->accept(v);
+  --v.depth_;
 }
 
-void ExprStatement::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  expr->print_ast(out, depth);
+void ExprStatement::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
+  expr->accept(v);
+  --v.depth_;
 }
 
-void AssignStatement::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  out << indent << "=" << std::endl;
-  var->print_ast(out, depth+1);
-  expr->print_ast(out, depth+1);
+void AssignStatement::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
+  var->accept(v);
+  expr->accept(v);
+  --v.depth_;
 }
 
-void Probe::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  out << indent << type << ":" << attach_point << std::endl;
-  out << indent << " pred" << std::endl;
+void Probe::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
   if (pred) {
-    pred->print_ast(out, depth+2);
+    pred->accept(v);
   }
   for (Statement *stmt : *stmts) {
-    stmt->print_ast(out, depth+1);
+    stmt->accept(v);
   }
+  --v.depth_;
 }
 
-void Program::print_ast(std::ostream &out, unsigned int depth) const
-{
-  std::string indent(depth, ' ');
-  out << indent << "Program" << std::endl;
+void Program::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
   for (Probe *probe : *probes) {
-    probe->print_ast(out, depth+1);
+    probe->accept(v);
   }
+  --v.depth_;
 }
 
 } // namespace ast

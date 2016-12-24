@@ -1,5 +1,7 @@
+#include <iostream>
 #include "driver.h"
 #include "ast.h"
+#include "printer.h"
 
 int main(int argc, char *argv[])
 {
@@ -12,8 +14,10 @@ int main(int argc, char *argv[])
     result = driver.parse(argv[1]);
   }
 
-  if (!result)
-    driver.root_->print_ast(std::cout);
+  if (!result) {
+    ebpf::bpftrace::ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
+    driver.root_->accept(p);
+  }
 
   return result;
 }
