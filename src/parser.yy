@@ -105,7 +105,7 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        ;
 
 probe : IDENT ":" IDENT block              { $$ = new ast::Probe($1, $3, $4); }
-      | IDENT ":" IDENT DIV expr ENDPRED block { $$ = new ast::Probe($1, $3, $5, $7); }
+      | IDENT ":" IDENT DIV expr ENDPRED block { $$ = new ast::Probe($1, $3, new ast::Predicate($5), $7); }
       ;
 
 block : "{" stmts "}"     { $$ = $2; }

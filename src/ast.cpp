@@ -49,6 +49,13 @@ void AssignStatement::accept(Visitor &v) {
   --v.depth_;
 }
 
+void Predicate::accept(Visitor &v) {
+  v.visit(*this);
+  ++v.depth_;
+  expr->accept(v);
+  --v.depth_;
+}
+
 void Probe::accept(Visitor &v) {
   v.visit(*this);
   ++v.depth_;

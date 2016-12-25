@@ -17,6 +17,7 @@ public:
   void visit(Unop &unop) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignStatement &assignment) override;
+  void visit(Predicate &pred) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 

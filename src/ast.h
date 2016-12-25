@@ -76,16 +76,24 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Predicate : public Node {
+public:
+  explicit Predicate(Expression *expr) : expr(expr) { }
+  Expression *expr;
+
+  void accept(Visitor &v) override;
+};
+
 class Probe : public Node {
 public:
   Probe(std::string &type, std::string &attach_point, StatementList *stmts)
     : type(type), attach_point(attach_point), pred(nullptr), stmts(stmts) { }
-  Probe(std::string &type, std::string &attach_point, Expression *pred, StatementList *stmts)
+  Probe(std::string &type, std::string &attach_point, Predicate *pred, StatementList *stmts)
     : type(type), attach_point(attach_point), pred(pred), stmts(stmts) { }
 
   std::string type;
   std::string attach_point;
-  Expression *pred;
+  Predicate *pred;
   StatementList *stmts;
 
   void accept(Visitor &v) override;
@@ -109,6 +117,7 @@ public:
   virtual void visit(Unop &unop) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignStatement &assignment) = 0;
+  virtual void visit(Predicate &pred) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
 

@@ -108,13 +108,16 @@ void Printer::visit(AssignStatement &)
   out_ << indent << "=" << std::endl;
 }
 
+void Printer::visit(Predicate &pred)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "pred" << std::endl;
+}
+
 void Printer::visit(Probe &probe)
 {
   std::string indent(depth_, ' ');
   out_ << indent << probe.type << ":" << probe.attach_point << std::endl;
-  if (probe.pred) {
-    out_ << indent << " pred";
-  }
 }
 
 void Printer::visit(Program &)
