@@ -16,6 +16,14 @@ void Printer::visit(Variable &var)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "var: " << var.ident << std::endl;
+
+  ++depth_;
+  if (var.vargs) {
+    for (Expression *expr : *var.vargs) {
+      expr->accept(*this);
+    }
+  }
+  --depth_;
 }
 
 void Printer::visit(Binop &binop)
@@ -43,6 +51,11 @@ void Printer::visit(Binop &binop)
   }
 
   out_ << indent << opstr << std::endl;
+
+  ++depth_;
+  binop.left->accept(*this);
+  binop.right->accept(*this);
+  --depth_;
 }
 
 void Printer::visit(Unop &unop)
@@ -56,34 +69,65 @@ void Printer::visit(Unop &unop)
   }
 
   out_ << indent << opstr << std::endl;
+
+  ++depth_;
+  unop.expr->accept(*this);
+  --depth_;
 }
 
-void Printer::visit(ExprStatement &)
+void Printer::visit(ExprStatement &expr)
 {
+  ++depth_;
+  expr.expr->accept(*this);
+  --depth_;
 }
 
-void Printer::visit(AssignStatement &)
+void Printer::visit(AssignStatement &assignment)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "=" << std::endl;
+
+  ++depth_;
+  assignment.var->accept(*this);
+  assignment.expr->accept(*this);
+  --depth_;
 }
 
 void Printer::visit(Predicate &pred)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "pred" << std::endl;
+
+  ++depth_;
+  pred.expr->accept(*this);
+  --depth_;
 }
 
 void Printer::visit(Probe &probe)
 {
   std::string indent(depth_, ' ');
   out_ << indent << probe.type << ":" << probe.attach_point << std::endl;
+
+  ++depth_;
+  if (probe.pred) {
+    probe.pred->accept(*this);
+  }
+  for (Statement *stmt : *probe.stmts) {
+    stmt->accept(*this);
+  }
+  --depth_;
 }
 
-void Printer::visit(Program &)
+void Printer::visit(Program &program)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
+
+  ++depth_;
+  for (Probe *probe : *program.probes) {
+    probe->accept(*this);
+  }
+  --depth_;
 }
 
 } // namespace ast

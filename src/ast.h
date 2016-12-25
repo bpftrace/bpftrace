@@ -120,8 +120,6 @@ public:
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
-
-  int depth_ = 0;
 };
 
 } // namespace ast

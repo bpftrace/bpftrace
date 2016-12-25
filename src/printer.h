@@ -21,6 +21,8 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
+  int depth_ = 0;
+
 private:
   std::ostream &out_;
 };
