@@ -1,8 +1,9 @@
 #pragma once
 
-#include <istream>
 #include "parser.tab.hh"
 #include "ast.h"
+
+#include <llvm/IR/Module.h>
 
 #define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
 YY_DECL;
@@ -12,23 +13,17 @@ extern FILE *yyin;
 namespace ebpf {
 namespace bpftrace {
 
+using namespace llvm;
+
 class Driver {
 public:
-  Driver() : parser_(*this) { }
+  Driver() : parser_(*this),
+             module_("bpftrace", context_)
+             { }
 
-  int parse()
-  {
-    return parser_.parse();
-  }
-
-  int parse(const std::string &f)
-  {
-    if (!(yyin = fopen(f.c_str(), "r"))) {
-      std::cerr << "Could not open file" << std::endl;
-      return -1;
-    }
-    return parser_.parse();
-  }
+  int parse();
+  int parse(const std::string &f);
+  int dump_ast(std::ostream &out);
 
   void error(const location &l, const std::string &m)
   {
@@ -41,8 +36,11 @@ public:
   }
 
   ast::Program *root_;
+
 private:
   Parser parser_;
+  LLVMContext context_;
+  Module module_;
 };
 
 } // namespace bpftrace

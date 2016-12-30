@@ -13,9 +13,10 @@ using namespace llvm;
 
 class Codegen : public Visitor {
 public:
-  Codegen() : b_(context_),
-              module_("bpftrace", context_)
-              { }
+  Codegen(Module &mod, LLVMContext &context) : context_(context),
+                                               module_(mod),
+                                               b_(context_)
+                                               { }
 
   void visit(Integer &integer) override;
   void visit(Variable &var) override;
@@ -27,10 +28,10 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
-//private:
-  LLVMContext context_;
+private:
+  LLVMContext &context_;
+  Module &module_;
   IRBuilder<> b_;
-  Module module_;
   Value *expr_ = nullptr;
 };
 

@@ -1,8 +1,5 @@
 #include <iostream>
 #include "driver.h"
-#include "ast.h"
-#include "printer.h"
-#include "codegen.h"
 
 int main(int argc, char *argv[])
 {
@@ -16,12 +13,7 @@ int main(int argc, char *argv[])
   }
 
   if (!result) {
-    ebpf::bpftrace::ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
-    driver.root_->accept(p);
-
-    ebpf::bpftrace::ast::Codegen c;
-    driver.root_->accept(c);
-    c.module_.dump();
+    driver.dump_ast(std::cout);
   }
 
   return result;
