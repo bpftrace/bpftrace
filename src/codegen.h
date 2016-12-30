@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast.h"
+#include "map.h"
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
@@ -33,6 +34,8 @@ private:
   Module &module_;
   IRBuilder<> b_;
   Value *expr_ = nullptr;
+  std::map<std::string, Value *> vars;
+  std::map<std::string, std::unique_ptr<Map>> maps_;
 };
 
 } // namespace ast
