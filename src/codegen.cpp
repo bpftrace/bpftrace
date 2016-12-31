@@ -99,7 +99,7 @@ void Codegen::visit(Predicate &pred)
 void Codegen::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(), false);
-  Function *func = Function::Create(func_type, Function::PrivateLinkage, probe.name, &module_);
+  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, &module_);
   BasicBlock *entry = BasicBlock::Create(module_.getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 

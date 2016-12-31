@@ -14,6 +14,7 @@ int main(int argc, char *argv[])
 
   if (!result) {
     driver.dump_ast(std::cout);
+    driver.compile();
   }
 
   return result;

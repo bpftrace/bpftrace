@@ -3,6 +3,7 @@
 #include "parser.tab.hh"
 #include "ast.h"
 
+#include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/Module.h>
 
 #define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
@@ -18,12 +19,13 @@ using namespace llvm;
 class Driver {
 public:
   Driver() : parser_(*this),
-             module_("bpftrace", context_)
+             module_(make_unique<Module>("bpftrace", context_))
              { }
 
   int parse();
   int parse(const std::string &f);
-  int dump_ast(std::ostream &out);
+  void dump_ast(std::ostream &out);
+  int compile();
 
   void error(const location &l, const std::string &m)
   {
@@ -40,7 +42,8 @@ public:
 private:
   Parser parser_;
   LLVMContext context_;
-  Module module_;
+  std::unique_ptr<Module> module_;
+  std::unique_ptr<ExecutionEngine> ee_;
 };
 
 } // namespace bpftrace

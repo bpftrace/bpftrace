@@ -15,5 +15,5 @@ add_definitions(${LLVM_DEFINITIONS})
 
 add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp codegen.cpp map.cpp)
 
-llvm_map_components_to_libnames(llvm_libs support core irreader)
+llvm_map_components_to_libnames(llvm_libs irreader bpfcodegen mcjit)
 target_link_libraries(bpftrace ${llvm_libs})
