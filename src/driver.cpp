@@ -32,7 +32,7 @@ void Driver::dump_ast(std::ostream &out)
 
 int Driver::compile()
 {
-  ast::Codegen c(*module_, context_);
+  ast::CodegenLLVM c(*module_, context_);
   root_->accept(c);
   module_->dump();
 

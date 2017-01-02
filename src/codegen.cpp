@@ -6,22 +6,22 @@ namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
-void Codegen::visit(Integer &integer)
+void CodegenLLVM::visit(Integer &integer)
 {
   expr_ = ConstantInt::get(module_.getContext(), APInt(64, integer.n)); // TODO fix bit width
 }
 
-void Codegen::visit(Builtin &builtin)
+void CodegenLLVM::visit(Builtin &builtin)
 {
   expr_ = b_.getInt64(0);
 }
 
-void Codegen::visit(Call &call)
+void CodegenLLVM::visit(Call &call)
 {
   expr_ = b_.getInt64(0);
 }
 
-void Codegen::visit(Map &map)
+void CodegenLLVM::visit(Map &map)
 {
   int mapfd;
   if (maps_.find(map.ident) == maps_.end()) {
@@ -33,7 +33,7 @@ void Codegen::visit(Map &map)
 //   CALL(BPF_FUNC_map_lookup_elem)
 }
 
-void Codegen::visit(Binop &binop)
+void CodegenLLVM::visit(Binop &binop)
 {
   Value *lhs, *rhs;
   binop.left->accept(*this);
@@ -62,7 +62,7 @@ void Codegen::visit(Binop &binop)
   }
 }
 
-void Codegen::visit(Unop &unop)
+void CodegenLLVM::visit(Unop &unop)
 {
   unop.expr->accept(*this);
 
@@ -73,12 +73,12 @@ void Codegen::visit(Unop &unop)
   }
 }
 
-void Codegen::visit(ExprStatement &expr)
+void CodegenLLVM::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);
 }
 
-void Codegen::visit(AssignMapStatement &assignment)
+void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   Value *map, *val;
   assignment.map->accept(*this);
@@ -89,11 +89,11 @@ void Codegen::visit(AssignMapStatement &assignment)
 //   CALL(BPF_FUNC_map_update_elem)
 }
 
-void Codegen::visit(AssignMapCallStatement &assignment)
+void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 {
 }
 
-void Codegen::visit(Predicate &pred)
+void CodegenLLVM::visit(Predicate &pred)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *pred_false_block = BasicBlock::Create(module_.getContext(), "pred_false", parent);
@@ -109,7 +109,7 @@ void Codegen::visit(Predicate &pred)
   b_.SetInsertPoint(pred_true_block);
 }
 
-void Codegen::visit(Probe &probe)
+void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(), false);
   Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, &module_);
@@ -126,7 +126,7 @@ void Codegen::visit(Probe &probe)
   b_.CreateRet(ConstantInt::get(module_.getContext(), APInt(64, 0)));
 }
 
-void Codegen::visit(Program &program)
+void CodegenLLVM::visit(Program &program)
 {
   for (Probe *probe : *program.probes) {
     probe->accept(*this);

@@ -12,9 +12,9 @@ namespace ast {
 
 using namespace llvm;
 
-class Codegen : public Visitor {
+class CodegenLLVM : public Visitor {
 public:
-  Codegen(Module &mod, LLVMContext &context) : context_(context),
+  CodegenLLVM(Module &mod, LLVMContext &context) : context_(context),
                                                module_(mod),
                                                b_(context_)
                                                { }
