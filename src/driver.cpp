@@ -4,6 +4,7 @@
 #include "driver.h"
 #include "printer.h"
 #include "codegen_llvm.h"
+#include "codegen_bcc.h"
 
 #include <llvm/Support/TargetRegistry.h>
 
@@ -30,7 +31,7 @@ void Driver::dump_ast(std::ostream &out)
   root_->accept(p);
 }
 
-int Driver::compile()
+int Driver::compile_llvm()
 {
   ast::CodegenLLVM c(*module_, context_);
   root_->accept(c);
@@ -61,6 +62,14 @@ int Driver::compile()
   EngineBuilder builder(move(module_));
   ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
   ee_->finalizeObject();
+
+  return 0;
+}
+
+int Driver::compile_bcc()
+{
+  ast::CodegenBCC c;
+  root_->accept(c);
 }
 
 } // namespace bpftrace
