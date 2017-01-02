@@ -15,19 +15,26 @@ static ebpf::bpftrace::location loc;
 using namespace ebpf::bpftrace;
 %}
 
+ident  [_a-zA-Z][_a-zA-Z0-9]*
+map    @[_a-zA-Z0-9]*
+int    [0-9]+|0[xX][0-9a-fA-F]+
+hspace [ \t]
+vspace [\n\r]
+space  {hspace}|{vspace}
+
 %%
 
 %{
   loc.step();
 %}
 
-[ \t]+                  { loc.step(); }
-[\n\r]+                 { loc.lines(yyleng); loc.step(); }
+{hspace}+               { loc.step(); }
+{vspace}+               { loc.lines(yyleng); loc.step(); }
 "//".*$  // Comments
 
-[_a-zA-Z][_a-zA-Z0-9]*  { return Parser::make_IDENT(yytext, loc); }
-[0-9]+                  { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
-0[xX][0-9a-fA-F]+       { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
+{ident}                 { return Parser::make_IDENT(yytext, loc); }
+{map}                   { return Parser::make_MAP(yytext, loc); }
+{int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
 ";"                     { return Parser::make_SEMI(loc); }
 "{"                     { return Parser::make_LBRACE(loc); }
@@ -36,7 +43,7 @@ using namespace ebpf::bpftrace;
 "]"                     { return Parser::make_RBRACKET(loc); }
 "("                     { return Parser::make_LPAREN(loc); }
 ")"                     { return Parser::make_RPAREN(loc); }
-\//[ \t\n\r]*[\/\{]     { return Parser::make_ENDPRED(loc); } // If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV
+\//{space}*[\/\{]       { return Parser::make_ENDPRED(loc); } // If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV
 ","                     { return Parser::make_COMMA(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }
 "=="                    { return Parser::make_EQ(loc); }

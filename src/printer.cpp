@@ -12,14 +12,34 @@ void Printer::visit(Integer &integer)
   out_ << indent << "int: " << integer.n << std::endl;
 }
 
-void Printer::visit(Variable &var)
+void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "var: " << var.ident << std::endl;
+  out_ << indent << "builtin: " << builtin.ident << std::endl;
+}
+
+void Printer::visit(Call &call)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "call: " << call.func << std::endl;
 
   ++depth_;
-  if (var.vargs) {
-    for (Expression *expr : *var.vargs) {
+  if (call.vargs) {
+    for (Expression *expr : *call.vargs) {
+      expr->accept(*this);
+    }
+  }
+  --depth_;
+}
+
+void Printer::visit(Map &map)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "map: " << map.ident << std::endl;
+
+  ++depth_;
+  if (map.vargs) {
+    for (Expression *expr : *map.vargs) {
       expr->accept(*this);
     }
   }
@@ -82,14 +102,25 @@ void Printer::visit(ExprStatement &expr)
   --depth_;
 }
 
-void Printer::visit(AssignStatement &assignment)
+void Printer::visit(AssignMapStatement &assignment)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "=" << std::endl;
 
   ++depth_;
-  assignment.var->accept(*this);
+  assignment.map->accept(*this);
   assignment.expr->accept(*this);
+  --depth_;
+}
+
+void Printer::visit(AssignMapCallStatement &assignment)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "=" << std::endl;
+
+  ++depth_;
+  assignment.map->accept(*this);
+  assignment.call->accept(*this);
   --depth_;
 }
 

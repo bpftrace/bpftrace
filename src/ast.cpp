@@ -8,7 +8,15 @@ void Integer::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void Variable::accept(Visitor &v) {
+void Builtin::accept(Visitor &v) {
+  v.visit(*this);
+}
+
+void Call::accept(Visitor &v) {
+  v.visit(*this);
+}
+
+void Map::accept(Visitor &v) {
   v.visit(*this);
 }
 
@@ -24,7 +32,11 @@ void ExprStatement::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void AssignStatement::accept(Visitor &v) {
+void AssignMapStatement::accept(Visitor &v) {
+  v.visit(*this);
+}
+
+void AssignMapCallStatement::accept(Visitor &v) {
   v.visit(*this);
 }
 

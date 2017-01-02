@@ -69,6 +69,7 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 ;
 
 %token <std::string> IDENT "identifier"
+%token <std::string> MAP "map"
 %token <int> INT "integer"
 
 %type <ast::ProbeList *> probes
@@ -76,7 +77,8 @@ void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
-%type <ast::Variable *> var
+%type <ast::Call *> call
+%type <ast::Map *> map
 %type <ast::ExpressionList *> vargs
 
 %printer { yyoutput << %%; } <*>;
@@ -116,11 +118,13 @@ stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
       ;
 
 stmt : expr         { $$ = new ast::ExprStatement($1); }
-     | var "=" expr { $$ = new ast::AssignStatement($1, $3); }
+     | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
+     | map "=" call { $$ = new ast::AssignMapCallStatement($1, $3); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
-     | var             { $$ = $1; }
+     | IDENT           { $$ = new ast::Builtin($1); }
+     | map             { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
      | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }
@@ -142,8 +146,11 @@ expr : INT             { $$ = new ast::Integer($1); }
      | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
      ;
 
-var : IDENT               { $$ = new ast::Variable($1); }
-    | IDENT "[" vargs "]" { $$ = new ast::Variable($1, $3); }
+call : IDENT "(" ")"       { $$ = new ast::Call($1); }
+     | IDENT "(" vargs ")" { $$ = new ast::Call($1, $3); }
+
+map : MAP               { $$ = new ast::Map($1); }
+    | MAP "[" vargs "]" { $$ = new ast::Map($1, $3); }
     ;
 
 vargs : vargs "," expr { $$ = $1; $1->push_back($3); }

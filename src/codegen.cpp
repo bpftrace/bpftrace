@@ -11,14 +11,24 @@ void Codegen::visit(Integer &integer)
   expr_ = ConstantInt::get(module_.getContext(), APInt(64, integer.n)); // TODO fix bit width
 }
 
-void Codegen::visit(Variable &var)
+void Codegen::visit(Builtin &builtin)
+{
+  expr_ = b_.getInt64(0);
+}
+
+void Codegen::visit(Call &call)
+{
+  expr_ = b_.getInt64(0);
+}
+
+void Codegen::visit(Map &map)
 {
   int mapfd;
-  if (maps_.find(var.ident) == maps_.end()) {
-    maps_[var.ident] = std::make_unique<Map>();
+  if (maps_.find(map.ident) == maps_.end()) {
+    maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
   }
-  mapfd = maps_[var.ident]->mapfd_;
-  expr_ = b_.getInt32(mapfd);
+  mapfd = maps_[map.ident]->mapfd_;
+  expr_ = b_.getInt64(mapfd);
 
 //   CALL(BPF_FUNC_map_lookup_elem)
 }
@@ -68,16 +78,19 @@ void Codegen::visit(ExprStatement &expr)
   expr.expr->accept(*this);
 }
 
-void Codegen::visit(AssignStatement &assignment)
+void Codegen::visit(AssignMapStatement &assignment)
 {
-  Value *var, *val;
-  assignment.var->accept(*this);
-  var = expr_;
+  Value *map, *val;
+  assignment.map->accept(*this);
+  map = expr_;
   assignment.expr->accept(*this);
   val = expr_;
 
-//  b_.CreateStore(val, var);
 //   CALL(BPF_FUNC_map_update_elem)
+}
+
+void Codegen::visit(AssignMapCallStatement &assignment)
+{
 }
 
 void Codegen::visit(Predicate &pred)

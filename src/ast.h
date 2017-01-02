@@ -27,10 +27,28 @@ public:
   void accept(Visitor &v) override;
 };
 
-class Variable : public Expression {
+class Builtin : public Expression {
 public:
-  explicit Variable(std::string &ident) : ident(ident), vargs(nullptr) { }
-  Variable(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { }
+  explicit Builtin(std::string ident) : ident(ident) { }
+  std::string ident;
+
+  void accept(Visitor &v) override;
+};
+
+class Call : public Expression {
+public:
+  explicit Call(std::string &func) : func(func), vargs(nullptr) { }
+  Call(std::string &func, ExpressionList *vargs) : func(func), vargs(vargs) { }
+  std::string func;
+  ExpressionList *vargs;
+
+  void accept(Visitor &v) override;
+};
+
+class Map : public Expression {
+public:
+  explicit Map(std::string &ident) : ident(ident), vargs(nullptr) { }
+  Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { }
   std::string ident;
   ExpressionList *vargs;
 
@@ -67,11 +85,20 @@ public:
   void accept(Visitor &v) override;
 };
 
-class AssignStatement : public Statement {
+class AssignMapStatement : public Statement {
 public:
-  AssignStatement(Variable *var, Expression *expr) : var(var), expr(expr) { }
-  Variable *var;
+  AssignMapStatement(Map *map, Expression *expr) : map(map), expr(expr) { }
+  Map *map;
   Expression *expr;
+
+  void accept(Visitor &v) override;
+};
+
+class AssignMapCallStatement : public Statement {
+public:
+  AssignMapCallStatement(Map *map, Call *call) : map(map), call(call) { }
+  Map *map;
+  Call *call;
 
   void accept(Visitor &v) override;
 };
@@ -113,11 +140,14 @@ class Visitor {
 public:
   virtual ~Visitor() { }
   virtual void visit(Integer &integer) = 0;
-  virtual void visit(Variable &var) = 0;
+  virtual void visit(Builtin &builtin) = 0;
+  virtual void visit(Call &call) = 0;
+  virtual void visit(Map &map) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
   virtual void visit(ExprStatement &expr) = 0;
-  virtual void visit(AssignStatement &assignment) = 0;
+  virtual void visit(AssignMapStatement &assignment) = 0;
+  virtual void visit(AssignMapCallStatement &assignment) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
