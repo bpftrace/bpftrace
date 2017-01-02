@@ -3,7 +3,7 @@
 
 #include "driver.h"
 #include "printer.h"
-#include "codegen.h"
+#include "codegen_llvm.h"
 
 #include <llvm/Support/TargetRegistry.h>
 
