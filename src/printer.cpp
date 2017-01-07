@@ -67,7 +67,7 @@ void Printer::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::BAND:  opstr = "&"; break;
     case ebpf::bpftrace::Parser::token::BOR:   opstr = "|"; break;
     case ebpf::bpftrace::Parser::token::BXOR:  opstr = "^"; break;
-    default: opstr = "???"; break;
+    default: abort();
   }
 
   out_ << indent << opstr << std::endl;
@@ -85,7 +85,7 @@ void Printer::visit(Unop &unop)
   switch (unop.op) {
     case ebpf::bpftrace::Parser::token::LNOT: opstr = "!"; break;
     case ebpf::bpftrace::Parser::token::BNOT: opstr = "~"; break;
-    default: opstr = "???"; break;
+    default: abort();
   }
 
   out_ << indent << opstr << std::endl;

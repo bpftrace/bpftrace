@@ -4,7 +4,7 @@ BPFtrace is currently a work in progress and can not currently run scripts. The 
 
 ## Examples
 
-To produce a histogram of amount of time spent in the read() system call:
+To produce a histogram of amount of time spent in the `read()` system call:
 ```
 kprobe:sys_read
 {
@@ -18,6 +18,15 @@ kretprobe:sys_read / @start[tid] /
 }
 ```
 
+## Builtins
+The following builtin variables are available for use in BPFtrace scripts:
+- `pid` - Process ID
+- `tid` - Thread ID
+- `nsecs` - Get a nanosecond timestamp
+
+The following builtin functions are also available:
+- `quantize()`
+- `count()`
 
 # Building
 

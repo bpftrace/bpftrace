@@ -62,7 +62,7 @@ void CodegenBCC::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::BAND:  code << "&";  break;
     case ebpf::bpftrace::Parser::token::BOR:   code << "|";  break;
     case ebpf::bpftrace::Parser::token::BXOR:  code << "^";  break;
-    default: break;
+    default: abort();
   }
   binop.right->accept(*this);
   code << ")";
@@ -74,7 +74,7 @@ void CodegenBCC::visit(Unop &unop)
   switch (unop.op) {
     case ebpf::bpftrace::Parser::token::LNOT: code << "!"; break;
     case ebpf::bpftrace::Parser::token::BNOT: code << "~"; break;
-    default: break;
+    default: abort();
   }
   unop.expr->accept(*this);
   code << ")";

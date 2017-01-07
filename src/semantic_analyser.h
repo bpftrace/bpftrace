@@ -31,6 +31,19 @@ public:
 
 private:
   Node *root_;
+  std::ostringstream err_;
+
+  enum class Type
+  {
+    none,
+    integer,
+    quantize,
+    count,
+  };
+
+  std::string typestr(Type t);
+  Type type_;
+  std::map<std::string, Type> map_types_;
 };
 
 } // namespace ast

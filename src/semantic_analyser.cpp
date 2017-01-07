@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "semantic_analyser.h"
 #include "ast.h"
 #include "parser.tab.hh"
@@ -8,10 +10,20 @@ namespace ast {
 
 void SemanticAnalyser::visit(Integer &integer)
 {
+  type_ = Type::integer;
 }
 
 void SemanticAnalyser::visit(Builtin &builtin)
 {
+  if (builtin.ident == "nsecs" ||
+      builtin.ident == "pid" ||
+      builtin.ident == "tid") {
+    type_ = Type::integer;
+  }
+  else {
+    type_ = Type::none;
+    err_ << "Unknown builtin: '" << builtin.ident << "'" << std::endl;
+  }
 }
 
 void SemanticAnalyser::visit(Call &call)
@@ -20,6 +32,15 @@ void SemanticAnalyser::visit(Call &call)
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
     }
+  }
+
+  if (call.func == "quantize")
+    type_ = Type::quantize;
+  else if (call.func == "count")
+    type_ = Type::count;
+  else {
+    type_ = Type::none;
+    err_ << "Unknown function: '" << call.func << "'" << std::endl;
   }
 }
 
@@ -52,7 +73,7 @@ void SemanticAnalyser::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::BAND:  break;
     case ebpf::bpftrace::Parser::token::BOR:   break;
     case ebpf::bpftrace::Parser::token::BXOR:  break;
-    default: break;
+    default: abort();
   }
   binop.right->accept(*this);
 }
@@ -62,7 +83,7 @@ void SemanticAnalyser::visit(Unop &unop)
   switch (unop.op) {
     case ebpf::bpftrace::Parser::token::LNOT: break;
     case ebpf::bpftrace::Parser::token::BNOT: break;
-    default: break;
+    default: abort();
   }
   unop.expr->accept(*this);
 }
@@ -76,12 +97,43 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 {
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
+
+  std::string map_ident = assignment.map->ident;
+  auto search = map_types_.find(map_ident);
+  if (search != map_types_.end()) {
+    if (search->second != type_) {
+      err_ << "Type mismatch for " << map_ident << ": ";
+      err_ << "trying to assign variable of type '" << typestr(type_);
+      err_ << "' when map already contains a '";
+      err_ << typestr(search->second) << "'" << std::endl;
+    }
+  }
+  else {
+    // This map hasn't been seen before
+    map_types_.insert({map_ident, type_});
+  }
 }
 
 void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
 {
   assignment.map->accept(*this);
   assignment.call->accept(*this);
+
+  std::string map_ident = assignment.map->ident;
+  auto search = map_types_.find(map_ident);
+  if (search != map_types_.end()) {
+    if (search->second != type_) {
+      err_ << "Type mismatch for " << map_ident << ": ";
+      err_ << "trying to assign result of '" << assignment.call->func;
+      err_ << "'" << typestr(type_);
+      err_ << "' when map already contains a '";
+      err_ << typestr(search->second) << "'" << std::endl;
+    }
+  }
+  else {
+    // This map hasn't been seen before
+    map_types_.insert({map_ident, type_});
+  }
 }
 
 void SemanticAnalyser::visit(Predicate &pred)
@@ -109,7 +161,27 @@ void SemanticAnalyser::visit(Program &program)
 int SemanticAnalyser::analyse()
 {
   root_->accept(*this);
-  return 0;
+
+  std::string errors = err_.str();
+  if (errors.empty()) {
+    return 0;
+  }
+  else {
+    std::cerr << errors;
+    return 1;
+  }
+}
+
+std::string SemanticAnalyser::typestr(Type t)
+{
+  switch (t)
+  {
+    case Type::none:     return "none";     break;
+    case Type::integer:  return "integer";  break;
+    case Type::quantize: return "quantize"; break;
+    case Type::count:    return "count";    break;
+    default: abort();
+  }
 }
 
 } // namespace ast

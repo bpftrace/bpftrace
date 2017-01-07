@@ -60,7 +60,7 @@ void CodegenLLVM::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
-    default: break;
+    default: abort();
   }
 }
 
@@ -71,7 +71,7 @@ void CodegenLLVM::visit(Unop &unop)
   switch (unop.op) {
     case ebpf::bpftrace::Parser::token::LNOT: expr_ = b_.CreateNot(expr_); break;
     case ebpf::bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
-    default: break;
+    default: abort();
   }
 }
 
