@@ -12,10 +12,12 @@ int main(int argc, char *argv[])
     result = driver.parse(argv[1]);
   }
 
-  if (!result) {
-    driver.dump_ast(std::cout);
-    driver.compile_bcc();
+  if (result) {
+    return result;
   }
 
-  return result;
+  driver.dump_ast(std::cout);
+  driver.compile();
+
+  return 0;
 }

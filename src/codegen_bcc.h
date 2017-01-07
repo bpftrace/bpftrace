@@ -12,6 +12,8 @@ namespace ast {
 
 class CodegenBCC : public Visitor {
 public:
+  explicit CodegenBCC(Node *root) : root_(root) { }
+
   void visit(Integer &integer) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
@@ -25,8 +27,11 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
+  int compile();
+
   std::ostringstream code;
 private:
+  Node *root_;
   std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
 };
 

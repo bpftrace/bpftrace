@@ -128,6 +128,11 @@ void CodegenBCC::visit(Program &program)
   }
 }
 
+int CodegenBCC::compile()
+{
+  root_->accept(*this);
+}
+
 } // namespace ast
 } // namespace bpftrace
 } // namespace ebpf

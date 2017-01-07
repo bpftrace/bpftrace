@@ -5,8 +5,6 @@
 #include "codegen_llvm.h"
 #include "codegen_bcc.h"
 
-#include <llvm/Support/TargetRegistry.h>
-
 namespace ebpf {
 namespace bpftrace {
 
@@ -30,46 +28,15 @@ void Driver::dump_ast(std::ostream &out)
   root_->accept(p);
 }
 
-int Driver::compile_llvm()
+int Driver::compile()
 {
-  ast::CodegenLLVM c(*module_, context_);
-  root_->accept(c);
-  module_->dump();
+  ast::CodegenLLVM llvm(root_);
+  int result_llvm = llvm.compile();
 
-  LLVMInitializeBPFTargetInfo();
-  LLVMInitializeBPFTarget();
-  LLVMInitializeBPFTargetMC();
-  LLVMInitializeBPFAsmPrinter();
-
-  std::string targetTriple = "bpf-pc-linux";
-  module_->setTargetTriple(targetTriple);
-
-  std::string error;
-  const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
-  if (!target) {
-    std::cerr << "Could not create LLVM target" << std::endl;
-    abort();
-  }
-
-  TargetOptions opt;
-  auto RM = Optional<Reloc::Model>();
-  TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
-  module_->setDataLayout(targetMachine->createDataLayout());
-
-  // TODO: Run some optimisation passes here
-
-  EngineBuilder builder(move(module_));
-  ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
-  ee_->finalizeObject();
-
-  return 0;
-}
-
-int Driver::compile_bcc()
-{
-  ast::CodegenBCC c;
-  root_->accept(c);
-  std::cout << c.code.str();
+  ast::CodegenBCC bcc(root_);
+  int result_bcc = bcc.compile();
+  std::cout << bcc.code.str();
+  return result_llvm && result_bcc;
 }
 
 } // namespace bpftrace

@@ -2,13 +2,15 @@
 #include "ast.h"
 #include "parser.tab.hh"
 
+#include <llvm/Support/TargetRegistry.h>
+
 namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
 void CodegenLLVM::visit(Integer &integer)
 {
-  expr_ = ConstantInt::get(module_.getContext(), APInt(64, integer.n)); // TODO fix bit width
+  expr_ = ConstantInt::get(module_->getContext(), APInt(64, integer.n)); // TODO fix bit width
 }
 
 void CodegenLLVM::visit(Builtin &builtin)
@@ -96,15 +98,15 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 void CodegenLLVM::visit(Predicate &pred)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *pred_false_block = BasicBlock::Create(module_.getContext(), "pred_false", parent);
-  BasicBlock *pred_true_block = BasicBlock::Create(module_.getContext(), "pred_true", parent);
+  BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(), "pred_false", parent);
+  BasicBlock *pred_true_block = BasicBlock::Create(module_->getContext(), "pred_true", parent);
 
   pred.expr->accept(*this);
   expr_ = b_.CreateICmpEQ(expr_, b_.getInt1(0), "predcond");
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
   b_.SetInsertPoint(pred_false_block);
-  b_.CreateRet(ConstantInt::get(module_.getContext(), APInt(64, 0)));
+  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 
   b_.SetInsertPoint(pred_true_block);
 }
@@ -112,8 +114,8 @@ void CodegenLLVM::visit(Predicate &pred)
 void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(), false);
-  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, &module_);
-  BasicBlock *entry = BasicBlock::Create(module_.getContext(), "entry", func);
+  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, module_.get());
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
   if (probe.pred) {
@@ -123,7 +125,7 @@ void CodegenLLVM::visit(Probe &probe)
     stmt->accept(*this);
   }
 
-  b_.CreateRet(ConstantInt::get(module_.getContext(), APInt(64, 0)));
+  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 }
 
 void CodegenLLVM::visit(Program &program)
@@ -131,6 +133,40 @@ void CodegenLLVM::visit(Program &program)
   for (Probe *probe : *program.probes) {
     probe->accept(*this);
   }
+}
+
+int CodegenLLVM::compile()
+{
+  root_->accept(*this);
+  module_->dump();
+
+  LLVMInitializeBPFTargetInfo();
+  LLVMInitializeBPFTarget();
+  LLVMInitializeBPFTargetMC();
+  LLVMInitializeBPFAsmPrinter();
+
+  std::string targetTriple = "bpf-pc-linux";
+  module_->setTargetTriple(targetTriple);
+
+  std::string error;
+  const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
+  if (!target) {
+    std::cerr << "Could not create LLVM target" << std::endl;
+    abort();
+  }
+
+  TargetOptions opt;
+  auto RM = Optional<Reloc::Model>();
+  TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
+  module_->setDataLayout(targetMachine->createDataLayout());
+
+  // TODO: Run some optimisation passes here
+
+  EngineBuilder builder(move(module_));
+  ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
+  ee_->finalizeObject();
+
+  return 0;
 }
 
 } // namespace ast

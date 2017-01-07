@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "map.h"
 
+#include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 
@@ -14,10 +15,11 @@ using namespace llvm;
 
 class CodegenLLVM : public Visitor {
 public:
-  CodegenLLVM(Module &mod, LLVMContext &context) : context_(context),
-                                               module_(mod),
-                                               b_(context_)
-                                               { }
+  explicit CodegenLLVM(Node *root) :
+    root_(root),
+    module_(std::make_unique<Module>("bpftrace", context_)),
+    b_(context_)
+    { }
 
   void visit(Integer &integer) override;
   void visit(Builtin &builtin) override;
@@ -32,9 +34,13 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
+  int compile();
+
 private:
-  LLVMContext &context_;
-  Module &module_;
+  Node *root_;
+  LLVMContext context_;
+  std::unique_ptr<Module> module_;
+  std::unique_ptr<ExecutionEngine> ee_;
   IRBuilder<> b_;
   Value *expr_ = nullptr;
   std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
