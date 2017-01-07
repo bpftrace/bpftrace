@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <sstream>
 
 #include "ast.h"
 #include "map.h"
@@ -24,6 +25,7 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
+  std::ostringstream code;
 private:
   std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
 };

@@ -1,5 +1,4 @@
-#include <istream>
-#include <ostream>
+#include <iostream>
 
 #include "driver.h"
 #include "printer.h"
@@ -70,6 +69,7 @@ int Driver::compile_bcc()
 {
   ast::CodegenBCC c;
   root_->accept(c);
+  std::cout << c.code.str();
 }
 
 } // namespace bpftrace
