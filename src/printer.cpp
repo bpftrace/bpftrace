@@ -1,6 +1,5 @@
 #include "printer.h"
 #include "ast.h"
-#include "parser.tab.hh"
 
 namespace ebpf {
 namespace bpftrace {
@@ -49,28 +48,7 @@ void Printer::visit(Map &map)
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');
-  std::string opstr;
-  switch (binop.op) {
-    case ebpf::bpftrace::Parser::token::EQ:    opstr = "=="; break;
-    case ebpf::bpftrace::Parser::token::NE:    opstr = "!="; break;
-    case ebpf::bpftrace::Parser::token::LE:    opstr = "<="; break;
-    case ebpf::bpftrace::Parser::token::GE:    opstr = ">="; break;
-    case ebpf::bpftrace::Parser::token::LT:    opstr = "<"; break;
-    case ebpf::bpftrace::Parser::token::GT:    opstr = ">"; break;
-    case ebpf::bpftrace::Parser::token::LAND:  opstr = "&&"; break;
-    case ebpf::bpftrace::Parser::token::LOR:   opstr = "||"; break;
-    case ebpf::bpftrace::Parser::token::PLUS:  opstr = "+"; break;
-    case ebpf::bpftrace::Parser::token::MINUS: opstr = "-"; break;
-    case ebpf::bpftrace::Parser::token::MUL:   opstr = "*"; break;
-    case ebpf::bpftrace::Parser::token::DIV:   opstr = "/"; break;
-    case ebpf::bpftrace::Parser::token::MOD:   opstr = "%"; break;
-    case ebpf::bpftrace::Parser::token::BAND:  opstr = "&"; break;
-    case ebpf::bpftrace::Parser::token::BOR:   opstr = "|"; break;
-    case ebpf::bpftrace::Parser::token::BXOR:  opstr = "^"; break;
-    default: abort();
-  }
-
-  out_ << indent << opstr << std::endl;
+  out_ << indent << opstr(binop) << std::endl;
 
   ++depth_;
   binop.left->accept(*this);
@@ -81,14 +59,7 @@ void Printer::visit(Binop &binop)
 void Printer::visit(Unop &unop)
 {
   std::string indent(depth_, ' ');
-  std::string opstr;
-  switch (unop.op) {
-    case ebpf::bpftrace::Parser::token::LNOT: opstr = "!"; break;
-    case ebpf::bpftrace::Parser::token::BNOT: opstr = "~"; break;
-    default: abort();
-  }
-
-  out_ << indent << opstr << std::endl;
+  out_ << indent << opstr(unop) << std::endl;
 
   ++depth_;
   unop.expr->accept(*this);

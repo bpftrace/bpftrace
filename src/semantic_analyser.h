@@ -32,6 +32,7 @@ public:
 private:
   Node *root_;
   std::ostringstream err_;
+  int pass_;
 
   enum class Type
   {

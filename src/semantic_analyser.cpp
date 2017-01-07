@@ -28,16 +28,28 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
 void SemanticAnalyser::visit(Call &call)
 {
+  int nargs = 0;
   if (call.vargs) {
+    nargs = call.vargs->size();
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
     }
   }
 
-  if (call.func == "quantize")
+  if (call.func == "quantize") {
     type_ = Type::quantize;
-  else if (call.func == "count")
+    if (nargs != 1) {
+      err_ << "quantize() should take 1 argument (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+  }
+  else if (call.func == "count") {
     type_ = Type::count;
+    if (nargs != 0) {
+      err_ << "count() should take 0 arguments (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+  }
   else {
     type_ = Type::none;
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
@@ -60,50 +72,39 @@ void SemanticAnalyser::visit(Map &map)
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: [ ";
       for (Type t : args) { err_ << typestr(t) << " "; }
-      err_ << "]" << std::endl;
-      err_ << "when map already uses the arguments: [ ";
+      err_ << "]\n\twhen map already uses the arguments: [ ";
       for (Type t : search->second) { err_ << typestr(t) << " "; }
-      err_ << "]" << std::endl;
+      err_ << "]\n" << std::endl;
     }
   }
   else {
     map_args_.insert({map.ident, args});
   }
+
+  type_ = map_val_.find(map.ident)->second;
 }
 
 void SemanticAnalyser::visit(Binop &binop)
 {
+  Type lhs, rhs;
   binop.left->accept(*this);
-  switch (binop.op) {
-    case ebpf::bpftrace::Parser::token::EQ:    break;
-    case ebpf::bpftrace::Parser::token::NE:    break;
-    case ebpf::bpftrace::Parser::token::LE:    break;
-    case ebpf::bpftrace::Parser::token::GE:    break;
-    case ebpf::bpftrace::Parser::token::LT:    break;
-    case ebpf::bpftrace::Parser::token::GT:    break;
-    case ebpf::bpftrace::Parser::token::LAND:  break;
-    case ebpf::bpftrace::Parser::token::LOR:   break;
-    case ebpf::bpftrace::Parser::token::PLUS:  break;
-    case ebpf::bpftrace::Parser::token::MINUS: break;
-    case ebpf::bpftrace::Parser::token::MUL:   break;
-    case ebpf::bpftrace::Parser::token::DIV:   break;
-    case ebpf::bpftrace::Parser::token::MOD:   break;
-    case ebpf::bpftrace::Parser::token::BAND:  break;
-    case ebpf::bpftrace::Parser::token::BOR:   break;
-    case ebpf::bpftrace::Parser::token::BXOR:  break;
-    default: abort();
-  }
+  lhs = type_;
   binop.right->accept(*this);
+  rhs = type_;
+
+  if (pass_ == 2 && lhs != rhs) {
+    err_ << "Type mismatch for '" << opstr(binop) << "': ";
+    err_ << "comparing '" << typestr(lhs) << "' ";
+    err_ << "with '" << typestr(rhs) << "'" << std::endl;
+  }
+
+  type_ = Type::integer;
 }
 
 void SemanticAnalyser::visit(Unop &unop)
 {
-  switch (unop.op) {
-    case ebpf::bpftrace::Parser::token::LNOT: break;
-    case ebpf::bpftrace::Parser::token::BNOT: break;
-    default: abort();
-  }
   unop.expr->accept(*this);
+  type_ = Type::integer;
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -122,8 +123,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign variable of type '" << typestr(type_);
-      err_ << "' when map already contains a '";
-      err_ << typestr(search->second) << "'" << std::endl;
+      err_ << "'\n\twhen map already contains a value of type '";
+      err_ << typestr(search->second) << "'\n" << std::endl;
     }
   }
   else {
@@ -143,9 +144,8 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
-      err_ << "'" << typestr(type_);
-      err_ << "' when map already contains a '";
-      err_ << typestr(search->second) << "'" << std::endl;
+      err_ << "()'\n\twhen map already contains a value of type '";
+      err_ << typestr(search->second) << "'\n" << std::endl;
     }
   }
   else {
@@ -178,16 +178,21 @@ void SemanticAnalyser::visit(Program &program)
 
 int SemanticAnalyser::analyse()
 {
-  root_->accept(*this);
+  // Two pass analysis, to handle variables being used before they are defined:
+  // - First pass checks assignments
+  // - Second pass checks expressions
+  std::string errors;
 
-  std::string errors = err_.str();
-  if (errors.empty()) {
-    return 0;
+  for (pass_ = 1; pass_ <= 2; pass_++) {
+    root_->accept(*this);
+    errors = err_.str();
+    if (!errors.empty()) {
+      std::cerr << errors;
+      return pass_;
+    }
   }
-  else {
-    std::cerr << errors;
-    return 1;
-  }
+
+  return 0;
 }
 
 std::string SemanticAnalyser::typestr(Type t)

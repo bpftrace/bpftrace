@@ -153,6 +153,9 @@ public:
   virtual void visit(Program &program) = 0;
 };
 
+std::string opstr(Binop &binop);
+std::string opstr(Unop &unop);
+
 } // namespace ast
 } // namespace bpftrace
 } // namespace ebpf
