@@ -43,7 +43,8 @@ private:
 
   std::string typestr(Type t);
   Type type_;
-  std::map<std::string, Type> map_types_;
+  std::map<std::string, Type> map_val_;
+  std::map<std::string, std::vector<Type>> map_args_;
 };
 
 } // namespace ast

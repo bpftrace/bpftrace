@@ -46,10 +46,28 @@ void SemanticAnalyser::visit(Call &call)
 
 void SemanticAnalyser::visit(Map &map)
 {
+  std::vector<Type> args;
   if (map.vargs) {
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
+      args.push_back(type_);
     }
+  }
+
+  auto search = map_args_.find(map.ident);
+  if (search != map_args_.end()) {
+    if (search->second != args) {
+      err_ << "Argument mismatch for " << map.ident << ": ";
+      err_ << "trying to access with arguments: [ ";
+      for (Type t : args) { err_ << typestr(t) << " "; }
+      err_ << "]" << std::endl;
+      err_ << "when map already uses the arguments: [ ";
+      for (Type t : search->second) { err_ << typestr(t) << " "; }
+      err_ << "]" << std::endl;
+    }
+  }
+  else {
+    map_args_.insert({map.ident, args});
   }
 }
 
@@ -99,8 +117,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = map_types_.find(map_ident);
-  if (search != map_types_.end()) {
+  auto search = map_val_.find(map_ident);
+  if (search != map_val_.end()) {
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign variable of type '" << typestr(type_);
@@ -110,7 +128,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    map_types_.insert({map_ident, type_});
+    map_val_.insert({map_ident, type_});
   }
 }
 
@@ -120,8 +138,8 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   assignment.call->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = map_types_.find(map_ident);
-  if (search != map_types_.end()) {
+  auto search = map_val_.find(map_ident);
+  if (search != map_val_.end()) {
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
@@ -132,7 +150,7 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    map_types_.insert({map_ident, type_});
+    map_val_.insert({map_ident, type_});
   }
 }
 
