@@ -2,6 +2,7 @@
 
 #include "driver.h"
 #include "printer.h"
+#include "semantic_analyser.h"
 #include "codegen_llvm.h"
 #include "codegen_bcc.h"
 
@@ -26,6 +27,12 @@ void Driver::dump_ast(std::ostream &out)
 {
   ast::Printer p = ebpf::bpftrace::ast::Printer(out);
   root_->accept(p);
+}
+
+int Driver::analyse()
+{
+  ast::SemanticAnalyser semantics(root_);
+  return semantics.analyse();
 }
 
 int Driver::compile()

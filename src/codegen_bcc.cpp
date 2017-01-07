@@ -131,6 +131,7 @@ void CodegenBCC::visit(Program &program)
 int CodegenBCC::compile()
 {
   root_->accept(*this);
+  return 0;
 }
 
 } // namespace ast

@@ -17,6 +17,12 @@ int main(int argc, char *argv[])
   }
 
   driver.dump_ast(std::cout);
+
+  result = driver.analyse();
+  if (result) {
+    return result;
+  }
+
   driver.compile();
 
   return 0;

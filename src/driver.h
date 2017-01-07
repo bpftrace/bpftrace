@@ -18,6 +18,7 @@ public:
   int parse();
   int parse(const std::string &f);
   void dump_ast(std::ostream &out);
+  int analyse();
   int compile();
 
   void error(const location &l, const std::string &m)
