@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast.h"
+#include "bpftrace.h"
 #include "map.h"
 
 #include <llvm/ExecutionEngine/MCJIT.h>
@@ -15,10 +16,11 @@ using namespace llvm;
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root) :
+  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace) :
     root_(root),
     module_(std::make_unique<Module>("bpftrace", context_)),
-    b_(context_)
+    b_(context_),
+    bpftrace_(bpftrace)
     { }
 
   void visit(Integer &integer) override;
@@ -43,7 +45,7 @@ private:
   std::unique_ptr<ExecutionEngine> ee_;
   IRBuilder<> b_;
   Value *expr_ = nullptr;
-  std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
+  BPFtrace &bpftrace_;
 };
 
 } // namespace ast

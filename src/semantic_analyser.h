@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
 #include <sstream>
 
 #include "ast.h"
+#include "bpftrace.h"
 #include "map.h"
 
 namespace ebpf {
@@ -12,7 +12,9 @@ namespace ast {
 
 class SemanticAnalyser : public Visitor {
 public:
-  explicit SemanticAnalyser(Node *root) : root_(root) { }
+  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace)
+    : root_(root),
+      bpftrace_(bpftrace) { }
 
   void visit(Integer &integer) override;
   void visit(Builtin &builtin) override;
@@ -31,21 +33,12 @@ public:
 
 private:
   Node *root_;
+  BPFtrace &bpftrace_;
   std::ostringstream err_;
   int pass_;
 
-  enum class Type
-  {
-    none,
-    integer,
-    quantize,
-    count,
-  };
-
-  std::string typestr(Type t);
+  using Type = ebpf::bpftrace::Type;
   Type type_;
-  std::map<std::string, Type> map_val_;
-  std::map<std::string, std::vector<Type>> map_args_;
 };
 
 } // namespace ast

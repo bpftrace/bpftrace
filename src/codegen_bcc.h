@@ -1,9 +1,9 @@
 #pragma once
 
-#include <memory>
 #include <sstream>
 
 #include "ast.h"
+#include "bpftrace.h"
 #include "map.h"
 
 namespace ebpf {
@@ -12,7 +12,9 @@ namespace ast {
 
 class CodegenBCC : public Visitor {
 public:
-  explicit CodegenBCC(Node *root) : root_(root) { }
+  explicit CodegenBCC(Node *root, BPFtrace &bpftrace)
+    : root_(root),
+      bpftrace_(bpftrace) { }
 
   void visit(Integer &integer) override;
   void visit(Builtin &builtin) override;
@@ -32,7 +34,7 @@ public:
   std::ostringstream code;
 private:
   Node *root_;
-  std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
+  BPFtrace &bpftrace_;
 };
 
 } // namespace ast

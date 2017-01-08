@@ -8,6 +8,8 @@ namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
+using ebpf::bpftrace::typestr;
+
 void SemanticAnalyser::visit(Integer &integer)
 {
   type_ = Type::integer;
@@ -66,8 +68,8 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
 
-  auto search = map_args_.find(map.ident);
-  if (search != map_args_.end()) {
+  auto search = bpftrace_.map_args_.find(map.ident);
+  if (search != bpftrace_.map_args_.end()) {
     if (search->second != args) {
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: [ ";
@@ -78,10 +80,10 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
   else {
-    map_args_.insert({map.ident, args});
+    bpftrace_.map_args_.insert({map.ident, args});
   }
 
-  type_ = map_val_.find(map.ident)->second;
+  type_ = bpftrace_.map_val_.find(map.ident)->second;
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -118,8 +120,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = map_val_.find(map_ident);
-  if (search != map_val_.end()) {
+  auto search = bpftrace_.map_val_.find(map_ident);
+  if (search != bpftrace_.map_val_.end()) {
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign variable of type '" << typestr(type_);
@@ -129,7 +131,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    map_val_.insert({map_ident, type_});
+    bpftrace_.map_val_.insert({map_ident, type_});
   }
 }
 
@@ -139,8 +141,8 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   assignment.call->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = map_val_.find(map_ident);
-  if (search != map_val_.end()) {
+  auto search = bpftrace_.map_val_.find(map_ident);
+  if (search != bpftrace_.map_val_.end()) {
     if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
@@ -150,7 +152,7 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    map_val_.insert({map_ident, type_});
+    bpftrace_.map_val_.insert({map_ident, type_});
   }
 }
 
@@ -193,18 +195,6 @@ int SemanticAnalyser::analyse()
   }
 
   return 0;
-}
-
-std::string SemanticAnalyser::typestr(Type t)
-{
-  switch (t)
-  {
-    case Type::none:     return "none";     break;
-    case Type::integer:  return "integer";  break;
-    case Type::quantize: return "quantize"; break;
-    case Type::count:    return "count";    break;
-    default: abort();
-  }
 }
 
 } // namespace ast

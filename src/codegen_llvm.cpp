@@ -26,10 +26,10 @@ void CodegenLLVM::visit(Call &call)
 void CodegenLLVM::visit(Map &map)
 {
   int mapfd;
-  if (maps_.find(map.ident) == maps_.end()) {
-    maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
+  if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
   }
-  mapfd = maps_[map.ident]->mapfd_;
+  mapfd = bpftrace_.maps_[map.ident]->mapfd_;
   expr_ = b_.getInt64(mapfd);
 
 //   CALL(BPF_FUNC_map_lookup_elem)

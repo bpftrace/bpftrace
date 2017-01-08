@@ -1,10 +1,10 @@
 #include <iostream>
 
+#include "codegen_bcc.h"
+#include "codegen_llvm.h"
 #include "driver.h"
 #include "printer.h"
 #include "semantic_analyser.h"
-#include "codegen_llvm.h"
-#include "codegen_bcc.h"
 
 namespace ebpf {
 namespace bpftrace {
@@ -31,16 +31,16 @@ void Driver::dump_ast(std::ostream &out)
 
 int Driver::analyse()
 {
-  ast::SemanticAnalyser semantics(root_);
+  ast::SemanticAnalyser semantics(root_, bpftrace_);
   return semantics.analyse();
 }
 
 int Driver::compile()
 {
-  ast::CodegenLLVM llvm(root_);
+  ast::CodegenLLVM llvm(root_, bpftrace_);
   int result_llvm = llvm.compile();
 
-  ast::CodegenBCC bcc(root_);
+  ast::CodegenBCC bcc(root_, bpftrace_);
   int result_bcc = bcc.compile();
   std::cout << bcc.code.str();
   return result_llvm && result_bcc;

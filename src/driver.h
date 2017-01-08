@@ -1,7 +1,8 @@
 #pragma once
 
-#include "parser.tab.hh"
 #include "ast.h"
+#include "bpftrace.h"
+#include "parser.tab.hh"
 
 #define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
 YY_DECL;
@@ -35,6 +36,7 @@ public:
 
 private:
   Parser parser_;
+  BPFtrace bpftrace_;
 };
 
 } // namespace bpftrace
