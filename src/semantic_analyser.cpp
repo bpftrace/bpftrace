@@ -10,7 +10,7 @@ namespace ast {
 
 using ebpf::bpftrace::typestr;
 
-void SemanticAnalyser::visit(Integer &integer)
+void SemanticAnalyser::visit(Integer &)
 {
   type_ = Type::integer;
 }
@@ -30,7 +30,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
 void SemanticAnalyser::visit(Call &call)
 {
-  int nargs = 0;
+  std::vector<Expression*>::size_type nargs = 0;
   if (call.vargs) {
     nargs = call.vargs->size();
     for (Expression *expr : *call.vargs) {
