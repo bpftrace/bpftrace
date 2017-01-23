@@ -30,9 +30,38 @@ void CodegenLLVM::visit(Map &map)
     bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
   }
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
-  expr_ = b_.getInt64(mapfd);
 
-//   CALL(BPF_FUNC_map_lookup_elem)
+  // void *map_lookup_elem(&map, &key)
+
+  std::vector<llvm::Type *> lookup_args_type = {
+    b_.getInt8PtrTy(0),
+    b_.getInt8PtrTy(0)};
+  FunctionType *lookup_func_type = FunctionType::get(
+      b_.getInt8PtrTy(0),
+      lookup_args_type,
+      false);
+  PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
+
+  std::vector<Value *> args = {
+    // &map
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(mapfd),
+        b_.getInt8PtrTy(0)),
+    // &key
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(0),
+        b_.getInt8PtrTy(0))
+  };
+  Constant *lookup_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      b_.getInt64(1),
+      lookup_func_ptr_type);
+  CallInst *call = b_.CreateCall(lookup_func, args);
+
+  // TODO check if result == 0 first
+  expr_ = b_.CreateLoad(b_.getInt64Ty(), call);
 }
 
 void CodegenLLVM::visit(Binop &binop)
@@ -82,13 +111,56 @@ void CodegenLLVM::visit(ExprStatement &expr)
 
 void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
-  Value *map, *val;
-  assignment.map->accept(*this);
-  map = expr_;
-  assignment.expr->accept(*this);
-  val = expr_;
+  Map &map = *assignment.map;
+  int mapfd;
+  if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
+  }
+  mapfd = bpftrace_.maps_[map.ident]->mapfd_;
 
-//   CALL(BPF_FUNC_map_update_elem)
+  assignment.expr->accept(*this);
+  Value *val = expr_;
+
+  // int map_update_elem(&map, &key, &value, flags)
+
+  std::vector<llvm::Type *> update_args_type = {
+    b_.getInt8PtrTy(0),
+    b_.getInt8PtrTy(0),
+    b_.getInt8PtrTy(0),
+    b_.getInt64Ty()};
+  FunctionType *update_func_type = FunctionType::get(
+      b_.getInt64Ty(),
+      update_args_type,
+      false);
+  PointerType *update_func_ptr_type = PointerType::get(update_func_type, 0);
+
+  std::vector<Value *> args = {
+    // &map
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(mapfd),
+        b_.getInt8PtrTy(0)),
+    // &key
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(0),
+        b_.getInt8PtrTy(0)),
+    // &value
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(0),
+        b_.getInt8PtrTy(0)),
+    // flags
+    ConstantExpr::getCast(
+        Instruction::IntToPtr,
+        b_.getInt64(0),
+        b_.getInt64Ty())
+  };
+  Constant *update_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      b_.getInt64(2),
+      update_func_ptr_type);
+  CallInst *call = b_.CreateCall(update_func, args);
 }
 
 void CodegenLLVM::visit(AssignMapCallStatement &assignment)
@@ -98,11 +170,20 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 void CodegenLLVM::visit(Predicate &pred)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(), "pred_false", parent);
-  BasicBlock *pred_true_block = BasicBlock::Create(module_->getContext(), "pred_true", parent);
+  BasicBlock *pred_false_block = BasicBlock::Create(
+      module_->getContext(),
+      "pred_false",
+      parent);
+  BasicBlock *pred_true_block = BasicBlock::Create(
+      module_->getContext(),
+      "pred_true",
+      parent);
 
   pred.expr->accept(*this);
-  expr_ = b_.CreateICmpEQ(expr_, b_.getInt1(0), "predcond");
+  expr_ = b_.CreateICmpEQ(
+      b_.CreateIntCast(expr_, b_.getInt64Ty(), true),
+      b_.getInt64(0),
+      "predcond");
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
   b_.SetInsertPoint(pred_false_block);
@@ -138,7 +219,6 @@ void CodegenLLVM::visit(Program &program)
 int CodegenLLVM::compile()
 {
   root_->accept(*this);
-  module_->dump();
 
   LLVMInitializeBPFTargetInfo();
   LLVMInitializeBPFTarget();
@@ -161,6 +241,8 @@ int CodegenLLVM::compile()
   module_->setDataLayout(targetMachine->createDataLayout());
 
   // TODO: Run some optimisation passes here
+
+  module_->dump();
 
   EngineBuilder builder(move(module_));
   ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
