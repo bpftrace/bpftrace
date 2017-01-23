@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "codegen_bcc.h"
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "printer.h"
@@ -38,12 +37,7 @@ int Driver::analyse()
 int Driver::compile()
 {
   ast::CodegenLLVM llvm(root_, bpftrace_);
-  int result_llvm = llvm.compile();
-
-  ast::CodegenBCC bcc(root_, bpftrace_);
-  int result_bcc = bcc.compile();
-  std::cout << bcc.code.str();
-  return result_llvm && result_bcc;
+  return llvm.compile();
 }
 
 } // namespace bpftrace

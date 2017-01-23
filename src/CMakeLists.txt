@@ -30,7 +30,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp codegen_llvm.cpp codegen_bcc.cpp map.cpp semantic_analyser.cpp bpftrace.cpp)
+add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp codegen_llvm.cpp map.cpp semantic_analyser.cpp bpftrace.cpp)
 
 llvm_map_components_to_libnames(llvm_libs irreader bpfcodegen mcjit)
 target_link_libraries(bpftrace ${llvm_libs})
