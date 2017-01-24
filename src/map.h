@@ -12,7 +12,6 @@ public:
   ~Map();
 
   int mapfd_;
-  static int n;
 };
 
 } // namespace bpftrace
