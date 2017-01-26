@@ -38,10 +38,12 @@ target_link_libraries(bpftrace ${llvm_libs})
 include(ExternalProject)
 ExternalProject_Add(bcc
   GIT_REPOSITORY https://github.com/iovisor/bcc
-  STEP_TARGETS build
+  STEP_TARGETS build update
   EXCLUDE_FROM_ALL 1
+  UPDATE_DISCONNECTED 1
 )
 add_dependencies(bpftrace bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 include_directories(${source_dir}/src/cc)
-target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.so)
+target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.a)
+target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc-loader-static.a)
