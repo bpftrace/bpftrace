@@ -68,7 +68,7 @@ int BPFtrace::add_probe(ast::Probe &p)
 int BPFtrace::attach_kprobe(Probe &probe)
 {
   std::string event;
-  std::string event_desc;
+  bpf_probe_attach_type attach_type;
   int pid = -1;
   int cpu = 0;
   int group_fd = -1;
@@ -78,27 +78,18 @@ int BPFtrace::attach_kprobe(Probe &probe)
   switch (probe.type) {
     case ProbeType::kprobe:
       event =  "p_" + probe.attach_point;
+      attach_type = BPF_PROBE_ENTRY;
       break;
     case ProbeType::kretprobe:
       event =  "r_" + probe.attach_point;
+      attach_type = BPF_PROBE_RETURN;
       break;
     default:
       abort();
   }
 
-  switch (probe.type) {
-    case ProbeType::kprobe:
-      event_desc =  "p:kprobes/" + event + " " + probe.attach_point;
-      break;
-    case ProbeType::kretprobe:
-      event_desc =  "r:kprobes/" + event + " " + probe.attach_point;
-      break;
-    default:
-      abort();
-  }
-
-  bpf_attach_kprobe(probe.progfd, event.c_str(), event_desc.c_str(),
-      pid, cpu, group_fd, cb, cb_cookie);
+  bpf_attach_kprobe(probe.progfd, attach_type, event.c_str(),
+      probe.attach_point.c_str(), pid, cpu, group_fd, cb, cb_cookie);
 }
 
 } // namespace bpftrace
