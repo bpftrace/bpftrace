@@ -1,29 +1,40 @@
 #include <iostream>
+#include "bpftrace.h"
+#include "codegen_llvm.h"
 #include "driver.h"
+#include "printer.h"
+#include "semantic_analyser.h"
+
+using namespace ebpf::bpftrace;
 
 int main(int argc, char *argv[])
 {
   int result;
-  ebpf::bpftrace::Driver driver;
-  if (argc == 1) {
+  Driver driver;
+  if (argc == 1)
     result = driver.parse();
-  }
-  else {
+  else
     result = driver.parse(argv[1]);
-  }
 
-  if (result) {
+  if (result)
     return result;
-  }
 
-  driver.dump_ast(std::cout);
+  BPFtrace bpftrace;
 
-  result = driver.analyse();
-  if (result) {
+  ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
+  driver.root_->accept(p);
+
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  result = semantics.analyse();
+  if (result)
     return result;
-  }
 
-  driver.compile();
+  ast::CodegenLLVM llvm(driver.root_, bpftrace);
+  result = llvm.compile();
+  if (result)
+    return result;
+
+  bpftrace.attach_probes();
 
   return 0;
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ast.h"
-#include "bpftrace.h"
 #include "parser.tab.hh"
 
 #define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
@@ -18,9 +17,6 @@ public:
 
   int parse();
   int parse(const std::string &f);
-  void dump_ast(std::ostream &out);
-  int analyse();
-  int compile();
 
   void error(const location &l, const std::string &m)
   {
@@ -36,7 +32,6 @@ public:
 
 private:
   Parser parser_;
-  BPFtrace bpftrace_;
 };
 
 } // namespace bpftrace
