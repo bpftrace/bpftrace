@@ -169,6 +169,10 @@ void SemanticAnalyser::visit(Probe &probe)
   for (Statement *stmt : *probe.stmts) {
     stmt->accept(*this);
   }
+
+  if (bpftrace_.add_probe(probe)) {
+    err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
+  }
 }
 
 void SemanticAnalyser::visit(Program &program)
