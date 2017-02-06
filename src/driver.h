@@ -6,8 +6,6 @@
 #define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
 YY_DECL;
 
-extern FILE *yyin;
-
 namespace ebpf {
 namespace bpftrace {
 
@@ -15,8 +13,9 @@ class Driver {
 public:
   Driver() : parser_(*this) { }
 
-  int parse();
-  int parse(const std::string &f);
+  int parse_stdin();
+  int parse_str(const std::string &script);
+  int parse_file(const std::string &f);
 
   void error(const location &l, const std::string &m)
   {

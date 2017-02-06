@@ -1,4 +1,5 @@
 #include <iostream>
+#include <unistd.h>
 #include "bpftrace.h"
 #include "codegen_llvm.h"
 #include "driver.h"
@@ -7,14 +8,54 @@
 
 using namespace ebpf::bpftrace;
 
+void usage()
+{
+  std::cerr << "Usage:" << std::endl;
+  std::cerr << "  bpftrace filename" << std::endl;
+  std::cerr << "  bpftrace -e 'script'" << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
   int result;
   Driver driver;
-  if (argc == 1)
-    result = driver.parse();
+
+  std::string script;
+  int c;
+  while ((c = getopt(argc, argv, "e:")) != -1)
+  {
+    switch (c)
+    {
+      case 'e':
+        script = optarg;
+        break;
+      default:
+        usage();
+        return 1;
+    }
+  }
+
+  if (script.empty())
+  {
+    // There should only be 1 non-option argument (the script file)
+    if (optind != argc-1)
+    {
+      usage();
+      return 1;
+    }
+    char *file_name = argv[optind];
+    result = driver.parse_file(file_name);
+  }
   else
-    result = driver.parse(argv[1]);
+  {
+    // Script is provided as a command line argument
+    if (optind != argc)
+    {
+      usage();
+      return 1;
+    }
+    result = driver.parse_str(script);
+  }
 
   if (result)
     return result;
