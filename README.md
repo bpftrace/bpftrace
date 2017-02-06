@@ -50,6 +50,8 @@ git clone https://github.com/ajor/bpftrace
 cd bpftrace
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug ../src
+cmake -DCMAKE_BUILD_TYPE=Debug ../
 make
 ```
+
+The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the commands `make bcc-update` and `make gtest-update` can be run.
