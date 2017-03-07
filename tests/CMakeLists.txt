@@ -12,6 +12,7 @@ ExternalProject_Add(gtest
   STEP_TARGETS build update
   EXCLUDE_FROM_ALL 1
   UPDATE_DISCONNECTED 1
+  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target gtest_main
 )
 add_dependencies(bpftrace_test gtest-build)
 ExternalProject_Get_Property(gtest source_dir binary_dir)
