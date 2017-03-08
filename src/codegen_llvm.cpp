@@ -236,7 +236,7 @@ int CodegenLLVM::compile()
   }
 
   TargetOptions opt;
-  auto RM = Optional<Reloc::Model>();
+  auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
 

@@ -36,22 +36,28 @@ The following builtin functions are also available:
 
 # Building
 
-## Requirements
+The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the commands `make bcc-update` and `make gtest-update` can be run.
+
+## Using Docker
+
+`./build.sh`
+
+## Standard build process
+
+### Requirements
+
 - A C++ compiler
 - CMake
 - Flex
 - Bison
-- LLVM
+- LLVM development packages
 
-## Compilation
+### Compilation
 Compile using CMake, optionally substituting "Release" for "Debug" as CMAKE\_BUILD\_TYPE:
 ```
 git clone https://github.com/ajor/bpftrace
-cd bpftrace
-mkdir build
-cd build
+mkdir -p bpftrace/build
+cd bpftrace/build
 cmake -DCMAKE_BUILD_TYPE=Debug ../
 make
 ```
-
-The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the commands `make bcc-update` and `make gtest-update` can be run.
