@@ -17,7 +17,7 @@ void usage()
 
 int main(int argc, char *argv[])
 {
-  int result;
+  int err;
   Driver driver;
 
   std::string script;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
       return 1;
     }
     char *file_name = argv[optind];
-    result = driver.parse_file(file_name);
+    err = driver.parse_file(file_name);
   }
   else
   {
@@ -54,11 +54,11 @@ int main(int argc, char *argv[])
       usage();
       return 1;
     }
-    result = driver.parse_str(script);
+    err = driver.parse_str(script);
   }
 
-  if (result)
-    return result;
+  if (err)
+    return err;
 
   BPFtrace bpftrace;
 
@@ -66,16 +66,23 @@ int main(int argc, char *argv[])
   driver.root_->accept(p);
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
-  result = semantics.analyse();
-  if (result)
-    return result;
+  err = semantics.analyse();
+  if (err)
+    return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  result = llvm.compile();
-  if (result)
-    return result;
+  err = llvm.compile();
+  if (err)
+    return err;
 
-  bpftrace.attach_probes();
+  err = bpftrace.attach_probes();
+  if (err)
+    goto cleanup;
+
+  // TODO wait here while script is running
+
+cleanup:
+  bpftrace.detach_probes();
 
   return 0;
 }

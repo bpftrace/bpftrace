@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "bpftrace.h"
-#include "libbpf.h"
 
 namespace ebpf {
 namespace bpftrace {
@@ -30,8 +29,8 @@ std::string typestr(ProbeType t)
 
 int BPFtrace::attach_probes()
 {
-  int err = 0;
   for (Probe &probe : probes_) {
+    int err = 0;
     if (probe.type == ProbeType::kprobe ||
         probe.type == ProbeType::kretprobe) {
       err = attach_kprobe(probe);
@@ -42,6 +41,31 @@ int BPFtrace::attach_probes()
 
     if (err) {
       std::cerr << "Error attaching probe: " << typestr(probe.type) << ":" << probe.attach_point << std::endl;
+      return err;
+    }
+
+    probe.attached = true;
+  }
+  return 0;
+}
+
+int BPFtrace::detach_probes()
+{
+  for (Probe &probe : probes_) {
+    if (!probe.attached)
+      continue;
+
+    int err = 0;
+    if (probe.type == ProbeType::kprobe ||
+        probe.type == ProbeType::kretprobe) {
+      err = bpf_detach_kprobe(eventname(probe).c_str());
+    }
+    else {
+      abort();
+    }
+
+    if (err) {
+      std::cerr << "Error detaching probe: " << typestr(probe.type) << ":" << probe.attach_point << std::endl;
       return err;
     }
   }
@@ -67,29 +91,51 @@ int BPFtrace::add_probe(ast::Probe &p)
 
 int BPFtrace::attach_kprobe(Probe &probe)
 {
-  std::string event;
-  bpf_probe_attach_type attach_type;
   int pid = -1;
   int cpu = 0;
   int group_fd = -1;
   perf_reader_cb cb = nullptr;
   void *cb_cookie = nullptr;
 
+  void *result = bpf_attach_kprobe(probe.progfd, attachtype(probe),
+      eventname(probe).c_str(), probe.attach_point.c_str(),
+      pid, cpu, group_fd, cb, cb_cookie);
+
+  if (result == nullptr)
+    return 1;
+  return 0;
+}
+
+std::string BPFtrace::eventname(Probe &probe)
+{
+  std::string event;
   switch (probe.type) {
     case ProbeType::kprobe:
       event =  "p_" + probe.attach_point;
-      attach_type = BPF_PROBE_ENTRY;
       break;
     case ProbeType::kretprobe:
       event =  "r_" + probe.attach_point;
+      break;
+    default:
+      abort();
+  }
+  return event;
+}
+
+bpf_probe_attach_type BPFtrace::attachtype(Probe &probe)
+{
+  bpf_probe_attach_type attach_type;
+  switch (probe.type) {
+    case ProbeType::kprobe:
+      attach_type = BPF_PROBE_ENTRY;
+      break;
+    case ProbeType::kretprobe:
       attach_type = BPF_PROBE_RETURN;
       break;
     default:
       abort();
   }
-
-  bpf_attach_kprobe(probe.progfd, attach_type, event.c_str(),
-      probe.attach_point.c_str(), pid, cpu, group_fd, cb, cb_cookie);
+  return attach_type;
 }
 
 } // namespace bpftrace

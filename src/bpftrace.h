@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "libbpf.h"
 #include "ast.h"
 #include "map.h"
 
@@ -33,12 +34,14 @@ public:
   ProbeType type;
   std::string attach_point;
   int progfd;
+  bool attached = false;
 };
 
 class BPFtrace
 {
 public:
   int attach_probes();
+  int detach_probes();
   int add_probe(ast::Probe &p);
 
   std::map<std::string, Type> map_val_;
@@ -49,6 +52,9 @@ private:
   std::vector<Probe> probes_;
 
   int attach_kprobe(Probe &probe);
+
+  static std::string eventname(Probe &probe);
+  static bpf_probe_attach_type attachtype(Probe &probe);
 };
 
 } // namespace bpftrace
