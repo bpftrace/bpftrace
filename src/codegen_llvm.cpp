@@ -2,6 +2,7 @@
 #include "ast.h"
 #include "parser.tab.hh"
 
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/TargetRegistry.h>
 
 namespace ebpf {
@@ -196,6 +197,7 @@ void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(b_.getInt64Ty(), false);
   Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, module_.get());
+  func->setSection(probe.name);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -215,6 +217,29 @@ void CodegenLLVM::visit(Program &program)
     probe->accept(*this);
   }
 }
+
+class BPFtraceMemoryManager : public SectionMemoryManager
+{
+public:
+  explicit BPFtraceMemoryManager(std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections)
+    : sections_(sections) { }
+  uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName) override
+  {
+    uint8_t *addr = SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID, SectionName);
+    sections_[SectionName.str()] = {addr, Size};
+    return addr;
+  }
+
+  uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName, bool isReadOnly) override
+  {
+    uint8_t *addr = SectionMemoryManager::allocateDataSection(Size, Alignment, SectionID, SectionName, isReadOnly);
+    sections_[SectionName.str()] = {addr, Size};
+    return addr;
+  }
+
+private:
+  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
+};
 
 int CodegenLLVM::compile()
 {
@@ -245,6 +270,7 @@ int CodegenLLVM::compile()
   module_->dump();
 
   EngineBuilder builder(move(module_));
+  builder.setMCJITMemoryManager(std::make_unique<BPFtraceMemoryManager>(bpftrace_.sections_));
   ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
   ee_->finalizeObject();
 

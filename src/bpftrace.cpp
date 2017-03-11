@@ -31,12 +31,14 @@ int BPFtrace::attach_probes()
 {
   for (Probe &probe : probes_) {
     int err = 0;
-    if (probe.type == ProbeType::kprobe ||
-        probe.type == ProbeType::kretprobe) {
-      err = attach_kprobe(probe);
-    }
-    else {
-      abort();
+    switch (probe.type)
+    {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+        err = attach_kprobe(probe);
+        break;
+      default:
+        abort();
     }
 
     if (err) {
@@ -51,25 +53,28 @@ int BPFtrace::attach_probes()
 
 int BPFtrace::detach_probes()
 {
+  int result = 0;
   for (Probe &probe : probes_) {
     if (!probe.attached)
       continue;
 
     int err = 0;
-    if (probe.type == ProbeType::kprobe ||
-        probe.type == ProbeType::kretprobe) {
-      err = bpf_detach_kprobe(eventname(probe).c_str());
-    }
-    else {
-      abort();
+    switch (probe.type)
+    {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+        err = bpf_detach_kprobe(eventname(probe).c_str());
+        break;
+      default:
+        abort();
     }
 
     if (err) {
       std::cerr << "Error detaching probe: " << typestr(probe.type) << ":" << probe.attach_point << std::endl;
-      return err;
+      result = err;
     }
   }
-  return 0;
+  return result;
 }
 
 int BPFtrace::add_probe(ast::Probe &p)

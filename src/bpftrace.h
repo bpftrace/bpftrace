@@ -47,6 +47,7 @@ public:
   std::map<std::string, Type> map_val_;
   std::map<std::string, std::vector<Type>> map_args_;
   std::map<std::string, std::unique_ptr<ebpf::bpftrace::Map>> maps_;
+  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
 
 private:
   std::vector<Probe> probes_;
