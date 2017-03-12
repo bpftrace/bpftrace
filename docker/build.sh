@@ -1,6 +1,6 @@
 set -e
-cd /bpftrace
-mkdir -p build-docker
-cd build-docker
+DIR="$1/build-docker"
+mkdir -p "$DIR"
+cd "$DIR"
 cmake -DCMAKE_BUILD_TYPE=Debug ../
 make
