@@ -17,16 +17,6 @@ std::string typestr(Type t)
   }
 }
 
-std::string typestr(ProbeType t)
-{
-  switch (t)
-  {
-    case ProbeType::kprobe:    return "kprobe";    break;
-    case ProbeType::kretprobe: return "kretprobe"; break;
-    default: abort();
-  }
-}
-
 bpf_probe_attach_type attachtype(ProbeType t)
 {
   switch (t)
