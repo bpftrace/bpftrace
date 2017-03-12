@@ -27,12 +27,15 @@ enum class ProbeType
 
 std::string typestr(Type t);
 std::string typestr(ProbeType t);
+bpf_probe_attach_type attachtype(ProbeType t);
+bpf_prog_type progtype(ProbeType t);
 
 class Probe
 {
 public:
   ProbeType type;
   std::string attach_point;
+  std::string name;
   int progfd;
   bool attached = false;
 };
@@ -40,6 +43,7 @@ public:
 class BPFtrace
 {
 public:
+  int load_progs();
   int attach_probes();
   int detach_probes();
   int add_probe(ast::Probe &p);
@@ -55,7 +59,6 @@ private:
   int attach_kprobe(Probe &probe);
 
   static std::string eventname(Probe &probe);
-  static bpf_probe_attach_type attachtype(Probe &probe);
 };
 
 } // namespace bpftrace

@@ -75,6 +75,10 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
+  err = bpftrace.load_progs();
+  if (err)
+    goto cleanup;
+
   err = bpftrace.attach_probes();
   if (err)
     goto cleanup;

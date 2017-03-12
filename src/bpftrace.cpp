@@ -27,9 +27,57 @@ std::string typestr(ProbeType t)
   }
 }
 
+bpf_probe_attach_type attachtype(ProbeType t)
+{
+  switch (t)
+  {
+    case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
+    case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
+    default: abort();
+  }
+}
+
+bpf_prog_type progtype(ProbeType t)
+{
+  switch (t)
+  {
+    case ProbeType::kprobe:    return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::kretprobe: return BPF_PROG_TYPE_KPROBE; break;
+    default: abort();
+  }
+}
+
+int BPFtrace::load_progs()
+{
+  for (Probe &probe : probes_)
+  {
+    auto func = sections_.find(probe.name);
+    if (func == sections_.end())
+      return -1;
+
+    uint8_t *insns = std::get<0>(func->second);
+    int prog_len = std::get<1>(func->second);
+    const char *license = "mylicencehere";
+    unsigned kern_version = (4 << 16) | (10 << 8) | 1;
+    char *log_buf = nullptr;
+    unsigned log_buf_size = 0;
+    probe.progfd = bpf_prog_load(progtype(probe.type),
+        reinterpret_cast<struct bpf_insn*>(insns), prog_len,
+        license, kern_version, log_buf, log_buf_size);
+
+    if (probe.progfd < 0)
+    {
+      std::cerr << "Error loading program: " << probe.name << std::endl;
+      return probe.progfd;
+    }
+  }
+  return 0;
+}
+
 int BPFtrace::attach_probes()
 {
-  for (Probe &probe : probes_) {
+  for (Probe &probe : probes_)
+  {
     int err = 0;
     switch (probe.type)
     {
@@ -41,12 +89,13 @@ int BPFtrace::attach_probes()
         abort();
     }
 
-    if (err) {
-      std::cerr << "Error attaching probe: " << typestr(probe.type) << ":" << probe.attach_point << std::endl;
+    probe.attached = true;
+
+    if (err)
+    {
+      std::cerr << "Error attaching probe: " << probe.name << std::endl;
       return err;
     }
-
-    probe.attached = true;
   }
   return 0;
 }
@@ -54,7 +103,8 @@ int BPFtrace::attach_probes()
 int BPFtrace::detach_probes()
 {
   int result = 0;
-  for (Probe &probe : probes_) {
+  for (Probe &probe : probes_)
+  {
     if (!probe.attached)
       continue;
 
@@ -69,8 +119,9 @@ int BPFtrace::detach_probes()
         abort();
     }
 
-    if (err) {
-      std::cerr << "Error detaching probe: " << typestr(probe.type) << ":" << probe.attach_point << std::endl;
+    if (err)
+    {
+      std::cerr << "Error detaching probe: " << probe.name << std::endl;
       result = err;
     }
   }
@@ -81,15 +132,13 @@ int BPFtrace::add_probe(ast::Probe &p)
 {
   Probe probe;
   probe.attach_point = p.attach_point;
-  if (p.type == "kprobe") {
+  probe.name = p.name;
+  if (p.type == "kprobe")
     probe.type = ProbeType::kprobe;
-  }
-  else if (p.type == "kretprobe") {
+  else if (p.type == "kretprobe")
     probe.type = ProbeType::kretprobe;
-  }
-  else {
+  else
     return -1;
-  }
   probes_.push_back(probe);
   return 0;
 }
@@ -102,19 +151,20 @@ int BPFtrace::attach_kprobe(Probe &probe)
   perf_reader_cb cb = nullptr;
   void *cb_cookie = nullptr;
 
-  void *result = bpf_attach_kprobe(probe.progfd, attachtype(probe),
+  void *result = bpf_attach_kprobe(probe.progfd, attachtype(probe.type),
       eventname(probe).c_str(), probe.attach_point.c_str(),
       pid, cpu, group_fd, cb, cb_cookie);
 
   if (result == nullptr)
-    return 1;
+    return -1;
   return 0;
 }
 
 std::string BPFtrace::eventname(Probe &probe)
 {
   std::string event;
-  switch (probe.type) {
+  switch (probe.type)
+  {
     case ProbeType::kprobe:
       event =  "p_" + probe.attach_point;
       break;
@@ -125,22 +175,6 @@ std::string BPFtrace::eventname(Probe &probe)
       abort();
   }
   return event;
-}
-
-bpf_probe_attach_type BPFtrace::attachtype(Probe &probe)
-{
-  bpf_probe_attach_type attach_type;
-  switch (probe.type) {
-    case ProbeType::kprobe:
-      attach_type = BPF_PROBE_ENTRY;
-      break;
-    case ProbeType::kretprobe:
-      attach_type = BPF_PROBE_RETURN;
-      break;
-    default:
-      abort();
-  }
-  return attach_type;
 }
 
 } // namespace bpftrace
