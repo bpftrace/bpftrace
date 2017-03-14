@@ -21,11 +21,15 @@ int main(int argc, char *argv[])
   Driver driver;
 
   std::string script;
+  bool debug = false;
   int c;
-  while ((c = getopt(argc, argv, "e:")) != -1)
+  while ((c = getopt(argc, argv, "de:")) != -1)
   {
     switch (c)
     {
+      case 'd':
+        debug = true;
+        break;
       case 'e':
         script = optarg;
         break;
@@ -62,8 +66,11 @@ int main(int argc, char *argv[])
 
   BPFtrace bpftrace;
 
-  ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
-  driver.root_->accept(p);
+  if (debug)
+  {
+    ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
+    driver.root_->accept(p);
+  }
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   err = semantics.analyse();
@@ -71,9 +78,12 @@ int main(int argc, char *argv[])
     return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  err = llvm.compile();
+  err = llvm.compile(debug);
   if (err)
     return err;
+
+  if (debug)
+    return 0;
 
   err = bpftrace.load_progs();
   if (err)

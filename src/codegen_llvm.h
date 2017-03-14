@@ -36,7 +36,7 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 
-  int compile();
+  int compile(bool debug=false);
 
 private:
   Node *root_;

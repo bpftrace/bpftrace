@@ -210,7 +210,7 @@ private:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
 };
 
-int CodegenLLVM::compile()
+int CodegenLLVM::compile(bool debug)
 {
   // Declare external LLVM function
   FunctionType *pseudo_func_type = FunctionType::get(
@@ -247,7 +247,8 @@ int CodegenLLVM::compile()
 
   // TODO: Run some optimisation passes here
 
-  module_->dump();
+  if (debug)
+    module_->dump();
 
   EngineBuilder builder(move(module_));
   builder.setMCJITMemoryManager(std::make_unique<BPFtraceMemoryManager>(bpftrace_.sections_));
