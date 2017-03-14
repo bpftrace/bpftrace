@@ -32,34 +32,23 @@ void CodegenLLVM::visit(Map &map)
   }
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
 
-  // void *map_lookup_elem(&map, &key)
+  Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
+  Value *map_ptr = b_.CreateCall(pseudo_func,
+        {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
+  Value *key = b_.CreateAlloca(b_.getInt8PtrTy());
+  b_.CreateStore(b_.getInt64(0), key); // TODO variable key
 
-  std::vector<llvm::Type *> lookup_args_type = {
-    b_.getInt8PtrTy(0),
-    b_.getInt8PtrTy(0)};
+  // void *map_lookup_elem(&map, &key)
   FunctionType *lookup_func_type = FunctionType::get(
-      b_.getInt8PtrTy(0),
-      lookup_args_type,
+      b_.getInt8PtrTy(),
+      {b_.getInt8PtrTy(), b_.getInt8PtrTy()},
       false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
-
-  std::vector<Value *> args = {
-    // &map
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(mapfd),
-        b_.getInt8PtrTy(0)),
-    // &key
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(0),
-        b_.getInt8PtrTy(0))
-  };
   Constant *lookup_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
-      b_.getInt64(1),
+      b_.getInt64(BPF_MAP_LOOKUP_ELEM),
       lookup_func_ptr_type);
-  CallInst *call = b_.CreateCall(lookup_func, args);
+  CallInst *call = b_.CreateCall(lookup_func, {map_ptr, key});
 
   // TODO check if result == 0 first
   expr_ = b_.CreateLoad(b_.getInt64Ty(), call);
@@ -119,49 +108,29 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   }
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
 
+  Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
+  Value *map_ptr = b_.CreateCall(pseudo_func,
+        {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
+  Value *key = b_.CreateAlloca(b_.getInt8PtrTy());
+  Value *val = b_.CreateAlloca(b_.getInt8PtrTy());
+  Value *flags = b_.CreateAlloca(b_.getInt8PtrTy());
+
+  b_.CreateStore(b_.getInt64(0), key); // TODO variable key
   assignment.expr->accept(*this);
-  Value *val = expr_;
+  b_.CreateStore(expr_, val);
+  b_.CreateStore(b_.getInt64(0), flags); // TODO set flags
 
   // int map_update_elem(&map, &key, &value, flags)
-
-  std::vector<llvm::Type *> update_args_type = {
-    b_.getInt8PtrTy(0),
-    b_.getInt8PtrTy(0),
-    b_.getInt8PtrTy(0),
-    b_.getInt64Ty()};
   FunctionType *update_func_type = FunctionType::get(
       b_.getInt64Ty(),
-      update_args_type,
+      {b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt64Ty()},
       false);
   PointerType *update_func_ptr_type = PointerType::get(update_func_type, 0);
-
-  std::vector<Value *> args = {
-    // &map
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(mapfd),
-        b_.getInt8PtrTy(0)),
-    // &key
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(0),
-        b_.getInt8PtrTy(0)),
-    // &value
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(0),
-        b_.getInt8PtrTy(0)),
-    // flags
-    ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(0),
-        b_.getInt64Ty())
-  };
   Constant *update_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
-      b_.getInt64(2),
+      b_.getInt64(BPF_MAP_UPDATE_ELEM),
       update_func_ptr_type);
-  CallInst *call = b_.CreateCall(update_func, args);
+  CallInst *call = b_.CreateCall(update_func, {map_ptr, key, val, flags});
 }
 
 void CodegenLLVM::visit(AssignMapCallStatement &assignment)
@@ -243,6 +212,17 @@ private:
 
 int CodegenLLVM::compile()
 {
+  // Declare external LLVM function
+  FunctionType *pseudo_func_type = FunctionType::get(
+      b_.getInt64Ty(),
+      {b_.getInt64Ty(), b_.getInt64Ty()},
+      false);
+  Function::Create(
+      pseudo_func_type,
+      GlobalValue::ExternalLinkage,
+      "llvm.bpf.pseudo",
+      module_.get());
+
   root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();

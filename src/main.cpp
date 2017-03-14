@@ -77,15 +77,15 @@ int main(int argc, char *argv[])
 
   err = bpftrace.load_progs();
   if (err)
-    goto cleanup;
+    return err;
 
   err = bpftrace.attach_probes();
   if (err)
-    goto cleanup;
+    goto detach_probes;
 
   // TODO wait here while script is running
 
-cleanup:
+detach_probes:
   bpftrace.detach_probes();
 
   return 0;
