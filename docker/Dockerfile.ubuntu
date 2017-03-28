@@ -1,22 +1,17 @@
-FROM ubuntu
+FROM ubuntu:rolling
 RUN apt-get update && apt-get install -y \
     bison \
     cmake \
     flex \
     g++ \
     git \
+    libclang-3.9-dev \
     libelf-dev \
-    llvm-dev \
+    llvm-3.9-dev \
     zlib1g-dev
 
-# Fix Ubuntu LLVM CMake bug (https://github.com/iovisor/bcc/issues/492)
-RUN apt-get install -y llvm-3.8-dev libclang-3.8-dev && \
-    mkdir -p /usr/lib/llvm-3.8/share/llvm && \
-    ln -s /usr/share/llvm-3.8/cmake /usr/lib/llvm-3.8/share/llvm/cmake && \
-    sed -i -e '/get_filename_component(LLVM_INSTALL_PREFIX/ {s|^|#|}' -e '/^# Compute the installation prefix/i set(LLVM_INSTALL_PREFIX "/usr/lib/llvm-3.8")' /usr/lib/llvm-3.8/share/llvm/cmake/LLVMConfig.cmake && \
-    sed -i '/_IMPORT_CHECK_TARGETS Polly/ {s|^|#|}' /usr/lib/llvm-3.8/share/llvm/cmake/LLVMExports-relwithdebinfo.cmake && \
-    sed -i '/_IMPORT_CHECK_TARGETS sancov/ {s|^|#|}' /usr/lib/llvm-3.8/share/llvm/cmake/LLVMExports-relwithdebinfo.cmake && \
-    ln -s /usr/lib/x86_64-linux-gnu/libLLVM-3.8.so.1 /usr/lib/llvm-3.8/lib/
+# Fix Ubuntu 16.10 LLVM CMake symlink
+RUN rm /usr/lib/llvm-3.9/cmake && ln -s /usr/lib/llvm-3.9/lib/cmake/llvm/ /usr/lib/llvm-3.9/cmake
 
 COPY build.sh /build.sh
 ENTRYPOINT ["bash", "/build.sh"]

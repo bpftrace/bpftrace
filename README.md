@@ -1,6 +1,6 @@
 # BPFtrace
 
-BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) to compile scripts to BPF-bytecode and many helper functions are included from [BCC](https://github.com/iovisor/bcc).
+BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and links to [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
 
 BPFtrace's scripting language is inspired by [ply](https://github.com/iovisor/ply) and DTrace.
 
@@ -50,7 +50,7 @@ The latest versions of BCC and Google Test will be downloaded on the first build
 - CMake
 - Flex
 - Bison
-- LLVM development packages
+- LLVM 3.9 development packages
 
 ### Compilation
 Compile using CMake, optionally substituting "Release" for "Debug" as CMAKE\_BUILD\_TYPE:
