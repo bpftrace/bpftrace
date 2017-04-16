@@ -8,10 +8,11 @@ namespace bpftrace {
 
 class Map {
 public:
-  Map();
+  explicit Map(std::string &);
   ~Map();
 
   int mapfd_;
+  std::string name_;
 };
 
 } // namespace bpftrace

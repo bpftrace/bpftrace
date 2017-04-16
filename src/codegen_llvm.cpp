@@ -28,7 +28,7 @@ void CodegenLLVM::visit(Map &map)
 {
   int mapfd;
   if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
-    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident);
   }
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
 
@@ -104,7 +104,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Map &map = *assignment.map;
   int mapfd;
   if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
-    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>();
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident);
   }
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
 
