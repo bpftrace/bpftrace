@@ -37,6 +37,7 @@ public:
   void visit(Program &program) override;
 
   int compile(bool debug=false);
+  AllocaInst *createAllocaBPF(llvm::Type *ty, const std::string &name="") const;
 
 private:
   Node *root_;

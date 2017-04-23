@@ -35,7 +35,7 @@ void CodegenLLVM::visit(Map &map)
   Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
   Value *map_ptr = b_.CreateCall(pseudo_func,
         {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
-  Value *key = b_.CreateAlloca(b_.getInt8PtrTy());
+  AllocaInst *key = createAllocaBPF(b_.getInt8PtrTy());
   b_.CreateStore(b_.getInt64(0), key); // TODO variable key
 
   // void *map_lookup_elem(&map, &key)
@@ -111,9 +111,9 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
   Value *map_ptr = b_.CreateCall(pseudo_func,
         {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
-  Value *key = b_.CreateAlloca(b_.getInt8PtrTy());
-  Value *val = b_.CreateAlloca(b_.getInt8PtrTy());
-  Value *flags = b_.CreateAlloca(b_.getInt8PtrTy());
+  AllocaInst *key = createAllocaBPF(b_.getInt8PtrTy());
+  AllocaInst *val = createAllocaBPF(b_.getInt8PtrTy());
+  AllocaInst *flags = createAllocaBPF(b_.getInt8PtrTy());
 
   b_.CreateStore(b_.getInt64(0), key); // TODO variable key
   assignment.expr->accept(*this);
@@ -237,6 +237,7 @@ int CodegenLLVM::compile(bool debug)
   const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
   if (!target) {
     std::cerr << "Could not create LLVM target" << std::endl;
+    std::cerr << error << std::endl;
     abort();
   }
 
@@ -256,6 +257,13 @@ int CodegenLLVM::compile(bool debug)
   ee_->finalizeObject();
 
   return 0;
+}
+
+AllocaInst *CodegenLLVM::createAllocaBPF(llvm::Type *ty, const std::string &name) const
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  Instruction *first_instr = &parent->getEntryBlock().front();
+  return new AllocaInst(ty, "", first_instr);
 }
 
 } // namespace ast
