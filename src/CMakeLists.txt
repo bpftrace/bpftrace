@@ -13,7 +13,7 @@ add_definitions(${LLVM_DEFINITIONS})
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp codegen_llvm.cpp map.cpp semantic_analyser.cpp bpftrace.cpp)
 
-llvm_map_components_to_libnames(llvm_libs irreader bpfcodegen mcjit)
+llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
 target_link_libraries(bpftrace ${llvm_libs})
 
 include(ExternalProject)

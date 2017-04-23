@@ -4,6 +4,8 @@
 
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 namespace ebpf {
 namespace bpftrace {
@@ -246,7 +248,11 @@ int CodegenLLVM::compile(bool debug)
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
 
-  // TODO: Run some optimisation passes here
+  legacy::PassManager PM;
+  PassManagerBuilder PMB;
+  PMB.OptLevel = 3;
+  PMB.populateModulePassManager(PM);
+  PM.run(*module_.get());
 
   if (debug)
     module_->dump();
