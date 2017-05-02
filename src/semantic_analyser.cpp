@@ -170,7 +170,7 @@ void SemanticAnalyser::visit(Probe &probe)
     stmt->accept(*this);
   }
 
-  if (bpftrace_.add_probe(probe)) {
+  if (pass_ == 2 && bpftrace_.add_probe(probe)) {
     err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
   }
 }

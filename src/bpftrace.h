@@ -42,10 +42,11 @@ public:
 class BPFtrace
 {
 public:
+  virtual ~BPFtrace() { }
   int load_progs();
   int attach_probes();
   int detach_probes();
-  int add_probe(ast::Probe &p);
+  virtual int add_probe(ast::Probe &p);
 
   std::map<std::string, Type> map_val_;
   std::map<std::string, std::vector<Type>> map_args_;

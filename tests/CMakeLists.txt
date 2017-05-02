@@ -2,7 +2,24 @@ add_compile_options("-Wno-undef")
 add_compile_options("-Wno-switch-default")
 add_compile_options("-Wno-switch-enum")
 
-add_executable(bpftrace_test parser.cpp)
+include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR}/src)
+
+add_executable(bpftrace_test
+  main.cpp
+  #  parser.cpp
+  semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast.cpp
+  ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
+  ${CMAKE_SOURCE_DIR}/src/map.cpp
+  ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp
+)
+
+add_dependencies(bpftrace_test bcc-build)
+ExternalProject_Get_Property(bcc source_dir binary_dir)
+include_directories(${source_dir}/src/cc)
+target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
+target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
 
 find_package(Threads REQUIRED)
 
@@ -12,13 +29,14 @@ ExternalProject_Add(gtest
   STEP_TARGETS build update
   EXCLUDE_FROM_ALL 1
   UPDATE_DISCONNECTED 1
-  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target gtest_main
 )
 add_dependencies(bpftrace_test gtest-build)
 ExternalProject_Get_Property(gtest source_dir binary_dir)
 include_directories(${source_dir}/googletest/include)
+include_directories(${source_dir}/googlemock/include)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
+target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
 target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(NAME bpftrace_test COMMAND bpftrace_test)

@@ -19,5 +19,14 @@ add_compile_options("-Wdisabled-optimization")
 
 enable_testing()
 
+include(ExternalProject)
+ExternalProject_Add(bcc
+  GIT_REPOSITORY https://github.com/iovisor/bcc
+  STEP_TARGETS build update
+  EXCLUDE_FROM_ALL 1
+  UPDATE_DISCONNECTED 1
+  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
+)
+
 add_subdirectory(src)
 add_subdirectory(tests)

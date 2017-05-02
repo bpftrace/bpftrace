@@ -16,14 +16,6 @@ add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp prin
 llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
 target_link_libraries(bpftrace ${llvm_libs})
 
-include(ExternalProject)
-ExternalProject_Add(bcc
-  GIT_REPOSITORY https://github.com/iovisor/bcc
-  STEP_TARGETS build update
-  EXCLUDE_FROM_ALL 1
-  UPDATE_DISCONNECTED 1
-  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-)
 add_dependencies(bpftrace bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 include_directories(${source_dir}/src/cc)
