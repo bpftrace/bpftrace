@@ -3,18 +3,17 @@
 #include "bpftrace.h"
 #include "semantic_analyser.h"
 
-using ::testing::_;
-using ebpf::bpftrace::ast::ExprStatement;
-using ebpf::bpftrace::ast::Integer;
-using ebpf::bpftrace::ast::Probe;
-using ebpf::bpftrace::ast::ProbeList;
-using ebpf::bpftrace::ast::Program;
-using ebpf::bpftrace::ast::StatementList;
+namespace ebpf {
+namespace bpftrace {
 
-class MockBPFtrace : public ebpf::bpftrace::BPFtrace {
+class MockBPFtrace : public BPFtrace {
 public:
-  MOCK_METHOD1(add_probe, int(Probe &p));
+  MOCK_METHOD1(add_probe, int(ast::Probe &p));
 };
+
+namespace ast {
+
+using ::testing::_;
 
 TEST(semantic_analyser, probe_count)
 {
@@ -32,3 +31,7 @@ TEST(semantic_analyser, probe_count)
   ebpf::bpftrace::ast::SemanticAnalyser semantics(&root, bpftrace);
   semantics.analyse();
 }
+
+} // namespace ast
+} // namespace bpftrace
+} // namespace ebpf

@@ -85,18 +85,11 @@ int main(int argc, char *argv[])
   if (debug)
     return 0;
 
-  err = bpftrace.load_progs();
+  err = bpftrace.run();
   if (err)
     return err;
 
-  err = bpftrace.attach_probes();
-  if (err)
-    goto detach_probes;
-
-  // TODO wait here while script is running
-
-detach_probes:
-  bpftrace.detach_probes();
+  // TODO print results
 
   return 0;
 }

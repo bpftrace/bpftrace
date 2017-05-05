@@ -10,6 +10,8 @@ class Map {
 public:
   explicit Map(std::string &);
   ~Map();
+  Map(const Map &) = delete;
+  Map& operator=(const Map &) = delete;
 
   int mapfd_;
   std::string name_;

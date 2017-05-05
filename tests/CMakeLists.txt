@@ -10,6 +10,7 @@ add_executable(bpftrace_test
   #  parser.cpp
   semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/ast.cpp
+  ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp

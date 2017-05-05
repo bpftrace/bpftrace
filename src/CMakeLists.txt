@@ -11,7 +11,19 @@ include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 set(CMAKE_EXE_LINKER_FLAGS "-static")
-add_executable(bpftrace main.cpp driver.cpp parser.tab.cc lex.yy.cc ast.cpp printer.cpp codegen_llvm.cpp map.cpp semantic_analyser.cpp bpftrace.cpp)
+add_executable(bpftrace
+  ast.cpp
+  attached_probe.cpp
+  bpftrace.cpp
+  codegen_llvm.cpp
+  driver.cpp
+  lex.yy.cc
+  main.cpp
+  map.cpp
+  parser.tab.cc
+  printer.cpp
+  semantic_analyser.cpp
+)
 
 llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
 target_link_libraries(bpftrace ${llvm_libs})

@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "bpftrace.h"
+#include "attached_probe.h"
 
 namespace ebpf {
 namespace bpftrace {
@@ -37,87 +38,6 @@ bpf_prog_type progtype(ProbeType t)
   }
 }
 
-int BPFtrace::load_progs()
-{
-  for (Probe &probe : probes_)
-  {
-    auto func = sections_.find(probe.name);
-    if (func == sections_.end())
-      return -1;
-
-    uint8_t *insns = std::get<0>(func->second);
-    int prog_len = std::get<1>(func->second);
-    const char *license = "mylicencehere";
-    unsigned kern_version = (4 << 16) | (10 << 8) | 1;
-    char *log_buf = nullptr;
-    unsigned log_buf_size = 0;
-    probe.progfd = bpf_prog_load(progtype(probe.type),
-        reinterpret_cast<struct bpf_insn*>(insns), prog_len,
-        license, kern_version, log_buf, log_buf_size);
-
-    if (probe.progfd < 0)
-    {
-      std::cerr << "Error loading program: " << probe.name << std::endl;
-      return probe.progfd;
-    }
-  }
-  return 0;
-}
-
-int BPFtrace::attach_probes()
-{
-  for (Probe &probe : probes_)
-  {
-    int err = 0;
-    switch (probe.type)
-    {
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-        err = attach_kprobe(probe);
-        break;
-      default:
-        abort();
-    }
-
-    probe.attached = true;
-
-    if (err)
-    {
-      std::cerr << "Error attaching probe: " << probe.name << std::endl;
-      return err;
-    }
-  }
-  return 0;
-}
-
-int BPFtrace::detach_probes()
-{
-  int result = 0;
-  for (Probe &probe : probes_)
-  {
-    if (!probe.attached)
-      continue;
-
-    int err = 0;
-    switch (probe.type)
-    {
-      case ProbeType::kprobe:
-      case ProbeType::kretprobe:
-        err = bpf_detach_kprobe(eventname(probe).c_str());
-        break;
-      default:
-        abort();
-    }
-
-    if (err)
-    {
-      std::cerr << "Error detaching probe: " << probe.name << std::endl;
-      result = err;
-    }
-  }
-  return result;
-}
-
 int BPFtrace::add_probe(ast::Probe &p)
 {
   Probe probe;
@@ -133,38 +53,24 @@ int BPFtrace::add_probe(ast::Probe &p)
   return 0;
 }
 
-int BPFtrace::attach_kprobe(Probe &probe)
+int BPFtrace::run()
 {
-  int pid = -1;
-  int cpu = 0;
-  int group_fd = -1;
-  perf_reader_cb cb = nullptr;
-  void *cb_cookie = nullptr;
-
-  void *result = bpf_attach_kprobe(probe.progfd, attachtype(probe.type),
-      eventname(probe).c_str(), probe.attach_point.c_str(),
-      pid, cpu, group_fd, cb, cb_cookie);
-
-  if (result == nullptr)
-    return -1;
-  return 0;
-}
-
-std::string BPFtrace::eventname(Probe &probe)
-{
-  std::string event;
-  switch (probe.type)
+  std::vector<std::unique_ptr<AttachedProbe>> attached_probes;
+  for (Probe &probe : probes_)
   {
-    case ProbeType::kprobe:
-      event =  "p_" + probe.attach_point;
-      break;
-    case ProbeType::kretprobe:
-      event =  "r_" + probe.attach_point;
-      break;
-    default:
-      abort();
+    auto func = sections_.find(probe.name);
+    if (func == sections_.end())
+    {
+      std::cerr << "Code not generated for probe: " << probe.name << std::endl;
+      return -1;
+    }
+    attached_probes.push_back(std::make_unique<AttachedProbe>(probe, func->second));
   }
-  return event;
+
+  // TODO wait here while script is running
+  getchar();
+
+  return 0;
 }
 
 } // namespace bpftrace
