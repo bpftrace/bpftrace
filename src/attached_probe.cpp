@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sys/utsname.h>
 #include <unistd.h>
 
 #include "attached_probe.h"
@@ -58,14 +59,24 @@ const char *AttachedProbe::eventname() const
   return event.c_str();
 }
 
+static unsigned kernel_version()
+{
+  struct utsname utsname;
+  uname(&utsname);
+  unsigned x, y, z;
+  sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
+  return (x << 16) + (y << 8) + z;
+}
+
 void AttachedProbe::load_prog()
 {
   uint8_t *insns = std::get<0>(func_);
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
-  unsigned kern_version = (4 << 16) | (10 << 8) | 13;
+  unsigned kern_version = kernel_version();
   char *log_buf = nullptr;
   unsigned log_buf_size = 0;
+
   progfd_ = bpf_prog_load(progtype(probe_.type),
       reinterpret_cast<struct bpf_insn*>(insns), prog_len,
       license, kern_version, log_buf, log_buf_size);
