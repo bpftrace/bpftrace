@@ -64,7 +64,15 @@ int BPFtrace::run()
       std::cerr << "Code not generated for probe: " << probe.name << std::endl;
       return -1;
     }
-    attached_probes.push_back(std::make_unique<AttachedProbe>(probe, func->second));
+    try
+    {
+      attached_probes.push_back(std::make_unique<AttachedProbe>(probe, func->second));
+    }
+    catch (std::runtime_error e)
+    {
+      std::cerr << e.what() << std::endl;
+      return -1;
+    }
   }
 
   // TODO wait here while script is running
