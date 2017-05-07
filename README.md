@@ -1,8 +1,6 @@
 # BPFtrace
 
-BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and links to [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
-
-BPFtrace's scripting language is inspired by [ply](https://github.com/iovisor/ply) and DTrace.
+BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
 
 ## Examples
 
@@ -36,13 +34,27 @@ The following builtin functions are also available:
 
 # Building
 
-The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the commands `make bcc-update` and `make gtest-update` can be run.
-
 ## Using Docker
+
+Building BPFtrace inside a Docker container is the recommended method:
 
 `./build.sh`
 
-## Standard build process
+There are some more fine-grained options if you find yourself building BPFtrace a lot:
+- `./build-docker.sh` - builds just the `bpftrace-builder` Docker image
+- `./build-debug.sh` - builds BPFtrace with debugging information
+- `./build-release.sh` - builds BPFtrace in a release configuration
+
+`./build.sh` is equivalent to `./build-docker.sh && ./build-release.sh`
+
+These build scripts pass on any command line arguments to `make` internally. This means specific targets can be built individually, e.g.:
+- `./build.sh bpftrace` - build only the targets required for the bpftrace executable
+- `./build.sh bcc-update` - update the copy of BCC used to build BPFtrace
+- `./build.sh gtest-update` - update the copy of Google Test used to build the BPFtrace tests
+
+The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the targets `bcc-update` and `gtest-update` can be built as shown above.
+
+## Native build process
 
 ### Requirements
 
@@ -53,7 +65,6 @@ The latest versions of BCC and Google Test will be downloaded on the first build
 - LLVM 3.9 development packages
 
 ### Compilation
-Compile using CMake, optionally substituting "Release" for "Debug" as CMAKE\_BUILD\_TYPE:
 ```
 git clone https://github.com/ajor/bpftrace
 mkdir -p bpftrace/build
