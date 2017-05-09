@@ -81,5 +81,21 @@ int BPFtrace::run()
   return 0;
 }
 
+int BPFtrace::print_maps()
+{
+  for(auto &mapmap : maps_)
+  {
+    Map &map = *mapmap.second.get();
+    uint64_t key = 0;
+    uint64_t next_key = 99;
+    uint64_t value;
+    int ret;
+    ret = bpf_get_next_key(map.mapfd_, &key, &next_key);
+    std::cout << ret << map.name_ << ":" << key << ":" << next_key << std::endl;
+    ret = bpf_lookup_elem(map.mapfd_, &key, &value);
+    std::cout << ret << map.name_ << ":" << key << ":" << value << std::endl;
+  }
+}
+
 } // namespace bpftrace
 } // namespace ebpf

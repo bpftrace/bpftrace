@@ -43,6 +43,7 @@ public:
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
   int run();
+  int print_maps();
 
   std::map<std::string, Type> map_val_;
   std::map<std::string, std::vector<Type>> map_args_;

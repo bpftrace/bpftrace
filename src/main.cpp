@@ -89,7 +89,9 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  // TODO print results
+  err = bpftrace.print_maps();
+  if (err)
+    return err;
 
   return 0;
 }

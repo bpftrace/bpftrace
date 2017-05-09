@@ -26,8 +26,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
 
 AttachedProbe::~AttachedProbe()
 {
-  perf_reader_free(perf_reader_);
   close(progfd_);
+  perf_reader_free(perf_reader_);
   int err = 0;
   switch (probe_.type)
   {

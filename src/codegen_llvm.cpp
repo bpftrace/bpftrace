@@ -113,14 +113,13 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
   Value *map_ptr = b_.CreateCall(pseudo_func,
         {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
-  AllocaInst *key = createAllocaBPF(b_.getInt8PtrTy());
-  AllocaInst *val = createAllocaBPF(b_.getInt8PtrTy());
-  AllocaInst *flags = createAllocaBPF(b_.getInt8PtrTy());
+  AllocaInst *key = createAllocaBPF(b_.getInt64Ty());
+  AllocaInst *val = createAllocaBPF(b_.getInt64Ty());
+  Value *flags = b_.getInt64(0);
 
   b_.CreateStore(b_.getInt64(0), key); // TODO variable key
   assignment.expr->accept(*this);
   b_.CreateStore(expr_, val);
-  b_.CreateStore(b_.getInt64(0), flags); // TODO set flags
 
   // int map_update_elem(&map, &key, &value, flags)
   FunctionType *update_func_type = FunctionType::get(
