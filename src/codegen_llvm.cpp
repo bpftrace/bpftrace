@@ -37,7 +37,7 @@ void CodegenLLVM::visit(Map &map)
   Function *pseudo_func = module_->getFunction("llvm.bpf.pseudo");
   Value *map_ptr = b_.CreateCall(pseudo_func,
         {b_.getInt64(BPF_PSEUDO_MAP_FD), b_.getInt64(mapfd)});
-  AllocaInst *key = createAllocaBPF(b_.getInt8PtrTy());
+  AllocaInst *key = createAllocaBPF(b_.getInt64Ty());
   b_.CreateStore(b_.getInt64(0), key); // TODO variable key
 
   // void *map_lookup_elem(&map, &key)
@@ -52,8 +52,27 @@ void CodegenLLVM::visit(Map &map)
       lookup_func_ptr_type);
   CallInst *call = b_.CreateCall(lookup_func, {map_ptr, key});
 
-  // TODO check if result == 0 first
-  expr_ = b_.CreateLoad(b_.getInt64Ty(), call);
+  // Check if result == 0
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(), "lookup_success", parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(), "lookup_failure", parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(), "lookup_merge", parent);
+
+  Value *value = createAllocaBPF(b_.getInt64Ty());
+  Value *condition = b_.CreateICmpNE(
+      b_.CreateIntCast(call, b_.getInt8PtrTy(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()),
+      "map_lookup_cond");
+  b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+  b_.SetInsertPoint(lookup_success_block);
+  Value *loaded_value = b_.CreateLoad(b_.getInt64Ty(), call);
+  b_.CreateStore(loaded_value, value);
+  b_.CreateBr(lookup_merge_block);
+  b_.SetInsertPoint(lookup_failure_block);
+  b_.CreateStore(b_.getInt64(0), value);
+  b_.CreateBr(lookup_merge_block);
+  b_.SetInsertPoint(lookup_merge_block);
+  expr_ = b_.CreateLoad(value);
 }
 
 void CodegenLLVM::visit(Binop &binop)
@@ -71,8 +90,8 @@ void CodegenLLVM::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LAND:  break;//expr_ = b_.CreateAnd(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LOR:   break;//expr_ = b_.CreateOR(lhs, rhs); break;
+    case ebpf::bpftrace::Parser::token::LAND:  break;//expr_ = b_.CreateAnd(lhs, rhs); break; TODO
+    case ebpf::bpftrace::Parser::token::LOR:   break;//expr_ = b_.CreateOR(lhs, rhs); break; TODO
     case ebpf::bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
@@ -151,6 +170,7 @@ void CodegenLLVM::visit(Predicate &pred)
       parent);
 
   pred.expr->accept(*this);
+
   expr_ = b_.CreateICmpEQ(
       b_.CreateIntCast(expr_, b_.getInt64Ty(), true),
       b_.getInt64(0),
