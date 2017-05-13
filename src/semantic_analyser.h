@@ -12,9 +12,10 @@ namespace ast {
 
 class SemanticAnalyser : public Visitor {
 public:
-  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace)
+  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, std::ostream &out = std::cerr)
     : root_(root),
-      bpftrace_(bpftrace) { }
+      bpftrace_(bpftrace),
+      out_(out) { }
 
   void visit(Integer &integer) override;
   void visit(Builtin &builtin) override;
@@ -34,11 +35,15 @@ public:
 private:
   Node *root_;
   BPFtrace &bpftrace_;
+  std::ostream &out_;
   std::ostringstream err_;
   int pass_;
+  const int num_passes_ = 10;
 
   using Type = ebpf::bpftrace::Type;
   Type type_;
+
+  bool is_final_pass() const;
 };
 
 } // namespace ast

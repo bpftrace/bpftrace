@@ -83,7 +83,16 @@ void SemanticAnalyser::visit(Map &map)
     bpftrace_.map_args_.insert({map.ident, args});
   }
 
-  type_ = bpftrace_.map_val_.find(map.ident)->second;
+  auto search_val = bpftrace_.map_val_.find(map.ident);
+  if (search_val != bpftrace_.map_val_.end()) {
+    type_ = search_val->second;
+  }
+  else {
+    if (is_final_pass()) {
+      err_ << "Undefined map: " << map.ident << std::endl;
+    }
+    type_ = Type::none;
+  }
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -94,7 +103,7 @@ void SemanticAnalyser::visit(Binop &binop)
   binop.right->accept(*this);
   rhs = type_;
 
-  if (pass_ == 2 && lhs != rhs) {
+  if (is_final_pass() && lhs != rhs) {
     err_ << "Type mismatch for '" << opstr(binop) << "': ";
     err_ << "comparing '" << typestr(lhs) << "' ";
     err_ << "with '" << typestr(rhs) << "'" << std::endl;
@@ -122,9 +131,17 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   std::string map_ident = assignment.map->ident;
   auto search = bpftrace_.map_val_.find(map_ident);
   if (search != bpftrace_.map_val_.end()) {
-    if (search->second != type_) {
+    if (search->second == Type::none) {
+      if (is_final_pass()) {
+        err_ << "Undefined map: " << map_ident << std::endl;
+      }
+      else {
+        search->second = type_;
+      }
+    }
+    else if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
-      err_ << "trying to assign variable of type '" << typestr(type_);
+      err_ << "trying to assign value of type '" << typestr(type_);
       err_ << "'\n\twhen map already contains a value of type '";
       err_ << typestr(search->second) << "'\n" << std::endl;
     }
@@ -143,7 +160,15 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   std::string map_ident = assignment.map->ident;
   auto search = bpftrace_.map_val_.find(map_ident);
   if (search != bpftrace_.map_val_.end()) {
-    if (search->second != type_) {
+    if (search->second == Type::none) {
+      if (is_final_pass()) {
+        err_ << "Undefined map: " << map_ident << std::endl;
+      }
+      else {
+        search->second = type_;
+      }
+    }
+    else if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
       err_ << "()'\n\twhen map already contains a value of type '";
@@ -170,7 +195,7 @@ void SemanticAnalyser::visit(Probe &probe)
     stmt->accept(*this);
   }
 
-  if (pass_ == 2 && bpftrace_.add_probe(probe)) {
+  if (is_final_pass() && bpftrace_.add_probe(probe)) {
     err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
   }
 }
@@ -184,21 +209,24 @@ void SemanticAnalyser::visit(Program &program)
 
 int SemanticAnalyser::analyse()
 {
-  // Two pass analysis, to handle variables being used before they are defined:
-  // - First pass checks assignments
-  // - Second pass checks expressions
+  // Multiple passes to handle variables being used before they are defined
   std::string errors;
 
-  for (pass_ = 1; pass_ <= 2; pass_++) {
+  for (pass_ = 1; pass_ <= num_passes_; pass_++) {
     root_->accept(*this);
     errors = err_.str();
     if (!errors.empty()) {
-      std::cerr << errors;
+      out_ << errors;
       return pass_;
     }
   }
 
   return 0;
+}
+
+bool SemanticAnalyser::is_final_pass() const
+{
+  return pass_ == num_passes_;
 }
 
 } // namespace ast
