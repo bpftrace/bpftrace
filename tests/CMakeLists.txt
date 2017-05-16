@@ -19,8 +19,9 @@ add_executable(bpftrace_test
 add_dependencies(bpftrace_test bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 include_directories(${source_dir}/src/cc)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
+target_link_libraries(bpftrace_test /usr/lib/x86_64-linux-gnu/libelf.a)
+target_link_libraries(bpftrace_test /usr/lib/x86_64-linux-gnu/libz.a)
 
 find_package(Threads REQUIRED)
 

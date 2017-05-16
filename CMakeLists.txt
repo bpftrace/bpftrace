@@ -25,7 +25,7 @@ ExternalProject_Add(bcc
   STEP_TARGETS build update
   EXCLUDE_FROM_ALL 1
   UPDATE_DISCONNECTED 1
-  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
+  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-loader-static
 )
 
 add_subdirectory(src)
