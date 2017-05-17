@@ -54,7 +54,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
 void CodegenLLVM::visit(Call &call)
 {
-  expr_ = b_.getInt64(0);
+  abort();
 }
 
 void CodegenLLVM::visit(Map &map)
@@ -124,6 +124,22 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 
 void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 {
+  Map &map = *assignment.map;
+  Call &call = *assignment.call;
+
+  if (call.func == "count")
+  {
+    AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty());
+    b_.CreateStore(b_.getInt64(0), key); // TODO variable key
+    Value *oldval = b_.CreateMapLookupElem(map, key);
+    AllocaInst *newval = b_.CreateAllocaBPF(b_.getInt64Ty());
+    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+    b_.CreateMapUpdateElem(map, key, newval);
+  }
+  else
+  {
+    abort();
+  }
 }
 
 void CodegenLLVM::visit(Predicate &pred)
