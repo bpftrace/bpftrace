@@ -4,7 +4,7 @@ BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for
 
 ## Examples
 
-BPFtrace is a work in progress and can not currently run scripts. The examples below are to give an idea of what the final result should be.
+BPFtrace is a work in progress and not all the features shown are currently available. The examples below are to give an idea of what the final result should be.
 
 To produce a histogram of amount of time spent in the `read()` system call:
 ```
@@ -24,11 +24,13 @@ kretprobe:sys_read / @start[tid] /
 The list of available builtins will grow as more features are added.
 
 The following builtin variables are available for use in BPFtrace scripts:
-- `pid` - Process ID
-- `tid` - Thread ID
-- `nsecs` - Get a nanosecond timestamp
+- `pid` - Process ID (kernel tgid)
+- `tid` - Thread ID (kernel pid)
+- `uid` - User ID
+- `gid` - Group ID
+- `nsecs` - Nanosecond timestamp
 
-The following builtin functions are also available:
+The following builtin functions will also be available in the future:
 - `quantize()`
 - `count()`
 

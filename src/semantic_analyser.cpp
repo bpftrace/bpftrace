@@ -19,7 +19,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs" ||
       builtin.ident == "pid" ||
-      builtin.ident == "tid") {
+      builtin.ident == "tid" ||
+      builtin.ident == "uid" ||
+      builtin.ident == "gid") {
     type_ = Type::integer;
   }
   else {

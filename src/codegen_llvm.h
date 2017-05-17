@@ -47,6 +47,37 @@ private:
   IRBuilder<> b_;
   Value *expr_ = nullptr;
   BPFtrace &bpftrace_;
+
+  enum bpf_func_id {
+    BPF_FUNC_unspec,
+    BPF_FUNC_map_lookup_elem,
+    BPF_FUNC_map_update_elem,
+    BPF_FUNC_map_delete_elem,
+    BPF_FUNC_probe_read,
+    BPF_FUNC_ktime_get_ns,
+    BPF_FUNC_trace_printk,
+    BPF_FUNC_get_prandom_u32,
+    BPF_FUNC_get_smp_processor_id,
+    BPF_FUNC_skb_store_bytes,
+    BPF_FUNC_l3_csum_replace,
+    BPF_FUNC_l4_csum_replace,
+    BPF_FUNC_tail_call,
+    BPF_FUNC_clone_redirect,
+    BPF_FUNC_get_current_pid_tgid,
+    BPF_FUNC_get_current_uid_gid,
+    BPF_FUNC_get_current_comm,
+    BPF_FUNC_get_cgroup_classid,
+    BPF_FUNC_skb_vlan_push,
+    BPF_FUNC_skb_vlan_pop,
+    BPF_FUNC_skb_get_tunnel_key,
+    BPF_FUNC_skb_set_tunnel_key,
+    BPF_FUNC_perf_event_read,
+    BPF_FUNC_redirect,
+    BPF_FUNC_get_route_realm,
+    BPF_FUNC_perf_event_output,
+    BPF_FUNC_skb_load_bytes,
+    BPF_FUNC_get_stackid,
+  };
 };
 
 } // namespace ast
