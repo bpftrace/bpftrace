@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "bpftrace.h"
+#include "irbuilderbpf.h"
 #include "map.h"
 
 #include <llvm/ExecutionEngine/MCJIT.h>
@@ -19,7 +20,7 @@ public:
   explicit CodegenLLVM(Node *root, BPFtrace &bpftrace) :
     root_(root),
     module_(std::make_unique<Module>("bpftrace", context_)),
-    b_(context_),
+    b_(context_, *module_.get(), bpftrace),
     bpftrace_(bpftrace)
     { }
 
@@ -44,7 +45,7 @@ private:
   LLVMContext context_;
   std::unique_ptr<Module> module_;
   std::unique_ptr<ExecutionEngine> ee_;
-  IRBuilder<> b_;
+  IRBuilderBPF b_;
   Value *expr_ = nullptr;
   BPFtrace &bpftrace_;
 

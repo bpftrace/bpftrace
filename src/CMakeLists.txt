@@ -17,6 +17,7 @@ add_executable(bpftrace
   bpftrace.cpp
   codegen_llvm.cpp
   driver.cpp
+  irbuilderbpf.cpp
   lex.yy.cc
   main.cpp
   map.cpp
