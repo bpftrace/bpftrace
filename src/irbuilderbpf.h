@@ -21,7 +21,10 @@ public:
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="") const;
   Value *CreateBpfPseudoCall(Map &map);
   Value *CreateMapLookupElem(Map &map, Value *key);
-  void CreateMapUpdateElem(Map &map, Value *key, Value *val);
+  void   CreateMapUpdateElem(Map &map, Value *key, Value *val);
+  Value *CreateGetNs();
+  Value *CreateGetPidTgid();
+  Value *CreateGetUidGid();
 
 private:
   Module &module_;

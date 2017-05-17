@@ -106,6 +106,46 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, Value *key, Value *val)
   CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags});
 }
 
+Value *IRBuilderBPF::CreateGetNs()
+{
+  // u64 ktime_get_ns()
+  // Return: current ktime
+  FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *gettime_func_ptr_type = PointerType::get(gettime_func_type, 0);
+  Constant *gettime_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_ktime_get_ns),
+      gettime_func_ptr_type);
+  return CreateCall(gettime_func);
+}
+
+Value *IRBuilderBPF::CreateGetPidTgid()
+{
+  // u64 bpf_get_current_pid_tgid(void)
+  // Return: current->tgid << 32 | current->pid
+  FunctionType *getpidtgid_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getpidtgid_func_ptr_type = PointerType::get(getpidtgid_func_type, 0);
+  Constant *getpidtgid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_current_pid_tgid),
+      getpidtgid_func_ptr_type);
+  return CreateCall(getpidtgid_func);
+}
+
+Value *IRBuilderBPF::CreateGetUidGid()
+{
+  // u64 bpf_get_current_uid_gid(void)
+  // Return: current_gid << 32 | current_uid
+  FunctionType *getuidgid_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getuidgid_func_ptr_type = PointerType::get(getuidgid_func_type, 0);
+  Constant *getuidgid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_current_uid_gid),
+      getuidgid_func_ptr_type);
+  return CreateCall(getuidgid_func);
+}
+
+
 } // namespace ast
 } // namespace bpftrace
 } // namespace ebpf

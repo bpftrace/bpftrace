@@ -20,53 +20,30 @@ void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
   {
-    // u64 ktime_get_ns()
-    FunctionType *gettime_func_type = FunctionType::get(b_.getInt64Ty(), false);
-    PointerType *gettime_func_ptr_type = PointerType::get(gettime_func_type, 0);
-    Constant *gettime_func = ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(BPF_FUNC_ktime_get_ns),
-        gettime_func_ptr_type);
-    expr_ = b_.CreateCall(gettime_func);
+    expr_ = b_.CreateGetNs();
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
-    // u64 bpf_get_current_pid_tgid(void)
-    // Return: current->tgid << 32 | current->pid
-    FunctionType *getpidtgid_func_type = FunctionType::get(b_.getInt64Ty(), false);
-    PointerType *getpidtgid_func_ptr_type = PointerType::get(getpidtgid_func_type, 0);
-    Constant *getpidtgid_func = ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(BPF_FUNC_get_current_pid_tgid),
-        getpidtgid_func_ptr_type);
-    CallInst *call = b_.CreateCall(getpidtgid_func);
+    Value *pidtgid = b_.CreateGetPidTgid();
     if (builtin.ident == "pid")
     {
-      expr_ = b_.CreateLShr(call, 32);
+      expr_ = b_.CreateLShr(pidtgid, 32);
     }
     else if (builtin.ident == "tid")
     {
-      expr_ = b_.CreateAnd(call, 0xffffffff);
+      expr_ = b_.CreateAnd(pidtgid, 0xffffffff);
     }
   }
   else if (builtin.ident == "uid" || builtin.ident == "gid")
   {
-    // u64 bpf_get_current_uid_gid(void)
-    // Return: current_gid << 32 | current_uid
-    FunctionType *getuidgid_func_type = FunctionType::get(b_.getInt64Ty(), false);
-    PointerType *getuidgid_func_ptr_type = PointerType::get(getuidgid_func_type, 0);
-    Constant *getuidgid_func = ConstantExpr::getCast(
-        Instruction::IntToPtr,
-        b_.getInt64(BPF_FUNC_get_current_uid_gid),
-        getuidgid_func_ptr_type);
-    CallInst *call = b_.CreateCall(getuidgid_func);
+    Value *uidgid = b_.CreateGetUidGid();
     if (builtin.ident == "uid")
     {
-      expr_ = b_.CreateAnd(call, 0xffffffff);
+      expr_ = b_.CreateAnd(uidgid, 0xffffffff);
     }
     else if (builtin.ident == "gid")
     {
-      expr_ = b_.CreateLShr(call, 32);
+      expr_ = b_.CreateLShr(uidgid, 32);
     }
   }
   else
