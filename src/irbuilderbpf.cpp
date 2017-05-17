@@ -36,7 +36,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &nam
     return new AllocaInst(ty, "", &entry_block.front());
 }
 
-Value *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
+CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 {
   int mapfd;
   if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
@@ -47,7 +47,7 @@ Value *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
   return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
 }
 
-Value *IRBuilderBPF::CreateMapLookupElem(Map &map, Value *key)
+LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
 
@@ -87,7 +87,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, Value *key)
   return CreateLoad(value);
 }
 
-void IRBuilderBPF::CreateMapUpdateElem(Map &map, Value *key, Value *val)
+void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, AllocaInst *val)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
   Value *flags = getInt64(0);
@@ -106,7 +106,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, Value *key, Value *val)
   CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags});
 }
 
-Value *IRBuilderBPF::CreateGetNs()
+CallInst *IRBuilderBPF::CreateGetNs()
 {
   // u64 ktime_get_ns()
   // Return: current ktime
@@ -119,7 +119,7 @@ Value *IRBuilderBPF::CreateGetNs()
   return CreateCall(gettime_func);
 }
 
-Value *IRBuilderBPF::CreateGetPidTgid()
+CallInst *IRBuilderBPF::CreateGetPidTgid()
 {
   // u64 bpf_get_current_pid_tgid(void)
   // Return: current->tgid << 32 | current->pid
@@ -132,7 +132,7 @@ Value *IRBuilderBPF::CreateGetPidTgid()
   return CreateCall(getpidtgid_func);
 }
 
-Value *IRBuilderBPF::CreateGetUidGid()
+CallInst *IRBuilderBPF::CreateGetUidGid()
 {
   // u64 bpf_get_current_uid_gid(void)
   // Return: current_gid << 32 | current_uid

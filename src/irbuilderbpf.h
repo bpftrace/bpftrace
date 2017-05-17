@@ -19,12 +19,12 @@ public:
                BPFtrace &bpftrace);
 
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="") const;
-  Value *CreateBpfPseudoCall(Map &map);
-  Value *CreateMapLookupElem(Map &map, Value *key);
-  void   CreateMapUpdateElem(Map &map, Value *key, Value *val);
-  Value *CreateGetNs();
-  Value *CreateGetPidTgid();
-  Value *CreateGetUidGid();
+  CallInst   *CreateBpfPseudoCall(Map &map);
+  LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);
+  void        CreateMapUpdateElem(Map &map, AllocaInst *key, AllocaInst *val);
+  CallInst   *CreateGetNs();
+  CallInst   *CreateGetPidTgid();
+  CallInst   *CreateGetUidGid();
 
 private:
   Module &module_;
