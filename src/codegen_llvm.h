@@ -36,9 +36,9 @@ public:
   void visit(Predicate &pred) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
+  AllocaInst *getMapKey(Map &map);
 
   int compile(bool debug=false);
-  AllocaInst *createAllocaBPF(llvm::Type *ty, const std::string &name="") const;
 
 private:
   Node *root_;

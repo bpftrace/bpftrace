@@ -59,21 +59,7 @@ void CodegenLLVM::visit(Call &call)
 
 void CodegenLLVM::visit(Map &map)
 {
-  AllocaInst *key;
-  if (map.vargs) {
-    key = b_.CreateAllocaBPF(map.vargs->size());
-    int i = 0;
-    for (Expression *expr : *map.vargs) {
-      expr->accept(*this);
-      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
-      b_.CreateStore(expr_, offset);
-    }
-  }
-  else
-  {
-    key = b_.CreateAllocaBPF();
-    b_.CreateStore(b_.getInt64(0), key);
-  }
+  AllocaInst *key = getMapKey(map);
   expr_ = b_.CreateMapLookupElem(map, key);
 }
 
@@ -125,26 +111,12 @@ void CodegenLLVM::visit(ExprStatement &expr)
 void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   Map &map = *assignment.map;
+
   AllocaInst *val = b_.CreateAllocaBPF();
-
-  AllocaInst *key;
-  if (map.vargs) {
-    key = b_.CreateAllocaBPF(map.vargs->size());
-    int i = 0;
-    for (Expression *expr : *map.vargs) {
-      expr->accept(*this);
-      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
-      b_.CreateStore(expr_, offset);
-    }
-  }
-  else
-  {
-    key = b_.CreateAllocaBPF();
-    b_.CreateStore(b_.getInt64(0), key);
-  }
-
   assignment.expr->accept(*this);
   b_.CreateStore(expr_, val);
+
+  AllocaInst *key = getMapKey(map);
 
   b_.CreateMapUpdateElem(map, key, val);
 }
@@ -156,8 +128,7 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 
   if (call.func == "count")
   {
-    AllocaInst *key = b_.CreateAllocaBPF();
-    b_.CreateStore(b_.getInt64(0), key); // TODO variable key
+    AllocaInst *key = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF();
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
@@ -218,6 +189,26 @@ void CodegenLLVM::visit(Program &program)
   for (Probe *probe : *program.probes) {
     probe->accept(*this);
   }
+}
+
+AllocaInst *CodegenLLVM::getMapKey(Map &map)
+{
+  AllocaInst *key;
+  if (map.vargs) {
+    key = b_.CreateAllocaBPF(map.vargs->size());
+    int i = 0;
+    for (Expression *expr : *map.vargs) {
+      expr->accept(*this);
+      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
+      b_.CreateStore(expr_, offset);
+    }
+  }
+  else
+  {
+    key = b_.CreateAllocaBPF();
+    b_.CreateStore(b_.getInt64(0), key);
+  }
+  return key;
 }
 
 class BPFtraceMemoryManager : public SectionMemoryManager
