@@ -90,29 +90,34 @@ int BPFtrace::print_maps()
     if (map_args == map_args_.end())
       abort();
 
-    int key_elems = map_args->second.size(); // TODO handle more than just integer keys
+    int key_elems = map_args->second.size();
     if (key_elems == 0) key_elems = 1;
+    auto old_key = std::vector<uint64_t>(key_elems);
     auto key = std::vector<uint64_t>(key_elems);
-    auto next_key = std::vector<uint64_t>(key_elems);
     uint64_t value;
     int err;
 
-    err = bpf_get_next_key(map.mapfd_, key.data(), next_key.data());
+    err = bpf_get_next_key(map.mapfd_, old_key.data(), key.data());
     if (err)
-      next_key = key;
+      key = old_key;
 
-    std::cout << map.name_ << "[ ";
-    for (int i=0; i<key_elems; i++)
-      std::cout << next_key.at(i) << " ";
-    std::cout << "]: ";
-
-    err = bpf_lookup_elem(map.mapfd_, next_key.data(), &value);
-    std::cout << value << std::endl;
-    if (err)
+    do
     {
-      std::cerr << "Error looking up elem: " << err << std::endl;
-      return -1;
+      std::cout << map.name_ << "[ ";
+      for (int i=0; i<key_elems; i++)
+        std::cout << key.at(i) << " ";
+      std::cout << "]: ";
+
+      err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
+      std::cout << value << std::endl;
+      if (err)
+      {
+        std::cerr << "Error looking up elem: " << err << std::endl;
+        return -1;
+      }
+      old_key = key;
     }
+    while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0);
   }
 }
 
