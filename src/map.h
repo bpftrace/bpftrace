@@ -8,7 +8,7 @@ namespace bpftrace {
 
 class Map {
 public:
-  explicit Map(std::string &);
+  Map(std::string &, int key_size);
   ~Map();
   Map(const Map &) = delete;
   Map& operator=(const Map &) = delete;

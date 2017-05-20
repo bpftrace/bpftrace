@@ -26,22 +26,48 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name) const
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(int num_items, const std::string &name)
 {
+  llvm::Type *ty = getInt64Ty();
+  Value *array_size = getInt64(num_items);
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
   if (entry_block.empty())
-    return new AllocaInst(ty, "", &entry_block);
+    return new AllocaInst(ty, array_size, "", &entry_block);
   else
-    return new AllocaInst(ty, "", &entry_block.front());
+    return new AllocaInst(ty, array_size, "", &entry_block.front());
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 {
   int mapfd;
   if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
-    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident);
+    // Create map since it doesn't already exist
+    int key_size = 0;
+    if (map.vargs)
+    {
+      auto map_args = bpftrace_.map_args_.find(map.ident);
+      if (map_args == bpftrace_.map_args_.end())
+        abort();
+      for (auto type : map_args->second)
+      {
+        switch (type)
+        {
+          case Type::integer:
+            key_size += 8;
+            break;
+          default:
+            abort();
+        }
+      }
+    }
+    else
+    {
+      key_size = 8;
+    }
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident, key_size);
   }
+
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
   return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
@@ -70,7 +96,7 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
 
-  Value *value = CreateAllocaBPF(getInt64Ty());
+  Value *value = CreateAllocaBPF();
   Value *condition = CreateICmpNE(
       CreateIntCast(call, getInt8PtrTy(), true),
       ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),

@@ -59,8 +59,21 @@ void CodegenLLVM::visit(Call &call)
 
 void CodegenLLVM::visit(Map &map)
 {
-  AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty());
-  b_.CreateStore(b_.getInt64(0), key); // TODO variable key
+  AllocaInst *key;
+  if (map.vargs) {
+    key = b_.CreateAllocaBPF(map.vargs->size());
+    int i = 0;
+    for (Expression *expr : *map.vargs) {
+      expr->accept(*this);
+      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
+      b_.CreateStore(expr_, offset);
+    }
+  }
+  else
+  {
+    key = b_.CreateAllocaBPF();
+    b_.CreateStore(b_.getInt64(0), key);
+  }
   expr_ = b_.CreateMapLookupElem(map, key);
 }
 
@@ -79,8 +92,8 @@ void CodegenLLVM::visit(Binop &binop)
     case ebpf::bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LAND:  break;//expr_ = b_.CreateAnd(lhs, rhs); break; TODO
-    case ebpf::bpftrace::Parser::token::LOR:   break;//expr_ = b_.CreateOR(lhs, rhs); break; TODO
+    case ebpf::bpftrace::Parser::token::LAND:  abort();// TODO
+    case ebpf::bpftrace::Parser::token::LOR:   abort();// TODO
     case ebpf::bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
     case ebpf::bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
@@ -112,10 +125,24 @@ void CodegenLLVM::visit(ExprStatement &expr)
 void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   Map &map = *assignment.map;
-  AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty());
-  AllocaInst *val = b_.CreateAllocaBPF(b_.getInt64Ty());
+  AllocaInst *val = b_.CreateAllocaBPF();
 
-  b_.CreateStore(b_.getInt64(0), key); // TODO variable key
+  AllocaInst *key;
+  if (map.vargs) {
+    key = b_.CreateAllocaBPF(map.vargs->size());
+    int i = 0;
+    for (Expression *expr : *map.vargs) {
+      expr->accept(*this);
+      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
+      b_.CreateStore(expr_, offset);
+    }
+  }
+  else
+  {
+    key = b_.CreateAllocaBPF();
+    b_.CreateStore(b_.getInt64(0), key);
+  }
+
   assignment.expr->accept(*this);
   b_.CreateStore(expr_, val);
 
@@ -129,10 +156,10 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
 
   if (call.func == "count")
   {
-    AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty());
+    AllocaInst *key = b_.CreateAllocaBPF();
     b_.CreateStore(b_.getInt64(0), key); // TODO variable key
     Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(b_.getInt64Ty());
+    AllocaInst *newval = b_.CreateAllocaBPF();
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
   }
