@@ -21,7 +21,7 @@ public:
   AllocaInst *CreateAllocaBPF(int array_size=1, const std::string &name="");
   CallInst   *CreateBpfPseudoCall(Map &map);
   LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);
-  void        CreateMapUpdateElem(Map &map, AllocaInst *key, AllocaInst *val);
+  void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();

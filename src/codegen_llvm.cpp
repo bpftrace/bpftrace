@@ -5,6 +5,7 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
 namespace ebpf {
@@ -134,6 +135,16 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
   }
+  else if (call.func == "quantize")
+  {
+    // TODO
+    call.vargs->front()->accept(*this);
+    Function *log2_func = module_->getFunction("log2");
+    Value *log2 = b_.CreateAllocaBPF();
+    b_.CreateStore(b_.CreateCall(log2_func, expr_), log2);
+    AllocaInst *key = getMapKey(map);
+    b_.CreateMapUpdateElem(map, key, log2);
+  }
   else
   {
     abort();
@@ -234,8 +245,48 @@ private:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
 };
 
+void CodegenLLVM::createLog2Function()
+{
+  // log2(int n)
+  // {
+  //   int result = 0;
+  //   int shift;
+  //   for (int i = 4; i >= 0; i--)
+  //   {
+  //     shift = (v >= (1<<(1<<i))) << i;
+  //     n >> = shift;
+  //     result += shift;
+  //   }
+  //   return result;
+  // }
+
+  FunctionType *log2_func_type = FunctionType::get(b_.getInt64Ty(), {b_.getInt64Ty()}, false);
+  Function *log2_func = Function::Create(log2_func_type, Function::InternalLinkage, "log2", module_.get());
+  log2_func->setSection("helpers");
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", log2_func);
+  b_.SetInsertPoint(entry);
+
+  Value *arg = &log2_func->getArgumentList().front();
+
+  Value *n_alloc = b_.CreateAllocaBPF();
+  b_.CreateStore(arg, n_alloc);
+
+  Value *result = b_.CreateAllocaBPF();
+  b_.CreateStore(b_.getInt64(0), result);
+
+  for (int i = 4; i >= 0; i--)
+  {
+    Value *n = b_.CreateLoad(n_alloc);
+    Value *shift = b_.CreateShl(b_.CreateIntCast(b_.CreateICmpSGE(b_.CreateIntCast(n, b_.getInt64Ty(), false), b_.getInt64(1 << (1<<i))), b_.getInt64Ty(), false), i);
+    b_.CreateStore(b_.CreateLShr(n, shift), n_alloc);
+    b_.CreateStore(b_.CreateAdd(b_.CreateLoad(result), shift), result);
+  }
+  b_.CreateRet(b_.CreateLoad(result));
+}
+
 int CodegenLLVM::compile(bool debug)
 {
+  createLog2Function();
   root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();
@@ -262,6 +313,7 @@ int CodegenLLVM::compile(bool debug)
   legacy::PassManager PM;
   PassManagerBuilder PMB;
   PMB.OptLevel = 3;
+  PM.add(createFunctionInliningPass());
   PMB.populateModulePassManager(PM);
   PM.run(*module_.get());
 

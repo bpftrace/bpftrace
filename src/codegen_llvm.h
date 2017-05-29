@@ -38,6 +38,7 @@ public:
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
 
+  void createLog2Function();
   int compile(bool debug=false);
 
 private:

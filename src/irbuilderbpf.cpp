@@ -113,7 +113,7 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   return CreateLoad(value);
 }
 
-void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, AllocaInst *val)
+void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
   Value *flags = getInt64(0);
