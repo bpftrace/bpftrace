@@ -14,6 +14,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
 add_dependencies(bpftrace_test bcc-build)

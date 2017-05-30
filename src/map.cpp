@@ -7,7 +7,33 @@
 namespace ebpf {
 namespace bpftrace {
 
-Map::Map(std::string &name, int key_size) : name_(name) {
+Map::Map(std::string &name, Type type, std::vector<Type> &args)
+  : name_(name)
+{
+  int key_size = 0;
+  if (args.size() > 0)
+  {
+    for (auto type : args)
+    {
+      switch (type)
+      {
+        case Type::integer:
+          key_size += 8;
+          break;
+        default:
+          abort();
+      }
+    }
+  }
+  else
+  {
+    key_size = 8;
+  }
+  if (type == Type::quantize)
+  {
+    key_size += 8;
+  }
+
   int value_size = 8;
   int max_entries = 128;
   int flags = 0;
@@ -18,7 +44,8 @@ Map::Map(std::string &name, int key_size) : name_(name) {
   }
 }
 
-Map::~Map() {
+Map::~Map()
+{
   close(mapfd_);
 }
 

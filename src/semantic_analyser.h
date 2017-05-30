@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "bpftrace.h"
 #include "map.h"
+#include "types.h"
 
 namespace ebpf {
 namespace bpftrace {

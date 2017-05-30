@@ -2,13 +2,16 @@
 
 #include <map>
 #include <string>
+#include <vector>
+
+#include "types.h"
 
 namespace ebpf {
 namespace bpftrace {
 
 class Map {
 public:
-  Map(std::string &, int key_size);
+  Map(std::string &, Type type, std::vector<Type> &args);
   ~Map();
   Map(const Map &) = delete;
   Map& operator=(const Map &) = delete;

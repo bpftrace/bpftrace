@@ -43,29 +43,17 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
   int mapfd;
   if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
     // Create map since it doesn't already exist
-    int key_size = 0;
-    if (map.vargs)
-    {
-      auto map_args = bpftrace_.map_args_.find(map.ident);
-      if (map_args == bpftrace_.map_args_.end())
-        abort();
-      for (auto type : map_args->second)
-      {
-        switch (type)
-        {
-          case Type::integer:
-            key_size += 8;
-            break;
-          default:
-            abort();
-        }
-      }
-    }
-    else
-    {
-      key_size = 8;
-    }
-    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident, key_size);
+    auto search_val = bpftrace_.map_val_.find(map.ident);
+    if (search_val == bpftrace_.map_val_.end())
+      abort();
+    Type type = search_val->second;
+
+    auto search_args = bpftrace_.map_args_.find(map.ident);
+    if (search_args == bpftrace_.map_args_.end())
+      abort();
+    auto &args = search_args->second;
+
+    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident, type, args);
   }
 
   mapfd = bpftrace_.maps_[map.ident]->mapfd_;
