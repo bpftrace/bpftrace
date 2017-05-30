@@ -37,6 +37,7 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
+  AllocaInst *getQuantizeMapKey(Map &map, Value *log2);
 
   void createLog2Function();
   int compile(bool debug=false);

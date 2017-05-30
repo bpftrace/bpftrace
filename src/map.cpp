@@ -24,14 +24,14 @@ Map::Map(std::string &name, Type type, std::vector<Type> &args)
           abort();
       }
     }
+    if (type == Type::quantize)
+    {
+      key_size += 8;
+    }
   }
   else
   {
     key_size = 8;
-  }
-  if (type == Type::quantize)
-  {
-    key_size += 8;
   }
 
   int value_size = 8;

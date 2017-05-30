@@ -137,13 +137,15 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
   }
   else if (call.func == "quantize")
   {
-    // TODO
     call.vargs->front()->accept(*this);
     Function *log2_func = module_->getFunction("log2");
-    Value *log2 = b_.CreateAllocaBPF();
-    b_.CreateStore(b_.CreateCall(log2_func, expr_), log2);
-    AllocaInst *key = getMapKey(map);
-    b_.CreateMapUpdateElem(map, key, log2);
+    Value *log2 = b_.CreateCall(log2_func, expr_);
+    AllocaInst *key = getQuantizeMapKey(map, log2);
+
+    Value *oldval = b_.CreateMapLookupElem(map, key);
+    AllocaInst *newval = b_.CreateAllocaBPF();
+    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+    b_.CreateMapUpdateElem(map, key, newval);
   }
   else
   {
@@ -218,6 +220,28 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
   {
     key = b_.CreateAllocaBPF();
     b_.CreateStore(b_.getInt64(0), key);
+  }
+  return key;
+}
+
+AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
+{
+  AllocaInst *key;
+  if (map.vargs) {
+    key = b_.CreateAllocaBPF(map.vargs->size() + 1);
+    int i = 0;
+    for (Expression *expr : *map.vargs) {
+      expr->accept(*this);
+      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
+      b_.CreateStore(expr_, offset);
+    }
+    Value *offset = b_.CreateGEP(key, b_.getInt64(i));
+    b_.CreateStore(log2, offset);
+  }
+  else
+  {
+    key = b_.CreateAllocaBPF();
+    b_.CreateStore(log2, key);
   }
   return key;
 }

@@ -56,6 +56,7 @@ int BPFtrace::print_maps()
     Map &map = *mapmap.second.get();
 
     int key_elems = map.args_.size();
+    if (map.type_ == Type::quantize) key_elems += 1;
     if (key_elems == 0) key_elems = 1;
     auto old_key = std::vector<uint64_t>(key_elems);
     auto key = std::vector<uint64_t>(key_elems);
