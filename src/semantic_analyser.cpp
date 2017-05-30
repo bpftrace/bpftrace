@@ -70,8 +70,8 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
 
-  auto search = bpftrace_.map_args_.find(map.ident);
-  if (search != bpftrace_.map_args_.end()) {
+  auto search = map_args_.find(map.ident);
+  if (search != map_args_.end()) {
     if (search->second != args) {
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: [ ";
@@ -82,11 +82,11 @@ void SemanticAnalyser::visit(Map &map)
     }
   }
   else {
-    bpftrace_.map_args_.insert({map.ident, args});
+    map_args_.insert({map.ident, args});
   }
 
-  auto search_val = bpftrace_.map_val_.find(map.ident);
-  if (search_val != bpftrace_.map_val_.end()) {
+  auto search_val = map_val_.find(map.ident);
+  if (search_val != map_val_.end()) {
     type_ = search_val->second;
   }
   else {
@@ -131,8 +131,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = bpftrace_.map_val_.find(map_ident);
-  if (search != bpftrace_.map_val_.end()) {
+  auto search = map_val_.find(map_ident);
+  if (search != map_val_.end()) {
     if (search->second == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined map: " << map_ident << std::endl;
@@ -150,7 +150,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    bpftrace_.map_val_.insert({map_ident, type_});
+    map_val_.insert({map_ident, type_});
   }
 }
 
@@ -160,8 +160,8 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   assignment.call->accept(*this);
 
   std::string map_ident = assignment.map->ident;
-  auto search = bpftrace_.map_val_.find(map_ident);
-  if (search != bpftrace_.map_val_.end()) {
+  auto search = map_val_.find(map_ident);
+  if (search != map_val_.end()) {
     if (search->second == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined map: " << map_ident << std::endl;
@@ -179,7 +179,7 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    bpftrace_.map_val_.insert({map_ident, type_});
+    map_val_.insert({map_ident, type_});
   }
 }
 
@@ -221,6 +221,24 @@ int SemanticAnalyser::analyse()
       out_ << errors;
       return pass_;
     }
+  }
+
+  return 0;
+}
+
+int SemanticAnalyser::create_maps()
+{
+  for (auto &map_val : map_val_)
+  {
+    std::string map_name = map_val.first;
+    Type type = map_val.second;
+
+    auto search_args = map_args_.find(map_name);
+    if (search_args == map_args_.end())
+      abort();
+    auto &args = search_args->second;
+
+    bpftrace_.maps_[map_name] = std::make_unique<ebpf::bpftrace::Map>(map_name, type, args);
   }
 
   return 0;

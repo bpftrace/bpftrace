@@ -54,11 +54,8 @@ int BPFtrace::print_maps()
   for(auto &mapmap : maps_)
   {
     Map &map = *mapmap.second.get();
-    auto map_args = map_args_.find(map.name_);
-    if (map_args == map_args_.end())
-      abort();
 
-    int key_elems = map_args->second.size();
+    int key_elems = map.args_.size();
     if (key_elems == 0) key_elems = 1;
     auto old_key = std::vector<uint64_t>(key_elems);
     auto key = std::vector<uint64_t>(key_elems);

@@ -32,6 +32,7 @@ public:
   void visit(Program &program) override;
 
   int analyse();
+  int create_maps();
 
 private:
   Node *root_;
@@ -45,6 +46,9 @@ private:
   Type type_;
 
   bool is_final_pass() const;
+
+  std::map<std::string, Type> map_val_;
+  std::map<std::string, std::vector<Type>> map_args_;
 };
 
 } // namespace ast

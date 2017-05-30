@@ -77,6 +77,10 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
+  err = semantics.create_maps();
+  if (err)
+    return err;
+
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
   err = llvm.compile(debug);
   if (err)

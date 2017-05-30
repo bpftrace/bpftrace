@@ -8,7 +8,7 @@ namespace ebpf {
 namespace bpftrace {
 
 Map::Map(std::string &name, Type type, std::vector<Type> &args)
-  : name_(name)
+  : name_(name), type_(type), args_(args)
 {
   int key_size = 0;
   if (args.size() > 0)

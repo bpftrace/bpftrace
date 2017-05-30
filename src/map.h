@@ -18,6 +18,8 @@ public:
 
   int mapfd_;
   std::string name_;
+  Type type_;
+  std::vector<Type> args_;
 };
 
 } // namespace bpftrace

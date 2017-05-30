@@ -40,23 +40,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int num_items, const std::string &name
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 {
-  int mapfd;
-  if (bpftrace_.maps_.find(map.ident) == bpftrace_.maps_.end()) {
-    // Create map since it doesn't already exist
-    auto search_val = bpftrace_.map_val_.find(map.ident);
-    if (search_val == bpftrace_.map_val_.end())
-      abort();
-    Type type = search_val->second;
-
-    auto search_args = bpftrace_.map_args_.find(map.ident);
-    if (search_args == bpftrace_.map_args_.end())
-      abort();
-    auto &args = search_args->second;
-
-    bpftrace_.maps_[map.ident] = std::make_unique<ebpf::bpftrace::Map>(map.ident, type, args);
-  }
-
-  mapfd = bpftrace_.maps_[map.ident]->mapfd_;
+  int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
   return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
 }
