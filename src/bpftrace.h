@@ -24,6 +24,9 @@ public:
 
 private:
   std::vector<Probe> probes_;
+  int print_map(Map &map);
+  int print_map_quantize(Map &map);
+  int print_quantize(std::vector<uint64_t> values);
 };
 
 } // namespace bpftrace
