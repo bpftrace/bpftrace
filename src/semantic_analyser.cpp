@@ -8,8 +8,6 @@ namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
-using ebpf::bpftrace::typestr;
-
 void SemanticAnalyser::visit(Integer &)
 {
   type_ = Type::integer;
@@ -107,8 +105,8 @@ void SemanticAnalyser::visit(Binop &binop)
 
   if (is_final_pass() && lhs != rhs) {
     err_ << "Type mismatch for '" << opstr(binop) << "': ";
-    err_ << "comparing '" << typestr(lhs) << "' ";
-    err_ << "with '" << typestr(rhs) << "'" << std::endl;
+    err_ << "comparing '" << lhs << "' ";
+    err_ << "with '" << rhs << "'" << std::endl;
   }
 
   type_ = Type::integer;
@@ -143,9 +141,9 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     }
     else if (search->second != type_) {
       err_ << "Type mismatch for " << map_ident << ": ";
-      err_ << "trying to assign value of type '" << typestr(type_);
+      err_ << "trying to assign value of type '" << type_;
       err_ << "'\n\twhen map already contains a value of type '";
-      err_ << typestr(search->second) << "'\n" << std::endl;
+      err_ << search->second << "'\n" << std::endl;
     }
   }
   else {
@@ -174,7 +172,7 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
       err_ << "()'\n\twhen map already contains a value of type '";
-      err_ << typestr(search->second) << "'\n" << std::endl;
+      err_ << search->second << "'\n" << std::endl;
     }
   }
   else {
