@@ -1,7 +1,6 @@
 #include "printer.h"
 #include "ast.h"
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -134,4 +133,3 @@ void Printer::visit(Program &program)
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

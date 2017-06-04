@@ -8,7 +8,6 @@
 #include "map.h"
 #include "types.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 class BPFtrace
@@ -30,4 +29,3 @@ private:
 };
 
 } // namespace bpftrace
-} // namespace ebpf

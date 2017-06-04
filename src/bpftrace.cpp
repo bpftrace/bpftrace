@@ -5,7 +5,6 @@
 #include "bpftrace.h"
 #include "attached_probe.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 int BPFtrace::add_probe(ast::Probe &p)
@@ -233,4 +232,3 @@ int BPFtrace::print_quantize(std::vector<uint64_t> values)
 }
 
 } // namespace bpftrace
-} // namespace ebpf

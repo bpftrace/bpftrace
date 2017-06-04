@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -158,4 +157,3 @@ std::string opstr(Unop &unop);
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

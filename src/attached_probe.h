@@ -2,7 +2,6 @@
 
 #include "bpftrace.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 class AttachedProbe
@@ -25,4 +24,3 @@ private:
 };
 
 } // namespace bpftrace
-} // namespace ebpf

@@ -4,7 +4,6 @@
 #include "ast.h"
 #include "parser.tab.hh"
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -236,7 +235,7 @@ int SemanticAnalyser::create_maps()
       abort();
     auto &args = search_args->second;
 
-    bpftrace_.maps_[map_name] = std::make_unique<ebpf::bpftrace::Map>(map_name, type, args);
+    bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, args);
   }
 
   return 0;
@@ -249,4 +248,3 @@ bool SemanticAnalyser::is_final_pass() const
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

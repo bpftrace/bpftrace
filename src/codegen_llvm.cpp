@@ -8,7 +8,6 @@
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -73,22 +72,22 @@ void CodegenLLVM::visit(Binop &binop)
   rhs = expr_;
 
   switch (binop.op) {
-    case ebpf::bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LE:    expr_ = b_.CreateICmpSLE(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::LAND:  abort();// TODO
-    case ebpf::bpftrace::Parser::token::LOR:   abort();// TODO
-    case ebpf::bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::DIV:   expr_ = b_.CreateSDiv   (lhs, rhs); break; // TODO signed/unsigned
-    case ebpf::bpftrace::Parser::token::MOD:   expr_ = b_.CreateURem   (lhs, rhs); break; // TODO signed/unsigned
-    case ebpf::bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
-    case ebpf::bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
+    case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
+    case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
+    case bpftrace::Parser::token::LE:    expr_ = b_.CreateICmpSLE(lhs, rhs); break;
+    case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
+    case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
+    case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
+    case bpftrace::Parser::token::LAND:  abort();// TODO
+    case bpftrace::Parser::token::LOR:   abort();// TODO
+    case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
+    case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
+    case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
+    case bpftrace::Parser::token::DIV:   expr_ = b_.CreateSDiv   (lhs, rhs); break; // TODO signed/unsigned
+    case bpftrace::Parser::token::MOD:   expr_ = b_.CreateURem   (lhs, rhs); break; // TODO signed/unsigned
+    case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
+    case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
+    case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
     default: abort();
   }
 }
@@ -98,8 +97,8 @@ void CodegenLLVM::visit(Unop &unop)
   unop.expr->accept(*this);
 
   switch (unop.op) {
-    case ebpf::bpftrace::Parser::token::LNOT: expr_ = b_.CreateNot(expr_); break;
-    case ebpf::bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
+    case bpftrace::Parser::token::LNOT: expr_ = b_.CreateNot(expr_); break;
+    case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
     default: abort();
   }
 }
@@ -354,4 +353,3 @@ int CodegenLLVM::compile(bool debug)
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

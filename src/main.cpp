@@ -6,7 +6,7 @@
 #include "printer.h"
 #include "semantic_analyser.h"
 
-using namespace ebpf::bpftrace;
+using namespace bpftrace;
 
 void usage()
 {
@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 
   if (debug)
   {
-    ast::Printer p = ebpf::bpftrace::ast::Printer(std::cout);
+    ast::Printer p = bpftrace::ast::Printer(std::cout);
     driver.root_->accept(p);
   }
 

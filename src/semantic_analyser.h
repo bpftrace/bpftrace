@@ -7,7 +7,6 @@
 #include "map.h"
 #include "types.h"
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -42,7 +41,7 @@ private:
   int pass_;
   const int num_passes_ = 10;
 
-  using Type = ebpf::bpftrace::Type;
+  using Type = bpftrace::Type;
   Type type_;
 
   bool is_final_pass() const;
@@ -53,4 +52,3 @@ private:
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

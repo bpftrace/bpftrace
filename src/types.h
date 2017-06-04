@@ -8,7 +8,6 @@
 
 #include "libbpf.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 enum class Type
@@ -64,4 +63,3 @@ std::string argument_list(const std::vector<T> &items, bool show_empty=false)
 }
 
 } // namespace bpftrace
-} // namespace ebpf

@@ -6,7 +6,6 @@
 #include "libbpf.h"
 #include "perf_reader.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &func)
@@ -102,4 +101,3 @@ void AttachedProbe::attach_kprobe()
 }
 
 } // namespace bpftrace
-} // namespace ebpf

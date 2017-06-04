@@ -4,7 +4,6 @@
 #include "map.h"
 #include "libbpf.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 Map::Map(std::string &name, Type type, std::vector<Type> &args)
@@ -50,4 +49,3 @@ Map::~Map()
 }
 
 } // namespace bpftrace
-} // namespace ebpf

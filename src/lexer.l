@@ -7,12 +7,12 @@
 #undef yywrap
 #define yywrap() 1
 
-static ebpf::bpftrace::location loc;
+static bpftrace::location loc;
 
 #define YY_USER_ACTION loc.columns(yyleng);
-#define yyterminate() return ebpf::bpftrace::Parser::make_END(loc)
+#define yyterminate() return bpftrace::Parser::make_END(loc)
 
-using namespace ebpf::bpftrace;
+using namespace bpftrace;
 %}
 
 ident  [_a-zA-Z][_a-zA-Z0-9]*

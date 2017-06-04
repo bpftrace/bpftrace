@@ -1,7 +1,7 @@
 %skeleton "lalr1.cc"
 %require "3.0.4"
 %defines
-%define api.namespace { ebpf::bpftrace }
+%define api.namespace { bpftrace }
 %define parser_class_name { Parser }
 
 %define api.token.constructor
@@ -10,20 +10,18 @@
 
 %define parse.error verbose
 
-%param { ebpf::bpftrace::Driver &driver }
+%param { bpftrace::Driver &driver }
 %locations
 
 // Forward declarations of classes referenced in the parser
 %code requires
 {
-namespace ebpf {
 namespace bpftrace {
 class Driver;
 namespace ast {
 class Node;
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf
 #include "ast.h"
 }
 
@@ -32,7 +30,7 @@ class Node;
 
 #include "driver.h"
 
-void yyerror(ebpf::bpftrace::Driver &driver, const char *s);
+void yyerror(bpftrace::Driver &driver, const char *s);
 %}
 
 %token
@@ -159,7 +157,7 @@ vargs : vargs "," expr { $$ = $1; $1->push_back($3); }
 
 %%
 
-void ebpf::bpftrace::Parser::error(const location &l, const std::string &m)
+void bpftrace::Parser::error(const location &l, const std::string &m)
 {
   driver.error(l, m);
 }

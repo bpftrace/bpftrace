@@ -3,10 +3,9 @@
 #include "ast.h"
 #include "parser.tab.hh"
 
-#define YY_DECL ebpf::bpftrace::Parser::symbol_type yylex(ebpf::bpftrace::Driver &driver)
+#define YY_DECL bpftrace::Parser::symbol_type yylex(bpftrace::Driver &driver)
 YY_DECL;
 
-namespace ebpf {
 namespace bpftrace {
 
 class Driver {
@@ -34,4 +33,3 @@ private:
 };
 
 } // namespace bpftrace
-} // namespace ebpf

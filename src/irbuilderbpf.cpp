@@ -3,7 +3,6 @@
 
 #include <llvm/IR/Module.h>
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -146,4 +145,3 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

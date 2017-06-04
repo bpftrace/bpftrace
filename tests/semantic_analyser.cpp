@@ -4,7 +4,6 @@
 #include "parser.tab.hh"
 #include "semantic_analyser.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 class MockBPFtrace : public BPFtrace {
@@ -32,7 +31,7 @@ TEST(semantic_analyser, probe_count)
   ProbeList pl = {&p1, &p2};
   Program root(&pl);
 
-  ebpf::bpftrace::ast::SemanticAnalyser semantics(&root, bpftrace);
+  bpftrace::ast::SemanticAnalyser semantics(&root, bpftrace);
   semantics.analyse();
 }
 
@@ -45,7 +44,7 @@ TEST(semantic_analyser, undefined_map)
   std::string mapstr1 = "mymap1";
   Integer myint(123);
   Map map1(mapstr1);
-  Binop binop(&map1, ebpf::bpftrace::Parser::token::EQ, &myint);
+  Binop binop(&map1, bpftrace::Parser::token::EQ, &myint);
   Predicate pred(&binop);
   ExprStatement stmt(&myint);
   StatementList stmts = {&stmt};
@@ -54,7 +53,7 @@ TEST(semantic_analyser, undefined_map)
   Program root(&pl);
 
   std::ostringstream out1;
-  ebpf::bpftrace::ast::SemanticAnalyser semantics1(&root, bpftrace, out1);
+  bpftrace::ast::SemanticAnalyser semantics1(&root, bpftrace, out1);
   EXPECT_EQ(semantics1.analyse(), 10);
 
   // kprobe:kprobe / @mymap1 == 123 / { 123; @mymap1 = @mymap2; }
@@ -64,10 +63,9 @@ TEST(semantic_analyser, undefined_map)
   stmts.push_back(&assign);
 
   std::ostringstream out2;
-  ebpf::bpftrace::ast::SemanticAnalyser semantics2(&root, bpftrace, out2);
+  bpftrace::ast::SemanticAnalyser semantics2(&root, bpftrace, out2);
   EXPECT_EQ(semantics2.analyse(), 10);
 }
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

@@ -5,7 +5,6 @@
 extern FILE *yyin;
 extern void *yy_scan_string(const char *yystr);
 
-namespace ebpf {
 namespace bpftrace {
 
 int Driver::parse_stdin()
@@ -33,4 +32,3 @@ int Driver::parse_file(const std::string &f)
 }
 
 } // namespace bpftrace
-} // namespace ebpf

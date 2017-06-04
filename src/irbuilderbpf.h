@@ -5,7 +5,6 @@
 
 #include <llvm/IR/IRBuilder.h>
 
-namespace ebpf {
 namespace bpftrace {
 namespace ast {
 
@@ -33,4 +32,3 @@ private:
 
 } // namespace ast
 } // namespace bpftrace
-} // namespace ebpf

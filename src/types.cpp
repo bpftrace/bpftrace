@@ -2,7 +2,6 @@
 
 #include "types.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 std::ostream &operator<<(std::ostream &os, Type type)
@@ -44,4 +43,3 @@ bpf_prog_type progtype(ProbeType t)
 }
 
 } // namespace bpftrace
-} // namespace ebpf

@@ -6,7 +6,6 @@
 
 #include "types.h"
 
-namespace ebpf {
 namespace bpftrace {
 
 class Map {
@@ -23,4 +22,3 @@ public:
 };
 
 } // namespace bpftrace
-} // namespace ebpf
