@@ -223,9 +223,15 @@ int BPFtrace::print_quantize(std::vector<uint64_t> values)
     if (suffix2)
       header << suffix2;
     header << ")";
+
+    int max_width = 52;
+    int bar_width = values.at(i)/(float)max_value*max_width;
+    std::string bar(bar_width, '@');
+
     std::cout << std::setw(16) << std::left << header.str()
               << std::setw(8) << std::right << values.at(i)
-              << " |" << std::endl;
+              << " |" << std::setw(max_width) << std::left << bar << "|"
+              << std::endl;
   }
 
   return 0;
