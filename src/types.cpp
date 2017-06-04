@@ -1,10 +1,15 @@
 #include <iostream>
-#include <sstream>
 
 #include "types.h"
 
 namespace ebpf {
 namespace bpftrace {
+
+std::ostream &operator<<(std::ostream &os, Type type)
+{
+  os << typestr(type);
+  return os;
+}
 
 std::string typestr(Type t)
 {
@@ -36,24 +41,6 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretprobe: return BPF_PROG_TYPE_KPROBE; break;
     default: abort();
   }
-}
-
-std::string argument_list(const std::vector<uint64_t> &items)
-{
-  return argument_list(items, items.size());
-}
-
-std::string argument_list(const std::vector<uint64_t> &items, size_t n)
-{
-  if (n == 0)
-    return "";
-
-  std::ostringstream list;
-  list << "[";
-  for (size_t i = 0; i < n-1; i++)
-    list << items.at(i) << ", ";
-  list << items.at(n-1) << "]";
-  return list.str();
 }
 
 } // namespace bpftrace

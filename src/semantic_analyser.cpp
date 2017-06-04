@@ -74,11 +74,11 @@ void SemanticAnalyser::visit(Map &map)
   if (search != map_args_.end()) {
     if (search->second != args) {
       err_ << "Argument mismatch for " << map.ident << ": ";
-      err_ << "trying to access with arguments: [ ";
-      for (Type t : args) { err_ << typestr(t) << " "; }
-      err_ << "]\n\twhen map expects arguments: [ ";
-      for (Type t : search->second) { err_ << typestr(t) << " "; }
-      err_ << "]\n" << std::endl;
+      err_ << "trying to access with arguments: ";
+      err_ << argument_list(args, true);
+      err_ << "\n\twhen map expects arguments: ";
+      err_ << argument_list(search->second, true);
+      err_ << "\n" << std::endl;
     }
   }
   else {
