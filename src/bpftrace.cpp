@@ -83,10 +83,7 @@ int BPFtrace::print_map(Map &map)
 
   do
   {
-    std::cout << map.name_ << "[ ";
-    for (int i=0; i<key_elems; i++)
-      std::cout << key.at(i) << " ";
-    std::cout << "]: ";
+    std::cout << map.name_ << argument_list(key, map.args_.size()) << ": ";
 
     uint64_t value;
     err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
@@ -153,10 +150,7 @@ int BPFtrace::print_map_quantize(Map &map)
 
   for (auto &map_elem : values)
   {
-    std::cout << map.name_ << "[ ";
-    for (size_t i=0; i<map_elem.first.size(); i++)
-      std::cout << map_elem.first.at(i) << " ";
-    std::cout << "]:" << std::endl;
+    std::cout << map.name_ << argument_list(map_elem.first) << ": " << std::endl;
 
     print_quantize(map_elem.second);
 

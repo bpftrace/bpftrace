@@ -1,7 +1,8 @@
 #pragma once
 
-#include <unistd.h>
 #include <string>
+#include <unistd.h>
+#include <vector>
 
 #include "libbpf.h"
 
@@ -25,6 +26,8 @@ enum class ProbeType
 std::string typestr(Type t);
 bpf_probe_attach_type attachtype(ProbeType t);
 bpf_prog_type progtype(ProbeType t);
+std::string argument_list(const std::vector<uint64_t> &items);
+std::string argument_list(const std::vector<uint64_t> &items, size_t n);
 
 class Probe
 {
