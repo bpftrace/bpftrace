@@ -70,22 +70,25 @@ int BPFtrace::print_maps()
 
 int BPFtrace::print_map(Map &map)
 {
-  int key_elems = map.args_.size();
-  if (key_elems == 0) key_elems = 1;
-  auto old_key = std::vector<uint64_t>(key_elems);
-  auto key = std::vector<uint64_t>(key_elems);
-  int err;
+  std::vector<uint64_t> old_key;
+  try
+  {
+    old_key = find_empty_key(map, map.args_.size());
+  }
+  catch (std::runtime_error &e)
+  {
+    std::cerr << "Error getting key for map '" << map.name_ << "': "
+              << e.what() << std::endl;
+    return -2;
+  }
+  auto key(old_key);
 
-  err = bpf_get_next_key(map.mapfd_, old_key.data(), key.data());
-  if (err)
-    key = old_key;
-
-  do
+  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     std::cout << map.name_ << argument_list(key, map.args_.size()) << ": ";
 
     uint64_t value;
-    err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
+    int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
     if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
@@ -95,7 +98,6 @@ int BPFtrace::print_map(Map &map)
 
     old_key = key;
   }
-  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0);
 
   std::cout << std::endl;
 
@@ -109,27 +111,31 @@ int BPFtrace::print_map_quantize(Map &map)
   // e.g. A map defined as: @x[1, 2] = @quantize(3);
   // would actually be stored with the key: [1, 2, 3]
 
-  int key_elems = map.args_.size();
-  auto old_key = std::vector<uint64_t>(key_elems + 1);
-  auto key = std::vector<uint64_t>(key_elems + 1);
-  int err;
+  std::vector<uint64_t> old_key;
+  try
+  {
+    old_key = find_empty_key(map, map.args_.size() + 1);
+  }
+  catch (std::runtime_error &e)
+  {
+    std::cerr << "Error getting key for map '" << map.name_ << "': "
+              << e.what() << std::endl;
+    return -2;
+  }
+  auto key(old_key);
 
   std::map<std::vector<uint64_t>, std::vector<uint64_t>> values;
 
-  err = bpf_get_next_key(map.mapfd_, old_key.data(), key.data());
-  if (err)
-    key = old_key;
-
-  do
+  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
-    auto key_prefix = std::vector<uint64_t>(key_elems);
-    int bucket = key.at(key_elems);
+    auto key_prefix = std::vector<uint64_t>(map.args_.size());
+    int bucket = key.at(map.args_.size());
 
-    for (int i=0; i<key_elems; i++)
+    for (int i=0; i<map.args_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
     uint64_t value;
-    err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
+    int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
     if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
@@ -145,7 +151,6 @@ int BPFtrace::print_map_quantize(Map &map)
 
     old_key = key;
   }
-  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0);
 
   for (auto &map_elem : values)
   {
@@ -231,6 +236,32 @@ std::string BPFtrace::quantize_index_label(int power)
   if (suffix)
     label << suffix;
   return label.str();
+}
+
+std::vector<uint64_t> BPFtrace::find_empty_key(Map &map, int num_elems)
+{
+  if (num_elems == 0) num_elems = 1;
+  auto key = std::vector<uint64_t>(num_elems);
+  uint64_t value;
+
+  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+    return key;
+
+  for (auto &elem : key)
+  {
+    elem = 0xffffffffffffffff;
+  }
+  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+    return key;
+
+  for (auto &elem : key)
+  {
+    elem = 0x5555555555555555;
+  }
+  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+    return key;
+
+  throw std::runtime_error("Could not find empty key");
 }
 
 } // namespace bpftrace

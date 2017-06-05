@@ -27,6 +27,7 @@ private:
   int print_map_quantize(Map &map);
   int print_quantize(std::vector<uint64_t> values);
   std::string quantize_index_label(int power);
+  std::vector<uint64_t> find_empty_key(Map &map, int num_elems);
 };
 
 } // namespace bpftrace
