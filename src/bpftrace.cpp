@@ -176,53 +176,18 @@ int BPFtrace::print_quantize(std::vector<uint64_t> values)
   if (max_index == -1)
     return 0;
 
-  std::cout << std::setw(16) << std::left << "[0, 1]"
-            << std::setw(8) << std::right << values.at(0)
-            << " |" << std::endl;
-  for (int i = 1; i <= max_index; i++)
+  for (int i = 0; i <= max_index; i++)
   {
-    int power1 = i, power2;
-    char suffix1 = '\0', suffix2 = '\0';
-    if (power1 >= 30)
+    std::ostringstream header;
+    if (i == 0)
     {
-      suffix1 = 'G';
-      power1 -= 30;
-    }
-    else if (power1 >= 20)
-    {
-      suffix1 = 'M';
-      if (power1 == 29)
-        suffix2 = 'G';
-      power1 -= 20;
-    }
-    else if (power1 >= 10)
-    {
-      suffix1 = 'k';
-      if (power1 == 19)
-        suffix2 = 'M';
-      power1 -= 10;
-    }
-
-    if (!suffix2)
-    {
-      suffix2 = suffix1;
-      power2 = power1;
+      header << "[0, 1]";
     }
     else
     {
-      power2 = power1 - 10;
+      header << "[" << quantize_index_label(i);
+      header << ", " << quantize_index_label(i+1) << ")";
     }
-
-    int start = 1<<power1;
-    int end = (1<<(power2+1));
-    std::ostringstream header;
-    header << "[" << start;
-    if (suffix1)
-      header << suffix1;
-    header << ", " << end;
-    if (suffix2)
-      header << suffix2;
-    header << ")";
 
     int max_width = 52;
     int bar_width = values.at(i)/(float)max_value*max_width;
@@ -235,6 +200,37 @@ int BPFtrace::print_quantize(std::vector<uint64_t> values)
   }
 
   return 0;
+}
+
+std::string BPFtrace::quantize_index_label(int power)
+{
+  char suffix = '\0';
+  if (power >= 40)
+  {
+    suffix = 'T';
+    power -= 40;
+  }
+  else if (power >= 30)
+  {
+    suffix = 'G';
+    power -= 30;
+  }
+  else if (power >= 20)
+  {
+    suffix = 'M';
+    power -= 20;
+  }
+  else if (power >= 10)
+  {
+    suffix = 'k';
+    power -= 10;
+  }
+
+  std::ostringstream label;
+  label << (1<<power);
+  if (suffix)
+    label << suffix;
+  return label.str();
 }
 
 } // namespace bpftrace
