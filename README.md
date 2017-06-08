@@ -4,9 +4,7 @@ BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for
 
 ## Examples
 
-BPFtrace is a work in progress and not all the features shown are currently available. The examples below are to give an idea of what the final result should be.
-
-To produce a histogram of amount of time spent in the `read()` system call:
+To produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
 ```
 kprobe:sys_read
 {
@@ -16,23 +14,56 @@ kprobe:sys_read
 kretprobe:sys_read / @start[tid] /
 {
   @times = quantize(nsecs - @start[tid]);
-  @start[tid] = 0;
+  @start[tid] = delete();
 }
+```
+```
+Running... press Ctrl-C to stop
+^C
+
+@start[9134]: 6465933686812
+
+@times:
+[0, 1]                 0 |                                                    |
+[2, 4)                 0 |                                                    |
+[4, 8)                 0 |                                                    |
+[8, 16)                0 |                                                    |
+[16, 32)               0 |                                                    |
+[32, 64)               0 |                                                    |
+[64, 128)              0 |                                                    |
+[128, 256)             0 |                                                    |
+[256, 512)           326 |@                                                   |
+[512, 1k)           7715 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[1k, 2k)           15306 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2k, 4k)             609 |@@                                                  |
+[4k, 8k)             611 |@@                                                  |
+[8k, 16k)            438 |@                                                   |
+[16k, 32k)            59 |                                                    |
+[32k, 64k)            36 |                                                    |
+[64k, 128k)            5 |                                                    |
+[128k, 256k)           0 |                                                    |
+[256k, 512k)           0 |                                                    |
+[512k, 1M)             0 |                                                    |
+[1M, 2M)               0 |                                                    |
+[2M, 4M)               0 |                                                    |
+[4M, 8M)               0 |                                                    |
+[8M, 16M)              2 |                                                    |
 ```
 
 ## Builtins
-The list of available builtins will grow as more features are added.
+Builtins can be assigned to maps and will either store a value or perform some action on the map.
 
-The following builtin variables are available for use in BPFtrace scripts:
+Variables:
 - `pid` - Process ID (kernel tgid)
 - `tid` - Thread ID (kernel pid)
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
 
-The following builtin functions will also be available in the future:
-- `quantize()`
-- `count()`
+Functions:
+- `quantize(int n)` - produce a log2 histogram of values of `n`
+- `count()` - count the number of times this function is called
+- `delete()` - delete the map element this is assigned to
 
 # Building
 
