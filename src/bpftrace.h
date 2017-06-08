@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "attached_probe.h"
 #include "map.h"
 #include "types.h"
 
@@ -15,7 +16,8 @@ class BPFtrace
 public:
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
-  int run();
+  int start();
+  void stop();
   int print_maps();
 
   std::map<std::string, std::unique_ptr<Map>> maps_;
@@ -23,6 +25,8 @@ public:
 
 private:
   std::vector<Probe> probes_;
+  std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
+
   int print_map(Map &map);
   int print_map_quantize(Map &map);
   int print_quantize(std::vector<uint64_t> values);

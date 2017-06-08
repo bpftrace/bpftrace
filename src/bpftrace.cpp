@@ -22,9 +22,8 @@ int BPFtrace::add_probe(ast::Probe &p)
   return 0;
 }
 
-int BPFtrace::run()
+int BPFtrace::start()
 {
-  std::vector<std::unique_ptr<AttachedProbe>> attached_probes;
   for (Probe &probe : probes_)
   {
     auto func = sections_.find(probe.name);
@@ -35,7 +34,7 @@ int BPFtrace::run()
     }
     try
     {
-      attached_probes.push_back(std::make_unique<AttachedProbe>(probe, func->second));
+      attached_probes_.push_back(std::make_unique<AttachedProbe>(probe, func->second));
     }
     catch (std::runtime_error e)
     {
@@ -43,11 +42,12 @@ int BPFtrace::run()
       return -1;
     }
   }
-
-  // TODO wait here while script is running
-  getchar();
-
   return 0;
+}
+
+void BPFtrace::stop()
+{
+  attached_probes_.clear();
 }
 
 int BPFtrace::print_maps()

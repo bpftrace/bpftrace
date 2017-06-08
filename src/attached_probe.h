@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bpftrace.h"
+#include "types.h"
 
 namespace bpftrace {
 

@@ -1,5 +1,7 @@
 #include <iostream>
+#include <signal.h>
 #include <unistd.h>
+
 #include "bpftrace.h"
 #include "codegen_llvm.h"
 #include "driver.h"
@@ -89,9 +91,22 @@ int main(int argc, char *argv[])
   if (debug)
     return 0;
 
-  err = bpftrace.run();
+  // Empty signal handler just to break out of the sleep below
+  struct sigaction act;
+  act.sa_handler = [](int) { };
+  sigaction(SIGINT, &act, NULL);
+
+  std::cout << "Running... press Ctrl-C to stop" << std::endl;
+
+  err = bpftrace.start();
   if (err)
     return err;
+
+  sleep(99999999);
+
+  bpftrace.stop();
+
+  std::cout << "\n\n";
 
   err = bpftrace.print_maps();
   if (err)
