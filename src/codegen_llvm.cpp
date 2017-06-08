@@ -146,6 +146,11 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
   }
+  else if (call.func == "delete")
+  {
+    AllocaInst *key = getMapKey(map);
+    b_.CreateMapDeleteElem(map, key);
+  }
   else
   {
     abort();

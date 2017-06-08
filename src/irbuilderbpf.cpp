@@ -103,6 +103,25 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
   CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags});
 }
 
+void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
+{
+  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *flags = getInt64(0);
+
+  // int map_delete_elem(&map, &key)
+  // Return: 0 on success or negative error
+  FunctionType *delete_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt8PtrTy()},
+      false);
+  PointerType *delete_func_ptr_type = PointerType::get(delete_func_type, 0);
+  Constant *delete_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_map_delete_elem),
+      delete_func_ptr_type);
+  CallInst *call = CreateCall(delete_func, {map_ptr, key});
+}
+
 CallInst *IRBuilderBPF::CreateGetNs()
 {
   // u64 ktime_get_ns()

@@ -51,6 +51,13 @@ void SemanticAnalyser::visit(Call &call)
       err_ << nargs << " provided)" << std::endl;
     }
   }
+  else if (call.func == "delete") {
+    // Don't assign a type
+    if (nargs != 0) {
+      err_ << "delete() should take 0 arguments (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+  }
   else {
     type_ = Type::none;
     err_ << "Unknown function: '" << call.func << "'" << std::endl;

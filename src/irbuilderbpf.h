@@ -21,6 +21,7 @@ public:
   CallInst   *CreateBpfPseudoCall(Map &map);
   LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
+  void        CreateMapDeleteElem(Map &map, AllocaInst *key);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();
