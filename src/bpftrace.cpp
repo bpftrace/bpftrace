@@ -95,7 +95,7 @@ int BPFtrace::print_map(Map &map) const
       return -1;
     }
     if (map.type_ == Type::stack)
-      std::cout << get_stack(value);
+      std::cout << get_stack(value, 8);
     else
       std::cout << value << std::endl;
 
@@ -261,9 +261,8 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
   throw std::runtime_error("Could not find empty key");
 }
 
-std::string BPFtrace::get_stack(uint64_t stackid) const
+std::string BPFtrace::get_stack(uint64_t stackid, int indent) const
 {
-  std::ostringstream stack;
   auto stack_trace = std::vector<void *>(MAX_STACK_SIZE);
   int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
   if (err)
@@ -272,12 +271,15 @@ std::string BPFtrace::get_stack(uint64_t stackid) const
     return "";
   }
 
+  std::ostringstream stack;
+  std::string padding(indent, ' ');
+
   stack << "\n";
   for (auto &addr : stack_trace)
   {
     if (addr == nullptr)
       break;
-    stack << (void*)addr << std::endl;
+    stack << padding << (void*)addr << std::endl;
   }
 
   return stack.str();
