@@ -2,6 +2,9 @@
 #include <iostream>
 #include <sstream>
 
+#include "bcc_syms.h"
+#include "syms.h"
+
 #include "bpftrace.h"
 #include "attached_probe.h"
 
@@ -263,7 +266,7 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
 
 std::string BPFtrace::get_stack(uint64_t stackid, int indent) const
 {
-  auto stack_trace = std::vector<void *>(MAX_STACK_SIZE);
+  auto stack_trace = std::vector<uint64_t>(MAX_STACK_SIZE);
   int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
   if (err)
   {
@@ -273,13 +276,18 @@ std::string BPFtrace::get_stack(uint64_t stackid, int indent) const
 
   std::ostringstream stack;
   std::string padding(indent, ' ');
+  struct bcc_symbol sym;
+  KSyms ksyms;
 
   stack << "\n";
   for (auto &addr : stack_trace)
   {
-    if (addr == nullptr)
+    if (addr == 0)
       break;
-    stack << padding << (void*)addr << std::endl;
+    if (ksyms.resolve_addr(addr, &sym))
+      stack << padding << sym.name << "+" << sym.offset << std::endl;
+    else
+      stack << padding << (void*)addr << std::endl;
   }
 
   return stack.str();
