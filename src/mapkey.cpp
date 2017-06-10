@@ -1,3 +1,4 @@
+#include "bpftrace.h"
 #include "mapkey.h"
 
 namespace bpftrace {
@@ -29,7 +30,8 @@ std::string MapKey::argument_type_list() const
   return list.str();
 }
 
-std::string MapKey::argument_value_list(const std::vector<uint8_t> &data) const
+std::string MapKey::argument_value_list(const BPFtrace &bpftrace,
+    const std::vector<uint8_t> &data) const
 {
   size_t n = args_.size();
   if (n == 0)
@@ -41,15 +43,17 @@ std::string MapKey::argument_value_list(const std::vector<uint8_t> &data) const
   for (size_t i = 0; i < n-1; i++)
   {
     const MapKeyArgument &arg = args_.at(i);
-    list << argument_value(arg, &data.at(offset)) << ", ";
+    list << argument_value(bpftrace, arg, &data.at(offset)) << ", ";
     offset += arg.size;
   }
   const MapKeyArgument &arg = args_.at(n-1);
-  list << argument_value(arg, &data.at(offset)) << "]";
+  list << argument_value(bpftrace, arg, &data.at(offset)) << "]";
   return list.str();
 }
 
-std::string MapKey::argument_value(const MapKeyArgument &arg, const void *data) const
+std::string MapKey::argument_value(const BPFtrace &bpftrace,
+    const MapKeyArgument &arg,
+    const void *data)
 {
   switch (arg.type)
   {
@@ -61,6 +65,8 @@ std::string MapKey::argument_value(const MapKeyArgument &arg, const void *data) 
         case 4:
           return std::to_string(*(uint32_t*)data);
       }
+    case Type::stack:
+      return bpftrace.get_stack(*(uint32_t*)data);
   }
   abort();
 }

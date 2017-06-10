@@ -59,6 +59,7 @@ Variables:
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
+- `stack` - Kernel stack trace
 
 Functions:
 - `quantize(int n)` - produce a log2 histogram of values of `n`

@@ -48,6 +48,7 @@ private:
 
   std::map<std::string, Type> map_val_;
   std::map<std::string, MapKey> map_key_;
+  bool needs_stackid_map_ = false;
 };
 
 } // namespace ast

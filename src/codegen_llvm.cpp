@@ -22,6 +22,10 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = b_.CreateGetNs();
   }
+  else if (builtin.ident == "stack")
+  {
+    expr_ = b_.CreateGetStackId(ctx_);
+  }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
     Value *pidtgid = b_.CreateGetPidTgid();
@@ -185,11 +189,16 @@ void CodegenLLVM::visit(Predicate &pred)
 
 void CodegenLLVM::visit(Probe &probe)
 {
-  FunctionType *func_type = FunctionType::get(b_.getInt64Ty(), false);
+  FunctionType *func_type = FunctionType::get(
+      b_.getInt64Ty(),
+      {b_.getInt8PtrTy()}, // struct pt_regs *ctx
+      false);
   Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, module_.get());
   func->setSection(probe.name);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
+
+  ctx_ = &func->getArgumentList().front();
 
   if (probe.pred) {
     probe.pred->accept(*this);

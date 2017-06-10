@@ -50,7 +50,7 @@ void BPFtrace::stop()
   attached_probes_.clear();
 }
 
-int BPFtrace::print_maps()
+int BPFtrace::print_maps() const
 {
   for(auto &mapmap : maps_)
   {
@@ -68,7 +68,7 @@ int BPFtrace::print_maps()
   return 0;
 }
 
-int BPFtrace::print_map(Map &map)
+int BPFtrace::print_map(Map &map) const
 {
   std::vector<uint8_t> old_key;
   try
@@ -85,7 +85,7 @@ int BPFtrace::print_map(Map &map)
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
-    std::cout << map.name_ << map.key_.argument_value_list(key) << ": ";
+    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
     uint64_t value;
     int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
@@ -94,7 +94,10 @@ int BPFtrace::print_map(Map &map)
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
     }
-    std::cout << value << std::endl;
+    if (map.type_ == Type::stack)
+      std::cout << get_stack(value);
+    else
+      std::cout << value << std::endl;
 
     old_key = key;
   }
@@ -104,7 +107,7 @@ int BPFtrace::print_map(Map &map)
   return 0;
 }
 
-int BPFtrace::print_map_quantize(Map &map)
+int BPFtrace::print_map_quantize(Map &map) const
 {
   // A quantize-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
@@ -154,7 +157,7 @@ int BPFtrace::print_map_quantize(Map &map)
 
   for (auto &map_elem : values_by_key)
   {
-    std::cout << map.name_ << map.key_.argument_value_list(map_elem.first) << ": " << std::endl;
+    std::cout << map.name_ << map.key_.argument_value_list(*this, map_elem.first) << ": " << std::endl;
 
     print_quantize(map_elem.second);
 
@@ -164,7 +167,7 @@ int BPFtrace::print_map_quantize(Map &map)
   return 0;
 }
 
-int BPFtrace::print_quantize(std::vector<uint64_t> values)
+int BPFtrace::print_quantize(std::vector<uint64_t> values) const
 {
   int max_index = -1;
   int max_value = 0;
@@ -207,7 +210,7 @@ int BPFtrace::print_quantize(std::vector<uint64_t> values)
   return 0;
 }
 
-std::string BPFtrace::quantize_index_label(int power)
+std::string BPFtrace::quantize_index_label(int power) const
 {
   char suffix = '\0';
   if (power >= 40)
@@ -238,7 +241,7 @@ std::string BPFtrace::quantize_index_label(int power)
   return label.str();
 }
 
-std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size)
+std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
@@ -256,6 +259,28 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size)
     return key;
 
   throw std::runtime_error("Could not find empty key");
+}
+
+std::string BPFtrace::get_stack(uint64_t stackid) const
+{
+  std::ostringstream stack;
+  auto stack_trace = std::vector<void *>(MAX_STACK_SIZE);
+  int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
+  if (err)
+  {
+    std::cerr << "Error looking up stack id: " << err << std::endl;
+    return "";
+  }
+
+  stack << "\n";
+  for (auto &addr : stack_trace)
+  {
+    if (addr == nullptr)
+      break;
+    stack << (void*)addr << std::endl;
+  }
+
+  return stack.str();
 }
 
 } // namespace bpftrace

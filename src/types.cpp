@@ -29,6 +29,7 @@ std::string typestr(Type t)
     case Type::integer:  return "integer";  break;
     case Type::quantize: return "quantize"; break;
     case Type::count:    return "count";    break;
+    case Type::stack:    return "stack";    break;
     default: abort();
   }
 }

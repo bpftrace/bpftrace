@@ -48,6 +48,7 @@ private:
   std::unique_ptr<ExecutionEngine> ee_;
   IRBuilderBPF b_;
   Value *expr_ = nullptr;
+  Value *ctx_;
   BPFtrace &bpftrace_;
 };
 

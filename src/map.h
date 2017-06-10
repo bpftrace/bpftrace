@@ -12,6 +12,7 @@ namespace bpftrace {
 class Map {
 public:
   Map(std::string &name, Type type, MapKey key);
+  Map(std::string name);
   ~Map();
   Map(const Map &) = delete;
   Map& operator=(const Map &) = delete;

@@ -37,11 +37,16 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int num_items, const std::string &name
     return new AllocaInst(ty, array_size, "", &entry_block.front());
 }
 
+CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
+{
+  Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
+  return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
+}
+
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 {
   int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
-  Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
-  return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
+  return CreateBpfPseudoCall(mapfd);
 }
 
 LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
@@ -161,6 +166,24 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
   return CreateCall(getuidgid_func);
 }
 
+CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx)
+{
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);
+  Value *flags = getInt64(0);
+
+  // int bpf_get_stackid(ctx, map, flags)
+  // Return: >= 0 stackid on success or negative error
+  FunctionType *getstackid_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt8PtrTy(), getInt8PtrTy()},
+      false);
+  PointerType *getstackid_func_ptr_type = PointerType::get(getstackid_func_type, 0);
+  Constant *getstackid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_stackid),
+      getstackid_func_ptr_type);
+  return CreateCall(getstackid_func, {ctx, map_ptr, flags});
+}
 
 } // namespace ast
 } // namespace bpftrace

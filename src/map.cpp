@@ -25,6 +25,20 @@ Map::Map(std::string &name, Type type, MapKey key)
   }
 }
 
+Map::Map(std::string name) : name_(name)
+{
+  // Only used for creating maps for storing stack IDs
+  int key_size = 4;
+  int value_size = 8 * MAX_STACK_SIZE;
+  int max_entries = 128;
+  int flags = 0;
+  mapfd_ = bpf_create_map(BPF_MAP_TYPE_STACK_TRACE, key_size, value_size, max_entries, flags);
+  if (mapfd_ < 0)
+  {
+    std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
+  }
+}
+
 Map::~Map()
 {
   close(mapfd_);

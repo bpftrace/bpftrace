@@ -10,12 +10,15 @@
 
 namespace bpftrace {
 
+const int MAX_STACK_SIZE = 32;
+
 enum class Type
 {
   none,
   integer,
   quantize,
   count,
+  stack,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);

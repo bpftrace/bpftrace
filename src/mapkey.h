@@ -7,6 +7,8 @@
 
 namespace bpftrace {
 
+class BPFtrace;
+
 class MapKey
 {
 public:
@@ -16,10 +18,13 @@ public:
 
   size_t size() const;
   std::string argument_type_list() const;
-  std::string argument_value_list(const std::vector<uint8_t> &data) const;
+  std::string argument_value_list(const BPFtrace &bpftrace,
+      const std::vector<uint8_t> &data) const;
 
 private:
-  std::string argument_value(const MapKeyArgument &arg, const void *data) const;
+  static std::string argument_value(const BPFtrace &bpftrace,
+      const MapKeyArgument &arg,
+      const void *data);
 };
 
 } // namespace bpftrace

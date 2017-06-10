@@ -21,6 +21,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "gid") {
     type_ = Type::integer;
   }
+  else if (builtin.ident == "stack")
+  {
+    type_ = Type::stack;
+    needs_stackid_map_ = true;
+  }
   else {
     type_ = Type::none;
     err_ << "Unknown builtin: '" << builtin.ident << "'" << std::endl;
@@ -38,25 +43,29 @@ void SemanticAnalyser::visit(Call &call)
   }
 
   if (call.func == "quantize") {
-    type_ = Type::quantize;
     if (nargs != 1) {
       err_ << "quantize() should take 1 argument (";
       err_ << nargs << " provided)" << std::endl;
     }
+    if (type_ != Type::integer) {
+      err_ << "quantize() only supports integer arguments";
+      err_ << " (" << type_ << " provided)" << std::endl;
+    }
+    type_ = Type::quantize;
   }
   else if (call.func == "count") {
-    type_ = Type::count;
     if (nargs != 0) {
       err_ << "count() should take 0 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
+    type_ = Type::count;
   }
   else if (call.func == "delete") {
-    // Don't assign a type
     if (nargs != 0) {
       err_ << "delete() should take 0 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
+    // Don't assign a type
   }
   else {
     type_ = Type::none;
@@ -243,6 +252,11 @@ int SemanticAnalyser::create_maps()
     auto &key = search_args->second;
 
     bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+  }
+
+  if (needs_stackid_map_)
+  {
+    bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>("stackid");
   }
 
   return 0;
