@@ -10,6 +10,17 @@ std::ostream &operator<<(std::ostream &os, Type type)
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, MapKeyArgument arg)
+{
+  os << arg.type;
+  return os;
+}
+
+bool MapKeyArgument::operator==(const MapKeyArgument &a) const
+{
+  return type == a.type && size == a.size;
+}
+
 std::string typestr(Type t)
 {
   switch (t)

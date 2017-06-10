@@ -47,7 +47,7 @@ private:
   bool is_final_pass() const;
 
   std::map<std::string, Type> map_val_;
-  std::map<std::string, std::vector<Type>> map_args_;
+  std::map<std::string, MapKey> map_key_;
 };
 
 } // namespace ast

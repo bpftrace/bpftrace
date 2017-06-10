@@ -66,27 +66,27 @@ void SemanticAnalyser::visit(Call &call)
 
 void SemanticAnalyser::visit(Map &map)
 {
-  std::vector<Type> args;
+  MapKey key;
   if (map.vargs) {
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
-      args.push_back(type_);
+      key.args_.push_back({type_, 8});
     }
   }
 
-  auto search = map_args_.find(map.ident);
-  if (search != map_args_.end()) {
-    if (search->second != args) {
+  auto search = map_key_.find(map.ident);
+  if (search != map_key_.end()) {
+    if (search->second != key) {
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: ";
-      err_ << argument_list(args, true);
+      err_ << key.argument_type_list();
       err_ << "\n\twhen map expects arguments: ";
-      err_ << argument_list(search->second, true);
+      err_ << search->second.argument_type_list();
       err_ << "\n" << std::endl;
     }
   }
   else {
-    map_args_.insert({map.ident, args});
+    map_key_.insert({map.ident, key});
   }
 
   auto search_val = map_val_.find(map.ident);
@@ -237,12 +237,12 @@ int SemanticAnalyser::create_maps()
     std::string map_name = map_val.first;
     Type type = map_val.second;
 
-    auto search_args = map_args_.find(map_name);
-    if (search_args == map_args_.end())
+    auto search_args = map_key_.find(map_name);
+    if (search_args == map_key_.end())
       abort();
-    auto &args = search_args->second;
+    auto &key = search_args->second;
 
-    bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, args);
+    bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
   }
 
   return 0;

@@ -3,8 +3,8 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <unistd.h>
 #include <vector>
+#include <unistd.h>
 
 #include "libbpf.h"
 
@@ -19,6 +19,17 @@ enum class Type
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
+
+class MapKeyArgument
+{
+public:
+  Type type;
+  size_t size;
+
+  bool operator==(const MapKeyArgument &a) const;
+};
+
+std::ostream &operator<<(std::ostream &os, MapKeyArgument arg);
 
 enum class ProbeType
 {
@@ -37,29 +48,5 @@ public:
   std::string attach_point;
   std::string name;
 };
-
-template <typename T>
-std::string argument_list(const std::vector<T> &items, size_t n, bool show_empty=false)
-{
-  if (n == 0)
-  {
-    if (show_empty)
-      return "[]";
-    return "";
-  }
-
-  std::ostringstream list;
-  list << "[";
-  for (size_t i = 0; i < n-1; i++)
-    list << items.at(i) << ", ";
-  list << items.at(n-1) << "]";
-  return list.str();
-}
-
-template <typename T>
-std::string argument_list(const std::vector<T> &items, bool show_empty=false)
-{
-  return argument_list(items, items.size(), show_empty);
-}
 
 } // namespace bpftrace

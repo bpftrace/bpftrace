@@ -21,6 +21,7 @@ add_executable(bpftrace
   lex.yy.cc
   main.cpp
   map.cpp
+  mapkey.cpp
   parser.tab.cc
   printer.cpp
   semantic_analyser.cpp

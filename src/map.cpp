@@ -6,32 +6,14 @@
 
 namespace bpftrace {
 
-Map::Map(std::string &name, Type type, std::vector<Type> &args)
-  : name_(name), type_(type), args_(args)
+Map::Map(std::string &name, Type type, MapKey key)
+  : name_(name), type_(type), key_(key)
 {
-  int key_size = 0;
-  if (args.size() > 0)
-  {
-    for (auto type : args)
-    {
-      switch (type)
-      {
-        case Type::integer:
-          key_size += 8;
-          break;
-        default:
-          abort();
-      }
-    }
-    if (type == Type::quantize)
-    {
-      key_size += 8;
-    }
-  }
-  else
-  {
+  int key_size = key.size();
+  if (type == Type::quantize)
+    key_size += 8;
+  if (key_size == 0)
     key_size = 8;
-  }
 
   int value_size = 8;
   int max_entries = 128;

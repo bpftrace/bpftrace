@@ -70,10 +70,10 @@ int BPFtrace::print_maps()
 
 int BPFtrace::print_map(Map &map)
 {
-  std::vector<uint64_t> old_key;
+  std::vector<uint8_t> old_key;
   try
   {
-    old_key = find_empty_key(map, map.args_.size());
+    old_key = find_empty_key(map, map.key_.size());
   }
   catch (std::runtime_error &e)
   {
@@ -85,7 +85,7 @@ int BPFtrace::print_map(Map &map)
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
-    std::cout << map.name_ << argument_list(key, map.args_.size()) << ": ";
+    std::cout << map.name_ << map.key_.argument_value_list(key) << ": ";
 
     uint64_t value;
     int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
@@ -111,10 +111,10 @@ int BPFtrace::print_map_quantize(Map &map)
   // e.g. A map defined as: @x[1, 2] = @quantize(3);
   // would actually be stored with the key: [1, 2, 3]
 
-  std::vector<uint64_t> old_key;
+  std::vector<uint8_t> old_key;
   try
   {
-    old_key = find_empty_key(map, map.args_.size() + 1);
+    old_key = find_empty_key(map, map.key_.size() + 8);
   }
   catch (std::runtime_error &e)
   {
@@ -124,14 +124,14 @@ int BPFtrace::print_map_quantize(Map &map)
   }
   auto key(old_key);
 
-  std::map<std::vector<uint64_t>, std::vector<uint64_t>> values;
+  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
-    auto key_prefix = std::vector<uint64_t>(map.args_.size());
-    int bucket = key.at(map.args_.size());
+    auto key_prefix = std::vector<uint8_t>(map.key_.size());
+    int bucket = key.at(map.key_.size());
 
-    for (int i=0; i<map.args_.size(); i++)
+    for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
     uint64_t value;
@@ -142,19 +142,19 @@ int BPFtrace::print_map_quantize(Map &map)
       return -1;
     }
 
-    if (values.find(key_prefix) == values.end())
+    if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      values[key_prefix] = std::vector<uint64_t>(65);
+      values_by_key[key_prefix] = std::vector<uint64_t>(65);
     }
-    values[key_prefix].at(bucket) = value;
+    values_by_key[key_prefix].at(bucket) = value;
 
     old_key = key;
   }
 
-  for (auto &map_elem : values)
+  for (auto &map_elem : values_by_key)
   {
-    std::cout << map.name_ << argument_list(map_elem.first) << ": " << std::endl;
+    std::cout << map.name_ << map.key_.argument_value_list(map_elem.first) << ": " << std::endl;
 
     print_quantize(map_elem.second);
 
@@ -238,26 +238,20 @@ std::string BPFtrace::quantize_index_label(int power)
   return label.str();
 }
 
-std::vector<uint64_t> BPFtrace::find_empty_key(Map &map, int num_elems)
+std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size)
 {
-  if (num_elems == 0) num_elems = 1;
-  auto key = std::vector<uint64_t>(num_elems);
-  uint64_t value;
+  if (size == 0) size = 8;
+  auto key = std::vector<uint8_t>(size);
+  uint8_t value;
 
   if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
     return key;
 
-  for (auto &elem : key)
-  {
-    elem = 0xffffffffffffffff;
-  }
+  for (auto &elem : key) elem = 0xff;
   if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
     return key;
 
-  for (auto &elem : key)
-  {
-    elem = 0x5555555555555555;
-  }
+  for (auto &elem : key) elem = 0x55;
   if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
     return key;
 
