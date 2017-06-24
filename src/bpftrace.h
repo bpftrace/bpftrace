@@ -19,7 +19,7 @@ public:
   int start();
   void stop();
   int print_maps() const;
-  std::string get_stack(uint64_t stackid, int indent=0) const;
+  std::string get_stack(uint32_t stackid, int indent=0) const;
 
   std::map<std::string, std::unique_ptr<Map>> maps_;
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
