@@ -62,6 +62,14 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateProbeRead(dst, b_.getInt64(8), src);
     expr_ = b_.CreateLoad(dst);
   }
+  else if (builtin.ident == "retval")
+  {
+    AllocaInst *dst = b_.CreateAllocaBPF();
+    int offset = arch::ret_offset() * sizeof(uintptr_t);
+    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
+    b_.CreateProbeRead(dst, b_.getInt64(8), src);
+    expr_ = b_.CreateLoad(dst);
+  }
   else
   {
     abort();

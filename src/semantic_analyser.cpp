@@ -19,7 +19,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "pid" ||
       builtin.ident == "tid" ||
       builtin.ident == "uid" ||
-      builtin.ident == "gid") {
+      builtin.ident == "gid" ||
+      builtin.ident == "retval") {
     type_ = Type::integer;
   }
   else if (builtin.ident == "stack")
