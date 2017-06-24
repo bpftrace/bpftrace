@@ -60,6 +60,7 @@ Variables:
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
 - `stack` - Kernel stack trace
+- `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 
 Functions:
 - `quantize(int n)` - produce a log2 histogram of values of `n`

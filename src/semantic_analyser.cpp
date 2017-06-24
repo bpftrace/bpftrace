@@ -3,6 +3,7 @@
 #include "semantic_analyser.h"
 #include "ast.h"
 #include "parser.tab.hh"
+#include "arch/arch.h"
 
 namespace bpftrace {
 namespace ast {
@@ -25,6 +26,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
   {
     type_ = Type::stack;
     needs_stackid_map_ = true;
+  }
+  else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
+      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+    int arg_num = atoi(builtin.ident.substr(3).c_str());
+    if (arg_num > arch::max_arg())
+      err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
+    type_ = Type::integer;
   }
   else {
     type_ = Type::none;

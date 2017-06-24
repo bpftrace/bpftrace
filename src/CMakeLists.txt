@@ -28,6 +28,8 @@ add_executable(bpftrace
   types.cpp
 )
 
+target_link_libraries(bpftrace arch)
+
 llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
 target_link_libraries(bpftrace ${llvm_libs})
 

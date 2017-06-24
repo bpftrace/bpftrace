@@ -18,6 +18,8 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
+target_link_libraries(bpftrace_test arch)
+
 add_dependencies(bpftrace_test bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 include_directories(${source_dir}/src/cc)

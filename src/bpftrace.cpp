@@ -285,7 +285,7 @@ std::string BPFtrace::get_stack(uint64_t stackid, int indent) const
     if (addr == 0)
       break;
     if (ksyms.resolve_addr(addr, &sym))
-      stack << padding << sym.name << "+" << sym.offset << std::endl;
+      stack << padding << sym.name << "+" << sym.offset << ":" << sym.module << std::endl;
     else
       stack << padding << (void*)addr << std::endl;
   }

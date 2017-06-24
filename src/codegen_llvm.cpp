@@ -1,6 +1,7 @@
 #include "codegen_llvm.h"
 #include "ast.h"
 #include "parser.tab.hh"
+#include "arch/arch.h"
 
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -49,6 +50,17 @@ void CodegenLLVM::visit(Builtin &builtin)
     {
       expr_ = b_.CreateLShr(uidgid, 32);
     }
+  }
+  else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
+      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9')
+  {
+    int arg_num = atoi(builtin.ident.substr(3).c_str());
+
+    AllocaInst *dst = b_.CreateAllocaBPF();
+    int offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
+    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
+    b_.CreateProbeRead(dst, b_.getInt64(8), src);
+    expr_ = b_.CreateLoad(dst);
   }
   else
   {

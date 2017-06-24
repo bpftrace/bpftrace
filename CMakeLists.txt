@@ -28,5 +28,6 @@ ExternalProject_Add(bcc
   BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
 )
 
+add_subdirectory(src/arch)
 add_subdirectory(src)
 add_subdirectory(tests)
