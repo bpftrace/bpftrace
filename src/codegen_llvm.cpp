@@ -114,6 +114,7 @@ void CodegenLLVM::visit(Binop &binop)
     case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
     default: abort();
   }
+  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
 void CodegenLLVM::visit(Unop &unop)
@@ -195,10 +196,7 @@ void CodegenLLVM::visit(Predicate &pred)
 
   pred.expr->accept(*this);
 
-  expr_ = b_.CreateICmpEQ(
-      b_.CreateIntCast(expr_, b_.getInt64Ty(), true),
-      b_.getInt64(0),
-      "predcond");
+  expr_ = b_.CreateICmpEQ(expr_, b_.getInt64(0), "predcond");
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
   b_.SetInsertPoint(pred_false_block);
