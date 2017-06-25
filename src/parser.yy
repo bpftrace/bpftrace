@@ -11,6 +11,7 @@
 %define parse.error verbose
 
 %param { bpftrace::Driver &driver }
+%param { void *yyscanner }
 %locations
 
 // Forward declarations of classes referenced in the parser

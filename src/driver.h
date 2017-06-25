@@ -1,16 +1,21 @@
 #pragma once
 
+#include <memory>
+
 #include "ast.h"
 #include "parser.tab.hh"
 
-#define YY_DECL bpftrace::Parser::symbol_type yylex(bpftrace::Driver &driver)
+typedef void* yyscan_t;
+#define YY_DECL bpftrace::Parser::symbol_type yylex(bpftrace::Driver &driver, yyscan_t yyscanner)
 YY_DECL;
 
 namespace bpftrace {
 
-class Driver {
+class Driver
+{
 public:
-  Driver() : parser_(*this) { }
+  Driver();
+  ~Driver();
 
   int parse_stdin();
   int parse_str(const std::string &script);
@@ -29,7 +34,8 @@ public:
   ast::Program *root_;
 
 private:
-  Parser parser_;
+  std::unique_ptr<Parser> parser_;
+  yyscan_t scanner_;
 };
 
 } // namespace bpftrace

@@ -1,11 +1,12 @@
-%option yylineno nodefault noyywrap
+%option yylineno nodefault noyywrap noinput nounput
 %option never-interactive
+%option reentrant
 %{
 #include "driver.h"
 #include "parser.tab.hh"
 
 #undef yywrap
-#define yywrap() 1
+#define yywrap(x) 1
 
 static bpftrace::location loc;
 

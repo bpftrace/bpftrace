@@ -7,18 +7,19 @@ include_directories(${CMAKE_BINARY_DIR}/src)
 
 add_executable(bpftrace_test
   main.cpp
-  #  parser.cpp
+  parser.cpp
   semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/ast.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
+  ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
   ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
-target_link_libraries(bpftrace_test arch)
+target_link_libraries(bpftrace_test arch parser)
 
 add_dependencies(bpftrace_test bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)

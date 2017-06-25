@@ -28,6 +28,14 @@ ExternalProject_Add(bcc
   BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
 )
 
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc)
+flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
+add_flex_bison_dependency(flex_lexer bison_parser)
+add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
+target_include_directories(parser PUBLIC src ${CMAKE_BINARY_DIR})
+
 add_subdirectory(src/arch)
 add_subdirectory(src)
 add_subdirectory(tests)
