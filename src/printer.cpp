@@ -67,9 +67,7 @@ void Printer::visit(Unop &unop)
 
 void Printer::visit(ExprStatement &expr)
 {
-  ++depth_;
   expr.expr->accept(*this);
-  --depth_;
 }
 
 void Printer::visit(AssignMapStatement &assignment)

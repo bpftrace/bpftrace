@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
   if (debug)
   {
-    ast::Printer p = bpftrace::ast::Printer(std::cout);
+    ast::Printer p(std::cout);
     driver.root_->accept(p);
   }
 

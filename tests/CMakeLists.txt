@@ -15,6 +15,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
+  ${CMAKE_SOURCE_DIR}/src/printer.cpp
   ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
