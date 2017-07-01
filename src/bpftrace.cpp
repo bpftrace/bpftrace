@@ -103,7 +103,9 @@ int BPFtrace::print_map(Map &map) const
       return -1;
     }
     if (map.type_ == Type::stack)
-      std::cout << get_stack(value, 8);
+      std::cout << get_stack(value, false, 8);
+    else if (map.type_ == Type::ustack)
+      std::cout << get_stack(value, true, 8);
     else
       std::cout << value << std::endl;
 
@@ -269,13 +271,13 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
   throw std::runtime_error("Could not find empty key");
 }
 
-std::string BPFtrace::get_stack(uint32_t stackid, int indent) const
+std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent) const
 {
   auto stack_trace = std::vector<uint64_t>(MAX_STACK_SIZE);
   int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
   if (err)
   {
-    std::cerr << "Error looking up stack id: " << err << std::endl;
+    std::cerr << "Error looking up stack id " << stackid << ": " << err << std::endl;
     return "";
   }
 
@@ -289,7 +291,7 @@ std::string BPFtrace::get_stack(uint32_t stackid, int indent) const
   {
     if (addr == 0)
       break;
-    if (ksyms.resolve_addr(addr, &sym))
+    if (!ustack && ksyms.resolve_addr(addr, &sym))
       stack << padding << sym.name << "+" << sym.offset << ":" << sym.module << std::endl;
     else
       stack << padding << (void*)addr << std::endl;

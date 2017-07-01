@@ -19,6 +19,7 @@ enum class Type
   quantize,
   count,
   stack,
+  ustack,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);

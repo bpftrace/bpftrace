@@ -23,9 +23,9 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = b_.CreateGetNs();
   }
-  else if (builtin.ident == "stack")
+  else if (builtin.ident == "stack" || builtin.ident == "ustack")
   {
-    expr_ = b_.CreateGetStackId(ctx_);
+    expr_ = b_.CreateGetStackId(ctx_, builtin.ident == "ustack");
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {

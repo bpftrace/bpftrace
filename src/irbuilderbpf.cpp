@@ -182,10 +182,14 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
   return CreateCall(getuidgid_func);
 }
 
-CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx)
+CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);
-  Value *flags = getInt64(0);
+
+  int flags = 0;
+  if (ustack)
+    flags |= (1<<8);
+  Value *flags_val = getInt64(flags);
 
   // int bpf_get_stackid(ctx, map, flags)
   // Return: >= 0 stackid on success or negative error
@@ -198,7 +202,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_stackid),
       getstackid_func_ptr_type);
-  return CreateCall(getstackid_func, {ctx, map_ptr, flags});
+  return CreateCall(getstackid_func, {ctx, map_ptr, flags_val});
 }
 
 } // namespace ast

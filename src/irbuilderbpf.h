@@ -27,7 +27,7 @@ public:
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();
-  CallInst   *CreateGetStackId(Value *ctx);
+  CallInst   *CreateGetStackId(Value *ctx, bool ustack);
 
 private:
   Module &module_;

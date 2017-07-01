@@ -23,9 +23,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "retval") {
     type_ = Type::integer;
   }
-  else if (builtin.ident == "stack")
-  {
+  else if (builtin.ident == "stack") {
     type_ = Type::stack;
+    needs_stackid_map_ = true;
+  }
+  else if (builtin.ident == "ustack") {
+    type_ = Type::ustack;
     needs_stackid_map_ = true;
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
