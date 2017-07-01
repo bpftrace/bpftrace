@@ -40,6 +40,8 @@ bpf_probe_attach_type attachtype(ProbeType t)
   {
     case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
+    case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
+    case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
     default: abort();
   }
 }
@@ -50,6 +52,8 @@ bpf_prog_type progtype(ProbeType t)
   {
     case ProbeType::kprobe:    return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe: return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uprobe:    return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uretprobe: return BPF_PROG_TYPE_KPROBE; break;
     default: abort();
   }
 }

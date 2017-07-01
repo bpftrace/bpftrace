@@ -38,6 +38,8 @@ enum class ProbeType
 {
   kprobe,
   kretprobe,
+  uprobe,
+  uretprobe,
 };
 
 std::string typestr(Type t);
@@ -48,6 +50,7 @@ class Probe
 {
 public:
   ProbeType type;
+  std::string path;
   std::string attach_point;
   std::string name;
 };

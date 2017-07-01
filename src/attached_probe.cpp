@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "attached_probe.h"
+#include "bcc_syms.h"
 #include "libbpf.h"
 #include "perf_reader.h"
 
@@ -18,6 +19,10 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
       attach_kprobe();
+      break;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+      attach_uprobe();
       break;
     default:
       abort();
@@ -35,6 +40,10 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::kretprobe:
       err = bpf_detach_kprobe(eventname());
       break;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+      err = bpf_detach_uprobe(eventname());
+      break;
     default:
       abort();
   }
@@ -42,21 +51,50 @@ AttachedProbe::~AttachedProbe()
     std::cerr << "Error detaching probe: " << probe_.name << std::endl;
 }
 
+std::string AttachedProbe::eventprefix() const
+{
+  switch (attachtype(probe_.type))
+  {
+    case BPF_PROBE_ENTRY:
+      return "p_";
+    case BPF_PROBE_RETURN:
+      return "r_";
+    default:
+      abort();
+  }
+}
+
 const char *AttachedProbe::eventname() const
 {
   std::string event;
+  std::ostringstream offset_str;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
-      event =  "p_" + probe_.attach_point;
-      break;
     case ProbeType::kretprobe:
-      event =  "r_" + probe_.attach_point;
+      event = eventprefix() + probe_.attach_point;
+      break;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+      offset_str << std::hex << offset();
+      event = eventprefix() + probe_.path + "_" + offset_str.str();
       break;
     default:
       abort();
   }
   return event.c_str();
+}
+
+uint64_t AttachedProbe::offset() const
+{
+  bcc_symbol sym;
+  int err = bcc_resolve_symname(probe_.path.c_str(), probe_.attach_point.c_str(),
+      0, 0, nullptr, &sym);
+
+  if (err)
+    throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + probe_.attach_point);
+
+  return sym.offset;
 }
 
 static unsigned kernel_version()
@@ -95,6 +133,22 @@ void AttachedProbe::attach_kprobe()
 
   perf_reader_ = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
       eventname(), probe_.attach_point.c_str(),
+      pid, cpu, group_fd, cb, cb_cookie);
+
+  if (perf_reader_ == nullptr)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+}
+
+void AttachedProbe::attach_uprobe()
+{
+  int pid = -1;
+  int cpu = 0;
+  int group_fd = -1;
+  perf_reader_cb cb = nullptr;
+  void *cb_cookie = nullptr;
+
+  perf_reader_ = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
+      eventname(), probe_.path.c_str(), offset(),
       pid, cpu, group_fd, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)

@@ -13,12 +13,17 @@ namespace bpftrace {
 int BPFtrace::add_probe(ast::Probe &p)
 {
   Probe probe;
+  probe.path = p.path;
   probe.attach_point = p.attach_point;
   probe.name = p.name;
   if (p.type == "kprobe")
     probe.type = ProbeType::kprobe;
   else if (p.type == "kretprobe")
     probe.type = ProbeType::kretprobe;
+  else if (p.type == "uprobe")
+    probe.type = ProbeType::uprobe;
+  else if (p.type == "uretprobe")
+    probe.type = ProbeType::uretprobe;
   else
     return -1;
   probes_.push_back(probe);

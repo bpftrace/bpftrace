@@ -13,9 +13,12 @@ public:
   AttachedProbe& operator=(const AttachedProbe &) = delete;
 
 private:
+  std::string eventprefix() const;
   const char *eventname() const;
+  uint64_t offset() const;
   void load_prog();
   void attach_kprobe();
+  void attach_uprobe();
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> &func_;
