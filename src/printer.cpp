@@ -105,7 +105,7 @@ void Printer::visit(Predicate &pred)
 void Printer::visit(Probe &probe)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << probe.type << ":" << probe.attach_point << std::endl;
+  out_ << indent << probe.name << std::endl;
 
   ++depth_;
   if (probe.pred) {

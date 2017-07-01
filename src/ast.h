@@ -112,12 +112,13 @@ public:
 
 class Probe : public Node {
 public:
-  Probe(std::string &type, std::string &attach_point, StatementList *stmts)
-    : type(type), attach_point(attach_point), name(type+":"+attach_point), pred(nullptr), stmts(stmts) { }
-  Probe(std::string &type, std::string &attach_point, Predicate *pred, StatementList *stmts)
+  Probe(const std::string &type, const std::string &attach_point, Predicate *pred, StatementList *stmts)
     : type(type), attach_point(attach_point), name(type+":"+attach_point), pred(pred), stmts(stmts) { }
+  Probe(const std::string &type, const std::string &path, const std::string &attach_point, Predicate *pred, StatementList *stmts)
+    : type(type), path(path), attach_point(attach_point), name(type+":"+path+":"+attach_point), pred(pred), stmts(stmts) { }
 
   std::string type;
+  std::string path;
   std::string attach_point;
   std::string name;
   Predicate *pred;

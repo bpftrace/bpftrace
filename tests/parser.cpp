@@ -168,4 +168,12 @@ TEST(Parser, multiple_probes)
       "  int: 2\n");
 }
 
+TEST(Parser, uprobe)
+{
+  test("uprobe:/my/program:func { 1; }",
+      "Program\n"
+      " uprobe:/my/program:func\n"
+      "  int: 1\n");
+}
+
 } // namespace bpftrace

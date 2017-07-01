@@ -68,12 +68,14 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 ;
 
 %token <std::string> IDENT "identifier"
+%token <std::string> PATH "path"
 %token <std::string> MAP "map"
 %token <int> INT "integer"
 
 %type <ast::ProbeList *> probes
 %type <ast::StatementList *> block stmts
 %type <ast::Probe *> probe
+%type <ast::Predicate *> pred
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
 %type <ast::Call *> call
@@ -105,9 +107,12 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : IDENT ":" IDENT block              { $$ = new ast::Probe($1, $3, $4); }
-      | IDENT ":" IDENT DIV expr ENDPRED block { $$ = new ast::Probe($1, $3, new ast::Predicate($5), $7); }
+probe : IDENT ":" IDENT pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
+      | IDENT PATH IDENT pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
       ;
+
+pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
+     |                  { $$ = nullptr; }
 
 block : "{" stmts "}"     { $$ = $2; }
       | "{" stmts ";" "}" { $$ = $2; }

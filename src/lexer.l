@@ -22,6 +22,7 @@ int    [0-9]+|0[xX][0-9a-fA-F]+
 hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
+path   :(\\.|[_\-\./a-zA-Z0-9])*:
 
 %%
 
@@ -34,6 +35,7 @@ space  {hspace}|{vspace}
 "//".*$  // Comments
 
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
+{path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
