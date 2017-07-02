@@ -148,6 +148,7 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
      | LNOT expr       { $$ = new ast::Unop(token::LNOT, $2); }
      | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
+     | MUL  expr       { $$ = new ast::Unop(token::MUL,  $2); }
      ;
 
 call : IDENT "(" ")"       { $$ = new ast::Call($1); }

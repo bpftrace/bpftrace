@@ -80,6 +80,7 @@ std::string opstr(Unop &unop)
   switch (unop.op) {
     case bpftrace::Parser::token::LNOT: return "!";
     case bpftrace::Parser::token::BNOT: return "~";
+    case bpftrace::Parser::token::MUL:  return "dereference";
     default: abort();
   }
 }

@@ -124,6 +124,13 @@ void CodegenLLVM::visit(Unop &unop)
   switch (unop.op) {
     case bpftrace::Parser::token::LNOT: expr_ = b_.CreateNot(expr_); break;
     case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
+    case bpftrace::Parser::token::MUL:
+    {
+      AllocaInst *dst = b_.CreateAllocaBPF();
+      b_.CreateProbeRead(dst, b_.getInt64(8), expr_);
+      expr_ = b_.CreateLoad(dst);
+      break;
+    }
     default: abort();
   }
 }

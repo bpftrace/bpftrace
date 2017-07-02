@@ -142,6 +142,11 @@ void SemanticAnalyser::visit(Binop &binop)
 void SemanticAnalyser::visit(Unop &unop)
 {
   unop.expr->accept(*this);
+
+  if (type_ != Type::integer) {
+    err_ << "The " << opstr(unop) << " operator can not be used on expressions of type " << type_ << std::endl;
+  }
+
   type_ = Type::integer;
 }
 
