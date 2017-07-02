@@ -17,7 +17,7 @@ public:
                Module &module,
                BPFtrace &bpftrace);
 
-  AllocaInst *CreateAllocaBPF(int array_size=1, const std::string &name="");
+  AllocaInst *CreateAllocaBPF(const std::string &name="", int num_items=1);
   CallInst   *CreateBpfPseudoCall(int mapfd);
   CallInst   *CreateBpfPseudoCall(Map &map);
   LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);

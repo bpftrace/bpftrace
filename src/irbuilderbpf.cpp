@@ -25,22 +25,22 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(int num_items, const std::string &name)
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(const std::string &name, int num_items)
 {
   llvm::Type *ty = getInt64Ty();
   Value *array_size = getInt64(num_items);
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
   if (entry_block.empty())
-    return new AllocaInst(ty, array_size, "", &entry_block);
+    return new AllocaInst(ty, array_size, name, &entry_block);
   else
-    return new AllocaInst(ty, array_size, "", &entry_block.front());
+    return new AllocaInst(ty, array_size, name, &entry_block.front());
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
 {
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
-  return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)});
+  return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)}, "pseudo");
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
@@ -64,7 +64,7 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_lookup_elem),
       lookup_func_ptr_type);
-  CallInst *call = CreateCall(lookup_func, {map_ptr, key});
+  CallInst *call = CreateCall(lookup_func, {map_ptr, key}, "lookup_elem");
 
   // Check if result == 0
   Function *parent = GetInsertBlock()->getParent();
@@ -72,7 +72,7 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
 
-  Value *value = CreateAllocaBPF();
+  Value *value = CreateAllocaBPF("lookup_elem_val");
   Value *condition = CreateICmpNE(
       CreateIntCast(call, getInt8PtrTy(), true),
       ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
@@ -105,7 +105,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_update_elem),
       update_func_ptr_type);
-  CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags});
+  CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags}, "update_elem");
 }
 
 void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
@@ -124,7 +124,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_delete_elem),
       delete_func_ptr_type);
-  CallInst *call = CreateCall(delete_func, {map_ptr, key});
+  CallInst *call = CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, Value *size, Value *src)
@@ -140,7 +140,7 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, Value *size, Value *src)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CallInst *call = CreateCall(proberead_func, {dst, size, src});
+  CallInst *call = CreateCall(proberead_func, {dst, size, src}, "probe_read");
 }
 
 CallInst *IRBuilderBPF::CreateGetNs()
@@ -153,7 +153,7 @@ CallInst *IRBuilderBPF::CreateGetNs()
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_ktime_get_ns),
       gettime_func_ptr_type);
-  return CreateCall(gettime_func);
+  return CreateCall(gettime_func, {}, "get_ns");
 }
 
 CallInst *IRBuilderBPF::CreateGetPidTgid()
@@ -166,7 +166,7 @@ CallInst *IRBuilderBPF::CreateGetPidTgid()
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_current_pid_tgid),
       getpidtgid_func_ptr_type);
-  return CreateCall(getpidtgid_func);
+  return CreateCall(getpidtgid_func, {}, "get_pid_tgid");
 }
 
 CallInst *IRBuilderBPF::CreateGetUidGid()
@@ -179,7 +179,7 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_current_uid_gid),
       getuidgid_func_ptr_type);
-  return CreateCall(getuidgid_func);
+  return CreateCall(getuidgid_func, {}, "get_uid_gid");
 }
 
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
@@ -202,7 +202,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_stackid),
       getstackid_func_ptr_type);
-  return CreateCall(getstackid_func, {ctx, map_ptr, flags_val});
+  return CreateCall(getstackid_func, {ctx, map_ptr, flags_val}, "get_stackid");
 }
 
 } // namespace ast
