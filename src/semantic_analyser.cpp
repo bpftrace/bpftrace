@@ -70,7 +70,7 @@ void SemanticAnalyser::visit(Call &call)
       err_ << "quantize() should take 1 argument (";
       err_ << nargs << " provided)" << std::endl;
     }
-    if (call.vargs->at(0)->type.type != Type::integer) {
+    if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
       err_ << "quantize() only supports integer arguments";
       err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
     }
@@ -160,7 +160,7 @@ void SemanticAnalyser::visit(Unop &unop)
 {
   unop.expr->accept(*this);
 
-  if (unop.expr->type.type != Type::integer) {
+  if (is_final_pass() && unop.expr->type.type != Type::integer) {
     err_ << "The " << opstr(unop) << " operator can not be used on expressions of type " << unop.expr->type << std::endl;
   }
 
