@@ -18,6 +18,7 @@ public:
       out_(out) { }
 
   void visit(Integer &integer) override;
+  void visit(String &string) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;

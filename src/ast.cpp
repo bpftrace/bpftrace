@@ -8,6 +8,10 @@ void Integer::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void String::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Builtin::accept(Visitor &v) {
   v.visit(*this);
 }

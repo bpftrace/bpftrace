@@ -13,6 +13,14 @@ void SemanticAnalyser::visit(Integer &integer)
   integer.type = SizedType(Type::integer, 8);
 }
 
+void SemanticAnalyser::visit(String &string)
+{
+  if (string.str.size() > STRING_SIZE-1) {
+    err_ << "String is too long (over " << STRING_SIZE << " bytes): " << string.str << std::endl;
+  }
+  string.type = SizedType(Type::string, STRING_SIZE);
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs" ||

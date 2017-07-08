@@ -30,6 +30,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class String : public Expression {
+public:
+  explicit String(std::string str) : str(str) { }
+  std::string str;
+
+  void accept(Visitor &v) override;
+};
+
 class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(ident) { }
@@ -144,6 +152,7 @@ class Visitor {
 public:
   virtual ~Visitor() { }
   virtual void visit(Integer &integer) = 0;
+  virtual void visit(String &string) = 0;
   virtual void visit(Builtin &builtin) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Map &map) = 0;

@@ -10,6 +10,12 @@ void Printer::visit(Integer &integer)
   out_ << indent << "int: " << integer.n << std::endl;
 }
 
+void Printer::visit(String &string)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "string: " << string.str << std::endl;
+}
+
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');

@@ -17,6 +17,15 @@ void CodegenLLVM::visit(Integer &integer)
   expr_ = b_.getInt64(integer.n);
 }
 
+void CodegenLLVM::visit(String &string)
+{
+  string.str.resize(string.type.size-1);
+  Constant *const_str = ConstantDataArray::getString(module_->getContext(), string.str, true);
+  AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
+  b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), buf);
+  expr_ = buf;
+}
+
 void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
@@ -146,10 +155,19 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 
   assignment.expr->accept(*this);
 
-  AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-  b_.CreateStore(expr_, val);
-  AllocaInst *key = getMapKey(map);
-  b_.CreateMapUpdateElem(map, key, val);
+  if (assignment.expr->type.type == Type::string)
+  {
+    Value *val = expr_;
+    AllocaInst *key = getMapKey(map);
+    b_.CreateMapUpdateElem(map, key, val);
+  }
+  else
+  {
+    AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateStore(expr_, val);
+    AllocaInst *key = getMapKey(map);
+    b_.CreateMapUpdateElem(map, key, val);
+  }
 }
 
 void CodegenLLVM::visit(AssignMapCallStatement &assignment)
@@ -256,7 +274,10 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      b_.CreateStore(expr_, offset_val);
+      if (expr->type.type == Type::string)
+        b_.CreateMemcpy(offset_val, expr_, b_.getInt64(expr->type.size));
+      else
+        b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
     }
   }
@@ -283,7 +304,10 @@ AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      b_.CreateStore(expr_, offset_val);
+      if (expr->type.type == Type::string)
+        b_.CreateMemcpy(offset_val, expr_, b_.getInt64(expr->type.size));
+      else
+        b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
     }
     Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});

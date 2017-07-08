@@ -20,6 +20,7 @@ public:
 
   AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
   AllocaInst *CreateAllocaMapKey(int bytes, const std::string &name="");
+  void        CreateMemcpy(Value *dst, Value *src, Value *len);
   CallInst   *CreateBpfPseudoCall(int mapfd);
   CallInst   *CreateBpfPseudoCall(Map &map);
   LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);

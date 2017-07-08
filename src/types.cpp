@@ -31,6 +31,7 @@ std::string typestr(Type t)
     case Type::count:    return "count";    break;
     case Type::stack:    return "stack";    break;
     case Type::ustack:   return "ustack";   break;
+    case Type::string:   return "string";   break;
     default: abort();
   }
 }

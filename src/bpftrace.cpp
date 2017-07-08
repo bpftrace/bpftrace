@@ -106,6 +106,8 @@ int BPFtrace::print_map(Map &map) const
       std::cout << get_stack(*(uint32_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
       std::cout << get_stack(*(uint32_t*)value.data(), true, 8);
+    else if (map.type_.type == Type::string)
+      std::cout << value.data() << std::endl;
     else
       std::cout << *(int64_t*)value.data() << std::endl;
 

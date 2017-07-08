@@ -23,21 +23,38 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       GlobalValue::ExternalLinkage,
       "llvm.bpf.pseudo",
       &module_);
+
+  FunctionType *memcpy_func_type = FunctionType::get(
+      getVoidTy(),
+      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty(), getInt32Ty(), getInt1Ty()},
+      false);
+  Function::Create(
+      memcpy_func_type,
+      GlobalValue::ExternalLinkage,
+      "llvm.memcpy.p0i8.p0i8.i64",
+      &module_);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)
 {
   llvm::Type *ty;
-  switch (stype.size)
+  if (stype.type == Type::string)
   {
-    case 8:
-      ty = getInt64Ty();
-      break;
-    case 4:
-      ty = getInt32Ty();
-      break;
-    default:
-      abort();
+    ty = ArrayType::get(getInt8Ty(), stype.size);
+  }
+  else
+  {
+    switch (stype.size)
+    {
+      case 8:
+        ty = getInt64Ty();
+        break;
+      case 4:
+        ty = getInt32Ty();
+        break;
+      default:
+        abort();
+    }
   }
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
@@ -57,6 +74,12 @@ AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
     return new AllocaInst(ty, name, &entry_block);
   else
     return new AllocaInst(ty, name, &entry_block.front());
+}
+
+void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, Value *len)
+{
+  Function *memcpy_func = module_.getFunction("llvm.memcpy.p0i8.p0i8.i64");
+  CreateCall(memcpy_func, {dst, src, len, getInt32(1), getInt1(0)}, "memcpy");
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)

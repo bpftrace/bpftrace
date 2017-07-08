@@ -69,6 +69,8 @@ std::string MapKey::argument_value(const BPFtrace &bpftrace,
       return bpftrace.get_stack(*(uint32_t*)data, false);
     case Type::ustack:
       return bpftrace.get_stack(*(uint32_t*)data, true);
+    case Type::string:
+      return std::string((char*)data);
   }
   abort();
 }

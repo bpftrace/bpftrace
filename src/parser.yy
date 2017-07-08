@@ -69,6 +69,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
+%token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <int> INT "integer"
 
@@ -127,6 +128,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
+     | STRING          { $$ = new ast::String($1.substr(1, $1.size()-2)); }
      | IDENT           { $$ = new ast::Builtin($1); }
      | map             { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
