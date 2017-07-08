@@ -110,24 +110,42 @@ void CodegenLLVM::visit(Binop &binop)
   binop.right->accept(*this);
   rhs = expr_;
 
-  switch (binop.op) {
-    case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
-    case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
-    case bpftrace::Parser::token::LE:    expr_ = b_.CreateICmpSLE(lhs, rhs); break;
-    case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
-    case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
-    case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
-    case bpftrace::Parser::token::LAND:  abort();// TODO
-    case bpftrace::Parser::token::LOR:   abort();// TODO
-    case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
-    case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
-    case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
-    case bpftrace::Parser::token::DIV:   expr_ = b_.CreateSDiv   (lhs, rhs); break; // TODO signed/unsigned
-    case bpftrace::Parser::token::MOD:   expr_ = b_.CreateURem   (lhs, rhs); break; // TODO signed/unsigned
-    case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
-    case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
-    case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
-    default: abort();
+  Type &type = binop.left->type.type;
+  if (type == Type::string)
+  {
+    Function *strcmp_func = module_->getFunction("strcmp");
+    switch (binop.op) {
+      case bpftrace::Parser::token::EQ:
+        expr_ = b_.CreateCall(strcmp_func, {lhs, rhs}, "strcmp");
+        break;
+      case bpftrace::Parser::token::NE:
+        expr_ = b_.CreateNot(b_.CreateCall(strcmp_func, {lhs, rhs}, "strcmp"));
+        break;
+      default:
+        abort();
+    }
+  }
+  else
+  {
+    switch (binop.op) {
+      case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
+      case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
+      case bpftrace::Parser::token::LE:    expr_ = b_.CreateICmpSLE(lhs, rhs); break;
+      case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
+      case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
+      case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
+      case bpftrace::Parser::token::LAND:  abort();// TODO
+      case bpftrace::Parser::token::LOR:   abort();// TODO
+      case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
+      case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
+      case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
+      case bpftrace::Parser::token::DIV:   expr_ = b_.CreateSDiv   (lhs, rhs); break; // TODO signed/unsigned
+      case bpftrace::Parser::token::MOD:   expr_ = b_.CreateURem   (lhs, rhs); break; // TODO signed/unsigned
+      case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
+      case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
+      case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
+      default: abort();
+    }
   }
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
@@ -193,7 +211,7 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
   {
     call.vargs->front()->accept(*this);
     Function *log2_func = module_->getFunction("log2");
-    Value *log2 = b_.CreateCall(log2_func, expr_);
+    Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
     AllocaInst *key = getQuantizeMapKey(map, log2);
 
     Value *oldval = b_.CreateMapLookupElem(map, key);
@@ -389,9 +407,50 @@ void CodegenLLVM::createLog2Function()
   b_.CreateRet(b_.CreateLoad(result));
 }
 
+void CodegenLLVM::createStrcmpFunction()
+{
+  // Returns 1 if strings match, 0 otherwise
+  // i1 strcmp(const char *s1, const char *s2)
+  // {
+  //   for (int i=0; i<STRING_SIZE; i++)
+  //   {
+  //     if (s1[i] != s2[i]) return 0;
+  //   }
+  //   return 1;
+  // }
+
+  FunctionType *strcmp_func_type = FunctionType::get(b_.getInt1Ty(), {b_.getInt8PtrTy(), b_.getInt8PtrTy()}, false);
+  Function *strcmp_func = Function::Create(strcmp_func_type, Function::InternalLinkage, "strcmp", module_.get());
+  strcmp_func->setSection("helpers");
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "strcmp.entry", strcmp_func);
+  BasicBlock *not_equal_block = BasicBlock::Create(module_->getContext(), "strcmp.not_equal", strcmp_func);
+  b_.SetInsertPoint(entry);
+
+  Value *s1 = &strcmp_func->getArgumentList().front();
+  Value *s2 = &strcmp_func->getArgumentList().back();
+
+  for (int i=0; i<STRING_SIZE; i++)
+  {
+    Value *s1_char = b_.CreateGEP(s1, {b_.getInt64(i)});
+    Value *s2_char = b_.CreateGEP(s2, {b_.getInt64(i)});
+
+    BasicBlock *continue_block = BasicBlock::Create(module_->getContext(), "strcmp.continue", strcmp_func);
+
+    Value *cmp = b_.CreateICmpNE(b_.CreateLoad(s1_char), b_.CreateLoad(s2_char));
+    b_.CreateCondBr(cmp, not_equal_block, continue_block);
+
+    b_.SetInsertPoint(continue_block);
+  }
+  b_.CreateRet(b_.getInt1(1));
+
+  b_.SetInsertPoint(not_equal_block);
+  b_.CreateRet(b_.getInt1(0));
+}
+
 int CodegenLLVM::compile(bool debug)
 {
   createLog2Function();
+  createStrcmpFunction();
   root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();

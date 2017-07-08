@@ -140,10 +140,17 @@ void SemanticAnalyser::visit(Binop &binop)
   Type &lhs = binop.left->type.type;
   Type &rhs = binop.right->type.type;
 
-  if (is_final_pass() && lhs != rhs) {
-    err_ << "Type mismatch for '" << opstr(binop) << "': ";
-    err_ << "comparing '" << lhs << "' ";
-    err_ << "with '" << rhs << "'" << std::endl;
+  if (is_final_pass()) {
+    if (lhs != rhs) {
+      err_ << "Type mismatch for '" << opstr(binop) << "': ";
+      err_ << "comparing '" << lhs << "' ";
+      err_ << "with '" << rhs << "'" << std::endl;
+    }
+    else if (lhs != Type::integer &&
+             binop.op != Parser::token::EQ &&
+             binop.op != Parser::token::NE) {
+      err_ << "The " << opstr(binop) << " operator can not be used on expressions of type " << lhs << std::endl;
+    }
   }
 
   binop.type = SizedType(Type::integer, 8);
@@ -226,6 +233,9 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
+  if (is_final_pass() && pred.expr->type.type != Type::integer) {
+    err_ << "Invalid type for predicate: " << pred.expr->type.type << std::endl;
+  }
 }
 
 void SemanticAnalyser::visit(Probe &probe)

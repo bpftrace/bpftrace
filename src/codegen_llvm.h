@@ -40,6 +40,7 @@ public:
   AllocaInst *getQuantizeMapKey(Map &map, Value *log2);
 
   void createLog2Function();
+  void createStrcmpFunction();
   int compile(bool debug=false);
 
 private:
