@@ -39,6 +39,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::ustack, 8);
     needs_stackid_map_ = true;
   }
+  else if (builtin.ident == "comm") {
+    builtin.type = SizedType(Type::string, STRING_SIZE);
+  }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
     int arg_num = atoi(builtin.ident.substr(3).c_str());

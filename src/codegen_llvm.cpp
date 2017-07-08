@@ -60,6 +60,12 @@ void CodegenLLVM::visit(Builtin &builtin)
       expr_ = b_.CreateLShr(uidgid, 32);
     }
   }
+  else if (builtin.ident == "comm")
+  {
+    AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
+    b_.CreateGetCurrentComm(buf, b_.getInt64(builtin.type.size));
+    expr_ = buf;
+  }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9')
   {

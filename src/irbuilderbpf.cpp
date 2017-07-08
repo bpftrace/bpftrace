@@ -250,5 +250,21 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
   return CreateCall(getstackid_func, {ctx, map_ptr, flags_val}, "get_stackid");
 }
 
+void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, Value *size)
+{
+  // int bpf_get_current_comm(char *buf, int size_of_buf)
+  // Return: 0 on success or negative error
+  FunctionType *getcomm_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt64Ty()},
+      false);
+  PointerType *getcomm_func_ptr_type = PointerType::get(getcomm_func_type, 0);
+  Constant *getcomm_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_current_comm),
+      getcomm_func_ptr_type);
+  CreateCall(getcomm_func, {buf, size}, "get_comm");
+}
+
 } // namespace ast
 } // namespace bpftrace

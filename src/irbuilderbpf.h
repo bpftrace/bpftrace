@@ -31,6 +31,7 @@ public:
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack);
+  void        CreateGetCurrentComm(AllocaInst *buf, Value *size);
 
 private:
   Module &module_;
