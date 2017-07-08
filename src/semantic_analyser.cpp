@@ -217,7 +217,8 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
         search->second = assignment.call->type;
       }
     }
-    else if (search->second.type != assignment.call->type.type) {
+    else if (search->second.type != assignment.call->type.type &&
+             assignment.call->func != "delete") {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
       err_ << "()'\n\twhen map already contains a value of type '";
