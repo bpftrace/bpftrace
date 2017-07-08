@@ -12,7 +12,7 @@ class BPFtrace;
 class MapKey
 {
 public:
-  std::vector<MapKeyArgument> args_;
+  std::vector<SizedType> args_;
 
   bool operator!=(const MapKey &k) const;
 
@@ -23,7 +23,7 @@ public:
 
 private:
   static std::string argument_value(const BPFtrace &bpftrace,
-      const MapKeyArgument &arg,
+      const SizedType &arg,
       const void *data);
 };
 

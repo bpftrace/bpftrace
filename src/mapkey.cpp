@@ -42,17 +42,17 @@ std::string MapKey::argument_value_list(const BPFtrace &bpftrace,
   int offset = 0;
   for (size_t i = 0; i < n-1; i++)
   {
-    const MapKeyArgument &arg = args_.at(i);
+    const SizedType &arg = args_.at(i);
     list << argument_value(bpftrace, arg, &data.at(offset)) << ", ";
     offset += arg.size;
   }
-  const MapKeyArgument &arg = args_.at(n-1);
+  const SizedType &arg = args_.at(n-1);
   list << argument_value(bpftrace, arg, &data.at(offset)) << "]";
   return list.str();
 }
 
 std::string MapKey::argument_value(const BPFtrace &bpftrace,
-    const MapKeyArgument &arg,
+    const SizedType &arg,
     const void *data)
 {
   switch (arg.type)

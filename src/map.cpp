@@ -6,16 +6,16 @@
 
 namespace bpftrace {
 
-Map::Map(std::string &name, Type type, MapKey key)
+Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   : name_(name), type_(type), key_(key)
 {
   int key_size = key.size();
-  if (type == Type::quantize)
+  if (type.type == Type::quantize)
     key_size += 8;
   if (key_size == 0)
     key_size = 8;
 
-  int value_size = 8;
+  int value_size = type.size;
   int max_entries = 128;
   int flags = 0;
   mapfd_ = bpf_create_map(BPF_MAP_TYPE_HASH, key_size, value_size, max_entries, flags);
@@ -25,7 +25,7 @@ Map::Map(std::string &name, Type type, MapKey key)
   }
 }
 
-Map::Map(std::string name) : name_(name)
+Map::Map(const std::string &name) : name_(name)
 {
   // Only used for creating maps for storing stack IDs
   int key_size = 4;

@@ -43,9 +43,7 @@ private:
 
   bool is_final_pass() const;
 
-  using Type = bpftrace::Type;
-  Type type_;
-  std::map<std::string, Type> map_val_;
+  std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   bool needs_stackid_map_ = false;
 };

@@ -10,15 +10,15 @@ std::ostream &operator<<(std::ostream &os, Type type)
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, MapKeyArgument arg)
+std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  os << arg.type;
+  os << type.type;
   return os;
 }
 
-bool MapKeyArgument::operator==(const MapKeyArgument &a) const
+bool SizedType::operator==(const SizedType &t) const
 {
-  return type == a.type && size == a.size;
+  return type == t.type && size == t.size;
 }
 
 std::string typestr(Type t)
@@ -31,30 +31,6 @@ std::string typestr(Type t)
     case Type::count:    return "count";    break;
     case Type::stack:    return "stack";    break;
     case Type::ustack:   return "ustack";   break;
-    default: abort();
-  }
-}
-
-bpf_probe_attach_type attachtype(ProbeType t)
-{
-  switch (t)
-  {
-    case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
-    case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
-    case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
-    case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
-    default: abort();
-  }
-}
-
-bpf_prog_type progtype(ProbeType t)
-{
-  switch (t)
-  {
-    case ProbeType::kprobe:    return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::kretprobe: return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uprobe:    return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uretprobe: return BPF_PROG_TYPE_KPROBE; break;
     default: abort();
   }
 }

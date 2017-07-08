@@ -64,7 +64,7 @@ int BPFtrace::print_maps() const
   {
     Map &map = *mapmap.second.get();
     int err;
-    if (map.type_ == Type::quantize)
+    if (map.type_.type == Type::quantize)
       err = print_map_quantize(map);
     else
       err = print_map(map);
@@ -95,19 +95,19 @@ int BPFtrace::print_map(Map &map) const
   {
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
-    int64_t value;
-    int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
+    auto value = std::vector<uint8_t>(map.type_.size);
+    int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
     }
-    if (map.type_ == Type::stack)
-      std::cout << get_stack(value, false, 8);
-    else if (map.type_ == Type::ustack)
-      std::cout << get_stack(value, true, 8);
+    if (map.type_.type == Type::stack)
+      std::cout << get_stack(*(uint32_t*)value.data(), false, 8);
+    else if (map.type_.type == Type::ustack)
+      std::cout << get_stack(*(uint32_t*)value.data(), true, 8);
     else
-      std::cout << value << std::endl;
+      std::cout << *(int64_t*)value.data() << std::endl;
 
     old_key = key;
   }
@@ -255,17 +255,17 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
-  uint8_t value;
+  auto value = std::vector<uint8_t>(map.type_.size);
 
-  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+  if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
     return key;
 
   for (auto &elem : key) elem = 0xff;
-  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+  if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
     return key;
 
   for (auto &elem : key) elem = 0x55;
-  if (bpf_lookup_elem(map.mapfd_, key.data(), &value))
+  if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
     return key;
 
   throw std::runtime_error("Could not find empty key");

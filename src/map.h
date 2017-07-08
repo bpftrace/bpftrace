@@ -11,15 +11,15 @@ namespace bpftrace {
 
 class Map {
 public:
-  Map(std::string &name, Type type, MapKey key);
-  Map(std::string name);
+  Map(const std::string &name, const SizedType &type, const MapKey &key);
+  Map(const std::string &name);
   ~Map();
   Map(const Map &) = delete;
   Map& operator=(const Map &) = delete;
 
   int mapfd_;
   std::string name_;
-  Type type_;
+  SizedType type_;
   MapKey key_;
 };
 

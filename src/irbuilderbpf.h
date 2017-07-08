@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "bpftrace.h"
+#include "types.h"
 
 #include <llvm/IR/IRBuilder.h>
 
@@ -17,7 +18,8 @@ public:
                Module &module,
                BPFtrace &bpftrace);
 
-  AllocaInst *CreateAllocaBPF(const std::string &name="", int num_items=1);
+  AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
+  AllocaInst *CreateAllocaMapKey(int bytes, const std::string &name="");
   CallInst   *CreateBpfPseudoCall(int mapfd);
   CallInst   *CreateBpfPseudoCall(Map &map);
   LoadInst   *CreateMapLookupElem(Map &map, AllocaInst *key);

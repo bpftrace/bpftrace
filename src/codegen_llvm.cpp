@@ -56,7 +56,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     int arg_num = atoi(builtin.ident.substr(3).c_str());
 
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.ident);
+    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     int offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, b_.getInt64(8), src);
@@ -64,7 +64,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "retval")
   {
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.ident);
+    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     int offset = arch::ret_offset() * sizeof(uintptr_t);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, b_.getInt64(8), src);
@@ -126,7 +126,7 @@ void CodegenLLVM::visit(Unop &unop)
     case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
     case bpftrace::Parser::token::MUL:
     {
-      AllocaInst *dst = b_.CreateAllocaBPF("deref");
+      AllocaInst *dst = b_.CreateAllocaBPF(unop.expr->type, "deref");
       b_.CreateProbeRead(dst, b_.getInt64(8), expr_);
       expr_ = b_.CreateLoad(dst);
       break;
@@ -144,12 +144,11 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 {
   Map &map = *assignment.map;
 
-  AllocaInst *val = b_.CreateAllocaBPF(map.ident + "_val");
   assignment.expr->accept(*this);
+
+  AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
   b_.CreateStore(expr_, val);
-
   AllocaInst *key = getMapKey(map);
-
   b_.CreateMapUpdateElem(map, key, val);
 }
 
@@ -162,7 +161,7 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
   {
     AllocaInst *key = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.ident + "_val");
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
   }
@@ -174,7 +173,7 @@ void CodegenLLVM::visit(AssignMapCallStatement &assignment)
     AllocaInst *key = getQuantizeMapKey(map, log2);
 
     Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.ident + "_val");
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
   }
@@ -246,17 +245,24 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
 {
   AllocaInst *key;
   if (map.vargs) {
-    key = b_.CreateAllocaBPF(map.ident + "_key", map.vargs->size());
-    int i = 0;
+    size_t size = 0;
+    for (Expression *expr : *map.vargs)
+    {
+      size += expr->type.size;
+    }
+    key = b_.CreateAllocaMapKey(size, map.ident + "_key");
+
+    int offset = 0;
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
-      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
-      b_.CreateStore(expr_, offset);
+      Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
+      b_.CreateStore(expr_, offset_val);
+      offset += expr->type.size;
     }
   }
   else
   {
-    key = b_.CreateAllocaBPF(map.ident + "_key");
+    key = b_.CreateAllocaBPF(map.type, map.ident + "_key");
     b_.CreateStore(b_.getInt64(0), key);
   }
   return key;
@@ -266,19 +272,26 @@ AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
 {
   AllocaInst *key;
   if (map.vargs) {
-    key = b_.CreateAllocaBPF(map.ident + "_key", map.vargs->size() + 1);
-    int i = 0;
+    size_t size = 8; // Extra space for the bucket value
+    for (Expression *expr : *map.vargs)
+    {
+      size += expr->type.size;
+    }
+    key = b_.CreateAllocaMapKey(size, map.ident + "_key");
+
+    int offset = 0;
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
-      Value *offset = b_.CreateGEP(key, b_.getInt64(i++));
-      b_.CreateStore(expr_, offset);
+      Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
+      b_.CreateStore(expr_, offset_val);
+      offset += expr->type.size;
     }
-    Value *offset = b_.CreateGEP(key, b_.getInt64(i));
-    b_.CreateStore(log2, offset);
+    Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
+    b_.CreateStore(log2, offset_val);
   }
   else
   {
-    key = b_.CreateAllocaBPF(map.ident + "_key");
+    key = b_.CreateAllocaBPF(SizedType(Type::integer, 8), map.ident + "_key");
     b_.CreateStore(log2, key);
   }
   return key;
@@ -330,10 +343,10 @@ void CodegenLLVM::createLog2Function()
 
   Value *arg = &log2_func->getArgumentList().front();
 
-  Value *n_alloc = b_.CreateAllocaBPF();
+  Value *n_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
   b_.CreateStore(arg, n_alloc);
 
-  Value *result = b_.CreateAllocaBPF();
+  Value *result = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
   b_.CreateStore(b_.getInt64(0), result);
 
   for (int i = 4; i >= 0; i--)

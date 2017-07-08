@@ -25,16 +25,38 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(const std::string &name, int num_items)
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)
 {
-  llvm::Type *ty = getInt64Ty();
-  Value *array_size = getInt64(num_items);
+  llvm::Type *ty;
+  switch (stype.size)
+  {
+    case 8:
+      ty = getInt64Ty();
+      break;
+    case 4:
+      ty = getInt32Ty();
+      break;
+    default:
+      abort();
+  }
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
   if (entry_block.empty())
-    return new AllocaInst(ty, array_size, name, &entry_block);
+    return new AllocaInst(ty, name, &entry_block);
   else
-    return new AllocaInst(ty, array_size, name, &entry_block.front());
+    return new AllocaInst(ty, name, &entry_block.front());
+}
+
+AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
+{
+  llvm::Type *ty = ArrayType::get(getInt8Ty(), bytes);
+  Value *array_size = getInt64(bytes);
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock &entry_block = parent->getEntryBlock();
+  if (entry_block.empty())
+    return new AllocaInst(ty, name, &entry_block);
+  else
+    return new AllocaInst(ty, name, &entry_block.front());
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
@@ -72,7 +94,7 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
 
-  Value *value = CreateAllocaBPF("lookup_elem_val");
+  Value *value = CreateAllocaBPF(SizedType(Type::integer, 8), "lookup_elem_val");
   Value *condition = CreateICmpNE(
       CreateIntCast(call, getInt8PtrTy(), true),
       ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),

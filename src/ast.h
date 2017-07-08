@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include "types.h"
+
 namespace bpftrace {
 namespace ast {
 
@@ -12,6 +14,8 @@ class Node {
 public:
   virtual ~Node() { }
   virtual void accept(Visitor &v) = 0;
+
+  SizedType type;
 };
 
 class Expression : public Node {

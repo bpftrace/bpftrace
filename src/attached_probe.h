@@ -2,7 +2,12 @@
 
 #include "types.h"
 
+#include "libbpf.h"
+
 namespace bpftrace {
+
+bpf_probe_attach_type attachtype(ProbeType t);
+bpf_prog_type progtype(ProbeType t);
 
 class AttachedProbe
 {

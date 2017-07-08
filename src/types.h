@@ -6,8 +6,6 @@
 #include <vector>
 #include <unistd.h>
 
-#include "libbpf.h"
-
 namespace bpftrace {
 
 const int MAX_STACK_SIZE = 32;
@@ -20,20 +18,23 @@ enum class Type
   count,
   stack,
   ustack,
+  string,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
 
-class MapKeyArgument
+class SizedType
 {
 public:
+  SizedType() : type(Type::none), size(0) { }
+  SizedType(Type type, size_t size) : type(type), size(size) { }
   Type type;
   size_t size;
 
-  bool operator==(const MapKeyArgument &a) const;
+  bool operator==(const SizedType &t) const;
 };
 
-std::ostream &operator<<(std::ostream &os, MapKeyArgument arg);
+std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
 enum class ProbeType
 {
@@ -44,8 +45,6 @@ enum class ProbeType
 };
 
 std::string typestr(Type t);
-bpf_probe_attach_type attachtype(ProbeType t);
-bpf_prog_type progtype(ProbeType t);
 
 class Probe
 {

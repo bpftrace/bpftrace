@@ -8,9 +8,9 @@
 namespace bpftrace {
 namespace ast {
 
-void SemanticAnalyser::visit(Integer &)
+void SemanticAnalyser::visit(Integer &integer)
 {
-  type_ = Type::integer;
+  integer.type = SizedType(Type::integer, 8);
 }
 
 void SemanticAnalyser::visit(Builtin &builtin)
@@ -21,14 +21,14 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "uid" ||
       builtin.ident == "gid" ||
       builtin.ident == "retval") {
-    type_ = Type::integer;
+    builtin.type = SizedType(Type::integer, 8);
   }
   else if (builtin.ident == "stack") {
-    type_ = Type::stack;
+    builtin.type = SizedType(Type::stack, 8);
     needs_stackid_map_ = true;
   }
   else if (builtin.ident == "ustack") {
-    type_ = Type::ustack;
+    builtin.type = SizedType(Type::ustack, 8);
     needs_stackid_map_ = true;
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
@@ -36,10 +36,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
       err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
-    type_ = Type::integer;
+    builtin.type = SizedType(Type::integer, 8);
   }
   else {
-    type_ = Type::none;
+    builtin.type = SizedType(Type::none, 0);
     err_ << "Unknown builtin: '" << builtin.ident << "'" << std::endl;
   }
 }
@@ -59,18 +59,18 @@ void SemanticAnalyser::visit(Call &call)
       err_ << "quantize() should take 1 argument (";
       err_ << nargs << " provided)" << std::endl;
     }
-    if (type_ != Type::integer) {
+    if (call.vargs->at(0)->type.type != Type::integer) {
       err_ << "quantize() only supports integer arguments";
-      err_ << " (" << type_ << " provided)" << std::endl;
+      err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
     }
-    type_ = Type::quantize;
+    call.type = SizedType(Type::quantize, 8);
   }
   else if (call.func == "count") {
     if (nargs != 0) {
       err_ << "count() should take 0 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
-    type_ = Type::count;
+    call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "delete") {
     if (nargs != 0) {
@@ -80,7 +80,7 @@ void SemanticAnalyser::visit(Call &call)
     // Don't assign a type
   }
   else {
-    type_ = Type::none;
+    call.type = SizedType(Type::none, 0);
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
   }
 }
@@ -91,7 +91,7 @@ void SemanticAnalyser::visit(Map &map)
   if (map.vargs) {
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
-      key.args_.push_back({type_, 8});
+      key.args_.push_back({expr->type.type, expr->type.size});
     }
   }
 
@@ -112,23 +112,22 @@ void SemanticAnalyser::visit(Map &map)
 
   auto search_val = map_val_.find(map.ident);
   if (search_val != map_val_.end()) {
-    type_ = search_val->second;
+    map.type = search_val->second;
   }
   else {
     if (is_final_pass()) {
       err_ << "Undefined map: " << map.ident << std::endl;
     }
-    type_ = Type::none;
+    map.type = SizedType(Type::none, 0);
   }
 }
 
 void SemanticAnalyser::visit(Binop &binop)
 {
-  Type lhs, rhs;
   binop.left->accept(*this);
-  lhs = type_;
   binop.right->accept(*this);
-  rhs = type_;
+  Type &lhs = binop.left->type.type;
+  Type &rhs = binop.right->type.type;
 
   if (is_final_pass() && lhs != rhs) {
     err_ << "Type mismatch for '" << opstr(binop) << "': ";
@@ -136,18 +135,18 @@ void SemanticAnalyser::visit(Binop &binop)
     err_ << "with '" << rhs << "'" << std::endl;
   }
 
-  type_ = Type::integer;
+  binop.type = SizedType(Type::integer, 8);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
 {
   unop.expr->accept(*this);
 
-  if (type_ != Type::integer) {
-    err_ << "The " << opstr(unop) << " operator can not be used on expressions of type " << type_ << std::endl;
+  if (unop.expr->type.type != Type::integer) {
+    err_ << "The " << opstr(unop) << " operator can not be used on expressions of type " << unop.expr->type << std::endl;
   }
 
-  type_ = Type::integer;
+  unop.type = SizedType(Type::integer, 8);
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -163,24 +162,24 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   std::string map_ident = assignment.map->ident;
   auto search = map_val_.find(map_ident);
   if (search != map_val_.end()) {
-    if (search->second == Type::none) {
+    if (search->second.type == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined map: " << map_ident << std::endl;
       }
       else {
-        search->second = type_;
+        search->second = assignment.expr->type;
       }
     }
-    else if (search->second != type_) {
+    else if (search->second.type != assignment.expr->type.type) {
       err_ << "Type mismatch for " << map_ident << ": ";
-      err_ << "trying to assign value of type '" << type_;
+      err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen map already contains a value of type '";
       err_ << search->second << "'\n" << std::endl;
     }
   }
   else {
     // This map hasn't been seen before
-    map_val_.insert({map_ident, type_});
+    map_val_.insert({map_ident, assignment.expr->type});
   }
 }
 
@@ -192,15 +191,15 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   std::string map_ident = assignment.map->ident;
   auto search = map_val_.find(map_ident);
   if (search != map_val_.end()) {
-    if (search->second == Type::none) {
+    if (search->second.type == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined map: " << map_ident << std::endl;
       }
       else {
-        search->second = type_;
+        search->second = assignment.call->type;
       }
     }
-    else if (search->second != type_) {
+    else if (search->second.type != assignment.call->type.type) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign result of '" << assignment.call->func;
       err_ << "()'\n\twhen map already contains a value of type '";
@@ -209,7 +208,7 @@ void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
   }
   else {
     // This map hasn't been seen before
-    map_val_.insert({map_ident, type_});
+    map_val_.insert({map_ident, assignment.call->type});
   }
 }
 
@@ -261,7 +260,7 @@ int SemanticAnalyser::create_maps()
   for (auto &map_val : map_val_)
   {
     std::string map_name = map_val.first;
-    Type type = map_val.second;
+    SizedType type = map_val.second;
 
     auto search_args = map_key_.find(map_name);
     if (search_args == map_key_.end())
