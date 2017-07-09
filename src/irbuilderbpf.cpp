@@ -33,6 +33,16 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       GlobalValue::ExternalLinkage,
       "llvm.memcpy.p0i8.p0i8.i64",
       &module_);
+
+  FunctionType *memset_func_type = FunctionType::get(
+      getVoidTy(),
+      {getInt8PtrTy(), getInt8Ty(), getInt64Ty(), getInt32Ty(), getInt1Ty()},
+      false);
+  Function::Create(
+      memset_func_type,
+      GlobalValue::ExternalLinkage,
+      "llvm.memset.p0i8.i64",
+      &module_);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)
@@ -80,6 +90,12 @@ void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, Value *len)
 {
   Function *memcpy_func = module_.getFunction("llvm.memcpy.p0i8.p0i8.i64");
   CreateCall(memcpy_func, {dst, src, len, getInt32(1), getInt1(0)}, "memcpy");
+}
+
+void IRBuilderBPF::CreateMemset(Value *dst, Value *val, Value *len)
+{
+  Function *memset_func = module_.getFunction("llvm.memset.p0i8.i64");
+  CreateCall(memset_func, {dst, val, len, getInt32(1), getInt1(0)}, "memset");
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
@@ -186,6 +202,21 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, Value *size, Value *src)
       getInt64(BPF_FUNC_probe_read),
       proberead_func_ptr_type);
   CallInst *call = CreateCall(proberead_func, {dst, size, src}, "probe_read");
+}
+
+void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, Value *size, Value *src)
+{
+  // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
+  FunctionType *probereadstr_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      false);
+  PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
+  Constant *probereadstr_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_probe_read_str),
+      probereadstr_func_ptr_type);
+  CallInst *call = CreateCall(probereadstr_func, {dst, size, src}, "probe_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateGetNs()

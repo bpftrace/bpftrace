@@ -124,6 +124,14 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMapDeleteElem(map, key);
     expr_ = nullptr;
   }
+  else if (call.func == "str")
+  {
+    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
+    b_.CreateMemset(buf, b_.getInt8(0), b_.getInt64(call.type.size));
+    call.vargs->front()->accept(*this);
+    b_.CreateProbeReadStr(buf, b_.getInt64(call.type.size), expr_);
+    expr_ = buf;
+  }
   else
   {
     abort();

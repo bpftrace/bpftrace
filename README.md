@@ -59,7 +59,9 @@ Variables:
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
+- `comm` - Process name
 - `stack` - Kernel stack trace
+- `ustack` - User stack trace
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 
@@ -67,6 +69,7 @@ Functions:
 - `quantize(int n)` - produce a log2 histogram of values of `n`
 - `count()` - count the number of times this function is called
 - `delete()` - delete the map element this is assigned to
+- `str(char *s)` - returns the string pointed to by `s`
 
 # Building
 

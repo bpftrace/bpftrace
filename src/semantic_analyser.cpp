@@ -99,6 +99,13 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::del, 0);
   }
+  else if (call.func == "str") {
+    if (nargs != 1) {
+      err_ << "str() should take 1 arguments (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+    call.type = SizedType(Type::string, STRING_SIZE);
+  }
   else {
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
     call.type = SizedType(Type::none, 0);

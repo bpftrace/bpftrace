@@ -83,4 +83,11 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { delete(); }", 1);
 }
 
+TEST(semantic_analyser, call_str)
+{
+  test("kprobe:f { str(arg0); }", 0);
+  test("kprobe:f { @x = str(arg0); }", 0);
+  test("kprobe:f { str(); }", 1);
+}
+
 } // namespace bpftrace

@@ -9,7 +9,7 @@
 namespace bpftrace {
 
 const int MAX_STACK_SIZE = 32;
-const int STRING_SIZE = 32;
+const int STRING_SIZE = 64;
 
 enum class Type
 {
