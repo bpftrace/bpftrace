@@ -66,6 +66,9 @@ void SemanticAnalyser::visit(Call &call)
   }
 
   if (call.func == "quantize") {
+    if (!call.map) {
+      err_ << "quantize() should be assigned to a map" << std::endl;
+    }
     if (nargs != 1) {
       err_ << "quantize() should take 1 argument (";
       err_ << nargs << " provided)" << std::endl;
@@ -77,6 +80,9 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::quantize, 8);
   }
   else if (call.func == "count") {
+    if (!call.map) {
+      err_ << "count() should be assigned to a map" << std::endl;
+    }
     if (nargs != 0) {
       err_ << "count() should take 0 arguments (";
       err_ << nargs << " provided)" << std::endl;
@@ -84,15 +90,18 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "delete") {
+    if (!call.map) {
+      err_ << "delete() should be assigned to a map" << std::endl;
+    }
     if (nargs != 0) {
       err_ << "delete() should take 0 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
-    // Don't assign a type
+    call.type = SizedType(Type::del, 0);
   }
   else {
-    call.type = SizedType(Type::none, 0);
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
+    call.type = SizedType(Type::none, 0);
   }
 }
 
@@ -188,7 +197,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type) {
+    else if (search->second.type != assignment.expr->type.type &&
+             assignment.expr->type.type != Type::del) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen map already contains a value of type '";
@@ -198,36 +208,6 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   else {
     // This map hasn't been seen before
     map_val_.insert({map_ident, assignment.expr->type});
-  }
-}
-
-void SemanticAnalyser::visit(AssignMapCallStatement &assignment)
-{
-  assignment.map->accept(*this);
-  assignment.call->accept(*this);
-
-  std::string map_ident = assignment.map->ident;
-  auto search = map_val_.find(map_ident);
-  if (search != map_val_.end()) {
-    if (search->second.type == Type::none) {
-      if (is_final_pass()) {
-        err_ << "Undefined map: " << map_ident << std::endl;
-      }
-      else {
-        search->second = assignment.call->type;
-      }
-    }
-    else if (search->second.type != assignment.call->type.type &&
-             assignment.call->func != "delete") {
-      err_ << "Type mismatch for " << map_ident << ": ";
-      err_ << "trying to assign result of '" << assignment.call->func;
-      err_ << "()'\n\twhen map already contains a value of type '";
-      err_ << search->second << "'\n" << std::endl;
-    }
-  }
-  else {
-    // This map hasn't been seen before
-    map_val_.insert({map_ident, assignment.call->type});
   }
 }
 

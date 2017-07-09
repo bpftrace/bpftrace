@@ -124,13 +124,13 @@ stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
 
 stmt : expr         { $$ = new ast::ExprStatement($1); }
      | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
-     | map "=" call { $$ = new ast::AssignMapCallStatement($1, $3); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1.substr(1, $1.size()-2)); }
      | IDENT           { $$ = new ast::Builtin($1); }
      | map             { $$ = $1; }
+     | call            { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
      | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }

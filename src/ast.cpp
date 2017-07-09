@@ -40,10 +40,6 @@ void AssignMapStatement::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void AssignMapCallStatement::accept(Visitor &v) {
-  v.visit(*this);
-}
-
 void Predicate::accept(Visitor &v) {
   v.visit(*this);
 }

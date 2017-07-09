@@ -93,7 +93,41 @@ void CodegenLLVM::visit(Builtin &builtin)
 
 void CodegenLLVM::visit(Call &call)
 {
-  abort();
+  if (call.func == "count")
+  {
+    Map &map = *call.map;
+    AllocaInst *key = getMapKey(map);
+    Value *oldval = b_.CreateMapLookupElem(map, key);
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+    b_.CreateMapUpdateElem(map, key, newval);
+    expr_ = nullptr;
+  }
+  else if (call.func == "quantize")
+  {
+    Map &map = *call.map;
+    call.vargs->front()->accept(*this);
+    Function *log2_func = module_->getFunction("log2");
+    Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
+    AllocaInst *key = getQuantizeMapKey(map, log2);
+
+    Value *oldval = b_.CreateMapLookupElem(map, key);
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+    b_.CreateMapUpdateElem(map, key, newval);
+    expr_ = nullptr;
+  }
+  else if (call.func == "delete")
+  {
+    Map &map = *call.map;
+    AllocaInst *key = getMapKey(map);
+    b_.CreateMapDeleteElem(map, key);
+    expr_ = nullptr;
+  }
+  else
+  {
+    abort();
+  }
 }
 
 void CodegenLLVM::visit(Map &map)
@@ -179,6 +213,9 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 
   assignment.expr->accept(*this);
 
+  if (!expr_) // Some functions do the assignments themselves
+    return;
+
   if (assignment.expr->type.type == Type::string)
   {
     Value *val = expr_;
@@ -191,42 +228,6 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     b_.CreateStore(expr_, val);
     AllocaInst *key = getMapKey(map);
     b_.CreateMapUpdateElem(map, key, val);
-  }
-}
-
-void CodegenLLVM::visit(AssignMapCallStatement &assignment)
-{
-  Map &map = *assignment.map;
-  Call &call = *assignment.call;
-
-  if (call.func == "count")
-  {
-    AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
-  }
-  else if (call.func == "quantize")
-  {
-    call.vargs->front()->accept(*this);
-    Function *log2_func = module_->getFunction("log2");
-    Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
-    AllocaInst *key = getQuantizeMapKey(map, log2);
-
-    Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
-  }
-  else if (call.func == "delete")
-  {
-    AllocaInst *key = getMapKey(map);
-    b_.CreateMapDeleteElem(map, key);
-  }
-  else
-  {
-    abort();
   }
 }
 

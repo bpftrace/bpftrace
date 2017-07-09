@@ -87,17 +87,6 @@ void Printer::visit(AssignMapStatement &assignment)
   --depth_;
 }
 
-void Printer::visit(AssignMapCallStatement &assignment)
-{
-  std::string indent(depth_, ' ');
-  out_ << indent << "=" << std::endl;
-
-  ++depth_;
-  assignment.map->accept(*this);
-  assignment.call->accept(*this);
-  --depth_;
-}
-
 void Printer::visit(Predicate &pred)
 {
   std::string indent(depth_, ' ');

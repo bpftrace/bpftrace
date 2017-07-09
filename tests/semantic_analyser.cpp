@@ -62,4 +62,25 @@ TEST(semantic_analyser, mismatched_call_types)
   test("kprobe:f { @x = 1; @x = delete(); }", 0);
 }
 
+TEST(semantic_analyser, call_quantize)
+{
+  test("kprobe:f { @x = quantize(1); }", 0);
+  test("kprobe:f { @x = quantize(); }", 1);
+  test("kprobe:f { quantize(); }", 1);
+}
+
+TEST(semantic_analyser, call_count)
+{
+  test("kprobe:f { @x = count(); }", 0);
+  test("kprobe:f { @x = count(1); }", 1);
+  test("kprobe:f { count(); }", 1);
+}
+
+TEST(semantic_analyser, call_delete)
+{
+  test("kprobe:f { @x = delete(); }", 0);
+  test("kprobe:f { @x = delete(1); }", 1);
+  test("kprobe:f { delete(); }", 1);
+}
+
 } // namespace bpftrace

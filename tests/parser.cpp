@@ -144,7 +144,7 @@ TEST(Parser, expressions)
 
 TEST(Parser, call)
 {
-  test("kprobe:sys_open { @x = foo(); @y = bar(1,2,3); }",
+  test("kprobe:sys_open { @x = foo(); @y = bar(1,2,3); myfunc(@x); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
@@ -155,7 +155,9 @@ TEST(Parser, call)
       "   call: bar\n"
       "    int: 1\n"
       "    int: 2\n"
-      "    int: 3\n");
+      "    int: 3\n"
+      "  call: myfunc\n"
+      "   map: @x\n");
 }
 
 TEST(Parser, multiple_probes)

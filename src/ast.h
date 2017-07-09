@@ -18,7 +18,10 @@ public:
   SizedType type;
 };
 
+class Map;
 class Expression : public Node {
+public:
+  Map *map = nullptr; // Only set when this expression is assigned to a map
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -98,18 +101,11 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr) : map(map), expr(expr) { }
+  AssignMapStatement(Map *map, Expression *expr) : map(map), expr(expr) {
+    expr->map = map;
+  }
   Map *map;
   Expression *expr;
-
-  void accept(Visitor &v) override;
-};
-
-class AssignMapCallStatement : public Statement {
-public:
-  AssignMapCallStatement(Map *map, Call *call) : map(map), call(call) { }
-  Map *map;
-  Call *call;
 
   void accept(Visitor &v) override;
 };
@@ -160,7 +156,6 @@ public:
   virtual void visit(Unop &unop) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
-  virtual void visit(AssignMapCallStatement &assignment) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
