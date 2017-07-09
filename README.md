@@ -1,10 +1,10 @@
 # BPFtrace
 
-BPFtrace aims to be a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
+BPFtrace is a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
 
 ## Examples
 
-To produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
+Produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
 ```
 kprobe:sys_read
 {
@@ -41,13 +41,52 @@ Running... press Ctrl-C to stop
 [16k, 32k)            59 |                                                    |
 [32k, 64k)            36 |                                                    |
 [64k, 128k)            5 |                                                    |
-[128k, 256k)           0 |                                                    |
-[256k, 512k)           0 |                                                    |
-[512k, 1M)             0 |                                                    |
-[1M, 2M)               0 |                                                    |
-[2M, 4M)               0 |                                                    |
-[4M, 8M)               0 |                                                    |
-[8M, 16M)              2 |                                                    |
+```
+
+Record the names of files that any bash process opens:
+```
+kprobe:sys_open / comm == "bash" /
+{
+  @[str(arg0)] = count()
+}
+```
+```
+Running... press Ctrl-C to stop
+^C
+
+@[/usr/lib/libnsl.so.1]: 1
+@[/etc/passwd]: 1
+@[/usr/lib/libnss_nis.so.2]: 1
+@[/usr/lib/libreadline.so.7]: 1
+@[/dev/tty]: 1
+@[/usr/lib/libncursesw.so.6]: 1
+@[/etc/ld.so.cache]: 3
+...
+```
+
+Record where malloc is called from for a particular process ID (userland stack tracing will try to resolve symbols in the future):
+```
+uprobe:/lib/libc-2.25.so:malloc / pid == 15201 /
+{
+  @[ustack] = count()
+}
+```
+```
+Running... press Ctrl-C to stop
+^C
+
+@[
+0x7fe223fdff40
+0x40058a
+0x7fe223f8343a
+0x82e258d4c544155
+]: 271276
+@[
+0x7fe223fdff40
+0x40058f
+0x7fe223f8343a
+0x82e258d4c544155
+]: 135637
 ```
 
 ## Builtins
