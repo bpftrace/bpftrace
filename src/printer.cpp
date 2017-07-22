@@ -50,6 +50,12 @@ void Printer::visit(Map &map)
   --depth_;
 }
 
+void Printer::visit(Variable &var)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "variable: " << var.ident << std::endl;
+}
+
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');
@@ -83,6 +89,17 @@ void Printer::visit(AssignMapStatement &assignment)
 
   ++depth_;
   assignment.map->accept(*this);
+  assignment.expr->accept(*this);
+  --depth_;
+}
+
+void Printer::visit(AssignVarStatement &assignment)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "=" << std::endl;
+
+  ++depth_;
+  assignment.var->accept(*this);
   assignment.expr->accept(*this);
   --depth_;
 }

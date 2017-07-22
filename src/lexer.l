@@ -18,6 +18,7 @@ using namespace bpftrace;
 
 ident  [_a-zA-Z][_a-zA-Z0-9]*
 map    @[_a-zA-Z0-9]*
+var    ${ident}
 int    [0-9]+|0[xX][0-9a-fA-F]+
 hspace [ \t]
 vspace [\n\r]
@@ -39,6 +40,7 @@ string \"(\\.|[^\\"])*\"
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {string}                { return Parser::make_STRING(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
+{var}                   { return Parser::make_VAR(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
 ";"                     { return Parser::make_SEMI(loc); }

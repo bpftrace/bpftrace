@@ -144,6 +144,11 @@ void CodegenLLVM::visit(Map &map)
   expr_ = b_.CreateMapLookupElem(map, key);
 }
 
+void CodegenLLVM::visit(Variable &var)
+{
+  expr_ = variables_[var.ident];
+}
+
 void CodegenLLVM::visit(Binop &binop)
 {
   Value *lhs, *rhs;
@@ -224,19 +229,27 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   if (!expr_) // Some functions do the assignments themselves
     return;
 
+  Value *val, *expr;
+  expr = expr_;
+  AllocaInst *key = getMapKey(map);
   if (assignment.expr->type.type == Type::string)
   {
-    Value *val = expr_;
-    AllocaInst *key = getMapKey(map);
-    b_.CreateMapUpdateElem(map, key, val);
+    val = expr;
   }
   else
   {
-    AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(expr_, val);
-    AllocaInst *key = getMapKey(map);
-    b_.CreateMapUpdateElem(map, key, val);
+    val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateStore(expr, val);
   }
+  b_.CreateMapUpdateElem(map, key, val);
+}
+
+void CodegenLLVM::visit(AssignVarStatement &assignment)
+{
+  Variable &var = *assignment.var;
+
+  assignment.expr->accept(*this);
+  variables_[var.ident] = expr_;
 }
 
 void CodegenLLVM::visit(Predicate &pred)

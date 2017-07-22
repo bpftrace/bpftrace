@@ -24,6 +24,10 @@ void Map::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void Variable::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Binop::accept(Visitor &v) {
   v.visit(*this);
 }
@@ -37,6 +41,10 @@ void ExprStatement::accept(Visitor &v) {
 }
 
 void AssignMapStatement::accept(Visitor &v) {
+  v.visit(*this);
+}
+
+void AssignVarStatement::accept(Visitor &v) {
   v.visit(*this);
 }
 

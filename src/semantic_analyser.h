@@ -22,10 +22,12 @@ public:
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;
+  void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
+  void visit(AssignVarStatement &assignment) override;
   void visit(Predicate &pred) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
@@ -43,6 +45,7 @@ private:
 
   bool is_final_pass() const;
 
+  std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   bool needs_stackid_map_ = false;

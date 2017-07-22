@@ -45,6 +45,28 @@ TEST(Parser, map_assign)
       "  =\n"
       "   map: @x\n"
       "   call: myfunc\n");
+  test("kprobe:sys_open { @x = \"mystring\" }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  =\n"
+      "   map: @x\n"
+      "   string: mystring\n");
+  test("kprobe:sys_open { @x = $myvar; }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  =\n"
+      "   map: @x\n"
+      "   variable: $myvar\n");
+}
+
+TEST(Parser, variable_assign)
+{
+  test("kprobe:sys_open { $x = 1; }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  =\n"
+      "   variable: $x\n"
+      "   int: 1\n");
 }
 
 TEST(Parser, map_key)
@@ -116,7 +138,7 @@ TEST(Parser, predicate_containing_division)
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 == 5*10 || ~0) || poop  /\n"
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || poop == \"string\" /\n"
        "{\n"
        "  1;\n"
        "}",
@@ -129,7 +151,7 @@ TEST(Parser, expressions)
       "      int: 1\n"
       "      int: 2\n"
       "     ||\n"
-      "      ==\n"
+      "      !=\n"
       "       -\n"
       "        int: 9\n"
       "        int: 4\n"
@@ -138,7 +160,9 @@ TEST(Parser, expressions)
       "        int: 10\n"
       "      ~\n"
       "       int: 0\n"
-      "    builtin: poop\n"
+      "    ==\n"
+      "     builtin: poop\n"
+      "     string: string\n"
       "  int: 1\n");
 }
 

@@ -149,6 +149,18 @@ void SemanticAnalyser::visit(Map &map)
   }
 }
 
+void SemanticAnalyser::visit(Variable &var)
+{
+  auto search_val = variable_val_.find(var.ident);
+  if (search_val != variable_val_.end()) {
+    var.type = search_val->second;
+  }
+  else {
+    err_ << "Undefined variable: " << var.ident << std::endl;
+    var.type = SizedType(Type::none, 0);
+  }
+}
+
 void SemanticAnalyser::visit(Binop &binop)
 {
   binop.left->accept(*this);
@@ -218,6 +230,36 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
 }
 
+void SemanticAnalyser::visit(AssignVarStatement &assignment)
+{
+  assignment.expr->accept(*this);
+
+  std::string var_ident = assignment.var->ident;
+  auto search = variable_val_.find(var_ident);
+  if (search != variable_val_.end()) {
+    if (search->second.type == Type::none) {
+      if (is_final_pass()) {
+        err_ << "Undefined variable: " << var_ident << std::endl;
+      }
+      else {
+        search->second = assignment.expr->type;
+      }
+    }
+    else if (search->second.type != assignment.expr->type.type &&
+             assignment.expr->type.type != Type::del) {
+      err_ << "Type mismatch for " << var_ident << ": ";
+      err_ << "trying to assign value of type '" << assignment.expr->type;
+      err_ << "'\n\twhen variable already contains a value of type '";
+      err_ << search->second << "'\n" << std::endl;
+    }
+  }
+  else {
+    // This variable hasn't been seen before
+    variable_val_.insert({var_ident, assignment.expr->type});
+    assignment.var->type = assignment.expr->type;
+  }
+}
+
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
@@ -228,6 +270,9 @@ void SemanticAnalyser::visit(Predicate &pred)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
+  // Clear out map of variable names - variables should be probe-local
+  variable_val_.clear();
+
   if (probe.pred) {
     probe.pred->accept(*this);
   }

@@ -14,13 +14,12 @@ class Node {
 public:
   virtual ~Node() { }
   virtual void accept(Visitor &v) = 0;
-
-  SizedType type;
 };
 
 class Map;
 class Expression : public Node {
 public:
+  SizedType type;
   Map *map = nullptr; // Only set when this expression is assigned to a map
 };
 using ExpressionList = std::vector<Expression *>;
@@ -69,6 +68,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Variable : public Expression {
+public:
+  explicit Variable(std::string &ident) : ident(ident) { }
+  std::string ident;
+
+  void accept(Visitor &v) override;
+};
+
 class Binop : public Expression {
 public:
   Binop(Expression *left, int op, Expression *right) : left(left), right(right), op(op) { }
@@ -105,6 +112,15 @@ public:
     expr->map = map;
   }
   Map *map;
+  Expression *expr;
+
+  void accept(Visitor &v) override;
+};
+
+class AssignVarStatement : public Statement {
+public:
+  AssignVarStatement(Variable *var, Expression *expr) : var(var), expr(expr) { }
+  Variable *var;
   Expression *expr;
 
   void accept(Visitor &v) override;
@@ -152,10 +168,12 @@ public:
   virtual void visit(Builtin &builtin) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Map &map) = 0;
+  virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
+  virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;

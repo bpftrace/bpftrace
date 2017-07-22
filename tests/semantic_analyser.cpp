@@ -13,23 +13,34 @@ public:
 
 using ::testing::_;
 
-void test(BPFtrace &bpftrace, const std::string &input, int result=0)
+void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expected_result=0)
 {
-  Driver driver;
   ASSERT_EQ(driver.parse_str(input), 0);
 
   std::stringstream out;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
-
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
-  EXPECT_EQ(semantics.analyse(), result) << msg.str() + out.str();
+  EXPECT_EQ(semantics.analyse(), expected_result) << msg.str() + out.str();
 }
 
-void test(const std::string &input, int result=0)
+void test(BPFtrace &bpftrace, const std::string &input, int expected_result=0)
+{
+  Driver driver;
+  test(bpftrace, driver, input, expected_result);
+}
+
+void test(Driver &driver, const std::string &input, int expected_result=0)
 {
   BPFtrace bpftrace;
-  test(bpftrace, input, result);
+  test(bpftrace, driver, input, expected_result);
+}
+
+void test(const std::string &input, int expected_result=0)
+{
+  BPFtrace bpftrace;
+  Driver driver;
+  test(bpftrace, driver, input, expected_result);
 }
 
 TEST(semantic_analyser, probe_count)
@@ -88,6 +99,47 @@ TEST(semantic_analyser, call_str)
   test("kprobe:f { str(arg0); }", 0);
   test("kprobe:f { @x = str(arg0); }", 0);
   test("kprobe:f { str(); }", 1);
+}
+
+TEST(semantic_analyser, map_reassignment)
+{
+  test("kprobe:f { @x = 1; @x = 2; }", 0);
+  test("kprobe:f { @x = 1; @x = \"foo\"; }", 1);
+}
+
+TEST(semantic_analyser, variable_reassignment)
+{
+  test("kprobe:f { $x = 1; $x = 2; }", 0);
+  test("kprobe:f { $x = 1; $x = \"foo\"; }", 1);
+}
+
+TEST(semantic_analyser, map_use_before_assign)
+{
+  test("kprobe:f { @x = @y; @y = 2; }", 0);
+}
+
+TEST(semantic_analyser, variable_use_before_assign)
+{
+  test("kprobe:f { @x = $y; $y = 2; }", 1);
+}
+
+TEST(semantic_analyser, maps_are_global)
+{
+  test("kprobe:f { @x = 1 } kprobe:g { @y = @x }", 0);
+}
+
+TEST(semantic_analyser, variables_are_local)
+{
+  test("kprobe:f { $x = 1 } kprobe:g { @y = $x }", 1);
+}
+
+TEST(semantic_analyser, variable_type)
+{
+  Driver driver;
+  test(driver, "kprobe:f { $x = 1 }", 0);
+  SizedType st(Type::integer, 8);
+  auto assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
+  EXPECT_EQ(st, assignment->var->type);
 }
 
 } // namespace bpftrace

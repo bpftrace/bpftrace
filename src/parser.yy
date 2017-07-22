@@ -71,6 +71,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> PATH "path"
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
+%token <std::string> VAR "variable"
 %token <int> INT "integer"
 
 %type <ast::ProbeList *> probes
@@ -81,6 +82,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
+%type <ast::Variable *> var
 %type <ast::ExpressionList *> vargs
 
 %printer { yyoutput << %%; } <*>;
@@ -124,12 +126,14 @@ stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
 
 stmt : expr         { $$ = new ast::ExprStatement($1); }
      | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
+     | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1.substr(1, $1.size()-2)); }
      | IDENT           { $$ = new ast::Builtin($1); }
      | map             { $$ = $1; }
+     | var             { $$ = $1; }
      | call            { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
@@ -158,6 +162,9 @@ call : IDENT "(" ")"       { $$ = new ast::Call($1); }
 
 map : MAP               { $$ = new ast::Map($1); }
     | MAP "[" vargs "]" { $$ = new ast::Map($1, $3); }
+    ;
+
+var : VAR { $$ = new ast::Variable($1); }
     ;
 
 vargs : vargs "," expr { $$ = $1; $1->push_back($3); }
