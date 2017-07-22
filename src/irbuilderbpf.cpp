@@ -86,16 +86,16 @@ AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
     return new AllocaInst(ty, name, &entry_block.front());
 }
 
-void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, Value *len)
+void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, size_t len)
 {
   Function *memcpy_func = module_.getFunction("llvm.memcpy.p0i8.p0i8.i64");
-  CreateCall(memcpy_func, {dst, src, len, getInt32(1), getInt1(0)}, "memcpy");
+  CreateCall(memcpy_func, {dst, src, getInt64(len), getInt32(1), getInt1(0)}, "memcpy");
 }
 
-void IRBuilderBPF::CreateMemset(Value *dst, Value *val, Value *len)
+void IRBuilderBPF::CreateMemset(Value *dst, Value *val, size_t len)
 {
   Function *memset_func = module_.getFunction("llvm.memset.p0i8.i64");
-  CreateCall(memset_func, {dst, val, len, getInt32(1), getInt1(0)}, "memset");
+  CreateCall(memset_func, {dst, val, getInt64(len), getInt32(1), getInt1(0)}, "memset");
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
@@ -188,7 +188,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
   CallInst *call = CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
-void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, Value *size, Value *src)
+void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
 {
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
@@ -201,10 +201,10 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, Value *size, Value *src)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CallInst *call = CreateCall(proberead_func, {dst, size, src}, "probe_read");
+  CallInst *call = CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
 }
 
-void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, Value *size, Value *src)
+void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
 {
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
@@ -216,7 +216,7 @@ void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, Value *size, Value *src)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
-  CallInst *call = CreateCall(probereadstr_func, {dst, size, src}, "probe_read_str");
+  CallInst *call = CreateCall(probereadstr_func, {dst, getInt64(size), src}, "probe_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateGetNs()
@@ -271,7 +271,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
   // Return: >= 0 stackid on success or negative error
   FunctionType *getstackid_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt8PtrTy()},
+      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty()},
       false);
   PointerType *getstackid_func_ptr_type = PointerType::get(getstackid_func_type, 0);
   Constant *getstackid_func = ConstantExpr::getCast(
@@ -281,7 +281,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
   return CreateCall(getstackid_func, {ctx, map_ptr, flags_val}, "get_stackid");
 }
 
-void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, Value *size)
+void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
 {
   // int bpf_get_current_comm(char *buf, int size_of_buf)
   // Return: 0 on success or negative error
@@ -294,7 +294,7 @@ void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, Value *size)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_current_comm),
       getcomm_func_ptr_type);
-  CreateCall(getcomm_func, {buf, size}, "get_comm");
+  CreateCall(getcomm_func, {buf, getInt64(size)}, "get_comm");
 }
 
 } // namespace ast

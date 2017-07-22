@@ -63,7 +63,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   else if (builtin.ident == "comm")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
-    b_.CreateGetCurrentComm(buf, b_.getInt64(builtin.type.size));
+    b_.CreateGetCurrentComm(buf, builtin.type.size);
     expr_ = buf;
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
@@ -74,7 +74,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     int offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
-    b_.CreateProbeRead(dst, b_.getInt64(8), src);
+    b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
   }
   else if (builtin.ident == "retval")
@@ -82,7 +82,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     int offset = arch::ret_offset() * sizeof(uintptr_t);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
-    b_.CreateProbeRead(dst, b_.getInt64(8), src);
+    b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
   }
   else
@@ -127,9 +127,9 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
-    b_.CreateMemset(buf, b_.getInt8(0), b_.getInt64(call.type.size));
+    b_.CreateMemset(buf, b_.getInt8(0), call.type.size);
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, b_.getInt64(call.type.size), expr_);
+    b_.CreateProbeReadStr(buf, call.type.size, expr_);
     expr_ = buf;
   }
   else
@@ -202,7 +202,7 @@ void CodegenLLVM::visit(Unop &unop)
     case bpftrace::Parser::token::MUL:
     {
       AllocaInst *dst = b_.CreateAllocaBPF(unop.expr->type, "deref");
-      b_.CreateProbeRead(dst, b_.getInt64(8), expr_);
+      b_.CreateProbeRead(dst, 8, expr_);
       expr_ = b_.CreateLoad(dst);
       break;
     }
@@ -308,7 +308,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string)
-        b_.CreateMemcpy(offset_val, expr_, b_.getInt64(expr->type.size));
+        b_.CreateMemcpy(offset_val, expr_, expr->type.size);
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
@@ -338,7 +338,7 @@ AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string)
-        b_.CreateMemcpy(offset_val, expr_, b_.getInt64(expr->type.size));
+        b_.CreateMemcpy(offset_val, expr_, expr->type.size);
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
