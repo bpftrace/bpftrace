@@ -18,6 +18,7 @@ public:
                Module &module,
                BPFtrace &bpftrace);
 
+  AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="");
   AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
   AllocaInst *CreateAllocaMapKey(int bytes, const std::string &name="");
   void        CreateMemcpy(Value *dst, Value *src, size_t len);
@@ -35,6 +36,7 @@ public:
   CallInst   *CreateGetCpuId();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
+  void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
 
 private:
   Module &module_;

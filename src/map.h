@@ -7,12 +7,14 @@
 #include "mapkey.h"
 #include "types.h"
 
+#include "libbpf.h"
+
 namespace bpftrace {
 
 class Map {
 public:
   Map(const std::string &name, const SizedType &type, const MapKey &key);
-  Map(const std::string &name);
+  Map(enum bpf_map_type map_type);
   ~Map();
   Map(const Map &) = delete;
   Map& operator=(const Map &) = delete;

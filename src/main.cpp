@@ -1,6 +1,5 @@
 #include <iostream>
 #include <signal.h>
-#include <unistd.h>
 
 #include "bpftrace.h"
 #include "codegen_llvm.h"
@@ -91,7 +90,7 @@ int main(int argc, char *argv[])
   if (debug)
     return 0;
 
-  // Empty signal handler just to break out of the sleep below
+  // Empty signal handler for cleanly terminating the program
   struct sigaction act;
   act.sa_handler = [](int) { };
   sigaction(SIGINT, &act, NULL);
@@ -101,8 +100,6 @@ int main(int argc, char *argv[])
   err = bpftrace.start();
   if (err)
     return err;
-
-  sleep(99999999);
 
   bpftrace.stop();
 

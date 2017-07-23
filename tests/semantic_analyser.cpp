@@ -142,4 +142,47 @@ TEST(semantic_analyser, variable_type)
   EXPECT_EQ(st, assignment->var->type);
 }
 
+TEST(semantic_analyser, printf)
+{
+  test("kprobe:f { printf(\"hi\") }", 0);
+  test("kprobe:f { printf(1234) }", 1);
+  test("kprobe:f { $fmt = \"mystring\"; printf($fmt) }", 1);
+}
+
+TEST(semantic_analyser, printf_format_int)
+{
+  test("kprobe:f { printf(\"int: %d\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %d\", pid) }", 0);
+  test("kprobe:f { @x = 123; printf(\"int: %d\", @x) }", 0);
+  test("kprobe:f { $x = 123; printf(\"int: %d\", $x) }", 0);
+
+  test("kprobe:f { printf(\"int: %u\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %x\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %X\", 1234) }", 0);
+}
+
+TEST(semantic_analyser, printf_format_string)
+{
+  test("kprobe:f { printf(\"str: %s\", \"mystr\") }", 0);
+  test("kprobe:f { printf(\"str: %s\", comm) }", 0);
+  test("kprobe:f { printf(\"str: %s\", str(arg0)) }", 0);
+  test("kprobe:f { @x = \"hi\"; printf(\"str: %s\", @x) }", 0);
+  test("kprobe:f { $x = \"hi\"; printf(\"str: %s\", $x) }", 0);
+}
+
+TEST(semantic_analyser, printf_bad_format_string)
+{
+  test("kprobe:f { printf(\"%d\", \"mystr\") }", 10);
+  test("kprobe:f { printf(\"%d\", str(arg0)) }", 10);
+
+  test("kprobe:f { printf(\"%s\", 1234) }", 10);
+  test("kprobe:f { printf(\"%s\", arg0) }", 10);
+}
+
+TEST(semantic_analyser, printf_format_multi)
+{
+  test("kprobe:f { printf(\"%d %d %s\", 1, 2, \"mystr\") }", 0);
+  test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
+}
+
 } // namespace bpftrace

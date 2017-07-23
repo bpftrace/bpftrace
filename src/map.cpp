@@ -1,8 +1,10 @@
 #include <iostream>
 #include <unistd.h>
 
-#include "map.h"
+#include "common.h"
 #include "libbpf.h"
+
+#include "map.h"
 
 namespace bpftrace {
 
@@ -25,17 +27,33 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   }
 }
 
-Map::Map(const std::string &name) : name_(name)
+Map::Map(enum bpf_map_type map_type)
 {
-  // Only used for creating maps for storing stack IDs
-  int key_size = 4;
-  int value_size = sizeof(uintptr_t) * MAX_STACK_SIZE;
-  int max_entries = 128;
-  int flags = 0;
-  mapfd_ = bpf_create_map(BPF_MAP_TYPE_STACK_TRACE, key_size, value_size, max_entries, flags);
+  int key_size, value_size, max_entries, flags;
+
+  if (map_type == BPF_MAP_TYPE_STACK_TRACE)
+  {
+    key_size = 4;
+    value_size = sizeof(uintptr_t) * MAX_STACK_SIZE;
+    max_entries = 128;
+    flags = 0;
+  }
+  else if (map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY)
+  {
+    std::vector<int> cpus = ebpf::get_online_cpus();
+    key_size = 4;
+    value_size = 4;
+    max_entries = cpus.size();
+    flags = 0;
+  }
+  else
+  {
+    abort();
+  }
+  mapfd_ = bpf_create_map(map_type, key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
+    std::cerr << "Error creating map: '" << name_ << "' (" << mapfd_ << ")" << std::endl;
   }
 }
 

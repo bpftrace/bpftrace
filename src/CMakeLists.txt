@@ -15,6 +15,7 @@ add_executable(bpftrace
   map.cpp
   mapkey.cpp
   printer.cpp
+  printf.cpp
   semantic_analyser.cpp
   types.cpp
 )
@@ -29,4 +30,5 @@ ExternalProject_Get_Property(bcc source_dir binary_dir)
 include_directories(${source_dir}/src/cc)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc-loader-static.a)
+target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.a)
 target_link_libraries(bpftrace ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../usr/lib/x86_64-linux-gnu/libelf.a)

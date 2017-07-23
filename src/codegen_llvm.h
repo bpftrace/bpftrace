@@ -20,6 +20,7 @@ public:
     root_(root),
     module_(std::make_unique<Module>("bpftrace", context_)),
     b_(context_, *module_.get(), bpftrace),
+    layout_(module_.get()),
     bpftrace_(bpftrace)
     { }
 
@@ -50,6 +51,7 @@ private:
   std::unique_ptr<Module> module_;
   std::unique_ptr<ExecutionEngine> ee_;
   IRBuilderBPF b_;
+  DataLayout layout_;
   Value *expr_ = nullptr;
   Value *ctx_;
   BPFtrace &bpftrace_;

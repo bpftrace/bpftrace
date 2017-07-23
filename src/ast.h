@@ -21,12 +21,13 @@ class Expression : public Node {
 public:
   SizedType type;
   Map *map = nullptr; // Only set when this expression is assigned to a map
+  bool is_literal = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(int n) : n(n) { }
+  explicit Integer(int n) : n(n) { is_literal = true; }
   int n;
 
   void accept(Visitor &v) override;
@@ -34,7 +35,7 @@ public:
 
 class String : public Expression {
 public:
-  explicit String(std::string str) : str(str) { }
+  explicit String(std::string str) : str(str) { is_literal = true; }
   std::string str;
 
   void accept(Visitor &v) override;

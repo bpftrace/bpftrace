@@ -136,6 +136,45 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateProbeReadStr(buf, call.type.size, expr_);
     expr_ = buf;
   }
+  else if (call.func == "printf")
+  {
+    ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
+    StructType *printf_struct = StructType::create(module_->getContext(), "printf_t");
+    std::vector<llvm::Type *> elements = { string_type }; // format string
+    String &fmt = static_cast<String&>(*call.vargs->at(0));
+    for (SizedType t : bpftrace_.format_strings_[fmt.str])
+    {
+      switch (t.type)
+      {
+        case Type::integer:
+          elements.push_back(b_.getInt64Ty());
+          break;
+        case Type::string:
+          elements.push_back(string_type);
+          break;
+        default:
+          abort();
+      }
+    }
+    printf_struct->setBody(elements);
+    int struct_size = layout_.getTypeAllocSize(printf_struct);
+
+    AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
+    b_.CreateMemset(printf_args, b_.getInt8(0), struct_size);
+    for (int i=0; i<call.vargs->size(); i++)
+    {
+      Expression &arg = *call.vargs->at(i);
+      arg.accept(*this);
+      Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
+      if (arg.type.type == Type::string)
+        b_.CreateMemcpy(offset, expr_, arg.type.size);
+      else
+        b_.CreateStore(expr_, offset);
+    }
+
+    b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
+    expr_ = nullptr;
+  }
   else
   {
     abort();
@@ -477,7 +516,6 @@ int CodegenLLVM::compile(bool debug)
 {
   createLog2Function();
   createStrcmpFunction();
-  root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();
   LLVMInitializeBPFTarget();
@@ -499,6 +537,8 @@ int CodegenLLVM::compile(bool debug)
   auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
+
+  root_->accept(*this);
 
   legacy::PassManager PM;
   PassManagerBuilder PMB;

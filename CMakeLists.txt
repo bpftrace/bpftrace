@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(bpftrace)
 
 add_compile_options("-std=c++14")
+add_compile_options("-Wno-format-security")
 #add_compile_options("-Wall")
 #add_compile_options("-Wextra")
 #add_compile_options("-Wundef")

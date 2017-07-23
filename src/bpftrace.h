@@ -23,7 +23,9 @@ public:
 
   std::map<std::string, std::unique_ptr<Map>> maps_;
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
+  std::map<std::string, std::vector<SizedType>> format_strings_;
   std::unique_ptr<Map> stackid_map_;
+  std::unique_ptr<Map> perf_event_map_;
 
 private:
   std::vector<Probe> probes_;

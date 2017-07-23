@@ -45,6 +45,16 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name)
+{
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock &entry_block = parent->getEntryBlock();
+  if (entry_block.empty())
+    return new AllocaInst(ty, name, &entry_block);
+  else
+    return new AllocaInst(ty, name, &entry_block.front());
+}
+
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)
 {
   llvm::Type *ty;
@@ -66,24 +76,13 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::str
         abort();
     }
   }
-  Function *parent = GetInsertBlock()->getParent();
-  BasicBlock &entry_block = parent->getEntryBlock();
-  if (entry_block.empty())
-    return new AllocaInst(ty, name, &entry_block);
-  else
-    return new AllocaInst(ty, name, &entry_block.front());
+  return CreateAllocaBPF(ty, name);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
 {
   llvm::Type *ty = ArrayType::get(getInt8Ty(), bytes);
-  Value *array_size = getInt64(bytes);
-  Function *parent = GetInsertBlock()->getParent();
-  BasicBlock &entry_block = parent->getEntryBlock();
-  if (entry_block.empty())
-    return new AllocaInst(ty, name, &entry_block);
-  else
-    return new AllocaInst(ty, name, &entry_block.front());
+  return CreateAllocaBPF(ty, name);
 }
 
 void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, size_t len)
@@ -308,6 +307,26 @@ void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
       getInt64(BPF_FUNC_get_current_comm),
       getcomm_func_ptr_type);
   CreateCall(getcomm_func, {buf, getInt64(size)}, "get_comm");
+}
+
+void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
+{
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
+
+  Value *flags_val = CreateGetCpuId();
+  Value *size_val = getInt64(size);
+
+  // int bpf_perf_event_output(ctx, map, flags, data, size)
+  FunctionType *perfoutput_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty(), getInt8PtrTy(), getInt64Ty()},
+      false);
+  PointerType *perfoutput_func_ptr_type = PointerType::get(perfoutput_func_type, 0);
+  Constant *perfoutput_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_perf_event_output),
+      perfoutput_func_ptr_type);
+  CreateCall(perfoutput_func, {ctx, map_ptr, flags_val, data, size_val}, "perf_event_output");
 }
 
 } // namespace ast

@@ -3,7 +3,10 @@
 #include "semantic_analyser.h"
 #include "ast.h"
 #include "parser.tab.hh"
+#include "printf.h"
 #include "arch/arch.h"
+
+#include "libbpf.h"
 
 namespace bpftrace {
 namespace ast {
@@ -104,6 +107,39 @@ void SemanticAnalyser::visit(Call &call)
     if (nargs != 1) {
       err_ << "str() should take 1 arguments (";
       err_ << nargs << " provided)" << std::endl;
+    }
+    if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
+      err_ << "str() only supports integer arguments";
+      err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
+    }
+    call.type = SizedType(Type::string, STRING_SIZE);
+  }
+  else if (call.func == "printf") {
+    if (call.map) {
+      err_ << "printf() should not be assigned to a map" << std::endl;
+    }
+    if (nargs == 0) {
+      err_ << "printf() should take at least 1 argument (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+    if (nargs > 7) {
+      err_ << "printf() can only take up to 7 arguments (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+    Expression &fmt_arg = *call.vargs->at(0);
+    if (fmt_arg.type.type != Type::string || !fmt_arg.is_literal) {
+      err_ << "The first argument to printf() must be a string literal";
+      err_ << " (" << fmt_arg.type.type << " provided)" << std::endl;
+    }
+    if (is_final_pass()) {
+      String &fmt = static_cast<String&>(fmt_arg);
+      std::vector<SizedType> args;
+      for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
+        args.push_back((*iter)->type);
+      }
+      err_ << verify_format_string(fmt.str, args);
+
+      bpftrace_.format_strings_[fmt.str] = args;
     }
     call.type = SizedType(Type::string, STRING_SIZE);
   }
@@ -326,9 +362,8 @@ int SemanticAnalyser::create_maps()
   }
 
   if (needs_stackid_map_)
-  {
-    bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>("stackid");
-  }
+    bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_STACK_TRACE);
+  bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 
   return 0;
 }

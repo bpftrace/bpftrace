@@ -1,8 +1,11 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include <sys/epoll.h>
 
 #include "bcc_syms.h"
+#include "common.h"
+#include "perf_reader.h"
 #include "syms.h"
 
 #include "bpftrace.h"
@@ -30,6 +33,72 @@ int BPFtrace::add_probe(ast::Probe &p)
   return 0;
 }
 
+void perf_event_printer(void *cb_cookie, void *data, int size)
+{
+  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  auto fmt = static_cast<char*>(data);
+  auto arg_data = static_cast<uint8_t*>(data);
+  arg_data += STRING_SIZE;
+
+  auto args = bpftrace->format_strings_[fmt];
+  std::vector<uint64_t> arg_values;
+  for (auto arg : args)
+  {
+    switch (arg.type)
+    {
+      case Type::integer:
+        arg_values.push_back(*(uint64_t*)arg_data);
+        break;
+      case Type::string:
+        arg_values.push_back((uint64_t)arg_data);
+        break;
+      default:
+        abort();
+    }
+    arg_data +=  arg.size;
+  }
+
+  // TODO remove when \n works with the lexer
+  std::string fmt_newline(fmt);
+  fmt_newline += "\n";
+
+  switch (args.size())
+  {
+    case 0:
+      printf(fmt_newline.c_str());
+      break;
+    case 1:
+      printf(fmt_newline.c_str(), arg_values.at(0));
+      break;
+    case 2:
+      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1));
+      break;
+    case 3:
+      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
+          arg_values.at(2));
+      break;
+    case 4:
+      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
+          arg_values.at(2), arg_values.at(3));
+      break;
+    case 5:
+      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
+          arg_values.at(2), arg_values.at(3), arg_values.at(4));
+      break;
+    case 6:
+      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
+          arg_values.at(2), arg_values.at(3), arg_values.at(4), arg_values.at(5));
+      break;
+    default:
+      abort();
+  }
+}
+
+void perf_event_lost(uint64_t lost)
+{
+  printf("Lost %lu events\n", lost);
+}
+
 int BPFtrace::start()
 {
   for (Probe &probe : probes_)
@@ -48,6 +117,53 @@ int BPFtrace::start()
     {
       std::cerr << e.what() << std::endl;
       return -1;
+    }
+  }
+
+  int epollfd = epoll_create1(EPOLL_CLOEXEC);
+  if (epollfd == -1)
+  {
+    std::cerr << "Failed to create epollfd" << std::endl;
+    return -1;
+  }
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int page_cnt = 8;
+    void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, this, -1, cpu, page_cnt);
+    if (reader == nullptr)
+    {
+      std::cerr << "Failed to open perf buffer" << std::endl;
+      return -1;
+    }
+
+    struct epoll_event ev = {};
+    ev.events = EPOLLIN;
+    ev.data.ptr = reader;
+    int reader_fd = perf_reader_fd((perf_reader*)reader);
+
+    bpf_update_elem(perf_event_map_->mapfd_, &cpu, &reader_fd, 0);
+    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, reader_fd, &ev) == -1)
+    {
+      std::cerr << "Failed to add perf reader to epoll" << std::endl;
+      return -1;
+    }
+  }
+
+  int ncpus = cpus.size();
+  auto events = std::vector<struct epoll_event>(ncpus);
+  while (true)
+  {
+    int ready = epoll_wait(epollfd, events.data(), ncpus, -1);
+    if (ready <= 0)
+    {
+      return 0;
+    }
+
+    for (int i=0; i<ready; i++)
+    {
+      perf_reader_event_read((perf_reader*)events[i].data.ptr);
     }
   }
   return 0;
