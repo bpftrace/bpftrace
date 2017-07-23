@@ -258,6 +258,19 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
   return CreateCall(getuidgid_func, {}, "get_uid_gid");
 }
 
+CallInst *IRBuilderBPF::CreateGetCpuId()
+{
+  // u32 bpf_raw_smp_processor_id(void)
+  // Return: SMP processor ID
+  FunctionType *getcpuid_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getcpuid_func_ptr_type = PointerType::get(getcpuid_func_type, 0);
+  Constant *getcpuid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_smp_processor_id),
+      getcpuid_func_ptr_type);
+  return CreateCall(getcpuid_func, {}, "get_cpu_id");
+}
+
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);

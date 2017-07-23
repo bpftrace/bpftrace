@@ -98,6 +98,7 @@ Variables:
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
+- `cpu` - Processor ID
 - `comm` - Process name
 - `stack` - Kernel stack trace
 - `ustack` - User stack trace

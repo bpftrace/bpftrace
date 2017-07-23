@@ -32,6 +32,7 @@ public:
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();
+  CallInst   *CreateGetCpuId();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
 
