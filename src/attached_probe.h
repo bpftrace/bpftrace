@@ -19,7 +19,7 @@ public:
 
 private:
   std::string eventprefix() const;
-  const char *eventname() const;
+  std::string eventname() const;
   uint64_t offset() const;
   void load_prog();
   void attach_kprobe();

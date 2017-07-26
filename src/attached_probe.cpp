@@ -63,11 +63,11 @@ AttachedProbe::~AttachedProbe()
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      err = bpf_detach_kprobe(eventname());
+      err = bpf_detach_kprobe(eventname().c_str());
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-      err = bpf_detach_uprobe(eventname());
+      err = bpf_detach_uprobe(eventname().c_str());
       break;
     default:
       abort();
@@ -89,25 +89,21 @@ std::string AttachedProbe::eventprefix() const
   }
 }
 
-const char *AttachedProbe::eventname() const
+std::string AttachedProbe::eventname() const
 {
-  std::string event;
   std::ostringstream offset_str;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      event = eventprefix() + probe_.attach_point;
-      break;
+      return eventprefix() + probe_.attach_point;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
       offset_str << std::hex << offset();
-      event = eventprefix() + probe_.path + "_" + offset_str.str();
-      break;
+      return eventprefix() + probe_.path + "_" + offset_str.str();
     default:
       abort();
   }
-  return event.c_str();
 }
 
 uint64_t AttachedProbe::offset() const
@@ -157,7 +153,7 @@ void AttachedProbe::attach_kprobe()
   void *cb_cookie = nullptr;
 
   perf_reader_ = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
-      eventname(), probe_.attach_point.c_str(),
+      eventname().c_str(), probe_.attach_point.c_str(),
       pid, cpu, group_fd, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
@@ -173,7 +169,7 @@ void AttachedProbe::attach_uprobe()
   void *cb_cookie = nullptr;
 
   perf_reader_ = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname(), probe_.path.c_str(), offset(),
+      eventname().c_str(), probe_.path.c_str(), offset(),
       pid, cpu, group_fd, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
