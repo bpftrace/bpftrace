@@ -29,8 +29,7 @@ include_directories(${source_dir}/src/cc)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
-target_link_libraries(bpftrace_test /usr/lib/x86_64-linux-gnu/libelf.a)
-target_link_libraries(bpftrace_test /usr/lib/x86_64-linux-gnu/libz.a)
+target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
 
 find_package(Threads REQUIRED)
 

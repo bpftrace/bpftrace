@@ -29,6 +29,10 @@ ExternalProject_Add(bcc
   BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
 )
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(LibElf REQUIRED)
+include_directories(${LIBELF_INCLUDE_DIRS})
+
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc)
