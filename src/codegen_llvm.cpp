@@ -418,14 +418,14 @@ public:
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName) override
   {
     uint8_t *addr = SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID, SectionName);
-    sections_[SectionName.str()] = {addr, Size};
+    sections_[SectionName.str()] = std::tuple<uint8_t *, uintptr_t>(addr, Size);
     return addr;
   }
 
   uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName, bool isReadOnly) override
   {
     uint8_t *addr = SectionMemoryManager::allocateDataSection(Size, Alignment, SectionID, SectionName, isReadOnly);
-    sections_[SectionName.str()] = {addr, Size};
+    sections_[SectionName.str()] = std::tuple<uint8_t *, uintptr_t>(addr, Size);
     return addr;
   }
 
@@ -516,6 +516,7 @@ int CodegenLLVM::compile(bool debug)
 {
   createLog2Function();
   createStrcmpFunction();
+  root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();
   LLVMInitializeBPFTarget();
@@ -537,8 +538,6 @@ int CodegenLLVM::compile(bool debug)
   auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
-
-  root_->accept(*this);
 
   legacy::PassManager PM;
   PassManagerBuilder PMB;
