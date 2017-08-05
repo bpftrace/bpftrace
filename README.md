@@ -114,6 +114,28 @@ Functions:
 
 # Building
 
+## Native build process
+
+### Requirements
+
+- A C++ compiler
+- CMake
+- Flex
+- Bison
+- LLVM 3.9 development packages
+- LibElf
+
+### Compilation
+```
+git clone https://github.com/ajor/bpftrace
+mkdir -p bpftrace/build
+cd bpftrace/build
+cmake -DCMAKE_BUILD_TYPE=Debug ../
+make
+```
+
+By default bpftrace will be built as a static binary to ease deployments. If a dynamically linked executable would be preferred, the CMake option `-DDYNAMIC_LINKING:BOOL=ON` can be used.
+
 ## Using Docker
 
 Building BPFtrace inside a Docker container is the recommended method:
@@ -133,22 +155,3 @@ These build scripts pass on any command line arguments to `make` internally. Thi
 - `./build.sh gtest-update` - update the copy of Google Test used to build the BPFtrace tests
 
 The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the targets `bcc-update` and `gtest-update` can be built as shown above.
-
-## Native build process
-
-### Requirements
-
-- A C++ compiler
-- CMake
-- Flex
-- Bison
-- LLVM 3.9 development packages
-
-### Compilation
-```
-git clone https://github.com/ajor/bpftrace
-mkdir -p bpftrace/build
-cd bpftrace/build
-cmake -DCMAKE_BUILD_TYPE=Debug ../
-make
-```
