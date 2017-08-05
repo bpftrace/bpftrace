@@ -85,8 +85,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Variable *> var
 %type <ast::ExpressionList *> vargs
 
-%printer { yyoutput << %%; } <*>;
-
 %right ASSIGN
 %left LOR
 %left LAND
@@ -130,7 +128,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
-     | STRING          { $$ = new ast::String($1.substr(1, $1.size()-2)); }
+     | STRING          { $$ = new ast::String($1); }
      | IDENT           { $$ = new ast::Builtin($1); }
      | map             { $$ = $1; }
      | var             { $$ = $1; }

@@ -40,6 +40,7 @@ std::string verify_format_string(const std::string &fmt, std::vector<SizedType> 
       case 'u':
       case 'x':
       case 'X':
+      case 'p':
         token_type = Type::integer;
         break;
       case 's':

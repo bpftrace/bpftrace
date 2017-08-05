@@ -110,7 +110,7 @@ Functions:
 - `count()` - count the number of times this function is called
 - `delete()` - delete the map element this is assigned to
 - `str(char *s)` - returns the string pointed to by `s`
-- `printf(char *fmt, ...)` - write to stdout (support for escape characters is coming)
+- `printf(char *fmt, ...)` - write to stdout
 
 # Building
 

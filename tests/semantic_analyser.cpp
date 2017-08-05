@@ -5,6 +5,8 @@
 #include "semantic_analyser.h"
 
 namespace bpftrace {
+namespace test {
+namespace semantic_analyser {
 
 class MockBPFtrace : public BPFtrace {
 public:
@@ -185,4 +187,6 @@ TEST(semantic_analyser, printf_format_multi)
   test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
 }
 
+} // namespace semantic_analyser
+} // namespace test
 } // namespace bpftrace

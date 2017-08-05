@@ -58,36 +58,31 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     arg_data +=  arg.size;
   }
 
-  // TODO remove when \n works with the lexer
-  std::string fmt_newline(fmt);
-  fmt_newline += "\n";
-
   switch (args.size())
   {
     case 0:
-      printf(fmt_newline.c_str());
+      printf(fmt);
       break;
     case 1:
-      printf(fmt_newline.c_str(), arg_values.at(0));
+      printf(fmt, arg_values.at(0));
       break;
     case 2:
-      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1));
+      printf(fmt, arg_values.at(0), arg_values.at(1));
       break;
     case 3:
-      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
-          arg_values.at(2));
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
       break;
     case 4:
-      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
-          arg_values.at(2), arg_values.at(3));
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3));
       break;
     case 5:
-      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
-          arg_values.at(2), arg_values.at(3), arg_values.at(4));
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4));
       break;
     case 6:
-      printf(fmt_newline.c_str(), arg_values.at(0), arg_values.at(1),
-          arg_values.at(2), arg_values.at(3), arg_values.at(4), arg_values.at(5));
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4), arg_values.at(5));
       break;
     default:
       abort();

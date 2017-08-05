@@ -9,6 +9,7 @@
 #define yywrap(x) 1
 
 static bpftrace::location loc;
+static std::string string_buffer;
 
 #define YY_USER_ACTION loc.columns(yyleng);
 #define yyterminate() return bpftrace::Parser::make_END(loc)
@@ -24,7 +25,7 @@ hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
-string \"(\\.|[^\\"])*\"
+%x STR
 
 %%
 
@@ -38,7 +39,6 @@ string \"(\\.|[^\\"])*\"
 
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
-{string}                { return Parser::make_STRING(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
@@ -72,6 +72,21 @@ string \"(\\.|[^\\"])*\"
 "!"                     { return Parser::make_LNOT(loc); }
 "~"                     { return Parser::make_BNOT(loc); }
 
-.                       { driver.error(loc, std::string("invalid character: ")+std::string(yytext)); exit(1); }
+\"                      { BEGIN(STR); string_buffer.clear(); }
+<STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(string_buffer, loc); }
+<STR>[^\\\n\"]+         { string_buffer += std::string(yytext); }
+<STR>\\n                { string_buffer += std::string("\n"); }
+<STR>\\t                { string_buffer += std::string("\t"); }
+<STR>\\\"               { string_buffer += std::string("\""); }
+<STR>\\\\               { string_buffer += std::string("\\"); }
+<STR>\n                 { driver.error(loc, std::string("unterminated string")); }
+<STR><<EOF>>            { driver.error(loc, std::string("unterminated string")); }
+<STR>\\.                { driver.error(loc, std::string("invalid escape character '") +
+                                            std::string(yytext) + std::string("'")); }
+<STR>.                  { driver.error(loc, std::string("invalid character '") +
+                                            std::string(yytext) + std::string("'")); }
+
+.                       { driver.error(loc, std::string("invalid character '") +
+                                            std::string(yytext) + std::string("'")); }
 
 %%

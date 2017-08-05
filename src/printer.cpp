@@ -1,3 +1,5 @@
+#include <regex>
+
 #include "printer.h"
 #include "ast.h"
 
@@ -13,7 +15,14 @@ void Printer::visit(Integer &integer)
 void Printer::visit(String &string)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "string: " << string.str << std::endl;
+
+  std::string str = string.str;
+  str = std::regex_replace(str, std::regex("\\\\"), "\\\\");
+  str = std::regex_replace(str, std::regex("\n"), "\\n");
+  str = std::regex_replace(str, std::regex("\t"), "\\t");
+  str = std::regex_replace(str, std::regex("\""), "\\\"");
+
+  out_ << indent << "string: " << str << std::endl;
 }
 
 void Printer::visit(Builtin &builtin)

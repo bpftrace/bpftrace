@@ -24,6 +24,7 @@ public:
   void error(const location &l, const std::string &m)
   {
     std::cerr << l << ": " << m << std::endl;
+    exit(-1);
   }
 
   void error(const std::string &m)

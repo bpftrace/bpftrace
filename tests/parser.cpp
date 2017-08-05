@@ -5,6 +5,8 @@
 #include "printer.h"
 
 namespace bpftrace {
+namespace test {
+namespace parser {
 
 using Printer = ast::Printer;
 
@@ -202,4 +204,14 @@ TEST(Parser, uprobe)
       "  int: 1\n");
 }
 
+TEST(Parser, escape_chars)
+{
+  test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  string: newline\\nand tab\\tbackslash\\\\quote\\\"here\n");
+}
+
+} // namespace parser
+} // namespace test
 } // namespace bpftrace
