@@ -53,7 +53,20 @@ Map::Map(enum bpf_map_type map_type)
   mapfd_ = bpf_create_map(map_type, key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating map: '" << name_ << "' (" << mapfd_ << ")" << std::endl;
+    std::string name;
+    switch (map_type)
+    {
+      case BPF_MAP_TYPE_STACK_TRACE:
+        name = "stack id";
+        break;
+      case BPF_MAP_TYPE_PERF_EVENT_ARRAY:
+        name = "perf event";
+        break;
+      default:
+        abort();
+    }
+
+    std::cerr << "Error creating " << name << " map (" << mapfd_ << ")" << std::endl;
   }
 }
 
