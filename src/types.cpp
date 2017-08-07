@@ -32,8 +32,27 @@ std::string typestr(Type t)
     case Type::stack:    return "stack";    break;
     case Type::ustack:   return "ustack";   break;
     case Type::string:   return "string";   break;
+    case Type::sym:      return "sym";      break;
+    case Type::usym:     return "usym";     break;
     default: abort();
   }
+}
+
+ProbeType probetype(const std::string &type)
+{
+  if (type == "kprobe")
+    return ProbeType::kprobe;
+  else if (type == "kretprobe")
+    return ProbeType::kretprobe;
+  else if (type == "uprobe")
+    return ProbeType::uprobe;
+  else if (type == "uretprobe")
+    return ProbeType::uretprobe;
+  else if (type == "BEGIN")
+    return ProbeType::uprobe;
+  else if (type == "END")
+    return ProbeType::uprobe;
+  return ProbeType::invalid;
 }
 
 } // namespace bpftrace

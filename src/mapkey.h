@@ -18,11 +18,11 @@ public:
 
   size_t size() const;
   std::string argument_type_list() const;
-  std::string argument_value_list(const BPFtrace &bpftrace,
+  std::string argument_value_list(BPFtrace &bpftrace,
       const std::vector<uint8_t> &data) const;
 
 private:
-  static std::string argument_value(const BPFtrace &bpftrace,
+  static std::string argument_value(BPFtrace &bpftrace,
       const SizedType &arg,
       const void *data);
 };

@@ -30,7 +30,7 @@ std::string MapKey::argument_type_list() const
   return list.str();
 }
 
-std::string MapKey::argument_value_list(const BPFtrace &bpftrace,
+std::string MapKey::argument_value_list(BPFtrace &bpftrace,
     const std::vector<uint8_t> &data) const
 {
   size_t n = args_.size();
@@ -51,7 +51,7 @@ std::string MapKey::argument_value_list(const BPFtrace &bpftrace,
   return list.str();
 }
 
-std::string MapKey::argument_value(const BPFtrace &bpftrace,
+std::string MapKey::argument_value(BPFtrace &bpftrace,
     const SizedType &arg,
     const void *data)
 {
@@ -69,6 +69,10 @@ std::string MapKey::argument_value(const BPFtrace &bpftrace,
       return bpftrace.get_stack(*(uint32_t*)data, false);
     case Type::ustack:
       return bpftrace.get_stack(*(uint32_t*)data, true);
+    case Type::sym:
+      return bpftrace.resolve_sym(*(uint64_t*)data);
+    case Type::usym:
+      return bpftrace.resolve_usym(*(uint64_t*)data);
     case Type::string:
       return std::string((char*)data);
   }

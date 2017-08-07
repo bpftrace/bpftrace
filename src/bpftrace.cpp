@@ -6,7 +6,6 @@
 #include "bcc_syms.h"
 #include "common.h"
 #include "perf_reader.h"
-#include "syms.h"
 
 #include "bpftrace.h"
 #include "attached_probe.h"
@@ -20,17 +19,10 @@ int BPFtrace::add_probe(ast::Probe &p)
   probe.path = p.path;
   probe.attach_point = p.attach_point;
   probe.name = p.name;
-  if (p.type == "kprobe")
-    probe.type = ProbeType::kprobe;
-  else if (p.type == "kretprobe")
-    probe.type = ProbeType::kretprobe;
-  else if (p.type == "uprobe")
-    probe.type = ProbeType::uprobe;
-  else if (p.type == "uretprobe")
-    probe.type = ProbeType::uretprobe;
-  else if (p.type == "BEGIN")
+  probe.type = probetype(p.type);
+
+  if (p.type == "BEGIN")
   {
-    probe.type = ProbeType::uprobe;
     probe.path = bpftrace_path_;
     probe.attach_point = "BEGIN_trigger";
     special_probes_.push_back(probe);
@@ -38,14 +30,11 @@ int BPFtrace::add_probe(ast::Probe &p)
   }
   else if (p.type == "END")
   {
-    probe.type = ProbeType::uprobe;
     probe.path = bpftrace_path_;
     probe.attach_point = "END_trigger";
     special_probes_.push_back(probe);
     return 0;
   }
-  else
-    abort();
 
   probes_.push_back(probe);
   return 0;
@@ -60,6 +49,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   auto args = bpftrace->format_strings_[fmt];
   std::vector<uint64_t> arg_values;
+  std::vector<std::string> resolved_symbols;
   for (auto arg : args)
   {
     switch (arg.type)
@@ -69,6 +59,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         break;
       case Type::string:
         arg_values.push_back((uint64_t)arg_data);
+        break;
+      case Type::sym:
+        resolved_symbols.push_back(bpftrace->resolve_sym(*(uint64_t*)arg_data));
+        arg_values.push_back((uint64_t)resolved_symbols.back().c_str());
+        break;
+      case Type::usym:
+        resolved_symbols.push_back(bpftrace->resolve_usym(*(uint64_t*)arg_data));
+        arg_values.push_back((uint64_t)resolved_symbols.back().c_str());
         break;
       default:
         abort();
@@ -221,7 +219,7 @@ void BPFtrace::poll_perf_events(int epollfd, int timeout)
   return;
 }
 
-int BPFtrace::print_maps() const
+int BPFtrace::print_maps()
 {
   for(auto &mapmap : maps_)
   {
@@ -239,7 +237,7 @@ int BPFtrace::print_maps() const
   return 0;
 }
 
-int BPFtrace::print_map(Map &map) const
+int BPFtrace::print_map(Map &map)
 {
   std::vector<uint8_t> old_key;
   try
@@ -269,6 +267,10 @@ int BPFtrace::print_map(Map &map) const
       std::cout << get_stack(*(uint32_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
       std::cout << get_stack(*(uint32_t*)value.data(), true, 8);
+    else if (map.type_.type == Type::sym)
+      std::cout << resolve_sym(*(uint64_t*)value.data());
+    else if (map.type_.type == Type::usym)
+      std::cout << resolve_usym(*(uint64_t*)value.data());
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else
@@ -282,7 +284,7 @@ int BPFtrace::print_map(Map &map) const
   return 0;
 }
 
-int BPFtrace::print_map_quantize(Map &map) const
+int BPFtrace::print_map_quantize(Map &map)
 {
   // A quantize-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
@@ -436,7 +438,7 @@ std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
   throw std::runtime_error("Could not find empty key");
 }
 
-std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent) const
+std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent)
 {
   auto stack_trace = std::vector<uint64_t>(MAX_STACK_SIZE);
   int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
@@ -448,21 +450,46 @@ std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent) const
 
   std::ostringstream stack;
   std::string padding(indent, ' ');
-  struct bcc_symbol sym;
-  KSyms ksyms;
 
   stack << "\n";
   for (auto &addr : stack_trace)
   {
     if (addr == 0)
       break;
-    if (!ustack && ksyms.resolve_addr(addr, &sym))
-      stack << padding << sym.name << "+" << sym.offset << ":" << sym.module << std::endl;
+    if (!ustack)
+      stack << padding << resolve_sym(addr, true) << std::endl;
     else
-      stack << padding << (void*)addr << std::endl;
+      stack << padding << resolve_usym(addr) << std::endl;
   }
 
   return stack.str();
+}
+
+std::string BPFtrace::resolve_sym(uint64_t addr, bool show_offset)
+{
+  struct bcc_symbol sym;
+  std::ostringstream symbol;
+
+  if (ksyms.resolve_addr(addr, &sym))
+  {
+    symbol << sym.name;
+    if (show_offset)
+      symbol << "+" << sym.offset;
+  }
+  else
+  {
+    symbol << (void*)addr;
+  }
+
+  return symbol.str();
+}
+
+std::string BPFtrace::resolve_usym(uint64_t addr) const
+{
+  // TODO
+  std::ostringstream symbol;
+  symbol << (void*)addr;
+  return symbol.str();
 }
 
 } // namespace bpftrace

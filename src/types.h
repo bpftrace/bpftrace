@@ -21,6 +21,8 @@ enum class Type
   stack,
   ustack,
   string,
+  sym,
+  usym,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -40,6 +42,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
 enum class ProbeType
 {
+  invalid,
   kprobe,
   kretprobe,
   uprobe,
@@ -47,6 +50,7 @@ enum class ProbeType
 };
 
 std::string typestr(Type t);
+ProbeType probetype(const std::string &type);
 
 class Probe
 {

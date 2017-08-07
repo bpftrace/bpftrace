@@ -89,6 +89,14 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
   }
+  else if (builtin.ident == "func")
+  {
+    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
+    int offset = arch::pc_offset() * sizeof(uintptr_t);
+    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
+    b_.CreateProbeRead(dst, 8, src);
+    expr_ = b_.CreateLoad(dst);
+  }
   else
   {
     abort();
@@ -147,6 +155,8 @@ void CodegenLLVM::visit(Call &call)
       switch (t.type)
       {
         case Type::integer:
+        case Type::sym:
+        case Type::usym:
           elements.push_back(b_.getInt64Ty());
           break;
         case Type::string:

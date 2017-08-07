@@ -104,6 +104,7 @@ Variables:
 - `ustack` - User stack trace
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
+- `func` - Name of the function currently being traced
 
 Functions:
 - `quantize(int n)` - produce a log2 histogram of values of `n`

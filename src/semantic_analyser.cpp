@@ -46,6 +46,16 @@ void SemanticAnalyser::visit(Builtin &builtin)
   else if (builtin.ident == "comm") {
     builtin.type = SizedType(Type::string, STRING_SIZE);
   }
+  else if (builtin.ident == "func") {
+    ProbeType type = probetype(probe_->type);
+    if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
+      builtin.type = SizedType(Type::sym, 8);
+    else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
+      builtin.type = SizedType(Type::usym, 8);
+    else
+      err_ << "The func builtin can not be used with '" << probe_->type
+           << "' probes" << std::endl;
+  }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
     int arg_num = atoi(builtin.ident.substr(3).c_str());
@@ -309,6 +319,7 @@ void SemanticAnalyser::visit(Probe &probe)
 {
   // Clear out map of variable names - variables should be probe-local
   variable_val_.clear();
+  probe_ = &probe;
 
   if (probe.type == "kprobe" || probe.type == "kretprobe") {
     if (probe.attach_point == "")

@@ -29,6 +29,11 @@ int ret_offset()
   return 10; // ax
 }
 
+int pc_offset()
+{
+  return 16; // ip
+}
+
 std::string name()
 {
   return std::string("x86_64");

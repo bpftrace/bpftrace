@@ -31,6 +31,8 @@ std::string verify_format_string(const std::string &fmt, std::vector<SizedType> 
   for (int i=0; i<num_args; i++, token_iter++)
   {
     Type arg_type = args.at(i).type;
+    if (arg_type == Type::sym || arg_type == Type::usym)
+      arg_type = Type::string; // Symbols should be printed as strings
     char token = token_iter->str()[1];
 
     Type token_type;

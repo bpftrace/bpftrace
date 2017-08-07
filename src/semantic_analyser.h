@@ -45,6 +45,7 @@ private:
 
   bool is_final_pass() const;
 
+  Probe *probe_;
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
