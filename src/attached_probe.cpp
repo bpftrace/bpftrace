@@ -1,6 +1,7 @@
 #include <iostream>
-#include <tuple>
+#include <regex>
 #include <sys/utsname.h>
+#include <tuple>
 #include <unistd.h>
 
 #include "attached_probe.h"
@@ -100,10 +101,15 @@ std::string AttachedProbe::eventname() const
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
       offset_str << std::hex << offset();
-      return eventprefix() + probe_.path + "_" + offset_str.str();
+      return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str();
     default:
       abort();
   }
+}
+
+std::string AttachedProbe::sanitise(const std::string &str)
+{
+  return std::regex_replace(str, std::regex("[^A-Za-z0-9_]"), "_");
 }
 
 uint64_t AttachedProbe::offset() const
