@@ -17,8 +17,7 @@ public:
   explicit BPFtrace(const std::string &path) : bpftrace_path_(path) { }
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
-  int start();
-  void stop();
+  int run();
   int print_maps() const;
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0) const;
 

@@ -97,11 +97,9 @@ int main(int argc, char *argv[])
 
   std::cout << "Running... press Ctrl-C to stop" << std::endl;
 
-  err = bpftrace.start();
+  err = bpftrace.run();
   if (err)
     return err;
-
-  bpftrace.stop();
 
   std::cout << "\n\n";
 

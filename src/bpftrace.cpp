@@ -131,7 +131,7 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
   return nullptr;
 }
 
-int BPFtrace::start()
+int BPFtrace::run()
 {
   for (Probe &probe : special_probes_)
   {
@@ -156,10 +156,11 @@ int BPFtrace::start()
   }
 
   poll_perf_events(epollfd);
-
   attached_probes_.clear();
+
   END_trigger();
   poll_perf_events(epollfd, 100);
+  special_attached_probes_.clear();
 
   return 0;
 }
@@ -218,11 +219,6 @@ void BPFtrace::poll_perf_events(int epollfd, int timeout)
     }
   }
   return;
-}
-
-void BPFtrace::stop()
-{
-  attached_probes_.clear();
 }
 
 int BPFtrace::print_maps() const
