@@ -220,6 +220,14 @@ TEST(Parser, begin_probe)
       "  int: 1\n");
 }
 
+TEST(Parser, multiple_attach_points)
+{
+  test("kprobe:sys_open,sys_close { 1 }",
+      "Program\n"
+      " kprobe:sys_open,sys_close\n"
+      "  int: 1\n");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

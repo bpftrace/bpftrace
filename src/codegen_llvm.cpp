@@ -334,8 +334,8 @@ void CodegenLLVM::visit(Probe &probe)
       b_.getInt64Ty(),
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
-  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name, module_.get());
-  func->setSection(probe.name);
+  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name(), module_.get());
+  func->setSection(probe.name());
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 

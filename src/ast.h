@@ -135,27 +135,26 @@ public:
   void accept(Visitor &v) override;
 };
 
+using AttachPointList = std::vector<std::string>;
 class Probe : public Node {
 public:
   Probe(const std::string &type, Predicate *pred, StatementList *stmts)
-    : type(type), name(type), pred(pred), stmts(stmts) { }
-  Probe(const std::string &type, const std::string &attach_point,
+    : type(type), attach_points(new AttachPointList), pred(pred), stmts(stmts) { }
+  Probe(const std::string &type, AttachPointList *attach_points,
       Predicate *pred, StatementList *stmts)
-    : type(type), attach_point(attach_point), name(type+":"+attach_point),
-      pred(pred), stmts(stmts) { }
+    : type(type), attach_points(attach_points), pred(pred), stmts(stmts) { }
   Probe(const std::string &type, const std::string &path,
-      const std::string &attach_point, Predicate *pred, StatementList *stmts)
-    : type(type), path(path), attach_point(attach_point),
-      name(type+":"+path+":"+attach_point), pred(pred), stmts(stmts) { }
+      AttachPointList *attach_points, Predicate *pred, StatementList *stmts)
+    : type(type), path(path), attach_points(attach_points), pred(pred), stmts(stmts) { }
 
   std::string type;
   std::string path;
-  std::string attach_point;
-  std::string name;
+  AttachPointList *attach_points;
   Predicate *pred;
   StatementList *stmts;
 
   void accept(Visitor &v) override;
+  std::string name() const;
 };
 using ProbeList = std::vector<Probe *>;
 

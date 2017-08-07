@@ -93,5 +93,18 @@ std::string opstr(Unop &unop)
   }
 }
 
+std::string Probe::name() const
+{
+  std::string n = type;
+  if (path != "")
+    n += ":" + path;
+  n += ":";
+  for (std::string attach_point : *attach_points)
+  {
+    n += attach_point + ",";
+  }
+  return n.substr(0, n.size()-1);
+}
+
 } // namespace ast
 } // namespace bpftrace

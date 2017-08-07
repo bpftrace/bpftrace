@@ -322,19 +322,19 @@ void SemanticAnalyser::visit(Probe &probe)
   probe_ = &probe;
 
   if (probe.type == "kprobe" || probe.type == "kretprobe") {
-    if (probe.attach_point == "")
+    if (probe.attach_points->size() == 0)
       err_ << "kprobes must have an attachment point" << std::endl;
     if (probe.path != "")
       err_ << "kprobes should not have a path" << std::endl;
   }
   else if (probe.type == "uprobe" || probe.type == "uretprobe") {
-    if (probe.attach_point == "")
+    if (probe.attach_points->size() == 0)
       err_ << "uprobes must have an attachment point" << std::endl;
     if (probe.path == "")
       err_ << "uprobes must have a path" << std::endl;
   }
   else if (probe.type == "BEGIN" || probe.type == "END") {
-    if (probe.attach_point != "")
+    if (probe.attach_points->size() != 0)
       err_ << "BEGIN/END probes should not have an attachment point" << std::endl;
     if (probe.path != "")
       err_ << "BEGIN/END probes should not have a path" << std::endl;

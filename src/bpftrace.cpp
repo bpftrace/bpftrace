@@ -15,28 +15,36 @@ namespace bpftrace {
 
 int BPFtrace::add_probe(ast::Probe &p)
 {
-  Probe probe;
-  probe.path = p.path;
-  probe.attach_point = p.attach_point;
-  probe.name = p.name;
-  probe.type = probetype(p.type);
-
   if (p.type == "BEGIN")
   {
+    Probe probe;
     probe.path = bpftrace_path_;
     probe.attach_point = "BEGIN_trigger";
+    probe.type = probetype(p.type);
+    probe.name = p.name();
     special_probes_.push_back(probe);
     return 0;
   }
   else if (p.type == "END")
   {
+    Probe probe;
     probe.path = bpftrace_path_;
     probe.attach_point = "END_trigger";
+    probe.type = probetype(p.type);
+    probe.name = p.name();
     special_probes_.push_back(probe);
     return 0;
   }
 
-  probes_.push_back(probe);
+  for (std::string attach_point : *p.attach_points)
+  {
+    Probe probe;
+    probe.path = p.path;
+    probe.attach_point = attach_point;
+    probe.type = probetype(p.type);
+    probe.name = p.name();
+    probes_.push_back(probe);
+  }
   return 0;
 }
 

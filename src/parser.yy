@@ -84,6 +84,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Map *> map
 %type <ast::Variable *> var
 %type <ast::ExpressionList *> vargs
+%type <ast::AttachPointList *> attach_points
 
 %right ASSIGN
 %left LOR
@@ -108,10 +109,14 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : IDENT pred block            { $$ = new ast::Probe($1, $2, $3); }
-      | IDENT ":" IDENT pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
-      | IDENT PATH IDENT pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
+probe : IDENT pred block                    { $$ = new ast::Probe($1, $2, $3); }
+      | IDENT ":" attach_points pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
+      | IDENT PATH attach_points pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
       ;
+
+attach_points : attach_points "," IDENT { $$ = $1; $1->push_back($3); }
+              | IDENT                   { $$ = new ast::AttachPointList; $$->push_back($1); }
+              ;
 
 pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
      |                  { $$ = nullptr; }
