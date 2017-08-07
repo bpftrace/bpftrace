@@ -10,6 +10,7 @@
 
 #include "bpftrace.h"
 #include "attached_probe.h"
+#include "triggers.h"
 
 namespace bpftrace {
 
@@ -27,8 +28,25 @@ int BPFtrace::add_probe(ast::Probe &p)
     probe.type = ProbeType::uprobe;
   else if (p.type == "uretprobe")
     probe.type = ProbeType::uretprobe;
+  else if (p.type == "BEGIN")
+  {
+    probe.type = ProbeType::uprobe;
+    probe.path = bpftrace_path_;
+    probe.attach_point = "BEGIN_trigger";
+    special_probes_.push_back(probe);
+    return 0;
+  }
+  else if (p.type == "END")
+  {
+    probe.type = ProbeType::uprobe;
+    probe.path = bpftrace_path_;
+    probe.attach_point = "END_trigger";
+    special_probes_.push_back(probe);
+    return 0;
+  }
   else
-    return -1;
+    abort();
+
   probes_.push_back(probe);
   return 0;
 }
@@ -94,27 +112,60 @@ void perf_event_lost(uint64_t lost)
   printf("Lost %lu events\n", lost);
 }
 
+std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
+{
+  auto func = sections_.find(probe.name);
+  if (func == sections_.end())
+  {
+    std::cerr << "Code not generated for probe: " << probe.name << std::endl;
+    return nullptr;
+  }
+  try
+  {
+    return std::make_unique<AttachedProbe>(probe, func->second);
+  }
+  catch (std::runtime_error e)
+  {
+    std::cerr << e.what() << std::endl;
+  }
+  return nullptr;
+}
+
 int BPFtrace::start()
 {
-  for (Probe &probe : probes_)
+  for (Probe &probe : special_probes_)
   {
-    auto func = sections_.find(probe.name);
-    if (func == sections_.end())
-    {
-      std::cerr << "Code not generated for probe: " << probe.name << std::endl;
+    auto attached_probe = attach_probe(probe);
+    if (attached_probe == nullptr)
       return -1;
-    }
-    try
-    {
-      attached_probes_.push_back(std::make_unique<AttachedProbe>(probe, func->second));
-    }
-    catch (std::runtime_error e)
-    {
-      std::cerr << e.what() << std::endl;
-      return -1;
-    }
+    special_attached_probes_.push_back(std::move(attached_probe));
   }
 
+  int epollfd = setup_perf_events();
+  if (epollfd < 0)
+    return epollfd;
+
+  BEGIN_trigger();
+
+  for (Probe &probe : probes_)
+  {
+    auto attached_probe = attach_probe(probe);
+    if (attached_probe == nullptr)
+      return -1;
+    attached_probes_.push_back(std::move(attached_probe));
+  }
+
+  poll_perf_events(epollfd);
+
+  attached_probes_.clear();
+  END_trigger();
+  poll_perf_events(epollfd, 100);
+
+  return 0;
+}
+
+int BPFtrace::setup_perf_events()
+{
   int epollfd = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd == -1)
   {
@@ -145,15 +196,20 @@ int BPFtrace::start()
       return -1;
     }
   }
+  return epollfd;
+}
 
+void BPFtrace::poll_perf_events(int epollfd, int timeout)
+{
+  std::vector<int> cpus = ebpf::get_online_cpus();
   int ncpus = cpus.size();
   auto events = std::vector<struct epoll_event>(ncpus);
   while (true)
   {
-    int ready = epoll_wait(epollfd, events.data(), ncpus, -1);
+    int ready = epoll_wait(epollfd, events.data(), ncpus, timeout);
     if (ready <= 0)
     {
-      return 0;
+      return;
     }
 
     for (int i=0; i<ready; i++)
@@ -161,7 +217,7 @@ int BPFtrace::start()
       perf_reader_event_read((perf_reader*)events[i].data.ptr);
     }
   }
-  return 0;
+  return;
 }
 
 void BPFtrace::stop()

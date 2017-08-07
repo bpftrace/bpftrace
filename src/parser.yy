@@ -108,7 +108,8 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : IDENT ":" IDENT pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
+probe : IDENT pred block            { $$ = new ast::Probe($1, $2, $3); }
+      | IDENT ":" IDENT pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
       | IDENT PATH IDENT pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
       ;
 

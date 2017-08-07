@@ -310,6 +310,40 @@ void SemanticAnalyser::visit(Probe &probe)
   // Clear out map of variable names - variables should be probe-local
   variable_val_.clear();
 
+  if (probe.type == "kprobe" || probe.type == "kretprobe") {
+    if (probe.attach_point == "")
+      err_ << "kprobes must have an attachment point" << std::endl;
+    if (probe.path != "")
+      err_ << "kprobes should not have a path" << std::endl;
+  }
+  else if (probe.type == "uprobe" || probe.type == "uretprobe") {
+    if (probe.attach_point == "")
+      err_ << "uprobes must have an attachment point" << std::endl;
+    if (probe.path == "")
+      err_ << "uprobes must have a path" << std::endl;
+  }
+  else if (probe.type == "BEGIN" || probe.type == "END") {
+    if (probe.attach_point != "")
+      err_ << "BEGIN/END probes should not have an attachment point" << std::endl;
+    if (probe.path != "")
+      err_ << "BEGIN/END probes should not have a path" << std::endl;
+    if (is_final_pass()) {
+      if (probe.type == "BEGIN") {
+        if (has_begin_probe_)
+          err_ << "More than one BEGIN probe defined" << std::endl;
+        has_begin_probe_ = true;
+      }
+      if (probe.type == "END") {
+        if (has_end_probe_)
+          err_ << "More than one END probe defined" << std::endl;
+        has_end_probe_ = true;
+      }
+    }
+  }
+  else {
+    err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
+  }
+
   if (probe.pred) {
     probe.pred->accept(*this);
   }
@@ -317,8 +351,8 @@ void SemanticAnalyser::visit(Probe &probe)
     stmt->accept(*this);
   }
 
-  if (is_final_pass() && bpftrace_.add_probe(probe)) {
-    err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
+  if (is_final_pass()) {
+    bpftrace_.add_probe(probe);
   }
 }
 

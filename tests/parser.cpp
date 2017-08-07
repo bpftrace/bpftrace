@@ -212,6 +212,14 @@ TEST(Parser, escape_chars)
       "  string: newline\\nand tab\\tbackslash\\\\quote\\\"here\n");
 }
 
+TEST(Parser, begin_probe)
+{
+  test("BEGIN { 1 }",
+      "Program\n"
+      " BEGIN\n"
+      "  int: 1\n");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

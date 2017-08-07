@@ -10,6 +10,7 @@ namespace semantic_analyser {
 
 class MockBPFtrace : public BPFtrace {
 public:
+MockBPFtrace() : BPFtrace("") { }
   MOCK_METHOD1(add_probe, int(ast::Probe &p));
 };
 
@@ -34,13 +35,13 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result=0)
 
 void test(Driver &driver, const std::string &input, int expected_result=0)
 {
-  BPFtrace bpftrace;
+  BPFtrace bpftrace("");
   test(bpftrace, driver, input, expected_result);
 }
 
 void test(const std::string &input, int expected_result=0)
 {
-  BPFtrace bpftrace;
+  BPFtrace bpftrace("");
   Driver driver;
   test(bpftrace, driver, input, expected_result);
 }
@@ -50,7 +51,7 @@ TEST(semantic_analyser, probe_count)
   MockBPFtrace bpftrace;
   EXPECT_CALL(bpftrace, add_probe(_)).Times(2);
 
-  test(bpftrace, "a:f { 1; } c:d { 1; }");
+  test(bpftrace, "kprobe:f { 1; } kprobe:d { 1; }");
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -185,6 +186,41 @@ TEST(semantic_analyser, printf_format_multi)
 {
   test("kprobe:f { printf(\"%d %d %s\", 1, 2, \"mystr\") }", 0);
   test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
+}
+
+TEST(semantic_analyser, kprobe)
+{
+  test("kprobe:f { 1 }", 0);
+  test("kprobe:path:f { 1 }", 1);
+  test("kprobe { 1 }", 1);
+
+  test("kretprobe:f { 1 }", 0);
+  test("kretprobe:path:f { 1 }", 1);
+  test("kretprobe { 1 }", 1);
+}
+
+TEST(semantic_analyser, uprobe)
+{
+  test("uprobe:path:f { 1 }", 0);
+  test("uprobe:f { 1 }", 1);
+  test("uprobe { 1 }", 1);
+
+  test("uretprobe:path:f { 1 }", 0);
+  test("uretprobe:f { 1 }", 1);
+  test("uretprobe { 1 }", 1);
+}
+
+TEST(semantic_analyser, begin_end_probes)
+{
+  test("BEGIN { 1 }", 0);
+  test("BEGIN:f { 1 }", 1);
+  test("BEGIN:path:f { 1 }", 1);
+  test("BEGIN { 1 } BEGIN { 2 }", 10);
+
+  test("END { 1 }", 0);
+  test("END:f { 1 }", 1);
+  test("END:path:f { 1 }", 1);
+  test("END { 1 } END { 2 }", 10);
 }
 
 } // namespace semantic_analyser
