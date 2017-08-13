@@ -18,7 +18,7 @@ int BPFtrace::add_probe(ast::Probe &p)
   if (p.type == "BEGIN")
   {
     Probe probe;
-    probe.path = bpftrace_path_;
+    probe.path = "/proc/self/exe";
     probe.attach_point = "BEGIN_trigger";
     probe.type = probetype(p.type);
     probe.name = p.name();
@@ -28,7 +28,7 @@ int BPFtrace::add_probe(ast::Probe &p)
   else if (p.type == "END")
   {
     Probe probe;
-    probe.path = bpftrace_path_;
+    probe.path = "/proc/self/exe";
     probe.attach_point = "END_trigger";
     probe.type = probetype(p.type);
     probe.name = p.name();

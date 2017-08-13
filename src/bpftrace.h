@@ -16,7 +16,6 @@ namespace bpftrace {
 class BPFtrace
 {
 public:
-  explicit BPFtrace(const std::string &path) : bpftrace_path_(path) { }
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
   int run();
@@ -32,7 +31,6 @@ public:
   std::unique_ptr<Map> perf_event_map_;
 
 private:
-  std::string bpftrace_path_;
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;

@@ -10,7 +10,6 @@ namespace semantic_analyser {
 
 class MockBPFtrace : public BPFtrace {
 public:
-MockBPFtrace() : BPFtrace("") { }
   MOCK_METHOD1(add_probe, int(ast::Probe &p));
 };
 
@@ -35,13 +34,13 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result=0)
 
 void test(Driver &driver, const std::string &input, int expected_result=0)
 {
-  BPFtrace bpftrace("");
+  BPFtrace bpftrace;
   test(bpftrace, driver, input, expected_result);
 }
 
 void test(const std::string &input, int expected_result=0)
 {
-  BPFtrace bpftrace("");
+  BPFtrace bpftrace;
   Driver driver;
   test(bpftrace, driver, input, expected_result);
 }

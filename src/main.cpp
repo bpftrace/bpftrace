@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  BPFtrace bpftrace(argv[0]);
+  BPFtrace bpftrace;
 
   if (debug)
   {
