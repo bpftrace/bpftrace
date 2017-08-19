@@ -85,6 +85,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Variable *> var
 %type <ast::ExpressionList *> vargs
 %type <ast::AttachPointList *> attach_points
+%type <std::string> attach_point
 
 %right ASSIGN
 %left LOR
@@ -114,15 +115,23 @@ probe : IDENT pred block                    { $$ = new ast::Probe($1, $2, $3); }
       | IDENT PATH attach_points pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
       ;
 
-attach_points : attach_points "," IDENT { $$ = $1; $1->push_back($3); }
-              | IDENT                   { $$ = new ast::AttachPointList; $$->push_back($1); }
+attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
+              | attach_point                   { $$ = new ast::AttachPointList; $$->push_back($1); }
               ;
+
+attach_point : attach_point IDENT { $$ = $1 + $2; }
+             | attach_point MUL   { $$ = $1 + "*"; }
+             | IDENT              { $$ = $1; }
+             | MUL                { $$ = "*"; }
+             ;
 
 pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
      |                  { $$ = nullptr; }
+     ;
 
 block : "{" stmts "}"     { $$ = $2; }
       | "{" stmts ";" "}" { $$ = $2; }
+      ;
 
 stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
       | stmt           { $$ = new ast::StatementList; $$->push_back($1); }
@@ -163,6 +172,7 @@ expr : INT             { $$ = new ast::Integer($1); }
 
 call : IDENT "(" ")"       { $$ = new ast::Call($1); }
      | IDENT "(" vargs ")" { $$ = new ast::Call($1, $3); }
+     ;
 
 map : MAP               { $$ = new ast::Map($1); }
     | MAP "[" vargs "]" { $$ = new ast::Map($1, $3); }

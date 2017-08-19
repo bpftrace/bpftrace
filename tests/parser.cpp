@@ -228,6 +228,51 @@ TEST(Parser, multiple_attach_points)
       "  int: 1\n");
 }
 
+TEST(Parser, wildcard_attach_points)
+{
+  test("kprobe:sys_* { 1 }",
+      "Program\n"
+      " kprobe:sys_*\n"
+      "  int: 1\n");
+  test("kprobe:*blah { 1 }",
+      "Program\n"
+      " kprobe:*blah\n"
+      "  int: 1\n");
+  test("kprobe:sys*blah { 1 }",
+      "Program\n"
+      " kprobe:sys*blah\n"
+      "  int: 1\n");
+  test("kprobe:* { 1 }",
+      "Program\n"
+      " kprobe:*\n"
+      "  int: 1\n");
+  test("kprobe:sys_* { @x = y*z }",
+      "Program\n"
+      " kprobe:sys_*\n"
+      "  =\n"
+      "   map: @x\n"
+      "   *\n"
+      "    builtin: y\n"
+      "    builtin: z\n");
+  test("kprobe:sys_* { @x = *arg0 }",
+      "Program\n"
+      " kprobe:sys_*\n"
+      "  =\n"
+      "   map: @x\n"
+      "   dereference\n"
+      "    builtin: arg0\n");
+}
+
+TEST(Parser, short_map_name)
+{
+  test("kprobe:sys_read { @ = 1 }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @\n"
+      "   int: 1\n");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

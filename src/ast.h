@@ -155,6 +155,7 @@ public:
 
   void accept(Visitor &v) override;
   std::string name() const;
+  std::string name(const std::string &attach_point) const;
 };
 using ProbeList = std::vector<Probe *>;
 

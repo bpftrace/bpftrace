@@ -106,5 +106,14 @@ std::string Probe::name() const
   return n.substr(0, n.size()-1);
 }
 
+std::string Probe::name(const std::string &attach_point) const
+{
+  std::string n = type;
+  if (path != "")
+    n += ":" + path;
+  n += ":" + attach_point;
+  return n;
+}
+
 } // namespace ast
 } // namespace bpftrace

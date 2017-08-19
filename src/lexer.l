@@ -18,7 +18,7 @@ using namespace bpftrace;
 %}
 
 ident  [_a-zA-Z][_a-zA-Z0-9]*
-map    @[_a-zA-Z0-9]*
+map    @{ident}|@
 var    ${ident}
 int    [0-9]+|0[xX][0-9a-fA-F]+
 hspace [ \t]

@@ -6,6 +6,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_BINARY_DIR}/src)
 
 add_executable(bpftrace_test
+  ast.cpp
+  bpftrace.cpp
   main.cpp
   parser.cpp
   semantic_analyser.cpp

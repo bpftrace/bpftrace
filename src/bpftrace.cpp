@@ -1,5 +1,7 @@
+#include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <sys/epoll.h>
 
@@ -21,6 +23,7 @@ int BPFtrace::add_probe(ast::Probe &p)
     probe.path = "/proc/self/exe";
     probe.attach_point = "BEGIN_trigger";
     probe.type = probetype(p.type);
+    probe.prog_name = p.name();
     probe.name = p.name();
     special_probes_.push_back(probe);
     return 0;
@@ -31,21 +34,74 @@ int BPFtrace::add_probe(ast::Probe &p)
     probe.path = "/proc/self/exe";
     probe.attach_point = "END_trigger";
     probe.type = probetype(p.type);
+    probe.prog_name = p.name();
     probe.name = p.name();
     special_probes_.push_back(probe);
     return 0;
   }
 
+  ast::AttachPointList expanded_attach_points;
   for (std::string attach_point : *p.attach_points)
+  {
+    if (attach_point.find("*") != std::string::npos)
+    {
+      std::string file_name;
+      switch (probetype(p.type))
+      {
+        case ProbeType::kprobe:
+        case ProbeType::kretprobe:
+          file_name = "/sys/kernel/debug/tracing/available_filter_functions";
+          break;
+        default:
+          std::cerr << "Wildcard matches aren't available on probe type '"
+                    << p.type << "'" << std::endl;
+          return 1;
+      }
+      auto matches = find_wildcard_matches(attach_point, file_name);
+      expanded_attach_points.insert(expanded_attach_points.end(),
+          matches.begin(), matches.end());
+      continue;
+    }
+
+    expanded_attach_points.push_back(attach_point);
+  }
+
+  for (std::string attach_point : expanded_attach_points)
   {
     Probe probe;
     probe.path = p.path;
     probe.attach_point = attach_point;
     probe.type = probetype(p.type);
-    probe.name = p.name();
+    probe.prog_name = p.name();
+    probe.name = p.name(attach_point);
     probes_.push_back(probe);
   }
   return 0;
+}
+
+std::set<std::string> BPFtrace::find_wildcard_matches(std::string attach_point, std::string file_name)
+{
+  // Turn glob into a regex
+  attach_point = "^" + std::regex_replace(attach_point, std::regex("\\*"), "[^\\s]*");
+  std::regex attach_point_regex(attach_point);
+  std::smatch match;
+
+  std::ifstream file(file_name);
+  std::string line;
+  std::set<std::string> matches;
+  while (std::getline(file, line))
+  {
+    if (std::regex_search(line, match, attach_point_regex))
+    {
+      matches.insert(match[0]);
+    }
+  }
+  return matches;
+}
+
+int BPFtrace::num_probes() const
+{
+  return special_probes_.size() + probes_.size();
 }
 
 void perf_event_printer(void *cb_cookie, void *data, int size)
@@ -120,7 +176,7 @@ void perf_event_lost(uint64_t lost)
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
 {
-  auto func = sections_.find(probe.name);
+  auto func = sections_.find(probe.prog_name);
   if (func == sections_.end())
   {
     std::cerr << "Code not generated for probe: " << probe.name << std::endl;

@@ -95,7 +95,16 @@ int main(int argc, char *argv[])
   act.sa_handler = [](int) { };
   sigaction(SIGINT, &act, NULL);
 
-  std::cout << "Running... press Ctrl-C to stop" << std::endl;
+  int num_probes = bpftrace.num_probes();
+  if (num_probes == 0)
+  {
+    std::cout << "No probes to attach" << std::endl;
+    return 1;
+  }
+  else if (num_probes == 1)
+    std::cout << "Attaching " << bpftrace.num_probes() << " probe..." << std::endl;
+  else
+    std::cout << "Attaching " << bpftrace.num_probes() << " probes..." << std::endl;
 
   err = bpftrace.run();
   if (err)

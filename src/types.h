@@ -58,6 +58,7 @@ public:
   ProbeType type;
   std::string path;
   std::string attach_point;
+  std::string prog_name;
   std::string name;
 };
 

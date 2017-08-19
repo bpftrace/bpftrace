@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
 #include "syms.h"
@@ -18,6 +19,7 @@ class BPFtrace
 public:
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
+  int num_probes() const;
   int run();
   int print_maps();
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
@@ -30,9 +32,12 @@ public:
   std::unique_ptr<Map> stackid_map_;
   std::unique_ptr<Map> perf_event_map_;
 
-private:
+protected:
+  virtual std::set<std::string> find_wildcard_matches(std::string attach_point, std::string file_name);
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
+
+private:
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   KSyms ksyms;

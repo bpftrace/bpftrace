@@ -163,7 +163,7 @@ void AttachedProbe::attach_kprobe()
       pid, cpu, group_fd, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
 }
 
 void AttachedProbe::attach_uprobe()
