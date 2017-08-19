@@ -47,6 +47,7 @@ enum class ProbeType
   kretprobe,
   uprobe,
   uretprobe,
+  tracepoint,
 };
 
 std::string typestr(Type t);

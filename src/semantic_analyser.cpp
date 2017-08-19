@@ -48,7 +48,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "func") {
     ProbeType type = probetype(probe_->type);
-    if (type == ProbeType::kprobe || type == ProbeType::kretprobe)
+    if (type == ProbeType::kprobe ||
+        type == ProbeType::kretprobe ||
+        type == ProbeType::tracepoint)
       builtin.type = SizedType(Type::sym, 8);
     else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
       builtin.type = SizedType(Type::usym, 8);
@@ -332,6 +334,12 @@ void SemanticAnalyser::visit(Probe &probe)
       err_ << "uprobes must have an attachment point" << std::endl;
     if (probe.path == "")
       err_ << "uprobes must have a path" << std::endl;
+  }
+  else if (probe.type == "tracepoint") {
+    if (probe.attach_points->size() == 0)
+      err_ << "tracepoint probe must have an event" << std::endl;
+    if (probe.path == "")
+      err_ << "tracepoint probe must have a category" << std::endl;
   }
   else if (probe.type == "BEGIN" || probe.type == "END") {
     if (probe.attach_points->size() != 0)

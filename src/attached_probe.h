@@ -25,6 +25,7 @@ private:
   void load_prog();
   void attach_kprobe();
   void attach_uprobe();
+  void attach_tracepoint();
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> &func_;

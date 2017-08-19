@@ -222,6 +222,13 @@ TEST(semantic_analyser, begin_end_probes)
   test("END { 1 } END { 2 }", 10);
 }
 
+TEST(semantic_analyser, tracepoint)
+{
+  test("tracepoint:category:event { 1 }", 0);
+  test("tracepoint:f { 1 }", 1);
+  test("tracepoint { 1 }", 1);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

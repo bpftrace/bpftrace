@@ -172,6 +172,30 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
   EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
 }
 
+TEST(bpftrace, add_probes_tracepoint)
+{
+  ast::AttachPointList attach_points = {"sched_switch"};
+  ast::Probe probe("tracepoint", "sched", &attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(bpftrace.add_probe(probe), 0);
+  EXPECT_EQ(bpftrace.get_probes().size(), 1);
+  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+}
+
+TEST(bpftrace, add_probes_tracepoint_wildcard)
+{
+  ast::AttachPointList attach_points = {"sched_*"};
+  ast::Probe probe("tracepoint", "sched", &attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_NE(bpftrace.add_probe(probe), 0);
+  EXPECT_EQ(bpftrace.get_probes().size(), 0);
+  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+}
+
 } // namespace bpftrace
 } // namespace test
 } // namespace bpftrace

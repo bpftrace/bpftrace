@@ -138,11 +138,14 @@ public:
 using AttachPointList = std::vector<std::string>;
 class Probe : public Node {
 public:
+  // BEGIN/END
   Probe(const std::string &type, Predicate *pred, StatementList *stmts)
     : type(type), attach_points(new AttachPointList), pred(pred), stmts(stmts) { }
+  // kprobe
   Probe(const std::string &type, AttachPointList *attach_points,
       Predicate *pred, StatementList *stmts)
     : type(type), attach_points(attach_points), pred(pred), stmts(stmts) { }
+  // uprobe, tracepoint
   Probe(const std::string &type, const std::string &path,
       AttachPointList *attach_points, Predicate *pred, StatementList *stmts)
     : type(type), path(path), attach_points(attach_points), pred(pred), stmts(stmts) { }

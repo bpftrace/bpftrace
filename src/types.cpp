@@ -52,6 +52,8 @@ ProbeType probetype(const std::string &type)
     return ProbeType::uprobe;
   else if (type == "END")
     return ProbeType::uprobe;
+  else if (type == "tracepoint")
+    return ProbeType::tracepoint;
   return ProbeType::invalid;
 }
 

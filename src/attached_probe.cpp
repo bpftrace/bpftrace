@@ -27,10 +27,11 @@ bpf_prog_type progtype(ProbeType t)
 {
   switch (t)
   {
-    case ProbeType::kprobe:    return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::kretprobe: return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uprobe:    return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uretprobe: return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::kprobe:     return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::kretprobe:  return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uprobe:     return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
     default: abort();
   }
 }
@@ -49,6 +50,9 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
       attach_uprobe();
+      break;
+    case ProbeType::tracepoint:
+      attach_tracepoint();
       break;
     default:
       abort();
@@ -69,6 +73,9 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
       err = bpf_detach_uprobe(eventname().c_str());
+      break;
+    case ProbeType::tracepoint:
+      err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
     default:
       abort();
@@ -102,6 +109,8 @@ std::string AttachedProbe::eventname() const
     case ProbeType::uretprobe:
       offset_str << std::hex << offset();
       return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str();
+    case ProbeType::tracepoint:
+      return probe_.attach_point;
     default:
       abort();
   }
@@ -177,6 +186,21 @@ void AttachedProbe::attach_uprobe()
   perf_reader_ = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
       eventname().c_str(), probe_.path.c_str(), offset(),
       pid, cpu, group_fd, cb, cb_cookie);
+
+  if (perf_reader_ == nullptr)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+}
+
+void AttachedProbe::attach_tracepoint()
+{
+  int pid = -1;
+  int cpu = 0;
+  int group_fd = -1;
+  perf_reader_cb cb = nullptr;
+  void *cb_cookie = nullptr;
+
+  perf_reader_ = bpf_attach_tracepoint(progfd_, probe_.path.c_str(),
+      eventname().c_str(), pid, cpu, group_fd, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
