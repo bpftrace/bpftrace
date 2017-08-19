@@ -2,6 +2,8 @@
 
 BPFtrace is a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
 
+For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md)
+
 ## Examples
 
 Produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
@@ -89,8 +91,37 @@ Running... press Ctrl-C to stop
 ]: 135637
 ```
 
+## Probe types
+
+### kprobes
+Attach a BPFtrace script to a kernel function, to be executed when that function is called:
+
+`kprobe:sys_read { ... }`
+
+### uprobes
+Attach script to a userland function:
+
+`uprobe:/bin/bash:readline { ... }`
+
+### tracepoints
+Attach script to a statically defined tracepoint in the kernel:
+
+`tracepoint:sched:sched_switch { ... }`
+
+Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
+
+### Multiple attachment points
+More than one function/tracepoint can be specified for a single probe:
+
+`kprobe:sys_read,sys_write { ... }`
+
+### Wildcards
+Some probe types allow wildcards to be used when attaching a probe:
+
+`kprobe:SyS_* { ... }`
+
 ## Builtins
-Builtins can be assigned to maps and will either store a value or perform some action on the map.
+The following variables and functions are available for use in bpftrace scripts:
 
 Variables:
 - `pid` - Process ID (kernel tgid)
@@ -112,47 +143,3 @@ Functions:
 - `delete()` - delete the map element this is assigned to
 - `str(char *s)` - returns the string pointed to by `s`
 - `printf(char *fmt, ...)` - write to stdout
-
-# Building
-
-## Native build process
-
-### Requirements
-
-- A C++ compiler
-- CMake
-- Flex
-- Bison
-- LLVM 3.9 development packages
-- LibElf
-
-### Compilation
-```
-git clone https://github.com/ajor/bpftrace
-mkdir -p bpftrace/build
-cd bpftrace/build
-cmake -DCMAKE_BUILD_TYPE=Debug ../
-make
-```
-
-By default bpftrace will be built as a static binary to ease deployments. If a dynamically linked executable would be preferred, the CMake option `-DDYNAMIC_LINKING:BOOL=ON` can be used.
-
-## Using Docker
-
-Building BPFtrace inside a Docker container is the recommended method:
-
-`./build.sh`
-
-There are some more fine-grained options if you find yourself building BPFtrace a lot:
-- `./build-docker.sh` - builds just the `bpftrace-builder` Docker image
-- `./build-debug.sh` - builds BPFtrace with debugging information
-- `./build-release.sh` - builds BPFtrace in a release configuration
-
-`./build.sh` is equivalent to `./build-docker.sh && ./build-release.sh`
-
-These build scripts pass on any command line arguments to `make` internally. This means specific targets can be built individually, e.g.:
-- `./build.sh bpftrace` - build only the targets required for the bpftrace executable
-- `./build.sh bcc-update` - update the copy of BCC used to build BPFtrace
-- `./build.sh gtest-update` - update the copy of Google Test used to build the BPFtrace tests
-
-The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the targets `bcc-update` and `gtest-update` can be built as shown above.
