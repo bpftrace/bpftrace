@@ -17,10 +17,16 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   if (key_size == 0)
     key_size = 8;
 
+  enum bpf_map_type map_type;
+  if (type.type == Type::quantize || type.type == Type::count)
+    map_type = BPF_MAP_TYPE_PERCPU_HASH;
+  else
+    map_type = BPF_MAP_TYPE_HASH;
+
   int value_size = type.size;
   int max_entries = 128;
   int flags = 0;
-  mapfd_ = bpf_create_map(BPF_MAP_TYPE_HASH, key_size, value_size, max_entries, flags);
+  mapfd_ = bpf_create_map(map_type, key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
     std::cerr << "Error creating map: '" << name_ << "'" << std::endl;

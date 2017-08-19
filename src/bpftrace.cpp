@@ -6,7 +6,6 @@
 #include <sys/epoll.h>
 
 #include "bcc_syms.h"
-#include "common.h"
 #include "perf_reader.h"
 
 #include "bpftrace.h"
@@ -320,7 +319,10 @@ int BPFtrace::print_map(Map &map)
   {
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
-    auto value = std::vector<uint8_t>(map.type_.size);
+    int value_size = map.type_.size;
+    if (map.type_.type == Type::count)
+      value_size *= ncpus_;
+    auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err)
     {
@@ -337,6 +339,8 @@ int BPFtrace::print_map(Map &map)
       std::cout << resolve_usym(*(uint64_t*)value.data());
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
+    else if (map.type_.type == Type::count)
+      std::cout << reduce_value(value) << std::endl;
     else
       std::cout << *(int64_t*)value.data() << std::endl;
 
@@ -378,8 +382,9 @@ int BPFtrace::print_map_quantize(Map &map)
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
-    uint64_t value;
-    int err = bpf_lookup_elem(map.mapfd_, key.data(), &value);
+    int value_size = map.type_.size * ncpus_;
+    auto value = std::vector<uint8_t>(value_size);
+    int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
@@ -391,7 +396,7 @@ int BPFtrace::print_map_quantize(Map &map)
       // New key - create a list of buckets for it
       values_by_key[key_prefix] = std::vector<uint64_t>(65);
     }
-    values_by_key[key_prefix].at(bucket) = value;
+    values_by_key[key_prefix].at(bucket) = reduce_value(value);
 
     old_key = key;
   }
@@ -408,7 +413,7 @@ int BPFtrace::print_map_quantize(Map &map)
   return 0;
 }
 
-int BPFtrace::print_quantize(std::vector<uint64_t> values) const
+int BPFtrace::print_quantize(const std::vector<uint64_t> &values) const
 {
   int max_index = -1;
   int max_value = 0;
@@ -482,11 +487,24 @@ std::string BPFtrace::quantize_index_label(int power) const
   return label.str();
 }
 
+uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value) const
+{
+  uint64_t sum = 0;
+  for (int i=0; i<ncpus_; i++)
+  {
+    sum += *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+  }
+  return sum;
+}
+
 std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
-  auto value = std::vector<uint8_t>(map.type_.size);
+  int value_size = map.type_.size;
+  if (map.type_.type == Type::count || map.type_.type == Type::quantize)
+    value_size *= ncpus_;
+  auto value = std::vector<uint8_t>(value_size);
 
   if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
     return key;
