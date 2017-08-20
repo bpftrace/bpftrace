@@ -10,7 +10,7 @@ CONFIG_BPF_EVENTS=y
 ```
 
 To use some BPFtrace features, minimum kernel versions are required:
-- kprobes
+- 4.1+ - kprobes
 - 4.3+ - uprobes
 - 4.6+ - stack traces, count and quantize builtins (use PERCPU maps for accuracy and efficiency)
 - 4.7+ - tracepoints

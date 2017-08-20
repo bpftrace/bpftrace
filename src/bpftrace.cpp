@@ -106,11 +106,11 @@ int BPFtrace::num_probes() const
 void perf_event_printer(void *cb_cookie, void *data, int size)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
-  auto fmt = static_cast<char*>(data);
-  auto arg_data = static_cast<uint8_t*>(data);
-  arg_data += STRING_SIZE;
+  auto printf_id = *static_cast<uint64_t*>(data);
+  auto arg_data = static_cast<uint8_t*>(data) + sizeof(uint64_t);
 
-  auto args = bpftrace->format_strings_[fmt];
+  auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
+  auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   std::vector<uint64_t> arg_values;
   std::vector<std::string> resolved_symbols;
   for (auto arg : args)

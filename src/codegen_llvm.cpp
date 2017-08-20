@@ -148,9 +148,12 @@ void CodegenLLVM::visit(Call &call)
   {
     ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
     StructType *printf_struct = StructType::create(module_->getContext(), "printf_t");
-    std::vector<llvm::Type *> elements = { string_type }; // format string
+    std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // printf ID
     String &fmt = static_cast<String&>(*call.vargs->at(0));
-    for (SizedType t : bpftrace_.format_strings_[fmt.str])
+
+    static int printf_id = 0;
+    auto args = std::get<1>(bpftrace_.printf_args_.at(printf_id));
+    for (SizedType t : args)
     {
       switch (t.type)
       {
@@ -170,8 +173,9 @@ void CodegenLLVM::visit(Call &call)
     int struct_size = layout_.getTypeAllocSize(printf_struct);
 
     AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
-    b_.CreateMemset(printf_args, b_.getInt8(0), struct_size);
-    for (int i=0; i<call.vargs->size(); i++)
+
+    b_.CreateStore(b_.getInt64(printf_id), printf_args);
+    for (int i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
       arg.accept(*this);
@@ -182,6 +186,7 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateStore(expr_, offset);
     }
 
+    printf_id++;
     b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
     expr_ = nullptr;
   }
@@ -428,14 +433,14 @@ public:
   uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName) override
   {
     uint8_t *addr = SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID, SectionName);
-    sections_[SectionName.str()] = std::tuple<uint8_t *, uintptr_t>(addr, Size);
+    sections_[SectionName.str()] = std::make_tuple(addr, Size);
     return addr;
   }
 
   uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName, bool isReadOnly) override
   {
     uint8_t *addr = SectionMemoryManager::allocateDataSection(Size, Alignment, SectionID, SectionName, isReadOnly);
-    sections_[SectionName.str()] = std::tuple<uint8_t *, uintptr_t>(addr, Size);
+    sections_[SectionName.str()] = std::make_tuple(addr, Size);
     return addr;
   }
 

@@ -151,7 +151,7 @@ void SemanticAnalyser::visit(Call &call)
       }
       err_ << verify_format_string(fmt.str, args);
 
-      bpftrace_.format_strings_[fmt.str] = args;
+      bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
     }
     call.type = SizedType(Type::string, STRING_SIZE);
   }
