@@ -424,11 +424,29 @@ int BPFtrace::print_map_quantize(Map &map)
     old_key = key;
   }
 
+  // Sort based on sum of counts in all buckets
+  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key)
   {
-    std::cout << map.name_ << map.key_.argument_value_list(*this, map_elem.first) << ": " << std::endl;
+    int sum = 0;
+    for (size_t i=0; i<map_elem.second.size(); i++)
+    {
+      sum += map_elem.second.at(i);
+    }
+    total_counts_by_key.push_back({map_elem.first, sum});
+  }
+  std::sort(total_counts_by_key.begin(), total_counts_by_key.end(), [&](auto &a, auto &b)
+  {
+    return a.second < b.second;
+  });
 
-    print_quantize(map_elem.second);
+  for (auto &key_count : total_counts_by_key)
+  {
+    auto &key = key_count.first;
+    auto &value = values_by_key[key];
+    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
+
+    print_quantize(value);
 
     std::cout << std::endl;
   }
