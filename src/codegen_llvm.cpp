@@ -209,6 +209,18 @@ void CodegenLLVM::visit(Variable &var)
 
 void CodegenLLVM::visit(Binop &binop)
 {
+  // Handle && and || separately so short circuiting works
+  if (binop.op == bpftrace::Parser::token::LAND)
+  {
+    expr_ = createLogicalAnd(binop);
+    return;
+  }
+  else if (binop.op == bpftrace::Parser::token::LOR)
+  {
+    expr_ = createLogicalOr(binop);
+    return;
+  }
+
   Value *lhs, *rhs;
   binop.left->accept(*this);
   lhs = expr_;
@@ -239,8 +251,6 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
       case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
       case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
-      case bpftrace::Parser::token::LAND:  abort();// TODO
-      case bpftrace::Parser::token::LOR:   abort();// TODO
       case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
       case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
@@ -249,6 +259,8 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
       case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
       case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
+      case bpftrace::Parser::token::LAND:  abort(); // Handled earlier
+      case bpftrace::Parser::token::LOR:   abort(); // Handled earlier
       default: abort();
     }
   }
@@ -423,6 +435,78 @@ AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
     b_.CreateStore(log2, key);
   }
   return key;
+}
+
+Value *CodegenLLVM::createLogicalAnd(Binop &binop)
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(), "&&_lhs_true", parent);
+  BasicBlock *true_block = BasicBlock::Create(module_->getContext(), "&&_true", parent);
+  BasicBlock *false_block = BasicBlock::Create(module_->getContext(), "&&_false", parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "&&_merge", parent);
+
+  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "&&_result");
+  Value *lhs;
+  binop.left->accept(*this);
+  lhs = expr_;
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.getInt64(0), "lhs_true_cond"),
+                  lhs_true_block,
+                  false_block);
+
+  b_.SetInsertPoint(lhs_true_block);
+  Value *rhs;
+  binop.right->accept(*this);
+  rhs = expr_;
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.getInt64(0), "rhs_true_cond"),
+                  true_block,
+                  false_block);
+
+  b_.SetInsertPoint(true_block);
+  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(false_block);
+  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(merge_block);
+  return b_.CreateLoad(result);
+}
+
+Value *CodegenLLVM::createLogicalOr(Binop &binop)
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(), "||_lhs_false", parent);
+  BasicBlock *false_block = BasicBlock::Create(module_->getContext(), "||_false", parent);
+  BasicBlock *true_block = BasicBlock::Create(module_->getContext(), "||_true", parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "||_merge", parent);
+
+  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "||_result");
+  Value *lhs;
+  binop.left->accept(*this);
+  lhs = expr_;
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.getInt64(0), "lhs_true_cond"),
+                  true_block,
+                  lhs_false_block);
+
+  b_.SetInsertPoint(lhs_false_block);
+  Value *rhs;
+  binop.right->accept(*this);
+  rhs = expr_;
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.getInt64(0), "rhs_true_cond"),
+                  true_block,
+                  false_block);
+
+  b_.SetInsertPoint(false_block);
+  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(true_block);
+  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateBr(merge_block);
+
+  b_.SetInsertPoint(merge_block);
+  return b_.CreateLoad(result);
 }
 
 class BPFtraceMemoryManager : public SectionMemoryManager

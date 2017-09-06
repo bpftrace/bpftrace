@@ -40,6 +40,8 @@ public:
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
   AllocaInst *getQuantizeMapKey(Map &map, Value *log2);
+  Value      *createLogicalAnd(Binop &binop);
+  Value      *createLogicalOr(Binop &binop);
 
   void createLog2Function();
   void createStrcmpFunction();
