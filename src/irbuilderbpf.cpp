@@ -109,7 +109,7 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
   return CreateBpfPseudoCall(mapfd);
 }
 
-LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
+Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
 
@@ -146,6 +146,9 @@ LoadInst *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   CreateStore(getInt64(0), value);
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
+
+  if (map.type.type == Type::string)
+    return value;
   return CreateLoad(value);
 }
 
