@@ -8,6 +8,7 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm-c/Transforms/IPO.h>
 
 namespace bpftrace {
 namespace ast {
@@ -549,6 +550,7 @@ void CodegenLLVM::createLog2Function()
 
   FunctionType *log2_func_type = FunctionType::get(b_.getInt64Ty(), {b_.getInt64Ty()}, false);
   Function *log2_func = Function::Create(log2_func_type, Function::InternalLinkage, "log2", module_.get());
+  log2_func->addFnAttr(Attribute::AlwaysInline);
   log2_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", log2_func);
   b_.SetInsertPoint(entry);
@@ -585,6 +587,7 @@ void CodegenLLVM::createStrcmpFunction()
 
   FunctionType *strcmp_func_type = FunctionType::get(b_.getInt1Ty(), {b_.getInt8PtrTy(), b_.getInt8PtrTy()}, false);
   Function *strcmp_func = Function::Create(strcmp_func_type, Function::InternalLinkage, "strcmp", module_.get());
+  strcmp_func->addFnAttr(Attribute::AlwaysInline);
   strcmp_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "strcmp.entry", strcmp_func);
   BasicBlock *not_equal_block = BasicBlock::Create(module_->getContext(), "strcmp.not_equal", strcmp_func);
@@ -642,6 +645,14 @@ int CodegenLLVM::compile(bool debug)
   PassManagerBuilder PMB;
   PMB.OptLevel = 3;
   PM.add(createFunctionInliningPass());
+  /*
+   * llvm < 4.0 needs
+   * PM.add(createAlwaysInlinerPass());
+   * llvm >= 4.0 needs
+   * PM.add(createAlwaysInlinerLegacyPass());
+   * use below 'stable' workaround
+   */
+  LLVMAddAlwaysInlinerPass(reinterpret_cast<LLVMPassManagerRef>(&PM));
   PMB.populateModulePassManager(PM);
   PM.run(*module_.get());
 
