@@ -20,6 +20,7 @@ public:
 };
 
 using ::testing::_;
+using ::testing::ContainerEq;
 using ::testing::Return;
 using ::testing::StrictMock;
 
@@ -194,6 +195,206 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
   EXPECT_NE(bpftrace.add_probe(probe), 0);
   EXPECT_EQ(bpftrace.get_probes().size(), 0);
   EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+}
+
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::vector<uint64_t> key, int val)
+{
+  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
+  pair.first  = std::vector<uint8_t>(sizeof(uint64_t)*key.size());
+  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
+
+  uint8_t *key_data = pair.first.data();
+  uint8_t *val_data = pair.second.data();
+
+  for (size_t i=0; i<key.size(); i++)
+  {
+    *(uint64_t*)(key_data + sizeof(uint64_t)*i) = key.at(i);
+  }
+  *(uint64_t*)val_data = val;
+
+  return pair;
+}
+
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::vector<std::string> key, int val)
+{
+  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
+  pair.first  = std::vector<uint8_t>(STRING_SIZE*key.size());
+  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
+
+  uint8_t *key_data = pair.first.data();
+  uint8_t *val_data = pair.second.data();
+
+  for (size_t i=0; i<key.size(); i++)
+  {
+    strncpy((char*)key_data + STRING_SIZE*i, key.at(i).c_str(), STRING_SIZE);
+  }
+  *(uint64_t*)val_data = val;
+
+  return pair;
+}
+
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(int myint, std::string mystr, int val)
+{
+  std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
+  pair.first  = std::vector<uint8_t>(sizeof(uint64_t) + STRING_SIZE);
+  pair.second = std::vector<uint8_t>(sizeof(uint64_t));
+
+  uint8_t *key_data = pair.first.data();
+  uint8_t *val_data = pair.second.data();
+
+  *(uint64_t*)key_data = myint;
+  strncpy((char*)key_data + sizeof(uint64_t), mystr.c_str(), STRING_SIZE);
+  *(uint64_t*)val_data = val;
+
+  return pair;
+}
+
+TEST(bpftrace, sort_by_key_int)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+
+  std::vector<SizedType> key_args = { SizedType(Type::integer, 8) };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
+  {
+    key_value_pair_int({2}, 12),
+    key_value_pair_int({3}, 11),
+    key_value_pair_int({1}, 10),
+  };
+  bpftrace.sort_by_key(key_args, values_by_key);
+
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
+  {
+    key_value_pair_int({1}, 10),
+    key_value_pair_int({2}, 12),
+    key_value_pair_int({3}, 11),
+  };
+
+  EXPECT_THAT(values_by_key, ContainerEq(expected_values));
+}
+
+TEST(bpftrace, sort_by_key_int_int)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+
+  std::vector<SizedType> key_args = {
+    SizedType(Type::integer, 8),
+    SizedType(Type::integer, 8),
+    SizedType(Type::integer, 8),
+  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
+  {
+    key_value_pair_int({5,2,1}, 1),
+    key_value_pair_int({5,3,1}, 2),
+    key_value_pair_int({5,1,1}, 3),
+    key_value_pair_int({2,2,2}, 4),
+    key_value_pair_int({2,3,2}, 5),
+    key_value_pair_int({2,1,2}, 6),
+  };
+  bpftrace.sort_by_key(key_args, values_by_key);
+
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
+  {
+    key_value_pair_int({2,1,2}, 6),
+    key_value_pair_int({2,2,2}, 4),
+    key_value_pair_int({2,3,2}, 5),
+    key_value_pair_int({5,1,1}, 3),
+    key_value_pair_int({5,2,1}, 1),
+    key_value_pair_int({5,3,1}, 2),
+  };
+
+  EXPECT_THAT(values_by_key, ContainerEq(expected_values));
+}
+
+TEST(bpftrace, sort_by_key_str)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+
+  std::vector<SizedType> key_args = {
+    SizedType(Type::string, STRING_SIZE),
+  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
+  {
+    key_value_pair_str({"z"}, 1),
+    key_value_pair_str({"a"}, 2),
+    key_value_pair_str({"x"}, 3),
+    key_value_pair_str({"d"}, 4),
+  };
+  bpftrace.sort_by_key(key_args, values_by_key);
+
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
+  {
+    key_value_pair_str({"a"}, 2),
+    key_value_pair_str({"d"}, 4),
+    key_value_pair_str({"x"}, 3),
+    key_value_pair_str({"z"}, 1),
+  };
+
+  EXPECT_THAT(values_by_key, ContainerEq(expected_values));
+}
+
+TEST(bpftrace, sort_by_key_str_str)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+
+  std::vector<SizedType> key_args = {
+    SizedType(Type::string, STRING_SIZE),
+    SizedType(Type::string, STRING_SIZE),
+    SizedType(Type::string, STRING_SIZE),
+  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
+  {
+    key_value_pair_str({"z", "a", "l"}, 1),
+    key_value_pair_str({"a", "a", "m"}, 2),
+    key_value_pair_str({"z", "c", "n"}, 3),
+    key_value_pair_str({"a", "c", "o"}, 4),
+    key_value_pair_str({"z", "b", "p"}, 5),
+    key_value_pair_str({"a", "b", "q"}, 6),
+  };
+  bpftrace.sort_by_key(key_args, values_by_key);
+
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
+  {
+    key_value_pair_str({"a", "a", "m"}, 2),
+    key_value_pair_str({"a", "b", "q"}, 6),
+    key_value_pair_str({"a", "c", "o"}, 4),
+    key_value_pair_str({"z", "a", "l"}, 1),
+    key_value_pair_str({"z", "b", "p"}, 5),
+    key_value_pair_str({"z", "c", "n"}, 3),
+  };
+
+  EXPECT_THAT(values_by_key, ContainerEq(expected_values));
+}
+
+TEST(bpftrace, sort_by_key_int_str)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+
+  std::vector<SizedType> key_args = {
+    SizedType(Type::integer, 8),
+    SizedType(Type::string, STRING_SIZE),
+  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
+  {
+    key_value_pair_int_str(1, "b", 1),
+    key_value_pair_int_str(2, "b", 2),
+    key_value_pair_int_str(3, "b", 3),
+    key_value_pair_int_str(1, "a", 4),
+    key_value_pair_int_str(2, "a", 5),
+    key_value_pair_int_str(3, "a", 6),
+  };
+  bpftrace.sort_by_key(key_args, values_by_key);
+
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
+  {
+    key_value_pair_int_str(1, "a", 4),
+    key_value_pair_int_str(1, "b", 1),
+    key_value_pair_int_str(2, "a", 5),
+    key_value_pair_int_str(2, "b", 2),
+    key_value_pair_int_str(3, "a", 6),
+    key_value_pair_int_str(3, "b", 3),
+  };
+
+  EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
 
 } // namespace bpftrace

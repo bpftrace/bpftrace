@@ -315,10 +315,10 @@ int BPFtrace::print_map(Map &map)
   }
   auto key(old_key);
 
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key;
+
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
-    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
-
     int value_size = map.type_.size;
     if (map.type_.type == Type::count)
       value_size *= ncpus_;
@@ -329,6 +329,31 @@ int BPFtrace::print_map(Map &map)
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
     }
+
+    values_by_key.push_back({key, value});
+
+    old_key = key;
+  }
+
+  if (map.type_.type == Type::count)
+  {
+    std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+    {
+      return reduce_value(a.second, ncpus_) < reduce_value(b.second, ncpus_);
+    });
+  }
+  else
+  {
+    sort_by_key(map.key_.args_, values_by_key);
+  };
+
+  for (auto &pair : values_by_key)
+  {
+    auto key = pair.first;
+    auto value = pair.second;
+
+    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
+
     if (map.type_.type == Type::stack)
       std::cout << get_stack(*(uint32_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
@@ -340,11 +365,9 @@ int BPFtrace::print_map(Map &map)
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else if (map.type_.type == Type::count)
-      std::cout << reduce_value(value) << std::endl;
+      std::cout << reduce_value(value, ncpus_) << std::endl;
     else
       std::cout << *(int64_t*)value.data() << std::endl;
-
-    old_key = key;
   }
 
   std::cout << std::endl;
@@ -396,7 +419,7 @@ int BPFtrace::print_map_quantize(Map &map)
       // New key - create a list of buckets for it
       values_by_key[key_prefix] = std::vector<uint64_t>(65);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value(value);
+    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
 
     old_key = key;
   }
@@ -456,7 +479,7 @@ int BPFtrace::print_quantize(const std::vector<uint64_t> &values) const
   return 0;
 }
 
-std::string BPFtrace::quantize_index_label(int power) const
+std::string BPFtrace::quantize_index_label(int power)
 {
   char suffix = '\0';
   if (power >= 40)
@@ -487,10 +510,10 @@ std::string BPFtrace::quantize_index_label(int power) const
   return label.str();
 }
 
-uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value) const
+uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
 {
   uint64_t sum = 0;
-  for (int i=0; i<ncpus_; i++)
+  for (int i=0; i<ncpus; i++)
   {
     sum += *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
   }
@@ -572,6 +595,48 @@ std::string BPFtrace::resolve_usym(uint64_t addr) const
   std::ostringstream symbol;
   symbol << (void*)addr;
   return symbol.str();
+}
+
+void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
+    std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key)
+{
+  int arg_offset = 0;
+  for (auto arg : key_args)
+  {
+    arg_offset += arg.size;
+  }
+
+  // Sort the key arguments in reverse order so the results are sorted by
+  // the first argument first, then the second, etc.
+  for (size_t i=key_args.size(); i-- > 0; )
+  {
+    auto arg = key_args.at(i);
+    arg_offset -= arg.size;
+
+    if (arg.type == Type::integer)
+    {
+      if (arg.size == 8)
+      {
+        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+        {
+          return *(uint64_t*)(a.first.data() + arg_offset) < *(uint64_t*)(b.first.data() + arg_offset);
+        });
+      }
+      else
+        abort();
+    }
+    else if (arg.type == Type::string)
+    {
+      std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+      {
+        return strncmp((char*)(a.first.data() + arg_offset),
+                       (char*)(b.first.data() + arg_offset),
+                       STRING_SIZE) < 0;
+      });
+    }
+
+    // Other types don't get sorted
+  }
 }
 
 } // namespace bpftrace

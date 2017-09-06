@@ -34,6 +34,9 @@ public:
   std::unique_ptr<Map> stackid_map_;
   std::unique_ptr<Map> perf_event_map_;
 
+  static void sort_by_key(std::vector<SizedType> key_args,
+      std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
+
 protected:
   virtual std::set<std::string> find_wildcard_matches(std::string attach_point, std::string file_name);
   std::vector<Probe> probes_;
@@ -51,8 +54,8 @@ private:
   int print_map(Map &map);
   int print_map_quantize(Map &map);
   int print_quantize(const std::vector<uint64_t> &values) const;
-  uint64_t reduce_value(const std::vector<uint8_t> &value) const;
-  std::string quantize_index_label(int power) const;
+  static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
+  static std::string quantize_index_label(int power);
   std::vector<uint8_t> find_empty_key(Map &map, size_t size) const;
 };
 
