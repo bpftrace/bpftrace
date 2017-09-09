@@ -400,7 +400,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
   }
   else
   {
-    key = b_.CreateAllocaBPF(map.type, map.ident + "_key");
+    key = b_.CreateAllocaBPF(SizedType(Type::integer, 8), map.ident + "_key");
     b_.CreateStore(b_.getInt64(0), key);
   }
   return key;
