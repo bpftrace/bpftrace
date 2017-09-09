@@ -41,6 +41,12 @@ add_flex_bison_dependency(flex_lexer bison_parser)
 add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
 target_include_directories(parser PUBLIC src ${CMAKE_BINARY_DIR})
 
+find_package(LLVM REQUIRED CONFIG)
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+
+set(DYNAMIC_LINKING OFF CACHE BOOL "Build bpftrace as a dynamically linked executable")
+
 add_subdirectory(src/arch)
 add_subdirectory(src)
 add_subdirectory(tests)

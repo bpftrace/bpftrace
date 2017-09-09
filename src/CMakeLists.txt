@@ -1,9 +1,3 @@
-find_package(LLVM REQUIRED CONFIG)
-
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
-
-set(DYNAMIC_LINKING OFF CACHE BOOL "Build bpftrace as a dynamically linked executable")
 if (NOT DYNAMIC_LINKING)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
 endif()

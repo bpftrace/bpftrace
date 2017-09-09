@@ -1,5 +1,8 @@
 #pragma once
 
+#include <iostream>
+#include <ostream>
+
 #include "ast.h"
 #include "bpftrace.h"
 #include "irbuilderbpf.h"
@@ -45,7 +48,7 @@ public:
 
   void createLog2Function();
   void createStrcmpFunction();
-  int compile(bool debug=false);
+  int compile(bool debug=false, std::ostream &out=std::cerr);
 
 private:
   Node *root_;

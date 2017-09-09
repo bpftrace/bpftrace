@@ -4,6 +4,7 @@
 #include "arch/arch.h"
 
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO.h>
@@ -614,7 +615,7 @@ void CodegenLLVM::createStrcmpFunction()
   b_.CreateRet(b_.getInt1(0));
 }
 
-int CodegenLLVM::compile(bool debug)
+int CodegenLLVM::compile(bool debug, std::ostream &out)
 {
   createLog2Function();
   createStrcmpFunction();
@@ -657,7 +658,10 @@ int CodegenLLVM::compile(bool debug)
   PM.run(*module_.get());
 
   if (debug)
-    module_->dump();
+  {
+    raw_os_ostream llvm_ostream(out);
+    module_->print(llvm_ostream, nullptr, false, true);
+  }
 
   EngineBuilder builder(move(module_));
   builder.setMCJITMemoryManager(std::make_unique<BPFtraceMemoryManager>(bpftrace_.sections_));
