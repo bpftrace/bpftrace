@@ -132,21 +132,28 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
 
-  Value *value = CreateAllocaBPF(SizedType(Type::integer, 8), "lookup_elem_val");
+  AllocaInst *value = CreateAllocaBPF(map.type, "lookup_elem_val");
   Value *condition = CreateICmpNE(
       CreateIntCast(call, getInt8PtrTy(), true),
       ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
       "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
-  SetInsertPoint(lookup_success_block);
-  Value *loaded_value = CreateLoad(getInt64Ty(), call);
-  CreateStore(loaded_value, value);
-  CreateBr(lookup_merge_block);
-  SetInsertPoint(lookup_failure_block);
-  CreateStore(getInt64(0), value);
-  CreateBr(lookup_merge_block);
-  SetInsertPoint(lookup_merge_block);
 
+  SetInsertPoint(lookup_success_block);
+  if (map.type.type == Type::string)
+    CreateMemcpy(value, call, map.type.size);
+  else
+    CreateStore(CreateLoad(getInt64Ty(), call), value);
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+  if (map.type.type == Type::string)
+    CreateMemset(value, getInt8(0), map.type.size);
+  else
+    CreateStore(getInt64(0), value);
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_merge_block);
   if (map.type.type == Type::string)
     return value;
   return CreateLoad(value);
