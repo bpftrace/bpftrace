@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  err = semantics.create_maps();
+  err = semantics.create_maps(debug);
   if (err)
     return err;
 

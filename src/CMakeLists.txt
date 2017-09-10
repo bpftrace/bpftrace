@@ -8,6 +8,7 @@ add_executable(bpftrace
   bpftrace.cpp
   codegen_llvm.cpp
   driver.cpp
+  fake_map.cpp
   irbuilderbpf.cpp
   main.cpp
   map.cpp

@@ -9,8 +9,11 @@
 namespace bpftrace {
 
 Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
-  : name_(name), type_(type), key_(key)
 {
+  name_ = name;
+  type_ = type;
+  key_ = key;
+
   int key_size = key.size();
   if (type.type == Type::quantize)
     key_size += 8;

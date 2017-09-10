@@ -2,6 +2,7 @@
 
 #include "semantic_analyser.h"
 #include "ast.h"
+#include "fake_map.h"
 #include "parser.tab.hh"
 #include "printf.h"
 #include "arch/arch.h"
@@ -399,7 +400,7 @@ int SemanticAnalyser::analyse()
   return 0;
 }
 
-int SemanticAnalyser::create_maps()
+int SemanticAnalyser::create_maps(bool debug)
 {
   for (auto &map_val : map_val_)
   {
@@ -411,12 +412,24 @@ int SemanticAnalyser::create_maps()
       abort();
     auto &key = search_args->second;
 
-    bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+    if (debug)
+      bpftrace_.maps_[map_name] = std::make_unique<bpftrace::FakeMap>(map_name, type, key);
+    else
+      bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
   }
 
-  if (needs_stackid_map_)
-    bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_STACK_TRACE);
-  bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  if (debug)
+  {
+    if (needs_stackid_map_)
+      bpftrace_.stackid_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_STACK_TRACE);
+    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  }
+  else
+  {
+    if (needs_stackid_map_)
+      bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_STACK_TRACE);
+    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  }
 
   return 0;
 }

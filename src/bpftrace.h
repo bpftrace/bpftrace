@@ -10,7 +10,7 @@
 
 #include "ast.h"
 #include "attached_probe.h"
-#include "map.h"
+#include "imap.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -28,11 +28,11 @@ public:
   std::string resolve_sym(uint64_t addr, bool show_offset=false);
   std::string resolve_usym(uint64_t addr) const;
 
-  std::map<std::string, std::unique_ptr<Map>> maps_;
+  std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
   std::vector<std::tuple<std::string, std::vector<SizedType>>> printf_args_;
-  std::unique_ptr<Map> stackid_map_;
-  std::unique_ptr<Map> perf_event_map_;
+  std::unique_ptr<IMap> stackid_map_;
+  std::unique_ptr<IMap> perf_event_map_;
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
@@ -51,12 +51,12 @@ private:
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe);
   int setup_perf_events();
   static void poll_perf_events(int epollfd, int timeout=-1);
-  int print_map(Map &map);
-  int print_map_quantize(Map &map);
+  int print_map(IMap &map);
+  int print_map_quantize(IMap &map);
   int print_quantize(const std::vector<uint64_t> &values) const;
   static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
   static std::string quantize_index_label(int power);
-  std::vector<uint8_t> find_empty_key(Map &map, size_t size) const;
+  std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
 };
 
 } // namespace bpftrace

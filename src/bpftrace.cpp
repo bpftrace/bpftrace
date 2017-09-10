@@ -286,7 +286,7 @@ int BPFtrace::print_maps()
 {
   for(auto &mapmap : maps_)
   {
-    Map &map = *mapmap.second.get();
+    IMap &map = *mapmap.second.get();
     int err;
     if (map.type_.type == Type::quantize)
       err = print_map_quantize(map);
@@ -300,7 +300,7 @@ int BPFtrace::print_maps()
   return 0;
 }
 
-int BPFtrace::print_map(Map &map)
+int BPFtrace::print_map(IMap &map)
 {
   std::vector<uint8_t> old_key;
   try
@@ -375,7 +375,7 @@ int BPFtrace::print_map(Map &map)
   return 0;
 }
 
-int BPFtrace::print_map_quantize(Map &map)
+int BPFtrace::print_map_quantize(IMap &map)
 {
   // A quantize-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
@@ -538,7 +538,7 @@ uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
   return sum;
 }
 
-std::vector<uint8_t> BPFtrace::find_empty_key(Map &map, size_t size) const
+std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);

@@ -33,7 +33,7 @@ public:
   void visit(Program &program) override;
 
   int analyse();
-  int create_maps();
+  int create_maps(bool debug=false);
 
 private:
   Node *root_;
