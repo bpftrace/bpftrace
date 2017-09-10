@@ -52,6 +52,10 @@ void Predicate::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void AttachPoint::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Probe::accept(Visitor &v) {
   v.visit(*this);
 }
@@ -93,26 +97,29 @@ std::string opstr(Unop &unop)
   }
 }
 
-std::string Probe::name() const
+std::string AttachPoint::name(const std::string &attach_point) const
 {
-  std::string n = type;
-  if (path != "")
-    n += ":" + path;
-  n += ":";
-  for (std::string attach_point : *attach_points)
-  {
-    n += attach_point + ",";
-  }
-  return n.substr(0, n.size()-1);
+  std::string n = provider;
+  if (target != "")
+    n += ":" + target;
+  if (attach_point != "")
+    n += ":" + attach_point;
+  return n;
 }
 
-std::string Probe::name(const std::string &attach_point) const
+std::string Probe::name() const
 {
-  std::string n = type;
-  if (path != "")
-    n += ":" + path;
-  n += ":" + attach_point;
-  return n;
+  std::string n = "";
+  for (auto attach_point : *attach_points)
+  {
+    n += attach_point->provider;
+    if (attach_point->target != "")
+      n += ":" + attach_point->target;
+    if (attach_point->func != "")
+      n += ":" + attach_point->func;
+    n += ",";
+  }
+  return n.substr(0, n.size()-1);
 }
 
 } // namespace ast

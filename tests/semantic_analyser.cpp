@@ -23,7 +23,7 @@ void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expe
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
-  EXPECT_EQ(semantics.analyse(), expected_result) << msg.str() + out.str();
+  EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
 }
 
 void test(BPFtrace &bpftrace, const std::string &input, int expected_result=0)

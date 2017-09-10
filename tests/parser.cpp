@@ -222,24 +222,11 @@ TEST(Parser, begin_probe)
 
 TEST(Parser, multiple_attach_points_kprobe)
 {
-  test("kprobe:sys_open,sys_close { 1 }",
+  test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",
       "Program\n"
-      " kprobe:sys_open,sys_close\n"
-      "  int: 1\n");
-}
-
-TEST(Parser, multiple_attach_points_uprobe)
-{
-  test("uprobe:/bin/sh:foo,bar { 1 }",
-      "Program\n"
-      " uprobe:/bin/sh:foo,bar\n"
-      "  int: 1\n");
-}
-
-TEST(Parser, multiple_attach_points_tracepoint)
-{
-  test("tracepoint:syscalls:sys_enter_* { 1 }",
-      "Program\n"
+      " BEGIN\n"
+      " kprobe:sys_open\n"
+      " uprobe:/bin/sh:foo\n"
       " tracepoint:syscalls:sys_enter_*\n"
       "  int: 1\n");
 }

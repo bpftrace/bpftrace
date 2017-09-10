@@ -29,6 +29,7 @@ public:
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(Predicate &pred) override;
+  void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
 

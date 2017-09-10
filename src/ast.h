@@ -136,30 +136,38 @@ public:
   void accept(Visitor &v) override;
 };
 
-using AttachPointList = std::vector<std::string>;
+class AttachPoint : public Node {
+public:
+  explicit AttachPoint(const std::string &provider)
+    : provider(provider) { }
+  AttachPoint(const std::string &provider,
+              const std::string &func)
+    : provider(provider), func(func) { }
+  AttachPoint(const std::string &provider,
+              const std::string &target,
+              const std::string &func)
+    : provider(provider), target(target), func(func) { }
+
+  std::string provider;
+  std::string target;
+  std::string func;
+
+  void accept(Visitor &v) override;
+  std::string name(const std::string &attach_point) const;
+};
+using AttachPointList = std::vector<AttachPoint *>;
+
 class Probe : public Node {
 public:
-  // BEGIN/END
-  Probe(const std::string &type, Predicate *pred, StatementList *stmts)
-    : type(type), attach_points(new AttachPointList), pred(pred), stmts(stmts) { }
-  // kprobe
-  Probe(const std::string &type, AttachPointList *attach_points,
-      Predicate *pred, StatementList *stmts)
-    : type(type), attach_points(attach_points), pred(pred), stmts(stmts) { }
-  // uprobe, tracepoint
-  Probe(const std::string &type, const std::string &path,
-      AttachPointList *attach_points, Predicate *pred, StatementList *stmts)
-    : type(type), path(path), attach_points(attach_points), pred(pred), stmts(stmts) { }
+  Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts)
+    : attach_points(attach_points), pred(pred), stmts(stmts) { }
 
-  std::string type;
-  std::string path;
   AttachPointList *attach_points;
   Predicate *pred;
   StatementList *stmts;
 
   void accept(Visitor &v) override;
   std::string name() const;
-  std::string name(const std::string &attach_point) const;
 };
 using ProbeList = std::vector<Probe *>;
 
@@ -186,6 +194,7 @@ public:
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(Predicate &pred) = 0;
+  virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
 };

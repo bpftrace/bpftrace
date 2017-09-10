@@ -8,7 +8,10 @@ namespace bpftrace {
 
 class MockBPFtrace : public BPFtrace {
 public:
-  MOCK_METHOD2(find_wildcard_matches, std::set<std::string>(std::string attach_point, std::string file));
+  MOCK_METHOD3(find_wildcard_matches, std::set<std::string>(
+        const std::string &prefix,
+        const std::string &func,
+        const std::string &file_name));
   std::vector<Probe> get_probes()
   {
     return probes_;
@@ -26,99 +29,117 @@ using ::testing::StrictMock;
 
 void check_kprobe(Probe &p, const std::string &attach_point, const std::string &prog_name)
 {
-  EXPECT_EQ(p.type, ProbeType::kprobe);
-  EXPECT_EQ(p.attach_point, attach_point);
-  EXPECT_EQ(p.prog_name, prog_name);
-  EXPECT_EQ(p.name, "kprobe:" + attach_point);
+  EXPECT_EQ(ProbeType::kprobe, p.type);
+  EXPECT_EQ(attach_point, p.attach_point);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ("kprobe:" + attach_point, p.name);
 }
 
 void check_uprobe(Probe &p, const std::string &path, const std::string &attach_point, const std::string &prog_name)
 {
-  EXPECT_EQ(p.type, ProbeType::uprobe);
-  EXPECT_EQ(p.attach_point, attach_point);
-  EXPECT_EQ(p.prog_name, prog_name);
-  EXPECT_EQ(p.name, "uprobe:" + path + ":" + attach_point);
+  EXPECT_EQ(ProbeType::uprobe, p.type);
+  EXPECT_EQ(attach_point, p.attach_point);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ("uprobe:" + path + ":" + attach_point, p.name);
+}
+
+void check_tracepoint(Probe &p, const std::string &target, const std::string &func, const std::string &prog_name)
+{
+  EXPECT_EQ(ProbeType::tracepoint, p.type);
+  EXPECT_EQ(func, p.attach_point);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ("tracepoint:" + target + ":" + func, p.name);
 }
 
 void check_special_probe(Probe &p, const std::string &attach_point, const std::string &prog_name)
 {
-  EXPECT_EQ(p.type, ProbeType::uprobe);
-  EXPECT_EQ(p.attach_point, attach_point);
-  EXPECT_EQ(p.prog_name, prog_name);
-  EXPECT_EQ(p.name, prog_name);
+  EXPECT_EQ(ProbeType::uprobe, p.type);
+  EXPECT_EQ(attach_point, p.attach_point);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ(prog_name, p.name);
 }
 
 TEST(bpftrace, add_begin_probe)
 {
-  ast::Probe probe("BEGIN", nullptr, nullptr);
+  ast::AttachPoint a("BEGIN");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 0);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 1);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(0, bpftrace.get_probes().size());
+  EXPECT_EQ(1, bpftrace.get_special_probes().size());
 
   check_special_probe(bpftrace.get_special_probes().at(0), "BEGIN_trigger", "BEGIN");
 }
 
 TEST(bpftrace, add_end_probe)
 {
-  ast::Probe probe("END", nullptr, nullptr);
+  ast::AttachPoint a("END");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 0);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 1);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(0, bpftrace.get_probes().size());
+  EXPECT_EQ(1, bpftrace.get_special_probes().size());
 
   check_special_probe(bpftrace.get_special_probes().at(0), "END_trigger", "END");
 }
 
 TEST(bpftrace, add_probes_single)
 {
-  ast::AttachPointList attach_points = {"sys_read"};
-  ast::Probe probe("kprobe", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a("kprobe", "sys_read");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 1);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", "kprobe:sys_read");
 }
 
 TEST(bpftrace, add_probes_multiple)
 {
-  ast::AttachPointList attach_points = {"sys_read", "sys_write"};
-  ast::Probe probe("kprobe", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a1("kprobe", "sys_read");
+  ast::AttachPoint a2("kprobe", "sys_write");
+  ast::AttachPointList attach_points = { &a1, &a2 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 2);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(2, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 
-  std::string probe_prog_name = "kprobe:sys_read,sys_write";
+  std::string probe_prog_name = "kprobe:sys_read,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_prog_name);
   check_kprobe(bpftrace.get_probes().at(1), "sys_write", probe_prog_name);
 }
 
 TEST(bpftrace, add_probes_wildcard)
 {
-  ast::AttachPointList attach_points = {"sys_read", "my_*", "sys_write"};
-  ast::Probe probe("kprobe", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a1("kprobe", "sys_read");
+  ast::AttachPoint a2("kprobe", "my_*");
+  ast::AttachPoint a3("kprobe", "sys_write");
+  ast::AttachPointList attach_points = { &a1, &a2, &a3 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
   std::set<std::string> matches = { "my_one", "my_two" };
-  ON_CALL(bpftrace, find_wildcard_matches(_, _))
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
     .WillByDefault(Return(matches));
   EXPECT_CALL(bpftrace,
-      find_wildcard_matches("my_*",
+      find_wildcard_matches("", "my_*",
         "/sys/kernel/debug/tracing/available_filter_functions"))
     .Times(1);
 
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 4);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(4, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 
-  std::string probe_prog_name = "kprobe:sys_read,my_*,sys_write";
+  std::string probe_prog_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_prog_name);
   check_kprobe(bpftrace.get_probes().at(1), "my_one", probe_prog_name);
   check_kprobe(bpftrace.get_probes().at(2), "my_two", probe_prog_name);
@@ -127,74 +148,115 @@ TEST(bpftrace, add_probes_wildcard)
 
 TEST(bpftrace, add_probes_wildcard_no_matches)
 {
-  ast::AttachPointList attach_points = {"sys_read", "my_*", "sys_write"};
-  ast::Probe probe("kprobe", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a1("kprobe", "sys_read");
+  ast::AttachPoint a2("kprobe", "my_*");
+  ast::AttachPoint a3("kprobe", "sys_write");
+  ast::AttachPointList attach_points = { &a1, &a2, &a3 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
   std::set<std::string> matches;
-  ON_CALL(bpftrace, find_wildcard_matches(_, _))
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
     .WillByDefault(Return(matches));
   EXPECT_CALL(bpftrace,
-      find_wildcard_matches("my_*",
+      find_wildcard_matches("", "my_*",
         "/sys/kernel/debug/tracing/available_filter_functions"))
     .Times(1);
 
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 2);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(2, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 
-  std::string probe_prog_name = "kprobe:sys_read,my_*,sys_write";
+  std::string probe_prog_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_prog_name);
   check_kprobe(bpftrace.get_probes().at(1), "sys_write", probe_prog_name);
 }
 
 TEST(bpftrace, add_probes_uprobe)
 {
-  ast::AttachPointList attach_points = {"foo"};
-  ast::Probe probe("uprobe", "/bin/sh", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
 
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 1);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
   check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
 {
-  ast::AttachPointList attach_points = {"foo*"};
-  ast::Probe probe("uprobe", "/bin/sh", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo*");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_NE(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 0);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 }
 
 TEST(bpftrace, add_probes_tracepoint)
 {
-  ast::AttachPointList attach_points = {"sched_switch"};
-  ast::Probe probe("tracepoint", "sched", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a("tracepoint", "sched", "sched_switch");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
 
-  EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 1);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+
+  std::string probe_prog_name = "tracepoint:sched:sched_switch";
+  check_tracepoint(bpftrace.get_probes().at(0), "sched", "sched_switch", probe_prog_name);
 }
 
 TEST(bpftrace, add_probes_tracepoint_wildcard)
 {
-  ast::AttachPointList attach_points = {"sched_*"};
-  ast::Probe probe("tracepoint", "sched", &attach_points, nullptr, nullptr);
+  ast::AttachPoint a("tracepoint", "sched", "sched_*");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
 
   StrictMock<MockBPFtrace> bpftrace;
+  std::set<std::string> matches = { "sched_one", "sched_two" };
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
+    .WillByDefault(Return(matches));
+  EXPECT_CALL(bpftrace,
+      find_wildcard_matches("sched", "sched_*",
+        "/sys/kernel/debug/tracing/available_events"))
+    .Times(1);
 
-  EXPECT_NE(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(bpftrace.get_probes().size(), 0);
-  EXPECT_EQ(bpftrace.get_special_probes().size(), 0);
+  EXPECT_EQ(bpftrace.add_probe(probe), 0);
+  EXPECT_EQ(2, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+
+  std::string probe_prog_name = "tracepoint:sched:sched_*";
+  check_tracepoint(bpftrace.get_probes().at(0), "sched", "sched_one", probe_prog_name);
+  check_tracepoint(bpftrace.get_probes().at(1), "sched", "sched_two", probe_prog_name);
+}
+
+TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
+{
+  ast::AttachPoint a("tracepoint", "typo", "typo_*");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+  std::set<std::string> matches;
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
+    .WillByDefault(Return(matches));
+  EXPECT_CALL(bpftrace,
+      find_wildcard_matches("typo", "typo_*",
+        "/sys/kernel/debug/tracing/available_events"))
+    .Times(1);
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(0, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
 }
 
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::vector<uint64_t> key, int val)

@@ -113,7 +113,7 @@ Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
 ### Multiple attachment points
 More than one function/tracepoint can be specified for a single probe:
 
-`kprobe:sys_read,sys_write { ... }`
+`kprobe:sys_read,kprobe:sys_write { ... }`
 
 ### Wildcards
 Some probe types allow wildcards to be used when attaching a probe:

@@ -48,16 +48,19 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::string, STRING_SIZE);
   }
   else if (builtin.ident == "func") {
-    ProbeType type = probetype(probe_->type);
-    if (type == ProbeType::kprobe ||
-        type == ProbeType::kretprobe ||
-        type == ProbeType::tracepoint)
-      builtin.type = SizedType(Type::sym, 8);
-    else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
-      builtin.type = SizedType(Type::usym, 8);
-    else
-      err_ << "The func builtin can not be used with '" << probe_->type
-           << "' probes" << std::endl;
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type == ProbeType::kprobe ||
+          type == ProbeType::kretprobe ||
+          type == ProbeType::tracepoint)
+        builtin.type = SizedType(Type::sym, 8);
+      else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
+        builtin.type = SizedType(Type::usym, 8);
+      else
+        err_ << "The func builtin can not be used with '" << attach_point->provider
+             << "' probes" << std::endl;
+    }
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
@@ -318,42 +321,34 @@ void SemanticAnalyser::visit(Predicate &pred)
   }
 }
 
-void SemanticAnalyser::visit(Probe &probe)
+void SemanticAnalyser::visit(AttachPoint &ap)
 {
-  // Clear out map of variable names - variables should be probe-local
-  variable_val_.clear();
-  probe_ = &probe;
-
-  if (probe.type == "kprobe" || probe.type == "kretprobe") {
-    if (probe.attach_points->size() == 0)
-      err_ << "kprobes must have an attachment point" << std::endl;
-    if (probe.path != "")
-      err_ << "kprobes should not have a path" << std::endl;
+  if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
+    if (ap.target != "")
+      err_ << "kprobes should not have a target" << std::endl;
+    if (ap.func == "")
+      err_ << "kprobes should be attached to a function" << std::endl;
   }
-  else if (probe.type == "uprobe" || probe.type == "uretprobe") {
-    if (probe.attach_points->size() == 0)
-      err_ << "uprobes must have an attachment point" << std::endl;
-    if (probe.path == "")
-      err_ << "uprobes must have a path" << std::endl;
+  else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
+    if (ap.target == "")
+      err_ << "uprobes should have a target" << std::endl;
+    if (ap.func == "")
+      err_ << "uprobes should be attached to a function" << std::endl;
   }
-  else if (probe.type == "tracepoint") {
-    if (probe.attach_points->size() == 0)
-      err_ << "tracepoint probe must have an event" << std::endl;
-    if (probe.path == "")
-      err_ << "tracepoint probe must have a category" << std::endl;
+  else if (ap.provider == "tracepoint") {
+    if (ap.target == "" || ap.func == "")
+      err_ << "tracepoint probe must have a target" << std::endl;
   }
-  else if (probe.type == "BEGIN" || probe.type == "END") {
-    if (probe.attach_points->size() != 0)
-      err_ << "BEGIN/END probes should not have an attachment point" << std::endl;
-    if (probe.path != "")
-      err_ << "BEGIN/END probes should not have a path" << std::endl;
+  else if (ap.provider == "BEGIN" || ap.provider == "END") {
+    if (ap.target != "" || ap.func != "")
+      err_ << "BEGIN/END probes should not have a target" << std::endl;
     if (is_final_pass()) {
-      if (probe.type == "BEGIN") {
+      if (ap.provider == "BEGIN") {
         if (has_begin_probe_)
           err_ << "More than one BEGIN probe defined" << std::endl;
         has_begin_probe_ = true;
       }
-      if (probe.type == "END") {
+      if (ap.provider == "END") {
         if (has_end_probe_)
           err_ << "More than one END probe defined" << std::endl;
         has_end_probe_ = true;
@@ -361,9 +356,19 @@ void SemanticAnalyser::visit(Probe &probe)
     }
   }
   else {
-    err_ << "Invalid probe type: '" << probe.type << "'" << std::endl;
+    err_ << "Invalid provider: '" << ap.provider << "'" << std::endl;
   }
+}
 
+void SemanticAnalyser::visit(Probe &probe)
+{
+  // Clear out map of variable names - variables should be probe-local
+  variable_val_.clear();
+  probe_ = &probe;
+
+  for (AttachPoint *ap : *probe.attach_points) {
+    ap->accept(*this);
+  }
   if (probe.pred) {
     probe.pred->accept(*this);
   }

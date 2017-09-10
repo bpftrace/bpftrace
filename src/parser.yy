@@ -85,7 +85,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Variable *> var
 %type <ast::ExpressionList *> vargs
 %type <ast::AttachPointList *> attach_points
-%type <std::string> attach_point
+%type <ast::AttachPoint *> attach_point
+%type <std::string> wildcard
 
 %right ASSIGN
 %left LOR
@@ -110,20 +111,22 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : IDENT pred block                    { $$ = new ast::Probe($1, $2, $3); }
-      | IDENT ":" attach_points pred block  { $$ = new ast::Probe($1, $3, $4, $5); }
-      | IDENT PATH attach_points pred block { $$ = new ast::Probe($1, $2.substr(1, $2.size()-2), $3, $4, $5); }
+probe : attach_points pred block { $$ = new ast::Probe($1, $2, $3); }
       ;
 
 attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
               | attach_point                   { $$ = new ast::AttachPointList; $$->push_back($1); }
               ;
 
-attach_point : attach_point IDENT { $$ = $1 + $2; }
-             | attach_point MUL   { $$ = $1 + "*"; }
-             | IDENT              { $$ = $1; }
-             | MUL                { $$ = "*"; }
+attach_point : IDENT               { $$ = new ast::AttachPoint($1); }
+             | IDENT ":" wildcard  { $$ = new ast::AttachPoint($1, $3); }
+             | IDENT PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
              ;
+
+wildcard : wildcard IDENT { $$ = $1 + $2; }
+         | wildcard MUL   { $$ = $1 + "*"; }
+         |                { $$ = ""; }
+         ;
 
 pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
      |                  { $$ = nullptr; }

@@ -370,6 +370,11 @@ void CodegenLLVM::visit(Predicate &pred)
   b_.SetInsertPoint(pred_true_block);
 }
 
+void CodegenLLVM::visit(AttachPoint &)
+{
+  // Empty
+}
+
 void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(

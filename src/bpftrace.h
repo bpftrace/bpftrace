@@ -38,7 +38,7 @@ public:
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
 
 protected:
-  virtual std::set<std::string> find_wildcard_matches(std::string attach_point, std::string file_name);
+  virtual std::set<std::string> find_wildcard_matches(const std::string &prefix, const std::string &attach_point, const std::string &file_name);
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
 

@@ -123,10 +123,19 @@ void Printer::visit(Predicate &pred)
   --depth_;
 }
 
+void Printer::visit(AttachPoint &ap)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << ap.name(ap.func) << std::endl;
+}
+
 void Printer::visit(Probe &probe)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << probe.name() << std::endl;
+
+  for (AttachPoint *ap : *probe.attach_points) {
+    ap->accept(*this);
+  }
 
   ++depth_;
   if (probe.pred) {
