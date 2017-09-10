@@ -22,6 +22,7 @@ public:
   SizedType type;
   Map *map = nullptr; // Only set when this expression is assigned to a map
   bool is_literal = false;
+  bool is_variable = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -71,7 +72,7 @@ public:
 
 class Variable : public Expression {
 public:
-  explicit Variable(std::string &ident) : ident(ident) { }
+  explicit Variable(std::string &ident) : ident(ident) { is_variable = true; }
   std::string ident;
 
   void accept(Visitor &v) override;

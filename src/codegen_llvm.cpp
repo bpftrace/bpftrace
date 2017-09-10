@@ -257,8 +257,10 @@ void CodegenLLVM::visit(Binop &binop)
       default:
         abort();
     }
-    b_.CreateLifetimeEnd(lhs);
-    b_.CreateLifetimeEnd(rhs);
+    if (!binop.left->is_variable)
+      b_.CreateLifetimeEnd(lhs);
+    if (!binop.right->is_variable)
+      b_.CreateLifetimeEnd(rhs);
   }
   else
   {
@@ -296,12 +298,14 @@ void CodegenLLVM::visit(Unop &unop)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(unop.expr->type, "deref");
       b_.CreateProbeRead(dst, 8, expr_);
-      b_.CreateLifetimeEnd(expr_);
       expr_ = b_.CreateLoad(dst);
+      b_.CreateLifetimeEnd(dst);
       break;
     }
     default: abort();
   }
+
+  // Unops only operate on integer values, so no need for lifetime end
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
@@ -332,7 +336,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   }
   b_.CreateMapUpdateElem(map, key, val);
   b_.CreateLifetimeEnd(key);
-  b_.CreateLifetimeEnd(val);
+  if (!assignment.expr->is_variable)
+    b_.CreateLifetimeEnd(val);
 }
 
 void CodegenLLVM::visit(AssignVarStatement &assignment)
