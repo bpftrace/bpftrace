@@ -289,6 +289,7 @@ void CodegenLLVM::visit(Binop &binop)
 
 void CodegenLLVM::visit(Unop &unop)
 {
+  assert(unop.expr->type.type == Type::integer);
   unop.expr->accept(*this);
 
   switch (unop.op) {
@@ -304,8 +305,6 @@ void CodegenLLVM::visit(Unop &unop)
     }
     default: abort();
   }
-
-  // Unops only operate on integer values, so no need for lifetime end
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
@@ -465,6 +464,9 @@ AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
 
 Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 {
+  assert(binop.left->type.type == Type::integer);
+  assert(binop.right->type.type == Type::integer);
+
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_true_block = BasicBlock::Create(module_->getContext(), "&&_lhs_true", parent);
   BasicBlock *true_block = BasicBlock::Create(module_->getContext(), "&&_true", parent);
@@ -501,6 +503,9 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
 
 Value *CodegenLLVM::createLogicalOr(Binop &binop)
 {
+  assert(binop.left->type.type == Type::integer);
+  assert(binop.right->type.type == Type::integer);
+
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *lhs_false_block = BasicBlock::Create(module_->getContext(), "||_lhs_false", parent);
   BasicBlock *false_block = BasicBlock::Create(module_->getContext(), "||_false", parent);
