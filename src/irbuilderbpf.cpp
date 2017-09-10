@@ -49,10 +49,13 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &nam
 {
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
+  AllocaInst *alloca;
   if (entry_block.empty())
-    return new AllocaInst(ty, name, &entry_block);
+    alloca = new AllocaInst(ty, name, &entry_block);
   else
-    return new AllocaInst(ty, name, &entry_block.front());
+    alloca = new AllocaInst(ty, name, &entry_block.front());
+  CreateLifetimeStart(alloca);
+  return alloca;
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)

@@ -82,6 +82,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
+    b_.CreateLifetimeEnd(dst);
   }
   else if (builtin.ident == "retval")
   {
@@ -90,6 +91,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
+    b_.CreateLifetimeEnd(dst);
   }
   else if (builtin.ident == "func")
   {
@@ -98,6 +100,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
+    b_.CreateLifetimeEnd(dst);
   }
   else
   {
@@ -115,6 +118,10 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
+
+    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    b_.CreateLifetimeEnd(key);
+    b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "quantize")
@@ -129,6 +136,10 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
+
+    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    b_.CreateLifetimeEnd(key);
+    b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "delete")
@@ -136,6 +147,7 @@ void CodegenLLVM::visit(Call &call)
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
     b_.CreateMapDeleteElem(map, key);
+    b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   }
   else if (call.func == "str")
@@ -190,6 +202,7 @@ void CodegenLLVM::visit(Call &call)
 
     printf_id++;
     b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
+    b_.CreateLifetimeEnd(printf_args);
     expr_ = nullptr;
   }
   else
@@ -202,6 +215,7 @@ void CodegenLLVM::visit(Map &map)
 {
   AllocaInst *key = getMapKey(map);
   expr_ = b_.CreateMapLookupElem(map, key);
+  b_.CreateLifetimeEnd(key);
 }
 
 void CodegenLLVM::visit(Variable &var)
@@ -243,6 +257,8 @@ void CodegenLLVM::visit(Binop &binop)
       default:
         abort();
     }
+    b_.CreateLifetimeEnd(lhs);
+    b_.CreateLifetimeEnd(rhs);
   }
   else
   {
@@ -280,6 +296,7 @@ void CodegenLLVM::visit(Unop &unop)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(unop.expr->type, "deref");
       b_.CreateProbeRead(dst, 8, expr_);
+      b_.CreateLifetimeEnd(expr_);
       expr_ = b_.CreateLoad(dst);
       break;
     }
@@ -314,6 +331,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     b_.CreateStore(expr, val);
   }
   b_.CreateMapUpdateElem(map, key, val);
+  b_.CreateLifetimeEnd(key);
+  b_.CreateLifetimeEnd(val);
 }
 
 void CodegenLLVM::visit(AssignVarStatement &assignment)
