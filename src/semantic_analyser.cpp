@@ -339,6 +339,19 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "" || ap.func == "")
       err_ << "tracepoint probe must have a target" << std::endl;
   }
+  else if (ap.provider == "profile") {
+    if (ap.target == "")
+      err_ << "profile probe must have unit of time" << std::endl;
+    else if (ap.target != "hz" &&
+             ap.target != "us" &&
+             ap.target != "ms" &&
+             ap.target != "s")
+      err_ << ap.target << " is not an accepted unit of time" << std::endl;
+    if (ap.func != "")
+      err_ << "profile probe must have an integer frequency" << std::endl;
+    else if (ap.freq <= 0)
+      err_ << "profile frequency should be a positive integer" << std::endl;
+  }
   else if (ap.provider == "BEGIN" || ap.provider == "END") {
     if (ap.target != "" || ap.func != "")
       err_ << "BEGIN/END probes should not have a target" << std::endl;

@@ -6,8 +6,10 @@
 
 #include "attached_probe.h"
 #include "bcc_syms.h"
+#include "common.h"
 #include "libbpf.h"
 #include "perf_reader.h"
+#include <linux/perf_event.h>
 
 namespace bpftrace {
 
@@ -32,6 +34,7 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::uprobe:     return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
+    case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
     default: abort();
   }
 }
@@ -54,6 +57,9 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
     case ProbeType::tracepoint:
       attach_tracepoint();
       break;
+    case ProbeType::profile:
+      attach_profile();
+      break;
     default:
       abort();
   }
@@ -62,7 +68,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
 AttachedProbe::~AttachedProbe()
 {
   close(progfd_);
-  perf_reader_free(perf_reader_);
+  if (perf_reader_)
+    perf_reader_free(perf_reader_);
   int err = 0;
   switch (probe_.type)
   {
@@ -76,6 +83,9 @@ AttachedProbe::~AttachedProbe()
       break;
     case ProbeType::tracepoint:
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
+      break;
+    case ProbeType::profile:
+      err = detach_profile();
       break;
     default:
       abort();
@@ -204,6 +214,61 @@ void AttachedProbe::attach_tracepoint()
 
   if (perf_reader_ == nullptr)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+}
+
+void AttachedProbe::attach_profile()
+{
+  int pid = -1;
+  int group_fd = -1;
+
+  uint64_t period, freq;
+  if (probe_.path == "hz")
+  {
+    period = 0;
+    freq = probe_.freq;
+  }
+  else if (probe_.path == "s")
+  {
+    period = probe_.freq * 1e9;
+    freq = 0;
+  }
+  else if (probe_.path == "ms")
+  {
+    period = probe_.freq * 1e6;
+    freq = 0;
+  }
+  else if (probe_.path == "us")
+  {
+    period = probe_.freq * 1e3;
+    freq = 0;
+  }
+  else
+  {
+    abort();
+  }
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
+        PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
+}
+
+int AttachedProbe::detach_profile()
+{
+  for (int perf_event_fd : perf_event_fds_)
+  {
+    int err = bpf_close_perf_event_fd(perf_event_fd);
+    if (err)
+      return err;
+  }
+  return 0;
 }
 
 } // namespace bpftrace

@@ -104,6 +104,8 @@ std::string AttachPoint::name(const std::string &attach_point) const
     n += ":" + target;
   if (attach_point != "")
     n += ":" + attach_point;
+  if (freq != 0)
+    n += ":" + std::to_string(freq);
   return n;
 }
 
@@ -117,6 +119,8 @@ std::string Probe::name() const
       n += ":" + attach_point->target;
     if (attach_point->func != "")
       n += ":" + attach_point->func;
+    if (attach_point->freq != 0)
+      n += ":" + std::to_string(attach_point->freq);
     n += ",";
   }
   return n.substr(0, n.size()-1);

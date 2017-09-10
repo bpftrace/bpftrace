@@ -121,6 +121,7 @@ attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
 attach_point : IDENT               { $$ = new ast::AttachPoint($1); }
              | IDENT ":" wildcard  { $$ = new ast::AttachPoint($1, $3); }
              | IDENT PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
+             | IDENT PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
              ;
 
 wildcard : wildcard IDENT { $$ = $1 + $2; }

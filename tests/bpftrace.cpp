@@ -51,6 +51,14 @@ void check_tracepoint(Probe &p, const std::string &target, const std::string &fu
   EXPECT_EQ("tracepoint:" + target + ":" + func, p.name);
 }
 
+void check_profile(Probe &p, const std::string &unit, int freq, const std::string &prog_name)
+{
+  EXPECT_EQ(ProbeType::profile, p.type);
+  EXPECT_EQ(freq, p.freq);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ("profile:" + unit + ":" + std::to_string(freq), p.name);
+}
+
 void check_special_probe(Probe &p, const std::string &attach_point, const std::string &prog_name)
 {
   EXPECT_EQ(ProbeType::uprobe, p.type);
@@ -257,6 +265,22 @@ TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
   EXPECT_EQ(0, bpftrace.add_probe(probe));
   EXPECT_EQ(0, bpftrace.get_probes().size());
   EXPECT_EQ(0, bpftrace.get_special_probes().size());
+}
+
+TEST(bpftrace, add_probes_profile)
+{
+  ast::AttachPoint a("profile", "ms", 997);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+
+  std::string probe_prog_name = "profile:ms:997";
+  check_profile(bpftrace.get_probes().at(0), "ms", 997, probe_prog_name);
 }
 
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::vector<uint64_t> key, int val)

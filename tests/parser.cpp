@@ -220,6 +220,22 @@ TEST(Parser, begin_probe)
       "  int: 1\n");
 }
 
+TEST(Parser, tracepoint_probe)
+{
+  test("tracepoint:sched:sched_switch { 1 }",
+      "Program\n"
+      " tracepoint:sched:sched_switch\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, profile_probe)
+{
+  test("profile:ms:997 { 1 }",
+      "Program\n"
+      " profile:ms:997\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, multiple_attach_points_kprobe)
 {
   test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",

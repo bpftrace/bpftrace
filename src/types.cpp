@@ -54,7 +54,9 @@ ProbeType probetype(const std::string &type)
     return ProbeType::uprobe;
   else if (type == "tracepoint")
     return ProbeType::tracepoint;
-  return ProbeType::invalid;
+  else if (type == "profile")
+    return ProbeType::profile;
+  abort();
 }
 
 } // namespace bpftrace

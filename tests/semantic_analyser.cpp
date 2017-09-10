@@ -229,6 +229,18 @@ TEST(semantic_analyser, tracepoint)
   test("tracepoint { 1 }", 1);
 }
 
+TEST(semantic_analyser, profile)
+{
+  test("profile:hz:997 { 1 }", 0);
+  test("profile:s:10 { 1 }", 0);
+  test("profile:ms:100 { 1 }", 0);
+  test("profile:us:100 { 1 }", 0);
+  test("profile:ms:nan { 1 }", 1);
+  test("profile:unit:100 { 1 }", 1);
+  test("profile:f { 1 }", 1);
+  test("profile { 1 }", 1);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

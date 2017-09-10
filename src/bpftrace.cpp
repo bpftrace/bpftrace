@@ -78,6 +78,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.type = probetype(attach_point->provider);
       probe.prog_name = p.name();
       probe.name = attach_point->name(func);
+      probe.freq = attach_point->freq;
       probes_.push_back(probe);
     }
   }

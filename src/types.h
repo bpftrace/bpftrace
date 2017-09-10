@@ -48,6 +48,7 @@ enum class ProbeType
   uprobe,
   uretprobe,
   tracepoint,
+  profile,
 };
 
 std::string typestr(Type t);
@@ -61,6 +62,7 @@ public:
   std::string attach_point;
   std::string prog_name;
   std::string name;
+  int freq;
 };
 
 } // namespace bpftrace

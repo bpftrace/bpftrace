@@ -147,10 +147,15 @@ public:
               const std::string &target,
               const std::string &func)
     : provider(provider), target(target), func(func) { }
+  AttachPoint(const std::string &provider,
+              const std::string &target,
+              int freq)
+    : provider(provider), target(target), freq(freq) { }
 
   std::string provider;
   std::string target;
   std::string func;
+  int freq = 0;
 
   void accept(Visitor &v) override;
   std::string name(const std::string &attach_point) const;

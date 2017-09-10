@@ -110,6 +110,12 @@ Attach script to a statically defined tracepoint in the kernel:
 
 Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
 
+### timers
+Run the script at specified time intervals:
+
+`profile:hz:99 { ... }`
+`profile:ms:10 { ... }`
+
 ### Multiple attachment points
 More than one function/tracepoint can be specified for a single probe:
 
