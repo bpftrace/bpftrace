@@ -20,7 +20,7 @@ kretprobe:sys_read / @start[tid] /
 }
 ```
 ```
-Running... press Ctrl-C to stop
+Attaching 2 probes...
 ^C
 
 @start[9134]: 6465933686812
@@ -53,7 +53,7 @@ kprobe:sys_open / comm == "bash" /
 }
 ```
 ```
-Running... press Ctrl-C to stop
+Attaching 1 probe...
 ^C
 
 @[/usr/lib/libnsl.so.1]: 1
@@ -66,29 +66,51 @@ Running... press Ctrl-C to stop
 ...
 ```
 
-Record where malloc is called from for a particular process ID (userland stack tracing will try to resolve symbols in the future):
+Whole system profiling (TODO make example check if kernel is on-cpu before recording):
 ```
-uprobe:/lib/libc-2.25.so:malloc / pid == 15201 /
+profile:hz:99
 {
-  @[ustack] = count()
+  @[stack] = count()
 }
 ```
 ```
-Running... press Ctrl-C to stop
+Attaching 1 probe...
 ^C
 
+...
 @[
-0x7fe223fdff40
-0x40058a
-0x7fe223f8343a
-0x82e258d4c544155
-]: 271276
+_raw_spin_unlock_irq+23
+finish_task_switch+117
+__schedule+574
+schedule_idle+44
+do_idle+333
+cpu_startup_entry+113
+start_secondary+344
+verify_cpu+0
+]: 83
 @[
-0x7fe223fdff40
-0x40058f
-0x7fe223f8343a
-0x82e258d4c544155
-]: 135637
+queue_work_on+41
+tty_flip_buffer_push+43
+pty_write+83
+n_tty_write+434
+tty_write+444
+__vfs_write+55
+vfs_write+177
+sys_write+85
+entry_SYSCALL_64_fastpath+26
+]: 97
+@[
+cpuidle_enter_state+299
+cpuidle_enter+23
+call_cpuidle+35
+do_idle+394
+cpu_startup_entry+113
+rest_init+132
+start_kernel+1083
+x86_64_start_reservations+41
+x86_64_start_kernel+323
+verify_cpu+0
+]: 150
 ```
 
 ## Probe types
