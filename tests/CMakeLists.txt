@@ -6,9 +6,6 @@ add_compile_options("-Wno-undef")
 add_compile_options("-Wno-switch-default")
 add_compile_options("-Wno-switch-enum")
 
-include_directories(${CMAKE_SOURCE_DIR}/src)
-include_directories(${CMAKE_BINARY_DIR}/src)
-
 add_executable(bpftrace_test
   ast.cpp
   bpftrace.cpp
@@ -16,19 +13,19 @@ add_executable(bpftrace_test
   main.cpp
   parser.cpp
   semantic_analyser.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
-  ${CMAKE_SOURCE_DIR}/src/codegen_llvm.cpp
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
-  ${CMAKE_SOURCE_DIR}/src/irbuilderbpf.cpp
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
-  ${CMAKE_SOURCE_DIR}/src/printer.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
-  ${CMAKE_SOURCE_DIR}/src/semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/ast.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/printer.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
 )
 
 target_link_libraries(bpftrace_test arch parser)
@@ -38,7 +35,7 @@ target_link_libraries(bpftrace_test ${llvm_libs})
 
 add_dependencies(bpftrace_test bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
-include_directories(${source_dir}/src/cc)
+target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
@@ -55,8 +52,8 @@ ExternalProject_Add(gtest
 )
 add_dependencies(bpftrace_test gtest-build)
 ExternalProject_Get_Property(gtest source_dir binary_dir)
-include_directories(${source_dir}/googletest/include)
-include_directories(${source_dir}/googlemock/include)
+target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
+target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)

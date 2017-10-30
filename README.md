@@ -136,10 +136,15 @@ Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
 Run the script at specified time intervals:
 
 `profile:hz:99 { ... }`
-`profile:ms:10 { ... }`
+
+`profile:s:1 { ... }`
+
+`profile:ms:20 { ... }`
+
+`profile:us:1500 { ... }`
 
 ### Multiple attachment points
-More than one function/tracepoint can be specified for a single probe:
+A single probe can be attached to multiple events:
 
 `kprobe:sys_read,kprobe:sys_write { ... }`
 
