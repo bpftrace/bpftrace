@@ -29,7 +29,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   int value_size = type.size;
   int max_entries = 128;
   int flags = 0;
-  mapfd_ = bpf_create_map(map_type, key_size, value_size, max_entries, flags);
+  mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
     std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
@@ -40,8 +40,10 @@ Map::Map(enum bpf_map_type map_type)
 {
   int key_size, value_size, max_entries, flags;
 
+  std::string name;
   if (map_type == BPF_MAP_TYPE_STACK_TRACE)
   {
+    name = "stack";
     key_size = 4;
     value_size = sizeof(uintptr_t) * MAX_STACK_SIZE;
     max_entries = 128;
@@ -50,6 +52,7 @@ Map::Map(enum bpf_map_type map_type)
   else if (map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY)
   {
     std::vector<int> cpus = ebpf::get_online_cpus();
+    name = "printf";
     key_size = 4;
     value_size = 4;
     max_entries = cpus.size();
@@ -59,7 +62,7 @@ Map::Map(enum bpf_map_type map_type)
   {
     abort();
   }
-  mapfd_ = bpf_create_map(map_type, key_size, value_size, max_entries, flags);
+  mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
     std::string name;
