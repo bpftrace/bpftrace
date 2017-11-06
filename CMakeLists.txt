@@ -20,14 +20,24 @@ add_compile_options("-Wno-format-security")
 
 enable_testing()
 
-include(ExternalProject)
-ExternalProject_Add(bcc
-  GIT_REPOSITORY https://github.com/iovisor/bcc
-  STEP_TARGETS build update
-  EXCLUDE_FROM_ALL 1
-  UPDATE_DISCONNECTED 1
-  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-)
+if (OFFLINE_BUILDS)
+  include(ExternalProject)
+  ExternalProject_Add(bcc
+    GIT_REPOSITORY https://github.com/iovisor/bcc
+    STEP_TARGETS build update
+    EXCLUDE_FROM_ALL 1
+    UPDATE_DISCONNECTED 1
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
+    )
+else()
+  include(ExternalProject)
+  ExternalProject_Add(bcc
+    GIT_REPOSITORY https://github.com/iovisor/bcc
+    STEP_TARGETS build update
+    EXCLUDE_FROM_ALL 1
+    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
+    )
+endif()
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(LibElf REQUIRED)

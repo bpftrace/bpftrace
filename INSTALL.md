@@ -41,6 +41,8 @@ make
 
 By default bpftrace will be built as a static binary to ease deployments. If a dynamically linked executable would be preferred, the CMake option `-DDYNAMIC_LINKING:BOOL=ON` can be used.
 
+The latest versions of BCC and Google Test will be downloaded on each build. To speed up builds and only download their sources on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
+
 ## Using Docker
 
 Building BPFtrace inside a Docker container is the recommended method:
@@ -53,10 +55,3 @@ There are some more fine-grained options if you find yourself building BPFtrace 
 - `./build-release.sh` - builds BPFtrace in a release configuration
 
 `./build.sh` is equivalent to `./build-docker.sh && ./build-release.sh`
-
-These build scripts pass on any command line arguments to `make` internally. This means specific targets can be built individually, e.g.:
-- `./build.sh bpftrace` - build only the targets required for the bpftrace executable
-- `./build.sh bcc-update` - update the copy of BCC used to build BPFtrace
-- `./build.sh gtest-update` - update the copy of Google Test used to build the BPFtrace tests
-
-The latest versions of BCC and Google Test will be downloaded on the first build. To update them later, the targets `bcc-update` and `gtest-update` can be built as shown above.
