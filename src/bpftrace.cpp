@@ -43,7 +43,9 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
 
     std::vector<std::string> attach_funcs;
-    if (attach_point->func.find("*") != std::string::npos)
+    if (attach_point->func.find("*") != std::string::npos ||
+        attach_point->func.find("[") != std::string::npos &&
+        attach_point->func.find("]") != std::string::npos)
     {
       std::string file_name;
       switch (probetype(attach_point->provider))

@@ -247,6 +247,14 @@ TEST(Parser, multiple_attach_points_kprobe)
       "  int: 1\n");
 }
 
+TEST(Parser, character_class_attach_point)
+{
+  test("kprobe:[Ss]y[Ss]_read { 1 }",
+      "Program\n"
+      " kprobe:[Ss]y[Ss]_read\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, wildcard_attach_points)
 {
   test("kprobe:sys_* { 1 }",

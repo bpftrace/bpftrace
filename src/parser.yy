@@ -124,9 +124,11 @@ attach_point : IDENT               { $$ = new ast::AttachPoint($1); }
              | IDENT PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
              ;
 
-wildcard : wildcard IDENT { $$ = $1 + $2; }
-         | wildcard MUL   { $$ = $1 + "*"; }
-         |                { $$ = ""; }
+wildcard : wildcard IDENT    { $$ = $1 + $2; }
+         | wildcard MUL      { $$ = $1 + "*"; }
+         | wildcard LBRACKET { $$ = $1 + "["; }
+         | wildcard RBRACKET { $$ = $1 + "]"; }
+         |                   { $$ = ""; }
          ;
 
 pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }

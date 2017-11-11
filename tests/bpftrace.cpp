@@ -126,6 +126,32 @@ TEST(bpftrace, add_probes_multiple)
   check_kprobe(bpftrace.get_probes().at(1), "sys_write", probe_prog_name);
 }
 
+TEST(bpftrace, add_probes_character_class)
+{
+  ast::AttachPoint a1("kprobe", "[Ss]y[Ss]_read");
+  ast::AttachPoint a2("kprobe", "sys_write");
+  ast::AttachPointList attach_points = { &a1, &a2 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+  std::set<std::string> matches = { "SyS_read", "sys_read" };
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
+    .WillByDefault(Return(matches));
+  EXPECT_CALL(bpftrace,
+      find_wildcard_matches("", "[Ss]y[Ss]_read",
+        "/sys/kernel/debug/tracing/available_filter_functions"))
+    .Times(1);
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(3, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+
+  std::string probe_prog_name = "kprobe:[Ss]y[Ss]_read,kprobe:sys_write";
+  check_kprobe(bpftrace.get_probes().at(0), "SyS_read", probe_prog_name);
+  check_kprobe(bpftrace.get_probes().at(1), "sys_read", probe_prog_name);
+  check_kprobe(bpftrace.get_probes().at(2), "sys_write", probe_prog_name);
+}
+
 TEST(bpftrace, add_probes_wildcard)
 {
   ast::AttachPoint a1("kprobe", "sys_read");

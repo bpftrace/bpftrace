@@ -6,6 +6,29 @@ For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md)
 
 ## Examples
 
+Count system calls:
+```
+kprobe:[Ss]y[Ss]_*
+{
+  @[func] = count()
+}
+```
+```
+Attaching 376 probes...
+^C
+
+...
+@[sys_open]: 579
+@[SyS_ioctl]: 686
+@[sys_bpf]: 730
+@[sys_close]: 779
+@[SyS_read]: 825
+@[sys_write]: 1031
+@[sys_poll]: 1796
+@[sys_futex]: 2237
+@[sys_recvmsg]: 2634
+```
+
 Produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
 ```
 kprobe:sys_read
@@ -45,25 +68,25 @@ Attaching 2 probes...
 [64k, 128k)            5 |                                                    |
 ```
 
-Record the names of files that any bash process opens:
+Print paths of any files opened along with the name of process which opened them:
 ```
-kprobe:sys_open / comm == "bash" /
+kprobe:sys_open
 {
-  @[str(arg0)] = count()
+  printf("%s: %s\n", comm, str(arg0))
 }
 ```
 ```
 Attaching 1 probe...
+git: .git/objects/70
+git: .git/objects/pack
+git: .git/objects/da
+git: .git/objects/pack
+git: /etc/localtime
+systemd-journal: /var/log/journal/72d0774c88dc4943ae3d34ac356125dd
+DNS Res~ver #15: /etc/hosts
+DNS Res~ver #16: /etc/hosts
+DNS Res~ver #15: /etc/hosts
 ^C
-
-@[/usr/lib/libnsl.so.1]: 1
-@[/etc/passwd]: 1
-@[/usr/lib/libnss_nis.so.2]: 1
-@[/usr/lib/libreadline.so.7]: 1
-@[/dev/tty]: 1
-@[/usr/lib/libncursesw.so.6]: 1
-@[/etc/ld.so.cache]: 3
-...
 ```
 
 Whole system profiling (TODO make example check if kernel is on-cpu before recording):
