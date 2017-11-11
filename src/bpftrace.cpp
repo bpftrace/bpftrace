@@ -250,6 +250,7 @@ int BPFtrace::setup_perf_events()
   }
 
   std::vector<int> cpus = ebpf::get_online_cpus();
+  online_cpus_ = cpus.size();
   for (int cpu : cpus)
   {
     int page_cnt = 8;
@@ -277,12 +278,10 @@ int BPFtrace::setup_perf_events()
 
 void BPFtrace::poll_perf_events(int epollfd, int timeout)
 {
-  std::vector<int> cpus = ebpf::get_online_cpus();
-  int ncpus = cpus.size();
-  auto events = std::vector<struct epoll_event>(ncpus);
+  auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
   {
-    int ready = epoll_wait(epollfd, events.data(), ncpus, timeout);
+    int ready = epoll_wait(epollfd, events.data(), online_cpus_, timeout);
     if (ready <= 0)
     {
       return;
@@ -607,7 +606,7 @@ std::string BPFtrace::resolve_sym(uint64_t addr, bool show_offset)
   struct bcc_symbol sym;
   std::ostringstream symbol;
 
-  if (ksyms.resolve_addr(addr, &sym))
+  if (ksyms_.resolve_addr(addr, &sym))
   {
     symbol << sym.name;
     if (show_offset)

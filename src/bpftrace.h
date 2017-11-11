@@ -45,12 +45,13 @@ protected:
 private:
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
-  KSyms ksyms;
+  KSyms ksyms_;
   int ncpus_;
+  int online_cpus_;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe);
   int setup_perf_events();
-  static void poll_perf_events(int epollfd, int timeout=-1);
+  void poll_perf_events(int epollfd, int timeout=-1);
   int print_map(IMap &map);
   int print_map_quantize(IMap &map);
   int print_quantize(const std::vector<uint64_t> &values) const;
