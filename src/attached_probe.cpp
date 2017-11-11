@@ -158,12 +158,13 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   unsigned kern_version = kernel_version();
+  int log_level = 0;
   char *log_buf = nullptr;
   unsigned log_buf_size = 0;
 
   progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
       reinterpret_cast<struct bpf_insn*>(insns), prog_len,
-      license, kern_version, log_buf, log_buf_size);
+      license, kern_version, log_level, log_buf, log_buf_size);
 
   if (progfd_ < 0)
     throw std::runtime_error("Error loading program: " + probe_.name);
