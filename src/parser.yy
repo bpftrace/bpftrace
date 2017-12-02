@@ -65,19 +65,23 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   BXOR     "^"
   LNOT     "!"
   BNOT     "~"
+  INCLUDE  "#include"
 ;
 
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
+%token <std::string> HEADER "header"
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <int> INT "integer"
 
+%type <ast::IncludeList *> includes
+%type <ast::Include *> include
 %type <ast::ProbeList *> probes
-%type <ast::StatementList *> block stmts
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
+%type <ast::StatementList *> block stmts
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
 %type <ast::Call *> call
@@ -104,7 +108,15 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %%
 
-program : probes { driver.root_ = new ast::Program($1); }
+program : includes probes { driver.root_ = new ast::Program($1, $2); }
+        ;
+
+includes : includes include { $$ = $1; $1->push_back($2); }
+         |                  { $$ = new ast::IncludeList; }
+         ;
+
+include : INCLUDE STRING { $$ = new ast::Include($2); }
+        | INCLUDE HEADER { $$ = new ast::Include($2.substr(1, $2.size()-2)); }
         ;
 
 probes : probes probe { $$ = $1; $1->push_back($2); }

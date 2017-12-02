@@ -24,6 +24,7 @@ public:
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
+  void visit(Include &include) override;
   void visit(Program &program) override;
 
   int depth_ = 0;

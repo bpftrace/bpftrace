@@ -425,11 +425,16 @@ void SemanticAnalyser::visit(Probe &probe)
   }
 }
 
+void SemanticAnalyser::visit(Include &include)
+{
+}
+
 void SemanticAnalyser::visit(Program &program)
 {
-  for (Probe *probe : *program.probes) {
+  for (Include *include : *program.includes)
+    include->accept(*this);
+  for (Probe *probe : *program.probes)
     probe->accept(*this);
-  }
 }
 
 int SemanticAnalyser::analyse()

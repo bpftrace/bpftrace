@@ -300,6 +300,41 @@ TEST(Parser, short_map_name)
       "   int: 1\n");
 }
 
+TEST(Parser, include)
+{
+  test("#include <stdio.h> kprobe:sys_read { @x = 1 }",
+      "Program\n"
+      " #include stdio.h\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   int: 1\n");
+}
+
+TEST(Parser, include_quote)
+{
+  test("#include \"stdio.h\" kprobe:sys_read { @x = 1 }",
+      "Program\n"
+      " #include stdio.h\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   int: 1\n");
+}
+
+TEST(Parser, include_multiple)
+{
+  test("#include <stdio.h> #include \"blah\" #include <foo.h> kprobe:sys_read { @x = 1 }",
+      "Program\n"
+      " #include stdio.h\n"
+      " #include blah\n"
+      " #include foo.h\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   int: 1\n");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

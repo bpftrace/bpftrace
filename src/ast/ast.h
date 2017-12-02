@@ -176,9 +176,20 @@ public:
 };
 using ProbeList = std::vector<Probe *>;
 
+class Include : public Node {
+public:
+  explicit Include(const std::string &file) : file(file) { }
+  std::string file;
+
+  void accept(Visitor &v) override;
+};
+using IncludeList = std::vector<Include *>;
+
 class Program : public Node {
 public:
-  explicit Program(ProbeList *probes) : probes(probes) { }
+  Program(IncludeList *includes, ProbeList *probes)
+    : includes(includes), probes(probes) { }
+  IncludeList *includes;
   ProbeList *probes;
 
   void accept(Visitor &v) override;
@@ -201,6 +212,7 @@ public:
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
+  virtual void visit(Include &include) = 0;
   virtual void visit(Program &program) = 0;
 };
 

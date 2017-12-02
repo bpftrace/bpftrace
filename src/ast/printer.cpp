@@ -131,8 +131,6 @@ void Printer::visit(AttachPoint &ap)
 
 void Printer::visit(Probe &probe)
 {
-  std::string indent(depth_, ' ');
-
   for (AttachPoint *ap : *probe.attach_points) {
     ap->accept(*this);
   }
@@ -147,15 +145,22 @@ void Printer::visit(Probe &probe)
   --depth_;
 }
 
+void Printer::visit(Include &include)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "#include " << include.file << std::endl;
+}
+
 void Printer::visit(Program &program)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
 
   ++depth_;
-  for (Probe *probe : *program.probes) {
+  for (Include *include : *program.includes)
+    include->accept(*this);
+  for (Probe *probe : *program.probes)
     probe->accept(*this);
-  }
   --depth_;
 }
 

@@ -25,6 +25,7 @@ hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
+header <(\\.|[_\-\./a-zA-Z0-9])*>
 %x STR
 
 %%
@@ -39,6 +40,7 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
+{header}                { return Parser::make_HEADER(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
@@ -71,6 +73,7 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 "^"                     { return Parser::make_BXOR(loc); }
 "!"                     { return Parser::make_LNOT(loc); }
 "~"                     { return Parser::make_BNOT(loc); }
+"#include"              { return Parser::make_INCLUDE(loc); }
 
 \"                      { BEGIN(STR); string_buffer.clear(); }
 <STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(string_buffer, loc); }
