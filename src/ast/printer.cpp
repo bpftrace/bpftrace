@@ -148,7 +148,10 @@ void Printer::visit(Probe &probe)
 void Printer::visit(Include &include)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "#include " << include.file << std::endl;
+  if (include.system_header)
+    out_ << indent << "#include <" << include.file << ">" << std::endl;
+  else
+    out_ << indent << "#include \"" << include.file << "\"" << std::endl;
 }
 
 void Printer::visit(Program &program)

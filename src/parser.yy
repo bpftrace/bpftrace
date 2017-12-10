@@ -115,8 +115,8 @@ includes : includes include { $$ = $1; $1->push_back($2); }
          |                  { $$ = new ast::IncludeList; }
          ;
 
-include : INCLUDE STRING { $$ = new ast::Include($2); }
-        | INCLUDE HEADER { $$ = new ast::Include($2.substr(1, $2.size()-2)); }
+include : INCLUDE STRING { $$ = new ast::Include($2, false); }
+        | INCLUDE HEADER { $$ = new ast::Include($2.substr(1, $2.size()-2), true); }
         ;
 
 probes : probes probe { $$ = $1; $1->push_back($2); }

@@ -178,8 +178,10 @@ using ProbeList = std::vector<Probe *>;
 
 class Include : public Node {
 public:
-  explicit Include(const std::string &file) : file(file) { }
+  explicit Include(const std::string &file, bool system_header)
+    : file(file), system_header(system_header) { }
   std::string file;
+  bool system_header;
 
   void accept(Visitor &v) override;
 };
