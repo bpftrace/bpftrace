@@ -172,15 +172,11 @@ void AttachedProbe::load_prog()
 
 void AttachedProbe::attach_kprobe()
 {
-  int pid = -1;
-  int cpu = 0;
-  int group_fd = -1;
   perf_reader_cb cb = nullptr;
   void *cb_cookie = nullptr;
 
   perf_reader_ = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.attach_point.c_str(),
-      pid, cpu, group_fd, cb, cb_cookie);
+      eventname().c_str(), probe_.attach_point.c_str(), cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
     throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
@@ -189,14 +185,11 @@ void AttachedProbe::attach_kprobe()
 void AttachedProbe::attach_uprobe()
 {
   int pid = -1;
-  int cpu = 0;
-  int group_fd = -1;
   perf_reader_cb cb = nullptr;
   void *cb_cookie = nullptr;
 
   perf_reader_ = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), offset(),
-      pid, cpu, group_fd, cb, cb_cookie);
+      eventname().c_str(), probe_.path.c_str(), offset(), pid, cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
@@ -204,14 +197,11 @@ void AttachedProbe::attach_uprobe()
 
 void AttachedProbe::attach_tracepoint()
 {
-  int pid = -1;
-  int cpu = 0;
-  int group_fd = -1;
   perf_reader_cb cb = nullptr;
   void *cb_cookie = nullptr;
 
   perf_reader_ = bpf_attach_tracepoint(progfd_, probe_.path.c_str(),
-      eventname().c_str(), pid, cpu, group_fd, cb, cb_cookie);
+      eventname().c_str(), cb, cb_cookie);
 
   if (perf_reader_ == nullptr)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
