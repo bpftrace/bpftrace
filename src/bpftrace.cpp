@@ -182,7 +182,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 }
 
-void perf_event_lost(uint64_t lost)
+void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
   printf("Lost %lu events\n", lost);
 }
