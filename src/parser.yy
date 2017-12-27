@@ -66,8 +66,11 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LNOT     "!"
   BNOT     "~"
   INCLUDE  "#include"
+  DOT      "."
+  PTR      "->"
 ;
 
+%token <std::string> BUILTIN "builtin"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
 %token <std::string> HEADER "header"
@@ -91,6 +94,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::AttachPointList *> attach_points
 %type <ast::AttachPoint *> attach_point
 %type <std::string> wildcard
+%type <std::string> type
+%type <std::string> ident
 
 %right ASSIGN
 %left LOR
@@ -102,7 +107,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %left LE GE LT GT
 %left PLUS MINUS
 %left MUL DIV MOD
-%right LNOT BNOT
+%right LNOT BNOT DEREF CAST
+%left DOT PTR
 
 %start program
 
@@ -130,13 +136,13 @@ attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
               | attach_point                   { $$ = new ast::AttachPointList; $$->push_back($1); }
               ;
 
-attach_point : IDENT               { $$ = new ast::AttachPoint($1); }
-             | IDENT ":" wildcard  { $$ = new ast::AttachPoint($1, $3); }
-             | IDENT PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
-             | IDENT PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
+attach_point : ident               { $$ = new ast::AttachPoint($1); }
+             | ident ":" wildcard  { $$ = new ast::AttachPoint($1, $3); }
+             | ident PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
+             | ident PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
              ;
 
-wildcard : wildcard IDENT    { $$ = $1 + $2; }
+wildcard : wildcard ident    { $$ = $1 + $2; }
          | wildcard MUL      { $$ = $1 + "*"; }
          | wildcard LBRACKET { $$ = $1 + "["; }
          | wildcard RBRACKET { $$ = $1 + "]"; }
@@ -162,7 +168,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
-     | IDENT           { $$ = new ast::Builtin($1); }
+     | BUILTIN         { $$ = new ast::Builtin($1); }
      | map             { $$ = $1; }
      | var             { $$ = $1; }
      | call            { $$ = $1; }
@@ -185,11 +191,22 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
      | LNOT expr       { $$ = new ast::Unop(token::LNOT, $2); }
      | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
-     | MUL  expr       { $$ = new ast::Unop(token::MUL,  $2); }
+     | MUL  expr %prec DEREF { $$ = new ast::Unop(token::MUL,  $2); }
+     | expr DOT ident  { $$ = new ast::FieldAccess($1, $3); }
+     | expr PTR ident  { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1), $3); }
+     | "(" type ")" expr %prec CAST  { $$ = new ast::Cast($2, $4); }
      ;
 
-call : IDENT "(" ")"       { $$ = new ast::Call($1); }
-     | IDENT "(" vargs ")" { $$ = new ast::Call($1, $3); }
+type : IDENT     { $$ = $1; }
+     | IDENT MUL { $$ = $1 + "*"; }
+     ;
+
+ident : IDENT   { $$ = $1; }
+      | BUILTIN { $$ = $1; }
+      ;
+
+call : ident "(" ")"       { $$ = new ast::Call($1); }
+     | ident "(" vargs ")" { $$ = new ast::Call($1, $3); }
      ;
 
 map : MAP               { $$ = new ast::Map($1); }

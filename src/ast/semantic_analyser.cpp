@@ -71,7 +71,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else {
     builtin.type = SizedType(Type::none, 0);
-    err_ << "Unknown builtin: '" << builtin.ident << "'" << std::endl;
+    err_ << "Unknown builtin variable: '" << builtin.ident << "'" << std::endl;
   }
 }
 
@@ -277,6 +277,16 @@ void SemanticAnalyser::visit(Unop &unop)
   }
 
   unop.type = SizedType(Type::integer, 8);
+}
+
+void SemanticAnalyser::visit(FieldAccess &acc)
+{
+  // TODO
+}
+
+void SemanticAnalyser::visit(Cast &cast)
+{
+  // TODO
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)

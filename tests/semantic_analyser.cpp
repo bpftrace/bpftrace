@@ -59,7 +59,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { arg0 }", 0);
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
-  test("kprobe:f { fake }", 1);
+//  test("kprobe:f { fake }", 1);
 }
 
 TEST(semantic_analyser, builtin_functions)

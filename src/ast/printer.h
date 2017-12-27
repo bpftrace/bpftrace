@@ -18,6 +18,8 @@ public:
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
+  void visit(FieldAccess &acc) override;
+  void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;

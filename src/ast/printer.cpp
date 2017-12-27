@@ -86,6 +86,28 @@ void Printer::visit(Unop &unop)
   --depth_;
 }
 
+void Printer::visit(FieldAccess &acc)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "." << std::endl;
+
+  ++depth_;
+  acc.expr->accept(*this);
+  --depth_;
+
+  out_ << indent << " " << acc.field << std::endl;
+}
+
+void Printer::visit(Cast &cast)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "(" << cast.type << ")" << std::endl;
+
+  ++depth_;
+  cast.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);

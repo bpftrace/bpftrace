@@ -21,6 +21,22 @@ void test(const std::string &input, const std::string &output)
   EXPECT_EQ(output, out.str());
 }
 
+TEST(Parser, builtin_variables)
+{
+  test("kprobe:f { pid }", "Program\n kprobe:f\n  builtin: pid\n");
+  test("kprobe:f { tid }", "Program\n kprobe:f\n  builtin: tid\n");
+  test("kprobe:f { uid }", "Program\n kprobe:f\n  builtin: uid\n");
+  test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
+  test("kprobe:f { nsecs }", "Program\n kprobe:f\n  builtin: nsecs\n");
+  test("kprobe:f { cpu }", "Program\n kprobe:f\n  builtin: cpu\n");
+  test("kprobe:f { comm }", "Program\n kprobe:f\n  builtin: comm\n");
+  test("kprobe:f { stack }", "Program\n kprobe:f\n  builtin: stack\n");
+  test("kprobe:f { ustack }", "Program\n kprobe:f\n  builtin: ustack\n");
+  test("kprobe:f { arg0 }", "Program\n kprobe:f\n  builtin: arg0\n");
+  test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
+  test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
+}
+
 TEST(Parser, map_assign)
 {
   test("kprobe:sys_open { @x = 1; }",
@@ -35,18 +51,18 @@ TEST(Parser, map_assign)
       "  =\n"
       "   map: @x\n"
       "   map: @y\n");
-  test("kprobe:sys_open { @x = mybuiltin; }",
+  test("kprobe:sys_open { @x = arg0; }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
       "   map: @x\n"
-      "   builtin: mybuiltin\n");
-  test("kprobe:sys_open { @x = myfunc(); }",
+      "   builtin: arg0\n");
+  test("kprobe:sys_open { @x = count(); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
       "   map: @x\n"
-      "   call: myfunc\n");
+      "   call: count\n");
   test("kprobe:sys_open { @x = \"mystring\" }",
       "Program\n"
       " kprobe:sys_open\n"
@@ -101,18 +117,18 @@ TEST(Parser, map_key)
       "    map: @c\n"
       "   int: 1\n");
 
-  test("kprobe:sys_open { @x[b1] = 1; @x[b1,b2,b3] = 1; }",
+  test("kprobe:sys_open { @x[pid] = 1; @x[tid,uid,arg9] = 1; }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
       "   map: @x\n"
-      "    builtin: b1\n"
+      "    builtin: pid\n"
       "   int: 1\n"
       "  =\n"
       "   map: @x\n"
-      "    builtin: b1\n"
-      "    builtin: b2\n"
-      "    builtin: b3\n"
+      "    builtin: tid\n"
+      "    builtin: uid\n"
+      "    builtin: arg9\n"
       "   int: 1\n");
 }
 
@@ -140,7 +156,7 @@ TEST(Parser, predicate_containing_division)
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || poop == \"string\" /\n"
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || comm == \"string\" /\n"
        "{\n"
        "  1;\n"
        "}",
@@ -163,27 +179,35 @@ TEST(Parser, expressions)
       "      ~\n"
       "       int: 0\n"
       "    ==\n"
-      "     builtin: poop\n"
+      "     builtin: comm\n"
       "     string: string\n"
       "  int: 1\n");
 }
 
 TEST(Parser, call)
 {
-  test("kprobe:sys_open { @x = foo(); @y = bar(1,2,3); myfunc(@x); }",
+  test("kprobe:sys_open { @x = count(); @y = quantize(1,2,3); delete(@x); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
       "   map: @x\n"
-      "   call: foo\n"
+      "   call: count\n"
       "  =\n"
       "   map: @y\n"
-      "   call: bar\n"
+      "   call: quantize\n"
       "    int: 1\n"
       "    int: 2\n"
       "    int: 3\n"
-      "  call: myfunc\n"
+      "  call: delete\n"
       "   map: @x\n");
+}
+
+TEST(Parser, call_unknown_function)
+{
+  test("kprobe:sys_open { myfunc() }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  call: myfunc\n");
 }
 
 TEST(Parser, multiple_probes)
@@ -273,14 +297,14 @@ TEST(Parser, wildcard_attach_points)
       "Program\n"
       " kprobe:*\n"
       "  int: 1\n");
-  test("kprobe:sys_* { @x = y*z }",
+  test("kprobe:sys_* { @x = cpu*retval }",
       "Program\n"
       " kprobe:sys_*\n"
       "  =\n"
       "   map: @x\n"
       "   *\n"
-      "    builtin: y\n"
-      "    builtin: z\n");
+      "    builtin: cpu\n"
+      "    builtin: retval\n");
   test("kprobe:sys_* { @x = *arg0 }",
       "Program\n"
       " kprobe:sys_*\n"
@@ -333,6 +357,154 @@ TEST(Parser, include_multiple)
       "  =\n"
       "   map: @x\n"
       "   int: 1\n");
+}
+
+TEST(Parser, brackets)
+{
+  test("kprobe:sys_read { (arg0*arg1) }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  *\n"
+      "   builtin: arg0\n"
+      "   builtin: arg1\n");
+}
+
+TEST(Parser, cast)
+{
+  test("kprobe:sys_read { (mytype)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (mytype)\n"
+      "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_ptr)
+{
+  test("kprobe:sys_read { (mytype*)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (mytype*)\n"
+      "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_or_expr1)
+{
+  test("kprobe:sys_read { (mytype)*arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (mytype)\n"
+      "   dereference\n"
+      "    builtin: arg0\n");
+}
+
+TEST(Parser, cast_or_expr2)
+{
+  test("kprobe:sys_read { (arg1)*arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  *\n"
+      "   builtin: arg1\n"
+      "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_precedence)
+{
+  test("kprobe:sys_read { (mytype)arg0.field; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (mytype)\n"
+      "   .\n"
+      "    builtin: arg0\n"
+      "    field\n");
+
+  test("kprobe:sys_read { (mytype*)arg0->field; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (mytype*)\n"
+      "   .\n"
+      "    dereference\n"
+      "     builtin: arg0\n"
+      "    field\n");
+
+  test("kprobe:sys_read { (mytype)arg0+123; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  +\n"
+      "   (mytype)\n"
+      "    builtin: arg0\n"
+      "   int: 123\n");
+}
+
+TEST(Parser, dereference_precedence)
+{
+  test("kprobe:sys_read { *@x+1 }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  +\n"
+      "   dereference\n"
+      "    map: @x\n"
+      "   int: 1\n");
+
+  test("kprobe:sys_read { *@x**@y }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  *\n"
+      "   dereference\n"
+      "    map: @x\n"
+      "   dereference\n"
+      "    map: @y\n");
+
+  test("kprobe:sys_read { *@x*@y }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  *\n"
+      "   dereference\n"
+      "    map: @x\n"
+      "   map: @y\n");
+
+  test("kprobe:sys_read { *@x.myfield }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  dereference\n"
+      "   .\n"
+      "    map: @x\n"
+      "    myfield\n");
+}
+
+TEST(Parser, field_access)
+{
+  test("kprobe:sys_read { @x.myfield; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  .\n"
+      "   map: @x\n"
+      "   myfield\n");
+
+  test("kprobe:sys_read { @x->myfield; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  .\n"
+      "   dereference\n"
+      "    map: @x\n"
+      "   myfield\n");
+}
+
+TEST(Parser, field_access_builtin)
+{
+  test("kprobe:sys_read { @x.count; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  .\n"
+      "   map: @x\n"
+      "   count\n");
+
+  test("kprobe:sys_read { @x->count; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  .\n"
+      "   dereference\n"
+      "    map: @x\n"
+      "   count\n");
 }
 
 } // namespace parser

@@ -36,6 +36,14 @@ void Unop::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void FieldAccess::accept(Visitor &v) {
+  v.visit(*this);
+}
+
+void Cast::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void ExprStatement::accept(Visitor &v) {
   v.visit(*this);
 }

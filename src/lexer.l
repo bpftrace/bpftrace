@@ -38,6 +38,10 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
 {vspace}+               { loc.lines(yyleng); loc.step(); }
 "//".*$  // Comments
 
+pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
+                          return Parser::make_BUILTIN(yytext, loc); }
+quantize|count|delete|str|printf {
+                          return Parser::make_BUILTIN(yytext, loc); }
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {header}                { return Parser::make_HEADER(yytext, loc); }
@@ -74,6 +78,8 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
 "!"                     { return Parser::make_LNOT(loc); }
 "~"                     { return Parser::make_BNOT(loc); }
 "#include"              { return Parser::make_INCLUDE(loc); }
+"."                     { return Parser::make_DOT(loc); }
+"->"                    { return Parser::make_PTR(loc); }
 
 \"                      { BEGIN(STR); string_buffer.clear(); }
 <STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(string_buffer, loc); }

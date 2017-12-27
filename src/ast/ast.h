@@ -96,6 +96,24 @@ public:
   void accept(Visitor &v) override;
 };
 
+class FieldAccess : public Expression {
+public:
+  FieldAccess(Expression *expr, const std::string &field) : expr(expr), field(field) { }
+  Expression *expr;
+  std::string field;
+
+  void accept(Visitor &v) override;
+};
+
+class Cast : public Expression {
+public:
+  Cast(const std::string &type, Expression *expr) : type(type), expr(expr) { }
+  std::string type;
+  Expression *expr;
+
+  void accept(Visitor &v) override;
+};
+
 class Statement : public Node {
 };
 using StatementList = std::vector<Statement *>;
@@ -208,6 +226,8 @@ public:
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
+  virtual void visit(FieldAccess &acc) = 0;
+  virtual void visit(Cast &cast) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
