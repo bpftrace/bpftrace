@@ -23,6 +23,7 @@ enum class Type
   string,
   sym,
   usym,
+  cast,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);

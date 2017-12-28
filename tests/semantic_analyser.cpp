@@ -184,10 +184,12 @@ TEST(semantic_analyser, variable_use_before_assign)
 TEST(semantic_analyser, maps_are_global)
 {
   test("kprobe:f { @x = 1 } kprobe:g { @y = @x }", 0);
+  test("kprobe:f { @x = 1 } kprobe:g { @x = \"abc\" }", 1);
 }
 
 TEST(semantic_analyser, variables_are_local)
 {
+  test("kprobe:f { $x = 1 } kprobe:g { $x = \"abc\"; }", 0);
   test("kprobe:f { $x = 1 } kprobe:g { @y = $x }", 1);
 }
 
@@ -296,6 +298,68 @@ TEST(semantic_analyser, profile)
   test("profile:unit:100 { 1 }", 1);
   test("profile:f { 1 }", 1);
   test("profile { 1 }", 1);
+}
+
+TEST(semantic_analyser, variable_cast_types)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  bpftrace.structs_["type2"]["field"] = 0;
+  test(bpftrace, "kprobe:f { $x = (type1)cpu; $x = (type1)cpu; }", 0);
+  test(bpftrace, "kprobe:f { $x = (type1)cpu; $x = (type2)cpu; }", 1);
+}
+
+TEST(semantic_analyser, map_cast_types)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  bpftrace.structs_["type2"]["field"] = 0;
+  test(bpftrace, "kprobe:f { @x = (type1)cpu; @x = (type1)cpu; }", 0);
+  test(bpftrace, "kprobe:f { @x = (type1)cpu; @x = (type2)cpu; }", 1);
+}
+
+TEST(semantic_analyser, variable_casts_are_local)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  bpftrace.structs_["type2"]["field"] = 0;
+  test(bpftrace, "kprobe:f { $x = (type1)cpu } kprobe:g { $x = (type2)cpu; }", 0);
+}
+
+TEST(semantic_analyser, map_casts_are_global)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  bpftrace.structs_["type2"]["field"] = 0;
+  test(bpftrace, "kprobe:f { @x = (type1)cpu } kprobe:g { @x = (type2)cpu; }", 1);
+}
+
+TEST(semantic_analyser, cast_unknown_type)
+{
+  test("kprobe:f { (faketype)cpu }", 1);
+}
+
+TEST(semantic_analyser, field_access)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  test(bpftrace, "kprobe:f { ((type1)cpu).field }", 0);
+  test(bpftrace, "kprobe:f { $x = (type1)cpu; $x.field }", 0);
+  test(bpftrace, "kprobe:f { @x = (type1)cpu; @x.field }", 0);
+}
+
+TEST(semantic_analyser, field_access_wrong_field)
+{
+  BPFtrace bpftrace;
+  bpftrace.structs_["type1"]["field"] = 0;
+  test(bpftrace, "kprobe:f { ((type1)cpu).blah }", 1);
+  test(bpftrace, "kprobe:f { $x = (type1)cpu; $x.blah }", 1);
+  test(bpftrace, "kprobe:f { @x = (type1)cpu; @x.blah }", 1);
+}
+
+TEST(semantic_analyser, field_access_wrong_expr)
+{
+  test("kprobe:f { 1234->field }", 1);
 }
 
 } // namespace semantic_analyser

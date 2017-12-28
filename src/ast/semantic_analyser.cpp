@@ -281,12 +281,47 @@ void SemanticAnalyser::visit(Unop &unop)
 
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
-  // TODO
+  acc.expr->accept(*this);
+
+  if (acc.expr->type.type != Type::cast) {
+    err_ << "Can not access field '" << acc.field
+         << "' on expression of type '" << acc.expr->type
+         << "'" << std::endl;
+    return;
+  }
+
+  std::string cast_type;
+  if (acc.expr->is_variable) {
+    auto var = static_cast<Variable*>(acc.expr);
+    cast_type = variable_casts_[var->ident];
+  }
+  else if (acc.expr->is_map) {
+    auto map = static_cast<Map*>(acc.expr);
+    cast_type = map_casts_[map->ident];
+  }
+  else if (acc.expr->is_cast) {
+    auto cast = static_cast<Cast*>(acc.expr);
+    cast_type = cast->cast_type;
+  }
+  else {
+    abort();
+  }
+
+  auto fields = bpftrace_.structs_[cast_type];
+  if (fields.count(acc.field) == 0) {
+    err_ << "Struct/union of type '" << cast_type << "' does not contain "
+         << "a field named '" << acc.field << "'" << std::endl;
+  }
 }
 
 void SemanticAnalyser::visit(Cast &cast)
 {
-  // TODO
+  cast.expr->accept(*this);
+  cast.type = SizedType(Type::cast, cast.expr->type.size);
+
+  if (bpftrace_.structs_.count(cast.cast_type) == 0) {
+    err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
+  }
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -322,6 +357,20 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     // This map hasn't been seen before
     map_val_.insert({map_ident, assignment.expr->type});
   }
+
+  if (assignment.expr->type.type == Type::cast) {
+    auto cast = static_cast<Cast*>(assignment.expr);
+    if (map_casts_.count(map_ident) > 0 &&
+        map_casts_[map_ident] != cast->cast_type) {
+      err_ << "Type mismatch for " << map_ident << ": ";
+      err_ << "trying to assign value of type '" << cast->cast_type;
+      err_ << "'\n\twhen map already contains a value of type '";
+      err_ << map_casts_[map_ident] << "'\n" << std::endl;
+    }
+    else {
+      map_casts_[map_ident] = cast->cast_type;
+    }
+  }
 }
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
@@ -351,6 +400,20 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     // This variable hasn't been seen before
     variable_val_.insert({var_ident, assignment.expr->type});
     assignment.var->type = assignment.expr->type;
+  }
+
+  if (assignment.expr->type.type == Type::cast) {
+    auto cast = static_cast<Cast*>(assignment.expr);
+    if (variable_casts_.count(var_ident) > 0 &&
+        variable_casts_[var_ident] != cast->cast_type) {
+      err_ << "Type mismatch for " << var_ident << ": ";
+      err_ << "trying to assign value of type '" << cast->cast_type;
+      err_ << "'\n\twhen variable already contains a value of type '";
+      err_ << variable_casts_[var_ident] << "'\n" << std::endl;
+    }
+    else {
+      variable_casts_[var_ident] = cast->cast_type;
+    }
   }
 }
 
@@ -418,6 +481,7 @@ void SemanticAnalyser::visit(Probe &probe)
 {
   // Clear out map of variable names - variables should be probe-local
   variable_val_.clear();
+  variable_casts_.clear();
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
