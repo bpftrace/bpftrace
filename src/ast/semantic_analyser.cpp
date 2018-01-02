@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "semantic_analyser.h"
 #include "ast.h"
 #include "fake_map.h"
@@ -311,6 +309,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   if (fields.count(acc.field) == 0) {
     err_ << "Struct/union of type '" << cast_type << "' does not contain "
          << "a field named '" << acc.field << "'" << std::endl;
+  }
+  else {
+    acc.type = std::get<0>(fields[acc.field]);
   }
 }
 
