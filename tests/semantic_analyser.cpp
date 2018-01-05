@@ -346,7 +346,7 @@ TEST(semantic_analyser, field_access_wrong_field)
 
 TEST(semantic_analyser, field_access_wrong_expr)
 {
-  test("kprobe:f { 1234->field }", 1);
+  test("kprobe:f { 1234->field }", 10);
 }
 
 TEST(semantic_analyser, field_access_types)

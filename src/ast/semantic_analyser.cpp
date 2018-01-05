@@ -282,9 +282,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   acc.expr->accept(*this);
 
   if (acc.expr->type.type != Type::cast) {
-    err_ << "Can not access field '" << acc.field
-         << "' on expression of type '" << acc.expr->type
-         << "'" << std::endl;
+    if (is_final_pass()) {
+      err_ << "Can not access field '" << acc.field
+           << "' on expression of type '" << acc.expr->type
+           << "'" << std::endl;
+    }
     return;
   }
 
