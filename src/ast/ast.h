@@ -23,8 +23,6 @@ public:
   Map *map = nullptr; // Only set when this expression is assigned to a map
   bool is_literal = false;
   bool is_variable = false;
-  bool is_map = false;
-  bool is_cast = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -64,10 +62,8 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(std::string &ident) : ident(ident), vargs(nullptr) { is_map = true; }
-  Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) {
-    is_map = true;
-  }
+  explicit Map(std::string &ident) : ident(ident), vargs(nullptr) { }
+  Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { }
   std::string ident;
   ExpressionList *vargs;
 
@@ -111,9 +107,7 @@ public:
 
 class Cast : public Expression {
 public:
-  Cast(const std::string &type, Expression *expr) : cast_type(type), expr(expr) {
-    is_cast = true;
-  }
+  Cast(const std::string &type, Expression *expr) : cast_type(type), expr(expr) { }
   std::string cast_type;
   Expression *expr;
 

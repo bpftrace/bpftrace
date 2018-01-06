@@ -42,8 +42,13 @@ void test(const std::string &input, int expected_result=0)
 {
   Field field = { SizedType(Type::integer, 8), 0 };
   Field mystr = { SizedType(Type::string, 8), 8 };
+  Field type2_field_ptr = { SizedType(Type::cast, 8, "type2*"), 16 };
+  Field type2_field = { SizedType(Type::cast, 8, "type2"), 24 };
 
-  Struct type1 = { 16, {{"field", field}, { "mystr", mystr}} };
+  Struct type1 = { 16, {{"field", field},
+                        {"mystr", mystr},
+                        {"type2ptr", type2_field_ptr},
+                        {"type2", type2_field}} };
   Struct type2 = { 8, {{"field", field}} };
 
   BPFtrace bpftrace;
@@ -365,6 +370,23 @@ TEST(semantic_analyser, field_access_types)
 
   test("kprobe:f { ((type1)0).field == ((type2)0).field }", 0);
   test("kprobe:f { ((type1)0).mystr == ((type2)0).field }", 10);
+}
+
+TEST(semantic_analyser, field_access_pointer)
+{
+  test("kprobe:f { ((type1*)0)->field }", 0);
+  test("kprobe:f { ((type1*)0).field }", 1);
+  test("kprobe:f { *((type1*)0) }", 0);
+}
+
+TEST(semantic_analyser, field_access_sub_struct)
+{
+  test("kprobe:f { ((type1)0).type2ptr->field }", 0);
+  test("kprobe:f { ((type1)0).type2.field }", 0);
+  test("kprobe:f { $x = (type2)0; $x = ((type1)0).type2 }", 0);
+  test("kprobe:f { $x = (type2*)0; $x = ((type1)0).type2ptr }", 0);
+  test("kprobe:f { $x = (type1)0; $x = ((type1)0).type2 }", 1);
+  test("kprobe:f { $x = (type1*)0; $x = ((type1)0).type2ptr }", 1);
 }
 
 } // namespace semantic_analyser

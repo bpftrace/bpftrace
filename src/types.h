@@ -32,9 +32,11 @@ class SizedType
 {
 public:
   SizedType() : type(Type::none), size(0) { }
-  SizedType(Type type, size_t size) : type(type), size(size) { }
+  SizedType(Type type, size_t size, const std::string &cast_type = "")
+    : type(type), size(size), cast_type(cast_type) { }
   Type type;
   size_t size;
+  std::string cast_type;
 
   bool operator==(const SizedType &t) const;
 };
