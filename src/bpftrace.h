@@ -11,6 +11,7 @@
 #include "ast.h"
 #include "attached_probe.h"
 #include "imap.h"
+#include "struct.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -30,8 +31,7 @@ public:
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
-  // structs_ = { struct_name: { field_name: { sized_type, offset } } }
-  std::map<std::string, std::map<std::string, std::tuple<SizedType, int>>> structs_;
+  std::map<std::string, Struct> structs_;
   std::vector<std::tuple<std::string, std::vector<SizedType>>> printf_args_;
   std::unique_ptr<IMap> stackid_map_;
   std::unique_ptr<IMap> perf_event_map_;

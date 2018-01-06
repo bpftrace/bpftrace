@@ -307,13 +307,13 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     abort();
   }
 
-  auto fields = bpftrace_.structs_[cast_type];
+  auto fields = bpftrace_.structs_[cast_type].fields;
   if (fields.count(acc.field) == 0) {
     err_ << "Struct/union of type '" << cast_type << "' does not contain "
          << "a field named '" << acc.field << "'" << std::endl;
   }
   else {
-    acc.type = std::get<0>(fields[acc.field]);
+    acc.type = fields[acc.field].type;
   }
 }
 

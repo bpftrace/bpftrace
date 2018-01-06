@@ -40,10 +40,16 @@ void test(Driver &driver, const std::string &input, int expected_result=0)
 
 void test(const std::string &input, int expected_result=0)
 {
+  Field field = { SizedType(Type::integer, 8), 0 };
+  Field mystr = { SizedType(Type::string, 8), 8 };
+
+  Struct type1 = { 16, {{"field", field}, { "mystr", mystr}} };
+  Struct type2 = { 8, {{"field", field}} };
+
   BPFtrace bpftrace;
-  bpftrace.structs_["type1"]["field"] = std::make_tuple(SizedType(Type::integer, 8), 0);
-  bpftrace.structs_["type1"]["mystr"] = std::make_tuple(SizedType(Type::string, 8), 8);
-  bpftrace.structs_["type2"]["field"] = std::make_tuple(SizedType(Type::integer, 8), 0);
+  bpftrace.structs_["type1"] = type1;
+  bpftrace.structs_["type2"] = type2;
+
   Driver driver;
   test(bpftrace, driver, input, expected_result);
 }
