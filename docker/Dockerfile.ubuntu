@@ -1,4 +1,4 @@
-FROM ubuntu:yakkety
+FROM ubuntu:bionic
 RUN apt-get update && apt-get install -y \
     bison \
     cmake \
@@ -9,9 +9,6 @@ RUN apt-get update && apt-get install -y \
     libelf-dev \
     llvm-3.9-dev \
     zlib1g-dev
-
-# Fix Ubuntu 16.10 LLVM CMake symlink
-RUN rm /usr/lib/llvm-3.9/cmake && ln -s /usr/lib/llvm-3.9/lib/cmake/llvm/ /usr/lib/llvm-3.9/cmake
 
 COPY build.sh /build.sh
 ENTRYPOINT ["bash", "/build.sh"]
