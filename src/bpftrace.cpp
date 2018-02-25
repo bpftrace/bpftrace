@@ -99,6 +99,12 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
   std::smatch match;
 
   std::ifstream file(file_name);
+  if (file.fail())
+  {
+    std::cerr << strerror(errno) << ": " << file_name << std::endl;
+    return std::set<std::string>();
+  }
+
   std::string line;
   std::set<std::string> matches;
   while (std::getline(file, line))
