@@ -782,7 +782,7 @@ entry:
   %str = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %memset = call void @llvm.memset.p0i8.i64([64 x i8]* nonnull %str, i8 0, i64 64, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %1, i8 0, i64 64, i32 1, i1 false)
   %2 = bitcast i64* %arg0 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   %3 = getelementptr i8, i8* %0, i64 112
@@ -986,11 +986,11 @@ entry:
   br i1 %map_lookup_cond, label %lookup_failure, label %lookup_success
 
 lookup_success:                                   ; preds = %entry
-  %memcpy = call void @llvm.memcpy.p0i8.p0i8.i64([64 x i8]* nonnull %lookup_elem_val, i8* nonnull %lookup_elem, i64 64, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %4, i8* nonnull %lookup_elem, i64 64, i32 1, i1 false)
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  %memset = call void @llvm.memset.p0i8.i64([64 x i8]* nonnull %lookup_elem_val, i8 0, i64 64, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %4, i8 0, i64 64, i32 1, i1 false)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success

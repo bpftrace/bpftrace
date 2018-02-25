@@ -21,8 +21,6 @@ public:
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="");
   AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
   AllocaInst *CreateAllocaMapKey(int bytes, const std::string &name="");
-  void        CreateMemcpy(Value *dst, Value *src, size_t len);
-  void        CreateMemset(Value *dst, Value *val, size_t len);
   CallInst   *CreateBpfPseudoCall(int mapfd);
   CallInst   *CreateBpfPseudoCall(Map &map);
   Value      *CreateMapLookupElem(Map &map, AllocaInst *key);

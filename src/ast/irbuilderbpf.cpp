@@ -92,18 +92,6 @@ AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
   return CreateAllocaBPF(ty, name);
 }
 
-void IRBuilderBPF::CreateMemcpy(Value *dst, Value *src, size_t len)
-{
-  Function *memcpy_func = module_.getFunction("llvm.memcpy.p0i8.p0i8.i64");
-  CreateCall(memcpy_func, {dst, src, getInt64(len), getInt32(1), getInt1(0)}, "memcpy");
-}
-
-void IRBuilderBPF::CreateMemset(Value *dst, Value *val, size_t len)
-{
-  Function *memset_func = module_.getFunction("llvm.memset.p0i8.i64");
-  CreateCall(memset_func, {dst, val, getInt64(len), getInt32(1), getInt1(0)}, "memset");
-}
-
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
 {
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
@@ -148,14 +136,14 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 
   SetInsertPoint(lookup_success_block);
   if (map.type.type == Type::string)
-    CreateMemcpy(value, call, map.type.size);
+    CreateMemCpy(value, call, map.type.size, 1);
   else
     CreateStore(CreateLoad(getInt64Ty(), call), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
   if (map.type.type == Type::string)
-    CreateMemset(value, getInt8(0), map.type.size);
+    CreateMemSet(value, getInt8(0), map.type.size, 1);
   else
     CreateStore(getInt64(0), value);
   CreateBr(lookup_merge_block);
