@@ -49,11 +49,15 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &nam
 {
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
-  AllocaInst *alloca;
+
+  auto ip = saveIP();
   if (entry_block.empty())
-    alloca = new AllocaInst(ty, name, &entry_block);
+    SetInsertPoint(&entry_block);
   else
-    alloca = new AllocaInst(ty, name, &entry_block.front());
+    SetInsertPoint(&entry_block.front());
+  AllocaInst *alloca = CreateAlloca(ty, nullptr, name); // TODO dodgy
+  restoreIP(ip);
+
   CreateLifetimeStart(alloca);
   return alloca;
 }

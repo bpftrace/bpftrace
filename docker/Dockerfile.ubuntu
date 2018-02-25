@@ -5,9 +5,9 @@ RUN apt-get update && apt-get install -y \
     flex \
     g++ \
     git \
-    libclang-3.9-dev \
+    libclang-5.0-dev \
     libelf-dev \
-    llvm-3.9-dev \
+    llvm-5.0-dev \
     zlib1g-dev
 
 COPY build.sh /build.sh

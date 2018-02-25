@@ -44,7 +44,7 @@ TEST(codegen, empty_function)
   test("kprobe:f { 1; }",
 
 R"EXPECTED(; Function Attrs: norecurse nounwind readnone
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr #0 section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr #0 section "s_kprobe:f" {
 entry:
   ret i64 0
 }
@@ -61,27 +61,27 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 1, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -96,17 +96,14 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
-
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_key" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 98, i8* %1, align 1
   %str.repack1 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 1
   store i8 108, i8* %str.repack1, align 1
@@ -117,17 +114,20 @@ entry:
   %str.repack4 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 4
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.memset.p0i8.i64(i8* %str.repack4, i8 0, i64 60, i32 1, i1 false)
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %str, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -142,31 +142,31 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca [24 x i8], align 8
-  %1 = getelementptr [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  %1 = getelementptr inbounds [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 11, i8* %1, align 8
-  %2 = getelementptr [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 8
+  %2 = getelementptr inbounds [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 8
   store i64 22, i8* %2, align 8
-  %3 = getelementptr [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 16
+  %3 = getelementptr inbounds [24 x i8], [24 x i8]* %"@x_key", i64 0, i64 16
   store i64 33, i8* %3, align 8
   %4 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, [24 x i8]* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -180,17 +180,14 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
-
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca [128 x i8], align 1
   %1 = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 97, i8* %1, align 1
   %str.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
   %str1.sroa.0.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 64
@@ -199,17 +196,20 @@ entry:
   %str1.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
   %2 = bitcast i64* %"@x_val" to i8*
   call void @llvm.memset.p0i8.i64(i8* %str1.sroa.3.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, [128 x i8]* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -224,28 +224,28 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %get_ns = tail call i64 inttoptr (i64 5 to i64 ()*)()
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 %get_ns, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -260,29 +260,29 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %get_stackid = tail call i64 inttoptr (i64 27 to i64 (i8*, i8*, i64)*)(i8* %0, i64 %pseudo, i64 0)
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 %get_stackid, i64* %"@x_val", align 8
   %pseudo1 = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -297,29 +297,29 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %get_stackid = tail call i64 inttoptr (i64 27 to i64 (i8*, i8*, i64)*)(i8* %0, i64 %pseudo, i64 256)
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 %get_stackid, i64* %"@x_val", align 8
   %pseudo1 = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -334,9 +334,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
@@ -345,32 +345,32 @@ entry:
   %get_pid_tgid = tail call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = lshr i64 %get_pid_tgid, 32
   %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %3 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 %1, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to i64 ()*)()
   %4 = and i64 %get_pid_tgid1, 4294967295
   %5 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@y_key", align 8
   %6 = bitcast i64* %"@y_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %6)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 %4, i64* %"@y_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem3 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo2, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
-  call void @llvm.lifetime.end(i64 -1, i8* %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -385,9 +385,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
@@ -396,32 +396,32 @@ entry:
   %get_uid_gid = tail call i64 inttoptr (i64 15 to i64 ()*)()
   %1 = and i64 %get_uid_gid, 4294967295
   %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %3 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 %1, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %get_uid_gid1 = call i64 inttoptr (i64 15 to i64 ()*)()
   %4 = lshr i64 %get_uid_gid1, 32
   %5 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@y_key", align 8
   %6 = bitcast i64* %"@y_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %6)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 %4, i64* %"@y_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem3 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo2, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
-  call void @llvm.lifetime.end(i64 -1, i8* %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -436,28 +436,28 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 %get_cpu_id, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -472,27 +472,27 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_key" = alloca i64, align 8
   %comm = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %comm, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([64 x i8]* nonnull %comm, i64 64)
   %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %comm, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -507,9 +507,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
@@ -518,42 +518,42 @@ entry:
   %"@x_key" = alloca i64, align 8
   %arg0 = alloca i64, align 8
   %1 = bitcast i64* %arg0 to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = getelementptr i8, i8* %0, i64 112
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %arg0, i64 8, i8* %2)
   %3 = load i64, i64* %arg0, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %4 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %5 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %3, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %6 = bitcast i64* %arg2 to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %6)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   %7 = getelementptr i8, i8* %0, i64 96
   %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %arg2, i64 8, i8* %7)
   %8 = load i64, i64* %arg2, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   %9 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %9)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
   store i64 0, i64* %"@y_key", align 8
   %10 = bitcast i64* %"@y_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %10)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %10)
   store i64 %8, i64* %"@y_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem3 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo2, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %9)
-  call void @llvm.lifetime.end(i64 -1, i8* %10)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %10)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -568,34 +568,34 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %retval = alloca i64, align 8
   %1 = bitcast i64* %retval to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = getelementptr i8, i8* %0, i64 80
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %retval, i64 8, i8* %2)
   %3 = load i64, i64* %retval, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %4 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %5 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %3, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -610,34 +610,34 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %func = alloca i64, align 8
   %1 = bitcast i64* %func to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = getelementptr i8, i8* %0, i64 128
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %func, i64 8, i8* %2)
   %3 = load i64, i64* %func, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %4 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %5 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %3, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -652,9 +652,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -683,7 +683,7 @@ entry:
   %22 = zext i1 %21 to i64
   %23 = or i64 %20, %22
   %24 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %24)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %24)
   store i64 %23, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@x_key")
@@ -698,17 +698,17 @@ lookup_success:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %entry, %lookup_success
   %lookup_elem_val.0 = phi i64 [ %phitmp, %lookup_success ], [ 1, %entry ]
   %26 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %26)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %26)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %24)
-  call void @llvm.lifetime.end(i64 -1, i8* %26)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %24)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %26)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -723,14 +723,14 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@x_key")
@@ -745,17 +745,17 @@ lookup_success:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %entry, %lookup_success
   %lookup_elem_val.0 = phi i64 [ %phitmp, %lookup_success ], [ 1, %entry ]
   %3 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -773,35 +773,35 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_key" = alloca i64, align 8
   %arg0 = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %memset = call void @llvm.memset.p0i8.i64([64 x i8]* nonnull %str, i8 0, i64 64, i32 1, i1 false)
   %2 = bitcast i64* %arg0 to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   %3 = getelementptr i8, i8* %0, i64 112
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %arg0, i64 8, i8* %3)
   %4 = load i64, i64* %arg0, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %4)
   %5 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %str, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -816,22 +816,22 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_key" = alloca i64, align 8
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %delete_elem = call i64 inttoptr (i64 3 to i64 (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@x_key")
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -848,23 +848,23 @@ R"EXPECTED(%printf_t = type { i64 }
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %printf_args = alloca %printf_t, align 8
   %1 = bitcast %printf_t* %printf_args to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, %printf_t* %printf_args, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 8)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -879,9 +879,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
@@ -889,17 +889,17 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %1 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 1234, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   %3 = bitcast i64* %"@x_key1" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key1", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo2, i64* nonnull %"@x_key1")
@@ -912,22 +912,22 @@ lookup_success:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %entry, %lookup_success
   %lookup_elem_val.0 = phi i64 [ %4, %lookup_success ], [ 0, %entry ]
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@y_key", align 8
   %6 = bitcast i64* %"@y_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %6)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 %lookup_elem_val.0, i64* %"@y_val", align 8
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo3, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
-  call void @llvm.lifetime.end(i64 -1, i8* %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -948,9 +948,9 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_key" = alloca i64, align 8
   %lookup_elem_val = alloca [64 x i8], align 1
@@ -958,7 +958,7 @@ entry:
   %"@x_key" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 97, i8* %1, align 1
   %str.repack5 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 1
   store i8 115, i8* %str.repack5, align 1
@@ -969,19 +969,19 @@ entry:
   %str.repack8 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 4
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.memset.p0i8.i64(i8* %str.repack8, i8 0, i64 60, i32 1, i1 false)
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %str, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = bitcast i64* %"@x_key1" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key1", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo2, i64* nonnull %"@x_key1")
   %4 = getelementptr inbounds [64 x i8], [64 x i8]* %lookup_elem_val, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_failure, label %lookup_success
 
@@ -994,19 +994,19 @@ lookup_failure:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %5)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@y_key", align 8
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo3, i64* nonnull %"@y_key", [64 x i8]* nonnull %lookup_elem_val, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %5)
-  call void @llvm.lifetime.end(i64 -1, i8* nonnull %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -1021,9 +1021,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -1037,20 +1037,20 @@ pred_false:                                       ; preds = %entry
 
 pred_true:                                        ; preds = %entry
   %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %3 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 1, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -1065,33 +1065,33 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@y_key" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %comm = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %comm, i64 0, i64 0
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([64 x i8]* nonnull %comm, i64 64)
   %2 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %2)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %comm, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %2)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   %3 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@y_key", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem2 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@y_key", [64 x i8]* nonnull %comm, i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -1106,33 +1106,33 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %deref = alloca i64, align 8
   %1 = bitcast i64* %deref to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %1)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %deref, i64 8, i64 1234)
   %2 = load i64, i64* %deref, align 8
-  call void @llvm.lifetime.end(i64 -1, i8* %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key", align 8
   %4 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %2, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -1147,9 +1147,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -1170,20 +1170,20 @@ entry:
 "||_merge":                                       ; preds = %"||_lhs_false", %"||_true"
   %"||_result.0" = phi i64 [ 1, %"||_true" ], [ 0, %"||_lhs_false" ]
   %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key", align 8
   %4 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %"||_result.0", i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
@@ -1198,9 +1198,9 @@ R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "kprobe:f" {
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
@@ -1221,20 +1221,20 @@ entry:
 "&&_merge":                                       ; preds = %"&&_lhs_true", %"&&_false"
   %"&&_result.0" = phi i64 [ 0, %"&&_false" ], [ 1, %"&&_lhs_true" ]
   %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %3)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key", align 8
   %4 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start(i64 -1, i8* %4)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %"&&_result.0", i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end(i64 -1, i8* %3)
-  call void @llvm.lifetime.end(i64 -1, i8* %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

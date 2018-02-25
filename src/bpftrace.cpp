@@ -189,7 +189,7 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
 {
-  auto func = sections_.find(probe.prog_name);
+  auto func = sections_.find("s_" + probe.prog_name);
   if (func == sections_.end())
   {
     std::cerr << "Code not generated for probe: " << probe.name << std::endl;

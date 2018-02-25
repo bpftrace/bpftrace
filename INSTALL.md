@@ -27,7 +27,7 @@ To use some BPFtrace features, minimum kernel versions are required:
 - CMake
 - Flex
 - Bison
-- LLVM 3.9 development packages
+- LLVM 5.0 development packages
 - LibElf
 
 ### Compilation

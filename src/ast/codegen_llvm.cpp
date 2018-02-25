@@ -382,11 +382,11 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
   Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name(), module_.get());
-  func->setSection(probe.name());
+  func->setSection("s_" + probe.name());
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
-  ctx_ = &func->getArgumentList().front();
+  ctx_ = func->arg_begin();
 
   if (probe.pred) {
     probe.pred->accept(*this);
@@ -590,7 +590,7 @@ void CodegenLLVM::createLog2Function()
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", log2_func);
   b_.SetInsertPoint(entry);
 
-  Value *arg = &log2_func->getArgumentList().front();
+  Value *arg = log2_func->arg_begin();
 
   Value *n_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
   b_.CreateStore(arg, n_alloc);
@@ -628,8 +628,8 @@ void CodegenLLVM::createStrcmpFunction()
   BasicBlock *not_equal_block = BasicBlock::Create(module_->getContext(), "strcmp.not_equal", strcmp_func);
   b_.SetInsertPoint(entry);
 
-  Value *s1 = &strcmp_func->getArgumentList().front();
-  Value *s2 = &strcmp_func->getArgumentList().back();
+  Value *s1 = strcmp_func->arg_begin();
+  Value *s2 = strcmp_func->arg_begin()+1;
 
   for (int i=0; i<STRING_SIZE; i++)
   {
