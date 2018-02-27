@@ -30,7 +30,17 @@ To use some BPFtrace features, minimum kernel versions are required:
 - LLVM 5.0 development packages
 - LibElf
 
+For example, installing the requirements on Ubuntu:
+
+```
+apt-get update
+apt-get install -y bison cmake flex g++ git libclang-5.0-dev libelf-dev llvm-5.0-dev zlib1g-dev
+```
+
 ### Compilation
+
+See previous requirements.
+
 ```
 git clone https://github.com/ajor/bpftrace
 mkdir -p bpftrace/build
