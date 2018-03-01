@@ -8,7 +8,6 @@
 #include "bcc_syms.h"
 #include "common.h"
 #include "libbpf.h"
-#include "perf_reader.h"
 #include <linux/perf_event.h>
 
 namespace bpftrace {
@@ -68,9 +67,16 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &fun
 AttachedProbe::~AttachedProbe()
 {
   close(progfd_);
-  if (perf_reader_)
-    perf_reader_free(perf_reader_);
+
   int err = 0;
+  for (int perf_event_fd : perf_event_fds_)
+  {
+    err = bpf_close_perf_event_fd(perf_event_fd);
+    if (err)
+      std::cerr << "Error closing perf event FDs for probe: " << probe_.name << std::endl;
+  }
+
+  err = 0;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
@@ -85,7 +91,6 @@ AttachedProbe::~AttachedProbe()
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
     case ProbeType::profile:
-      err = detach_profile();
       break;
     default:
       abort();
@@ -172,39 +177,37 @@ void AttachedProbe::load_prog()
 
 void AttachedProbe::attach_kprobe()
 {
-  perf_reader_cb cb = nullptr;
-  void *cb_cookie = nullptr;
+  int perf_event_fd = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
+      eventname().c_str(), probe_.attach_point.c_str());
 
-  perf_reader_ = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.attach_point.c_str(), cb, cb_cookie);
-
-  if (perf_reader_ == nullptr)
+  if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+
+  perf_event_fds_.push_back(perf_event_fd);
 }
 
 void AttachedProbe::attach_uprobe()
 {
   int pid = -1;
-  perf_reader_cb cb = nullptr;
-  void *cb_cookie = nullptr;
 
-  perf_reader_ = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), offset(), pid, cb, cb_cookie);
+  int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
+      eventname().c_str(), probe_.path.c_str(), offset(), pid);
 
-  if (perf_reader_ == nullptr)
+  if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
 }
 
 void AttachedProbe::attach_tracepoint()
 {
-  perf_reader_cb cb = nullptr;
-  void *cb_cookie = nullptr;
+  int perf_event_fd = bpf_attach_tracepoint(progfd_, probe_.path.c_str(),
+      eventname().c_str());
 
-  perf_reader_ = bpf_attach_tracepoint(progfd_, probe_.path.c_str(),
-      eventname().c_str(), cb, cb_cookie);
-
-  if (perf_reader_ == nullptr)
+  if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
 }
 
 void AttachedProbe::attach_profile()
@@ -249,17 +252,6 @@ void AttachedProbe::attach_profile()
 
     perf_event_fds_.push_back(perf_event_fd);
   }
-}
-
-int AttachedProbe::detach_profile()
-{
-  for (int perf_event_fd : perf_event_fds_)
-  {
-    int err = bpf_close_perf_event_fd(perf_event_fd);
-    if (err)
-      return err;
-  }
-  return 0;
 }
 
 } // namespace bpftrace

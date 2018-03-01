@@ -27,12 +27,10 @@ private:
   void attach_uprobe();
   void attach_tracepoint();
   void attach_profile();
-  int detach_profile();
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> &func_;
   std::vector<int> perf_event_fds_;
-  void *perf_reader_ = nullptr;
   int progfd_;
 };
 
