@@ -1,4 +1,4 @@
-if (NOT DYNAMIC_LINKING)
+if (STATIC_LINKING)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
 endif()
 

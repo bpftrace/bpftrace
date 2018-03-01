@@ -27,7 +27,7 @@ To use some BPFtrace features, minimum kernel versions are required:
 - CMake
 - Flex
 - Bison
-- LLVM 5.0 development packages
+- LLVM & Clang 5.0 development packages
 - LibElf
 
 For example, installing the requirements on Ubuntu:
@@ -49,13 +49,13 @@ cmake -DCMAKE_BUILD_TYPE=Debug ../
 make
 ```
 
-By default bpftrace will be built as a static binary to ease deployments. If a dynamically linked executable would be preferred, the CMake option `-DDYNAMIC_LINKING:BOOL=ON` can be used.
+By default bpftrace will be built as a dynamically linked executable. If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the Docker method below will always result in a statically linked executable.
 
 The latest versions of BCC and Google Test will be downloaded on each build. To speed up builds and only download their sources on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
 
 ## Using Docker
 
-Building BPFtrace inside a Docker container is the recommended method:
+Building inside a Docker container will produce a statically linked bpftrace executable.
 
 `./build.sh`
 

@@ -55,7 +55,7 @@ find_package(LLVM REQUIRED CONFIG)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-set(DYNAMIC_LINKING OFF CACHE BOOL "Build bpftrace as a dynamically linked executable")
+set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
