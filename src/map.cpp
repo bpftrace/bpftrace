@@ -1,5 +1,6 @@
 #include <iostream>
 #include <unistd.h>
+#include <linux/version.h>
 
 #include "common.h"
 #include "libbpf.h"
@@ -21,8 +22,11 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
     key_size = 8;
 
   enum bpf_map_type map_type;
-  if (type.type == Type::quantize || type.type == Type::count)
-    map_type = BPF_MAP_TYPE_PERCPU_HASH;
+  if ((type.type == Type::quantize || type.type == Type::count) &&
+      (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
+  {
+      map_type = BPF_MAP_TYPE_PERCPU_HASH;
+  }
   else
     map_type = BPF_MAP_TYPE_HASH;
 
