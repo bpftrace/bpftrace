@@ -7,7 +7,7 @@ namespace bpftrace {
 std::string verify_format_string(const std::string &fmt, std::vector<SizedType> args)
 {
   std::stringstream message;
-  std::regex re("%[a-zA-Z]");
+  std::regex re("%-?[0-9]*[a-zA-Z]");
 
   auto tokens_begin = std::sregex_iterator(fmt.begin(), fmt.end(), re);
   auto tokens_end = std::sregex_iterator();
@@ -33,7 +33,15 @@ std::string verify_format_string(const std::string &fmt, std::vector<SizedType> 
     Type arg_type = args.at(i).type;
     if (arg_type == Type::sym || arg_type == Type::usym)
       arg_type = Type::string; // Symbols should be printed as strings
-    char token = token_iter->str()[1];
+    int offset = 1;
+
+    // skip over format widths during verification
+    if (token_iter->str()[offset] == '-')
+      offset++;
+    while (token_iter->str()[offset] >= '0' && token_iter->str()[offset] <= '9')
+      offset++;
+
+    char token = token_iter->str()[offset];
 
     Type token_type;
     switch (token)
