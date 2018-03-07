@@ -69,6 +69,8 @@ void CodegenLLVM::visit(Builtin &builtin)
   else if (builtin.ident == "comm")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
+    // initializing memory needed for older kernels:
+    b_.CreateMemSet(buf, b_.getInt8(0), builtin.type.size, 1);
     b_.CreateGetCurrentComm(buf, builtin.type.size);
     expr_ = buf;
   }
