@@ -1,0 +1,40 @@
+//
+// biosnoop.bt - basic block I/O tracing tool, showing per I/O latency.
+//               For Linux, uses bpftrace, eBPF.
+//
+// TODO: switch to block tracepoints. Add device, offset, and size columns.
+//
+// 15-Nov-2017	Brendan Gregg	Created this.
+//
+
+BEGIN
+{
+	printf("%-12s %-16s %-6s %7s\n", "TIME(ms)", "COMM", "PID", "LAT(ms)");
+	@epoch = nsecs;
+}
+
+kprobe:blk_account_io_start
+{
+	@start[arg0] = nsecs;
+	@iopid[arg0] = pid;
+	@iocomm[arg0] = comm;
+}
+
+kprobe:blk_account_io_completion
+/@start[arg0] != 0 && @iopid[arg0] != 0 && @iocomm[arg0] != ""/
+
+{
+	$now = nsecs;
+	printf("%-12u %-16s %-6d %7d\n",
+	    ($now - @epoch) / 1000000, @iocomm[arg0], @iopid[arg0],
+	    ($now - @start[arg0]) / 1000000);
+
+	@start[arg0] = delete();
+	@iopid[arg0] = delete();
+	@iocomm[arg0] = delete();
+}
+
+END
+{
+	@epoch = delete();
+}
