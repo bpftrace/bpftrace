@@ -1,0 +1,42 @@
+//
+// execsnoop.bt - basic process exec tracing tool.
+//                For Linux, uses bpftrace, eBPF.
+//
+// This traces when processes call exec(). It is handy for identifying new
+// processes created via the usual fork()->exec() sequence. Note that the
+// return value is not currently traced, so the exec() may have failed.
+// Also, only the first five arguments are currently printed.
+//
+// TODO: switch to proc tracepoints. Support more args. Include retval.
+//
+// 15-Nov-2017	Brendan Gregg	Created this.
+//
+
+BEGIN
+{
+	printf("%-10s %-5s %s\n", "TIME(ms)", "PID", "ARGS");
+	@epoch = nsecs;
+}
+
+kprobe:sys_execve
+{
+	$step = 8;	// sizeof (char *)
+	$ptr = arg1;
+	
+	$now = nsecs;
+	printf("%-10u %-5d %s",
+	    ($now - @epoch) / 1000000, pid,
+	    str(*$ptr));
+	// unrolled loop for now:
+	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
+	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
+	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
+	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
+	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
+	printf("\n");
+}
+
+END
+{
+	@epoch = delete();
+}

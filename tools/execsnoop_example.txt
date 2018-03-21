@@ -1,0 +1,40 @@
+Demonstrations of execsnoop, the Linux BPF/bpftrace version.
+
+
+Tracing all new process execution (via exec()):
+
+# bpftrace execsnoop.bt
+Attaching 3 probes...
+TIME(ms)   PID   ARGS
+2460       3466  ls --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
+3996       3467  man ls
+4005       3473  preconv -e UTF-8
+4005       3473  preconv -e UTF-8
+4005       3473  preconv -e UTF-8
+4005       3473  preconv -e UTF-8
+4005       3473  preconv -e UTF-8
+4005       3474  tbl
+4005       3474  tbl
+4005       3474  tbl
+4005       3474  tbl
+4005       3474  tbl
+4005       3476  nroff -mandoc -rLL=193n -rLT=193n -Tutf8
+4005       3476  nroff -mandoc -rLL=193n -rLT=193n -Tutf8
+4005       3476  nroff -mandoc -rLL=193n -rLT=193n -Tutf8
+4005       3476  nroff -mandoc -rLL=193n -rLT=193n -Tutf8
+4005       3476  nroff -mandoc -rLL=193n -rLT=193n -Tutf8
+4006       3479  pager  -rLL=193n
+4006       3479  pager  -rLL=193n
+4006       3479  pager  -rLL=193n
+4006       3479  pager  -rLL=193n
+4006       3479  pager  -rLL=193n
+4007       3481  locale charmap
+4008       3482  groff -mtty-char -Tutf8 -mandoc -rLL=193n -rLT=193n
+4009       3483  troff -mtty-char -mandoc -rLL=193n -rLT=193n -Tutf8
+
+The output begins by showing an "ls" command, and then the process execution
+to serve "man ls". The same exec arguments appear multiple times: in this case
+they are failing as the $PATH variable is walked, until one finally succeeds.
+
+This tool can be used to discover unwanted short-lived processes that may be
+causing performance issues such as latency perturbations.
