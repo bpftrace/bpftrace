@@ -160,6 +160,10 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateProbeReadStr(buf, call.type.size, expr_);
     expr_ = buf;
   }
+  else if (call.func == "sym" || call.func == "usym")
+  {
+    call.vargs->front()->accept(*this);
+  }
   else if (call.func == "printf")
   {
     ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);

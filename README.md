@@ -194,8 +194,10 @@ Variables:
 - `func` - Name of the function currently being traced
 
 Functions:
-- `quantize(int n)` - produce a log2 histogram of values of `n`
-- `count()` - count the number of times this function is called
-- `delete()` - delete the map element this is assigned to
-- `str(char *s)` - returns the string pointed to by `s`
-- `printf(char *fmt, ...)` - write to stdout
+- `quantize(int n)` - Produce a log2 histogram of values of `n`
+- `count()` - Count the number of times this function is called
+- `delete()` - Delete the map element this is assigned to
+- `str(char *s)` - Returns the string pointed to by `s`
+- `printf(char *fmt, ...)` - Write to stdout
+- `sym(void *p)` - Resolve kernel address
+- `usym(void *p)` - Resolve user space address (incomplete)

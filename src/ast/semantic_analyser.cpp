@@ -119,16 +119,22 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::del, 0);
   }
-  else if (call.func == "str") {
+  else if (call.func == "str" || call.func == "sym" || call.func == "usym") {
     if (nargs != 1) {
-      err_ << "str() should take 1 arguments (";
+      err_ << call.func << "() should take 1 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
     if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
-      err_ << "str() only supports integer arguments";
+      err_ << call.func << "() only supports integer arguments";
       err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
     }
-    call.type = SizedType(Type::string, STRING_SIZE);
+
+    if (call.func == "str")
+      call.type = SizedType(Type::string, STRING_SIZE);
+    else if (call.func == "sym")
+      call.type = SizedType(Type::sym, 8);
+    else if (call.func == "usym")
+      call.type = SizedType(Type::usym, 8);
   }
   else if (call.func == "printf") {
     if (call.map) {
