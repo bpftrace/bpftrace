@@ -23,26 +23,6 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       GlobalValue::ExternalLinkage,
       "llvm.bpf.pseudo",
       &module_);
-
-  FunctionType *memcpy_func_type = FunctionType::get(
-      getVoidTy(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty(), getInt32Ty(), getInt1Ty()},
-      false);
-  Function::Create(
-      memcpy_func_type,
-      GlobalValue::ExternalLinkage,
-      "llvm.memcpy.p0i8.p0i8.i64",
-      &module_);
-
-  FunctionType *memset_func_type = FunctionType::get(
-      getVoidTy(),
-      {getInt8PtrTy(), getInt8Ty(), getInt64Ty(), getInt32Ty(), getInt1Ty()},
-      false);
-  Function::Create(
-      memset_func_type,
-      GlobalValue::ExternalLinkage,
-      "llvm.memset.p0i8.i64",
-      &module_);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name)
