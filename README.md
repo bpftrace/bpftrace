@@ -192,6 +192,7 @@ Variables:
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
+- `sp` - Stack pointer
 
 Functions:
 - `quantize(int n)` - Produce a log2 histogram of values of `n`

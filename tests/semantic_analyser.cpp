@@ -45,6 +45,36 @@ void test(const std::string &input, int expected_result=0)
   test(bpftrace, driver, input, expected_result);
 }
 
+TEST(semantic_analyser, builtin_variables)
+{
+  test("kprobe:f { pid }", 0);
+  test("kprobe:f { tid }", 0);
+  test("kprobe:f { uid }", 0);
+  test("kprobe:f { gid }", 0);
+  test("kprobe:f { nsecs }", 0);
+  test("kprobe:f { cpu }", 0);
+  test("kprobe:f { comm }", 0);
+  test("kprobe:f { stack }", 0);
+  test("kprobe:f { ustack }", 0);
+  test("kprobe:f { arg0 }", 0);
+  test("kprobe:f { retval }", 0);
+  test("kprobe:f { func }", 0);
+  test("kprobe:f { sp }", 0);
+  test("kprobe:f { fake }", 1);
+}
+
+TEST(semantic_analyser, builtin_functions)
+{
+  test("kprobe:f { @x = quantize(123) }", 0);
+  test("kprobe:f { @x = count() }", 0);
+  test("kprobe:f { @x = delete() }", 0);
+  test("kprobe:f { str(0xffff) }", 0);
+  test("kprobe:f { printf(\"hello\\n\") }", 0);
+  test("kprobe:f { sym(0xffff) }", 0);
+  test("kprobe:f { usym(0xffff) }", 0);
+  test("kprobe:f { fake() }", 1);
+}
+
 TEST(semantic_analyser, probe_count)
 {
   MockBPFtrace bpftrace;

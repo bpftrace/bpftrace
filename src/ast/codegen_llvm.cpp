@@ -75,30 +75,25 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = buf;
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
-      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9')
+      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9' ||
+      builtin.ident == "retval" ||
+      builtin.ident == "func" ||
+      builtin.ident == "sp")
   {
-    int arg_num = atoi(builtin.ident.substr(3).c_str());
+    int offset;
+    if (builtin.ident == "retval")
+      offset = arch::ret_offset() * sizeof(uintptr_t);
+    else if (builtin.ident == "func")
+      offset = arch::pc_offset() * sizeof(uintptr_t);
+    else if (builtin.ident == "sp")
+      offset = arch::sp_offset() * sizeof(uintptr_t);
+    else // argX
+    {
+      int arg_num = atoi(builtin.ident.substr(3).c_str());
+      offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
+    }
 
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    int offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
-    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
-    b_.CreateProbeRead(dst, 8, src);
-    expr_ = b_.CreateLoad(dst);
-    b_.CreateLifetimeEnd(dst);
-  }
-  else if (builtin.ident == "retval")
-  {
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    int offset = arch::ret_offset() * sizeof(uintptr_t);
-    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
-    b_.CreateProbeRead(dst, 8, src);
-    expr_ = b_.CreateLoad(dst);
-    b_.CreateLifetimeEnd(dst);
-  }
-  else if (builtin.ident == "func")
-  {
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    int offset = arch::pc_offset() * sizeof(uintptr_t);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
