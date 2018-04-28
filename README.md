@@ -176,6 +176,11 @@ Some probe types allow wildcards to be used when attaching a probe:
 
 `kprobe:SyS_* { ... }`
 
+### Predicates
+Define conditions for which a probe should be executed:
+
+`kprobe:sys_open / uid == 0 / { ... }`
+
 ## Builtins
 The following variables and functions are available for use in bpftrace scripts:
 
