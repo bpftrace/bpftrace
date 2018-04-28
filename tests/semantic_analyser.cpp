@@ -59,7 +59,6 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { arg0 }", 0);
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
-  test("kprobe:f { sp }", 0);
   test("kprobe:f { fake }", 1);
 }
 
@@ -72,6 +71,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { printf(\"hello\\n\") }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
+  test("kprobe:f { reg(\"ip\") }", 0);
   test("kprobe:f { fake() }", 1);
 }
 
@@ -150,6 +150,15 @@ TEST(semantic_analyser, call_usym)
   test("kprobe:f { usym(\"hello\"); }", 10);
 }
 
+TEST(semantic_analyser, call_reg)
+{
+  test("kprobe:f { reg(\"ip\"); }", 0);
+  test("kprobe:f { @x = reg(\"ip\"); }", 0);
+  test("kprobe:f { reg(\"blah\"); }", 1);
+  test("kprobe:f { reg(); }", 1);
+  test("kprobe:f { reg(123); }", 1);
+}
+
 TEST(semantic_analyser, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }", 0);
@@ -195,6 +204,7 @@ TEST(semantic_analyser, printf)
 {
   test("kprobe:f { printf(\"hi\") }", 0);
   test("kprobe:f { printf(1234) }", 1);
+  test("kprobe:f { printf() }", 1);
   test("kprobe:f { $fmt = \"mystring\"; printf($fmt) }", 1);
 }
 

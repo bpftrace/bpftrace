@@ -77,24 +77,21 @@ void CodegenLLVM::visit(Builtin &builtin)
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9' ||
       builtin.ident == "retval" ||
-      builtin.ident == "func" ||
-      builtin.ident == "sp")
+      builtin.ident == "func")
   {
     int offset;
     if (builtin.ident == "retval")
-      offset = arch::ret_offset() * sizeof(uintptr_t);
+      offset = arch::ret_offset();
     else if (builtin.ident == "func")
-      offset = arch::pc_offset() * sizeof(uintptr_t);
-    else if (builtin.ident == "sp")
-      offset = arch::sp_offset() * sizeof(uintptr_t);
+      offset = arch::pc_offset();
     else // argX
     {
       int arg_num = atoi(builtin.ident.substr(3).c_str());
-      offset = arch::arg_offset(arg_num) * sizeof(uintptr_t);
+      offset = arch::arg_offset(arg_num);
     }
 
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset));
+    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t)));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
@@ -157,7 +154,21 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "sym" || call.func == "usym")
   {
+    // We want expr_ to just pass through from the child node - don't set it here
     call.vargs->front()->accept(*this);
+  }
+  else if (call.func == "reg")
+  {
+    auto &reg_name = static_cast<String&>(*call.vargs->at(0)).str;
+    int offset = arch::offset(reg_name);
+    if (offset == -1)
+      abort();
+
+    AllocaInst *dst = b_.CreateAllocaBPF(call.type, call.func+"_"+reg_name);
+    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t)));
+    b_.CreateProbeRead(dst, 8, src);
+    expr_ = b_.CreateLoad(dst);
+    b_.CreateLifetimeEnd(dst);
   }
   else if (call.func == "printf")
   {

@@ -33,7 +33,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "uid" ||
       builtin.ident == "gid" ||
       builtin.ident == "cpu" ||
-      builtin.ident == "sp" ||
       builtin.ident == "retval") {
     builtin.type = SizedType(Type::integer, 8);
   }
@@ -122,7 +121,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "str" || call.func == "sym" || call.func == "usym") {
     if (nargs != 1) {
-      err_ << call.func << "() should take 1 arguments (";
+      err_ << call.func << "() should take 1 argument (";
       err_ << nargs << " provided)" << std::endl;
     }
     if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
@@ -137,6 +136,29 @@ void SemanticAnalyser::visit(Call &call)
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 8);
   }
+  else if (call.func == "reg") {
+    if (nargs != 1) {
+      err_ << call.func << "() should take 1 argument (";
+      err_ << nargs << " provided)" << std::endl;
+    }
+    else {
+      auto &arg = *call.vargs->at(0);
+      if (arg.type.type != Type::string || !arg.is_literal) {
+        err_ << "reg() expects a string literal";
+        err_ << " (" << arg.type.type << " provided)" << std::endl;
+      }
+      else {
+        auto &reg_name = static_cast<String&>(arg).str;
+        int offset = arch::offset(reg_name);;
+        if (offset == -1) {
+          err_ << "'" << reg_name << "' is not a valid register on this architecture";
+          err_ << " (" << arch::name() << ")" << std::endl;
+        }
+      }
+    }
+
+    call.type = SizedType(Type::integer, 8);
+  }
   else if (call.func == "printf") {
     if (call.map) {
       err_ << "printf() should not be assigned to a map" << std::endl;
@@ -149,20 +171,22 @@ void SemanticAnalyser::visit(Call &call)
       err_ << "printf() can only take up to 7 arguments (";
       err_ << nargs << " provided)" << std::endl;
     }
-    Expression &fmt_arg = *call.vargs->at(0);
-    if (fmt_arg.type.type != Type::string || !fmt_arg.is_literal) {
-      err_ << "The first argument to printf() must be a string literal";
-      err_ << " (" << fmt_arg.type.type << " provided)" << std::endl;
-    }
-    if (is_final_pass()) {
-      String &fmt = static_cast<String&>(fmt_arg);
-      std::vector<SizedType> args;
-      for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
-        args.push_back((*iter)->type);
+    if (nargs > 0) {
+      Expression &fmt_arg = *call.vargs->at(0);
+      if (fmt_arg.type.type != Type::string || !fmt_arg.is_literal) {
+        err_ << "The first argument to printf() must be a string literal";
+        err_ << " (" << fmt_arg.type.type << " provided)" << std::endl;
       }
-      err_ << verify_format_string(fmt.str, args);
+      if (is_final_pass()) {
+        String &fmt = static_cast<String&>(fmt_arg);
+        std::vector<SizedType> args;
+        for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
+          args.push_back((*iter)->type);
+        }
+        err_ << verify_format_string(fmt.str, args);
 
-      bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
+        bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
+      }
     }
     call.type = SizedType(Type::string, STRING_SIZE);
   }

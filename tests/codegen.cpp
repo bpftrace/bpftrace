@@ -648,9 +648,9 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
-TEST(codegen, builtin_sp)
+TEST(codegen, call_reg) // Identical to builtin_func apart from variable names
 {
-  test("kprobe:f { @x = sp }",
+  test("kprobe:f { @x = reg(\"ip\") }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -662,12 +662,12 @@ define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %sp = alloca i64, align 8
-  %1 = bitcast i64* %sp to i8*
+  %reg_ip = alloca i64, align 8
+  %1 = bitcast i64* %reg_ip to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %2 = getelementptr i8, i8* %0, i64 152
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %sp, i64 8, i8* %2)
-  %3 = load i64, i64* %sp, align 8
+  %2 = getelementptr i8, i8* %0, i64 128
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %reg_ip, i64 8, i8* %2)
+  %3 = load i64, i64* %reg_ip, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
