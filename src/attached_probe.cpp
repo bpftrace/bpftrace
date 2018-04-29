@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <iostream>
 #include <regex>
 #include <sys/utsname.h>
@@ -9,6 +10,7 @@
 #include "common.h"
 #include "libbpf.h"
 #include <linux/perf_event.h>
+#include <linux/version.h>
 
 namespace bpftrace {
 
@@ -148,13 +150,19 @@ uint64_t AttachedProbe::offset() const
   return sym.offset;
 }
 
-static unsigned kernel_version()
+static unsigned kernel_version(int attempt)
 {
-  struct utsname utsname;
-  uname(&utsname);
-  unsigned x, y, z;
-  sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
-  return (x << 16) + (y << 8) + z;
+  switch (attempt)
+  {
+    case 0:
+      return LINUX_VERSION_CODE;
+    case 1:
+      struct utsname utsname;
+      uname(&utsname);
+      unsigned x, y, z;
+      sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
+      return (x << 16) + (y << 8) + z;
+  }
 }
 
 void AttachedProbe::load_prog()
@@ -162,14 +170,31 @@ void AttachedProbe::load_prog()
   uint8_t *insns = std::get<0>(func_);
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
-  unsigned kern_version = kernel_version();
   int log_level = 0;
   char *log_buf = nullptr;
   unsigned log_buf_size = 0;
 
-  progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
-      reinterpret_cast<struct bpf_insn*>(insns), prog_len,
-      license, kern_version, log_level, log_buf, log_buf_size);
+  // Redirect stderr, so we don't get error messages from BCC
+  int old_stderr, new_stderr;
+  fflush(stderr);
+  old_stderr = dup(2);
+  new_stderr = open("/dev/null", O_WRONLY);
+  dup2(new_stderr, 2);
+  close(new_stderr);
+
+  for (int attempt=0; attempt<2; attempt++)
+  {
+    progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
+        reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
+        kernel_version(attempt), log_level, log_buf, log_buf_size);
+    if (progfd_ >= 0)
+      break;
+  }
+
+  // Restore stderr
+  fflush(stderr);
+  dup2(old_stderr, 2);
+  close(old_stderr);
 
   if (progfd_ < 0)
     throw std::runtime_error("Error loading program: " + probe_.name);
