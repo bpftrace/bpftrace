@@ -25,8 +25,8 @@ public:
   int run();
   int print_maps();
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
-  std::string resolve_sym(uint64_t addr, bool show_offset=false);
-  std::string resolve_usym(uint64_t addr) const;
+  std::string resolve_sym(uintptr_t addr, bool show_offset=false);
+  std::string resolve_usym(uintptr_t addr) const;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;

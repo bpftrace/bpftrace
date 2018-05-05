@@ -164,7 +164,7 @@ void SemanticAnalyser::visit(Call &call)
       err_ << "printf() should not be assigned to a map" << std::endl;
     }
     if (nargs == 0) {
-      err_ << "printf() should take at least 1 argument (";
+      err_ << "printf() requires at least 1 argument (";
       err_ << nargs << " provided)" << std::endl;
     }
     if (nargs > 7) {
@@ -188,7 +188,7 @@ void SemanticAnalyser::visit(Call &call)
         bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
       }
     }
-    call.type = SizedType(Type::string, STRING_SIZE);
+    call.type = SizedType(Type::none, 0);
   }
   else {
     err_ << "Unknown function: '" << call.func << "'" << std::endl;

@@ -132,7 +132,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   std::vector<uint64_t> arg_values;
-  std::vector<std::string> resolved_symbols;
+  std::vector<std::unique_ptr<char>> resolved_symbols;
   for (auto arg : args)
   {
     switch (arg.type)
@@ -144,12 +144,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         arg_values.push_back((uint64_t)arg_data);
         break;
       case Type::sym:
-        resolved_symbols.push_back(bpftrace->resolve_sym(*(uint64_t*)arg_data));
-        arg_values.push_back((uint64_t)resolved_symbols.back().c_str());
+        resolved_symbols.emplace_back(strdup(
+              bpftrace->resolve_sym(*(uint64_t*)arg_data).c_str()));
+        arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       case Type::usym:
-        resolved_symbols.push_back(bpftrace->resolve_usym(*(uint64_t*)arg_data));
-        arg_values.push_back((uint64_t)resolved_symbols.back().c_str());
+        resolved_symbols.emplace_back(strdup(
+              bpftrace->resolve_usym(*(uint64_t*)arg_data).c_str()));
+        arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       default:
         abort();
@@ -378,9 +380,9 @@ int BPFtrace::print_map(IMap &map)
     else if (map.type_.type == Type::ustack)
       std::cout << get_stack(*(uint32_t*)value.data(), true, 8);
     else if (map.type_.type == Type::sym)
-      std::cout << resolve_sym(*(uint64_t*)value.data());
+      std::cout << resolve_sym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
-      std::cout << resolve_usym(*(uint64_t*)value.data());
+      std::cout << resolve_usym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else if (map.type_.type == Type::count)
@@ -607,7 +609,7 @@ std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent)
   return stack.str();
 }
 
-std::string BPFtrace::resolve_sym(uint64_t addr, bool show_offset)
+std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
 {
   struct bcc_symbol sym;
   std::ostringstream symbol;
@@ -626,7 +628,7 @@ std::string BPFtrace::resolve_sym(uint64_t addr, bool show_offset)
   return symbol.str();
 }
 
-std::string BPFtrace::resolve_usym(uint64_t addr) const
+std::string BPFtrace::resolve_usym(uintptr_t addr) const
 {
   // TODO
   std::ostringstream symbol;
