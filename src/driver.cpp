@@ -46,4 +46,14 @@ int Driver::parse_file(const std::string &f)
   return result;
 }
 
+void Driver::error(const location &l, const std::string &m)
+{
+  std::cerr << l << ": " << m << std::endl;
+}
+
+void Driver::error(const std::string &m)
+{
+  std::cerr << m << std::endl;
+}
+
 } // namespace bpftrace

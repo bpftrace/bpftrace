@@ -20,17 +20,8 @@ public:
   int parse_stdin();
   int parse_str(const std::string &script);
   int parse_file(const std::string &f);
-
-  void error(const location &l, const std::string &m)
-  {
-    std::cerr << l << ": " << m << std::endl;
-    exit(-1);
-  }
-
-  void error(const std::string &m)
-  {
-    std::cerr << m << std::endl;
-  }
+  void error(const location &l, const std::string &m);
+  void error(const std::string &m);
 
   ast::Program *root_;
 
