@@ -1,13 +1,14 @@
 #include <regex>
 
 #include "printf.h"
+#include "printf_format_types.h"
 
 namespace bpftrace {
 
 std::string verify_format_string(const std::string &fmt, std::vector<SizedType> args)
 {
   std::stringstream message;
-  std::regex re("%-?[0-9]*[a-zA-Z]");
+  const std::regex re("%-?[0-9]*[a-zA-Z]+");
 
   auto tokens_begin = std::sregex_iterator(fmt.begin(), fmt.end(), re);
   auto tokens_end = std::sregex_iterator();
@@ -41,25 +42,14 @@ std::string verify_format_string(const std::string &fmt, std::vector<SizedType> 
     while (token_iter->str()[offset] >= '0' && token_iter->str()[offset] <= '9')
       offset++;
 
-    char token = token_iter->str()[offset];
-
-    Type token_type;
-    switch (token)
+    const std::string token = token_iter->str().substr(offset);
+    const auto token_type_iter = printf_format_types.find(token);
+    if (token_type_iter == printf_format_types.end())
     {
-      case 'd':
-      case 'u':
-      case 'x':
-      case 'X':
-      case 'p':
-        token_type = Type::integer;
-        break;
-      case 's':
-        token_type = Type::string;
-        break;
-      default:
-        message << "printf: Unknown format string token: %" << token << std::endl;
-        return message.str();
+      message << "printf: Unknown format string token: %" << token << std::endl;
+      return message.str();
     }
+    const Type &token_type = token_type_iter->second;
 
     if (arg_type != token_type)
     {
