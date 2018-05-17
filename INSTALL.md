@@ -60,8 +60,8 @@ Building inside a Docker container will produce a statically linked bpftrace exe
 `./build.sh`
 
 There are some more fine-grained options if you find yourself building BPFtrace a lot:
-- `./build-docker.sh` - builds just the `bpftrace-builder` Docker image
-- `./build-debug.sh` - builds BPFtrace with debugging information
-- `./build-release.sh` - builds BPFtrace in a release configuration
+- `./build-docker-image.sh` - builds just the `bpftrace-builder` Docker image
+- `./build-debug.sh` - builds BPFtrace with debugging information (requires `./build-docker-image.sh` to have already been run)
+- `./build-release.sh` - builds BPFtrace in a release configuration (requires `./build-docker-image.sh` to have already been run)
 
-`./build.sh` is equivalent to `./build-docker.sh && ./build-release.sh`
+`./build.sh` is equivalent to `./build-docker-image.sh && ./build-release.sh`
