@@ -1,0 +1,12 @@
+sudo: required
+
+language:
+  - cpp
+
+services:
+  - docker
+
+script:
+  - ./build-docker-image.sh
+  - ./build-debug.sh
+  - build-debug/tests/bpftrace_test
