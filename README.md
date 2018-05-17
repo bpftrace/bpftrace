@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ajor/bpftrace.svg?branch=master)](https://travis-ci.org/ajor/bpftrace)
+
 # BPFtrace
 
 BPFtrace is a [DTrace](http://dtrace.org)-style dynamic tracing tool for linux, based on the extended BPF capabilities available in recent Linux kernels. BPFtrace uses [LLVM](http://llvm.org) as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system.
