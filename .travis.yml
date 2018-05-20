@@ -9,4 +9,4 @@ services:
 script:
   - ./build-docker-image.sh
   - ./build-debug.sh
-  - build-debug/tests/bpftrace_test
+  - build-debug/tests/bpftrace_test --gtest_filter=-codegen*
