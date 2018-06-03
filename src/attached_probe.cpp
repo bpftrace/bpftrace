@@ -203,7 +203,7 @@ void AttachedProbe::load_prog()
 void AttachedProbe::attach_kprobe()
 {
   int perf_event_fd = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.attach_point.c_str());
+      eventname().c_str(), probe_.attach_point.c_str(), 0);
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
