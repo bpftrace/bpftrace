@@ -75,6 +75,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
         abort();
     }
   }
+  return ty;
 }
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
