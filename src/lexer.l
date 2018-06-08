@@ -40,8 +40,6 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
 
 pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
                           return Parser::make_BUILTIN(yytext, loc); }
-quantize|count|delete|str|printf {
-                          return Parser::make_BUILTIN(yytext, loc); }
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {header}                { return Parser::make_HEADER(yytext, loc); }

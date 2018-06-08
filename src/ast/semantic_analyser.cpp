@@ -75,57 +75,34 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
 void SemanticAnalyser::visit(Call &call)
 {
-  std::vector<Expression*>::size_type nargs = 0;
   if (call.vargs) {
-    nargs = call.vargs->size();
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
     }
   }
 
   if (call.func == "quantize") {
-    if (!call.map) {
-      err_ << "quantize() should be assigned to a map" << std::endl;
-    }
-    if (nargs != 1) {
-      err_ << "quantize() should take 1 argument (";
-      err_ << nargs << " provided)" << std::endl;
-    }
-    if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
-      err_ << "quantize() only supports integer arguments";
-      err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
-    }
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+    check_arg(call, Type::integer, 0);
+
     call.type = SizedType(Type::quantize, 8);
   }
   else if (call.func == "count") {
-    if (!call.map) {
-      err_ << "count() should be assigned to a map" << std::endl;
-    }
-    if (nargs != 0) {
-      err_ << "count() should take 0 arguments (";
-      err_ << nargs << " provided)" << std::endl;
-    }
+    check_assignment(call, true, false);
+    check_nargs(call, 0);
+
     call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "delete") {
-    if (!call.map) {
-      err_ << "delete() should be assigned to a map" << std::endl;
-    }
-    if (nargs != 0) {
-      err_ << "delete() should take 0 arguments (";
-      err_ << nargs << " provided)" << std::endl;
-    }
+    check_assignment(call, true, false);
+    check_nargs(call, 0);
+
     call.type = SizedType(Type::del, 0);
   }
   else if (call.func == "str" || call.func == "sym" || call.func == "usym") {
-    if (nargs != 1) {
-      err_ << call.func << "() should take 1 argument (";
-      err_ << nargs << " provided)" << std::endl;
-    }
-    if (is_final_pass() && call.vargs->at(0)->type.type != Type::integer) {
-      err_ << call.func << "() only supports integer arguments";
-      err_ << " (" << call.vargs->at(0)->type.type << " provided)" << std::endl;
-    }
+    check_nargs(call, 1);
+    check_arg(call, Type::integer, 0);
 
     if (call.func == "str")
       call.type = SizedType(Type::string, STRING_SIZE);
@@ -135,17 +112,9 @@ void SemanticAnalyser::visit(Call &call)
       call.type = SizedType(Type::usym, 8);
   }
   else if (call.func == "reg") {
-    if (nargs != 1) {
-      err_ << call.func << "() should take 1 argument (";
-      err_ << nargs << " provided)" << std::endl;
-    }
-    else {
-      auto &arg = *call.vargs->at(0);
-      if (arg.type.type != Type::string || !arg.is_literal) {
-        err_ << "reg() expects a string literal";
-        err_ << " (" << arg.type.type << " provided)" << std::endl;
-      }
-      else {
+    if (check_nargs(call, 1)) {
+      if (check_arg(call, Type::string, 0, true)) {
+        auto &arg = *call.vargs->at(0);
         auto &reg_name = static_cast<String&>(arg).str;
         int offset = arch::offset(reg_name);;
         if (offset == -1) {
@@ -158,24 +127,11 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::integer, 8);
   }
   else if (call.func == "printf") {
-    if (call.map) {
-      err_ << "printf() should not be assigned to a map" << std::endl;
-    }
-    if (nargs == 0) {
-      err_ << "printf() requires at least 1 argument (";
-      err_ << nargs << " provided)" << std::endl;
-    }
-    if (nargs > 7) {
-      err_ << "printf() can only take up to 7 arguments (";
-      err_ << nargs << " provided)" << std::endl;
-    }
-    if (nargs > 0) {
-      Expression &fmt_arg = *call.vargs->at(0);
-      if (fmt_arg.type.type != Type::string || !fmt_arg.is_literal) {
-        err_ << "The first argument to printf() must be a string literal";
-        err_ << " (" << fmt_arg.type.type << " provided)" << std::endl;
-      }
+    check_assignment(call, false, false);
+    if (check_varargs(call, 1, 7)) {
+      check_arg(call, Type::string, 0, true);
       if (is_final_pass()) {
+        auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<SizedType> args;
         for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
@@ -186,6 +142,7 @@ void SemanticAnalyser::visit(Call &call)
         bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
       }
     }
+
     call.type = SizedType(Type::none, 0);
   }
   else {
@@ -586,6 +543,99 @@ int SemanticAnalyser::create_maps(bool debug)
 bool SemanticAnalyser::is_final_pass() const
 {
   return pass_ == num_passes_;
+}
+
+bool SemanticAnalyser::check_assignment(const Call &call, bool want_map, bool want_var)
+{
+  if (want_map && want_var)
+  {
+    if (!call.map && !call.var)
+    {
+      err_ << call.func << "() should be assigned to a map or a variable" << std::endl;
+      return false;
+    }
+  }
+  else if (want_map)
+  {
+    if (!call.map)
+    {
+      err_ << call.func << "() should be assigned to a map" << std::endl;
+      return false;
+    }
+  }
+  else if (want_var)
+  {
+    if (!call.var)
+    {
+      err_ << call.func << "() should be assigned to a variable" << std::endl;
+      return false;
+    }
+  }
+  else
+  {
+    if (call.map || call.var)
+    {
+      err_ << call.func << "() should not be used in an assignment" << std::endl;
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SemanticAnalyser::check_nargs(const Call &call, int expected_nargs)
+{
+  std::vector<Expression*>::size_type nargs = 0;
+  if (call.vargs)
+    nargs = call.vargs->size();
+
+  if (nargs != expected_nargs)
+  {
+    err_ << call.func << "() should take " << expected_nargs << " arguments ("; // TODO plural
+    err_ << nargs << " provided)" << std::endl;
+    return false;
+  }
+  return true;
+}
+
+bool SemanticAnalyser::check_varargs(const Call &call, int min_nargs, int max_nargs)
+{
+  std::vector<Expression*>::size_type nargs = 0;
+  if (call.vargs)
+    nargs = call.vargs->size();
+
+  if (nargs < min_nargs)
+  {
+    err_ << call.func << "() requires at least " << min_nargs << " argument ("; // TODO plural
+    err_ << nargs << " provided)" << std::endl;
+    return false;
+  }
+  else if (nargs > max_nargs)
+  {
+    err_ << call.func << "() can only take up to " << max_nargs << " arguments (";
+    err_ << nargs << " provided)" << std::endl;
+    return false;
+  }
+  return true;
+}
+
+bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool want_literal)
+{
+  if (!call.vargs)
+    return false;
+
+  auto &arg = *call.vargs->at(arg_num);
+  if (want_literal && (!arg.is_literal || arg.type.type != type))
+  {
+    err_ << call.func << "() expects a " << type << " literal";
+    err_ << " (" << arg.type.type << " provided)" << std::endl;
+    return false;
+  }
+  else if (is_final_pass() && arg.type.type != type) {
+    err_ << call.func << "() only supports " << type << " arguments";
+    err_ << " (" << arg.type.type << " provided)" << std::endl;
+    return false;
+  }
+  return true;
 }
 
 } // namespace ast

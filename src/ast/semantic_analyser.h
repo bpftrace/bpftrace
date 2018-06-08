@@ -51,6 +51,11 @@ private:
   bool is_final_pass() const;
   std::string get_cast_type(Expression *expr);
 
+  bool check_assignment(const Call &call, bool want_map, bool want_var);
+  bool check_nargs(const Call &call, int expected_nargs);
+  bool check_varargs(const Call &call, int min_nargs, int max_nargs);
+  bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
+
   Probe *probe_;
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;

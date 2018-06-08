@@ -222,6 +222,8 @@ TEST(semantic_analyser, printf)
   test("kprobe:f { printf(1234) }", 1);
   test("kprobe:f { printf() }", 1);
   test("kprobe:f { $fmt = \"mystring\"; printf($fmt) }", 1);
+  test("kprobe:f { @x = printf(\"hi\") }", 1);
+  test("kprobe:f { $x = printf(\"hi\") }", 1);
 }
 
 TEST(semantic_analyser, printf_format_int)

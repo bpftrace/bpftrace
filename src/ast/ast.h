@@ -17,10 +17,12 @@ public:
 };
 
 class Map;
+class Variable;
 class Expression : public Node {
 public:
   SizedType type;
   Map *map = nullptr; // Only set when this expression is assigned to a map
+  Variable *var = nullptr; // Set when this expression is assigned to a variable
   bool is_literal = false;
   bool is_variable = false;
 };
@@ -139,7 +141,9 @@ public:
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var, Expression *expr) : var(var), expr(expr) { }
+  AssignVarStatement(Variable *var, Expression *expr) : var(var), expr(expr) {
+    expr->var = var;
+  }
   Variable *var;
   Expression *expr;
 
