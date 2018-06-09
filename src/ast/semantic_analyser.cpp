@@ -95,10 +95,14 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "delete") {
-    check_assignment(call, true, false);
-    check_nargs(call, 0);
+    check_assignment(call, false, false);
+    if (check_nargs(call, 1)) {
+      auto &arg = *call.vargs->at(0);
+      if (!arg.is_map)
+        err_ << "delete() expects a map to be provided" << std::endl;
+    }
 
-    call.type = SizedType(Type::del, 0);
+    call.type = SizedType(Type::none, 0);
   }
   else if (call.func == "str" || call.func == "sym" || call.func == "usym") {
     check_nargs(call, 1);
@@ -324,8 +328,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type &&
-             assignment.expr->type.type != Type::del) {
+    else if (search->second.type != assignment.expr->type.type) {
       err_ << "Type mismatch for " << map_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen map already contains a value of type '";
@@ -367,8 +370,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type &&
-             assignment.expr->type.type != Type::del) {
+    else if (search->second.type != assignment.expr->type.type) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen variable already contains a value of type '";

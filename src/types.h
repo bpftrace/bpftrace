@@ -14,7 +14,6 @@ const int STRING_SIZE = 64;
 enum class Type
 {
   none,
-  del,
   integer,
   quantize,
   count,

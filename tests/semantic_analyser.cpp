@@ -80,7 +80,7 @@ TEST(semantic_analyser, builtin_functions)
 {
   test("kprobe:f { @x = quantize(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
-  test("kprobe:f { @x = delete() }", 0);
+  test("kprobe:f { @x = 1; delete(@x) }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
@@ -116,7 +116,6 @@ TEST(semantic_analyser, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", 1);
   test("kprobe:f { @x = 1; @x = quantize(0); }", 1);
-  test("kprobe:f { @x = 1; @x = delete(); }", 0);
 }
 
 TEST(semantic_analyser, call_quantize)
@@ -135,9 +134,11 @@ TEST(semantic_analyser, call_count)
 
 TEST(semantic_analyser, call_delete)
 {
-  test("kprobe:f { @x = delete(); }", 0);
-  test("kprobe:f { @x = delete(1); }", 1);
+  test("kprobe:f { @x = 1; delete(@x); }", 0);
+  test("kprobe:f { delete(1); }", 1);
   test("kprobe:f { delete(); }", 1);
+  test("kprobe:f { @y = delete(@x); }", 1);
+  test("kprobe:f { $y = delete(@x); }", 1);
 }
 
 TEST(semantic_analyser, call_str)

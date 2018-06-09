@@ -38,5 +38,5 @@ kprobe:sys_execve
 
 END
 {
-	@epoch = delete();
+	delete(@epoch);
 }

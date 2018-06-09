@@ -138,7 +138,8 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "delete")
   {
-    Map &map = *call.map;
+    auto &arg = *call.vargs->at(0);
+    auto &map = static_cast<Map&>(arg);
     AllocaInst *key = getMapKey(map);
     b_.CreateMapDeleteElem(map, key);
     b_.CreateLifetimeEnd(key);
