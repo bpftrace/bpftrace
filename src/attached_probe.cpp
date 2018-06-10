@@ -162,7 +162,7 @@ static unsigned kernel_version(int attempt)
       uname(&utsname);
       unsigned x, y, z;
       sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
-      return (x << 16) + (y << 8) + z;
+      return KERNEL_VERSION(x, y, z);
     case 2:
       // try to get the definition of LINUX_VERSION_CODE at runtime.
       // needed if bpftrace is compiled on a different linux version than it's used on.
