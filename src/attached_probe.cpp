@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <fstream>
 #include <iostream>
 #include <regex>
 #include <sys/utsname.h>
@@ -161,7 +162,23 @@ static unsigned kernel_version(int attempt)
       uname(&utsname);
       unsigned x, y, z;
       sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
-      return (x << 16) + (y << 8) + z;
+      return KERNEL_VERSION(x, y, z);
+    case 2:
+      // try to get the definition of LINUX_VERSION_CODE at runtime.
+      // needed if bpftrace is compiled on a different linux version than it's used on.
+      // e.g. if built with docker.
+      // the reason case 0 doesn't work for this is because it uses the preprocessor directive,
+      // which is by definition a compile-time constant
+      std::ifstream linux_version_header{"/usr/include/linux/version.h"};
+      const std::string content{std::istreambuf_iterator<char>(linux_version_header),
+                                std::istreambuf_iterator<char>()};
+      const std::regex regex{"#define\\s+LINUX_VERSION_CODE\\s+(\\d+)"};
+      std::smatch match;
+
+      if (std::regex_search(content.begin(), content.end(), match, regex))
+        return static_cast<unsigned>(std::stoi(match[1]));
+
+      return 0;
   }
 }
 
@@ -182,7 +199,7 @@ void AttachedProbe::load_prog()
   dup2(new_stderr, 2);
   close(new_stderr);
 
-  for (int attempt=0; attempt<2; attempt++)
+  for (int attempt=0; attempt<3; attempt++)
   {
     progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
