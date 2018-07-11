@@ -16,6 +16,8 @@
 
 namespace bpftrace {
 
+class BpfOrc;
+
 class BPFtrace
 {
 public:
@@ -23,14 +25,13 @@ public:
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
-  int run();
+  int run(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr) const;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
-  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
   std::map<std::string, Struct> structs_;
   std::vector<std::tuple<std::string, std::vector<SizedType>>> printf_args_;
   std::unique_ptr<IMap> stackid_map_;
@@ -51,7 +52,7 @@ private:
   int ncpus_;
   int online_cpus_;
 
-  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe);
+  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();
   void poll_perf_events(int epollfd, int timeout=-1);
   int print_map(IMap &map);

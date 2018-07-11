@@ -1,5 +1,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "bpforc.h"
 #include "bpftrace.h"
 #include "codegen_llvm.h"
 #include "driver.h"
@@ -11,6 +12,24 @@ namespace test {
 namespace codegen {
 
 using ::testing::_;
+
+TEST(codegen, populate_sections)
+{
+  BPFtrace bpftrace;
+  Driver driver;
+
+  ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ASSERT_EQ(semantics.analyse(), 0);
+  std::stringstream out;
+  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  auto bpforc = codegen.compile(true, out);
+
+  // Check sections are populated
+  ASSERT_EQ(bpforc->sections_.size(), 2);
+  ASSERT_EQ(bpforc->sections_.count("s_kprobe:foo"), 1);
+  ASSERT_EQ(bpforc->sections_.count("s_kprobe:bar"), 1);
+}
 
 std::string header = R"HEAD(; ModuleID = 'bpftrace'
 source_filename = "bpftrace"
@@ -33,7 +52,7 @@ void test(const std::string &input, const std::string expected_output)
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  ASSERT_EQ(codegen.compile(true, out), 0);
+  codegen.compile(true, out);
 
   std::string full_expected_output = header + expected_output;
   EXPECT_EQ(full_expected_output, out.str());

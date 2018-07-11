@@ -12,7 +12,7 @@ bpf_prog_type progtype(ProbeType t);
 class AttachedProbe
 {
 public:
-  AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &func);
+  AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe& operator=(const AttachedProbe &) = delete;
@@ -29,7 +29,7 @@ private:
   void attach_profile();
 
   Probe &probe_;
-  std::tuple<uint8_t *, uintptr_t> &func_;
+  std::tuple<uint8_t *, uintptr_t> func_;
   std::vector<int> perf_event_fds_;
   int progfd_;
 };

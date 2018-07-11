@@ -1,9 +1,9 @@
+#include "bpforc.h"
 #include "codegen_llvm.h"
 #include "ast.h"
 #include "parser.tab.hh"
 #include "arch/arch.h"
 
-#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -562,29 +562,6 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   return b_.CreateLoad(result);
 }
 
-class BPFtraceMemoryManager : public SectionMemoryManager
-{
-public:
-  explicit BPFtraceMemoryManager(std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections)
-    : sections_(sections) { }
-  uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName) override
-  {
-    uint8_t *addr = SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID, SectionName);
-    sections_[SectionName.str()] = std::make_tuple(addr, Size);
-    return addr;
-  }
-
-  uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName, bool isReadOnly) override
-  {
-    uint8_t *addr = SectionMemoryManager::allocateDataSection(Size, Alignment, SectionID, SectionName, isReadOnly);
-    sections_[SectionName.str()] = std::make_tuple(addr, Size);
-    return addr;
-  }
-
-private:
-  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
-};
-
 void CodegenLLVM::createLog2Function()
 {
   // log2(int n)
@@ -666,7 +643,7 @@ void CodegenLLVM::createStrcmpFunction()
   b_.CreateRet(b_.getInt1(0));
 }
 
-int CodegenLLVM::compile(bool debug, std::ostream &out)
+std::unique_ptr<BpfOrc> CodegenLLVM::compile(bool debug, std::ostream &out)
 {
   createLog2Function();
   createStrcmpFunction();
@@ -682,11 +659,8 @@ int CodegenLLVM::compile(bool debug, std::ostream &out)
 
   std::string error;
   const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
-  if (!target) {
-    std::cerr << "Could not create LLVM target" << std::endl;
-    std::cerr << error << std::endl;
-    abort();
-  }
+  if (!target)
+    throw new std::runtime_error("Could not create LLVM target " + error);
 
   TargetOptions opt;
   auto RM = Reloc::Model();
@@ -714,12 +688,10 @@ int CodegenLLVM::compile(bool debug, std::ostream &out)
     module_->print(llvm_ostream, nullptr, false, true);
   }
 
-  EngineBuilder builder(move(module_));
-  builder.setMCJITMemoryManager(std::make_unique<BPFtraceMemoryManager>(bpftrace_.sections_));
-  ee_ = std::unique_ptr<ExecutionEngine>(builder.create());
-  ee_->finalizeObject();
+  auto bpforc = std::make_unique<BpfOrc>(targetMachine);
+  bpforc->compileModule(move(module_));
 
-  return 0;
+  return move(bpforc);
 }
 
 } // namespace ast

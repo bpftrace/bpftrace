@@ -1,6 +1,7 @@
 #include <iostream>
 #include <signal.h>
 
+#include "bpforc.h"
 #include "bpftrace.h"
 #include "codegen_llvm.h"
 #include "driver.h"
@@ -83,9 +84,7 @@ int main(int argc, char *argv[])
     return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  err = llvm.compile(debug);
-  if (err)
-    return err;
+  auto bpforc = llvm.compile(debug);
 
   if (debug)
     return 0;
@@ -106,7 +105,7 @@ int main(int argc, char *argv[])
   else
     std::cout << "Attaching " << bpftrace.num_probes() << " probes..." << std::endl;
 
-  err = bpftrace.run();
+  err = bpftrace.run(move(bpforc));
   if (err)
     return err;
 

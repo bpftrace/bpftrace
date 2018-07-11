@@ -9,6 +9,7 @@
 #include "bcc_syms.h"
 #include "perf_reader.h"
 
+#include "bpforc.h"
 #include "bpftrace.h"
 #include "attached_probe.h"
 #include "triggers.h"
@@ -195,10 +196,10 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
   printf("Lost %lu events\n", lost);
 }
 
-std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
+std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
 {
-  auto func = sections_.find("s_" + probe.prog_name);
-  if (func == sections_.end())
+  auto func = bpforc.sections_.find("s_" + probe.prog_name);
+  if (func == bpforc.sections_.end())
   {
     std::cerr << "Code not generated for probe: " << probe.name << std::endl;
     return nullptr;
@@ -214,11 +215,11 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe)
   return nullptr;
 }
 
-int BPFtrace::run()
+int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
   for (Probe &probe : special_probes_)
   {
-    auto attached_probe = attach_probe(probe);
+    auto attached_probe = attach_probe(probe, *bpforc.get());
     if (attached_probe == nullptr)
       return -1;
     special_attached_probes_.push_back(std::move(attached_probe));
@@ -232,7 +233,7 @@ int BPFtrace::run()
 
   for (Probe &probe : probes_)
   {
-    auto attached_probe = attach_probe(probe);
+    auto attached_probe = attach_probe(probe, *bpforc.get());
     if (attached_probe == nullptr)
       return -1;
     attached_probes_.push_back(std::move(attached_probe));

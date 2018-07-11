@@ -16,7 +16,7 @@ add_executable(bpftrace
 
 target_link_libraries(bpftrace arch ast parser)
 
-llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
+llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit orcjit)
 target_link_libraries(bpftrace ${llvm_libs})
 
 add_dependencies(bpftrace bcc-build)

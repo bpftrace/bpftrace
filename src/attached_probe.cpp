@@ -42,7 +42,7 @@ bpf_prog_type progtype(ProbeType t)
 }
 
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> &func)
+AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func)
   : probe_(probe), func_(func)
 {
   load_prog();

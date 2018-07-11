@@ -52,7 +52,7 @@ public:
 
   void createLog2Function();
   void createStrcmpFunction();
-  int compile(bool debug=false, std::ostream &out=std::cerr);
+  std::unique_ptr<BpfOrc> compile(bool debug=false, std::ostream &out=std::cerr);
 
 private:
   Node *root_;
