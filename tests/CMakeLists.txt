@@ -5,12 +5,14 @@ add_compile_options("-Wno-switch-enum")
 add_executable(bpftrace_test
   ast.cpp
   bpftrace.cpp
+  clang_parser.cpp
   codegen.cpp
   main.cpp
   parser.cpp
   semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
+  ${CMAKE_SOURCE_DIR}/src/clang_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp

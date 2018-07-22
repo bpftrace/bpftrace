@@ -3,6 +3,7 @@
 
 #include "bpforc.h"
 #include "bpftrace.h"
+#include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "printer.h"
@@ -73,6 +74,9 @@ int main(int argc, char *argv[])
     ast::Printer p(std::cout);
     driver.root_->accept(p);
   }
+
+  ClangParser clang;
+  clang.parse(driver.root_, bpftrace.structs_);
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   err = semantics.analyse();

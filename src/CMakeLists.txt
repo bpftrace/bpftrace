@@ -1,6 +1,7 @@
 add_executable(bpftrace
   attached_probe.cpp
   bpftrace.cpp
+  clang_parser.cpp
   driver.cpp
   fake_map.cpp
   main.cpp

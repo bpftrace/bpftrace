@@ -13,7 +13,7 @@ class AttachedProbe
 {
 public:
   AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func);
-  ~AttachedProbe();
+  virtual ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe& operator=(const AttachedProbe &) = delete;
 
