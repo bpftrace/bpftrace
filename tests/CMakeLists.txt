@@ -1,7 +1,3 @@
-if (STATIC_LINKING)
-  set(CMAKE_EXE_LINKER_FLAGS "-static")
-endif()
-
 add_compile_options("-Wno-undef")
 add_compile_options("-Wno-switch-default")
 add_compile_options("-Wno-switch-enum")
@@ -21,19 +17,10 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/ast.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/printer.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
 )
 
-target_link_libraries(bpftrace_test arch parser)
+target_link_libraries(bpftrace_test arch ast parser)
 
-llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit)
-target_link_libraries(bpftrace_test ${llvm_libs})
-
-add_dependencies(bpftrace_test bcc-build)
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)

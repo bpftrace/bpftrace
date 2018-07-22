@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(bpftrace)
 
+set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
+
 add_compile_options("-std=c++14")
 add_compile_options("-Wno-format-security")
 #add_compile_options("-Wall")
@@ -39,6 +41,13 @@ else()
     )
 endif()
 
+if (STATIC_LINKING)
+  set(CMAKE_EXE_LINKER_FLAGS "-static")
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  set(CMAKE_LINK_SEARCH_START_STATIC TRUE)
+  set(CMAKE_LINK_SEARCH_END_STATIC TRUE)
+endif()
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 find_package(LibElf REQUIRED)
 include_directories(${LIBELF_INCLUDE_DIRS})
@@ -51,11 +60,12 @@ add_flex_bison_dependency(flex_lexer bison_parser)
 add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
 target_include_directories(parser PUBLIC src src/ast ${CMAKE_BINARY_DIR})
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM REQUIRED)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
+find_package(Clang REQUIRED)
+include_directories(${CLANG_INCLUDE_DIRS})
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
