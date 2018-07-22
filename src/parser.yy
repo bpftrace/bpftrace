@@ -65,7 +65,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   BXOR     "^"
   LNOT     "!"
   BNOT     "~"
-  INCLUDE  "#include"
   DOT      "."
   PTR      "->"
 ;
@@ -73,14 +72,14 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> BUILTIN "builtin"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
-%token <std::string> HEADER "header"
+%token <std::string> CPREPROC "preprocessor directive"
+%token <std::string> STRUCT "struct"
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <int> INT "integer"
 
-%type <ast::IncludeList *> includes
-%type <ast::Include *> include
+%type <std::string> c_definitions
 %type <ast::ProbeList *> probes
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
@@ -114,16 +113,13 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %%
 
-program : includes probes { driver.root_ = new ast::Program($1, $2); }
+program : c_definitions probes { driver.root_ = new ast::Program($1, $2); }
         ;
 
-includes : includes include { $$ = $1; $1->push_back($2); }
-         |                  { $$ = new ast::IncludeList; }
-         ;
-
-include : INCLUDE STRING { $$ = new ast::Include($2, false); }
-        | INCLUDE HEADER { $$ = new ast::Include($2.substr(1, $2.size()-2), true); }
-        ;
+c_definitions : CPREPROC c_definitions { $$ = $1 + "\n" + $2; }
+              | STRUCT c_definitions   { $$ = $1 + "\n" + $2; }
+              |                        { $$ = std::string(); }
+              ;
 
 probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }

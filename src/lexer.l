@@ -9,7 +9,8 @@
 #define yywrap(x) 1
 
 static bpftrace::location loc;
-static std::string string_buffer;
+static std::string buffer;
+static int open_brackets;
 
 #define YY_USER_ACTION loc.columns(yyleng);
 #define yyterminate() return bpftrace::Parser::make_END(loc)
@@ -25,8 +26,8 @@ hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
-header <(\\.|[_\-\./a-zA-Z0-9])*>
 %x STR
+%x STRUCT
 
 %%
 
@@ -40,9 +41,7 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
 
 pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
                           return Parser::make_BUILTIN(yytext, loc); }
-{ident}                 { return Parser::make_IDENT(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
-{header}                { return Parser::make_HEADER(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
@@ -75,17 +74,17 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 "^"                     { return Parser::make_BXOR(loc); }
 "!"                     { return Parser::make_LNOT(loc); }
 "~"                     { return Parser::make_BNOT(loc); }
-"#include"              { return Parser::make_INCLUDE(loc); }
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
+"#".*                   { return Parser::make_CPREPROC(yytext, loc); }
 
-\"                      { BEGIN(STR); string_buffer.clear(); }
-<STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(string_buffer, loc); }
-<STR>[^\\\n\"]+         { string_buffer += std::string(yytext); }
-<STR>\\n                { string_buffer += std::string("\n"); }
-<STR>\\t                { string_buffer += std::string("\t"); }
-<STR>\\\"               { string_buffer += std::string("\""); }
-<STR>\\\\               { string_buffer += std::string("\\"); }
+\"                      { BEGIN(STR); buffer.clear(); }
+<STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(buffer, loc); }
+<STR>[^\\\n\"]+         { buffer += std::string(yytext); }
+<STR>\\n                { buffer += std::string("\n"); }
+<STR>\\t                { buffer += std::string("\t"); }
+<STR>\\\"               { buffer += std::string("\""); }
+<STR>\\\\               { buffer += std::string("\\"); }
 <STR>\n                 { driver.error(loc, std::string("unterminated string")); }
 <STR><<EOF>>            { driver.error(loc, std::string("unterminated string")); }
 <STR>\\.                { driver.error(loc, std::string("invalid escape character '") +
@@ -93,6 +92,22 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 <STR>.                  { driver.error(loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
 
+struct                  { BEGIN(STRUCT); buffer = std::string(yytext); open_brackets = 0; }
+<STRUCT>"{"             { BEGIN(STRUCT); buffer += std::string(yytext); open_brackets++; }
+<STRUCT>"}"             { buffer += std::string(yytext);
+                          if (open_brackets == 1)
+                          {
+                            BEGIN(INITIAL); return Parser::make_STRUCT(buffer, loc);
+                          }
+                          else
+                          {
+                            open_brackets--;
+                          }
+                        }
+<STRUCT>\n              { buffer += std::string(yytext); }
+<STRUCT>.               { buffer += std::string(yytext); }
+
+{ident}                 { return Parser::make_IDENT(yytext, loc); }
 .                       { driver.error(loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
 

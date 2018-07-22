@@ -199,22 +199,11 @@ public:
 };
 using ProbeList = std::vector<Probe *>;
 
-class Include : public Node {
-public:
-  explicit Include(const std::string &file, bool system_header)
-    : file(file), system_header(system_header) { }
-  std::string file;
-  bool system_header;
-
-  void accept(Visitor &v) override;
-};
-using IncludeList = std::vector<Include *>;
-
 class Program : public Node {
 public:
-  Program(IncludeList *includes, ProbeList *probes)
-    : includes(includes), probes(probes) { }
-  IncludeList *includes;
+  Program(const std::string &c_definitions, ProbeList *probes)
+    : c_definitions(c_definitions), probes(probes) { }
+  std::string c_definitions;
   ProbeList *probes;
 
   void accept(Visitor &v) override;
@@ -239,7 +228,6 @@ public:
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
-  virtual void visit(Include &include) = 0;
   virtual void visit(Program &program) = 0;
 };
 

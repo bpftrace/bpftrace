@@ -326,9 +326,10 @@ TEST(Parser, short_map_name)
 
 TEST(Parser, include)
 {
-  test("#include <stdio.h> kprobe:sys_read { @x = 1 }",
+  test("#include <stdio.h>\nkprobe:sys_read { @x = 1 }",
+      "#include <stdio.h>\n"
+      "\n"
       "Program\n"
-      " #include <stdio.h>\n"
       " kprobe:sys_read\n"
       "  =\n"
       "   map: @x\n"
@@ -337,9 +338,10 @@ TEST(Parser, include)
 
 TEST(Parser, include_quote)
 {
-  test("#include \"stdio.h\" kprobe:sys_read { @x = 1 }",
+  test("#include \"stdio.h\"\nkprobe:sys_read { @x = 1 }",
+      "#include \"stdio.h\"\n"
+      "\n"
       "Program\n"
-      " #include \"stdio.h\"\n"
       " kprobe:sys_read\n"
       "  =\n"
       "   map: @x\n"
@@ -348,11 +350,12 @@ TEST(Parser, include_quote)
 
 TEST(Parser, include_multiple)
 {
-  test("#include <stdio.h> #include \"blah\" #include <foo.h> kprobe:sys_read { @x = 1 }",
+  test("#include <stdio.h>\n#include \"blah\"\n#include <foo.h>\nkprobe:sys_read { @x = 1 }",
+      "#include <stdio.h>\n"
+      "#include \"blah\"\n"
+      "#include <foo.h>\n"
+      "\n"
       "Program\n"
-      " #include <stdio.h>\n"
-      " #include \"blah\"\n"
-      " #include <foo.h>\n"
       " kprobe:sys_read\n"
       "  =\n"
       "   map: @x\n"
@@ -505,6 +508,26 @@ TEST(Parser, field_access_builtin)
       "   dereference\n"
       "    map: @x\n"
       "   count\n");
+}
+
+TEST(Parser, cstruct)
+{
+  test("struct Foo { int x, y; char *str; } kprobe:sys_read { 1; }",
+      "struct Foo { int x, y; char *str; }\n"
+      "\n"
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, cstruct_nested)
+{
+  test("struct Foo { struct { int x; } bar; } kprobe:sys_read { 1; }",
+      "struct Foo { struct { int x; } bar; }\n"
+      "\n"
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  int: 1\n");
 }
 
 } // namespace parser

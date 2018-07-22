@@ -167,23 +167,15 @@ void Printer::visit(Probe &probe)
   --depth_;
 }
 
-void Printer::visit(Include &include)
-{
-  std::string indent(depth_, ' ');
-  if (include.system_header)
-    out_ << indent << "#include <" << include.file << ">" << std::endl;
-  else
-    out_ << indent << "#include \"" << include.file << "\"" << std::endl;
-}
-
 void Printer::visit(Program &program)
 {
+  if (program.c_definitions.size() > 0)
+    out_ << program.c_definitions << std::endl;
+
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
 
   ++depth_;
-  for (Include *include : *program.includes)
-    include->accept(*this);
   for (Probe *probe : *program.probes)
     probe->accept(*this);
   --depth_;

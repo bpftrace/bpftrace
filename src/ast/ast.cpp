@@ -68,10 +68,6 @@ void Probe::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void Include::accept(Visitor &v) {
-  v.visit(*this);
-}
-
 void Program::accept(Visitor &v) {
   v.visit(*this);
 }

@@ -410,14 +410,8 @@ void CodegenLLVM::visit(Probe &probe)
   b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 }
 
-void CodegenLLVM::visit(Include &include)
-{
-}
-
 void CodegenLLVM::visit(Program &program)
 {
-  for (Include *include : *program.includes)
-    include->accept(*this);
   for (Probe *probe : *program.probes)
     probe->accept(*this);
 }
