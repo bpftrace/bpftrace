@@ -174,7 +174,6 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "printf")
   {
     ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
-    StructType *printf_struct = StructType::create(module_->getContext(), "printf_t");
     std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // printf ID
     String &fmt = static_cast<String&>(*call.vargs->at(0));
 
@@ -185,7 +184,7 @@ void CodegenLLVM::visit(Call &call)
       llvm::Type *ty = b_.GetType(t);
       elements.push_back(ty);
     }
-    printf_struct->setBody(elements);
+    StructType *printf_struct = StructType::create(elements, "printf_t", true);
     int struct_size = layout_.getTypeAllocSize(printf_struct);
 
     AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");

@@ -71,6 +71,12 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
       case 4:
         ty = getInt32Ty();
         break;
+      case 2:
+        ty = getInt16Ty();
+        break;
+      case 1:
+        ty = getInt8Ty();
+        break;
       default:
         abort();
     }
