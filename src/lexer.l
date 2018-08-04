@@ -85,8 +85,8 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 <STR>\\t                { buffer += std::string("\t"); }
 <STR>\\\"               { buffer += std::string("\""); }
 <STR>\\\\               { buffer += std::string("\\"); }
-<STR>\n                 { driver.error(loc, std::string("unterminated string")); }
-<STR><<EOF>>            { driver.error(loc, std::string("unterminated string")); }
+<STR>\n                 { driver.error(loc, std::string("unterminated string")); BEGIN(INITIAL); }
+<STR><<EOF>>            { driver.error(loc, std::string("unterminated string")); BEGIN(INITIAL); }
 <STR>\\.                { driver.error(loc, std::string("invalid escape character '") +
                                             std::string(yytext) + std::string("'")); }
 <STR>.                  { driver.error(loc, std::string("invalid character '") +

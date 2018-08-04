@@ -530,6 +530,13 @@ TEST(Parser, cstruct_nested)
       "  int: 1\n");
 }
 
+TEST(Parser, unterminated_string)
+{
+  // Make sure parser doesn't get stuck in an infinite loop
+  Driver driver;
+  EXPECT_EQ(driver.parse_str("kprobe:f { \"asdf }"), 1);
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace
