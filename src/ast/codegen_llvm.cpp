@@ -177,19 +177,26 @@ void CodegenLLVM::visit(Call &call)
     std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // printf ID
     String &fmt = static_cast<String&>(*call.vargs->at(0));
 
-    static int printf_id = 0;
-    auto args = std::get<1>(bpftrace_.printf_args_.at(printf_id));
-    for (SizedType &t : args)
+    auto &args = std::get<1>(bpftrace_.printf_args_.at(printf_id_));
+    for (Field &arg : args)
     {
-      llvm::Type *ty = b_.GetType(t);
+      llvm::Type *ty = b_.GetType(arg.type);
       elements.push_back(ty);
     }
-    StructType *printf_struct = StructType::create(elements, "printf_t", true);
+    StructType *printf_struct = StructType::create(elements, "printf_t", false);
     int struct_size = layout_.getTypeAllocSize(printf_struct);
 
-    AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
+    auto *struct_layout = layout_.getStructLayout(printf_struct);
+    for (int i=0; i<args.size(); i++)
+    {
+      Field &arg = args[i];
+      arg.offset = struct_layout->getElementOffset(i+1); // +1 for the printf_id field
+    }
 
-    b_.CreateStore(b_.getInt64(printf_id), printf_args);
+    AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
+    b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
+
+    b_.CreateStore(b_.getInt64(printf_id_), printf_args);
     for (int i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
@@ -201,7 +208,7 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateStore(expr_, offset);
     }
 
-    printf_id++;
+    printf_id_++;
     b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
     b_.CreateLifetimeEnd(printf_args);
     expr_ = nullptr;

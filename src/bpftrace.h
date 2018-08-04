@@ -33,7 +33,7 @@ public:
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
-  std::vector<std::tuple<std::string, std::vector<SizedType>>> printf_args_;
+  std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
   std::unique_ptr<IMap> stackid_map_;
   std::unique_ptr<IMap> perf_event_map_;
 

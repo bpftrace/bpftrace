@@ -137,9 +137,9 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass()) {
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
-        std::vector<SizedType> args;
+        std::vector<Field> args;
         for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
-          args.push_back((*iter)->type);
+          args.push_back({ .type = (*iter)->type });
         }
         err_ << verify_format_string(fmt.str, args);
 

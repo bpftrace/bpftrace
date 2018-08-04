@@ -5,6 +5,8 @@
 
 namespace bpftrace {
 
-std::string verify_format_string(const std::string &fmt, std::vector<SizedType> args);
+struct Field;
+
+std::string verify_format_string(const std::string &fmt, std::vector<Field> args);
 
 } // namespace bpftrace

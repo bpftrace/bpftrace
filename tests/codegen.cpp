@@ -24,12 +24,44 @@ TEST(codegen, populate_sections)
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  auto bpforc = codegen.compile(true, out);
+  auto bpforc = codegen.compile();
 
   // Check sections are populated
-  ASSERT_EQ(bpforc->sections_.size(), 2);
-  ASSERT_EQ(bpforc->sections_.count("s_kprobe:foo"), 1);
-  ASSERT_EQ(bpforc->sections_.count("s_kprobe:bar"), 1);
+  EXPECT_EQ(bpforc->sections_.size(), 2);
+  EXPECT_EQ(bpforc->sections_.count("s_kprobe:foo"), 1);
+  EXPECT_EQ(bpforc->sections_.count("s_kprobe:bar"), 1);
+}
+
+TEST(codegen, printf_offsets)
+{
+  BPFtrace bpftrace;
+  Driver driver;
+
+  ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
+  ClangParser clang;
+  clang.parse(driver.root_, bpftrace.structs_);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ASSERT_EQ(semantics.analyse(), 0);
+  ASSERT_EQ(semantics.create_maps(true), 0);
+  std::stringstream out;
+  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  auto bpforc = codegen.compile();
+
+  EXPECT_EQ(bpftrace.printf_args_.size(), 1);
+  auto &fmt = std::get<0>(bpftrace.printf_args_[0]);
+  auto &args = std::get<1>(bpftrace.printf_args_[0]);
+
+  EXPECT_EQ(fmt, "%c %u\n");
+
+  EXPECT_EQ(args.size(), 2);
+
+  EXPECT_EQ(args[0].type.type, Type::integer);
+  EXPECT_EQ(args[0].type.size, 1);
+  EXPECT_EQ(args[0].offset, 8);
+
+  EXPECT_EQ(args[1].type.type, Type::integer);
+  EXPECT_EQ(args[1].type.size, 4);
+  EXPECT_EQ(args[1].offset, 12);
 }
 
 std::string header = R"HEAD(; ModuleID = 'bpftrace'
@@ -921,9 +953,9 @@ attributes #1 = { argmemonly nounwind }
 
 TEST(codegen, call_printf)
 {
-  test("kprobe:f { printf(\"hello\\n\") }",
+  test("struct Foo { char c; long l; } kprobe:f { $foo = (Foo*)0; printf(\"%c %lu\\n\", $foo->c, $foo->l) }",
 
-R"EXPECTED(%printf_t = type { i64 }
+R"EXPECTED(%printf_t = type { i64, i8, i64 }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -933,16 +965,35 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
 entry:
+  %Foo.l = alloca i64, align 8
+  %Foo.c = alloca i8, align 1
   %printf_args = alloca %printf_t, align 8
   %1 = bitcast %printf_t* %printf_args to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 0, %printf_t* %printf_args, align 8
-  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 8)
+  %2 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 16, i32 8, i1 false)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %Foo.c)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %Foo.c, i64 1, i64 0)
+  %3 = load i8, i8* %Foo.c, align 1
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %Foo.c)
+  %4 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1
+  store i8 %3, i8* %4, align 8
+  %5 = bitcast i64* %Foo.l to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.l, i64 8, i64 8)
+  %6 = load i64, i64* %Foo.l, align 8
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  %7 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 2
+  store i64 %6, i64* %7, align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 20)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

@@ -2,10 +2,11 @@
 
 #include "printf.h"
 #include "printf_format_types.h"
+#include "struct.h"
 
 namespace bpftrace {
 
-std::string verify_format_string(const std::string &fmt, std::vector<SizedType> args)
+std::string verify_format_string(const std::string &fmt, std::vector<Field> args)
 {
   std::stringstream message;
   const std::regex re("%-?[0-9]*[a-zA-Z]+");
@@ -31,7 +32,7 @@ std::string verify_format_string(const std::string &fmt, std::vector<SizedType> 
   auto token_iter = tokens_begin;
   for (int i=0; i<num_args; i++, token_iter++)
   {
-    Type arg_type = args.at(i).type;
+    Type arg_type = args.at(i).type.type;
     if (arg_type == Type::sym || arg_type == Type::usym)
       arg_type = Type::string; // Symbols should be printed as strings
     int offset = 1;

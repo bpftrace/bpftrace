@@ -128,7 +128,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
-  auto arg_data = static_cast<uint8_t*>(data) + sizeof(uint64_t);
+  auto arg_data = static_cast<uint8_t*>(data);
 
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
@@ -136,28 +136,43 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   std::vector<std::unique_ptr<char>> resolved_symbols;
   for (auto arg : args)
   {
-    switch (arg.type)
+    switch (arg.type.type)
     {
       case Type::integer:
-        arg_values.push_back(*(uint64_t*)arg_data);
+        switch (arg.type.size)
+        {
+          case 8:
+            arg_values.push_back(*(uint64_t*)(arg_data+arg.offset));
+            break;
+          case 4:
+            arg_values.push_back(*(uint32_t*)(arg_data+arg.offset));
+            break;
+          case 2:
+            arg_values.push_back(*(uint16_t*)(arg_data+arg.offset));
+            break;
+          case 1:
+            arg_values.push_back(*(uint8_t*)(arg_data+arg.offset));
+            break;
+          default:
+            abort();
+        }
         break;
       case Type::string:
-        arg_values.push_back((uint64_t)arg_data);
+        arg_values.push_back((uint64_t)(arg_data+arg.offset));
         break;
       case Type::sym:
         resolved_symbols.emplace_back(strdup(
-              bpftrace->resolve_sym(*(uint64_t*)arg_data).c_str()));
+              bpftrace->resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       case Type::usym:
         resolved_symbols.emplace_back(strdup(
-              bpftrace->resolve_usym(*(uint64_t*)arg_data).c_str()));
+              bpftrace->resolve_usym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       default:
         abort();
     }
-    arg_data +=  arg.size;
   }
 
   switch (args.size())
