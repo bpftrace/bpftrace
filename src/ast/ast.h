@@ -110,8 +110,10 @@ public:
 
 class Cast : public Expression {
 public:
-  Cast(const std::string &type, Expression *expr) : cast_type(type), expr(expr) { }
+  Cast(const std::string &type, bool is_pointer, Expression *expr)
+    : cast_type(type), is_pointer(is_pointer), expr(expr) { }
   std::string cast_type;
+  bool is_pointer;
   Expression *expr;
 
   void accept(Visitor &v) override;

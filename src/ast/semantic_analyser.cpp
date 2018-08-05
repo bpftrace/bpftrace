@@ -231,22 +231,31 @@ void SemanticAnalyser::visit(Unop &unop)
 {
   unop.expr->accept(*this);
 
+  SizedType &type = unop.expr->type;
   if (is_final_pass() &&
-      unop.expr->type.type != Type::integer &&
-      unop.expr->type.type != Type::cast) {
+      !(type.type == Type::integer) &&
+      !(type.type == Type::cast && unop.op == Parser::token::MUL)) {
     err_ << "The " << opstr(unop) << " operator can not be used on expressions of type '"
-         << unop.expr->type << "'" << std::endl;
+         << type << "'" << std::endl;
   }
 
-  if (unop.op == Parser::token::MUL && unop.expr->type.type == Type::cast) {
-    std::string cast_type = unop.expr->type.cast_type;
-    if (cast_type.back() == '*') {
-      cast_type.pop_back();
-      unop.type = SizedType(Type::cast, 8, cast_type);
+  if (unop.op == Parser::token::MUL) {
+    if (type.type == Type::cast) {
+      if (type.is_pointer) {
+        if (bpftrace_.structs_.count(type.cast_type) == 0) {
+          err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
+          return;
+        }
+        int cast_size = bpftrace_.structs_[type.cast_type].size;
+        unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+      }
+      else {
+        err_ << "Can not dereference struct/union of type '" << type.cast_type << "'. "
+             << "It is not a pointer." << std::endl;
+      }
     }
-    else {
-      err_ << "Can not dereference struct/union of type '" << cast_type << "'. "
-           << "It is not a pointer." << std::endl;
+    else if (type.type == Type::integer) {
+      unop.type = SizedType(Type::integer, type.size);
     }
   }
   else {
@@ -258,30 +267,35 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
 
-  if (acc.expr->type.type != Type::cast) {
+  SizedType &type = acc.expr->type;
+  if (type.type != Type::cast) {
     if (is_final_pass()) {
       err_ << "Can not access field '" << acc.field
-           << "' on expression of type '" << acc.expr->type
+           << "' on expression of type '" << type
            << "'" << std::endl;
     }
     return;
   }
 
-  std::string cast_type = acc.expr->type.cast_type;
-  if (cast_type.back() == '*') {
+  if (type.is_pointer) {
     err_ << "Can not access field '" << acc.field << "' on type '"
-         << cast_type << "'. Try dereferencing it first, or using '->'"
+         << type.cast_type << "'. Try dereferencing it first, or using '->'"
          << std::endl;
     return;
   }
+  if (bpftrace_.structs_.count(type.cast_type) == 0) {
+    err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
+    return;
+  }
 
-  auto fields = bpftrace_.structs_[cast_type].fields;
+  auto fields = bpftrace_.structs_[type.cast_type].fields;
   if (fields.count(acc.field) == 0) {
-    err_ << "Struct/union of type '" << cast_type << "' does not contain "
+    err_ << "Struct/union of type '" << type.cast_type << "' does not contain "
          << "a field named '" << acc.field << "'" << std::endl;
   }
   else {
     acc.type = fields[acc.field].type;
+    acc.type.is_internal = type.is_internal;
   }
 }
 
@@ -289,22 +303,20 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
-  std::string cast_type = cast.cast_type;
-  if (cast_type.back() == '*')
-    cast_type.pop_back();
-  if (bpftrace_.structs_.count(cast_type) == 0) {
-    err_ << "Unknown struct/union: '" << cast_type << "'" << std::endl;
+  if (bpftrace_.structs_.count(cast.cast_type) == 0) {
+    err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
     return;
   }
 
   int cast_size;
-  if (cast.cast_type.back() == '*') {
+  if (cast.is_pointer) {
     cast_size = sizeof(uintptr_t);
   }
   else {
     cast_size = bpftrace_.structs_[cast.cast_type].size;
   }
   cast.type = SizedType(Type::cast, cast_size, cast.cast_type);
+  cast.type.is_pointer = cast.is_pointer;
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -338,6 +350,11 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   else {
     // This map hasn't been seen before
     map_val_.insert({map_ident, assignment.expr->type});
+    if (map_val_[map_ident].type == Type::integer) {
+      // Store all integer values as 64-bit in maps, so that there will
+      // be space for any integer to be assigned to the map later
+      map_val_[map_ident].size = 8;
+    }
   }
 
   if (assignment.expr->type.type == Type::cast) {
@@ -351,6 +368,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     }
     else {
       map_val_[map_ident].cast_type = cast_type;
+      map_val_[map_ident].is_internal = true;
     }
   }
 }

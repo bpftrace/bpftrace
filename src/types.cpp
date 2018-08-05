@@ -13,6 +13,8 @@ std::ostream &operator<<(std::ostream &os, Type type)
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
   os << type.type;
+  if (type.is_pointer)
+    os << "*";
   return os;
 }
 

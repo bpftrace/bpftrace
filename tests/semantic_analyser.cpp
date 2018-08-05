@@ -1,6 +1,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "bpftrace.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "semantic_analyser.h"
 
@@ -18,6 +19,9 @@ using ::testing::_;
 void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expected_result=0)
 {
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ClangParser clang;
+  clang.parse(driver.root_, bpftrace.structs_);
 
   std::stringstream out;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
@@ -40,21 +44,7 @@ void test(Driver &driver, const std::string &input, int expected_result=0)
 
 void test(const std::string &input, int expected_result=0)
 {
-  Field field = { SizedType(Type::integer, 8), 0 };
-  Field mystr = { SizedType(Type::string, 8), 8 };
-  Field type2_field_ptr = { SizedType(Type::cast, 8, "type2*"), 16 };
-  Field type2_field = { SizedType(Type::cast, 8, "type2"), 24 };
-
-  Struct type1 = { 16, {{"field", field},
-                        {"mystr", mystr},
-                        {"type2ptr", type2_field_ptr},
-                        {"type2", type2_field}} };
-  Struct type2 = { 8, {{"field", field}} };
-
   BPFtrace bpftrace;
-  bpftrace.structs_["type1"] = type1;
-  bpftrace.structs_["type2"] = type2;
-
   Driver driver;
   test(bpftrace, driver, input, expected_result);
 }
@@ -217,6 +207,34 @@ TEST(semantic_analyser, variable_type)
   EXPECT_EQ(st, assignment->var->type);
 }
 
+TEST(semantic_analyser, map_integer_sizes)
+{
+  Driver driver;
+  std::string structs = "struct type1 { int x; }";
+  test(driver, structs + "kprobe:f { $x = ((type1)0).x; @x = $x; }", 0);
+
+  auto var_assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
+  auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(1));
+  EXPECT_EQ(SizedType(Type::integer, 4), var_assignment->var->type);
+  EXPECT_EQ(SizedType(Type::integer, 8), map_assignment->map->type);
+}
+
+TEST(semantic_analyser, unop_dereference)
+{
+  test("kprobe:f { *0; }", 0);
+  test("struct X { int n; } kprobe:f { $x = (X*)0; *$x; }", 0);
+  test("struct X { int n; } kprobe:f { $x = (X)0; *$x; }", 1);
+  test("kprobe:f { *\"0\"; }", 10);
+}
+
+TEST(semantic_analyser, unop_not)
+{
+  test("kprobe:f { ~0; }", 0);
+  test("struct X { int n; } kprobe:f { $x = (X*)0; ~$x; }", 10);
+  test("struct X { int n; } kprobe:f { $x = (X)0; ~$x; }", 10);
+  test("kprobe:f { ~\"0\"; }", 10);
+}
+
 TEST(semantic_analyser, printf)
 {
   test("kprobe:f { printf(\"hi\") }", 0);
@@ -370,24 +388,28 @@ TEST(semantic_analyser, profile)
 
 TEST(semantic_analyser, variable_cast_types)
 {
-  test("kprobe:f { $x = (type1)cpu; $x = (type1)cpu; }", 0);
-  test("kprobe:f { $x = (type1)cpu; $x = (type2)cpu; }", 1);
+  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { $x = (type1)cpu; $x = (type1)cpu; }", 0);
+  test(structs + "kprobe:f { $x = (type1)cpu; $x = (type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, map_cast_types)
 {
-  test("kprobe:f { @x = (type1)cpu; @x = (type1)cpu; }", 0);
-  test("kprobe:f { @x = (type1)cpu; @x = (type2)cpu; }", 1);
+  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { @x = (type1)cpu; @x = (type1)cpu; }", 0);
+  test(structs + "kprobe:f { @x = (type1)cpu; @x = (type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, variable_casts_are_local)
 {
-  test("kprobe:f { $x = (type1)cpu } kprobe:g { $x = (type2)cpu; }", 0);
+  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { $x = (type1)cpu } kprobe:g { $x = (type2)cpu; }", 0);
 }
 
 TEST(semantic_analyser, map_casts_are_global)
 {
-  test("kprobe:f { @x = (type1)cpu } kprobe:g { @x = (type2)cpu; }", 1);
+  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { @x = (type1)cpu } kprobe:g { @x = (type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, cast_unknown_type)
@@ -397,50 +419,76 @@ TEST(semantic_analyser, cast_unknown_type)
 
 TEST(semantic_analyser, field_access)
 {
-  test("kprobe:f { ((type1)cpu).field }", 0);
-  test("kprobe:f { $x = (type1)cpu; $x.field }", 0);
-  test("kprobe:f { @x = (type1)cpu; @x.field }", 0);
+  std::string structs = "struct type1 { int field; }";
+  test(structs + "kprobe:f { ((type1)cpu).field }", 0);
+  test(structs + "kprobe:f { $x = (type1)cpu; $x.field }", 0);
+  test(structs + "kprobe:f { @x = (type1)cpu; @x.field }", 0);
 }
 
 TEST(semantic_analyser, field_access_wrong_field)
 {
-  test("kprobe:f { ((type1)cpu).blah }", 1);
-  test("kprobe:f { $x = (type1)cpu; $x.blah }", 1);
-  test("kprobe:f { @x = (type1)cpu; @x.blah }", 1);
+  std::string structs = "struct type1 { int field; }";
+  test(structs + "kprobe:f { ((type1)cpu).blah }", 1);
+  test(structs + "kprobe:f { $x = (type1)cpu; $x.blah }", 1);
+  test(structs + "kprobe:f { @x = (type1)cpu; @x.blah }", 1);
 }
 
 TEST(semantic_analyser, field_access_wrong_expr)
 {
-  test("kprobe:f { 1234->field }", 10);
+  std::string structs = "struct type1 { int field; }";
+  test(structs + "kprobe:f { 1234->field }", 10);
 }
 
 TEST(semantic_analyser, field_access_types)
 {
-  test("kprobe:f { ((type1)0).field == 123 }", 0);
-  test("kprobe:f { ((type1)0).field == \"abc\" }", 10);
+  std::string structs = "struct type1 { int field; char mystr[8]; }"
+                        "struct type2 { int field; }";
 
-  test("kprobe:f { ((type1)0).mystr == \"abc\" }", 0);
-  test("kprobe:f { ((type1)0).mystr == 123 }", 10);
+  test(structs + "kprobe:f { ((type1)0).field == 123 }", 0);
+  test(structs + "kprobe:f { ((type1)0).field == \"abc\" }", 10);
 
-  test("kprobe:f { ((type1)0).field == ((type2)0).field }", 0);
-  test("kprobe:f { ((type1)0).mystr == ((type2)0).field }", 10);
+  test(structs + "kprobe:f { ((type1)0).mystr == \"abc\" }", 0);
+  test(structs + "kprobe:f { ((type1)0).mystr == 123 }", 10);
+
+  test(structs + "kprobe:f { ((type1)0).field == ((type2)0).field }", 0);
+  test(structs + "kprobe:f { ((type1)0).mystr == ((type2)0).field }", 10);
 }
 
 TEST(semantic_analyser, field_access_pointer)
 {
-  test("kprobe:f { ((type1*)0)->field }", 0);
-  test("kprobe:f { ((type1*)0).field }", 1);
-  test("kprobe:f { *((type1*)0) }", 0);
+  std::string structs = "struct type1 { int field; }";
+  test(structs + "kprobe:f { ((type1*)0)->field }", 0);
+  test(structs + "kprobe:f { ((type1*)0).field }", 1);
+  test(structs + "kprobe:f { *((type1*)0) }", 0);
 }
 
 TEST(semantic_analyser, field_access_sub_struct)
 {
-  test("kprobe:f { ((type1)0).type2ptr->field }", 0);
-  test("kprobe:f { ((type1)0).type2.field }", 0);
-  test("kprobe:f { $x = (type2)0; $x = ((type1)0).type2 }", 0);
-  test("kprobe:f { $x = (type2*)0; $x = ((type1)0).type2ptr }", 0);
-  test("kprobe:f { $x = (type1)0; $x = ((type1)0).type2 }", 1);
-  test("kprobe:f { $x = (type1*)0; $x = ((type1)0).type2ptr }", 1);
+  std::string structs = "struct type1 { struct type2 *type2ptr; struct type2 type2; }"
+                        "struct type2 { int field; }";
+
+  test(structs + "kprobe:f { ((type1)0).type2ptr->field }", 0);
+  test(structs + "kprobe:f { ((type1)0).type2.field }", 0);
+  test(structs + "kprobe:f { $x = (type2)0; $x = ((type1)0).type2 }", 0);
+  test(structs + "kprobe:f { $x = (type2*)0; $x = ((type1)0).type2ptr }", 0);
+  test(structs + "kprobe:f { $x = (type1)0; $x = ((type1)0).type2 }", 1);
+  test(structs + "kprobe:f { $x = (type1*)0; $x = ((type1)0).type2ptr }", 1);
+}
+
+TEST(semantic_analyser, field_access_is_internal)
+{
+  Driver driver;
+  std::string structs = "struct type1 { int x; }";
+
+  test(driver, structs + "kprobe:f { $x = ((type1)0).x }", 0);
+  auto var_assignment1 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
+  EXPECT_EQ(false, var_assignment1->var->type.is_internal);
+
+  test(driver, structs + "kprobe:f { @type1 = (type1)0; $x = @type1.x }", 0);
+  auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(0));
+  auto var_assignment2 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
+  EXPECT_EQ(true, map_assignment->map->type.is_internal);
+  EXPECT_EQ(true, var_assignment2->var->type.is_internal);
 }
 
 } // namespace semantic_analyser

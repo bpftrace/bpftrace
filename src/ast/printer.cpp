@@ -101,7 +101,10 @@ void Printer::visit(FieldAccess &acc)
 void Printer::visit(Cast &cast)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "(" << cast.cast_type << ")" << std::endl;
+  if (cast.is_pointer)
+    out_ << indent << "(" << cast.cast_type << "*)" << std::endl;
+  else
+    out_ << indent << "(" << cast.cast_type << ")" << std::endl;
 
   ++depth_;
   cast.expr->accept(*this);

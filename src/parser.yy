@@ -93,7 +93,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::AttachPointList *> attach_points
 %type <ast::AttachPoint *> attach_point
 %type <std::string> wildcard
-%type <std::string> type
 %type <std::string> ident
 
 %right ASSIGN
@@ -190,11 +189,8 @@ expr : INT             { $$ = new ast::Integer($1); }
      | MUL  expr %prec DEREF { $$ = new ast::Unop(token::MUL,  $2); }
      | expr DOT ident  { $$ = new ast::FieldAccess($1, $3); }
      | expr PTR ident  { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1), $3); }
-     | "(" type ")" expr %prec CAST  { $$ = new ast::Cast($2, $4); }
-     ;
-
-type : IDENT     { $$ = $1; }
-     | IDENT MUL { $$ = $1 + "*"; }
+     | "(" IDENT ")" expr %prec CAST  { $$ = new ast::Cast($2, false, $4); }
+     | "(" IDENT MUL ")" expr %prec CAST  { $$ = new ast::Cast($2, true, $5); }
      ;
 
 ident : IDENT   { $$ = $1; }

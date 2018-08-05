@@ -48,7 +48,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::str
   return CreateAllocaBPF(ty, name);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
 {
   llvm::Type *ty = ArrayType::get(getInt8Ty(), bytes);
   return CreateAllocaBPF(ty, name);
@@ -57,7 +57,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.type == Type::string || stype.type == Type::cast)
+  if (stype.type == Type::string || (stype.type == Type::cast && !stype.is_pointer))
   {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
@@ -121,22 +121,23 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || map.type.type == Type::cast)
     CreateMemCpy(value, call, map.type.size, 1);
   else
     CreateStore(CreateLoad(getInt64Ty(), call), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || map.type.type == Type::cast)
     CreateMemSet(value, getInt8(0), map.type.size, 1);
   else
     CreateStore(getInt64(0), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_merge_block);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || map.type.type == Type::cast)
     return value;
+
   return CreateLoad(value);
 }
 

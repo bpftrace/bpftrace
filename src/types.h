@@ -36,6 +36,9 @@ public:
   Type type;
   size_t size;
   std::string cast_type;
+  bool is_internal = false;
+  bool is_pointer = false;
+  size_t pointee_size;
 
   bool operator==(const SizedType &t) const;
 };
