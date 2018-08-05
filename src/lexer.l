@@ -92,7 +92,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 <STR>.                  { driver.error(loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
 
-struct                  { BEGIN(STRUCT); buffer = std::string(yytext); open_brackets = 0; }
+struct|union            { BEGIN(STRUCT); buffer = std::string(yytext); open_brackets = 0; }
 <STRUCT>"{"             { BEGIN(STRUCT); buffer += std::string(yytext); open_brackets++; }
 <STRUCT>"}"             { buffer += std::string(yytext);
                           if (open_brackets == 1)

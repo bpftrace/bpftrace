@@ -43,6 +43,38 @@ TEST(clang_parser, integers)
   EXPECT_EQ(structs["Foo"].fields["z"].offset, 8);
 }
 
+TEST(clang_parser, c_union)
+{
+  StructMap structs;
+  parse("union Foo { char c; short s; int i; long l; }", structs);
+
+  ASSERT_EQ(structs.size(), 1);
+  ASSERT_EQ(structs.count("Foo"), 1);
+
+  EXPECT_EQ(structs["Foo"].size, 8);
+  ASSERT_EQ(structs["Foo"].fields.size(), 4);
+  ASSERT_EQ(structs["Foo"].fields.count("c"), 1);
+  ASSERT_EQ(structs["Foo"].fields.count("s"), 1);
+  ASSERT_EQ(structs["Foo"].fields.count("i"), 1);
+  ASSERT_EQ(structs["Foo"].fields.count("l"), 1);
+
+  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 1);
+  EXPECT_EQ(structs["Foo"].fields["c"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["s"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["s"].type.size, 2);
+  EXPECT_EQ(structs["Foo"].fields["s"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["i"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["i"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["i"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["l"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["l"].type.size, 8);
+  EXPECT_EQ(structs["Foo"].fields["l"].offset, 0);
+}
+
 TEST(clang_parser, integer_ptr)
 {
   StructMap structs;

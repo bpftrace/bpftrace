@@ -116,7 +116,8 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
       {
         auto &structs = *static_cast<StructMap*>(client_data);
 
-        if (clang_getCursorKind(parent) != CXCursor_StructDecl) // TODO CXCursor_UnionDecl
+        if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
+            clang_getCursorKind(parent) != CXCursor_UnionDecl)
           return CXChildVisit_Recurse;
 
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
