@@ -188,6 +188,33 @@ TEST(clang_parser, nested_struct_anon)
   EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
 }
 
+TEST(clang_parser, builtin_headers)
+{
+  // size_t is definied in stddef.h
+  StructMap structs;
+  parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", structs);
+
+  ASSERT_EQ(structs.count("Foo"), 1);
+
+  EXPECT_EQ(structs["Foo"].size, 24);
+  ASSERT_EQ(structs["Foo"].fields.size(), 3);
+  ASSERT_EQ(structs["Foo"].fields.count("x"), 1);
+  ASSERT_EQ(structs["Foo"].fields.count("y"), 1);
+  ASSERT_EQ(structs["Foo"].fields.count("z"), 1);
+
+  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 8);
+  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 8);
+  EXPECT_EQ(structs["Foo"].fields["y"].offset, 8);
+
+  EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 8);
+  EXPECT_EQ(structs["Foo"].fields["z"].offset, 16);
+}
+
 } // namespace clang_parser
 } // namespace test
 } // namespace bpftrace

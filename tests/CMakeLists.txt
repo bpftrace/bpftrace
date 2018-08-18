@@ -21,7 +21,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
-target_link_libraries(bpftrace_test arch ast parser)
+target_link_libraries(bpftrace_test arch ast parser resources)
 
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)

@@ -7,6 +7,19 @@
 #include "clang_parser.h"
 #include "types.h"
 
+extern "C" const char __stddef_max_align_t_h[];
+extern "C" const unsigned __stddef_max_align_t_h_len;
+extern "C" const char float_h[];
+extern "C" const unsigned float_h_len;
+extern "C" const char limits_h[];
+extern "C" const unsigned limits_h_len;
+extern "C" const char stdarg_h[];
+extern "C" const unsigned stdarg_h_len;
+extern "C" const char stddef_h[];
+extern "C" const unsigned stddef_h_len;
+extern "C" const char stdint_h[];
+extern "C" const unsigned stdint_h_len;
+
 namespace bpftrace {
 
 static std::string get_clang_string(CXString string)
@@ -39,6 +52,8 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_UInt:
     case CXType_Long:
     case CXType_ULong:
+    case CXType_LongLong:
+    case CXType_ULongLong:
       return SizedType(Type::integer, size);
     case CXType_Record:
       return SizedType(Type::cast, size, typestr);
@@ -72,7 +87,10 @@ static SizedType get_sized_type(CXType clang_type)
       // TODO add support for arrays
       return SizedType(Type::none, 0);
     }
+    case CXType_LongDouble:
+      return SizedType(Type::none, 0);
     default:
+      // TODO just return Type::none?
       auto unknown_type = get_clang_string(clang_getTypeKindSpelling(clang_type.kind));
       std::cerr << "Error: unknown clang CXType '" << unknown_type << "'" << std::endl;
       abort();
@@ -81,31 +99,65 @@ static SizedType get_sized_type(CXType clang_type)
 
 void ClangParser::parse(ast::Program *program, StructMap &structs)
 {
-  CXUnsavedFile input_file
-  {
-    .Filename = "definitions.h",
-    .Contents = program->c_definitions.c_str(),
-    .Length = program->c_definitions.size(),
-  };
-
-  if (input_file.Length == 0)
+  auto input = program->c_definitions;
+  if (input.size() == 0)
     return; // We occasionally get crashes in libclang otherwise
+
+  CXUnsavedFile unsaved_files[] =
+  {
+    {
+      .Filename = "definitions.h",
+      .Contents = input.c_str(),
+      .Length = input.size(),
+    },
+    {
+      .Filename = "/bpftrace/include/__stddef_max_align_t.h",
+      .Contents = __stddef_max_align_t_h,
+      .Length = __stddef_max_align_t_h_len,
+    },
+    {
+      .Filename = "/bpftrace/include/float.h",
+      .Contents = float_h,
+      .Length = float_h_len,
+    },
+    {
+      .Filename = "/bpftrace/include/limits.h",
+      .Contents = limits_h,
+      .Length = limits_h_len,
+    },
+    {
+      .Filename = "/bpftrace/include/stdarg.h",
+      .Contents = stdarg_h,
+      .Length = stdarg_h_len,
+    },
+    {
+      .Filename = "/bpftrace/include/stddef.h",
+      .Contents = stddef_h,
+      .Length = stddef_h_len,
+    },
+    {
+      .Filename = "/bpftrace/include/stdint.h",
+      .Contents = stdint_h,
+      .Length = stdint_h_len,
+    },
+  };
 
   CXIndex index = clang_createIndex(0, 0);
   CXTranslationUnit translation_unit;
+  const char * const args[] = {
+    "-I/bpftrace/include"
+  };
   CXErrorCode error = clang_parseTranslationUnit2(
       index,
       "definitions.h",
-      NULL,
-      0,
-      &input_file,
-      1,
+      args, 1,
+      unsaved_files, 7,
       CXTranslationUnit_None,
       &translation_unit);
   if (error)
   {
     std::cerr << "Clang error while parsing C definitions: " << error << std::endl;
-    std::cerr << "Input (" << input_file.Length << "): " << input_file.Contents << std::endl;
+    std::cerr << "Input (" << input.size() << "): " << input << std::endl;
   }
 
   CXCursor cursor = clang_getTranslationUnitCursor(translation_unit);

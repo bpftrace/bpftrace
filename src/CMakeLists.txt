@@ -11,7 +11,7 @@ add_executable(bpftrace
   types.cpp
 )
 
-target_link_libraries(bpftrace arch ast parser)
+target_link_libraries(bpftrace arch ast parser resources)
 
 ExternalProject_Get_Property(bcc source_dir binary_dir)
 target_include_directories(bpftrace PUBLIC ${source_dir}/src/cc)
