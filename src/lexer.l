@@ -53,7 +53,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 "]"                     { return Parser::make_RBRACKET(loc); }
 "("                     { return Parser::make_LPAREN(loc); }
 ")"                     { return Parser::make_RPAREN(loc); }
-\//{space}*[\/\{]       { return Parser::make_ENDPRED(loc); } // If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV
+\//{space}*[\/\{]       { return Parser::make_ENDPRED(loc); } /* If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV */
 ","                     { return Parser::make_COMMA(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }
 "=="                    { return Parser::make_EQ(loc); }
