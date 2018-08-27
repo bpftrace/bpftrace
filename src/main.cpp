@@ -12,9 +12,18 @@ using namespace bpftrace;
 
 void usage()
 {
-  std::cerr << "Usage:" << std::endl;
-  std::cerr << "  bpftrace filename" << std::endl;
-  std::cerr << "  bpftrace -e 'script'" << std::endl;
+  std::cerr << "USAGE:" << std::endl;
+  std::cerr << "    bpftrace [options] filename" << std::endl;
+  std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
+  std::cerr << "OPTIONS:" << std::endl;
+  std::cerr << "    -e 'program'   execute this program" << std::endl;
+  std::cerr << "    -v    verbose messages" << std::endl;
+  std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
+  std::cerr << "EXAMPLES:" << std::endl;
+  std::cerr << "bpftrace -e 'kprobe:sys_nanosleep { printf(\"PID %d sleeping...\\n\", pid); }'" << std::endl;
+  std::cerr << "    trace processes calling sleep" << std::endl;
+  std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
+  std::cerr << "    count syscalls by process name" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -23,14 +32,16 @@ int main(int argc, char *argv[])
   Driver driver;
 
   std::string script;
-  bool debug = false;
   int c;
-  while ((c = getopt(argc, argv, "de:")) != -1)
+  while ((c = getopt(argc, argv, "de:v")) != -1)
   {
     switch (c)
     {
       case 'd':
-        debug = true;
+        bt_debug = true;
+        break;
+      case 'v':
+        bt_verbose = true;
         break;
       case 'e':
         script = optarg;
@@ -39,6 +50,13 @@ int main(int argc, char *argv[])
         usage();
         return 1;
     }
+  }
+
+  if (bt_verbose && bt_debug)
+  {
+    // TODO: allow both
+    std::cerr << "USAGE: Use either -v or -d." << std::endl;
+    return 1;
   }
 
   if (script.empty())
@@ -68,10 +86,11 @@ int main(int argc, char *argv[])
 
   BPFtrace bpftrace;
 
-  if (debug)
+  if (bt_debug)
   {
     ast::Printer p(std::cout);
     driver.root_->accept(p);
+    std::cout << std::endl;
   }
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
@@ -79,14 +98,14 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  err = semantics.create_maps(debug);
+  err = semantics.create_maps(bt_debug);
   if (err)
     return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  auto bpforc = llvm.compile(debug);
+  auto bpforc = llvm.compile(bt_debug);
 
-  if (debug)
+  if (bt_debug)
     return 0;
 
   // Empty signal handler for cleanly terminating the program

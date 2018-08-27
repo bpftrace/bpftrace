@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "attached_probe.h"
+#include "bpftrace.h"
 #include "bcc_syms.h"
 #include "common.h"
 #include "libbpf.h"
@@ -14,6 +15,8 @@
 #include <linux/version.h>
 
 namespace bpftrace {
+
+const int BPF_LOG_SIZE = 100 * 1024;
 
 bpf_probe_attach_type attachtype(ProbeType t)
 {
@@ -188,20 +191,32 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
-  char *log_buf = nullptr;
-  unsigned log_buf_size = 0;
+  char log_buf[BPF_LOG_SIZE];
+  char name[STRING_SIZE], *namep;
+  unsigned log_buf_size = sizeof (log_buf);
 
   // Redirect stderr, so we don't get error messages from BCC
   int old_stderr, new_stderr;
   fflush(stderr);
-  old_stderr = dup(2);
-  new_stderr = open("/dev/null", O_WRONLY);
-  dup2(new_stderr, 2);
-  close(new_stderr);
+  if (bt_debug)
+    log_level = 15;
+  else
+  {
+    old_stderr = dup(2);
+    new_stderr = open("/dev/null", O_WRONLY);
+    dup2(new_stderr, 2);
+    close(new_stderr);
+  }
+
+  // bpf_prog_load rejects colons in the probe name
+  strncpy(name, probe_.name.c_str(), STRING_SIZE);
+  namep = name;
+  if (strrchr(name, ':') != NULL)
+    namep = strrchr(name, ':') + 1;
 
   for (int attempt=0; attempt<3; attempt++)
   {
-    progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
+    progfd_ = bpf_prog_load(progtype(probe_.type), namep,
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
         kernel_version(attempt), log_level, log_buf, log_buf_size);
     if (progfd_ >= 0)
@@ -209,12 +224,18 @@ void AttachedProbe::load_prog()
   }
 
   // Restore stderr
-  fflush(stderr);
-  dup2(old_stderr, 2);
-  close(old_stderr);
+  if (bt_debug == false)
+  {
+    fflush(stderr);
+    dup2(old_stderr, 2);
+    close(old_stderr);
+  }
 
-  if (progfd_ < 0)
-    throw std::runtime_error("Error loading program: " + probe_.name);
+  if (progfd_ < 0) {
+    if (bt_verbose)
+      std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
+    throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
+  }
 }
 
 void AttachedProbe::attach_kprobe()

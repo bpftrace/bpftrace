@@ -18,6 +18,10 @@ namespace bpftrace {
 
 class BpfOrc;
 
+// globals
+extern bool bt_debug;
+extern bool bt_verbose;
+
 class BPFtrace
 {
 public:

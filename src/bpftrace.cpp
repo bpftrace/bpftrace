@@ -16,6 +16,9 @@
 
 namespace bpftrace {
 
+bool bt_debug = false;
+bool bt_verbose = false;
+
 int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points)
