@@ -205,7 +205,11 @@ Functions:
 - `count()` - Count the number of times this function is called
 - `delete(@x)` - Delete the map element passed in as an argument
 - `str(char *s)` - Returns the string pointed to by `s`
-- `printf(char *fmt, ...)` - Write to stdout
+- `printf(char *fmt, ...)` - Print formatted to stdout
+- `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
+- `clear(@x)` - Delet all key/values from a map
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address (incomplete)
 - `reg(char *name)` - Returns the value stored in the named register
+- `time(char *fmt)` - Print the current time
+- `exit()` - Quit bpftrace

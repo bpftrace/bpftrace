@@ -5,6 +5,7 @@
 #include <regex>
 #include <sstream>
 #include <sys/epoll.h>
+#include <time.h>
 
 #include "bcc_syms.h"
 #include "perf_reader.h"
@@ -132,7 +133,56 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data) + sizeof(uint64_t);
+  int err;
 
+  // async actions
+  if (printf_id == asyncactionint(AsyncAction::exit))
+  {
+    err = bpftrace->print_maps();
+    exit(err);
+  }
+  else if (printf_id == asyncactionint(AsyncAction::print))
+  {
+    std::string arg = (const char *)(static_cast<uint8_t*>(data) + sizeof(uint64_t) + 2 * sizeof(uint64_t));
+    uint64_t top = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    uint64_t div = (uint64_t)*(static_cast<uint64_t*>(data) + (sizeof(uint64_t) + sizeof(uint64_t)) / sizeof(uint64_t));
+    bpftrace->print_map_ident(arg, top, div);
+    return;
+  }
+  else if (printf_id == asyncactionint(AsyncAction::clear))
+  {
+    std::string arg = (const char *)arg_data;
+    bpftrace->clear_map_ident(arg);
+    return;
+  }
+  else if (printf_id == asyncactionint(AsyncAction::zero))
+  {
+    std::string arg = (const char *)arg_data;
+    bpftrace->zero_map_ident(arg);
+    return;
+  }
+  else if (printf_id == asyncactionint(AsyncAction::time))
+  {
+    char timestr[STRING_SIZE];
+    time_t t;
+    struct tm *tmp;
+    t = time(NULL);
+    tmp = localtime(&t);
+    if (tmp == NULL) {
+      perror("localtime");
+      return;
+    }
+    uint64_t time_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    auto fmt = bpftrace->time_args_[time_id].c_str();
+    if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
+      fprintf(stderr, "strftime returned 0");
+      return;
+    }
+    printf("%s", timestr);
+    return;
+  }
+
+  // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   std::vector<uint64_t> arg_values;
@@ -314,9 +364,9 @@ int BPFtrace::print_maps()
     IMap &map = *mapmap.second.get();
     int err;
     if (map.type_.type == Type::quantize)
-      err = print_map_quantize(map);
+      err = print_map_quantize(map, 0, 0);
     else
-      err = print_map(map);
+      err = print_map(map, 0, 0);
 
     if (err)
       return err;
@@ -325,7 +375,142 @@ int BPFtrace::print_maps()
   return 0;
 }
 
-int BPFtrace::print_map(IMap &map)
+// print a map given an ident string
+int BPFtrace::print_map_ident(const std::string &ident, uint32_t top, uint32_t div)
+{
+  int err = 0;
+  for(auto &mapmap : maps_)
+  {
+    IMap &map = *mapmap.second.get();
+    if (map.name_ == ident) {
+      if (map.type_.type == Type::quantize)
+        err = print_map_quantize(map, top, div);
+      else
+        err = print_map(map, top, div);
+      return err;
+    }
+  }
+
+  return -2;
+}
+
+// clear a map (delete all keys) given an ident string
+int BPFtrace::clear_map_ident(const std::string &ident)
+{
+  int err = 0;
+  for(auto &mapmap : maps_)
+  {
+    IMap &map = *mapmap.second.get();
+    if (map.name_ == ident) {
+        err = clear_map(map);
+      return err;
+    }
+  }
+
+  return -2;
+}
+
+// zero a map (set all keys to zero) given an ident string
+int BPFtrace::zero_map_ident(const std::string &ident)
+{
+  int err = 0;
+  for(auto &mapmap : maps_)
+  {
+    IMap &map = *mapmap.second.get();
+    if (map.name_ == ident) {
+        err = zero_map(map);
+      return err;
+    }
+  }
+
+  return -2;
+}
+
+// clear a map
+int BPFtrace::clear_map(IMap &map)
+{
+  std::vector<uint8_t> old_key;
+  try
+  {
+    if (map.type_.type == Type::quantize)
+      // quantize maps have 8 extra bytes for the bucket number
+      old_key = find_empty_key(map, map.key_.size() + 8);
+    else
+      old_key = find_empty_key(map, map.key_.size());
+  }
+  catch (std::runtime_error &e)
+  {
+    std::cerr << "Error getting key for map '" << map.name_ << "': "
+              << e.what() << std::endl;
+    return -2;
+  }
+  auto key(old_key);
+
+  // snapshot keys, then operate on them
+  std::vector<std::vector<uint8_t>> keys;
+  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
+  {
+    keys.push_back(key);
+    old_key = key;
+  }
+
+  for (auto &key : keys)
+  {
+    int err = bpf_delete_elem(map.mapfd_, key.data());
+    if (err)
+    {
+      std::cerr << "Error looking up elem: " << err << std::endl;
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+// zero a map
+int BPFtrace::zero_map(IMap &map)
+{
+  std::vector<uint8_t> old_key;
+  try
+  {
+    if (map.type_.type == Type::quantize)
+      // quantize maps have 8 extra bytes for the bucket number
+      old_key = find_empty_key(map, map.key_.size() + 8);
+    else
+      old_key = find_empty_key(map, map.key_.size());
+  }
+  catch (std::runtime_error &e)
+  {
+    std::cerr << "Error getting key for map '" << map.name_ << "': "
+              << e.what() << std::endl;
+    return -2;
+  }
+  auto key(old_key);
+
+  // snapshot keys, then operate on them
+  std::vector<std::vector<uint8_t>> keys;
+  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
+  {
+    keys.push_back(key);
+    old_key = key;
+  }
+
+  uint64_t zero = 0;
+  for (auto &key : keys)
+  {
+    int err = bpf_update_elem(map.mapfd_, key.data(), &zero, BPF_EXIST);
+
+    if (err)
+    {
+      std::cerr << "Error looking up elem: " << err << std::endl;
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
   std::vector<uint8_t> old_key;
   try
@@ -372,10 +557,19 @@ int BPFtrace::print_map(IMap &map)
     sort_by_key(map.key_.args_, values_by_key);
   };
 
+  if (div == 0)
+    div = 1;
+  uint32_t i = 0;
   for (auto &pair : values_by_key)
   {
     auto key = pair.first;
     auto value = pair.second;
+
+    if (top)
+    {
+      if (i++ < (values_by_key.size() - top))
+        continue;
+    }
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
@@ -390,9 +584,9 @@ int BPFtrace::print_map(IMap &map)
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else if (map.type_.type == Type::count)
-      std::cout << reduce_value(value, ncpus_) << std::endl;
+      std::cout << reduce_value(value, ncpus_) / div << std::endl;
     else
-      std::cout << *(int64_t*)value.data() << std::endl;
+      std::cout << *(int64_t*)value.data() / div << std::endl;
   }
 
   std::cout << std::endl;
@@ -400,7 +594,7 @@ int BPFtrace::print_map(IMap &map)
   return 0;
 }
 
-int BPFtrace::print_map_quantize(IMap &map)
+int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
 {
   // A quantize-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
@@ -465,13 +659,23 @@ int BPFtrace::print_map_quantize(IMap &map)
     return a.second < b.second;
   });
 
+  if (div == 0)
+    div = 1;
+  uint32_t i = 0;
   for (auto &key_count : total_counts_by_key)
   {
     auto &key = key_count.first;
     auto &value = values_by_key[key];
+
+    if (top)
+    {
+      if (i++ < (values_by_key.size() - top))
+        continue;
+    }
+
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
 
-    print_quantize(value);
+    print_quantize(value, div);
 
     std::cout << std::endl;
   }
@@ -479,14 +683,14 @@ int BPFtrace::print_map_quantize(IMap &map)
   return 0;
 }
 
-int BPFtrace::print_quantize(const std::vector<uint64_t> &values) const
+int BPFtrace::print_quantize(const std::vector<uint64_t> &values, uint32_t div) const
 {
   int max_index = -1;
   int max_value = 0;
 
   for (size_t i = 0; i < values.size(); i++)
   {
-    int v = values.at(i);
+    int v = values.at(i) / div;
     if (v != 0)
       max_index = i;
     if (v > max_value)
@@ -510,11 +714,11 @@ int BPFtrace::print_quantize(const std::vector<uint64_t> &values) const
     }
 
     int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
+    int bar_width = values.at(i)/((float)max_value*max_width * div);
     std::string bar(bar_width, '@');
 
     std::cout << std::setw(16) << std::left << header.str()
-              << std::setw(8) << std::right << values.at(i)
+              << std::setw(8) << std::right << (values.at(i) / div)
               << " |" << std::setw(max_width) << std::left << bar << "|"
               << std::endl;
   }

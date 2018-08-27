@@ -948,6 +948,228 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
+TEST(codegen, call_exit)
+{
+  test("kprobe:f { exit() }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+entry:
+  %perfdata = alloca [8 x i8], align 8
+  %1 = getelementptr inbounds [8 x i8], [8 x i8]* %perfdata, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 10000, [8 x i8]* %perfdata, align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [8 x i8]* nonnull %perfdata, i64 8)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
+TEST(codegen, call_print)
+{
+  test("BEGIN { @x = 1; } kprobe:f { print(@x); }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @BEGIN(i8* nocapture readnone) local_unnamed_addr section "s_BEGIN" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %1 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 0, i64* %"@x_key", align 8
+  %2 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  store i64 1, i64* %"@x_val", align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+entry:
+  %perfdata = alloca [26 x i8], align 8
+  %1 = getelementptr inbounds [26 x i8], [26 x i8]* %perfdata, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 10001, [26 x i8]* %perfdata, align 8
+  %2 = getelementptr inbounds [26 x i8], [26 x i8]* %perfdata, i64 0, i64 8
+  %3 = getelementptr inbounds [26 x i8], [26 x i8]* %perfdata, i64 0, i64 24
+  %4 = bitcast i8* %3 to i16*
+  call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 16, i32 8, i1 false)
+  store i16 30784, i16* %4, align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
+  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [26 x i8]* nonnull %perfdata, i64 26)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
+TEST(codegen, call_clear)
+{
+  test("BEGIN { @x = 1; } kprobe:f { clear(@x); }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @BEGIN(i8* nocapture readnone) local_unnamed_addr section "s_BEGIN" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %1 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 0, i64* %"@x_key", align 8
+  %2 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  store i64 1, i64* %"@x_val", align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+entry:
+  %perfdata = alloca [10 x i8], align 8
+  %1 = getelementptr inbounds [10 x i8], [10 x i8]* %perfdata, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 10002, [10 x i8]* %perfdata, align 8
+  %2 = getelementptr inbounds [10 x i8], [10 x i8]* %perfdata, i64 0, i64 8
+  %3 = bitcast i8* %2 to i16*
+  store i16 30784, i16* %3, align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
+  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [10 x i8]* nonnull %perfdata, i64 10)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
+TEST(codegen, call_zero)
+{
+  test("BEGIN { @x = 1; } kprobe:f { zero(@x); }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @BEGIN(i8* nocapture readnone) local_unnamed_addr section "s_BEGIN" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %1 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 0, i64* %"@x_key", align 8
+  %2 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  store i64 1, i64* %"@x_val", align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+entry:
+  %perfdata = alloca [10 x i8], align 8
+  %1 = getelementptr inbounds [10 x i8], [10 x i8]* %perfdata, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 10003, [10 x i8]* %perfdata, align 8
+  %2 = getelementptr inbounds [10 x i8], [10 x i8]* %perfdata, i64 0, i64 8
+  %3 = bitcast i8* %2 to i16*
+  store i16 30784, i16* %3, align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
+  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [10 x i8]* nonnull %perfdata, i64 10)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
+TEST(codegen, call_time)
+{
+  test("kprobe:f { time(); }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+entry:
+  %perfdata = alloca [16 x i8], align 8
+  %1 = getelementptr inbounds [16 x i8], [16 x i8]* %perfdata, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  store i64 10004, [16 x i8]* %perfdata, align 8
+  %2 = getelementptr inbounds [16 x i8], [16 x i8]* %perfdata, i64 0, i64 8
+  store i64 0, i8* %2, align 8
+  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [16 x i8]* nonnull %perfdata, i64 16)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
 TEST(codegen, int_propagation)
 {
   test("kprobe:f { @x = 1234; @y = @x }",

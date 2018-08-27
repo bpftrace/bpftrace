@@ -67,4 +67,16 @@ public:
   int freq;
 };
 
+enum class AsyncAction
+{
+  // printf reserves 0-9999 for printf_ids
+  exit = 10000,
+  print,
+  clear,
+  zero,
+  time,
+};
+
+uint64_t asyncactionint(AsyncAction a);
+
 } // namespace bpftrace

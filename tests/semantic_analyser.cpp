@@ -81,6 +81,11 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = quantize(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
   test("kprobe:f { @x = 1; delete(@x) }", 0);
+  test("kprobe:f { @x = 1; print(@x) }", 0);
+  test("kprobe:f { @x = 1; clear(@x) }", 0);
+  test("kprobe:f { @x = 1; zero(@x) }", 0);
+  test("kprobe:f { time() }", 0);
+  test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
@@ -139,6 +144,43 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { delete(); }", 1);
   test("kprobe:f { @y = delete(@x); }", 1);
   test("kprobe:f { $y = delete(@x); }", 1);
+}
+
+TEST(semantic_analyser, call_exit)
+{
+  test("kprobe:f { exit(); }", 0);
+  test("kprobe:f { exit(1); }", 1);
+}
+
+TEST(semantic_analyser, call_print)
+{
+  test("kprobe:f { @x = count(); print(@x); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5, 10); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = print(); }", 1);
+}
+
+TEST(semantic_analyser, call_clear)
+{
+  test("kprobe:f { @x = count(); clear(@x); }", 0);
+  test("kprobe:f { @x = count(); clear(@x, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = clear(); }", 1);
+}
+
+TEST(semantic_analyser, call_zero)
+{
+  test("kprobe:f { @x = count(); zero(@x); }", 0);
+  test("kprobe:f { @x = count(); zero(@x, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = zero(); }", 1);
+}
+
+TEST(semantic_analyser, call_time)
+{
+  test("kprobe:f { time(); }", 0);
+  test("kprobe:f { time(\"%M:%S\"); }", 0);
+  test("kprobe:f { time(\"%M:%S\", 1); }", 1);
+  test("kprobe:f { @x = time(); }", 1);
 }
 
 TEST(semantic_analyser, call_str)

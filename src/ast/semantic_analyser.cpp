@@ -149,6 +149,57 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::none, 0);
   }
+  else if (call.func == "exit") {
+    check_nargs(call, 0);
+  }
+  else if (call.func == "print") {
+    check_assignment(call, false, false);
+    if (check_varargs(call, 1, 3)) {
+      if (is_final_pass()) {
+        auto &arg = *call.vargs->at(0);
+        if (!arg.is_map)
+          err_ << "print() expects a map to be provided" << std::endl;
+        if (call.vargs->size() > 1)
+          check_arg(call, Type::integer, 1, true);
+        if (call.vargs->size() > 2)
+          check_arg(call, Type::integer, 2, true);
+      }
+    }
+  }
+  else if (call.func == "clear") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    if (check_nargs(call, 1)) {
+      auto &arg = *call.vargs->at(0);
+      if (!arg.is_map)
+        err_ << "clear() expects a map to be provided" << std::endl;
+    }
+  }
+  else if (call.func == "zero") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    if (check_nargs(call, 1)) {
+      auto &arg = *call.vargs->at(0);
+      if (!arg.is_map)
+        err_ << "zero() expects a map to be provided" << std::endl;
+    }
+  }
+  else if (call.func == "time") {
+    check_assignment(call, false, false);
+    if (check_varargs(call, 0, 1)) {
+      if (is_final_pass()) {
+        if (call.vargs && call.vargs->size() > 0) {
+          check_arg(call, Type::string, 0, true);
+          auto &fmt_arg = *call.vargs->at(0);
+          String &fmt = static_cast<String&>(fmt_arg);
+          bpftrace_.time_args_.push_back(fmt.str);
+        } else {
+          std::string fmt_default = "%H:%M:%S\n";
+          bpftrace_.time_args_.push_back(fmt_default.c_str());
+        }
+      }
+    }
+  }
   else {
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
     call.type = SizedType(Type::none, 0);
@@ -167,6 +218,14 @@ void SemanticAnalyser::visit(Map &map)
 
   auto search = map_key_.find(map.ident);
   if (search != map_key_.end()) {
+    /*
+     * TODO: this code ensures that map keys are consistent, but
+     * currently prevents print() and clear() being used, since
+     * for example "@x[pid] = count(); ... print(@x)" is detected
+     * as having inconsistent keys. We need a way to do this check
+     * differently for print() and clear() calls. I've commented it
+     * out for now - Brendan.
+     *
     if (search->second != key) {
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: ";
@@ -175,6 +234,7 @@ void SemanticAnalyser::visit(Map &map)
       err_ << search->second.argument_type_list();
       err_ << "\n" << std::endl;
     }
+     */
   }
   else {
     map_key_.insert({map.ident, key});

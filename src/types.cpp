@@ -60,4 +60,9 @@ ProbeType probetype(const std::string &type)
   abort();
 }
 
+uint64_t asyncactionint(AsyncAction a)
+{
+  return (uint64_t)a;
+}
+
 } // namespace bpftrace
