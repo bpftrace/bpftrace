@@ -59,6 +59,14 @@ void check_profile(Probe &p, const std::string &unit, int freq, const std::strin
   EXPECT_EQ("profile:" + unit + ":" + std::to_string(freq), p.name);
 }
 
+void check_interval(Probe &p, const std::string &unit, int freq, const std::string &prog_name)
+{
+  EXPECT_EQ(ProbeType::interval, p.type);
+  EXPECT_EQ(freq, p.freq);
+  EXPECT_EQ(prog_name, p.prog_name);
+  EXPECT_EQ("interval:" + unit + ":" + std::to_string(freq), p.name);
+}
+
 void check_software(Probe &p, const std::string &unit, int freq, const std::string &prog_name)
 {
   EXPECT_EQ(ProbeType::software, p.type);
@@ -323,6 +331,22 @@ TEST(bpftrace, add_probes_profile)
 
   std::string probe_prog_name = "profile:ms:997";
   check_profile(bpftrace.get_probes().at(0), "ms", 997, probe_prog_name);
+}
+
+TEST(bpftrace, add_probes_interval)
+{
+  ast::AttachPoint a("interval", "s", 1);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+
+  std::string probe_prog_name = "interval:s:1";
+  check_interval(bpftrace.get_probes().at(0), "s", 1, probe_prog_name);
 }
 
 TEST(bpftrace, add_probes_software)

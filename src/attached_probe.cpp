@@ -40,6 +40,7 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
     case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::interval:      return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     default: abort();
@@ -66,6 +67,9 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       break;
     case ProbeType::profile:
       attach_profile();
+      break;
+    case ProbeType::interval:
+      attach_interval();
       break;
     case ProbeType::software:
       attach_software();
@@ -105,6 +109,7 @@ AttachedProbe::~AttachedProbe()
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
     case ProbeType::profile:
+    case ProbeType::interval:
     case ProbeType::software:
     case ProbeType::hardware:
       break;
@@ -325,6 +330,37 @@ void AttachedProbe::attach_profile()
 
     perf_event_fds_.push_back(perf_event_fd);
   }
+}
+
+void AttachedProbe::attach_interval()
+{
+  int pid = -1;
+  int group_fd = -1;
+  int cpu = 0;
+
+  uint64_t period, freq;
+  if (probe_.path == "s")
+  {
+    period = probe_.freq * 1e9;
+    freq = 0;
+  }
+  else if (probe_.path == "ms")
+  {
+    period = probe_.freq * 1e6;
+    freq = 0;
+  }
+  else
+  {
+    abort();
+  }
+
+  int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
+      PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+
+  if (perf_event_fd < 0)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
 }
 
 void AttachedProbe::attach_software()

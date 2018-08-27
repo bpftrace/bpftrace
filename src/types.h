@@ -51,6 +51,7 @@ enum class ProbeType
   uretprobe,
   tracepoint,
   profile,
+  interval,
   software,
   hardware,
 };

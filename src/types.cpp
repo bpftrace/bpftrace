@@ -57,6 +57,8 @@ ProbeType probetype(const std::string &type)
     return ProbeType::tracepoint;
   else if (type == "profile")
     return ProbeType::profile;
+  else if (type == "interval")
+    return ProbeType::interval;
   else if (type == "software")
     return ProbeType::software;
   else if (type == "hardware")

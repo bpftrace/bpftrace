@@ -169,8 +169,8 @@ Attach script to hardware events (PMCs), executing once every provided count or 
 `hardware:cache-references:1000000`
 `hardware:cache-references:`
 
-### timers
-Run the script at specified time intervals:
+### profile
+Run the script on all CPUs at specified time intervals:
 
 `profile:hz:99 { ... }`
 
@@ -179,6 +179,13 @@ Run the script at specified time intervals:
 `profile:ms:20 { ... }`
 
 `profile:us:1500 { ... }`
+
+### interval
+Run the script once per interval, for printing interval output:
+
+`interval:s:1 { ... }`
+
+`interval:ms:20 { ... }`
 
 ### Multiple attachment points
 A single probe can be attached to multiple events:

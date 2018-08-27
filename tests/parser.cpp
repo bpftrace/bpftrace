@@ -260,6 +260,14 @@ TEST(Parser, profile_probe)
       "  int: 1\n");
 }
 
+TEST(Parser, interval_probe)
+{
+  test("interval:s:1 { 1 }",
+      "Program\n"
+      " interval:s:1\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, software_probe)
 {
   test("software:faults:1000 { 1 }",

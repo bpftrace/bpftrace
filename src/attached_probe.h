@@ -27,6 +27,7 @@ private:
   void attach_uprobe();
   void attach_tracepoint();
   void attach_profile();
+  void attach_interval();
   void attach_software();
   void attach_hardware();
 

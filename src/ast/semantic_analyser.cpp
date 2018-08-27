@@ -497,6 +497,15 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq <= 0)
       err_ << "profile frequency should be a positive integer" << std::endl;
   }
+  else if (ap.provider == "interval") {
+    if (ap.target == "")
+      err_ << "interval probe must have unit of time" << std::endl;
+    else if (ap.target != "ms" &&
+             ap.target != "s")
+      err_ << ap.target << " is not an accepted unit of time" << std::endl;
+    if (ap.func != "")
+      err_ << "interval probe must have an integer frequency" << std::endl;
+  }
   else if (ap.provider == "software") {
     if (ap.target == "")
       err_ << "software probe must have a software event name" << std::endl;
