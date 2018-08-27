@@ -67,8 +67,11 @@ private:
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
   int print_map_quantize(IMap &map, uint32_t top, uint32_t div);
+  int print_map_stats(IMap &map);
   int print_quantize(const std::vector<uint64_t> &values, uint32_t div) const;
   static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
+  static uint64_t min_value(const std::vector<uint8_t> &value, int ncpus);
+  static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static std::string quantize_index_label(int power);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
 };

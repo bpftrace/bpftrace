@@ -63,6 +63,41 @@ TEST(Parser, map_assign)
       "  =\n"
       "   map: @x\n"
       "   call: count\n");
+  test("kprobe:sys_read { @x = sum(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: sum\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = min(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: min\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = max(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: max\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = avg(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: avg\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = stats(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: stats\n"
+      "    builtin: arg2\n");
   test("kprobe:sys_open { @x = \"mystring\" }",
       "Program\n"
       " kprobe:sys_open\n"

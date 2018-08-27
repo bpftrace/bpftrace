@@ -94,6 +94,36 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::count, 8);
   }
+  else if (call.func == "sum") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::sum, 8);
+  }
+  else if (call.func == "min") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::min, 8);
+  }
+  else if (call.func == "max") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::max, 8);
+  }
+  else if (call.func == "avg") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::avg, 8);
+  }
+  else if (call.func == "stats") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::stats, 8);
+  }
   else if (call.func == "delete") {
     check_assignment(call, false, false);
     if (check_nargs(call, 1)) {

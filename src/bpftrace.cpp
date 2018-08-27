@@ -365,6 +365,8 @@ int BPFtrace::print_maps()
     int err;
     if (map.type_.type == Type::quantize)
       err = print_map_quantize(map, 0, 0);
+    else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
+      err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
 
@@ -530,7 +532,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     int value_size = map.type_.size;
-    if (map.type_.type == Type::count)
+    if (map.type_.type == Type::count ||
+        map.type_.type == Type::sum || map.type_.type == Type::min || map.type_.type == Type::max)
       value_size *= ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
@@ -545,11 +548,25 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     old_key = key;
   }
 
-  if (map.type_.type == Type::count)
+  if (map.type_.type == Type::count || map.type_.type == Type::sum)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
       return reduce_value(a.second, ncpus_) < reduce_value(b.second, ncpus_);
+    });
+  }
+  else if (map.type_.type == Type::min)
+  {
+    std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+    {
+      return min_value(a.second, ncpus_) < min_value(b.second, ncpus_);
+    });
+  }
+  else if (map.type_.type == Type::max)
+  {
+    std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+    {
+      return max_value(a.second, ncpus_) < max_value(b.second, ncpus_);
     });
   }
   else
@@ -583,8 +600,12 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << resolve_usym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
-    else if (map.type_.type == Type::count)
+    else if (map.type_.type == Type::count || map.type_.type == Type::sum)
       std::cout << reduce_value(value, ncpus_) / div << std::endl;
+    else if (map.type_.type == Type::min)
+      std::cout << min_value(value, ncpus_) / div << std::endl;
+    else if (map.type_.type == Type::max)
+      std::cout << max_value(value, ncpus_) / div << std::endl;
     else
       std::cout << *(int64_t*)value.data() / div << std::endl;
   }
@@ -683,6 +704,88 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
   return 0;
 }
 
+int BPFtrace::print_map_stats(IMap &map)
+{
+  // A quantize-map adds an extra 8 bytes onto the end of its key for storing
+  // the bucket number.
+
+  std::vector<uint8_t> old_key;
+  try
+  {
+    old_key = find_empty_key(map, map.key_.size() + 8);
+  }
+  catch (std::runtime_error &e)
+  {
+    std::cerr << "Error getting key for map '" << map.name_ << "': "
+              << e.what() << std::endl;
+    return -2;
+  }
+  auto key(old_key);
+
+  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
+
+  while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
+  {
+    auto key_prefix = std::vector<uint8_t>(map.key_.size());
+    int bucket = key.at(map.key_.size());
+
+    for (size_t i=0; i<map.key_.size(); i++)
+      key_prefix.at(i) = key.at(i);
+
+    int value_size = map.type_.size * ncpus_;
+    auto value = std::vector<uint8_t>(value_size);
+    int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
+    if (err)
+    {
+      std::cerr << "Error looking up elem: " << err << std::endl;
+      return -1;
+    }
+
+    if (values_by_key.find(key_prefix) == values_by_key.end())
+    {
+      // New key - create a list of buckets for it
+      values_by_key[key_prefix] = std::vector<uint64_t>(2);
+    }
+    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
+
+    old_key = key;
+  }
+
+  // Sort based on sum of counts in all buckets
+  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
+  for (auto &map_elem : values_by_key)
+  {
+    assert(map_elem.second.size() == 2);
+    uint64_t count = map_elem.second.at(0);
+    uint64_t total = map_elem.second.at(1);
+    assert(count != 0);
+    total_counts_by_key.push_back({map_elem.first, total / count});
+  }
+  std::sort(total_counts_by_key.begin(), total_counts_by_key.end(), [&](auto &a, auto &b)
+  {
+    return a.second < b.second;
+  });
+
+  for (auto &key_count : total_counts_by_key)
+  {
+    auto &key = key_count.first;
+    auto &value = values_by_key[key];
+    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
+
+    uint64_t count = value.at(0);
+    uint64_t total = value.at(1);
+
+    if (map.type_.type == Type::stats)
+      std::cout << "count " << count << ", average " << total / count << ", total " << total << std::endl;
+    else
+      std::cout << total / count << std::endl;
+  }
+
+  std::cout << std::endl;
+
+  return 0;
+}
+
 int BPFtrace::print_quantize(const std::vector<uint64_t> &values, uint32_t div) const
 {
   int max_index = -1;
@@ -767,12 +870,39 @@ uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
   return sum;
 }
 
+uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
+{
+  uint64_t val, max = 0;
+  for (int i=0; i<ncpus; i++)
+  {
+    val = *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    if (val > max)
+      max = val;
+  }
+  return max;
+}
+
+uint64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
+{
+  uint64_t val, max = 0;
+  for (int i=0; i<ncpus; i++)
+  {
+    val = *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    if (val > max)
+      max = val;
+  }
+  return (0xffffffff - max);
+}
+
 std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
   int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::quantize)
+  if (map.type_.type == Type::count || map.type_.type == Type::quantize ||
+      map.type_.type == Type::sum || map.type_.type == Type::min ||
+      map.type_.type == Type::max || map.type_.type == Type::avg ||
+      map.type_.type == Type::stats)
     value_size *= ncpus_;
   auto value = std::vector<uint8_t>(value_size);
 

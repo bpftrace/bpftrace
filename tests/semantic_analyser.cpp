@@ -80,6 +80,11 @@ TEST(semantic_analyser, builtin_functions)
 {
   test("kprobe:f { @x = quantize(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
+  test("kprobe:f { @x = sum(pid) }", 0);
+  test("kprobe:f { @x = min(pid) }", 0);
+  test("kprobe:f { @x = max(pid) }", 0);
+  test("kprobe:f { @x = avg(pid) }", 0);
+  test("kprobe:f { @x = stats(pid) }", 0);
   test("kprobe:f { @x = 1; delete(@x) }", 0);
   test("kprobe:f { @x = 1; print(@x) }", 0);
   test("kprobe:f { @x = 1; clear(@x) }", 0);
@@ -91,6 +96,8 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
+  test("kprobe:f { @x = count(pid) }", 1);
+  test("kprobe:f { @x = sum(pid, 123) }", 1);
   test("kprobe:f { fake() }", 1);
 }
 
@@ -120,6 +127,7 @@ TEST(semantic_analyser, predicate_expressions)
 TEST(semantic_analyser, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", 1);
+  test("kprobe:f { @x = count(); @x = sum(pid); }", 1);
   test("kprobe:f { @x = 1; @x = quantize(0); }", 1);
 }
 
@@ -135,6 +143,41 @@ TEST(semantic_analyser, call_count)
   test("kprobe:f { @x = count(); }", 0);
   test("kprobe:f { @x = count(1); }", 1);
   test("kprobe:f { count(); }", 1);
+}
+
+TEST(semantic_analyser, call_sum)
+{
+  test("kprobe:f { @x = sum(); }", 1);
+  test("kprobe:f { @x = sum(123); }", 0);
+  test("kprobe:f { sum(); }", 1);
+}
+
+TEST(semantic_analyser, call_min)
+{
+  test("kprobe:f { @x = min(); }", 1);
+  test("kprobe:f { @x = min(123); }", 0);
+  test("kprobe:f { min(); }", 1);
+}
+
+TEST(semantic_analyser, call_max)
+{
+  test("kprobe:f { @x = max(); }", 1);
+  test("kprobe:f { @x = max(123); }", 0);
+  test("kprobe:f { max(); }", 1);
+}
+
+TEST(semantic_analyser, call_avg)
+{
+  test("kprobe:f { @x = avg(); }", 1);
+  test("kprobe:f { @x = avg(123); }", 0);
+  test("kprobe:f { avg(); }", 1);
+}
+
+TEST(semantic_analyser, call_stats)
+{
+  test("kprobe:f { @x = stats(); }", 1);
+  test("kprobe:f { @x = stats(123); }", 0);
+  test("kprobe:f { stats(); }", 1);
 }
 
 TEST(semantic_analyser, call_delete)

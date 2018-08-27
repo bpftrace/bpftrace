@@ -16,13 +16,15 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   key_ = key;
 
   int key_size = key.size();
-  if (type.type == Type::quantize)
+  if (type.type == Type::quantize ||
+      type.type == Type::avg || type.type == Type::stats)
     key_size += 8;
   if (key_size == 0)
     key_size = 8;
 
   enum bpf_map_type map_type;
-  if ((type.type == Type::quantize || type.type == Type::count) &&
+  if ((type.type == Type::quantize || type.type == Type::count ||
+      type.type == Type::sum || type.type == Type::min || type.type == Type::max || type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
   {
       map_type = BPF_MAP_TYPE_PERCPU_HASH;

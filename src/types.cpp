@@ -29,6 +29,11 @@ std::string typestr(Type t)
     case Type::integer:  return "integer";  break;
     case Type::quantize: return "quantize"; break;
     case Type::count:    return "count";    break;
+    case Type::sum:      return "sum";      break;
+    case Type::min:      return "min";      break;
+    case Type::max:      return "max";      break;
+    case Type::avg:      return "avg";      break;
+    case Type::stats:    return "stats";    break;
     case Type::stack:    return "stack";    break;
     case Type::ustack:   return "ustack";   break;
     case Type::string:   return "string";   break;
