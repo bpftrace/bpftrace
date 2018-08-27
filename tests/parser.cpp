@@ -260,6 +260,22 @@ TEST(Parser, profile_probe)
       "  int: 1\n");
 }
 
+TEST(Parser, software_probe)
+{
+  test("software:faults:1000 { 1 }",
+      "Program\n"
+      " software:faults:1000\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, hardware_probe)
+{
+  test("hardware:cache-references:1000000 { 1 }",
+      "Program\n"
+      " hardware:cache-references:1000000\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, multiple_attach_points_kprobe)
 {
   test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",

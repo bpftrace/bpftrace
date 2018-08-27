@@ -51,6 +51,8 @@ enum class ProbeType
   uretprobe,
   tracepoint,
   profile,
+  software,
+  hardware,
 };
 
 std::string typestr(Type t);

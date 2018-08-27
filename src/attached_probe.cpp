@@ -40,6 +40,8 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
     case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     default: abort();
   }
 }
@@ -64,6 +66,12 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       break;
     case ProbeType::profile:
       attach_profile();
+      break;
+    case ProbeType::software:
+      attach_software();
+      break;
+    case ProbeType::hardware:
+      attach_hardware();
       break;
     default:
       abort();
@@ -97,6 +105,8 @@ AttachedProbe::~AttachedProbe()
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
     case ProbeType::profile:
+    case ProbeType::software:
+    case ProbeType::hardware:
       break;
     default:
       abort();
@@ -309,6 +319,155 @@ void AttachedProbe::attach_profile()
   {
     int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
         PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
+}
+
+void AttachedProbe::attach_software()
+{
+  int pid = -1;
+  int group_fd = -1;
+
+  uint64_t period = probe_.freq;
+  uint64_t defaultp = 1;
+  uint32_t type;
+
+  // from linux/perf_event.h, with aliases from perf:
+  if (probe_.path == "cpu-clock" || probe_.path == "cpu")
+  {
+    type = PERF_COUNT_SW_CPU_CLOCK;
+    defaultp = 1000000;
+  }
+  else if (probe_.path == "task-clock")
+  {
+    type = PERF_COUNT_SW_TASK_CLOCK;
+  }
+  else if (probe_.path == "page-faults" || probe_.path == "faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS;
+    defaultp = 100;
+  }
+  else if (probe_.path == "context-switches" || probe_.path == "cs")
+  {
+    type = PERF_COUNT_SW_CONTEXT_SWITCHES;
+    defaultp = 1000;
+  }
+  else if (probe_.path == "cpu-migrations")
+  {
+    type = PERF_COUNT_SW_CPU_MIGRATIONS;
+  }
+  else if (probe_.path == "minor-faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS_MIN;
+    defaultp = 100;
+  }
+  else if (probe_.path == "major-faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS_MAJ;
+  }
+  else if (probe_.path == "alignment-faults")
+  {
+    type = PERF_COUNT_SW_ALIGNMENT_FAULTS;
+  }
+  else if (probe_.path == "emulation-faults")
+  {
+    type = PERF_COUNT_SW_EMULATION_FAULTS;
+  }
+  else if (probe_.path == "dummy")
+  {
+    type = PERF_COUNT_SW_DUMMY;
+  }
+  else if (probe_.path == "bpf-output")
+  {
+    type = PERF_COUNT_SW_BPF_OUTPUT;
+  }
+  else
+  {
+    abort();
+  }
+
+  if (period == 0)
+    period = defaultp;
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
+        type, period, 0, pid, cpu, group_fd);
+
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
+}
+
+void AttachedProbe::attach_hardware()
+{
+  int pid = -1;
+  int group_fd = -1;
+
+  uint64_t period = probe_.freq;
+  uint64_t defaultp = 1000000;
+  uint32_t type;
+
+  // from linux/perf_event.h, with aliases from perf:
+  if (probe_.path == "cpu-cycles" || probe_.path == "cycles")
+  {
+    type = PERF_COUNT_HW_CPU_CYCLES;
+  }
+  else if (probe_.path == "instructions")
+  {
+    type = PERF_COUNT_HW_INSTRUCTIONS;
+  }
+  else if (probe_.path == "cache-references")
+  {
+    type = PERF_COUNT_HW_CACHE_REFERENCES;
+  }
+  else if (probe_.path == "cache-misses")
+  {
+    type = PERF_COUNT_HW_CACHE_MISSES;
+  }
+  else if (probe_.path == "branch-instructions" || probe_.path == "branches")
+  {
+    type = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+    defaultp = 100000;
+  }
+  else if (probe_.path == "bus-cycles")
+  {
+    type = PERF_COUNT_HW_BUS_CYCLES;
+    defaultp = 100000;
+  }
+  else if (probe_.path == "frontend-stalls")
+  {
+    type = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
+  }
+  else if (probe_.path == "backend-stalls")
+  {
+    type = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
+  }
+  else if (probe_.path == "ref-cycles")
+  {
+    type = PERF_COUNT_HW_REF_CPU_CYCLES;
+  }
+  // can add PERF_COUNT_HW_CACHE_... here
+  else
+  {
+    abort();
+  }
+
+  if (period == 0)
+    period = defaultp;
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_HARDWARE,
+        type, period, 0, pid, cpu, group_fd);
 
     if (perf_event_fd < 0)
       throw std::runtime_error("Error attaching probe: " + probe_.name);

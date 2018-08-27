@@ -27,6 +27,8 @@ private:
   void attach_uprobe();
   void attach_tracepoint();
   void attach_profile();
+  void attach_software();
+  void attach_hardware();
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;

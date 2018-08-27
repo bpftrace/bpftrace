@@ -157,6 +157,18 @@ Attach script to a statically defined tracepoint in the kernel:
 
 Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
 
+### software
+Attach script to kernel software events, executing once every provided count or use a default:
+
+`software:faults:100`
+`software:faults:`
+
+### hardware
+Attach script to hardware events (PMCs), executing once every provided count or use a default:
+
+`hardware:cache-references:1000000`
+`hardware:cache-references:`
+
 ### timers
 Run the script at specified time intervals:
 
