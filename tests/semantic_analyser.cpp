@@ -126,6 +126,14 @@ TEST(semantic_analyser, predicate_expressions)
   test("kprobe:f / @mymap / { @mymap = \"str\" }", 10);
 }
 
+TEST(semantic_analyser, ternary_experssions)
+{
+  test("kprobe:f { @x = pid < 10000 ? 1 : 2 }", 0);
+  test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"high\" }", 0);
+  test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", 10);
+  test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", 10);
+}
+
 TEST(semantic_analyser, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", 1);

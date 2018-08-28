@@ -220,6 +220,56 @@ TEST(Parser, expressions)
       "  int: 1\n");
 }
 
+TEST(Parser, ternary_int)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2 }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    int: 1\n"
+       "    int: 2\n");
+}
+
+TEST(Parser, ternary_str)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\" }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    string: lo\n"
+       "    string: high\n");
+}
+
+TEST(Parser, ternary_nested)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? pid < 5000 ? 1 : 2 : 3 }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    ?:\n"
+       "     <\n"
+       "      builtin: pid\n"
+       "      int: 5000\n"
+       "     int: 1\n"
+       "     int: 2\n"
+       "    int: 3\n");
+}
+
 TEST(Parser, call)
 {
   test("kprobe:sys_open { @x = count(); @y = hist(1,2,3); delete(@x); }",

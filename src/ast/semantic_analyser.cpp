@@ -390,6 +390,29 @@ void SemanticAnalyser::visit(Unop &unop)
   }
 }
 
+void SemanticAnalyser::visit(Ternary &ternary)
+{
+  ternary.cond->accept(*this);
+  ternary.left->accept(*this);
+  ternary.right->accept(*this);
+  Type &lhs = ternary.left->type.type;
+  Type &rhs = ternary.right->type.type;
+  if (is_final_pass()) {
+    if (lhs != rhs) {
+      err_ << "Ternary operator must return the same type: ";
+      err_ << "have '" << lhs << "' ";
+      err_ << "and '" << rhs << "'" << std::endl;
+    }
+  }
+  if (lhs == Type::string)
+    ternary.type = SizedType(lhs, STRING_SIZE);
+  else if (lhs == Type::integer)
+    ternary.type = SizedType(lhs, 8);
+  else {
+    err_ << "Ternary return type unsupported " << lhs << std::endl;
+  }
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);

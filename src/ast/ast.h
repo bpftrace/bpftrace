@@ -160,6 +160,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Ternary : public Expression {
+public:
+  Ternary(Expression *cond, Expression *left, Expression *right) : cond(cond), left(left), right(right) { }
+  Expression *cond, *left, *right;
+
+  void accept(Visitor &v) override;
+};
+
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &provider)
@@ -233,6 +241,7 @@ public:
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
+  virtual void visit(Ternary &ternary) = 0;
   virtual void visit(FieldAccess &acc) = 0;
   virtual void visit(Cast &cast) = 0;
   virtual void visit(ExprStatement &expr) = 0;

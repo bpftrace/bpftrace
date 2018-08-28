@@ -44,6 +44,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   RBRACKET "]"
   LPAREN   "("
   RPAREN   ")"
+  QUES     "?"
   ENDPRED  "end predicate"
   COMMA    ","
   ASSIGN   "="
@@ -84,6 +85,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ProbeList *> probes
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
+%type <ast::Ternary *> ternary
 %type <ast::StatementList *> block stmts
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
@@ -98,6 +100,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <std::string> ident
 
 %right ASSIGN
+%left QUES COLON
 %left LOR
 %left LAND
 %left BOR
@@ -153,6 +156,9 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
      |                  { $$ = nullptr; }
      ;
 
+ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
+     ;
+
 block : "{" stmts "}"     { $$ = $2; }
       | "{" stmts ";" "}" { $$ = $2; }
       ;
@@ -169,6 +175,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
      | BUILTIN         { $$ = new ast::Builtin($1); }
+     | ternary         { $$ = $1; }
      | map             { $$ = $1; }
      | var             { $$ = $1; }
      | call            { $$ = $1; }

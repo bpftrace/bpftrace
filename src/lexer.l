@@ -78,6 +78,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name {
 "#include"              { return Parser::make_INCLUDE(loc); }
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
+"?"                     { return Parser::make_QUES(loc); }
 
 \"                      { BEGIN(STR); string_buffer.clear(); }
 <STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(string_buffer, loc); }

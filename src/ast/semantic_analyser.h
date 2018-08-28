@@ -26,6 +26,7 @@ public:
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
+  void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;

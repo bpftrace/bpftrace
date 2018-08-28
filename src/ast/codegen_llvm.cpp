@@ -583,6 +583,53 @@ void CodegenLLVM::visit(Unop &unop)
   }
 }
 
+void CodegenLLVM::visit(Ternary &ternary)
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *left_block = BasicBlock::Create(module_->getContext(), "left", parent);
+  BasicBlock *right_block = BasicBlock::Create(module_->getContext(), "right", parent);
+  BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+
+  // ordering of all the following statements is important
+  Value *result = b_.CreateAllocaBPF(ternary.type, "result");
+  AllocaInst *buf = b_.CreateAllocaBPF(ternary.type, "buf");
+  Value *cond;
+  ternary.cond->accept(*this);
+  cond = expr_;
+  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"),
+                  left_block, right_block);
+
+  if (ternary.type.type == Type::integer) {
+    // fetch selected integer via CreateStore
+    b_.SetInsertPoint(left_block);
+    ternary.left->accept(*this);
+    b_.CreateStore(expr_, result);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(right_block);
+    ternary.right->accept(*this);
+    b_.CreateStore(expr_, result);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(done);
+    expr_ = b_.CreateLoad(result);
+  } else {
+    // copy selected string via CreateMemCpy
+    b_.SetInsertPoint(left_block);
+    ternary.left->accept(*this);
+    b_.CreateMemCpy(buf, expr_, ternary.type.size, 1);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(right_block);
+    ternary.right->accept(*this);
+    b_.CreateMemCpy(buf, expr_, ternary.type.size, 1);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(done);
+    expr_ = buf;
+  }
+}
+
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   // TODO
