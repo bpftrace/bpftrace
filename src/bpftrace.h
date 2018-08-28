@@ -37,6 +37,7 @@ public:
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr) const;
+  std::string resolve_name(uint64_t name_id);
   int pid_;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
@@ -46,14 +47,15 @@ public:
   std::unique_ptr<IMap> stackid_map_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;
+  std::vector<std::string> name_ids_;
   int join_argnum_;
   int join_argsize_;
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
+  virtual std::set<std::string> find_wildcard_matches(const std::string &prefix, const std::string &attach_point, const std::string &file_name);
 
 protected:
-  virtual std::set<std::string> find_wildcard_matches(const std::string &prefix, const std::string &attach_point, const std::string &file_name);
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
 

@@ -30,7 +30,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = "/proc/self/exe";
       probe.attach_point = "BEGIN_trigger";
       probe.type = probetype(attach_point->provider);
-      probe.prog_name = p.name();
+      probe.orig_name = p.name();
       probe.name = p.name();
       special_probes_.push_back(probe);
       continue;
@@ -41,7 +41,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = "/proc/self/exe";
       probe.attach_point = "END_trigger";
       probe.type = probetype(attach_point->provider);
-      probe.prog_name = p.name();
+      probe.orig_name = p.name();
       probe.name = p.name();
       special_probes_.push_back(probe);
       continue;
@@ -83,7 +83,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = attach_point->target;
       probe.attach_point = func;
       probe.type = probetype(attach_point->provider);
-      probe.prog_name = p.name();
+      probe.orig_name = p.name();
       probe.name = attach_point->name(func);
       probe.freq = attach_point->freq;
       probes_.push_back(probe);
@@ -117,7 +117,9 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
     if (std::regex_search(line, match, func_regex))
     {
       assert(match.size() == 2);
-      matches.insert(match[1]);
+      // skip the ".part.N" kprobe variants, as they can't be traced:
+      if (std::strstr(match.str(1).c_str(), ".part.") == NULL)
+        matches.insert(match[1]);
     }
   }
   return matches;
@@ -201,6 +203,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   std::vector<uint64_t> arg_values;
   std::vector<std::unique_ptr<char>> resolved_symbols;
+  char *name;
   for (auto arg : args)
   {
     switch (arg.type)
@@ -220,6 +223,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         resolved_symbols.emplace_back(strdup(
               bpftrace->resolve_usym(*(uint64_t*)arg_data).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        break;
+      case Type::name:
+        name = strdup(bpftrace->resolve_name(*(uint64_t*)arg_data).c_str());
+        arg_values.push_back((uint64_t)name);
         break;
       default:
         abort();
@@ -265,10 +272,19 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
 {
-  auto func = bpforc.sections_.find("s_" + probe.prog_name);
+  // use the single-probe program if it exists (as is the case with wildcards
+  // and the name builtin, which must be expanded into separate programs per
+  // probe), else try to find a the program based on the original probe name
+  // that includes wildcards.
+  auto func = bpforc.sections_.find("s_" + probe.name);
+  if (func == bpforc.sections_.end())
+    func = bpforc.sections_.find("s_" + probe.orig_name);
   if (func == bpforc.sections_.end())
   {
-    std::cerr << "Code not generated for probe: " << probe.name << std::endl;
+    if (probe.name != probe.orig_name)
+      std::cerr << "Code not generated for probe: " << probe.name << " from: " << probe.orig_name << std::endl;
+    else
+      std::cerr << "Code not generated for probe: " << probe.name << std::endl;
     return nullptr;
   }
   try
@@ -308,6 +324,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       return -1;
     attached_probes_.push_back(std::move(attached_probe));
   }
+
+  if (bt_verbose)
+    std::cerr << "Running..." << std::endl;
 
   poll_perf_events(epollfd);
   attached_probes_.clear();
@@ -623,6 +642,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << min_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::max)
       std::cout << max_value(value, ncpus_) / div << std::endl;
+    else if (map.type_.type == Type::name)
+      std::cout << resolve_name(*(uint64_t*)value.data()) << std::endl;
     else
       std::cout << *(int64_t*)value.data() / div << std::endl;
   }
@@ -1042,6 +1063,12 @@ std::string BPFtrace::resolve_usym(uintptr_t addr) const
   std::ostringstream symbol;
   symbol << (void*)addr;
   return symbol.str();
+}
+
+std::string BPFtrace::resolve_name(uint64_t name_id)
+{
+  assert(name_id < name_ids_.size());
+  return name_ids_[name_id];
 }
 
 void BPFtrace::sort_by_key(std::vector<SizedType> key_args,

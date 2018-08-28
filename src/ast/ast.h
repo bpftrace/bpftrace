@@ -49,6 +49,7 @@ class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(ident) { }
   std::string ident;
+  int name_id;
 
   void accept(Visitor &v) override;
 };
@@ -196,6 +197,7 @@ public:
 
   void accept(Visitor &v) override;
   std::string name() const;
+  bool need_expansion = false;	// must build a BPF program per wildcard match
 };
 using ProbeList = std::vector<Probe *>;
 

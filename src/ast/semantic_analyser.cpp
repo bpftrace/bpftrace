@@ -68,6 +68,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
       err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
     builtin.type = SizedType(Type::integer, 8);
   }
+  else if (builtin.ident == "name") {
+    builtin.type = SizedType(Type::name, 8);
+    probe_->need_expansion = true;
+  }
   else {
     builtin.type = SizedType(Type::none, 0);
     err_ << "Unknown builtin variable: '" << builtin.ident << "'" << std::endl;

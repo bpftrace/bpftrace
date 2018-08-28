@@ -97,6 +97,14 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
+  else if (builtin.ident == "name")
+  {
+    static int name_id = 0;
+    bpftrace_.name_ids_.push_back(probefull_);
+    builtin.name_id = name_id;
+    name_id++;
+    expr_ = b_.getInt64(builtin.name_id);
+  }
   else
   {
     abort();
@@ -659,21 +667,70 @@ void CodegenLLVM::visit(Probe &probe)
       b_.getInt64Ty(),
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
-  Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name(), module_.get());
-  func->setSection("s_" + probe.name());
-  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
-  b_.SetInsertPoint(entry);
 
-  ctx_ = func->arg_begin();
+  /*
+   * Most of the time, we can take a probe like kprobe:do_f* and build a
+   * single BPF program for that, called "s_kprobe:do_f*", and attach it to
+   * each wildcard match. An exception is the "name" builtin, where we need
+   * to build different BPF programs for each wildcard match that cantains an
+   * ID for the match. Those programs will be called "s_kprobe:do_fcntl" etc.
+   */
+  if (probe.need_expansion == false) {
+    // build a single BPF program pre-wildcards
+    Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name(), module_.get());
+    func->setSection("s_" + probe.name());
+    BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+    b_.SetInsertPoint(entry);
 
-  if (probe.pred) {
-    probe.pred->accept(*this);
+    ctx_ = func->arg_begin();
+
+    if (probe.pred) {
+      probe.pred->accept(*this);
+    }
+    for (Statement *stmt : *probe.stmts) {
+      stmt->accept(*this);
+    }
+
+    b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+
+  } else {
+    // build a separate BPF programs for each wildcard match
+    for (auto &attach_point : *probe.attach_points) {
+      std::string file_name;
+      switch (probetype(attach_point->provider))
+      {
+        case ProbeType::kprobe:
+        case ProbeType::kretprobe:
+          file_name = "/sys/kernel/debug/tracing/available_filter_functions";
+          break;
+        case ProbeType::tracepoint:
+          file_name = "/sys/kernel/debug/tracing/available_events";
+          break;
+        default:
+          std::cerr << "Wildcard matches aren't available on probe type '"
+                    << attach_point->provider << "'" << std::endl;
+          return;
+      }
+      auto matches = bpftrace_.find_wildcard_matches(attach_point->target, attach_point->func, file_name);
+      for (auto &match : matches) {
+        probefull_ = attach_point->name(match);
+        Function *func = Function::Create(func_type, Function::ExternalLinkage, attach_point->name(match), module_.get());
+        func->setSection("s_" + attach_point->name(match));
+        BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+        b_.SetInsertPoint(entry);
+
+        // check: do the following 8 lines need to be in the wildcard loop?
+        ctx_ = func->arg_begin();
+        if (probe.pred) {
+          probe.pred->accept(*this);
+        }
+        for (Statement *stmt : *probe.stmts) {
+          stmt->accept(*this);
+        }
+        b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+      }
+    }
   }
-  for (Statement *stmt : *probe.stmts) {
-    stmt->accept(*this);
-  }
-
-  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 }
 
 void CodegenLLVM::visit(Include &include)

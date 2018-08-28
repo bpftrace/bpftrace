@@ -65,6 +65,7 @@ private:
   Value *expr_ = nullptr;
   Value *ctx_;
   BPFtrace &bpftrace_;
+  std::string probefull_;
 
   std::map<std::string, Value *> variables_;
 };

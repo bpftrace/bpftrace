@@ -55,6 +55,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   : probe_(probe), func_(func)
 {
   load_prog();
+  if (bt_verbose)
+    std::cerr << "Attaching " << probe_.name << std::endl;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
@@ -277,8 +279,16 @@ void AttachedProbe::attach_kprobe()
   int perf_event_fd = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
       eventname().c_str(), probe_.attach_point.c_str(), 0);
 
-  if (perf_event_fd < 0)
-    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+  if (perf_event_fd < 0) {
+    if (probe_.orig_name != probe_.name) {
+      // a wildcard expansion couldn't probe something, just print a warning
+      // as this is normal for some kernel functions (eg, do_debug())
+      std::cerr << "Warning: could not attach probe " << probe_.name << ", skipping." << std::endl;
+    } else {
+      // an explicit match failed, so fail as the user must have wanted it
+      throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+    }
+  }
 
   perf_event_fds_.push_back(perf_event_fd);
 }

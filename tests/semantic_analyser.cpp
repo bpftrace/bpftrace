@@ -73,6 +73,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { arg0 }", 0);
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
+  test("kprobe:f { name }", 0);
 //  test("kprobe:f { fake }", 1);
 }
 
@@ -258,6 +259,24 @@ TEST(semantic_analyser, call_reg)
   test("kprobe:f { reg(\"blah\"); }", 1);
   test("kprobe:f { reg(); }", 1);
   test("kprobe:f { reg(123); }", 1);
+}
+
+TEST(semantic_analyser, call_func)
+{
+  test("kprobe:f { @[func] = count(); }", 0);
+  test("kprobe:f { printf(\"%s\", func);  }", 0);
+  test("kprobe:f { func(\"blah\"); }", 1);
+  test("kprobe:f { func(); }", 1);
+  test("kprobe:f { func(123); }", 1);
+}
+
+TEST(semantic_analyser, call_name)
+{
+  test("kprobe:f { @[name] = count(); }", 0);
+  test("kprobe:f { printf(\"%s\", name);  }", 0);
+  test("kprobe:f { name(\"blah\"); }", 1);
+  test("kprobe:f { name(); }", 1);
+  test("kprobe:f { name(123); }", 1);
 }
 
 TEST(semantic_analyser, map_reassignment)

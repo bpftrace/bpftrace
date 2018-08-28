@@ -30,6 +30,7 @@ enum class Type
   usym,
   cast,
   join,
+  name,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -71,10 +72,11 @@ class Probe
 {
 public:
   ProbeType type;
-  std::string path;
-  std::string attach_point;
-  std::string prog_name;
-  std::string name;
+  std::string path;		// file path if used
+  std::string attach_point;	// probe name (last component)
+  std::string orig_name;	// original full probe name,
+				// before wildcard expansion
+  std::string name;		// full probe name
   uint64_t loc;
   int freq;
 };
