@@ -380,7 +380,7 @@ int BPFtrace::print_maps()
   {
     IMap &map = *mapmap.second.get();
     int err;
-    if (map.type_.type == Type::quantize)
+    if (map.type_.type == Type::quantize || map.type_.type == Type::lhist)
       err = print_map_quantize(map, 0, 0);
     else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
       err = print_map_stats(map);
@@ -674,7 +674,10 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      values_by_key[key_prefix] = std::vector<uint64_t>(65);
+      if (map.type_.type == Type::quantize)
+        values_by_key[key_prefix] = std::vector<uint64_t>(65);
+      else
+        values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }
     values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
 
@@ -713,7 +716,10 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
 
-    print_quantize(value, div);
+    if (map.type_.type == Type::quantize)
+      print_quantize(value, div);
+    else
+      print_lhist(value, map.lqmin, map.lqmax, map.lqstep);
 
     std::cout << std::endl;
   }
@@ -839,6 +845,53 @@ int BPFtrace::print_quantize(const std::vector<uint64_t> &values, uint32_t div) 
 
     std::cout << std::setw(16) << std::left << header.str()
               << std::setw(8) << std::right << (values.at(i) / div)
+              << " |" << std::setw(max_width) << std::left << bar << "|"
+              << std::endl;
+  }
+
+  return 0;
+}
+
+int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
+{
+  int max_index = -1;
+  int max_value = 0;
+  int buckets = (max - min) / step;	// excluding lt and gt buckets
+
+  for (size_t i = 0; i < values.size(); i++)
+  {
+    int v = values.at(i);
+    if (v != 0)
+      max_index = i;
+    if (v > max_value)
+      max_value = v;
+  }
+
+  if (max_index == -1)
+    return 0;
+
+  std::ostringstream lt;
+  lt << "(...," << min << "]";
+  std::ostringstream gt;
+
+  for (int i = 0; i <= buckets + 1; i++)
+  {
+    int max_width = 52;
+    int bar_width = values.at(i)/(float)max_value*max_width;
+    std::ostringstream header;
+    if (i == 0) {
+      header << "(...," << min << "]";
+    } else if (i == (buckets + 1)) {
+      header << "[" << max << ",...)";
+    } else {
+      header << "[" << (i - 1) * step + min;
+      header << ", " << i * step + min << ")";
+    }
+
+    std::string bar(bar_width, '@');
+
+    std::cout << std::setw(16) << std::left << header.str()
+              << std::setw(8) << std::right << values.at(i)
               << " |" << std::setw(max_width) << std::left << bar << "|"
               << std::endl;
   }

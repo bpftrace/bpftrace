@@ -51,6 +51,7 @@ public:
   Value      *createLogicalOr(Binop &binop);
 
   void createLog2Function();
+  void createLinearFunction();
   void createStrcmpFunction();
   std::unique_ptr<BpfOrc> compile(bool debug=false, std::ostream &out=std::cerr);
 

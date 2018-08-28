@@ -89,6 +89,40 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::quantize, 8);
   }
+  else if (call.func == "lhist") {
+    check_nargs(call, 4);
+    check_arg(call, Type::integer, 0);
+    check_arg(call, Type::integer, 1);
+    check_arg(call, Type::integer, 2);
+    check_arg(call, Type::integer, 3);
+
+    if (is_final_pass()) {
+      Expression &min_arg = *call.vargs->at(1);
+      Expression &max_arg = *call.vargs->at(2);
+      Expression &step_arg = *call.vargs->at(3);
+      Integer &min = static_cast<Integer&>(min_arg);
+      Integer &max = static_cast<Integer&>(max_arg);
+      Integer &step = static_cast<Integer&>(step_arg);
+      if (step.n <= 0)
+        err_ << "lhist() step must be >= 1 (" << step.n << " provided)" << std::endl;
+      else
+      {
+        int buckets = (max.n - min.n) / step.n;
+        if (buckets > 1000)
+          err_ << "lhist() too many buckets, must be <= 1000 (would need " << buckets << ")" << std::endl;
+      }
+      if (min.n > max.n)
+        err_ << "lhist() min must be less than max (provided min " << min.n << " and max " << max.n << ")" << std::endl;
+      if ((max.n - min.n) < step.n)
+        err_ << "lhist() step is too large for the given range (provided step " << step.n << " for range " << (max.n - min.n) << ")" << std::endl;
+
+      // store args for later passing to bpftrace::Map
+      auto search = map_args_.find(call.map->ident);
+      if (search == map_args_.end())
+        map_args_.insert({call.map->ident, *call.vargs});
+    }
+    call.type = SizedType(Type::lhist, 8);
+  }
   else if (call.func == "count") {
     check_assignment(call, true, false);
     check_nargs(call, 0);
@@ -675,7 +709,24 @@ int SemanticAnalyser::create_maps(bool debug)
     if (debug)
       bpftrace_.maps_[map_name] = std::make_unique<bpftrace::FakeMap>(map_name, type, key);
     else
-      bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+    {
+      if (type.type == Type::lhist)
+      {
+        // store lhist args to the bpftrace::Map
+        auto map_args = map_args_.find(map_name);
+        if (map_args == map_args_.end())
+          abort();
+        Expression &min_arg = *map_args->second.at(1);
+        Expression &max_arg = *map_args->second.at(2);
+        Expression &step_arg = *map_args->second.at(3);
+        Integer &min = static_cast<Integer&>(min_arg);
+        Integer &max = static_cast<Integer&>(max_arg);
+        Integer &step = static_cast<Integer&>(step_arg);
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n);
+      }
+      else
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+    }
   }
 
   if (debug)

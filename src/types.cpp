@@ -28,6 +28,7 @@ std::string typestr(Type t)
     case Type::none:     return "none";     break;
     case Type::integer:  return "integer";  break;
     case Type::quantize: return "quantize"; break;
+    case Type::lhist:    return "lhist";    break;
     case Type::count:    return "count";    break;
     case Type::sum:      return "sum";      break;
     case Type::min:      return "min";      break;

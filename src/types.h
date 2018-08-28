@@ -16,6 +16,7 @@ enum class Type
   none,
   integer,
   quantize,
+  lhist,
   count,
   sum,
   min,

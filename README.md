@@ -221,6 +221,7 @@ Variables:
 
 Functions:
 - `quantize(int n)` - Produce a log2 histogram of values of `n`
+- `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of `n`
 - `count()` - Count the number of times this function is called
 - `sum(int n)` - Sum this value
 - `min(int n)` - Record the minimum value seen

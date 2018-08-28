@@ -227,6 +227,41 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
+  else if (call.func == "lhist")
+  {
+    Map &map = *call.map;
+    call.vargs->front()->accept(*this);
+    Function *linear_func = module_->getFunction("linear");
+
+    // prepare arguments
+    Integer &value_arg = static_cast<Integer&>(*call.vargs->at(0));
+    Integer &min_arg = static_cast<Integer&>(*call.vargs->at(1));
+    Integer &max_arg = static_cast<Integer&>(*call.vargs->at(2));
+    Integer &step_arg = static_cast<Integer&>(*call.vargs->at(3));
+    Value *value, *min, *max, *step;
+    value_arg.accept(*this);
+    value = expr_;
+    min_arg.accept(*this);
+    min = expr_;
+    max_arg.accept(*this);
+    max = expr_;
+    step_arg.accept(*this);
+    step = expr_;
+
+    Value *linear = b_.CreateCall(linear_func, {value, min, max, step} , "linear");
+
+    AllocaInst *key = getQuantizeMapKey(map, linear);
+
+    Value *oldval = b_.CreateMapLookupElem(map, key);
+    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+    b_.CreateMapUpdateElem(map, key, newval);
+
+    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    b_.CreateLifetimeEnd(key);
+    b_.CreateLifetimeEnd(newval);
+    expr_ = nullptr;
+  }
   else if (call.func == "delete")
   {
     auto &arg = *call.vargs->at(0);
@@ -833,6 +868,75 @@ void CodegenLLVM::createLog2Function()
   b_.CreateRet(b_.CreateLoad(result));
 }
 
+void CodegenLLVM::createLinearFunction()
+{
+  // lhist() returns a bucket index for the given value. The first and last
+  //   bucket indexes are special: they are 0 for the less-than-range
+  //   bucket, and index max_bucket+2 for the greater-than-range bucket.
+  //   Indexes 1 to max_bucket+1 span the buckets in the range.
+  //
+  // int lhist(int value, int min, int max, int step)
+  // {
+  // 	int result;
+  //
+  // 	if (value < min)
+  // 		return 0;
+  // 	if (value > max)
+  // 		return 1 + (max - min) / step;
+  // 	result = 1 + (value - min) / step;
+  //
+  // 	return result;
+  // }
+
+  // inlined function initialization
+  FunctionType *linear_func_type = FunctionType::get(b_.getInt64Ty(), {b_.getInt64Ty(), b_.getInt64Ty(), b_.getInt64Ty(), b_.getInt64Ty()}, false);
+  Function *linear_func = Function::Create(linear_func_type, Function::InternalLinkage, "linear", module_.get());
+  linear_func->addFnAttr(Attribute::AlwaysInline);
+  linear_func->setSection("helpers");
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", linear_func);
+  b_.SetInsertPoint(entry);
+
+  // pull in arguments
+  Value *value_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *min_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *max_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *step_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *result_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *value = linear_func->arg_begin()+0;
+  Value *min = linear_func->arg_begin()+1;
+  Value *max = linear_func->arg_begin()+2;
+  Value *step = linear_func->arg_begin()+3;
+  b_.CreateStore(value, value_alloc);
+  b_.CreateStore(min, min_alloc);
+  b_.CreateStore(max, max_alloc);
+  b_.CreateStore(step, step_alloc);
+
+  // algorithm
+  Value *cmp = b_.CreateICmpSLT(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc));
+  BasicBlock *lt_min = BasicBlock::Create(module_->getContext(), "lhist.lt_min", linear_func);
+  BasicBlock *ge_min = BasicBlock::Create(module_->getContext(), "lhist.ge_min", linear_func);
+  b_.CreateCondBr(cmp, lt_min, ge_min);
+
+  b_.SetInsertPoint(lt_min);
+  b_.CreateRet(b_.getInt64(0));
+
+  b_.SetInsertPoint(ge_min);
+  Value *cmp1 = b_.CreateICmpSGT(b_.CreateLoad(value_alloc), b_.CreateLoad(max_alloc));
+  BasicBlock *le_max = BasicBlock::Create(module_->getContext(), "lhist.le_max", linear_func);
+  BasicBlock *gt_max = BasicBlock::Create(module_->getContext(), "lhist.gt_max", linear_func);
+  b_.CreateCondBr(cmp1, gt_max, le_max);
+
+  b_.SetInsertPoint(gt_max);
+  Value *div = b_.CreateSDiv(b_.CreateSub(b_.CreateLoad(max_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
+  b_.CreateStore(b_.CreateAdd(div, b_.getInt64(1)), result_alloc);
+  b_.CreateRet(b_.CreateLoad(result_alloc));
+
+  b_.SetInsertPoint(le_max);
+  Value *div3 = b_.CreateSDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
+  b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
+  b_.CreateRet(b_.CreateLoad(result_alloc));
+}
+
 void CodegenLLVM::createStrcmpFunction()
 {
   // Returns 1 if strings match, 0 otherwise
@@ -877,6 +981,7 @@ void CodegenLLVM::createStrcmpFunction()
 std::unique_ptr<BpfOrc> CodegenLLVM::compile(bool debug, std::ostream &out)
 {
   createLog2Function();
+  createLinearFunction();
   createStrcmpFunction();
   root_->accept(*this);
 
