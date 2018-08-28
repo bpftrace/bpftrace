@@ -32,6 +32,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.type = probetype(attach_point->provider);
       probe.orig_name = p.name();
       probe.name = p.name();
+      probe.loc = 0;
       special_probes_.push_back(probe);
       continue;
     }
@@ -43,6 +44,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.type = probetype(attach_point->provider);
       probe.orig_name = p.name();
       probe.name = p.name();
+      probe.loc = 0;
       special_probes_.push_back(probe);
       continue;
     }
@@ -86,6 +88,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.orig_name = p.name();
       probe.name = attach_point->name(func);
       probe.freq = attach_point->freq;
+      probe.loc = 0;
       probes_.push_back(probe);
     }
   }

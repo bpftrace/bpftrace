@@ -77,7 +77,7 @@ public:
   std::string orig_name;	// original full probe name,
 				// before wildcard expansion
   std::string name;		// full probe name
-  uint64_t loc;
+  uint64_t loc;			// for USDT probes
   int freq;
 };
 
