@@ -186,11 +186,11 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "avg" || call.func == "stats")
   {
-    // avg stores the count and total in a quantize map using indexes 0 and 1
+    // avg stores the count and total in a hist map using indexes 0 and 1
     // respectively, and the calculation is made when printing.
     Map &map = *call.map;
 
-    AllocaInst *count_key = getQuantizeMapKey(map, b_.getInt64(0));
+    AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
     Value *count_old = b_.CreateMapLookupElem(map, count_key);
     AllocaInst *count_new = b_.CreateAllocaBPF(map.type, map.ident + "_num");
     b_.CreateStore(b_.CreateAdd(count_old, b_.getInt64(1)), count_new);
@@ -198,7 +198,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(count_key);
     b_.CreateLifetimeEnd(count_new);
 
-    AllocaInst *total_key = getQuantizeMapKey(map, b_.getInt64(1));
+    AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
     Value *total_old = b_.CreateMapLookupElem(map, total_key);
     AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     call.vargs->front()->accept(*this);
@@ -209,13 +209,13 @@ void CodegenLLVM::visit(Call &call)
 
     expr_ = nullptr;
   }
-  else if (call.func == "quantize")
+  else if (call.func == "hist")
   {
     Map &map = *call.map;
     call.vargs->front()->accept(*this);
     Function *log2_func = module_->getFunction("log2");
     Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
-    AllocaInst *key = getQuantizeMapKey(map, log2);
+    AllocaInst *key = getHistMapKey(map, log2);
 
     Value *oldval = b_.CreateMapLookupElem(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
@@ -250,7 +250,7 @@ void CodegenLLVM::visit(Call &call)
 
     Value *linear = b_.CreateCall(linear_func, {value, min, max, step} , "linear");
 
-    AllocaInst *key = getQuantizeMapKey(map, linear);
+    AllocaInst *key = getHistMapKey(map, linear);
 
     Value *oldval = b_.CreateMapLookupElem(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
@@ -718,7 +718,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
   return key;
 }
 
-AllocaInst *CodegenLLVM::getQuantizeMapKey(Map &map, Value *log2)
+AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
   AllocaInst *key;
   if (map.vargs) {

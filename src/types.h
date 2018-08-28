@@ -15,7 +15,7 @@ enum class Type
 {
   none,
   integer,
-  quantize,
+  hist,
   lhist,
   count,
   sum,

@@ -78,7 +78,7 @@ TEST(semantic_analyser, builtin_variables)
 
 TEST(semantic_analyser, builtin_functions)
 {
-  test("kprobe:f { @x = quantize(123) }", 0);
+  test("kprobe:f { @x = hist(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
   test("kprobe:f { @x = sum(pid) }", 0);
   test("kprobe:f { @x = min(pid) }", 0);
@@ -129,14 +129,14 @@ TEST(semantic_analyser, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", 1);
   test("kprobe:f { @x = count(); @x = sum(pid); }", 1);
-  test("kprobe:f { @x = 1; @x = quantize(0); }", 1);
+  test("kprobe:f { @x = 1; @x = hist(0); }", 1);
 }
 
-TEST(semantic_analyser, call_quantize)
+TEST(semantic_analyser, call_hist)
 {
-  test("kprobe:f { @x = quantize(1); }", 0);
-  test("kprobe:f { @x = quantize(); }", 1);
-  test("kprobe:f { quantize(); }", 1);
+  test("kprobe:f { @x = hist(1); }", 0);
+  test("kprobe:f { @x = hist(); }", 1);
+  test("kprobe:f { hist(); }", 1);
 }
 
 TEST(semantic_analyser, call_count)

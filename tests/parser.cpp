@@ -221,7 +221,7 @@ TEST(Parser, expressions)
 
 TEST(Parser, call)
 {
-  test("kprobe:sys_open { @x = count(); @y = quantize(1,2,3); delete(@x); }",
+  test("kprobe:sys_open { @x = count(); @y = hist(1,2,3); delete(@x); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
@@ -229,7 +229,7 @@ TEST(Parser, call)
       "   call: count\n"
       "  =\n"
       "   map: @y\n"
-      "   call: quantize\n"
+      "   call: hist\n"
       "    int: 1\n"
       "    int: 2\n"
       "    int: 3\n"

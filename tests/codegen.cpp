@@ -709,9 +709,9 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
-TEST(codegen, call_quantize)
+TEST(codegen, call_hist)
 {
-  test("kprobe:f { @x = quantize(pid) }",
+  test("kprobe:f { @x = hist(pid) }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0

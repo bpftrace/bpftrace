@@ -40,7 +40,7 @@ kprobe:sys_read
 
 kretprobe:sys_read / @start[tid] /
 {
-  @times = quantize(nsecs - @start[tid]);
+  @times = hist(nsecs - @start[tid]);
   delete(@start[tid]);
 }
 ```
@@ -220,7 +220,7 @@ Variables:
 - `func` - Name of the function currently being traced
 
 Functions:
-- `quantize(int n)` - Produce a log2 histogram of values of `n`
+- `hist(int n)` - Produce a log2 histogram of values of `n`
 - `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of `n`
 - `count()` - Count the number of times this function is called
 - `sum(int n)` - Sum this value

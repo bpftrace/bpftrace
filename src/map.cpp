@@ -20,7 +20,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   lqstep = step;
 
   int key_size = key.size();
-  if (type.type == Type::quantize || type.type == Type::lhist ||
+  if (type.type == Type::hist || type.type == Type::lhist ||
       type.type == Type::avg || type.type == Type::stats)
     key_size += 8;
   if (key_size == 0)
@@ -28,7 +28,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
 
   int max_entries = 128;
   enum bpf_map_type map_type;
-  if ((type.type == Type::quantize || type.type == Type::lhist || type.type == Type::count ||
+  if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
       type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))

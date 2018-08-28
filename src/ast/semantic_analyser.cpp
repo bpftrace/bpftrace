@@ -82,12 +82,12 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
 
-  if (call.func == "quantize") {
+  if (call.func == "hist") {
     check_assignment(call, true, false);
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
-    call.type = SizedType(Type::quantize, 8);
+    call.type = SizedType(Type::hist, 8);
   }
   else if (call.func == "lhist") {
     check_nargs(call, 4);

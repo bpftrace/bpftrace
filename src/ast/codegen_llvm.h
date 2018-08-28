@@ -46,7 +46,7 @@ public:
   void visit(Include &include) override;
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
-  AllocaInst *getQuantizeMapKey(Map &map, Value *log2);
+  AllocaInst *getHistMapKey(Map &map, Value *log2);
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 

@@ -380,8 +380,8 @@ int BPFtrace::print_maps()
   {
     IMap &map = *mapmap.second.get();
     int err;
-    if (map.type_.type == Type::quantize || map.type_.type == Type::lhist)
-      err = print_map_quantize(map, 0, 0);
+    if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
+      err = print_map_hist(map, 0, 0);
     else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
       err = print_map_stats(map);
     else
@@ -402,8 +402,8 @@ int BPFtrace::print_map_ident(const std::string &ident, uint32_t top, uint32_t d
   {
     IMap &map = *mapmap.second.get();
     if (map.name_ == ident) {
-      if (map.type_.type == Type::quantize)
-        err = print_map_quantize(map, top, div);
+      if (map.type_.type == Type::hist)
+        err = print_map_hist(map, top, div);
       else
         err = print_map(map, top, div);
       return err;
@@ -451,8 +451,8 @@ int BPFtrace::clear_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::quantize)
-      // quantize maps have 8 extra bytes for the bucket number
+    if (map.type_.type == Type::hist)
+      // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
       old_key = find_empty_key(map, map.key_.size());
@@ -492,8 +492,8 @@ int BPFtrace::zero_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::quantize)
-      // quantize maps have 8 extra bytes for the bucket number
+    if (map.type_.type == Type::hist)
+      // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
       old_key = find_empty_key(map, map.key_.size());
@@ -632,11 +632,11 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   return 0;
 }
 
-int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
+int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
 {
-  // A quantize-map adds an extra 8 bytes onto the end of its key for storing
+  // A hist-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
-  // e.g. A map defined as: @x[1, 2] = @quantize(3);
+  // e.g. A map defined as: @x[1, 2] = @hist(3);
   // would actually be stored with the key: [1, 2, 3]
 
   std::vector<uint8_t> old_key;
@@ -674,7 +674,7 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      if (map.type_.type == Type::quantize)
+      if (map.type_.type == Type::hist)
         values_by_key[key_prefix] = std::vector<uint64_t>(65);
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
@@ -716,8 +716,8 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
 
-    if (map.type_.type == Type::quantize)
-      print_quantize(value, div);
+    if (map.type_.type == Type::hist)
+      print_hist(value, div);
     else
       print_lhist(value, map.lqmin, map.lqmax, map.lqstep);
 
@@ -729,7 +729,7 @@ int BPFtrace::print_map_quantize(IMap &map, uint32_t top, uint32_t div)
 
 int BPFtrace::print_map_stats(IMap &map)
 {
-  // A quantize-map adds an extra 8 bytes onto the end of its key for storing
+  // A hist-map adds an extra 8 bytes onto the end of its key for storing
   // the bucket number.
 
   std::vector<uint8_t> old_key;
@@ -809,7 +809,7 @@ int BPFtrace::print_map_stats(IMap &map)
   return 0;
 }
 
-int BPFtrace::print_quantize(const std::vector<uint64_t> &values, uint32_t div) const
+int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) const
 {
   int max_index = -1;
   int max_value = 0;
@@ -835,8 +835,8 @@ int BPFtrace::print_quantize(const std::vector<uint64_t> &values, uint32_t div) 
     }
     else
     {
-      header << "[" << quantize_index_label(i);
-      header << ", " << quantize_index_label(i+1) << ")";
+      header << "[" << hist_index_label(i);
+      header << ", " << hist_index_label(i+1) << ")";
     }
 
     int max_width = 52;
@@ -899,7 +899,7 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   return 0;
 }
 
-std::string BPFtrace::quantize_index_label(int power)
+std::string BPFtrace::hist_index_label(int power)
 {
   char suffix = '\0';
   if (power >= 40)
@@ -969,7 +969,7 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
   int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::quantize ||
+  if (map.type_.type == Type::count || map.type_.type == Type::hist ||
       map.type_.type == Type::sum || map.type_.type == Type::min ||
       map.type_.type == Type::max || map.type_.type == Type::avg ||
       map.type_.type == Type::stats)
