@@ -7,6 +7,7 @@
 #include "driver.h"
 #include "printer.h"
 #include "semantic_analyser.h"
+#include "list.h"
 
 using namespace bpftrace;
 
@@ -16,11 +17,14 @@ void usage()
   std::cerr << "    bpftrace [options] filename" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
+  std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -v    verbose messages" << std::endl;
   std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
-  std::cerr << "bpftrace -e 'kprobe:sys_nanosleep { printf(\"PID %d sleeping...\\n\", pid); }'" << std::endl;
+  std::cerr << "bpftrace -l '*sleep*'" << std::endl;
+  std::cerr << "    list probes containing \"sleep\"" << std::endl;
+  std::cerr << "bpftrace -e 'kprobe:do_nanosleep { printf(\"PID %d sleeping...\\n\", pid); }'" << std::endl;
   std::cerr << "    trace processes calling sleep" << std::endl;
   std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   std::cerr << "    count syscalls by process name" << std::endl;
@@ -30,10 +34,11 @@ int main(int argc, char *argv[])
 {
   int err;
   Driver driver;
+  bool listing = false;
 
-  std::string script;
+  std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:v")) != -1)
+  while ((c = getopt(argc, argv, "de:lv")) != -1)
   {
     switch (c)
     {
@@ -46,6 +51,9 @@ int main(int argc, char *argv[])
       case 'e':
         script = optarg;
         break;
+      case 'l':
+        listing = true;
+        break;
       default:
         usage();
         return 1;
@@ -57,6 +65,20 @@ int main(int argc, char *argv[])
     // TODO: allow both
     std::cerr << "USAGE: Use either -v or -d." << std::endl;
     return 1;
+  }
+
+  // Listing probes
+  if (listing)
+  {
+    if (optind == argc-1)
+      list_probes(argv[optind]);
+    else if (optind == argc)
+      list_probes();
+    else
+    {
+      usage();
+    }
+    return 0;
   }
 
   if (script.empty())
