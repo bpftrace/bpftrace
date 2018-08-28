@@ -113,6 +113,10 @@ int main(int argc, char *argv[])
 
   BPFtrace bpftrace;
 
+  // defaults
+  bpftrace.join_argnum_ = 16;
+  bpftrace.join_argsize_ = 1024;
+
   // PID is currently only used for USDT probes that need enabling. Future work:
   // - make PID a filter for all probe types: pass to perf_event_open(), etc.
   // - provide PID in USDT probe specification as a way to override -p.

@@ -61,6 +61,7 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   bool needs_stackid_map_ = false;
+  bool needs_join_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
 };

@@ -146,6 +146,13 @@ void SemanticAnalyser::visit(Call &call)
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 8);
   }
+  else if (call.func == "join") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    check_arg(call, Type::integer, 0);
+    call.type = SizedType(Type::none, 0);
+    needs_join_map_ = true;
+  }
   else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
@@ -675,12 +682,28 @@ int SemanticAnalyser::create_maps(bool debug)
   {
     if (needs_stackid_map_)
       bpftrace_.stackid_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_STACK_TRACE);
+    if (needs_join_map_)
+    {
+      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
+      std::string map_ident = "join";
+      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      MapKey key;
+      bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
+    }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }
   else
   {
     if (needs_stackid_map_)
       bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_STACK_TRACE);
+    if (needs_join_map_)
+    {
+      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
+      std::string map_ident = "join";
+      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      MapKey key;
+      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key);
+    }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }
 

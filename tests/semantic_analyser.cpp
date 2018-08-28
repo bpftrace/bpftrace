@@ -93,6 +93,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
+  test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
@@ -397,6 +398,16 @@ TEST(semantic_analyser, printf_format_multi)
 {
   test("kprobe:f { printf(\"%d %d %s\", 1, 2, \"mystr\") }", 0);
   test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
+}
+
+TEST(semantic_analyser, join)
+{
+  test("kprobe:f { join(arg0) }", 0);
+  test("kprobe:f { printf(\"%s\", join(arg0)) }", 10);
+  test("kprobe:f { join() }", 1);
+  test("kprobe:f { $fmt = \"mystring\"; join($fmt) }", 10);
+  test("kprobe:f { @x = join(arg0) }", 1);
+  test("kprobe:f { $x = join(arg0) }", 1);
 }
 
 TEST(semantic_analyser, kprobe)

@@ -244,6 +244,40 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateProbeReadStr(buf, call.type.size, expr_);
     expr_ = buf;
   }
+  else if (call.func == "join")
+  {
+    call.vargs->front()->accept(*this);
+    AllocaInst *first = b_.CreateAllocaBPF(SizedType(Type::integer, 8), call.func + "_first");
+    AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_second");
+    Value *perfdata = b_.CreateGetJoinMap(ctx_);
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(), "joinzero", parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "joinnotzero", parent);
+    b_.CreateCondBr(b_.CreateICmpNE(perfdata, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()), "joinzerocond"), notzero, zero);
+
+    // arg0
+    b_.SetInsertPoint(notzero);
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
+    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
+    b_.CreateProbeRead(arr, 8, expr_);
+    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
+
+    for (int i = 1; i < bpftrace_.join_argnum_; i++) {
+      // argi
+      b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
+      b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
+      b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + i * bpftrace_.join_argsize_)), bpftrace_.join_argsize_, b_.CreateLoad(second));
+    }
+
+    // emit
+    b_.CreatePerfEventOutput(ctx_, perfdata, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+
+    b_.CreateBr(zero);
+
+    // done
+    b_.SetInsertPoint(zero);
+    expr_ = nullptr;
+  }
   else if (call.func == "sym" || call.func == "usym")
   {
     // We want expr_ to just pass through from the child node - don't set it here

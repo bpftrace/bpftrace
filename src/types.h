@@ -28,6 +28,7 @@ enum class Type
   sym,
   usym,
   cast,
+  join,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -85,6 +86,7 @@ enum class AsyncAction
   clear,
   zero,
   time,
+  join,
 };
 
 uint64_t asyncactionint(AsyncAction a);

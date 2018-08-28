@@ -22,6 +22,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   if (key_size == 0)
     key_size = 8;
 
+  int max_entries = 128;
   enum bpf_map_type map_type;
   if ((type.type == Type::quantize || type.type == Type::count ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max || type.type == Type::avg || type.type == Type::stats) &&
@@ -29,11 +30,16 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key)
   {
       map_type = BPF_MAP_TYPE_PERCPU_HASH;
   }
+  else if (type.type == Type::join)
+  {
+    map_type = BPF_MAP_TYPE_PERCPU_ARRAY;
+    max_entries = 1;
+    key_size = 4;
+  }
   else
     map_type = BPF_MAP_TYPE_HASH;
 
   int value_size = type.size;
-  int max_entries = 128;
   int flags = 0;
   mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)

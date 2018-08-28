@@ -44,7 +44,10 @@ public:
   std::vector<std::tuple<std::string, std::vector<SizedType>>> printf_args_;
   std::vector<std::string> time_args_;
   std::unique_ptr<IMap> stackid_map_;
+  std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;
+  int join_argnum_;
+  int join_argsize_;
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);

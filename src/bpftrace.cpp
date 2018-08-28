@@ -181,6 +181,20 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     printf("%s", timestr);
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::join))
+  {
+     const char *joinstr = " ";
+     for (int i = 0; i < bpftrace->join_argnum_; i++) {
+       auto *arg = arg_data + i * bpftrace->join_argsize_;
+       if (arg[0] == 0)
+         break;
+       if (i)
+         printf("%s", joinstr);
+       printf("%s", arg);
+     }
+     printf("\n");
+     return;
+  }
 
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
@@ -318,7 +332,7 @@ int BPFtrace::setup_perf_events()
   online_cpus_ = cpus.size();
   for (int cpu : cpus)
   {
-    int page_cnt = 8;
+    int page_cnt = 64;
     void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, this, -1, cpu, page_cnt);
     if (reader == nullptr)
     {

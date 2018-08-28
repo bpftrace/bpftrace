@@ -90,6 +90,26 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
   return CreateBpfPseudoCall(mapfd);
 }
 
+CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx)
+{
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.join_map_->mapfd_);
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  Value *keyv = getInt32(0);
+  CreateStore(keyv, key);
+
+  FunctionType *lookup_func_type = FunctionType::get(
+      getInt8PtrTy(),
+      {getInt8PtrTy(), getInt8PtrTy()},
+      false);
+  PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
+  Constant *lookup_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_map_lookup_elem),
+      lookup_func_ptr_type);
+  CallInst *call = CreateCall(lookup_func, {map_ptr, key}, "join_elem");
+  return call;
+}
+
 Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
@@ -194,7 +214,7 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
   CallInst *call = CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
 }
 
-void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
+CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
 {
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
@@ -206,7 +226,22 @@ void IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
-  CallInst *call = CreateCall(probereadstr_func, {dst, getInt64(size), src}, "probe_read_str");
+  return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "probe_read_str");
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
+{
+  // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
+  FunctionType *probereadstr_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      false);
+  PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
+  Constant *probereadstr_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_probe_read_str),
+      probereadstr_func_ptr_type);
+  return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "map_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateGetNs()

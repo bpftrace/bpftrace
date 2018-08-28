@@ -1476,6 +1476,8 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
+// TODO: add a join() test. It gets stuck in codegen.compile().
+
 TEST(codegen, int_propagation)
 {
   test("kprobe:f { @x = 1234; @y = @x }",

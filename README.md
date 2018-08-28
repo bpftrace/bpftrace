@@ -235,5 +235,6 @@ Functions:
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address (incomplete)
 - `reg(char *name)` - Returns the value stored in the named register
+- `join(char *arr[])` - Prints the string array
 - `time(char *fmt)` - Print the current time
 - `exit()` - Quit bpftrace
