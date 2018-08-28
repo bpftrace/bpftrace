@@ -37,6 +37,7 @@ public:
   std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr) const;
+  int pid_;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;

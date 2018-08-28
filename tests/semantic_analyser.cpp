@@ -421,6 +421,13 @@ TEST(semantic_analyser, uprobe)
   test("uretprobe { 1 }", 1);
 }
 
+TEST(semantic_analyser, usdt)
+{
+  test("usdt:/bin/sh:probe { 1 }", 0);
+  test("usdt:/notexistfile:probe { 1 }", 1);
+  test("usdt { 1 }", 1);
+}
+
 TEST(semantic_analyser, begin_end_probes)
 {
   test("BEGIN { 1 }", 0);

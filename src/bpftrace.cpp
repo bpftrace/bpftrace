@@ -259,7 +259,10 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   }
   try
   {
-    return std::make_unique<AttachedProbe>(probe, func->second);
+    if (probe.type == ProbeType::usdt)
+      return std::make_unique<AttachedProbe>(probe, func->second, pid_);
+    else
+      return std::make_unique<AttachedProbe>(probe, func->second);
   }
   catch (std::runtime_error e)
   {

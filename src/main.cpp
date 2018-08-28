@@ -19,6 +19,7 @@ void usage()
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
+  std::cerr << "    -p PID    PID for enabling USDT probes" << std::endl;
   std::cerr << "    -v    verbose messages" << std::endl;
   std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
@@ -34,11 +35,12 @@ int main(int argc, char *argv[])
 {
   int err;
   Driver driver;
+  char *pid_str = NULL;
   bool listing = false;
 
   std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:lv")) != -1)
+  while ((c = getopt(argc, argv, "de:lp:v")) != -1)
   {
     switch (c)
     {
@@ -50,6 +52,9 @@ int main(int argc, char *argv[])
         break;
       case 'e':
         script = optarg;
+        break;
+      case 'p':
+        pid_str = optarg;
         break;
       case 'l':
         listing = true;
@@ -107,6 +112,13 @@ int main(int argc, char *argv[])
     return err;
 
   BPFtrace bpftrace;
+
+  // PID is currently only used for USDT probes that need enabling. Future work:
+  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
+  // - provide PID in USDT probe specification as a way to override -p.
+  bpftrace.pid_ = 0;
+  if (pid_str)
+    bpftrace.pid_ = atoi(pid_str);
 
   if (bt_debug)
   {

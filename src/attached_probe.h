@@ -13,6 +13,7 @@ class AttachedProbe
 {
 public:
   AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func);
+  AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe& operator=(const AttachedProbe &) = delete;
@@ -25,6 +26,7 @@ private:
   void load_prog();
   void attach_kprobe();
   void attach_uprobe();
+  void attach_usdt(int pid);
   void attach_tracepoint();
   void attach_profile();
   void attach_interval();

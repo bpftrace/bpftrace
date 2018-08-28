@@ -54,6 +54,7 @@ enum class ProbeType
   kretprobe,
   uprobe,
   uretprobe,
+  usdt,
   tracepoint,
   profile,
   interval,
@@ -72,6 +73,7 @@ public:
   std::string attach_point;
   std::string prog_name;
   std::string name;
+  uint64_t loc;
   int freq;
 };
 

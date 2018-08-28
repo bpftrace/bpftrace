@@ -4,6 +4,7 @@
 #include "parser.tab.hh"
 #include "printf.h"
 #include "arch/arch.h"
+#include <sys/stat.h>
 
 #include "libbpf.h"
 
@@ -509,6 +510,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "uprobes should have a target" << std::endl;
     if (ap.func == "")
       err_ << "uprobes should be attached to a function" << std::endl;
+  }
+  else if (ap.provider == "usdt") {
+    if (ap.target == "" || ap.func == "")
+      err_ << "usdt probe must have a target" << std::endl;
+    struct stat s;
+    if (stat(ap.target.c_str(), &s) != 0)
+      err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
   }
   else if (ap.provider == "tracepoint") {
     if (ap.target == "" || ap.func == "")

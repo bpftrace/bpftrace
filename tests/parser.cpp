@@ -263,6 +263,14 @@ TEST(Parser, uprobe)
       "  int: 1\n");
 }
 
+TEST(Parser, usdt)
+{
+  test("usdt:/my/program:probe { 1; }",
+      "Program\n"
+      " usdt:/my/program:probe\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, escape_chars)
 {
   test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",

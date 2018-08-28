@@ -9,6 +9,7 @@
 #include "attached_probe.h"
 #include "bpftrace.h"
 #include "bcc_syms.h"
+#include "bcc_usdt.h"
 #include "common.h"
 #include "libbpf.h"
 #include <linux/perf_event.h>
@@ -26,6 +27,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
+    case ProbeType::usdt:      return BPF_PROBE_ENTRY; break;
     default: abort();
   }
 }
@@ -38,6 +40,7 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uprobe:     return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::usdt:       return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
     case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::interval:      return BPF_PROG_TYPE_PERF_EVENT; break;
@@ -82,6 +85,20 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   }
 }
 
+AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid)
+  : probe_(probe), func_(func)
+{
+  load_prog();
+  switch (probe_.type)
+  {
+    case ProbeType::usdt:
+      attach_usdt(pid);
+      break;
+    default:
+      abort();
+  }
+}
+
 AttachedProbe::~AttachedProbe()
 {
   close(progfd_);
@@ -103,6 +120,7 @@ AttachedProbe::~AttachedProbe()
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
+    case ProbeType::usdt:
       err = bpf_detach_uprobe(eventname().c_str());
       break;
     case ProbeType::tracepoint:
@@ -143,6 +161,7 @@ std::string AttachedProbe::eventname() const
       return eventprefix() + probe_.attach_point;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
+    case ProbeType::usdt:
       offset_str << std::hex << offset();
       return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str();
     case ProbeType::tracepoint:
@@ -161,7 +180,7 @@ uint64_t AttachedProbe::offset() const
 {
   bcc_symbol sym;
   int err = bcc_resolve_symname(probe_.path.c_str(), probe_.attach_point.c_str(),
-      0, 0, nullptr, &sym);
+      probe_.loc, 0, nullptr, &sym);
 
   if (err)
     throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + probe_.attach_point);
@@ -273,6 +292,57 @@ void AttachedProbe::attach_uprobe()
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
+}
+
+void AttachedProbe::attach_usdt(int pid)
+{
+  struct bcc_usdt_location loc = {};
+  int err, i;
+  std::ostringstream offset_str;
+  void *ctx;
+
+  if (pid)
+  {
+    ctx = bcc_usdt_new_frompid(pid, probe_.path.c_str());
+    if (!ctx)
+      throw std::runtime_error("Error initializing context for probe: " + probe_.name + ", for PID: " + std::to_string(pid));
+  }
+  else
+  {
+    ctx = bcc_usdt_new_frompath(probe_.path.c_str());
+    if (!ctx)
+      throw std::runtime_error("Error initializing context for probe: " + probe_.name);
+  }
+
+  // TODO: fn_name may need a unique suffix for each attachment on the same probe:
+  std::string fn_name = "probe_" + probe_.attach_point + "_1";
+  err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
+  if (err)
+    throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
+
+  std::string provider_name;
+  if ((i = probe_.path.rfind("/")) != std::string::npos)
+     provider_name = probe_.path.substr(i + 1);
+  else
+     provider_name = probe_.path;
+
+  err = bcc_usdt_get_location(ctx, provider_name.c_str(), probe_.attach_point.c_str(), 0, &loc);
+  if (err)
+    throw std::runtime_error("Error finding location for probe: " + probe_.name);
+  probe_.loc = loc.address;
+
+  int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
+      eventname().c_str(), probe_.path.c_str(), loc.address - 0x400000, pid == 0 ? -1 : pid);
+
+  if (perf_event_fd < 0)
+  {
+    if (pid)
+      throw std::runtime_error("Error attaching probe: " + probe_.name + ", to PID: " + std::to_string(pid));
+    else
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+  }
 
   perf_event_fds_.push_back(perf_event_fd);
 }

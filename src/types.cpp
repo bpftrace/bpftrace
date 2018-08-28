@@ -54,6 +54,8 @@ ProbeType probetype(const std::string &type)
     return ProbeType::uprobe;
   else if (type == "uretprobe")
     return ProbeType::uretprobe;
+  else if (type == "usdt")
+    return ProbeType::usdt;
   else if (type == "BEGIN")
     return ProbeType::uprobe;
   else if (type == "END")
