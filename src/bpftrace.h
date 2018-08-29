@@ -34,9 +34,9 @@ public:
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
   int clear_map_ident(const std::string &ident);
   int zero_map_ident(const std::string &ident);
-  std::string get_stack(uint32_t stackid, bool ustack, int indent=0);
+  std::string get_stack(uint64_t stackidpid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
-  std::string resolve_usym(uintptr_t addr) const;
+  std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
   std::string resolve_name(uint64_t name_id);
   int pid_;
 
@@ -63,6 +63,7 @@ private:
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   KSyms ksyms_;
+  std::map<int, void *> pid_sym_;
   int ncpus_;
   int online_cpus_;
 

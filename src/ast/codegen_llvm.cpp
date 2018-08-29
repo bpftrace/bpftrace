@@ -37,7 +37,10 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "stack" || builtin.ident == "ustack")
   {
-    expr_ = b_.CreateGetStackId(ctx_, builtin.ident == "ustack");
+    // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
+    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
+    Value *stackid = b_.CreateGetStackId(ctx_, builtin.ident == "ustack");
+    expr_ = b_.CreateOr(stackid, pidhigh);
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
@@ -321,10 +324,23 @@ void CodegenLLVM::visit(Call &call)
     b_.SetInsertPoint(zero);
     expr_ = nullptr;
   }
-  else if (call.func == "sym" || call.func == "usym")
+  else if (call.func == "sym")
   {
     // We want expr_ to just pass through from the child node - don't set it here
     call.vargs->front()->accept(*this);
+  }
+  else if (call.func == "usym")
+  {
+    // store uint64_t[2] with: [0]: (uint64_t)addr, [1]: (uint64_t)pid
+    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "usym");
+    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+    Value *pid = b_.CreateLShr(b_.CreateGetPidTgid(), 32);
+    Value *addr_offset = b_.CreateGEP(buf, b_.getInt64(0));
+    Value *pid_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
+    call.vargs->front()->accept(*this);
+    b_.CreateStore(expr_, addr_offset);
+    b_.CreateStore(pid, pid_offset);
+    expr_ = buf;
   }
   else if (call.func == "reg")
   {
@@ -370,7 +386,7 @@ void CodegenLLVM::visit(Call &call)
       Expression &arg = *call.vargs->at(i);
       arg.accept(*this);
       Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
-      if (arg.type.type == Type::string)
+      if (arg.type.type == Type::string || arg.type.type == Type::usym)
         b_.CreateMemCpy(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
@@ -807,7 +823,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string)
+      if (expr->type.type == Type::string || expr->type.type == Type::usym)
         b_.CreateMemCpy(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);
@@ -837,7 +853,7 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string)
+      if (expr->type.type == Type::string || expr->type.type == Type::usym)
         b_.CreateMemCpy(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);

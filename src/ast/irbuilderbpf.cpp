@@ -25,7 +25,7 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name)
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize, const std::string &name)
 {
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
@@ -35,17 +35,28 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &nam
     SetInsertPoint(&entry_block);
   else
     SetInsertPoint(&entry_block.front());
-  AllocaInst *alloca = CreateAlloca(ty, nullptr, name); // TODO dodgy
+  AllocaInst *alloca = CreateAlloca(ty, arraysize, name); // TODO dodgy
   restoreIP(ip);
 
   CreateLifetimeStart(alloca);
   return alloca;
 }
 
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, const std::string &name)
+{
+  return CreateAllocaBPF(ty, nullptr, name);
+}
+
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::string &name)
 {
   llvm::Type *ty = GetType(stype);
-  return CreateAllocaBPF(ty, name);
+  return CreateAllocaBPF(ty, nullptr, name);
+}
+
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, llvm::Value *arraysize, const std::string &name)
+{
+  llvm::Type *ty = GetType(stype);
+  return CreateAllocaBPF(ty, arraysize, name);
 }
 
 AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
@@ -57,7 +68,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaMapKey(int bytes, const std::string &name)
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.type == Type::string || stype.type == Type::cast)
+  if (stype.type == Type::string || stype.type == Type::cast || stype.type == Type::usym)
   {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }

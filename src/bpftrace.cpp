@@ -224,7 +224,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         break;
       case Type::usym:
         resolved_symbols.emplace_back(strdup(
-              bpftrace->resolve_usym(*(uint64_t*)arg_data).c_str()));
+              bpftrace->resolve_usym(*(uint64_t*)arg_data, *(uint64_t*)(arg_data + 8)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       case Type::name:
@@ -630,13 +630,13 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
     if (map.type_.type == Type::stack)
-      std::cout << get_stack(*(uint32_t*)value.data(), false, 8);
+      std::cout << get_stack(*(uint64_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
-      std::cout << get_stack(*(uint32_t*)value.data(), true, 8);
+      std::cout << get_stack(*(uint64_t*)value.data(), true, 8);
     else if (map.type_.type == Type::sym)
       std::cout << resolve_sym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
-      std::cout << resolve_usym(*(uintptr_t*)value.data());
+      std::cout << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else if (map.type_.type == Type::count || map.type_.type == Type::sum)
@@ -1014,13 +1014,15 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
   throw std::runtime_error("Could not find empty key");
 }
 
-std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent)
+std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
 {
+  uint32_t stackid = stackidpid & 0xffffffff;
+  int pid = stackidpid >> 32;
   auto stack_trace = std::vector<uint64_t>(MAX_STACK_SIZE);
   int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
   if (err)
   {
-    std::cerr << "Error looking up stack id " << stackid << ": " << err << std::endl;
+    std::cerr << "Error looking up stack id " << stackid << " (pid " << pid << "): " << err << std::endl;
     return "";
   }
 
@@ -1035,7 +1037,7 @@ std::string BPFtrace::get_stack(uint32_t stackid, bool ustack, int indent)
     if (!ustack)
       stack << padding << resolve_sym(addr, true) << std::endl;
     else
-      stack << padding << resolve_usym(addr) << std::endl;
+      stack << padding << resolve_usym(addr, pid, true) << std::endl;
   }
 
   return stack.str();
@@ -1060,11 +1062,42 @@ std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
   return symbol.str();
 }
 
-std::string BPFtrace::resolve_usym(uintptr_t addr) const
+std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
 {
-  // TODO
+  struct bcc_symbol sym;
   std::ostringstream symbol;
-  symbol << (void*)addr;
+  struct bcc_symbol_option symopts;
+  void *psyms;
+
+  // TODO: deal with these:
+  symopts = {.use_debug_file = false,
+	     .check_debug_file_crc = false,
+	     .use_symbol_type = BCC_SYM_ALL_TYPES};
+
+  if (pid_sym_.find(pid) == pid_sym_.end())
+  {
+    // not cached, create new ProcSyms cache
+    psyms = bcc_symcache_new(pid, &symopts);
+    pid_sym_[pid] = psyms;
+  }
+  else
+  {
+    psyms = pid_sym_[pid];
+  }
+
+  if (((ProcSyms *)psyms)->resolve_addr(addr, &sym))
+  {
+    symbol << sym.name;
+    if (show_offset)
+      symbol << "+" << sym.offset;
+  }
+  else
+  {
+    symbol << (void*)addr;
+  }
+
+  // TODO: deal with process exit and clearing its psyms entry
+
   return symbol.str();
 }
 
