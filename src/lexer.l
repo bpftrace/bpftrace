@@ -27,6 +27,7 @@ space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
 header <(\\.|[_\-\./a-zA-Z0-9])*>
 %x STR
+%x COMMENT
 
 %%
 
@@ -36,7 +37,13 @@ header <(\\.|[_\-\./a-zA-Z0-9])*>
 
 {hspace}+               { loc.step(); }
 {vspace}+               { loc.lines(yyleng); loc.step(); }
-"//".*$  // Comments
+
+"//".*$                 // single-line comments
+"/*"                    BEGIN(COMMENT);   // multi-line comments
+<COMMENT>"/*"           driver.error(loc, std::string("nested comments unsupported"));
+<COMMENT>"*/"           BEGIN(INITIAL);
+<COMMENT>"EOF"          driver.error(loc, std::string("end of file during comment"));
+<COMMENT>.|"\n"         ;
 
 pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name {
                           return Parser::make_BUILTIN(yytext, loc); }
