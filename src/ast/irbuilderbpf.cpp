@@ -307,6 +307,19 @@ CallInst *IRBuilderBPF::CreateGetCpuId()
   return CreateCall(getcpuid_func, {}, "get_cpu_id");
 }
 
+CallInst *IRBuilderBPF::CreateGetCurrentTask()
+{
+  // u64 bpf_get_current_task(void)
+  // Return: current task_struct
+  FunctionType *getcurtask_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getcurtask_func_ptr_type = PointerType::get(getcurtask_func_type, 0);
+  Constant *getcurtask_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_current_task),
+      getcurtask_func_ptr_type);
+  return CreateCall(getcurtask_func, {}, "get_cur_task");
+}
+
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);

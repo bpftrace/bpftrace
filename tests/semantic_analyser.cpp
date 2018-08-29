@@ -67,6 +67,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { gid }", 0);
   test("kprobe:f { nsecs }", 0);
   test("kprobe:f { cpu }", 0);
+  test("kprobe:f { curtask }", 0);
   test("kprobe:f { comm }", 0);
   test("kprobe:f { stack }", 0);
   test("kprobe:f { ustack }", 0);

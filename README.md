@@ -218,6 +218,7 @@ Variables:
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
+- `curtask` - Current task_struct as a u64.
 
 Functions:
 - `hist(int n)` - Produce a log2 histogram of values of `n`

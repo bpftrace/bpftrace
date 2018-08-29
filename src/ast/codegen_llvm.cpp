@@ -70,6 +70,10 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = b_.CreateGetCpuId();
   }
+  else if (builtin.ident == "curtask")
+  {
+    expr_ = b_.CreateGetCurrentTask();
+  }
   else if (builtin.ident == "comm")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
