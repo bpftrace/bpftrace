@@ -320,6 +320,19 @@ CallInst *IRBuilderBPF::CreateGetCurrentTask()
   return CreateCall(getcurtask_func, {}, "get_cur_task");
 }
 
+CallInst *IRBuilderBPF::CreateGetRandom()
+{
+  // u64 bpf_get_prandom_u32(void)
+  // Return: random
+  FunctionType *getrandom_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getrandom_func_ptr_type = PointerType::get(getrandom_func_type, 0);
+  Constant *getrandom_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_prandom_u32),
+      getrandom_func_ptr_type);
+  return CreateCall(getrandom_func, {}, "get_random");
+}
+
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);

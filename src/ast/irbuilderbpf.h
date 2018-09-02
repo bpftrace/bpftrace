@@ -37,6 +37,7 @@ public:
   CallInst   *CreateGetUidGid();
   CallInst   *CreateGetCpuId();
   CallInst   *CreateGetCurrentTask();
+  CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack);
   CallInst   *CreateGetJoinMap(Value *ctx);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);

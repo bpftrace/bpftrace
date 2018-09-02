@@ -74,6 +74,10 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = b_.CreateGetCurrentTask();
   }
+  else if (builtin.ident == "rand")
+  {
+    expr_ = b_.CreateGetRandom();
+  }
   else if (builtin.ident == "comm")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
