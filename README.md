@@ -139,6 +139,7 @@ verify_cpu+0
 ```
 
 ## Probe types
+<center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
 
 ### kprobes
 Attach a BPFtrace script to a kernel function, to be executed when that function is called:
