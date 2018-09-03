@@ -244,3 +244,9 @@ Functions:
 - `exit()` - Quit bpftrace
 
 See the [Reference Guide](docs/reference_guide.md) for more detail.
+
+## Internals
+
+<center><a href="images/bpftrace_internals_2018.png"><img src="images/bpftrace_internals_2018.png" border=0 width=700></a></center>
+
+bpftrace employes various techniques for efficiency, minimizing the instrumentation overhead. Summary statistics are stored in kernel BPF maps, which are asynchronously copied from kernel to user-space, only when needed. Other data, and asynchronous actions, are passed from kernel to user-space via the perf output buffer.
