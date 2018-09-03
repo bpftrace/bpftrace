@@ -33,6 +33,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "gid" ||
       builtin.ident == "cpu" ||
       builtin.ident == "curtask" ||
+      builtin.ident == "rand" ||
       builtin.ident == "retval") {
     builtin.type = SizedType(Type::integer, 8);
   }
