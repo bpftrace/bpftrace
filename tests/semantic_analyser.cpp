@@ -57,25 +57,41 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { gid }", 0);
   test("kprobe:f { nsecs }", 0);
   test("kprobe:f { cpu }", 0);
+  test("kprobe:f { curtask }", 0);
+  test("kprobe:f { rand }", 0);
   test("kprobe:f { comm }", 0);
   test("kprobe:f { stack }", 0);
   test("kprobe:f { ustack }", 0);
   test("kprobe:f { arg0 }", 0);
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
+  test("kprobe:f { name }", 0);
 //  test("kprobe:f { fake }", 1);
 }
 
 TEST(semantic_analyser, builtin_functions)
 {
-  test("kprobe:f { @x = quantize(123) }", 0);
+  test("kprobe:f { @x = hist(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
+  test("kprobe:f { @x = sum(pid) }", 0);
+  test("kprobe:f { @x = min(pid) }", 0);
+  test("kprobe:f { @x = max(pid) }", 0);
+  test("kprobe:f { @x = avg(pid) }", 0);
+  test("kprobe:f { @x = stats(pid) }", 0);
   test("kprobe:f { @x = 1; delete(@x) }", 0);
+  test("kprobe:f { @x = 1; print(@x) }", 0);
+  test("kprobe:f { @x = 1; clear(@x) }", 0);
+  test("kprobe:f { @x = 1; zero(@x) }", 0);
+  test("kprobe:f { time() }", 0);
+  test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
+  test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
+  test("kprobe:f { @x = count(pid) }", 1);
+  test("kprobe:f { @x = sum(pid, 123) }", 1);
   test("kprobe:f { fake() }", 1);
 }
 
@@ -102,17 +118,26 @@ TEST(semantic_analyser, predicate_expressions)
   test("kprobe:f / @mymap / { @mymap = \"str\" }", 10);
 }
 
+TEST(semantic_analyser, ternary_experssions)
+{
+  test("kprobe:f { @x = pid < 10000 ? 1 : 2 }", 0);
+  test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"high\" }", 0);
+  test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", 10);
+  test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", 10);
+}
+
 TEST(semantic_analyser, mismatched_call_types)
 {
   test("kprobe:f { @x = 1; @x = count(); }", 1);
-  test("kprobe:f { @x = 1; @x = quantize(0); }", 1);
+  test("kprobe:f { @x = count(); @x = sum(pid); }", 1);
+  test("kprobe:f { @x = 1; @x = hist(0); }", 1);
 }
 
-TEST(semantic_analyser, call_quantize)
+TEST(semantic_analyser, call_hist)
 {
-  test("kprobe:f { @x = quantize(1); }", 0);
-  test("kprobe:f { @x = quantize(); }", 1);
-  test("kprobe:f { quantize(); }", 1);
+  test("kprobe:f { @x = hist(1); }", 0);
+  test("kprobe:f { @x = hist(); }", 1);
+  test("kprobe:f { hist(); }", 1);
 }
 
 TEST(semantic_analyser, call_count)
@@ -122,6 +147,41 @@ TEST(semantic_analyser, call_count)
   test("kprobe:f { count(); }", 1);
 }
 
+TEST(semantic_analyser, call_sum)
+{
+  test("kprobe:f { @x = sum(); }", 1);
+  test("kprobe:f { @x = sum(123); }", 0);
+  test("kprobe:f { sum(); }", 1);
+}
+
+TEST(semantic_analyser, call_min)
+{
+  test("kprobe:f { @x = min(); }", 1);
+  test("kprobe:f { @x = min(123); }", 0);
+  test("kprobe:f { min(); }", 1);
+}
+
+TEST(semantic_analyser, call_max)
+{
+  test("kprobe:f { @x = max(); }", 1);
+  test("kprobe:f { @x = max(123); }", 0);
+  test("kprobe:f { max(); }", 1);
+}
+
+TEST(semantic_analyser, call_avg)
+{
+  test("kprobe:f { @x = avg(); }", 1);
+  test("kprobe:f { @x = avg(123); }", 0);
+  test("kprobe:f { avg(); }", 1);
+}
+
+TEST(semantic_analyser, call_stats)
+{
+  test("kprobe:f { @x = stats(); }", 1);
+  test("kprobe:f { @x = stats(123); }", 0);
+  test("kprobe:f { stats(); }", 1);
+}
+
 TEST(semantic_analyser, call_delete)
 {
   test("kprobe:f { @x = 1; delete(@x); }", 0);
@@ -129,6 +189,43 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { delete(); }", 1);
   test("kprobe:f { @y = delete(@x); }", 1);
   test("kprobe:f { $y = delete(@x); }", 1);
+}
+
+TEST(semantic_analyser, call_exit)
+{
+  test("kprobe:f { exit(); }", 0);
+  test("kprobe:f { exit(1); }", 1);
+}
+
+TEST(semantic_analyser, call_print)
+{
+  test("kprobe:f { @x = count(); print(@x); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5, 10); }", 0);
+  test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = print(); }", 1);
+}
+
+TEST(semantic_analyser, call_clear)
+{
+  test("kprobe:f { @x = count(); clear(@x); }", 0);
+  test("kprobe:f { @x = count(); clear(@x, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = clear(); }", 1);
+}
+
+TEST(semantic_analyser, call_zero)
+{
+  test("kprobe:f { @x = count(); zero(@x); }", 0);
+  test("kprobe:f { @x = count(); zero(@x, 1); }", 1);
+  test("kprobe:f { @x = count(); @x = zero(); }", 1);
+}
+
+TEST(semantic_analyser, call_time)
+{
+  test("kprobe:f { time(); }", 0);
+  test("kprobe:f { time(\"%M:%S\"); }", 0);
+  test("kprobe:f { time(\"%M:%S\", 1); }", 1);
+  test("kprobe:f { @x = time(); }", 1);
 }
 
 TEST(semantic_analyser, call_str)
@@ -162,6 +259,24 @@ TEST(semantic_analyser, call_reg)
   test("kprobe:f { reg(\"blah\"); }", 1);
   test("kprobe:f { reg(); }", 1);
   test("kprobe:f { reg(123); }", 1);
+}
+
+TEST(semantic_analyser, call_func)
+{
+  test("kprobe:f { @[func] = count(); }", 0);
+  test("kprobe:f { printf(\"%s\", func);  }", 0);
+  test("kprobe:f { func(\"blah\"); }", 1);
+  test("kprobe:f { func(); }", 1);
+  test("kprobe:f { func(123); }", 1);
+}
+
+TEST(semantic_analyser, call_name)
+{
+  test("kprobe:f { @[name] = count(); }", 0);
+  test("kprobe:f { printf(\"%s\", name);  }", 0);
+  test("kprobe:f { name(\"blah\"); }", 1);
+  test("kprobe:f { name(); }", 1);
+  test("kprobe:f { name(123); }", 1);
 }
 
 TEST(semantic_analyser, map_reassignment)
@@ -332,6 +447,16 @@ TEST(semantic_analyser, printf_format_multi)
   test("kprobe:f { printf(\"%d %s %d\", 1, 2, \"mystr\") }", 10);
 }
 
+TEST(semantic_analyser, join)
+{
+  test("kprobe:f { join(arg0) }", 0);
+  test("kprobe:f { printf(\"%s\", join(arg0)) }", 10);
+  test("kprobe:f { join() }", 1);
+  test("kprobe:f { $fmt = \"mystring\"; join($fmt) }", 10);
+  test("kprobe:f { @x = join(arg0) }", 1);
+  test("kprobe:f { $x = join(arg0) }", 1);
+}
+
 TEST(semantic_analyser, kprobe)
 {
   test("kprobe:f { 1 }", 0);
@@ -352,6 +477,13 @@ TEST(semantic_analyser, uprobe)
   test("uretprobe:path:f { 1 }", 0);
   test("uretprobe:f { 1 }", 1);
   test("uretprobe { 1 }", 1);
+}
+
+TEST(semantic_analyser, usdt)
+{
+  test("usdt:/bin/sh:probe { 1 }", 0);
+  test("usdt:/notexistfile:probe { 1 }", 1);
+  test("usdt { 1 }", 1);
 }
 
 TEST(semantic_analyser, begin_end_probes)

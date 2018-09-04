@@ -35,6 +35,7 @@ public:
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
+  void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;
@@ -45,11 +46,12 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
-  AllocaInst *getQuantizeMapKey(Map &map, Value *log2);
+  AllocaInst *getHistMapKey(Map &map, Value *log2);
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
   void createLog2Function();
+  void createLinearFunction();
   void createStrcmpFunction();
   std::unique_ptr<BpfOrc> compile(bool debug=false, std::ostream &out=std::cerr);
 
@@ -63,6 +65,7 @@ private:
   Value *expr_ = nullptr;
   Value *ctx_;
   BPFtrace &bpftrace_;
+  std::string probefull_;
 
   std::map<std::string, Value *> variables_;
   int printf_id_ = 0;

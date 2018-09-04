@@ -86,6 +86,18 @@ void Printer::visit(Unop &unop)
   --depth_;
 }
 
+void Printer::visit(Ternary &ternary)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "?:" << std::endl;
+
+  ++depth_;
+  ternary.cond->accept(*this);
+  ternary.left->accept(*this);
+  ternary.right->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(FieldAccess &acc)
 {
   std::string indent(depth_, ' ');

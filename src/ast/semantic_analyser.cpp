@@ -4,6 +4,7 @@
 #include "parser.tab.hh"
 #include "printf.h"
 #include "arch/arch.h"
+#include <sys/stat.h>
 
 #include "libbpf.h"
 
@@ -31,6 +32,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "uid" ||
       builtin.ident == "gid" ||
       builtin.ident == "cpu" ||
+      builtin.ident == "curtask" ||
+      builtin.ident == "rand" ||
       builtin.ident == "retval") {
     builtin.type = SizedType(Type::integer, 8);
   }
@@ -54,7 +57,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
           type == ProbeType::tracepoint)
         builtin.type = SizedType(Type::sym, 8);
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
-        builtin.type = SizedType(Type::usym, 8);
+        builtin.type = SizedType(Type::usym, 16);
       else
         err_ << "The func builtin can not be used with '" << attach_point->provider
              << "' probes" << std::endl;
@@ -66,6 +69,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
     if (arg_num > arch::max_arg())
       err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
     builtin.type = SizedType(Type::integer, 8);
+  }
+  else if (builtin.ident == "name") {
+    builtin.type = SizedType(Type::name, 8);
+    probe_->need_expansion = true;
   }
   else {
     builtin.type = SizedType(Type::none, 0);
@@ -81,18 +88,82 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
 
-  if (call.func == "quantize") {
+  if (call.func == "hist") {
     check_assignment(call, true, false);
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
-    call.type = SizedType(Type::quantize, 8);
+    call.type = SizedType(Type::hist, 8);
+  }
+  else if (call.func == "lhist") {
+    check_nargs(call, 4);
+    check_arg(call, Type::integer, 0);
+    check_arg(call, Type::integer, 1);
+    check_arg(call, Type::integer, 2);
+    check_arg(call, Type::integer, 3);
+
+    if (is_final_pass()) {
+      Expression &min_arg = *call.vargs->at(1);
+      Expression &max_arg = *call.vargs->at(2);
+      Expression &step_arg = *call.vargs->at(3);
+      Integer &min = static_cast<Integer&>(min_arg);
+      Integer &max = static_cast<Integer&>(max_arg);
+      Integer &step = static_cast<Integer&>(step_arg);
+      if (step.n <= 0)
+        err_ << "lhist() step must be >= 1 (" << step.n << " provided)" << std::endl;
+      else
+      {
+        int buckets = (max.n - min.n) / step.n;
+        if (buckets > 1000)
+          err_ << "lhist() too many buckets, must be <= 1000 (would need " << buckets << ")" << std::endl;
+      }
+      if (min.n > max.n)
+        err_ << "lhist() min must be less than max (provided min " << min.n << " and max " << max.n << ")" << std::endl;
+      if ((max.n - min.n) < step.n)
+        err_ << "lhist() step is too large for the given range (provided step " << step.n << " for range " << (max.n - min.n) << ")" << std::endl;
+
+      // store args for later passing to bpftrace::Map
+      auto search = map_args_.find(call.map->ident);
+      if (search == map_args_.end())
+        map_args_.insert({call.map->ident, *call.vargs});
+    }
+    call.type = SizedType(Type::lhist, 8);
   }
   else if (call.func == "count") {
     check_assignment(call, true, false);
     check_nargs(call, 0);
 
     call.type = SizedType(Type::count, 8);
+  }
+  else if (call.func == "sum") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::sum, 8);
+  }
+  else if (call.func == "min") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::min, 8);
+  }
+  else if (call.func == "max") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::max, 8);
+  }
+  else if (call.func == "avg") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::avg, 8);
+  }
+  else if (call.func == "stats") {
+    check_assignment(call, true, false);
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::stats, 8);
   }
   else if (call.func == "delete") {
     check_assignment(call, false, false);
@@ -113,7 +184,14 @@ void SemanticAnalyser::visit(Call &call)
     else if (call.func == "sym")
       call.type = SizedType(Type::sym, 8);
     else if (call.func == "usym")
-      call.type = SizedType(Type::usym, 8);
+      call.type = SizedType(Type::usym, 16);
+  }
+  else if (call.func == "join") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    check_arg(call, Type::integer, 0);
+    call.type = SizedType(Type::none, 0);
+    needs_join_map_ = true;
   }
   else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
@@ -149,6 +227,57 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::none, 0);
   }
+  else if (call.func == "exit") {
+    check_nargs(call, 0);
+  }
+  else if (call.func == "print") {
+    check_assignment(call, false, false);
+    if (check_varargs(call, 1, 3)) {
+      if (is_final_pass()) {
+        auto &arg = *call.vargs->at(0);
+        if (!arg.is_map)
+          err_ << "print() expects a map to be provided" << std::endl;
+        if (call.vargs->size() > 1)
+          check_arg(call, Type::integer, 1, true);
+        if (call.vargs->size() > 2)
+          check_arg(call, Type::integer, 2, true);
+      }
+    }
+  }
+  else if (call.func == "clear") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    if (check_nargs(call, 1)) {
+      auto &arg = *call.vargs->at(0);
+      if (!arg.is_map)
+        err_ << "clear() expects a map to be provided" << std::endl;
+    }
+  }
+  else if (call.func == "zero") {
+    check_assignment(call, false, false);
+    check_nargs(call, 1);
+    if (check_nargs(call, 1)) {
+      auto &arg = *call.vargs->at(0);
+      if (!arg.is_map)
+        err_ << "zero() expects a map to be provided" << std::endl;
+    }
+  }
+  else if (call.func == "time") {
+    check_assignment(call, false, false);
+    if (check_varargs(call, 0, 1)) {
+      if (is_final_pass()) {
+        if (call.vargs && call.vargs->size() > 0) {
+          check_arg(call, Type::string, 0, true);
+          auto &fmt_arg = *call.vargs->at(0);
+          String &fmt = static_cast<String&>(fmt_arg);
+          bpftrace_.time_args_.push_back(fmt.str);
+        } else {
+          std::string fmt_default = "%H:%M:%S\n";
+          bpftrace_.time_args_.push_back(fmt_default.c_str());
+        }
+      }
+    }
+  }
   else {
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
     call.type = SizedType(Type::none, 0);
@@ -167,6 +296,14 @@ void SemanticAnalyser::visit(Map &map)
 
   auto search = map_key_.find(map.ident);
   if (search != map_key_.end()) {
+    /*
+     * TODO: this code ensures that map keys are consistent, but
+     * currently prevents print() and clear() being used, since
+     * for example "@x[pid] = count(); ... print(@x)" is detected
+     * as having inconsistent keys. We need a way to do this check
+     * differently for print() and clear() calls. I've commented it
+     * out for now - Brendan.
+     *
     if (search->second != key) {
       err_ << "Argument mismatch for " << map.ident << ": ";
       err_ << "trying to access with arguments: ";
@@ -175,6 +312,7 @@ void SemanticAnalyser::visit(Map &map)
       err_ << search->second.argument_type_list();
       err_ << "\n" << std::endl;
     }
+     */
   }
   else {
     map_key_.insert({map.ident, key});
@@ -260,6 +398,29 @@ void SemanticAnalyser::visit(Unop &unop)
   }
   else {
     unop.type = SizedType(Type::integer, 8);
+  }
+}
+
+void SemanticAnalyser::visit(Ternary &ternary)
+{
+  ternary.cond->accept(*this);
+  ternary.left->accept(*this);
+  ternary.right->accept(*this);
+  Type &lhs = ternary.left->type.type;
+  Type &rhs = ternary.right->type.type;
+  if (is_final_pass()) {
+    if (lhs != rhs) {
+      err_ << "Ternary operator must return the same type: ";
+      err_ << "have '" << lhs << "' ";
+      err_ << "and '" << rhs << "'" << std::endl;
+    }
+  }
+  if (lhs == Type::string)
+    ternary.type = SizedType(lhs, STRING_SIZE);
+  else if (lhs == Type::integer)
+    ternary.type = SizedType(lhs, 8);
+  else {
+    err_ << "Ternary return type unsupported " << lhs << std::endl;
   }
 }
 
@@ -438,6 +599,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "")
       err_ << "uprobes should be attached to a function" << std::endl;
   }
+  else if (ap.provider == "usdt") {
+    if (ap.target == "" || ap.func == "")
+      err_ << "usdt probe must have a target" << std::endl;
+    struct stat s;
+    if (stat(ap.target.c_str(), &s) != 0)
+      err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
+  }
   else if (ap.provider == "tracepoint") {
     if (ap.target == "" || ap.func == "")
       err_ << "tracepoint probe must have a target" << std::endl;
@@ -454,6 +622,53 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "profile probe must have an integer frequency" << std::endl;
     else if (ap.freq <= 0)
       err_ << "profile frequency should be a positive integer" << std::endl;
+  }
+  else if (ap.provider == "interval") {
+    if (ap.target == "")
+      err_ << "interval probe must have unit of time" << std::endl;
+    else if (ap.target != "ms" &&
+             ap.target != "s")
+      err_ << ap.target << " is not an accepted unit of time" << std::endl;
+    if (ap.func != "")
+      err_ << "interval probe must have an integer frequency" << std::endl;
+  }
+  else if (ap.provider == "software") {
+    if (ap.target == "")
+      err_ << "software probe must have a software event name" << std::endl;
+    else if (ap.target != "cpu-clock" && ap.target != "cpu" &&
+             ap.target != "task-clock" &&
+             ap.target != "page-faults" && ap.target != "faults" &&
+             ap.target != "context-switches" && ap.target != "cs" &&
+             ap.target != "cpu-migrations" &&
+             ap.target != "minor-faults" &&
+             ap.target != "major-faults" &&
+             ap.target != "alignment-faults" &&
+             ap.target != "emulation-faults" &&
+             ap.target != "dummy" &&
+             ap.target != "bpf-output")
+      err_ << ap.target << " is not a software probe" << std::endl;
+    if (ap.func != "")
+      err_ << "software probe can only have an integer count" << std::endl;
+    else if (ap.freq < 0)
+      err_ << "software count should be a positive integer" << std::endl;
+  }
+  else if (ap.provider == "hardware") {
+    if (ap.target == "")
+      err_ << "hardware probe must have a hardware event name" << std::endl;
+    else if (ap.target != "cpu-cycles" && ap.target != "cycles" &&
+             ap.target != "instructions" &&
+             ap.target != "cache-references" &&
+             ap.target != "cache-misses" &&
+             ap.target != "branch-instructions" && ap.target != "branches" &&
+             ap.target != "bus-cycles" &&
+             ap.target != "frontend-stalls" &&
+             ap.target != "backend-stalls" &&
+             ap.target != "ref-cycles")
+      err_ << ap.target << " is not a hardware probe" << std::endl;
+    if (ap.func != "")
+      err_ << "hardware probe can only have an integer count" << std::endl;
+    else if (ap.freq < 0)
+      err_ << "hardware frequency should be a positive integer" << std::endl;
   }
   else if (ap.provider == "BEGIN" || ap.provider == "END") {
     if (ap.target != "" || ap.func != "")
@@ -535,19 +750,52 @@ int SemanticAnalyser::create_maps(bool debug)
     if (debug)
       bpftrace_.maps_[map_name] = std::make_unique<bpftrace::FakeMap>(map_name, type, key);
     else
-      bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+    {
+      if (type.type == Type::lhist)
+      {
+        // store lhist args to the bpftrace::Map
+        auto map_args = map_args_.find(map_name);
+        if (map_args == map_args_.end())
+          abort();
+        Expression &min_arg = *map_args->second.at(1);
+        Expression &max_arg = *map_args->second.at(2);
+        Expression &step_arg = *map_args->second.at(3);
+        Integer &min = static_cast<Integer&>(min_arg);
+        Integer &max = static_cast<Integer&>(max_arg);
+        Integer &step = static_cast<Integer&>(step_arg);
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n);
+      }
+      else
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+    }
   }
 
   if (debug)
   {
     if (needs_stackid_map_)
       bpftrace_.stackid_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_STACK_TRACE);
+    if (needs_join_map_)
+    {
+      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
+      std::string map_ident = "join";
+      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      MapKey key;
+      bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
+    }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }
   else
   {
     if (needs_stackid_map_)
       bpftrace_.stackid_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_STACK_TRACE);
+    if (needs_join_map_)
+    {
+      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
+      std::string map_ident = "join";
+      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      MapKey key;
+      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key);
+    }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }
 

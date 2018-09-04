@@ -49,6 +49,7 @@ class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(ident) { }
   std::string ident;
+  int name_id;
 
   void accept(Visitor &v) override;
 };
@@ -161,6 +162,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Ternary : public Expression {
+public:
+  Ternary(Expression *cond, Expression *left, Expression *right) : cond(cond), left(left), right(right) { }
+  Expression *cond, *left, *right;
+
+  void accept(Visitor &v) override;
+};
+
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &provider)
@@ -198,6 +207,7 @@ public:
 
   void accept(Visitor &v) override;
   std::string name() const;
+  bool need_expansion = false;	// must build a BPF program per wildcard match
 };
 using ProbeList = std::vector<Probe *>;
 
@@ -222,6 +232,7 @@ public:
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
+  virtual void visit(Ternary &ternary) = 0;
   virtual void visit(FieldAccess &acc) = 0;
   virtual void visit(Cast &cast) = 0;
   virtual void visit(ExprStatement &expr) = 0;

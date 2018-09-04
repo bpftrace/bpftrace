@@ -9,6 +9,7 @@ add_executable(bpftrace
   mapkey.cpp
   printf.cpp
   types.cpp
+  list.cpp
 )
 
 target_link_libraries(bpftrace arch ast parser resources)

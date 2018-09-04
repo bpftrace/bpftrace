@@ -20,6 +20,11 @@ public:
   std::string name_;
   SizedType type_;
   MapKey key_;
+
+  // used by lhist(). TODO: move to separate Map object.
+  int lqmin;
+  int lqmax;
+  int lqstep;
 };
 
 } // namespace bpftrace

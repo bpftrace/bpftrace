@@ -7,13 +7,17 @@
 #include <unistd.h>
 
 #include "attached_probe.h"
+#include "bpftrace.h"
 #include "bcc_syms.h"
+#include "bcc_usdt.h"
 #include "common.h"
 #include "libbpf.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
 namespace bpftrace {
+
+const int BPF_LOG_SIZE = 100 * 1024;
 
 bpf_probe_attach_type attachtype(ProbeType t)
 {
@@ -23,6 +27,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
+    case ProbeType::usdt:      return BPF_PROBE_ENTRY; break;
     default: abort();
   }
 }
@@ -35,8 +40,12 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uprobe:     return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::usdt:       return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
     case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::interval:      return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     default: abort();
   }
 }
@@ -46,6 +55,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   : probe_(probe), func_(func)
 {
   load_prog();
+  if (bt_verbose)
+    std::cerr << "Attaching " << probe_.name << std::endl;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
@@ -61,6 +72,29 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       break;
     case ProbeType::profile:
       attach_profile();
+      break;
+    case ProbeType::interval:
+      attach_interval();
+      break;
+    case ProbeType::software:
+      attach_software();
+      break;
+    case ProbeType::hardware:
+      attach_hardware();
+      break;
+    default:
+      abort();
+  }
+}
+
+AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid)
+  : probe_(probe), func_(func)
+{
+  load_prog();
+  switch (probe_.type)
+  {
+    case ProbeType::usdt:
+      attach_usdt(pid);
       break;
     default:
       abort();
@@ -88,12 +122,16 @@ AttachedProbe::~AttachedProbe()
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
+    case ProbeType::usdt:
       err = bpf_detach_uprobe(eventname().c_str());
       break;
     case ProbeType::tracepoint:
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
     case ProbeType::profile:
+    case ProbeType::interval:
+    case ProbeType::software:
+    case ProbeType::hardware:
       break;
     default:
       abort();
@@ -125,6 +163,7 @@ std::string AttachedProbe::eventname() const
       return eventprefix() + probe_.attach_point;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
+    case ProbeType::usdt:
       offset_str << std::hex << offset();
       return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str();
     case ProbeType::tracepoint:
@@ -143,7 +182,7 @@ uint64_t AttachedProbe::offset() const
 {
   bcc_symbol sym;
   int err = bcc_resolve_symname(probe_.path.c_str(), probe_.attach_point.c_str(),
-      0, 0, nullptr, &sym);
+      probe_.loc, 0, nullptr, &sym);
 
   if (err)
     throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + probe_.attach_point);
@@ -188,20 +227,32 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
-  char *log_buf = nullptr;
-  unsigned log_buf_size = 0;
+  char log_buf[BPF_LOG_SIZE];
+  char name[STRING_SIZE], *namep;
+  unsigned log_buf_size = sizeof (log_buf);
 
   // Redirect stderr, so we don't get error messages from BCC
   int old_stderr, new_stderr;
   fflush(stderr);
-  old_stderr = dup(2);
-  new_stderr = open("/dev/null", O_WRONLY);
-  dup2(new_stderr, 2);
-  close(new_stderr);
+  if (bt_debug)
+    log_level = 15;
+  else
+  {
+    old_stderr = dup(2);
+    new_stderr = open("/dev/null", O_WRONLY);
+    dup2(new_stderr, 2);
+    close(new_stderr);
+  }
+
+  // bpf_prog_load rejects colons in the probe name
+  strncpy(name, probe_.name.c_str(), STRING_SIZE);
+  namep = name;
+  if (strrchr(name, ':') != NULL)
+    namep = strrchr(name, ':') + 1;
 
   for (int attempt=0; attempt<3; attempt++)
   {
-    progfd_ = bpf_prog_load(progtype(probe_.type), probe_.name.c_str(),
+    progfd_ = bpf_prog_load(progtype(probe_.type), namep,
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
         kernel_version(attempt), log_level, log_buf, log_buf_size);
     if (progfd_ >= 0)
@@ -209,12 +260,18 @@ void AttachedProbe::load_prog()
   }
 
   // Restore stderr
-  fflush(stderr);
-  dup2(old_stderr, 2);
-  close(old_stderr);
+  if (bt_debug == false)
+  {
+    fflush(stderr);
+    dup2(old_stderr, 2);
+    close(old_stderr);
+  }
 
-  if (progfd_ < 0)
-    throw std::runtime_error("Error loading program: " + probe_.name);
+  if (progfd_ < 0) {
+    if (bt_verbose)
+      std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
+    throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
+  }
 }
 
 void AttachedProbe::attach_kprobe()
@@ -222,8 +279,16 @@ void AttachedProbe::attach_kprobe()
   int perf_event_fd = bpf_attach_kprobe(progfd_, attachtype(probe_.type),
       eventname().c_str(), probe_.attach_point.c_str(), 0);
 
-  if (perf_event_fd < 0)
-    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+  if (perf_event_fd < 0) {
+    if (probe_.orig_name != probe_.name) {
+      // a wildcard expansion couldn't probe something, just print a warning
+      // as this is normal for some kernel functions (eg, do_debug())
+      std::cerr << "Warning: could not attach probe " << probe_.name << ", skipping." << std::endl;
+    } else {
+      // an explicit match failed, so fail as the user must have wanted it
+      throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+    }
+  }
 
   perf_event_fds_.push_back(perf_event_fd);
 }
@@ -237,6 +302,57 @@ void AttachedProbe::attach_uprobe()
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
+}
+
+void AttachedProbe::attach_usdt(int pid)
+{
+  struct bcc_usdt_location loc = {};
+  int err, i;
+  std::ostringstream offset_str;
+  void *ctx;
+
+  if (pid)
+  {
+    ctx = bcc_usdt_new_frompid(pid, probe_.path.c_str());
+    if (!ctx)
+      throw std::runtime_error("Error initializing context for probe: " + probe_.name + ", for PID: " + std::to_string(pid));
+  }
+  else
+  {
+    ctx = bcc_usdt_new_frompath(probe_.path.c_str());
+    if (!ctx)
+      throw std::runtime_error("Error initializing context for probe: " + probe_.name);
+  }
+
+  // TODO: fn_name may need a unique suffix for each attachment on the same probe:
+  std::string fn_name = "probe_" + probe_.attach_point + "_1";
+  err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
+  if (err)
+    throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
+
+  std::string provider_name;
+  if ((i = probe_.path.rfind("/")) != std::string::npos)
+     provider_name = probe_.path.substr(i + 1);
+  else
+     provider_name = probe_.path;
+
+  err = bcc_usdt_get_location(ctx, provider_name.c_str(), probe_.attach_point.c_str(), 0, &loc);
+  if (err)
+    throw std::runtime_error("Error finding location for probe: " + probe_.name);
+  probe_.loc = loc.address;
+
+  int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
+      eventname().c_str(), probe_.path.c_str(), loc.address - 0x400000, pid == 0 ? -1 : pid);
+
+  if (perf_event_fd < 0)
+  {
+    if (pid)
+      throw std::runtime_error("Error attaching probe: " + probe_.name + ", to PID: " + std::to_string(pid));
+    else
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+  }
 
   perf_event_fds_.push_back(perf_event_fd);
 }
@@ -288,6 +404,186 @@ void AttachedProbe::attach_profile()
   {
     int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
         PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
+}
+
+void AttachedProbe::attach_interval()
+{
+  int pid = -1;
+  int group_fd = -1;
+  int cpu = 0;
+
+  uint64_t period, freq;
+  if (probe_.path == "s")
+  {
+    period = probe_.freq * 1e9;
+    freq = 0;
+  }
+  else if (probe_.path == "ms")
+  {
+    period = probe_.freq * 1e6;
+    freq = 0;
+  }
+  else
+  {
+    abort();
+  }
+
+  int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
+      PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+
+  if (perf_event_fd < 0)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
+}
+
+void AttachedProbe::attach_software()
+{
+  int pid = -1;
+  int group_fd = -1;
+
+  uint64_t period = probe_.freq;
+  uint64_t defaultp = 1;
+  uint32_t type;
+
+  // from linux/perf_event.h, with aliases from perf:
+  if (probe_.path == "cpu-clock" || probe_.path == "cpu")
+  {
+    type = PERF_COUNT_SW_CPU_CLOCK;
+    defaultp = 1000000;
+  }
+  else if (probe_.path == "task-clock")
+  {
+    type = PERF_COUNT_SW_TASK_CLOCK;
+  }
+  else if (probe_.path == "page-faults" || probe_.path == "faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS;
+    defaultp = 100;
+  }
+  else if (probe_.path == "context-switches" || probe_.path == "cs")
+  {
+    type = PERF_COUNT_SW_CONTEXT_SWITCHES;
+    defaultp = 1000;
+  }
+  else if (probe_.path == "cpu-migrations")
+  {
+    type = PERF_COUNT_SW_CPU_MIGRATIONS;
+  }
+  else if (probe_.path == "minor-faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS_MIN;
+    defaultp = 100;
+  }
+  else if (probe_.path == "major-faults")
+  {
+    type = PERF_COUNT_SW_PAGE_FAULTS_MAJ;
+  }
+  else if (probe_.path == "alignment-faults")
+  {
+    type = PERF_COUNT_SW_ALIGNMENT_FAULTS;
+  }
+  else if (probe_.path == "emulation-faults")
+  {
+    type = PERF_COUNT_SW_EMULATION_FAULTS;
+  }
+  else if (probe_.path == "dummy")
+  {
+    type = PERF_COUNT_SW_DUMMY;
+  }
+  else if (probe_.path == "bpf-output")
+  {
+    type = PERF_COUNT_SW_BPF_OUTPUT;
+  }
+  else
+  {
+    abort();
+  }
+
+  if (period == 0)
+    period = defaultp;
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
+        type, period, 0, pid, cpu, group_fd);
+
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
+}
+
+void AttachedProbe::attach_hardware()
+{
+  int pid = -1;
+  int group_fd = -1;
+
+  uint64_t period = probe_.freq;
+  uint64_t defaultp = 1000000;
+  uint32_t type;
+
+  // from linux/perf_event.h, with aliases from perf:
+  if (probe_.path == "cpu-cycles" || probe_.path == "cycles")
+  {
+    type = PERF_COUNT_HW_CPU_CYCLES;
+  }
+  else if (probe_.path == "instructions")
+  {
+    type = PERF_COUNT_HW_INSTRUCTIONS;
+  }
+  else if (probe_.path == "cache-references")
+  {
+    type = PERF_COUNT_HW_CACHE_REFERENCES;
+  }
+  else if (probe_.path == "cache-misses")
+  {
+    type = PERF_COUNT_HW_CACHE_MISSES;
+  }
+  else if (probe_.path == "branch-instructions" || probe_.path == "branches")
+  {
+    type = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
+    defaultp = 100000;
+  }
+  else if (probe_.path == "bus-cycles")
+  {
+    type = PERF_COUNT_HW_BUS_CYCLES;
+    defaultp = 100000;
+  }
+  else if (probe_.path == "frontend-stalls")
+  {
+    type = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
+  }
+  else if (probe_.path == "backend-stalls")
+  {
+    type = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
+  }
+  else if (probe_.path == "ref-cycles")
+  {
+    type = PERF_COUNT_HW_REF_CPU_CYCLES;
+  }
+  // can add PERF_COUNT_HW_CACHE_... here
+  else
+  {
+    abort();
+  }
+
+  if (period == 0)
+    period = defaultp;
+
+  std::vector<int> cpus = ebpf::get_online_cpus();
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_HARDWARE,
+        type, period, 0, pid, cpu, group_fd);
 
     if (perf_event_fd < 0)
       throw std::runtime_error("Error attaching probe: " + probe_.name);

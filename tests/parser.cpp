@@ -29,12 +29,15 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
   test("kprobe:f { nsecs }", "Program\n kprobe:f\n  builtin: nsecs\n");
   test("kprobe:f { cpu }", "Program\n kprobe:f\n  builtin: cpu\n");
+  test("kprobe:f { curtask }", "Program\n kprobe:f\n  builtin: curtask\n");
+  test("kprobe:f { rand }", "Program\n kprobe:f\n  builtin: rand\n");
   test("kprobe:f { comm }", "Program\n kprobe:f\n  builtin: comm\n");
   test("kprobe:f { stack }", "Program\n kprobe:f\n  builtin: stack\n");
   test("kprobe:f { ustack }", "Program\n kprobe:f\n  builtin: ustack\n");
   test("kprobe:f { arg0 }", "Program\n kprobe:f\n  builtin: arg0\n");
   test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
   test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
+  test("kprobe:f { name }", "Program\n kprobe:f\n  builtin: name\n");
 }
 
 TEST(Parser, map_assign)
@@ -63,6 +66,41 @@ TEST(Parser, map_assign)
       "  =\n"
       "   map: @x\n"
       "   call: count\n");
+  test("kprobe:sys_read { @x = sum(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: sum\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = min(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: min\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = max(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: max\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = avg(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: avg\n"
+      "    builtin: arg2\n");
+  test("kprobe:sys_read { @x = stats(arg2); }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   map: @x\n"
+      "   call: stats\n"
+      "    builtin: arg2\n");
   test("kprobe:sys_open { @x = \"mystring\" }",
       "Program\n"
       " kprobe:sys_open\n"
@@ -184,9 +222,59 @@ TEST(Parser, expressions)
       "  int: 1\n");
 }
 
+TEST(Parser, ternary_int)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2 }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    int: 1\n"
+       "    int: 2\n");
+}
+
+TEST(Parser, ternary_str)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\" }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    string: lo\n"
+       "    string: high\n");
+}
+
+TEST(Parser, ternary_nested)
+{
+  test("kprobe:sys_open { @x = pid < 10000 ? pid < 5000 ? 1 : 2 : 3 }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   ?:\n"
+       "    <\n"
+       "     builtin: pid\n"
+       "     int: 10000\n"
+       "    ?:\n"
+       "     <\n"
+       "      builtin: pid\n"
+       "      int: 5000\n"
+       "     int: 1\n"
+       "     int: 2\n"
+       "    int: 3\n");
+}
+
 TEST(Parser, call)
 {
-  test("kprobe:sys_open { @x = count(); @y = quantize(1,2,3); delete(@x); }",
+  test("kprobe:sys_open { @x = count(); @y = hist(1,2,3); delete(@x); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
@@ -194,7 +282,7 @@ TEST(Parser, call)
       "   call: count\n"
       "  =\n"
       "   map: @y\n"
-      "   call: quantize\n"
+      "   call: hist\n"
       "    int: 1\n"
       "    int: 2\n"
       "    int: 3\n"
@@ -228,6 +316,14 @@ TEST(Parser, uprobe)
       "  int: 1\n");
 }
 
+TEST(Parser, usdt)
+{
+  test("usdt:/my/program:probe { 1; }",
+      "Program\n"
+      " usdt:/my/program:probe\n"
+      "  int: 1\n");
+}
+
 TEST(Parser, escape_chars)
 {
   test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
@@ -257,6 +353,30 @@ TEST(Parser, profile_probe)
   test("profile:ms:997 { 1 }",
       "Program\n"
       " profile:ms:997\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, interval_probe)
+{
+  test("interval:s:1 { 1 }",
+      "Program\n"
+      " interval:s:1\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, software_probe)
+{
+  test("software:faults:1000 { 1 }",
+      "Program\n"
+      " software:faults:1000\n"
+      "  int: 1\n");
+}
+
+TEST(Parser, hardware_probe)
+{
+  test("hardware:cache-references:1000000 { 1 }",
+      "Program\n"
+      " hardware:cache-references:1000000\n"
       "  int: 1\n");
 }
 

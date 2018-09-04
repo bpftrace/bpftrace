@@ -26,6 +26,7 @@ public:
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
+  void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;
@@ -59,7 +60,9 @@ private:
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
+  std::map<std::string, ExpressionList> map_args_;
   bool needs_stackid_map_ = false;
+  bool needs_join_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
 };

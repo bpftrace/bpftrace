@@ -28,6 +28,7 @@ space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
 %x STR
 %x STRUCT
+%x COMMENT
 
 %%
 
@@ -37,9 +38,15 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 
 {hspace}+               { loc.step(); }
 {vspace}+               { loc.lines(yyleng); loc.step(); }
-"//".*$  // Comments
 
-pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
+"//".*$                 // single-line comments
+"/*"                    BEGIN(COMMENT);   // multi-line comments
+<COMMENT>"/*"           driver.error(loc, std::string("nested comments unsupported"));
+<COMMENT>"*/"           BEGIN(INITIAL);
+<COMMENT>"EOF"          driver.error(loc, std::string("end of file during comment"));
+<COMMENT>.|"\n"         ;
+
+pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|rand {
                           return Parser::make_BUILTIN(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
@@ -77,6 +84,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func {
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
 "#".*                   { return Parser::make_CPREPROC(yytext, loc); }
+"?"                     { return Parser::make_QUES(loc); }
 
 \"                      { BEGIN(STR); buffer.clear(); }
 <STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(buffer, loc); }

@@ -48,6 +48,19 @@ TEST(ast, probe_name_uprobe)
   EXPECT_EQ(uprobe2.name(), "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc");
 }
 
+TEST(ast, probe_name_usdt)
+{
+  AttachPoint ap1("usdt", "/bin/sh", "probe1");
+  AttachPointList attach_points1 = { &ap1 };
+  Probe usdt1(&attach_points1, nullptr, nullptr);
+  EXPECT_EQ(usdt1.name(), "usdt:/bin/sh:probe1");
+
+  AttachPoint ap2("usdt", "/bin/sh", "probe2");
+  AttachPointList attach_points2 = { &ap1, &ap2 };
+  Probe usdt2(&attach_points2, nullptr, nullptr);
+  EXPECT_EQ(usdt2.name(), "usdt:/bin/sh:probe1,usdt:/bin/sh:probe2");
+}
+
 TEST(ast, attach_point_name)
 {
   AttachPoint ap1("kprobe", "sys_read");

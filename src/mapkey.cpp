@@ -55,6 +55,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     const SizedType &arg,
     const void *data)
 {
+  auto arg_data = static_cast<const uint8_t*>(data);
   switch (arg.type)
   {
     case Type::integer:
@@ -66,13 +67,15 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
           return std::to_string(*(int32_t*)data);
       }
     case Type::stack:
-      return bpftrace.get_stack(*(uint32_t*)data, false);
+      return bpftrace.get_stack(*(uint64_t*)data, false);
     case Type::ustack:
-      return bpftrace.get_stack(*(uint32_t*)data, true);
+      return bpftrace.get_stack(*(uint64_t*)data, true);
     case Type::sym:
       return bpftrace.resolve_sym(*(uint64_t*)data);
     case Type::usym:
-      return bpftrace.resolve_usym(*(uint64_t*)data);
+      return bpftrace.resolve_usym(*(uint64_t*)data, *(uint64_t*)(arg_data + 8));
+    case Type::name:
+      return bpftrace.name_ids_[*(uint64_t*)data];
     case Type::string:
       return std::string((char*)data);
   }

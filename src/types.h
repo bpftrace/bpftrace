@@ -15,14 +15,22 @@ enum class Type
 {
   none,
   integer,
-  quantize,
+  hist,
+  lhist,
   count,
+  sum,
+  min,
+  max,
+  avg,
+  stats,
   stack,
   ustack,
   string,
   sym,
   usym,
   cast,
+  join,
+  name,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -52,8 +60,12 @@ enum class ProbeType
   kretprobe,
   uprobe,
   uretprobe,
+  usdt,
   tracepoint,
   profile,
+  interval,
+  software,
+  hardware,
 };
 
 std::string typestr(Type t);
@@ -63,11 +75,26 @@ class Probe
 {
 public:
   ProbeType type;
-  std::string path;
-  std::string attach_point;
-  std::string prog_name;
-  std::string name;
+  std::string path;		// file path if used
+  std::string attach_point;	// probe name (last component)
+  std::string orig_name;	// original full probe name,
+				// before wildcard expansion
+  std::string name;		// full probe name
+  uint64_t loc;			// for USDT probes
   int freq;
 };
+
+enum class AsyncAction
+{
+  // printf reserves 0-9999 for printf_ids
+  exit = 10000,
+  print,
+  clear,
+  zero,
+  time,
+  join,
+};
+
+uint64_t asyncactionint(AsyncAction a);
 
 } // namespace bpftrace

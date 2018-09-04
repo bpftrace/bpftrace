@@ -36,6 +36,10 @@ void Unop::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void Ternary::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void FieldAccess::accept(Visitor &v) {
   v.visit(*this);
 }

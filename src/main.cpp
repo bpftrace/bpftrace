@@ -8,38 +8,83 @@
 #include "driver.h"
 #include "printer.h"
 #include "semantic_analyser.h"
+#include "list.h"
 
 using namespace bpftrace;
 
 void usage()
 {
-  std::cerr << "Usage:" << std::endl;
-  std::cerr << "  bpftrace filename" << std::endl;
-  std::cerr << "  bpftrace -e 'script'" << std::endl;
+  std::cerr << "USAGE:" << std::endl;
+  std::cerr << "    bpftrace [options] filename" << std::endl;
+  std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
+  std::cerr << "OPTIONS:" << std::endl;
+  std::cerr << "    -l [search]    list probes" << std::endl;
+  std::cerr << "    -e 'program'   execute this program" << std::endl;
+  std::cerr << "    -p PID    PID for enabling USDT probes" << std::endl;
+  std::cerr << "    -v    verbose messages" << std::endl;
+  std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
+  std::cerr << "EXAMPLES:" << std::endl;
+  std::cerr << "bpftrace -l '*sleep*'" << std::endl;
+  std::cerr << "    list probes containing \"sleep\"" << std::endl;
+  std::cerr << "bpftrace -e 'kprobe:do_nanosleep { printf(\"PID %d sleeping...\\n\", pid); }'" << std::endl;
+  std::cerr << "    trace processes calling sleep" << std::endl;
+  std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
+  std::cerr << "    count syscalls by process name" << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
   int err;
   Driver driver;
+  char *pid_str = NULL;
+  bool listing = false;
 
-  std::string script;
-  bool debug = false;
+  std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:")) != -1)
+  while ((c = getopt(argc, argv, "de:lp:v")) != -1)
   {
     switch (c)
     {
       case 'd':
-        debug = true;
+        bt_debug = true;
+        break;
+      case 'v':
+        bt_verbose = true;
         break;
       case 'e':
         script = optarg;
+        break;
+      case 'p':
+        pid_str = optarg;
+        break;
+      case 'l':
+        listing = true;
         break;
       default:
         usage();
         return 1;
     }
+  }
+
+  if (bt_verbose && bt_debug)
+  {
+    // TODO: allow both
+    std::cerr << "USAGE: Use either -v or -d." << std::endl;
+    return 1;
+  }
+
+  // Listing probes
+  if (listing)
+  {
+    if (optind == argc-1)
+      list_probes(argv[optind]);
+    else if (optind == argc)
+      list_probes();
+    else
+    {
+      usage();
+    }
+    return 0;
   }
 
   if (script.empty())
@@ -69,10 +114,22 @@ int main(int argc, char *argv[])
 
   BPFtrace bpftrace;
 
-  if (debug)
+  // defaults
+  bpftrace.join_argnum_ = 16;
+  bpftrace.join_argsize_ = 1024;
+
+  // PID is currently only used for USDT probes that need enabling. Future work:
+  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
+  // - provide PID in USDT probe specification as a way to override -p.
+  bpftrace.pid_ = 0;
+  if (pid_str)
+    bpftrace.pid_ = atoi(pid_str);
+
+  if (bt_debug)
   {
     ast::Printer p(std::cout);
     driver.root_->accept(p);
+    std::cout << std::endl;
   }
 
   ClangParser clang;
@@ -83,14 +140,14 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  err = semantics.create_maps(debug);
+  err = semantics.create_maps(bt_debug);
   if (err)
     return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  auto bpforc = llvm.compile(debug);
+  auto bpforc = llvm.compile(bt_debug);
 
-  if (debug)
+  if (bt_debug)
     return 0;
 
   // Empty signal handler for cleanly terminating the program

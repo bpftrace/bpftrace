@@ -4,7 +4,7 @@
 
 BPFtrace is a high-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4.x). BPFtrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), and tracepoints. The BPFtrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap.
 
-For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md)
+For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md). There is also a [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
 
 ## Examples
 
@@ -40,7 +40,7 @@ kprobe:sys_read
 
 kretprobe:sys_read / @start[tid] /
 {
-  @times = quantize(nsecs - @start[tid]);
+  @times = hist(nsecs - @start[tid]);
   delete(@start[tid]);
 }
 ```
@@ -157,8 +157,20 @@ Attach script to a statically defined tracepoint in the kernel:
 
 Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes.
 
-### timers
-Run the script at specified time intervals:
+### software
+Attach script to kernel software events, executing once every provided count or use a default:
+
+`software:faults:100`
+`software:faults:`
+
+### hardware
+Attach script to hardware events (PMCs), executing once every provided count or use a default:
+
+`hardware:cache-references:1000000`
+`hardware:cache-references:`
+
+### profile
+Run the script on all CPUs at specified time intervals:
 
 `profile:hz:99 { ... }`
 
@@ -167,6 +179,13 @@ Run the script at specified time intervals:
 `profile:ms:20 { ... }`
 
 `profile:us:1500 { ... }`
+
+### interval
+Run the script once per interval, for printing interval output:
+
+`interval:s:1 { ... }`
+
+`interval:ms:20 { ... }`
 
 ### Multiple attachment points
 A single probe can be attached to multiple events:
@@ -199,13 +218,28 @@ Variables:
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
+- `curtask` - Current task_struct as a u64.
+- `rand` - Random number of type u32.
 
 Functions:
-- `quantize(int n)` - Produce a log2 histogram of values of `n`
+- `hist(int n)` - Produce a log2 histogram of values of `n`
+- `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of `n`
 - `count()` - Count the number of times this function is called
+- `sum(int n)` - Sum this value
+- `min(int n)` - Record the minimum value seen
+- `max(int n)` - Record the maximum value seen
+- `avg(int n)` - Average this value
+- `stats(int n)` - Return the count, average, and total for this value
 - `delete(@x)` - Delete the map element passed in as an argument
 - `str(char *s)` - Returns the string pointed to by `s`
-- `printf(char *fmt, ...)` - Write to stdout
+- `printf(char *fmt, ...)` - Print formatted to stdout
+- `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
+- `clear(@x)` - Delet all key/values from a map
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address (incomplete)
 - `reg(char *name)` - Returns the value stored in the named register
+- `join(char *arr[])` - Prints the string array
+- `time(char *fmt)` - Print the current time
+- `exit()` - Quit bpftrace
+
+See the [Reference Guide](docs/reference_guide.md) for more detail.
