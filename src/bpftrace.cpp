@@ -913,7 +913,25 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   lt << "(...," << min << "]";
   std::ostringstream gt;
 
+  // trim empty values
+  int start_value = -1;
+  int end_value = 0;
+
   for (int i = 0; i <= buckets + 1; i++)
+  {
+    if (values.at(i) > 0) {
+      if (start_value == -1) {
+        start_value = i;
+      }
+      end_value = i;
+    }
+  }
+
+  if (start_value == -1) {
+    start_value = 0;
+  }
+
+  for (int i = start_value; i <= end_value; i++)
   {
     int max_width = 52;
     int bar_width = values.at(i)/(float)max_value*max_width;
