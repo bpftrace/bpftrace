@@ -107,7 +107,7 @@ Filters (also known as predicates) can be added after probe names. The probe sti
 Examples:
 
 ```
-# bpftrace -e 'kprobe:sys_read /arg2 < 16/ { printf("small read: %d byte buffer\n", arg2); }'
+# bpftrace -e 'kprobe:vfs_read /arg2 < 16/ { printf("small read: %d byte buffer\n", arg2); }'
 Attaching 1 probe...
 small read: 8 byte buffer
 small read: 8 byte buffer
@@ -119,7 +119,7 @@ small read: 12 byte buffer
 ```
 
 ```
-# bpftrace -e 'kprobe:sys_read /comm == "bash"/ { printf("read by %s\n", comm); }'
+# bpftrace -e 'kprobe:vfs_read /comm == "bash"/ { printf("read by %s\n", comm); }'
 Attaching 1 probe...
 read by bash
 read by bash
@@ -149,13 +149,13 @@ These can be used in bpftrace scripts to document your code.
 Future example:
 
 ```
-bpftrace -e 'kprobe:sys_nanosleep { printf("secs: %d\n", arg0->tv_nsec); }
+bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", arg0->tv_nsec); }
 ```
 
 or
 
 ```
-bpftrace -e 'kprobe:sys_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0)->tv_nsec); }'
+bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0)->tv_nsec); }'
 ```
 
 # Probes
@@ -167,7 +167,7 @@ bpftrace -e 'kprobe:sys_nanosleep { printf("secs: %d\n", ((struct timespec *)arg
 - `tracepoint` - kernel static tracepoints
 - `profile` - timed sampling
 
-Some probe types allow wildcards to match multiple probes, eg, `kprobe:SyS_*`.
+Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`.
 
 ## 1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level
 
@@ -183,7 +183,7 @@ These use kprobes (a Linux kernel capability). `kprobe` instruments the beginnin
 Examples:
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { printf("sleep by %d\n", tid); }'
+# bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %d\n", tid); }'
 Attaching 1 probe...
 sleep by 1396
 sleep by 3669
@@ -499,7 +499,7 @@ For example, `@start`:
 
 ```
 # bpftrace -e 'BEGIN { @start = nsecs; }
-    kprobe:sys_nanosleep /@start != 0/ { printf("at %d ms: sleep\n", (nsecs - @start) / 1000000); }'
+    kprobe:do_nanosleep /@start != 0/ { printf("at %d ms: sleep\n", (nsecs - @start) / 1000000); }'
 Attaching 2 probes...
 at 437 ms: sleep
 at 647 ms: sleep
@@ -516,8 +516,8 @@ at 1648 ms: sleep
 These can be implemented as an associative array keyed on the thread ID. For example, `@start[tid]`:
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { @start[tid] = nsecs; }
-    kretprobe:sys_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
+    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -534,8 +534,8 @@ Syntax: `$name`
 For example, `$delta`:
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { @start[tid] = nsecs; }
-    kretprobe:sys_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
+    kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -551,8 +551,8 @@ These are implemented using BPF maps.
 For example, `@start[tid]`:
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { @start[tid] = nsecs; }
-    kretprobe:sys_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+# bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
+    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -578,7 +578,7 @@ Examples:
 
 ```
 # bpftrace -e 'BEGIN { @start = nsecs; }
-    kprobe:sys_nanosleep /@start != 0/ { printf("at %d ms: sleep\n", (nsecs - @start) / 1000000); }'
+    kprobe:do_nanosleep /@start != 0/ { printf("at %d ms: sleep\n", (nsecs - @start) / 1000000); }'
 Attaching 2 probes...
 at 437 ms: sleep
 at 647 ms: sleep
@@ -764,13 +764,13 @@ Syntax: `time(fmt)`
 This prints the current time using the format string supported by libc `strftime(3)`.
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { time("%H:%M:%S"); }'
+# bpftrace -e 'kprobe:do_nanosleep { time("%H:%M:%S\n"); }'
 07:11:03
 07:11:09
 ^C
 ```
 
-If a format string is not provided, it defaults to "%H:%M:%S".
+If a format string is not provided, it defaults to "%H:%M:%S\n".
 
 ## 4. `join()`: Join
 
@@ -819,10 +819,10 @@ Syntax: `sym(addr)`
 Examples:
 
 ```
-# ./build/src/bpftrace -e 'kprobe:sys_nanosleep { printf("%s\n", sym(reg("ip"))); }'
+# ./build/src/bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", sym(reg("ip"))); }'
 Attaching 1 probe...
-sys_nanosleep
-sys_nanosleep
+do_nanosleep
+do_nanosleep
 ```
 
 ## 7. `usym()`: Symbol resolution, user-level
@@ -896,19 +896,19 @@ This is implemented using a BPF map.
 For example, `@reads`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @reads = count();  }'
+# bpftrace -e 'kprobe:vfs_read { @reads = count();  }'
 Attaching 1 probe...
 ^C
 
 @reads: 119
 ```
 
-That shows there were 119 calls to sys_read() while tracing.
+That shows there were 119 calls to vfs_read() while tracing.
 
 This next example includes the `comm` variable as a key, so that the value is broken down by each process name. For example, `@reads[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @reads[comm] = count(); }'
+# bpftrace -e 'kprobe:vfs_read { @reads[comm] = count(); }'
 Attaching 1 probe...
 ^C
 
@@ -929,7 +929,7 @@ This is implemented using a BPF map.
 For example, `@bytes[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @bytes[comm] = sum(arg2); }'
+# bpftrace -e 'kprobe:vfs_read { @bytes[comm] = sum(arg2); }'
 Attaching 1 probe...
 ^C
 
@@ -941,10 +941,10 @@ Attaching 1 probe...
 @bytes[sshd]: 262144
 ```
 
-That is summing requested bytes via the sys_read() kernel function, which is one of two possible entry points for the read syscall. To see actual bytes read:
+That is summing requested bytes via the vfs_read() kernel function, which is one of two possible entry points for the read syscall. To see actual bytes read:
 
 ```
-# bpftrace -e 'kretprobe:sys_read /retval > 0/ { @bytes[comm] = sum(retval); }'
+# bpftrace -e 'kretprobe:vfs_read /retval > 0/ { @bytes[comm] = sum(retval); }'
 Attaching 1 probe...
 ^C
 
@@ -968,7 +968,7 @@ This is implemented using a BPF map.
 For example, `@bytes[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @bytes[comm] = avg(arg2); }'
+# bpftrace -e 'kprobe:vfs_read { @bytes[comm] = avg(arg2); }'
 Attaching 1 probe...
 ^C
 
@@ -991,7 +991,7 @@ This is implemented using a BPF map.
 For example, `@bytes[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @bytes[comm] = min(arg2); }'
+# bpftrace -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); }'
 Attaching 1 probe...
 ^C
 
@@ -1015,7 +1015,7 @@ This is implemented using a BPF map.
 For example, `@bytes[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @bytes[comm] = max(arg2); }'
+# bpftrace -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); }'
 Attaching 1 probe...
 ^C
 
@@ -1039,7 +1039,7 @@ This is implemented using a BPF map.
 For example, `@bytes[comm]`:
 
 ```
-# bpftrace -e 'kprobe:sys_read { @bytes[comm] = stats(arg2); }'
+# bpftrace -e 'kprobe:vfs_read { @bytes[comm] = stats(arg2); }'
 Attaching 1 probe...
 ^C
 
@@ -1068,7 +1068,7 @@ Examples:
 ### 8.1. Power-Of-2:
 
 ```
-# bpftrace -e 'kretprobe:sys_read { @bytes = hist(retval); }'
+# bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); }'
 Attaching 1 probe...
 ^C
 
@@ -1124,7 +1124,7 @@ This is implemented using a BPF map.
 Examples:
 
 ```
-# bpftrace -e 'kretprobe:sys_read { @bytes = lhist(retval, 0, 10000, 1000); }'
+# bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); }'
 Attaching 1 probe...
 ^C
 
@@ -1152,25 +1152,24 @@ The <tt>print()</tt> function will print a map, similar to the automatic printin
 As an example of top, tracing the top 5 syscalls via kprobe:SyS_*:
 
 ```
-# bpftrace -e 'kprobe:SyS_* { @[func] = count(); } END { print(@, 5); clear(@); }'
-Attaching 345 probes...
-^C
-@[sys_write]: 1827
-@[sys_newfstat]: 8401
-@[sys_close]: 9608
-@[sys_open]: 17453
-@[sys_read]: 26353
+# bpftrace -e 'kprobe:vfs_* { @[func] = count(); } END { print(@, 5); clear(@); }'
+Attaching 54 probes...
+^C@[vfs_getattr]: 91
+@[vfs_getattr_nosec]: 92
+@[vfs_statx_fd]: 135
+@[vfs_open]: 188
+@[vfs_read]: 405
 ```
 
 The final <tt>clear()</tt> is used to prevent printing the map automatically on exit.
 
-As an example of divisor, summing total time in SyS_read() by process name as milliseconds:
+As an example of divisor, summing total time in vfs_read() by process name as milliseconds:
 
 ```
-# bpftrace -e 'kprobe:SyS_read { @start[tid] = nsecs; } kretprobe:SyS_read /@start[tid]/ { @ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); } END { print(@ms, 1, 1000000); clear(@ms); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); } END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
 ```
 
-This one-liner sums the SyS_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, <tt>sum((nsecs - @start[tid]) / 1000000)</tt>), the value would often be rounded to zero, and not accumulate as it should.
+This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, <tt>sum((nsecs - @start[tid]) / 1000000)</tt>), the value would often be rounded to zero, and not accumulate as it should.
 
 # Output
 
@@ -1183,7 +1182,7 @@ Per-event details can be printed using `print()`.
 Examples:
 
 ```
-# bpftrace -e 'kprobe:sys_nanosleep { printf("sleep by %d\n", tid); }'
+# bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %d\n", tid); }'
 Attaching 1 probe...
 sleep by 3669
 sleep by 1396
@@ -1219,7 +1218,7 @@ Declared histograms are automatically printed out on program termination. See [5
 Examples:
 
 ```
-# bpftrace -e 'kretprobe:sys_read { @bytes = hist(retval); }'
+# bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); }'
 Attaching 1 probe...
 ^C
 
@@ -1241,7 +1240,7 @@ Attaching 1 probe...
 Histograms can also be printed on-demand, using the <tt>print()</tt> function. Eg:
 
 <pre>
-# bpftrace -e 'kretprobe:sys_read { @bytes = hist(retval); } interval:s:1 { print(@bytes); clear(@bytes); }'
+# bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); } interval:s:1 { print(@bytes); clear(@bytes); }'
 
 [...]
 </pre>
