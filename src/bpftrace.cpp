@@ -891,7 +891,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
   return 0;
 }
 
-int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const 
+int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
 {
   int max_index = -1;
   int max_value = 0;
@@ -994,11 +994,11 @@ std::string BPFtrace::lhist_index_label(int number)
 
   std::ostringstream label;
 
-  if (number % mega == 0) 
+  if (number % mega == 0)
   {
     label << number / mega << 'm';
-  } 
-  else if (number % kilo == 0) 
+  }
+  else if (number % kilo == 0)
   {
     label << number / kilo << 'k';
   }
