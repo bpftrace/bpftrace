@@ -996,7 +996,7 @@ std::string BPFtrace::lhist_index_label(int number)
 
   if (number % mega == 0)
   {
-    label << number / mega << 'm';
+    label << number / mega << 'M';
   }
   else if (number % kilo == 0)
   {
