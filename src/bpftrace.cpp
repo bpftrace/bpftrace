@@ -891,7 +891,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
   return 0;
 }
 
-int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
+int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const 
 {
   int max_index = -1;
   int max_value = 0;
@@ -910,7 +910,7 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
     return 0;
 
   std::ostringstream lt;
-  lt << "(...," << min << "]";
+  lt << "(...," << lhist_index_label(min) << "]";
   std::ostringstream gt;
 
   // trim empty values
@@ -937,12 +937,12 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
     int bar_width = values.at(i)/(float)max_value*max_width;
     std::ostringstream header;
     if (i == 0) {
-      header << "(...," << min << "]";
+      header << "(...," << lhist_index_label(min) << "]";
     } else if (i == (buckets + 1)) {
-      header << "[" << max << ",...)";
+      header << "[" << lhist_index_label(max) << ",...)";
     } else {
-      header << "[" << (i - 1) * step + min;
-      header << ", " << i * step + min << ")";
+      header << "[" << lhist_index_label((i - 1) * step + min);
+      header << ", " << lhist_index_label(i * step + min) << ")";
     }
 
     std::string bar(bar_width, '@');
@@ -984,6 +984,32 @@ std::string BPFtrace::hist_index_label(int power)
   label << (1<<power);
   if (suffix)
     label << suffix;
+  return label.str();
+}
+
+std::string BPFtrace::lhist_index_label(int number)
+{
+  int kilo = 1024;
+  int mega = 1048576;
+
+  std::ostringstream label;
+
+  if (number < kilo) 
+  {
+    label << number;
+  } 
+  else if (number % mega == 0) 
+  {
+    label << number / mega << 'm';
+  } 
+  else if (number % kilo == 0) 
+  {
+    label << number / kilo << 'k';
+  }
+  else {
+    label << number;
+  }
+
   return label.str();
 }
 

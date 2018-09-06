@@ -82,6 +82,7 @@ private:
   static uint64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static std::string hist_index_label(int power);
+  static std::string lhist_index_label(int number);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
 };
 
