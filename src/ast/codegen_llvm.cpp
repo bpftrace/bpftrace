@@ -116,6 +116,11 @@ void CodegenLLVM::visit(Builtin &builtin)
     name_id++;
     expr_ = b_.getInt64(builtin.name_id);
   }
+  else if (builtin.ident == "ctx")
+  {
+    // undocumented builtin: for debugging
+    expr_ = ctx_;
+  }
   else
   {
     abort();
