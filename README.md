@@ -10,35 +10,38 @@ For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md). There is al
 
 Count system calls:
 ```
-kprobe:[Ss]y[Ss]_*
+tracepoint:syscalls:sys_enter_*
 {
-  @[func] = count()
+  @[name] = count();
 }
 ```
 ```
-Attaching 376 probes...
+Attaching 320 probes...
 ^C
 
 ...
-@[sys_open]: 579
-@[SyS_ioctl]: 686
-@[sys_bpf]: 730
-@[sys_close]: 779
-@[SyS_read]: 825
-@[sys_write]: 1031
-@[sys_poll]: 1796
-@[sys_futex]: 2237
-@[sys_recvmsg]: 2634
+@[tracepoint:syscalls:sys_enter_futex]: 50
+@[tracepoint:syscalls:sys_enter_newfstat]: 52
+@[tracepoint:syscalls:sys_enter_clock_gettime]: 56
+@[tracepoint:syscalls:sys_enter_perf_event_open]: 148
+@[tracepoint:syscalls:sys_enter_select]: 156
+@[tracepoint:syscalls:sys_enter_dup]: 291
+@[tracepoint:syscalls:sys_enter_read]: 308
+@[tracepoint:syscalls:sys_enter_bpf]: 310
+@[tracepoint:syscalls:sys_enter_open]: 363
+@[tracepoint:syscalls:sys_enter_ioctl]: 571
+@[tracepoint:syscalls:sys_enter_dup2]: 580
+@[tracepoint:syscalls:sys_enter_close]: 998
 ```
 
 Produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
 ```
-kprobe:sys_read
+tracepoint:syscalls:sys_enter_read
 {
   @start[tid] = nsecs;
 }
 
-kretprobe:sys_read / @start[tid] /
+tracepoint:syscalls:sys_exit_read / @start[tid] /
 {
   @times = hist(nsecs - @start[tid]);
   delete(@start[tid]);
@@ -139,11 +142,12 @@ verify_cpu+0
 ```
 
 ## Probe types
+<center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
 
 ### kprobes
 Attach a BPFtrace script to a kernel function, to be executed when that function is called:
 
-`kprobe:sys_read { ... }`
+`kprobe:vfs_read { ... }`
 
 ### uprobes
 Attach script to a userland function:
@@ -190,12 +194,12 @@ Run the script once per interval, for printing interval output:
 ### Multiple attachment points
 A single probe can be attached to multiple events:
 
-`kprobe:sys_read,kprobe:sys_write { ... }`
+`kprobe:vfs_read,kprobe:vfs_write { ... }`
 
 ### Wildcards
 Some probe types allow wildcards to be used when attaching a probe:
 
-`kprobe:SyS_* { ... }`
+`kprobe:vfs_* { ... }`
 
 ### Predicates
 Define conditions for which a probe should be executed:
@@ -243,3 +247,9 @@ Functions:
 - `exit()` - Quit bpftrace
 
 See the [Reference Guide](docs/reference_guide.md) for more detail.
+
+## Internals
+
+<center><a href="images/bpftrace_internals_2018.png"><img src="images/bpftrace_internals_2018.png" border=0 width=700></a></center>
+
+bpftrace employes various techniques for efficiency, minimizing the instrumentation overhead. Summary statistics are stored in kernel BPF maps, which are asynchronously copied from kernel to user-space, only when needed. Other data, and asynchronous actions, are passed from kernel to user-space via the perf output buffer.
