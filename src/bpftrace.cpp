@@ -857,7 +857,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
 
   for (size_t i = 0; i < values.size(); i++)
   {
-    int v = values.at(i) / div;
+    int v = values.at(i);
     if (v != 0)
       max_index = i;
     if (v > max_value)
@@ -881,7 +881,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
     }
 
     int max_width = 52;
-    int bar_width = values.at(i)/((float)max_value*max_width * div);
+    int bar_width = values.at(i)/(float)max_value*max_width;
     std::string bar(bar_width, '@');
 
     std::cout << std::setw(16) << std::left << header.str()
