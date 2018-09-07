@@ -976,7 +976,7 @@ std::string BPFtrace::hist_index_label(int power)
   }
   else if (power >= 10)
   {
-    suffix = 'k';
+    suffix = 'K';
     power -= 10;
   }
 
@@ -1000,9 +1000,10 @@ std::string BPFtrace::lhist_index_label(int number)
   }
   else if (number % kilo == 0)
   {
-    label << number / kilo << 'k';
+    label << number / kilo << 'K';
   }
-  else {
+  else
+  {
     label << number;
   }
 
