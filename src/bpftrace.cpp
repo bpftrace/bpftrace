@@ -423,6 +423,7 @@ int BPFtrace::print_maps()
       err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
+    std::cout << std::endl;
 
     if (err)
       return err;
@@ -638,9 +639,10 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
     if (top)
     {
-      if (i++ < (values_by_key.size() - top))
+      if (i < (values_by_key.size() - top))
         continue;
     }
+    i++;
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
@@ -665,8 +667,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     else
       std::cout << *(int64_t*)value.data() / div << std::endl;
   }
-
-  std::cout << std::endl;
+  if (i == 0)
+    std::cout << std::endl;
 
   return 0;
 }
