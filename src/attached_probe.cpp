@@ -344,7 +344,7 @@ void AttachedProbe::attach_usdt(int pid)
   probe_.loc = loc.address;
 
   int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), loc.address - 0x400000, pid == 0 ? -1 : pid);
+      eventname().c_str(), probe_.path.c_str(), offset(), pid == 0 ? -1 : pid);
 
   if (perf_event_fd < 0)
   {
