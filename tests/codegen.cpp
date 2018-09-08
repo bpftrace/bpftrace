@@ -1024,6 +1024,23 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
+TEST(codegen, call_kaddr)
+{
+  test("kprobe:f { @x = kaddr(\"avenrun\") }",
+
+R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+BDG run bpftrace_test, and copy-n-paste the '+' diff output here until bpftrace_test passes this test
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED");
+}
+
 TEST(codegen, call_hist)
 {
   test("kprobe:f { @x = hist(pid) }",

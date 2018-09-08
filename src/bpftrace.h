@@ -37,6 +37,7 @@ public:
   std::string get_stack(uint64_t stackidpid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
+  uint64_t resolve_kname(const char *name);
   std::string resolve_name(uint64_t name_id);
   int pid_;
 
