@@ -1024,6 +1024,11 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
+TEST(codegen, call_kaddr)
+{
+  // TODO: test kaddr()
+}
+
 TEST(codegen, call_hist)
 {
   test("kprobe:f { @x = hist(pid) }",

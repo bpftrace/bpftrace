@@ -253,6 +253,14 @@ TEST(semantic_analyser, call_usym)
   test("kprobe:f { usym(\"hello\"); }", 10);
 }
 
+TEST(semantic_analyser, call_kaddr)
+{
+  test("kprobe:f { kaddr(\"avenrun\"); }", 0);
+  test("kprobe:f { @x = kaddr(\"avenrun\"); }", 0);
+  test("kprobe:f { kaddr(); }", 1);
+  test("kprobe:f { kaddr(123); }", 1);
+}
+
 TEST(semantic_analyser, call_reg)
 {
   test("kprobe:f { reg(\"ip\"); }", 0);

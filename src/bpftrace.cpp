@@ -1120,6 +1120,41 @@ std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
   return symbol.str();
 }
 
+uint64_t BPFtrace::resolve_kname(const char *name)
+{
+  uint64_t addr = 0;
+  std::string file_name = "/proc/kallsyms";
+
+  std::ifstream file(file_name);
+  if (file.fail())
+  {
+    std::cerr << strerror(errno) << ": " << file_name << std::endl;
+    return addr;
+  }
+
+  std::string line;
+
+  std::string search = "\\b( ";
+  search += name;
+  std::regex e (search + ")");
+  std::smatch match;
+
+  while (std::getline(file, line) && addr == 0)
+  {
+    auto found = std::regex_search (line, match, e);
+
+    if (found)
+    {
+      std::string first_word = line.substr(0, line.find(" "));
+      addr = std::stoull(first_word, 0, 16);
+    }
+  }
+
+  file.close();
+
+  return addr;
+}
+
 std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
 {
   struct bcc_symbol sym;

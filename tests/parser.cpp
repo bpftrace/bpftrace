@@ -299,6 +299,17 @@ TEST(Parser, call_unknown_function)
       "  call: myfunc\n");
 }
 
+TEST(Parser, call_kaddr)
+{
+  test("kprobe:f { @ = kaddr(\"avenrun\") }",
+      "Program\n"
+      " kprobe:f\n"
+      "  =\n"
+      "   map: @\n"
+      "   call: kaddr\n"
+      "    string: avenrun\n");
+}
+
 TEST(Parser, multiple_probes)
 {
   test("kprobe:sys_open { 1; } kretprobe:sys_open { 2; }",
