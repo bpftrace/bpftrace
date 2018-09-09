@@ -1,0 +1,38 @@
+/*
+ * pidpersec	Count new procesess (via fork).
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Written as a basic example of counting on an event.
+ *
+ * USAGE: pidpersec.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing new processes... Hit Ctrl-C to end.\n");
+
+}
+
+tracepoint:sched:sched_process_fork
+{
+	@ = count();
+}
+
+interval:s:1
+{
+	time("%H:%M:%S PIDs/sec: ");
+	print(@);
+	clear(@);
+}
+
+END
+{
+	clear(@);
+}
