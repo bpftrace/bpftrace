@@ -1,0 +1,43 @@
+/*
+ * vfsstat	Count some VFS calls, with per-second summaries.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Written as a basic example of counting multiple events and printing a
+ * per-second summary.
+ *
+ * USAGE: vfsstat.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing key VFS calls... Hit Ctrl-C to end.\n");
+
+}
+
+kprobe:vfs_read,
+kprobe:vfs_write,
+kprobe:vfs_fsync,
+kprobe:vfs_open,
+kprobe:vfs_create
+{
+	@[func] = count();
+}
+
+interval:s:1
+{
+	time();
+	print(@);
+	clear(@);
+}
+
+END
+{
+	clear(@);
+}

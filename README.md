@@ -151,6 +151,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
+- tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
 
 For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
 
