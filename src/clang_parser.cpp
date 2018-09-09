@@ -142,16 +142,16 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
     },
   };
 
-  CXIndex index = clang_createIndex(0, 0);
+  CXIndex index = clang_createIndex(1, 1);
   CXTranslationUnit translation_unit;
   const char * const args[] = {
-    "-I/bpftrace/include"
+    "-I", "/bpftrace/include",
   };
   CXErrorCode error = clang_parseTranslationUnit2(
       index,
       "definitions.h",
-      args, 1,
-      unsaved_files, 7,
+      args, sizeof(args)/sizeof(char*),
+      unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
       CXTranslationUnit_None,
       &translation_unit);
   if (error)

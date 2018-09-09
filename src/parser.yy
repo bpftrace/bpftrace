@@ -119,7 +119,7 @@ program : c_definitions probes { driver.root_ = new ast::Program($1, $2); }
         ;
 
 c_definitions : CPREPROC c_definitions { $$ = $1 + "\n" + $2; }
-              | STRUCT c_definitions   { $$ = $1 + "\n" + $2; }
+              | STRUCT c_definitions   { $$ = $1 + ";\n" + $2; }
               |                        { $$ = std::string(); }
               ;
 
