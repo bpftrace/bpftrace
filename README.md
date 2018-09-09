@@ -150,6 +150,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
 - tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
+- tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 
 For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
 

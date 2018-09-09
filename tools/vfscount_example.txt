@@ -1,0 +1,38 @@
+Demonstrations of vfscount, the Linux bpftrace/eBPF version.
+
+
+Tracing all VFS calls:
+
+# bpftrace vfscount.bt
+Attaching 54 probes...
+cannot attach kprobe, Invalid argument
+Warning: could not attach probe kprobe:vfs_dedupe_get_page.isra.21, skipping.
+Tracing VFS calls... Hit Ctrl-C to end.
+^C
+
+@[vfs_fsync_range]: 4
+@[vfs_readlink]: 14
+@[vfs_statfs]: 56
+@[vfs_lock_file]: 60
+@[vfs_write]: 276
+@[vfs_statx]: 328
+@[vfs_statx_fd]: 394
+@[vfs_open]: 541
+@[vfs_getattr]: 595
+@[vfs_getattr_nosec]: 597
+@[vfs_read]: 1113
+
+While tracing, the vfs_read() call was the most frequent, occurring 1,113 times.
+
+VFS is the Virtual File System: a kernel abstraction for file systems and other
+resources that expose a file system interface. Much of VFS maps directly to the
+syscall interface. Tracing VFS calls gives you a high level breakdown of the
+kernel workload, and starting points for further investigation.
+
+Notet that a warning was printed: "Warning: could not attach probe
+kprobe:vfs_dedupe_get_page.isra.21": these are not currently instrumentable by
+bpftrace/kprobes, so a warning is printed to let you know that they will be
+missed.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
