@@ -1,0 +1,41 @@
+/*
+ * xfsdist	Summarize XFS operation latency.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * This traces four common file system calls: read, write, open, and fsync.
+ * It can be customized to trace more if desired.
+ *
+ * USAGE: xfsdist.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing XFS operation latency... Hit Ctrl-C to end.\n");
+}
+
+kprobe:xfs_file_read_iter,
+kprobe:xfs_file_write_iter,
+kprobe:xfs_file_open,
+kprobe:xfs_file_fsync
+{
+	@start[tid] = nsecs;
+	@name[tid] = func;
+}
+
+kretprobe:xfs_file_read_iter,
+kretprobe:xfs_file_write_iter,
+kretprobe:xfs_file_open,
+kretprobe:xfs_file_fsync
+/@start[tid]/
+{
+	@us[@name[tid]] = hist((nsecs - @start[tid]) / 1000);
+	delete(@start[tid]);
+	delete(@name[tid]);
+}

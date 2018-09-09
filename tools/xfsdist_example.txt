@@ -1,0 +1,65 @@
+Demonstrations of xfsdist, the Linux bpftrace/eBPF version.
+
+
+xfsdist traces XFS reads, writes, opens, and fsyncs, and summarizes their
+latency as a power-of-2 histogram. For example:
+
+# xfsdist.bt
+Attaching 9 probes...
+Tracing XFS operation latency... Hit Ctrl-C to end.
+^C
+
+@us[xfs_file_write_iter]:
+[0, 1]                 0 |                                                    |
+[2, 4)                 0 |                                                    |
+[4, 8)                 0 |                                                    |
+[8, 16)                1 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[16, 32)               2 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+@us[xfs_file_read_iter]:
+[0, 1]               724 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2, 4)               137 |@@@@@@@@@                                           |
+[4, 8)               143 |@@@@@@@@@@                                          |
+[8, 16)               37 |@@                                                  |
+[16, 32)              11 |                                                    |
+[32, 64)              22 |@                                                   |
+[64, 128)              7 |                                                    |
+[128, 256)             0 |                                                    |
+[256, 512)           485 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                  |
+[512, 1K)            149 |@@@@@@@@@@                                          |
+[1K, 2K)              98 |@@@@@@@                                             |
+[2K, 4K)              85 |@@@@@@                                              |
+[4K, 8K)              27 |@                                                   |
+[8K, 16K)             29 |@@                                                  |
+[16K, 32K)            25 |@                                                   |
+[32K, 64K)             1 |                                                    |
+[64K, 128K)            0 |                                                    |
+[128K, 256K)           6 |                                                    |
+
+@us[xfs_file_open]:
+[0, 1]              1819 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2, 4)               272 |@@@@@@@                                             |
+[4, 8)                 0 |                                                    |
+[8, 16)                9 |                                                    |
+[16, 32)               7 |                                                    |
+
+This output shows a bi-modal distribution for read latency, with a faster
+mode of 724 reads that took between 0 and 1 microseconds, and a slower
+mode of over 485 reads that took between 256 and 512 microseconds. It's
+likely that the faster mode was a hit from the in-memory file system cache,
+and the slower mode is a read from a storage device (disk).
+
+This "latency" is measured from when the operation was issued from the VFS
+interface to the file system, to when it completed. This spans everything:
+block device I/O (disk I/O), file system CPU cycles, file system locks, run
+queue latency, etc. This is a better measure of the latency suffered by
+applications reading from the file system than measuring this down at the
+block device interface.
+
+Note that this only traces the common file system operations previously
+listed: other file system operations (eg, inode operations including
+getattr()) are not traced.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides command line options to customize the output.
