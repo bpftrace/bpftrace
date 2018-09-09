@@ -60,6 +60,7 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [1. `printf()`: Per-Event Output](#1-printf-per-event-output)
     - [2. `interval`: Interval Output](#2-interval-interval-output)
     - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-print-histogram-printing)
+- [Advanced Tools](#advanced-tools)
 - [Errors](#errors)
 
 # Terminology
@@ -1300,6 +1301,38 @@ Histograms can also be printed on-demand, using the <tt>print()</tt> function. E
 [...]
 </pre>
 
+# Advanced Tools
+
+bpftrace can be used to create some powerful one-liners and some simple tools. For complex tools, which may involve command line options, positional parameters, argument processing, and customized output, consider switching to [bcc](https://github.com/iovisor/bcc). bcc provides Python (and other) front-ends, enabling usage of all the other Python libraries (including argparse), as well as a direct control of the kernel BPF program. The down side is that bcc is much more verbose and laborious to program. Together, bpftrace and bcc are complimentary.
+
+An expected development path would be exploration with bpftrace one-liners, then and ad hoc scripting with bpftrace, then finally, when needed, advanced tooling with bcc.
+
+As an example of bpftrace vs bcc differences, the bpftrace xfsdist.bt tool also exists in bcc as xfsdist.py. Both measure the same functions and produce the same summary of information. However, the bcc version supports various arguments:
+
+```
+# ./xfsdist.py -h
+usage: xfsdist.py [-h] [-T] [-m] [-p PID] [interval] [count]
+
+Summarize XFS operation latency
+
+positional arguments:
+  interval            output interval, in seconds
+  count               number of outputs
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -T, --notimestamp   don't include timestamp on interval output
+  -m, --milliseconds  output in milliseconds
+  -p PID, --pid PID   trace this PID only
+
+examples:
+    ./xfsdist            # show operation latency as a histogram
+    ./xfsdist -p 181     # trace PID 181 only
+    ./xfsdist 1 10       # print 1 second summaries, 10 times
+    ./xfsdist -m 5       # 5s summaries, milliseconds
+```
+
+The bcc version is 131 lines of code. The bptrace version is 22.
 
 # Errors
 
