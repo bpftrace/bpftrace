@@ -22,8 +22,9 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [7. `usdt`: Static Tracing, User-Level](#7-usdt-static-tracing-user-level)
     - [8. `usdt`: Static Tracing, User-Level Arguments](#8-usdt-static-tracing-user-level-arguments)
     - [9. `profile`: Timed Sampling Events](#9-profile-timed-sampling-events)
-    - [10. `software`: Pre-defined Software Events](#10-software-pre-defined-software-events)
-    - [11. `hardware`: Pre-defined Hardware Events](#11-hardware-pre-defined-hardware-events)
+    - [10. `interval`: Timed Output](#10-interval-timed-output)
+    - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
+    - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -165,7 +166,11 @@ bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0
 - `uprobe` - user-level function start
 - `uretprobe` - user-level function return
 - `tracepoint` - kernel static tracepoints
+- `usdt` - user-level static tracepoints
 - `profile` - timed sampling
+- `interval` - timed output
+- `software` - kernel software events
+- `hardware` - processor-level events
 
 Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`.
 
@@ -375,7 +380,36 @@ Attaching 1 probe...
 @[0]: 579
 ```
 
-## 10. `software`: Pre-defined Software Events
+## 10. `interval`: Timed Output
+
+Syntax:
+
+```
+profile:hz:rate
+profile:s:rate
+```
+
+This fires on one CPU only, and can be used for generating per-interval output.
+
+Example:
+
+```
+# bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @syscalls = count(); }
+    interval:s:1 { print(@syscalls); clear(@syscalls); }'
+Attaching 2 probes...
+@syscalls: 1263
+@syscalls: 731
+@syscalls: 891
+@syscalls: 1195
+@syscalls: 1154
+@syscalls: 1635
+@syscalls: 1208
+[...]
+```
+
+This prints the rate of syscalls per second.
+
+## 11. `software`: Pre-defined Software Events
 
 Syntax:
 
@@ -424,7 +458,7 @@ Attaching 1 probe...
 
 This roughly counts who is causing page faults, by sampling the process name for every one in one hundred faults.
 
-## 11. `hardware`: Pre-defined Hardware Events
+## 12. `hardware`: Pre-defined Hardware Events
 
 Syntax:
 
