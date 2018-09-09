@@ -148,6 +148,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[bashreadline.bt](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
 - tools/[capable.bt](tools/capable.bt): Trace security capabilitiy checks. [Examples](tools/capable_example.txt).
 - tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
+- tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
 
 For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
 
