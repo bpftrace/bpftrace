@@ -34,7 +34,7 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [7. `stack`: Stack Traces, Kernel](#7-stack-stack-traces-kernel)
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
 - [Functions](#functions)
-    - [1. Builtins](#1-builtins2)
+    - [1. Builtins](#1-builtins-1)
     - [2. `printf()`: Print Formatted](#2-printf-print-formatted)
     - [3. `time()`: Time](#3-time-time)
     - [4. `join()`: Join](#4-join-join)
@@ -44,7 +44,7 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [8. `reg()`: Registers](#8-reg-registers)
     - [9. `exit()`: Exit](#9-exit-exit)
 - [Map Functions](#map-functions)
-    - [1. Builtins](#1-builtins3)
+    - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
     - [3. `sum()`: Sum](#3-sum-sum)
     - [4. `avg()`: Average](#4-avg-average)
@@ -57,7 +57,7 @@ This is a work in progress. If something is missing or incomplete, check the bpf
 - [Output](#output)
     - [1. `printf()`: Per-Event Output](#1-printf-per-event-output)
     - [2. `interval`: Interval Output](#2-interval-interval-output)
-    - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-printf-histogram-printing)
+    - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-print-histogram-printing)
 - [Errors](#errors)
 
 # Terminology
