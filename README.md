@@ -222,6 +222,7 @@ Variables:
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
+- `name` - Full name of the probe
 - `curtask` - Current task_struct as a u64.
 - `rand` - Random number of type u32.
 
@@ -241,6 +242,7 @@ Functions:
 - `clear(@x)` - Delet all key/values from a map
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address (incomplete)
+- `kaddr(char *name)` - Resolve kernel symbol name
 - `reg(char *name)` - Returns the value stored in the named register
 - `join(char *arr[])` - Prints the string array
 - `time(char *fmt)` - Print the current time

@@ -42,8 +42,9 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [5. `str()`: Strings](#5-str-strings)
     - [6. `sym()`: Symbol Resolution, Kernel-Level](#6-str-symbol-resolution-kernel-level)
     - [7. `usym()`: Symbol Resolution, User-Level](#7-usym-symbol-resolution-user-level)
-    - [8. `reg()`: Registers](#8-reg-registers)
-    - [9. `exit()`: Exit](#9-exit-exit)
+    - [8. `kaddr()`: Address Resolution, Kernel-Level](#8-kaddr-address-resolution-kernel-level)
+    - [9. `reg()`: Registers](#9-reg-registers)
+    - [10. `exit()`: Exit](#10-exit-exit)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -763,7 +764,8 @@ Note that for this example to work, bash had to be recompiled with frame pointer
 - `join(char *arr[])` - Print the array
 - `str(char *s)` - Returns the string pointed to by s
 - `sym(void *p)` - Resolve kernel address
-- `usym(void *p)` - Resolve user space address (incomplete)
+- `usym(void *p)` - Resolve user space address
+- `kaddr(char *name)` - Resolve kernel symbol name
 - `reg(char *name)` - Returns the value stored in the named register
 - `exit()` - Quit bpftrace
 
@@ -874,7 +876,26 @@ readline
 ^C
 ```
 
-## 8. `reg()`: Registers
+## 8. `kaddr()`: Address resolution, kernel-level
+
+Syntax: `kaddr(char *name)`
+
+Examples:
+
+```
+# bpftrace -e 'BEGIN { printf("%s\n", str(*kaddr("usbcore_name"))); }'
+Attaching 1 probe...
+usbcore
+^C
+```
+
+This is printing the `usbcore_name` string from drivers/usb/core/usb.c:
+
+```
+const char *usbcore_name = "usbcore";
+```
+
+## 9. `reg()`: Registers
 
 Syntax: `reg(char *name)`
 
@@ -890,7 +911,7 @@ Attaching 1 probe...
 
 See src/arch/x86_64.cpp for the register name list.
 
-## 9. `exit()`: Exit
+## 10. `exit()`: Exit
 
 Syntax: `exit()`
 
