@@ -1,0 +1,24 @@
+Demonstrations of bashreadline, the Linux bpftrace/eBPF version.
+
+
+This prints bash commands from all running bash shells on the system. For
+example:
+
+# bpftrace bashreadline.bt
+Attaching 2 probes...
+Tracing bash commands... Hit Ctrl-C to end.
+TIME      PID    COMMAND
+06:40:06  5526   df -h
+06:40:09  5526   ls -l
+06:40:18  5526   echo hello bpftrace
+06:40:42  5526   echooo this is a failed command, but we can see it anyway
+^C
+
+The entered command may fail. This is just showing what command lines were
+entered interactively for bash to process.
+
+It works by tracing the return of the readline() function using uprobes
+(specifically a uretprobe).
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc

@@ -141,6 +141,14 @@ verify_cpu+0
 ]: 150
 ```
 
+## Tools
+
+bpftrace contains various tools, which also serve as examples of programming in the bpftrace language.
+
+- tools/[bashreadline](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
+
+For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
+
 ## Probe types
 <center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
 
