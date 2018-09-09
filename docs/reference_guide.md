@@ -387,8 +387,8 @@ Attaching 1 probe...
 Syntax:
 
 ```
-profile:hz:rate
-profile:s:rate
+interval:hz:rate
+interval:s:rate
 ```
 
 This fires on one CPU only, and can be used for generating per-interval output.
@@ -925,6 +925,31 @@ Attaching 2 probes...
 ```
 
 # Map Functions
+
+Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are also used for some variable types as discussed in the previous section, whenever `@` is used: [globals](#21-global), [per thread variables](#22-per-thread), and [associative arrays](#3--associative-arrays).
+
+When bpftrace exits, all maps are printed. For example (the `count()` function is covered in the sections that follow):
+
+```
+# bpftrace -e 'kprobe:vfs_read { @[comm] = count(); }'
+Attaching 1 probe...
+^C
+
+@[systemd]: 6
+@[vi]: 7
+@[sshd]: 16
+@[snmpd]: 321
+@[snmp-pass]: 374
+```
+
+The map was printed after the Ctrl-C to end the program. If you use maps that you do not wish to be automatically printed on exit, you can add an END block that clears the maps. For example:
+
+```
+END
+{
+	clear(@start);
+}
+```
 
 ## 1. Builtins
 

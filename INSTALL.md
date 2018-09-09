@@ -58,8 +58,7 @@ To test that the build works, you can try running the test suite, and a one-line
 The llvm/clang packages that are currently available for Ubuntu have an issue, so we'll use the ones from llvm.org for now. The build instructions are:
 
 ```
-vi /etc/apt/sources.list
----append---
+cat <<EOF | sudo tee -a /etc/apt/sources.list
 # from https://apt.llvm.org/:
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
@@ -69,10 +68,10 @@ deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
 # 6.0
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
----append---
-apt-get update
-apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev
-apt-get install clang-5.0 libclang-5.0-dev libclang-common-5.0-dev libclang1-5.0 libllvm5.0 llvm-5.0 llvm-5.0-dev llvm-5.0-runtime
+EOF
+sudo apt-get update
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev
+sudo apt-get install clang-5.0 libclang-5.0-dev libclang-common-5.0-dev libclang1-5.0 libllvm5.0 llvm-5.0 llvm-5.0-dev llvm-5.0-runtime
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=DEBUG ..
