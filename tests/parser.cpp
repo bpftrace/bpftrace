@@ -645,7 +645,7 @@ TEST(Parser, field_access_builtin)
 TEST(Parser, cstruct)
 {
   test("struct Foo { int x, y; char *str; } kprobe:sys_read { 1; }",
-      "struct Foo { int x, y; char *str; }\n"
+      "struct Foo { int x, y; char *str; };\n"
       "\n"
       "Program\n"
       " kprobe:sys_read\n"
@@ -655,7 +655,7 @@ TEST(Parser, cstruct)
 TEST(Parser, cstruct_nested)
 {
   test("struct Foo { struct { int x; } bar; } kprobe:sys_read { 1; }",
-      "struct Foo { struct { int x; } bar; }\n"
+      "struct Foo { struct { int x; } bar; };\n"
       "\n"
       "Program\n"
       " kprobe:sys_read\n"
