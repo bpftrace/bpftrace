@@ -145,7 +145,8 @@ verify_cpu+0
 
 bpftrace contains various tools, which also serve as examples of programming in the bpftrace language.
 
-- tools/[bashreadline](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
+- tools/[bashreadline.bt](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
+- tools/[capable.bt](tools/capable.bt): Trace security capabilitiy checks. [Examples](tools/capable_example.txt).
 
 For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
 
