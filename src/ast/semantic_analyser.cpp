@@ -209,7 +209,7 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "kaddr") {
+  else if (call.func == "kaddr" || call.func == "uaddr") {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
          ;

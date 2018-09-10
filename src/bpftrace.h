@@ -38,6 +38,7 @@ public:
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
   uint64_t resolve_kname(const char *name);
+  uint64_t resolve_uname(const char *name);
   std::string resolve_name(uint64_t name_id);
   int pid_;
 
@@ -82,6 +83,8 @@ private:
   static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
+  static uint64_t read_address_from_output(std::string output);
+  static std::string exec_system(const char* cmd);
   static std::string hist_index_label(int power);
   static std::string lhist_index_label(int number);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;

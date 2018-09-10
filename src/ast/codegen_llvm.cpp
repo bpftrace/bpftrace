@@ -303,11 +303,18 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateProbeReadStr(buf, call.type.size, expr_);
     expr_ = buf;
   }
-   else if (call.func == "kaddr")
+  else if (call.func == "kaddr")
   {
     uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
     addr = bpftrace_.resolve_kname(name.c_str());
+    expr_ = b_.getInt64(addr);
+  }
+  else if (call.func == "uaddr")
+  {
+   uint64_t addr;
+    auto &name = static_cast<String&>(*call.vargs->at(0)).str;
+    addr = bpftrace_.resolve_uname(name.c_str());
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "join")
