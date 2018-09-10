@@ -1,6 +1,6 @@
-The bpftrace One-Liner Tutorial
+# The bpftrace One-Liner Tutorial
 
-This teaches you bpftrace for Linux in 12 easy lessons, where each lesson is a one-liner you can try running. This series of one-liners introduces concepts which are summarized as bullet points. For a full reference to bpftrace, see docs/reference_guide.md.
+This teaches you bpftrace for Linux in 12 easy lessons, where each lesson is a one-liner you can try running. This series of one-liners introduces concepts which are summarized as bullet points. For a full reference to bpftrace, see the [Reference Guide](reference_guide.md)
 
 Contributed by Brendan Gregg, Netflix (2018), based on his FreeBSD [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial).
 
@@ -278,5 +278,4 @@ Summarize kernel blk_account_io_start() calls with a histogram of the I/O size. 
 - kprobe: As mentioned earlier, this is the kernel dynamic tracing probe type, which traces the entry of kernel functions (use kretprobe to trace their returns). 
 - ((struct request *)arg0)->__data_len: this casts arg0 as struct request *, then dereferences the __data_len field.
 
-At this point you understand much of bpftrace, and can begin to use and write powerful one-liners. See the reference guide for more capabilities.
-
+At this point you understand much of bpftrace, and can begin to use and write powerful one-liners. See the [Reference Guide](reference_guide.md) for more capabilities.

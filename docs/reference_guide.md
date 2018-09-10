@@ -22,8 +22,9 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [7. `usdt`: Static Tracing, User-Level](#7-usdt-static-tracing-user-level)
     - [8. `usdt`: Static Tracing, User-Level Arguments](#8-usdt-static-tracing-user-level-arguments)
     - [9. `profile`: Timed Sampling Events](#9-profile-timed-sampling-events)
-    - [10. `software`: Pre-defined Software Events](#10-software-pre-defined-software-events)
-    - [11. `hardware`: Pre-defined Hardware Events](#11-hardware-pre-defined-hardware-events)
+    - [10. `interval`: Timed Output](#10-interval-timed-output)
+    - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
+    - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -34,17 +35,18 @@ This is a work in progress. If something is missing or incomplete, check the bpf
     - [7. `stack`: Stack Traces, Kernel](#7-stack-stack-traces-kernel)
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
 - [Functions](#functions)
-    - [1. Builtins](#1-builtins2)
+    - [1. Builtins](#1-builtins-1)
     - [2. `printf()`: Print Formatted](#2-printf-print-formatted)
     - [3. `time()`: Time](#3-time-time)
     - [4. `join()`: Join](#4-join-join)
     - [5. `str()`: Strings](#5-str-strings)
     - [6. `sym()`: Symbol Resolution, Kernel-Level](#6-str-symbol-resolution-kernel-level)
     - [7. `usym()`: Symbol Resolution, User-Level](#7-usym-symbol-resolution-user-level)
-    - [8. `reg()`: Registers](#8-reg-registers)
-    - [9. `exit()`: Exit](#9-exit-exit)
+    - [8. `kaddr()`: Address Resolution, Kernel-Level](#8-kaddr-address-resolution-kernel-level)
+    - [9. `reg()`: Registers](#9-reg-registers)
+    - [10. `exit()`: Exit](#10-exit-exit)
 - [Map Functions](#map-functions)
-    - [1. Builtins](#1-builtins3)
+    - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
     - [3. `sum()`: Sum](#3-sum-sum)
     - [4. `avg()`: Average](#4-avg-average)
@@ -57,7 +59,8 @@ This is a work in progress. If something is missing or incomplete, check the bpf
 - [Output](#output)
     - [1. `printf()`: Per-Event Output](#1-printf-per-event-output)
     - [2. `interval`: Interval Output](#2-interval-interval-output)
-    - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-printf-histogram-printing)
+    - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-print-histogram-printing)
+- [Advanced Tools](#advanced-tools)
 - [Errors](#errors)
 
 # Terminology
@@ -165,7 +168,11 @@ bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0
 - `uprobe` - user-level function start
 - `uretprobe` - user-level function return
 - `tracepoint` - kernel static tracepoints
+- `usdt` - user-level static tracepoints
 - `profile` - timed sampling
+- `interval` - timed output
+- `software` - kernel software events
+- `hardware` - processor-level events
 
 Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`.
 
@@ -375,7 +382,36 @@ Attaching 1 probe...
 @[0]: 579
 ```
 
-## 10. `software`: Pre-defined Software Events
+## 10. `interval`: Timed Output
+
+Syntax:
+
+```
+interval:hz:rate
+interval:s:rate
+```
+
+This fires on one CPU only, and can be used for generating per-interval output.
+
+Example:
+
+```
+# bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @syscalls = count(); }
+    interval:s:1 { print(@syscalls); clear(@syscalls); }'
+Attaching 2 probes...
+@syscalls: 1263
+@syscalls: 731
+@syscalls: 891
+@syscalls: 1195
+@syscalls: 1154
+@syscalls: 1635
+@syscalls: 1208
+[...]
+```
+
+This prints the rate of syscalls per second.
+
+## 11. `software`: Pre-defined Software Events
 
 Syntax:
 
@@ -424,7 +460,7 @@ Attaching 1 probe...
 
 This roughly counts who is causing page faults, by sampling the process name for every one in one hundred faults.
 
-## 11. `hardware`: Pre-defined Hardware Events
+## 12. `hardware`: Pre-defined Hardware Events
 
 Syntax:
 
@@ -729,7 +765,8 @@ Note that for this example to work, bash had to be recompiled with frame pointer
 - `join(char *arr[])` - Print the array
 - `str(char *s)` - Returns the string pointed to by s
 - `sym(void *p)` - Resolve kernel address
-- `usym(void *p)` - Resolve user space address (incomplete)
+- `usym(void *p)` - Resolve user space address
+- `kaddr(char *name)` - Resolve kernel symbol name
 - `reg(char *name)` - Returns the value stored in the named register
 - `exit()` - Quit bpftrace
 
@@ -840,7 +877,26 @@ readline
 ^C
 ```
 
-## 8. `reg()`: Registers
+## 8. `kaddr()`: Address resolution, kernel-level
+
+Syntax: `kaddr(char *name)`
+
+Examples:
+
+```
+# bpftrace -e 'BEGIN { printf("%s\n", str(*kaddr("usbcore_name"))); }'
+Attaching 1 probe...
+usbcore
+^C
+```
+
+This is printing the `usbcore_name` string from drivers/usb/core/usb.c:
+
+```
+const char *usbcore_name = "usbcore";
+```
+
+## 9. `reg()`: Registers
 
 Syntax: `reg(char *name)`
 
@@ -856,7 +912,7 @@ Attaching 1 probe...
 
 See src/arch/x86_64.cpp for the register name list.
 
-## 9. `exit()`: Exit
+## 10. `exit()`: Exit
 
 Syntax: `exit()`
 
@@ -869,6 +925,31 @@ Attaching 2 probes...
 ```
 
 # Map Functions
+
+Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are also used for some variable types as discussed in the previous section, whenever `@` is used: [globals](#21-global), [per thread variables](#22-per-thread), and [associative arrays](#3--associative-arrays).
+
+When bpftrace exits, all maps are printed. For example (the `count()` function is covered in the sections that follow):
+
+```
+# bpftrace -e 'kprobe:vfs_read { @[comm] = count(); }'
+Attaching 1 probe...
+^C
+
+@[systemd]: 6
+@[vi]: 7
+@[sshd]: 16
+@[snmpd]: 321
+@[snmp-pass]: 374
+```
+
+The map was printed after the Ctrl-C to end the program. If you use maps that you do not wish to be automatically printed on exit, you can add an END block that clears the maps. For example:
+
+```
+END
+{
+	clear(@start);
+}
+```
 
 ## 1. Builtins
 
@@ -1245,6 +1326,38 @@ Histograms can also be printed on-demand, using the <tt>print()</tt> function. E
 [...]
 </pre>
 
+# Advanced Tools
+
+bpftrace can be used to create some powerful one-liners and some simple tools. For complex tools, which may involve command line options, positional parameters, argument processing, and customized output, consider switching to [bcc](https://github.com/iovisor/bcc). bcc provides Python (and other) front-ends, enabling usage of all the other Python libraries (including argparse), as well as a direct control of the kernel BPF program. The down side is that bcc is much more verbose and laborious to program. Together, bpftrace and bcc are complimentary.
+
+An expected development path would be exploration with bpftrace one-liners, then and ad hoc scripting with bpftrace, then finally, when needed, advanced tooling with bcc.
+
+As an example of bpftrace vs bcc differences, the bpftrace xfsdist.bt tool also exists in bcc as xfsdist.py. Both measure the same functions and produce the same summary of information. However, the bcc version supports various arguments:
+
+```
+# ./xfsdist.py -h
+usage: xfsdist.py [-h] [-T] [-m] [-p PID] [interval] [count]
+
+Summarize XFS operation latency
+
+positional arguments:
+  interval            output interval, in seconds
+  count               number of outputs
+
+optional arguments:
+  -h, --help          show this help message and exit
+  -T, --notimestamp   don't include timestamp on interval output
+  -m, --milliseconds  output in milliseconds
+  -p PID, --pid PID   trace this PID only
+
+examples:
+    ./xfsdist            # show operation latency as a histogram
+    ./xfsdist -p 181     # trace PID 181 only
+    ./xfsdist 1 10       # print 1 second summaries, 10 times
+    ./xfsdist -m 5       # 5s summaries, milliseconds
+```
+
+The bcc version is 131 lines of code. The bptrace version is 22.
 
 # Errors
 
