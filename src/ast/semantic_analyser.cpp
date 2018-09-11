@@ -5,6 +5,7 @@
 #include "printf.h"
 #include "arch/arch.h"
 #include <sys/stat.h>
+#include <regex>
 
 #include "libbpf.h"
 
@@ -209,10 +210,21 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "kaddr" || call.func == "uaddr") {
+  else if (call.func == "kaddr") {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
          ;
+      }
+    }
+    call.type = SizedType(Type::integer, 8);
+  }
+   else if (call.func == "uaddr")
+   {
+    if (check_nargs(call, 1)) {
+      if (check_arg(call, Type::string, 0, true)) {
+        if (check_alpha_numeric(call, 0)) {
+         ;
+        }
       }
     }
     call.type = SizedType(Type::integer, 8);
@@ -906,6 +918,24 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
     err_ << " (" << arg.type.type << " provided)" << std::endl;
     return false;
   }
+  return true;
+}
+
+bool SemanticAnalyser::check_alpha_numeric(const Call &call, int arg_num)
+{
+  if (!call.vargs)
+    return false;
+
+  auto &arg = static_cast<String&>(*call.vargs->at(0)).str;
+
+  bool is_alpha = std::regex_match(arg, std::regex("^[a-zA-Z0-9_-]+$"));
+  if (!is_alpha)
+  {
+    err_ << call.func << "() expects an alpha numeric string as input";
+    err_ << " (\"" << arg << "\" provided)" << std::endl;
+    return false;
+  }
+
   return true;
 }
 

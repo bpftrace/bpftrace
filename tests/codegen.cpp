@@ -1029,6 +1029,11 @@ TEST(codegen, call_kaddr)
   // TODO: test kaddr()
 }
 
+TEST(codegen, call_uaddr)
+{
+  // TODO: test uaddr()
+}
+
 TEST(codegen, call_hist)
 {
   test("kprobe:f { @x = hist(pid) }",

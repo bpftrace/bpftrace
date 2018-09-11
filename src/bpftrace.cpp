@@ -1158,6 +1158,7 @@ uint64_t BPFtrace::resolve_uname(const char *name)
 {
   uint64_t addr = 0;
 
+  // TODO: switch from objdump to library call
   std::string call_str = "objdump -tT /bin/bash | grep ";
   call_str += name;
   const char *call = call_str.c_str();
