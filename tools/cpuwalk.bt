@@ -1,0 +1,24 @@
+/*
+ * cpuwalk	Sample which CPUs are executing processes.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: cpuwalk.bt
+ *
+ * This is a bpftrace version of the DTraceToolkit tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Sampling CPU at 99hz... Hit Ctrl-C to end.\n");
+}
+
+profile:hz:99
+/pid/
+{
+	@cpu = lhist(cpu, 0, 1000, 1);
+}

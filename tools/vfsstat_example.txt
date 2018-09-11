@@ -1,0 +1,43 @@
+Demonstrations of vfsstat, the Linux bpftrace/eBPF version.
+
+
+This traces some common VFS calls (see the script for the list) and prints
+per-second summaries.
+
+# bpftrace vfsstat.bt
+Attaching 8 probes...
+Tracing key VFS calls... Hit Ctrl-C to end.
+21:30:38
+@[vfs_write]: 1274
+@[vfs_open]: 8675
+@[vfs_read]: 11515
+
+21:30:39
+@[vfs_write]: 1155
+@[vfs_open]: 8077
+@[vfs_read]: 10398
+
+21:30:40
+@[vfs_write]: 1222
+@[vfs_open]: 8554
+@[vfs_read]: 11011
+
+21:30:41
+@[vfs_write]: 1230
+@[vfs_open]: 8605
+@[vfs_read]: 11077
+
+21:30:42
+@[vfs_write]: 1229
+@[vfs_open]: 8591
+@[vfs_read]: 11061
+
+^C
+
+Each second, a timestamp is printed ("HH:MM:SS") followed by common VFS
+functions and the number of calls for that second. While tracing, the vfs_read()
+kernel function was most frequent, occurring over 10,000 times per second.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides command line options.

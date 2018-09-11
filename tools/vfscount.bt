@@ -1,0 +1,26 @@
+/*
+ * vfscount	Count VFS calls ("vfs_*").
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Written as a basic example of counting kernel functions.
+ *
+ * USAGE: vfscount.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 06-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing VFS calls... Hit Ctrl-C to end.\n");
+
+}
+
+kprobe:vfs_*
+{
+	@[func] = count();
+}

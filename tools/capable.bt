@@ -1,0 +1,72 @@
+/*
+ * capable	Trace security capabilitiy checks (cap_capable()).
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: capable.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing cap_capable syscalls... Hit Ctrl-C to end.\n");
+	printf("%-9s %-6s %-6s %-16s %-4s %-20s AUDIT\n", "TIME", "UID", "PID",
+	    "COMM", "CAP", "NAME");
+	@cap[0] = "CAP_CHOWN";
+	@cap[1] = "CAP_DAC_OVERRIDE";
+	@cap[2] = "CAP_DAC_READ_SEARCH";
+	@cap[3] = "CAP_FOWNER";
+	@cap[4] = "CAP_FSETID";
+	@cap[5] = "CAP_KILL";
+	@cap[6] = "CAP_SETGID";
+	@cap[7] = "CAP_SETUID";
+	@cap[8] = "CAP_SETPCAP";
+	@cap[9] = "CAP_LINUX_IMMUTABLE";
+	@cap[10] = "CAP_NET_BIND_SERVICE";
+	@cap[11] = "CAP_NET_BROADCAST";
+	@cap[12] = "CAP_NET_ADMIN";
+	@cap[13] = "CAP_NET_RAW";
+	@cap[14] = "CAP_IPC_LOCK";
+	@cap[15] = "CAP_IPC_OWNER";
+	@cap[16] = "CAP_SYS_MODULE";
+	@cap[17] = "CAP_SYS_RAWIO";
+	@cap[18] = "CAP_SYS_CHROOT";
+	@cap[19] = "CAP_SYS_PTRACE";
+	@cap[20] = "CAP_SYS_PACCT";
+	@cap[21] = "CAP_SYS_ADMIN";
+	@cap[22] = "CAP_SYS_BOOT";
+	@cap[23] = "CAP_SYS_NICE";
+	@cap[24] = "CAP_SYS_RESOURCE";
+	@cap[25] = "CAP_SYS_TIME";
+	@cap[26] = "CAP_SYS_TTY_CONFIG";
+	@cap[27] = "CAP_MKNOD";
+	@cap[28] = "CAP_LEASE";
+	@cap[29] = "CAP_AUDIT_WRITE";
+	@cap[30] = "CAP_AUDIT_CONTROL";
+	@cap[31] = "CAP_SETFCAP";
+	@cap[32] = "CAP_MAC_OVERRIDE";
+	@cap[33] = "CAP_MAC_ADMIN";
+	@cap[34] = "CAP_SYSLOG";
+	@cap[35] = "CAP_WAKE_ALARM";
+	@cap[36] = "CAP_BLOCK_SUSPEND";
+	@cap[37] = "CAP_AUDIT_READ";
+}
+
+kprobe:cap_capable
+{
+	$cap = arg2;
+	$audit = arg3;
+	time("%H:%M:%S  ");
+	printf("%-6d %-6d %-16s %-4d %-20s %d\n", uid, pid, comm, $cap,
+	    @cap[$cap], $audit);
+}
+
+END
+{
+	clear(@cap);
+}

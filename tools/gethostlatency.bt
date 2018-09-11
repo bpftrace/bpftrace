@@ -1,0 +1,46 @@
+/*
+ * gethostlatency	Trace getaddrinfo/gethostbyname[2] calls.
+ *			For Linux, uses bpftrace and eBPF.
+ *
+ * This can be useful for identifying DNS latency, by identifying which
+ * remote host name lookups were slow, and by how much.
+ *
+ * This uses dynamic tracing of user-level functions and registers, and may
+ # need modifications to match your software and processor architecture.
+ *
+ * USAGE: gethostlatency.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing getaddr/gethost calls... Hit Ctrl-C to end.\n");
+	printf("%-9s %-6s %-16s %6s %s\n", "TIME", "PID", "COMM", "LATms",
+	    "HOST");
+}
+
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:getaddrinfo,
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname,
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname2
+{
+	@start[tid] = nsecs;
+	@name[tid] = arg0;
+}
+
+uretprobe:/lib/x86_64-linux-gnu/libc.so.6:getaddrinfo,
+uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname,
+uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname2
+/@start[tid]/
+{
+	$latms = (nsecs - @start[tid]) / 1000000;
+	time("%H:%M:%S  ");
+	printf("%-6d %-16s %6d %s\n", pid, comm, $latms, str(@name[tid]));
+	delete(@start[tid]);
+	delete(@name[tid]);
+}

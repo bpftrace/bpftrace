@@ -1,0 +1,57 @@
+.TH loads 8  "2018-09-10" "USER COMMANDS"
+.SH NAME
+loads.bt \- Prints load averages. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B loads.bt
+.SH DESCRIPTION
+These are the same load averages printed by "uptime", but to three decimal
+places instead of two (not that it really matters). This is really a
+demonstration of fetching and processing a kernel structure from bpftrace.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Print system load averages every second:
+#
+.B loads
+.SH FIELDS
+.TP
+HH:MM:SS
+Each output line includes time of printing in "HH:MM:SS" format.
+.TP
+load averages:
+These are exponentially-damped moving sum averages of the system loads. 
+Load is a measurement of demand on system resources, which include CPUs and
+other resources that are accessed with the kernel in an uninterruptible state
+(TASK_UNINTERRUPTIBLE), which includes types of disk I/O and lock accessses.
+Linux load averages originally reflected CPU demand only, as it does in other
+OSes, but this was changed in Linux 0.99.14. This demand meseasurement reflects
+not just the utilized resource, but also the queued demand (a saturation
+measurement). Finally, the three numbers are called the "one-", "five-", and
+"fifteen-minute" load averages, however these times are constants used in the
+exponentially-damping equation, and the load averages reflect load beyond these
+times. Were you expecting an accurate description of load averages in
+the man page of a bpftrace tool?
+.SH OVERHEAD
+Other than bpftrace startup time, negligible.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+.SH REFERENCE
+For more on load averages, see:
+.PP
+http://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+uptime(1)

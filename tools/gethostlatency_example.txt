@@ -1,0 +1,22 @@
+Demonstrations of gethostlatency, the Linux bpftrace/eBPF version.
+
+
+This traces host name lookup calls (getaddrinfo(), gethostbyname(), and
+gethostbyname2()), and shows the PID and command performing the lookup, the
+latency (duration) of the call in milliseconds, and the host string:
+
+# bpftrace gethostlatency.bt
+Attaching 7 probes...
+Tracing getaddr/gethost calls... Hit Ctrl-C to end.
+TIME      PID    COMM              LATms HOST
+02:52:05  19105  curl                 81 www.netflix.com
+02:52:12  19111  curl                 17 www.netflix.com
+02:52:19  19116  curl                  9 www.facebook.com
+02:52:23  19118  curl                  3 www.facebook.com
+
+In this example, the first call to lookup "www.netflix.com" took 81 ms, and
+the second took 17 ms (sounds like some caching).
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides options to customize the output.

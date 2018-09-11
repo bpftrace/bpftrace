@@ -141,6 +141,22 @@ verify_cpu+0
 ]: 150
 ```
 
+## Tools
+
+bpftrace contains various tools, which also serve as examples of programming in the bpftrace language.
+
+- tools/[bashreadline.bt](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
+- tools/[capable.bt](tools/capable.bt): Trace security capabilitiy checks. [Examples](tools/capable_example.txt).
+- tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
+- tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
+- tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
+- tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
+- tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
+- tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
+- tools/[xfsdist.bt](tools/xfsdist.bt): Summarize XFS operation latency distribution as a histogram. [Examples](tools/xfsdist_example.txt).
+
+For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).
+
 ## Probe types
 <center><a href="images/bpftrace_probes_2018.png"><img src="images/bpftrace_probes_2018.png" border=0 width=700></a></center>
 

@@ -1,0 +1,57 @@
+Demonstrations of pidpersec, the Linux bpftrace/eBPF version.
+
+
+Tracing new procesess:
+
+# pidpersec.bt
+Attaching 4 probes...
+Tracing new processes... Hit Ctrl-C to end.
+22:29:50 PIDs/sec: @: 121
+22:29:51 PIDs/sec: @: 120
+22:29:52 PIDs/sec: @: 122
+22:29:53 PIDs/sec: @: 124
+22:29:54 PIDs/sec: @: 123
+22:29:55 PIDs/sec: @: 121
+22:29:56 PIDs/sec: @: 121
+22:29:57 PIDs/sec: @: 121
+22:29:58 PIDs/sec: @: 49
+22:29:59 PIDs/sec:
+22:30:00 PIDs/sec:
+22:30:01 PIDs/sec:
+22:30:02 PIDs/sec:
+^C
+
+The output begins by showing a rate of new procesess over 120 per second.
+That then ends at time 22:29:59, and for the next few seconds there are zero
+new processes per second.
+
+
+The following example shows a Linux build launched at 6:33:40, on a 36 CPU
+server, with make -j36:
+
+# pidpersec.bt
+Attaching 4 probes...
+Tracing new processes... Hit Ctrl-C to end.
+06:33:38 PIDs/sec:
+06:33:39 PIDs/sec:
+06:33:40 PIDs/sec: @: 2314
+06:33:41 PIDs/sec: @: 2517
+06:33:42 PIDs/sec: @: 1345
+06:33:43 PIDs/sec: @: 1752
+06:33:44 PIDs/sec: @: 1744
+06:33:45 PIDs/sec: @: 1549
+06:33:46 PIDs/sec: @: 1643
+06:33:47 PIDs/sec: @: 1487
+06:33:48 PIDs/sec: @: 1534
+06:33:49 PIDs/sec: @: 1279
+06:33:50 PIDs/sec: @: 1392
+06:33:51 PIDs/sec: @: 1556
+06:33:52 PIDs/sec: @: 1580
+06:33:53 PIDs/sec: @: 1944
+
+A Linux kernel build involves launched many thousands of short-lived processes,
+which can be seen in the above output: a rate of over 1,000 processes per
+second.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc

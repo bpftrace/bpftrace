@@ -1,0 +1,59 @@
+.TH vfsstat 8  "2018-09-06" "USER COMMANDS"
+.SH NAME
+vfsstat.bt \- Count key VFS calls. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B vfsstat.bt
+.SH DESCRIPTION
+This traces some common VFS calls and prints per-second summaries. This can
+be useful for general workload characterization, and looking for patterns
+in operation usage over time.
+
+This works by tracing some kernel vfs functions using dynamic tracing, and will
+need updating to match any changes to these functions. Edit the script to
+customize which functions are traced. Also see vfscount, which is more
+easily customized to trace multiple functions.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Count some VFS calls, printing per-second summaries until Ctrl-C is hit:
+#
+.B vfsstat.bt
+.SH FIELDS
+.TP
+HH:MM:SS
+Each output summary is prefixed by the time of printing in "HH:MM:SS" format.
+.TP
+1st
+Kernel function name (in @[])
+.TP
+2nd
+Number of calls while tracing
+.SH OVERHEAD
+This traces various kernel vfs functions and maintains in-kernel counts, which
+are asynchronously copied to user-space. While the rate of VFS operations can
+be very high (>1M/sec), this is a relatively efficient way to trace these
+events, and so the overhead is expected to be small for normal workloads.
+Measure in a test environment.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name. The bcc tool
+may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+vfscount.bt(8)
