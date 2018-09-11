@@ -78,7 +78,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
-%token <int> INT "integer"
+%token <long> INT "integer"
 
 %type <std::string> c_definitions
 %type <ast::ProbeList *> probes

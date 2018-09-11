@@ -31,8 +31,8 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(int n) : n(n) { is_literal = true; }
-  int n;
+  explicit Integer(long n) : n(n) { is_literal = true; }
+  long n;
 
   void accept(Visitor &v) override;
 };

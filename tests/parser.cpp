@@ -126,6 +126,22 @@ TEST(Parser, variable_assign)
       "   int: 1\n");
 }
 
+TEST(Parser, integer_sizes)
+{
+  test("kprobe:do_nanosleep { $x = 0x12345678; }",
+      "Program\n"
+      " kprobe:do_nanosleep\n"
+      "  =\n"
+      "   variable: $x\n"
+      "   int: 305419896\n");
+  test("kprobe:do_nanosleep { $x = 0x4444444412345678; }",
+      "Program\n"
+      " kprobe:do_nanosleep\n"
+      "  =\n"
+      "   variable: $x\n"
+      "   int: 4919131752149309048\n");
+}
+
 TEST(Parser, map_key)
 {
   test("kprobe:sys_open { @x[0] = 1; @x[0,1,2] = 1; }",
