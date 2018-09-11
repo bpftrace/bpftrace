@@ -314,7 +314,7 @@ void CodegenLLVM::visit(Call &call)
   {
    uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
-    addr = bpftrace_.resolve_uname(name.c_str());
+    addr = bpftrace_.resolve_uname(name.c_str(), path_.c_str());
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "join")
@@ -863,6 +863,13 @@ void CodegenLLVM::visit(Probe &probe)
       b_.getInt64Ty(),
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
+
+  // needed for uaddr() call:
+  for (auto &attach_point : *probe.attach_points) {
+    path_ = attach_point->target;
+    // TODO: semantic analyser should ensure targets are equal when uaddr() is used
+    break;
+  }
 
   /*
    * Most of the time, we can take a probe like kprobe:do_f* and build a

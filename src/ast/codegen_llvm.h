@@ -66,6 +66,7 @@ private:
   Value *ctx_;
   BPFtrace &bpftrace_;
   std::string probefull_;
+  std::string path_;
 
   std::map<std::string, Value *> variables_;
   int printf_id_ = 0;
