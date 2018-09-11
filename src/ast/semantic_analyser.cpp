@@ -48,7 +48,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     needs_stackid_map_ = true;
   }
   else if (builtin.ident == "comm") {
-    builtin.type = SizedType(Type::string, STRING_SIZE);
+    builtin.type = SizedType(Type::string, COMM_SIZE);
   }
   else if (builtin.ident == "func") {
     for (auto &attach_point : *probe_->attach_points)
