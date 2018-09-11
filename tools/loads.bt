@@ -1,0 +1,41 @@
+/*
+ * loads	Prints load averages.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * These are the same load averages printed by "uptime", but to three decimal
+ * places instead of two (not that it really matters). This is really a
+ * demonstration of fetching and processing a kernel structure from bpftrace.
+ *
+ * USAGE: loads.bt
+ *
+ * This is a bpftrace version of a DTraceToolkit tool.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 10-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Reading load averages... Hit Ctrl-C to end.\n");
+
+}
+
+interval:s:1
+{
+	/*
+	 * See fs/proc/loadavg.c and include/linux/sched/loadavg.h for the
+	 * following calculations.
+	 */
+	$avenrun = kaddr("avenrun");
+	$load1 = *$avenrun;
+	$load5 = *($avenrun + 8);
+	$load15 = *($avenrun + 16);
+	time("%H:%M:%S ");
+	printf("load averages: %d.%03d %d.%03d %d.%03d\n",
+	    ($load1 / 2048), (($load1 & 2047) * 1000) / 2048,
+	    ($load5 / 2048), (($load5 & 2047) * 1000) / 2048,
+	    ($load15 / 2048), (($load15 & 2047) * 1000) / 2048
+	);
+}

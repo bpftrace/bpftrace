@@ -149,6 +149,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[capable.bt](tools/capable.bt): Trace security capabilitiy checks. [Examples](tools/capable_example.txt).
 - tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
 - tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
+- tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 - tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).

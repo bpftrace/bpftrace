@@ -1,6 +1,6 @@
 /*
- * bashreadline	Print entered bash commands from all running shells.
- *		For Linux, uses bpftrace and eBPF.
+ * bashreadline    Print entered bash commands from all running shells.
+ *                 For Linux, uses bpftrace and eBPF.
  *
  * This works by tracing the readline() function using a uretprobe (uprobes).
  *

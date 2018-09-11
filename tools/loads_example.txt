@@ -1,0 +1,27 @@
+Demonstrations of loads, the Linux bpftrace/eBPF version.
+
+
+This is a simple tool that prints the system load averages, to three decimal
+places each (not that it really matters), as a demonstration of fetching
+kernel structures from bpftrace:
+
+# bpftrace loads.bt
+Attaching 2 probes...
+Reading load averages... Hit Ctrl-C to end.
+21:29:17 load averages: 2.091 2.048 1.947
+21:29:18 load averages: 2.091 2.048 1.947
+21:29:19 load averages: 2.091 2.048 1.947
+21:29:20 load averages: 2.091 2.048 1.947
+21:29:21 load averages: 2.164 2.064 1.953
+21:29:22 load averages: 2.164 2.064 1.953
+21:29:23 load averages: 2.164 2.064 1.953
+^C
+
+These are the same load averages printed by uptime:
+
+# uptime
+ 21:29:24 up 2 days, 18:57,  3 users,  load average: 2.16, 2.06, 1.95
+
+
+For more on load averages, see my post:
+http://www.brendangregg.com/blog/2017-08-08/linux-load-averages.html
