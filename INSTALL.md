@@ -58,6 +58,8 @@ To test that the build works, you can try running the test suite, and a one-line
 The llvm/clang packages that are currently available for Ubuntu have an issue, so we'll use the ones from llvm.org for now. The build instructions are:
 
 ```
+# see https://apt.llvm.org/ for the following archive signature:
+wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
 cat <<EOF | sudo tee -a /etc/apt/sources.list
 # from https://apt.llvm.org/:
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
