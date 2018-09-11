@@ -55,6 +55,7 @@ private:
   bool check_nargs(const Call &call, int expected_nargs);
   bool check_varargs(const Call &call, int min_nargs, int max_nargs);
   bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
+  bool check_alpha_numeric(const Call &call, int arg_num);
 
   Probe *probe_;
   std::map<std::string, SizedType> variable_val_;

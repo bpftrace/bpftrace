@@ -1145,14 +1145,46 @@ uint64_t BPFtrace::resolve_kname(const char *name)
 
     if (found)
     {
-      std::string first_word = line.substr(0, line.find(" "));
-      addr = std::stoull(first_word, 0, 16);
+      addr = read_address_from_output(line);
     }
   }
 
   file.close();
 
   return addr;
+}
+
+uint64_t BPFtrace::resolve_uname(const char *name)
+{
+  uint64_t addr = 0;
+
+  // TODO: switch from objdump to library call
+  std::string call_str = "objdump -tT /bin/bash | grep ";
+  call_str += name;
+  const char *call = call_str.c_str();
+  auto result = exec_system(call);
+  addr = read_address_from_output(result);
+
+  return addr;
+}
+
+std::string BPFtrace::exec_system(const char* cmd)
+{
+	std::array<char, 128> buffer;
+  std::string result;
+  std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
+  if (!pipe) throw std::runtime_error("popen() failed!");
+  while (!feof(pipe.get())) {
+      if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+          result += buffer.data();
+    }
+  return result;
+}
+
+uint64_t BPFtrace::read_address_from_output(std::string output)
+{
+  std::string first_word = output.substr(0, output.find(" "));
+  return std::stoull(first_word, 0, 16);
 }
 
 std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
