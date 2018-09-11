@@ -1154,13 +1154,12 @@ uint64_t BPFtrace::resolve_kname(const char *name)
   return addr;
 }
 
-uint64_t BPFtrace::resolve_uname(const char *name)
+uint64_t BPFtrace::resolve_uname(const char *name, const char *path)
 {
   uint64_t addr = 0;
 
-  // TODO: switch from objdump to library call
-  std::string call_str = "objdump -tT /bin/bash | grep ";
-  call_str += name;
+  // TODO: switch from objdump to library call, perhaps bcc_resolve_symname()
+  std::string call_str = std::string("objdump -tT ") + path + " | grep -w " + name;
   const char *call = call_str.c_str();
   auto result = exec_system(call);
   addr = read_address_from_output(result);
@@ -1170,14 +1169,14 @@ uint64_t BPFtrace::resolve_uname(const char *name)
 
 std::string BPFtrace::exec_system(const char* cmd)
 {
-	std::array<char, 128> buffer;
+  std::array<char, 128> buffer;
   std::string result;
   std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
   if (!pipe) throw std::runtime_error("popen() failed!");
   while (!feof(pipe.get())) {
-      if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-          result += buffer.data();
-    }
+    if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
+      result += buffer.data();
+  }
   return result;
 }
 

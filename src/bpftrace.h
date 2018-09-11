@@ -38,7 +38,7 @@ public:
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
   uint64_t resolve_kname(const char *name);
-  uint64_t resolve_uname(const char *name);
+  uint64_t resolve_uname(const char *name, const char *path);
   std::string resolve_name(uint64_t name_id);
   int pid_;
 
