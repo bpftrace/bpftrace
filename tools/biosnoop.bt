@@ -1,11 +1,13 @@
-//
-// biosnoop.bt - basic block I/O tracing tool, showing per I/O latency.
-//               For Linux, uses bpftrace, eBPF.
-//
-// TODO: switch to block tracepoints. Add device, offset, and size columns.
-//
-// 15-Nov-2017	Brendan Gregg	Created this.
-//
+/*
+ * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
+ *               For Linux, uses bpftrace, eBPF.
+ *
+ * TODO: switch to block tracepoints. Add device, offset, and size columns.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * 15-Nov-2017	Brendan Gregg	Created this.
+ */
 
 BEGIN
 {

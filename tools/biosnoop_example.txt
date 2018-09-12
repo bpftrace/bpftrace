@@ -41,3 +41,7 @@ TIME(ms)     COMM             PID    LAT(ms)
 2966         jbd2/nvme0n1-8   615          0
 2967         jbd2/nvme0n1-8   615          0
 [...]
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides more fields.
