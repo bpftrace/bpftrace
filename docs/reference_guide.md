@@ -2,11 +2,18 @@
 
 For a reference summary, see the [README.md](../README.md) for the sections on [Probe types](../README.md#probe-types) and [Builtins](../README.md#builtins).
 
-This is a work in progress. If something is missing or incomplete, check the bpftrace source to see if these docs are just out of date. And if you find something, please file an issue or pull request to update these docs.
+This is a work in progress. If something is missing, check the bpftrace source to see if these docs are just out of date. And if you find something, please file an issue or pull request to update these docs. Also, please keep these docs as terse as possible to maintain it's brevity (inspired by the 6-page awk summary from page 106 of [v7vol2b.pdf](https://9p.io/7thEdMan/bswv7.html)). Leave longer examples and discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog posts and other articles.
 
 ## Contents
 
 - [Terminology](#terminology)
+- [Usage](#usage)
+    - [1. Hello World](#1-hello-world)
+    - [2. `-e 'program'`: One-Liners](#2--e-program-one-liners)
+    - [3. `filename`: Program Files](#3-filename-program-files)
+    - [4. `-l`: Listing Probes](#4--l-listing-probes)
+    - [5. `-d`: Debug Output](#5--d-debug-output)
+    - [6. `-v`: Verbose Output](#6--v-verbose-output)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -77,6 +84,212 @@ kprobes | A Linux kernel technology for providing dynamic tracing of kernel func
 uprobes | A Linux kernel technology for providing dynamic tracing of user-level functions.
 USDT | User Statically-Defined Tracing: static tracing points for user-level software. Some applications support USDT.
 BPF map | A BPF memory object, which is used by bpftrace to create many higher-level objects.
+
+# Usage
+
+Command line usage is summarized by bpftrace without options:
+
+```
+# bpftrace
+USAGE:
+    bpftrace [options] filename
+    bpftrace [options] -e 'program'
+
+OPTIONS:
+    -l [search]    list probes
+    -e 'program'   execute this program
+    -p PID    PID for enabling USDT probes
+    -v    verbose messages
+    -d    debug info dry run
+
+EXAMPLES:
+bpftrace -l '*sleep*'
+    list probes containing "sleep"
+bpftrace -e 'kprobe:do_nanosleep { printf("PID %d sleeping...\n", pid); }'
+    trace processes calling sleep
+bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
+    count syscalls by process name
+```
+
+## 1. Hello World
+
+The most basic example of a bpftrace program:
+
+```
+# bpftrace -e 'BEGIN { printf("Hello, World!\n"); }'
+Attaching 1 probe...
+Hello, World!
+^C
+```
+
+The syntax to this program will be explained in the [Language](#language) section. In this section, we'll cover tool usage.
+
+A program will continue running until Ctrl-C is hit, or an `exit()` function is called. When a program exits, all populated maps are printed: this behavior, and maps, are explained in later sections.
+
+## 2. `-e 'program'`: One-Liners
+
+The `-e` option allows a program to be specified, and is a way to construct one-liners:
+
+```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+Attaching 1 probe...
+iscsid is sleeping.
+irqbalance is sleeping.
+iscsid is sleeping.
+iscsid is sleeping.
+[...]
+```
+
+This example is printing when processes call the nanosleep syscall. Again, the syntax of the program will be explained in the [Language](#language) section.
+
+## 3. `filename`: Program Files
+
+Programs saved as files are often called scripts, and can be executed by specifying their file name. We'll often use a `.bt` file extension, short for bpftrace, but the extension is ignored.
+
+For example, listing the sleepers.bt file using `cat -n` (which enumerates the output lines):
+
+```
+# cat -n sleepers.bt
+     1	tracepoint:syscalls:sys_enter_nanosleep
+     2	{
+     3		printf("%s is sleeping.\n", comm);
+     4	}
+```
+
+Running sleepers.bt:
+
+```
+# bpftrace sleepers.bt
+Attaching 1 probe...
+iscsid is sleeping.
+iscsid is sleeping.
+[...]
+```
+
+## 4. `-l`: Listing Probes
+
+Probes from the tracepoint and kprobe libraries can be listed with `-l`.
+
+```
+# bpftrace -l | more
+tracepoint:xfs:xfs_attr_list_sf
+tracepoint:xfs:xfs_attr_list_sf_all
+tracepoint:xfs:xfs_attr_list_leaf
+tracepoint:xfs:xfs_attr_list_leaf_end
+[...]
+# bpftrace -l | wc -l
+46260
+```
+
+Other libraries generate probes dynamically, such as uprobe, and require specific ways to determine available probes. See the later [Probes](#probes) sections.
+
+Search terms can be added:
+
+```
+# bpftrace -l '*nanosleep*'
+tracepoint:syscalls:sys_enter_clock_nanosleep
+tracepoint:syscalls:sys_exit_clock_nanosleep
+tracepoint:syscalls:sys_enter_nanosleep
+tracepoint:syscalls:sys_exit_nanosleep
+kprobe:nanosleep_copyout
+kprobe:hrtimer_nanosleep
+[...]
+```
+
+## 5. `-d`: Debug Output
+
+The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging issues with bpftrace itself.
+
+**If you are an end-user of bpftrace, you should not normally need the `-d` or `-v` options, and you can skip to the [Language](#language) section.**
+
+
+```
+# bpftrace -d -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+Program
+ tracepoint:syscalls:sys_enter_nanosleep
+  call: printf
+   string: %s is sleeping.\n
+   builtin: comm
+[...]
+```
+
+The output begins with `Program` and then an abstract syntax tree (AST) representation of the program.
+
+Continued:
+
+```
+[...]
+%printf_t = type { i64, [16 x i8] }
+[...]
+define i64 @"tracepoint:syscalls:sys_enter_nanosleep"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_nanosleep" {
+entry:
+  %comm = alloca [16 x i8], align 1
+  %printf_args = alloca %printf_t, align 8
+  %1 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 0
+  %3 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.memset.p0i8.i64(i8* nonnull %3, i8 0, i64 24, i32 8, i1 false)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 16, i32 1, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
+  %4 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1, i64 0
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %4, i8* nonnull %2, i64 16, i32 1, i1 false)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 24)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+  ret i64 0
+[...]
+```
+
+This section shows the llvm intermediate representation (IR) assembly, which is then compiled into BPF.
+
+## 6. `-v`: Verbose Output
+
+The `-v` option prints more information about the program as it is run:
+
+```
+# bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+Attaching 1 probe...
+
+Bytecode:
+0: (bf) r6 = r1
+1: (b7) r1 = 0
+2: (7b) *(u64 *)(r10 -24) = r1
+3: (7b) *(u64 *)(r10 -32) = r1
+4: (7b) *(u64 *)(r10 -40) = r1
+5: (7b) *(u64 *)(r10 -8) = r1
+6: (7b) *(u64 *)(r10 -16) = r1
+7: (bf) r1 = r10
+8: (07) r1 += -16
+9: (b7) r2 = 16
+10: (85) call bpf_get_current_comm#16
+11: (79) r1 = *(u64 *)(r10 -16)
+12: (7b) *(u64 *)(r10 -32) = r1
+13: (79) r1 = *(u64 *)(r10 -8)
+14: (7b) *(u64 *)(r10 -24) = r1
+15: (18) r7 = 0xffff9044e65f1000
+17: (85) call bpf_get_smp_processor_id#8
+18: (bf) r4 = r10
+19: (07) r4 += -40
+20: (bf) r1 = r6
+21: (bf) r2 = r7
+22: (bf) r3 = r0
+23: (b7) r5 = 24
+24: (85) call bpf_perf_event_output#25
+25: (b7) r0 = 0
+26: (95) exit
+processed 26 insns (limit 131072), stack depth 40
+
+Attaching tracepoint:syscalls:sys_enter_nanosleep
+Running...
+iscsid is sleeping.
+iscsid is sleeping.
+[...]
+```
+
+This includes `Bytecode:` and then the eBPF bytecode after it was compiled from the llvm assembly.
 
 # Language
 
@@ -250,6 +463,20 @@ uretprobe:library_name:function_name
 
 These use uprobes (a Linux kernel capability). `uprobe` instruments the beginning of a user-level function's execution, and `uretprobe` instruments the end (its return).
 
+To list available uprobes, you can use any program to list the text segment symbols from a binary, such as `objdump` and `nm`. For example:
+
+```
+# objdump -tT /bin/bash | grep readline
+00000000007003f8 g    DO .bss	0000000000000004  Base        rl_readline_state
+0000000000499e00 g    DF .text	00000000000001c5  Base        readline_internal_char
+00000000004993d0 g    DF .text	0000000000000126  Base        readline_internal_setup
+000000000046d400 g    DF .text	000000000000004b  Base        posix_readline_initialize
+000000000049a520 g    DF .text	0000000000000081  Base        readline
+[...]
+```
+
+This has listed various functions containing "readline" from /bin/bash. These can be instrumented using `uprobe` and `uretprobe`.
+
 Examples:
 
 ```
@@ -258,15 +485,21 @@ Attaching 1 probe...
 read a line
 read a line
 read a line
-read a line
 ^C
 ```
 
+While tracing, this has caught a few executions of the `readline()` function in /bin/bash. This example is continued in the next section.
+
 ## 4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments
 
-Syntax: `arg0, arg1, ..., argN`
+Syntax:
 
-Arguments can be accessed via these variables names. arg0 is the first argument.
+```
+uprobe: arg0, arg1, ..., argN
+uretprobe: retval`
+```
+
+Arguments can be accessed via these variables names. `arg0` is the first argument, and can only be accessed with a `uprobe`. `retval` is the return value for the instrumented function, and can only be accessed on `uretprobe`.
 
 Examples:
 
@@ -279,6 +512,8 @@ arg0: 19755784
 ^C
 ```
 
+What does `arg0` of `readline()` in /bin/bash contain? I don't know. I'd need to look at the bash source code to find out what its arguments were.
+
 ```
 # bpftrace -e 'uprobe:/lib/x86_64-linux-gnu/libc-2.23.so:fopen { printf("fopen: %s\n", str(arg0)); }'
 Attaching 1 probe...
@@ -287,6 +522,8 @@ fopen: /usr/share/locale/locale.alias
 fopen: /proc/self/mountinfo
 ^C
 ```
+
+In this case, I know that the first argument of libc `fopen()` is the pathname (see the fopen(3) man page), so I've traced it using a uprobe. Adjust the path to libc to match your system (it may not be libc-2.23.so). A `str()` call is necessary to turn the char * pointer to a string, as explained in a later section.
 
 ```
 # bpftrace -e 'uretprobe:/bin/bash:readline { printf("readline: \"%s\"\n", str(retval)); }'
@@ -297,6 +534,8 @@ readline: "date"
 readline: "uname -r"
 ^C
 ```
+
+Back to the bash `readline()` example: after checking the source code, I saw that the return value was the string read. So I can use a `uretprobe` and the `retval` variable to see the read string.
 
 ## 5. `tracepoint`: Static Tracing, Kernel-Level
 
