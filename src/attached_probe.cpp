@@ -244,6 +244,9 @@ void AttachedProbe::load_prog()
     close(new_stderr);
   }
 
+   if (bt_verbose)
+    log_level = 1;
+
   // bpf_prog_load rejects colons in the probe name
   strncpy(name, probe_.name.c_str(), STRING_SIZE);
   namep = name;
@@ -271,6 +274,10 @@ void AttachedProbe::load_prog()
     if (bt_verbose)
       std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
     throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
+  } else {
+    if (bt_verbose) {
+       std::cout << std::endl << "Bytecode: " << std::endl << log_buf << std::endl;
+    }
   }
 }
 
