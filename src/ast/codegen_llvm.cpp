@@ -596,6 +596,8 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
       case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
       case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
+      case bpftrace::Parser::token::LEFT:  expr_ = b_.CreateShl    (lhs, rhs); break;
+      case bpftrace::Parser::token::RIGHT: expr_ = b_.CreateLShr   (lhs, rhs); break;
       case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
       case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;

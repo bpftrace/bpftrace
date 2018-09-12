@@ -52,6 +52,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   NE       "!="
   LE       "<="
   GE       ">="
+  LEFT     "<<"
+  RIGHT    ">>"
   LT       "<"
   GT       ">"
   LAND     "&&"
@@ -106,6 +108,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %left BAND
 %left EQ NE
 %left LE GE LT GT
+%left LEFT RIGHT
 %left PLUS MINUS
 %left MUL DIV MOD
 %right LNOT BNOT DEREF CAST
@@ -183,6 +186,8 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr GT expr    { $$ = new ast::Binop($1, token::GT, $3); }
      | expr LAND expr  { $$ = new ast::Binop($1, token::LAND,  $3); }
      | expr LOR expr   { $$ = new ast::Binop($1, token::LOR,   $3); }
+     | expr LEFT expr  { $$ = new ast::Binop($1, token::LEFT,  $3); }
+     | expr RIGHT expr { $$ = new ast::Binop($1, token::RIGHT, $3); }
      | expr PLUS expr  { $$ = new ast::Binop($1, token::PLUS,  $3); }
      | expr MINUS expr { $$ = new ast::Binop($1, token::MINUS, $3); }
      | expr MUL expr   { $$ = new ast::Binop($1, token::MUL,   $3); }
