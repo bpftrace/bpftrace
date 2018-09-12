@@ -1,16 +1,18 @@
-//
-// execsnoop.bt - basic process exec tracing tool.
-//                For Linux, uses bpftrace, eBPF.
-//
-// This traces when processes call exec(). It is handy for identifying new
-// processes created via the usual fork()->exec() sequence. Note that the
-// return value is not currently traced, so the exec() may have failed.
-// Also, only the first five arguments are currently printed.
-//
-// TODO: switch to proc tracepoints. Support more args. Include retval.
-//
-// 15-Nov-2017	Brendan Gregg	Created this.
-//
+/*
+ * execsnoop.bt   Trace new processes via exec() syscalls.
+ *                For Linux, uses bpftrace and eBPF.
+ *
+ * This traces when processes call exec(). It is handy for identifying new
+ * processes created via the usual fork()->exec() sequence. Note that the
+ * return value is not currently traced, so the exec() may have failed.
+ *
+ * TODO: switch to tracepoints args. Support more args. Include retval.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * 15-Nov-2017	Brendan Gregg	Created this.
+ * 11-Sep-2018	   "     "	Switched to use join().
+ */
 
 BEGIN
 {
@@ -18,22 +20,12 @@ BEGIN
 	@epoch = nsecs;
 }
 
-kprobe:sys_execve
+tracepoint:syscalls:sys_enter_execve
 {
-	$step = 8;	// sizeof (char *)
-	$ptr = arg1;
-	
+	$argv = ctx + 24; // workaround until #32
 	$now = nsecs;
-	printf("%-10u %-5d %s",
-	    ($now - @epoch) / 1000000, pid,
-	    str(*$ptr));
-	// unrolled loop for now:
-	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
-	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
-	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
-	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
-	$ptr = $ptr + $step; printf(" %s", str(*$ptr));
-	printf("\n");
+	printf("%-10u %-5d ", ($now - @epoch) / 1000000, pid);
+	join(*$argv);
 }
 
 END
