@@ -520,10 +520,9 @@ void CodegenLLVM::visit(Call &call)
     ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) * 2);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::time)), perfdata);
-    static int time_id = 0;
-    b_.CreateStore(b_.getInt64(time_id), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
+    b_.CreateStore(b_.getInt64(time_id_), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
 
-    time_id++;
+    time_id_++;
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) * 2);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
@@ -899,7 +898,14 @@ void CodegenLLVM::visit(Probe &probe)
     b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 
   } else {
-    // build a separate BPF programs for each wildcard match
+    /*
+     * Build a separate BPF program for each wildcard match.
+     * We begin by saving state that gets changed by the codegen pass, so we
+     * can restore it for the next pass (printf_id_, time_id_).
+     */
+    int starting_printf_id_ = printf_id_;
+    int starting_time_id_ = time_id_;
+
     for (auto &attach_point : *probe.attach_points) {
       std::string file_name;
       switch (probetype(attach_point->provider))
@@ -918,6 +924,8 @@ void CodegenLLVM::visit(Probe &probe)
       }
       auto matches = bpftrace_.find_wildcard_matches(attach_point->target, attach_point->func, file_name);
       for (auto &match : matches) {
+        printf_id_ = starting_printf_id_;
+        time_id_ = starting_time_id_;
         probefull_ = attach_point->name(match);
         Function *func = Function::Create(func_type, Function::ExternalLinkage, attach_point->name(match), module_.get());
         func->setSection("s_" + attach_point->name(match));
