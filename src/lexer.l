@@ -40,11 +40,13 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 {vspace}+               { loc.lines(yyleng); loc.step(); }
 
 "//".*$                 // single-line comments
-"/*"                    BEGIN(COMMENT);   // multi-line comments
+"/*"                    BEGIN(COMMENT);  // multi-line comments; see flex(1)
 <COMMENT>"/*"           driver.error(loc, std::string("nested comments unsupported"));
+<COMMENT>[^*\n]*	;
+<COMMENT>"*"+[^*/\n]*	;
+<COMMENT>"\n"           loc.lines(1);
 <COMMENT>"*/"           BEGIN(INITIAL);
 <COMMENT>"EOF"          driver.error(loc, std::string("end of file during comment"));
-<COMMENT>.|"\n"         ;
 
 pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|rand|ctx {
                           return Parser::make_BUILTIN(yytext, loc); }
