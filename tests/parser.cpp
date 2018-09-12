@@ -239,6 +239,39 @@ TEST(Parser, expressions)
       "  int: 1\n");
 }
 
+TEST(Parser, bit_shifting)
+{
+  test("kprobe:do_nanosleep { @x = 1 << 10 }",
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   map: @x\n"
+       "   <<\n"
+       "    int: 1\n"
+       "    int: 10\n");
+  test("kprobe:do_nanosleep { @x = 1024 >> 9 }",
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   map: @x\n"
+       "   >>\n"
+       "    int: 1024\n"
+       "    int: 9\n");
+  test("kprobe:do_nanosleep / 2 < 1 >> 8 / { $x = 1 }",
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  pred\n"
+       "   <\n"
+       "    int: 2\n"
+       "    >>\n"
+       "     int: 1\n"
+       "     int: 8\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   int: 1\n");
+}
+
+
 TEST(Parser, ternary_int)
 {
   test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2 }",

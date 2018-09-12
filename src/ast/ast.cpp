@@ -87,6 +87,8 @@ std::string opstr(Binop &binop)
     case bpftrace::Parser::token::GT:    return ">";
     case bpftrace::Parser::token::LAND:  return "&&";
     case bpftrace::Parser::token::LOR:   return "||";
+    case bpftrace::Parser::token::LEFT:  return "<<";
+    case bpftrace::Parser::token::RIGHT: return ">>";
     case bpftrace::Parser::token::PLUS:  return "+";
     case bpftrace::Parser::token::MINUS: return "-";
     case bpftrace::Parser::token::MUL:   return "*";
