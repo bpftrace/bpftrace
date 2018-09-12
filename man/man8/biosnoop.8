@@ -1,0 +1,55 @@
+.TH biosnoop 8  "2018-09-11" "USER COMMANDS"
+.SH NAME
+biosnoop.bt \- Block I/O tracing tool, showing per I/O latency. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B biosnoop.bt
+.SH DESCRIPTION
+This is a basic block I/O (disk I/O) tracing tool, showing each I/O event
+along with the issuing process ID, and the I/O latency. This can be used to
+investigate disk I/O performance issues.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace block I/O events, printing per-line summaries:
+#
+.B biosnoop.bt
+.SH FIELDS
+.TP
+TIME
+Time of the I/O completion, in milliseconds since program start.
+.TP
+COMM
+Issuing process name. This often identifies the issuing applicaion process, but I/O may be initiated from kernel threads only.
+.TP
+PID
+Issuing process ID. This often identifies the issuing applicaion process, but I/O may be initiated from kernel threads only.
+.TP
+ARGS
+Process name and arguments (16 word maximum).
+.SH OVERHEAD
+Since block device I/O usually has a relatively low frequency (< 10,000/s),
+the overhead for this tool is expected to be negligible. For high IOPS storage
+systems, test and quantify before use.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name. The bcc tool
+provides more fields.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+opensnoop(8)

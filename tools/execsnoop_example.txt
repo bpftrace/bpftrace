@@ -38,3 +38,7 @@ they are failing as the $PATH variable is walked, until one finally succeeds.
 
 This tool can be used to discover unwanted short-lived processes that may be
 causing performance issues such as latency perturbations.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides more fields and command line options.
