@@ -151,19 +151,25 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     std::string arg = (const char *)(static_cast<uint8_t*>(data) + sizeof(uint64_t) + 2 * sizeof(uint64_t));
     uint64_t top = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
     uint64_t div = (uint64_t)*(static_cast<uint64_t*>(data) + (sizeof(uint64_t) + sizeof(uint64_t)) / sizeof(uint64_t));
-    bpftrace->print_map_ident(arg, top, div);
+    err = bpftrace->print_map_ident(arg, top, div);
+    if (err)
+      throw std::runtime_error("Could not print map with ident \"" + arg + "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::clear))
   {
     std::string arg = (const char *)(arg_data+sizeof(uint64_t));
-    bpftrace->clear_map_ident(arg);
+    err = bpftrace->clear_map_ident(arg);
+    if (err)
+      throw std::runtime_error("Could not clear map with ident \"" + arg + "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::zero))
   {
     std::string arg = (const char *)(arg_data+sizeof(uint64_t));
-    bpftrace->zero_map_ident(arg);
+    err = bpftrace->zero_map_ident(arg);
+    if (err)
+      throw std::runtime_error("Could not zero map with ident \"" + arg + "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::time))

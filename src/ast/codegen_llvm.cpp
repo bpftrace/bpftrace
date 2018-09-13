@@ -459,9 +459,10 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
-    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length()), "str");
+    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
+    b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
     b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), str_buf);
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length());
+    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
 
     // store asyncactionid:
@@ -492,8 +493,8 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateStore(b_.getInt64(0), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + sizeof(uint64_t))}));
 
     // store map ident:
-    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + 2 * sizeof(uint64_t))}), str_buf, map.ident.length(), 1);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length());
+    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + 2 * sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
+    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
   }
@@ -502,16 +503,17 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
-    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length()), "str");
+    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
+    b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
     b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), str_buf);
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + map.ident.length());
+    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
     if (call.func == "clear")
       b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::clear)), perfdata);
     else
       b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::zero)), perfdata);
-    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}), str_buf, map.ident.length(), 1);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + map.ident.length());
+    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
+    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + map.ident.length() + 1);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
   }
