@@ -638,6 +638,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   if (div == 0)
     div = 1;
   uint32_t i = 0;
+  int total = values_by_key.size();
   for (auto &pair : values_by_key)
   {
     auto key = pair.first;
@@ -645,10 +646,9 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
     if (top)
     {
-      if (i < (values_by_key.size() - top))
+      if (total > top && i++ < (total - top))
         continue;
     }
-    i++;
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
