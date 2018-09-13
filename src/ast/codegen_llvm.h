@@ -70,6 +70,7 @@ private:
 
   std::map<std::string, Value *> variables_;
   int printf_id_ = 0;
+  int time_id_ = 0;
 };
 
 } // namespace ast
