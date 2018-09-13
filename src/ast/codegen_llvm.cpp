@@ -54,10 +54,10 @@ void CodegenLLVM::visit(Builtin &builtin)
       expr_ = b_.CreateAnd(pidtgid, 0xffffffff);
     }
   }
-  else if (builtin.ident == "uid" || builtin.ident == "gid")
+  else if (builtin.ident == "uid" || builtin.ident == "gid" || builtin.ident == "username")
   {
     Value *uidgid = b_.CreateGetUidGid();
-    if (builtin.ident == "uid")
+    if (builtin.ident == "uid"  || builtin.ident == "username")
     {
       expr_ = b_.CreateAnd(uidgid, 0xffffffff);
     }

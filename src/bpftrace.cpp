@@ -206,6 +206,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   std::vector<uint64_t> arg_values;
   std::vector<std::unique_ptr<char>> resolved_symbols;
+  std::vector<std::unique_ptr<char>> resolved_usernames;
+
   char *name;
   for (auto arg : args)
   {
@@ -242,6 +244,11 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         resolved_symbols.emplace_back(strdup(
               bpftrace->resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        break;
+      case Type::username:
+        resolved_usernames.emplace_back(strdup(
+              bpftrace->resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+        arg_values.push_back((uint64_t)resolved_usernames.back().get());
         break;
       case Type::name:
         name = strdup(bpftrace->resolve_name(*(uint64_t*)(arg_data+arg.offset)).c_str());
@@ -654,6 +661,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << resolve_sym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
       std::cout << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
+    else if (map.type_.type == Type::username)
+      std::cout << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
     else if (map.type_.type == Type::count || map.type_.type == Type::sum)
@@ -1099,6 +1108,48 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
   }
 
   return stack.str();
+}
+
+std::string BPFtrace::resolve_uid(uintptr_t addr)
+{
+    std::string file_name = "/etc/passwd";
+    std::string uid = std::to_string(addr);
+    std::string username = "";
+
+    std::ifstream file(file_name);
+    if (file.fail())
+    {
+        std::cerr << strerror(errno) << ": " << file_name << std::endl;
+        return username;
+    }
+
+    std::string line;
+    bool found = false;
+
+    while (std::getline(file, line) && !found)
+    {
+        auto fields = split_string(line, ':');
+
+        if (fields[2] == uid) {
+            found = true;
+            username = fields[0];
+        }
+    }
+
+    file.close();
+
+    return username;
+}
+
+std::vector<std::string> BPFtrace::split_string(std::string &str, char split_by)
+{
+    std::vector<std::string> elems;
+    std::stringstream ss(str);
+    std::string value;
+    while(std::getline(ss, value, split_by)) {
+        elems.push_back(value);
+    }
+    return elems;
 }
 
 std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)

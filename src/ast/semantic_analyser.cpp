@@ -76,6 +76,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::name, 8);
     probe_->need_expansion = true;
   }
+  else if (builtin.ident == "username") {
+    builtin.type = SizedType(Type::username, 8);
+  }
   else {
     builtin.type = SizedType(Type::none, 0);
     err_ << "Unknown builtin variable: '" << builtin.ident << "'" << std::endl;
