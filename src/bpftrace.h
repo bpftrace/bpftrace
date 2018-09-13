@@ -37,6 +37,7 @@ public:
   std::string get_stack(uint64_t stackidpid, bool ustack, int indent=0);
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
+  std::string resolve_uid(uintptr_t addr);
   uint64_t resolve_kname(const char *name);
   uint64_t resolve_uname(const char *name, const char *path);
   std::string resolve_name(uint64_t name_id);
@@ -87,6 +88,7 @@ private:
   static std::string exec_system(const char* cmd);
   static std::string hist_index_label(int power);
   static std::string lhist_index_label(int number);
+  static std::vector<std::string> split_string(std::string &str, char split_by);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
 };
 

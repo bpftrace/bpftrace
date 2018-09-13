@@ -32,6 +32,7 @@ enum class Type
   cast,
   join,
   name,
+  username,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);

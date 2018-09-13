@@ -54,6 +54,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { pid }", 0);
   test("kprobe:f { tid }", 0);
   test("kprobe:f { uid }", 0);
+  test("kprobe:f { username }", 0);
   test("kprobe:f { gid }", 0);
   test("kprobe:f { nsecs }", 0);
   test("kprobe:f { cpu }", 0);
