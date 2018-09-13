@@ -1112,44 +1112,45 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
 
 std::string BPFtrace::resolve_uid(uintptr_t addr)
 {
-    std::string file_name = "/etc/passwd";
-    std::string uid = std::to_string(addr);
-    std::string username = "";
+  std::string file_name = "/etc/passwd";
+  std::string uid = std::to_string(addr);
+  std::string username = "";
 
-    std::ifstream file(file_name);
-    if (file.fail())
-    {
-        std::cerr << strerror(errno) << ": " << file_name << std::endl;
-        return username;
-    }
-
-    std::string line;
-    bool found = false;
-
-    while (std::getline(file, line) && !found)
-    {
-        auto fields = split_string(line, ':');
-
-        if (fields[2] == uid) {
-            found = true;
-            username = fields[0];
-        }
-    }
-
-    file.close();
-
+  std::ifstream file(file_name);
+  if (file.fail())
+  {
+    std::cerr << strerror(errno) << ": " << file_name << std::endl;
     return username;
+  }
+
+  std::string line;
+  bool found = false;
+
+  while (std::getline(file, line) && !found)
+  {
+    auto fields = split_string(line, ':');
+
+    if (fields[2] == uid)
+    {
+      found = true;
+      username = fields[0];
+    }
+  }
+
+  file.close();
+
+  return username;
 }
 
 std::vector<std::string> BPFtrace::split_string(std::string &str, char split_by)
 {
-    std::vector<std::string> elems;
-    std::stringstream ss(str);
-    std::string value;
-    while(std::getline(ss, value, split_by)) {
-        elems.push_back(value);
-    }
-    return elems;
+  std::vector<std::string> elems;
+  std::stringstream ss(str);
+  std::string value;
+  while(std::getline(ss, value, split_by)) {
+      elems.push_back(value);
+  }
+  return elems;
 }
 
 std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
