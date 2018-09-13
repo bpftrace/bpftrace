@@ -66,6 +66,7 @@ private:
   DataLayout layout_;
   Value *expr_ = nullptr;
   Value *ctx_;
+  AttachPoint *current_attach_point_ = nullptr;
   BPFtrace &bpftrace_;
   std::string probefull_;
   std::string path_;

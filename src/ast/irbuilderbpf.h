@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "bpftrace.h"
+#include "bcc_usdt.h"
 #include "types.h"
 
 #include <llvm/IR/IRBuilder.h>
@@ -32,6 +33,7 @@ public:
   void        CreateProbeRead(AllocaInst *dst, size_t size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src);
   CallInst   *CreateProbeReadStr(Value *dst, size_t size, Value *src);
+  Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetUidGid();
@@ -46,6 +48,8 @@ public:
 private:
   Module &module_;
   BPFtrace &bpftrace_;
+
+  Value      *CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin);
 };
 
 } // namespace ast
