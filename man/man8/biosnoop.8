@@ -8,6 +8,10 @@ This is a basic block I/O (disk I/O) tracing tool, showing each I/O event
 along with the issuing process ID, and the I/O latency. This can be used to
 investigate disk I/O performance issues.
 
+This tool currently works by dynamic tracing of the blk_account*() kernel
+functions, which will need updating to match any changes to these functions
+in future kernels versions.
+
 Since this uses BPF, only the root user can use this tool.
 .SH REQUIREMENTS
 CONFIG_BPF and bpftrace.
