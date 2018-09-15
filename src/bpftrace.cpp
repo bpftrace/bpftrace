@@ -89,6 +89,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.name = attach_point->name(func);
       probe.freq = attach_point->freq;
       probe.loc = 0;
+      probe.index = attach_point->index(func) > 0 ? 
+          attach_point->index(func) : p.index();
       probes_.push_back(probe);
     }
   }
@@ -307,9 +309,10 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   // and the name builtin, which must be expanded into separate programs per
   // probe), else try to find a the program based on the original probe name
   // that includes wildcards.
-  auto func = bpforc.sections_.find("s_" + probe.name);
+  std::string index_str = "_" + std::to_string(probe.index);
+  auto func = bpforc.sections_.find("s_" + probe.name + index_str);
   if (func == bpforc.sections_.end())
-    func = bpforc.sections_.find("s_" + probe.orig_name);
+    func = bpforc.sections_.find("s_" + probe.orig_name + index_str);
   if (func == bpforc.sections_.end())
   {
     if (probe.name != probe.orig_name)

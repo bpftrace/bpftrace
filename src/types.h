@@ -83,6 +83,7 @@ public:
 				// before wildcard expansion
   std::string name;		// full probe name
   uint64_t loc;			// for USDT probes
+  int index = 0;
   int freq;
 };
 

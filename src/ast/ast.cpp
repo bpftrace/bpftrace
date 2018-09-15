@@ -124,6 +124,15 @@ std::string AttachPoint::name(const std::string &attach_point) const
   return n;
 }
 
+int AttachPoint::index(std::string name) {
+  if (index_.count(name) == 0) return 0;
+  return index_[name];
+}
+
+void AttachPoint::set_index(std::string name, int index) {
+  index_[name] = index;
+}
+
 std::string Probe::name() const
 {
   std::string n = "";
@@ -139,6 +148,14 @@ std::string Probe::name() const
     n += ",";
   }
   return n.substr(0, n.size()-1);
+}
+
+int Probe::index() {
+  return index_;
+}
+
+void Probe::set_index(int index) {
+  index_ = index;
 }
 
 } // namespace ast

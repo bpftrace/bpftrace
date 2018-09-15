@@ -156,18 +156,19 @@ std::string AttachedProbe::eventprefix() const
 std::string AttachedProbe::eventname() const
 {
   std::ostringstream offset_str;
+  std::string index_str = "_" + std::to_string(probe_.index);
   switch (probe_.type)
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      return eventprefix() + probe_.attach_point;
+      return eventprefix() + probe_.attach_point + index_str;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
       offset_str << std::hex << offset();
-      return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str();
+      return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str() + index_str;
     case ProbeType::tracepoint:
-      return probe_.attach_point;
+      return probe_.attach_point + index_str;
     default:
       abort();
   }
