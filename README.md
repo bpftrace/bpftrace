@@ -157,6 +157,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
 - tools/[opensnoop.bt](tools/loads.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
+- tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
 - tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 - tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
