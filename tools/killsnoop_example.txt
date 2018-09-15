@@ -1,0 +1,21 @@
+Demonstrations of killsnoop, the Linux bpftrace/eBPF version.
+
+
+This traces signals sent via the kill() syscall. For example:
+
+# bpftrace killsnoop.bt
+Attaching 3 probes...
+Tracing kill() signals... Hit Ctrl-C to end.
+TIME      PID    COMM             SIG  TPID   RESULT
+00:09:37  22485  bash             2    23856  0
+00:09:40  22485  bash             2    23856  -3
+00:09:31  22485  bash             15   23814  -3
+
+The first line showed a SIGINT (2) sent from PID 22485 (a bash shell) to
+PID 23856. The result, 0, means success. The next line shows the same signal
+sent, which resulted in -3, a failure (likely because the target process
+no longer existed).
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides command line options to customize the output.
