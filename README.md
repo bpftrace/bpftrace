@@ -8,34 +8,23 @@ For instructions on building BPFtrace, see [INSTALL.md](INSTALL.md). There is al
 
 ## Examples
 
-Count system calls:
+Count system calls using tracepoints:
 ```
-tracepoint:syscalls:sys_enter_*
-{
-  @[name] = count();
-}
-```
-```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_* { @[name] = count(); }'
 Attaching 320 probes...
 ^C
 
 ...
-@[tracepoint:syscalls:sys_enter_futex]: 50
-@[tracepoint:syscalls:sys_enter_newfstat]: 52
-@[tracepoint:syscalls:sys_enter_clock_gettime]: 56
-@[tracepoint:syscalls:sys_enter_perf_event_open]: 148
-@[tracepoint:syscalls:sys_enter_select]: 156
-@[tracepoint:syscalls:sys_enter_dup]: 291
-@[tracepoint:syscalls:sys_enter_read]: 308
-@[tracepoint:syscalls:sys_enter_bpf]: 310
-@[tracepoint:syscalls:sys_enter_open]: 363
-@[tracepoint:syscalls:sys_enter_ioctl]: 571
-@[tracepoint:syscalls:sys_enter_dup2]: 580
-@[tracepoint:syscalls:sys_enter_close]: 998
+@[tracepoint:syscalls:sys_enter_access]: 3291
+@[tracepoint:syscalls:sys_enter_close]: 3897
+@[tracepoint:syscalls:sys_enter_newstat]: 4268
+@[tracepoint:syscalls:sys_enter_open]: 4609
+@[tracepoint:syscalls:sys_enter_mmap]: 4781
 ```
 
-Produce a histogram of amount of time (in nanoseconds) spent in the `read()` system call:
+Produce a histogram of time (in nanoseconds) spent in the `read()` system call:
 ```
+// read.bt file
 tracepoint:syscalls:sys_enter_read
 {
   @start[tid] = nsecs;
@@ -48,20 +37,11 @@ tracepoint:syscalls:sys_exit_read / @start[tid] /
 }
 ```
 ```
+# bpftrace read.bt
 Attaching 2 probes...
 ^C
 
-@start[9134]: 6465933686812
-
 @times:
-[0, 1]                 0 |                                                    |
-[2, 4)                 0 |                                                    |
-[4, 8)                 0 |                                                    |
-[8, 16)                0 |                                                    |
-[16, 32)               0 |                                                    |
-[32, 64)               0 |                                                    |
-[64, 128)              0 |                                                    |
-[128, 256)             0 |                                                    |
 [256, 512)           326 |@                                                   |
 [512, 1k)           7715 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
 [1k, 2k)           15306 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
@@ -73,49 +53,25 @@ Attaching 2 probes...
 [64k, 128k)            5 |                                                    |
 ```
 
-Print paths of any files opened along with the name of process which opened them:
+Print process name and paths for file opens, using kprobes (kernel dynamic tracing) of do_sys_open():
 ```
-kprobe:sys_open
-{
-  printf("%s: %s\n", comm, str(arg0))
-}
-```
-```
+# bpftrace -e 'kprobe:do_sys_open { printf("%s: %s\n", comm, str(arg0)) }'
 Attaching 1 probe...
-git: .git/objects/70
-git: .git/objects/pack
 git: .git/objects/da
 git: .git/objects/pack
 git: /etc/localtime
 systemd-journal: /var/log/journal/72d0774c88dc4943ae3d34ac356125dd
 DNS Res~ver #15: /etc/hosts
-DNS Res~ver #16: /etc/hosts
-DNS Res~ver #15: /etc/hosts
 ^C
 ```
 
-Whole system profiling (TODO make example check if kernel is on-cpu before recording):
+CPU profiling, sampling kernel stacks at 99 Hertz:
 ```
-profile:hz:99
-{
-  @[stack] = count()
-}
-```
-```
+# bpftrace -e 'profile:hz:99 { @[stack] = count() }'
 Attaching 1 probe...
 ^C
 
 ...
-@[
-_raw_spin_unlock_irq+23
-finish_task_switch+117
-__schedule+574
-schedule_idle+44
-do_idle+333
-cpu_startup_entry+113
-start_secondary+344
-verify_cpu+0
-]: 83
 @[
 queue_work_on+41
 tty_flip_buffer_push+43
