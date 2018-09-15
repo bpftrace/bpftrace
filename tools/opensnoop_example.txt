@@ -1,0 +1,51 @@
+Demonstrations of opensnoop, the Linux bpftrace/eBPF version.
+
+
+opensnoop traces the open() syscall system-wide, and prints various details.
+Example output:
+
+# bpftrace opensnoop.bt
+Attaching 3 probes...
+Tracing open syscalls... Hit Ctrl-C to end.
+PID    COMM               FD ERR PATH
+2440   snmp-pass           4   0 /proc/cpuinfo
+2440   snmp-pass           4   0 /proc/stat
+25706  ls                  3   0 /etc/ld.so.cache
+25706  ls                  3   0 /lib/x86_64-linux-gnu/libselinux.so.1
+25706  ls                  3   0 /lib/x86_64-linux-gnu/libc.so.6
+25706  ls                  3   0 /lib/x86_64-linux-gnu/libpcre.so.3
+25706  ls                  3   0 /lib/x86_64-linux-gnu/libdl.so.2
+25706  ls                  3   0 /lib/x86_64-linux-gnu/libpthread.so.0
+25706  ls                  3   0 /proc/filesystems
+25706  ls                  3   0 /usr/lib/locale/locale-archive
+25706  ls                  3   0 .
+1744   snmpd               8   0 /proc/net/dev
+1744   snmpd              21   0 /proc/net/if_inet6
+1744   snmpd              21   0 /sys/class/net/eth0/device/vendor
+1744   snmpd              21   0 /sys/class/net/eth0/device/device
+1744   snmpd              21   0 /proc/sys/net/ipv4/neigh/eth0/retrans_time_ms
+1744   snmpd              21   0 /proc/sys/net/ipv6/neigh/eth0/retrans_time_ms
+1744   snmpd              21   0 /proc/sys/net/ipv6/conf/eth0/forwarding
+1744   snmpd              21   0 /proc/sys/net/ipv6/neigh/eth0/base_reachable_time_ms
+1744   snmpd              -1   2 /sys/class/net/lo/device/vendor
+1744   snmpd              21   0 /proc/sys/net/ipv4/neigh/lo/retrans_time_ms
+1744   snmpd              21   0 /proc/sys/net/ipv6/neigh/lo/retrans_time_ms
+1744   snmpd              21   0 /proc/sys/net/ipv6/conf/lo/forwarding
+1744   snmpd              21   0 /proc/sys/net/ipv6/neigh/lo/base_reachable_time_ms
+2440   snmp-pass           4   0 /proc/cpuinfo
+2440   snmp-pass           4   0 /proc/stat
+22884  pickup             12   0 maildrop
+2440   snmp-pass           4   0 /proc/cpuinfo
+2440   snmp-pass           4   0 /proc/stat
+
+While tracing, at "ls" command was launched: the libraries it uses can be seen
+as they were opened. Also, the snmpd process opened various /proc and /sys
+files (reading metrics).
+was starting up: a new process).
+
+opensnoop can be useful for discovering configuration and log files, if used
+during application startup.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides command line options to customize the output.

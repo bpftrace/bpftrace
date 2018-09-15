@@ -1,0 +1,66 @@
+.TH statsnoop 8  "2018-09-08" "USER COMMANDS"
+.SH NAME
+statsnoop.bt \- Trace stat() syscalls. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B statsnoop.bt
+.SH DESCRIPTION
+statsnoop traces the stat() syscall, showing which processes are attempting
+to stat which files. This can be useful for determining the location of config
+and log files, or for troubleshooting applications that are failing, specially
+on startup.
+
+This traces the traecepoints for statfs(), statx(), newstat(), and
+newlstat(). These aren't the only the stat syscalls: if you are missing
+activity, you may need to add more variants.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bcc.
+.SH EXAMPLES
+.TP
+Trace all stat() syscalls:
+#
+.B statsnoop.bt
+.SH FIELDS
+PID
+Process ID
+.TP
+TID
+Thread ID
+.TP
+COMM
+Process name
+.TP
+FD
+File descriptor (if success), or -1 (if failed)
+.TP
+ERR
+Error number (see the system's errno.h)
+.TP
+PATH
+Stat path
+.SH OVERHEAD
+This traces the stat tracepoints and prints output for each event. As the
+rate of this is generally expected to be low (< 1000/s), the overhead is also
+expected to be negligible. If you have an application that is calling a high
+rate of stat()s, then test and understand overhead before use.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name. The bcc tool
+may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+opensnoop(8), execsnoop(8)

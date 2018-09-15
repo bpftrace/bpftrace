@@ -1,0 +1,58 @@
+Demonstrations of statsnoop, the Linux bpftrace/eBPF version.
+
+
+statsnoop traces different stat() syscalls system-wide, and prints details.
+Example output:
+
+# bpftrace statsnoop.bt
+Attaching 9 probes...
+Tracing stat syscalls... Hit Ctrl-C to end.
+PID    COMM             ERR PATH
+27835  bash               0 .
+27835  bash               2 /usr/local/sbin/iconfig
+27835  bash               2 /usr/local/bin/iconfig
+27835  bash               2 /usr/sbin/iconfig
+27835  bash               2 /usr/bin/iconfig
+27835  bash               2 /sbin/iconfig
+27835  bash               2 /bin/iconfig
+27835  bash               2 /usr/games/iconfig
+27835  bash               2 /usr/local/games/iconfig
+27835  bash               2 /snap/bin/iconfig
+27835  bash               2 /apps/python/bin/iconfig
+30573  command-not-fou    2 /usr/bin/Modules/Setup
+30573  command-not-fou    2 /usr/bin/lib/python3.5/os.py
+30573  command-not-fou    2 /usr/bin/lib/python3.5/os.pyc
+30573  command-not-fou    0 /usr/lib/python3.5/os.py
+30573  command-not-fou    2 /usr/bin/pybuilddir.txt
+30573  command-not-fou    2 /usr/bin/lib/python3.5/lib-dynload
+30573  command-not-fou    0 /usr/lib/python3.5/lib-dynload
+30573  command-not-fou    2 /usr/lib/python35.zip
+30573  command-not-fou    0 /usr/lib
+30573  command-not-fou    2 /usr/lib/python35.zip
+30573  command-not-fou    0 /usr/lib/python3.5/
+30573  command-not-fou    0 /usr/lib/python3.5/
+30573  command-not-fou    0 /usr/lib/python3.5/
+30573  command-not-fou    2 /usr/lib/python3.5/encodings/__init__.cpython-35m-x86_64-linux-
+30573  command-not-fou    2 /usr/lib/python3.5/encodings/__init__.abi3.so
+30573  command-not-fou    2 /usr/lib/python3.5/encodings/__init__.so
+30573  command-not-fou    0 /usr/lib/python3.5/encodings/__init__.py
+30573  command-not-fou    0 /usr/lib/python3.5/encodings/__init__.py
+
+This output has caught me mistyping a command in another shell, "iconfig"
+instead of "ifconfig". The first several lines show the bash shell searching
+the $PATH (why is games in my $PATH??), and failing to find it (ERR == 2 is
+file not found). Then, a "command-not-found" program executes (the name is
+truncated to 16 characters in the COMM field, including the NULL), which
+begins the process of searching for and suggesting a package. ie, this:
+
+# iconfig
+The program 'iconfig' is currently not installed. You can install it by typing:
+apt install ipmiutil
+
+statsnoop can be used for general debugging, to see what file information has
+been requested, and whether those files exist. It can be used as a companion
+to opensnoop, which shows what files were actually opened.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides options to customize the output.

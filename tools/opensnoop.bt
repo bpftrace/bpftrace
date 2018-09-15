@@ -1,0 +1,39 @@
+/*
+ * opensnoop	Trace open() syscalls.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Also a basic example of bpftrace.
+ *
+ * USAGE: opensnoop.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing open syscalls... Hit Ctrl-C to end.\n");
+	printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
+}
+
+tracepoint:syscalls:sys_enter_open
+{
+	$file = *(ctx + 16);
+	@filename[tid] = $file;
+}
+
+tracepoint:syscalls:sys_exit_open
+/@filename[tid]/
+{
+	$ret = *(ctx + 16);
+	$fd = $ret > 0 ? $ret : -1;
+	$errno = $ret > 0 ? 0 : - $ret;
+
+	printf("%-6d %-16s %4d %3d %s\n", pid, comm, $fd, $errno,
+	    str(@filename[tid]));
+	delete(@filename[tid]);
+}

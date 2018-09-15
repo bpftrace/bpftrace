@@ -1,12 +1,14 @@
-.TH biosnoop 8  "2018-09-11" "USER COMMANDS"
+.TH biolatency 8  "2018-09-13" "USER COMMANDS"
 .SH NAME
-biosnoop.bt \- Block I/O tracing tool, showing per I/O latency. Uses bpftrace/eBPF.
+biolatency.bt \- Block I/O latency as a histogram. Uses bpftrace/eBPF.
 .SH SYNOPSIS
-.B biosnoop.bt
+.B biolatency.bt
 .SH DESCRIPTION
-This is a basic block I/O (disk I/O) tracing tool, showing each I/O event
-along with the issuing process ID, and the I/O latency. This can be used to
-investigate disk I/O performance issues.
+This tool summarizes time (latency) spent in block device I/O (disk I/O)
+as a power-of-2 histogram. This allows the distribution to be studied,
+including modes and outliers. There are often two modes, one for device cache
+hits and one for cache misses, which can be shown by this tool. Latency
+outliers will also be shown.
 
 This tool currently works by dynamic tracing of the blk_account*() kernel
 functions, which will need updating to match any changes to these functions
@@ -17,22 +19,19 @@ Since this uses BPF, only the root user can use this tool.
 CONFIG_BPF and bpftrace.
 .SH EXAMPLES
 .TP
-Trace block I/O events, printing per-line summaries:
+Trace block device I/O (disk I/O), and print a latency histogram on Ctrl-C:
 #
-.B biosnoop.bt
+.B biolatency
 .SH FIELDS
 .TP
-TIME
-Time of the I/O completion, in milliseconds since program start.
+1st, 2nd
+This is a range of latency, in microseconds (shown in "[...)" set notation).
 .TP
-COMM
-Issuing process name. This often identifies the issuing applicaion process, but I/O may be initiated from kernel threads only.
+3rd
+A column showing the count of operations in this range.
 .TP
-PID
-Issuing process ID. This often identifies the issuing applicaion process, but I/O may be initiated from kernel threads only.
-.TP
-ARGS
-Process name and arguments (16 word maximum).
+4th
+This is an ASCII histogram representing the count colimn.
 .SH OVERHEAD
 Since block device I/O usually has a relatively low frequency (< 10,000/s),
 the overhead for this tool is expected to be negligible. For high IOPS storage
@@ -46,7 +45,7 @@ Also look in the bpftrace distribution for a companion _examples.txt file contai
 example usage, output, and commentary for this tool.
 
 This is a bpftrace version of the bcc tool of the same name. The bcc tool
-provides more fields.
+may provide more options and customizations.
 .IP
 https://github.com/iovisor/bcc
 .SH OS
@@ -56,4 +55,4 @@ Unstable - in development.
 .SH AUTHOR
 Brendan Gregg
 .SH SEE ALSO
-opensnoop(8)
+biosnoop(1)
