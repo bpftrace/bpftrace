@@ -125,6 +125,13 @@ TEST(Parser, variable_assign)
       "  =\n"
       "   variable: $x\n"
       "   int: 1\n");
+  test("kprobe:sys_open { $x = -1; }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  =\n"
+      "   variable: $x\n"
+      "   -\n"
+      "    int: 1\n");
 }
 
 TEST(Parser, integer_sizes)
