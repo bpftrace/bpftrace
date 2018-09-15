@@ -1,0 +1,40 @@
+Demonstrations of biolatency, the Linux BPF/bpftrace version.
+
+
+This traces block I/O, and shows latency as a power-of-2 histogram. For example:
+
+# biolatency.bt
+Attaching 3 probes...
+Tracing block device I/O... Hit Ctrl-C to end.
+^C
+
+@usecs:
+[0, 1]                 0 |                                                    |
+[2, 4)                 0 |                                                    |
+[4, 8)                 0 |                                                    |
+[8, 16)                0 |                                                    |
+[16, 32)               0 |                                                    |
+[32, 64)               0 |                                                    |
+[64, 128)              0 |                                                    |
+[128, 256)             0 |                                                    |
+[256, 512)             2 |                                                    |
+[512, 1K)             10 |@                                                   |
+[1K, 2K)             426 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[2K, 4K)             230 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@                        |
+[4K, 8K)               9 |@                                                   |
+[8K, 16K)            128 |@@@@@@@@@@@@@@@                                     |
+[16K, 32K)            68 |@@@@@@@@                                            |
+[32K, 64K)             0 |                                                    |
+[64K, 128K)            0 |                                                    |
+[128K, 256K)          10 |@                                                   |
+
+While tracing, this shows that 426 block I/O had a latency of between 1K and 2K
+usecs (1024 and 2048 microseconds), which is between 1 and 2 milliseconds.
+There are also two modes visible, one between 1 and 2 milliseconds, and another
+between 8 and 16 milliseconds: this sounds like cache hits and cache misses.
+There were also 10 I/O with latency 128 to 256 ms: outliers. Other tools and
+instrumentation, like biosnoop.bt, can shed more light on those outliers.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides options to customize the output.
