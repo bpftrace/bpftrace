@@ -115,6 +115,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
 - tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
 - tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).
+- tools/[syscount.bt](tools/syscount.bt): Count system callls. [Examples](tools/syscount_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 - tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
 - tools/[xfsdist.bt](tools/xfsdist.bt): Summarize XFS operation latency distribution as a histogram. [Examples](tools/xfsdist_example.txt).
