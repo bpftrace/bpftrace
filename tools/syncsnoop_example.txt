@@ -1,0 +1,17 @@
+Demonstrations of syncsnoop, the Linux bpftrace/eBPF version.
+
+
+Tracing file system sync events:
+
+# bpftrace syncsnoop.bt
+Attaching 7 probes...
+Tracing sync syscalls... Hit Ctrl-C to end.
+TIME      PID    COMM             EVENT
+02:02:17  27933  sync             tracepoint:syscalls:sys_enter_sync
+02:03:43  27936  sync             tracepoint:syscalls:sys_enter_sync
+
+The output shows calls to the sync() syscall (traced via its tracepoint),
+along with various details.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
