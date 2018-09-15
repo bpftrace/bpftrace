@@ -53,7 +53,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|ra
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
-{int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
+{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
 ";"                     { return Parser::make_SEMI(loc); }
 "{"                     { return Parser::make_LBRACE(loc); }

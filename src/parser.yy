@@ -198,6 +198,7 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
      | LNOT expr       { $$ = new ast::Unop(token::LNOT, $2); }
      | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
+     | MINUS expr       { $$ = new ast::Unop(token::MINUS, $2); }
      | MUL  expr %prec DEREF { $$ = new ast::Unop(token::MUL,  $2); }
      | expr DOT ident  { $$ = new ast::FieldAccess($1, $3); }
      | expr PTR ident  { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1), $3); }
