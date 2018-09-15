@@ -118,6 +118,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[syscount.bt](tools/syscount.bt): Count system callls. [Examples](tools/syscount_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 - tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
+- tools/[writeback.bt](tools/writeback.bt): Trace file system writeback events with details. [Examples](tools/writeback_example.txt).
 - tools/[xfsdist.bt](tools/xfsdist.bt): Summarize XFS operation latency distribution as a histogram. [Examples](tools/xfsdist_example.txt).
 
 For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bcc#tools).

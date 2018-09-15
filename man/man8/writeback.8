@@ -1,0 +1,59 @@
+.TH writeback 8  "2018-09-14" "USER COMMANDS"
+.SH NAME
+writeback.bt \- Trace file system writeback events with details. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B writeback.bt
+.SH DESCRIPTION
+This traces when file system dirtied pages are flushed to disk by kernel
+writeback, and prints details including when the event occurred, and the
+duration of the event. This can be useful for correlating these times with
+other performace problems, and if there is a match, it would be a clue
+that the problem may be caused by writeback. How quickly the kernel does
+writeback can be tuned: see the kernel docs, eg,
+vm.dirty_writeback_centisecs.
+
+This uses the tracepoint:writeback:writeback_start and
+tracepoint:writeback:writeback_written tracepoints.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace all writeback events with timestamps and latency details:
+#
+.B writeback.bt
+.SH FIELDS
+.TP
+TIME
+Time that the writeback event completed, in %H:%M:%S format.
+.TP
+DEVICE
+Device name in major:minor number format.
+.TP
+PAGES
+Pages written during writeback.
+.TP
+REASON
+Reason for the writeback event. This may be "background", "vmscan", "sync", "periodic", etc.
+.TP
+ms
+Duration of the writeback event in milliseconds.
+.SH OVERHEAD
+Since writeback events are expected to be infrequent (<10/sec), the overhead
+of this tool is expected to be negligible (near 0%).
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+biosnoop(8)

@@ -1,0 +1,63 @@
+/*
+ * writeback	Trace file system writeback events with details.
+ * 		For Linux, uses bpftrace and eBPF.
+ *
+ * This traces when file system dirtied pages are flushed to disk by kernel
+ * writeback, and prints details including when the event occurred, and the
+ * duration of the event. This can be useful for correlating these times with
+ * other performace problems, and if there is a match, it would be a clue
+ * that the problem may be caused by writeback. How quickly the kernel does
+ * writeback can be tuned: see the kernel docs, eg,
+ * vm.dirty_writeback_centisecs.
+ *
+ * USAGE: writeback.bt
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 14-Sep-2018	Brendan Gregg	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing writeback... Hit Ctrl-C to end.\n");
+	printf("%-9s %-8s %-8s %-16s %s\n", "TIME", "DEVICE", "PAGES",
+	    "REASON", "ms");
+
+	// see /sys/kernel/debug/tracing/events/writeback/writeback_start/format
+	@reason[0] = "background";
+	@reason[1] = "vmscan";
+	@reason[2] = "sync";
+	@reason[3] = "periodic";
+	@reason[4] = "laptop_timer";
+	@reason[5] = "free_more_memory";
+	@reason[6] = "fs_free_space";
+	@reason[7] = "forker_thread";
+}
+
+tracepoint:writeback:writeback_start
+{
+	$sb_dev = *(ctx + 48) & 0xffffffff;
+	@start[$sb_dev] = nsecs;
+}
+
+tracepoint:writeback:writeback_written
+{
+	$name = str(ctx + 8);
+	$nr_pages = *(ctx + 40) & 0xffff;
+	$sb_dev = *(ctx + 48) & 0xffffffff;
+	$r = *(ctx + 68) & 0xffffffff;
+	$s = @start[$sb_dev];
+	delete(@start[$sb_dev]);
+	$lat = $s ? (nsecs - $s) / 1000 : 0;
+
+	time("%H:%M:%S  ");
+	printf("%-8s %-8d %-16s %d.%03d\n", $name, $nr_pages, @reason[$r],
+	    $lat / 1000, $lat % 1000);
+}
+
+END
+{
+	clear(@reason);
+	clear(@start);
+}
