@@ -55,7 +55,7 @@ tracepoint:syscalls:sys_exit_newlstat
 /@filename[tid]/
 {
 	$ret = *(ctx + 16);
-	$errno = $ret >= 0 ? 0 : 0 - $ret;
+	$errno = $ret >= 0 ? 0 : - $ret;
 
 	printf("%-6d %-16s %3d %s\n", pid, comm, $errno,
 	    str(@filename[tid]));

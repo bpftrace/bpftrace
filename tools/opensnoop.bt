@@ -30,8 +30,8 @@ tracepoint:syscalls:sys_exit_open
 /@filename[tid]/
 {
 	$ret = *(ctx + 16);
-	$fd = $ret > 0 ? $ret : 0 - 1;
-	$errno = $ret > 0 ? 0 : 0 - $ret;
+	$fd = $ret > 0 ? $ret : -1;
+	$errno = $ret > 0 ? 0 : - $ret;
 
 	printf("%-6d %-16s %4d %3d %s\n", pid, comm, $fd, $errno,
 	    str(@filename[tid]));
