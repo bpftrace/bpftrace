@@ -1,0 +1,56 @@
+.TH bitesize 8  "2018-09-07" "USER COMMANDS"
+.SH NAME
+bitesize.bt \- Show disk I/O size as a histogram. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B bitesize.bt
+.SH DESCRIPTION
+This can be used to characterize the distribution of block device
+(disk) I/O sizes. To study block device I/O in more detail, see biosnoop(8).
+
+This uses the tracepoint:block:block_rq_issue tracepoint, and is a simple
+example of bpftrace.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace block I/O and summarize as a histogram by process:
+#
+.B bitesize.bt
+.SH FIELDS
+.TP
+0th
+A process name (shown in "@[...]") is printed before each I/O histogram.
+.TP
+1st, 2nd
+This is a range of I/O sizes, in Kbytes (shown in "[...)" set notation).
+.TP
+3rd
+A column showing the count of I/O in this range.
+.TP
+4th
+This is an ASCII histogram representing the count colimn.
+.SH OVERHEAD
+Since block device I/O usually has a relatively low frequency (< 10,000/s),
+the overhead for this tool is expected to be low or negligible. For high IOPS
+storage systems, test and quantify before use.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+biosnoop.bt(8)
