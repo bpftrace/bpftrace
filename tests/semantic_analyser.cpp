@@ -9,11 +9,6 @@ namespace bpftrace {
 namespace test {
 namespace semantic_analyser {
 
-class MockBPFtrace : public BPFtrace {
-public:
-  MOCK_METHOD1(add_probe, int(ast::Probe &p));
-};
-
 using ::testing::_;
 
 void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expected_result=0)
@@ -95,14 +90,6 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = count(pid) }", 1);
   test("kprobe:f { @x = sum(pid, 123) }", 1);
   test("kprobe:f { fake() }", 1);
-}
-
-TEST(semantic_analyser, probe_count)
-{
-  MockBPFtrace bpftrace;
-  EXPECT_CALL(bpftrace, add_probe(_)).Times(2);
-
-  test(bpftrace, "kprobe:f { 1; } kprobe:d { 1; }");
 }
 
 TEST(semantic_analyser, undefined_map)

@@ -13,6 +13,11 @@ namespace test {
 namespace codegen {
 
 using ::testing::_;
+class MockBPFtrace : public BPFtrace {
+public:
+  MOCK_METHOD1(add_probe, int(ast::Probe &p));
+};
+
 
 TEST(codegen, populate_sections)
 {
@@ -92,6 +97,21 @@ void test(const std::string &input, const std::string expected_output)
 
   std::string full_expected_output = header + expected_output;
   EXPECT_EQ(full_expected_output, out.str());
+}
+
+
+TEST(codegen, probe_count)
+{
+  MockBPFtrace bpftrace;
+  EXPECT_CALL(bpftrace, add_probe(_)).Times(2);
+
+  Driver driver;
+
+  ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ASSERT_EQ(semantics.analyse(), 0);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  codegen.compile();
 }
 
 TEST(codegen, empty_function)
