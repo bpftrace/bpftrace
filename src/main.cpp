@@ -6,9 +6,10 @@
 #include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
+#include "list.h"
 #include "printer.h"
 #include "semantic_analyser.h"
-#include "list.h"
+#include "tracepoint_format_parser.h"
 
 using namespace bpftrace;
 
@@ -129,6 +130,8 @@ int main(int argc, char *argv[])
   bpftrace.pid_ = 0;
   if (pid_str)
     bpftrace.pid_ = atoi(pid_str);
+
+  TracepointFormatParser::parse(driver.root_);
 
   if (bt_debug != DebugLevel::kNone)
   {

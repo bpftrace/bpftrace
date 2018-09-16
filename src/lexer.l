@@ -48,7 +48,7 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 <COMMENT>"*/"           BEGIN(INITIAL);
 <COMMENT>"EOF"          driver.error(loc, std::string("end of file during comment"));
 
-pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|rand|ctx|username {
+pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|rand|ctx|username|args {
                           return Parser::make_BUILTIN(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }

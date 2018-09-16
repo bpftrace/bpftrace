@@ -40,6 +40,7 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
   test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
   test("kprobe:f { name }", "Program\n kprobe:f\n  builtin: name\n");
+  test("kprobe:f { args }", "Program\n kprobe:f\n  builtin: args\n");
 }
 
 TEST(Parser, map_assign)
