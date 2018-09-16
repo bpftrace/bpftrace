@@ -206,10 +206,132 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
      printf("\n");
      return;
   }
+  else if ( printf_id >= asyncactionint(AsyncAction::syscall))
+  {
+    auto id = printf_id - asyncactionint(AsyncAction::syscall);
+    auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
+    auto args = std::get<1>(bpftrace->system_args_[id]);
+    std::vector<uint64_t> arg_values = bpftrace->get_arg_values(args, arg_data);
+
+    std::string command = "";
+    switch (args.size())
+    {
+      case 0:
+        system(fmt);
+        break;
+      case 1:
+        command = bpftrace->format_string(fmt, arg_values.at(0));
+        system(command.c_str());
+        break;
+      case 2:
+        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1));
+        system(command.c_str());
+        break;
+      case 3:
+        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+        system(command.c_str());
+        break;
+      case 4:
+        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3));
+        system(command.c_str());
+        break;
+      case 5:
+        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4));
+        system(command.c_str());
+        break;
+     case 6:
+        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4), arg_values.at(5));
+        system(command.c_str());
+        break;
+      default:
+        abort();
+    }
+
+    return;
+  }
 
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
+  std::vector<uint64_t> arg_values = bpftrace->get_arg_values(args, arg_data);
+
+  switch (args.size())
+  {
+    case 0:
+      printf(fmt);
+      break;
+    case 1:
+      printf(fmt, arg_values.at(0));
+      break;
+    case 2:
+      printf(fmt, arg_values.at(0), arg_values.at(1));
+      break;
+    case 3:
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+      break;
+    case 4:
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3));
+      break;
+    case 5:
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4));
+      break;
+    case 6:
+      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+          arg_values.at(3), arg_values.at(4), arg_values.at(5));
+      break;
+    default:
+      abort();
+  }
+}
+
+void BPFtrace::format_impl(std::stringstream &ss, const char *format)
+{
+  while (*format)
+  {
+    if (*format == '%' && *++format != '%') // %% == % (not a format directive)
+      throw std::invalid_argument("not enough arguments !\n");
+    ss << *format++;
+  }
+}
+
+template <typename Arg, typename... Args>
+void BPFtrace::format_impl(std::stringstream &ss, const char *format, Arg arg, Args... args)
+{
+  while (*format)
+  {
+    if (*format == '%' && *++format != '%')
+    {
+      auto current_format_qualifier = *format;
+      switch (current_format_qualifier)
+      {
+      case 'd':
+        if (!std::is_integral<Arg>())
+          throw std::invalid_argument("%d introduces integral argument");
+      }
+
+      ss << arg;                                 // arg type is deduced
+      return format_impl(ss, ++format, args...); // one arg less
+    }
+    ss << *format++;
+  } // the format string is exhausted and we still have args : throw
+  throw std::invalid_argument("Too many arguments\n");
+}
+
+template <typename... Args>
+std::string BPFtrace::format_string(const char *fmt, Args... args)
+{
+  std::stringstream ss;
+  format_impl(ss, fmt, args...);
+  return ss.str();
+}
+
+std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)
+{
   std::vector<uint64_t> arg_values;
   std::vector<std::unique_ptr<char>> resolved_symbols;
   std::vector<std::unique_ptr<char>> resolved_usernames;
@@ -243,21 +365,21 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         break;
       case Type::sym:
         resolved_symbols.emplace_back(strdup(
-              bpftrace->resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+              resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       case Type::usym:
         resolved_symbols.emplace_back(strdup(
-              bpftrace->resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
+              resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
         arg_values.push_back((uint64_t)resolved_symbols.back().get());
         break;
       case Type::username:
         resolved_usernames.emplace_back(strdup(
-              bpftrace->resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+              resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         arg_values.push_back((uint64_t)resolved_usernames.back().get());
         break;
       case Type::name:
-        name = strdup(bpftrace->resolve_name(*(uint64_t*)(arg_data+arg.offset)).c_str());
+        name = strdup(resolve_name(*(uint64_t*)(arg_data+arg.offset)).c_str());
         arg_values.push_back((uint64_t)name);
         break;
       default:
@@ -265,35 +387,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
   }
 
-  switch (args.size())
-  {
-    case 0:
-      printf(fmt);
-      break;
-    case 1:
-      printf(fmt, arg_values.at(0));
-      break;
-    case 2:
-      printf(fmt, arg_values.at(0), arg_values.at(1));
-      break;
-    case 3:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
-      break;
-    case 4:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3));
-      break;
-    case 5:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4));
-      break;
-    case 6:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4), arg_values.at(5));
-      break;
-    default:
-      abort();
-  }
+  return arg_values;
 }
 
 void perf_event_lost(void *cb_cookie, uint64_t lost)

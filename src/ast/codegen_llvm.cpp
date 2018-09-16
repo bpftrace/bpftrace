@@ -430,6 +430,55 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(printf_args);
     expr_ = nullptr;
   }
+  else if (call.func == "system")
+  {
+    /*
+     * perf event output has: uint64_t system_id, vargs
+     * The system_id maps to bpftrace_.system_args_, and is a way to define the
+     * types and offsets of each of the arguments, and share that between BPF and
+     * user-space for printing.
+     */
+    ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
+    std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // system ID
+    String &fmt = static_cast<String&>(*call.vargs->at(0));
+
+    auto &args = std::get<1>(bpftrace_.system_args_.at(system_id_));
+    for (Field &arg : args)
+    {
+      llvm::Type *ty = b_.GetType(arg.type);
+      elements.push_back(ty);
+    }
+    StructType *printf_struct = StructType::create(elements, "system_t", false);
+    int struct_size = layout_.getTypeAllocSize(printf_struct);
+
+    auto *struct_layout = layout_.getStructLayout(printf_struct);
+    for (int i=0; i<args.size(); i++)
+    {
+      Field &arg = args[i];
+      arg.offset = struct_layout->getElementOffset(i+1); // +1 for the system_id field
+    }
+
+    AllocaInst *system_args = b_.CreateAllocaBPF(printf_struct, "system_args");
+    b_.CreateMemSet(system_args, b_.getInt8(0), struct_size, 1);
+
+    b_.CreateStore(b_.getInt64(system_id_ + 10000), system_args);
+    for (int i=1; i<call.vargs->size(); i++)
+    {
+      Expression &arg = *call.vargs->at(i);
+      arg.accept(*this);
+      Value *offset = b_.CreateGEP(system_args, {b_.getInt32(0), b_.getInt32(i)});
+      if (arg.type.type == Type::string || arg.type.type == Type::usym)
+        b_.CreateMemCpy(offset, expr_, arg.type.size, 1);
+      else
+        b_.CreateStore(expr_, offset);
+        // b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
+    }
+
+    system_id_++;
+    b_.CreatePerfEventOutput(ctx_, system_args, struct_size);
+    b_.CreateLifetimeEnd(system_args);
+    expr_ = nullptr;
+  }
   else if (call.func == "exit")
   {
     /*

@@ -41,11 +41,24 @@ public:
   uint64_t resolve_kname(const char *name);
   uint64_t resolve_uname(const char *name, const char *path);
   std::string resolve_name(uint64_t name_id);
+  std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
+  void format_impl(std::stringstream& ss, const char* format);
+
+  template <typename Arg, typename... Args>
+  void format_impl(std::stringstream& ss, const char* format, Arg arg, Args... args);
+
+  template <typename... Args>
+  std::string format(const char* fmt, Args... args);
+
+  template <typename... Args>
+  std::string format_string(const char* fmt, Args... args);
+
   int pid_;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
+  std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> time_args_;
   std::unique_ptr<IMap> stackid_map_;
   std::unique_ptr<IMap> join_map_;

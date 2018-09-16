@@ -232,7 +232,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "printf") {
+  else if (call.func == "printf" || call.func == "system") {
     check_assignment(call, false, false);
     if (check_varargs(call, 1, 7)) {
       check_arg(call, Type::string, 0, true);
@@ -245,7 +245,10 @@ void SemanticAnalyser::visit(Call &call)
         }
         err_ << verify_format_string(fmt.str, args);
 
-        bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
+        if (call.func == "printf")
+          bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
+        else
+          bpftrace_.system_args_.push_back(std::make_tuple(fmt.str, args));
       }
     }
 
