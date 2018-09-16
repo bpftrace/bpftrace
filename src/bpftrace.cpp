@@ -352,6 +352,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   BEGIN_trigger();
 
+  // NOTE (mmarchini): Apparently the kernel fires kprobe_events in the reverse
+  // order they were attached, so we insert them backwards to make sure blocks
+  // are executed in the same order they were declared.
   auto r_probes = probes_.rbegin();
   for (; r_probes != probes_.rend(); ++r_probes)
   {
