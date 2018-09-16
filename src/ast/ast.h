@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "types.h"
 
@@ -193,6 +194,11 @@ public:
 
   void accept(Visitor &v) override;
   std::string name(const std::string &attach_point) const;
+
+  int index(std::string name);
+  void set_index(std::string name, int index);
+private:
+  std::map<std::string, int> index_;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
@@ -208,6 +214,11 @@ public:
   void accept(Visitor &v) override;
   std::string name() const;
   bool need_expansion = false;	// must build a BPF program per wildcard match
+
+  int index();
+  void set_index(int index);
+private:
+  int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
 

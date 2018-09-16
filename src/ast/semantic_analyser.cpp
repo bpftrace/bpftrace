@@ -731,9 +731,6 @@ void SemanticAnalyser::visit(Probe &probe)
     stmt->accept(*this);
   }
 
-  if (is_final_pass()) {
-    bpftrace_.add_probe(probe);
-  }
 }
 
 void SemanticAnalyser::visit(Program &program)

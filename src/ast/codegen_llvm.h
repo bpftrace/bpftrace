@@ -47,6 +47,8 @@ public:
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
   AllocaInst *getHistMapKey(Map &map, Value *log2);
+  int         getNextIndexForProbe(std::string probe_name);
+  std::string getSectionNameForProbe(std::string probe_name, int index);
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
@@ -67,6 +69,7 @@ private:
   BPFtrace &bpftrace_;
   std::string probefull_;
   std::string path_;
+  std::map<std::string, int> next_probe_index_;
 
   std::map<std::string, Value *> variables_;
   int printf_id_ = 0;
