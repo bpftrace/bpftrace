@@ -42,7 +42,6 @@ public:
   uint64_t resolve_uname(const char *name, const char *path);
   std::string resolve_name(uint64_t name_id);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
-  void format_impl(std::stringstream& ss, const char* format);
   int pid_;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
