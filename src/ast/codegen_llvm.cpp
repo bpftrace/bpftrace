@@ -461,6 +461,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *system_args = b_.CreateAllocaBPF(printf_struct, "system_args");
     b_.CreateMemSet(system_args, b_.getInt8(0), struct_size, 1);
 
+    // system_id_ has an offset to avoid be confused with printf
     b_.CreateStore(b_.getInt64(system_id_ + asyncactionint(AsyncAction::syscall)), system_args);
     for (int i=1; i<call.vargs->size(); i++)
     {

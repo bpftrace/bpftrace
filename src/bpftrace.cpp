@@ -221,29 +221,29 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         system(fmt);
         break;
       case 1:
-        sprintf(buffer, fmt, arg_values.at(0));
+        snprintf(buffer, 255, fmt, arg_values.at(0));
         system(buffer);
         break;
       case 2:
-        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1));
+        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1));
         system(buffer);
         break;
       case 3:
-        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
         system(buffer);
         break;
       case 4:
-        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3));
         system(buffer);
         break;
       case 5:
-        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3), arg_values.at(4));
         system(buffer);
         break;
      case 6:
-        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3), arg_values.at(4), arg_values.at(5));
         system(buffer);
         break;
