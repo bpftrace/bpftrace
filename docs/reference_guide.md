@@ -362,15 +362,15 @@ These can be used in bpftrace scripts to document your code.
 
 ## 4. `->`: C Struct Navigation
 
-**TODO**: see issue [#31](https://github.com/iovisor/bpftrace/issues/31)
-
-Future example:
+Example:
 
 ```
-bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", arg0->tv_nsec); }
+bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args-&gt;filename)); }'
 ```
 
-or
+This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the tracepoint arguments.
+
+A future example is to add struct support to kprobes, so that this is possible (see issue [#34](https://github.com/iovisor/bpftrace/issues/34)):
 
 ```
 bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0)->tv_nsec); }'
@@ -453,6 +453,8 @@ returned: -2
 returned: 21
 [...]
 ```
+
+**TODO**: see issue [#34](https://github.com/iovisor/bpftrace/issues/34) for supporting struct arguments on kprobes.
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 
@@ -559,13 +561,41 @@ block I/O created by 28941
 
 ## 6. `tracepoint`: Static Tracing, Kernel-Level Arguments
 
-**TODO**: see issue [#32](https://github.com/iovisor/bpftrace/issues/32)
-
-Future examples:
+Example:
 
 ```
-bpftrace -e 'tracepoint:block:block_rq_insert { printf("sectors: %d\n", args->nr_sector); }'
+# bpftrace-tp -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+Attaching 1 probe...
+irqbalance /proc/interrupts
+irqbalance /proc/stat
+snmpd /proc/diskstats
+snmpd /proc/stat
+snmpd /proc/vmstat
+snmpd /proc/net/dev
+[...]
 ```
+
+The available members for each tracepoint can be listed from their /format file in /sys. For example:
+
+```
+# cat /sys/kernel/debug/tracing/events/syscalls/sys_enter_open/format
+name: sys_enter_open
+ID: 603
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:const char * filename;	offset:16;	size:8;	signed:0;
+	field:int flags;	offset:24;	size:8;	signed:0;
+	field:umode_t mode;	offset:32;	size:8;	signed:0;
+
+print fmt: "filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->filename)), ((unsigned long)(REC->flags)), ((unsigned long)(REC->mode))
+```
+
+Apart from the `filename` member, we can also print `flags`, `mode`, and more. After the "common" members listed first, the members are specific to the tracepoint.
 
 ## 7. `usdt`: Static Tracing, User-Level
 
