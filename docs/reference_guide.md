@@ -50,8 +50,10 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [6. `sym()`: Symbol Resolution, Kernel-Level](#6-str-symbol-resolution-kernel-level)
     - [7. `usym()`: Symbol Resolution, User-Level](#7-usym-symbol-resolution-user-level)
     - [8. `kaddr()`: Address Resolution, Kernel-Level](#8-kaddr-address-resolution-kernel-level)
-    - [9. `reg()`: Registers](#9-reg-registers)
-    - [10. `exit()`: Exit](#10-exit-exit)
+    - [9. `uaddr()`: Address Resolution, User-Level](#9-uaddr-address-resolution-user-level)
+    - [10. `reg()`: Registers](#10-reg-registers)
+    - [11. `system()`: System](#11-system-system)
+    - [12. `exit()`: Exit](#12-exit-exit)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -1006,7 +1008,9 @@ Note that for this example to work, bash had to be recompiled with frame pointer
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
+- `uaddr(char *name)` - Resolve user-level symbol name
 - `reg(char *name)` - Returns the value stored in the named register
+- `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>sym()</tt> and <tt>usym()</tt>, as well as the variables <tt>stack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
@@ -1135,7 +1139,23 @@ This is printing the `usbcore_name` string from drivers/usb/core/usb.c:
 const char *usbcore_name = "usbcore";
 ```
 
-## 9. `reg()`: Registers
+## 9. `uaddr()`: Address resolution, user-level
+
+Syntax: `uaddr(char *name)`
+
+Examples:
+
+```
+# bpftrace -e 'uprobe:/bin/bash:readline { printf("PS1: %s\n", str(*uaddr("ps1_prompt"))); }'
+Attaching 1 probe...
+PS1: \[\e[34;1m\]\u@\h:\w>\[\e[0m\]
+PS1: \[\e[34;1m\]\u@\h:\w>\[\e[0m\]
+^C
+```
+
+This is printing the `ps1_prompt` string from /bin/bash, whenever a `readline()` function is executed.
+
+## 10. `reg()`: Registers
 
 Syntax: `reg(char *name)`
 
@@ -1151,7 +1171,29 @@ Attaching 1 probe...
 
 See src/arch/x86_64.cpp for the register name list.
 
-## 10. `exit()`: Exit
+## 11. `system()`: System
+
+Syntax: `system(fmt)`
+
+This runs the provided command at the shell. For example:
+
+```
+# bpftrace -e 'kprobe:do_nanosleep { system("ps -p %d\n", pid); }'
+Attaching 1 probe...
+  PID TTY          TIME CMD
+ 1339 ?        00:00:15 iscsid
+  PID TTY          TIME CMD
+ 1339 ?        00:00:15 iscsid
+  PID TTY          TIME CMD
+ 1518 ?        00:01:07 irqbalance
+  PID TTY          TIME CMD
+ 1339 ?        00:00:15 iscsid
+^C
+```
+
+This can be useful to execute commands or a shell script when an instrumented event happens.
+
+## 12. `exit()`: Exit
 
 Syntax: `exit()`
 

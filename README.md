@@ -223,11 +223,13 @@ Functions:
 - `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
 - `clear(@x)` - Delet all key/values from a map
 - `sym(void *p)` - Resolve kernel address
-- `usym(void *p)` - Resolve user space address (incomplete)
+- `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
+- `uaddr(char *name)` - Resolve user space symbol name
 - `reg(char *name)` - Returns the value stored in the named register
 - `join(char *arr[])` - Prints the string array
 - `time(char *fmt)` - Print the current time
+- `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace
 
 See the [Reference Guide](docs/reference_guide.md) for more detail.
