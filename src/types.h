@@ -90,7 +90,8 @@ public:
 enum class AsyncAction
 {
   // printf reserves 0-9999 for printf_ids
-  exit = 10000,
+  syscall = 10000, // system reserves 10000-19999 for printf_ids
+  exit = 20000,
   print,
   clear,
   zero,
