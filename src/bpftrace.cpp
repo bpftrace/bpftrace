@@ -213,38 +213,39 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto args = std::get<1>(bpftrace->system_args_[id]);
     std::vector<uint64_t> arg_values = bpftrace->get_arg_values(args, arg_data);
 
-    std::string command = "";
+    char buffer [255];
+
     switch (args.size())
     {
       case 0:
         system(fmt);
         break;
       case 1:
-        command = bpftrace->format_string(fmt, arg_values.at(0));
-        system(command.c_str());
+        sprintf(buffer, fmt, arg_values.at(0));
+        system(buffer);
         break;
       case 2:
-        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1));
-        system(command.c_str());
+        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1));
+        system(buffer);
         break;
       case 3:
-        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
-        system(command.c_str());
+        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+        system(buffer);
         break;
       case 4:
-        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3));
-        system(command.c_str());
+        system(buffer);
         break;
       case 5:
-        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3), arg_values.at(4));
-        system(command.c_str());
+        system(buffer);
         break;
      case 6:
-        command = bpftrace->format_string(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
+        sprintf(buffer, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
           arg_values.at(3), arg_values.at(4), arg_values.at(5));
-        system(command.c_str());
+        system(buffer);
         break;
       default:
         abort();
@@ -287,47 +288,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     default:
       abort();
   }
-}
-
-void BPFtrace::format_impl(std::stringstream &ss, const char *format)
-{
-  while (*format)
-  {
-    if (*format == '%' && *++format != '%') // %% == % (not a format directive)
-      throw std::invalid_argument("not enough arguments !\n");
-    ss << *format++;
-  }
-}
-
-template <typename Arg, typename... Args>
-void BPFtrace::format_impl(std::stringstream &ss, const char *format, Arg arg, Args... args)
-{
-  while (*format)
-  {
-    if (*format == '%' && *++format != '%')
-    {
-      auto current_format_qualifier = *format;
-      switch (current_format_qualifier)
-      {
-      case 'd':
-        if (!std::is_integral<Arg>())
-          throw std::invalid_argument("%d introduces integral argument");
-      }
-
-      ss << arg;                                 // arg type is deduced
-      return format_impl(ss, ++format, args...); // one arg less
-    }
-    ss << *format++;
-  } // the format string is exhausted and we still have args : throw
-  throw std::invalid_argument("Too many arguments\n");
-}
-
-template <typename... Args>
-std::string BPFtrace::format_string(const char *fmt, Args... args)
-{
-  std::stringstream ss;
-  format_impl(ss, fmt, args...);
-  return ss.str();
 }
 
 std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)

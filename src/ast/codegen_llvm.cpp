@@ -461,7 +461,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *system_args = b_.CreateAllocaBPF(printf_struct, "system_args");
     b_.CreateMemSet(system_args, b_.getInt8(0), struct_size, 1);
 
-    b_.CreateStore(b_.getInt64(system_id_ + 10000), system_args);
+    b_.CreateStore(b_.getInt64(system_id_ + asyncactionint(AsyncAction::syscall)), system_args);
     for (int i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
@@ -471,7 +471,6 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateMemCpy(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
-        // b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
     }
 
     system_id_++;

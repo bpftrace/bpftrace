@@ -88,6 +88,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
+  test("kprobe:f { system(\"ls\\n\") }", 0);
   test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
@@ -368,6 +369,14 @@ TEST(semantic_analyser, printf)
   test("kprobe:f { $fmt = \"mystring\"; printf($fmt) }", 1);
   test("kprobe:f { @x = printf(\"hi\") }", 1);
   test("kprobe:f { $x = printf(\"hi\") }", 1);
+}
+
+TEST(semantic_analyser, system)
+{
+  test("kprobe:f { system(\"ls\") }", 0);
+  test("kprobe:f { system(1234) }", 1);
+  test("kprobe:f { system() }", 1);
+  test("kprobe:f { $fmt = \"mystring\"; system($fmt) }", 1);
 }
 
 TEST(semantic_analyser, printf_format_int)
