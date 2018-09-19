@@ -168,7 +168,7 @@ std::string AttachedProbe::eventname() const
       offset_str << std::hex << offset();
       return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str() + index_str;
     case ProbeType::tracepoint:
-      return probe_.attach_point + index_str;
+      return probe_.attach_point;
     default:
       abort();
   }
