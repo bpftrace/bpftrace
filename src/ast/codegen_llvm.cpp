@@ -99,6 +99,11 @@ void CodegenLLVM::visit(Builtin &builtin)
     else // argX
     {
       int arg_num = atoi(builtin.ident.substr(3).c_str());
+      if (probetype(current_attach_point_->provider) == ProbeType::usdt) {
+        expr_ = b_.CreateUSDTReadArgument(ctx_, current_attach_point_,
+                                          arg_num, builtin);
+        return;
+      }
       offset = arch::arg_offset(arg_num);
     }
 
@@ -314,7 +319,7 @@ void CodegenLLVM::visit(Call &call)
   {
    uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
-    addr = bpftrace_.resolve_uname(name.c_str(), path_.c_str());
+    addr = bpftrace_.resolve_uname(name.c_str(), current_attach_point_->target.c_str());
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "join")
@@ -919,7 +924,7 @@ void CodegenLLVM::visit(Probe &probe)
 
   // needed for uaddr() call:
   for (auto &attach_point : *probe.attach_points) {
-    path_ = attach_point->target;
+    current_attach_point_ = attach_point;
     // TODO: semantic analyser should ensure targets are equal when uaddr() is used
     break;
   }
@@ -960,6 +965,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_time_id_ = time_id_;
 
     for (auto &attach_point : *probe.attach_points) {
+      current_attach_point_ = attach_point;
       std::string file_name;
       switch (probetype(attach_point->provider))
       {
@@ -1000,6 +1006,7 @@ void CodegenLLVM::visit(Probe &probe)
     }
   }
   bpftrace_.add_probe(probe);
+  current_attach_point_ = nullptr;
 }
 
 void CodegenLLVM::visit(Program &program)

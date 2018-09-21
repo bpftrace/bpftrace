@@ -12,6 +12,7 @@
 #include "bcc_usdt.h"
 #include "common.h"
 #include "libbpf.h"
+#include "utils-inl.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
@@ -340,11 +341,7 @@ void AttachedProbe::attach_usdt(int pid)
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
-  std::string provider_name;
-  if ((i = probe_.path.rfind("/")) != std::string::npos)
-     provider_name = probe_.path.substr(i + 1);
-  else
-     provider_name = probe_.path;
+  std::string provider_name = GetProviderFromPath(probe_.path);
 
   err = bcc_usdt_get_location(ctx, provider_name.c_str(), probe_.attach_point.c_str(), 0, &loc);
   if (err)

@@ -1,5 +1,10 @@
+#include <iostream>
+
 #include "irbuilderbpf.h"
 #include "libbpf.h"
+#include "bcc_usdt.h"
+#include "arch/arch.h"
+#include "utils-inl.h"
 
 #include <llvm/IR/Module.h>
 
@@ -260,6 +265,62 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
       getInt64(BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
   return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "map_read_str");
+}
+
+Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin) {
+  // TODO (mmarchini): Handle base + index * scale addressing.
+  // https://github.com/iovisor/bcc/pull/988
+  if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME)
+    std::cerr << "index register is not handled yet [" << argument->index_register_name << "]" << std::endl;
+  if (argument->valid & BCC_USDT_ARGUMENT_SCALE)
+    std::cerr << "scale is not handled yet [" << argument->scale << "]" << std::endl;
+  if (argument->valid & BCC_USDT_ARGUMENT_DEREF_IDENT)
+    std::cerr << "defer ident is not handled yet [" << argument->deref_ident << "]" << std::endl;
+
+  if (argument->valid & BCC_USDT_ARGUMENT_CONSTANT)
+    return getInt64(argument->constant);
+
+  Value *result = nullptr;
+  if (argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME) {
+    int offset = 0;
+    offset = arch::offset(argument->base_register_name);
+    Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
+    AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
+    CreateProbeRead(dst, builtin.type.size, reg);
+    result = CreateLoad(dst);
+    if (argument->valid & BCC_USDT_ARGUMENT_DEREF_OFFSET) {
+      Value *ptr = CreateAdd(
+          result,
+          getInt64(argument->deref_offset));
+      CreateProbeRead(dst, builtin.type.size, ptr);
+      result = CreateLoad(dst);
+    }
+    CreateLifetimeEnd(dst);
+  }
+  return result;
+}
+
+Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin)
+{
+  struct bcc_usdt_argument argument;
+
+  void *usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
+  if (usdt == nullptr) {
+    std::cerr << "couldn't load " << attach_point->target << std::endl;
+    exit(-1);
+  }
+
+  std::string provider = GetProviderFromPath(attach_point->target);
+  if (bcc_usdt_get_argument(usdt, provider.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
+    std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
+              << provider << ":" << attach_point->func << std::endl;
+    exit(-2);
+  }
+
+  Value *result = CreateUSDTReadArgument(ctx, &argument, builtin);
+
+  bcc_usdt_close(usdt);
+  return result;
 }
 
 CallInst *IRBuilderBPF::CreateGetNs()
