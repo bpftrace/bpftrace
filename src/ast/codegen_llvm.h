@@ -69,7 +69,6 @@ private:
   AttachPoint *current_attach_point_ = nullptr;
   BPFtrace &bpftrace_;
   std::string probefull_;
-  std::string path_;
   std::map<std::string, int> next_probe_index_;
 
   std::map<std::string, Value *> variables_;
