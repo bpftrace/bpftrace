@@ -17,7 +17,7 @@
 
 namespace bpftrace {
 
-bool bt_debug = false;
+DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 
 int BPFtrace::add_probe(ast::Probe &p)
@@ -89,7 +89,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.name = attach_point->name(func);
       probe.freq = attach_point->freq;
       probe.loc = 0;
-      probe.index = attach_point->index(func) > 0 ? 
+      probe.index = attach_point->index(func) > 0 ?
           attach_point->index(func) : p.index();
       probes_.push_back(probe);
     }

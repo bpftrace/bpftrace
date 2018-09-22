@@ -236,7 +236,7 @@ void AttachedProbe::load_prog()
   // Redirect stderr, so we don't get error messages from BCC
   int old_stderr, new_stderr;
   fflush(stderr);
-  if (bt_debug)
+  if (bt_debug != DebugLevel::kNone)
     log_level = 15;
   else
   {
@@ -265,7 +265,7 @@ void AttachedProbe::load_prog()
   }
 
   // Restore stderr
-  if (bt_debug == false)
+  if (bt_debug == DebugLevel::kNone)
   {
     fflush(stderr);
     dup2(old_stderr, 2);

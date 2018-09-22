@@ -1317,7 +1317,7 @@ void CodegenLLVM::createStrcmpFunction()
   b_.CreateRet(b_.getInt1(0));
 }
 
-std::unique_ptr<BpfOrc> CodegenLLVM::compile(bool debug, std::ostream &out)
+std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out)
 {
   createLog2Function();
   createLinearFunction();
@@ -1355,11 +1355,23 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(bool debug, std::ostream &out)
    */
   LLVMAddAlwaysInlinerPass(reinterpret_cast<LLVMPassManagerRef>(&PM));
   PMB.populateModulePassManager(PM);
-  PM.run(*module_.get());
-
-  if (debug)
+  if (debug == DebugLevel::kFullDebug)
   {
     raw_os_ostream llvm_ostream(out);
+    llvm_ostream << "Before optimization\n";
+    llvm_ostream << "-------------------\n\n";
+    module_->print(llvm_ostream, nullptr, false, true);
+  }
+
+  PM.run(*module_.get());
+
+  if (debug != DebugLevel::kNone)
+  {
+    raw_os_ostream llvm_ostream(out);
+    if (debug == DebugLevel::kFullDebug) {
+      llvm_ostream << "\nAfter optimization\n";
+      llvm_ostream << "------------------\n\n";
+    }
     module_->print(llvm_ostream, nullptr, false, true);
   }
 

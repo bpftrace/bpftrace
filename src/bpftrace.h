@@ -17,10 +17,34 @@
 namespace bpftrace {
 
 class BpfOrc;
+enum class DebugLevel;
 
 // globals
-extern bool bt_debug;
+extern DebugLevel bt_debug;
 extern bool bt_verbose;
+
+enum class DebugLevel {
+  kNone,
+  kDebug,
+  kFullDebug
+};
+
+inline DebugLevel operator++(DebugLevel& level, int)
+{
+  switch (level) {
+    case DebugLevel::kNone:
+      level = DebugLevel::kDebug;
+      break;
+    case DebugLevel::kDebug:
+      level = DebugLevel::kFullDebug;
+      break;
+    case DebugLevel::kFullDebug:
+      // NOTE (mmarchini): should be handled by the caller
+      level = DebugLevel::kNone;
+      break;
+  }
+  return level;
+}
 
 class BPFtrace
 {

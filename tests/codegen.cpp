@@ -93,7 +93,7 @@ void test(const std::string &input, const std::string expected_output)
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  codegen.compile(true, out);
+  codegen.compile(DebugLevel::kDebug, out);
 
   std::string full_expected_output = header + expected_output;
   EXPECT_EQ(full_expected_output, out.str());
