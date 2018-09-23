@@ -382,6 +382,10 @@ void SemanticAnalyser::visit(Binop &binop)
       err_ << "comparing '" << lhs << "' ";
       err_ << "with '" << rhs << "'" << std::endl;
     }
+    else if (lhs == Type::string && !(binop.left->is_literal || binop.right->is_literal)) {
+      err_ << "Comparison between two variables of ";
+      err_ << "type string is not allowed" << std::endl;
+    }
     else if (lhs != Type::integer &&
              binop.op != Parser::token::EQ &&
              binop.op != Parser::token::NE) {
