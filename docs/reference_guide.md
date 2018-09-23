@@ -589,12 +589,25 @@ hi
 
 ## 8. `usdt`: Static Tracing, User-Level Arguments
 
-**TODO**: see issue [#33](https://github.com/iovisor/bpftrace/issues/33)
-
-Future example:
+Examples:
 
 ```
-bpftrace -e 'usdt:pthread:pthread_create /arg4 != 0/ { printf("created thread\n"); }'
+# bpftrace -e 'usdt:/root/tick:loop { printf("%s: %d\n", str(arg0), arg1); }'
+my string: 1
+my string: 2
+my string: 3
+my string: 4
+my string: 5
+^C
+```
+
+```
+# bpftrace -e 'usdt:/root/tick:loop /arg1 > 2/ { printf("%s: %d\n", str(arg0), arg1); }'
+my string: 3
+my string: 4
+my string: 5
+my string: 6
+^C
 ```
 
 ## 9. `profile`: Timed Sampling Events
