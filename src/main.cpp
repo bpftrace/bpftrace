@@ -23,6 +23,7 @@ void usage()
   std::cerr << "    -p PID    PID for enabling USDT probes" << std::endl;
   std::cerr << "    -v    verbose messages" << std::endl;
   std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
+  std::cerr << "   -dd    verbose debug info dry run" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -46,7 +47,11 @@ int main(int argc, char *argv[])
     switch (c)
     {
       case 'd':
-        bt_debug = true;
+        bt_debug++;
+        if (bt_debug == DebugLevel::kNone) {
+          usage();
+          return 1;
+        }
         break;
       case 'v':
         bt_verbose = true;
@@ -66,7 +71,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  if (bt_verbose && bt_debug)
+  if (bt_verbose && (bt_debug != DebugLevel::kNone))
   {
     // TODO: allow both
     std::cerr << "USAGE: Use either -v or -d." << std::endl;
@@ -125,7 +130,7 @@ int main(int argc, char *argv[])
   if (pid_str)
     bpftrace.pid_ = atoi(pid_str);
 
-  if (bt_debug)
+  if (bt_debug != DebugLevel::kNone)
   {
     ast::Printer p(std::cout);
     driver.root_->accept(p);
@@ -140,14 +145,14 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  err = semantics.create_maps(bt_debug);
+  err = semantics.create_maps(bt_debug != DebugLevel::kNone);
   if (err)
     return err;
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
   auto bpforc = llvm.compile(bt_debug);
 
-  if (bt_debug)
+  if (bt_debug != DebugLevel::kNone)
     return 0;
 
   // Empty signal handler for cleanly terminating the program

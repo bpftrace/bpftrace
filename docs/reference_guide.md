@@ -103,6 +103,7 @@ OPTIONS:
     -p PID    PID for enabling USDT probes
     -v    verbose messages
     -d    debug info dry run
+   -dd    verbose debug info dry run
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -201,6 +202,7 @@ kprobe:hrtimer_nanosleep
 ## 5. `-d`: Debug Output
 
 The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging issues with bpftrace itself.
+You can also use `-dd` to produce a more verbose debug output, which will also print unoptimized IR.
 
 **If you are an end-user of bpftrace, you should not normally need the `-d` or `-v` options, and you can skip to the [Language](#language) section.**
 

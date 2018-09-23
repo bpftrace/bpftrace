@@ -55,7 +55,7 @@ public:
   void createLog2Function();
   void createLinearFunction();
   void createStrcmpFunction();
-  std::unique_ptr<BpfOrc> compile(bool debug=false, std::ostream &out=std::cerr);
+  std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cerr);
 
 private:
   Node *root_;
