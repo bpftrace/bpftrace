@@ -933,14 +933,18 @@ int BPFtrace::print_map_stats(IMap &map)
 
 int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) const
 {
+  int min_index = -1;
   int max_index = -1;
   int max_value = 0;
 
   for (size_t i = 0; i < values.size(); i++)
   {
     int v = values.at(i);
-    if (v != 0)
+    if (v > 0) {
+      if (min_index == -1)
+        min_index = i;
       max_index = i;
+    }
     if (v > max_value)
       max_value = v;
   }
@@ -948,7 +952,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
   if (max_index == -1)
     return 0;
 
-  for (int i = 0; i <= max_index; i++)
+  for (int i = min_index; i <= max_index; i++)
   {
     std::ostringstream header;
     if (i == 0)
