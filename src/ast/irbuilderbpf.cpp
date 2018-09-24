@@ -323,6 +323,39 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
   return result;
 }
 
+Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
+  AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
+
+  CreateStore(getInt1(inverse), store);
+
+  const char *c_str = str.c_str();
+  for (int i = 0; i < strlen(c_str) + 1; i++)
+  {
+    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
+    AllocaInst *val_char = CreateAllocaBPF(getInt8Ty(), "strcmp.char");
+    Value *ptr = CreateAdd(
+        val,
+        getInt64(i));
+    CreateProbeRead(val_char, 8, ptr);
+
+    Value *l = CreateLoad(getInt8Ty(), val_char);
+    CreateLifetimeEnd(store);
+    Value *r = getInt8(c_str[i]);
+    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
+    CreateCondBr(cmp, str_ne, char_eq);
+    SetInsertPoint(char_eq);
+  }
+  CreateStore(getInt1(!inverse), store);
+  CreateBr(str_ne);
+
+  SetInsertPoint(str_ne);
+  Value *result = CreateLoad(store);
+  CreateLifetimeEnd(store);
+  return result;
+}
+
 CallInst *IRBuilderBPF::CreateGetNs()
 {
   // u64 ktime_get_ns()

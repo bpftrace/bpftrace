@@ -617,33 +617,41 @@ void CodegenLLVM::visit(Binop &binop)
     return;
   }
 
-  Value *lhs, *rhs;
-  binop.left->accept(*this);
-  lhs = expr_;
-  binop.right->accept(*this);
-  rhs = expr_;
-
   Type &type = binop.left->type.type;
   if (type == Type::string)
   {
-    Function *strcmp_func = module_->getFunction("strcmp");
+    Value *val;
+    std::string string_literal("");
+    if (binop.right->is_literal) {
+      binop.left->accept(*this);
+      val = expr_;
+      string_literal = reinterpret_cast<String*>(binop.right)->str;
+    } else {
+      binop.right->accept(*this);
+      val = expr_;
+      string_literal = reinterpret_cast<String*>(binop.left)->str;
+    }
+
     switch (binop.op) {
       case bpftrace::Parser::token::EQ:
-        expr_ = b_.CreateCall(strcmp_func, {lhs, rhs}, "strcmp");
+        expr_ = b_.CreateStrcmp(val, string_literal);
         break;
       case bpftrace::Parser::token::NE:
-        expr_ = b_.CreateNot(b_.CreateCall(strcmp_func, {lhs, rhs}, "strcmp"));
+        expr_ = b_.CreateStrcmp(val, string_literal, true);
         break;
       default:
         abort();
     }
-    if (!binop.left->is_variable)
-      b_.CreateLifetimeEnd(lhs);
-    if (!binop.right->is_variable)
-      b_.CreateLifetimeEnd(rhs);
+    b_.CreateLifetimeEnd(val);
   }
   else
   {
+    Value *lhs, *rhs;
+    binop.left->accept(*this);
+    lhs = expr_;
+    binop.right->accept(*this);
+    rhs = expr_;
+
     switch (binop.op) {
       case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
       case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
@@ -1276,52 +1284,10 @@ void CodegenLLVM::createLinearFunction()
   b_.CreateRet(b_.CreateLoad(result_alloc));
 }
 
-void CodegenLLVM::createStrcmpFunction()
-{
-  // Returns 1 if strings match, 0 otherwise
-  // i1 strcmp(const char *s1, const char *s2)
-  // {
-  //   for (int i=0; i<STRING_SIZE; i++)
-  //   {
-  //     if (s1[i] != s2[i]) return 0;
-  //   }
-  //   return 1;
-  // }
-
-  FunctionType *strcmp_func_type = FunctionType::get(b_.getInt1Ty(), {b_.getInt8PtrTy(), b_.getInt8PtrTy()}, false);
-  Function *strcmp_func = Function::Create(strcmp_func_type, Function::InternalLinkage, "strcmp", module_.get());
-  strcmp_func->addFnAttr(Attribute::AlwaysInline);
-  strcmp_func->setSection("helpers");
-  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "strcmp.entry", strcmp_func);
-  BasicBlock *not_equal_block = BasicBlock::Create(module_->getContext(), "strcmp.not_equal", strcmp_func);
-  b_.SetInsertPoint(entry);
-
-  Value *s1 = strcmp_func->arg_begin();
-  Value *s2 = strcmp_func->arg_begin()+1;
-
-  for (int i=0; i<STRING_SIZE; i++)
-  {
-    Value *s1_char = b_.CreateGEP(s1, {b_.getInt64(i)});
-    Value *s2_char = b_.CreateGEP(s2, {b_.getInt64(i)});
-
-    BasicBlock *continue_block = BasicBlock::Create(module_->getContext(), "strcmp.continue", strcmp_func);
-
-    Value *cmp = b_.CreateICmpNE(b_.CreateLoad(s1_char), b_.CreateLoad(s2_char));
-    b_.CreateCondBr(cmp, not_equal_block, continue_block);
-
-    b_.SetInsertPoint(continue_block);
-  }
-  b_.CreateRet(b_.getInt1(1));
-
-  b_.SetInsertPoint(not_equal_block);
-  b_.CreateRet(b_.getInt1(0));
-}
-
 std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out)
 {
   createLog2Function();
   createLinearFunction();
-  createStrcmpFunction();
   root_->accept(*this);
 
   LLVMInitializeBPFTargetInfo();
