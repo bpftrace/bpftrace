@@ -1384,6 +1384,13 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
           return *(uint64_t*)(a.first.data() + arg_offset) < *(uint64_t*)(b.first.data() + arg_offset);
         });
       }
+      else if (arg.size == 4)
+      {
+        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
+        {
+          return *(uint32_t*)(a.first.data() + arg_offset) < *(uint32_t*)(b.first.data() + arg_offset);
+        });
+      }
       else
         abort();
     }

@@ -656,6 +656,10 @@ void CodegenLLVM::visit(Binop &binop)
     binop.right->accept(*this);
     rhs = expr_;
 
+    // promote int to 64-bit
+    lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), false);
+    rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), false);
+
     switch (binop.op) {
       case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
       case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
