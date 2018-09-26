@@ -20,8 +20,7 @@ BEGIN
 
 tracepoint:block:block_rq_issue
 {
-	$b = *(ctx+28) & 0x3ffff;
-	@[comm] = hist($b);
+	@[comm] = hist(args->bytes);
 }
 
 END

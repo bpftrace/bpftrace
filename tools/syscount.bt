@@ -20,8 +20,7 @@ BEGIN
 
 tracepoint:raw_syscalls:sys_enter
 {
-	$id = *(ctx + 8); // workaround until #32
-	@syscall[$id] = count();
+	@syscall[args->id] = count();
 	@process[comm] = count();
 }
 
