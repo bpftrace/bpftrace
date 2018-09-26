@@ -63,6 +63,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
   test("kprobe:f { name }", 0);
+  test("tracepoint:a:b { args }", 0);
 //  test("kprobe:f { fake }", 1);
 }
 

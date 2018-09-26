@@ -1,6 +1,7 @@
 #include <clang-c/Index.h>
 #include <iostream>
 #include <string.h>
+#include <sys/utsname.h>
 
 #include "ast.h"
 #include "bpftrace.h"
@@ -142,10 +143,15 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
     },
   };
 
+  struct utsname utsname;
+  uname(&utsname);
+  std::string kernel_header_include_flag = std::string("/lib/modules/") + utsname.release + "/build/include";
+
   CXIndex index = clang_createIndex(1, 1);
   CXTranslationUnit translation_unit;
   const char * const args[] = {
     "-I", "/bpftrace/include",
+    "-I", kernel_header_include_flag.c_str(),
   };
   CXErrorCode error = clang_parseTranslationUnit2(
       index,

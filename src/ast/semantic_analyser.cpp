@@ -3,6 +3,7 @@
 #include "fake_map.h"
 #include "parser.tab.hh"
 #include "printf.h"
+#include "tracepoint_format_parser.h"
 #include "arch/arch.h"
 #include <sys/stat.h>
 #include <regex>
@@ -67,6 +68,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type == ProbeType::tracepoint)
+        err_ << "The " << builtin.ident << " builtin can not be used with tracepoint probes" << std::endl;
+    }
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
       err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
@@ -78,6 +85,20 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "username") {
     builtin.type = SizedType(Type::username, 8);
+  }
+  else if (builtin.ident == "args") {
+    if (probe_->attach_points->size() > 1)
+      err_ << "The args builtin only works for probes with 1 attach point" << std::endl;
+    auto &attach_point = probe_->attach_points->at(0);
+    ProbeType type = probetype(attach_point->provider);
+    if (type != ProbeType::tracepoint)
+      err_ << "The args builtin can only be used with tracepoint probes"
+           << "(" << attach_point->provider << " used here)" << std::endl;
+
+    std::string tracepoint_struct = TracepointFormatParser::get_struct_name(attach_point->target, attach_point->func);
+    Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
+    builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
+    builtin.type.is_pointer = true;
   }
   else {
     builtin.type = SizedType(Type::none, 0);

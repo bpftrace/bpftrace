@@ -5,7 +5,6 @@
 namespace bpftrace {
 
 namespace ast { class Program; }
-class BPFtrace;
 
 using StructMap = std::map<std::string, Struct>;
 

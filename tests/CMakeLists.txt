@@ -10,6 +10,7 @@ add_executable(bpftrace_test
   main.cpp
   parser.cpp
   semantic_analyser.cpp
+  tracepoint_format_parser.cpp
   utils.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
@@ -19,6 +20,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
+  ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
