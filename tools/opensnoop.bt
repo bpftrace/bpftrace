@@ -22,14 +22,13 @@ BEGIN
 
 tracepoint:syscalls:sys_enter_open
 {
-	$file = *(ctx + 16);
-	@filename[tid] = $file;
+	@filename[tid] = args->filename;
 }
 
 tracepoint:syscalls:sys_exit_open
 /@filename[tid]/
 {
-	$ret = *(ctx + 16);
+	$ret = args->ret;
 	$fd = $ret > 0 ? $ret : -1;
 	$errno = $ret > 0 ? 0 : - $ret;
 

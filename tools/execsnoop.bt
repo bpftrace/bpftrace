@@ -22,10 +22,9 @@ BEGIN
 
 tracepoint:syscalls:sys_enter_execve
 {
-	$argv = ctx + 24; // workaround until #32
 	$now = nsecs;
 	printf("%-10u %-5d ", ($now - @epoch) / 1000000, pid);
-	join(*$argv);
+	join(args->argv);
 }
 
 END
