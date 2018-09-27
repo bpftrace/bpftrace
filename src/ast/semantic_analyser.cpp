@@ -262,7 +262,11 @@ void SemanticAnalyser::visit(Call &call)
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
         for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
-          args.push_back({ .type = (*iter)->type });
+          auto ty = (*iter)->type;
+          // Promote to 64-bit if it's not an array type
+          if (!ty.IsArray())
+            ty.size = 8;
+          args.push_back({ .type =  ty });
         }
         err_ << verify_format_string(fmt.str, args);
 

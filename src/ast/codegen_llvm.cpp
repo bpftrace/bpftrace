@@ -428,7 +428,7 @@ void CodegenLLVM::visit(Call &call)
       Expression &arg = *call.vargs->at(i);
       arg.accept(*this);
       Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
-      if (arg.type.type == Type::string || arg.type.type == Type::usym)
+      if (arg.type.IsArray())
         b_.CreateMemCpy(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
@@ -477,7 +477,7 @@ void CodegenLLVM::visit(Call &call)
       Expression &arg = *call.vargs->at(i);
       arg.accept(*this);
       Value *offset = b_.CreateGEP(system_args, {b_.getInt32(0), b_.getInt32(i)});
-      if (arg.type.type == Type::string || arg.type.type == Type::usym)
+      if (arg.type.IsArray())
         b_.CreateMemCpy(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);

@@ -42,6 +42,7 @@ TEST(codegen, printf_offsets)
   BPFtrace bpftrace;
   Driver driver;
 
+  // TODO (mmarchini): also test printf with a string argument
   ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
   ClangParser clang;
   clang.parse(driver.root_, bpftrace.structs_);
@@ -60,13 +61,15 @@ TEST(codegen, printf_offsets)
 
   EXPECT_EQ(args.size(), 2);
 
+  // NOTE (mmarchini) type.size is the original arg size, and it might be
+  // different from the actual size we use to store in memory
   EXPECT_EQ(args[0].type.type, Type::integer);
-  EXPECT_EQ(args[0].type.size, 1);
+  EXPECT_EQ(args[0].type.size, 8);
   EXPECT_EQ(args[0].offset, 8);
 
   EXPECT_EQ(args[1].type.type, Type::integer);
-  EXPECT_EQ(args[1].type.size, 4);
-  EXPECT_EQ(args[1].offset, 12);
+  EXPECT_EQ(args[1].type.size, 8);
+  EXPECT_EQ(args[1].offset, 16);
 }
 
 std::string header = R"HEAD(; ModuleID = 'bpftrace'
@@ -1694,7 +1697,7 @@ TEST(codegen, call_printf)
 {
   test("struct Foo { char c; long l; } kprobe:f { $foo = (Foo*)0; printf(\"%c %lu\\n\", $foo->c, $foo->l) }",
 
-R"EXPECTED(%printf_t = type { i64, i8, i64 }
+R"EXPECTED(%printf_t = type { i64, i64, i64 }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -1716,7 +1719,7 @@ entry:
   %3 = load i8, i8* %Foo.c, align 1
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %Foo.c)
   %4 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1
-  store i8 %3, i8* %4, align 8
+  store i8 %3, i64* %4, align 8
   %5 = bitcast i64* %Foo.l to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.l, i64 8, i64 8)
@@ -1726,7 +1729,7 @@ entry:
   store i64 %6, i64* %7, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 20)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 24)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }

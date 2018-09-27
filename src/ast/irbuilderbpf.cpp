@@ -73,7 +73,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.type == Type::string || stype.type == Type::usym || (stype.type == Type::cast && !stype.is_pointer))
+  if (stype.IsArray())
   {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }

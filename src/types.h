@@ -50,6 +50,8 @@ public:
   bool is_pointer = false;
   size_t pointee_size;
 
+  bool IsArray() const;
+
   bool operator==(const SizedType &t) const;
 };
 
