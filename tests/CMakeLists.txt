@@ -39,6 +39,7 @@ if (OFFLINE_BUILDS)
   include(ExternalProject)
   ExternalProject_Add(gtest
     GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     UPDATE_DISCONNECTED 1
@@ -47,6 +48,7 @@ else()
   include(ExternalProject)
   ExternalProject_Add(gtest
     GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     )
