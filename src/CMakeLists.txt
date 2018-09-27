@@ -21,3 +21,5 @@ target_link_libraries(bpftrace ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc-loader-static.a)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.a)
 target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
+
+install(TARGETS bpftrace DESTINATION bin)
