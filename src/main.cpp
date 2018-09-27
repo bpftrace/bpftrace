@@ -1,5 +1,6 @@
 #include <iostream>
 #include <signal.h>
+#include <sys/resource.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -32,6 +33,22 @@ void usage()
   std::cerr << "    trace processes calling sleep" << std::endl;
   std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   std::cerr << "    count syscalls by process name" << std::endl;
+}
+
+static void enforce_infinite_rlimit() {
+  struct rlimit rl = {};
+  if (getrlimit(RLIMIT_MEMLOCK, &rl) != 0) {
+    std::cerr << "Warning: couldn't set RLIMIT for bpftrace. " <<
+        "If your program is not loading, you can try " <<
+        "\"ulimit -l 8192\" to fix the problem" << std::endl;
+    return;
+  }
+  rl.rlim_max = RLIM_INFINITY;
+  rl.rlim_cur = rl.rlim_max;
+  if (setrlimit(RLIMIT_MEMLOCK, &rl) != 0)
+    std::cerr << "Warning: couldn't set RLIMIT for bpftrace. " <<
+        "If your program is not loading, you can try " <<
+        "\"ulimit -l 8192\" to fix the problem" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -117,6 +134,10 @@ int main(int argc, char *argv[])
 
   if (err)
     return err;
+
+  // FIXME (mmarchini): maybe we don't want to always enforce an infinite
+  // rlimit?
+  enforce_infinite_rlimit();
 
   BPFtrace bpftrace;
 
