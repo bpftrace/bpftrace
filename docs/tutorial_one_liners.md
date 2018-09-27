@@ -4,8 +4,6 @@ This teaches you bpftrace for Linux in 12 easy lessons, where each lesson is a o
 
 Contributed by Brendan Gregg, Netflix (2018), based on his FreeBSD [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial).
 
-TODO: lessons 3, 5, 11, and 12, will not work until the struct work is complete (see issues #31, #32, #34).
-
 # Lesson 1. Listing Probes
 
 ```
@@ -75,7 +73,7 @@ Maps are automatically printed when bpftrace ends (eg, via Ctrl-C).
 # Lesson 5. Distribution of read() Bytes
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args->retval); }'
+# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args->ret); }'
 Attaching 1 probe...
 ^C
 
@@ -256,22 +254,47 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 # Lesson 11. Block I/O Tracing
 
 ```
-bpftrace -e 'tracepoint:block:block_rq_complete { @ = hist(args->nr_sector * 512); }'
+# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args->bytes); }'
+Attaching 1 probe...
+^C
+
+@: 
+[0, 1]                 1 |@@                                                  |
+[2, 4)                 0 |                                                    |
+[4, 8)                 0 |                                                    |
+[8, 16)                0 |                                                    |
+[16, 32)               0 |                                                    |
+[32, 64)               0 |                                                    |
+[64, 128)              0 |                                                    |
+[128, 256)             0 |                                                    |
+[256, 512)             0 |                                                    |
+[512, 1K)              0 |                                                    |
+[1K, 2K)               0 |                                                    |
+[2K, 4K)               0 |                                                    |
+[4K, 8K)              24 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[8K, 16K)              2 |@@@@                                                |
+[16K, 32K)             6 |@@@@@@@@@@@@@                                       |
+[32K, 64K)             5 |@@@@@@@@@@                                          |
+[64K, 128K)            0 |                                                    |
+[128K, 256K)           1 |@@                                                  |
+
 ```
 
 Block I/O requests by size in bytes, as a histogram.
 
 - tracepoint:block: The block category of tracepoints traces various block I/O (storage) events.
-- block_rq_complete: This fires when an I/O has completed.
-- args->nr_sector: This is a member from the tracepoint block_rq_complete arguments which shows the size in sectors.
+- block_rq_issue: This fires when an I/O is issued to the device.
+- args->bytes: This is a member from the tracepoint block_rq_issue arguments which shows the size in bytes.
 
-The context of this probe is important: this fires when the device sends the completion interrupt. At this point, the process that submitted the I/O is not on-CPU, therefore, builtins like comm will not show which you might expect.
+The context of this probe is important: this fires when the I/O is issued to the device. This often happens in process context, where builtins like comm will show you the process name, but it can also happen from kernel context (eg, readahead) whene the pid and comm will not show the application you expect.
 
 # Lesson 12. Kernel Struct Tracing
 
 ```
 bpftrace -n 'kprobe:blk_account_io_start { @bytes = hist(((struct request *)arg0)->__data_len); }'
 ```
+
+TODO: requires issue #34 to be completed.
 
 Summarize kernel blk_account_io_start() calls with a histogram of the I/O size. This differs from the previous example in that it uses kernel dynamic tracing and fetches the size from a kernel struct.
 
