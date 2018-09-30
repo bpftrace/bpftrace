@@ -630,13 +630,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       err_ << "'\n\twhen variable already contains a value of type '";
       err_ << search->second << "'\n" << std::endl;
     }
-  }
 
-  if (is_inside_if_block && probe_->variables_.find(var_ident) == probe_->variables_.end())
-  {
-    probe_->variables_[var_ident] = assignment.var;
+    if (is_inside_if_block && probe_->variables_.find(var_ident) == probe_->variables_.end())
+    {
+      probe_->variables_[var_ident] = assignment.var;
+    }
   }
-
   else {
     // This variable hasn't been seen before
     variable_val_.insert({var_ident, assignment.expr->type});
