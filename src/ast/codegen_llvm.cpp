@@ -604,7 +604,22 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  expr_ = variables_[var.ident];
+  if (persistent_variables_.find(var.ident) != persistent_variables_.end())
+  {
+    if (!var.type.IsArray())
+    {
+      expr_ = b_.CreateLoad(persistent_variables_[var.ident]);
+    }
+    else
+    {
+      expr_ = persistent_variables_[var.ident];
+    }
+  }
+  else
+  {
+    expr_ = variables_[var.ident];
+  }
+
 }
 
 void CodegenLLVM::visit(Binop &binop)
@@ -770,6 +785,44 @@ void CodegenLLVM::visit(Ternary &ternary)
   }
 }
 
+void CodegenLLVM::visit(If &if_block)
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
+  BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
+
+  if_block.cond->accept(*this);
+  Value *cond = expr_;
+
+  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"), if_true, if_false);
+
+  b_.SetInsertPoint(if_true);
+  for (Statement *stmt : *if_block.stmts)
+  {
+    stmt->accept(*this);
+  }
+
+  if (if_block.else_stmts)
+  {
+    BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(if_false);
+    for (Statement *stmt : *if_block.else_stmts)
+    {
+      stmt->accept(*this);
+    }
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(done);
+  }
+  else
+  {
+      b_.CreateBr(if_false);
+      b_.SetInsertPoint(if_false);
+  }
+}
+
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
@@ -900,7 +953,23 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   Variable &var = *assignment.var;
 
   assignment.expr->accept(*this);
-  variables_[var.ident] = expr_;
+
+  if (persistent_variables_.find(var.ident) != persistent_variables_.end())
+  {
+    if (!var.type.IsArray())
+    {
+      b_.CreateStore(expr_, persistent_variables_[var.ident]);
+    }
+    else
+    {
+      b_.CreateMemCpy(persistent_variables_[var.ident], expr_, var.type.size, 1);
+    }
+  }
+  else
+  {
+    variables_[var.ident] = expr_;
+  }
+
 }
 
 void CodegenLLVM::visit(Predicate &pred)
@@ -965,6 +1034,14 @@ void CodegenLLVM::visit(Probe &probe)
     if (probe.pred) {
       probe.pred->accept(*this);
     }
+
+    for( const auto& var : probe.variables_ )
+    {
+      auto name = var.second->ident;
+      AllocaInst *val = b_.CreateAllocaBPF(var.second->type, name);
+      persistent_variables_[name] = val;
+    }
+
     for (Statement *stmt : *probe.stmts) {
       stmt->accept(*this);
     }

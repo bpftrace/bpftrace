@@ -27,6 +27,7 @@ public:
   bool is_literal = false;
   bool is_variable = false;
   bool is_map = false;
+  bool is_persistent = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -171,6 +172,18 @@ public:
   void accept(Visitor &v) override;
 };
 
+class If : public Statement {
+public:
+  If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts) { }
+  If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
+    : cond(cond), stmts(stmts), else_stmts(else_stmts) { }
+  Expression *cond;
+  StatementList *stmts = nullptr;
+  StatementList *else_stmts = nullptr;
+
+  void accept(Visitor &v) override;
+};
+
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &provider)
@@ -216,6 +229,7 @@ public:
   bool need_expansion = false;	// must build a BPF program per wildcard match
 
   int index();
+  std::map<std::string, Variable *> variables_;
   void set_index(int index);
 private:
   int index_ = 0;
@@ -253,6 +267,7 @@ public:
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
+  virtual void visit(If &If) = 0;
 };
 
 std::string opstr(Binop &binop);

@@ -68,6 +68,10 @@ void AttachPoint::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void If::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Probe::accept(Visitor &v) {
   v.visit(*this);
 }

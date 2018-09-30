@@ -41,6 +41,7 @@ public:
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(If &if_block) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
@@ -71,6 +72,7 @@ private:
   std::map<std::string, int> next_probe_index_;
 
   std::map<std::string, Value *> variables_;
+  std::map<std::string, AllocaInst *> persistent_variables_;
   int printf_id_ = 0;
   int time_id_ = 0;
   int system_id_ = 0;

@@ -80,6 +80,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
+%nonassoc <std::string> IF "if"
+%nonassoc <std::string> ELSE "else"
 %token <long> INT "integer"
 
 %type <std::string> c_definitions
@@ -168,7 +170,9 @@ stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
 stmt : expr         { $$ = new ast::ExprStatement($1); }
      | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
      | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
-     ;
+     | IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
+     | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
+
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
