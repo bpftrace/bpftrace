@@ -98,29 +98,13 @@ std::string TracepointFormatParser::adjust_integer_types(const std::string &fiel
 {
   std::string new_type = field_type;
   // Adjust integer fields to correctly sized types
-  if (size == 2)
+  if (size == 8)
   {
-    if (new_type == "char" || new_type == "int8_t")
-      new_type = "s16";
-    if (new_type == "unsigned char" || new_type == "uint8_t")
-      new_type = "u16";
-  } else if (size == 4)
-  {
-    if (new_type == "char" || new_type == "short" ||
-        new_type == "int8_t" || new_type == "int16_t")
-      new_type = "s32";
-    if (new_type == "unsigned char" || new_type == "unsigned short" ||
-        new_type == "uint8_t" || new_type == "uint16_t")
-      new_type = "u32";
-  } else if (size == 8)
-  {
-    if (new_type == "char" || new_type == "short" || new_type == "int" ||
-        new_type == "int8_t" || new_type == "int16_t" ||
-        new_type == "int32_t")
+    if (field_type == "int")
       new_type = "s64";
-    if (new_type == "unsigned char" || new_type == "unsigned short" ||
-        new_type == "unsigned int" || new_type == "uint8_t" ||
-        new_type == "uint16_t" || new_type == "uint32_t")
+    if (field_type == "unsigned int" || field_type == "unsigned" ||
+        field_type == "u32" || field_type == "pid_t" ||
+        field_type == "uid_t" || field_type == "gid_t")
       new_type = "u64";
   }
 
