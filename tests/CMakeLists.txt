@@ -37,7 +37,7 @@ find_package(Threads REQUIRED)
 
 if (OFFLINE_BUILDS)
   include(ExternalProject)
-  ExternalProject_Add(gtest
+  ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
@@ -46,15 +46,15 @@ if (OFFLINE_BUILDS)
     )
 else()
   include(ExternalProject)
-  ExternalProject_Add(gtest
+  ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     )
 endif()
-add_dependencies(bpftrace_test gtest-build)
-ExternalProject_Get_Property(gtest source_dir binary_dir)
+add_dependencies(bpftrace_test gtest-git-build)
+ExternalProject_Get_Property(gtest-git source_dir binary_dir)
 target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
 target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
 target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
