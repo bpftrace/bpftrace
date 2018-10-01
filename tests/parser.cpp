@@ -305,9 +305,10 @@ TEST(Parser, if_block)
        "   >\n"
        "    builtin: pid\n"
        "    int: 10000\n"
-       "   call: printf\n"
-       "    string: %d is high\\n\n"
-       "    builtin: pid\n");
+       "   then\n"
+       "    call: printf\n"
+       "     string: %d is high\\n\n"
+       "     builtin: pid\n");
 }
 
 TEST(Parser, if_block_variable)
@@ -319,9 +320,10 @@ TEST(Parser, if_block_variable)
        "   >\n"
        "    builtin: pid\n"
        "    int: 10000\n"
-       "   =\n"
-       "    variable: $s\n"
-       "    int: 10\n");
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     int: 10\n");
 }
 
 TEST(Parser, if_else)
@@ -333,13 +335,14 @@ TEST(Parser, if_else)
        "   >\n"
        "    builtin: pid\n"
        "    int: 10000\n"
-       "   =\n"
-       "    variable: $s\n"
-       "    string: a\n"
-       "  else\n"
-       "   =\n"
-       "    variable: $s\n"
-       "    string: b\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     string: a\n"
+       "   else\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     string: b\n"
        "  call: printf\n"
        "   string: %d is high\\n\n"
        "   builtin: pid\n"

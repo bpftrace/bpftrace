@@ -785,44 +785,6 @@ void CodegenLLVM::visit(Ternary &ternary)
   }
 }
 
-void CodegenLLVM::visit(If &if_block)
-{
-  Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
-  BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
-
-  if_block.cond->accept(*this);
-  Value *cond = expr_;
-
-  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"), if_true, if_false);
-
-  b_.SetInsertPoint(if_true);
-  for (Statement *stmt : *if_block.stmts)
-  {
-    stmt->accept(*this);
-  }
-
-  if (if_block.else_stmts)
-  {
-    BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(if_false);
-    for (Statement *stmt : *if_block.else_stmts)
-    {
-      stmt->accept(*this);
-    }
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(done);
-  }
-  else
-  {
-      b_.CreateBr(if_false);
-      b_.SetInsertPoint(if_false);
-  }
-}
-
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
@@ -970,6 +932,44 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     variables_[var.ident] = expr_;
   }
 
+}
+
+void CodegenLLVM::visit(If &if_block)
+{
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
+  BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
+
+  if_block.cond->accept(*this);
+  Value *cond = expr_;
+
+  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"), if_true, if_false);
+
+  b_.SetInsertPoint(if_true);
+  for (Statement *stmt : *if_block.stmts)
+  {
+    stmt->accept(*this);
+  }
+
+  if (if_block.else_stmts)
+  {
+    BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(if_false);
+    for (Statement *stmt : *if_block.else_stmts)
+    {
+      stmt->accept(*this);
+    }
+    b_.CreateBr(done);
+
+    b_.SetInsertPoint(done);
+  }
+  else
+  {
+      b_.CreateBr(if_false);
+      b_.SetInsertPoint(if_false);
+  }
 }
 
 void CodegenLLVM::visit(Predicate &pred)

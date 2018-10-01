@@ -172,7 +172,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
      | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
      | IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
      | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
-
+     ;
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }

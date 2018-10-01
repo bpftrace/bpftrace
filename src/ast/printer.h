@@ -19,12 +19,12 @@ public:
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
   void visit(Ternary &ternary) override;
-  void visit(If &if_blovk) override;
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(If &if_block) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;

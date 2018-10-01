@@ -156,6 +156,18 @@ public:
   void accept(Visitor &v) override;
 };
 
+class If : public Statement {
+public:
+  If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts) { }
+  If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
+    : cond(cond), stmts(stmts), else_stmts(else_stmts) { }
+  Expression *cond;
+  StatementList *stmts = nullptr;
+  StatementList *else_stmts = nullptr;
+
+  void accept(Visitor &v) override;
+};
+
 class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr) : expr(expr) { }
@@ -168,18 +180,6 @@ class Ternary : public Expression {
 public:
   Ternary(Expression *cond, Expression *left, Expression *right) : cond(cond), left(left), right(right) { }
   Expression *cond, *left, *right;
-
-  void accept(Visitor &v) override;
-};
-
-class If : public Statement {
-public:
-  If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts) { }
-  If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
-    : cond(cond), stmts(stmts), else_stmts(else_stmts) { }
-  Expression *cond;
-  StatementList *stmts = nullptr;
-  StatementList *else_stmts = nullptr;
 
   void accept(Visitor &v) override;
 };
@@ -263,11 +263,11 @@ public:
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
+  virtual void visit(If &if_block) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
   virtual void visit(Program &program) = 0;
-  virtual void visit(If &If) = 0;
 };
 
 std::string opstr(Binop &binop);
