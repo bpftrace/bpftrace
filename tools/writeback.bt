@@ -37,22 +37,20 @@ BEGIN
 
 tracepoint:writeback:writeback_start
 {
-	$sb_dev = *(ctx + 48) & 0xffffffff;
-	@start[$sb_dev] = nsecs;
+	@start[args->sb_dev] = nsecs;
 }
 
 tracepoint:writeback:writeback_written
 {
-	$name = str(ctx + 8);
-	$nr_pages = *(ctx + 40) & 0xffff;
-	$sb_dev = *(ctx + 48) & 0xffffffff;
-	$r = *(ctx + 68) & 0xffffffff;
+	$sb_dev = args->sb_dev;
 	$s = @start[$sb_dev];
 	delete(@start[$sb_dev]);
 	$lat = $s ? (nsecs - $s) / 1000 : 0;
 
 	time("%H:%M:%S  ");
-	printf("%-8s %-8d %-16s %d.%03d\n", $name, $nr_pages, @reason[$r],
+	printf("%-8s %-8d %-16s %d.%03d\n", args->name,
+	    args->nr_pages & 0xffff,	// TODO: explain these bitmasks
+	    @reason[args->reason & 0xffffffff],
 	    $lat / 1000, $lat % 1000);
 }
 
