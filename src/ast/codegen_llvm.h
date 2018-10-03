@@ -71,8 +71,7 @@ private:
   std::string probefull_;
   std::map<std::string, int> next_probe_index_;
 
-  std::map<std::string, Value *> variables_;
-  std::map<std::string, AllocaInst *> persistent_variables_;
+  std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;
   int time_id_ = 0;
   int system_id_ = 0;

@@ -484,7 +484,6 @@ void SemanticAnalyser::visit(If &if_block)
 {
   if_block.cond->accept(*this);
 
-  is_inside_if_block = true;
   for (Statement *stmt : *if_block.stmts) {
     stmt->accept(*this);
   }
@@ -494,7 +493,6 @@ void SemanticAnalyser::visit(If &if_block)
       stmt->accept(*this);
     }
   }
-  is_inside_if_block = false;
 
 }
 
@@ -630,21 +628,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       err_ << "'\n\twhen variable already contains a value of type '";
       err_ << search->second << "'\n" << std::endl;
     }
-
-    if (is_inside_if_block && probe_->variables_.find(var_ident) == probe_->variables_.end())
-    {
-      probe_->variables_[var_ident] = assignment.var;
-    }
   }
   else {
     // This variable hasn't been seen before
     variable_val_.insert({var_ident, assignment.expr->type});
     assignment.var->type = assignment.expr->type;
 
-    if (is_inside_if_block)
-    {
-      probe_->variables_[var_ident] = assignment.var;
-    }
   }
 
   if (assignment.expr->type.type == Type::cast) {

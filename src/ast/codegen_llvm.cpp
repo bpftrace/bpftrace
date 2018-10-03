@@ -604,22 +604,14 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  if (persistent_variables_.find(var.ident) != persistent_variables_.end())
+  if (!var.type.IsArray())
   {
-    if (!var.type.IsArray())
-    {
-      expr_ = b_.CreateLoad(persistent_variables_[var.ident]);
-    }
-    else
-    {
-      expr_ = persistent_variables_[var.ident];
-    }
+    expr_ = b_.CreateLoad(variables_[var.ident]);
   }
   else
   {
     expr_ = variables_[var.ident];
   }
-
 }
 
 void CodegenLLVM::visit(Binop &binop)
@@ -916,22 +908,20 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   assignment.expr->accept(*this);
 
-  if (persistent_variables_.find(var.ident) != persistent_variables_.end())
+  if (variables_.find(var.ident) == variables_.end())
   {
-    if (!var.type.IsArray())
-    {
-      b_.CreateStore(expr_, persistent_variables_[var.ident]);
-    }
-    else
-    {
-      b_.CreateMemCpy(persistent_variables_[var.ident], expr_, var.type.size, 1);
-    }
+    AllocaInst *val = b_.CreateAllocaBPF(var.type, var.ident);
+    variables_[var.ident] = val;
+  }
+
+  if (!var.type.IsArray())
+  {
+    b_.CreateStore(expr_, variables_[var.ident]);
   }
   else
   {
-    variables_[var.ident] = expr_;
+    b_.CreateMemCpy(variables_[var.ident], expr_, var.type.size, 1);
   }
-
 }
 
 void CodegenLLVM::visit(If &if_block)
@@ -1033,13 +1023,6 @@ void CodegenLLVM::visit(Probe &probe)
 
     if (probe.pred) {
       probe.pred->accept(*this);
-    }
-
-    for( const auto& var : probe.variables_ )
-    {
-      auto name = var.second->ident;
-      AllocaInst *val = b_.CreateAllocaBPF(var.second->type, name);
-      persistent_variables_[name] = val;
     }
 
     for (Statement *stmt : *probe.stmts) {

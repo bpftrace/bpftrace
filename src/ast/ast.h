@@ -27,7 +27,6 @@ public:
   bool is_literal = false;
   bool is_variable = false;
   bool is_map = false;
-  bool is_persistent = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -229,7 +228,6 @@ public:
   bool need_expansion = false;	// must build a BPF program per wildcard match
 
   int index();
-  std::map<std::string, Variable *> variables_;
   void set_index(int index);
 private:
   int index_ = 0;

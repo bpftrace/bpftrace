@@ -1757,7 +1757,7 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
   %system_args = alloca %system_t, align 8
   %1 = bitcast %system_t* %system_args to i8*
@@ -2467,28 +2467,35 @@ define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kpr
 entry:
   %"@y_key" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  %"$var" = alloca [16 x i8], align 1
   %comm = alloca [16 x i8], align 1
   %1 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memset.p0i8.i64(i8* nonnull %1, i8 0, i64 16, i32 1, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
-  %2 = bitcast i64* %"@x_key" to i8*
+  %2 = getelementptr inbounds [16 x i8], [16 x i8]* %"$var", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %2, i8* nonnull %1, i64 16, i32 1, i1 false)
+  %3 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [16 x i8]* nonnull %comm, i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
-  %3 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [16 x i8]* nonnull %"$var", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %4 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@y_key", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %update_elem2 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@y_key", [16 x i8]* nonnull %comm, i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %update_elem2 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@y_key", [16 x i8]* nonnull %"$var", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
 }
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i32, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
@@ -2822,6 +2829,58 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %Foo.x = alloca i32, align 4
+  %"$foo" = alloca i32, align 4
+  %tmpcast = bitcast i32* %"$foo" to [4 x i8]*
+  %1 = bitcast i32* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i32, i32 addrspace(64)* null, align 536870912
+  store i32 %2, i32* %"$foo", align 4
+  %3 = bitcast i32* %Foo.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.x, i64 4, [4 x i8]* nonnull %tmpcast)
+  %4 = load i32, i32* %Foo.x, align 4
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  store i64 0, i64* %"@x_key", align 8
+  %6 = zext i32 %4 to i64
+  %7 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 %6, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { int x; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.x;"
+       "}",
+       expected);
+
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Foo.x = alloca i32, align 4
   %1 = bitcast i32* %Foo.x to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.x, i64 4, i64 0)
@@ -2847,14 +2906,6 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED";
-
-  test("struct Foo { int x; }"
-       "kprobe:f"
-       "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.x;"
-       "}",
-       expected);
 
   test("struct Foo { int x; }"
        "kprobe:f"
@@ -3028,6 +3079,56 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %Foo.x = alloca i64, align 8
+  %"$foo" = alloca i64, align 8
+  %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
+  %1 = bitcast i64* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i64, i64 addrspace(64)* null, align 536870912
+  store i64 %2, i64* %"$foo", align 8
+  %3 = bitcast i64* %Foo.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, [8 x i8]* nonnull %tmpcast)
+  %4 = load i64, i64* %Foo.x, align 8
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  store i64 0, i64* %"@x_key", align 8
+  %6 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
+  store i64 %4, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { long x; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Foo.x = alloca i64, align 8
   %1 = bitcast i64* %Foo.x to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, i64 0)
@@ -3056,14 +3157,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { long x; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.x;"
-       "}",
-       expected);
-
-  test("struct Foo { long x; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = $foo->x;"
        "}",
@@ -3073,6 +3166,57 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_short)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Foo.x = alloca i16, align 2
+  %"$foo" = alloca i16, align 2
+  %tmpcast = bitcast i16* %"$foo" to [2 x i8]*
+  %1 = bitcast i16* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i16, i16 addrspace(64)* null, align 536870912
+  store i16 %2, i16* %"$foo", align 2
+  %3 = bitcast i16* %Foo.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i16* nonnull %Foo.x, i64 2, [2 x i8]* nonnull %tmpcast)
+  %4 = load i16, i16* %Foo.x, align 2
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  store i64 0, i64* %"@x_key", align 8
+  %6 = zext i16 %4 to i64
+  %7 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 %6, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { short x; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.x;"
+       "}",
+       expected);
+
+expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3112,14 +3256,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { short x; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.x;"
-       "}",
-       expected);
-
-  test("struct Foo { short x; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = $foo->x;"
        "}",
@@ -3129,6 +3265,55 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_char)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Foo.x = alloca i8, align 1
+  %"$foo" = alloca [1 x i8], align 1
+  %1 = getelementptr inbounds [1 x i8], [1 x i8]* %"$foo", i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i8, i8 addrspace(64)* null, align 536870912
+  store i8 %2, i8* %1, align 1
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %Foo.x)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %Foo.x, i64 1, [1 x i8]* nonnull %"$foo")
+  %3 = load i8, i8* %Foo.x, align 1
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %Foo.x)
+  %4 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
+  store i64 0, i64* %"@x_key", align 8
+  %5 = zext i8 %3 to i64
+  %6 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
+  store i64 %5, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { char x; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3167,14 +3352,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { char x; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.x;"
-       "}",
-       expected);
-
-  test("struct Foo { char x; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = $foo->x;"
        "}",
@@ -3184,6 +3361,63 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_integer_ptr)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %deref = alloca i32, align 4
+  %Foo.x = alloca i64, align 8
+  %"$foo" = alloca i64, align 8
+  %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
+  %1 = bitcast i64* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i64, i64 addrspace(64)* null, align 536870912
+  store i64 %2, i64* %"$foo", align 8
+  %3 = bitcast i64* %Foo.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, [8 x i8]* nonnull %tmpcast)
+  %4 = load i64, i64* %Foo.x, align 8
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i32* %deref to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %deref, i64 4, i64 %4)
+  %6 = load i32, i32* %deref, align 4
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  %7 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 0, i64* %"@x_key", align 8
+  %8 = zext i32 %6 to i64
+  %9 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
+  store i64 %8, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { int *x; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = *$foo.x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3229,14 +3463,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { int *x; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = *$foo.x;"
-       "}",
-       expected);
-
-  test("struct Foo { int *x; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = *$foo->x;"
        "}",
@@ -3246,6 +3472,60 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_string_ptr)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@mystr_key" = alloca i64, align 8
+  %Foo.str = alloca i64, align 8
+  %str = alloca [64 x i8], align 1
+  %"$foo" = alloca i64, align 8
+  %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
+  %1 = bitcast i64* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i64, i64 addrspace(64)* null, align 536870912
+  store i64 %2, i64* %"$foo", align 8
+  %3 = getelementptr inbounds [64 x i8], [64 x i8]* %str, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %3, i8 0, i64 64, i32 1, i1 false)
+  %4 = bitcast i64* %Foo.str to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.str, i64 8, [8 x i8]* nonnull %tmpcast)
+  %5 = load i64, i64* %Foo.str, align 8
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %5)
+  %6 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
+  store i64 0, i64* %"@mystr_key", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [64 x i8]* nonnull %str, i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { char *str; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @mystr = str($foo.str);"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3288,14 +3568,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { char *str; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @mystr = str($foo.str);"
-       "}",
-       expected);
-
-  test("struct Foo { char *str; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @mystr = str($foo->str);"
        "}",
@@ -3305,6 +3577,51 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_string_array)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@mystr_key" = alloca i64, align 8
+  %Foo.str = alloca [32 x i8], align 1
+  %"$foo" = alloca [32 x i8], align 1
+  %1 = getelementptr inbounds [32 x i8], [32 x i8]* %"$foo", i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  call void @llvm.memcpy.p0i8.p64i8.i64(i8* nonnull %1, i8 addrspace(64)* null, i64 32, i32 1, i1 false)
+  %2 = getelementptr inbounds [32 x i8], [32 x i8]* %Foo.str, i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, [32 x i8]* nonnull %"$foo")
+  %3 = bitcast i64* %"@mystr_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  store i64 0, i64* %"@mystr_key", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %Foo.str, i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memcpy.p0i8.p64i8.i64(i8* nocapture writeonly, i8 addrspace(64)* nocapture readonly, i64, i32, i1) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { char str[32]; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @mystr = $foo.str;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3337,14 +3654,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { char str[32]; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @mystr = $foo.str;"
-       "}",
-       expected);
-
-  test("struct Foo { char str[32]; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @mystr = $foo->str;"
        "}",
@@ -3354,6 +3663,57 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_nested_struct_named)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Bar.x = alloca i32, align 4
+  %"$foo" = alloca i32, align 4
+  %tmpcast = bitcast i32* %"$foo" to [4 x i8]*
+  %1 = bitcast i32* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i32, i32 addrspace(64)* null, align 536870912
+  store i32 %2, i32* %"$foo", align 4
+  %3 = bitcast i32* %Bar.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, [4 x i8]* nonnull %tmpcast)
+  %4 = load i32, i32* %Bar.x, align 4
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  store i64 0, i64* %"@x_key", align 8
+  %6 = zext i32 %4 to i64
+  %7 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 %6, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Bar { int x; } struct Foo { struct Bar bar; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.bar.x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3393,14 +3753,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Bar { int x; } struct Foo { struct Bar bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.bar.x;"
-       "}",
-       expected);
-
-  test("struct Bar { int x; } struct Foo { struct Bar bar; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = $foo->bar.x;"
        "}",
@@ -3410,6 +3762,63 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_nested_struct_ptr_named)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %Bar.x = alloca i32, align 4
+  %Foo.bar = alloca i64, align 8
+  %"$foo" = alloca i64, align 8
+  %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
+  %1 = bitcast i64* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i64, i64 addrspace(64)* null, align 536870912
+  store i64 %2, i64* %"$foo", align 8
+  %3 = bitcast i64* %Foo.bar to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, [8 x i8]* nonnull %tmpcast)
+  %4 = load i64, i64* %Foo.bar, align 8
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i32* %Bar.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i64 %4)
+  %6 = load i32, i32* %Bar.x, align 4
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  %7 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 0, i64* %"@x_key", align 8
+  %8 = zext i32 %6 to i64
+  %9 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
+  store i64 %8, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Bar { int x; } struct Foo { struct Bar *bar; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.bar->x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3455,14 +3864,6 @@ attributes #1 = { argmemonly nounwind }
   test("struct Bar { int x; } struct Foo { struct Bar *bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.bar->x;"
-       "}",
-       expected);
-
-  test("struct Bar { int x; } struct Foo { struct Bar *bar; }"
-       "kprobe:f"
-       "{"
        "  $foo = (Foo*)0;"
        "  @x = $foo->bar->x;"
        "}",
@@ -3472,6 +3873,57 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, struct_nested_struct_anon)
 {
   auto expected = R"EXPECTED(; Function Attrs: nounwind
+declare i64 @llvm.bpf.pseudo(i64, i64) #0
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+entry:
+  %"@x_val" = alloca i64, align 8
+  %"@x_key" = alloca i64, align 8
+  %"Foo::(anonymous at definitions.h:1:14).x" = alloca i32, align 4
+  %"$foo" = alloca i32, align 4
+  %tmpcast = bitcast i32* %"$foo" to [4 x i8]*
+  %1 = bitcast i32* %"$foo" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+  %2 = load i32, i32 addrspace(64)* null, align 536870912
+  store i32 %2, i32* %"$foo", align 4
+  %3 = bitcast i32* %"Foo::(anonymous at definitions.h:1:14).x" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %"Foo::(anonymous at definitions.h:1:14).x", i64 4, [4 x i8]* nonnull %tmpcast)
+  %4 = load i32, i32* %"Foo::(anonymous at definitions.h:1:14).x", align 4
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
+  %5 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  store i64 0, i64* %"@x_key", align 8
+  %6 = zext i32 %4 to i64
+  %7 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
+  store i64 %6, i64* %"@x_val", align 8
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  ret i64 0
+}
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+
+attributes #0 = { nounwind }
+attributes #1 = { argmemonly nounwind }
+)EXPECTED";
+
+  test("struct Foo { struct { int x; } bar; }"
+       "kprobe:f"
+       "{"
+       "  $foo = (Foo)0;"
+       "  @x = $foo.bar.x;"
+       "}",
+       expected);
+
+  expected = R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -3508,13 +3960,6 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED";
 
-  test("struct Foo { struct { int x; } bar; }"
-       "kprobe:f"
-       "{"
-       "  $foo = (Foo)0;"
-       "  @x = $foo.bar.x;"
-       "}",
-       expected);
 
   test("struct Foo { struct { int x; } bar; }"
        "kprobe:f"

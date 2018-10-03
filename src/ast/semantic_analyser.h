@@ -49,8 +49,6 @@ private:
   int pass_;
   const int num_passes_ = 10;
 
-  bool is_inside_if_block = false;
-
   bool is_final_pass() const;
   std::string get_cast_type(Expression *expr);
 
