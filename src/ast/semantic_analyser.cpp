@@ -614,7 +614,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   auto search = variable_val_.find(var_ident);
   assignment.var->type = assignment.expr->type;
   if (search != variable_val_.end()) {
-    if (search->second.type == Type::none || search->second.size == 0) {
+    if (search->second.type == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined variable: " << var_ident << std::endl;
       }
@@ -633,7 +633,6 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     // This variable hasn't been seen before
     variable_val_.insert({var_ident, assignment.expr->type});
     assignment.var->type = assignment.expr->type;
-
   }
 
   if (assignment.expr->type.type == Type::cast) {
