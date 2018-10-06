@@ -494,6 +494,9 @@ void SemanticAnalyser::visit(If &if_block)
     }
   }
 
+  // Only if-else variables will be registered
+  if_block.variable_val = variable_val_;
+
 }
 
 void SemanticAnalyser::visit(FieldAccess &acc)

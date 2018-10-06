@@ -163,6 +163,7 @@ public:
   Expression *cond;
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
+  std::map<std::string, SizedType> variable_val;
 
   void accept(Visitor &v) override;
 };
