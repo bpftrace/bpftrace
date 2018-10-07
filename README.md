@@ -150,6 +150,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[killsnoop.bt](tools/killsnoop.bt): Trace signals issued by the kill() syscall. [Examples](tools/killsnoop_example.txt).
 - tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
 - tools/[opensnoop.bt](tools/loads.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
+- tools/[oomkill.bt](tools/oomkill.bt): Trace OOM killer. [Examples](tools/oomkill_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
 - tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
 - tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).
