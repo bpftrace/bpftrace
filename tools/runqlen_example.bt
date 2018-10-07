@@ -1,0 +1,25 @@
+Demonstrations of runqlen, the Linux BPF/bpftrace version.
+
+
+This tool samples the length of the CPU scheduler run queues, showing these
+sampled lengths as a histogram. This can be used to characterize demand for
+CPU resources. For example:
+
+# runqlen.bt 
+Attaching 2 probes...
+Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.
+^C
+
+@runqlen: 
+[0, 1)              1967 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1, 2)                 0 |                                                    |
+[2, 3)                 0 |                                                    |
+[3, 4)               306 |@@@@@@@@                                            |
+
+This output shows that the run queue length was usually zero, except for some
+samples where it was 3. This was caused by binding 4 CPU bound threads to a
+single CPUs.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides options to customize the output.

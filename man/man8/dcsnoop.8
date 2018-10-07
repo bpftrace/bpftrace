@@ -1,0 +1,70 @@
+.TH dcsnoop 8  "2018-09-08" "USER COMMANDS"
+.SH NAME
+dcsnoop.bt \- Trace directory entry cache (dcache) lookups. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B dcsnoop.bt
+.SH DESCRIPTION
+By default, this traces every dcache lookup, and shows the
+process performing the lookup and the filename requested.
+
+The output of this tool can be verbose, and is intended for further
+investigations of dcache performance beyond dcstat(8), which prints
+per-second summaries.
+
+This uses kernel dynamic tracing of the d_lookup() function, and will need
+and will need updating to match any changes to this function.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bcc.
+.SH EXAMPLES
+.TP
+Trace all dcache lookups:
+#
+.B dcsnoop
+.SH FIELDS
+.TP
+TIME(ms)
+Time of lookup, in milliseconds.
+.TP
+PID
+Process ID.
+.TP
+COMM
+Process name.
+.TP
+T
+Type: R == reference, M == miss. A miss will print two
+lines, one for the reference, and one for the miss.
+.TP
+FILE
+The file name component that was being looked up. This contains trailing
+pathname components (after '/'), which will be the subject of subsequent
+lookups.
+.SH OVERHEAD
+File name lookups can be frequent (depending on the workload), and this tool
+prints a line for each failed lookup, and with \-a, each reference as well. The
+output may be verbose, and the incurred overhead, while optimized to some
+extent, may still be from noticeable to significant. This is only really
+intended for deeper investigations beyond dcstat(8), when absolutely necessary.
+Measure and quantify the overhead in a test environment before use.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name. The bcc tool
+may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+dcstat(8)
