@@ -21,6 +21,7 @@ public:
 
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="");
   AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
+  AllocaInst *CreateAllocaBPFInit(const SizedType &stype, const std::string &name);
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize, const std::string &name="");
   AllocaInst *CreateAllocaBPF(const SizedType &stype, llvm::Value *arraysize, const std::string &name="");
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name="");

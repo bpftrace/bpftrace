@@ -910,7 +910,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   if (variables_.find(var.ident) == variables_.end())
   {
-    AllocaInst *val = b_.CreateAllocaBPF(var.type, var.ident);
+    AllocaInst *val = b_.CreateAllocaBPFInit(var.type, var.ident);
     variables_[var.ident] = val;
   }
 
@@ -926,26 +926,6 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
 void CodegenLLVM::visit(If &if_block)
 {
-  // Initializes if-else variables
-  for( const auto& var : if_block.variable_val )
-  {
-    if (variables_.find(var.first) == variables_.end())
-    {
-      auto name = var.first;
-      AllocaInst *val = b_.CreateAllocaBPF(var.second, name);
-
-      variables_[name] = val;
-      if (!var.second.IsArray())
-      {
-        b_.CreateStore(b_.getInt64(0), variables_[name]);
-      }
-      else
-      {
-        b_.CreateMemSet(val, b_.getInt64(0), var.second.size, 1);
-      }
-    }
-  }
-
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
   BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
