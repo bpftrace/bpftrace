@@ -1,0 +1,92 @@
+Demonstrations of dcsnoop, the Linux bpftrace/eBPF version.
+
+
+dcsnoop traces directory entry cache (dcache) lookups, and can be used for
+further investigation beyond dcstat(8). The output is likely verbose, as
+dcache lookups are likely frequent. For example:
+
+# dcsnoop.bt
+Attaching 4 probes...
+Tracing dcache lookups... Hit Ctrl-C to end.
+TIME     PID    COMM             T FILE
+427      1518   irqbalance       R proc/interrupts
+427      1518   irqbalance       R interrupts
+427      1518   irqbalance       R proc/stat
+427      1518   irqbalance       R stat
+483      2440   snmp-pass        R proc/cpuinfo
+483      2440   snmp-pass        R cpuinfo
+486      2440   snmp-pass        R proc/stat
+486      2440   snmp-pass        R stat
+834      1744   snmpd            R proc/net/dev
+834      1744   snmpd            R net/dev
+834      1744   snmpd            R self/net
+834      1744   snmpd            R 1744
+834      1744   snmpd            R net
+834      1744   snmpd            R dev
+834      1744   snmpd            R proc/net/if_inet6
+834      1744   snmpd            R net/if_inet6
+834      1744   snmpd            R self/net
+834      1744   snmpd            R 1744
+834      1744   snmpd            R net
+834      1744   snmpd            R if_inet6
+835      1744   snmpd            R sys/class/net/docker0/device/vendor
+835      1744   snmpd            R class/net/docker0/device/vendor
+835      1744   snmpd            R net/docker0/device/vendor
+835      1744   snmpd            R docker0/device/vendor
+835      1744   snmpd            R devices/virtual/net/docker0
+835      1744   snmpd            R virtual/net/docker0
+835      1744   snmpd            R net/docker0
+835      1744   snmpd            R docker0
+835      1744   snmpd            R device/vendor
+835      1744   snmpd            R proc/sys/net/ipv4/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R sys/net/ipv4/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R net/ipv4/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R ipv4/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R neigh/docker0/retrans_time_ms
+835      1744   snmpd            R docker0/retrans_time_ms
+835      1744   snmpd            R retrans_time_ms
+835      1744   snmpd            R proc/sys/net/ipv6/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R sys/net/ipv6/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R net/ipv6/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R ipv6/neigh/docker0/retrans_time_ms
+835      1744   snmpd            R neigh/docker0/retrans_time_ms
+835      1744   snmpd            R docker0/retrans_time_ms
+835      1744   snmpd            R retrans_time_ms
+835      1744   snmpd            R proc/sys/net/ipv6/conf/docker0/forwarding
+835      1744   snmpd            R sys/net/ipv6/conf/docker0/forwarding
+835      1744   snmpd            R net/ipv6/conf/docker0/forwarding
+835      1744   snmpd            R ipv6/conf/docker0/forwarding
+835      1744   snmpd            R conf/docker0/forwarding
+[...]
+5154     934    cksum            R usr/bin/basename
+5154     934    cksum            R bin/basename
+5154     934    cksum            R basename
+5154     934    cksum            R usr/bin/bashbug
+5154     934    cksum            R bin/bashbug
+5154     934    cksum            R bashbug
+5154     934    cksum            M bashbug
+5155     934    cksum            R usr/bin/batch
+5155     934    cksum            R bin/batch
+5155     934    cksum            R batch
+5155     934    cksum            M batch
+5155     934    cksum            R usr/bin/bc
+5155     934    cksum            R bin/bc
+5155     934    cksum            R bc
+5155     934    cksum            M bc
+5169     934    cksum            R usr/bin/bdftopcf
+5169     934    cksum            R bin/bdftopcf
+5169     934    cksum            R bdftopcf
+5169     934    cksum            M bdftopcf
+5173     934    cksum            R usr/bin/bdftruncate
+5173     934    cksum            R bin/bdftruncate
+5173     934    cksum            R bdftruncate
+5173     934    cksum            M bdftruncate
+
+The way the dcache is currently implemented, each component of a path is
+checked in turn. The first line, showing "proc/interrupts" from irqbalance,
+will be a lookup for "proc" in a directory (that isn't shown here). If it
+finds "proc", it will then lookup "interrupts" inside net.
+
+The script is easily modifiable to only show misses, reducing the volume of
+the output. Or use the bcc version of this tool, which only shows misses by
+default: https://github.com/iovisor/bcc
