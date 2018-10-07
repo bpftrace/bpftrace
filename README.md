@@ -149,6 +149,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
 - tools/[killsnoop.bt](tools/killsnoop.bt): Trace signals issued by the kill() syscall. [Examples](tools/killsnoop_example.txt).
 - tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
+- tools/[mdflush.bt](tools/mdflush.bt): Trace md flush events. [Examples](tools/mdflush_example.txt).
 - tools/[opensnoop.bt](tools/loads.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
 - tools/[oomkill.bt](tools/oomkill.bt): Trace OOM killer. [Examples](tools/oomkill_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new procesess (via fork). [Examples](tools/pidpersec_example.txt).
