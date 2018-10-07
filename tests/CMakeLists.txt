@@ -31,6 +31,7 @@ target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
 target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
+target_link_libraries(bpftrace_test ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
 target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
 
 find_package(Threads REQUIRED)
