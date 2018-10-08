@@ -364,7 +364,7 @@ These can be used in bpftrace scripts to document your code.
 
 ## 4. `->`: C Struct Navigation
 
-Example:
+tracepoint example:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
@@ -377,7 +377,7 @@ snmpd /proc/vmstat
 
 This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the tracepoint arguments. See the [Static Tracing, Kernel-Level Arguments](#6-tracepoint-static-tracing-kernel-level-arguments) section for the contents of this struct.
 
-Here is an example of dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt:
+kprobe example:
 
 ```
 # cat path.bt
@@ -397,7 +397,7 @@ open path: retrans_time_ms
 [...]
 ```
 
-Some kernel headers needed to be included to understand the `path` and `dentry` structs.
+This uses dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt. Some kernel headers needed to be included to understand the `path` and `dentry` structs.
 
 ## 5. `? :`: ternary operators
 
@@ -503,7 +503,27 @@ returned: 21
 [...]
 ```
 
-See [C Struct Navigation](#4---c-struct-navigation) for an example of accessing kprobe struct arguments.
+As an example of struct arguments:
+
+```
+# cat path.bt
+#include <linux/path.h>
+#include <linux/dcache.h>
+
+kprobe:vfs_open
+{
+	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+}
+
+# bpftrace path.bt
+Attaching 1 probe...
+open path: dev
+open path: if_inet6
+open path: retrans_time_ms
+[...]
+```
+
+Here arg0 was casted as a (path \*), since that is the first argument to vfs_open(). The struct support is currently the same as bcc, and based on available kernel headers. This means that many, but not all, structs will be available, and you may need to manually define some structs. In the future, bpftrace will use the newer Linux BTF support so that all kernel structs are always available.
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 

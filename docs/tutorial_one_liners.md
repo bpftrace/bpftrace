@@ -291,14 +291,29 @@ The context of this probe is important: this fires when the I/O is issued to the
 # Lesson 12. Kernel Struct Tracing
 
 ```
-bpftrace -n 'kprobe:blk_account_io_start { @bytes = hist(((struct request *)arg0)->__data_len); }'
+# cat path.bt
+#include <linux/path.h>
+#include <linux/dcache.h>
+
+kprobe:vfs_open
+{
+	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+}
+
+# bpftrace path.bt
+Attaching 1 probe...
+open path: dev
+open path: if_inet6
+open path: retrans_time_ms
+[...]
 ```
 
-TODO: requires issue #34 to be completed.
-
-Summarize kernel blk_account_io_start() calls with a histogram of the I/O size. This differs from the previous example in that it uses kernel dynamic tracing and fetches the size from a kernel struct.
+This uses kernel dynamic tracing of the vfs_open() function, which has a (struct path *) as the first argument.
 
 - kprobe: As mentioned earlier, this is the kernel dynamic tracing probe type, which traces the entry of kernel functions (use kretprobe to trace their returns). 
-- ((struct request *)arg0)->__data_len: this casts arg0 as struct request *, then dereferences the __data_len field.
+- ((path *)arg0)->dentry->d_name.name: this casts arg0 as path *, then dereferences dentry, etc.
+- #include: these were necessary to include struct definitions for path and dentry.
+
+The kernel struct support is currently the same as bcc, making use of kernel headers. This means that many structs are available, but not everything, and sometimes it might be necessary to manually include a struct. For an example of this, see the [dcsnoop tool](../tools/dcsnoop.bt), which includes a portion of struct nameidata manually as it wasn't in the available headers. In the future, bpftrace will use the newer Linux BTF support, so that all structs are available.
 
 At this point you understand much of bpftrace, and can begin to use and write powerful one-liners. See the [Reference Guide](reference_guide.md) for more capabilities.
