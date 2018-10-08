@@ -296,6 +296,59 @@ TEST(Parser, ternary_int)
        "    int: 2\n");
 }
 
+TEST(Parser, if_block)
+{
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    call: printf\n"
+       "     string: %d is high\\n\n"
+       "     builtin: pid\n");
+}
+
+TEST(Parser, if_block_variable)
+{
+  test("kprobe:sys_open { if (pid > 10000) { $s = 10; } }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     int: 10\n");
+}
+
+TEST(Parser, if_else)
+{
+  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; }; printf(\"%d is high\\n\", pid, $s); }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     string: a\n"
+       "   else\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     string: b\n"
+       "  call: printf\n"
+       "   string: %d is high\\n\n"
+       "   builtin: pid\n"
+       "   variable: $s\n");
+}
+
 TEST(Parser, ternary_str)
 {
   test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\" }",

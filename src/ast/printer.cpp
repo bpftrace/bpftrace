@@ -150,6 +150,31 @@ void Printer::visit(AssignVarStatement &assignment)
   --depth_;
 }
 
+void Printer::visit(If &if_block)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "if" << std::endl;
+
+  ++depth_;
+  if_block.cond->accept(*this);
+
+  ++depth_;
+  out_ << indent << " then" << std::endl;
+
+  for (Statement *stmt : *if_block.stmts) {
+    stmt->accept(*this);
+  }
+
+  if (if_block.else_stmts) {
+    out_ << indent << " else" << std::endl;
+    for (Statement *stmt : *if_block.else_stmts) {
+      stmt->accept(*this);
+    }
+  }
+  depth_ -= 2;
+}
+
 void Printer::visit(Predicate &pred)
 {
   std::string indent(depth_, ' ');

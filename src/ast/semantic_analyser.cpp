@@ -480,6 +480,21 @@ void SemanticAnalyser::visit(Ternary &ternary)
   }
 }
 
+void SemanticAnalyser::visit(If &if_block)
+{
+  if_block.cond->accept(*this);
+
+  for (Statement *stmt : *if_block.stmts) {
+    stmt->accept(*this);
+  }
+
+  if (if_block.else_stmts) {
+    for (Statement *stmt : *if_block.else_stmts) {
+      stmt->accept(*this);
+    }
+  }
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
@@ -596,6 +611,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_.find(var_ident);
+  assignment.var->type = assignment.expr->type;
   if (search != variable_val_.end()) {
     if (search->second.type == Type::none) {
       if (is_final_pass()) {
@@ -605,7 +621,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type) {
+    else if (search->second.type != assignment.expr->type.type || search->second.size != assignment.expr->type.size) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen variable already contains a value of type '";

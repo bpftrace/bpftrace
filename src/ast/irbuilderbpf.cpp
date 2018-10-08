@@ -58,6 +58,35 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::str
   return CreateAllocaBPF(ty, nullptr, name);
 }
 
+AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std::string &name)
+{
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock &entry_block = parent->getEntryBlock();
+
+  auto ip = saveIP();
+  if (entry_block.empty())
+    SetInsertPoint(&entry_block);
+  else
+    SetInsertPoint(&entry_block.front());
+
+  llvm::Type *ty = GetType(stype);
+  AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
+
+  if (!stype.IsArray())
+  {
+    CreateStore(getInt64(0), alloca);
+  }
+  else
+  {
+    CreateMemSet(alloca, getInt64(0), stype.size, 1);
+  }
+
+  restoreIP(ip);
+
+  CreateLifetimeStart(alloca);
+  return alloca;
+}
+
 AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, llvm::Value *arraysize, const std::string &name)
 {
   llvm::Type *ty = GetType(stype);
