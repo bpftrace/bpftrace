@@ -367,16 +367,37 @@ These can be used in bpftrace scripts to document your code.
 Example:
 
 ```
-bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args-&gt;filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+Attaching 1 probe...
+snmpd /proc/diskstats
+snmpd /proc/stat
+snmpd /proc/vmstat
+[...]
 ```
 
-This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the tracepoint arguments.
+This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the tracepoint arguments. See the [Static Tracing, Kernel-Level Arguments](#6-tracepoint-static-tracing-kernel-level-arguments) section for the contents of this struct.
 
-A future example is to add struct support to kprobes, so that this is possible (see issue [#34](https://github.com/iovisor/bpftrace/issues/34)):
+Here is an example of dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt:
 
 ```
-bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0)->tv_nsec); }'
+# cat path.bt
+#include <linux/path.h>
+#include <linux/dcache.h>
+
+kprobe:vfs_open
+{
+	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+}
+
+# bpftrace path.bt
+Attaching 1 probe...
+open path: dev
+open path: if_inet6
+open path: retrans_time_ms
+[...]
 ```
+
+Some kernel headers needed to be included to understand the `path` and `dentry` structs.
 
 ## 5. `? :`: ternary operators
 
@@ -482,7 +503,7 @@ returned: 21
 [...]
 ```
 
-**TODO**: see issue [#34](https://github.com/iovisor/bpftrace/issues/34) for supporting struct arguments on kprobes.
+See [C Struct Navigation](#4---c-struct-navigation) for an example of accessing kprobe struct arguments.
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 

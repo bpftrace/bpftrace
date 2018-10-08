@@ -89,6 +89,66 @@ TEST(tracepoint_format_parser, data_loc)
   EXPECT_EQ(expected, result);
 }
 
+TEST(tracepoint_format_parser, adjust_integer_types)
+{
+  std::string input =
+    "	field:int arr[8];	offset:0;	size:32;	signed:1;\n"
+
+    "	field:int int_a;	offset:0;	size:4;	signed:1;\n"
+    "	field:int int_b;	offset:0;	size:8;	signed:1;\n"
+
+    "	field:u32 u32_a;	offset:0;	size:4;	signed:0;\n"
+    "	field:u32 u32_b;	offset:0;	size:8;	signed:0;\n"
+
+    "	field:unsigned int uint_a;	offset:0;	size:4;	signed:0;\n"
+    "	field:unsigned int uint_b;	offset:0;	size:8;	signed:0;\n"
+
+    "	field:unsigned unsigned_a;	offset:0;	size:4;	signed:0;\n"
+    "	field:unsigned unsigned_b;	offset:0;	size:8;	signed:0;\n"
+
+    "	field:uid_t uid_a;	offset:0;	size:4;	signed:0;\n"
+    "	field:uid_t uid_b;	offset:0;	size:8;	signed:0;\n"
+
+    "	field:gid_t gid_a;	offset:0;	size:4;	signed:0;\n"
+    "	field:gid_t gid_b;	offset:0;	size:8;	signed:0;\n"
+
+    "	field:pid_t pid_a;	offset:0;	size:4;	signed:1;\n"
+    "	field:pid_t pid_b;	offset:0;	size:8;	signed:0;\n";
+
+  std::string expected =
+    "struct _tracepoint_syscalls_sys_enter_read\n"
+    "{\n"
+    "  int arr[8];\n"
+
+    "  int int_a;\n"
+    "  s64 int_b;\n"
+
+    "  u32 u32_a;\n"
+    "  u64 u32_b;\n"
+
+    "  unsigned int uint_a;\n"
+    "  u64 uint_b;\n"
+
+    "  unsigned unsigned_a;\n"
+    "  u64 unsigned_b;\n"
+
+    "  uid_t uid_a;\n"
+    "  u64 uid_b;\n"
+
+    "  gid_t gid_a;\n"
+    "  u64 gid_b;\n"
+
+    "  pid_t pid_a;\n"
+    "  u64 pid_b;\n"
+    "};\n";
+
+  std::istringstream format_file(input);
+
+  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(format_file, "syscalls", "sys_enter_read");
+
+  EXPECT_EQ(expected, result);
+}
+
 } // namespace tracepoint_format_parser
 } // namespace test
 } // namespace bpftrace

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/utsname.h>
 
+#include "frontends/clang/kbuild_helper.h"
+
 #include "ast.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -88,14 +90,26 @@ static SizedType get_sized_type(CXType clang_type)
       // TODO add support for arrays
       return SizedType(Type::none, 0);
     }
-    case CXType_LongDouble:
-      return SizedType(Type::none, 0);
     default:
-      // TODO just return Type::none?
-      auto unknown_type = get_clang_string(clang_getTypeKindSpelling(clang_type.kind));
-      std::cerr << "Error: unknown clang CXType '" << unknown_type << "'" << std::endl;
-      abort();
+      return SizedType(Type::none, 0);
   }
+}
+
+static bool is_dir(const std::string& path)
+{
+  struct stat buf;
+
+  if (::stat(path.c_str(), &buf) < 0)
+    return false;
+
+  return S_ISDIR(buf.st_mode);
+}
+
+static std::pair<bool, std::string> get_kernel_path_info(const std::string kdir)
+{
+  if (is_dir(kdir + "/build") && is_dir(kdir + "/source"))
+    return std::make_pair (true, "source");
+  return std::make_pair(false, "build");
 }
 
 void ClangParser::parse(ast::Program *program, StructMap &structs)
@@ -145,18 +159,34 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
   struct utsname utsname;
   uname(&utsname);
-  std::string kernel_header_include_flag = std::string("/lib/modules/") + utsname.release + "/build/include";
+  std::string kernel_modules_dir = std::string("/lib/modules/") + utsname.release;
+  auto kpath_info = get_kernel_path_info(kernel_modules_dir);
+  auto kpath = kernel_modules_dir + "/" + kpath_info.second;
+  bool has_kpath_source = kpath_info.first;
+
+  ebpf::DirStack dstack(kpath);
+  if (!dstack.ok())
+    return;
+
+  ebpf::KBuildHelper kbuild_helper(kpath, has_kpath_source);
+  std::vector<std::string> kflags;
+  kbuild_helper.get_flags(utsname.machine, &kflags);
+
+  std::vector<const char *> args =
+  {
+    "-I", "/bpftrace/include",
+  };
+  for (auto &flag : kflags)
+  {
+    args.push_back(flag.c_str());
+  }
 
   CXIndex index = clang_createIndex(1, 1);
   CXTranslationUnit translation_unit;
-  const char * const args[] = {
-    "-I", "/bpftrace/include",
-    "-I", kernel_header_include_flag.c_str(),
-  };
   CXErrorCode error = clang_parseTranslationUnit2(
       index,
       "definitions.h",
-      args, sizeof(args)/sizeof(char*),
+      &args[0], args.size(),
       unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
       CXTranslationUnit_None,
       &translation_unit);

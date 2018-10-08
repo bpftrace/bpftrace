@@ -1,0 +1,37 @@
+/*
+ * oomkill	Trace OOM killer.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * This traces the kernel out-of-memory killer, and prints basic details,
+ * including the system load averages. This can provide more context on the
+ * system state at the time of OOM: was it getting busier or steady, based
+ * on the load averages? This tool may also be useful to customize for
+ * investigations; for example, by adding other task_struct details at the
+ * time of the OOM, or other commands in the system() call.
+ *
+ * This currently works by using kernel dynamic tracing of oom_kill_process().
+ *
+ * USAGE: oomkill.bt
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 07-Sep-2018	Brendan Gregg	Created this.
+ */
+
+#include <linux/oom.h>
+
+BEGIN
+{
+	printf("Tracing oom_kill_process()... Hit Ctrl-C to end.\n");
+}
+
+kprobe:oom_kill_process
+{
+	$oc = (oom_control *)arg1;
+	time("%H:%M:%S ");
+	printf("Triggered by PID %d (\"%s\"), ", pid, comm);
+	printf("OOM kill of PID %d (\"%s\"), %d pages, loadavg: ",
+	    $oc->chosen->pid, $oc->chosen->comm, $oc->totalpages);
+	system("cat /proc/loadavg");
+}

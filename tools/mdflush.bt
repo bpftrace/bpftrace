@@ -1,0 +1,28 @@
+/*
+ * mdflush	Trace md flush events.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: mdflush.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 08-Sep-2018	Brendan Gregg	Created this.
+ */
+
+#include <linux/genhd.h>
+#include <linux/bio.h>
+
+BEGIN
+{
+	printf("Tracing md flush events... Hit Ctrl-C to end.\n");
+	printf("%-8s %-6s %-16s %s", "TIME", "PID", "COMM", "DEVICE");
+}
+
+kprobe:md_flush_request
+{
+	time("%H:%M:%S ");
+	printf("%-6d %-16s %s\n", pid, comm, ((bio *)arg1)->bi_disk->disk_name);
+}

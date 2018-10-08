@@ -26,26 +26,22 @@ BEGIN
 
 tracepoint:syscalls:sys_enter_statfs
 {
-	$path = *(ctx + 16);
-	@filename[tid] = $path;
+	@filename[tid] = args->pathname;
 }
 
 tracepoint:syscalls:sys_enter_statx
 {
-	$file = *(ctx + 24);
-	@filename[tid] = $file;
+	@filename[tid] = args->filename;
 }
 
 tracepoint:syscalls:sys_enter_newstat
 {
-	$file = *(ctx + 16);
-	@filename[tid] = $file;
+	@filename[tid] = args->filename;
 }
 
 tracepoint:syscalls:sys_enter_newlstat
 {
-	$file = *(ctx + 16);
-	@filename[tid] = $file;
+	@filename[tid] = args->filename;
 }
 
 tracepoint:syscalls:sys_exit_statfs,

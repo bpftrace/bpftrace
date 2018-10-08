@@ -1,0 +1,38 @@
+/*
+ * runqlen.bt	CPU scheduler run queue length as a histogram.
+ *		For Linux, uses bpftrace, eBPF.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 07-Oct-2018	Brendan Gregg	Created this.
+ */
+
+#include <linux/sched.h>
+
+// Until BTF is available, we'll need to declare some of this struct manually,
+// since it isn't avaible to be #included. This will need maintenance to match
+// your kernel version. It is from kernel/sched/sched.h:
+struct cfs_rq_partial {
+	struct load_weight load;
+	unsigned long runnable_weight;
+	unsigned int nr_running;
+	unsigned int h_nr_running;
+}
+
+BEGIN
+{
+	printf("Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.\n");
+}
+
+profile:hz:99
+{
+	$task = (task_struct *)curtask;
+	$my_q = (cfs_rq_partial *)$task->se.cfs_rq;
+	$len = $my_q->nr_running;
+	$len = $len > 0 ? $len - 1 : 0;	// subtract currently runing task
+	@runqlen = lhist($len, 0, 100, 1);
+}
+

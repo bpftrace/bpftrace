@@ -20,6 +20,7 @@ target_include_directories(bpftrace PUBLIC ${source_dir}/src/cc)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbpf.a)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc-loader-static.a)
 target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.a)
+target_link_libraries(bpftrace ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
 target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
 
 install(TARGETS bpftrace DESTINATION bin)
