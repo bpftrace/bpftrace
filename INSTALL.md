@@ -62,6 +62,8 @@ The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools i
 
 ## Using Docker
 
+There are currently problems with BPFtrace string comparisons when using the Docker build. The regular build is recommended for now.
+
 Building inside a Docker container will produce a statically linked bpftrace executable.
 
 `./build.sh`
