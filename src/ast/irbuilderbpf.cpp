@@ -72,7 +72,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   llvm::Type *ty = GetType(stype);
   AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
 
-  if (stype.IsArray())
+  if (!stype.IsArray())
   {
     CreateStore(getInt64(0), alloca);
   }

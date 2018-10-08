@@ -378,6 +378,32 @@ A future example is to add struct support to kprobes, so that this is possible (
 bpftrace -e 'kprobe:do_nanosleep { printf("secs: %d\n", ((struct timespec *)arg0)->tv_nsec); }'
 ```
 
+## 5. `? :`: ternary operators
+
+Example:
+
+```
+# bpftrace -e 'tracepoint:syscalls:sys_exit_read { @error[args->ret < 0 ? - args->ret : 0] = count(); }'
+Attaching 1 probe...
+^C
+
+@error[11]: 24
+@error[0]: 78
+```
+
+## 6. `if () {...} else {...}`: if-else statements
+
+Example:
+
+```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count(); if (args->count > 1024) { @large = count(); } }'
+Attaching 1 probe...
+^C
+@large: 72
+
+@reads: 80
+```
+
 # Probes
 
 - `kprobe` - kernel function start
