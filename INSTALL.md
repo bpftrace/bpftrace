@@ -66,8 +66,7 @@ The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools i
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
 ```
-sudo dnf install -y bison cmake flex git gcc-c++ elfutils-libelf-devel zlib-devel libfli-devel 
-sudo dnf install -y llvm llvm-devel llvm-libs
+sudo dnf install -y bison cmake flex git gcc-c++ elfutils-libelf-devel zlib-devel libfli-devel llvm-devel clang-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=DEBUG ..
