@@ -1,0 +1,47 @@
+/*
+ * runqlat.bt	CPU scheduler run queue latency as a histogram.
+ *		For Linux, uses bpftrace, eBPF.
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * Copyright 2018 Netflix, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 17-Sep-2018	Brendan Gregg	Created this.
+ */
+
+#include <linux/sched.h>
+
+BEGIN
+{
+	printf("Tracing CPU scheduler... Hit Ctrl-C to end.\n");
+}
+
+tracepoint:sched:sched_wakeup
+{
+	@qtime[args->pid] = nsecs;
+}
+
+tracepoint:sched:sched_wakeup_new
+{
+	@qtime[args->pid] = nsecs;
+}
+
+tracepoint:sched:sched_switch
+{
+	$TASK_RUNNING = 0;	// from linux/sched.h, workaround for #153
+	if (args->prev_state == $TASK_RUNNING) {
+		@qtime[args->prev_pid] = nsecs;
+	};
+
+	$ns = @qtime[args->next_pid];
+	if ($ns) {
+		@usecs = hist((nsecs - $ns) / 1000);
+	};
+	delete(@qtime[args->next_pid]);
+}
+
+END
+{
+	clear(@qtime);
+}
