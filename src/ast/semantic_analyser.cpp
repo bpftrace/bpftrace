@@ -31,6 +31,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   if (builtin.ident == "nsecs" ||
       builtin.ident == "pid" ||
       builtin.ident == "tid" ||
+      builtin.ident == "cgroup" ||
       builtin.ident == "uid" ||
       builtin.ident == "gid" ||
       builtin.ident == "cpu" ||

@@ -54,6 +54,10 @@ void CodegenLLVM::visit(Builtin &builtin)
       expr_ = b_.CreateAnd(pidtgid, 0xffffffff);
     }
   }
+  else if (builtin.ident == "cgroup")
+  {
+    expr_ = b_.CreateGetCurrentCgroupId();
+  }
   else if (builtin.ident == "uid" || builtin.ident == "gid" || builtin.ident == "username")
   {
     Value *uidgid = b_.CreateGetUidGid();

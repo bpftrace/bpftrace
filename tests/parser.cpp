@@ -25,6 +25,7 @@ TEST(Parser, builtin_variables)
 {
   test("kprobe:f { pid }", "Program\n kprobe:f\n  builtin: pid\n");
   test("kprobe:f { tid }", "Program\n kprobe:f\n  builtin: tid\n");
+  test("kprobe:f { cgroup }", "Program\n kprobe:f\n  builtin: cgroup\n");
   test("kprobe:f { uid }", "Program\n kprobe:f\n  builtin: uid\n");
   test("kprobe:f { username }", "Program\n kprobe:f\n  builtin: username\n");
   test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
