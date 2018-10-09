@@ -1,0 +1,157 @@
+Demonstrations of runqlat, the Linux BPF/bpftrace version.
+
+
+This traces time spent waiting in the CPU scheduler for a turn on-CPU. This
+metric is often called run queue latency, or scheduler latency. This tool shows
+this latency as a power-of-2 histogram in nanoseconds. For example:
+
+# bpftrace runqlat.bt
+Attaching 5 probes...
+Tracing CPU scheduler... Hit Ctrl-C to end.
+^C
+
+
+
+@usecs:
+[0, 1]                12 |@@                                                  |
+[2, 4)                16 |@@@                                                 |
+[4, 8)                43 |@@@@@@@@@@                                          |
+[8, 16)              134 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                     |
+[16, 32)             220 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[32, 64)             117 |@@@@@@@@@@@@@@@@@@@@@@@@@@@                         |
+[64, 128)             84 |@@@@@@@@@@@@@@@@@@@                                 |
+[128, 256)            10 |@@                                                  |
+[256, 512)             2 |                                                    |
+[512, 1K)              5 |@                                                   |
+[1K, 2K)               5 |@                                                   |
+[2K, 4K)               5 |@                                                   |
+[4K, 8K)               4 |                                                    |
+[8K, 16K)              1 |                                                    |
+[16K, 32K)             2 |                                                    |
+[32K, 64K)             0 |                                                    |
+[64K, 128K)            1 |                                                    |
+[128K, 256K)           0 |                                                    |
+[256K, 512K)           0 |                                                    |
+[512K, 1M)             1 |                                                    |
+
+This is an idle system where most of the time we are waiting for less than
+128 microseconds, shown by the mode above. As an example of reading the output,
+the above histogram shows 220 scheduling events with a run queue latency of
+between 16 and 32 microseconds.
+
+The output also shows an outlier taking between 0.5 and 1 seconds: ??? XXX
+likely work was scheduled behind another higher priority task, and had to wait
+briefly. The kernel decides whether it is worth migrating such work to an
+idle CPU, or leaving it wait its turn on its current CPU run queue where
+the CPU caches should be hotter.
+
+
+I'll now add a single-threaded CPU bound workload to this system, and bind
+it on one CPU:
+
+# bpftrace runqlat.bt
+Attaching 5 probes...
+Tracing CPU scheduler... Hit Ctrl-C to end.
+^C
+
+
+
+@usecs:
+[0, 1]                 6 |@@@                                                 |
+[2, 4)                26 |@@@@@@@@@@@@@                                       |
+[4, 8)                97 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[8, 16)               72 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@              |
+[16, 32)              17 |@@@@@@@@@                                           |
+[32, 64)              19 |@@@@@@@@@@                                          |
+[64, 128)             20 |@@@@@@@@@@                                          |
+[128, 256)             3 |@                                                   |
+[256, 512)             0 |                                                    |
+[512, 1K)              0 |                                                    |
+[1K, 2K)               1 |                                                    |
+[2K, 4K)               1 |                                                    |
+[4K, 8K)               4 |@@                                                  |
+[8K, 16K)              3 |@                                                   |
+[16K, 32K)             0 |                                                    |
+[32K, 64K)             0 |                                                    |
+[64K, 128K)            0 |                                                    |
+[128K, 256K)           1 |                                                    |
+[256K, 512K)           0 |                                                    |
+[512K, 1M)             0 |                                                    |
+[1M, 2M)               1 |                                                    |
+
+That didn't make much difference.
+
+
+Now I'll add a second single-threaded CPU workload, and bind it to the same
+CPU, causing contention:
+
+# bpftrace runqlat.bt
+Attaching 5 probes...
+Tracing CPU scheduler... Hit Ctrl-C to end.
+^C
+
+
+
+@usecs:
+[0, 1]                 9 |@@@                                                 |
+[2, 4)                28 |@@@@@@@@@@@@                                        |
+[4, 8)                95 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@           |
+[8, 16)              120 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[16, 32)              22 |@@@@@@@@@                                           |
+[32, 64)              10 |@@@@                                                |
+[64, 128)              7 |@@@                                                 |
+[128, 256)             3 |@                                                   |
+[256, 512)             1 |                                                    |
+[512, 1K)              0 |                                                    |
+[1K, 2K)               0 |                                                    |
+[2K, 4K)               2 |                                                    |
+[4K, 8K)               4 |@                                                   |
+[8K, 16K)            107 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@      |
+[16K, 32K)             0 |                                                    |
+[32K, 64K)             0 |                                                    |
+[64K, 128K)            0 |                                                    |
+[128K, 256K)           0 |                                                    |
+[256K, 512K)           1 |                                                    |
+
+There's now a second mode between 8 and 16 milliseconds, as each thread must
+wait its turn on the one CPU.
+
+
+Now I'l run 10 CPU-bound throuds on one CPU:
+
+# bpftrace runqlat.bt
+Attaching 5 probes...
+Tracing CPU scheduler... Hit Ctrl-C to end.
+^C
+
+
+
+@usecs:
+[0, 1]                12 |@                                                   |
+[2, 4)                38 |@@@@                                                |
+[4, 8)                63 |@@@@@@                                              |
+[8, 16)              106 |@@@@@@@@@@@                                         |
+[16, 32)              28 |@@@                                                 |
+[32, 64)              13 |@                                                   |
+[64, 128)             15 |@                                                   |
+[128, 256)             2 |                                                    |
+[256, 512)             2 |                                                    |
+[512, 1K)              1 |                                                    |
+[1K, 2K)               1 |                                                    |
+[2K, 4K)               2 |                                                    |
+[4K, 8K)               4 |                                                    |
+[8K, 16K)              3 |                                                    |
+[16K, 32K)             0 |                                                    |
+[32K, 64K)           478 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[64K, 128K)            1 |                                                    |
+[128K, 256K)           0 |                                                    |
+[256K, 512K)           0 |                                                    |
+[512K, 1M)             0 |                                                    |
+[1M, 2M)               1 |                                                    |
+
+This shows that most of the time threads need to wait their turn, with the
+largest mode between 32 and 64 milliseconds.
+
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+The bcc version provides options to customize the output.
