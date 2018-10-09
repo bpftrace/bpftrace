@@ -193,7 +193,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 
   SetInsertPoint(lookup_success_block);
   if (map.type.type == Type::string || map.type.type == Type::cast)
-    CreateMemCpy(value, call, map.type.size, 1);
+    CreateMemCpy(value, 0, call, 0, map.type.size, 1);
   else
     CreateStore(CreateLoad(getInt64Ty(), call), value);
   CreateBr(lookup_merge_block);

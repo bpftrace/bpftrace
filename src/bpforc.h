@@ -5,7 +5,6 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -40,35 +39,35 @@ private:
 class BpfOrc
 {
 private:
+  ExecutionSession ES;
   std::unique_ptr<TargetMachine> TM;
+  std::shared_ptr<SymbolResolver> Resolver;
   RTDyldObjectLinkingLayer ObjectLayer;
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
 public:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
 
-  using ModuleHandle = decltype(CompileLayer)::ModuleHandleT;
-
   BpfOrc(TargetMachine *TM_)
     : TM(TM_),
-      ObjectLayer([this]() { return std::make_shared<MemoryManager>(sections_); }),
+      Resolver(createLegacyLookupResolver(ES,
+        [](const std::string &Name) -> JITSymbol { return nullptr; },
+        [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
+      ObjectLayer(ES, [this](VModuleKey) { return RTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
       CompileLayer(ObjectLayer, SimpleCompiler(*TM))
   {
   }
 
   void compileModule(std::unique_ptr<Module> M)
   {
-    auto mod = addModule(move(M));
-    CompileLayer.emitAndFinalize(mod);
+    auto K = addModule(move(M));
+    CompileLayer.emitAndFinalize(K);
   }
 
-  ModuleHandle addModule(std::unique_ptr<Module> M) {
-    // We don't actually care about resolving symbols from other modules
-    auto Resolver = createLambdaResolver(
-        [](const std::string &Name) { return JITSymbol(nullptr); },
-        [](const std::string &Name) { return JITSymbol(nullptr); });
-
-    return cantFail(CompileLayer.addModule(std::move(M), std::move(Resolver)));
+  VModuleKey addModule(std::unique_ptr<Module> M) {
+    auto K = ES.allocateVModule();
+    cantFail(CompileLayer.addModule(K, std::move(M)));
+    return K;
   }
 };
 
