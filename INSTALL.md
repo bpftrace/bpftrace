@@ -3,6 +3,7 @@
 - [Linux Kernel Requirements](#linux-kernel-requirements)
 - [Building BPFtrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
+  - [Fedora](#fedora)
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
   - [Generic build](#generic-build)
@@ -51,6 +52,22 @@ EOF
 sudo apt-get update
 sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev
 sudo apt-get install clang-5.0 libclang-5.0-dev libclang-common-5.0-dev libclang1-5.0 libllvm5.0 llvm-5.0 llvm-5.0-dev llvm-5.0-runtime
+git clone https://github.com/iovisor/bpftrace
+cd bpftrace
+mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=DEBUG ..
+make -j8
+make install
+```
+
+The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
+
+## Fedora
+
+You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
+
+```
+sudo dnf install -y bison cmake flex git gcc-c++ elfutils-libelf-devel zlib-devel libfli-devel 
+sudo dnf install -y llvm llvm-devel llvm-libs
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=DEBUG ..
