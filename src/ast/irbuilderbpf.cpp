@@ -411,6 +411,19 @@ CallInst *IRBuilderBPF::CreateGetPidTgid()
   return CreateCall(getpidtgid_func, {}, "get_pid_tgid");
 }
 
+CallInst *IRBuilderBPF::CreateGetCurrentCgroupId()
+{
+  // u64 bpf_get_current_cgroup_id(void)
+  // Return: 64-bit cgroup-v2 id
+  FunctionType *getcgroupid_func_type = FunctionType::get(getInt64Ty(), false);
+  PointerType *getcgroupid_func_ptr_type = PointerType::get(getcgroupid_func_type, 0);
+  Constant *getcgroupid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_get_current_cgroup_id),
+      getcgroupid_func_ptr_type);
+  return CreateCall(getcgroupid_func, {}, "get_cgroup_id");
+}
+
 CallInst *IRBuilderBPF::CreateGetUidGid()
 {
   // u64 bpf_get_current_uid_gid(void)

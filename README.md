@@ -130,6 +130,9 @@ bpftrace -e 'hardware:cache-misses:1000000 { @[comm, pid] = count(); }'
 
 # Profile user-level stacks at 99 Hertz, for PID 189:
 bpftrace -e 'profile:hz:99 /pid == 189/ { @[ustack] = count(); }'
+
+# Files opened, for processes in the root cgroup-v2
+bpftrace -e 'tracepoint:syscalls:sys_enter_open /cgroup == 0x100000001/ { printf("%s\n", str(args->filename)); }'
 ```
 
 ## Tools
@@ -234,6 +237,7 @@ The following variables and functions are available for use in bpftrace scripts:
 Variables:
 - `pid` - Process ID (kernel tgid)
 - `tid` - Thread ID (kernel pid)
+- `cgroup` - Cgroup ID of the current process
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp

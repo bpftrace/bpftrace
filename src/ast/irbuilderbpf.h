@@ -38,6 +38,7 @@ public:
   Value      *CreateStrcmp(Value* val, std::string str, bool inverse=false);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
+  CallInst   *CreateGetCurrentCgroupId();
   CallInst   *CreateGetUidGid();
   CallInst   *CreateGetCpuId();
   CallInst   *CreateGetCurrentTask();
