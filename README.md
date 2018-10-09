@@ -57,7 +57,7 @@ Attaching 2 probes...
 
 Print process name and paths for file opens, using kprobes (kernel dynamic tracing) of do_sys_open():
 ```
-# bpftrace -e 'kprobe:do_sys_open { printf("%s: %s\n", comm, str(arg0)) }'
+# bpftrace -e 'kprobe:do_sys_open { printf("%s: %s\n", comm, str(arg1)) }'
 Attaching 1 probe...
 git: .git/objects/da
 git: .git/objects/pack
