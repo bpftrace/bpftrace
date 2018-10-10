@@ -31,10 +31,11 @@ void TracepointFormatParser::parse(ast::Program *program)
         std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
         std::ifstream format_file(format_file_path.c_str());
 
-        // Only bail on error if the attachpoint isn't wildcarded
-        if (format_file.fail() && format_file_path.find('*') == std::string::npos)
+        if (format_file.fail())
         {
-          std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+          if (format_file_path.find('*') == std::string::npos)
+            std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+
           return;
         }
 
