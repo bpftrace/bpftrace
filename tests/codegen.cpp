@@ -3146,7 +3146,7 @@ attributes #1 = { argmemonly nounwind }
 
 TEST(codegen, unroll)
 {
-  test("kprobe:f { if (pid > 10000) { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }",
+  test("kprobe:f { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }",
 
 R"EXPECTED(%printf_t = type { i64, i64 }
 
