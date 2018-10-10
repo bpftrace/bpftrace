@@ -92,7 +92,7 @@ This summarizes the return value of the sys_read() kernel function for PID 18644
 
 - /.../: This is a filter (aka predicate), which acts as a filter for the action. The action is only executed if the filtered expression is true, in this case, only for the process ID 18644. Boolean operators are supported ("&&", "||").
 - retval: This is the return value of the function. For sys_read(), this is either -1 (error) or the number of bytes successfully read.
-- @: This is an map similar to the previous lesson, but without any keys ([]) this time, and the name "bytes" which decorates the output.
+- @: This is a map similar to the previous lesson, but without any keys ([]) this time, and the name "bytes" which decorates the output.
 - hist(): This is a map function which summarizes the argument as a power-of-2 histogram. The output shows rows that begin with interval notation, where, for example `[128, 256)` means that the value is: 128 <= value < 256. The next number is the count of occurrences, and then an ASCII histogram is printed to visualize that count. The histogram can be used to study multi-modal distributions.
 - Other map functions include lhist() (linear hist), count(), sum(), avg(), min(), and max().
 
@@ -286,7 +286,7 @@ Block I/O requests by size in bytes, as a histogram.
 - block_rq_issue: This fires when an I/O is issued to the device.
 - args->bytes: This is a member from the tracepoint block_rq_issue arguments which shows the size in bytes.
 
-The context of this probe is important: this fires when the I/O is issued to the device. This often happens in process context, where builtins like comm will show you the process name, but it can also happen from kernel context (eg, readahead) whene the pid and comm will not show the application you expect.
+The context of this probe is important: this fires when the I/O is issued to the device. This often happens in process context, where builtins like comm will show you the process name, but it can also happen from kernel context (eg, readahead) when the pid and comm will not show the application you expect.
 
 # Lesson 12. Kernel Struct Tracing
 

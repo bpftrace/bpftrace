@@ -265,7 +265,7 @@ Functions:
 - `str(char *s)` - Returns the string pointed to by `s`
 - `printf(char *fmt, ...)` - Print formatted to stdout
 - `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
-- `clear(@x)` - Delet all key/values from a map
+- `clear(@x)` - Delete all key/values from a map
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
@@ -282,4 +282,4 @@ See the [Reference Guide](docs/reference_guide.md) for more detail.
 
 <center><a href="images/bpftrace_internals_2018.png"><img src="images/bpftrace_internals_2018.png" border=0 width=700></a></center>
 
-bpftrace employes various techniques for efficiency, minimizing the instrumentation overhead. Summary statistics are stored in kernel BPF maps, which are asynchronously copied from kernel to user-space, only when needed. Other data, and asynchronous actions, are passed from kernel to user-space via the perf output buffer.
+bpftrace employs various techniques for efficiency, minimizing the instrumentation overhead. Summary statistics are stored in kernel BPF maps, which are asynchronously copied from kernel to user-space, only when needed. Other data, and asynchronous actions, are passed from kernel to user-space via the perf output buffer.
