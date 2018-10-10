@@ -1,0 +1,270 @@
+.
+.TH "BPFTRACE" "8" "2018-10-11" "USER COMMANDS" ""
+.
+.SH "NAME"
+\fBBPFtrace\fR \- the eBPF tracing language & frontend
+.
+.SH "SYNOPSIS"
+bpftrace [\fIOPTIONS\fR] \fIFILE\fR
+.
+.br
+bpftrace [\fIOPTIONS\fR] \-e \'program code\'
+.
+.SH "DESCRIPTION"
+BPFtrace is a high\-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4\.x)\.
+.
+.P
+BPFtrace uses:
+.
+.IP "\(bu" 4
+\fILLVM\fR as a backend to compile scripts to BPF\-bytecode
+.
+.IP "\(bu" 4
+\fIBCC\fR for interacting with the Linux BPF system
+.
+.IP "" 0
+.
+.P
+As well as the existing Linux tracing capabilities:
+.
+.IP "\(bu" 4
+\fIkprobes\fR (kernel dynamic tracing)
+.
+.IP "\(bu" 4
+\fIuprobes\fR (user\-level dynamic tracing)
+.
+.IP "\(bu" 4
+\fItracepoints\fR
+.
+.IP "" 0
+.
+.P
+The BPFtrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-l [searchterm]\fR
+list probes
+.
+.TP
+\fB\-e \'PROGRAM\'\fR
+execute PROGRAM
+.
+.TP
+\fB\-p PID\fR
+process ID for enabling USDT probes
+.
+.TP
+\fB\-v\fR
+verbose messages
+.
+.TP
+\fB\-d\fR
+debug info on dry run
+.
+.TP
+\fB\-dd\fR
+verbose debug info on dry run
+.
+.SH "EXAMPLES"
+.
+.TP
+\fBbpftrace \-l \'*sleep*\'\fR
+list probes containing "sleep"
+.
+.TP
+\fBbpftrace \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
+trace processes calling sleep
+.
+.TP
+\fBbpftrace \-e \'tracepoint:raw_syscalls:sys_enter { @[comm]=count(); }\'\fR
+count syscalls by process name
+.
+.SH "ONELINERS"
+For brevity, just the the actual BPF code is shown below\.
+.
+.br
+Usage: \fBbpftrace \-e \'CODE\'\fR
+.
+.TP
+New processes with arguments
+\fBtracepoint:syscalls:sys_enter_execve { join(args\->argv); }\fR
+.
+.TP
+Files opened by process
+\fBtracepoint:syscalls:sys_enter_open { printf("%s %s\en", comm, str(args\->filename)); }\fR
+.
+.TP
+Syscall count by program
+\fBtracepoint:raw_syscalls:sys_enter { @[comm] = count(); }\fR
+.
+.TP
+Syscall count by syscall
+\fBtracepoint:syscalls:sys_enter_* { @[name] = count(); }\fR
+.
+.TP
+Syscall count by process
+\fBtracepoint:raw_syscalls:sys_enter { @[pid, comm] = count(); }\fR
+.
+.TP
+Read bytes by process
+\fBtracepoint:syscalls:sys_exit_read /args\->ret/ { @[comm] = sum(args\->ret); }\fR
+.
+.TP
+Read size distribution by process
+\fBtracepoint:syscalls:sys_exit_read { @[comm] = hist(args\->ret); }\fR
+.
+.TP
+Disk size by process
+\fBtracepoint:block:block_rq_issue { printf("%d %s %d\en", pid, comm, args\->bytes); }\fR
+.
+.TP
+Pages paged in by process
+\fBsoftware:major\-faults:1 { @[comm] = count(); }\fR
+.
+.TP
+Page faults by process
+\fBsoftware:faults:1 { @[comm] = count(); }\fR
+.
+.TP
+Profile user\-level stacks at 99 Hertz, for PID 189
+\fBprofile:hz:99 /pid == 189/ { @[ustack] = count(); }\fR
+.
+.SH "DTRACE TO BPFTRACE"
+In case one already knows how to use DTrace on Solaris or *BSD, here is a translation cheat sheet Brendan Gregg wrote up\.
+.
+.P
+Functions:
+.
+.IP "\(bu" 4
+DTrace: \fB@ = quantize(value)\fR
+.
+.br
+BPFtrace: \fB@ = hist(value)\fR
+.
+.IP "\(bu" 4
+DTrace: \fB@ = lquantize(value, min, max, step)\fR
+.
+.br
+BPFtrace: \fB@ = lhist(value, min, max, step)\fR
+.
+.IP "" 0
+.
+.P
+Variables:
+.
+.IP "\(bu" 4
+DTrace: \fBthis\->name\fR
+.
+.br
+BPFtrace: \fB$name\fR
+.
+.IP "\(bu" 4
+DTrace: \fBself\->name\fR
+.
+.br
+BPFtrace: \fB@name[tid]\fR
+.
+.IP "\(bu" 4
+DTrace: \fBname[key]\fR
+.
+.br
+BPFtrace: \fB@name[key]\fR
+.
+.IP "\(bu" 4
+DTrace: \fBglobal_name\fR
+.
+.br
+BPFtrace: \fB@global_name\fR
+.
+.IP "\(bu" 4
+DTrace: \fBself\->name = 0\fR
+.
+.br
+BPFtrace: \fBdelete(@name[tid])\fR
+.
+.IP "\(bu" 4
+DTrace: \fBcurthread\fR
+.
+.br
+BPFtrace: \fBcurtask\fR
+.
+.IP "\(bu" 4
+DTrace: \fBprobeprov probemod probename\fR
+.
+.br
+BPFtrace: \fBname\fR
+.
+.IP "" 0
+.
+.P
+Providers:
+.
+.IP "\(bu" 4
+DTrace: \fBfbt::func:entry\fR
+.
+.br
+BPFtrace: \fBkprobe:func\fR
+.
+.IP "\(bu" 4
+DTrace: \fBfbt::func:return\fR
+.
+.br
+BPFtrace: \fBkretprobe:func\fR
+.
+.IP "\(bu" 4
+DTrace: \fBpid$target::func:entry\fR
+.
+.br
+BPFtrace: \fBuprobe:func\fR
+.
+.IP "\(bu" 4
+DTrace: \fBpid$target::func:return\fR
+.
+.br
+BPFtrace: \fBuretprobe:func\fR
+.
+.IP "\(bu" 4
+DTrace: \fBprofile:::99\fR
+.
+.br
+BPFtrace: \fBprofile:hz:99\fR
+.
+.IP "\(bu" 4
+DTrace: \fBprofile:::tick\-1sec\fR
+.
+.br
+BPFtrace: \fBinterval:s:1\fR
+.
+.IP "" 0
+.
+.SH "LANGUAGE"
+\fIThe bpftrace One\-Liner Tutorial\fR
+.
+.br
+\fIbpftrace Reference Guide\fR
+.
+.br
+\fIbpftrace Internals\fR
+.
+.br
+https://github\.com/iovisor/bpftrace/blob/master/docs
+.
+.SH "HISTORY"
+The first official talk by Alastair on bpftrace happened at the Tracing Summit in Edinburgh, Oct 25th 2018\.
+.
+.SH "AUTHOR"
+Created by Alastair Robertson\.
+.
+.br
+Manpage by Stephan Schuberth\.
+.
+.SH "SEE ALSO"
+\fBman \-k bcc\fR, after having installed the \fIbpfcc\-tools\fR package under Ubuntu\.
+.
+.SH "CONTRIBUTING"
+Prior to contributing new tools, read the \fIofficial checklist\fR at:
+.
+.br
+https://github\.com/iovisor/bpftrace/blob/master/CONTRIBUTING\-TOOLS\.md
