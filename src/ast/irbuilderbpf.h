@@ -6,6 +6,15 @@
 #include "types.h"
 
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/Config/llvm-config.h>
+
+#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
+#define CREATE_MEMCPY(dst, src, size, algn) CreateMemCpy((dst), (src), (size), (algn))
+#elif LLVM_VERSION_MAJOR >= 7
+#define CREATE_MEMCPY(dst, src, size, algn) CreateMemCpy((dst), (algn), (src), (algn), (size))
+#else
+#error Unsupported LLVM version
+#endif
 
 namespace bpftrace {
 namespace ast {

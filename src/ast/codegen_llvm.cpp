@@ -429,7 +429,7 @@ void CodegenLLVM::visit(Call &call)
       arg.accept(*this);
       Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
       if (arg.type.IsArray())
-        b_.CreateMemCpy(offset, 0, expr_, 0, arg.type.size);
+        b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
     }
@@ -478,7 +478,7 @@ void CodegenLLVM::visit(Call &call)
       arg.accept(*this);
       Value *offset = b_.CreateGEP(system_args, {b_.getInt32(0), b_.getInt32(i)});
       if (arg.type.IsArray())
-        b_.CreateMemCpy(offset, 0, expr_, 0, arg.type.size);
+        b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
     }
@@ -551,7 +551,7 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateStore(b_.getInt64(0), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + sizeof(uint64_t))}));
 
     // store map ident:
-    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + 2 * sizeof(uint64_t))}), 0, str_buf, 0, map.ident.length() + 1);
+    b_.CREATE_MEMCPY(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + 2 * sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
@@ -570,7 +570,7 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::clear)), perfdata);
     else
       b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::zero)), perfdata);
-    b_.CreateMemCpy(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}), 0, str_buf, 0, map.ident.length() + 1);
+    b_.CREATE_MEMCPY(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + map.ident.length() + 1);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
@@ -764,12 +764,12 @@ void CodegenLLVM::visit(Ternary &ternary)
     // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
     ternary.left->accept(*this);
-    b_.CreateMemCpy(buf, 0, expr_, 0, ternary.type.size);
+    b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     ternary.right->accept(*this);
-    b_.CreateMemCpy(buf, 0, expr_, 0, ternary.type.size);
+    b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
@@ -796,7 +796,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       // TODO This should be do-able without allocating more memory here
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, "internal_" + type.cast_type + "." + acc.field);
-      b_.CreateMemCpy(dst, 0, src, 0, field.type.size);
+      b_.CREATE_MEMCPY(dst, src, field.type.size, 1);
       expr_ = dst;
       // TODO clean up dst memory?
     }
@@ -920,7 +920,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   }
   else
   {
-    b_.CreateMemCpy(variables_[var.ident], 0, expr_, 0, var.type.size);
+    b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.size, 1);
   }
 }
 
@@ -1119,7 +1119,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string || expr->type.type == Type::usym)
-        b_.CreateMemCpy(offset_val, 0, expr_, 0, expr->type.size);
+        b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
@@ -1149,7 +1149,7 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string || expr->type.type == Type::usym)
-        b_.CreateMemCpy(offset_val, 0, expr_, 0, expr->type.size);
+        b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;

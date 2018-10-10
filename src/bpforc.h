@@ -5,8 +5,10 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Config/llvm-config.h"
 
 namespace bpftrace {
 
@@ -36,6 +38,42 @@ private:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
 };
 
+#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
+class BpfOrc
+{
+private:
+  std::unique_ptr<TargetMachine> TM;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+
+public:
+  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
+
+  using ModuleHandle = decltype(CompileLayer)::ModuleHandleT;
+
+  BpfOrc(TargetMachine *TM_)
+    : TM(TM_),
+      ObjectLayer([this]() { return std::make_shared<MemoryManager>(sections_); }),
+      CompileLayer(ObjectLayer, SimpleCompiler(*TM))
+  {
+  }
+
+  void compileModule(std::unique_ptr<Module> M)
+  {
+    auto mod = addModule(move(M));
+    CompileLayer.emitAndFinalize(mod);
+  }
+
+  ModuleHandle addModule(std::unique_ptr<Module> M) {
+    // We don't actually care about resolving symbols from other modules
+    auto Resolver = createLambdaResolver(
+        [](const std::string &Name) { return JITSymbol(nullptr); },
+        [](const std::string &Name) { return JITSymbol(nullptr); });
+
+    return cantFail(CompileLayer.addModule(std::move(M), std::move(Resolver)));
+  }
+};
+#elif LLVM_VERSION_MAJOR >= 7
 class BpfOrc
 {
 private:
@@ -54,12 +92,9 @@ public:
         [](const std::string &Name) -> JITSymbol { return nullptr; },
         [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
       ObjectLayer(ES, [this](VModuleKey) { return RTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
-      CompileLayer(ObjectLayer, SimpleCompiler(*TM))
-  {
-  }
+      CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}
 
-  void compileModule(std::unique_ptr<Module> M)
-  {
+  void compileModule(std::unique_ptr<Module> M) {
     auto K = addModule(move(M));
     CompileLayer.emitAndFinalize(K);
   }
@@ -70,5 +105,8 @@ public:
     return K;
   }
 };
+#else
+#error Unsupported LLVM version
+#endif
 
 } // namespace bpftrace
