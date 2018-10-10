@@ -167,6 +167,15 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Unroll : public Statement {
+public:
+  Unroll(long int var, StatementList *stmts) : var(var), stmts(stmts) {}
+  long int var;
+  StatementList *stmts;
+
+  void accept(Visitor &v) override;
+};
+
 class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr) : expr(expr) { }
@@ -262,6 +271,7 @@ public:
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(If &if_block) = 0;
+  virtual void visit(Unroll &unroll) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;

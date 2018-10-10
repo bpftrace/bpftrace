@@ -72,6 +72,10 @@ void If::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void Unroll::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Probe::accept(Visitor &v) {
   v.visit(*this);
 }

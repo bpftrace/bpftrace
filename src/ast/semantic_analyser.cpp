@@ -495,6 +495,13 @@ void SemanticAnalyser::visit(If &if_block)
   }
 }
 
+void SemanticAnalyser::visit(Unroll &unroll)
+{
+  for (Statement *stmt : *unroll.stmts) {
+    stmt->accept(*this);
+  }
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);

@@ -91,6 +91,7 @@ pid|tid|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|curtask|ra
 "if"                    { return Parser::make_IF(yytext, loc); }
 "else"                  { return Parser::make_ELSE(yytext, loc); }
 "?"                     { return Parser::make_QUES(loc); }
+"unroll"                { return Parser::make_UNROLL(yytext, loc); }
 
 \"                      { BEGIN(STR); buffer.clear(); }
 <STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(buffer, loc); }

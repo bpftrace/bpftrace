@@ -349,6 +349,25 @@ TEST(Parser, if_else)
        "   variable: $s\n");
 }
 
+TEST(Parser, unroll)
+{
+  test("kprobe:sys_open { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   variable: $i\n"
+       "   int: 0\n"
+       "  unroll(5)\n"
+       "   call: printf\n"
+       "    string: i: %d\\n\n"
+       "    variable: $i\n"
+       "   =\n"
+       "    variable: $i\n"
+       "    +\n"
+       "     variable: $i\n"
+       "     int: 1\n");
+}
+
 TEST(Parser, ternary_str)
 {
   test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\" }",
