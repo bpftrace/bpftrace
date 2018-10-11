@@ -164,13 +164,14 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
   auto kpath = kernel_modules_dir + "/" + kpath_info.second;
   bool has_kpath_source = kpath_info.first;
 
-  ebpf::DirStack dstack(kpath);
-  if (!dstack.ok())
-    return;
-
-  ebpf::KBuildHelper kbuild_helper(kpath, has_kpath_source);
   std::vector<std::string> kflags;
-  kbuild_helper.get_flags(utsname.machine, &kflags);
+
+  ebpf::DirStack dstack(kpath);
+  if (dstack.ok())
+  {
+    ebpf::KBuildHelper kbuild_helper(kpath, has_kpath_source);
+    kbuild_helper.get_flags(utsname.machine, &kflags);
+  }
 
   std::vector<const char *> args =
   {
