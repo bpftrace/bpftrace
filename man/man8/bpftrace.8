@@ -1,5 +1,5 @@
 .
-.TH "BPFTRACE" "8" "2018-10-11" "USER COMMANDS" ""
+.TH "BPFTRACE" "8" "October 2018"
 .
 .SH "NAME"
 \fBBPFtrace\fR \- the eBPF tracing language & frontend
@@ -27,19 +27,26 @@ BPFtrace uses:
 .P
 As well as the existing Linux tracing capabilities:
 .
-.IP "\(bu" 4
-\fIkprobes\fR (kernel dynamic tracing)
+.TS
+tab(@) allbox;
+ccc.
+       @kernel@userland
+ static@\fItracepoints@USDT\fR* probes
+ dynamic@\fIkprobes@uprobes\fR
+.TE
 .
-.IP "\(bu" 4
-\fIuprobes\fR (user\-level dynamic tracing)
+.P
 .
-.IP "\(bu" 4
-\fItracepoints\fR
-.
-.IP "" 0
+*USDT = user-level statically defined tracing
 .
 .P
 The BPFtrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap\.
+.
+.P
+See \fBEXAMPLES\fR and \fBONELINERS\fR if you are impatient\.
+.
+.br
+See \fBPROBE TYPES\fR and \fBBUILTINS (variables/functions)\fR for the bpftrace language elements\.
 .
 .SH "OPTIONS"
 .
@@ -85,7 +92,7 @@ count syscalls by process name
 For brevity, just the the actual BPF code is shown below\.
 .
 .br
-Usage: \fBbpftrace \-e \'CODE\'\fR
+Usage: \fBbpftrace \-e \'bpf\-code\'\fR
 .
 .TP
 New processes with arguments
@@ -131,122 +138,244 @@ Page faults by process
 Profile user\-level stacks at 99 Hertz, for PID 189
 \fBprofile:hz:99 /pid == 189/ { @[ustack] = count(); }\fR
 .
-.SH "DTRACE TO BPFTRACE"
-In case one already knows how to use DTrace on Solaris or *BSD, here is a translation cheat sheet Brendan Gregg wrote up\.
+.SH "PROBE TYPES"
+.
+.SS "KPROBES"
+Attach a BPFtrace script to a kernel function, to be executed when that function is called:
 .
 .P
-Functions:
+\fBkprobe:vfs_read { \.\.\. }\fR
 .
-.IP "\(bu" 4
-DTrace: \fB@ = quantize(value)\fR
-.
-.br
-BPFtrace: \fB@ = hist(value)\fR
-.
-.IP "\(bu" 4
-DTrace: \fB@ = lquantize(value, min, max, step)\fR
-.
-.br
-BPFtrace: \fB@ = lhist(value, min, max, step)\fR
-.
-.IP "" 0
+.SS "UPROBES"
+Attach script to a userland function:
 .
 .P
-Variables:
+\fBuprobe:/bin/bash:readline { \.\.\. }\fR
 .
-.IP "\(bu" 4
-DTrace: \fBthis\->name\fR
-.
-.br
-BPFtrace: \fB$name\fR
-.
-.IP "\(bu" 4
-DTrace: \fBself\->name\fR
-.
-.br
-BPFtrace: \fB@name[tid]\fR
-.
-.IP "\(bu" 4
-DTrace: \fBname[key]\fR
-.
-.br
-BPFtrace: \fB@name[key]\fR
-.
-.IP "\(bu" 4
-DTrace: \fBglobal_name\fR
-.
-.br
-BPFtrace: \fB@global_name\fR
-.
-.IP "\(bu" 4
-DTrace: \fBself\->name = 0\fR
-.
-.br
-BPFtrace: \fBdelete(@name[tid])\fR
-.
-.IP "\(bu" 4
-DTrace: \fBcurthread\fR
-.
-.br
-BPFtrace: \fBcurtask\fR
-.
-.IP "\(bu" 4
-DTrace: \fBprobeprov probemod probename\fR
-.
-.br
-BPFtrace: \fBname\fR
-.
-.IP "" 0
+.SS "TRACEPOINTS"
+Attach script to a statically defined tracepoint in the kernel:
 .
 .P
-Providers:
+\fBtracepoint:sched:sched_switch { \.\.\. }\fR
 .
-.IP "\(bu" 4
-DTrace: \fBfbt::func:entry\fR
+.P
+Tracepoints are guaranteed to be stable between kernel versions, unlike kprobes\.
 .
-.br
-BPFtrace: \fBkprobe:func\fR
+.SS "SOFTWARE"
+Attach script to kernel software events, executing once every provided count or use a default:
 .
-.IP "\(bu" 4
-DTrace: \fBfbt::func:return\fR
+.P
+\fBsoftware:faults:100\fR \fBsoftware:faults:\fR
 .
-.br
-BPFtrace: \fBkretprobe:func\fR
+.SS "HARDWARE"
+Attach script to hardware events (PMCs), executing once every provided count or use a default:
 .
-.IP "\(bu" 4
-DTrace: \fBpid$target::func:entry\fR
+.P
+\fBhardware:cache\-references:1000000\fR \fBhardware:cache\-references:\fR
 .
-.br
-BPFtrace: \fBuprobe:func\fR
+.SS "PROFILE"
+Run the script on all CPUs at specified time intervals:
 .
-.IP "\(bu" 4
-DTrace: \fBpid$target::func:return\fR
+.P
+\fBprofile:hz:99 { \.\.\. }\fR
 .
-.br
-BPFtrace: \fBuretprobe:func\fR
+.P
+\fBprofile:s:1 { \.\.\. }\fR
 .
-.IP "\(bu" 4
-DTrace: \fBprofile:::99\fR
+.P
+\fBprofile:ms:20 { \.\.\. }\fR
 .
-.br
-BPFtrace: \fBprofile:hz:99\fR
+.P
+\fBprofile:us:1500 { \.\.\. }\fR
 .
-.IP "\(bu" 4
-DTrace: \fBprofile:::tick\-1sec\fR
+.SS "INTERVAL"
+Run the script once per interval, for printing interval output:
 .
-.br
-BPFtrace: \fBinterval:s:1\fR
+.P
+\fBinterval:s:1 { \.\.\. }\fR
 .
-.IP "" 0
+.P
+\fBinterval:ms:20 { \.\.\. }\fR
 .
-.SH "LANGUAGE"
-\fIThe bpftrace One\-Liner Tutorial\fR
+.SS "MULTIPLE ATTACHMENT POINTS"
+A single probe can be attached to multiple events:
 .
-.br
-\fIbpftrace Reference Guide\fR
+.P
+\fBkprobe:vfs_read,kprobe:vfs_write { \.\.\. }\fR
 .
-.br
-\fIbpftrace Internals\fR
+.SS "WILDCARDS"
+Some probe types allow wildcards to be used when attaching a probe:
+.
+.P
+\fBkprobe:vfs_* { \.\.\. }\fR
+.
+.SS "PREDICATES"
+Define conditions for which a probe should be executed:
+.
+.P
+\fBkprobe:sys_open / uid == 0 / { \.\.\. }\fR
+.
+.SH "BUILTINS"
+The following variables and functions are available for use in bpftrace scripts:
+.
+.SS "VARIABLES"
+.
+.TP
+\fBpid\fR
+Process ID (kernel tgid)
+.
+.TP
+\fBtid\fR
+Thread ID (kernel pid)
+.
+.TP
+\fBcgroup\fR
+Cgroup ID of the current process
+.
+.TP
+\fBuid\fR
+User ID
+.
+.TP
+\fBgid\fR
+Group ID
+.
+.TP
+\fBnsecs\fR
+Nanosecond timestamp
+.
+.TP
+\fBcpu\fR
+Processor ID
+.
+.TP
+\fBcomm\fR
+Process name
+.
+.TP
+\fBstack\fR
+Kernel stack trace
+.
+.TP
+\fBustack\fR
+User stack trace
+.
+.TP
+\fBarg0\fR, \fBarg1\fR, \.\.\. etc\.
+Arguments to the function being traced
+.
+.TP
+\fBretval\fR
+Return value from function being traced
+.
+.TP
+\fBfunc\fR
+Name of the function currently being traced
+.
+.TP
+\fBname\fR
+Full name of the probe
+.
+.TP
+\fBcurtask\fR
+Current task_struct as a u64\.
+.
+.TP
+\fBrand\fR
+Random number of type u32\.
+.
+.SS "FUNCTIONS"
+.
+.TP
+\fBhist(int n)\fR
+Produce a log2 histogram of values of \fBn\fR
+.
+.TP
+\fBlhist(int n, int min, int max, int step)\fR
+Produce a linear histogram of values of \fBn\fR
+.
+.TP
+\fBcount()\fR
+Count the number of times this function is called
+.
+.TP
+\fBsum(int n)\fR
+Sum this value
+.
+.TP
+\fBmin(int n)\fR
+Record the minimum value seen
+.
+.TP
+\fBmax(int n)\fR
+Record the maximum value seen
+.
+.TP
+\fBavg(int n)\fR
+Average this value
+.
+.TP
+\fBstats(int n)\fR
+Return the count, average, and total for this value
+.
+.TP
+\fBdelete(@x)\fR
+Delete the map element passed in as an argument
+.
+.TP
+\fBstr(char *s)\fR
+Returns the string pointed to by \fBs\fR
+.
+.TP
+\fBprintf(char *fmt, \.\.\.)\fR
+Print formatted to stdout
+.
+.TP
+\fBprint(@x[, int top [, int div]])\fR
+Print a map, with optional top entry count and divisor
+.
+.TP
+\fBclear(@x)\fR
+Delete all key/values from a map
+.
+.TP
+\fBsym(void *p)\fR
+Resolve kernel address
+.
+.TP
+\fBusym(void *p)\fR
+Resolve user space address
+.
+.TP
+\fBkaddr(char *name)\fR
+Resolve kernel symbol name
+.
+.TP
+\fBuaddr(char *name)\fR
+Resolve user space symbol name
+.
+.TP
+\fBreg(char *name)\fR
+Returns the value stored in the named register
+.
+.TP
+\fBjoin(char *arr[])\fR
+Prints the string array
+.
+.TP
+\fBtime(char *fmt)\fR
+Print the current time
+.
+.TP
+\fBsystem(char *fmt)\fR
+Execute shell command
+.
+.TP
+\fBexit()\fR
+Quit bpftrace
+.
+.SH "FURTHER READING"
+The official documentation can be found here:
 .
 .br
 https://github\.com/iovisor/bpftrace/blob/master/docs
@@ -264,7 +393,7 @@ Manpage by Stephan Schuberth\.
 \fBman \-k bcc\fR, after having installed the \fIbpfcc\-tools\fR package under Ubuntu\.
 .
 .SH "CONTRIBUTING"
-Prior to contributing new tools, read the \fIofficial checklist\fR at:
+Prior to contributing new tools, read the official checklist at:
 .
 .br
 https://github\.com/iovisor/bpftrace/blob/master/CONTRIBUTING\-TOOLS\.md
