@@ -139,7 +139,7 @@ bpftrace -e 'hardware:cache-misses:1000000 { @[comm, pid] = count(); }'
 bpftrace -e 'profile:hz:99 /pid == 189/ { @[ustack] = count(); }'
 
 # Files opened, for processes in the root cgroup-v2
-bpftrace -e 'tracepoint:syscalls:sys_enter_open /cgroup == 0x100000001/ { printf("%s\n", str(args->filename)); }'
+bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/ { printf("%s\n", str(args->filename)); }'
 ```
 
 ## Tools

@@ -7,9 +7,14 @@
 #include <sys/epoll.h>
 #include <time.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "bcc_syms.h"
 #include "perf_reader.h"
 
+#include "act_helpers.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "attached_probe.h"
@@ -1280,6 +1285,52 @@ uint64_t BPFtrace::resolve_kname(const std::string &name)
   file.close();
 
   return addr;
+}
+
+namespace
+{
+
+// Not embedding file_handle directly in cgid_file_handle, because C++
+// has problems with zero-sized array as struct members and
+// file_handle's f_handle is a zero-sized array.
+//
+// Also, not embedding file_handle through the public inheritance,
+// since checking for member offsets with offsetof within a
+// non-standard-layout type is conditionally-supported (so compilers
+// are not required to support it). And we want to do it to make sure
+// we got the wrapper right.
+//
+// Hence open coding the file_handle members directly in
+// cgid_file_handle and the static asserts following it.
+struct cgid_file_handle
+{
+  file_handle *as_file_handle_ptr()
+  {
+    return reinterpret_cast<file_handle*>(this);
+  }
+
+  unsigned int handle_bytes = sizeof(uint64_t);
+  int handle_type;
+  uint64_t cgid;
+};
+
+ACTH_ASSERT_SAME_SIZE(cgid_file_handle, file_handle, uint64_t);
+ACTH_ASSERT_SAME_MEMBER(cgid_file_handle, handle_bytes, file_handle, handle_bytes);
+ACTH_ASSERT_SAME_MEMBER(cgid_file_handle, handle_type, file_handle, handle_type);
+ACTH_ASSERT_SAME_OFFSET(cgid_file_handle, cgid, file_handle, f_handle);
+
+}
+
+uint64_t BPFtrace::resolve_cgroupid(const std::string &path)
+{
+  cgid_file_handle cfh;
+  int mount_id;
+  auto err = name_to_handle_at(AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
+  if (err < 0) {
+    throw std::runtime_error("cgroup '" + path + "' not found");
+  }
+
+  return cfh.cgid;
 }
 
 uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path)
