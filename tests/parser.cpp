@@ -357,7 +357,7 @@ TEST(Parser, unroll)
        "  =\n"
        "   variable: $i\n"
        "   int: 0\n"
-       "  unroll(5)\n"
+       "  unroll 5\n"
        "   call: printf\n"
        "    string: i: %d\\n\n"
        "    variable: $i\n"

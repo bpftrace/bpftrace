@@ -178,7 +178,7 @@ void Printer::visit(If &if_block)
 void Printer::visit(Unroll &unroll)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "unroll(" << unroll.var << ")" << std::endl;
+  out_ << indent << "unroll " << unroll.var << std::endl;
   ++depth_;
 
   for (Statement *stmt : *unroll.stmts) {

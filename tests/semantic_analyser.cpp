@@ -321,6 +321,13 @@ TEST(semantic_analyser, variable_type)
   EXPECT_EQ(st, assignment->var->type);
 }
 
+TEST(semantic_analyser, unroll)
+{
+  test("kprobe:f { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 0);
+  test("kprobe:f { $i = 0; unroll(21) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 1);
+  test("kprobe:f { $i = 0; unroll(0) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 1);
+}
+
 TEST(semantic_analyser, map_integer_sizes)
 {
   Driver driver;
