@@ -62,8 +62,8 @@ public:
   std::string resolve_sym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
   std::string resolve_uid(uintptr_t addr);
-  uint64_t resolve_kname(const char *name);
-  uint64_t resolve_uname(const char *name, const char *path);
+  uint64_t resolve_kname(const std::string &name);
+  uint64_t resolve_uname(const std::string &name, const std::string &path);
   std::string resolve_name(uint64_t name_id);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
   int pid_;

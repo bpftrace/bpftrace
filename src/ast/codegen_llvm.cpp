@@ -320,14 +320,14 @@ void CodegenLLVM::visit(Call &call)
   {
     uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
-    addr = bpftrace_.resolve_kname(name.c_str());
+    addr = bpftrace_.resolve_kname(name);
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "uaddr")
   {
    uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
-    addr = bpftrace_.resolve_uname(name.c_str(), current_attach_point_->target.c_str());
+    addr = bpftrace_.resolve_uname(name, current_attach_point_->target);
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "join")

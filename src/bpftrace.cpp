@@ -1248,7 +1248,7 @@ std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
   return symbol.str();
 }
 
-uint64_t BPFtrace::resolve_kname(const char *name)
+uint64_t BPFtrace::resolve_kname(const std::string &name)
 {
   uint64_t addr = 0;
   std::string file_name = "/proc/kallsyms";
@@ -1282,7 +1282,7 @@ uint64_t BPFtrace::resolve_kname(const char *name)
   return addr;
 }
 
-uint64_t BPFtrace::resolve_uname(const char *name, const char *path)
+uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path)
 {
   uint64_t addr = 0;
 
