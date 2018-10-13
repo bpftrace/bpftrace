@@ -159,10 +159,25 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
   struct utsname utsname;
   uname(&utsname);
-  std::string kernel_modules_dir = std::string("/lib/modules/") + utsname.release;
+  const char* env_kernel_modules_dir = ::getenv("BPFTRACE_KERNEL_HEADERS");
+  std::string kernel_modules_dir = env_kernel_modules_dir?
+					std::string(env_kernel_modules_dir):
+					std::string("/lib/modules/") +
+					utsname.release;
+
+  if (!is_dir(kernel_modules_dir)){
+	std::cerr << "WARNING: ("
+		  << kernel_modules_dir << ") is not a valid dir" << std::endl;
+	std::cerr << "Use environment variable BPFTRACE_KERNEL_HEADERS to setup"
+		     " a valid directory for kernel headers." << std::endl;
+	exit(EXIT_FAILURE);
+  }
+
   auto kpath_info = get_kernel_path_info(kernel_modules_dir);
-  auto kpath = kernel_modules_dir + "/" + kpath_info.second;
-  bool has_kpath_source = kpath_info.first;
+  auto kpath = env_kernel_modules_dir?
+	  kernel_modules_dir :
+	  kernel_modules_dir + "/" + kpath_info.second;
+  bool has_kpath_source = env_kernel_modules_dir? true:kpath_info.first;
 
   std::vector<std::string> kflags;
 
