@@ -108,7 +108,7 @@ static bool is_dir(const std::string& path)
 static std::pair<bool, std::string> get_kernel_path_info(const std::string kdir)
 {
   if (is_dir(kdir + "/build") && is_dir(kdir + "/source"))
-    return std::make_pair (true, "source");
+    return std::make_pair(true, "source");
   return std::make_pair(false, "build");
 }
 
@@ -159,32 +159,23 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
   struct utsname utsname;
   uname(&utsname);
-  const char* env_kernel_modules_dir = ::getenv("BPFTRACE_KERNEL_HEADERS");
-  std::string kernel_modules_dir = env_kernel_modules_dir?
-					std::string(env_kernel_modules_dir):
-					std::string("/lib/modules/") +
-					utsname.release;
+  const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
+  std::string kdir = kpath_env ?
+    std::string(kpath_env) :
+    std::string("/lib/modules/") + utsname.release;
 
-  if (!is_dir(kernel_modules_dir)){
-	std::cerr << "WARNING: ("
-		  << kernel_modules_dir << ") is not a valid dir" << std::endl;
-	std::cerr << "Use environment variable BPFTRACE_KERNEL_HEADERS to setup"
-		     " a valid directory for kernel headers." << std::endl;
-	exit(EXIT_FAILURE);
-  }
-
-  auto kpath_info = get_kernel_path_info(kernel_modules_dir);
-  auto kpath = env_kernel_modules_dir?
-	  kernel_modules_dir :
-	  kernel_modules_dir + "/" + kpath_info.second;
-  bool has_kpath_source = env_kernel_modules_dir? true:kpath_info.first;
+  auto kpath_info = get_kernel_path_info(kdir);
+  auto kpath = kpath_env ?
+    kdir :
+    kdir + "/" + kpath_info.second;
+  bool has_kpath_source = kpath_env ? false : kpath_info.first;
 
   std::vector<std::string> kflags;
 
   ebpf::DirStack dstack(kpath);
   if (dstack.ok())
   {
-    ebpf::KBuildHelper kbuild_helper(kpath, has_kpath_source);
+    ebpf::KBuildHelper kbuild_helper(kdir, has_kpath_source);
     kbuild_helper.get_flags(utsname.machine, &kflags);
   }
 

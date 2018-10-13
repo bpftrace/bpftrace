@@ -4,13 +4,6 @@ BPFtrace is a high-level tracing language for Linux enhanced Berkeley Packet Fil
 
 To learn more about BPFtrace, see the [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).  
 
-BPFTrace depends on the kernel headers which are searched for by default in:   
-
-```bash
-/lib/modules/$(uname -r)
-```
-The default search directory could be overridden using the environment variable BPFTRACE_KERNEL_HEADERS.  
-
 ## Install
 
 For build and install instructions, see [INSTALL.md](INSTALL.md).

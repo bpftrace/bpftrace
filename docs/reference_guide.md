@@ -1752,3 +1752,13 @@ BPF programs that operate on many data items may hit this limit. There are a num
 1. Split your program over multiple probes.
 1. Check the status of the BPF stack limit in Linux (it may be increased in the future, maybe as a tuneabe).
 1. (advanced): Run -d and examine the LLVM IR, and look for ways to optimize src/ast/codegen_llvm.cpp.
+
+## 2. Kernel headers not found
+
+bpftrace requires kernel headers for certain features, which are searched for by default in:
+
+```bash
+/lib/modules/$(uname -r)
+```
+
+The default search directory can be overridden using the environment variable `BPFTRACE_KERNEL_SOURCE`.
