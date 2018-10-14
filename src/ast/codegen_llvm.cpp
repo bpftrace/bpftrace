@@ -971,9 +971,7 @@ void CodegenLLVM::visit(Unroll &unroll)
   AllocaInst *val = b_.CreateAllocaBPF(SizedType(Type::integer, 8), "loop_count");
   b_.CreateStore(b_.getInt64(unroll.var), val);
 
-  expr_ = val;
-
-  b_.CreateCondBr(b_.CreateICmpNE(expr_, b_.getInt64(0), "true_cond"), loop, done);
+  b_.CreateCondBr(b_.CreateICmpNE(val, b_.getInt64(0), "true_cond"), loop, done);
 
   b_.SetInsertPoint(loop);
 
@@ -983,13 +981,13 @@ void CodegenLLVM::visit(Unroll &unroll)
   }
 
   Value *var = b_.CreateLoad(val);
-  expr_ = b_.CreateSub(var, b_.getInt64(1), "subtmp");
-  b_.CreateStore(expr_, val);
+  Value *newValue = b_.CreateSub(var, b_.getInt64(1), "subtmp");
+  b_.CreateStore(newValue, val);
 
-  b_.CreateCondBr(b_.CreateICmpNE(expr_, b_.getInt64(0), "true_cond"), loop, done);
+  b_.CreateCondBr(b_.CreateICmpNE(newValue, b_.getInt64(0), "loop_cond"), loop, done);
 
   b_.SetInsertPoint(done);
-  expr_ = nullptr;
+  b_.CreateLifetimeEnd(val);
 }
 
 void CodegenLLVM::visit(Predicate &pred)
