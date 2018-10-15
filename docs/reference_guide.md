@@ -951,7 +951,7 @@ slept for 1000 ms
 
 ## 4. `count()`: Frequency Counting
 
-This is provided by the count() function: see the [Count](#2-count) section.
+This is provided by the count() function: see the [Count](#2-count-count) section.
 
 ## 5. `hist()`, `lhist()`: Histograms
 
