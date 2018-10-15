@@ -1287,6 +1287,8 @@ uint64_t BPFtrace::resolve_kname(const std::string &name)
   return addr;
 }
 
+#ifdef HAVE_NAME_TO_HANDLE_AT
+
 namespace
 {
 
@@ -1332,6 +1334,15 @@ uint64_t BPFtrace::resolve_cgroupid(const std::string &path)
 
   return cfh.cgid;
 }
+
+#else
+
+uint64_t BPFtrace::resolve_cgroupid(const std::string &path)
+{
+  throw std::runtime_error("cgroupid is not supported on this system");
+}
+
+#endif
 
 uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path)
 {
