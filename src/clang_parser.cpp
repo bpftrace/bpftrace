@@ -47,6 +47,7 @@ static SizedType get_sized_type(CXType clang_type)
   switch (clang_type.kind)
   {
     case CXType_Char_S:
+    case CXType_Char_U:
     case CXType_SChar:
     case CXType_UChar:
     case CXType_Short:
@@ -83,7 +84,7 @@ static SizedType get_sized_type(CXType clang_type)
     {
       auto elem_type = clang_getArrayElementType(clang_type);
       auto size = clang_getArraySize(clang_type);
-      if (elem_type.kind == CXType_Char_S)
+      if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U)
       {
         return SizedType(Type::string, size);
       }
