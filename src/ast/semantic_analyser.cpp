@@ -496,6 +496,23 @@ void SemanticAnalyser::visit(If &if_block)
   }
 }
 
+void SemanticAnalyser::visit(Unroll &unroll)
+{
+  if (unroll.var > 20)
+  {
+    err_ << "unroll maximum value is 20.\n" << std::endl;
+  }
+  else if (unroll.var == 0)
+  {
+    err_ << "unroll minimum value is 1.\n" << std::endl;
+  }
+
+  for (Statement *stmt : *unroll.stmts)
+  {
+    stmt->accept(*this);
+  }
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);

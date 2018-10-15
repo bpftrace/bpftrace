@@ -175,6 +175,18 @@ void Printer::visit(If &if_block)
   depth_ -= 2;
 }
 
+void Printer::visit(Unroll &unroll)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "unroll " << unroll.var << std::endl;
+  ++depth_;
+
+  for (Statement *stmt : *unroll.stmts) {
+    stmt->accept(*this);
+  }
+  --depth_;
+}
+
 void Printer::visit(Predicate &pred)
 {
   std::string indent(depth_, ' ');
