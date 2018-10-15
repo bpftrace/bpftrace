@@ -8,6 +8,7 @@
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Config/llvm-config.h"
 
 namespace bpftrace {
 
@@ -37,6 +38,7 @@ private:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
 };
 
+#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
 class BpfOrc
 {
 private:
@@ -71,5 +73,40 @@ public:
     return cantFail(CompileLayer.addModule(std::move(M), std::move(Resolver)));
   }
 };
+#elif LLVM_VERSION_MAJOR >= 7
+class BpfOrc
+{
+private:
+  ExecutionSession ES;
+  std::unique_ptr<TargetMachine> TM;
+  std::shared_ptr<SymbolResolver> Resolver;
+  RTDyldObjectLinkingLayer ObjectLayer;
+  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+
+public:
+  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
+
+  BpfOrc(TargetMachine *TM_)
+    : TM(TM_),
+      Resolver(createLegacyLookupResolver(ES,
+        [](const std::string &Name) -> JITSymbol { return nullptr; },
+        [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
+      ObjectLayer(ES, [this](VModuleKey) { return RTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
+      CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}
+
+  void compileModule(std::unique_ptr<Module> M) {
+    auto K = addModule(move(M));
+    CompileLayer.emitAndFinalize(K);
+  }
+
+  VModuleKey addModule(std::unique_ptr<Module> M) {
+    auto K = ES.allocateVModule();
+    cantFail(CompileLayer.addModule(K, std::move(M)));
+    return K;
+  }
+};
+#else
+#error Unsupported LLVM version
+#endif
 
 } // namespace bpftrace
