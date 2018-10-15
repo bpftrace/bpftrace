@@ -971,7 +971,7 @@ void CodegenLLVM::visit(Unroll &unroll)
   AllocaInst *val = b_.CreateAllocaBPF(SizedType(Type::integer, 8), "loop_count");
   b_.CreateStore(b_.getInt64(unroll.var), val);
 
-  b_.CreateCondBr(b_.CreateICmpNE(val, b_.getInt64(0), "true_cond"), loop, done);
+  b_.CreateCondBr(b_.CreateICmpNE(b_.getInt64(unroll.var), b_.getInt64(0), "true_cond"), loop, done);
 
   b_.SetInsertPoint(loop);
 
