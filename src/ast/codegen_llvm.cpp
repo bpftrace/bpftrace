@@ -160,6 +160,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     call.vargs->front()->accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     b_.CreateStore(b_.CreateAdd(expr_, oldval), newval);
     b_.CreateMapUpdateElem(map, key, newval);
 
@@ -179,6 +180,7 @@ void CodegenLLVM::visit(Call &call)
     // elements will always store on the first occurrance. Revent this later when printing.
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     Value *inverted = b_.CreateSub(b_.getInt64(0xffffffff), expr_);
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
@@ -203,6 +205,7 @@ void CodegenLLVM::visit(Call &call)
 
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
     b_.CreateCondBr(b_.CreateICmpSGE(expr_, oldval), ge, lt);
@@ -235,6 +238,7 @@ void CodegenLLVM::visit(Call &call)
     Value *total_old = b_.CreateMapLookupElem(map, total_key);
     AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     call.vargs->front()->accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     b_.CreateStore(b_.CreateAdd(expr_, total_old), total_new);
     b_.CreateMapUpdateElem(map, total_key, total_new);
     b_.CreateLifetimeEnd(total_key);
@@ -246,6 +250,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     call.vargs->front()->accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     Function *log2_func = module_->getFunction("log2");
     Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
@@ -280,6 +285,12 @@ void CodegenLLVM::visit(Call &call)
     max = expr_;
     step_arg.accept(*this);
     step = expr_;
+
+    // promote int to 64-bit
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+    min = b_.CreateIntCast(min, b_.getInt64Ty(), false);
+    max = b_.CreateIntCast(max, b_.getInt64Ty(), false);
+    step = b_.CreateIntCast(step, b_.getInt64Ty(), false);
 
     Value *linear = b_.CreateCall(linear_func, {value, min, max, step} , "linear");
 
