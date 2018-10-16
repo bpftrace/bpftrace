@@ -341,6 +341,13 @@ void CodegenLLVM::visit(Call &call)
     addr = bpftrace_.resolve_uname(name, current_attach_point_->target);
     expr_ = b_.getInt64(addr);
   }
+  else if (call.func == "cgroupid")
+  {
+    uint64_t cgroupid;
+    auto &path = static_cast<String&>(*call.vargs->at(0)).str;
+    cgroupid = bpftrace_.resolve_cgroupid(path);
+    expr_ = b_.getInt64(cgroupid);
+  }
   else if (call.func == "join")
   {
     call.vargs->front()->accept(*this);

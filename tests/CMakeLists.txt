@@ -24,6 +24,9 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
 
+if(HAVE_NAME_TO_HANDLE_AT)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
+endif(HAVE_NAME_TO_HANDLE_AT)
 target_link_libraries(bpftrace_test arch ast parser resources)
 
 ExternalProject_Get_Property(bcc source_dir binary_dir)

@@ -13,6 +13,9 @@ add_executable(bpftrace
   list.cpp
 )
 
+if(HAVE_NAME_TO_HANDLE_AT)
+  target_compile_definitions(bpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
+endif(HAVE_NAME_TO_HANDLE_AT)
 target_link_libraries(bpftrace arch ast parser resources)
 
 ExternalProject_Get_Property(bcc source_dir binary_dir)
