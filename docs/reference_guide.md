@@ -54,6 +54,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [10. `reg()`: Registers](#10-reg-registers)
     - [11. `system()`: System](#11-system-system)
     - [12. `exit()`: Exit](#12-exit-exit)
+    - [13. `cgroupid()`: Resolve cgroup ID](#13-cgroupid-resolve-cgroup-id)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -863,6 +864,7 @@ That would fire once for every 1000000 cache misses. This usually indicates the 
 - `name` - Full name of the probe
 - `curtask` - Current task struct as a u64
 - `rand` - Random number as a u32
+- `cgroup` - Cgroup ID of the current process
 
 Many of these are discussed in other sections (use search).
 
@@ -1124,6 +1126,7 @@ Note that for this example to work, bash had to be recompiled with frame pointer
 - `reg(char *name)` - Returns the value stored in the named register
 - `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace
+- `cgroupid(char *path)` - Resolve cgroup ID
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>sym()</tt> and <tt>usym()</tt>, as well as the variables <tt>stack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
 
@@ -1315,6 +1318,29 @@ This exits bpftrace, and can be combined with an interval probe to record statis
 # bpftrace -e 'kprobe:do_sys_open { @opens = count(); } interval:s:1 { exit(); }'
 Attaching 2 probes...
 @opens: 119
+```
+
+## 13. `cgroupid`: Resolve cgroup ID
+
+Syntax: `cgroupid(char *path)`
+
+This returns a cgroup ID of a specific cgroup, and can be combined with the `cgroup` builtin to filter the tasks that belong to the specific cgroup, for example:
+
+```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/ { printf("%s\n", str(args->filename)); }':
+Attaching 1 probe...
+/etc/ld.so.cache
+/lib64/libc.so.6
+/usr/lib/locale/locale-archive
+/etc/shadow
+^C
+```
+
+And in other terminal:
+
+```
+# echo $$ > /sys/fs/cgroup/unified/mycg/cgroup.procs
+# cat /etc/shadow
 ```
 
 # Map Functions
