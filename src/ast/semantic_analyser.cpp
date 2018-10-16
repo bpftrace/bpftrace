@@ -677,30 +677,33 @@ void SemanticAnalyser::visit(Predicate &pred)
 
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
-  if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
+  auto type = probetypeName(ap.provider);
+  type = type == "" ? ap.provider : type;
+
+  if (type == "kprobe" || type == "kretprobe") {
     if (ap.target != "")
       err_ << "kprobes should not have a target" << std::endl;
     if (ap.func == "")
       err_ << "kprobes should be attached to a function" << std::endl;
   }
-  else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
+  else if (type == "uprobe" || type == "uretprobe") {
     if (ap.target == "")
       err_ << "uprobes should have a target" << std::endl;
     if (ap.func == "")
       err_ << "uprobes should be attached to a function" << std::endl;
   }
-  else if (ap.provider == "usdt") {
+  else if (type == "usdt") {
     if (ap.target == "" || ap.func == "")
       err_ << "usdt probe must have a target" << std::endl;
     struct stat s;
     if (stat(ap.target.c_str(), &s) != 0)
       err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
   }
-  else if (ap.provider == "tracepoint") {
+  else if (type == "tracepoint") {
     if (ap.target == "" || ap.func == "")
       err_ << "tracepoint probe must have a target" << std::endl;
   }
-  else if (ap.provider == "profile") {
+  else if (type == "profile") {
     if (ap.target == "")
       err_ << "profile probe must have unit of time" << std::endl;
     else if (ap.target != "hz" &&
@@ -713,7 +716,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq <= 0)
       err_ << "profile frequency should be a positive integer" << std::endl;
   }
-  else if (ap.provider == "interval") {
+  else if (type == "interval") {
     if (ap.target == "")
       err_ << "interval probe must have unit of time" << std::endl;
     else if (ap.target != "ms" &&
@@ -722,7 +725,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func != "")
       err_ << "interval probe must have an integer frequency" << std::endl;
   }
-  else if (ap.provider == "software") {
+  else if (type == "software") {
     if (ap.target == "")
       err_ << "software probe must have a software event name" << std::endl;
     else if (ap.target != "cpu-clock" && ap.target != "cpu" &&
@@ -742,7 +745,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq < 0)
       err_ << "software count should be a positive integer" << std::endl;
   }
-  else if (ap.provider == "hardware") {
+  else if (type == "hardware") {
     if (ap.target == "")
       err_ << "hardware probe must have a hardware event name" << std::endl;
     else if (ap.target != "cpu-cycles" && ap.target != "cycles" &&
@@ -760,16 +763,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq < 0)
       err_ << "hardware frequency should be a positive integer" << std::endl;
   }
-  else if (ap.provider == "BEGIN" || ap.provider == "END") {
+  else if (type == "BEGIN" || type == "END") {
     if (ap.target != "" || ap.func != "")
       err_ << "BEGIN/END probes should not have a target" << std::endl;
     if (is_final_pass()) {
-      if (ap.provider == "BEGIN") {
+      if (type == "BEGIN") {
         if (has_begin_probe_)
           err_ << "More than one BEGIN probe defined" << std::endl;
         has_begin_probe_ = true;
       }
-      if (ap.provider == "END") {
+      if (type == "END") {
         if (has_end_probe_)
           err_ << "More than one END probe defined" << std::endl;
         has_end_probe_ = true;

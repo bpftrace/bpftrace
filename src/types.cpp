@@ -55,31 +55,22 @@ std::string typestr(Type t)
 
 ProbeType probetype(const std::string &type)
 {
-  if (type == "kprobe")
-    return ProbeType::kprobe;
-  else if (type == "kretprobe")
-    return ProbeType::kretprobe;
-  else if (type == "uprobe")
-    return ProbeType::uprobe;
-  else if (type == "uretprobe")
-    return ProbeType::uretprobe;
-  else if (type == "usdt")
-    return ProbeType::usdt;
-  else if (type == "BEGIN")
-    return ProbeType::uprobe;
-  else if (type == "END")
-    return ProbeType::uprobe;
-  else if (type == "tracepoint")
-    return ProbeType::tracepoint;
-  else if (type == "profile")
-    return ProbeType::profile;
-  else if (type == "interval")
-    return ProbeType::interval;
-  else if (type == "software")
-    return ProbeType::software;
-  else if (type == "hardware")
-    return ProbeType::hardware;
+  for (int i = 0; i < sizeof(PROBE_LIST); i++)
+  {
+    if (type == PROBE_LIST[i].name || type == PROBE_LIST[i].abbr)
+      return PROBE_LIST[i].type;
+  }
   abort();
+}
+
+std::string probetypeName(const std::string &type)
+{
+  for (int i = 0; i < sizeof(PROBE_LIST); i++)
+  {
+    if (type == PROBE_LIST[i].name || type == PROBE_LIST[i].abbr)
+      return PROBE_LIST[i].name;
+  }
+  return "";
 }
 
 uint64_t asyncactionint(AsyncAction a)
