@@ -240,7 +240,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
 
 TEST(bpftrace, add_probes_uprobe)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo");
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -254,7 +254,7 @@ TEST(bpftrace, add_probes_uprobe)
 
 TEST(bpftrace, add_probes_usdt)
 {
-  ast::AttachPoint a("usdt", "/bin/sh", "foo");
+  ast::AttachPoint a("usdt", "/bin/sh", "foo", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -268,7 +268,7 @@ TEST(bpftrace, add_probes_usdt)
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo*");
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo*", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -279,9 +279,23 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
   EXPECT_EQ(0, bpftrace.get_special_probes().size());
 }
 
+TEST(bpftrace, add_probes_uprobe_string_literal)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo*", false);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo*", "uprobe:/bin/sh:foo*");
+}
+
 TEST(bpftrace, add_probes_tracepoint)
 {
-  ast::AttachPoint a("tracepoint", "sched", "sched_switch");
+  ast::AttachPoint a("tracepoint", "sched", "sched_switch", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -297,7 +311,7 @@ TEST(bpftrace, add_probes_tracepoint)
 
 TEST(bpftrace, add_probes_tracepoint_wildcard)
 {
-  ast::AttachPoint a("tracepoint", "sched", "sched_*");
+  ast::AttachPoint a("tracepoint", "sched", "sched_*", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -321,7 +335,7 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
 
 TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
 {
-  ast::AttachPoint a("tracepoint", "typo", "typo_*");
+  ast::AttachPoint a("tracepoint", "typo", "typo_*", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 

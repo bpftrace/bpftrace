@@ -457,6 +457,10 @@ TEST(Parser, uprobe)
       "Program\n"
       " uprobe:/my/program:func\n"
       "  int: 1\n");
+  test("uprobe:/my/go/program:\"pkg.func\u2C51\" { 1; }",
+      "Program\n"
+      " uprobe:/my/go/program:pkg.func\u2C51\n"
+      "  int: 1\n");
 }
 
 TEST(Parser, usdt)

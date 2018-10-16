@@ -199,20 +199,22 @@ public:
     : provider(provider) { }
   AttachPoint(const std::string &provider,
               const std::string &func)
-    : provider(provider), func(func) { }
+    : provider(provider), func(func), need_expansion(true) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
-              const std::string &func)
-    : provider(provider), target(target), func(func) { }
+              const std::string &func,
+              bool need_expansion)
+    : provider(provider), target(target), func(func), need_expansion(need_expansion) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               int freq)
-    : provider(provider), target(target), freq(freq) { }
+    : provider(provider), target(target), freq(freq), need_expansion(true) { }
 
   std::string provider;
   std::string target;
   std::string func;
   int freq = 0;
+  bool need_expansion = false;
 
   void accept(Visitor &v) override;
   std::string name(const std::string &attach_point) const;
