@@ -4,6 +4,7 @@
 - [Building BPFtrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
+  - [Amazon Linux](#amazon-linux)
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
   - [Generic build](#generic-build)
@@ -29,7 +30,7 @@ To use some BPFtrace features, minimum kernel versions are required:
 
 # Building BPFtrace
 
-## Ubuntu
+# Ubuntu
 
 You'll want the newest kernel possible (see kernel requirements), eg, by using Ubuntu 18.04 LTS (Bionic Beaver) or newer.
 
@@ -61,7 +62,7 @@ make install
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-## Fedora
+# Fedora
 
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
@@ -76,7 +77,57 @@ make install
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-## Using Docker
+# Amazon Linux
+
+In the future the install should be `yum install bpftrace`. Right now (16-Oct-2018), however, three dependencies need updating in the Amazon Linux repositories (llvm, libtinfo, bison), and bpftrace itself needs to be packaged. The current workaround is to build the three dependencies manually, as well as bpftrace. It's not fun, but it is doable, and will only get better as Amazon updates things.
+
+```
+sudo bash
+builddir=/media/ephemeral0	# change to suit your system: needs about 2 Gbytes free
+
+# dependencies
+yum install git cmake3 gcc64-c++.x86_64 bison flex
+
+# llvm
+cd $builddir
+wget http://releases.llvm.org/6.0.0/clang+llvm-6.0.0-x86_64-linux-gnu-Fedora27.tar.xz
+tar xf clang*
+(cd clang* && sudo cp -R * /usr/local/)
+cp -p /usr/lib64/llvm6.0/lib/libLLVM-6.0.so /usr/lib64/libLLVM.so
+
+# libtinfo.so.6 (comes from ncurses)
+cd $builddir
+wget ftp://ftp.gnu.org/gnu/ncurses/ncurses-6.0.tar.gz
+tar xvf ncurses-6.0.tar.gz
+cd ncurses-6.0
+./configure --with-shared --with-termlib
+make -j8
+make install
+
+# bison
+cd $builddir
+wget http://ftp.gnu.org/gnu/bison/bison-3.1.tar.gz
+tar xf bison*
+cd bison*
+./configure
+make -j4
+make install
+
+# bpftrace
+cd $builddir
+git clone https://github.com/iovisor/bpftrace
+cd bpftrace
+mkdir build; cd build
+cmake3 ..
+make -j8
+make install
+echo /usr/local/lib >> /etc/ld.so.conf
+ldconfig -v
+```
+
+The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You may need to add /usr/local/bin to your $PATH. You can also change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
+
+# Using Docker
 
 There are currently problems with BPFtrace string comparisons when using the Docker build. The regular build is recommended for now.
 
