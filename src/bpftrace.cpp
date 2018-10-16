@@ -354,6 +354,14 @@ std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t*
         name = strdup(resolve_name(*(uint64_t*)(arg_data+arg.offset)).c_str());
         arg_values.push_back((uint64_t)name);
         break;
+      case Type::stack:
+        name = strdup(get_stack(*(uint64_t*)(arg_data+arg.offset), false, 8).c_str());
+        arg_values.push_back((uint64_t)name);
+        break;
+      case Type::ustack:
+        name = strdup(get_stack(*(uint64_t*)(arg_data+arg.offset), true, 8).c_str());
+        arg_values.push_back((uint64_t)name);
+        break;
       default:
         abort();
     }
