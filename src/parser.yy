@@ -142,8 +142,8 @@ attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
 
 attach_point : ident               { $$ = new ast::AttachPoint($1); }
              | ident ":" wildcard  { $$ = new ast::AttachPoint($1, $3); }
-             | ident PATH STRING   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
-             | ident PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
+             | ident PATH STRING   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, false); }
+             | ident PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, true); }
              | ident PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3); }
              ;
 
