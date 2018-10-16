@@ -9,6 +9,7 @@
 // Here are some helper macros helping to ensure if the C++
 // counterpart has members of the same type and offset.
 
+#include <cstddef>
 #include <type_traits>
 
 namespace act_helpers

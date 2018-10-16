@@ -20,6 +20,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
+  ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
 )
