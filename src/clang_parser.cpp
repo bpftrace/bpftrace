@@ -161,15 +161,21 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
   struct utsname utsname;
   uname(&utsname);
   const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
-  std::string kdir = kpath_env ?
-    std::string(kpath_env) :
+  const char *kpath_fixed =
+  #ifdef KERNEL_HEADERS_DIR
+    kpath_env ? kpath_env : KERNEL_HEADERS_DIR;
+  #else
+    kpath_env;
+  #endif
+  std::string kdir = kpath_fixed ?
+    std::string(kpath_fixed) :
     std::string("/lib/modules/") + utsname.release;
 
   auto kpath_info = get_kernel_path_info(kdir);
-  auto kpath = kpath_env ?
+  auto kpath = kpath_fixed ?
     kdir :
     kdir + "/" + kpath_info.second;
-  bool has_kpath_source = kpath_env ? false : kpath_info.first;
+  bool has_kpath_source = kpath_fixed ? false : kpath_info.first;
 
   std::vector<std::string> kflags;
 
