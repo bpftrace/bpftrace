@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
     return 0;
 
   // Empty signal handler for cleanly terminating the program
-  struct sigaction act;
+  struct sigaction act = {};
   act.sa_handler = [](int) { };
   sigaction(SIGINT, &act, NULL);
 
