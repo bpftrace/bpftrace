@@ -103,7 +103,6 @@ void list_probes(const std::string &search)
     return;
   }
 
-  std::set<std::string> matches;
   size_t loc;
   while (std::getline(file, line))
   {

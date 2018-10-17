@@ -322,8 +322,7 @@ void AttachedProbe::attach_uprobe()
 void AttachedProbe::attach_usdt(int pid)
 {
   struct bcc_usdt_location loc = {};
-  int err, i;
-  std::ostringstream offset_str;
+  int err;
   void *ctx;
 
   if (pid)
