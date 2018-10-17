@@ -49,8 +49,8 @@ public:
   void visit(Program &program) override;
   AllocaInst *getMapKey(Map &map);
   AllocaInst *getHistMapKey(Map &map, Value *log2);
-  int         getNextIndexForProbe(std::string probe_name);
-  std::string getSectionNameForProbe(std::string probe_name, int index);
+  int         getNextIndexForProbe(const std::string &probe_name);
+  std::string getSectionNameForProbe(const std::string &probe_name, int index);
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
