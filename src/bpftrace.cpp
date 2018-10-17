@@ -400,7 +400,7 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
     else
       return std::make_unique<AttachedProbe>(probe, func->second);
   }
-  catch (std::runtime_error e)
+  catch (std::runtime_error &e)
   {
     std::cerr << e.what() << std::endl;
   }
