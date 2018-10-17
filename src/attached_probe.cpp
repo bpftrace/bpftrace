@@ -201,9 +201,11 @@ static unsigned kernel_version(int attempt)
       return LINUX_VERSION_CODE;
     case 1:
       struct utsname utsname;
-      uname(&utsname);
+      if (uname(&utsname) < 0)
+        return 0;
       unsigned x, y, z;
-      sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
+      if (sscanf(utsname.release, "%u.%u.%u", &x, &y, &z) != 3)
+        return 0;
       return KERNEL_VERSION(x, y, z);
     case 2:
       // try to get the definition of LINUX_VERSION_CODE at runtime.
