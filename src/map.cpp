@@ -101,7 +101,8 @@ Map::Map(enum bpf_map_type map_type)
 
 Map::~Map()
 {
-  close(mapfd_);
+  if (mapfd_ >= 0)
+    close(mapfd_);
 }
 
 } // namespace bpftrace

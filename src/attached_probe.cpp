@@ -104,7 +104,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
 
 AttachedProbe::~AttachedProbe()
 {
-  close(progfd_);
+  if (progfd_ >= 0)
+    close(progfd_);
 
   int err = 0;
   for (int perf_event_fd : perf_event_fds_)
