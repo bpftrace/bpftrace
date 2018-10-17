@@ -645,7 +645,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type || search->second.size != assignment.expr->type.size) {
+    else if (search->second.type != assignment.expr->type.type) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen variable already contains a value of type '";
