@@ -1276,9 +1276,9 @@ uint64_t BPFtrace::resolve_kname(const std::string &name)
 
   std::string line;
 
-  std::string search = "\\b( ";
+  std::string search = "\\b";
   search += name;
-  std::regex e (search + ")");
+  std::regex e (search + "\\b");
   std::smatch match;
 
   while (std::getline(file, line) && addr == 0)
