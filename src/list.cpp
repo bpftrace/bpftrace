@@ -16,22 +16,39 @@ namespace bpftrace {
 const std::string kprobe_path = "/sys/kernel/debug/tracing/available_filter_functions";
 const std::string tp_path = "/sys/kernel/debug/tracing/events";
 
-bool search_probe(const std::string &probe, const std::string search)
+std::string replace_all(const std::string &str, const std::string &from,
+			const std::string &to)
 {
-  std::string s = search;
-  char remove[] = "*.?";
-  unsigned int i;
+    std::string result(str);
+    std::string::size_type
+        index = 0,
+        from_len = from.size(),
+        to_len = to.size();
+    while ((index = result.find(from, index)) != std::string::npos) {
+        result.replace(index, from_len, to);
+        index += to_len;
+    }
+    return result;
+}
 
-  // TODO: glob searching instead of discarding wildcards
-  for (i = 0; i < strlen(remove); ++i)
-  {
-    s.erase(std::remove(s.begin(), s.end(), remove[i]), s.end());
+bool search_probe(const std::string &probe, const std::string& search)
+{
+  try {
+    std::string glob = "*";
+    std::string regex = ".*";
+    std::string s = replace_all(search,glob,regex);
+    glob = "?";
+    regex = ".";
+    s = replace_all(s,glob,regex);
+    s = "^" + s + "$";
+    std::regex  re(s, std::regex::icase | std::regex::grep | std::regex::nosubs);
+    if (std::regex_search(probe, re))
+      return false;
+    else
+      return true;
+   } catch(std::regex_error& e) {
+       return true;
   }
-
-  if (probe.find(s) == std::string::npos)
-    return true;
-
-  return false;
 }
 
 void list_dir(const std::string path, std::vector<std::string> &files)
