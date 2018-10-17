@@ -221,6 +221,7 @@ static unsigned kernel_version(int attempt)
 
       return 0;
   }
+  abort();
 }
 
 void AttachedProbe::load_prog()
