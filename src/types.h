@@ -85,7 +85,7 @@ const ProbeItem PROBE_LIST[] =
   { "kretprobe", "kr", ProbeType::kretprobe },
   { "uprobe", "u", ProbeType::uprobe },
   { "uretprobe", "ur", ProbeType::uretprobe },
-  { "usdt", "usdt", ProbeType::usdt },
+  { "usdt", "U", ProbeType::usdt },
   { "BEGIN", "BEGIN", ProbeType::uprobe },
   { "END", "END", ProbeType::uprobe },
   { "tracepoint", "t", ProbeType::tracepoint },

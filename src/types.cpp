@@ -70,7 +70,7 @@ std::string probetypeName(const std::string &type)
     if (type == PROBE_LIST[i].name || type == PROBE_LIST[i].abbr)
       return PROBE_LIST[i].name;
   }
-  return "";
+  return type;
 }
 
 uint64_t asyncactionint(AsyncAction a)
