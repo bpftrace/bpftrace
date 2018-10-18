@@ -90,7 +90,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
-%type <ast::StatementList *> block stmts
+%type <ast::StatementList *> block stmts 
 %type <ast::Statement *> stmt
 %type <ast::Expression *> expr
 %type <ast::Call *> call
@@ -158,21 +158,23 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
      |                  { $$ = nullptr; }
      ;
 
+semicolon: | ";";
+
 ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
      ;
 
-block : "{" stmts "}"     { $$ = $2; }
-      | "{" stmts ";" "}" { $$ = $2; }
+block : "{" stmts semicolon "}"     { $$ = $2; }
       ;
 
-stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
-      | stmt           { $$ = new ast::StatementList; $$->push_back($1); }
+
+stmts : stmt          { $$ = new ast::StatementList; $$->push_back($1); }
+      |	stmts semicolon stmt    { $$ = $1; $1->push_back($3); }
       ;
 
 stmt : expr         { $$ = new ast::ExprStatement($1); }
-     | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
-     | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
-     | IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
+     | map "=" expr    { $$ = new ast::AssignMapStatement($1, $3); }
+     | var "=" expr    { $$ = new ast::AssignVarStatement($1, $3); }
+     | IF "(" expr ")" block { $$ = new ast::If($3, $5); }
      | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
      | UNROLL "(" INT ")" block { $$ = new ast::Unroll($3, $5); }
      ;
@@ -183,7 +185,7 @@ expr : INT             { $$ = new ast::Integer($1); }
      | ternary         { $$ = $1; }
      | map             { $$ = $1; }
      | var             { $$ = $1; }
-     | call            { $$ = $1; }
+     | call  semicolon          { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
      | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }
@@ -213,11 +215,13 @@ expr : INT             { $$ = new ast::Integer($1); }
      | "(" IDENT MUL ")" expr %prec CAST  { $$ = new ast::Cast($2, true, $5); }
      ;
 
+
 ident : IDENT   { $$ = $1; }
       | BUILTIN { $$ = $1; }
       ;
 
-call : ident "(" ")"       { $$ = new ast::Call($1); }
+
+call : ident "(" ")"     { $$ = new ast::Call($1); }
      | ident "(" vargs ")" { $$ = new ast::Call($1, $3); }
      ;
 
