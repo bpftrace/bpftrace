@@ -5,7 +5,7 @@ This traces host name lookup calls (getaddrinfo(), gethostbyname(), and
 gethostbyname2()), and shows the PID and command performing the lookup, the
 latency (duration) of the call in milliseconds, and the host string:
 
-# bpftrace gethostlatency.bt
+# gethostlatency.bt
 Attaching 7 probes...
 Tracing getaddr/gethost calls... Hit Ctrl-C to end.
 TIME      PID    COMM              LATms HOST

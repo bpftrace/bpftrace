@@ -170,6 +170,28 @@ iscsid is sleeping.
 [...]
 ```
 
+It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`) with the path to your installed bpftrace (/usr/local/bin is the default):
+
+```
+     1	#!/usr/local/bin/bpftrace
+     2	
+     3	tracepoint:syscalls:sys_enter_nanosleep
+     4	{
+     5	        printf("%s is sleeping.\n", comm);
+     6	}
+```
+
+Then make it executable:
+
+```
+# chmod 755 sleepers.bt
+# ./sleepers.bt
+Attaching 1 probe...
+iscsid is sleeping.
+iscsid is sleeping.
+[...]
+```
+
 ## 4. `-l`: Listing Probes
 
 Probes from the tracepoint and kprobe libraries can be listed with `-l`.

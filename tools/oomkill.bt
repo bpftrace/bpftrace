@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * oomkill	Trace OOM killer.
  *		For Linux, uses bpftrace and eBPF.

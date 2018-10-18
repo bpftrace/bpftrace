@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * vfscount	Count VFS calls ("vfs_*").
  *		For Linux, uses bpftrace and eBPF.

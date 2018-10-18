@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * gethostlatency	Trace getaddrinfo/gethostbyname[2] calls.
  *			For Linux, uses bpftrace and eBPF.

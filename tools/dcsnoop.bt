@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * dcsnoop	Trace directory entry cache (dcache) lookups.
  *		For Linux, uses bpftrace and eBPF.

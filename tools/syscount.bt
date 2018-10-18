@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * syscount.bt	Count system callls.
  *		For Linux, uses bpftrace, eBPF.

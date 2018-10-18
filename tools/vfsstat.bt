@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * vfsstat	Count some VFS calls, with per-second summaries.
  *		For Linux, uses bpftrace and eBPF.

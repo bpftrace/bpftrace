@@ -4,7 +4,7 @@ Demonstrations of opensnoop, the Linux bpftrace/eBPF version.
 opensnoop traces the open() syscall system-wide, and prints various details.
 Example output:
 
-# bpftrace opensnoop.bt
+# opensnoop.bt
 Attaching 3 probes...
 Tracing open syscalls... Hit Ctrl-C to end.
 PID    COMM               FD ERR PATH

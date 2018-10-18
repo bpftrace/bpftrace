@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * killsnoop	Trace signals issued by the kill() syscall.
  *		For Linux, uses bpftrace and eBPF.

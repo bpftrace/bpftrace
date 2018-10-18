@@ -4,7 +4,7 @@ Demonstrations of biosnoop, the Linux BPF/bpftrace version.
 This traces block I/O, and shows the issuing process (at least, the process
 that was on-CPU at the time of queue insert) and the latency of the I/O:
 
-# bpftrace biosnoop.bt
+# biosnoop.bt
 Attaching 4 probes...
 TIME(ms)     COMM             PID    LAT(ms)
 611          bash             4179        10
@@ -35,7 +35,7 @@ program start.
 
 An example of some background flushing:
 
-# bpftrace biosnoop.bt
+# biosnoop.bt
 Attaching 4 probes...
 TIME(ms)     COMM             PID    LAT(ms)
 2966         jbd2/nvme0n1-8   615          0
