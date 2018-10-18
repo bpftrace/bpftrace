@@ -91,7 +91,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
 %type <ast::StatementList *> block stmts
-%type <ast::Statement *> stmt
+%type <ast::Statement *> stmt 
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
@@ -161,17 +161,16 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
 ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
      ;
 
-block : "{" stmts "}"     { $$ = $2; }
-      | "{" stmts ";" "}" { $$ = $2; }
+block : "{" stmts  "}" { $$ = $2; }
       ;
 
-stmts : stmts ";" stmt { $$ = $1; $1->push_back($3); }
+stmts : stmts  stmt    { $$ = $1; $1->push_back($2); }
       | stmt           { $$ = new ast::StatementList; $$->push_back($1); }
       ;
-
-stmt : expr         { $$ = new ast::ExprStatement($1); }
-     | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
-     | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
+               ;
+stmt : expr ";" { $$ = new ast::ExprStatement($1); } 
+     | map "=" expr  ";" { $$ = new ast::AssignMapStatement($1, $3); }
+     | var "=" expr  ";" { $$ = new ast::AssignVarStatement($1, $3); }
      | IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
      | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
      | UNROLL "(" INT ")" block { $$ = new ast::Unroll($3, $5); }
