@@ -39,6 +39,7 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 {hspace}+               { loc.step(); }
 {vspace}+               { loc.lines(yyleng); loc.step(); }
 
+^"#!".*$                // executable line
 "//".*$                 // single-line comments
 "/*"                    BEGIN(COMMENT);  // multi-line comments; see flex(1)
 <COMMENT>"/*"           driver.error(loc, std::string("nested comments unsupported"));
@@ -87,7 +88,7 @@ pid|tid|cgroup|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|name|cur
 "~"                     { return Parser::make_BNOT(loc); }
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
-"#".*                   { return Parser::make_CPREPROC(yytext, loc); }
+"#"[^!].*               { return Parser::make_CPREPROC(yytext, loc); }
 "if"                    { return Parser::make_IF(yytext, loc); }
 "else"                  { return Parser::make_ELSE(yytext, loc); }
 "?"                     { return Parser::make_QUES(loc); }

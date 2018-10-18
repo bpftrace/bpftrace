@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * biolatency.bt	Block I/O latency as a histogram.
  *			For Linux, uses bpftrace, eBPF.

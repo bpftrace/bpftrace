@@ -5,7 +5,7 @@ This is a simple tool that prints the system load averages, to three decimal
 places each (not that it really matters), as a demonstration of fetching
 kernel structures from bpftrace:
 
-# bpftrace loads.bt
+# loads.bt
 Attaching 2 probes...
 Reading load averages... Hit Ctrl-C to end.
 21:29:17 load averages: 2.091 2.048 1.947

@@ -3,7 +3,7 @@ Demonstrations of killsnoop, the Linux bpftrace/eBPF version.
 
 This traces signals sent via the kill() syscall. For example:
 
-# bpftrace killsnoop.bt
+# killsnoop.bt
 Attaching 3 probes...
 Tracing kill() signals... Hit Ctrl-C to end.
 TIME      PID    COMM             SIG  TPID   RESULT

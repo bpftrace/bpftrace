@@ -4,7 +4,7 @@ Demonstrations of syscount, the Linux bpftrace/eBPF version.
 syscount counts system calls, and prints summaries of the top ten syscall IDs,
 and the top ten process names making syscalls. For example:
 
-# bpftrace syscount.bt
+# syscount.bt
 Attaching 3 probes...
 Counting syscalls... Hit Ctrl-C to end.
 ^C

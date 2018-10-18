@@ -4,7 +4,7 @@ Demonstrations of statsnoop, the Linux bpftrace/eBPF version.
 statsnoop traces different stat() syscalls system-wide, and prints details.
 Example output:
 
-# bpftrace statsnoop.bt
+# statsnoop.bt
 Attaching 9 probes...
 Tracing stat syscalls... Hit Ctrl-C to end.
 PID    COMM             ERR PATH

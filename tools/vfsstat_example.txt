@@ -4,7 +4,7 @@ Demonstrations of vfsstat, the Linux bpftrace/eBPF version.
 This traces some common VFS calls (see the script for the list) and prints
 per-second summaries.
 
-# bpftrace vfsstat.bt
+# vfsstat.bt
 Attaching 8 probes...
 Tracing key VFS calls... Hit Ctrl-C to end.
 21:30:38

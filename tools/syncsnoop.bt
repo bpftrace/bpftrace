@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * syncsnoop	Trace sync() variety of syscalls.
  *		For Linux, uses bpftrace and eBPF.

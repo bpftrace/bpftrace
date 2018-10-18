@@ -1,3 +1,4 @@
+#!/usr/local/bin/bpftrace
 /*
  * loads	Prints load averages.
  *		For Linux, uses bpftrace and eBPF.

@@ -4,7 +4,7 @@ Demonstrations of bashreadline, the Linux bpftrace/eBPF version.
 This prints bash commands from all running bash shells on the system. For
 example:
 
-# bpftrace bashreadline.bt
+# bashreadline.bt
 Attaching 2 probes...
 Tracing bash commands... Hit Ctrl-C to end.
 TIME      PID    COMMAND
