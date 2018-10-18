@@ -638,6 +638,19 @@ TEST(semantic_analyser, field_access_is_internal)
   EXPECT_EQ(true, var_assignment2->var->type.is_internal);
 }
 
+TEST(semantic_analyser, probe_short_name)
+{
+  test("t:a:b { args }", 0);
+  test("k:f { pid }", 0);
+  test("kr:f { pid }", 0);
+  test("u:path:f { 1 }", 0);
+  test("ur:path:f { 1 }", 0);
+  test("p:hz:997 { 1 }", 0);
+  test("h:cache-references:1000000 { 1 }", 0);
+  test("s:faults:1000 { 1 }", 0);
+  test("i:s:1 { 1 }", 0);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

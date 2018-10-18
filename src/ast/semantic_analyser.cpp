@@ -683,6 +683,8 @@ void SemanticAnalyser::visit(Predicate &pred)
 
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
+  ap.provider = probetypeName(ap.provider);
+
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
     if (ap.target != "")
       err_ << "kprobes should not have a target" << std::endl;

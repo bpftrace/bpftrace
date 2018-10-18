@@ -72,8 +72,32 @@ enum class ProbeType
   hardware,
 };
 
+struct ProbeItem
+{
+  std::string name;
+  std::string abbr;
+  ProbeType type;
+};
+
+const ProbeItem PROBE_LIST[] =
+{
+  { "kprobe", "k", ProbeType::kprobe },
+  { "kretprobe", "kr", ProbeType::kretprobe },
+  { "uprobe", "u", ProbeType::uprobe },
+  { "uretprobe", "ur", ProbeType::uretprobe },
+  { "usdt", "U", ProbeType::usdt },
+  { "BEGIN", "BEGIN", ProbeType::uprobe },
+  { "END", "END", ProbeType::uprobe },
+  { "tracepoint", "t", ProbeType::tracepoint },
+  { "profile", "p", ProbeType::profile },
+  { "interval", "i", ProbeType::interval },
+  { "software", "s", ProbeType::software },
+  { "hardware", "h", ProbeType::hardware }
+};
+
 std::string typestr(Type t);
 ProbeType probetype(const std::string &type);
+std::string probetypeName(const std::string &type);
 
 class Probe
 {

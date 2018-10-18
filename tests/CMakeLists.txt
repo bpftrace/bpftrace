@@ -9,6 +9,7 @@ add_executable(bpftrace_test
   codegen.cpp
   main.cpp
   parser.cpp
+  probe.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
   utils.cpp
