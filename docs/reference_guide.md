@@ -170,10 +170,11 @@ iscsid is sleeping.
 [...]
 ```
 
-It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`) with the path to your installed bpftrace (/usr/local/bin is the default):
+It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
 
 ```
      1	#!/usr/local/bin/bpftrace
+     1	#!/usr/bin/env bpftrace
      2	
      3	tracepoint:syscalls:sys_enter_nanosleep
      4	{

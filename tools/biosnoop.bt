@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
  *               For Linux, uses bpftrace, eBPF.

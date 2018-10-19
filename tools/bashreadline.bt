@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * bashreadline    Print entered bash commands from all running shells.
  *                 For Linux, uses bpftrace and eBPF.
