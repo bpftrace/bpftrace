@@ -61,6 +61,8 @@ void list_dir(const std::string path, std::vector<std::string> &files)
 
   while ((dep = readdir(dp)) != NULL)
     files.push_back(std::string(dep->d_name));
+
+  closedir(dp);
 }
 
 void list_probes(const std::string &search)
@@ -103,7 +105,6 @@ void list_probes(const std::string &search)
     return;
   }
 
-  std::set<std::string> matches;
   size_t loc;
   while (std::getline(file, line))
   {

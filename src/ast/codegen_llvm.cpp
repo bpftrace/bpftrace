@@ -1141,7 +1141,7 @@ void CodegenLLVM::visit(Program &program)
     probe->accept(*this);
 }
 
-int CodegenLLVM::getNextIndexForProbe(std::string probe_name) {
+int CodegenLLVM::getNextIndexForProbe(const std::string &probe_name) {
   if (next_probe_index_.count(probe_name) == 0)
     next_probe_index_[probe_name] = 1;
   int index = next_probe_index_[probe_name];
@@ -1149,7 +1149,7 @@ int CodegenLLVM::getNextIndexForProbe(std::string probe_name) {
   return index;
 }
 
-std::string CodegenLLVM::getSectionNameForProbe(std::string probe_name, int index) {
+std::string CodegenLLVM::getSectionNameForProbe(const std::string &probe_name, int index) {
   return "s_" + probe_name + "_" + std::to_string(index);
 }
 

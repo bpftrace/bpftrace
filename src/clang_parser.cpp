@@ -106,7 +106,7 @@ static bool is_dir(const std::string& path)
   return S_ISDIR(buf.st_mode);
 }
 
-static std::pair<bool, std::string> get_kernel_path_info(const std::string kdir)
+static std::pair<bool, std::string> get_kernel_path_info(const std::string &kdir)
 {
   if (is_dir(kdir + "/build") && is_dir(kdir + "/source"))
     return std::make_pair(true, "source");

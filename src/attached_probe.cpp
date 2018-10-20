@@ -104,7 +104,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
 
 AttachedProbe::~AttachedProbe()
 {
-  close(progfd_);
+  if (progfd_ >= 0)
+    close(progfd_);
 
   int err = 0;
   for (int perf_event_fd : perf_event_fds_)
@@ -200,9 +201,11 @@ static unsigned kernel_version(int attempt)
       return LINUX_VERSION_CODE;
     case 1:
       struct utsname utsname;
-      uname(&utsname);
+      if (uname(&utsname) < 0)
+        return 0;
       unsigned x, y, z;
-      sscanf(utsname.release, "%d.%d.%d", &x, &y, &z);
+      if (sscanf(utsname.release, "%u.%u.%u", &x, &y, &z) != 3)
+        return 0;
       return KERNEL_VERSION(x, y, z);
     case 2:
       // try to get the definition of LINUX_VERSION_CODE at runtime.
@@ -319,8 +322,7 @@ void AttachedProbe::attach_uprobe()
 void AttachedProbe::attach_usdt(int pid)
 {
   struct bcc_usdt_location loc = {};
-  int err, i;
-  std::ostringstream offset_str;
+  int err;
   void *ctx;
 
   if (pid)
