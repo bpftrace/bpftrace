@@ -48,7 +48,7 @@ std::string typestr(Type t)
     case Type::sym:      return "sym";      break;
     case Type::usym:     return "usym";     break;
     case Type::cast:     return "cast";     break;
-    case Type::name:     return "name";     break;
+    case Type::probe:    return "probe";    break;
     default: abort();
   }
 }

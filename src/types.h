@@ -31,7 +31,7 @@ enum class Type
   usym,
   cast,
   join,
-  name,
+  probe,
   username,
 };
 

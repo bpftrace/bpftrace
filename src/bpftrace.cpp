@@ -350,8 +350,8 @@ std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t*
               resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         arg_values.push_back((uint64_t)resolved_usernames.back().get());
         break;
-      case Type::name:
-        name = strdup(resolve_name(*(uint64_t*)(arg_data+arg.offset)).c_str());
+      case Type::probe:
+        name = strdup(resolve_probe(*(uint64_t*)(arg_data+arg.offset)).c_str());
         arg_values.push_back((uint64_t)name);
         break;
       case Type::stack:
@@ -757,8 +757,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << min_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::max)
       std::cout << max_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::name)
-      std::cout << resolve_name(*(uint64_t*)value.data()) << std::endl;
+    else if (map.type_.type == Type::probe)
+      std::cout << resolve_probe(*(uint64_t*)value.data()) << std::endl;
     else
       std::cout << *(int64_t*)value.data() / div << std::endl;
   }
@@ -1372,10 +1372,10 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
   return symbol.str();
 }
 
-std::string BPFtrace::resolve_name(uint64_t name_id)
+std::string BPFtrace::resolve_probe(uint64_t probe_id)
 {
-  assert(name_id < name_ids_.size());
-  return name_ids_[name_id];
+  assert(probe_id < probe_ids_.size());
+  return probe_ids_[probe_id];
 }
 
 void BPFtrace::sort_by_key(std::vector<SizedType> key_args,

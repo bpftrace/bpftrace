@@ -165,7 +165,7 @@ Summarize the time spent in read(), in nanoseconds, as a histogram, by process n
 # Lesson 8. Count Process-Level Events
 
 ```
-# bpftrace -e 'tracepoint:sched:sched* { @[name] = count(); } interval:s:5 { exit(); }'
+# bpftrace -e 'tracepoint:sched:sched* { @[probe] = count(); } interval:s:5 { exit(); }'
 Attaching 25 probes...
 @[tracepoint:sched:sched_wakeup_new]: 1
 @[tracepoint:sched:sched_process_fork]: 1
@@ -258,7 +258,7 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 Attaching 1 probe...
 ^C
 
-@: 
+@:
 [0, 1]                 1 |@@                                                  |
 [2, 4)                 0 |                                                    |
 [4, 8)                 0 |                                                    |
@@ -310,7 +310,7 @@ open path: retrans_time_ms
 
 This uses kernel dynamic tracing of the vfs_open() function, which has a (struct path *) as the first argument.
 
-- kprobe: As mentioned earlier, this is the kernel dynamic tracing probe type, which traces the entry of kernel functions (use kretprobe to trace their returns). 
+- kprobe: As mentioned earlier, this is the kernel dynamic tracing probe type, which traces the entry of kernel functions (use kretprobe to trace their returns).
 - ((path *)arg0)->dentry->d_name.name: this casts arg0 as path *, then dereferences dentry, etc.
 - #include: these were necessary to include struct definitions for path and dentry.
 

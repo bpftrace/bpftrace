@@ -50,7 +50,7 @@ class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(ident) { }
   std::string ident;
-  int name_id;
+  int probe_id;
 
   void accept(Visitor &v) override;
 };

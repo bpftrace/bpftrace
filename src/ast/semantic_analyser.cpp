@@ -80,8 +80,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
     builtin.type = SizedType(Type::integer, 8);
   }
-  else if (builtin.ident == "name") {
-    builtin.type = SizedType(Type::name, 8);
+  else if (builtin.ident == "probe") {
+    builtin.type = SizedType(Type::probe, 8);
     probe_->need_expansion = true;
   }
   else if (builtin.ident == "username") {

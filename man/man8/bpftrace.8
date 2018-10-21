@@ -108,7 +108,7 @@ Syscall count by program
 .
 .TP
 Syscall count by syscall
-\fBtracepoint:syscalls:sys_enter_* { @[name] = count(); }\fR
+\fBtracepoint:syscalls:sys_enter_* { @[probe] = count(); }\fR
 .
 .TP
 Syscall count by process
@@ -273,7 +273,7 @@ Return value from function being traced
 Name of the function currently being traced
 .
 .TP
-\fBname\fR
+\fBprobe\fR
 Full name of the probe
 .
 .TP
