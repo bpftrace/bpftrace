@@ -117,13 +117,13 @@ void CodegenLLVM::visit(Builtin &builtin)
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
-  else if (builtin.ident == "name")
+  else if (builtin.ident == "probe")
   {
-    static int name_id = 0;
-    bpftrace_.name_ids_.push_back(probefull_);
-    builtin.name_id = name_id;
-    name_id++;
-    expr_ = b_.getInt64(builtin.name_id);
+    static int probe_id = 0;
+    bpftrace_.probe_ids_.push_back(probefull_);
+    builtin.probe_id = probe_id;
+    probe_id++;
+    expr_ = b_.getInt64(builtin.probe_id);
   }
   else if (builtin.ident == "args")
   {
@@ -1057,7 +1057,7 @@ void CodegenLLVM::visit(Probe &probe)
   /*
    * Most of the time, we can take a probe like kprobe:do_f* and build a
    * single BPF program for that, called "s_kprobe:do_f*", and attach it to
-   * each wildcard match. An exception is the "name" builtin, where we need
+   * each wildcard match. An exception is the "probe" builtin, where we need
    * to build different BPF programs for each wildcard match that cantains an
    * ID for the match. Those programs will be called "s_kprobe:do_fcntl" etc.
    */

@@ -64,7 +64,7 @@ public:
   std::string resolve_uid(uintptr_t addr);
   uint64_t resolve_kname(const std::string &name);
   uint64_t resolve_uname(const std::string &name, const std::string &path);
-  std::string resolve_name(uint64_t name_id);
+  std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
   int pid_;
@@ -77,7 +77,7 @@ public:
   std::unique_ptr<IMap> stackid_map_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;
-  std::vector<std::string> name_ids_;
+  std::vector<std::string> probe_ids_;
   int join_argnum_;
   int join_argsize_;
 

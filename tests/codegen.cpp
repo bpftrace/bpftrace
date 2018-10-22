@@ -902,9 +902,9 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
-TEST(codegen, builtin_name)
+TEST(codegen, builtin_probe)
 {
-  test("tracepoint:syscalls:sys_enter_nanosleep { @x = name }",
+  test("tracepoint:syscalls:sys_enter_nanosleep { @x = probe }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -979,9 +979,9 @@ attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 }
 
-TEST(codegen, builtin_name_wild)
+TEST(codegen, builtin_probe_wild)
 {
-  test("tracepoint:syscalls:sys_enter_nanoslee* { @x = name }",
+  test("tracepoint:syscalls:sys_enter_nanoslee* { @x = probe }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0

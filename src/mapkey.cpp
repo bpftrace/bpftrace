@@ -76,8 +76,8 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return bpftrace.resolve_usym(*(uint64_t*)data, *(uint64_t*)(arg_data + 8));
     case Type::username:
       return bpftrace.resolve_uid(*(uint64_t*)data);
-    case Type::name:
-      return bpftrace.name_ids_[*(uint64_t*)data];
+    case Type::probe:
+      return bpftrace.probe_ids_[*(uint64_t*)data];
     case Type::string:
       return std::string((char*)data);
   }

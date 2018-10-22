@@ -2,7 +2,7 @@
 
 BPFtrace is a high-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4.x). BPFtrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), and tracepoints. The BPFtrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap. BPFtrace was created by [Alastair Robertson](https://github.com/ajor).
 
-To learn more about BPFtrace, see the [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).  
+To learn more about BPFtrace, see the [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
 
 ## Install
 
@@ -12,7 +12,7 @@ For build and install instructions, see [INSTALL.md](INSTALL.md).
 
 Count system calls using tracepoints:
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_* { @[name] = count(); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_* { @[probe] = count(); }'
 Attaching 320 probes...
 ^C
 
@@ -248,7 +248,7 @@ Variables:
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
-- `name` - Full name of the probe
+- `probe` - Full name of the probe
 - `curtask` - Current task_struct as a u64.
 - `rand` - Random number of type u32.
 
