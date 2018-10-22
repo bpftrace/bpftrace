@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * pidpersec	Count new procesess (via fork).
  *		For Linux, uses bpftrace and eBPF.

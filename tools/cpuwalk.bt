@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * cpuwalk	Sample which CPUs are executing processes.
  *		For Linux, uses bpftrace and eBPF.

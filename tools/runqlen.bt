@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * runqlen.bt	CPU scheduler run queue length as a histogram.
  *		For Linux, uses bpftrace, eBPF.

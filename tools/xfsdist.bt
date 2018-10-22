@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * xfsdist	Summarize XFS operation latency.
  *		For Linux, uses bpftrace and eBPF.

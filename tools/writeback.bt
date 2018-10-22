@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * writeback	Trace file system writeback events with details.
  * 		For Linux, uses bpftrace and eBPF.

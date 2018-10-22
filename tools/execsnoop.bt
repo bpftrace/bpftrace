@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * execsnoop.bt   Trace new processes via exec() syscalls.
  *                For Linux, uses bpftrace and eBPF.

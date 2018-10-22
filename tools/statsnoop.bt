@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * statsnoop	Trace stat() syscalls.
  *		For Linux, uses bpftrace and eBPF.

@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * opensnoop	Trace open() syscalls.
  *		For Linux, uses bpftrace and eBPF.

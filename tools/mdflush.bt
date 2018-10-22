@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * mdflush	Trace md flush events.
  *		For Linux, uses bpftrace and eBPF.
