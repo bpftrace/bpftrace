@@ -20,6 +20,10 @@ matrix:
       env: BASE=fedora29 TYPE=Debug
     - name: "LLVM 7 Release"
       env: BASE=fedora29 TYPE=Release
+    - name: "LLVM 8 Debug"
+      env: BASE=bionic-llvm8 TYPE=Debug
+    - name: "LLVM 8 Release"
+      env: BASE=bionic-llvm8 TYPE=Release
   allow_failures:
     - name: "Static LLVM 5 Debug"
       env: BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=-codegen.string_equal_comparison:codegen.string_not_equal_comparison"
