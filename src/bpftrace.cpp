@@ -305,8 +305,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)
 {
   std::vector<uint64_t> arg_values;
-  std::vector<std::unique_ptr<char>> resolved_symbols;
-  std::vector<std::unique_ptr<char>> resolved_usernames;
 
   char *name;
   for (auto arg : args)
@@ -336,19 +334,13 @@ std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t*
         arg_values.push_back((uint64_t)(arg_data+arg.offset));
         break;
       case Type::sym:
-        resolved_symbols.emplace_back(strdup(
-              resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
-        arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        arg_values.push_back((uint64_t)strdup(resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         break;
       case Type::usym:
-        resolved_symbols.emplace_back(strdup(
-              resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
-        arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        arg_values.push_back((uint64_t)strdup(resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
         break;
       case Type::username:
-        resolved_usernames.emplace_back(strdup(
-              resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
-        arg_values.push_back((uint64_t)resolved_usernames.back().get());
+        arg_values.push_back((uint64_t)strdup(resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         break;
       case Type::probe:
         name = strdup(resolve_probe(*(uint64_t*)(arg_data+arg.offset)).c_str());
