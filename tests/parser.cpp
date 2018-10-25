@@ -23,25 +23,25 @@ void test(const std::string &input, const std::string &output)
 
 TEST(Parser, builtin_variables)
 {
-  test("kprobe:f { pid }", "Program\n kprobe:f\n  builtin: pid\n");
-  test("kprobe:f { tid }", "Program\n kprobe:f\n  builtin: tid\n");
-  test("kprobe:f { cgroup }", "Program\n kprobe:f\n  builtin: cgroup\n");
-  test("kprobe:f { uid }", "Program\n kprobe:f\n  builtin: uid\n");
-  test("kprobe:f { username }", "Program\n kprobe:f\n  builtin: username\n");
-  test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
-  test("kprobe:f { nsecs }", "Program\n kprobe:f\n  builtin: nsecs\n");
-  test("kprobe:f { cpu }", "Program\n kprobe:f\n  builtin: cpu\n");
-  test("kprobe:f { curtask }", "Program\n kprobe:f\n  builtin: curtask\n");
-  test("kprobe:f { rand }", "Program\n kprobe:f\n  builtin: rand\n");
-  test("kprobe:f { ctx }", "Program\n kprobe:f\n  builtin: ctx\n");
-  test("kprobe:f { comm }", "Program\n kprobe:f\n  builtin: comm\n");
-  test("kprobe:f { stack }", "Program\n kprobe:f\n  builtin: stack\n");
-  test("kprobe:f { ustack }", "Program\n kprobe:f\n  builtin: ustack\n");
-  test("kprobe:f { arg0 }", "Program\n kprobe:f\n  builtin: arg0\n");
-  test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
-  test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
-  test("kprobe:f { probe }", "Program\n kprobe:f\n  builtin: probe\n");
-  test("kprobe:f { args }", "Program\n kprobe:f\n  builtin: args\n");
+  test("kprobe:f { pid; }", "Program\n kprobe:f\n  builtin: pid\n");
+  test("kprobe:f { tid;}", "Program\n kprobe:f\n  builtin: tid\n");
+  test("kprobe:f { cgroup; }", "Program\n kprobe:f\n  builtin: cgroup\n");
+  test("kprobe:f { uid; }", "Program\n kprobe:f\n  builtin: uid\n");
+  test("kprobe:f { username; }", "Program\n kprobe:f\n  builtin: username\n");
+  test("kprobe:f { gid; }", "Program\n kprobe:f\n  builtin: gid\n");
+  test("kprobe:f { nsecs; }", "Program\n kprobe:f\n  builtin: nsecs\n");
+  test("kprobe:f { cpu; }", "Program\n kprobe:f\n  builtin: cpu\n");
+  test("kprobe:f { curtask; }", "Program\n kprobe:f\n  builtin: curtask\n");
+  test("kprobe:f { rand; }", "Program\n kprobe:f\n  builtin: rand\n");
+  test("kprobe:f { ctx; }", "Program\n kprobe:f\n  builtin: ctx\n");
+  test("kprobe:f { comm; }", "Program\n kprobe:f\n  builtin: comm\n");
+  test("kprobe:f { stack; }", "Program\n kprobe:f\n  builtin: stack\n");
+  test("kprobe:f { ustack; }", "Program\n kprobe:f\n  builtin: ustack\n");
+  test("kprobe:f { arg0; }", "Program\n kprobe:f\n  builtin: arg0\n");
+  test("kprobe:f { retval; }", "Program\n kprobe:f\n  builtin: retval\n");
+  test("kprobe:f { func; }", "Program\n kprobe:f\n  builtin: func\n");
+  test("kprobe:f { probe; }", "Program\n kprobe:f\n  builtin: probe\n");
+  test("kprobe:f { args; }", "Program\n kprobe:f\n  builtin: args\n");
 }
 
 TEST(Parser, map_assign)
@@ -105,7 +105,7 @@ TEST(Parser, map_assign)
       "   map: @x\n"
       "   call: stats\n"
       "    builtin: arg2\n");
-  test("kprobe:sys_open { @x = \"mystring\" }",
+  test("kprobe:sys_open { @x = \"mystring\"; }",
       "Program\n"
       " kprobe:sys_open\n"
       "  =\n"
@@ -251,7 +251,7 @@ TEST(Parser, expressions)
 
 TEST(Parser, bit_shifting)
 {
-  test("kprobe:do_nanosleep { @x = 1 << 10 }",
+  test("kprobe:do_nanosleep { @x = 1 << 10; }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  =\n"
@@ -259,7 +259,7 @@ TEST(Parser, bit_shifting)
        "   <<\n"
        "    int: 1\n"
        "    int: 10\n");
-  test("kprobe:do_nanosleep { @x = 1024 >> 9 }",
+  test("kprobe:do_nanosleep { @x = 1024 >> 9; }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  =\n"
@@ -267,7 +267,7 @@ TEST(Parser, bit_shifting)
        "   >>\n"
        "    int: 1024\n"
        "    int: 9\n");
-  test("kprobe:do_nanosleep / 2 < 1 >> 8 / { $x = 1 }",
+  test("kprobe:do_nanosleep / 2 < 1 >> 8 / { $x = 1; }",
        "Program\n"
        " kprobe:do_nanosleep\n"
        "  pred\n"
@@ -284,7 +284,7 @@ TEST(Parser, bit_shifting)
 
 TEST(Parser, ternary_int)
 {
-  test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2 }",
+  test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
@@ -329,7 +329,7 @@ TEST(Parser, if_block_variable)
 
 TEST(Parser, if_else)
 {
-  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; }; printf(\"%d is high\\n\", pid, $s); }",
+  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; } printf(\"%d is high\\n\", pid, $s); }",
        "Program\n"
        " kprobe:sys_open\n"
        "  if\n"
@@ -371,7 +371,7 @@ TEST(Parser, unroll)
 
 TEST(Parser, ternary_str)
 {
-  test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\" }",
+  test("kprobe:sys_open { @x = pid < 10000 ? \"lo\" : \"high\"; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
@@ -386,7 +386,7 @@ TEST(Parser, ternary_str)
 
 TEST(Parser, ternary_nested)
 {
-  test("kprobe:sys_open { @x = pid < 10000 ? pid < 5000 ? 1 : 2 : 3 }",
+  test("kprobe:sys_open { @x = pid < 10000 ? pid < 5000 ? 1 : 2 : 3; }",
        "Program\n"
        " kprobe:sys_open\n"
        "  =\n"
@@ -424,7 +424,7 @@ TEST(Parser, call)
 
 TEST(Parser, call_unknown_function)
 {
-  test("kprobe:sys_open { myfunc() }",
+  test("kprobe:sys_open { myfunc(); }",
       "Program\n"
       " kprobe:sys_open\n"
       "  call: myfunc\n");
@@ -432,7 +432,7 @@ TEST(Parser, call_unknown_function)
 
 TEST(Parser, call_kaddr)
 {
-  test("kprobe:f { @ = kaddr(\"avenrun\") }",
+  test("kprobe:f { @ = kaddr(\"avenrun\"); }",
       "Program\n"
       " kprobe:f\n"
       "  =\n"
@@ -473,7 +473,7 @@ TEST(Parser, usdt)
 
 TEST(Parser, escape_chars)
 {
-  test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
+  test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\"; }",
       "Program\n"
       " kprobe:sys_open\n"
       "  string: newline\\nand tab\\tbackslash\\\\quote\\\"here\n");
@@ -481,7 +481,7 @@ TEST(Parser, escape_chars)
 
 TEST(Parser, begin_probe)
 {
-  test("BEGIN { 1 }",
+  test("BEGIN { 1; }",
       "Program\n"
       " BEGIN\n"
       "  int: 1\n");
@@ -489,7 +489,7 @@ TEST(Parser, begin_probe)
 
 TEST(Parser, tracepoint_probe)
 {
-  test("tracepoint:sched:sched_switch { 1 }",
+  test("tracepoint:sched:sched_switch { 1; }",
       "Program\n"
       " tracepoint:sched:sched_switch\n"
       "  int: 1\n");
@@ -497,7 +497,7 @@ TEST(Parser, tracepoint_probe)
 
 TEST(Parser, profile_probe)
 {
-  test("profile:ms:997 { 1 }",
+  test("profile:ms:997 { 1; }",
       "Program\n"
       " profile:ms:997\n"
       "  int: 1\n");
@@ -505,7 +505,7 @@ TEST(Parser, profile_probe)
 
 TEST(Parser, interval_probe)
 {
-  test("interval:s:1 { 1 }",
+  test("interval:s:1 { 1; }",
       "Program\n"
       " interval:s:1\n"
       "  int: 1\n");
@@ -513,7 +513,7 @@ TEST(Parser, interval_probe)
 
 TEST(Parser, software_probe)
 {
-  test("software:faults:1000 { 1 }",
+  test("software:faults:1000 { 1; }",
       "Program\n"
       " software:faults:1000\n"
       "  int: 1\n");
@@ -521,7 +521,7 @@ TEST(Parser, software_probe)
 
 TEST(Parser, hardware_probe)
 {
-  test("hardware:cache-references:1000000 { 1 }",
+  test("hardware:cache-references:1000000 { 1; }",
       "Program\n"
       " hardware:cache-references:1000000\n"
       "  int: 1\n");
@@ -529,7 +529,7 @@ TEST(Parser, hardware_probe)
 
 TEST(Parser, multiple_attach_points_kprobe)
 {
-  test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",
+  test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1; }",
       "Program\n"
       " BEGIN\n"
       " kprobe:sys_open\n"
@@ -540,7 +540,7 @@ TEST(Parser, multiple_attach_points_kprobe)
 
 TEST(Parser, character_class_attach_point)
 {
-  test("kprobe:[Ss]y[Ss]_read { 1 }",
+  test("kprobe:[Ss]y[Ss]_read { 1; }",
       "Program\n"
       " kprobe:[Ss]y[Ss]_read\n"
       "  int: 1\n");
@@ -548,23 +548,23 @@ TEST(Parser, character_class_attach_point)
 
 TEST(Parser, wildcard_attach_points)
 {
-  test("kprobe:sys_* { 1 }",
+  test("kprobe:sys_* { 1; }",
       "Program\n"
       " kprobe:sys_*\n"
       "  int: 1\n");
-  test("kprobe:*blah { 1 }",
+  test("kprobe:*blah { 1; }",
       "Program\n"
       " kprobe:*blah\n"
       "  int: 1\n");
-  test("kprobe:sys*blah { 1 }",
+  test("kprobe:sys*blah { 1; }",
       "Program\n"
       " kprobe:sys*blah\n"
       "  int: 1\n");
-  test("kprobe:* { 1 }",
+  test("kprobe:* { 1; }",
       "Program\n"
       " kprobe:*\n"
       "  int: 1\n");
-  test("kprobe:sys_* { @x = cpu*retval }",
+  test("kprobe:sys_* { @x = cpu*retval; }",
       "Program\n"
       " kprobe:sys_*\n"
       "  =\n"
@@ -572,7 +572,7 @@ TEST(Parser, wildcard_attach_points)
       "   *\n"
       "    builtin: cpu\n"
       "    builtin: retval\n");
-  test("kprobe:sys_* { @x = *arg0 }",
+  test("kprobe:sys_* { @x = *arg0; }",
       "Program\n"
       " kprobe:sys_*\n"
       "  =\n"
@@ -583,7 +583,7 @@ TEST(Parser, wildcard_attach_points)
 
 TEST(Parser, short_map_name)
 {
-  test("kprobe:sys_read { @ = 1 }",
+  test("kprobe:sys_read { @ = 1; }",
       "Program\n"
       " kprobe:sys_read\n"
       "  =\n"
@@ -593,7 +593,7 @@ TEST(Parser, short_map_name)
 
 TEST(Parser, include)
 {
-  test("#include <stdio.h>\nkprobe:sys_read { @x = 1 }",
+  test("#include <stdio.h>\nkprobe:sys_read { @x = 1; }",
       "#include <stdio.h>\n"
       "\n"
       "Program\n"
@@ -605,7 +605,7 @@ TEST(Parser, include)
 
 TEST(Parser, include_quote)
 {
-  test("#include \"stdio.h\"\nkprobe:sys_read { @x = 1 }",
+  test("#include \"stdio.h\"\nkprobe:sys_read { @x = 1; }",
       "#include \"stdio.h\"\n"
       "\n"
       "Program\n"
@@ -617,7 +617,7 @@ TEST(Parser, include_quote)
 
 TEST(Parser, include_multiple)
 {
-  test("#include <stdio.h>\n#include \"blah\"\n#include <foo.h>\nkprobe:sys_read { @x = 1 }",
+  test("#include <stdio.h>\n#include \"blah\"\n#include <foo.h>\nkprobe:sys_read { @x = 1; }",
       "#include <stdio.h>\n"
       "#include \"blah\"\n"
       "#include <foo.h>\n"
@@ -631,7 +631,7 @@ TEST(Parser, include_multiple)
 
 TEST(Parser, brackets)
 {
-  test("kprobe:sys_read { (arg0*arg1) }",
+  test("kprobe:sys_read { (arg0*arg1); }",
       "Program\n"
       " kprobe:sys_read\n"
       "  *\n"
@@ -707,7 +707,7 @@ TEST(Parser, cast_precedence)
 
 TEST(Parser, dereference_precedence)
 {
-  test("kprobe:sys_read { *@x+1 }",
+  test("kprobe:sys_read { *@x+1; }",
       "Program\n"
       " kprobe:sys_read\n"
       "  +\n"
@@ -715,7 +715,7 @@ TEST(Parser, dereference_precedence)
       "    map: @x\n"
       "   int: 1\n");
 
-  test("kprobe:sys_read { *@x**@y }",
+  test("kprobe:sys_read { *@x**@y; }",
       "Program\n"
       " kprobe:sys_read\n"
       "  *\n"
@@ -724,7 +724,7 @@ TEST(Parser, dereference_precedence)
       "   dereference\n"
       "    map: @y\n");
 
-  test("kprobe:sys_read { *@x*@y }",
+  test("kprobe:sys_read { *@x*@y; }",
       "Program\n"
       " kprobe:sys_read\n"
       "  *\n"
@@ -732,7 +732,7 @@ TEST(Parser, dereference_precedence)
       "    map: @x\n"
       "   map: @y\n");
 
-  test("kprobe:sys_read { *@x.myfield }",
+  test("kprobe:sys_read { *@x.myfield; }",
       "Program\n"
       " kprobe:sys_read\n"
       "  dereference\n"
