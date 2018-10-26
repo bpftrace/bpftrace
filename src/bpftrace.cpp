@@ -17,6 +17,7 @@
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "attached_probe.h"
+#include "printf.h"
 #include "triggers.h"
 #include "resolve_cgroupid.h"
 
@@ -223,7 +224,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
     auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->system_args_[id]);
-    std::vector<uint64_t> arg_values = bpftrace->get_arg_values(args, arg_data);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     char buffer [255];
 
@@ -233,30 +234,30 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         system(fmt);
         break;
       case 1:
-        snprintf(buffer, 255, fmt, arg_values.at(0));
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value());
         system(buffer);
         break;
       case 2:
-        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1));
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value());
         system(buffer);
         break;
       case 3:
-        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value());
         system(buffer);
         break;
       case 4:
-        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3));
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+          arg_values.at(3)->value());
         system(buffer);
         break;
       case 5:
-        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4));
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+          arg_values.at(3)->value(), arg_values.at(4)->value());
         system(buffer);
         break;
-     case 6:
-        snprintf(buffer, 255, fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4), arg_values.at(5));
+      case 6:
+        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+          arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
         system(buffer);
         break;
       default:
@@ -269,7 +270,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
-  std::vector<uint64_t> arg_values = bpftrace->get_arg_values(args, arg_data);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
   switch (args.size())
   {
@@ -277,38 +278,35 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       printf(fmt);
       break;
     case 1:
-      printf(fmt, arg_values.at(0));
+      printf(fmt, arg_values.at(0)->value());
       break;
     case 2:
-      printf(fmt, arg_values.at(0), arg_values.at(1));
+      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value());
       break;
     case 3:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2));
+      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value());
       break;
     case 4:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3));
+      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+        arg_values.at(3)->value());
       break;
     case 5:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4));
+      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+        arg_values.at(3)->value(), arg_values.at(4)->value());
       break;
     case 6:
-      printf(fmt, arg_values.at(0), arg_values.at(1), arg_values.at(2),
-          arg_values.at(3), arg_values.at(4), arg_values.at(5));
+      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
+        arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
       break;
     default:
       abort();
   }
 }
 
-std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)
+std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)
 {
-  std::vector<uint64_t> arg_values;
-  std::vector<std::unique_ptr<char>> resolved_symbols;
-  std::vector<std::unique_ptr<char>> resolved_usernames;
+  std::vector<std::unique_ptr<IPrintable>> arg_values;
 
-  char *name;
   for (auto arg : args)
   {
     switch (arg.type.type)
@@ -317,50 +315,48 @@ std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t*
         switch (arg.type.size)
         {
           case 8:
-            arg_values.push_back(*(uint64_t*)(arg_data+arg.offset));
+            arg_values.emplace_back(new PrintableInt(*(uint64_t*)(arg_data+arg.offset)));
             break;
           case 4:
-            arg_values.push_back(*(uint32_t*)(arg_data+arg.offset));
+            arg_values.emplace_back(new PrintableInt(*(uint32_t*)(arg_data+arg.offset)));
             break;
           case 2:
-            arg_values.push_back(*(uint16_t*)(arg_data+arg.offset));
+            arg_values.emplace_back(new PrintableInt(*(uint16_t*)(arg_data+arg.offset)));
             break;
           case 1:
-            arg_values.push_back(*(uint8_t*)(arg_data+arg.offset));
+            arg_values.emplace_back(new PrintableInt(*(uint8_t*)(arg_data+arg.offset)));
             break;
           default:
             abort();
         }
         break;
       case Type::string:
-        arg_values.push_back((uint64_t)(arg_data+arg.offset));
+        arg_values.emplace_back(new PrintableString(
+          std::string((char *) arg_data+arg.offset)));
         break;
       case Type::sym:
-        resolved_symbols.emplace_back(strdup(
-              resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
-        arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        arg_values.emplace_back(new PrintableString(
+          resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         break;
       case Type::usym:
-        resolved_symbols.emplace_back(strdup(
-              resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
-        arg_values.push_back((uint64_t)resolved_symbols.back().get());
+        arg_values.emplace_back(new PrintableString(
+          resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
         break;
       case Type::username:
-        resolved_usernames.emplace_back(strdup(
-              resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
-        arg_values.push_back((uint64_t)resolved_usernames.back().get());
+        arg_values.emplace_back(new PrintableString(
+          resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         break;
       case Type::probe:
-        name = strdup(resolve_probe(*(uint64_t*)(arg_data+arg.offset)).c_str());
-        arg_values.push_back((uint64_t)name);
+        arg_values.emplace_back(new PrintableString(
+          resolve_probe(*(uint64_t*)(arg_data+arg.offset)).c_str()));
         break;
       case Type::stack:
-        name = strdup(get_stack(*(uint64_t*)(arg_data+arg.offset), false, 8).c_str());
-        arg_values.push_back((uint64_t)name);
+        arg_values.emplace_back(new PrintableString(
+          get_stack(*(uint64_t*)(arg_data+arg.offset), false, 8).c_str()));
         break;
       case Type::ustack:
-        name = strdup(get_stack(*(uint64_t*)(arg_data+arg.offset), true, 8).c_str());
-        arg_values.push_back((uint64_t)name);
+        arg_values.emplace_back(new PrintableString(
+          get_stack(*(uint64_t*)(arg_data+arg.offset), true, 8).c_str()));
         break;
       default:
         abort();
