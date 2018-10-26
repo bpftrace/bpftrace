@@ -64,4 +64,14 @@ std::string verify_format_string(const std::string &fmt, std::vector<Field> args
   return "";
 }
 
+uint64_t PrintableString::value()
+{
+  return (uint64_t)_value.c_str();
+}
+
+uint64_t PrintableInt::value()
+{
+  return _value;
+}
+
 } // namespace bpftrace

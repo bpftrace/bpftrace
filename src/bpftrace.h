@@ -11,6 +11,7 @@
 #include "ast.h"
 #include "attached_probe.h"
 #include "imap.h"
+#include "printf.h"
 #include "struct.h"
 #include "types.h"
 
@@ -68,7 +69,7 @@ public:
   std::string extract_func_symbols_from_path(const std::string &path);
   std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
-  std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
+  std::vector<std::unique_ptr<IPrintable>> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
   void add_param(const std::string &param);
   bool is_numeric(std::string str);
   std::string get_param(int index);
