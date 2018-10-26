@@ -1095,7 +1095,11 @@ std::string BPFtrace::lhist_index_label(int number)
 
   std::ostringstream label;
 
-  if (number % mega == 0)
+  if (number == 0)
+  {
+    label << number;
+  }
+  else if (number % mega == 0)
   {
     label << number / mega << 'M';
   }
