@@ -20,12 +20,13 @@ void usage()
   std::cerr << "    bpftrace [options] filename" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -l [search]    list probes" << std::endl;
+  std::cerr << "    -d             debug info dry run" << std::endl;
+  std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
-  std::cerr << "    -p PID    PID for enabling USDT probes" << std::endl;
-  std::cerr << "    -v    verbose messages" << std::endl;
-  std::cerr << "    -d    debug info dry run" << std::endl << std::endl;
-  std::cerr << "   -dd    verbose debug info dry run" << std::endl << std::endl;
+  std::cerr << "    -h             show this help message" << std::endl;
+  std::cerr << "    -l [search]    list probes" << std::endl;
+  std::cerr << "    -p PID         PID for enabling USDT probes" << std::endl;
+  std::cerr << "    -v             verbose messages" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
 
   std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:lp:v")) != -1)
+  while ((c = getopt(argc, argv, "de:hlp:v")) != -1)
   {
     switch (c)
     {
