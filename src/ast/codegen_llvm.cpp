@@ -37,10 +37,18 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "stack" || builtin.ident == "ustack")
   {
-    // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
     Value *stackid = b_.CreateGetStackId(ctx_, builtin.ident == "ustack");
-    expr_ = b_.CreateOr(stackid, pidhigh);
+    // Kernel stacks should not be differentiated by tid, since the kernel
+    // address space is the same between pids (and when aggregating you *want*
+    // to be able to correlate between pids in most cases). User-space stacks
+    // are special because of ASLR and so we do usym()-style packing.
+    if (builtin.ident == "ustack")
+    {
+      // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
+      Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
+      stackid = b_.CreateOr(stackid, pidhigh);
+    }
+    expr_ = stackid;
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
