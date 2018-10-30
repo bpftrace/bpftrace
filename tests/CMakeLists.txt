@@ -6,13 +6,90 @@ add_executable(bpftrace_test
   ast.cpp
   bpftrace.cpp
   clang_parser.cpp
-  codegen.cpp
   main.cpp
   parser.cpp
   probe.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
   utils.cpp
+
+  codegen/general.cpp
+  codegen/bitshift_left.cpp
+  codegen/bitshift_right.cpp
+  codegen/builtin_arg.cpp
+  codegen/builtin_comm.cpp
+  codegen/builtin_cpu.cpp
+  codegen/builtin_ctx.cpp
+  codegen/builtin_curtask.cpp
+  codegen/builtin_func.cpp
+  codegen/builtin_func_wild.cpp
+  codegen/builtin_nsecs.cpp
+  codegen/builtin_pid_tid.cpp
+  codegen/builtin_probe.cpp
+  codegen/builtin_probe_wild.cpp
+  codegen/builtin_rand.cpp
+  codegen/builtin_retval.cpp
+  codegen/builtin_stack.cpp
+  codegen/builtin_uid_gid.cpp
+  codegen/builtin_username.cpp
+  codegen/builtin_ustack.cpp
+  codegen/call_avg.cpp
+  codegen/call_cgroup.cpp
+  codegen/call_clear.cpp
+  codegen/call_count.cpp
+  codegen/call_delete.cpp
+  codegen/call_exit.cpp
+  codegen/call_hist.cpp
+  codegen/call_lhist.cpp
+  codegen/call_max.cpp
+  codegen/call_min.cpp
+  codegen/call_print.cpp
+  codegen/call_printf.cpp
+  codegen/call_reg.cpp
+  codegen/call_stats.cpp
+  codegen/call_str.cpp
+  codegen/call_sum.cpp
+  codegen/call_system.cpp
+  codegen/call_time.cpp
+  codegen/call_usym_key.cpp
+  codegen/call_zero.cpp
+  codegen/dereference.cpp
+  codegen/empty_function.cpp
+  codegen/if_else_printf.cpp
+  codegen/if_else_variable.cpp
+  codegen/if_nested_printf.cpp
+  codegen/if_printf.cpp
+  codegen/if_variable.cpp
+  codegen/int_propagation.cpp
+  codegen/logical_and.cpp
+  codegen/logical_or.cpp
+  codegen/map_assign_int.cpp
+  codegen/map_assign_string.cpp
+  codegen/map_key_int.cpp
+  codegen/map_key_string.cpp
+  codegen/multiple_identical_probes.cpp
+  codegen/pred_binop.cpp
+  codegen/string_equal_comparison.cpp
+  codegen/string_not_equal_comparison.cpp
+  codegen/string_propagation.cpp
+  codegen/struct_char.cpp
+  codegen/struct_integer_ptr.cpp
+  codegen/struct_integers.cpp
+  codegen/struct_long.cpp
+  codegen/struct_nested_struct_anon.cpp
+  codegen/struct_nested_struct_named.cpp
+  codegen/struct_nested_struct_ptr_named.cpp
+  codegen/struct_save.cpp
+  codegen/struct_save_nested.cpp
+  codegen/struct_save_string.cpp
+  codegen/struct_short.cpp
+  codegen/struct_string_array.cpp
+  codegen/struct_string_ptr.cpp
+  codegen/ternary_int.cpp
+  codegen/ternary_str.cpp
+  codegen/unroll.cpp
+  codegen/variable.cpp
+
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/clang_parser.cpp
