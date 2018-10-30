@@ -330,9 +330,21 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
-    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+
+    Integer &strlen_arg = static_cast<Integer&>(*call.vargs->at(1));
+    Value *strlen;
+    strlen_arg.accept(*this);
+    strlen = expr_;
+    strlen = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+
+    // call.vargs->at(1)->accept(*this);
+    // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    b_.CreateMemSet(buf, b_.getInt8(0), b_.CreateAdd(strlen, b_.getInt64(1)), 1);
     call.vargs->front()->accept(*this);
     b_.CreateProbeReadStr(buf, call.type.size, expr_);
+    // call.vargs->at(1)->accept(*this);
+    // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    b_.CreateStore(b_.getInt8(0), b_.CreateGEP(buf, b_.CreateAdd(strlen, b_.getInt64(1))));
     expr_ = buf;
   }
   else if (call.func == "kaddr")
