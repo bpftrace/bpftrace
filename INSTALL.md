@@ -170,6 +170,8 @@ By default bpftrace will be built as a dynamically linked executable. If a stati
 
 The latest versions of BCC and Google Test will be downloaded on each build. To speed up builds and only download their sources on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
 
+There is also an experimental support to link the bpftrace executable against the system installed bcc library instead of downloading and building bcc from source. This can be enabled through the CMake option `-DSYSTEM_BCC_LIBRARY:BOOL=ON`.
+
 To test that the build works, you can try running the test suite, and a one-liner:
 
 ```
