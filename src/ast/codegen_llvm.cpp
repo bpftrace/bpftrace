@@ -329,7 +329,31 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
+    // int strlen = STRING_SIZE;
+
+    // maybe 8-bit would be fine
+    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+    if (call.vargs->size() > 1) {
+      // Expression &size_arg = *call.vargs->at(1);
+      // Integer &size = static_cast<Integer&>(size_arg);
+      // strlen = size.n+1;
+      // strlen = 2;
+
+      // maybe Integer is only for literals, and we should prefer Expression?
+      Integer &len_arg = static_cast<Integer&>(*call.vargs->at(1));
+      // Expression &len_arg = *call.vargs->at(1);
+      Value *len;
+      len_arg.accept(*this);
+      len = expr_;
+      // maybe we need to do a ProbeRead and/or load to dereference this? (see Unop)
+      b_.CreateStore(len, strlen);
+      // b_.CreateStore(b_.CreateAdd(len, b_.getInt64(1)), strlen);
+      // b_.CreateStore(b_.CreateGEP(len, b_.getInt64(0)), strlen);
+    } else {
+      b_.CreateStore(b_.getInt64(STRING_SIZE), strlen);
+    }
     AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
+    // AllocaInst *buf = b_.CreateAllocaBPF(STRING_SIZE, "str");
 
     // Integer &strlen_arg = static_cast<Integer&>(*call.vargs->at(1));
     // Value *strlen;
@@ -341,9 +365,11 @@ void CodegenLLVM::visit(Call &call)
     // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     
     // b_.CreateMemSet(buf, b_.getInt8(0), b_.CreateAdd(strlen, b_.getInt64(1)), 1);
+    // b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
     b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, call.type.size, expr_);
+    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+    b_.CreateLifetimeEnd(strlen);
     
     // call.vargs->at(1)->accept(*this);
     // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
