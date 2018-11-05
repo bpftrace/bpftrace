@@ -333,20 +333,30 @@ void CodegenLLVM::visit(Call &call)
 
     // maybe 8-bit would be fine
     AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+    b_.CreateMemSet(strlen, b_.getInt64(0), 8, 1);
     if (call.vargs->size() > 1) {
       // Expression &size_arg = *call.vargs->at(1);
       // Integer &size = static_cast<Integer&>(size_arg);
       // strlen = size.n+1;
       // strlen = 2;
 
-      // maybe Integer is only for literals, and we should prefer Expression?
-      Integer &len_arg = static_cast<Integer&>(*call.vargs->at(1));
       // Expression &len_arg = *call.vargs->at(1);
-      Value *len;
-      len_arg.accept(*this);
-      len = expr_;
-      // maybe we need to do a ProbeRead and/or load to dereference this? (see Unop)
-      b_.CreateStore(len, strlen);
+      //// seems to work with literal, but we may need a probe read for an expression
+      // maybe Integer is only for literals, and we should prefer Expression?
+      // Integer &len_arg = static_cast<Integer&>(*call.vargs->at(1));
+      // Value *len;
+      // len_arg.accept(*this);
+      // len = expr_;
+      // b_.CreateStore(expr_, strlen);
+
+      // call.vargs->at(1)->accept(*this);
+      // b_.CreateProbeRead(strlen, 8, expr_);
+
+      // b_.CreateProbeRead(b_.CreateGEP(strlen, {b_.getInt8(0), b_.getInt8(7)}), 1, expr_);
+
+      call.vargs->at(1)->accept(*this);
+      b_.CreateStore(expr_, strlen);
+
       // b_.CreateStore(b_.CreateAdd(len, b_.getInt64(1)), strlen);
       // b_.CreateStore(b_.CreateGEP(len, b_.getInt64(0)), strlen);
     } else {
@@ -368,6 +378,7 @@ void CodegenLLVM::visit(Call &call)
     // b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
     b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
     call.vargs->front()->accept(*this);
+    // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateLifetimeEnd(strlen);
     

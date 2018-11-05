@@ -250,6 +250,22 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
   CallInst *call = CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
+void IRBuilderBPF::CreateProbeRead(Value *dst, size_t size, Value *src)
+{
+  // int bpf_probe_read(void *dst, int size, void *src)
+  // Return: 0 on success or negative error
+  FunctionType *proberead_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      false);
+  PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type, 0);
+  Constant *proberead_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_probe_read),
+      proberead_func_ptr_type);
+  CallInst *call = CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
+}
+
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
 {
   // int bpf_probe_read(void *dst, int size, void *src)

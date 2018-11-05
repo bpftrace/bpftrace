@@ -40,6 +40,7 @@ public:
   Value      *CreateMapLookupElem(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
   void        CreateMapDeleteElem(Map &map, AllocaInst *key);
+  void        CreateProbeRead(Value *dst, size_t size, Value *src);
   void        CreateProbeRead(AllocaInst *dst, size_t size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src);
