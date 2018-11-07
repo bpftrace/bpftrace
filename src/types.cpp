@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 
 #include "types.h"
 
@@ -53,24 +54,36 @@ std::string typestr(Type t)
   }
 }
 
-ProbeType probetype(const std::string &type)
+ProbeType probetype(const std::string &probeName)
 {
-  for (int i = 0; i < sizeof(PROBE_LIST); i++)
-  {
-    if (type == PROBE_LIST[i].name || type == PROBE_LIST[i].abbr)
-      return PROBE_LIST[i].type;
-  }
-  abort();
+  ProbeType retType = ProbeType::invalid;
+
+  auto v = std::find_if(PROBE_LIST.begin(), PROBE_LIST.end(),
+                          [&probeName] (const ProbeItem& p) {
+                            return (p.name == probeName ||
+                                   p.abbr == probeName);
+                         });
+
+  if (v != PROBE_LIST.end())
+    retType =  v->type;
+
+  return retType;
 }
 
-std::string probetypeName(const std::string &type)
+std::string probetypeName(const std::string &probeName)
 {
-  for (int i = 0; i < sizeof(PROBE_LIST); i++)
-  {
-    if (type == PROBE_LIST[i].name || type == PROBE_LIST[i].abbr)
-      return PROBE_LIST[i].name;
-  }
-  return type;
+  std::string res = probeName;
+
+  auto v = std::find_if(PROBE_LIST.begin(), PROBE_LIST.end(),
+                          [&probeName] (const ProbeItem& p) {
+                            return (p.name == probeName ||
+                                    p.abbr == probeName);
+                          });
+
+  if (v != PROBE_LIST.end())
+    res = v->name;
+
+  return res;
 }
 
 uint64_t asyncactionint(AsyncAction a)
