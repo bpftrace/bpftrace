@@ -79,7 +79,7 @@ struct ProbeItem
   ProbeType type;
 };
 
-const ProbeItem PROBE_LIST[] =
+const std::vector<ProbeItem> PROBE_LIST =
 {
   { "kprobe", "k", ProbeType::kprobe },
   { "kretprobe", "kr", ProbeType::kretprobe },

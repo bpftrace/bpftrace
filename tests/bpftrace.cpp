@@ -417,6 +417,17 @@ TEST(bpftrace, add_probes_hardware)
   check_hardware(bpftrace.get_probes().at(0), "cache-references", 1000000, probe_orig_name);
 }
 
+TEST(bpftrace, invalid_provider)
+{
+  ast::AttachPoint a("lookatme", "invalid");
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(0, bpftrace.add_probe(probe));
+}
+
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::vector<uint64_t> key, int val)
 {
   std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
