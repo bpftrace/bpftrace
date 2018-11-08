@@ -347,6 +347,7 @@ void CodegenLLVM::visit(Call &call)
       // Value *len;
       // len_arg.accept(*this);
       // len = expr_;
+      // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
       // b_.CreateStore(expr_, strlen);
 
       // call.vargs->at(1)->accept(*this);
@@ -355,7 +356,8 @@ void CodegenLLVM::visit(Call &call)
       // b_.CreateProbeRead(b_.CreateGEP(strlen, {b_.getInt8(0), b_.getInt8(7)}), 1, expr_);
 
       call.vargs->at(1)->accept(*this);
-      b_.CreateStore(expr_, strlen);
+      b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), strlen);
+      // b_.CreateStore(expr_, strlen);
 
       // b_.CreateStore(b_.CreateAdd(len, b_.getInt64(1)), strlen);
       // b_.CreateStore(b_.CreateGEP(len, b_.getInt64(0)), strlen);
@@ -380,7 +382,7 @@ void CodegenLLVM::visit(Call &call)
     call.vargs->front()->accept(*this);
     // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
-    b_.CreateLifetimeEnd(strlen);
+    // b_.CreateLifetimeEnd(strlen);
     
     // call.vargs->at(1)->accept(*this);
     // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
