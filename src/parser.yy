@@ -164,8 +164,8 @@ ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
 block : "{" stmts  "}" { $$ = $2; }
       ;
 
-stmts : stmts  stmt    { $$ = $1; $1->push_back($2); }
-      | stmt           { $$ = new ast::StatementList; $$->push_back($1); }
+stmts : stmts  stmt { $$ = $1; $1->push_back($2); }
+      | stmt        { $$ = new ast::StatementList; $$->push_back($1); }
       ;
 
 stmt : expr ";" { $$ = new ast::ExprStatement($1); }
