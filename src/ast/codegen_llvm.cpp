@@ -382,7 +382,7 @@ void CodegenLLVM::visit(Call &call)
     call.vargs->front()->accept(*this);
     // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
-    // b_.CreateLifetimeEnd(strlen);
+    b_.CreateLifetimeEnd(strlen);
     
     // call.vargs->at(1)->accept(*this);
     // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
