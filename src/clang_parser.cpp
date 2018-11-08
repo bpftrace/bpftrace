@@ -46,6 +46,7 @@ static SizedType get_sized_type(CXType clang_type)
 
   switch (clang_type.kind)
   {
+    case CXType_Bool:
     case CXType_Char_S:
     case CXType_Char_U:
     case CXType_SChar:
