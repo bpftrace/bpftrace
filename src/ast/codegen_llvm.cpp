@@ -329,65 +329,20 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
-    // int strlen = STRING_SIZE;
-
-    // maybe 8-bit would be fine
     AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CreateMemSet(strlen, b_.getInt64(0), 8, 1);
+    b_.CreateMemSet(strlen, b_.getInt64(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
-      // Expression &size_arg = *call.vargs->at(1);
-      // Integer &size = static_cast<Integer&>(size_arg);
-      // strlen = size.n+1;
-      // strlen = 2;
-
-      // Expression &len_arg = *call.vargs->at(1);
-      //// seems to work with literal, but we may need a probe read for an expression
-      // maybe Integer is only for literals, and we should prefer Expression?
-      // Integer &len_arg = static_cast<Integer&>(*call.vargs->at(1));
-      // Value *len;
-      // len_arg.accept(*this);
-      // len = expr_;
-      // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
-      // b_.CreateStore(expr_, strlen);
-
-      // call.vargs->at(1)->accept(*this);
-      // b_.CreateProbeRead(strlen, 8, expr_);
-
-      // b_.CreateProbeRead(b_.CreateGEP(strlen, {b_.getInt8(0), b_.getInt8(7)}), 1, expr_);
-
       call.vargs->at(1)->accept(*this);
       b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), strlen);
-      // b_.CreateStore(expr_, strlen);
-
-      // b_.CreateStore(b_.CreateAdd(len, b_.getInt64(1)), strlen);
-      // b_.CreateStore(b_.CreateGEP(len, b_.getInt64(0)), strlen);
     } else {
       b_.CreateStore(b_.getInt64(STRING_SIZE), strlen);
     }
-    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
-    // AllocaInst *buf = b_.CreateAllocaBPF(STRING_SIZE, "str");
-
-    // Integer &strlen_arg = static_cast<Integer&>(*call.vargs->at(1));
-    // Value *strlen;
-    // strlen_arg.accept(*this);
-    // strlen = expr_;
-    // strlen = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
-
-    // call.vargs->at(1)->accept(*this);
-    // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
     
-    // b_.CreateMemSet(buf, b_.getInt8(0), b_.CreateAdd(strlen, b_.getInt64(1)), 1);
-    // b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
     b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
     call.vargs->front()->accept(*this);
-    // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateLifetimeEnd(strlen);
-    
-    // call.vargs->at(1)->accept(*this);
-    // expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
-    
-    // b_.CreateStore(b_.getInt8(0), b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt8(call.type.size)}));
     expr_ = buf;
   }
   else if (call.func == "kaddr")

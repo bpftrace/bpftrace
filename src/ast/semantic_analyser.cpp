@@ -206,14 +206,10 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
       if (is_final_pass()) {
-        int strlen = STRING_SIZE;
         if (call.vargs->size() > 1) {
           check_arg(call, Type::integer, 1, false);
-          // Expression &size_arg = *call.vargs->at(1);
-          // Integer &size = static_cast<Integer&>(size_arg);
-          // strlen = size.n+1;
         }
-        call.type = SizedType(Type::string, strlen);
+        call.type = SizedType(Type::string, STRING_SIZE);
       }
     }
   }
