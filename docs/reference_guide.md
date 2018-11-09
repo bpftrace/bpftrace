@@ -175,7 +175,7 @@ It can also be made executable to run stand-alone. Start by adding an interprete
 ```
      1	#!/usr/local/bin/bpftrace
      1	#!/usr/bin/env bpftrace
-     2	
+     2
      3	tracepoint:syscalls:sys_enter_nanosleep
      4	{
      5	        printf("%s is sleeping.\n", comm);
