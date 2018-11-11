@@ -29,5 +29,5 @@ tracepoint:syscalls:sys_enter_sync_file_range,
 tracepoint:syscalls:sys_enter_msync
 {
 	time("%H:%M:%S  ");
-	printf("%-6d %-16s %s\n", pid, comm, name);
+	printf("%-6d %-16s %s\n", pid, comm, probe);
 }
