@@ -175,7 +175,7 @@ It can also be made executable to run stand-alone. Start by adding an interprete
 ```
      1	#!/usr/local/bin/bpftrace
      1	#!/usr/bin/env bpftrace
-     2	
+     2
      3	tracepoint:syscalls:sys_enter_nanosleep
      4	{
      5	        printf("%s is sleeping.\n", comm);
@@ -884,7 +884,7 @@ That would fire once for every 1000000 cache misses. This usually indicates the 
 - `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function
 - `retval` - Return value from traced function
 - `func` - Name of the traced function
-- `name` - Full name of the probe
+- `probe` - Full name of the probe
 - `curtask` - Current task struct as a u64
 - `rand` - Random number as a u32
 - `cgroup` - Cgroup ID of the current process
