@@ -40,8 +40,8 @@ else()
   if(found_LLVM)
     target_link_libraries(ast LLVM)
   else()
-    llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit orcjit
-      core mc support executionengine object runtimedyld ${LLVM_TARGETS_TO_BUILD})
+    llvm_map_components_to_libnames(_llvm_libs bpfcodegen ipo irreader mcjit orcjit ${LLVM_TARGETS_TO_BUILD})
+    llvm_expand_dependencies(llvm_libs ${_llvm_libs})
     target_link_libraries(ast ${llvm_libs})
   endif()
 
