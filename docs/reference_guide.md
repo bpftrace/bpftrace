@@ -175,7 +175,7 @@ It can also be made executable to run stand-alone. Start by adding an interprete
 ```
      1	#!/usr/local/bin/bpftrace
      1	#!/usr/bin/env bpftrace
-     2	
+     2
      3	tracepoint:syscalls:sys_enter_nanosleep
      4	{
      5	        printf("%s is sleeping.\n", comm);
@@ -447,6 +447,22 @@ Attaching 1 probe...
 @large: 72
 
 @reads: 80
+```
+
+## 7. `unroll () {...}
+
+Example:
+
+```
+# bpftrace -e 'kprobe:do_nanosleep { $i = 1; unroll(5) { printf("i: %d\n", $i); $i = $i + 1; } }'
+Attaching 1 probe...
+i: 1
+i: 2
+i: 3
+i: 4
+i: 5
+^C
+
 ```
 
 # Probes
