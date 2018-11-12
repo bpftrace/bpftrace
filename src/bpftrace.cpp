@@ -407,12 +407,12 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   return nullptr;
 }
 
-int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
+int BPFtrace::run(BpfOrc *bpforc)
 {
   auto r_special_probes = special_probes_.rbegin();
   for (; r_special_probes != special_probes_.rend(); ++r_special_probes)
   {
-    auto attached_probe = attach_probe(*r_special_probes, *bpforc.get());
+    auto attached_probe = attach_probe(*r_special_probes, *bpforc);
     if (attached_probe == nullptr)
       return -1;
     special_attached_probes_.push_back(std::move(attached_probe));
@@ -430,7 +430,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   auto r_probes = probes_.rbegin();
   for (; r_probes != probes_.rend(); ++r_probes)
   {
-    auto attached_probe = attach_probe(*r_probes, *bpforc.get());
+    auto attached_probe = attach_probe(*r_probes, *bpforc);
     if (attached_probe == nullptr)
       return -1;
     attached_probes_.push_back(std::move(attached_probe));

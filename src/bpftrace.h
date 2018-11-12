@@ -53,7 +53,7 @@ public:
   virtual ~BPFtrace() { }
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
-  int run(std::unique_ptr<BpfOrc> bpforc);
+  int run(BpfOrc *bpforc);
   int print_maps();
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
   int clear_map_ident(const std::string &ident);

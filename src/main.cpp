@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
   else
     std::cout << "Attaching " << bpftrace.num_probes() << " probes..." << std::endl;
 
-  err = bpftrace.run(move(bpforc));
+  err = bpftrace.run(bpforc.get());
   if (err)
     return err;
 
