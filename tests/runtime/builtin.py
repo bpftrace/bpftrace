@@ -12,14 +12,14 @@ class TestBuiltin(unittest.TestCase):
         regex = Utils.regex_uint("pid")
         cmd = ("test=pid; {} -e ".format(environ["BPFTRACE_RUNTIME"]) +
         "'i:ms:1 { printf(\"SUCCESS '$test' %d\\n\", pid); exit(); }'" +
-		" | grep '{}' || echo \"FAILURE $test\"".format(regex))
+        " | grep '{}' || echo \"FAILURE $test\"".format(regex))
         Utils.run_test(self, cmd, regex)
 
     def test_tid(self):
         regex = Utils.regex_uint("tid")
         cmd = ("test=tid; {} -e ".format(environ["BPFTRACE_RUNTIME"]) +
-		"'i:ms:1 { printf(\"SUCCESS '$test' %d\\n\", tid); exit(); }'" +
-		" | grep '{}' || echo \"FAILURE $test\"".format(regex))
+        "'i:ms:1 { printf(\"SUCCESS '$test' %d\\n\", tid); exit(); }'" +
+        " | grep '{}' || echo \"FAILURE $test\"".format(regex))
         Utils.run_test(self, cmd, regex)
 
     def test_uid(self):

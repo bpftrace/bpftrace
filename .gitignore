@@ -1,4 +1,4 @@
 build/
 build-*/
-tests/python/*.pyc
-tests/python/runtimetest
+tests/runtime/*.pyc
+tests/runtime/runtimetest
