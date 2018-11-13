@@ -19,6 +19,10 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [2. `/.../`: Filtering](#2--filtering)
     - [3. `//`, `/*`: Comments](#3---comments)
     - [4. `->`: C Struct Navigation](#4---c-struct-navigation)
+    - [5. `? :`: ternary operators](#5---ternary-operators)
+    - [6. `if () {...} else {...}`: if-else statements](#6-if---else--if-else-statements)
+    - [7. `unroll () {...}`: unroll](#7-unroll---unroll)
+
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -43,7 +47,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
 - [Functions](#functions)
     - [1. Builtins](#1-builtins-1)
-    - [2. `printf()`: Print Formatted](#2-printf-print-formatted)
+    - [2. `printf()`: Print Formatted](#2-printf-Printing)
     - [3. `time()`: Time](#3-time-time)
     - [4. `join()`: Join](#4-join-join)
     - [5. `str()`: Strings](#5-str-strings)
@@ -449,7 +453,7 @@ Attaching 1 probe...
 @reads: 80
 ```
 
-## 7. `unroll () {...}
+## 7. `unroll () {...}`: Unroll
 
 Example:
 
