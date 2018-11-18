@@ -8,6 +8,8 @@
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
   - [Generic build](#generic-build)
+- [Package install](#package-install)
+  - [Fedora](#fedora-package)
 
 # Linux Kernel Requirements
 
@@ -175,4 +177,14 @@ To test that the build works, you can try running the test suite, and a one-line
 ```
 ./tests/bpftrace_test
 ./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
+```
+
+# Package install
+
+## Fedora package
+
+For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
+
+```
+sudo dnf install bpftrace
 ```
