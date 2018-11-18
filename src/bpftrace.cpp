@@ -1157,7 +1157,7 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
   if (map.type_.type == Type::count || map.type_.type == Type::hist ||
       map.type_.type == Type::sum || map.type_.type == Type::min ||
       map.type_.type == Type::max || map.type_.type == Type::avg ||
-      map.type_.type == Type::stats)
+      map.type_.type == Type::stats || map.type_.type == Type::lhist)
     value_size *= ncpus_;
   auto value = std::vector<uint8_t>(value_size);
 
