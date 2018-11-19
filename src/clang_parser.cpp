@@ -38,6 +38,33 @@ static void remove_struct_prefix(std::string &str)
     str.erase(0, 7);
 }
 
+static CXCursor get_indirect_field_parent_struct(CXCursor c)
+{
+  CXCursor parent = clang_getCursorSemanticParent(c);
+
+  while (!clang_Cursor_isNull(parent) && clang_Cursor_isAnonymous(parent))
+     parent = clang_getCursorSemanticParent(parent);
+
+  return parent;
+}
+
+static std::string get_parent_struct_name(CXCursor c)
+{
+  CXCursor parent = get_indirect_field_parent_struct(c);
+
+  return get_clang_string(clang_getCursorSpelling(parent));
+}
+
+static int get_indirect_field_offset(CXCursor c)
+{
+  int offset=0;
+  CXCursor parent = get_indirect_field_parent_struct(c);
+  auto ident = get_clang_string(clang_getCursorSpelling(c));
+  offset = clang_Type_getOffsetOf(clang_getCursorType(parent), ident.c_str()) / 8;
+
+  return offset;
+}
+
 static SizedType get_sized_type(CXType clang_type)
 {
   auto size = clang_Type_getSizeOf(clang_type);
@@ -225,7 +252,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
-          auto struct_name = get_clang_string(clang_getCursorSpelling(parent));
+          auto struct_name = get_parent_struct_name(c);
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Cursor_getOffsetOfField(c) / 8;
           auto type = clang_getCanonicalType(clang_getCursorType(c));
@@ -233,6 +260,9 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
           auto ptype = clang_getCanonicalType(clang_getCursorType(parent));
           auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
           auto ptypesize = clang_Type_getSizeOf(ptype);
+
+          if(clang_Cursor_isAnonymous(parent))
+            offset = get_indirect_field_offset(c);
 
           if (struct_name == "")
             struct_name = ptypestr;
