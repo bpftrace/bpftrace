@@ -330,10 +330,14 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CreateMemSet(strlen, b_.getInt64(0), sizeof(uint64_t), 1);
+    b_.CreateMemSet(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
       call.vargs->at(1)->accept(*this);
-      b_.CreateStore(b_.CreateAnd(expr_, 0x1fffffff), strlen);
+      b_.CreateStore(
+        b_.CreateAnd(
+          b_.CreateAdd(expr_, b_.getInt64(1)), // add 1 to fit probe_read_str's null byte
+          0x0000003F), // crude way to stay under 64, our string buffer size. also helps with verifier's bounds checks
+        strlen);
     } else {
       b_.CreateStore(b_.getInt64(STRING_SIZE), strlen);
     }
