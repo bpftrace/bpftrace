@@ -333,7 +333,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMemSet(strlen, b_.getInt64(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
       call.vargs->at(1)->accept(*this);
-      b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), strlen);
+      b_.CreateStore(b_.CreateAnd(expr_, 0x1fffffff), strlen);
     } else {
       b_.CreateStore(b_.getInt64(STRING_SIZE), strlen);
     }
