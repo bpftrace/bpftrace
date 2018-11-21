@@ -21,7 +21,7 @@ CONFIG_BPF and bpftrace.
 .TP
 Trace block device I/O (disk I/O), and print a latency histogram on Ctrl-C:
 #
-.B biolatency
+.B biolatency.bt
 .SH FIELDS
 .TP
 1st, 2nd
@@ -31,7 +31,7 @@ This is a range of latency, in microseconds (shown in "[...)" set notation).
 A column showing the count of operations in this range.
 .TP
 4th
-This is an ASCII histogram representing the count colimn.
+This is an ASCII histogram representing the count column.
 .SH OVERHEAD
 Since block device I/O usually has a relatively low frequency (< 10,000/s),
 the overhead for this tool is expected to be negligible. For high IOPS storage

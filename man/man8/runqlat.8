@@ -18,17 +18,17 @@ CONFIG_BPF and bpftrace.
 .TP
 Trace CPU run queue latency system wide, printing a histogram on Ctrl-C:
 #
-.B runqlat
+.B runqlat.bt
 .SH FIELDS
 .TP
 1st, 2nd
 This is a range of latency, in microseconds (shown in "[...)" set notation).
 .TP
 3rd
-A column showing the count of scheduler veents in this range.
+A column showing the count of scheduler events in this range.
 .TP
 4th
-This is an ASCII histogram representing the count colimn.
+This is an ASCII histogram representing the count column.
 .SH OVERHEAD
 This traces scheduler functions, which can become very frequent. While eBPF
 has very low overhead, and this tool uses in-kernel maps for efficiency, the

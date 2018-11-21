@@ -15,19 +15,19 @@ CONFIG_BPF and bpftrace.
 .TP
 Print system load averages every second:
 #
-.B loads
+.B loads.bt
 .SH FIELDS
 .TP
 HH:MM:SS
 Each output line includes time of printing in "HH:MM:SS" format.
 .TP
 load averages:
-These are exponentially-damped moving sum averages of the system loads. 
+These are exponentially-damped moving sum averages of the system loads.
 Load is a measurement of demand on system resources, which include CPUs and
 other resources that are accessed with the kernel in an uninterruptible state
-(TASK_UNINTERRUPTIBLE), which includes types of disk I/O and lock accessses.
+(TASK_UNINTERRUPTIBLE), which includes types of disk I/O and lock accesses.
 Linux load averages originally reflected CPU demand only, as it does in other
-OSes, but this was changed in Linux 0.99.14. This demand meseasurement reflects
+OSes, but this was changed in Linux 0.99.14. This demand measurement reflects
 not just the utilized resource, but also the queued demand (a saturation
 measurement). Finally, the three numbers are called the "one-", "five-", and
 "fifteen-minute" load averages, however these times are constants used in the
