@@ -188,6 +188,40 @@ TEST(clang_parser, nested_struct_anon)
   EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
 }
 
+TEST(clang_parser, nested_struct_indirect_fields)
+{
+  StructMap structs;
+  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", structs);
+
+  ASSERT_EQ(structs["Foo"].fields.size(), 4);
+  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
+  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4);
+}
+
+TEST(clang_parser, nested_struct_anon_union_struct)
+{
+  StructMap structs;
+  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", structs);
+
+  ASSERT_EQ(structs["Foo"].fields.size(), 5);
+  EXPECT_EQ(structs["Foo"].fields["_xy"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["_xy"].type.size, 8);
+  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4);
+  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
+  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4);
+}
+
 TEST(clang_parser, builtin_headers)
 {
   // size_t is definied in stddef.h

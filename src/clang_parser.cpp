@@ -57,7 +57,7 @@ static std::string get_parent_struct_name(CXCursor c)
 
 static int get_indirect_field_offset(CXCursor c)
 {
-  int offset=0;
+  int offset = 0;
   CXCursor parent = get_indirect_field_parent_struct(c);
   auto ident = get_clang_string(clang_getCursorSpelling(c));
   offset = clang_Type_getOffsetOf(clang_getCursorType(parent), ident.c_str()) / 8;
