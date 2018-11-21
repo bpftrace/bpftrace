@@ -7,7 +7,7 @@ writeback.bt \- Trace file system writeback events with details. Uses bpftrace/e
 This traces when file system dirtied pages are flushed to disk by kernel
 writeback, and prints details including when the event occurred, and the
 duration of the event. This can be useful for correlating these times with
-other performace problems, and if there is a match, it would be a clue
+other performance problems, and if there is a match, it would be a clue
 that the problem may be caused by writeback. How quickly the kernel does
 writeback can be tuned: see the kernel docs, eg,
 vm.dirty_writeback_centisecs.
