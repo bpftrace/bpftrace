@@ -1,2 +1,5 @@
 file(GLOB BT_FILES *.bt)
+file(GLOB TXT_FILES *.txt)
+list(REMOVE_ITEM TXT_FILES ${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt)
 install(FILES ${BT_FILES} DESTINATION share/bpftrace/tools)
+install(FILES ${TXT_FILES} DESTINATION share/bpftrace/tools/doc)
