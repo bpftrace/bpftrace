@@ -1154,16 +1154,30 @@ uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
   return max;
 }
 
-uint64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
+int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
 {
-  uint64_t val, max = 0;
+  int64_t val, max = 0, retval;
   for (int i=0; i<ncpus; i++)
   {
-    val = *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    val = *(int64_t*)(value.data() + i*sizeof(int64_t*));
     if (val > max)
       max = val;
   }
-  return (0xffffffff - max);
+
+  /*
+   * This is a hack really until the code generation for the min() function
+   * is sorted out. The way it is currently implemented doesn't allow >
+   * 32 bit quantities and also means we have to do gymnastics with the return
+   * value owing to the way it is stored (i.e., 0xffffffff - val).
+   */
+  if (max == 0) /* If we have applied the zero() function */
+    retval = max;
+  else if ((0xffffffff - max) <= 0) /* A negative 32 bit value */
+    retval =  0 - (max - 0xffffffff);
+  else
+    retval =  0xffffffff - max; /* A positive 32 bit value */
+
+  return retval;
 }
 
 std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
