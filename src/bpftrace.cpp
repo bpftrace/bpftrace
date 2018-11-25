@@ -126,7 +126,7 @@ int BPFtrace::add_probe(ast::Probe &p)
   return 0;
 }
 
-std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, const std::string &file_name)
+std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream)
 {
   // Turn glob into a regex
   auto regex_str = "(" + std::regex_replace(func, std::regex("\\*"), "[^\\s]*") + ")";
@@ -136,16 +136,9 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
   std::regex func_regex(regex_str);
   std::smatch match;
 
-  std::ifstream file(file_name);
-  if (file.fail())
-  {
-    std::cerr << strerror(errno) << ": " << file_name << std::endl;
-    return std::set<std::string>();
-  }
-
   std::string line;
   std::set<std::string> matches;
-  while (std::getline(file, line))
+  while (std::getline(symbol_name_stream, line))
   {
     if (std::regex_search(line, match, func_regex))
     {
@@ -156,6 +149,26 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
     }
   }
   return matches;
+}
+
+std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, const std::string &file_name)
+{
+  std::ifstream file(file_name);
+  if (file.fail())
+  {
+    throw std::runtime_error("Could not read symbols from \"" + file_name + "\", err=" + std::to_string(errno));
+  }
+
+  std::stringstream symbol_name_stream;
+  std::string line;
+  while (file >> line)
+  {
+    symbol_name_stream << line << std::endl;
+  }
+
+  file.close();
+
+  return find_wildcard_matches(prefix, func, symbol_name_stream);
 }
 
 int BPFtrace::num_probes() const
