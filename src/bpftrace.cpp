@@ -82,24 +82,26 @@ int BPFtrace::add_probe(ast::Probe &p)
           attach_point->func.find("[") != std::string::npos &&
           attach_point->func.find("]") != std::string::npos))
     {
-      std::string file_name;
+      std::set<std::string> matches;
       switch (probetype(attach_point->provider))
       {
         case ProbeType::kprobe:
         case ProbeType::kretprobe:
-          file_name = "/sys/kernel/debug/tracing/available_filter_functions";
+          matches = find_wildcard_matches(attach_point->target,
+                                          attach_point->func,
+                                          "/sys/kernel/debug/tracing/available_filter_functions");
           break;
         case ProbeType::tracepoint:
-          file_name = "/sys/kernel/debug/tracing/available_events";
+          matches = find_wildcard_matches(attach_point->target,
+                                          attach_point->func,
+                                          "/sys/kernel/debug/tracing/available_events");
           break;
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
           return 1;
       }
-      auto matches = find_wildcard_matches(attach_point->target,
-                                           attach_point->func,
-                                           file_name);
+
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
     else
