@@ -1445,6 +1445,15 @@ uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &pat
   return addr;
 }
 
+std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
+{
+  std::string call_str = std::string("objdump -tT ") + path +
+    + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
+
+  const char *call = call_str.c_str();
+  return exec_system(call);
+}
+
 std::string BPFtrace::exec_system(const char* cmd)
 {
   std::array<char, 128> buffer;
