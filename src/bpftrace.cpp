@@ -91,6 +91,13 @@ int BPFtrace::add_probe(ast::Probe &p)
                                           attach_point->func,
                                           "/sys/kernel/debug/tracing/available_filter_functions");
           break;
+        case ProbeType::uprobe:
+        case ProbeType::uretprobe:
+        {
+            auto symbol_stream = std::istringstream(extract_func_symbols_from_path(attach_point->target));
+            matches = find_wildcard_matches("", attach_point->func, symbol_stream);
+            break;
+        }
         case ProbeType::tracepoint:
           matches = find_wildcard_matches(attach_point->target,
                                           attach_point->func,
