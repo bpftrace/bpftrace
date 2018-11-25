@@ -268,6 +268,7 @@ Functions:
 - `clear(@x)` - Delete all key/values from a map
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
+- `ntop(int af, int addr)` - Resolve ip address
 - `kaddr(char *name)` - Resolve kernel symbol name
 - `uaddr(char *name)` - Resolve user space symbol name
 - `reg(char *name)` - Returns the value stored in the named register

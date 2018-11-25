@@ -26,7 +26,7 @@ bool SizedType::operator==(const SizedType &t) const
 
 bool SizedType::IsArray() const
 {
-  return type == Type::string || type == Type::usym || (type == Type::cast && !is_pointer);
+  return type == Type::string || type == Type::usym || type == Type::inet || (type == Type::cast && !is_pointer);
 }
 
 std::string typestr(Type t)
@@ -48,6 +48,7 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::sym:      return "sym";      break;
     case Type::usym:     return "usym";     break;
+    case Type::inet:     return "inet";     break;
     case Type::cast:     return "cast";     break;
     case Type::probe:    return "probe";    break;
     default: abort();

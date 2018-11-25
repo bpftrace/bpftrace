@@ -34,7 +34,8 @@ std::string verify_format_string(const std::string &fmt, std::vector<Field> args
   {
     Type arg_type = args.at(i).type.type;
     if (arg_type == Type::sym || arg_type == Type::usym || arg_type == Type::probe ||
-        arg_type == Type::username || arg_type == Type::stack || arg_type == Type::ustack)
+        arg_type == Type::username || arg_type == Type::stack || arg_type == Type::ustack ||
+        arg_type == Type::inet)
       arg_type = Type::string; // Symbols should be printed as strings
     int offset = 1;
 

@@ -89,6 +89,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
+  test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
   test("kprobe:f { @x = count(pid) }", 1);
   test("kprobe:f { @x = sum(pid, 123) }", 1);
@@ -242,6 +243,15 @@ TEST(semantic_analyser, call_usym)
   test("kprobe:f { @x = usym(arg0); }", 0);
   test("kprobe:f { usym(); }", 1);
   test("kprobe:f { usym(\"hello\"); }", 10);
+}
+
+TEST(semantic_analyser, call_ntop)
+{
+  test("kprobe:f { ntop(2, arg0); }", 0);
+  test("kprobe:f { @x = ntop(2, arg0); }", 0);
+  test("kprobe:f { @x = ntop(2, 0xFFFF); }", 0);
+  test("kprobe:f { ntop(); }", 1);
+  test("kprobe:f { ntop(2, \"hello\"); }", 10);
 }
 
 TEST(semantic_analyser, call_kaddr)
