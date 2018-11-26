@@ -90,8 +90,13 @@ void list_probes(const std::string &search)
       if (events[j] == "." || events[j] == ".." || events[j] == "enable" || events[j] == "filter")
         continue;
       probe = "tracepoint:" + cats[i] + ":" + events[j];
-      if (search_probe(probe, search))
-        continue;
+
+      if (!search.empty())
+      {
+        if (search_probe(probe, search))
+          continue;
+      }
+
       std::cout << probe << std::endl;
     }
   }
