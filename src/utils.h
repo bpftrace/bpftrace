@@ -1,10 +1,19 @@
 #pragma once
 
+#include <tuple>
 #include <string>
 #include <vector>
 #include <iostream>
 
 namespace bpftrace {
+
+typedef std::tuple<std::string, std::string> usdt_probe_pair;
+
+class USDTHelper
+{
+public:
+  static usdt_probe_pair find(void *ctx, int pid, std::string name);
+};
 
 struct DeprecatedName
 {
@@ -20,7 +29,6 @@ static std::vector<DeprecatedName> DEPRECATED_LIST =
 };
 
 
-inline std::string GetProviderFromPath(std::string path);
 bool has_wildcard(const std::string &str);
 std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
@@ -31,5 +39,3 @@ std::vector<std::string> get_kernel_cflags(
 std::string is_deprecated(std::string &str);
 
 } // namespace bpftrace
-
-#include "utils-inl.h"

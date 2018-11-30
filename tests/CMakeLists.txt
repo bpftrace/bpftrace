@@ -12,7 +12,6 @@ add_executable(bpftrace_test
   probe.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
-  utils.cpp
 
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp

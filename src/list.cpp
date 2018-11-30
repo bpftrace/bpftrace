@@ -59,12 +59,12 @@ void list_dir(const std::string path, std::vector<std::string> &files)
   closedir(dp);
 }
 
-typedef std::tuple<std::string, std::string, std::string> uprobe_entry;
-static std::vector<uprobe_entry> uprobes;
+typedef std::tuple<std::string, std::string, std::string> usdt_entry;
+static std::vector<usdt_entry> usdt_probes;
 
-void uprobe_each(struct bcc_usdt *uprobe)
+void usdt_each(struct bcc_usdt *usdt)
 {
-  uprobes.push_back(std::make_tuple(uprobe->provider, uprobe->name, uprobe->bin_path));
+  usdt_probes.push_back(std::make_tuple(usdt->provider, usdt->name, usdt->bin_path));
 }
 
 void list_probes_from_list(const std::vector<ProbeListItem> &probes_list,
@@ -163,11 +163,9 @@ void list_probes(const std::string &search_input, int pid)
       std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
       return;
     }
-    bcc_usdt_foreach(ctx, uprobe_each);
-    for (auto u : uprobes) {
-      std::string provider, probe_name, bin_path;
-      std::tie(provider, probe_name, bin_path) = u;
-      std::string probe = "usdt:" + bin_path + ":" + probe_name;
+    bcc_usdt_foreach(ctx, usdt_each);
+    for (const auto &u : usdt_probes) {
+      std::string probe = "usdt:" + std::get<2>(u) + ":" + std::get<1>(u);
       if (search_probe(probe, re))
         continue;
       std::cout << probe << std::endl;

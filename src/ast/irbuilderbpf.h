@@ -44,7 +44,7 @@ public:
   CallInst   *CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src);
   CallInst   *CreateProbeReadStr(Value *dst, size_t size, Value *src);
-  Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin);
+  Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin, int pid);
   Value      *CreateStrcmp(Value* val, std::string str, bool inverse=false);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();

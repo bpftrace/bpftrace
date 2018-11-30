@@ -136,7 +136,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       int arg_num = atoi(builtin.ident.substr(3).c_str());
       if (probetype(current_attach_point_->provider) == ProbeType::usdt) {
         expr_ = b_.CreateUSDTReadArgument(ctx_, current_attach_point_,
-                                          arg_num, builtin);
+                                          arg_num, builtin, bpftrace_.pid_);
         return;
       }
       offset = arch::arg_offset(arg_num);
