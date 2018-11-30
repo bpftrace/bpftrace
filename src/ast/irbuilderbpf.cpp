@@ -4,7 +4,7 @@
 #include "libbpf.h"
 #include "bcc_usdt.h"
 #include "arch/arch.h"
-#include "utils-inl.h"
+#include "usdt_util.h"
 
 #include <llvm/IR/Module.h>
 
@@ -329,17 +329,30 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
   return result;
 }
 
-Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin)
+Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin, int pid)
 {
   struct bcc_usdt_argument argument;
 
-  void *usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
+  void *usdt;
+
+  if (pid) {
+    //FIXME use attach_point->target when iovisor/bcc#2064 is merged
+    usdt = bcc_usdt_new_frompid(pid, nullptr);
+  } else {
+    std::cerr << "initializing usdt context from path" << std::endl;
+    usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
+  }
+
   if (usdt == nullptr) {
-    std::cerr << "couldn't load " << attach_point->target << std::endl;
+    std::cerr << "failed to initialize usdt context for probe " << attach_point->target << std::endl;
     exit(-1);
   }
 
-  std::string provider = GetProviderFromPath(attach_point->target);
+  auto u = USDTHelper::find(usdt, 0, attach_point->func);
+
+  std::string &provider = std::get<0>(u);
+  attach_point->target = std::get<1>(u);
+
   if (bcc_usdt_get_argument(usdt, provider.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
               << provider << ":" << attach_point->func << std::endl;

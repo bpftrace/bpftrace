@@ -12,7 +12,7 @@
 #include "bcc_usdt.h"
 #include "common.h"
 #include "libbpf.h"
-#include "utils-inl.h"
+#include "usdt_util.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
@@ -327,7 +327,8 @@ void AttachedProbe::attach_usdt(int pid)
 
   if (pid)
   {
-    ctx = bcc_usdt_new_frompid(pid, probe_.path.c_str());
+    //FIXME when iovisor/bcc#2604 is merged, optionally pass probe_.path
+    ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (!ctx)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name + ", for PID: " + std::to_string(pid));
   }
@@ -344,7 +345,10 @@ void AttachedProbe::attach_usdt(int pid)
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
-  std::string provider_name = GetProviderFromPath(probe_.path);
+  auto u = USDTHelper::find(ctx, pid, probe_.attach_point);
+
+  std::string &provider_name = std::get<0>(u);
+  probe_.path = std::get<1>(u);
 
   err = bcc_usdt_get_location(ctx, provider_name.c_str(), probe_.attach_point.c_str(), 0, &loc);
   if (err)

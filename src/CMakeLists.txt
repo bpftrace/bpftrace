@@ -12,6 +12,7 @@ add_executable(bpftrace
   tracepoint_format_parser.cpp
   types.cpp
   list.cpp
+  usdt_util.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)

@@ -11,7 +11,6 @@ add_executable(bpftrace_test
   probe.cpp
   semantic_analyser.cpp
   tracepoint_format_parser.cpp
-  utils.cpp
 
   codegen/general.cpp
   codegen/bitshift_left.cpp
@@ -101,6 +100,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
+  ${CMAKE_SOURCE_DIR}/src/usdt_util.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)
