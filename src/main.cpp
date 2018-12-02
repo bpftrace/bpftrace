@@ -97,13 +97,22 @@ int main(int argc, char *argv[])
     return 1;
   }
 
+  BPFtrace bpftrace;
+
+  // PID is currently only used for USDT probes that need enabling. Future work:
+  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
+  // - provide PID in USDT probe specification as a way to override -p.
+  bpftrace.pid_ = 0;
+  if (pid_str)
+    bpftrace.pid_ = atoi(pid_str);
+
   // Listing probes
   if (listing)
   {
     if (optind == argc-1)
-      list_probes(argv[optind]);
+      list_probes(argv[optind], bpftrace.pid_);
     else if (optind == argc)
-      list_probes();
+      list_probes("", bpftrace.pid_);
     else
     {
       usage();
@@ -140,18 +149,9 @@ int main(int argc, char *argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  BPFtrace bpftrace;
-
   // defaults
   bpftrace.join_argnum_ = 16;
   bpftrace.join_argsize_ = 1024;
-
-  // PID is currently only used for USDT probes that need enabling. Future work:
-  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
-  // - provide PID in USDT probe specification as a way to override -p.
-  bpftrace.pid_ = 0;
-  if (pid_str)
-    bpftrace.pid_ = atoi(pid_str);
 
   TracepointFormatParser::parse(driver.root_);
 

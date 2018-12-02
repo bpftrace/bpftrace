@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "bcc_usdt.h"
+
 #include "list.h"
 #include "bpftrace.h"
 
@@ -65,13 +67,37 @@ void list_dir(const std::string path, std::vector<std::string> &files)
   closedir(dp);
 }
 
-void list_probes(const std::string &search)
+typedef std::tuple<std::string, std::string, std::string> uprobe_entry;
+static std::vector<uprobe_entry> uprobes;
+
+void uprobe_each(struct bcc_usdt *uprobe)
+{
+  uprobes.push_back(std::make_tuple(uprobe->provider, uprobe->name, uprobe->bin_path));
+}
+
+void list_probes(const std::string &search, int pid)
 {
   unsigned int i, j;
   std::string line, probe;
 
   // software
-  // TODO: add here
+  if (pid > 0) {
+    void *ctx = bcc_usdt_new_frompid(pid, nullptr);
+    if (ctx == nullptr) {
+      std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
+      return;
+    }
+    bcc_usdt_foreach(ctx, uprobe_each);
+    for (auto u : uprobes) {
+      std::string provider, probe_name, bin_path;
+      std::tie(provider, probe_name, bin_path) = u;
+      std::string probe = "usdt:" + bin_path + ":" + probe_name;
+      if (search_probe(probe, search))
+        continue;
+      std::cout << probe << std::endl;
+    }
+    bcc_usdt_close(ctx);
+  }
 
   // hardware
   // TODO: add here
@@ -123,12 +149,6 @@ void list_probes(const std::string &search)
     std::cout << probe << std::endl;
   }
 
-}
-
-void list_probes()
-{
-  const std::string search = "";
-  list_probes(search);
 }
 
 } // namespace bpftrace
