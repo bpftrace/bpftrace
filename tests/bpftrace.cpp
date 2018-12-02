@@ -274,7 +274,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
 
   StrictMock<MockBPFtrace> bpftrace;
 
-  EXPECT_NE(bpftrace.add_probe(probe), 0);
+  EXPECT_EQ(bpftrace.add_probe(probe), 0);
   EXPECT_EQ(0, bpftrace.get_probes().size());
   EXPECT_EQ(0, bpftrace.get_special_probes().size());
 }
