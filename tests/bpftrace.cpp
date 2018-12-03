@@ -268,6 +268,19 @@ TEST(bpftrace, add_probes_usdt)
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
 {
+  ast::AttachPoint a("uprobe", "/bin/grep", "*open", true);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  EXPECT_EQ(bpftrace.add_probe(probe), 0);
+  EXPECT_EQ(1, bpftrace.get_probes().size());
+  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+}
+
+TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
+{
   ast::AttachPoint a("uprobe", "/bin/sh", "foo*", true);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
