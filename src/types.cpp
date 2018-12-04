@@ -26,7 +26,9 @@ bool SizedType::operator==(const SizedType &t) const
 
 bool SizedType::IsArray() const
 {
-  return type == Type::string || type == Type::usym || type == Type::inet || (type == Type::cast && !is_pointer);
+  return type == Type::array || type == Type::string ||
+         type == Type::usym  || type == Type::inet ||
+         (type == Type::cast && !is_pointer);
 }
 
 bool SizedType::IsStack() const
@@ -56,6 +58,7 @@ std::string typestr(Type t)
     case Type::inet:     return "inet";     break;
     case Type::cast:     return "cast";     break;
     case Type::probe:    return "probe";    break;
+    case Type::array:    return "array";    break;
     default:
       std::cerr << "call or probe type not found" << std::endl;
       abort();

@@ -128,6 +128,16 @@ void Printer::visit(FieldAccess &acc)
   out_ << indent << " " << acc.field << std::endl;
 }
 
+void Printer::visit(ArrayIndex &arr)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "[]" << std::endl;
+
+  ++depth_;
+  arr.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(Cast &cast)
 {
   std::string indent(depth_, ' ');

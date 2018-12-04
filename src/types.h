@@ -36,6 +36,7 @@ enum class Type
   username,
   inet,
   stack_mode,
+  array,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
@@ -67,6 +68,7 @@ public:
     stack_type = stack_type_;
   }
   Type type;
+  Type elem_type;
   size_t size;
   StackType stack_type;
   std::string cast_type;
