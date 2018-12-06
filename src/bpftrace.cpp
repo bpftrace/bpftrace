@@ -1190,15 +1190,15 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
   std::ostringstream stack;
   std::string padding(indent, ' ');
 
-  stack << "\n";
+  stack << std::endl;
   for (auto &addr : stack_trace)
   {
     if (addr == 0)
       break;
     if (!ustack)
-      stack << padding << resolve_sym(addr, true) << std::endl;
+      stack << "\t" << padding << resolve_sym(addr, true) << std::endl;
     else
-      stack << padding << resolve_usym(addr, pid, true) << std::endl;
+      stack << "\t" << padding << std::hex << addr << " " << std::dec << resolve_usym(addr, pid, true) << std::endl;
   }
 
   return stack.str();
@@ -1365,10 +1365,11 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
     symbol << sym.name;
     if (show_offset)
       symbol << "+" << sym.offset;
+    symbol  << " (" << sym.module << ")";
   }
   else
   {
-    symbol << (void*)addr;
+    symbol << "[unknown] ([unknown])";
   }
 
   // TODO: deal with process exit and clearing its psyms entry
