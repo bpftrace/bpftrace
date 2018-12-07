@@ -1017,10 +1017,18 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
 void CodegenLLVM::visit(ArrayIndex &arr)
 {
+  Value *array, *index, *offset;
   SizedType &type = arr.expr->type;
+
   arr.expr->accept(*this);
+  array = expr_;
+
+  arr.indexpr->accept(*this);
+  index = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+  offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
+
   AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_index");
-  Value *src = b_.CreateAdd(expr_, b_.getInt64(arr.index * type.pointee_size));
+  Value *src = b_.CreateAdd(array, offset);
   b_.CreateProbeRead(dst, type.pointee_size, src);
   expr_ = b_.CreateLoad(dst);
   b_.CreateLifetimeEnd(dst);

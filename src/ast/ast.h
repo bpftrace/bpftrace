@@ -137,9 +137,9 @@ public:
 
 class ArrayIndex : public Expression {
 public:
-  ArrayIndex(Expression *expr, int index) : expr(expr), index(index) { }
+  ArrayIndex(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
   Expression *expr;
-  int index;
+  Expression *indexpr;
 
   void accept(Visitor &v) override;
 };
