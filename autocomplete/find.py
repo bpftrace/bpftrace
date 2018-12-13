@@ -28,7 +28,8 @@ PROBES = [
 
 SINGLE_NAME_LIST = [OPTS, PROBES, VARIABLES, FUNCTIONS]
 
-def find(name):
+
+def find_probe(name):
     name_split = name.split(':')
     probe_name = name_split[0]
     search = ':'.join(name_split[1:])
@@ -36,7 +37,6 @@ def find(name):
     if probe_name == 'kprobe' or probe_name == 'kretprobe':
         match = kprobe_event(search)
     elif probe_name == 'tracepoint':
-        search = name_split[1:]
         match = tracepoint_event(search)
     else:
         match = find_single_name(search)
@@ -45,27 +45,24 @@ def find(name):
 
 
 def kprobe_event(search):
-    f = open("/sys/kernel/debug/tracing/available_filter_functions", "r")
-    value = filter(lambda x: re.search('^' + search, x), f.readlines())
-    f.close
-    return value
+   return probe_event('kprobe', search)
 
-def tracepoint_event(search_list):
-    cmd = 'sudo ../build-release/src/bpftrace -l "tracepoint:*"'
-    p = subprocess.Popen([cmd], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+def tracepoint_event(search):
+    return probe_event('tracepoint', search)
+
+
+def probe_event(probe_name, search):
+    cmd = 'sudo ./bpftrace -l "' + probe_name + ':*"'
+    p = subprocess.Popen(
+        [cmd], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output, error = p.communicate()
 
     if error != None:
         return []
     else:
-        search = ':'.join(search_list)
-        search_list.pop()
-        replace = ':'.join(search_list) + ':'
-        if replace == ':':
-            replace = ''
+        return filter(lambda x: re.search('^' + probe_name + ':' + search, x), output.split())
 
-        tool_list = filter(lambda x: re.search('^tracepoint:' + search, x), output.split())
-        return [s.replace('tracepoint:' + replace, '') for s in tool_list]
 
 def find_single_name(name):
     total_match = []
@@ -75,9 +72,11 @@ def find_single_name(name):
 
     return total_match
 
+
 def print_result(result):
     for item in result:
         print(item)
+
 
 def main(argv):
     if len(argv) == 0:
@@ -85,8 +84,15 @@ def main(argv):
 
     user_input = argv[0]
 
+    if user_input[0] == "'":
+        user_input = user_input[1:]
+
+    last_char = len(user_input) - 1
+    if user_input[last_char] == "'":
+        user_input = user_input[0:last_char]
+
     if re.search('.+\\:', user_input):
-        print_result(find(user_input))
+        print_result(find_probe(user_input))
     else:
         print_result(find_single_name(user_input))
 
