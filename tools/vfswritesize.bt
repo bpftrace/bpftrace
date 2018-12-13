@@ -1,0 +1,29 @@
+#!/usr/bin/env bpftrace
+/*
+ * vfswritesize.bt   Trace the number of bytes written to a file
+ *	Using the vfs_write kernel function.
+ *
+ * This traces at every call to the vfs_write function as a kprobe.
+ * It is handy for identifying writes and distribution of writes chunks sizes to a specific group of files.
+ * It produces an histogram for each file name.
+ *
+ * 13-Dec-2018	Lorenzo Fontana Created this.
+ */
+
+#include <linux/path.h>
+#include <linux/file.h>
+#include <linux/fs.h>
+#include <linux/dcache.h>
+
+BEGIN
+{
+	printf("Tracing VFS writes by file names... Hit Ctrl-C to end.\n");
+}
+
+kprobe:vfs_write
+{
+	$file = (file *)arg0;
+	$dentry = $file->f_path.dentry;
+	$file_name = str($dentry->d_name.name);
+	@writes[$file_name] = hist(arg2);
+}
