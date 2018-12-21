@@ -408,6 +408,20 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(pid, pid_offset);
     expr_ = buf;
   }
+  else if (call.func == "ntop")
+  {
+    // store uint64_t[2] with: [0]: (uint64_t)address_family, [1]: (uint64_t) inet_address
+    // To support ipv6, [2] should be the remaining bytes of the address
+    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "inet");
+    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+    Value *af_offset = b_.CreateGEP(buf, b_.getInt64(0));
+    Value *inet_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
+    call.vargs->at(0)->accept(*this);
+    b_.CreateStore(expr_, af_offset);
+    call.vargs->at(1)->accept(*this);
+    b_.CreateStore(expr_, inet_offset);
+    expr_ = buf;
+  }
   else if (call.func == "reg")
   {
     auto &reg_name = static_cast<String&>(*call.vargs->at(0)).str;
@@ -1176,7 +1190,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string || expr->type.type == Type::usym)
+      if (expr->type.type == Type::string || expr->type.type == Type::usym ||
+        expr->type.type == Type::inet)
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);
@@ -1206,7 +1221,8 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string || expr->type.type == Type::usym)
+      if (expr->type.type == Type::string || expr->type.type == Type::usym ||
+        expr->type.type == Type::inet)
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
         b_.CreateStore(expr_, offset_val);

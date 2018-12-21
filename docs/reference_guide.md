@@ -59,6 +59,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [11. `system()`: System](#11-system-system)
     - [12. `exit()`: Exit](#12-exit-exit)
     - [13. `cgroupid()`: Resolve cgroup ID](#13-cgroupid-resolve-cgroup-id)
+    - [14. `ntop()`: Convert IP address data to text](#14-ntop-convert-ip-address-data-to-text)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -1384,6 +1385,40 @@ And in other terminal:
 ```
 # echo $$ > /sys/fs/cgroup/unified/mycg/cgroup.procs
 # cat /etc/shadow
+```
+
+## 14. `ntop`: Convert IP address data to text
+
+Syntax: `ntop(int af, int addr)`
+
+This returns the string representation of an IPv4 address. IPv6 support will be added in the future.
+
+Examples:
+
+A simple example of ntop with an ipv4 hex-encoded literal:
+
+```
+bpftrace -e 'BEGIN { $addr_type=2; printf("%s\n", ntop($addr_type, 0x0100007f));}'
+127.0.0.1
+^C
+```
+
+Note that the literal `2` above is the value of the enum `AF_INET`, and `10` would indicate `AF_INET6` once supported, as per `include/linux/socket.h`.
+
+A less trivial example of this usage, tracing tcp outbound connections, and printing the destination address:
+
+```
+bpftrace -e '#include <net/sock.h>
+kprobe:tcp_connect { $sk = ((sock *) arg0); printf("%s\n", ntop(2, $sk->__sk_common.skc_daddr)); }'
+Attaching 1 probe...
+169.254.0.1
+^C
+```
+
+And initiate a connection to this (or any) address in another terminal:
+
+```
+curl 169.254.0.1
 ```
 
 # Map Functions

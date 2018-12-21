@@ -213,6 +213,16 @@ void SemanticAnalyser::visit(Call &call)
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 16);
   }
+  else if (call.func == "ntop") {
+    check_nargs(call, 2);
+    check_arg(call, Type::integer, 0);
+    check_arg(call, Type::integer, 1);
+    // 3 x 64 bit words are needed, hence 24 bytes
+    //  0 - To store address family, but stay word-aligned
+    //  1 - To store ipv4 or first half of ipv6
+    //  2 - Reserved for future use, to store remainder of ipv6
+    call.type = SizedType(Type::inet, 24);
+  }
   else if (call.func == "join") {
     check_assignment(call, false, false);
     check_nargs(call, 1);
