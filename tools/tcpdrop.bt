@@ -1,0 +1,65 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcpdrop.bt   Trace TCP kernel-dropped packets/segments.
+ *              For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: tcpdrop.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ * It is limited to ipv4 addresses, and cannot show tcp flags.
+ *
+ * This provides information such as packet details, socket state, and kernel
+ * stack trace for packets/segments that were dropped via tcp_drop().
+
+ * Copyright (c) 2018 Dale Hamel.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+
+ * 23-Nov-2018	Dale Hamel	created this.
+ */
+
+#include <net/sock.h>
+
+BEGIN
+{
+  printf("Tracing tcp drops. Hit Ctrl-C to end.\n");
+  printf("%-8s %-8s %-16s %-21s %-21s %-8s\n", "TIME", "PID", "COMM", "SADDR:SPORT", "DADDR:DPORT", "STATE")
+}
+
+kprobe:tcp_drop
+{
+  $sk = ((sock *) arg0);
+  $inet_family = $sk->__sk_common.skc_family;
+  $af_inet = 2;
+
+  if ($inet_family == $af_inet) {
+    $daddr = $sk->__sk_common.skc_daddr;
+    $saddr = $sk->__sk_common.skc_rcv_saddr;
+    $lport = $sk->__sk_common.skc_num;
+    $dport = $sk->__sk_common.skc_dport;
+
+    // Destination port is big endian, it must be flipped
+    $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
+
+    $state = $sk->__sk_common.skc_state;
+
+    // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
+    $statestr = "";
+    $statestr = $state == 1 ? "ESTABLISHED" : $statestr;
+    $statestr = $state == 2 ? "SYN_SENT" : $statestr;
+    $statestr = $state == 3 ? "SYN_RECV" : $statestr;
+    $statestr = $state == 4 ? "FIN_WAIT1" : $statestr;
+    $statestr = $state == 5 ? "FIN_WAIT2" : $statestr;
+    $statestr = $state == 6 ? "TIME_WAIT" : $statestr;
+    $statestr = $state == 7 ? "CLOSE" : $statestr;
+    $statestr = $state == 8 ? "CLOSE_WAIT" : $statestr;
+    $statestr = $state == 9 ? "LAST_ACK" : $statestr;
+    $statestr = $state == 10 ? "LISTEN" : $statestr;
+    $statestr = $state == 11 ? "CLOSING" : $statestr;
+    $statestr = $state == 12 ? "NEW_SYN_RECV" : $statestr;
+
+    time("%H:%M:%S ");
+    printf("%-8d %-16s ", pid, comm);
+    printf("%14s:%-6d %14s:%-6d %-10s\n", ntop($af_inet, $daddr), $dport, ntop($af_inet, $saddr), $lport, $statestr);
+    printf("%s\n", stack);
+  }
+}

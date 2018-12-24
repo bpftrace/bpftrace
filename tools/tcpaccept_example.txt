@@ -1,0 +1,32 @@
+Demonstrations of tcpaccept, the Linux bpftrace/eBPF version.
+
+
+This tool traces the kernel function accepting TCP socket connections (eg, a
+passive connection via accept(); not connect()). Some example output (IP
+addresses changed to protect the innocent):
+
+# ./tcpaccept
+Tracing tcp accepts. Hit Ctrl-C to end.
+TIME     PID      COMM         RADDR          RPORT   LADDR            LPORT  QLEN   QMAX
+05:25:38 1463622  redis-server 10.152.152.89  50672   10.134.113.155    6379 0   8192
+05:25:38 3252023  thread.rb   10.152.229.144  46768    10.134.113.160    8000 0   8192
+05:25:38 1463622  redis-server 10.148.179.172  54856   10.134.113.159    6379 0   8192
+
+
+This output shows three connections, an IPv4 connections to PID 1463622, a "redis-server"
+process listening on port 6379, and one IPv6 connection to a "thread.rb" process
+listening on port 8000. The remote address and port are also printed, and the accept queue
+current size as well as maximum size are shown.
+
+The overhead of this tool should be negligible, since it is only tracing the
+kernel function performing accept. It is not tracing every packet and then
+filtering.
+
+This tool only traces successful TCP accept()s. Connection attempts to closed
+ports will not be shown (those can be traced via other functions).
+
+There is another version of this tool in bcc: https://github.com/iovisor/bcc
+
+USAGE message:
+
+# ./tcpaccept.bt

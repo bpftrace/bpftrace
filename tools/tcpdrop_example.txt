@@ -1,0 +1,62 @@
+Demonstrations of tcpdrop, the Linux bpftrace/eBPF version.
+
+
+tcpdrop prints details of TCP packets or segments that were dropped by the
+kernel, including the kernel stack trace that led to the drop:
+
+# ./tcpdrop.bt
+TIME     COMM             PID      SADDR:SPORT          > DADDR:DPORT          STATE (FLAGS)
+06:29:07 redis-server     3252023  10.153.18.169:44926 > 10.134.113.159:6379     ESTABLISHED
+	tcp_drop+0x1
+	tcp_v4_do_rcv+0x135
+	tcp_v4_rcv+0x9c7
+	ip_local_deliver_finish+0x62
+	ip_local_deliver+0x6f
+	ip_rcv_finish+0x129
+	ip_rcv+0x28f
+	__netif_receive_skb_core+0x432
+	__netif_receive_skb+0x18
+	netif_receive_skb_internal+0x37
+	napi_gro_receive+0xc5
+	ena_clean_rx_irq+0x3c3
+	ena_io_poll+0x33f
+	net_rx_action+0x140
+	__softirqentry_text_start+0xdf
+	irq_exit+0xb6
+	do_IRQ+0x82
+	ret_from_intr+0x0
+	native_safe_halt+0x6
+	default_idle+0x20
+	arch_cpu_idle+0x15
+	default_idle_call+0x23
+	do_idle+0x17f
+	cpu_startup_entry+0x73
+	rest_init+0xae
+	start_kernel+0x4dc
+	x86_64_start_reservations+0x24
+	x86_64_start_kernel+0x74
+	secondary_startup_64+0xa5
+
+06:30:24 swapper/4        0        10.152.132.206:38392 > 10.134.113.159:6379     ESTABLISHED
+	tcp_drop+0x1
+	tcp_v4_do_rcv+0x135
+	__release_sock+0x88
+	release_sock+0x30
+	inet_stream_connect+0x47
+	SYSC_connect+0x9e
+	sys_connect+0xe
+	do_syscall_64+0x73
+	entry_SYSCALL_64_after_hwframe+0x3d
+
+[...]
+
+The last two columns show the state of the TCP session.
+These two examples show packets arriving for a session in the established state,
+that were dropped by the kernel.
+
+This tool is useful for debugging high rates of drops, which can cause the
+remote end to do timer-based retransmits, hurting performance.
+
+USAGE:
+
+# ./tcpdrop.bt

@@ -1,0 +1,78 @@
+.TH tcpdrop 8  "2018-11-24" "USER COMMANDS"
+.SH NAME
+tcpdrop.bt \- Trace kernel-based TCP packet drops with details. Uses Linux bpftrace/eBPF
+.SH SYNOPSIS
+.B tcpdrop.bt
+.SH DESCRIPTION
+This tool traces TCP packets or segments that were dropped by the kernel, and
+shows details from the IP and TCP headers, the socket state, and the
+kernel stack trace. This is useful for debugging cases of high kernel drops,
+which can cause timer-based retransmits and performance issues.
+
+This tool works using dynamic tracing of the tcp_drop() kernel function,
+which requires a recent kernel version.
+
+This tool is limited to ipv4, and cannot parse tcpflags as bpftrace currently cannot parse socket buffers in the way that bcc can.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace all tcp drops:
+#
+.B tcpdrop.bt
+.TP
+.SH FIELDS
+.TP
+TIME
+Time of the call, in HH:MM:SS format.
+.TP
+PID
+Process ID that was on-CPU during the drop. This may be unrelated, as drops
+can occur on the receive interrupt and be unrelated to the PID that was
+interrupted.
+.TP
+COMM
+Process name
+.TP
+SADDR
+Source IP address.
+.TP
+SPORT
+Source TCP port.
+.TP
+DADDR
+Destination IP address.
+.TP
+DPORT
+Destionation TCP port.
+.TP
+STATE
+TCP session state ("ESTABLISHED", etc).
+.SH OVERHEAD
+This traces the kernel tcp_drop() function, which should be low frequency,
+and therefore the overhead of this tool should be negligible.
+
+As always, test and understand this tools overhead for your types of
+workloads before production use.
+.SH SOURCE
+This is from bpftrace
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tool of the same name. The bcc tool
+may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg, adapted for bpftrace by Dale Hamel
+.SH SEE ALSO
+tcplife(8), tcpaccept(8), tcpconnect(8), tcptop(8)
