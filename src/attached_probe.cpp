@@ -1,7 +1,11 @@
+#include <cstring>
+#include <elf.h>
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
+#include <link.h>
 #include <regex>
+#include <sys/auxv.h>
 #include <sys/utsname.h>
 #include <tuple>
 #include <unistd.h>
@@ -193,12 +197,67 @@ uint64_t AttachedProbe::offset() const
   return sym.offset;
 }
 
+/**
+ * Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
+ */
+static unsigned _find_version_note(unsigned long base)
+{
+  auto ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
+
+  for (int i = 0; i < ehdr->e_shnum; i++)
+  {
+    auto shdr = reinterpret_cast<const ElfW(Shdr) *>(
+      base + ehdr->e_shoff + (i * ehdr->e_shentsize)
+    );
+
+    if (shdr->sh_type == SHT_NOTE)
+    {
+      auto ptr = reinterpret_cast<const char *>(base + shdr->sh_offset);
+      auto end = ptr + shdr->sh_size;
+
+      while (ptr < end)
+      {
+        auto nhdr = reinterpret_cast<const ElfW(Nhdr) *>(ptr);
+        ptr += sizeof *nhdr;
+
+        auto name = ptr;
+        ptr += (nhdr->n_namesz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
+
+        auto desc = ptr;
+        ptr += (nhdr->n_descsz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
+
+        if ((nhdr->n_namesz > 5 && !memcmp(name, "Linux", 5)) &&
+            nhdr->n_descsz == 4 && !nhdr->n_type)
+          return *reinterpret_cast<const uint32_t *>(desc);
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Find a LINUX_VERSION_CODE matching the host kernel. The build-time constant
+ * may not match if bpftrace is compiled on a different Linux version than it's
+ * used on, e.g. if built with Docker.
+ */
 static unsigned kernel_version(int attempt)
 {
   switch (attempt)
   {
     case 0:
-      return LINUX_VERSION_CODE;
+    {
+      // Fetch LINUX_VERSION_CODE from the vDSO .note section, falling back on
+      // the build-time constant if unavailable. This always matches the
+      // running kernel, but is not supported on arm32.
+      unsigned code = 0;
+      unsigned long base = getauxval(AT_SYSINFO_EHDR);
+      if (base && !memcmp(reinterpret_cast<void *>(base), ELFMAG, 4))
+        code = _find_version_note(base);
+      if (! code)
+        code = LINUX_VERSION_CODE;
+      return code;
+    }
     case 1:
       struct utsname utsname;
       if (uname(&utsname) < 0)
@@ -208,11 +267,7 @@ static unsigned kernel_version(int attempt)
         return 0;
       return KERNEL_VERSION(x, y, z);
     case 2:
-      // try to get the definition of LINUX_VERSION_CODE at runtime.
-      // needed if bpftrace is compiled on a different linux version than it's used on.
-      // e.g. if built with docker.
-      // the reason case 0 doesn't work for this is because it uses the preprocessor directive,
-      // which is by definition a compile-time constant
+      // Try to get the definition of LINUX_VERSION_CODE at runtime.
       std::ifstream linux_version_header{"/usr/include/linux/version.h"};
       const std::string content{std::istreambuf_iterator<char>(linux_version_header),
                                 std::istreambuf_iterator<char>()};
