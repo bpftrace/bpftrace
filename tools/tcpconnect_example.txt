@@ -1,0 +1,26 @@
+Demonstrations of tcpconnect, the Linux bpftrace/eBPF version.
+
+
+This tool traces the kernel function performing active TCP connections
+(eg, via a connect() syscall; accept() are passive connections). Some example
+output (IP addresses changed to protect the innocent):
+
+# ./tcpconnect
+TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
+00:36:45 1798396  agent            127.0.0.1      5001   10.229.20.82   56114
+00:36:45 1798396  curl             127.0.0.1      10255  10.229.20.82   56606
+00:36:45 3949059  nginx            127.0.0.1      8000   127.0.0.1      37780
+
+
+This output shows three connections, one from a "agent" process, one from
+"curl", and one from "redis-cli". The output details shows the IP version, source
+address, source socket port, destination address, and destination port. This traces attempted
+connections: these may have failed.
+
+The overhead of this tool should be negligible, since it is only tracing the
+kernel functions performing connect. It is not tracing every packet and then
+filtering.
+
+USAGE message:
+
+# ./tcpconnect.bt

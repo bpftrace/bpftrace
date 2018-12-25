@@ -1,0 +1,28 @@
+Demonstrations of tcpretrans, the Linux bpftrace/eBPF version.
+
+
+This tool traces the kernel TCP retransmit function to show details of these
+retransmits. For example:
+
+# ./tcpretrans.bt
+TIME     PID               LADDR:LPORT          RADDR:RPORT  STATE
+00:43:54 0          10.229.20.82:46654    153.2.224.76:443    SYN_SENT
+00:43:55 0           10.232.0.49:57678    10.229.20.99:24231  SYN_SENT
+00:43:57 100       10.229.20.175:54224   10.201.76.122:443    ESTABLISHED
+[...]
+
+This output shows three TCP retransmits, the first two were for an IPv4
+connection from 10.153.223.157 port 22 to 69.53.245.40 port 34619. The TCP
+state was "ESTABLISHED" at the time of the retransmit. The on-CPU PID at the
+time of the retransmit is printed, in this case 0 (the kernel, which will
+be the case most of the time).
+
+Retransmits are usually a sign of poor network health, and this tool is
+useful for their investigation. Unlike using tcpdump, this tool has very
+low overhead, as it only traces the retransmit function. It also prints
+additional kernel details: the state of the TCP session at the time of the
+retransmit.
+
+USAGE message:
+
+# ./tcpretrans.bt

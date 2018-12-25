@@ -1,0 +1,50 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcpaccept.bt Trace TCP accept()s
+ *              For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: tcpaccept.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ *
+ * This uses dynamic tracing of the kernel inet_csk_accept() socket function
+ * (from tcp_prot.accept), and will need to be modified to match kernel changes.
+
+ * Copyright (c) 2018 Dale Hamel.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+
+ * 23-Nov-2018	Dale Hamel	created this.
+ */
+
+#include <net/sock.h>
+
+BEGIN
+{
+  printf("Tracing tcp accepts. Hit Ctrl-C to end.\n");
+  printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
+  printf("%-14s %-5s %-14s %-5s %s\n", "RADDR", "RPORT", "LADDR", "LPORT", "BL");
+}
+
+kretprobe:inet_csk_accept
+{
+  $sk = ((sock *) retval);
+  $inet_family = $sk->__sk_common.skc_family;
+  $af_inet = 2;
+
+  if ($inet_family == $af_inet) {
+    $daddr = $sk->__sk_common.skc_daddr;
+    $saddr = $sk->__sk_common.skc_rcv_saddr;
+    $lport = $sk->__sk_common.skc_num;
+    $dport = $sk->__sk_common.skc_dport;
+    $qlen  = $sk->sk_ack_backlog;
+    $qmax  = $sk->sk_max_ack_backlog;
+
+    // Destination port is big endian, it must be flipped
+    $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
+
+    time("%H:%M:%S ");
+    printf("%-6d %-14s ", pid, comm);
+    printf("%-14s %-5d %-14s %-5d ", ntop($af_inet, $daddr), $dport, ntop($af_inet, $saddr), $lport);
+    printf("%d/%d\n", $qlen, $qmax);
+  }
+}

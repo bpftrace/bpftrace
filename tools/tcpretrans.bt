@@ -1,0 +1,63 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcpretrans.bt Trace or count TCP retransmits
+ *               For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: tcpretrans.bt
+ *
+ * This is a bpftrace version of the bcc tool of the same name.
+ * It is limited to ipv4 addresses, and doesn't support tracking TLPs.
+ *
+ * This uses dynamic tracing of kernel functions, and will need to be updated
+ * to match kernel changes.
+ *
+ * Copyright (c) 2018 Dale Hamel.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 23-Nov-2018  Dale Hamel      created this.
+ */
+
+#include <net/sock.h>
+
+BEGIN
+{
+  printf("Tracing tcp retransmits. Hit Ctrl-C to end.\n");
+  printf("%-8s %-8s %20s %21s %6s\n", "TIME", "PID", "LADDR:LPORT", "RADDR:RPORT", "STATE" )
+}
+
+kprobe:tcp_retransmit_skb
+{
+  $sk = ((sock *) arg0);
+  $inet_family = $sk->__sk_common.skc_family;
+  $af_inet = 2;
+
+  if ($inet_family == $af_inet) {
+    $daddr = $sk->__sk_common.skc_daddr;
+    $saddr = $sk->__sk_common.skc_rcv_saddr;
+    $lport = $sk->__sk_common.skc_num;
+    $dport = $sk->__sk_common.skc_dport;
+
+    // Destination port is big endian, it must be flipped
+    $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
+
+    $state = $sk->__sk_common.skc_state;
+
+    // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
+    $statestr = "";
+    $statestr = $state == 1 ? "ESTABLISHED" : $statestr;
+    $statestr = $state == 2 ? "SYN_SENT" : $statestr;
+    $statestr = $state == 3 ? "SYN_RECV" : $statestr;
+    $statestr = $state == 4 ? "FIN_WAIT1" : $statestr;
+    $statestr = $state == 5 ? "FIN_WAIT2" : $statestr;
+    $statestr = $state == 6 ? "TIME_WAIT" : $statestr;
+    $statestr = $state == 7 ? "CLOSE" : $statestr;
+    $statestr = $state == 8 ? "CLOSE_WAIT" : $statestr;
+    $statestr = $state == 9 ? "LAST_ACK" : $statestr;
+    $statestr = $state == 10 ? "LISTEN" : $statestr;
+    $statestr = $state == 11 ? "CLOSING" : $statestr;
+    $statestr = $state == 12 ? "NEW_SYN_RECV" : $statestr;
+
+    time("%H:%M:%S ");
+    printf("%-8d %14s:%-6d %14s:%-6d %6s\n", pid, ntop($af_inet, $saddr), $lport, ntop($af_inet, $daddr), $dport, $statestr);
+  }
+}
