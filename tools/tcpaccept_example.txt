@@ -7,10 +7,10 @@ addresses changed to protect the innocent):
 
 # ./tcpaccept
 Tracing tcp accepts. Hit Ctrl-C to end.
-TIME     PID      COMM         RADDR          RPORT   LADDR            LPORT  QLEN   QMAX
-05:25:38 1463622  redis-server 10.152.152.89  50672   10.134.113.155    6379 0   8192
-05:25:38 3252023  thread.rb   10.152.229.144  46768    10.134.113.160    8000 0   8192
-05:25:38 1463622  redis-server 10.148.179.172  54856   10.134.113.159    6379 0   8192
+TIME     PID     COMM           RADDR          RPORT LADDR          LPORT BL
+00:34:19 3949061 nginx          10.228.22.228  44226 10.229.20.169  8080  0/128
+00:34:19 3951399 ruby           127.0.0.1      52422 127.0.0.1      8000  0/128
+00:34:19 3949062 nginx          10.228.23.128  35408 10.229.20.169  8080  0/128
 
 
 This output shows three connections, an IPv4 connections to PID 1463622, a "redis-server"

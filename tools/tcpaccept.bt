@@ -21,7 +21,7 @@
 BEGIN
 {
   printf("Tracing tcp accepts. Hit Ctrl-C to end.\n");
-  printf("%-8s %-7s %-14s ", "TIME", "PID", "COMM");
+  printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
   printf("%-14s %-5s %-14s %-5s %s\n", "RADDR", "RPORT", "LADDR", "LPORT", "BL");
 }
 

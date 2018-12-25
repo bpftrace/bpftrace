@@ -6,10 +6,10 @@ This tool traces the kernel function performing active TCP connections
 output (IP addresses changed to protect the innocent):
 
 # ./tcpconnect
-TIME     PID      COMM         SADDR        SPORT     DADDR        DPORT
-05:44:26 629487   agent        127.0.0.1   5001   127.0.0.1    34282
-05:44:30 629922   curl         127.0.0.1  10255   127.0.0.1    45084
-05:44:30 629955   redis-cli    127.0.0.1   6379   127.0.0.1    51136
+TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
+00:36:45 1798396  agent            127.0.0.1      5001   10.229.20.82   56114
+00:36:45 1798396  curl             127.0.0.1      10255  10.229.20.82   56606
+00:36:45 3949059  nginx            127.0.0.1      8000   127.0.0.1      37780
 
 
 This output shows three connections, one from a "agent" process, one from

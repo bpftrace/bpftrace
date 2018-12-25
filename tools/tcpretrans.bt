@@ -22,7 +22,7 @@
 BEGIN
 {
   printf("Tracing tcp retransmits. Hit Ctrl-C to end.\n");
-  printf("%-8s %-8s %20s %20s %6s\n", "TIME", "PID", "LADDR:LPORT", "RADDR:RPORT", "STATE" )
+  printf("%-8s %-8s %20s %21s %6s\n", "TIME", "PID", "LADDR:LPORT", "RADDR:RPORT", "STATE" )
 }
 
 kprobe:tcp_retransmit_skb
