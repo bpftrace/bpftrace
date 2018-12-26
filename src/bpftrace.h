@@ -68,7 +68,7 @@ public:
   std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
-  int pid_;
+  int pid_{0};
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
@@ -100,7 +100,7 @@ private:
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();
-  void poll_perf_events(int epollfd, int timeout=-1);
+  void poll_perf_events(int epollfd, bool drain=false);
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
@@ -118,6 +118,7 @@ private:
   static std::string lhist_index_label(int number);
   static std::vector<std::string> split_string(std::string &str, char split_by);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
+  static bool is_pid_alive(int pid);
 };
 
 } // namespace bpftrace

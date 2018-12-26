@@ -448,7 +448,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   attached_probes_.clear();
 
   END_trigger();
-  poll_perf_events(epollfd, 100);
+  poll_perf_events(epollfd, true);
   special_attached_probes_.clear();
 
   return 0;
@@ -490,13 +490,17 @@ int BPFtrace::setup_perf_events()
   return epollfd;
 }
 
-void BPFtrace::poll_perf_events(int epollfd, int timeout)
+void BPFtrace::poll_perf_events(int epollfd, bool drain)
 {
   auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
   {
-    int ready = epoll_wait(epollfd, events.data(), online_cpus_, timeout);
-    if (ready <= 0)
+    int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
+
+    // Return if either
+    //   * epoll_wait has encountered an error (eg signal delivery)
+    //   * There's no events left and we've been instructed to drain
+    if (ready < 0 || (ready == 0 && drain))
     {
       return;
     }
@@ -504,6 +508,17 @@ void BPFtrace::poll_perf_events(int epollfd, int timeout)
     for (int i=0; i<ready; i++)
     {
       perf_reader_event_read((perf_reader*)events[i].data.ptr);
+    }
+
+    // If we are tracing a specific pid and it has exited, we should exit
+    // as well b/c otherwise we'd be tracing nothing.
+    //
+    // Note that there technically is a race with a new process using the
+    // same pid, but we're polling at 100ms and it would be unlikely that
+    // the pids wrap around that fast.
+    if (pid_ > 0 && !is_pid_alive(pid_))
+    {
+      return;
     }
   }
   return;
@@ -1451,6 +1466,25 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
 
     // Other types don't get sorted
   }
+}
+
+bool BPFtrace::is_pid_alive(int pid)
+{
+  char buf[256];
+  int ret = snprintf(buf, sizeof(buf), "/proc/%d/status", pid);
+  if (ret < 0)
+  {
+    throw std::runtime_error("failed to snprintf");
+  }
+
+  int fd = open(buf, 0, O_RDONLY);
+  if (fd < 0 && errno == ENOENT)
+  {
+    return false;
+  }
+  close(fd);
+
+  return true;
 }
 
 } // namespace bpftrace
