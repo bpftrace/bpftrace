@@ -1,6 +1,7 @@
 #include <iostream>
 #include <signal.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -54,6 +55,12 @@ static void enforce_infinite_rlimit() {
 
 int main(int argc, char *argv[])
 {
+  if (geteuid() != 0)
+  {
+    std::cerr << "ERROR: bpftrace currently only supports running as the root user." << std::endl;
+    exit(0);
+  }
+
   int err;
   Driver driver;
   char *pid_str = NULL;
