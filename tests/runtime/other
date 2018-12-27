@@ -1,0 +1,34 @@
+NAME if_gt
+RUN bpftrace -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 }; printf("a=%d\n", $a); exit();}'
+EXPECT a=20
+TIMEOUT 5
+
+NAME if_lt
+RUN bpftrace -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 }; printf("a=%d\n", $a); exit();}'
+EXPECT a=10
+TIMEOUT 5
+
+NAME ifelse_go_else
+RUN bpftrace -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"}; printf("a=%s\n", $a); exit();}'
+EXPECT a=hello
+TIMEOUT 5
+
+NAME ifelse_go_if
+RUN bpftrace -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"}; printf("a=%s\n", $a); exit();}'
+EXPECT a=hi
+TIMEOUT 5
+
+NAME unroll
+RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; }; printf("a=%d\n", $a); exit();}'
+EXPECT a=11
+TIMEOUT 5
+
+NAME unroll_max_value
+RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (30) { $a = $a + 2; }; printf("a=%d\n", $a); exit();}'
+EXPECT unroll maximum value is 20
+TIMEOUT 5
+
+NAME unroll_min_value
+RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; }; printf("a=%d\n", $a); exit();}'
+EXPECT unroll minimum value is 1
+TIMEOUT 5
