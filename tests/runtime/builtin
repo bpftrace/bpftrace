@@ -1,0 +1,91 @@
+NAME pid
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+EXPECT SUCCESS pid [0-9][0-9]*
+TIMEOUT 5
+
+NAME tid
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", tid); exit(); }'
+EXPECT SUCCESS tid [0-9][0-9]*
+TIMEOUT 5
+
+NAME uid
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", uid); exit(); }'
+EXPECT SUCCESS uid [0-9][0-9]*
+TIMEOUT 5
+
+NAME gid
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", gid); exit(); }'
+EXPECT SUCCESS gid [0-9][0-9]*
+TIMEOUT 5
+
+NAME nsecs
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", nsecs); exit(); }'
+EXPECT SUCCESS nsecs -?[0-9][0-9]*
+TIMEOUT 5
+
+NAME cpu
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cpu); exit(); }'
+EXPECT SUCCESS cpu -?[0-9][0-9]*
+TIMEOUT 5
+
+NAME comm
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", comm); exit(); }'
+EXPECT SUCCESS comm .*
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+AFTER | egrep 'SUCCESS comm .*'
+
+NAME stack
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", stack); exit(); }'
+EXPECT SUCCESS stack
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
+NAME ustack
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", ustack); exit(); }'
+EXPECT SUCCESS ustack
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
+NAME arg
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", arg0); exit(); }'
+EXPECT SUCCESS arg -?[0-9][0-9]*
+TIMEOUT 5
+
+NAME retval
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %d\n", retval); exit(); }'
+EXPECT SUCCESS retval .*
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
+NAME func
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", func); exit(); }'
+EXPECT SUCCESS func .*
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
+NAME username
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %s\n", username); exit(); }'
+EXPECT SUCCESS username .*
+TIMEOUT 5
+
+NAME probe
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", probe); exit(); }'
+EXPECT SUCCESS probe kprobe:do_nanosleep
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
+NAME curtask
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
+EXPECT SUCCESS curtask -?[0-9][0-9]*
+TIMEOUT 5
+
+NAME rand
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", rand); exit(); }'
+EXPECT SUCCESS rand -?[0-9][0-9]*
+TIMEOUT 5
+
+NAME cgroup
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }'
+EXPECT SUCCESS cgroup -?[0-9][0-9]*
+TIMEOUT 5

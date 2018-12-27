@@ -70,3 +70,10 @@ target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
 target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
+
+configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
+configure_file(main.py main.py COPYONLY)
+configure_file(parser.py parser.py COPYONLY)
+configure_file(utils.py utils.py COPYONLY)
+file(COPY runtime DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+add_custom_target(runtime-tests COMMAND ./runtime-tests.sh)
