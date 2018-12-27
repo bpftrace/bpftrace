@@ -52,41 +52,41 @@ See \fBPROBE TYPES\fR and \fBBUILTINS (variables/functions)\fR for the bpftrace 
 .
 .TP
 \fB\-l [searchterm]\fR
-list probes
+List probes.
 .
 .TP
 \fB\-e \'PROGRAM\'\fR
-execute PROGRAM
+Execute PROGRAM.
 .
 .TP
 \fB\-p PID\fR
-process ID for enabling USDT probes
+Process ID for enabling USDT probes.
 .
 .TP
 \fB\-v\fR
-verbose messages
+Verbose messages.
 .
 .TP
 \fB\-d\fR
-debug info on dry run
+Debug info on dry run.
 .
 .TP
 \fB\-dd\fR
-verbose debug info on dry run
+Verbose debug info on dry run.
 .
 .SH "EXAMPLES"
 .
 .TP
 \fBbpftrace \-l \'*sleep*\'\fR
-list probes containing "sleep"
+List probes containing "sleep".
 .
 .TP
 \fBbpftrace \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
-trace processes calling sleep
+Trace processes calling sleep.
 .
 .TP
 \fBbpftrace \-e \'tracepoint:raw_syscalls:sys_enter { @[comm]=count(); }\'\fR
-count syscalls by process name
+Count syscalls by process name.
 .
 .SH "ONELINERS"
 For brevity, just the the actual BPF code is shown below\.
@@ -95,47 +95,47 @@ For brevity, just the the actual BPF code is shown below\.
 Usage: \fBbpftrace \-e \'bpf\-code\'\fR
 .
 .TP
-New processes with arguments
+New processes with arguments:
 \fBtracepoint:syscalls:sys_enter_execve { join(args\->argv); }\fR
 .
 .TP
-Files opened by process
+Files opened by process:
 \fBtracepoint:syscalls:sys_enter_open { printf("%s %s\en", comm, str(args\->filename)); }\fR
 .
 .TP
-Syscall count by program
+Syscall count by program:
 \fBtracepoint:raw_syscalls:sys_enter { @[comm] = count(); }\fR
 .
 .TP
-Syscall count by syscall
+Syscall count by syscall:
 \fBtracepoint:syscalls:sys_enter_* { @[probe] = count(); }\fR
 .
 .TP
-Syscall count by process
+Syscall count by process:
 \fBtracepoint:raw_syscalls:sys_enter { @[pid, comm] = count(); }\fR
 .
 .TP
-Read bytes by process
+Read bytes by process:
 \fBtracepoint:syscalls:sys_exit_read /args\->ret/ { @[comm] = sum(args\->ret); }\fR
 .
 .TP
-Read size distribution by process
+Read size distribution by process:
 \fBtracepoint:syscalls:sys_exit_read { @[comm] = hist(args\->ret); }\fR
 .
 .TP
-Disk size by process
+Disk size by process:
 \fBtracepoint:block:block_rq_issue { printf("%d %s %d\en", pid, comm, args\->bytes); }\fR
 .
 .TP
-Pages paged in by process
+Pages paged in by process:
 \fBsoftware:major\-faults:1 { @[comm] = count(); }\fR
 .
 .TP
-Page faults by process
+Page faults by process:
 \fBsoftware:faults:1 { @[comm] = count(); }\fR
 .
 .TP
-Profile user\-level stacks at 99 Hertz, for PID 189
+Profile user\-level stacks at 99 Hertz, for PID 189:
 \fBprofile:hz:99 /pid == 189/ { @[ustack] = count(); }\fR
 .
 .SH "PROBE TYPES"
