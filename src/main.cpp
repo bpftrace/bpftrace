@@ -1,6 +1,7 @@
 #include <iostream>
 #include <signal.h>
 #include <sys/resource.h>
+#include <unistd.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -51,6 +52,17 @@ static void enforce_infinite_rlimit() {
     std::cerr << "Warning: couldn't set RLIMIT for bpftrace. " <<
         "If your program is not loading, you can try " <<
         "\"ulimit -l 8192\" to fix the problem" << std::endl;
+}
+
+bool is_root()
+{
+  if (geteuid() != 0)
+  {
+    std::cerr << "ERROR: bpftrace currently only supports running as the root user." << std::endl;
+    return false;
+  }
+  else
+    return true;
 }
 
 int main(int argc, char *argv[])
@@ -112,6 +124,9 @@ int main(int argc, char *argv[])
   // Listing probes
   if (listing)
   {
+    if (!is_root())
+      return 1;
+
     if (optind == argc-1)
       list_probes(argv[optind]);
     else if (optind == argc)
@@ -144,6 +159,9 @@ int main(int argc, char *argv[])
     }
     err = driver.parse_str(script);
   }
+
+  if (!is_root())
+    return 1;
 
   if (err)
     return err;
