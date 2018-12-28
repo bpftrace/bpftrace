@@ -50,7 +50,7 @@ class BPFtrace
 {
 public:
   BPFtrace() : ncpus_(ebpf::get_possible_cpus().size()) { }
-  virtual ~BPFtrace() { }
+  virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
   int run(std::unique_ptr<BpfOrc> bpforc);
@@ -68,6 +68,7 @@ public:
   std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
+  std::string cmd_;
   int pid_{0};
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
@@ -97,6 +98,7 @@ private:
   std::map<int, void *> pid_sym_;
   int ncpus_;
   int online_cpus_;
+  std::vector<int> child_pids_;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();
@@ -118,6 +120,7 @@ private:
   static std::string lhist_index_label(int number);
   static std::vector<std::string> split_string(std::string &str, char split_by);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
+  static int spawn_child(const std::vector<std::string>& args);
   static bool is_pid_alive(int pid);
 };
 

@@ -60,7 +60,12 @@ Execute PROGRAM.
 .
 .TP
 \fB\-p PID\fR
-Process ID for enabling USDT probes.
+Enable USDT probes on PID. Will terminate bpftrace on PID termination. Note this is not a global PID filter on probes.
+.
+.TP
+\fB\-c CMD\fR
+Helper to run CMD. Equivalent to manually running CMD and then giving passing the PID to -p. This is useful to ensure
+you've traced at least the duration CMD's execution. You must provide an absolute path for the executable.
 .
 .TP
 \fB\-v\fR
@@ -83,6 +88,10 @@ List probes containing "sleep".
 .TP
 \fBbpftrace \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
 Trace processes calling sleep.
+.
+.TP
+\fBbpftrace \-c \'sleep 5\' \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
+run "sleep 5" in a new process and then trace processes calling sleep.
 .
 .TP
 \fBbpftrace \-e \'tracepoint:raw_syscalls:sys_enter { @[comm]=count(); }\'\fR
