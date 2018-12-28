@@ -25,7 +25,8 @@ void usage()
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h             show this help message" << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
-  std::cerr << "    -p PID         PID for enabling USDT probes" << std::endl;
+  std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
+  std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    -v             verbose messages" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -56,12 +57,13 @@ int main(int argc, char *argv[])
 {
   int err;
   Driver driver;
-  char *pid_str = NULL;
+  char *pid_str = nullptr;
+  char *cmd_str = nullptr;
   bool listing = false;
 
   std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:hlp:v")) != -1)
+  while ((c = getopt(argc, argv, "de:hlp:vc:")) != -1)
   {
     switch (c)
     {
@@ -84,6 +86,9 @@ int main(int argc, char *argv[])
       case 'l':
         listing = true;
         break;
+      case 'c':
+        cmd_str = optarg;
+        break;
       default:
         usage();
         return 1;
@@ -94,6 +99,13 @@ int main(int argc, char *argv[])
   {
     // TODO: allow both
     std::cerr << "USAGE: Use either -v or -d." << std::endl;
+    return 1;
+  }
+
+  if (cmd_str && pid_str)
+  {
+    std::cerr << "USAGE: Cannot use both -c and -p." << std::endl;
+    usage();
     return 1;
   }
 
@@ -151,6 +163,9 @@ int main(int argc, char *argv[])
   // - provide PID in USDT probe specification as a way to override -p.
   if (pid_str)
     bpftrace.pid_ = atoi(pid_str);
+
+  if (cmd_str)
+    bpftrace.cmd_ = cmd_str;
 
   TracepointFormatParser::parse(driver.root_);
 

@@ -10,7 +10,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/prctl.h>
+#include <sys/wait.h>
 #include <fcntl.h>
+#include <unistd.h>
 
 #include "bcc_syms.h"
 #include "perf_reader.h"
@@ -21,10 +24,24 @@
 #include "triggers.h"
 #include "resolve_cgroupid.h"
 
+extern char** environ;
+
 namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
+
+BPFtrace::~BPFtrace()
+{
+  for (int pid : child_pids_)
+  {
+    // We don't care if waitpid returns any errors. We're just trying
+    // to make a best effort here. It's not like we could recover from
+    // an error.
+    int status;
+    waitpid(pid, &status, 0);
+  }
+}
 
 int BPFtrace::add_probe(ast::Probe &p)
 {
@@ -426,6 +443,21 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   int epollfd = setup_perf_events();
   if (epollfd < 0)
     return epollfd;
+
+  // Spawn a child process if we've been passed a command to run
+  if (cmd_.size())
+  {
+    auto args = split_string(cmd_, ' ');
+    int pid = spawn_child(args);
+    if (pid < 0)
+    {
+      std::cerr << "Failed to spawn child=" << cmd_ << std::endl;
+      return pid;
+    }
+
+    child_pids_.emplace_back(pid);
+    pid_ = pid;
+  }
 
   BEGIN_trigger();
 
@@ -1079,6 +1111,56 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   return 0;
 }
 
+int BPFtrace::spawn_child(const std::vector<std::string>& args)
+{
+  static const int maxargs = 256;
+  char* argv[maxargs];
+
+  // Convert vector of strings into raw array of C-strings for execve(2)
+  int idx = 0;
+  for (const auto& arg : args)
+  {
+    if (idx == maxargs - 1)
+    {
+      std::cerr << "Too many args passed into spawn_child (" << args.size()
+        << " > " << maxargs - 1 << ")" << std::endl;
+      return -1;
+    }
+
+    argv[idx] = const_cast<char*>(arg.c_str());
+    ++idx;
+  }
+  argv[idx] = nullptr;  // must be null terminated
+
+  // Fork and exec
+  int ret = fork();
+  if (ret == 0)
+  {
+    // Receive SIGTERM if parent dies
+    //
+    // Useful if user doesn't kill the bpftrace process group
+    if (prctl(PR_SET_PDEATHSIG, SIGTERM))
+      perror("prctl(PR_SET_PDEATHSIG)");
+
+    if (execve(argv[0], argv, environ))
+    {
+      perror("execve");
+      return -1;
+    }
+  }
+  else if (ret > 0)
+  {
+    return ret;
+  }
+  else
+  {
+    perror("fork");
+    return -1;
+  }
+
+  return -1;  // silence end of control compiler warning
+}
+
 std::string BPFtrace::hist_index_label(int power)
 {
   char suffix = '\0';
@@ -1476,6 +1558,12 @@ bool BPFtrace::is_pid_alive(int pid)
   {
     throw std::runtime_error("failed to snprintf");
   }
+
+  // Do a nonblocking wait on the pid just in case it's our child and it
+  // has exited. We don't really care about any errors, we're just trying
+  // to make a best effort.
+  int status;
+  waitpid(pid, &status, WNOHANG);
 
   int fd = open(buf, 0, O_RDONLY);
   if (fd < 0 && errno == ENOENT)
