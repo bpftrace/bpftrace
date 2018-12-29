@@ -202,13 +202,27 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::none, 0);
   }
-  else if (call.func == "str" || call.func == "sym" || call.func == "usym") {
+  else if (call.func == "str") {
+    if (check_varargs(call, 1, 2)) {
+      check_arg(call, Type::integer, 0);
+      if (is_final_pass()) {
+        uint64_t strlen = bpftrace_.strlen_;
+        if (call.vargs->size() > 1) {
+          check_arg(call, Type::integer, 1, false);
+          auto &strlen_arg = *call.vargs->at(1);
+          if (strlen_arg.is_literal) {
+            strlen = static_cast<Integer&>(strlen_arg).n;
+          }
+        }
+        call.type = SizedType(Type::string, strlen);
+      }
+    }
+  }
+  else if (call.func == "sym" || call.func == "usym") {
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
-    if (call.func == "str")
-      call.type = SizedType(Type::string, STRING_SIZE);
-    else if (call.func == "sym")
+    if (call.func == "sym")
       call.type = SizedType(Type::sym, 8);
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 16);

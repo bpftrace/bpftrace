@@ -29,6 +29,11 @@ void usage()
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    -v             verbose messages" << std::endl << std::endl;
+  std::cerr << "ENVIRONMENT:" << std::endl;
+  std::cerr << "    BPFTRACE_STRLEN    [default: 64] bytes allocated on BPF stack by str()." << std::endl;
+  std::cerr << "                       Tune this to read in larger strings from userspace." << std::endl;
+  std::cerr << "                       Beware that BPF stack is small (512 bytes)." << std::endl;
+  std::cerr << "                       Beware that printf() and system() allocate strlen again when composing perf event output." << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -36,6 +41,8 @@ void usage()
   std::cerr << "    trace processes calling sleep" << std::endl;
   std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   std::cerr << "    count syscalls by process name" << std::endl;
+  std::cerr << "BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 25783/ { printf(\"<%s>\\n\", str(args->buf, args->count)); }'" << std::endl;
+  std::cerr << "    trace input & output of terminal with specified PID" << std::endl;
 }
 
 static void enforce_infinite_rlimit() {
@@ -175,6 +182,17 @@ int main(int argc, char *argv[])
   // defaults
   bpftrace.join_argnum_ = 16;
   bpftrace.join_argsize_ = 1024;
+
+  bpftrace.strlen_ = 64;
+  if(const char* env_p = std::getenv("BPFTRACE_STRLEN")) {
+    uint64_t proposed;
+    std::istringstream stringstream(env_p);
+    if (!(stringstream >> proposed)) {
+      std::cerr << "Env var 'BPFTRACE_STRLEN' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      return 1;
+    }
+    bpftrace.strlen_ = proposed;
+  }
 
   // PID is currently only used for USDT probes that need enabling. Future work:
   // - make PID a filter for all probe types: pass to perf_event_open(), etc.

@@ -268,6 +268,11 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
 {
+  return CreateProbeReadStr(dst, getInt64(size), src);
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src)
+{
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
       getInt64Ty(),
@@ -278,7 +283,7 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
-  return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "probe_read_str");
+  return CreateCall(probereadstr_func, {dst, size, src}, "probe_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
