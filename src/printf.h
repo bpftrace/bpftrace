@@ -21,19 +21,28 @@ public:
 class PrintableString : public virtual IPrintable
 {
 public:
-  PrintableString(std::string value) : _value(value) { }
+  PrintableString(std::string value) : value_(value) { }
   uint64_t value();
 private:
-  std::string _value;
+  std::string value_;
+};
+
+class PrintableCString : public virtual IPrintable
+{
+public:
+  PrintableCString(char* value) : value_(value) { }
+  uint64_t value();
+private:
+  char* value_;
 };
 
 class PrintableInt : public virtual IPrintable
 {
 public:
-  PrintableInt(uint64_t value) : _value(value) { }
+  PrintableInt(uint64_t value) : value_(value) { }
   uint64_t value();
 private:
-  uint64_t _value;
+  uint64_t value_;
 };
 
 

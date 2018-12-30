@@ -355,52 +355,87 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(std::vector<Fi
         switch (arg.type.size)
         {
           case 8:
-            arg_values.emplace_back(new PrintableInt(*(uint64_t*)(arg_data+arg.offset)));
+            arg_values.push_back(
+              std::make_unique<PrintableInt>(
+                *(uint64_t*)(arg_data+arg.offset)));
             break;
           case 4:
-            arg_values.emplace_back(new PrintableInt(*(uint32_t*)(arg_data+arg.offset)));
+            arg_values.push_back(
+              std::make_unique<PrintableInt>(
+                *(uint32_t*)(arg_data+arg.offset)));
             break;
           case 2:
-            arg_values.emplace_back(new PrintableInt(*(uint16_t*)(arg_data+arg.offset)));
+            arg_values.push_back(
+              std::make_unique<PrintableInt>(
+                *(uint16_t*)(arg_data+arg.offset)));
             break;
           case 1:
-            arg_values.emplace_back(new PrintableInt(*(uint8_t*)(arg_data+arg.offset)));
+            arg_values.push_back(
+              std::make_unique<PrintableInt>(
+                *(uint8_t*)(arg_data+arg.offset)));
             break;
           default:
             abort();
         }
         break;
       case Type::string:
-        arg_values.emplace_back(new PrintableString(
-          std::string((char *) arg_data+arg.offset)));
+        arg_values.push_back(
+          std::make_unique<PrintableCString>(
+            (char *) arg_data+arg.offset));
         break;
       case Type::sym:
-        arg_values.emplace_back(new PrintableString(
-          resolve_sym(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              resolve_sym(*(uint64_t*)(arg_data+arg.offset)))));
         break;
       case Type::usym:
-        arg_values.emplace_back(new PrintableString(
-          resolve_usym(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset + 8)).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              resolve_usym(
+                *(uint64_t*)(arg_data+arg.offset),
+                *(uint64_t*)(arg_data+arg.offset + 8)))));
         break;
       case Type::inet:
-        name = strdup(resolve_inet(*(uint64_t*)(arg_data+arg.offset), *(uint64_t*)(arg_data+arg.offset+8)).c_str());
-        arg_values.push_back((uint64_t)name);
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              resolve_inet(
+                *(uint64_t*)(arg_data+arg.offset),
+                *(uint64_t*)(arg_data+arg.offset+8)))));
         break;
       case Type::username:
-        arg_values.emplace_back(new PrintableString(
-          resolve_uid(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              resolve_uid(
+                *(uint64_t*)(arg_data+arg.offset)))));
         break;
       case Type::probe:
-        arg_values.emplace_back(new PrintableString(
-          resolve_probe(*(uint64_t*)(arg_data+arg.offset)).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              resolve_probe(
+                *(uint64_t*)(arg_data+arg.offset)))));
         break;
       case Type::stack:
-        arg_values.emplace_back(new PrintableString(
-          get_stack(*(uint64_t*)(arg_data+arg.offset), false, 8).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              get_stack(
+                *(uint64_t*)(arg_data+arg.offset),
+                false,
+                8))));
         break;
       case Type::ustack:
-        arg_values.emplace_back(new PrintableString(
-          get_stack(*(uint64_t*)(arg_data+arg.offset), true, 8).c_str()));
+        arg_values.push_back(
+          std::make_unique<PrintableString>(
+            std::move(
+              get_stack(
+                *(uint64_t*)(arg_data+arg.offset),
+                true,
+                8))));
         break;
       default:
         abort();
