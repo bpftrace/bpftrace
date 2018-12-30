@@ -448,6 +448,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (cmd_.size())
   {
     auto args = split_string(cmd_, ' ');
+    args[0] = resolve_binary_path(args[0]);  // does path lookup on executable
     int pid = spawn_child(args);
     if (pid < 0)
     {
@@ -1109,6 +1110,28 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   }
 
   return 0;
+}
+
+std::string BPFtrace::resolve_binary_path(const std::string& cmd)
+{
+  std::string query;
+  query += "command -pv ";
+  query += cmd;
+  std::string result = exec_system(query.c_str());
+
+  if (result.size())
+  {
+    // Remove newline at the end
+    auto it = result.rfind('\n');
+    if (it != std::string::npos)
+      result.erase(it);
+
+    return result;
+  }
+  else
+  {
+    return cmd;
+  }
 }
 
 int BPFtrace::spawn_child(const std::vector<std::string>& args)
