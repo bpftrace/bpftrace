@@ -19,6 +19,7 @@ public:
       out_(out) { }
 
   void visit(Integer &integer) override;
+  void visit(PositionalParameter &param) override;
   void visit(String &string) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
@@ -60,6 +61,7 @@ private:
   bool check_alpha_numeric(const Call &call, int arg_num);
 
   Probe *probe_;
+  Call *call_;
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;

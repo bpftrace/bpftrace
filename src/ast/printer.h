@@ -11,6 +11,7 @@ public:
   explicit Printer(std::ostream &out) : out_(out) { }
 
   void visit(Integer &integer) override;
+  void visit(PositionalParameter &param) override;
   void visit(String &string) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;

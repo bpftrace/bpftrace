@@ -18,6 +18,24 @@ void SemanticAnalyser::visit(Integer &integer)
   integer.type = SizedType(Type::integer, 8);
 }
 
+void SemanticAnalyser::visit(PositionalParameter &param)
+{
+  param.type = SizedType(Type::integer, 8);
+  std::string pstr = bpftrace_.get_param(param.n);
+  if (is_final_pass()) {
+    if (!bpftrace_.is_numeric(pstr)) {
+      if (!call_ || call_->func != "str")
+        /*
+         * call_ was added just for this test: ensuring a string parameter is
+         * only used inside str(). Without it, string parameters used as
+         * integers would return their buffer address. Maybe that's ok?
+         * If this behavior is changed, codegen needs to support it.
+         */
+        err_ << "$" << param.n << " used numerically, but given \"" << pstr << "\". Try using str($" << param.n << ")." << std::endl;
+    }
+  }
+}
+
 void SemanticAnalyser::visit(String &string)
 {
   if (string.str.size() > STRING_SIZE-1) {
@@ -109,6 +127,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
 void SemanticAnalyser::visit(Call &call)
 {
+  // needed for positional parameters context:
+  call_ = &call;
+
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
