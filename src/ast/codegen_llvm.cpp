@@ -1114,15 +1114,14 @@ void CodegenLLVM::visit(Probe &probe)
 
     for (auto &attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
-
       std::set<std::string> matches;
       switch (probetype(attach_point->provider))
       {
         case ProbeType::kprobe:
         case ProbeType::kretprobe:
           matches = bpftrace_.find_wildcard_matches(attach_point->target,
-						    attach_point->func,
-						    "/sys/kernel/debug/tracing/available_filter_functions");
+                                                    attach_point->func,
+                                                    "/sys/kernel/debug/tracing/available_filter_functions");
           break;
         case ProbeType::uprobe:
         case ProbeType::uretprobe:
@@ -1133,15 +1132,14 @@ void CodegenLLVM::visit(Probe &probe)
         }
         case ProbeType::tracepoint:
           matches = bpftrace_.find_wildcard_matches(attach_point->target,
-						    attach_point->func,
-						    "/sys/kernel/debug/tracing/available_events");
+                                                    attach_point->func,
+                                                    "/sys/kernel/debug/tracing/available_events");
           break;
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
           return;
       }
-      
       for (auto &match : matches) {
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;
