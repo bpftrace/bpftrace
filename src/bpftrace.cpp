@@ -586,8 +586,10 @@ int BPFtrace::print_map_ident(const std::string &ident, uint32_t top, uint32_t d
   {
     IMap &map = *mapmap.second.get();
     if (map.name_ == ident) {
-      if (map.type_.type == Type::hist)
+      if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
         err = print_map_hist(map, top, div);
+      else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
+          err = print_map_stats(map);
       else
         err = print_map(map, top, div);
       return err;
@@ -676,7 +678,8 @@ int BPFtrace::zero_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::hist)
+    if (map.type_.type == Type::hist || map.type_.type == Type::lhist ||
+        map.type_.type == Type::stats || map.type_.type == Type::avg)
       // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
@@ -698,10 +701,16 @@ int BPFtrace::zero_map(IMap &map)
     old_key = key;
   }
 
-  uint64_t zero = 0;
+  int value_size = map.type_.size;
+  if (map.type_.type == Type::count || map.type_.type == Type::sum ||
+      map.type_.type == Type::min || map.type_.type == Type::max ||
+      map.type_.type == Type::avg || map.type_.type == Type::hist ||
+      map.type_.type == Type::lhist || map.type_.type == Type::stats )
+    value_size *= ncpus_;
+  std::vector<uint8_t> zero(value_size, 0);
   for (auto &key : keys)
   {
-    int err = bpf_update_elem(map.mapfd_, key.data(), &zero, BPF_EXIST);
+    int err = bpf_update_elem(map.mapfd_, key.data(), zero.data(), BPF_EXIST);
 
     if (err)
     {
@@ -733,8 +742,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     int value_size = map.type_.size;
-    if (map.type_.type == Type::count ||
-        map.type_.type == Type::sum || map.type_.type == Type::min || map.type_.type == Type::max)
+    if (map.type_.type == Type::count || map.type_.type == Type::sum ||
+        map.type_.type == Type::min || map.type_.type == Type::max)
       value_size *= ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
@@ -920,8 +929,8 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
 
 int BPFtrace::print_map_stats(IMap &map)
 {
-  // A hist-map adds an extra 8 bytes onto the end of its key for storing
-  // the bucket number.
+  // stats() and avg() maps add an extra 8 bytes onto the end of their key for
+  // storing the bucket number.
 
   std::vector<uint8_t> old_key;
   try
@@ -972,8 +981,12 @@ int BPFtrace::print_map_stats(IMap &map)
     assert(map_elem.second.size() == 2);
     uint64_t count = map_elem.second.at(0);
     uint64_t total = map_elem.second.at(1);
-    assert(count != 0);
-    total_counts_by_key.push_back({map_elem.first, total / count});
+    uint64_t value = 0;
+
+    if (count != 0)
+      value = total / count;
+
+    total_counts_by_key.push_back({map_elem.first, value});
   }
   std::sort(total_counts_by_key.begin(), total_counts_by_key.end(), [&](auto &a, auto &b)
   {
@@ -988,11 +1001,15 @@ int BPFtrace::print_map_stats(IMap &map)
 
     uint64_t count = value.at(0);
     uint64_t total = value.at(1);
+    uint64_t average = 0;
+
+    if (count != 0)
+      average = total / count;
 
     if (map.type_.type == Type::stats)
-      std::cout << "count " << count << ", average " << total / count << ", total " << total << std::endl;
+      std::cout << "count " << count << ", average " <<  average << ", total " << total << std::endl;
     else
-      std::cout << total / count << std::endl;
+      std::cout << average << std::endl;
   }
 
   std::cout << std::endl;
@@ -1264,16 +1281,30 @@ uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
   return max;
 }
 
-uint64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
+int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
 {
-  uint64_t val, max = 0;
+  int64_t val, max = 0, retval;
   for (int i=0; i<ncpus; i++)
   {
-    val = *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    val = *(int64_t*)(value.data() + i*sizeof(int64_t*));
     if (val > max)
       max = val;
   }
-  return (0xffffffff - max);
+
+  /*
+   * This is a hack really until the code generation for the min() function
+   * is sorted out. The way it is currently implemented doesn't allow >
+   * 32 bit quantities and also means we have to do gymnastics with the return
+   * value owing to the way it is stored (i.e., 0xffffffff - val).
+   */
+  if (max == 0) /* If we have applied the zero() function */
+    retval = max;
+  else if ((0xffffffff - max) <= 0) /* A negative 32 bit value */
+    retval =  0 - (max - 0xffffffff);
+  else
+    retval =  0xffffffff - max; /* A positive 32 bit value */
+
+  return retval;
 }
 
 std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const

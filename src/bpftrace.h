@@ -112,7 +112,7 @@ private:
   int print_hist(const std::vector<uint64_t> &values, uint32_t div) const;
   int print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
   static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
-  static uint64_t min_value(const std::vector<uint8_t> &value, int ncpus);
+  static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t read_address_from_output(std::string output);
   static std::string exec_system(const char* cmd);
