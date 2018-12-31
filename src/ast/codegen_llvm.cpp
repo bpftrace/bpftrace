@@ -1114,22 +1114,32 @@ void CodegenLLVM::visit(Probe &probe)
 
     for (auto &attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
-      std::string file_name;
+      std::set<std::string> matches;
       switch (probetype(attach_point->provider))
       {
         case ProbeType::kprobe:
         case ProbeType::kretprobe:
-          file_name = "/sys/kernel/debug/tracing/available_filter_functions";
+          matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                    attach_point->func,
+                                                    "/sys/kernel/debug/tracing/available_filter_functions");
           break;
+        case ProbeType::uprobe:
+        case ProbeType::uretprobe:
+        {
+            auto symbol_stream = std::istringstream(bpftrace_.extract_func_symbols_from_path(attach_point->target));
+            matches = bpftrace_.find_wildcard_matches("", attach_point->func, symbol_stream);
+            break;
+        }
         case ProbeType::tracepoint:
-          file_name = "/sys/kernel/debug/tracing/available_events";
+          matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                    attach_point->func,
+                                                    "/sys/kernel/debug/tracing/available_events");
           break;
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
           return;
       }
-      auto matches = bpftrace_.find_wildcard_matches(attach_point->target, attach_point->func, file_name);
       for (auto &match : matches) {
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;

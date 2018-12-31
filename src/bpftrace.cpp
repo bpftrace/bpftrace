@@ -82,24 +82,33 @@ int BPFtrace::add_probe(ast::Probe &p)
           attach_point->func.find("[") != std::string::npos &&
           attach_point->func.find("]") != std::string::npos))
     {
-      std::string file_name;
+      std::set<std::string> matches;
       switch (probetype(attach_point->provider))
       {
         case ProbeType::kprobe:
         case ProbeType::kretprobe:
-          file_name = "/sys/kernel/debug/tracing/available_filter_functions";
+          matches = find_wildcard_matches(attach_point->target,
+                                          attach_point->func,
+                                          "/sys/kernel/debug/tracing/available_filter_functions");
           break;
+        case ProbeType::uprobe:
+        case ProbeType::uretprobe:
+        {
+            auto symbol_stream = std::istringstream(extract_func_symbols_from_path(attach_point->target));
+            matches = find_wildcard_matches("", attach_point->func, symbol_stream);
+            break;
+        }
         case ProbeType::tracepoint:
-          file_name = "/sys/kernel/debug/tracing/available_events";
+          matches = find_wildcard_matches(attach_point->target,
+                                          attach_point->func,
+                                          "/sys/kernel/debug/tracing/available_events");
           break;
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
           return 1;
       }
-      auto matches = find_wildcard_matches(attach_point->target,
-                                           attach_point->func,
-                                           file_name);
+
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
     else
@@ -126,7 +135,7 @@ int BPFtrace::add_probe(ast::Probe &p)
   return 0;
 }
 
-std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, const std::string &file_name)
+std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream)
 {
   // Turn glob into a regex
   auto regex_str = "(" + std::regex_replace(func, std::regex("\\*"), "[^\\s]*") + ")";
@@ -136,16 +145,9 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
   std::regex func_regex(regex_str);
   std::smatch match;
 
-  std::ifstream file(file_name);
-  if (file.fail())
-  {
-    std::cerr << strerror(errno) << ": " << file_name << std::endl;
-    return std::set<std::string>();
-  }
-
   std::string line;
   std::set<std::string> matches;
-  while (std::getline(file, line))
+  while (std::getline(symbol_name_stream, line))
   {
     if (std::regex_search(line, match, func_regex))
     {
@@ -156,6 +158,26 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
     }
   }
   return matches;
+}
+
+std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, const std::string &file_name)
+{
+  std::ifstream file(file_name);
+  if (file.fail())
+  {
+    throw std::runtime_error("Could not read symbols from \"" + file_name + "\", err=" + std::to_string(errno));
+  }
+
+  std::stringstream symbol_name_stream;
+  std::string line;
+  while (file >> line)
+  {
+    symbol_name_stream << line << std::endl;
+  }
+
+  file.close();
+
+  return find_wildcard_matches(prefix, func, symbol_name_stream);
 }
 
 int BPFtrace::num_probes() const
@@ -1474,6 +1496,16 @@ uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &pat
   addr = read_address_from_output(result);
 
   return addr;
+}
+
+std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
+{
+  // TODO: switch from objdump to library call, perhaps bcc_resolve_symname()
+  std::string call_str = std::string("objdump -tT ") + path +
+    + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
+
+  const char *call = call_str.c_str();
+  return exec_system(call);
 }
 
 std::string BPFtrace::exec_system(const char* cmd)

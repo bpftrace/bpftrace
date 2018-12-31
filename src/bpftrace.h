@@ -65,6 +65,7 @@ public:
   std::string resolve_uid(uintptr_t addr);
   uint64_t resolve_kname(const std::string &name);
   uint64_t resolve_uname(const std::string &name, const std::string &path);
+  std::string extract_func_symbols_from_path(const std::string &path);
   std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
@@ -85,6 +86,7 @@ public:
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
+  virtual std::set<std::string> find_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream);
   virtual std::set<std::string> find_wildcard_matches(const std::string &prefix, const std::string &attach_point, const std::string &file_name);
 
 protected:
