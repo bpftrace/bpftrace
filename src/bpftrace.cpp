@@ -1469,6 +1469,7 @@ uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &pat
 
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
 {
+  // TODO: switch from objdump to library call, perhaps bcc_resolve_symname()
   std::string call_str = std::string("objdump -tT ") + path +
     + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
 
