@@ -228,6 +228,8 @@ A single probe can be attached to multiple events:
 ### Wildcards
 Some probe types allow wildcards to be used when attaching a probe:
 
+`uprobe:/bin/bash:read* { ... }`
+
 `kprobe:vfs_* { ... }`
 
 ### Predicates
