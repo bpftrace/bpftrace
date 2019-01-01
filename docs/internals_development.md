@@ -52,6 +52,8 @@ entry:
 ...
 ```
 
+## References
+
 Reference documentation for the codegen_llvm.cpp IR calls:
 
 - [llvm::IRBuilderBase Class Reference](https://llvm.org/doxygen/classllvm_1_1IRBuilderBase.html)
@@ -64,12 +66,184 @@ Reference documentation for the llvm assembly:
 Reference documentation for eBPF kernel helpers:
 
 - [Kernel Helpers](https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md#helpers)
+- [`bpf.h`](https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/bpf.h)
+
+Reference for eBPF syscall and data structures (e.g. maps):
+
+- [`bpf(2)` man page](http://man7.org/linux/man-pages/man2/bpf.2.html)
+
+## Gotchas
 
 If there's one gotcha I would like to mention, it's the use of CreateGEP() (Get Element Pointer). It's needed when dereferencing at an offset in a buffer, and it's tricky to use.
 
-Let's go through some codegen examples.
+## Verifier
 
-## 1. Codegen: Sum
+BPF programs are submitted to Linux's in-kernel BPF verifier. Read the large comment at the start of the source; it provides a good explanation.
+
+Source code:
+
+https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c
+
+Self-tests:
+
+https://github.com/torvalds/linux/blob/master/tools/testing/selftests/bpf/test_verifier.c
+
+If you see an error, it's often educational to look up the error message inside the source code or tests. The reasoning is easily understood if you work your way backwards from the message.
+
+If you find a test which expects your error message: the name of the test may reveal a better explanation for what the error means. You may also find that nearby tests reveal the criteria for success.
+
+Reading BPF instructions is difficult, but if you compare "successful tests" against their various "failure tests": you may see patterns and differences. For example, a successful test may perform a bitmask or conditional logic to provide guarantees about what range of inputs is possible.
+
+Mostly the verifier is trying to check "are you allowed to read/write this memory?". Usually there's a notion of "if your read begins inside the BPF stack, it needs to end inside the BPF stack as well", or suchlike.
+
+For example: if you've stack-allocated a buffer of 64 bytes for writing strings into, and you intend to parameterise "how many bytes might I copy into this buffer": you will need to add some minimum and maximum conditions, to constrain whichever variable is used to determine the length of data copied.
+
+BPF load and store instructions may be picky about what locations they're happy to read/write to. For example, probe_read_str() will only permit writes into a PTR_TO_STACK.
+
+I've documented some common errors you may encounter when the verifier bounds-checks your program. Most of this was learned during https://github.com/iovisor/bpftrace/pull/241.
+
+### min value is negative
+
+```
+R2 min value is negative, either use unsigned or 'var &= const'
+```
+
+Probably you are using a variable to determine "how far should I jump, relative to this pointer". You need to prove that your variable is always positive.
+
+You could try casting to unsigned integer (my notes say that this did not result in any improvement, but it feels like it's worth another try):
+
+```c++
+// where expr_ is the problematic Value*
+b_.CreateIntCast(
+  expr_,
+  b_.getInt64Ty(),
+  false)
+```
+
+Or you could bitmask it such that no negative number is possible:
+
+```c++
+b_.CreateAnd(
+  expr_,
+  0x7fffffffffffffff) // 64-bit number with all bits except the first set to 1
+```
+
+Or you could try [CreateMaxNum()](https://llvm.org/docs/LangRef.html#llvm-maxnum-intrinsic) (my notes say that this segfaulted, but it feels like it's worth another try):
+
+```c++
+b_.CreateMaxNum(
+  b_.getInt64(0),
+  expr_,
+  "ensure_positive"),
+```
+
+Or you could try using if/else to provide bounds hints (my notes say that this did not result in any improvement, but it feels like it's worth another try):
+
+```c++
+// where expr_ is the problematic Value*
+
+// allocate a variable in which to store your final result, after comparisons are completed
+AllocaInst *mycoolvar = b_.CreateAllocaBPF(b_.getInt64Ty(), "mycoolvar");
+
+Function *parent = b_.GetInsertBlock()->getParent();
+BasicBlock *positive = BasicBlock::Create(module_->getContext(), "positive", parent);
+BasicBlock *negative = BasicBlock::Create(module_->getContext(), "negative", parent);
+BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+b_.CreateCondBr(
+  b_.CreateICmpUGE(expr_, b_.getInt64(0), "if_positive"),
+  positive,
+  negative);
+
+// if expr_ is positive, store it into mycoolvar
+b_.SetInsertPoint(positive);
+b_.CreateStore(expr_, mycoolvar);
+b_.CreateBr(done);
+
+// if expr_ is negative, store a 0 into mycoolvar (or whatever you want to do)
+b_.SetInsertPoint(negative);
+b_.CreateStore(b_.getInt64(0), mycoolvar);
+b_.CreateBr(done);
+
+b_.SetInsertPoint(done);
+```
+
+**My favoured approach is to select the result of an unsigned comparison:**
+
+```c++
+// largest number we'll allow. choosing arbitrary maximum
+// since this example just wants to take advantage of the comparison's unsignedness
+Value *max = b_.getInt64(1024);
+// integer comparison: unsigned less-than-or-equal-to
+CmpInst::Predicate P = CmpInst::ICMP_ULE;
+// check whether expr_ is less-than-or-equal-to maximum
+Value *Cmp = b_.CreateICmp(P, expr_, max, "str.min.cmp");
+// Select will contain expr_ if expr_ is sufficiently low, otherwise it will contain max
+Value *Select = b_.CreateSelect(Cmp, expr_, max, "str.min.select");
+```
+
+### unbounded memory access
+
+```
+R2 unbounded memory access, use 'var &= const' or 'if (var < const)'
+```
+
+You need to prove that you don't jump too far from your pointer. This re-uses techniques from "min value is negative"; you just need to tighten the range even further.
+
+How far is too far? You need to [stay below `BPF_MAX_VAR_SIZ`](https://github.com/iovisor/bpftrace/pull/241#issuecomment-440274294), `1ULL << 29`.
+
+So, you could bitmask your variable with `(1ULL << 29) - 1` = `0x1FFFFFFF`:
+
+```c++
+b_.CreateAnd(
+  expr_,
+  0x1fffffff) // (1ULL << 29) - 1
+```
+
+### invalid stack
+
+```
+invalid stack type R1 off=-72 access_size=536870911
+```
+
+This means that it's possible for us to jump so far that we'd overflow our stack. Keep re-using techniques from above, and tighten the range even further.
+
+But more likely, you have a fundamental problem: perhaps you're trying to allocate a buffer of arbitrary size (determined at runtime), and do arbitrarily-sized writes into it (determined at runtime).
+
+If indeed that's what you're trying to do: you'll have to change your architecture. The BPF stack (512 bytes) can only accommodate tiny allocations and jumps. You need to move towards storing your data in BPF maps.
+
+Consider this ongoing discussion on how to rearchitect to store stack data in a map: https://github.com/iovisor/bpftrace/issues/305
+
+### expected=PTR_TO_STACK; actual=PTR_TO_MAP_VALUE
+
+```
+R1 type=map_value_or_null expected=fp
+```
+
+This was encountered when I invoked `probe_read_str(void *dst, int size, const void *unsafe_ptr)` with a `*dst` that pointed to a BPF map value.
+
+It refused; `probe_read_str(3)` will only write into stack-allocated memory.
+
+The workaround is probably to write data onto the BPF stack _first_, then transfer from BPF stack into BPF map. If you've a lot of data, then this will take a few trips.
+
+### stack limit exceeded
+
+```
+Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.
+```
+
+You're trying to stack-allocate a really big variable. Sadly you'll need to rearchitect; see above.
+
+### call to 'memset' is not supported.
+
+A call to built-in function 'memset' is not supported.
+
+This occurs when you attempt to zero out a large amount of memory, e.g. 1024 bytes.
+
+Probably the real problem is that you stack-allocated a really big variable. It just happens that (at large numbers): you'll get the error about memset _before_ you get the error about the allocation.
+
+## Examples.
+
+### 1. Codegen: Sum
 
 We can explore and get the hang of llvm assembly by writing some simple C programs and compiling them using clang. Since llvm assembly maps to llvm IR, I've sometimes prototyped my codegen_llvm.cpp IR this way: writing a C program to produce the llvm assembly, and then manually mapping it back to llvm IR.
 
@@ -193,7 +367,7 @@ Becomes (I'll just do this on one line as well):
 
 That's just my mental conversion. I haven't tested this and it may have a bug. But this should be enough to illustrate the idea.
 
-## 2. Codegen: curtask
+### 2. Codegen: curtask
 
 If you need to add support to a BPF kernel function that bpftrace does not yet call, this is a simple example. It adds a `curtask` builtin that calls BPF_FUNC_get_current_task. See [bcc Kernel Versions](https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md) for documentation on these BPF functions. The commit is:
 
@@ -363,7 +537,7 @@ index d6e26b8..d9b24e2 100644
    test("kprobe:f { ustack }", 0);
 ```
 
-## 3. Codegen: arguments & return value
+### 3. Codegen: arguments & return value
 
 See the implementation of `lhist()` for an example of pulling in arguments. Commit:
 
@@ -371,7 +545,7 @@ https://github.com/iovisor/bpftrace/commit/6bdd1198e04392aa468b12357a051816f2cc5
 
 You'll also notice that the builtins finish by setting `expr_` to the final result. This is taking the node in the AST and replacing it with the computed expression. Calls don't necessarily do this: for example, `reg()` sets `expr_` since it returns a value, but `printf()` sets `expr_` to `nullptr`, since it does not return a value.
 
-## 4. Codegen: sum(), min(), max(), avg(), stats()
+### 4. Codegen: sum(), min(), max(), avg(), stats()
 
 These are examples of adding new map functions, and the required components. Since the functions themselves are simple, they are good examples of codegen. They were all added in a single commit:
 

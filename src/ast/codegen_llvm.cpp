@@ -334,9 +334,14 @@ void CodegenLLVM::visit(Call &call)
     if (call.vargs->size() > 1) {
       call.vargs->at(1)->accept(*this);
       Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+
+      // largest read we'll allow = our global string buffer size
       Value *max = b_.getInt64(bpftrace_.strlen_);
+      // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
+      // check whether proposed_strlen is less-than-or-equal-to maximum
       Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+      // select proposed_strlen if it's sufficiently low, otherwise choose maximum
       Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
       b_.CreateStore(Select, strlen);
     } else {

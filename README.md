@@ -268,7 +268,7 @@ Functions:
 - `avg(int n)` - Average this value
 - `stats(int n)` - Return the count, average, and total for this value
 - `delete(@x)` - Delete the map element passed in as an argument
-- `str(char *s)` - Returns the string pointed to by `s`
+- `str(char *s [, int length])` - Returns the string pointed to by `s`
 - `printf(char *fmt, ...)` - Print formatted to stdout
 - `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
 - `clear(@x)` - Delete all key/values from a map

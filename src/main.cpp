@@ -30,10 +30,7 @@ void usage()
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    -v             verbose messages" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
-  std::cerr << "    BPFTRACE_STRLEN    [default: 64] bytes allocated on BPF stack by str()." << std::endl;
-  std::cerr << "                       Tune this to read in larger strings from userspace." << std::endl;
-  std::cerr << "                       Beware that BPF stack is small (512 bytes)." << std::endl;
-  std::cerr << "                       Beware that printf() and system() allocate strlen again when composing perf event output." << std::endl;
+  std::cerr << "    BPFTRACE_STRLEN    [default: 64] bytes on BPF stack per str()" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -41,8 +38,6 @@ void usage()
   std::cerr << "    trace processes calling sleep" << std::endl;
   std::cerr << "bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'" << std::endl;
   std::cerr << "    count syscalls by process name" << std::endl;
-  std::cerr << "BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 25783/ { printf(\"<%s>\\n\", str(args->buf, args->count)); }'" << std::endl;
-  std::cerr << "    trace input & output of terminal with specified PID" << std::endl;
 }
 
 static void enforce_infinite_rlimit() {
@@ -189,6 +184,19 @@ int main(int argc, char *argv[])
     std::istringstream stringstream(env_p);
     if (!(stringstream >> proposed)) {
       std::cerr << "Env var 'BPFTRACE_STRLEN' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      return 1;
+    }
+
+    // in practice, the largest buffer I've seen fit into the BPF stack was 240 bytes.
+    // I've set the bar lower, in case your program has a deeper stack than the one from my tests,
+    // in the hope that you'll get this instructive error instead of getting the BPF verifier's error.
+    if (proposed > 200) {
+      // the verifier errors you would encounter when attempting larger allocations would be:
+      // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
+      // ~1024= <A call to built-in function 'memset' is not supported.>
+      std::cerr << "'BPFTRACE_STRLEN' " << proposed << " exceeds the current maximum of 200 bytes." << std::endl
+      << "This limitation is because strings are currently stored on the 512 byte BPF stack." << std::endl
+      << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
       return 1;
     }
     bpftrace.strlen_ = proposed;
