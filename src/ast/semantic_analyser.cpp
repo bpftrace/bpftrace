@@ -226,15 +226,10 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
-      uint64_t strlen = bpftrace_.strlen_;
-      call.type = SizedType(Type::string, strlen);
+      call.type = SizedType(Type::string, bpftrace_.strlen_);
       if (is_final_pass()) {
         if (call.vargs->size() > 1) {
           check_arg(call, Type::integer, 1, false);
-          auto &strlen_arg = *call.vargs->at(1);
-          if (strlen_arg.is_literal) {
-            strlen = static_cast<Integer&>(strlen_arg).n;
-          }
         }
       }
     }
