@@ -329,11 +329,32 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
-    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "str");
-    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+    b_.CreateMemSet(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+    if (call.vargs->size() > 1) {
+      call.vargs->at(1)->accept(*this);
+      Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+
+      // largest read we'll allow = our global string buffer size
+      Value *max = b_.getInt64(bpftrace_.strlen_);
+      // integer comparison: unsigned less-than-or-equal-to
+      CmpInst::Predicate P = CmpInst::ICMP_ULE;
+      // check whether proposed_strlen is less-than-or-equal-to maximum
+      Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+      // select proposed_strlen if it's sufficiently low, otherwise choose maximum
+      Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
+      b_.CreateStore(Select, strlen);
+    } else {
+      b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+    }
+    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
+    b_.CreateMemSet(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, call.type.size, expr_);
+    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+    b_.CreateLifetimeEnd(strlen);
+
     expr_ = buf;
+    expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
   }
   else if (call.func == "kaddr")
   {
@@ -470,12 +491,16 @@ void CodegenLLVM::visit(Call &call)
     for (int i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
+      expr_deleter_ = nullptr;
       arg.accept(*this);
       Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
       if (arg.type.IsArray())
         b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
+
+      if (expr_deleter_)
+        expr_deleter_();
     }
 
     printf_id_++;
@@ -519,12 +544,16 @@ void CodegenLLVM::visit(Call &call)
     for (int i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
+      expr_deleter_ = nullptr;
       arg.accept(*this);
       Value *offset = b_.CreateGEP(system_args, {b_.getInt32(0), b_.getInt32(i)});
       if (arg.type.IsArray())
         b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       else
         b_.CreateStore(expr_, offset);
+
+      if (expr_deleter_)
+        expr_deleter_();
     }
 
     system_id_++;

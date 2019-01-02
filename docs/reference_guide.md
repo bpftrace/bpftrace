@@ -14,6 +14,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [4. `-l`: Listing Probes](#4--l-listing-probes)
     - [5. `-d`: Debug Output](#5--d-debug-output)
     - [6. `-v`: Verbose Output](#6--v-verbose-output)
+    - [7. Env: `BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -323,6 +324,18 @@ iscsid is sleeping.
 ```
 
 This includes `Bytecode:` and then the eBPF bytecode after it was compiled from the llvm assembly.
+
+## 7. Env: `BPFTRACE_STRLEN`
+
+Default: 64
+
+Number of bytes allocated on the BPF stack for the string returned by str().
+
+Make this larger if you wish to read bigger strings with str().
+
+Beware that the BPF stack is small (512 bytes), and that you pay the toll again inside printf() (whilst it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
+
+Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
 # Language
 
@@ -1162,7 +1175,7 @@ Note that for this example to work, bash had to be recompiled with frame pointer
 - `printf(char *fmt, ...)` - Print formatted
 - `time(char *fmt)` - Print formatted time
 - `join(char *arr[])` - Print the array
-- `str(char *s)` - Returns the string pointed to by s
+- `str(char *s [, int length])` - Returns the string pointed to by s
 - `sym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
@@ -1233,9 +1246,14 @@ tbl
 
 ## 5. `str()`: Strings
 
-Syntax: `str(char *s)`
+Syntax: `str(char *s [, int length])`
 
-Returns the string pointer to by s. This was used in the earlier printf() example, since arg0 to sys_execve() is <tt>const char *filename</tt>:
+Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce a null-terminator.  
+By default, the string will have size 64 bytes (tuneable using [env var `BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)).
+
+Examples:
+
+We can take the arg0 of sys_execve() (a <tt>const char *filename</tt>), and read the string to which it points. This string can be provided as an argument to printf():
 
 ```
 # bpftrace -e 'kprobe:sys_execve { printf("%s called %s\n", comm, str(arg0)); }'
@@ -1249,6 +1267,27 @@ man called /usr/sbin/preconv
 man called /usr/bin/preconv
 man called /apps/nflx-bash-utils/bin/tbl
 [...]
+```
+
+We can trace strings that are displayed in a bash shell. Some length tuning is employed, because:
+
+- sys_enter_write()'s `args->buf` does not point to null-terminated strings
+  - we use the length parameter to limit how many bytes to read of the pointed-to string
+- sys_enter_write()'s `args->buf` contains messages larger than 64 bytes
+  - we increase BPFTRACE_STRLEN to accommodate the large messages
+
+```
+# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/ { printf("<%s>\n", str(args->buf, args->count)); }'
+# type pwd into terminal 23506
+<p>
+<w>
+<d>
+# press enter in terminal 23506
+<
+>
+</home/anon
+>
+<anon@anon-VirtualBox:~$ >
 ```
 
 ## 6. `sym()`: Symbol resolution, kernel-level
