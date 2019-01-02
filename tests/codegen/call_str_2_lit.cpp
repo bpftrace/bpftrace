@@ -49,6 +49,9 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
+#else
+R"EXPECTED(
+)EXPECTED");
 #endif
 }
 
