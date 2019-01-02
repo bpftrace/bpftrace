@@ -24,7 +24,8 @@ EXPECT A
 TIMEOUT 5
 
 NAME str
-RUN bpftrace -e 'i:ms:1 { system("echo 10"); } k:sys_execve { printf("P: %s\n", str(arg0)); exit();}'
+RUN bpftrace -e 'k:sys_execve { printf("P: %s\n", str(arg0)); exit();}'
+BEFORE sleep 1s && /bin/sh -c 'exit 0' &
 EXPECT P: /bin/sh
 TIMEOUT 5
 
@@ -54,6 +55,7 @@ NAME avg
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
 
 NAME min
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}'
@@ -64,19 +66,23 @@ BEFORE sleep 1 && sleep 1 &
 NAME max
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
+BEFORE sleep 1 && sleep 1 &
 TIMEOUT 5
 
 NAME stats
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}'
 EXPECT @.*\[.*\]\:\scount\s[0-9]*\,\saverage\s[0-9]*\,\stotal\s[0-9]*
 TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
 
 NAME hist
 RUN bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); exit();}'
 EXPECT @bytes:\s\n\n\[.*\,\s.*\]?\)?\s
+BEFORE sleep 1 && sleep 1 &
 TIMEOUT 5
 
 NAME lhist
 RUN bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}'
 EXPECT @bytes:\s\n\n\(?\[?.*
 TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &

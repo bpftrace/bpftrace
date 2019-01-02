@@ -1,3 +1,5 @@
+#!/bin/bash
+
 set -e
 
 STATIC_LINKING=${STATIC_LINKING:-OFF}
@@ -10,5 +12,7 @@ shift 2
 make "$@"
 
 if [ $RUN_TESTS = 1 ]; then
-  ./tests/bpftrace_test $TEST_ARGS
+  set +e
+  ./tests/bpftrace_test $TEST_ARGS;
+  make runtime-tests;
 fi
