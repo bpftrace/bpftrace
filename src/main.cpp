@@ -109,6 +109,11 @@ int main(int argc, char *argv[])
     }
   }
 
+  if (argc == 1) {
+    usage();
+    return 1;
+  }
+
   if (bt_verbose && (bt_debug != DebugLevel::kNone))
   {
     // TODO: allow both
@@ -142,23 +147,14 @@ int main(int argc, char *argv[])
 
   if (script.empty())
   {
-    // There should only be 1 non-option argument (the script file)
-    if (optind != argc-1)
-    {
-      usage();
-      return 1;
-    }
+    // Script file
     char *file_name = argv[optind];
     err = driver.parse_file(file_name);
+    optind++;
   }
   else
   {
     // Script is provided as a command line argument
-    if (optind != argc)
-    {
-      usage();
-      return 1;
-    }
     err = driver.parse_str(script);
   }
 
@@ -173,6 +169,12 @@ int main(int argc, char *argv[])
   enforce_infinite_rlimit();
 
   BPFtrace bpftrace;
+
+  // positional parameters
+  while (optind < argc) {
+    bpftrace.add_param(argv[optind]);
+    optind++;
+  }
 
   // defaults
   bpftrace.join_argnum_ = 16;

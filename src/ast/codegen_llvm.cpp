@@ -20,6 +20,20 @@ void CodegenLLVM::visit(Integer &integer)
   expr_ = b_.getInt64(integer.n);
 }
 
+void CodegenLLVM::visit(PositionalParameter &param)
+{
+  std::string pstr = bpftrace_.get_param(param.n);
+  if (bpftrace_.is_numeric(pstr)) {
+    expr_ = b_.getInt64(std::stoll(pstr));
+  } else {
+    Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
+    AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
+    b_.CreateMemSet(buf, b_.getInt8(0), pstr.length() + 1, 1);
+    b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), buf);
+    expr_ = buf;
+  }
+}
+
 void CodegenLLVM::visit(String &string)
 {
   string.str.resize(string.type.size-1);

@@ -414,6 +414,31 @@ std::vector<uint64_t> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t*
   return arg_values;
 }
 
+bool BPFtrace::is_numeric(std::string str)
+{
+  int i = 0;
+  while (str[i]) {
+    if (str[i] < '0' || str[i] > '9')
+      return false;
+    i++;
+  }
+  if (i == 0)
+    return false;
+  return true;
+}
+
+void BPFtrace::add_param(const std::string &param)
+{
+  params_.emplace_back(param);
+}
+
+std::string BPFtrace::get_param(int i)
+{
+  if (i > 0 && i < params_.size() + 1)
+      return params_[i - 1];
+  return "0";
+}
+
 void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
   printf("Lost %lu events\n", lost);

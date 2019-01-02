@@ -64,6 +64,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
   test("kprobe:f { probe }", 0);
+  test("kprobe:f { $1 }", 0);
   test("tracepoint:a:b { args }", 0);
 //  test("kprobe:f { fake }", 1);
 }
@@ -659,6 +660,13 @@ TEST(semantic_analyser, probe_short_name)
   test("h:cache-references:1000000 { 1 }", 0);
   test("s:faults:1000 { 1 }", 0);
   test("i:s:1 { 1 }", 0);
+}
+
+TEST(semantic_analyser, positional_parameters)
+{
+  // $1 won't be defined, will be tested more in runtime.
+  test("kprobe:f { printf(\"%d\", $1); }", 0);
+  test("kprobe:f { printf(\"%s\", str($1)); }", 0);
 }
 
 } // namespace semantic_analyser

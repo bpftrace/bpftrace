@@ -78,6 +78,7 @@ pid|tid|cgroup|uid|gid|nsecs|cpu|comm|stack|ustack|arg[0-9]|retval|func|probe|cu
 "||"                    { return Parser::make_LOR(loc); }
 "+"                     { return Parser::make_PLUS(loc); }
 "-"                     { return Parser::make_MINUS(loc); }
+"$"                     { return Parser::make_DOLLAR(loc); }
 "*"                     { return Parser::make_MUL(loc); }
 "/"                     { return Parser::make_DIV(loc); }
 "%"                     { return Parser::make_MOD(loc); }

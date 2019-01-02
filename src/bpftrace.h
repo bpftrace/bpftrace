@@ -69,6 +69,9 @@ public:
   std::string resolve_probe(uint64_t probe_id);
   uint64_t resolve_cgroupid(const std::string &path);
   std::vector<uint64_t> get_arg_values(std::vector<Field> args, uint8_t* arg_data);
+  void add_param(const std::string &param);
+  bool is_numeric(std::string str);
+  std::string get_param(int index);
   std::string cmd_;
   int pid_{0};
 
@@ -103,6 +106,7 @@ private:
   int ncpus_;
   int online_cpus_;
   std::vector<int> child_pids_;
+  std::vector<std::string> params_;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();

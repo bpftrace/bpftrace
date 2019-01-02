@@ -60,6 +60,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LOR      "||"
   PLUS     "+"
   MINUS    "-"
+  DOLLAR   "$"
   MUL      "*"
   DIV      "/"
   MOD      "%"
@@ -99,6 +100,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ExpressionList *> vargs
 %type <ast::AttachPointList *> attach_points
 %type <ast::AttachPoint *> attach_point
+%type <ast::PositionalParameter *> param
 %type <std::string> wildcard
 %type <std::string> ident
 
@@ -161,6 +163,8 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
 ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
      ;
 
+param : DOLLAR INT { $$ = new ast::PositionalParameter($2); }
+
 block : "{" stmts "}"     { $$ = $2; }
       | "{" stmts ";" "}" { $$ = $2; }
       ;
@@ -181,6 +185,7 @@ expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
      | BUILTIN         { $$ = new ast::Builtin($1); }
      | ternary         { $$ = $1; }
+     | param           { $$ = $1; }
      | map             { $$ = $1; }
      | var             { $$ = $1; }
      | call            { $$ = $1; }

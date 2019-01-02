@@ -38,6 +38,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class PositionalParameter : public Expression {
+public:
+  explicit PositionalParameter(long n) : n(n) { is_literal = true; }
+  long n;
+
+  void accept(Visitor &v) override;
+};
+
 class String : public Expression {
 public:
   explicit String(std::string str) : str(str) { is_literal = true; }
@@ -260,6 +268,7 @@ class Visitor {
 public:
   virtual ~Visitor() { }
   virtual void visit(Integer &integer) = 0;
+  virtual void visit(PositionalParameter &integer) = 0;
   virtual void visit(String &string) = 0;
   virtual void visit(Builtin &builtin) = 0;
   virtual void visit(Call &call) = 0;

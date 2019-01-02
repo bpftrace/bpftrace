@@ -12,6 +12,12 @@ void Printer::visit(Integer &integer)
   out_ << indent << "int: " << integer.n << std::endl;
 }
 
+void Printer::visit(PositionalParameter &param)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "builtin: $" << param.n << std::endl;
+}
+
 void Printer::visit(String &string)
 {
   std::string indent(depth_, ' ');
