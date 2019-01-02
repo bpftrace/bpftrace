@@ -167,7 +167,7 @@ std::string AttachedProbe::eventname() const
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      return eventprefix() + probe_.attach_point + index_str;
+      return eventprefix() + sanitise(probe_.attach_point) + index_str;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
@@ -182,6 +182,10 @@ std::string AttachedProbe::eventname() const
 
 std::string AttachedProbe::sanitise(const std::string &str)
 {
+  /*
+   * Characters such as "." in event names are rejected by the kernel,
+   * so sanitize:
+   */
   return std::regex_replace(str, std::regex("[^A-Za-z0-9_]"), "_");
 }
 
