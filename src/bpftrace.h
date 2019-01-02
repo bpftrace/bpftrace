@@ -87,7 +87,7 @@ public:
   int join_argnum_;
   int join_argsize_;
 
-  uint64_t strlen_;
+  uint64_t strlen_ = 64;
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);

@@ -180,7 +180,6 @@ int main(int argc, char *argv[])
   bpftrace.join_argnum_ = 16;
   bpftrace.join_argsize_ = 1024;
 
-  bpftrace.strlen_ = 64;
   if(const char* env_p = std::getenv("BPFTRACE_STRLEN")) {
     uint64_t proposed;
     std::istringstream stringstream(env_p);
