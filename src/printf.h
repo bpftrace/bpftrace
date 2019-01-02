@@ -21,7 +21,7 @@ public:
 class PrintableString : public virtual IPrintable
 {
 public:
-  PrintableString(std::string value) : value_(value) { }
+  PrintableString(std::string value) : value_(std::move(value)) { }
   uint64_t value();
 private:
   std::string value_;
