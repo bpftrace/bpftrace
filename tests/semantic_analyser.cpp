@@ -230,6 +230,19 @@ TEST(semantic_analyser, call_str)
   test("kprobe:f { str(\"hello\"); }", 10);
 }
 
+TEST(semantic_analyser, call_str_2_lit)
+{
+  test("kprobe:f { str(arg0, 3); }", 0);
+  test("kprobe:f { @x = str(arg0, 3); }", 0);
+  test("kprobe:f { str(arg0, \"hello\"); }", 10);
+}
+
+TEST(semantic_analyser, call_str_2_expr)
+{
+  test("kprobe:f { str(arg0, arg1); }", 0);
+  test("kprobe:f { @x = str(arg0, arg1); }", 0);
+}
+
 TEST(semantic_analyser, call_sym)
 {
   test("kprobe:f { sym(arg0); }", 0);

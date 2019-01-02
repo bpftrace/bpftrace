@@ -36,6 +36,8 @@
 #include "codegen/call_reg.cpp"
 #include "codegen/call_stats.cpp"
 #include "codegen/call_str.cpp"
+#include "codegen/call_str_2_lit.cpp"
+#include "codegen/call_str_2_expr.cpp"
 #include "codegen/call_sum.cpp"
 #include "codegen/call_system.cpp"
 #include "codegen/call_time.cpp"
