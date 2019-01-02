@@ -30,6 +30,9 @@ def main():
     print(str(total_tests) + ' tests [fail ' + str(total_fail) + ']')
     print('Done in ' + str(timedelta(seconds=elapsed)) )
 
+    if total_fail > 0:
+        exit(1)
+
 
 if __name__ == "__main__":
     main()
