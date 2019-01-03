@@ -27,5 +27,7 @@ matrix:
       env: BASE=alpine TYPE=Release STATIC_LINKING=ON
 
 script:
+  - uname -a
+  - lsb_release
   - docker build -t bpftrace-builder-$BASE -f docker/Dockerfile.$BASE docker/
   - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE $(pwd)/build-$TYPE-$BASE $TYPE
