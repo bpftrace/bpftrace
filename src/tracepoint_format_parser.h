@@ -9,7 +9,7 @@ namespace ast { class Program; }
 class TracepointFormatParser
 {
 public:
-  static void parse(ast::Program *program);
+  static bool parse(ast::Program *program);
   static std::string get_struct_name(const std::string &category, const std::string &event_name);
 
 private:
