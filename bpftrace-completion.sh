@@ -6,12 +6,10 @@
 
 _words_complete()
 {
-    local cur comp_line pos_cursor_cur cursor_line line_begin word_arr word_size cur_word cur_match cur_match_size
-    local opts probes variables functions word_list
-
+    local cur opts
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
-    comp_line="${COMP_LINE}"
+    local comp_line="${COMP_LINE}"
 
     opts="-l -e -p -v -d -dd"
     if [[ ${cur} == -* ]] ; then
@@ -20,10 +18,12 @@ _words_complete()
     fi
 
     # list of words to match
-    probes="kprobe kretprobe uprobe uretprobe tracepoint usdt profile interval software hardware BEGIN END"
+    probes="kprobe kretprobe uprobe uretprobe tracepoint usdt profile interval software hardware"
     variables="count hist lhist nsecs stack ustack"
     functions="printf time join str sym usym kaddr uaddr reg system exit cgroupid min max stats"
     word_list="$probes $variables $functions $opts"
+
+    local cur_word cur_match cur_match_size cur_line
 
     # everything inside quotes is treated as one thing so we need to break it manually
 
@@ -31,19 +31,15 @@ _words_complete()
     awk_comp_line=$(echo "${comp_line}" | sed 's/\\/\//g')
     awk_cur=$(echo "${cur}" | sed 's/\\/\//g')
 
-    pos_cursor_cur=$(awk -v a="$awk_comp_line" -v b="$awk_cur" 'BEGIN{print index(a,b)}')
-    cursor_line="${COMP_POINT}"
-    cursor_cur=$((COMP_POINT - pos_cursor_cur))
+    pos=$(awk -v a="$awk_comp_line" -v b="$awk_cur" 'BEGIN{print index(a,b)}')
+    local current_word_cursor=$((COMP_POINT - pos))
 
-    line_begin="${comp_line:pos:cursor_cur}"
-
-    # Get current word
+    line_begin="${comp_line:pos:current_word_cursor}"
     cur_size=$(echo "$line_begin" | wc -w)
     word_arr=($line_begin)
     cur_word="${word_arr[cur_size-1]}"
-
-    # remove current word from line_begin
     line_begin=$(echo "${line_begin}" | sed '1{s/[^ ]\+\s*$//}')
+    word_size=$(echo "${#comp_line}")
 
     # probe completion
     if [[ ${cur_word} =~ kprobe* || ${cur_word} =~ tracepoint* ]] ; then
@@ -71,7 +67,6 @@ _words_complete()
     else
         # single word completion
         cur_match=( $(compgen -W "${word_list}" -- ${cur_word}) )
-
     fi
 
     cur_match_size=$(echo "$cur_match" | wc -w)
