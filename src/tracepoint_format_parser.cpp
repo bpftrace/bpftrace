@@ -5,10 +5,11 @@
 #include "ast.h"
 #include "struct.h"
 #include "tracepoint_format_parser.h"
+#include "bpftrace.h"
 
 namespace bpftrace {
 
-void TracepointFormatParser::parse(ast::Program *program)
+bool TracepointFormatParser::parse(ast::Program *program)
 {
   bool has_tracepoint_probes = false;
   for (ast::Probe *probe : *program->probes)
@@ -17,7 +18,7 @@ void TracepointFormatParser::parse(ast::Program *program)
         has_tracepoint_probes = true;
 
   if (!has_tracepoint_probes)
-    return;
+    return true;
 
   program->c_definitions += "#include <linux/types.h>\n";
   for (ast::Probe *probe : *program->probes)
@@ -33,16 +34,23 @@ void TracepointFormatParser::parse(ast::Program *program)
 
         if (format_file.fail())
         {
-          if (format_file_path.find('*') == std::string::npos)
-            std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+          std::cerr << "ERROR: tracepoint not found: " << ap->target << ":" << ap->func << std::endl;
+          // helper message:
+          if (ap->target == "syscall")
+            std::cerr << "Did you mean syscalls:" << ap->func << "?" << std::endl;
+          if (bt_verbose) {
+            if (format_file_path.find('*') == std::string::npos)
+              std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+          }
 
-          return;
+          return false;
         }
 
         program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
       }
     }
   }
+  return true;
 }
 
 std::string TracepointFormatParser::get_struct_name(const std::string &category, const std::string &event_name)
