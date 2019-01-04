@@ -343,7 +343,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 }
 
-std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(std::vector<Field> args, uint8_t* arg_data)
+std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
 
@@ -357,22 +357,22 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(std::vector<Fi
           case 8:
             arg_values.push_back(
               std::make_unique<PrintableInt>(
-                *(uint64_t*)(arg_data+arg.offset)));
+                *reinterpret_cast<uint64_t*>(arg_data+arg.offset)));
             break;
           case 4:
             arg_values.push_back(
               std::make_unique<PrintableInt>(
-                *(uint32_t*)(arg_data+arg.offset)));
+                *reinterpret_cast<uint32_t*>(arg_data+arg.offset)));
             break;
           case 2:
             arg_values.push_back(
               std::make_unique<PrintableInt>(
-                *(uint16_t*)(arg_data+arg.offset)));
+                *reinterpret_cast<uint16_t*>(arg_data+arg.offset)));
             break;
           case 1:
             arg_values.push_back(
               std::make_unique<PrintableInt>(
-                *(uint8_t*)(arg_data+arg.offset)));
+                *reinterpret_cast<uint8_t*>(arg_data+arg.offset)));
             break;
           default:
             abort();
@@ -381,61 +381,54 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(std::vector<Fi
       case Type::string:
         arg_values.push_back(
           std::make_unique<PrintableCString>(
-            (char *) arg_data+arg.offset));
+            reinterpret_cast<char *>(arg_data+arg.offset)));
         break;
       case Type::sym:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              resolve_sym(*(uint64_t*)(arg_data+arg.offset)))));
+            resolve_sym(*reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
         break;
       case Type::usym:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              resolve_usym(
-                *(uint64_t*)(arg_data+arg.offset),
-                *(uint64_t*)(arg_data+arg.offset + 8)))));
+            resolve_usym(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset + 8))));
         break;
       case Type::inet:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              resolve_inet(
-                *(uint64_t*)(arg_data+arg.offset),
-                *(uint64_t*)(arg_data+arg.offset+8)))));
+            resolve_inet(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset+8))));
         break;
       case Type::username:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              resolve_uid(
-                *(uint64_t*)(arg_data+arg.offset)))));
+            resolve_uid(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
         break;
       case Type::probe:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              resolve_probe(
-                *(uint64_t*)(arg_data+arg.offset)))));
+            resolve_probe(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
         break;
       case Type::stack:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              get_stack(
-                *(uint64_t*)(arg_data+arg.offset),
-                false,
-                8))));
+            get_stack(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
+              false,
+              8)));
         break;
       case Type::ustack:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            std::move(
-              get_stack(
-                *(uint64_t*)(arg_data+arg.offset),
-                true,
-                8))));
+            get_stack(
+              *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
+              true,
+              8)));
         break;
       default:
         abort();
