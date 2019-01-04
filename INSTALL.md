@@ -13,7 +13,18 @@
 
 # Linux Kernel Requirements
 
-Your kernel needs to be built with the following options:
+It is recommended that you are running a Linux 4.9 kernel or higher. Some tools may work on older kernels, but these old kernels are no longer tested. To explain this requirement, these are the kernel versions where major features were added:
+
+- 4.1 - kprobes
+- 4.3 - uprobes
+- 4.6 - stack traces, count and hist builtins (use PERCPU maps for accuracy and efficiency)
+- 4.7 - tracepoints
+- 4.9 - timers/profiling
+
+Minor improvements have been added in later kernels, so newer than 4.9 is preferred.
+
+Your kernel also needs to be built with the following options:
+
 ```
 CONFIG_BPF=y
 CONFIG_BPF_SYSCALL=y
@@ -21,14 +32,6 @@ CONFIG_BPF_JIT=y
 CONFIG_HAVE_EBPF_JIT=y
 CONFIG_BPF_EVENTS=y
 ```
-
-To use some BPFtrace features, minimum kernel versions are required:
-- 4.1+ - kprobes
-- 4.3+ - uprobes
-- 4.6+ - stack traces, count and hist builtins (use PERCPU maps for accuracy and efficiency)
-- 4.7+ - tracepoints
-- 4.9+ - timers/profiling
-
 
 # Building BPFtrace
 
