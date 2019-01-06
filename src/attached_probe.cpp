@@ -339,10 +339,18 @@ void AttachedProbe::load_prog()
     if (bt_verbose)
       std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
     throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
-  } else {
-    if (bt_verbose) {
-       std::cout << std::endl << "Bytecode: " << std::endl << log_buf << std::endl;
+  }
+
+  if (bt_verbose) {
+    struct bpf_prog_info info = {};
+    uint32_t info_len = sizeof(info);
+    int ret;
+
+    ret = bpf_obj_get_info(progfd_, &info, &info_len);
+    if (ret == 0) {
+      std::cout << std::endl << "Program ID: " << info.id << std::endl;
     }
+    std::cout << std::endl << "Bytecode: " << std::endl << log_buf << std::endl;
   }
 }
 
