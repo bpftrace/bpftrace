@@ -2,8 +2,8 @@
 #include <unistd.h>
 #include <linux/version.h>
 
-#include "common.h"
 #include "libbpf.h"
+#include "utils.h"
 
 #include "map.h"
 
@@ -68,7 +68,7 @@ Map::Map(enum bpf_map_type map_type)
   }
   else if (map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY)
   {
-    std::vector<int> cpus = ebpf::get_online_cpus();
+    std::vector<int> cpus = get_online_cpus();
     name = "printf";
     key_size = 4;
     value_size = 4;

@@ -12,9 +12,9 @@
 
 #include "attached_probe.h"
 #include "bpftrace.h"
+#include "utils.h"
 #include "bcc_syms.h"
 #include "bcc_usdt.h"
-#include "common.h"
 #include "libbpf.h"
 #include "utils-inl.h"
 #include <linux/perf_event.h>
@@ -474,7 +474,7 @@ void AttachedProbe::attach_profile()
     abort();
   }
 
-  std::vector<int> cpus = ebpf::get_online_cpus();
+  std::vector<int> cpus = get_online_cpus();
   for (int cpu : cpus)
   {
     int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
@@ -584,7 +584,7 @@ void AttachedProbe::attach_software()
   if (period == 0)
     period = defaultp;
 
-  std::vector<int> cpus = ebpf::get_online_cpus();
+  std::vector<int> cpus = get_online_cpus();
   for (int cpu : cpus)
   {
     int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
@@ -654,7 +654,7 @@ void AttachedProbe::attach_hardware()
   if (period == 0)
     period = defaultp;
 
-  std::vector<int> cpus = ebpf::get_online_cpus();
+  std::vector<int> cpus = get_online_cpus();
   for (int cpu : cpus)
   {
     int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_HARDWARE,
