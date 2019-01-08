@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(bpftrace)
 
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 add_compile_options("-std=c++14")
 add_compile_options("-Wno-format-security")
@@ -22,25 +23,6 @@ add_compile_options("-Wno-format-security")
 
 enable_testing()
 
-if (OFFLINE_BUILDS)
-  include(ExternalProject)
-  ExternalProject_Add(bcc
-    GIT_REPOSITORY https://github.com/iovisor/bcc
-    STEP_TARGETS build update
-    EXCLUDE_FROM_ALL 1
-    UPDATE_DISCONNECTED 1
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-    )
-else()
-  include(ExternalProject)
-  ExternalProject_Add(bcc
-    GIT_REPOSITORY https://github.com/iovisor/bcc
-    STEP_TARGETS build update
-    EXCLUDE_FROM_ALL 1
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-    )
-endif()
-
 if (STATIC_LINKING)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
@@ -48,7 +30,9 @@ if (STATIC_LINKING)
   set(CMAKE_LINK_SEARCH_END_STATIC TRUE)
 endif()
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+find_package(LibBcc REQUIRED)
+include_directories(${LIBBCC_INCLUDE_DIRS})
+
 find_package(LibElf REQUIRED)
 include_directories(${LIBELF_INCLUDE_DIRS})
 
