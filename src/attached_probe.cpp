@@ -16,7 +16,7 @@
 #include "bcc_usdt.h"
 #include "common.h"
 #include "libbpf.h"
-#include "utils-inl.h"
+#include "utils.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
