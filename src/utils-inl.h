@@ -1,7 +1,3 @@
-#pragma once
-
-#include "utils.h"
-
 namespace bpftrace {
 
 inline std::string GetProviderFromPath(std::string path) {

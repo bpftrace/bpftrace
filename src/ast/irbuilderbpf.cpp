@@ -4,7 +4,7 @@
 #include "libbpf.h"
 #include "bcc_usdt.h"
 #include "arch/arch.h"
-#include "utils-inl.h"
+#include "utils.h"
 
 #include <llvm/IR/Module.h>
 
