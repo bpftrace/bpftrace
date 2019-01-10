@@ -14,5 +14,6 @@ make "$@"
 if [ $RUN_TESTS = 1 ]; then
   set +e
   ./tests/bpftrace_test $TEST_ARGS;
-  make runtime-tests;
+  # TODO(mmarchini) re-enable once we figured out how to run it properly on CI
+  # make runtime-tests;
 fi
