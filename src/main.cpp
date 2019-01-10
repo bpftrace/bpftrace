@@ -152,6 +152,11 @@ int main(int argc, char *argv[])
   {
     // Script file
     char *file_name = argv[optind];
+    if (!file_name)
+    {
+      std::cerr << "USAGE: filename or -e 'program' required." << std::endl;
+      return 1;
+    }
     err = driver.parse_file(file_name);
     optind++;
   }
