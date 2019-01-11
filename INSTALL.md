@@ -35,7 +35,9 @@ CONFIG_BPF_EVENTS=y
 
 # Building BPFtrace
 
-# Ubuntu
+BPFtrace's build system will download `gtest` at build time. If you don't want that or don't want tests, you can use the `make bpftrace` target.
+
+## Ubuntu
 
 You'll want the newest kernel possible (see kernel requirements), eg, by using Ubuntu 18.04 LTS (Bionic Beaver) or newer.
 
@@ -67,7 +69,7 @@ make install
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-# Fedora
+## Fedora
 
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
@@ -82,7 +84,7 @@ make install
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-# Amazon Linux
+## Amazon Linux
 
 In the future the install should be `yum install bpftrace`. Right now (16-Oct-2018), however, three dependencies need updating in the Amazon Linux repositories (llvm, libtinfo, bison), and bpftrace itself needs to be packaged. The current workaround is to build the three dependencies manually, as well as bpftrace. It's not fun, but it is doable, and will only get better as Amazon updates things.
 
@@ -132,7 +134,7 @@ ldconfig -v
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You may need to add /usr/local/bin to your $PATH. You can also change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-# Using Docker
+## Using Docker
 
 There are currently problems with BPFtrace string comparisons when using the Docker build. The regular build is recommended for now.
 
