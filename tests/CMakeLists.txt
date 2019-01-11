@@ -25,6 +25,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
+  ${CMAKE_SOURCE_DIR}/src/utils.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)
@@ -32,12 +33,7 @@ if(HAVE_NAME_TO_HANDLE_AT)
 endif(HAVE_NAME_TO_HANDLE_AT)
 target_link_libraries(bpftrace_test arch ast parser resources)
 
-ExternalProject_Get_Property(bcc source_dir binary_dir)
-target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
+target_link_libraries(bpftrace_test ${LIBBCC_LIBRARIES})
 target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
 
 find_package(Threads REQUIRED)

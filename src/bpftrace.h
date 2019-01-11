@@ -5,14 +5,12 @@
 #include <set>
 #include <vector>
 
-#include "common.h"
-#include "syms.h"
-
 #include "ast.h"
 #include "attached_probe.h"
 #include "imap.h"
 #include "printf.h"
 #include "struct.h"
+#include "utils.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -50,7 +48,7 @@ inline DebugLevel operator++(DebugLevel& level, int)
 class BPFtrace
 {
 public:
-  BPFtrace() : ncpus_(ebpf::get_possible_cpus().size()) { }
+  BPFtrace() : ncpus_(get_possible_cpus().size()) { }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
@@ -102,7 +100,7 @@ protected:
 private:
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
-  KSyms ksyms_;
+  void* ksyms_{nullptr};
   std::map<int, void *> pid_sym_;
   int ncpus_;
   int online_cpus_;

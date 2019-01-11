@@ -42,6 +42,15 @@ BPFtrace::~BPFtrace()
     int status;
     waitpid(pid, &status, 0);
   }
+
+  for (const auto& pair : pid_sym_)
+  {
+    if (pair.second)
+      bcc_free_symcache(pair.second, pair.first);
+  }
+
+  if (ksyms_)
+    bcc_free_symcache(ksyms_, -1);
 }
 
 int BPFtrace::add_probe(ast::Probe &p)
@@ -567,7 +576,7 @@ int BPFtrace::setup_perf_events()
     return -1;
   }
 
-  std::vector<int> cpus = ebpf::get_online_cpus();
+  std::vector<int> cpus = get_online_cpus();
   online_cpus_ = cpus.size();
   for (int cpu : cpus)
   {
@@ -1481,7 +1490,10 @@ std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
   struct bcc_symbol sym;
   std::ostringstream symbol;
 
-  if (ksyms_.resolve_addr(addr, &sym))
+  if (!ksyms_)
+    ksyms_ = bcc_symcache_new(-1, nullptr);
+
+  if (bcc_symcache_resolve(ksyms_, addr, &sym))
   {
     symbol << sym.name;
     if (show_offset)
@@ -1614,7 +1626,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
     psyms = pid_sym_[pid];
   }
 
-  if (((ProcSyms *)psyms)->resolve_addr(addr, &sym))
+  if (bcc_symcache_resolve(psyms, addr, &sym))
   {
     symbol << sym.name;
     if (show_offset)
@@ -1624,8 +1636,6 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
   {
     symbol << (void*)addr;
   }
-
-  // TODO: deal with process exit and clearing its psyms entry
 
   return symbol.str();
 }

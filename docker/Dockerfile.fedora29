@@ -9,7 +9,8 @@ RUN dnf install -y \
     git \
     llvm-devel \
     make \
-    zlib-devel
+    zlib-devel \
+    bcc-devel
 
 COPY build.sh /build.sh
 ENTRYPOINT ["/bin/sh", "/build.sh"]

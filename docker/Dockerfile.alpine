@@ -11,7 +11,8 @@ RUN apk add --update \
   linux-headers \
   llvm5-dev \
   llvm5-static \
-  zlib-dev
+  zlib-dev \
+  bcc-dev
 
 # Put LLVM directories where CMake expects them to be
 RUN ln -s /usr/lib/cmake/llvm5 /usr/lib/cmake/llvm
