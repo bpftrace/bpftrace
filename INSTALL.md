@@ -41,7 +41,11 @@ BPFtrace's build system will download `gtest` at build time. If you don't want t
 
 You'll want the newest kernel possible (see kernel requirements), eg, by using Ubuntu 18.04 LTS (Bionic Beaver) or newer.
 
-The llvm/clang packages that are currently available for Ubuntu have an issue (see [#76](https://github.com/iovisor/bpftrace/issues/76)), so we'll use the ones from llvm.org for now. The build instructions are:
+The llvm/clang packages that are currently available for Ubuntu have an issue (see [#76](https://github.com/iovisor/bpftrace/issues/76)), so we'll use the ones from llvm.org for now.
+
+Ubuntu 18.04's libbpfcc-dev package has a bug where it's missing a header file (see [#335](https://github.com/iovisor/bpftrace/pull/335)). We recommend first trying libbpfcc-dev and then trying [a manual installation](https://github.com/iovisor/bcc) if the package has not already been fixed.
+
+The build instructions are:
 
 ```
 # see https://apt.llvm.org/ for the following archive signature:
@@ -58,7 +62,7 @@ deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 EOF
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev bcc-dev
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev libbpfcc-dev
 sudo apt-get install clang-5.0 libclang-5.0-dev libclang-common-5.0-dev libclang1-5.0 libllvm5.0 llvm-5.0 llvm-5.0-dev llvm-5.0-runtime
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
