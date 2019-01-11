@@ -39,6 +39,6 @@ include (FindPackageHandleStandardArgs)
 
 
 # handle the QUIETLY and REQUIRED arguments and set LIBBCC_FOUND to TRUE if all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc DEFAULT_MSG
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc "Please install the libbcc development package"
   LIBBCC_LIBRARIES
   LIBBCC_INCLUDE_DIRS)
