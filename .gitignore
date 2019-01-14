@@ -1,3 +1,4 @@
 build/
 build-*/
 tests/runtime/*.pyc
+/src/version.h
