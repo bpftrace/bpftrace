@@ -33,12 +33,12 @@ tracepoint:sched:sched_switch
 	$TASK_RUNNING = 0;	// from linux/sched.h, workaround for #153
 	if (args->prev_state == $TASK_RUNNING) {
 		@qtime[args->prev_pid] = nsecs;
-	};
+	}
 
 	$ns = @qtime[args->next_pid];
 	if ($ns) {
 		@usecs = hist((nsecs - $ns) / 1000);
-	};
+	}
 	delete(@qtime[args->next_pid]);
 }
 
