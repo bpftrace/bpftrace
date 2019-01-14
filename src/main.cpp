@@ -12,7 +12,6 @@
 #include "printer.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
-#include "version.h"
 
 using namespace bpftrace;
 
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
 
   if (argc > 1 && strcmp(argv[1], "--version") == 0)
   {
-    std::cout << "bpfTrace " << GIT_VERSION << "\n" << std::endl;
+    std::cout << "bpftrace " << BPFTRACE_VERSION<< "\n" << std::endl;
     return 0;
   }
 

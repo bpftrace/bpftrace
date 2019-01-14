@@ -34,13 +34,8 @@ endif()
 execute_process(
   COMMAND git describe --abbrev=4 --dirty --always --tags
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE GIT_VERSION
+  OUTPUT_VARIABLE BPFTRACE_VERSION
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-add_definitions("-DVERSION=${GIT_VERSION}")
-
-configure_file(
-  ${CMAKE_SOURCE_DIR}/src/version.h.in
-  ${CMAKE_SOURCE_DIR}/src/version.h
-)
+add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
