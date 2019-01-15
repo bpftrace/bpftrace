@@ -1162,10 +1162,6 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   if (max_index == -1)
     return 0;
 
-  std::ostringstream lt;
-  lt << "(...," << lhist_index_label(min) << "]";
-  std::ostringstream gt;
-
   // trim empty values
   int start_value = -1;
   int end_value = 0;
@@ -1190,9 +1186,9 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
     int bar_width = values.at(i)/(float)max_value*max_width;
     std::ostringstream header;
     if (i == 0) {
-      header << "(...," << lhist_index_label(min) << "]";
+      header << "(..., " << lhist_index_label(min) << ")";
     } else if (i == (buckets + 1)) {
-      header << "[" << lhist_index_label(max) << ",...)";
+      header << "[" << lhist_index_label(max) << ", ...)";
     } else {
       header << "[" << lhist_index_label((i - 1) * step + min);
       header << ", " << lhist_index_label(i * step + min) << ")";
