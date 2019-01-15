@@ -5,6 +5,7 @@
 #include "printf.h"
 #include "tracepoint_format_parser.h"
 #include "arch/arch.h"
+#include "list.h"
 #include <sys/stat.h>
 #include <regex>
 
@@ -773,18 +774,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "software") {
     if (ap.target == "")
       err_ << "software probe must have a software event name" << std::endl;
-    else if (ap.target != "cpu-clock" && ap.target != "cpu" &&
-             ap.target != "task-clock" &&
-             ap.target != "page-faults" && ap.target != "faults" &&
-             ap.target != "context-switches" && ap.target != "cs" &&
-             ap.target != "cpu-migrations" &&
-             ap.target != "minor-faults" &&
-             ap.target != "major-faults" &&
-             ap.target != "alignment-faults" &&
-             ap.target != "emulation-faults" &&
-             ap.target != "dummy" &&
-             ap.target != "bpf-output")
-      err_ << ap.target << " is not a software probe" << std::endl;
+    else {
+      bool found = false;
+      for (auto &probeListItem : SW_PROBE_LIST) {
+        if (ap.target == probeListItem.path || (!probeListItem.alias.empty() && ap.target == probeListItem.alias)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        err_ << ap.target << " is not a software probe" << std::endl;
+    }
     if (ap.func != "")
       err_ << "software probe can only have an integer count" << std::endl;
     else if (ap.freq < 0)
@@ -793,16 +793,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "hardware") {
     if (ap.target == "")
       err_ << "hardware probe must have a hardware event name" << std::endl;
-    else if (ap.target != "cpu-cycles" && ap.target != "cycles" &&
-             ap.target != "instructions" &&
-             ap.target != "cache-references" &&
-             ap.target != "cache-misses" &&
-             ap.target != "branch-instructions" && ap.target != "branches" &&
-             ap.target != "bus-cycles" &&
-             ap.target != "frontend-stalls" &&
-             ap.target != "backend-stalls" &&
-             ap.target != "ref-cycles")
-      err_ << ap.target << " is not a hardware probe" << std::endl;
+    else {
+      bool found = false;
+      for (auto &probeListItem : HW_PROBE_LIST) {
+        if (ap.target == probeListItem.path || (!probeListItem.alias.empty() && ap.target == probeListItem.alias)) {
+          found = true;
+          break;
+        }
+      }
+      if (!found)
+        err_ << ap.target << " is not a hardware probe" << std::endl;
+    }
     if (ap.func != "")
       err_ << "hardware probe can only have an integer count" << std::endl;
     else if (ap.freq < 0)

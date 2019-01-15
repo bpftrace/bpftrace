@@ -17,6 +17,7 @@
 #include "bcc_usdt.h"
 #include "libbpf.h"
 #include "utils.h"
+#include "list.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
@@ -528,57 +529,13 @@ void AttachedProbe::attach_software()
   uint32_t type;
 
   // from linux/perf_event.h, with aliases from perf:
-  if (probe_.path == "cpu-clock" || probe_.path == "cpu")
+  for (auto &probeListItem : SW_PROBE_LIST)
   {
-    type = PERF_COUNT_SW_CPU_CLOCK;
-    defaultp = 1000000;
-  }
-  else if (probe_.path == "task-clock")
-  {
-    type = PERF_COUNT_SW_TASK_CLOCK;
-  }
-  else if (probe_.path == "page-faults" || probe_.path == "faults")
-  {
-    type = PERF_COUNT_SW_PAGE_FAULTS;
-    defaultp = 100;
-  }
-  else if (probe_.path == "context-switches" || probe_.path == "cs")
-  {
-    type = PERF_COUNT_SW_CONTEXT_SWITCHES;
-    defaultp = 1000;
-  }
-  else if (probe_.path == "cpu-migrations")
-  {
-    type = PERF_COUNT_SW_CPU_MIGRATIONS;
-  }
-  else if (probe_.path == "minor-faults")
-  {
-    type = PERF_COUNT_SW_PAGE_FAULTS_MIN;
-    defaultp = 100;
-  }
-  else if (probe_.path == "major-faults")
-  {
-    type = PERF_COUNT_SW_PAGE_FAULTS_MAJ;
-  }
-  else if (probe_.path == "alignment-faults")
-  {
-    type = PERF_COUNT_SW_ALIGNMENT_FAULTS;
-  }
-  else if (probe_.path == "emulation-faults")
-  {
-    type = PERF_COUNT_SW_EMULATION_FAULTS;
-  }
-  else if (probe_.path == "dummy")
-  {
-    type = PERF_COUNT_SW_DUMMY;
-  }
-  else if (probe_.path == "bpf-output")
-  {
-    type = PERF_COUNT_SW_BPF_OUTPUT;
-  }
-  else
-  {
-    abort();
+    if (probe_.path == probeListItem.path || probe_.path == probeListItem.alias)
+    {
+      type = probeListItem.type;
+      defaultp = probeListItem.defaultp;
+    }
   }
 
   if (period == 0)
@@ -607,48 +564,13 @@ void AttachedProbe::attach_hardware()
   uint32_t type;
 
   // from linux/perf_event.h, with aliases from perf:
-  if (probe_.path == "cpu-cycles" || probe_.path == "cycles")
+  for (auto &probeListItem : HW_PROBE_LIST)
   {
-    type = PERF_COUNT_HW_CPU_CYCLES;
-  }
-  else if (probe_.path == "instructions")
-  {
-    type = PERF_COUNT_HW_INSTRUCTIONS;
-  }
-  else if (probe_.path == "cache-references")
-  {
-    type = PERF_COUNT_HW_CACHE_REFERENCES;
-  }
-  else if (probe_.path == "cache-misses")
-  {
-    type = PERF_COUNT_HW_CACHE_MISSES;
-  }
-  else if (probe_.path == "branch-instructions" || probe_.path == "branches")
-  {
-    type = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
-    defaultp = 100000;
-  }
-  else if (probe_.path == "bus-cycles")
-  {
-    type = PERF_COUNT_HW_BUS_CYCLES;
-    defaultp = 100000;
-  }
-  else if (probe_.path == "frontend-stalls")
-  {
-    type = PERF_COUNT_HW_STALLED_CYCLES_FRONTEND;
-  }
-  else if (probe_.path == "backend-stalls")
-  {
-    type = PERF_COUNT_HW_STALLED_CYCLES_BACKEND;
-  }
-  else if (probe_.path == "ref-cycles")
-  {
-    type = PERF_COUNT_HW_REF_CPU_CYCLES;
-  }
-  // can add PERF_COUNT_HW_CACHE_... here
-  else
-  {
-    abort();
+    if (probe_.path == probeListItem.path || probe_.path == probeListItem.alias)
+    {
+      type = probeListItem.type;
+      defaultp = probeListItem.defaultp;
+    }
   }
 
   if (period == 0)

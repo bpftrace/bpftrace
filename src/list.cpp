@@ -65,18 +65,37 @@ void list_dir(const std::string path, std::vector<std::string> &files)
   closedir(dp);
 }
 
+void list_probes_from_list(const std::vector<ProbeListItem> &probes_list, const std::string &search)
+{
+  for (auto &probeListItem : probes_list)
+  {
+    if (!search.empty())
+    {
+      if (search_probe(probeListItem.path, search) && search_probe(probeListItem.alias, search))
+        continue;
+    }
+
+    std::cout << probeListItem.path;
+    if (!probeListItem.alias.empty())
+      std::cout << " OR " << probeListItem.alias;
+    std::cout << std::endl;
+  }
+}
+
 void list_probes(const std::string &search)
 {
   unsigned int i, j;
   std::string line, probe;
 
   // software
-  // TODO: add here
+  list_probes_from_list(SW_PROBE_LIST, search);
 
   // hardware
-  // TODO: add here
+  std::cout << std::endl;
+  list_probes_from_list(HW_PROBE_LIST, search);
 
   // tracepoints
+  std::cout << std::endl;
   std::vector<std::string> cats = std::vector<std::string>();
   list_dir(tp_path, cats);
   for (i = 0; i < cats.size(); i++)
