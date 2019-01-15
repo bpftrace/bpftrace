@@ -1123,12 +1123,20 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
     std::ostringstream header;
     if (i == 0)
     {
-      header << "[0, 1]";
+      header << "(..., 0)";
+    }
+    else if (i == 1)
+    {
+      header << "[0]";
+    }
+    else if (i == 2)
+    {
+      header << "[1]";
     }
     else
     {
-      header << "[" << hist_index_label(i);
-      header << ", " << hist_index_label(i+1) << ")";
+      header << "[" << hist_index_label(i-2);
+      header << ", " << hist_index_label(i-2+1) << ")";
     }
 
     int max_width = 52;

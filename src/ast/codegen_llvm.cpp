@@ -1372,10 +1372,18 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
 
 void CodegenLLVM::createLog2Function()
 {
+  // log2() returns a bucket index for the given value. Index 0 is for
+  // values less than 0, index 1 is for 0, and indexes 2 onwards is the
+  // power-of-2 histogram index.
+  //
   // log2(int n)
   // {
   //   int result = 0;
   //   int shift;
+  //   if (n < 0) return result;
+  //   result++;
+  //   if (n == 0) return result;
+  //   result++;
   //   for (int i = 4; i >= 0; i--)
   //   {
   //     shift = (v >= (1<<(1<<i))) << i;
@@ -1392,14 +1400,36 @@ void CodegenLLVM::createLog2Function()
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", log2_func);
   b_.SetInsertPoint(entry);
 
+  // setup n and result registers
   Value *arg = log2_func->arg_begin();
-
   Value *n_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
   b_.CreateStore(arg, n_alloc);
-
   Value *result = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
   b_.CreateStore(b_.getInt64(0), result);
 
+  // test for less than zero
+  BasicBlock *is_less_than_zero = BasicBlock::Create(module_->getContext(), "hist.is_less_than_zero", log2_func);
+  BasicBlock *is_not_less_than_zero = BasicBlock::Create(module_->getContext(), "hist.is_not_less_than_zero", log2_func);
+  b_.CreateCondBr(b_.CreateICmpSLT(b_.CreateLoad(n_alloc), b_.getInt64(0)),
+                  is_less_than_zero,
+                  is_not_less_than_zero);
+  b_.SetInsertPoint(is_less_than_zero);
+  b_.CreateRet(b_.CreateLoad(result));
+  b_.SetInsertPoint(is_not_less_than_zero);
+
+  // test for equal to zero
+  BasicBlock *is_zero = BasicBlock::Create(module_->getContext(), "hist.is_zero", log2_func);
+  BasicBlock *is_not_zero = BasicBlock::Create(module_->getContext(), "hist.is_not_zero", log2_func);
+  b_.CreateCondBr(b_.CreateICmpEQ(b_.CreateLoad(n_alloc), b_.getInt64(0)),
+                  is_zero,
+                  is_not_zero);
+  b_.SetInsertPoint(is_zero);
+  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateRet(b_.CreateLoad(result));
+  b_.SetInsertPoint(is_not_zero);
+
+  // power-of-2 index, offset by +2
+  b_.CreateStore(b_.getInt64(2), result);
   for (int i = 4; i >= 0; i--)
   {
     Value *n = b_.CreateLoad(n_alloc);
