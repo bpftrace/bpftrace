@@ -9,19 +9,7 @@
 #include "clang_parser.h"
 #include "types.h"
 #include "utils.h"
-
-extern "C" const char __stddef_max_align_t_h[];
-extern "C" const unsigned __stddef_max_align_t_h_len;
-extern "C" const char float_h[];
-extern "C" const unsigned float_h_len;
-extern "C" const char limits_h[];
-extern "C" const unsigned limits_h_len;
-extern "C" const char stdarg_h[];
-extern "C" const unsigned stdarg_h_len;
-extern "C" const char stddef_h[];
-extern "C" const unsigned stddef_h_len;
-extern "C" const char stdint_h[];
-extern "C" const unsigned stdint_h_len;
+#include "headers.h"
 
 namespace bpftrace {
 
