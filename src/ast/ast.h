@@ -204,19 +204,19 @@ public:
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &provider)
-    : provider(provider) { }
+    : provider(probetypeName(provider)) { }
   AttachPoint(const std::string &provider,
               const std::string &func)
-    : provider(provider), func(func), need_expansion(true) { }
+    : provider(probetypeName(provider)), func(func), need_expansion(true) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               const std::string &func,
               bool need_expansion)
-    : provider(provider), target(target), func(func), need_expansion(need_expansion) { }
+    : provider(probetypeName(provider)), target(target), func(func), need_expansion(need_expansion) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               int freq)
-    : provider(provider), target(target), freq(freq), need_expansion(true) { }
+    : provider(probetypeName(provider)), target(target), freq(freq), need_expansion(true) { }
 
   std::string provider;
   std::string target;
