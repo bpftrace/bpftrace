@@ -75,6 +75,12 @@ int main(int argc, char *argv[])
   char *cmd_str = nullptr;
   bool listing = false;
 
+  if (argc > 1 && strcmp(argv[1], "--version") == 0)
+  {
+    std::cout << "bpftrace " << BPFTRACE_VERSION<< "\n" << std::endl;
+    return 0;
+  }
+
   std::string script, search;
   int c;
   while ((c = getopt(argc, argv, "de:hlp:vc:")) != -1)
