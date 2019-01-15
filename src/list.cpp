@@ -89,11 +89,9 @@ void list_probes(const std::string &search)
   list_probes_from_list(SW_PROBE_LIST, "software", search);
 
   // hardware
-  std::cout << std::endl;
   list_probes_from_list(HW_PROBE_LIST, "hardware",  search);
 
   // tracepoints
-  std::cout << std::endl;
   std::vector<std::string> cats = std::vector<std::string>();
   list_dir(tp_path, cats);
   for (i = 0; i < cats.size(); i++)
@@ -119,7 +117,6 @@ void list_probes(const std::string &search)
   }
 
   // kprobes
-  std::cout << std::endl;
   std::ifstream file(kprobe_path);
   if (file.fail())
   {
