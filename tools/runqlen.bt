@@ -21,7 +21,7 @@ struct cfs_rq_partial {
 	unsigned long runnable_weight;
 	unsigned int nr_running;
 	unsigned int h_nr_running;
-}
+};
 
 BEGIN
 {
