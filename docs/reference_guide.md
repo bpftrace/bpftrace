@@ -691,7 +691,7 @@ block I/O created by 28941
 Example:
 
 ```
-# bpftrace-tp -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 irqbalance /proc/interrupts
 irqbalance /proc/stat
