@@ -1497,7 +1497,7 @@ std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
   if (!ksyms_)
     ksyms_ = bcc_symcache_new(-1, nullptr);
 
-  if (bcc_symcache_resolve(ksyms_, addr, &sym))
+  if (bcc_symcache_resolve(ksyms_, addr, &sym) == 0)
   {
     symbol << sym.name;
     if (show_offset)
@@ -1630,7 +1630,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
     psyms = pid_sym_[pid];
   }
 
-  if (bcc_symcache_resolve(psyms, addr, &sym))
+  if (bcc_symcache_resolve(psyms, addr, &sym) == 0)
   {
     symbol << sym.name;
     if (show_offset)
