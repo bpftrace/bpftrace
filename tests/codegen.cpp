@@ -72,6 +72,7 @@
 #include "codegen/struct_save.cpp"
 #include "codegen/struct_save_nested.cpp"
 #include "codegen/struct_save_string.cpp"
+#include "codegen/struct_semicolon.cpp"
 #include "codegen/struct_short.cpp"
 #include "codegen/struct_string_array.cpp"
 #include "codegen/struct_string_ptr.cpp"
