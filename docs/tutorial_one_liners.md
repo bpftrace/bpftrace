@@ -91,7 +91,7 @@ Attaching 1 probe...
 This summarizes the return value of the sys_read() kernel function for PID 18644, printing it as a histogram.
 
 - /.../: This is a filter (aka predicate), which acts as a filter for the action. The action is only executed if the filtered expression is true, in this case, only for the process ID 18644. Boolean operators are supported ("&&", "||").
-- retval: This is the return value of the function. For sys_read(), this is either -1 (error) or the number of bytes successfully read.
+- ret: This is the return value of the function. For sys_read(), this is either -1 (error) or the number of bytes successfully read.
 - @: This is a map similar to the previous lesson, but without any keys ([]) this time, and the name "bytes" which decorates the output.
 - hist(): This is a map function which summarizes the argument as a power-of-2 histogram. The output shows rows that begin with interval notation, where, for example `[128, 256)` means that the value is: 128 <= value < 256. The next number is the count of occurrences, and then an ASCII histogram is printed to visualize that count. The histogram can be used to study multi-modal distributions.
 - Other map functions include lhist() (linear hist), count(), sum(), avg(), min(), and max().
