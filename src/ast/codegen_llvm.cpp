@@ -49,7 +49,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = b_.CreateGetNs();
   }
-  else if (builtin.ident == "stack" || builtin.ident == "ustack")
+  else if (builtin.ident == "kstack" || builtin.ident == "ustack")
   {
     Value *stackid = b_.CreateGetStackId(ctx_, builtin.ident == "ustack");
     // Kernel stacks should not be differentiated by tid, since the kernel

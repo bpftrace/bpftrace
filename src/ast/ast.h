@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -56,7 +57,13 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(std::string ident) : ident(ident) { }
+  explicit Builtin(std::string ident) : ident(ident) {
+    if (ident == "stack") {
+      std::cout << "\033[33m warning: \033[0m";
+      std::cout << "stack is deprecated and will be removed in the future. Use kstack instead" << std::endl;
+      this->ident = "kstack";
+    }
+  }
   std::string ident;
   int probe_id;
 

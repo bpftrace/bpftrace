@@ -24,7 +24,7 @@ enum class Type
   max,
   avg,
   stats,
-  stack,
+  kstack,
   ustack,
   string,
   sym,
