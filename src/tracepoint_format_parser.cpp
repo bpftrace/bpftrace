@@ -29,20 +29,24 @@ bool TracepointFormatParser::parse(ast::Program *program)
       {
         std::string &category = ap->target;
         std::string &event_name = ap->func;
+        if (has_wildcard(event_name))
+        {
+          // args not supported with wildcards yet: #132
+          return true;
+        }
+
         std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
         std::ifstream format_file(format_file_path.c_str());
 
         if (format_file.fail())
         {
-          std::cerr << "ERROR: tracepoint not found: " << ap->target << ":" << ap->func << std::endl;
+          std::cerr << "ERROR: tracepoint not found: " << category << ":" << event_name << std::endl;
           // helper message:
-          if (ap->target == "syscall")
-            std::cerr << "Did you mean syscalls:" << ap->func << "?" << std::endl;
+          if (category == "syscall")
+            std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
           if (bt_verbose) {
-            if (format_file_path.find('*') == std::string::npos)
               std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
           }
-
           return false;
         }
 
