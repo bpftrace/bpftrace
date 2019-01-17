@@ -215,12 +215,12 @@ secondary_startup_64+165
 Profile kernel stacks at 99 Hertz, printing a frequency count.
 
 - profile:hz:99: This fires on all CPUs at 99 Hertz. Why 99 and not 100 or 1000? We want frequent enough to catch both the big and small picture of execution, but not too frequent as to perturb performance. 100 Hertz is enough. But we don't want 100 exactly, as sampling may occur in lockstep with other timed activities, hence 99.
-- stack: Returns the kernel stack trace. This is used as a key for the map, so that it can be frequency counted. The output of this is ideal to be visualized as a flame graph. There is also `ustack` for the user-level stack trace.
+- kstack: Returns the kernel stack trace. This is used as a key for the map, so that it can be frequency counted. The output of this is ideal to be visualized as a flame graph. There is also `ustack` for the user-level stack trace.
 
 # Lesson 10. Scheduler Tracing
 
 ```
-# bpftrace -e 'tracepoint:sched:sched_switch { @[stack] = count(); }'
+# bpftrace -e 'tracepoint:sched:sched_switch { @[kstack] = count(); }'
 ^C
 [...]
 
@@ -248,8 +248,8 @@ This counts stack traces that led to context switching (off-CPU) events. The abo
 
 - sched: The sched category has tracepoints for different kernel CPU scheduler events: sched_switch, sched_wakeup, sched_migrate_task, etc.
 - sched_switch: This probe fires when a thread leaves CPU. This will be a blocking event: eg, waiting on I/O, a timer, paging/swapping, or a lock.
-- stack: A kernel stack trace.
-- sched_switch fires in thread context, so that the stack refers to the thread who is leaving. As you use other probe types, pay attention to context, as comm, pid, stack, etc, may not refer to the target of the probe.
+- kstack: A kernel stack trace.
+- sched_switch fires in thread context, so that the stack refers to the thread who is leaving. As you use other probe types, pay attention to context, as comm, pid, kstack, etc, may not refer to the target of the probe.
 
 # Lesson 11. Block I/O Tracing
 

@@ -44,7 +44,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [4. `count()`: Frequency Counting](#4-count-frequency-counting)
     - [5. `hist()`, `lhist()`: Histograms](#5-hist-lhist-histograms)
     - [6. `nsecs`: Timestamps and Time Deltas](#6-nsecs-timestamps-and-time-deltas)
-    - [7. `stack`: Stack Traces, Kernel](#7-stack-stack-traces-kernel)
+    - [7. `kstack`: Stack Traces, Kernel](#7-kstack-stack-traces-kernel)
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
     - [9. `$1`, ..., `$N`: Positional Parameters](#9-1--n-positional-parameters)
 - [Functions](#functions)
@@ -929,7 +929,7 @@ That would fire once for every 1000000 cache misses. This usually indicates the 
 - `nsecs` - Nanosecond timestamp
 - `cpu` - Processor ID
 - `comm` - Process name
-- `stack` - Kernel stack trace
+- `kstack` - Kernel stack trace
 - `ustack` - User stack trace
 - `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function
 - `retval` - Return value from traced function
@@ -1052,16 +1052,16 @@ at 1438 ms: sleep
 ^C
 ```
 
-## 7. `stack`: Stack Traces, Kernel
+## 7. `kstack`: Stack Traces, Kernel
 
-Syntax: `stack`
+Syntax: `kstack`
 
 These are implemented using BPF stack maps.
 
 Examples:
 
 ```
-# bpftrace -e 'kprobe:ip_output { @[stack] = count(); }'
+# bpftrace -e 'kprobe:ip_output { @[kstack] = count(); }'
 Attaching 1 probe...
 [...]
 @[
@@ -1269,7 +1269,7 @@ Tracing block I/O sizes > 0 bytes
 - `exit()` - Quit bpftrace
 - `cgroupid(char *path)` - Resolve cgroup ID
 
-Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>sym()</tt> and <tt>usym()</tt>, as well as the variables <tt>stack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
+Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>sym()</tt> and <tt>usym()</tt>, as well as the variables <tt>kstack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
 
 A selection of these are discussed in the following sections.
 
@@ -1332,7 +1332,7 @@ tbl
 
 Syntax: `str(char *s [, int length])`
 
-Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce a null-terminator.  
+Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce a null-terminator.
 By default, the string will have size 64 bytes (tuneable using [env var `BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)).
 
 Examples:

@@ -420,7 +420,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
             resolve_probe(
               *reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
         break;
-      case Type::stack:
+      case Type::kstack:
         arg_values.push_back(
           std::make_unique<PrintableString>(
             get_stack(
@@ -878,7 +878,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
-    if (map.type_.type == Type::stack)
+    if (map.type_.type == Type::kstack)
       std::cout << get_stack(*(uint64_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
       std::cout << get_stack(*(uint64_t*)value.data(), true, 8);

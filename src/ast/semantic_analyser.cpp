@@ -60,8 +60,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "retval") {
     builtin.type = SizedType(Type::integer, 8);
   }
-  else if (builtin.ident == "stack") {
-    builtin.type = SizedType(Type::stack, 8);
+  else if (builtin.ident == "kstack") {
+    builtin.type = SizedType(Type::kstack, 8);
     needs_stackid_map_ = true;
   }
   else if (builtin.ident == "ustack") {

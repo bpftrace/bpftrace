@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <map>
@@ -8,6 +9,8 @@
 
 namespace bpftrace {
 namespace ast {
+
+static bool PRINT_STACK_DEPRICATED = true;
 
 class Visitor;
 
@@ -56,7 +59,17 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(std::string ident) : ident(ident) { }
+  explicit Builtin(std::string ident) : ident(ident) {
+    if (ident == "stack") {
+      if (PRINT_STACK_DEPRICATED)
+      {
+        std::cerr << "warning: stack is deprecated and will be removed in the future. Use kstack instead" << std::endl;
+        PRINT_STACK_DEPRICATED = false;
+      }
+
+      this->ident = "kstack";
+    }
+  }
   std::string ident;
   int probe_id;
 
