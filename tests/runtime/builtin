@@ -41,6 +41,12 @@ EXPECT SUCCESS stack
 TIMEOUT 5
 BEFORE sleep 1 && sleep 1 &
 
+NAME kstack
+RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", kstack); exit(); }'
+EXPECT SUCCESS kstack
+TIMEOUT 5
+BEFORE sleep 1 && sleep 1 &
+
 NAME ustack
 RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", ustack); exit(); }'
 EXPECT SUCCESS ustack
