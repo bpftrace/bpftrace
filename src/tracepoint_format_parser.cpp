@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string.h>
+#include <glob.h>
 
 #include "ast.h"
 #include "struct.h"
@@ -37,33 +38,75 @@ bool TracepointFormatParser::parse(ast::Program *program)
       {
         std::string &category = ap->target;
         std::string &event_name = ap->func;
+        std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
+        glob_t glob_result;
+
         if (has_wildcard(event_name))
         {
-          // args not supported with wildcards yet: #132
-          return true;
-        }
-
-        std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
-        std::ifstream format_file(format_file_path.c_str());
-
-        if (format_file.fail())
-        {
-          std::cerr << "ERROR: tracepoint not found: " << category << ":" << event_name << std::endl;
-          // helper message:
-          if (category == "syscall")
-            std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
-          if (bt_verbose) {
-              std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+          // tracepoint wildcard expansion, part 1 of 3. struct definitions.
+          memset(&glob_result, 0, sizeof(glob_result));
+          int ret = glob(format_file_path.c_str(), 0, NULL, &glob_result);
+          if (ret != 0)
+          {
+            if (ret == GLOB_NOMATCH)
+            {
+              std::cerr << "ERROR: tracepoints not found: " << category << ":" << event_name << std::endl;
+              // helper message:
+              if (category == "syscall")
+                std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
+              if (bt_verbose) {
+                  std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+              }
+              return false;
+            }
+            else
+            {
+              // unexpected error
+              std::cerr << strerror(errno) << std::endl;
+              return false;
+            }
           }
-          return false;
-        }
 
-        // Check to avoid adding the same struct more than once to definitions
-        std::string struct_name = get_struct_name(category, event_name);
-        if (!TracepointFormatParser::struct_list.count(struct_name))
+          for (int i = 0; i < glob_result.gl_pathc; ++i) {
+            std::string filename(glob_result.gl_pathv[i]);
+            std::ifstream format_file(filename);
+            std::string prefix("/sys/kernel/debug/tracing/events/" + category + "/");
+            std::string real_event = filename.substr(prefix.length(),
+                    filename.length() - std::string("/format").length() - prefix.length());
+
+            // Check to avoid adding the same struct more than once to definitions
+            std::string struct_name = get_struct_name(category, real_event);
+            if (!TracepointFormatParser::struct_list.count(struct_name))
+            {
+              program->c_definitions += get_tracepoint_struct(format_file, category, real_event);
+              TracepointFormatParser::struct_list.insert(struct_name);
+            }
+          }
+          globfree(&glob_result);
+        }
+        else
         {
-          program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
-          TracepointFormatParser::struct_list.insert(struct_name);
+          // single tracepoint
+          std::ifstream format_file(format_file_path.c_str());
+          if (format_file.fail())
+          {
+            std::cerr << "ERROR: tracepoint not found: " << category << ":" << event_name << std::endl;
+            // helper message:
+            if (category == "syscall")
+              std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
+            if (bt_verbose) {
+                std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+            }
+            return false;
+          }
+
+          // Check to avoid adding the same struct more than once to definitions
+          std::string struct_name = get_struct_name(category, event_name);
+          if (!TracepointFormatParser::struct_list.count(struct_name))
+          {
+            program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
+            TracepointFormatParser::struct_list.insert(struct_name);
+          }
         }
       }
     }
