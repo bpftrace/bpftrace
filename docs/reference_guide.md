@@ -20,9 +20,10 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [2. `/.../`: Filtering](#2--filtering)
     - [3. `//`, `/*`: Comments](#3---comments)
     - [4. `->`: C Struct Navigation](#4---c-struct-navigation)
-    - [5. `? :`: ternary operators](#5---ternary-operators)
-    - [6. `if () {...} else {...}`: if-else statements](#6-if---else--if-else-statements)
-    - [7. `unroll () {...}`: unroll](#7-unroll---unroll)
+    - [5. `struct`: Struct Declaration](#5-struct-struct-declaration)
+    - [6. `? :`: ternary operators](#6---ternary-operators)
+    - [7. `if () {...} else {...}`: if-else statements](#7-if---else--if-else-statements)
+    - [8. `unroll () {...}`: unroll](#8-unroll---unroll)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -441,7 +442,22 @@ open path: retrans_time_ms
 
 This uses dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt. Some kernel headers needed to be included to understand the `path` and `dentry` structs.
 
-## 5. `? :`: ternary operators
+## 5. `struct`: Struct Declaration
+
+Example:
+
+```
+// from fs/namei.c:
+struct nameidata {
+        struct path     path;
+        struct qstr     last;
+        // [...]
+};
+```
+
+You can define your own structs when needed. In some cases, kernel structs are not declared in the kernel headers package, and are declared manually in bpftrace tools (or partial structs are: enough to reach the member to dereference).
+
+## 6. `? :`: ternary operators
 
 Example:
 
@@ -454,7 +470,7 @@ Attaching 1 probe...
 @error[0]: 78
 ```
 
-## 6. `if () {...} else {...}`: if-else statements
+## 7. `if () {...} else {...}`: if-else statements
 
 Example:
 
@@ -467,7 +483,7 @@ Attaching 1 probe...
 @reads: 80
 ```
 
-## 7. `unroll () {...}`: Unroll
+## 8. `unroll () {...}`: Unroll
 
 Example:
 
