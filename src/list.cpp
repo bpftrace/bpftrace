@@ -31,17 +31,9 @@ std::string replace_all(const std::string &str, const std::string &from,
     return result;
 }
 
-bool search_probe(const std::string &probe, const std::string& search)
+inline bool search_probe(const std::string &probe, const std::regex& re)
 {
   try {
-    std::string glob = "*";
-    std::string regex = ".*";
-    std::string s = replace_all(search,glob,regex);
-    glob = "?";
-    regex = ".";
-    s = replace_all(s,glob,regex);
-    s = "^" + s + "$";
-    std::regex  re(s, std::regex::icase | std::regex::grep | std::regex::nosubs);
     if (std::regex_search(probe, re))
       return false;
     else
@@ -66,17 +58,22 @@ void list_dir(const std::string path, std::vector<std::string> &files)
 }
 
 void list_probes_from_list(const std::vector<ProbeListItem> &probes_list,
-                           const std::string &probetype, const std::string &search)
+                           const std::string &probetype, const std::string &search,
+                           const std::regex& re)
 {
+  std::string probe;
+
   for (auto &probeListItem : probes_list)
   {
+    probe = probetype + ":" + probeListItem.path + ":";
+
     if (!search.empty())
     {
-      if (search_probe(probeListItem.path, search) && search_probe(probeListItem.alias, search))
+      if (search_probe(probe, re))
         continue;
     }
 
-    std::cout << probetype << ":" << probeListItem.path << ":" << std::endl;
+    std::cout << probe  << std::endl;
   }
 }
 
@@ -84,12 +81,20 @@ void list_probes(const std::string &search)
 {
   unsigned int i, j;
   std::string line, probe;
+  std::string glob = "*";
+  std::string regex = ".*";
+  std::string s = replace_all(search,glob,regex);
+  glob = "?";
+  regex = ".";
+  s = replace_all(s,glob,regex);
+  s = "^" + s + "$";
+  std::regex re(s, std::regex::icase | std::regex::grep | std::regex::nosubs | std::regex::optimize);
 
   // software
-  list_probes_from_list(SW_PROBE_LIST, "software", search);
+  list_probes_from_list(SW_PROBE_LIST, "software", search, re);
 
   // hardware
-  list_probes_from_list(HW_PROBE_LIST, "hardware",  search);
+  list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
   // tracepoints
   std::vector<std::string> cats = std::vector<std::string>();
@@ -108,7 +113,7 @@ void list_probes(const std::string &search)
 
       if (!search.empty())
       {
-        if (search_probe(probe, search))
+        if (search_probe(probe, re))
           continue;
       }
 
@@ -135,7 +140,7 @@ void list_probes(const std::string &search)
 
     if (!search.empty())
     {
-      if (search_probe(probe, search))
+      if (search_probe(probe, re))
         continue;
     }
 
