@@ -31,6 +31,16 @@ std::vector<int> read_cpu_range(std::string path)
 
 namespace bpftrace {
 
+bool has_wildcard(const std::string &str)
+{
+  if (str.find("*") != std::string::npos ||
+      str.find("[") != std::string::npos &&
+      str.find("]") != std::string::npos)
+     return true;
+  else
+     return false;
+}
+
 std::vector<int> get_online_cpus()
 {
   return read_cpu_range("/sys/devices/system/cpu/online");

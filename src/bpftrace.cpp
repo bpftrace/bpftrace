@@ -87,10 +87,7 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
 
     std::vector<std::string> attach_funcs;
-    if (attach_point->need_expansion && (
-          attach_point->func.find("*") != std::string::npos ||
-          attach_point->func.find("[") != std::string::npos &&
-          attach_point->func.find("]") != std::string::npos))
+    if (attach_point->need_expansion && has_wildcard(attach_point->func))
     {
       std::set<std::string> matches;
       switch (probetype(attach_point->provider))
