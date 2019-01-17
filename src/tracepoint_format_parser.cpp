@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <string.h>
+#include <glob.h>
 
 #include "ast.h"
 #include "struct.h"
@@ -30,23 +31,36 @@ bool TracepointFormatParser::parse(ast::Program *program)
         std::string &category = ap->target;
         std::string &event_name = ap->func;
         std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
-        std::ifstream format_file(format_file_path.c_str());
 
-        if (format_file.fail())
-        {
-          std::cerr << "ERROR: tracepoint not found: " << ap->target << ":" << ap->func << std::endl;
-          // helper message:
-          if (ap->target == "syscall")
-            std::cerr << "Did you mean syscalls:" << ap->func << "?" << std::endl;
-          if (bt_verbose) {
-            if (format_file_path.find('*') == std::string::npos)
+        glob_t glob_result;
+        memset(&glob_result, 0, sizeof(glob_result));
+        int ret = glob(format_file_path.c_str(), 0, NULL, &glob_result);
+        if (ret != 0) {
+          if (ret == GLOB_NOMATCH) {
+            std::cerr << "ERROR: tracepoint not found: " << ap->target << ":" << ap->func << std::endl;
+            // helper message:
+            if (ap->target == "syscall")
+              std::cerr << "Did you mean syscalls:" << ap->func << "?" << std::endl;
+            if (bt_verbose)
               std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+          } else {
+            std::cerr << strerror(errno) << std::endl;
           }
 
+          globfree(&glob_result);
           return false;
         }
 
-        program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
+        for (int i = 0; i < glob_result.gl_pathc; ++i) {
+          std::string filename(glob_result.gl_pathv[i]);
+          std::ifstream format_file(filename);
+          std::string prefix("/sys/kernel/debug/tracing/events/" + category + "/");
+          std::string real_event = filename.substr(prefix.length(),
+                  filename.length() - std::string("/format").length() - prefix.length());
+
+          program->c_definitions += get_tracepoint_struct(format_file, category, real_event);
+        }
+        globfree(&glob_result);
       }
     }
   }
