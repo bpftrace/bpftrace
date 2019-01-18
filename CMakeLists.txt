@@ -30,6 +30,8 @@ if (STATIC_LINKING)
   set(CMAKE_LINK_SEARCH_END_STATIC TRUE)
 endif()
 
+set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
+
 find_package(LibBcc REQUIRED)
 include_directories(${LIBBCC_INCLUDE_DIRS})
 
