@@ -425,7 +425,7 @@ void CodegenLLVM::visit(Call &call)
     b_.SetInsertPoint(zero);
     expr_ = nullptr;
   }
-  else if (call.func == "sym")
+  else if (call.func == "ksym")
   {
     // We want expr_ to just pass through from the child node - don't set it here
     call.vargs->front()->accept(*this);

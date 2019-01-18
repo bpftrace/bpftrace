@@ -114,4 +114,27 @@ std::vector<std::string> get_kernel_cflags(
   return cflags;
 }
 
+std::string is_deprecated(std::string &str)
+{
+
+  std::vector<DeprecatedName>::iterator item;
+
+  for (item = DEPRECATED_LIST.begin(); item != DEPRECATED_LIST.end(); item++)
+  {
+    if (str.compare(item->old_name) == 0)
+    {
+      if (item->show_warning)
+      {
+        std::cerr << "warning: " << item->old_name << " is deprecated and will be removed in the future. ";
+        std::cerr << "Use " << item->new_name << "instead." << std::endl;
+        item->show_warning = false;
+      }
+
+      return item->new_name;
+    }
+  }
+
+  return str;
+}
+
 } // namespace bpftrace

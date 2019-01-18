@@ -29,8 +29,8 @@ BEFORE sleep 1s && /bin/sh -c 'exit 0' &
 EXPECT P: /bin/sh
 TIMEOUT 5
 
-NAME sym
-RUN bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", sym(reg("ip"))); exit();}'
+NAME ksym
+RUN bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}'
 EXPECT P: /bin/sh
 TIMEOUT 5
 BEFORE sleep 1 && sleep 1 &

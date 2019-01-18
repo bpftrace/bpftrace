@@ -89,6 +89,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { system(\"ls\\n\") }", 0);
   test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
+  test("kprobe:f { ksym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
@@ -245,6 +246,11 @@ TEST(semantic_analyser, call_str_2_expr)
 
 TEST(semantic_analyser, call_sym)
 {
+  test("kprobe:f { ksym(arg0); }", 0);
+  test("kprobe:f { @x = ksym(arg0); }", 0);
+  test("kprobe:f { ksym(); }", 1);
+  test("kprobe:f { ksym(\"hello\"); }", 10);
+
   test("kprobe:f { sym(arg0); }", 0);
   test("kprobe:f { @x = sym(arg0); }", 0);
   test("kprobe:f { sym(); }", 1);
