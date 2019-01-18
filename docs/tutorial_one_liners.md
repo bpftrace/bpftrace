@@ -190,7 +190,7 @@ Count process-level events for five seconds, printing a summary.
 # Lesson 9. Profile On-CPU Kernel Stacks
 
 ```
-# bpftrace -e 'profile:hz:99 { @[stack] = count(); }'
+# bpftrace -e 'profile:hz:99 { @[kstack] = count(); }'
 Attaching 1 probe...
 ^C
 
