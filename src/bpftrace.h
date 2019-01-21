@@ -58,7 +58,7 @@ public:
   int clear_map_ident(const std::string &ident);
   int zero_map_ident(const std::string &ident);
   std::string get_stack(uint64_t stackidpid, bool ustack, int indent=0);
-  std::string resolve_sym(uintptr_t addr, bool show_offset=false);
+  std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
   std::string resolve_inet(int af, uint64_t inet);
   std::string resolve_uid(uintptr_t addr);

@@ -27,7 +27,7 @@ enum class Type
   kstack,
   ustack,
   string,
-  sym,
+  ksym,
   usym,
   cast,
   join,

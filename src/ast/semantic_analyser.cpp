@@ -78,7 +78,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       if (type == ProbeType::kprobe ||
           type == ProbeType::kretprobe ||
           type == ProbeType::tracepoint)
-        builtin.type = SizedType(Type::sym, 8);
+        builtin.type = SizedType(Type::ksym, 8);
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
         builtin.type = SizedType(Type::usym, 16);
       else
@@ -235,12 +235,12 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
-  else if (call.func == "sym" || call.func == "usym") {
+  else if (call.func == "ksym" || call.func == "usym") {
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
-    if (call.func == "sym")
-      call.type = SizedType(Type::sym, 8);
+    if (call.func == "ksym")
+      call.type = SizedType(Type::ksym, 8);
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 16);
   }

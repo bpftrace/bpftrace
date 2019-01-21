@@ -389,10 +389,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
           std::make_unique<PrintableCString>(
             reinterpret_cast<char *>(arg_data+arg.offset)));
         break;
-      case Type::sym:
+      case Type::ksym:
         arg_values.push_back(
           std::make_unique<PrintableString>(
-            resolve_sym(*reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
+            resolve_ksym(*reinterpret_cast<uint64_t*>(arg_data+arg.offset))));
         break;
       case Type::usym:
         arg_values.push_back(
@@ -882,8 +882,8 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << get_stack(*(uint64_t*)value.data(), false, 8);
     else if (map.type_.type == Type::ustack)
       std::cout << get_stack(*(uint64_t*)value.data(), true, 8);
-    else if (map.type_.type == Type::sym)
-      std::cout << resolve_sym(*(uintptr_t*)value.data());
+    else if (map.type_.type == Type::ksym)
+      std::cout << resolve_ksym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
       std::cout << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
     else if (map.type_.type == Type::inet)
@@ -1435,7 +1435,7 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
     if (addr == 0)
       break;
     if (!ustack)
-      stack << padding << resolve_sym(addr, true) << std::endl;
+      stack << padding << resolve_ksym(addr, true) << std::endl;
     else
       stack << padding << resolve_usym(addr, pid, true) << std::endl;
   }
@@ -1486,19 +1486,19 @@ std::vector<std::string> BPFtrace::split_string(std::string &str, char split_by)
   return elems;
 }
 
-std::string BPFtrace::resolve_sym(uintptr_t addr, bool show_offset)
+std::string BPFtrace::resolve_ksym(uintptr_t addr, bool show_offset)
 {
-  struct bcc_symbol sym;
+  struct bcc_symbol ksym;
   std::ostringstream symbol;
 
   if (!ksyms_)
     ksyms_ = bcc_symcache_new(-1, nullptr);
 
-  if (bcc_symcache_resolve(ksyms_, addr, &sym) == 0)
+  if (bcc_symcache_resolve(ksyms_, addr, &ksym) == 0)
   {
-    symbol << sym.name;
+    symbol << ksym.name;
     if (show_offset)
-      symbol << "+" << sym.offset;
+      symbol << "+" << ksym.offset;
   }
   else
   {
@@ -1606,7 +1606,7 @@ std::string BPFtrace::resolve_inet(int af, uint64_t inet)
 
 std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
 {
-  struct bcc_symbol sym;
+  struct bcc_symbol usym;
   std::ostringstream symbol;
   struct bcc_symbol_option symopts;
   void *psyms;
@@ -1627,11 +1627,11 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
     psyms = pid_sym_[pid];
   }
 
-  if (bcc_symcache_resolve(psyms, addr, &sym) == 0)
+  if (bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    symbol << sym.name;
+    symbol << usym.name;
     if (show_offset)
-      symbol << "+" << sym.offset;
+      symbol << "+" << usym.offset;
   }
   else
   {

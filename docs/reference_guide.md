@@ -53,7 +53,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [3. `time()`: Time](#3-time-time)
     - [4. `join()`: Join](#4-join-join)
     - [5. `str()`: Strings](#5-str-strings)
-    - [6. `sym()`: Symbol Resolution, Kernel-Level](#6-str-symbol-resolution-kernel-level)
+    - [6. `ksym()`: Symbol Resolution, Kernel-Level](#6-str-symbol-resolution-kernel-level)
     - [7. `usym()`: Symbol Resolution, User-Level](#7-usym-symbol-resolution-user-level)
     - [8. `kaddr()`: Address Resolution, Kernel-Level](#8-kaddr-address-resolution-kernel-level)
     - [9. `uaddr()`: Address Resolution, User-Level](#9-uaddr-address-resolution-user-level)
@@ -1260,7 +1260,7 @@ Tracing block I/O sizes > 0 bytes
 - `time(char *fmt)` - Print formatted time
 - `join(char *arr[])` - Print the array
 - `str(char *s [, int length])` - Returns the string pointed to by s
-- `sym(void *p)` - Resolve kernel address
+- `ksym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
 - `uaddr(char *name)` - Resolve user-level symbol name
@@ -1269,7 +1269,7 @@ Tracing block I/O sizes > 0 bytes
 - `exit()` - Quit bpftrace
 - `cgroupid(char *path)` - Resolve cgroup ID
 
-Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>sym()</tt> and <tt>usym()</tt>, as well as the variables <tt>kstack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
+Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both <tt>ksym()</tt> and <tt>usym()</tt>, as well as the variables <tt>kstack</tt> and </tt>ustack</tt>, record addresses synchronously, but then do symbol translation asynchronously.
 
 A selection of these are discussed in the following sections.
 
@@ -1374,14 +1374,14 @@ We can trace strings that are displayed in a bash shell. Some length tuning is e
 <anon@anon-VirtualBox:~$ >
 ```
 
-## 6. `sym()`: Symbol resolution, kernel-level
+## 6. `ksym()`: Symbol resolution, kernel-level
 
-Syntax: `sym(addr)`
+Syntax: `ksym(addr)`
 
 Examples:
 
 ```
-# ./build/src/bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", sym(reg("ip"))); }'
+# ./build/src/bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); }'
 Attaching 1 probe...
 do_nanosleep
 do_nanosleep
@@ -1444,7 +1444,7 @@ Syntax: `reg(char *name)`
 Examples:
 
 ```
-# ./src/bpftrace -e 'kprobe:tcp_sendmsg { @[sym(reg("ip"))] = count(); }'
+# ./src/bpftrace -e 'kprobe:tcp_sendmsg { @[ksym(reg("ip"))] = count(); }'
 Attaching 1 probe...
 ^C
 
