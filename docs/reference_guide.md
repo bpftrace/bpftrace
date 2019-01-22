@@ -230,6 +230,17 @@ kprobe:hrtimer_nanosleep
 [...]
 ```
 
+The `-v` option when listing tracepoints will show their arguments for use from the args builtin. For example:
+
+```
+# bpftrace -lv tracepoint:syscalls:sys_enter_open
+tracepoint:syscalls:sys_enter_open
+    int __syscall_nr;
+    const char * filename;
+    int flags;
+    umode_t mode;
+```
+
 ## 5. `-d`: Debug Output
 
 The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging issues with bpftrace itself.
