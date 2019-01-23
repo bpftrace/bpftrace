@@ -25,10 +25,15 @@ RUN ln -s /usr/include/llvm5/llvm-c /usr/include/llvm-c
 #
 # We're building here so docker can cache the build layer
 WORKDIR /
-RUN curl -L https://github.com/iovisor/bcc/archive/v0.8.0.tar.gz --output /bcc.tar.gz
+RUN curl -L https://github.com/iovisor/bcc/archive/v0.8.0.tar.gz \
+  --output /bcc.tar.gz
 RUN tar xvf /bcc.tar.gz
 RUN mv bcc-0.8.0 bcc
-RUN cd /bcc && mkdir build && cd build && cmake .. && make install bcc-static -j4
+RUN cd /bcc && mkdir build && cd build && cmake .. && make install -j4 && \
+  cp src/cc/libbcc.a /usr/local/lib64/libbcc.a && \
+  cp src/cc/libbcc-loader-static.a /usr/local/lib64/libbcc-loader-static.a && \
+  cp src/cc/libbpf.a /usr/local/lib64/libbpf.a
+
 
 COPY build.sh /build.sh
 ENTRYPOINT ["/bin/sh", "/build.sh"]
