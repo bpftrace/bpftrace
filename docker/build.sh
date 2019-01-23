@@ -5,6 +5,7 @@ set -e
 STATIC_LINKING=${STATIC_LINKING:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
 
+# Build bpftrace
 mkdir -p "$1"
 cd "$1"
 cmake -DCMAKE_BUILD_TYPE="$2" -DSTATIC_LINKING:BOOL=$STATIC_LINKING ../
