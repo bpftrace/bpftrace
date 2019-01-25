@@ -1,5 +1,6 @@
 #include "ast.h"
 #include "parser.tab.hh"
+#include <iostream>
 
 namespace bpftrace {
 namespace ast {
@@ -109,7 +110,9 @@ std::string opstr(Binop &binop)
     case bpftrace::Parser::token::BAND:  return "&";
     case bpftrace::Parser::token::BOR:   return "|";
     case bpftrace::Parser::token::BXOR:  return "^";
-    default: abort();
+    default:
+      std::cerr << "unknown binary operator" << std::endl;
+      abort();
   }
 }
 
@@ -120,7 +123,9 @@ std::string opstr(Unop &unop)
     case bpftrace::Parser::token::BNOT: return "~";
     case bpftrace::Parser::token::MINUS: return "-";
     case bpftrace::Parser::token::MUL:  return "dereference";
-    default: abort();
+    default:
+      std::cerr << "unknown union operator" << std::endl;
+      abort();
   }
 }
 

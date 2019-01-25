@@ -880,7 +880,11 @@ int SemanticAnalyser::create_maps(bool debug)
 
     auto search_args = map_key_.find(map_name);
     if (search_args == map_key_.end())
+    {
+      std::cerr << "map key \"" << map_name << "\" not found" << std::endl;
       abort();
+    }
+
     auto &key = search_args->second;
 
     if (debug)
@@ -892,7 +896,11 @@ int SemanticAnalyser::create_maps(bool debug)
         // store lhist args to the bpftrace::Map
         auto map_args = map_args_.find(map_name);
         if (map_args == map_args_.end())
+        {
+          std::cerr << "map arg \"" << map_name << "\" not found" << std::endl;
           abort();
+        }
+
         Expression &min_arg = *map_args->second.at(1);
         Expression &max_arg = *map_args->second.at(2);
         Expression &step_arg = *map_args->second.at(3);

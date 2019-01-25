@@ -35,7 +35,7 @@ std::string typestr(Type t)
   {
     case Type::none:     return "none";     break;
     case Type::integer:  return "integer";  break;
-    case Type::hist:     return "hist"; break;
+    case Type::hist:     return "hist";     break;
     case Type::lhist:    return "lhist";    break;
     case Type::count:    return "count";    break;
     case Type::sum:      return "sum";      break;
@@ -43,15 +43,17 @@ std::string typestr(Type t)
     case Type::max:      return "max";      break;
     case Type::avg:      return "avg";      break;
     case Type::stats:    return "stats";    break;
-    case Type::kstack:   return "kstack";    break;
+    case Type::kstack:   return "kstack";   break;
     case Type::ustack:   return "ustack";   break;
     case Type::string:   return "string";   break;
-    case Type::ksym:      return "ksym";      break;
+    case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
     case Type::inet:     return "inet";     break;
     case Type::cast:     return "cast";     break;
     case Type::probe:    return "probe";    break;
-    default: abort();
+    default:
+      std::cerr << "call or probe type not found" << std::endl;
+      abort();
   }
 }
 
@@ -85,6 +87,27 @@ std::string probetypeName(const std::string &probeName)
     res = v->name;
 
   return res;
+}
+
+std::string probetypeName(ProbeType t)
+{
+   switch (t)
+  {
+    case ProbeType::invalid:     return "invalid";     break;
+    case ProbeType::kprobe:      return "kprobe";      break;
+    case ProbeType::kretprobe:   return "kretprobe";   break;
+    case ProbeType::uprobe:      return "uprobe";      break;
+    case ProbeType::uretprobe:   return "uretprobe";   break;
+    case ProbeType::usdt:        return "usdt";        break;
+    case ProbeType::tracepoint:  return "tracepoint";  break;
+    case ProbeType::profile:     return "profile";     break;
+    case ProbeType::interval:    return "interval";    break;
+    case ProbeType::software:    return "software";    break;
+    case ProbeType::hardware:    return "hardware";    break;
+    default:
+      std::cerr << "probe type not found" << std::endl;
+      abort();
+  }
 }
 
 uint64_t asyncactionint(AsyncAction a)

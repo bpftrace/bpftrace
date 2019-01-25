@@ -77,6 +77,7 @@ Map::Map(enum bpf_map_type map_type)
   }
   else
   {
+    std::cerr << "invalid map type" << std::endl;
     abort();
   }
   mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
@@ -92,6 +93,7 @@ Map::Map(enum bpf_map_type map_type)
         name = "perf event";
         break;
       default:
+        std::cerr << "invalid map type" << std::endl;
         abort();
     }
 
