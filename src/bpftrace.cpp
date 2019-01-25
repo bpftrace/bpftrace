@@ -307,6 +307,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         system(buffer);
         break;
       default:
+        std::cerr << "printf() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
         abort();
     }
 
@@ -345,6 +346,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
       break;
     default:
+      std::cerr << "printf() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
       abort();
   }
 }
@@ -381,6 +383,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
                 *reinterpret_cast<uint8_t*>(arg_data+arg.offset)));
             break;
           default:
+            std::cerr << "get_arg_values: invalid integer size. 8, 4, 2 and byte supported. " << arg.type.size << "provided" << std::endl;
             abort();
         }
         break;
@@ -437,6 +440,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
               8)));
         break;
       default:
+        std::cerr << "invalid argument type" << std::endl;
         abort();
     }
   }
@@ -1680,7 +1684,11 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
         });
       }
       else
+      {
+        std::cerr << "invalid integer argument size. 4 or 8  expected, but " << arg.size << " provided" << std::endl;
         abort();
+      }
+
     }
     else if (arg.type == Type::string)
     {

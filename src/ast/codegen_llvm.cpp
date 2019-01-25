@@ -158,6 +158,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else
   {
+    std::cerr << "unknown builtin \"" << builtin.ident << "\"" << std::endl;
     abort();
   }
 }
@@ -462,7 +463,10 @@ void CodegenLLVM::visit(Call &call)
     auto &reg_name = static_cast<String&>(*call.vargs->at(0)).str;
     int offset = arch::offset(reg_name);
     if (offset == -1)
+    {
+      std::cerr << "negative offset on reg() call" << std::endl;
       abort();
+    }
 
     AllocaInst *dst = b_.CreateAllocaBPF(call.type, call.func+"_"+reg_name);
     Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t)));
@@ -677,7 +681,7 @@ void CodegenLLVM::visit(Call &call)
 
   else
   {
-    std::cerr << "Error: missing codegen for function \"" << call.func << "\"" << std::endl;
+    std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
     abort();
   }
 }
@@ -738,6 +742,7 @@ void CodegenLLVM::visit(Binop &binop)
         expr_ = b_.CreateStrcmp(val, string_literal, true);
         break;
       default:
+        std::cerr << "missing codegen to string operator \"" << opstr(binop) << "\"" << std::endl;
         abort();
     }
     b_.CreateLifetimeEnd(val);
@@ -771,9 +776,15 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
       case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
       case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
-      case bpftrace::Parser::token::LAND:  abort(); // Handled earlier
-      case bpftrace::Parser::token::LOR:   abort(); // Handled earlier
-      default: abort();
+      case bpftrace::Parser::token::LAND:
+        std::cerr << "\"" << opstr(binop) << "\" was handled earlier" << std::endl;
+        abort();
+      case bpftrace::Parser::token::LOR:
+        std::cerr << "\"" << opstr(binop) << "\" was handled earlier" << std::endl;
+        abort();
+      default:
+        std::cerr << "missing codegen (LLVM) to string operator \"" << opstr(binop) << "\"" << std::endl;
+        abort();
     }
   }
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
@@ -804,7 +815,9 @@ void CodegenLLVM::visit(Unop &unop)
         b_.CreateLifetimeEnd(dst);
         break;
       }
-      default: abort();
+      default:
+        std::cerr << "missing codegen to union expression type" << std::endl;
+        abort();
     }
   }
   else if (type.type == Type::cast)
@@ -813,6 +826,7 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else
   {
+    std::cerr << "missing codegen to union operator \"" << opstr(unop) << "\"" << std::endl;
     abort();
   }
 }

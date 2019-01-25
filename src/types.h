@@ -99,6 +99,7 @@ const std::vector<ProbeItem> PROBE_LIST =
 std::string typestr(Type t);
 ProbeType probetype(const std::string &type);
 std::string probetypeName(const std::string &type);
+std::string probetypeName(ProbeType t);
 
 class Probe
 {
