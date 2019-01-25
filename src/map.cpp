@@ -46,7 +46,11 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
 
   int value_size = type.size;
   int flags = 0;
+#ifdef HAVE_BCC_CREATE_MAP
+  mapfd_ = bcc_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
+#else
   mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
+#endif
   if (mapfd_ < 0)
   {
     std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
@@ -79,7 +83,11 @@ Map::Map(enum bpf_map_type map_type)
   {
     abort();
   }
+#ifdef HAVE_BCC_CREATE_MAP
+  mapfd_ = bcc_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
+#else
   mapfd_ = bpf_create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
+#endif
   if (mapfd_ < 0)
   {
     std::string name;

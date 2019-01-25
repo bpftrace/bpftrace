@@ -51,6 +51,10 @@ set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
 check_symbol_exists(name_to_handle_at "sys/types.h;sys/stat.h;fcntl.h" HAVE_NAME_TO_HANDLE_AT)
 set(CMAKE_REQUIRED_DEFINITIONS)
 
+set(CMAKE_REQUIRED_LIBRARIES bcc)
+check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_PROG_LOAD)
+check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_CREATE_MAP)
+
 find_package(LLVM REQUIRED)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
