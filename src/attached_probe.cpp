@@ -331,7 +331,11 @@ void AttachedProbe::load_prog()
 
   for (int attempt=0; attempt<3; attempt++)
   {
+#ifdef HAVE_BCC_PROG_LOAD
+    progfd_ = bcc_prog_load(progtype(probe_.type), namep,
+#else
     progfd_ = bpf_prog_load(progtype(probe_.type), namep,
+#endif
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
         kernel_version(attempt), log_level, log_buf, log_buf_size);
     if (progfd_ >= 0)

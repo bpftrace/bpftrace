@@ -31,6 +31,12 @@ add_executable(bpftrace_test
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)
+if(HAVE_BCC_PROG_LOAD)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_BCC_PROG_LOAD)
+endif(HAVE_BCC_PROG_LOAD)
+if(HAVE_BCC_CREATE_MAP)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_BCC_CREATE_MAP)
+endif(HAVE_BCC_CREATE_MAP)
 target_link_libraries(bpftrace_test arch ast parser resources)
 
 if (STATIC_LINKING)
