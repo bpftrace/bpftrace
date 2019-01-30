@@ -4,7 +4,7 @@ project(bpftrace)
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_compile_options("-std=c++14")
+add_compile_options("-std=c++17")
 add_compile_options("-Wno-format-security")
 #add_compile_options("-Wall")
 add_compile_options("-Wextra")
