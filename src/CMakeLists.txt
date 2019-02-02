@@ -18,14 +18,7 @@ if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)
 target_link_libraries(bpftrace arch ast parser resources)
-
-ExternalProject_Get_Property(bcc source_dir binary_dir)
-target_include_directories(bpftrace PUBLIC ${source_dir}/src/cc)
-target_link_libraries(bpftrace ${binary_dir}/src/cc/libbpf.a)
-target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc-loader-static.a)
-target_link_libraries(bpftrace ${binary_dir}/src/cc/libbcc.a)
-target_link_libraries(bpftrace ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
-target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
+LinkBCC(bpftrace)
 
 install(TARGETS bpftrace DESTINATION bin)
 

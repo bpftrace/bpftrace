@@ -20,6 +20,9 @@ add_compile_options("-Wno-format-security")
 #add_compile_options("-Wstrict-overflow=5")
 #add_compile_options("-Wdisabled-optimization")
 
+option(USE_BUNDLED "Use bundled dependencies." ON)
+option(USE_BUNDLED_BCC "Use the bundled version of bcc." ${USE_BUNDLED})
+option(USE_BUNDLED_GTEST "Use the bundled version of gtest." ${USE_BUNDLED})
 option(OFFLINE_BUILDS "Don't try to update external dependencies." OFF)
 if (OFFLINE_BUILDS)
   set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED 1)
@@ -27,6 +30,7 @@ endif()
 
 enable_testing()
 
+if (USE_BUNDLED_BCC)
 include(ExternalProject)
 ExternalProject_Add(bcc
   GIT_REPOSITORY https://github.com/iovisor/bcc
@@ -34,6 +38,29 @@ ExternalProject_Add(bcc
   EXCLUDE_FROM_ALL 1
   BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
   )
+endif()
+
+function(LinkBCC name)
+  if (USE_BUNDLED_BCC)
+    ExternalProject_Get_Property(bcc source_dir binary_dir)
+    target_include_directories(${name} PUBLIC ${source_dir}/src/cc)
+    target_link_libraries(${name} ${binary_dir}/src/cc/libbpf.a)
+    target_link_libraries(${name} ${binary_dir}/src/cc/libbcc-loader-static.a)
+    target_link_libraries(${name} ${binary_dir}/src/cc/libbcc.a)
+    target_link_libraries(${name} ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
+  else()
+    find_path(BCC_INCLUDE_DIR
+      NAMES "bcc_elf.h"
+      PATH_SUFFIXES "bcc")
+    find_library(BCC_LIBRARY NAMES bcc libbcc)
+    if (NOT BCC_INCLUDE_DIR OR NOT BCC_LIBRARY)
+      message(FATAL_ERROR "bcc library required, but not found!")
+    endif()
+    target_include_directories(${name} PUBLIC ${BCC_INCLUDE_DIR})
+    target_link_libraries(${name} ${BCC_LIBRARY})
+  endif()
+  target_link_libraries(${name} ${LIBELF_LIBRARIES})
+endfunction(LinkBCC)
 
 if (STATIC_LINKING)
   set(CMAKE_EXE_LINKER_FLAGS "-static")

@@ -31,31 +31,39 @@ if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)
 target_link_libraries(bpftrace_test arch ast parser resources)
-
-ExternalProject_Get_Property(bcc source_dir binary_dir)
-target_include_directories(bpftrace_test PUBLIC ${source_dir}/src/cc)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbpf.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc-loader-static.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/libbcc.a)
-target_link_libraries(bpftrace_test ${binary_dir}/src/cc/frontends/clang/libclang_frontend.a)
-target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
+LinkBCC(bpftrace_test)
 
 find_package(Threads REQUIRED)
 
-include(ExternalProject)
-ExternalProject_Add(gtest-git
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG release-1.8.1
-  STEP_TARGETS build update
-  EXCLUDE_FROM_ALL 1
-  )
-add_dependencies(bpftrace_test gtest-git-build)
-ExternalProject_Get_Property(gtest-git source_dir binary_dir)
-target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
-target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
-target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
-target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
-target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
+if (USE_BUNDLED_GTEST)
+  include(ExternalProject)
+  ExternalProject_Add(gtest-git
+    GIT_REPOSITORY https://github.com/google/googletest.git
+    GIT_TAG release-1.8.1
+    STEP_TARGETS build update
+    EXCLUDE_FROM_ALL 1
+    )
+  add_dependencies(bpftrace_test gtest-git-build)
+  ExternalProject_Get_Property(gtest-git source_dir binary_dir)
+  target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
+  target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
+  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
+  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
+  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
+else()
+  find_package(GTest REQUIRED)
+  target_include_directories(bpftrace_test PUBLIC ${GTEST_INCLUDE_DIRS})
+  target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES})
+
+  # Unfortunately, not possible to get the same for gmock
+  find_path(GMOCK_INCLUDE_DIR NAMES gmock/gmock.h)
+  find_library(GMOCK_LIBRARY NAMES libgmock.a)
+  if (NOT GMOCK_INCLUDE_DIR OR NOT GMOCK_LIBRARY)
+    message(FATAL_ERROR "gmock library required, but not found!")
+  endif()
+  target_include_directories(bpftrace_test PUBLIC ${GMOCK_INCLUDE_DIR})
+  target_link_libraries(bpftrace_test ${GMOCK_LIBRARY})
+endif()
 target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
