@@ -20,26 +20,20 @@ add_compile_options("-Wno-format-security")
 #add_compile_options("-Wstrict-overflow=5")
 #add_compile_options("-Wdisabled-optimization")
 
+option(OFFLINE_BUILDS "Don't try to update external dependencies." OFF)
+if (OFFLINE_BUILDS)
+  set_property(DIRECTORY PROPERTY EP_UPDATE_DISCONNECTED 1)
+endif()
+
 enable_testing()
 
-if (OFFLINE_BUILDS)
-  include(ExternalProject)
-  ExternalProject_Add(bcc
-    GIT_REPOSITORY https://github.com/iovisor/bcc
-    STEP_TARGETS build update
-    EXCLUDE_FROM_ALL 1
-    UPDATE_DISCONNECTED 1
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-    )
-else()
-  include(ExternalProject)
-  ExternalProject_Add(bcc
-    GIT_REPOSITORY https://github.com/iovisor/bcc
-    STEP_TARGETS build update
-    EXCLUDE_FROM_ALL 1
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
-    )
-endif()
+include(ExternalProject)
+ExternalProject_Add(bcc
+  GIT_REPOSITORY https://github.com/iovisor/bcc
+  STEP_TARGETS build update
+  EXCLUDE_FROM_ALL 1
+  BUILD_COMMAND ${CMAKE_COMMAND} --build . --target bcc-static
+  )
 
 if (STATIC_LINKING)
   set(CMAKE_EXE_LINKER_FLAGS "-static")
