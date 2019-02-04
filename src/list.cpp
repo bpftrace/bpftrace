@@ -113,8 +113,22 @@ void print_tracepoint_args(const std::string &category, const std::string &event
   }
 }
 
-void list_probes(const std::string &search)
+void list_probes(const std::string &search_input)
 {
+  std::string search = search_input;
+
+  std::smatch probe_match;
+  std::regex probe_regex(":.*");
+  std::regex_search ( search, probe_match, probe_regex );
+
+  // replace alias name with full name
+  if (probe_match.size())
+  {
+    auto pos = probe_match.position(0);
+    auto probe_name =  probetypeName(search.substr(0, probe_match.position(0)));
+    search = probe_name + search.substr(pos, search.length());
+  }
+
   unsigned int i, j;
   std::string line, probe;
   std::string glob = "*";
