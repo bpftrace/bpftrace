@@ -314,7 +314,7 @@ void SemanticAnalyser::visit(Call &call)
           // Promote to 64-bit if it's not an array type
           if (!ty.IsArray())
             ty.size = 8;
-          args.push_back({ .type =  ty });
+          args.push_back({ .type =  ty, .offset = 0 });
         }
         err_ << verify_format_string(fmt.str, args);
 
@@ -988,7 +988,7 @@ bool SemanticAnalyser::check_assignment(const Call &call, bool want_map, bool wa
   return true;
 }
 
-bool SemanticAnalyser::check_nargs(const Call &call, int expected_nargs)
+bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::vector<Expression*>::size_type nargs = 0;
   if (call.vargs)
@@ -1003,7 +1003,7 @@ bool SemanticAnalyser::check_nargs(const Call &call, int expected_nargs)
   return true;
 }
 
-bool SemanticAnalyser::check_varargs(const Call &call, int min_nargs, int max_nargs)
+bool SemanticAnalyser::check_varargs(const Call &call, size_t min_nargs, size_t max_nargs)
 {
   std::vector<Expression*>::size_type nargs = 0;
   if (call.vargs)

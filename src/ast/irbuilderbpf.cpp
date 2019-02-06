@@ -366,7 +366,7 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   CreateStore(getInt1(inverse), store);
 
   const char *c_str = str.c_str();
-  for (int i = 0; i < strlen(c_str) + 1; i++)
+  for (size_t i = 0; i < strlen(c_str) + 1; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
     AllocaInst *val_char = CreateAllocaBPF(getInt8Ty(), "strcmp.char");

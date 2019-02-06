@@ -32,9 +32,9 @@ TEST(codegen, populate_sections)
   auto bpforc = codegen.compile();
 
   // Check sections are populated
-  EXPECT_EQ(bpforc->sections_.size(), 2);
-  EXPECT_EQ(bpforc->sections_.count("s_kprobe:foo_1"), 1);
-  EXPECT_EQ(bpforc->sections_.count("s_kprobe:bar_1"), 1);
+  EXPECT_EQ(bpforc->sections_.size(), 2U);
+  EXPECT_EQ(bpforc->sections_.count("s_kprobe:foo_1"), 1U);
+  EXPECT_EQ(bpforc->sections_.count("s_kprobe:bar_1"), 1U);
 }
 
 TEST(codegen, printf_offsets)
@@ -53,22 +53,22 @@ TEST(codegen, printf_offsets)
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   auto bpforc = codegen.compile();
 
-  EXPECT_EQ(bpftrace.printf_args_.size(), 1);
+  EXPECT_EQ(bpftrace.printf_args_.size(), 1U);
   auto &fmt = std::get<0>(bpftrace.printf_args_[0]);
   auto &args = std::get<1>(bpftrace.printf_args_[0]);
 
   EXPECT_EQ(fmt, "%c %u\n");
 
-  EXPECT_EQ(args.size(), 2);
+  EXPECT_EQ(args.size(), 2U);
 
   // NOTE (mmarchini) type.size is the original arg size, and it might be
   // different from the actual size we use to store in memory
   EXPECT_EQ(args[0].type.type, Type::integer);
-  EXPECT_EQ(args[0].type.size, 8);
+  EXPECT_EQ(args[0].type.size, 8U);
   EXPECT_EQ(args[0].offset, 8);
 
   EXPECT_EQ(args[1].type.type, Type::integer);
-  EXPECT_EQ(args[1].type.size, 8);
+  EXPECT_EQ(args[1].type.size, 8U);
   EXPECT_EQ(args[1].offset, 16);
 }
 

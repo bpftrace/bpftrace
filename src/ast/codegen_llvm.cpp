@@ -496,7 +496,7 @@ void CodegenLLVM::visit(Call &call)
     int struct_size = layout_.getTypeAllocSize(printf_struct);
 
     auto *struct_layout = layout_.getStructLayout(printf_struct);
-    for (int i=0; i<args.size(); i++)
+    for (size_t i=0; i<args.size(); i++)
     {
       Field &arg = args[i];
       arg.offset = struct_layout->getElementOffset(i+1); // +1 for the printf_id field
@@ -506,7 +506,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
 
     b_.CreateStore(b_.getInt64(printf_id_), printf_args);
-    for (int i=1; i<call.vargs->size(); i++)
+    for (size_t i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
       expr_deleter_ = nullptr;
@@ -548,7 +548,7 @@ void CodegenLLVM::visit(Call &call)
     int struct_size = layout_.getTypeAllocSize(printf_struct);
 
     auto *struct_layout = layout_.getStructLayout(printf_struct);
-    for (int i=0; i<args.size(); i++)
+    for (size_t i=0; i<args.size(); i++)
     {
       Field &arg = args[i];
       arg.offset = struct_layout->getElementOffset(i+1); // +1 for the system_id field
@@ -559,7 +559,7 @@ void CodegenLLVM::visit(Call &call)
 
     // system_id_ has an offset to avoid be confused with printf
     b_.CreateStore(b_.getInt64(system_id_ + asyncactionint(AsyncAction::syscall)), system_args);
-    for (int i=1; i<call.vargs->size(); i++)
+    for (size_t i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
       expr_deleter_ = nullptr;

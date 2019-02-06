@@ -70,7 +70,7 @@ public:
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
   void add_param(const std::string &param);
   bool is_numeric(std::string str);
-  std::string get_param(int index);
+  std::string get_param(size_t index);
   std::string cmd_;
   int pid_{0};
 
