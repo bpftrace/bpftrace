@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <sys/resource.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -42,16 +43,13 @@ void usage()
 
 static void enforce_infinite_rlimit() {
   struct rlimit rl = {};
-  if (getrlimit(RLIMIT_MEMLOCK, &rl) != 0) {
-    std::cerr << "Warning: couldn't set RLIMIT for bpftrace. " <<
-        "If your program is not loading, you can try " <<
-        "\"ulimit -l 8192\" to fix the problem" << std::endl;
-    return;
-  }
+  int err;
+
   rl.rlim_max = RLIM_INFINITY;
   rl.rlim_cur = rl.rlim_max;
-  if (setrlimit(RLIMIT_MEMLOCK, &rl) != 0)
-    std::cerr << "Warning: couldn't set RLIMIT for bpftrace. " <<
+  err = setrlimit(RLIMIT_MEMLOCK, &rl);
+  if (err)
+    std::cerr << std::strerror(err)<<": couldn't set RLIMIT for bpftrace. " <<
         "If your program is not loading, you can try " <<
         "\"ulimit -l 8192\" to fix the problem" << std::endl;
 }
