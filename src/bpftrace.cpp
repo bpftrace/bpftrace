@@ -466,7 +466,7 @@ void BPFtrace::add_param(const std::string &param)
   params_.emplace_back(param);
 }
 
-std::string BPFtrace::get_param(int i)
+std::string BPFtrace::get_param(size_t i)
 {
   if (i > 0 && i < params_.size() + 1)
       return params_[i - 1];
@@ -868,7 +868,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   if (div == 0)
     div = 1;
   uint32_t i = 0;
-  int total = values_by_key.size();
+  size_t total = values_by_key.size();
   for (auto &pair : values_by_key)
   {
     auto key = pair.first;

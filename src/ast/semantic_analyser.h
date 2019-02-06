@@ -55,8 +55,8 @@ private:
   std::string get_cast_type(Expression *expr);
 
   bool check_assignment(const Call &call, bool want_map, bool want_var);
-  bool check_nargs(const Call &call, int expected_nargs);
-  bool check_varargs(const Call &call, int min_nargs, int max_nargs);
+  bool check_nargs(const Call &call, size_t expected_nargs);
+  bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
   bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
   bool check_alpha_numeric(const Call &call, int arg_num);
 

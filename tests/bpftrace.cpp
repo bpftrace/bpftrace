@@ -107,8 +107,8 @@ TEST(bpftrace, add_begin_probe)
 
   StrictMock<MockBPFtrace> bpftrace;
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(0, bpftrace.get_probes().size());
-  EXPECT_EQ(1, bpftrace.get_special_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_special_probes().size());
 
   check_special_probe(bpftrace.get_special_probes().at(0), "BEGIN_trigger", "BEGIN");
 }
@@ -121,8 +121,8 @@ TEST(bpftrace, add_end_probe)
 
   StrictMock<MockBPFtrace> bpftrace;
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(0, bpftrace.get_probes().size());
-  EXPECT_EQ(1, bpftrace.get_special_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_special_probes().size());
 
   check_special_probe(bpftrace.get_special_probes().at(0), "END_trigger", "END");
 }
@@ -135,8 +135,8 @@ TEST(bpftrace, add_probes_single)
 
   StrictMock<MockBPFtrace> bpftrace;
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", "kprobe:sys_read");
 }
@@ -150,8 +150,8 @@ TEST(bpftrace, add_probes_multiple)
 
   StrictMock<MockBPFtrace> bpftrace;
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(2, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(2U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "kprobe:sys_read,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_orig_name);
@@ -175,8 +175,8 @@ TEST(bpftrace, add_probes_character_class)
     .Times(1);
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(3, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(3U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "kprobe:[Ss]y[Ss]_read,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "SyS_read", probe_orig_name);
@@ -202,8 +202,8 @@ TEST(bpftrace, add_probes_wildcard)
     .Times(1);
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(4, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(4U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_orig_name);
@@ -230,8 +230,8 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
     .Times(1);
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(2, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(2U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
   check_kprobe(bpftrace.get_probes().at(0), "sys_read", probe_orig_name);
@@ -247,8 +247,8 @@ TEST(bpftrace, add_probes_uprobe)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
   check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo");
 }
 
@@ -261,8 +261,8 @@ TEST(bpftrace, add_probes_usdt)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
   check_usdt(bpftrace.get_probes().at(0), "/bin/sh", "foo", "usdt:/bin/sh:foo");
 }
 
@@ -275,8 +275,8 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
@@ -288,8 +288,8 @@ TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(0, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 }
 
 TEST(bpftrace, add_probes_uprobe_string_literal)
@@ -301,8 +301,8 @@ TEST(bpftrace, add_probes_uprobe_string_literal)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
   check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo*", "uprobe:/bin/sh:foo*");
 }
 
@@ -315,8 +315,8 @@ TEST(bpftrace, add_probes_tracepoint)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "tracepoint:sched:sched_switch";
   check_tracepoint(bpftrace.get_probes().at(0), "sched", "sched_switch", probe_orig_name);
@@ -338,8 +338,8 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
     .Times(1);
 
   EXPECT_EQ(bpftrace.add_probe(probe), 0);
-  EXPECT_EQ(2, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(2U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "tracepoint:sched:sched_*";
   check_tracepoint(bpftrace.get_probes().at(0), "sched", "sched_one", probe_orig_name);
@@ -362,8 +362,8 @@ TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
     .Times(1);
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(0, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 }
 
 TEST(bpftrace, add_probes_profile)
@@ -375,8 +375,8 @@ TEST(bpftrace, add_probes_profile)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "profile:ms:997";
   check_profile(bpftrace.get_probes().at(0), "ms", 997, probe_orig_name);
@@ -391,8 +391,8 @@ TEST(bpftrace, add_probes_interval)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "interval:s:1";
   check_interval(bpftrace.get_probes().at(0), "s", 1, probe_orig_name);
@@ -407,8 +407,8 @@ TEST(bpftrace, add_probes_software)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "software:faults:1000";
   check_software(bpftrace.get_probes().at(0), "faults", 1000, probe_orig_name);
@@ -423,8 +423,8 @@ TEST(bpftrace, add_probes_hardware)
   StrictMock<MockBPFtrace> bpftrace;
 
   EXPECT_EQ(0, bpftrace.add_probe(probe));
-  EXPECT_EQ(1, bpftrace.get_probes().size());
-  EXPECT_EQ(0, bpftrace.get_special_probes().size());
+  EXPECT_EQ(1U, bpftrace.get_probes().size());
+  EXPECT_EQ(0U, bpftrace.get_special_probes().size());
 
   std::string probe_orig_name = "hardware:cache-references:1000000";
   check_hardware(bpftrace.get_probes().at(0), "cache-references", 1000000, probe_orig_name);
