@@ -2,6 +2,6 @@
 
 extern "C"
 {
-  void BEGIN_trigger() { }
-  void END_trigger() { }
+  void __attribute__((noinline)) BEGIN_trigger() { asm (""); }
+  void __attribute__((noinline)) END_trigger() { asm (""); }
 }
