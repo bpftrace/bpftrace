@@ -75,27 +75,27 @@ Attaching 1 probe...
 
 ...
 @[
-queue_work_on+41
-tty_flip_buffer_push+43
-pty_write+83
-n_tty_write+434
-tty_write+444
-__vfs_write+55
-vfs_write+177
-sys_write+85
-entry_SYSCALL_64_fastpath+26
+    queue_work_on+41
+    tty_flip_buffer_push+43
+    pty_write+83
+    n_tty_write+434
+    tty_write+444
+    __vfs_write+55
+    vfs_write+177
+    sys_write+85
+    entry_SYSCALL_64_fastpath+26
 ]: 97
 @[
-cpuidle_enter_state+299
-cpuidle_enter+23
-call_cpuidle+35
-do_idle+394
-cpu_startup_entry+113
-rest_init+132
-start_kernel+1083
-x86_64_start_reservations+41
-x86_64_start_kernel+323
-verify_cpu+0
+    cpuidle_enter_state+299
+    cpuidle_enter+23
+    call_cpuidle+35
+    do_idle+394
+    cpu_startup_entry+113
+    rest_init+132
+    start_kernel+1083
+    x86_64_start_reservations+41
+    x86_64_start_kernel+323
+    verify_cpu+0
 ]: 150
 ```
 
