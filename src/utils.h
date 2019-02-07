@@ -26,7 +26,8 @@ std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
 std::vector<std::string> get_kernel_cflags(
     const char* uname_machine,
-    const std::string& kdir);
+    const std::string& ksrc,
+    const std::string& kobj);
 std::string is_deprecated(std::string &str);
 
 } // namespace bpftrace
