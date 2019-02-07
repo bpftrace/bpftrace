@@ -103,6 +103,7 @@ std::vector<std::string> get_kernel_cflags(
   cflags.push_back("-include");
   cflags.push_back(kdir + "/include/linux/kconfig.h");
   cflags.push_back("-D__KERNEL__");
+  cflags.push_back("-D__BPF_TRACING__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP16__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP32__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP64__");
