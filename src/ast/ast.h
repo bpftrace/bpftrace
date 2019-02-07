@@ -180,8 +180,8 @@ class Unroll : public Statement {
 public:
   Unroll(long int var, StatementList *stmts) : var(var), stmts(stmts) {}
 
-  StatementList *stmts;
   long int var = 0;
+  StatementList *stmts;
 
   void accept(Visitor &v) override;
 };

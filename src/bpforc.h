@@ -89,7 +89,7 @@ public:
   BpfOrc(TargetMachine *TM_)
     : TM(TM_),
       Resolver(createLegacyLookupResolver(ES,
-        [](const std::string &Name) -> JITSymbol { return nullptr; },
+        [](const std::string &Name __attribute__((unused))) -> JITSymbol { return nullptr; },
         [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
       ObjectLayer(ES, [this](VModuleKey) { return RTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
       CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}

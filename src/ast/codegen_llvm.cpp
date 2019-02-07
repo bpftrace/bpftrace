@@ -112,8 +112,8 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateGetCurrentComm(buf, builtin.type.size);
     expr_ = buf;
   }
-  else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
-      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9' ||
+  else if ((!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
+      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') ||
       builtin.ident == "retval" ||
       builtin.ident == "func")
   {
@@ -482,9 +482,7 @@ void CodegenLLVM::visit(Call &call)
      * types and offsets of each of the arguments, and share that between BPF and
      * user-space for printing.
      */
-    ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
     std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // printf ID
-    String &fmt = static_cast<String&>(*call.vargs->at(0));
 
     auto &args = std::get<1>(bpftrace_.printf_args_.at(printf_id_));
     for (Field &arg : args)
@@ -534,9 +532,7 @@ void CodegenLLVM::visit(Call &call)
      * types and offsets of each of the arguments, and share that between BPF and
      * user-space for printing.
      */
-    ArrayType *string_type = ArrayType::get(b_.getInt8Ty(), STRING_SIZE);
     std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // system ID
-    String &fmt = static_cast<String&>(*call.vargs->at(0));
 
     auto &args = std::get<1>(bpftrace_.system_args_.at(system_id_));
     for (Field &arg : args)
