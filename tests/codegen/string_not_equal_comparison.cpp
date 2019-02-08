@@ -31,7 +31,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char, i64 8, [16 x i8]* nonnull %comm)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char, i64 1, [16 x i8]* nonnull %comm)
   %2 = load i8, i8* %strcmp.char, align 1
   %strcmp.cmp = icmp eq i8 %2, 115
   br i1 %strcmp.cmp, label %strcmp.loop, label %pred_true.critedge
@@ -71,7 +71,7 @@ pred_true:                                        ; preds = %strcmp.loop9, %pred
 strcmp.loop:                                      ; preds = %entry
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char2)
   %5 = add [16 x i8]* %comm, i64 1
-  %probe_read3 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char2, i64 8, [16 x i8]* %5)
+  %probe_read3 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char2, i64 1, [16 x i8]* %5)
   %6 = load i8, i8* %strcmp.char2, align 1
   %strcmp.cmp4 = icmp eq i8 %6, 115
   br i1 %strcmp.cmp4, label %strcmp.loop1, label %pred_true.critedge20
@@ -79,7 +79,7 @@ strcmp.loop:                                      ; preds = %entry
 strcmp.loop1:                                     ; preds = %strcmp.loop
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char6)
   %7 = add [16 x i8]* %comm, i64 2
-  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char6, i64 8, [16 x i8]* %7)
+  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char6, i64 1, [16 x i8]* %7)
   %8 = load i8, i8* %strcmp.char6, align 1
   %strcmp.cmp8 = icmp eq i8 %8, 104
   br i1 %strcmp.cmp8, label %strcmp.loop5, label %pred_true.critedge21
@@ -87,7 +87,7 @@ strcmp.loop1:                                     ; preds = %strcmp.loop
 strcmp.loop5:                                     ; preds = %strcmp.loop1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char10)
   %9 = add [16 x i8]* %comm, i64 3
-  %probe_read11 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char10, i64 8, [16 x i8]* %9)
+  %probe_read11 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char10, i64 1, [16 x i8]* %9)
   %10 = load i8, i8* %strcmp.char10, align 1
   %strcmp.cmp12 = icmp eq i8 %10, 100
   br i1 %strcmp.cmp12, label %strcmp.loop9, label %pred_true.critedge22
@@ -95,7 +95,7 @@ strcmp.loop5:                                     ; preds = %strcmp.loop1
 strcmp.loop9:                                     ; preds = %strcmp.loop5
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char14)
   %11 = add [16 x i8]* %comm, i64 4
-  %probe_read15 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char14, i64 8, [16 x i8]* %11)
+  %probe_read15 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char14, i64 1, [16 x i8]* %11)
   %12 = load i8, i8* %strcmp.char14, align 1
   %strcmp.cmp16 = icmp eq i8 %12, 0
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
@@ -153,7 +153,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* nonnull %1, i8 0, i64 16, i32 1, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char, i64 8, [16 x i8]* nonnull %comm)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char, i64 1, [16 x i8]* nonnull %comm)
   %2 = load i8, i8* %strcmp.char, align 1
   %strcmp.cmp = icmp eq i8 %2, 115
   br i1 %strcmp.cmp, label %strcmp.loop, label %pred_true.critedge
@@ -193,7 +193,7 @@ pred_true:                                        ; preds = %strcmp.loop9, %pred
 strcmp.loop:                                      ; preds = %entry
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char2)
   %5 = add [16 x i8]* %comm, i64 1
-  %probe_read3 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char2, i64 8, [16 x i8]* %5)
+  %probe_read3 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char2, i64 1, [16 x i8]* %5)
   %6 = load i8, i8* %strcmp.char2, align 1
   %strcmp.cmp4 = icmp eq i8 %6, 115
   br i1 %strcmp.cmp4, label %strcmp.loop1, label %pred_true.critedge20
@@ -201,7 +201,7 @@ strcmp.loop:                                      ; preds = %entry
 strcmp.loop1:                                     ; preds = %strcmp.loop
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char6)
   %7 = add [16 x i8]* %comm, i64 2
-  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char6, i64 8, [16 x i8]* %7)
+  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char6, i64 1, [16 x i8]* %7)
   %8 = load i8, i8* %strcmp.char6, align 1
   %strcmp.cmp8 = icmp eq i8 %8, 104
   br i1 %strcmp.cmp8, label %strcmp.loop5, label %pred_true.critedge21
@@ -209,7 +209,7 @@ strcmp.loop1:                                     ; preds = %strcmp.loop
 strcmp.loop5:                                     ; preds = %strcmp.loop1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char10)
   %9 = add [16 x i8]* %comm, i64 3
-  %probe_read11 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char10, i64 8, [16 x i8]* %9)
+  %probe_read11 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char10, i64 1, [16 x i8]* %9)
   %10 = load i8, i8* %strcmp.char10, align 1
   %strcmp.cmp12 = icmp eq i8 %10, 100
   br i1 %strcmp.cmp12, label %strcmp.loop9, label %pred_true.critedge22
@@ -217,7 +217,7 @@ strcmp.loop5:                                     ; preds = %strcmp.loop1
 strcmp.loop9:                                     ; preds = %strcmp.loop5
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char14)
   %11 = add [16 x i8]* %comm, i64 4
-  %probe_read15 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char14, i64 8, [16 x i8]* %11)
+  %probe_read15 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %strcmp.char14, i64 1, [16 x i8]* %11)
   %12 = load i8, i8* %strcmp.char14, align 1
   %strcmp.cmp16 = icmp eq i8 %12, 0
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)

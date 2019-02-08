@@ -373,7 +373,7 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
     Value *ptr = CreateAdd(
         val,
         getInt64(i));
-    CreateProbeRead(val_char, 8, ptr);
+     CreateProbeRead(val_char, 1, ptr);
 
     Value *l = CreateLoad(getInt8Ty(), val_char);
     CreateLifetimeEnd(store);
