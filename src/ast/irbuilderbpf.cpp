@@ -142,7 +142,7 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
   return CreateBpfPseudoCall(mapfd);
 }
 
-CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx)
+CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.join_map_->mapfd_);
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
@@ -229,13 +229,12 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_update_elem),
       update_func_ptr_type);
-  CallInst *call = CreateCall(update_func, {map_ptr, key, val, flags}, "update_elem");
+  CreateCall(update_func, {map_ptr, key, val, flags}, "update_elem");
 }
 
 void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
-  Value *flags = getInt64(0);
 
   // int map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
@@ -248,7 +247,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_delete_elem),
       delete_func_ptr_type);
-  CallInst *call = CreateCall(delete_func, {map_ptr, key}, "delete_elem");
+  CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
@@ -264,7 +263,7 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CallInst *call = CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
+  CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)

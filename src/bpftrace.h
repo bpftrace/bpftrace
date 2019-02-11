@@ -41,6 +41,8 @@ inline DebugLevel operator++(DebugLevel& level, int)
       // NOTE (mmarchini): should be handled by the caller
       level = DebugLevel::kNone;
       break;
+    default:
+      break;
   }
   return level;
 }

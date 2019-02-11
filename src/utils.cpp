@@ -34,8 +34,8 @@ namespace bpftrace {
 bool has_wildcard(const std::string &str)
 {
   if (str.find("*") != std::string::npos ||
-      str.find("[") != std::string::npos &&
-      str.find("]") != std::string::npos)
+     (str.find("[") != std::string::npos &&
+      str.find("]") != std::string::npos))
      return true;
   else
      return false;

@@ -281,6 +281,7 @@ static unsigned kernel_version(int attempt)
         return 0;
       return KERNEL_VERSION(x, y, z);
     case 2:
+    {
       // Try to get the definition of LINUX_VERSION_CODE at runtime.
       std::ifstream linux_version_header{"/usr/include/linux/version.h"};
       const std::string content{std::istreambuf_iterator<char>(linux_version_header),
@@ -292,6 +293,9 @@ static unsigned kernel_version(int attempt)
         return static_cast<unsigned>(std::stoi(match[1]));
 
       return 0;
+    }
+    default:
+      break;
   }
   std::cerr << "invalid kernel version" << std::endl;
   abort();
@@ -308,7 +312,7 @@ void AttachedProbe::load_prog()
   unsigned log_buf_size = sizeof (log_buf);
 
   // Redirect stderr, so we don't get error messages from BCC
-  int old_stderr, new_stderr;
+  int old_stderr = -1, new_stderr;
   fflush(stderr);
   if (bt_debug != DebugLevel::kNone)
     log_level = 15;
@@ -324,7 +328,7 @@ void AttachedProbe::load_prog()
     log_level = 1;
 
   // bpf_prog_load rejects colons in the probe name
-  strncpy(name, probe_.name.c_str(), STRING_SIZE);
+  strncpy(name, probe_.name.c_str(), STRING_SIZE - 1);
   namep = name;
   if (strrchr(name, ':') != NULL)
     namep = strrchr(name, ':') + 1;
@@ -542,7 +546,7 @@ void AttachedProbe::attach_software()
 
   uint64_t period = probe_.freq;
   uint64_t defaultp = 1;
-  uint32_t type;
+  uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
   for (auto &probeListItem : SW_PROBE_LIST)
@@ -577,7 +581,7 @@ void AttachedProbe::attach_hardware()
 
   uint64_t period = probe_.freq;
   uint64_t defaultp = 1000000;
-  uint32_t type;
+  uint32_t type = 0;
 
   // from linux/perf_event.h, with aliases from perf:
   for (auto &probeListItem : HW_PROBE_LIST)

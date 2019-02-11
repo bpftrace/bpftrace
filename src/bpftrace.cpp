@@ -192,7 +192,7 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
-void perf_event_printer(void *cb_cookie, void *data, int size)
+void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
@@ -473,7 +473,7 @@ std::string BPFtrace::get_param(size_t i)
   return "0";
 }
 
-void perf_event_lost(void *cb_cookie, uint64_t lost)
+void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
 {
   printf("Lost %lu events\n", lost);
 }
@@ -1349,7 +1349,7 @@ uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
   uint64_t sum = 0;
   for (int i=0; i<ncpus; i++)
   {
-    sum += *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    sum += *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
   }
   return sum;
 }
@@ -1359,7 +1359,7 @@ uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
   uint64_t val, max = 0;
   for (int i=0; i<ncpus; i++)
   {
-    val = *(uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    val = *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
     if (val > max)
       max = val;
   }
@@ -1371,7 +1371,7 @@ int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
   int64_t val, max = 0, retval;
   for (int i=0; i<ncpus; i++)
   {
-    val = *(int64_t*)(value.data() + i*sizeof(int64_t*));
+    val = *(const int64_t*)(value.data() + i*sizeof(int64_t*));
     if (val > max)
       max = val;
   }
@@ -1673,14 +1673,14 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
       {
         std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
         {
-          return *(uint64_t*)(a.first.data() + arg_offset) < *(uint64_t*)(b.first.data() + arg_offset);
+          return *(const uint64_t*)(a.first.data() + arg_offset) < *(const uint64_t*)(b.first.data() + arg_offset);
         });
       }
       else if (arg.size == 4)
       {
         std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
         {
-          return *(uint32_t*)(a.first.data() + arg_offset) < *(uint32_t*)(b.first.data() + arg_offset);
+          return *(const uint32_t*)(a.first.data() + arg_offset) < *(const uint32_t*)(b.first.data() + arg_offset);
         });
       }
       else
@@ -1694,8 +1694,8 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
     {
       std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
       {
-        return strncmp((char*)(a.first.data() + arg_offset),
-                       (char*)(b.first.data() + arg_offset),
+        return strncmp((const char*)(a.first.data() + arg_offset),
+                       (const char*)(b.first.data() + arg_offset),
                        STRING_SIZE) < 0;
       });
     }

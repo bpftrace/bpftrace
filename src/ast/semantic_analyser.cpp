@@ -1044,7 +1044,7 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
   return true;
 }
 
-bool SemanticAnalyser::check_alpha_numeric(const Call &call, int arg_num)
+bool SemanticAnalyser::check_alpha_numeric(const Call &call, int arg_num __attribute__((unused)))
 {
   if (!call.vargs)
     return false;

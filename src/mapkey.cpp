@@ -62,33 +62,36 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       switch (arg.size)
       {
         case 1:
-          return std::to_string(*(int8_t*)data);
+          return std::to_string(*(const int8_t*)data);
         case 2:
-          return std::to_string(*(int16_t*)data);
+          return std::to_string(*(const int16_t*)data);
         case 4:
-          return std::to_string(*(int32_t*)data);
+          return std::to_string(*(const int32_t*)data);
         case 8:
-          return std::to_string(*(int64_t*)data);
+          return std::to_string(*(const int64_t*)data);
+        default:
+          break;
       }
       break;
     case Type::kstack:
-      return bpftrace.get_stack(*(uint64_t*)data, false, 4);
+      return bpftrace.get_stack(*(const uint64_t*)data, false, 4);
     case Type::ustack:
-      return bpftrace.get_stack(*(uint64_t*)data, true, 4);
+      return bpftrace.get_stack(*(const uint64_t*)data, true, 4);
     case Type::ksym:
-      return bpftrace.resolve_ksym(*(uint64_t*)data);
+      return bpftrace.resolve_ksym(*(const uint64_t*)data);
     case Type::usym:
-      return bpftrace.resolve_usym(*(uint64_t*)data, *(uint64_t*)(arg_data + 8));
+      return bpftrace.resolve_usym(*(const uint64_t*)data, *(const uint64_t*)(arg_data + 8));
     case Type::inet:
-      return bpftrace.resolve_inet(*(uint64_t*)data, *(uint64_t*)(arg_data + 8));
+      return bpftrace.resolve_inet(*(const uint64_t*)data, *(const uint64_t*)(arg_data + 8));
     case Type::username:
-      return bpftrace.resolve_uid(*(uint64_t*)data);
+      return bpftrace.resolve_uid(*(const uint64_t*)data);
     case Type::probe:
-      return bpftrace.probe_ids_[*(uint64_t*)data];
+      return bpftrace.probe_ids_[*(const uint64_t*)data];
     case Type::string:
-      return std::string((char*)data);
+      return std::string((const char*)data);
+    default:
+      std::cerr << "invalid mapkey argument type" << std::endl;
   }
-  std::cerr << "invalid mapkey argument type" << std::endl;
   abort();
 }
 
