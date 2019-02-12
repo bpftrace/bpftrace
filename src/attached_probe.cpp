@@ -414,7 +414,7 @@ void AttachedProbe::attach_usdt(int pid)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
   // Handle manually specifying probe provider namespace
-  if (!probe_.ns.empty()) // FIXME what's the idiomatic way to check if this is set?
+  if (probe_.ns != "")
     provider_ns = probe_.ns;
   else
     provider_ns = GetProviderFromPath(probe_.path);

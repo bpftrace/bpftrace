@@ -345,7 +345,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
     exit(-1);
   }
 
-  if(!attach_point->ns.empty())
+  if(attach_point->ns != "")
     provider_ns = attach_point->ns;
   else
     provider_ns = GetProviderFromPath(attach_point->target);
