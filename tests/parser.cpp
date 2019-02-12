@@ -473,6 +473,13 @@ TEST(Parser, usdt)
       "  int: 1\n");
 }
 
+TEST(Parser, usdt_namespaced_probe)
+{
+  test("usdt:/my/program:namespace:probe { 1; }",
+      "Program\n"
+      " usdt:/my/program:namespace:probe\n"
+      "  int: 1\n");
+}
 TEST(Parser, escape_chars)
 {
   test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
