@@ -757,8 +757,12 @@ Syntax:
 
 ```
 usdt:binary_path:probe_name
+usdt:binary_path:[probe_namespace]:probe_name
 usdt:library_path:probe_name
+usdt:library_path:[probe_namespace]:probe_name
 ```
+
+Where the `probe_namespace` is optional, and will default to the basename of the binary or library path.
 
 Examples:
 
@@ -771,6 +775,22 @@ hi
 hi
 hi
 ^C
+```
+The basename of a path will be used for the namespace of a probe. If it doesn't match, the probe won't be found.
+In this example, the function name `loop` is in the namespace `tick`. If we rename the binary to `tock`, it won't be found:
+
+```
+mv /root/tick /root/tock
+bpftrace -e 'usdt:/root/tock:loop { printf("hi\n"); }'
+Attaching 1 probe...
+Error finding location for probe: usdt:/root/tock:loop
+```
+
+The probe namespace can be manually specified, between the path and probe function name. This allows for the probe to be
+found, regardless of the name of the binary:
+
+```
+bpftrace -e 'usdt:/root/tock:tick:loop { printf("hi\n"); }'
 ```
 
 ## 8. `usdt`: Static Tracing, User-Level Arguments
