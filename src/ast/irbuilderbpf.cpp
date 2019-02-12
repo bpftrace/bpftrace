@@ -337,6 +337,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin)
 {
   struct bcc_usdt_argument argument;
+  std::string provider_ns;
 
   void *usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
   if (usdt == nullptr) {
@@ -344,10 +345,14 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
     exit(-1);
   }
 
-  std::string provider = GetProviderFromPath(attach_point->target);
-  if (bcc_usdt_get_argument(usdt, provider.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
+  if(!attach_point->ns.empty())
+    provider_ns = attach_point->ns;
+  else
+    provider_ns = GetProviderFromPath(attach_point->target);
+
+  if (bcc_usdt_get_argument(usdt, provider_ns.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
-              << provider << ":" << attach_point->func << std::endl;
+              << provider_ns << ":" << attach_point->func << std::endl;
     exit(-2);
   }
 

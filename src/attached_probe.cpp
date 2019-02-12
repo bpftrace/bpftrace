@@ -391,6 +391,7 @@ void AttachedProbe::attach_usdt(int pid)
 {
   struct bcc_usdt_location loc = {};
   int err;
+  std::string provider_ns;
   void *ctx;
 
   if (pid)
@@ -412,9 +413,13 @@ void AttachedProbe::attach_usdt(int pid)
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
-  std::string provider_name = GetProviderFromPath(probe_.path);
+  // Handle manually specifying probe provider namespace
+  if (!probe_.ns.empty()) // FIXME what's the idiomatic way to check if this is set?
+    provider_ns = probe_.ns;
+  else
+    provider_ns = GetProviderFromPath(probe_.path);
 
-  err = bcc_usdt_get_location(ctx, provider_name.c_str(), probe_.attach_point.c_str(), 0, &loc);
+  err = bcc_usdt_get_location(ctx, provider_ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
   if (err)
     throw std::runtime_error("Error finding location for probe: " + probe_.name);
   probe_.loc = loc.address;
