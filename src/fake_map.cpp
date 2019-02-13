@@ -11,6 +11,11 @@ FakeMap::FakeMap(const std::string &name __attribute__((unused)),
   mapfd_ = next_mapfd_++;
 }
 
+FakeMap::FakeMap(const SizedType &type __attribute__((unused)))
+{
+  mapfd_ = next_mapfd_++;
+}
+
 FakeMap::FakeMap(enum bpf_map_type map_type __attribute__((unused)))
 {
   mapfd_ = next_mapfd_++;

@@ -8,7 +8,8 @@
 
 namespace bpftrace {
 
-const int MAX_STACK_SIZE = 32;
+const int MAX_STACK_SIZE = 1024;
+const int DEFAULT_STACK_SIZE = 127;
 const int STRING_SIZE = 64;
 const int COMM_SIZE = 16;
 
@@ -42,16 +43,29 @@ class SizedType
 {
 public:
   SizedType() : type(Type::none), size(0) { }
-  SizedType(Type type, size_t size, const std::string &cast_type = "")
-    : type(type), size(size), cast_type(cast_type) { }
+  SizedType(Type type, size_t size_, const std::string &cast_type = "")
+    : type(type), cast_type(cast_type) {
+    switch (type) {
+      case Type::ustack:
+      case Type::kstack:
+        stack_size = size_;
+        size = 8;
+        break;
+      default:
+        size = size_;
+        break;
+    }
+  }
   Type type;
   size_t size;
+  size_t stack_size = DEFAULT_STACK_SIZE;
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
   size_t pointee_size;
 
   bool IsArray() const;
+  bool IsStack() const;
 
   bool operator==(const SizedType &t) const;
 };

@@ -424,9 +424,9 @@ index ccae94c..3ccf1e6 100644
 +  return CreateCall(getcurtask_func, {}, "get_cur_task");
 +}
 +
- CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack)
+ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, size_t limit)
  {
-   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_map_->mapfd_);
+   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[limit]->mapfd_);
 diff --git a/src/ast/irbuilderbpf.h b/src/ast/irbuilderbpf.h
 index 0321e9a..ce2e3b6 100644
 --- a/src/ast/irbuilderbpf.h
