@@ -29,6 +29,11 @@ bool SizedType::IsArray() const
   return type == Type::string || type == Type::usym || type == Type::inet || (type == Type::cast && !is_pointer);
 }
 
+bool SizedType::IsStack() const
+{
+  return type == Type::ustack || type == Type::kstack;
+}
+
 std::string typestr(Type t)
 {
   switch (t)

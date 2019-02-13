@@ -430,7 +430,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
             get_stack(
               *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
               false,
-              8)));
+              arg.type.stack_size, 8)));
         break;
       case Type::ustack:
         arg_values.push_back(
@@ -438,7 +438,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
             get_stack(
               *reinterpret_cast<uint64_t*>(arg_data+arg.offset),
               true,
-              8)));
+              arg.type.stack_size, 8)));
         break;
       default:
         std::cerr << "invalid argument type" << std::endl;
@@ -884,9 +884,9 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
     if (map.type_.type == Type::kstack)
-      std::cout << get_stack(*(uint64_t*)value.data(), false, 8);
+      std::cout << get_stack(*(uint64_t*)value.data(), false, map.type_.stack_size, 8);
     else if (map.type_.type == Type::ustack)
-      std::cout << get_stack(*(uint64_t*)value.data(), true, 8);
+      std::cout << get_stack(*(uint64_t*)value.data(), true, map.type_.stack_size, 8);
     else if (map.type_.type == Type::ksym)
       std::cout << resolve_ksym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
@@ -1419,12 +1419,12 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
   throw std::runtime_error("Could not find empty key");
 }
 
-std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, int indent)
+std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, size_t limit, int indent)
 {
   uint32_t stackid = stackidpid & 0xffffffff;
   int pid = stackidpid >> 32;
-  auto stack_trace = std::vector<uint64_t>(MAX_STACK_SIZE);
-  int err = bpf_lookup_elem(stackid_map_->mapfd_, &stackid, stack_trace.data());
+  auto stack_trace = std::vector<uint64_t>(limit);
+  int err = bpf_lookup_elem(stackid_maps_[limit]->mapfd_, &stackid, stack_trace.data());
   if (err)
   {
     std::cerr << "Error looking up stack id " << stackid << " (pid " << pid << "): " << err << std::endl;
