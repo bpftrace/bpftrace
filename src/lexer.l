@@ -100,6 +100,7 @@ pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|retval|func|p
 <STR>[^\\\n\"]+         { buffer += std::string(yytext); }
 <STR>\\n                { buffer += std::string("\n"); }
 <STR>\\t                { buffer += std::string("\t"); }
+<STR>\\r                { buffer += std::string("\r"); }
 <STR>\\\"               { buffer += std::string("\""); }
 <STR>\\\\               { buffer += std::string("\\"); }
 <STR>\n                 { driver.error(loc, std::string("unterminated string")); BEGIN(INITIAL); }

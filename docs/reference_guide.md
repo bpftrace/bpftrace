@@ -14,7 +14,8 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [4. `-l`: Listing Probes](#4--l-listing-probes)
     - [5. `-d`: Debug Output](#5--d-debug-output)
     - [6. `-v`: Verbose Output](#6--v-verbose-output)
-    - [7. Env: `BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)
+    - [7. Other Options](#7-other-options)
+    - [8. Env: `BPFTRACE_STRLEN`](#8-env-bpftrace_strlen)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -108,12 +109,19 @@ USAGE:
     bpftrace [options] -e 'program'
 
 OPTIONS:
-    -l [search]    list probes
+    -B MODE        output buffering mode ('line', 'full', or 'none')
+    -d             debug info dry run
+    -dd            verbose debug info dry run
     -e 'program'   execute this program
-    -p PID    PID for enabling USDT probes
-    -v    verbose messages
-    -d    debug info dry run
-   -dd    verbose debug info dry run
+    -h             show this help message
+    -l [search]    list probes
+    -p PID         enable USDT probes on PID
+    -c 'CMD'       run CMD and enable USDT probes on resulting process
+    -v             verbose messages
+    --version      bpftrace version
+
+ENVIRONMENT:
+    BPFTRACE_STRLEN    [default: 64] bytes on BPF stack per str()
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -339,7 +347,16 @@ iscsid is sleeping.
 
 This includes `Bytecode:` and then the eBPF bytecode after it was compiled from the llvm assembly.
 
-## 7. Env: `BPFTRACE_STRLEN`
+## 7. Other Options
+
+The -v option prints the bpftrace version:
+
+```
+# bpftrace --version
+bpftrace v0.8-90-g585e-dirty
+```
+
+## 8. Env: `BPFTRACE_STRLEN`
 
 Default: 64
 
