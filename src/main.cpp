@@ -24,7 +24,7 @@ void usage()
   std::cerr << "    bpftrace [options] filename" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -b MODE        output buffering mode ('line' or 'full')" << std::endl;
+  std::cerr << "    -B MODE        output buffering mode ('line', 'full', or 'none')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
@@ -32,7 +32,8 @@ void usage()
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
-  std::cerr << "    -v             verbose messages" << std::endl << std::endl;
+  std::cerr << "    -v             verbose messages" << std::endl;
+  std::cerr << "    --version      bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN    [default: 64] bytes on BPF stack per str()" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
@@ -84,7 +85,7 @@ int main(int argc, char *argv[])
 
   std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "db:e:hlp:vc:")) != -1)
+  while ((c = getopt(argc, argv, "dB:e:hlp:vc:")) != -1)
   {
     switch (c)
     {
@@ -98,13 +99,15 @@ int main(int argc, char *argv[])
       case 'v':
         bt_verbose = true;
         break;
-      case 'b':
+      case 'B':
         if (std::strcmp(optarg, "line") == 0) {
           std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
         } else if (std::strcmp(optarg, "full") == 0) {
           std::setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+        } else if (std::strcmp(optarg, "none") == 0) {
+          std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
         } else {
-          std::cerr << "USAGE: -b must be either 'line' or 'full'." << std::endl;
+          std::cerr << "USAGE: -B must be either 'line', 'full', or 'none'." << std::endl;
           return 1;
         }
         break;
