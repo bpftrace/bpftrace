@@ -1,6 +1,7 @@
 #pragma once
 
 #include <istream>
+#include <set>
 
 namespace bpftrace {
 
@@ -15,6 +16,7 @@ public:
 private:
   static std::string parse_field(const std::string &line);
   static std::string adjust_integer_types(const std::string &field_type, int size);
+  static std::set<std::string> struct_list;
 
 protected:
   static std::string get_tracepoint_struct(std::istream &format_file, const std::string &category, const std::string &event_name);

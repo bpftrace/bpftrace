@@ -9,6 +9,8 @@
 
 namespace bpftrace {
 
+std::set<std::string> TracepointFormatParser::struct_list;
+
 bool TracepointFormatParser::parse(ast::Program *program)
 {
   bool has_tracepoint_probes = false;
@@ -50,7 +52,13 @@ bool TracepointFormatParser::parse(ast::Program *program)
           return false;
         }
 
-        program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
+        // Check to avoid adding the same struct more than once to definitions
+        std::string struct_name = get_struct_name(category, event_name);
+        if (!TracepointFormatParser::struct_list.count(struct_name))
+        {
+          program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
+          TracepointFormatParser::struct_list.insert(struct_name);
+        }
       }
     }
   }
