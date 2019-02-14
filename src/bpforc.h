@@ -96,7 +96,7 @@ public:
 
   void compileModule(std::unique_ptr<Module> M) {
     auto K = addModule(move(M));
-    CompileLayer.emitAndFinalize(K);
+    cantFail(CompileLayer.emitAndFinalize(K));
   }
 
   VModuleKey addModule(std::unique_ptr<Module> M) {
