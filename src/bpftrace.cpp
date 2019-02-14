@@ -1617,8 +1617,8 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
   void *psyms;
 
   // TODO: deal with these:
-  symopts = {.use_debug_file = false,
-	     .check_debug_file_crc = false,
+  symopts = {.use_debug_file = true,
+	     .check_debug_file_crc = true,
 	     .use_symbol_type = BCC_SYM_ALL_TYPES};
 
   if (pid_sym_.find(pid) == pid_sym_.end())
