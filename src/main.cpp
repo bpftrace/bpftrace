@@ -1,6 +1,8 @@
 #include <iostream>
 #include <signal.h>
 #include <sys/resource.h>
+#include <cstdio>
+#include <cstring>
 #include <unistd.h>
 #include <string.h>
 
@@ -22,6 +24,7 @@ void usage()
   std::cerr << "    bpftrace [options] filename" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
+  std::cerr << "    -b MODE        output buffering mode ('line' or 'full')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
@@ -81,7 +84,7 @@ int main(int argc, char *argv[])
 
   std::string script, search;
   int c;
-  while ((c = getopt(argc, argv, "de:hlp:vc:")) != -1)
+  while ((c = getopt(argc, argv, "db:e:hlp:vc:")) != -1)
   {
     switch (c)
     {
@@ -94,6 +97,16 @@ int main(int argc, char *argv[])
         break;
       case 'v':
         bt_verbose = true;
+        break;
+      case 'b':
+        if (std::strcmp(optarg, "line") == 0) {
+          std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+        } else if (std::strcmp(optarg, "full") == 0) {
+          std::setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+        } else {
+          std::cerr << "USAGE: -b must be either 'line' or 'full'." << std::endl;
+          return 1;
+        }
         break;
       case 'e':
         script = optarg;
