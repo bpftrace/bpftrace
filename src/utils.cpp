@@ -53,7 +53,8 @@ std::vector<int> get_possible_cpus()
 
 std::vector<std::string> get_kernel_cflags(
     const char* uname_machine,
-    const std::string& kdir)
+    const std::string& ksrc,
+    const std::string& kobj)
 {
   std::vector<std::string> cflags;
   std::string arch = uname_machine;
@@ -90,18 +91,18 @@ std::vector<std::string> get_kernel_cflags(
   cflags.push_back("-isystem");
   cflags.push_back("/virtual/lib/clang/include");
 
-  cflags.push_back("-I" + kdir + "/arch/"+arch+"/include");
-  cflags.push_back("-I" + kdir + "/arch/"+arch+"/include/generated/uapi");
-  cflags.push_back("-I" + kdir + "/arch/"+arch+"/include/generated");
-  cflags.push_back("-I" + kdir + "/include");
-  cflags.push_back("-I" + kdir + "/./arch/"+arch+"/include/uapi");
-  cflags.push_back("-I" + kdir + "/arch/"+arch+"/include/generated/uapi");
-  cflags.push_back("-I" + kdir + "/include/uapi");
-  cflags.push_back("-I" + kdir + "/include/generated");
-  cflags.push_back("-I" + kdir + "/include/generated/uapi");
+  // see linux/Makefile for $(LINUXINCLUDE) + $(USERINCLUDE)
+  cflags.push_back("-I" + ksrc + "/arch/"+arch+"/include");
+  cflags.push_back("-I" + kobj + "/arch/"+arch+"/include/generated");
+  cflags.push_back("-I" + ksrc + "/include");
+  cflags.push_back("-I" + kobj + "/include");
+  cflags.push_back("-I" + ksrc + "/arch/"+arch+"/include/uapi");
+  cflags.push_back("-I" + kobj + "/arch/"+arch+"/include/generated/uapi");
+  cflags.push_back("-I" + ksrc + "/include/uapi");
+  cflags.push_back("-I" + kobj + "/include/generated/uapi");
 
   cflags.push_back("-include");
-  cflags.push_back(kdir + "/include/linux/kconfig.h");
+  cflags.push_back(ksrc + "/include/linux/kconfig.h");
   cflags.push_back("-D__KERNEL__");
   cflags.push_back("-D__BPF_TRACING__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP16__");

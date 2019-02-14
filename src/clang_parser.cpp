@@ -122,21 +122,54 @@ static bool is_dir(const std::string& path)
   return S_ISDIR(buf.st_mode);
 }
 
-static std::string get_kernel_root_dir(const struct utsname& utsname)
+// get_kernel_dirs returns {ksrc, kobj} - directories for pristine and
+// generated kernel sources.
+//
+// When the kernel was built in its source tree ksrc == kobj, however when
+// the kernel was build in a different directory than its source, ksrc != kobj.
+//
+// A notable example is Debian, which places pristine kernel headers in
+//
+//	/lib/modules/`uname -r`/source/
+//
+// and generated kernel headers in
+//
+//	/lib/modules/`uname -r`/build/
+//
+// {"", ""} is returned if no trace of kernel headers was found at all.
+// Both ksrc and kobj are guaranteed to be != "", if at least some trace of kernel sources was found.
+static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsname)
 {
 #ifdef KERNEL_HEADERS_DIR
-  return KERNEL_HEADERS_DIR;
+  return {KERNEL_HEADERS_DIR, KERNEL_HEADERS_DIR};
 #endif
 
   const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
   if (kpath_env)
-    return kpath_env;
+    return {kpath_env, kpath_env};
 
   std::string kdir = std::string("/lib/modules/") + utsname.release;
-  if (is_dir(kdir + "/build") && is_dir(kdir + "/source"))
-    return kdir + "/source";
-  else
-    return kdir + "/build";
+  auto ksrc = kdir + "/source";
+  auto kobj = kdir + "/build";
+
+  // if one of source/ or build/ is not present - try to use the other one for both.
+  if (!is_dir(ksrc)) {
+	  ksrc = "";
+  }
+  if (!is_dir(kobj)) {
+	  kobj = "";
+  }
+  if (ksrc == "" && kobj == "") {
+	  return {"", ""};
+  }
+  if (ksrc == "") {
+	  ksrc = kobj;
+  }
+  else if (kobj == "") {
+	  kobj = ksrc;
+  }
+
+  return {ksrc, kobj};
 }
 
 void ClangParser::parse(ast::Program *program, StructMap &structs)
@@ -187,9 +220,9 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
   std::vector<std::string> kflags;
   struct utsname utsname;
   uname(&utsname);
-  auto kpath = get_kernel_root_dir(utsname);
-  if (is_dir(kpath))
-    kflags = get_kernel_cflags(utsname.machine, kpath);
+  auto [ksrc, kobj] = get_kernel_dirs(utsname);
+  if (ksrc != "")
+    kflags = get_kernel_cflags(utsname.machine, ksrc, kobj);
 
   std::vector<const char *> args =
   {
