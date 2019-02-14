@@ -18,17 +18,10 @@
 BEGIN
 {
 	printf("%-10s %-5s %s\n", "TIME(ms)", "PID", "ARGS");
-	@epoch = nsecs;
 }
 
 tracepoint:syscalls:sys_enter_execve
 {
-	$now = nsecs;
-	printf("%-10u %-5d ", ($now - @epoch) / 1000000, pid);
+	printf("%-10u %-5d ", elapsed / 1000000, pid);
 	join(args->argv);
-}
-
-END
-{
-	delete(@epoch);
 }
