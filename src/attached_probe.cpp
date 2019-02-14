@@ -7,6 +7,7 @@
 #include <regex>
 #include <sys/auxv.h>
 #include <sys/utsname.h>
+#include <sys/types.h>
 #include <tuple>
 #include <unistd.h>
 
@@ -425,8 +426,8 @@ void AttachedProbe::attach_usdt(int pid)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name);
   }
 
-  // TODO: fn_name may need a unique suffix for each attachment on the same probe:
-  std::string fn_name = "probe_" + probe_.attach_point + "_1";
+  // gets current pid of the program and suffix it to the string
+  std::string fn_name = "probe_" + probe_.attach_point + "_" + std::to_string(getpid());
   err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
