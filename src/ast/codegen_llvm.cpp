@@ -4,6 +4,7 @@
 #include "parser.tab.hh"
 #include "arch/arch.h"
 #include "types.h"
+#include <time.h>
 
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -48,6 +49,13 @@ void CodegenLLVM::visit(Builtin &builtin)
   if (builtin.ident == "nsecs")
   {
     expr_ = b_.CreateGetNs();
+  }
+  else if (builtin.ident == "elapsed")
+  {
+    struct timespec ts;
+    // this time will be calculated during codegen and baked into the BPF
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    expr_ = b_.CreateSub(b_.CreateGetNs(), b_.getInt64(1000000000ULL * ts.tv_sec + ts.tv_nsec));
   }
   else if (builtin.ident == "kstack" || builtin.ident == "ustack")
   {

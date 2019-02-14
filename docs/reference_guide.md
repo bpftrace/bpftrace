@@ -960,6 +960,7 @@ That would fire once for every 1000000 cache misses. This usually indicates the 
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
+- `elapsed` - Nanosecond timestamp since bpftrace initialization
 - `cpu` - Processor ID
 - `comm` - Process name
 - `kstack` - Kernel stack trace
