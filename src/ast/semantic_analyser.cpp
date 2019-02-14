@@ -536,6 +536,7 @@ void SemanticAnalyser::visit(Unop &unop)
         }
         int cast_size = bpftrace_.structs_[type.cast_type].size;
         unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+        unop.type.is_tparg = type.is_tparg;
       }
       else {
         err_ << "Can not dereference struct/union of type '" << type.cast_type << "'. "
@@ -631,16 +632,38 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  auto fields = bpftrace_.structs_[type.cast_type].fields;
-  if (fields.count(acc.field) == 0) {
-    err_ << "Struct/union of type '" << type.cast_type << "' does not contain "
-         << "a field named '" << acc.field << "'" << std::endl;
+  std::map<std::string, FieldsMap> structs;
+
+  if (type.is_tparg) {
+    for (AttachPoint *attach_point : *probe_->attach_points) {
+      assert(probetype(attach_point->provider) == ProbeType::tracepoint);
+
+      std::set<std::string> matches = bpftrace_.find_wildcard_matches(
+          attach_point->target, attach_point->func,
+          "/sys/kernel/debug/tracing/available_events");
+      for (auto &match : matches) {
+        std::string tracepoint_struct =
+            TracepointFormatParser::get_struct_name(attach_point->target,
+                                                    match);
+        structs[tracepoint_struct] = bpftrace_.structs_[tracepoint_struct].fields;
+      }
+    }
+  } else {
+    structs[type.cast_type] = bpftrace_.structs_[type.cast_type].fields;
   }
-  else {
-    acc.type = fields[acc.field].type;
-    acc.type.is_internal = type.is_internal;
+
+  for (auto it : structs) {
+    std::string cast_type = it.first;
+    FieldsMap fields = it.second;
+    if (fields.count(acc.field) == 0) {
+      err_ << "Struct/union of type '" << cast_type << "' does not contain "
+          << "a field named '" << acc.field << "'" << std::endl;
+    }
+    else {
+      acc.type = fields[acc.field].type;
+      acc.type.is_internal = type.is_internal;
+    }
   }
-// XXX this necessary here? acc.type.is_tparg = type.is_tparg;
 }
 
 void SemanticAnalyser::visit(Cast &cast)

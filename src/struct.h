@@ -11,11 +11,13 @@ public:
   int offset;
 };
 
+using FieldsMap = std::map<std::string, Field>;
+
 class Struct
 {
 public:
   int size;
-  std::map<std::string, Field> fields;
+  FieldsMap fields;
 };
 
 } // namespace bpftrace

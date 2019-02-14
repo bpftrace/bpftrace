@@ -842,12 +842,7 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else if (type.type == Type::cast)
   {
-    if (type.is_tparg) {
-      // overwrite args type
-      Struct &cstruct = bpftrace_.structs_[tracepoint_struct_];
-      unop.expr->type = SizedType(Type::cast, cstruct.size, tracepoint_struct_);
-      unop.expr->type.is_tparg = true;
-    }
+    // Do nothing
   }
   else
   {
@@ -909,28 +904,14 @@ void CodegenLLVM::visit(FieldAccess &acc)
   assert(type.type == Type::cast);
   acc.expr->accept(*this);
 
-  std::map<std::string, Field> fields;
-  Field field;
-// XXX the following test should work, but is_tparg is always zero, so it's not getting set somewhere:
-//  if (!type.is_tparg) {
-  if (type.cast_type.find("_tracepoint_") == std::string::npos) {
-    // normal struct access
-    fields = bpftrace_.structs_[type.cast_type].fields;
-    field = fields[acc.field];
-  }
-  else
-  {
-    // tracepoint args access
-    fields = bpftrace_.structs_[tracepoint_struct_].fields;
-    if (fields.find(acc.field) != fields.end()) {
-      field = fields[acc.field];
-      // this test should be in semantic analyzer, but is here so that it is after wildcard expansion:
-    } else {
-      std::cerr << "Tracepoint args for " << probefull_ << " does not have field \"" << acc.field << "\"." << std::endl;
-// XXX needs to error exit?
-      return;
-    }
-  }
+  std::string cast_type = type.is_tparg ? tracepoint_struct_ : type.cast_type;
+  Struct &cstruct = bpftrace_.structs_[cast_type];
+
+  type = SizedType(type);
+  type.size = cstruct.size;
+  type.cast_type = cast_type;
+
+  auto &field = cstruct.fields[acc.field];
 
   if (type.is_internal)
   {
