@@ -13,18 +13,24 @@ std::set<std::string> TracepointFormatParser::struct_list;
 
 bool TracepointFormatParser::parse(ast::Program *program)
 {
-  bool has_tracepoint_probes = false;
+  std::vector<ast::Probe*> probes_with_tracepoint;
   for (ast::Probe *probe : *program->probes)
     for (ast::AttachPoint *ap : *probe->attach_points)
-      if (ap->provider == "tracepoint")
-        has_tracepoint_probes = true;
+      if (ap->provider == "tracepoint") {
+        probes_with_tracepoint.push_back(probe);
+        continue;
+      }
 
-  if (!has_tracepoint_probes)
+  if (probes_with_tracepoint.size() == 0)
     return true;
 
+  ast::TracepointArgsVisitor n{};
   program->c_definitions += "#include <linux/types.h>\n";
-  for (ast::Probe *probe : *program->probes)
+  for (ast::Probe *probe : probes_with_tracepoint)
   {
+    n.analyse(probe);
+    if (!probe->need_tp_args_structs)
+      continue;
     for (ast::AttachPoint *ap : *probe->attach_points)
     {
       if (ap->provider == "tracepoint")
