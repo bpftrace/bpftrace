@@ -48,6 +48,7 @@ void SemanticAnalyser::visit(String &string)
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs" ||
+      builtin.ident == "elapsed" ||
       builtin.ident == "pid" ||
       builtin.ident == "tid" ||
       builtin.ident == "cgroup" ||

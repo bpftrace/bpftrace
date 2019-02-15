@@ -23,6 +23,11 @@ RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", nsecs); exit(); }'
 EXPECT SUCCESS nsecs -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME elapsed
+RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", elapsed); exit(); }'
+EXPECT SUCCESS elapsed -?[0-9][0-9]*
+TIMEOUT 5
+
 NAME cpu
 RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cpu); exit(); }'
 EXPECT SUCCESS cpu -?[0-9][0-9]*

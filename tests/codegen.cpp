@@ -12,6 +12,7 @@
 #include "codegen/builtin_func.cpp"
 #include "codegen/builtin_func_wild.cpp"
 #include "codegen/builtin_nsecs.cpp"
+#include "codegen/builtin_elapsed.cpp"
 #include "codegen/builtin_pid_tid.cpp"
 #include "codegen/builtin_probe.cpp"
 #include "codegen/builtin_probe_wild.cpp"
