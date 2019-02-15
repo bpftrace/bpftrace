@@ -1634,7 +1634,10 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset)
 
   if (bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    symbol << usym.name;
+    if (demangle_cpp_symbols)
+      symbol << usym.demangle_name;
+    else
+      symbol << usym.name;
     if (show_offset)
       symbol << "+" << usym.offset;
   }

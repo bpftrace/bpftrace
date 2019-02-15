@@ -35,7 +35,8 @@ void usage()
   std::cerr << "    -v             verbose messages" << std::endl;
   std::cerr << "    --version      bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
-  std::cerr << "    BPFTRACE_STRLEN    [default: 64] bytes on BPF stack per str()" << std::endl << std::endl;
+  std::cerr << "    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()" << std::endl;
+  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -229,6 +230,19 @@ int main(int argc, char *argv[])
       return 1;
     }
     bpftrace.strlen_ = proposed;
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
+  {
+    if (std::string(env_p) == "1")
+      bpftrace.demangle_cpp_symbols = false;
+    else if (std::string(env_p) == "0")
+      bpftrace.demangle_cpp_symbols = true;
+    else
+    {
+      std::cerr << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a valid value (0 or 1)." << std::endl;
+      return 1;
+    }
   }
 
   // PID is currently only used for USDT probes that need enabling. Future work:
