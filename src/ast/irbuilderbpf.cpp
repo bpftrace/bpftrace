@@ -423,15 +423,22 @@ CallInst *IRBuilderBPF::CreateGetPidTgid()
 
 CallInst *IRBuilderBPF::CreateGetCurrentCgroupId()
 {
-  // u64 bpf_get_current_cgroup_id(void)
-  // Return: 64-bit cgroup-v2 id
-  FunctionType *getcgroupid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getcgroupid_func_ptr_type = PointerType::get(getcgroupid_func_type, 0);
-  Constant *getcgroupid_func = ConstantExpr::getCast(
+  #ifndef HAVE_GET_CURRENT_CGROUP_ID
+    std::cerr << "BPF_FUNC_get_current_group_id is not available for your kernel version" << std::endl;
+    abort();
+  #else
+    // u64 bpf_get_current_cgroup_id(void)
+    // Return: 64-bit cgroup-v2 id
+    FunctionType *getcgroupid_func_type = FunctionType::get(getInt64Ty(), false);
+    PointerType *getcgroupid_func_ptr_type = PointerType::get(getcgroupid_func_type, 0);
+    Constant *getcgroupid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_get_current_cgroup_id),
       getcgroupid_func_ptr_type);
-  return CreateCall(getcgroupid_func, {}, "get_cgroup_id");
+    return CreateCall(getcgroupid_func, {}, "get_cgroup_id");
+  #endif
+
+
 }
 
 CallInst *IRBuilderBPF::CreateGetUidGid()

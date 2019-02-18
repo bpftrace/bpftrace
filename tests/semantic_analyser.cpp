@@ -48,7 +48,9 @@ TEST(semantic_analyser, builtin_variables)
 {
   test("kprobe:f { pid }", 0);
   test("kprobe:f { tid }", 0);
-  test("kprobe:f { cgroup }", 0);
+  #ifdef HAVE_GET_CURRENT_CGROUP_ID
+    test("kprobe:f { cgroup }", 0);
+  #endif
   test("kprobe:f { uid }", 0);
   test("kprobe:f { username }", 0);
   test("kprobe:f { gid }", 0);
