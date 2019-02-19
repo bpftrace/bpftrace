@@ -220,7 +220,12 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
   std::vector<std::string> kflags;
   struct utsname utsname;
   uname(&utsname);
-  auto [ksrc, kobj] = get_kernel_dirs(utsname);
+  // auto [ksrc, kobj] = get_kernel_dirs(utsname);	XXX fails with LLVM5
+  std::string ksrc, kobj;
+  auto kdirs = get_kernel_dirs(utsname);
+  ksrc = std::get<0>(kdirs);
+  kobj = std::get<1>(kdirs);
+
   if (ksrc != "")
     kflags = get_kernel_cflags(utsname.machine, ksrc, kobj);
 
