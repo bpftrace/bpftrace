@@ -54,16 +54,13 @@ cat <<EOF | sudo tee -a /etc/apt/sources.list
 # from https://apt.llvm.org/:
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
-# 5.0
-deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-5.0 main
 # 6.0
 deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 EOF
 sudo apt-get update
 sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev libbpfcc-dev
-sudo apt-get install clang-5.0 libclang-5.0-dev libclang-common-5.0-dev libclang1-5.0 libllvm5.0 llvm-5.0 llvm-5.0-dev llvm-5.0-runtime
+sudo apt-get install clang-6.0 libclang-6.0-dev libclang-common-6.0-dev libclang1-6.0 libllvm6.0 llvm-6.0 llvm-6.0-dev llvm-6.0-runtime
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=DEBUG ..
