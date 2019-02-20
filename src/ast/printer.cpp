@@ -82,6 +82,16 @@ void Printer::visit(Binop &binop)
   --depth_;
 }
 
+void Printer::visit(IncrementVariable &incvar)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << opstr(incvar) << std::endl;
+
+  ++depth_;
+  incvar.var->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(Unop &unop)
 {
   std::string indent(depth_, ' ');

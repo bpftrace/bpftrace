@@ -809,6 +809,53 @@ void CodegenLLVM::visit(Binop &binop)
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
+void CodegenLLVM::visit(IncrementVariable &incvar)
+{
+  Variable &var = *incvar.var;
+
+  if (variables_.find(var.ident) == variables_.end())
+  {
+    AllocaInst *val = b_.CreateAllocaBPFInit(var.type, var.ident);
+    variables_[var.ident] = val;
+    // FIXME initialize to 0?
+  }
+
+  if (var.type.type == Type::integer)
+  {
+
+    Value *value;
+    expr_ = b_.CreateLoad(variables_[var.ident]);
+    value = expr_;
+    // promote int to 64-bit
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+
+    switch (incvar.op) {
+      case bpftrace::Parser::token::PLUSPLUS:
+      {
+        expr_ = b_.CreateAdd    (value, b_.getInt64(1));
+        break;
+      }
+      case bpftrace::Parser::token::MINUSMINUS:
+      {
+        expr_ = b_.CreateSub    (value, b_.getInt64(1));
+        break;
+      }
+      default:
+        std::cerr << "missing codegen to increment expression for " << opstr(incvar) << std::endl;
+        abort();
+    }
+    // Figure out the IR to store the value back at the address where we found it, check other examples for how to do this
+    // also see how this is done for assignments
+    b_.CreateStore(expr_, variables_[var.ident]);
+  }
+  else
+  {
+    std::cerr << "missing codegen to increment operator \"" << opstr(incvar) << "\" for this type" << std::endl;
+    abort();
+  }
+  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+}
+
 void CodegenLLVM::visit(Unop &unop)
 {
   unop.expr->accept(*this);

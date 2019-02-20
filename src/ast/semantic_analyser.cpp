@@ -471,7 +471,7 @@ void SemanticAnalyser::visit(Variable &var)
     var.type = search_val->second;
   }
   else {
-    err_ << "Undefined variable: " << var.ident << std::endl;
+    err_ << "Undefined or undeclared variable: " << var.ident << std::endl;
     var.type = SizedType(Type::none, 0);
   }
 }
@@ -501,6 +501,26 @@ void SemanticAnalyser::visit(Binop &binop)
   }
 
   binop.type = SizedType(Type::integer, 8);
+}
+
+void SemanticAnalyser::visit(IncrementVariable &incvar)
+{
+  // FIXME don't do this unconditionally and do it more safely
+  // note that it *must* come before accepting the incvar.var below so that it doesn't fail on an undefined variable
+  std::string var_ident = incvar.var->ident;
+  variable_val_.insert({var_ident, SizedType(Type::integer, 8)});
+
+  incvar.var->accept(*this);
+  Type &type = incvar.var->type.type;
+
+  if (is_final_pass()) {
+    if (type != Type::integer)
+    {
+      err_ << "The " << opstr(incvar) << " operator can not be used on variables of type " << type << std::endl;
+    }
+  }
+
+  incvar.type = SizedType(Type::integer, 8);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
