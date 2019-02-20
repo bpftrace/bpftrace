@@ -146,7 +146,7 @@ static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname
 
   const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
   if (kpath_env)
-    return {kpath_env, kpath_env};
+    return std::make_tuple(kpath_env, kpath_env);
 
   std::string kdir = std::string("/lib/modules/") + utsname.release;
   auto ksrc = kdir + "/source";
@@ -160,7 +160,7 @@ static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname
 	  kobj = "";
   }
   if (ksrc == "" && kobj == "") {
-	  return {"", ""};
+	  return std::make_tuple("", "");
   }
   if (ksrc == "") {
 	  ksrc = kobj;
@@ -169,7 +169,7 @@ static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname
 	  kobj = ksrc;
   }
 
-  return {ksrc, kobj};
+  return std::make_tuple(ksrc, kobj);
 }
 
 void ClangParser::parse(ast::Program *program, StructMap &structs)
