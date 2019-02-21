@@ -124,7 +124,6 @@ std::string opstr(Binop &binop)
   }
 }
 
-// FIXME not DRY
 std::string opstr(IncrementMap &incmap)
 {
   switch (incmap.op) {

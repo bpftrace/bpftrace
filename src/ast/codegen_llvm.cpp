@@ -817,9 +817,6 @@ void CodegenLLVM::visit(IncrementMap &incmap)
   Value *value, *ref;
   AllocaInst *key = getMapKey(map);
 
-  // FIXME if this works can i just visit the map? it seems to do just this
-
-  //value = b_.CreateLoad(key);
   value = b_.CreateMapLookupElem(map, key);
 
   if (map.type.type == Type::integer)
@@ -876,8 +873,6 @@ void CodegenLLVM::visit(IncrementVariable &incvar)
         abort();
     }
 
-    // Figure out the IR to store the value back at the address where we found it, check other examples for how to do this
-    // also see how this is done for assignments
     b_.CreateStore(expr_, variables_[var.ident]);
   }
   else
