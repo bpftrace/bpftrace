@@ -503,13 +503,46 @@ void SemanticAnalyser::visit(Binop &binop)
   binop.type = SizedType(Type::integer, 8);
 }
 
+void SemanticAnalyser::visit(IncrementMap &incmap)
+{
+
+  // Initialize so that in can be used implicitly
+  std::string map_ident = incmap.map->ident;
+  auto search = map_val_.find(map_ident);
+  if (search == map_val_.end()) {
+    map_val_.insert({map_ident, SizedType(Type::integer, 8)});
+    if (map_val_[map_ident].type == Type::integer) {
+      // Store all integer values as 64-bit in maps, so that there will
+      // be space for any integer to be assigned to the map later
+      map_val_[map_ident].size = 8;
+    }
+  }
+
+  incmap.map->accept(*this);
+  Type &type = incmap.map->type.type;
+
+  if (is_final_pass()) {
+    if (type != Type::integer)
+    {
+      err_ << "The " << opstr(incmap) << " operator can not be used on maps of type " << type << std::endl;
+    }
+  }
+
+  incmap.type = SizedType(Type::integer, 8);
+}
+
 void SemanticAnalyser::visit(IncrementVariable &incvar)
 {
-  // FIXME don't do this unconditionally and do it more safely
-  // note that it *must* come before accepting the incvar.var below so that it doesn't fail on an undefined variable
-  std::string var_ident = incvar.var->ident;
-  variable_val_.insert({var_ident, SizedType(Type::integer, 8)});
 
+  // Initialize if not yet created
+  std::string var_ident = incvar.var->ident;
+  auto search = variable_val_.find(var_ident);
+  if (search == variable_val_.end()) {
+    std::string var_ident = incvar.var->ident;
+    variable_val_.insert({var_ident, SizedType(Type::integer, 8)});
+  }
+
+  // Must accept variable *after* we initialize it if it's not
   incvar.var->accept(*this);
   Type &type = incvar.var->type.type;
 

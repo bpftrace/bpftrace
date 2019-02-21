@@ -39,6 +39,9 @@ public:
     binop.left->accept(*this);
     binop.right->accept(*this);
   };
+  void visit(IncrementMap &incmap) override {
+    incmap.map->accept(*this);
+  };
   void visit(IncrementVariable &incvar) override {
     incvar.var->accept(*this);
   };
