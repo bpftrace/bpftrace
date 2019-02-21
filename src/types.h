@@ -35,30 +35,40 @@ enum class Type
   probe,
   username,
   inet,
+  stack_mode,
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
+
+enum class StackMode
+{
+  bpftrace,
+  perf,
+};
+
+struct StackType
+{
+  size_t limit = DEFAULT_STACK_SIZE;
+  StackMode mode = StackMode::bpftrace;
+
+  bool operator ==(const StackType &obj) const {
+    return limit == obj.limit && mode == obj.mode;
+  }
+};
 
 class SizedType
 {
 public:
   SizedType() : type(Type::none), size(0) { }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
-    : type(type), cast_type(cast_type) {
-    switch (type) {
-      case Type::ustack:
-      case Type::kstack:
-        stack_size = size_;
-        size = 8;
-        break;
-      default:
-        size = size_;
-        break;
-    }
+    : type(type), size(size_), cast_type(cast_type) { }
+  SizedType(Type type, StackType stack_type_)
+    : SizedType(type, 8) {
+    stack_type = stack_type_;
   }
   Type type;
   size_t size;
-  size_t stack_size = DEFAULT_STACK_SIZE;
+  StackType stack_type;
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
@@ -145,3 +155,23 @@ enum class AsyncAction
 uint64_t asyncactionint(AsyncAction a);
 
 } // namespace bpftrace
+
+
+namespace std {
+template<>
+struct hash<bpftrace::StackType>
+{
+  size_t operator()(const bpftrace::StackType& obj) const
+  {
+    switch (obj.mode) {
+      case bpftrace::StackMode::bpftrace:
+	return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
+      case bpftrace::StackMode::perf:
+	return std::hash<std::string>()("perf#" + to_string(obj.limit));
+      // TODO (mmarchini): enable -Wswitch-enum and disable -Wswitch-default
+      default:
+        abort();
+    }
+  }
+};
+}

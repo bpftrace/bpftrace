@@ -22,6 +22,7 @@ public:
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
+  void visit(StackMode &mode) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;
@@ -63,13 +64,15 @@ private:
   bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
   bool check_alpha_numeric(const Call &call, int arg_num);
 
+  void check_stack_call(Call &call, Type type);
+
   Probe *probe_;
   Call *call_;
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   std::map<std::string, ExpressionList> map_args_;
-  std::unordered_set<size_t> needs_stackid_maps_;
+  std::unordered_set<StackType> needs_stackid_maps_;
   bool needs_join_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;

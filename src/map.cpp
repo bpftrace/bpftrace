@@ -71,7 +71,7 @@ Map::Map(const SizedType &type) {
 #endif
   type_ = type;
   int key_size = 4;
-  int value_size = sizeof(uintptr_t) * type.stack_size;
+  int value_size = sizeof(uintptr_t) * type.stack_type.limit;
   std::string name = "stack";
   int max_entries = 4096;
   int flags = 0;
@@ -83,7 +83,7 @@ Map::Map(const SizedType &type) {
     std::cerr << "Error creating stack id map" << std::endl;
     // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
     std::cerr << "This might have happened because kernel.perf_event_max_stack"
-      << "is smaller than " << type.stack_size
+      << "is smaller than " << type.stack_type.limit
       << ". Try to tweak this value with"
       << "sysctl kernel.perf_event_max_stack=<new value>" << std::endl;
   }

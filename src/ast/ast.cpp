@@ -13,6 +13,10 @@ void String::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void StackMode::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Builtin::accept(Visitor &v) {
   v.visit(*this);
 }

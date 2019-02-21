@@ -55,6 +55,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class StackMode : public Expression {
+public:
+  explicit StackMode(std::string mode) : mode(mode) {}
+  std::string mode;
+
+  void accept(Visitor &v) override;
+};
+
 class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {}
@@ -298,6 +306,7 @@ public:
   virtual void visit(PositionalParameter &integer) = 0;
   virtual void visit(String &string) = 0;
   virtual void visit(Builtin &builtin) = 0;
+  virtual void visit(StackMode &mode) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Map &map) = 0;
   virtual void visit(Variable &var) = 0;

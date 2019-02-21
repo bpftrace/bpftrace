@@ -45,6 +45,19 @@ void SemanticAnalyser::visit(String &string)
   string.type = SizedType(Type::string, STRING_SIZE);
 }
 
+void SemanticAnalyser::visit(StackMode &mode)
+{
+  mode.type = SizedType(Type::stack_mode, 0);
+  if (mode.mode == "bpftrace") {
+    mode.type.stack_type.mode = bpftrace::StackMode::bpftrace;
+  } else if (mode.mode == "perf") {
+    mode.type.stack_type.mode = bpftrace::StackMode::perf;
+  } else {
+    mode.type = SizedType(Type::none, 0);
+    err_ << "Unknown stack mode: '" << mode.mode << "'" << std::endl;
+  }
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs" ||
@@ -67,12 +80,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   }
   else if (builtin.ident == "kstack") {
-    builtin.type = SizedType(Type::kstack, DEFAULT_STACK_SIZE);
-    needs_stackid_maps_.insert(builtin.type.stack_size);
+    builtin.type = SizedType(Type::kstack, StackType());
+    needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "ustack") {
-    builtin.type = SizedType(Type::ustack, DEFAULT_STACK_SIZE);
-    needs_stackid_maps_.insert(builtin.type.stack_size);
+    builtin.type = SizedType(Type::ustack, StackType());
+    needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "comm") {
     builtin.type = SizedType(Type::string, COMM_SIZE);
@@ -385,36 +398,54 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "kstack") {
-    if (check_varargs(call, 0, 1)) {
-      unsigned int limit = DEFAULT_STACK_SIZE;
-      if (call.vargs && call.vargs->size() == 1) {
-        check_arg(call, Type::integer, 0, true);
-        auto &limit_arg = *call.vargs->at(0);
-        limit = static_cast<Integer&>(limit_arg).n;
-      }
-      if (limit > MAX_STACK_SIZE)
-        err_ << call.func << "([int limit]): limit shouldn't exceed " << MAX_STACK_SIZE << std::endl;
-      call.type = SizedType(Type::kstack, limit);
-      needs_stackid_maps_.insert(limit);
-    }
+    check_stack_call(call, Type::kstack);
   }
   else if (call.func == "ustack") {
-    if (check_varargs(call, 0, 1)) {
-      unsigned int limit = DEFAULT_STACK_SIZE;
-      if (call.vargs && call.vargs->size() == 1) {
-        check_arg(call, Type::integer, 0, true);
-        auto &limit_arg = *call.vargs->at(0);
-        limit = static_cast<Integer&>(limit_arg).n;
-      }
-      if (limit > MAX_STACK_SIZE)
-        err_ << call.func << "([int limit]): limit shouldn't exceed " << MAX_STACK_SIZE << std::endl;
-      call.type = SizedType(Type::ustack, limit);
-      needs_stackid_maps_.insert(limit);
-    }
+    check_stack_call(call, Type::ustack);
   }
   else {
     err_ << "Unknown function: '" << call.func << "'" << std::endl;
     call.type = SizedType(Type::none, 0);
+  }
+}
+
+void SemanticAnalyser::check_stack_call(Call &call, Type type) {
+  call.type = SizedType(type, StackType());
+  if (check_varargs(call, 0, 2) && is_final_pass()) {
+    StackType stack_type;
+    if (call.vargs) {
+      switch (call.vargs->size()) {
+        case 0: break;
+        case 1: {
+          auto &arg = *call.vargs->at(0);
+          if (is_final_pass() && arg.type.type != Type::stack_mode) {
+            check_arg(call, Type::integer, 0, true);
+            stack_type.limit = static_cast<Integer&>(arg).n;
+          } else {
+            check_arg(call, Type::stack_mode, 0, false);
+            stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
+          }
+          break;
+        }
+        case 2: {
+          check_arg(call, Type::stack_mode, 0, false);
+          auto &mode_arg = *call.vargs->at(0);
+          stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
+
+          check_arg(call, Type::integer, 1, true);
+          auto &limit_arg = *call.vargs->at(1);
+          stack_type.limit = static_cast<Integer&>(limit_arg).n;
+          break;
+        }
+        default:
+          err_ << "Invalid number of arguments" << std::endl;
+          break;
+      }
+    }
+    if (stack_type.limit > MAX_STACK_SIZE)
+      err_ << call.func << "([int limit]): limit shouldn't exceed " << MAX_STACK_SIZE << ", " << stack_type.limit << " given" << std::endl;
+    call.type = SizedType(type, stack_type);
+    needs_stackid_maps_.insert(stack_type);
   }
 }
 
@@ -1001,13 +1032,13 @@ int SemanticAnalyser::create_maps(bool debug)
     }
   }
 
-  for (size_t limit : needs_stackid_maps_) {
+  for (StackType stack_type : needs_stackid_maps_) {
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
     if (debug)
-      bpftrace_.stackid_maps_[limit] = std::make_unique<bpftrace::FakeMap>(SizedType(Type::kstack, limit));
+      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::FakeMap>(SizedType(Type::kstack, stack_type));
     else
-      bpftrace_.stackid_maps_[limit] = std::make_unique<bpftrace::Map>(SizedType(Type::kstack, limit));
+      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::Map>(SizedType(Type::kstack, stack_type));
   }
 
   if (debug)

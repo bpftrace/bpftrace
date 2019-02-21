@@ -493,9 +493,10 @@ CallInst *IRBuilderBPF::CreateGetRandom()
   return CreateCall(getrandom_func, {}, "get_random");
 }
 
-CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, size_t limit)
+CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stack_type)
 {
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[limit]->mapfd_);
+  assert(bpftrace_.stackid_maps_.count(stack_type) == 1);
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[stack_type]->mapfd_);
 
   int flags = 0;
   if (ustack)

@@ -16,6 +16,7 @@ public:
   void visit(__attribute__((unused)) Integer &integer) override { };  // Leaf
   void visit(__attribute__((unused)) PositionalParameter &integer) override { };  // Leaf
   void visit(__attribute__((unused)) String &string) override { };  // Leaf
+  void visit(__attribute__((unused)) StackMode &mode) override { };  // Leaf
   void visit(Builtin &builtin) override {  // Leaf
     if (builtin.ident == "args")
       probe_->need_tp_args_structs = true;
