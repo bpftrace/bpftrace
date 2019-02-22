@@ -26,6 +26,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [6. `? :`: ternary operators](#6---ternary-operators)
     - [7. `if () {...} else {...}`: if-else statements](#7-if---else--if-else-statements)
     - [8. `unroll () {...}`: unroll](#8-unroll---unroll)
+    - [9. `++ and --`: increment operators](#9--and----increment-operators)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -537,6 +538,41 @@ i: 4
 i: 5
 ^C
 
+```
+
+## 9. `++` and `--`: Increment operators
+
+`++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
+
+Note that variables will be implictly declared and initalized to 0 if not already declared or defined.
+
+Example - variable:
+
+```
+bpftrace -e 'BEGIN { $x++; $x++; printf("x: %d\n", $x); }'
+Attaching 1 probe...
+x: 2
+^C
+```
+
+Example - map:
+
+```
+bpftrace -e 'k:vfs_read { @++ }'
+Attaching 1 probe...
+^C
+
+@: 12807
+```
+
+Example - map with key:
+
+```
+# bpftrace -e 'k:vfs_read { @[probe]++ }'
+Attaching 1 probe...
+^C
+
+@[kprobe:vfs_read]: 13369
 ```
 
 # Probes

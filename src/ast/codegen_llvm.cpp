@@ -809,6 +809,80 @@ void CodegenLLVM::visit(Binop &binop)
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
+void CodegenLLVM::visit(IncrementMap &incmap)
+{
+
+  Map &map = *incmap.map;
+
+  Value *value, *ref;
+  AllocaInst *key = getMapKey(map);
+
+  value = b_.CreateMapLookupElem(map, key);
+
+  if (map.type.type == Type::integer)
+  {
+    // promote int to 64-bit
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+
+    switch (incmap.op) {
+      case bpftrace::Parser::token::PLUSPLUS:   expr_ = b_.CreateAdd  (value, b_.getInt64(1)); break;
+      case bpftrace::Parser::token::MINUSMINUS: expr_ = b_.CreateSub  (value, b_.getInt64(1)); break;
+      default:
+        std::cerr << "missing codegen to increment map for " << opstr(incmap) << std::endl;
+        abort();
+    }
+
+    ref = b_.CreateAllocaBPF(map.type, map.ident + "_ref");
+    b_.CreateStore(expr_, ref);
+
+    b_.CreateMapUpdateElem(map, key, ref);
+    b_.CreateLifetimeEnd(key);
+
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+  }
+  else
+  {
+    std::cerr << "missing codegen to increment map \"" << opstr(incmap) << "\" for this type" << std::endl;
+    abort();
+  }
+}
+
+void CodegenLLVM::visit(IncrementVariable &incvar)
+{
+  Variable &var = *incvar.var;
+
+  if (variables_.find(var.ident) == variables_.end())
+  {
+    AllocaInst *val = b_.CreateAllocaBPFInit(var.type, var.ident);
+    variables_[var.ident] = val;
+  }
+
+  if (var.type.type == Type::integer)
+  {
+    Value *value;
+    expr_ = b_.CreateLoad(variables_[var.ident]);
+    value = expr_;
+    // promote int to 64-bit
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+
+    switch (incvar.op) {
+      case bpftrace::Parser::token::PLUSPLUS:   expr_ = b_.CreateAdd  (value, b_.getInt64(1)); break;
+      case bpftrace::Parser::token::MINUSMINUS: expr_ = b_.CreateSub  (value, b_.getInt64(1)); break;
+      default:
+        std::cerr << "missing codegen to increment variable for " << opstr(incvar) << std::endl;
+        abort();
+    }
+
+    b_.CreateStore(expr_, variables_[var.ident]);
+  }
+  else
+  {
+    std::cerr << "missing codegen to increment variable \"" << opstr(incvar) << "\" for this type" << std::endl;
+    abort();
+  }
+  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+}
+
 void CodegenLLVM::visit(Unop &unop)
 {
   unop.expr->accept(*this);
