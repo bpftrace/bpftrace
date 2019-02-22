@@ -825,7 +825,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   {
     int value_size = map.type_.size;
     if (map.type_.type == Type::count || map.type_.type == Type::sum ||
-        map.type_.type == Type::min || map.type_.type == Type::max)
+        map.type_.type == Type::min || map.type_.type == Type::max || map.type_.type == Type::integer)
       value_size *= ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
@@ -840,7 +840,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     old_key = key;
   }
 
-  if (map.type_.type == Type::count || map.type_.type == Type::sum)
+  if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
@@ -897,7 +897,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       std::cout << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
     else if (map.type_.type == Type::string)
       std::cout << value.data() << std::endl;
-    else if (map.type_.type == Type::count || map.type_.type == Type::sum)
+    else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
       std::cout << reduce_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::min)
       std::cout << min_value(value, ncpus_) / div << std::endl;
