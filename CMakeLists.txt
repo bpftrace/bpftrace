@@ -33,10 +33,10 @@ endif()
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
 
 find_package(LibBcc REQUIRED)
-include_directories(${LIBBCC_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibElf REQUIRED)
-include_directories(${LIBELF_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
@@ -65,11 +65,11 @@ check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE 
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
 find_package(LLVM REQUIRED)
-include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 find_package(Clang REQUIRED)
-include_directories(${CLANG_INCLUDE_DIRS})
+include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
