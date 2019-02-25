@@ -60,6 +60,9 @@ public:
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
   int clear_map_ident(const std::string &ident);
   int zero_map_ident(const std::string &ident);
+  inline int next_probe_id() {
+    return next_probe_id_++;
+  };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
@@ -110,6 +113,7 @@ private:
   int online_cpus_;
   std::vector<int> child_pids_;
   std::vector<std::string> params_;
+  int next_probe_id_ = 0;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();
