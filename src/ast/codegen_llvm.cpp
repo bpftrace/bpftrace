@@ -150,10 +150,15 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "probe")
   {
-    static int probe_id = 0;
-    bpftrace_.probe_ids_.push_back(probefull_);
-    builtin.probe_id = probe_id;
-    probe_id++;
+    auto begin = bpftrace_.probe_ids_.begin();
+    auto end = bpftrace_.probe_ids_.end();
+    auto found = std::find(begin, end, probefull_);
+    if (found == end) {
+      bpftrace_.probe_ids_.push_back(probefull_);
+      builtin.probe_id = bpftrace_.next_probe_id();
+    } else {
+      builtin.probe_id = std::distance(begin, found);
+    }
     expr_ = b_.getInt64(builtin.probe_id);
   }
   else if (builtin.ident == "args")
