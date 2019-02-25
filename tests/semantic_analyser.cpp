@@ -174,6 +174,76 @@ TEST(semantic_analyser, mismatched_call_types)
   test("kprobe:f { @x = 1; @x = hist(0); }", 1);
 }
 
+TEST(semantic_analyser, compound_left)
+{
+  test("kprobe:f { $a <<= 0 }", 1);
+  test("kprobe:f { $a = 0; $a <<= 1 }", 0);
+  test("kprobe:f { @a <<= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_right)
+{
+  test("kprobe:f { $a >>= 0 }", 1);
+  test("kprobe:f { $a = 0; $a >>= 1 }", 0);
+  test("kprobe:f { @a >>= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_plus)
+{
+  test("kprobe:f { $a += 0 }", 1);
+  test("kprobe:f { $a = 0; $a += 1 }", 0);
+  test("kprobe:f { @a += 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_minus)
+{
+  test("kprobe:f { $a -= 0 }", 1);
+  test("kprobe:f { $a = 0; $a -= 1 }", 0);
+  test("kprobe:f { @a -= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_mul)
+{
+  test("kprobe:f { $a *= 0 }", 1);
+  test("kprobe:f { $a = 0; $a *= 1 }", 0);
+  test("kprobe:f { @a *= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_div)
+{
+  test("kprobe:f { $a /= 0 }", 1);
+  test("kprobe:f { $a = 0; $a /= 1 }", 0);
+  test("kprobe:f { @a /= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_mod)
+{
+  test("kprobe:f { $a %= 0 }", 1);
+  test("kprobe:f { $a = 0; $a %= 1 }", 0);
+  test("kprobe:f { @a %= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_band)
+{
+  test("kprobe:f { $a &= 0 }", 1);
+  test("kprobe:f { $a = 0; $a &= 1 }", 0);
+  test("kprobe:f { @a &= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_bor)
+{
+  test("kprobe:f { $a |= 0 }", 1);
+  test("kprobe:f { $a = 0; $a |= 1 }", 0);
+  test("kprobe:f { @a |= 1 }", 0);
+}
+
+TEST(semantic_analyser, compound_bxor)
+{
+  test("kprobe:f { $a ^= 0 }", 1);
+  test("kprobe:f { $a = 0; $a ^= 1 }", 0);
+  test("kprobe:f { @a ^= 1 }", 0);
+}
+
 TEST(semantic_analyser, call_hist)
 {
   test("kprobe:f { @x = hist(1); }", 0);

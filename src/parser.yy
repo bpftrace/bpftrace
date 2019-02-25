@@ -60,6 +60,18 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LOR        "||"
   PLUS       "+"
   PLUSPLUS   "++"
+
+  LEFTASSIGN   "<<="
+  RIGHTASSIGN  ">>="
+  PLUSASSIGN  "+="
+  MINUSASSIGN "-="
+  MULASSIGN   "*="
+  DIVASSIGN   "/="
+  MODASSIGN   "%="
+  BANDASSIGN  "&="
+  BORASSIGN   "|="
+  BXORASSIGN  "^="
+
   MINUS      "-"
   MINUSMINUS "--"
   DOLLAR     "$"
@@ -96,7 +108,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
 %type <ast::StatementList *> block stmts
-%type <ast::Statement *> block_stmt stmt semicolon_ended_stmt
+%type <ast::Statement *> block_stmt stmt semicolon_ended_stmt compound_assignment
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
@@ -191,14 +203,37 @@ block_stmt : IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
            | UNROLL "(" INT ")" block { $$ = new ast::Unroll($3, $5); }
            ;
 
-stmt : expr         { $$ = new ast::ExprStatement($1); }
-     | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
-     | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
-     | map PLUSPLUS    { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
-     | map MINUSMINUS  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
-     | var PLUSPLUS    { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
-     | var MINUSMINUS  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
+stmt : expr                { $$ = new ast::ExprStatement($1); }
+     | compound_assignment { $$ = $1; }
+     | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3); }
+     | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3); }
+     | map PLUSPLUS        { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
+     | map MINUSMINUS      { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
+     | var PLUSPLUS        { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
+     | var MINUSMINUS      { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
      ;
+
+compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::LEFT,  $3)); }
+                    | var LEFTASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::LEFT,  $3)); }
+                    | map RIGHTASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::RIGHT,   $3)); }
+                    | var RIGHTASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::RIGHT,   $3)); }
+                    | map PLUSASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  $3)); }
+                    | var PLUSASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  $3)); }
+                    | map MINUSASSIGN expr { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, $3)); }
+                    | var MINUSASSIGN expr { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, $3)); }
+                    | map MULASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MUL,   $3)); }
+                    | var MULASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MUL,   $3)); }
+                    | map DIVASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::DIV,   $3)); }
+                    | var DIVASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::DIV,   $3)); }
+                    | map MODASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MOD,   $3)); }
+                    | var MODASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MOD,   $3)); }
+                    | map BANDASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BAND,  $3)); }
+                    | var BANDASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BAND,  $3)); }
+                    | map BORASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BOR,   $3)); }
+                    | var BORASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BOR,   $3)); }
+                    | map BXORASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BXOR,  $3)); }
+                    | var BXORASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BXOR,  $3)); }
+                    ;
 
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
