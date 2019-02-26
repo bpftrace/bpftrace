@@ -1241,14 +1241,12 @@ void CodegenLLVM::visit(Probe &probe)
     BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
     b_.SetInsertPoint(entry);
 
-    variables_.clear(); // make sure variables are local to the probe
-
     ctx_ = func->arg_begin();
 
     if (probe.pred) {
       probe.pred->accept(*this);
     }
-
+    variables_.clear();
     for (Statement *stmt : *probe.stmts) {
       stmt->accept(*this);
     }
@@ -1308,6 +1306,7 @@ void CodegenLLVM::visit(Probe &probe)
         if (probe.pred) {
           probe.pred->accept(*this);
         }
+        variables_.clear();
         for (Statement *stmt : *probe.stmts) {
           stmt->accept(*this);
         }
