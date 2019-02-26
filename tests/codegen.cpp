@@ -81,3 +81,4 @@
 #include "codegen/ternary_str.cpp"
 #include "codegen/unroll.cpp"
 #include "codegen/variable.cpp"
+#include "codegen/variable_undeclared.cpp"

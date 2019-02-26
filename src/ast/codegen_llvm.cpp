@@ -714,6 +714,12 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
+  if (variables_.count(var.ident) == 0)
+  {
+    AllocaInst *val = b_.CreateAllocaBPFInit(var.type, var.ident);
+    variables_[var.ident] = val;
+  }
+
   if (!var.type.IsArray())
   {
     expr_ = b_.CreateLoad(variables_[var.ident]);
