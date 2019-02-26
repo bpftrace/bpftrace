@@ -128,7 +128,7 @@ std::string is_deprecated(std::string &str)
       if (item->show_warning)
       {
         std::cerr << "warning: " << item->old_name << " is deprecated and will be removed in the future. ";
-        std::cerr << "Use " << item->new_name << "instead." << std::endl;
+        std::cerr << "Use " << item->new_name << " instead." << std::endl;
         item->show_warning = false;
       }
 
