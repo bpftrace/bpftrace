@@ -113,18 +113,35 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::username, 8);
   }
   else if (builtin.ident == "args") {
-    if (probe_->attach_points->size() > 1)
-      err_ << "The args builtin only works for probes with 1 attach point" << std::endl;
-    auto &attach_point = probe_->attach_points->at(0);
-    ProbeType type = probetype(attach_point->provider);
-    if (type != ProbeType::tracepoint)
-      err_ << "The args builtin can only be used with tracepoint probes"
-           << "(" << attach_point->provider << " used here)" << std::endl;
+    probe_->need_expansion = true;
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type != ProbeType::tracepoint)
+        err_ << "The args builtin can only be used with tracepoint probes"
+             << "(" << attach_point->provider << " used here)" << std::endl;
 
-    std::string tracepoint_struct = TracepointFormatParser::get_struct_name(attach_point->target, attach_point->func);
-    Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-    builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
-    builtin.type.is_pointer = true;
+      /*
+       * tracepoint wildcard expansion, part 2 of 3. This:
+       * 1. expands the wildcard, then sets args to be the first matched probe.
+       *    This is so that enough of the type information is available to
+       *    survive the later semantic analyser checks.
+       * 2. sets is_tparg so that codegen does the real type setting after
+       *    expansion.
+       */
+      std::set<std::string> matches;
+      matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                attach_point->func,
+                                                "/sys/kernel/debug/tracing/available_events");
+      for (auto &match : matches) {
+        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(attach_point->target, match);
+        Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
+        builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
+        builtin.type.is_pointer = true;
+        builtin.type.is_tparg = true;
+        break;
+      }
+    }
   }
   else {
     builtin.type = SizedType(Type::none, 0);
@@ -577,6 +594,7 @@ void SemanticAnalyser::visit(Unop &unop)
         }
         int cast_size = bpftrace_.structs_[type.cast_type].size;
         unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+        unop.type.is_tparg = type.is_tparg;
       }
       else {
         err_ << "Can not dereference struct/union of type '" << type.cast_type << "'. "
@@ -672,14 +690,37 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  auto fields = bpftrace_.structs_[type.cast_type].fields;
-  if (fields.count(acc.field) == 0) {
-    err_ << "Struct/union of type '" << type.cast_type << "' does not contain "
-         << "a field named '" << acc.field << "'" << std::endl;
+  std::map<std::string, FieldsMap> structs;
+
+  if (type.is_tparg) {
+    for (AttachPoint *attach_point : *probe_->attach_points) {
+      assert(probetype(attach_point->provider) == ProbeType::tracepoint);
+
+      std::set<std::string> matches = bpftrace_.find_wildcard_matches(
+          attach_point->target, attach_point->func,
+          "/sys/kernel/debug/tracing/available_events");
+      for (auto &match : matches) {
+        std::string tracepoint_struct =
+            TracepointFormatParser::get_struct_name(attach_point->target,
+                                                    match);
+        structs[tracepoint_struct] = bpftrace_.structs_[tracepoint_struct].fields;
+      }
+    }
+  } else {
+    structs[type.cast_type] = bpftrace_.structs_[type.cast_type].fields;
   }
-  else {
-    acc.type = fields[acc.field].type;
-    acc.type.is_internal = type.is_internal;
+
+  for (auto it : structs) {
+    std::string cast_type = it.first;
+    FieldsMap fields = it.second;
+    if (fields.count(acc.field) == 0) {
+      err_ << "Struct/union of type '" << cast_type << "' does not contain "
+          << "a field named '" << acc.field << "'" << std::endl;
+    }
+    else {
+      acc.type = fields[acc.field].type;
+      acc.type.is_internal = type.is_internal;
+    }
   }
 }
 

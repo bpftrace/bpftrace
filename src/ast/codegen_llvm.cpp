@@ -5,6 +5,7 @@
 #include "arch/arch.h"
 #include "types.h"
 #include <time.h>
+#include "tracepoint_format_parser.h"
 
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
@@ -977,7 +978,14 @@ void CodegenLLVM::visit(FieldAccess &acc)
   assert(type.type == Type::cast);
   acc.expr->accept(*this);
 
-  auto &field = bpftrace_.structs_[type.cast_type].fields[acc.field];
+  std::string cast_type = type.is_tparg ? tracepoint_struct_ : type.cast_type;
+  Struct &cstruct = bpftrace_.structs_[cast_type];
+
+  type = SizedType(type);
+  type.size = cstruct.size;
+  type.cast_type = cast_type;
+
+  auto &field = cstruct.fields[acc.field];
 
   if (type.is_internal)
   {
@@ -1292,10 +1300,14 @@ void CodegenLLVM::visit(Probe &probe)
                     << attach_point->provider << "'" << std::endl;
           return;
       }
+      tracepoint_struct_ = "";
       for (auto &match : matches) {
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;
         probefull_ = attach_point->name(match);
+        // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use by args builtin.
+        if (probetype(attach_point->provider) == ProbeType::tracepoint)
+          tracepoint_struct_ = TracepointFormatParser::get_struct_name(attach_point->target, match);
         int index = getNextIndexForProbe(probe.name());
         attach_point->set_index(match, index);
         Function *func = Function::Create(func_type, Function::ExternalLinkage, probefull_, module_.get());

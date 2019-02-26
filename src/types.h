@@ -62,6 +62,7 @@ public:
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
+  bool is_tparg = false;
   size_t pointee_size;
 
   bool IsArray() const;
