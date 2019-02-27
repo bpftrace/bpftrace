@@ -31,6 +31,12 @@ void Printer::visit(String &string)
   out_ << indent << "string: " << str << std::endl;
 }
 
+void Printer::visit(StackMode &mode)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "stack_mode: " << mode.mode << std::endl;
+}
+
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');

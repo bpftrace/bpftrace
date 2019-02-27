@@ -74,9 +74,9 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       }
       break;
     case Type::kstack:
-      return bpftrace.get_stack(*(const uint64_t*)data, false, arg.stack_size, 4);
+      return bpftrace.get_stack(*(const uint64_t*)data, false, arg.stack_type, 4);
     case Type::ustack:
-      return bpftrace.get_stack(*(const uint64_t*)data, true, arg.stack_size, 4);
+      return bpftrace.get_stack(*(const uint64_t*)data, true, arg.stack_type, 4);
     case Type::ksym:
       return bpftrace.resolve_ksym(*(const uint64_t*)data);
     case Type::usym:

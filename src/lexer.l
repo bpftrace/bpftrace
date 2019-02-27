@@ -51,6 +51,8 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 
 pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|retval|func|probe|curtask|rand|ctx|username|args|elapsed {
                           return Parser::make_BUILTIN(yytext, loc); }
+bpftrace|perf {
+                          return Parser::make_STACK_MODE(yytext, loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }

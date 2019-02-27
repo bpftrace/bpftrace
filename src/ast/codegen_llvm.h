@@ -31,6 +31,7 @@ public:
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
   void visit(Builtin &builtin) override;
+  void visit(StackMode &) override { };
   void visit(Call &call) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;

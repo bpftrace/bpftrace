@@ -84,6 +84,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <long> INT "integer"
+%token <std::string> STACK_MODE "stack_mode"
 %nonassoc <std::string> IF "if"
 %nonassoc <std::string> ELSE "else"
 %nonassoc <std::string> UNROLL "unroll"
@@ -198,6 +199,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
      | BUILTIN         { $$ = new ast::Builtin($1); }
+     | STACK_MODE      { $$ = new ast::StackMode($1); }
      | ternary         { $$ = $1; }
      | param           { $$ = $1; }
      | map             { $$ = $1; }

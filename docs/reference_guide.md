@@ -910,7 +910,7 @@ Attaching 1 probe...
 Syntax:
 
 ```
-interval:hz:rate
+interval:ms:rate
 interval:s:rate
 ```
 
@@ -1365,8 +1365,8 @@ Tracing block I/O sizes > 0 bytes
 - `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace
 - `cgroupid(char *path)` - Resolve cgroup ID
-- `kstack([int level])` - Kernel stack trace
-- `ustack([int level])` - User stack trace
+- `kstack([StackMode mode, ][int level])` - Kernel stack trace
+- `ustack([StackMode mode, ][int level])` - User stack trace
 - `ntop(int af, int addr)` - Convert IP address data to text
 
 Some of these are asynchronous: the kernel queues the event, but some time
@@ -1651,7 +1651,7 @@ curl 169.254.0.1
 
 ## 15. `kstack()`: Stack Traces, Kernel
 
-Syntax: `kstack([int limit])`
+Syntax: `kstack([StackMode mode, ][int limit])`
 
 These are implemented using BPF stack maps.
 
@@ -1717,6 +1717,38 @@ Attaching 1 probe...
     ip_output+1
     tcp_transmit_skb+1308
     tcp_write_xmit+482
+]: 22186
+```
+
+You can also choose a different output format. Available formats are `bpftrace`
+and `perf`:
+
+```
+# bpftrace -e 'kprobe:do_mmap { @[kstack(perf)] = count(); }'
+Attaching 1 probe...
+[...]
+@[
+	ffffffffb4019501 do_mmap+1
+	ffffffffb401700a sys_mmap_pgoff+266
+	ffffffffb3e334eb sys_mmap+27
+	ffffffffb3e03ae3 do_syscall_64+115
+	ffffffffb4800081 entry_SYSCALL_64_after_hwframe+61
+
+]: 22186
+```
+
+It's also possible to use a different output format and limit the number of
+frames:
+
+```
+# bpftrace -e 'kprobe:do_mmap { @[kstack(perf, 3)] = count(); }'
+Attaching 1 probe...
+[...]
+@[
+	ffffffffb4019501 do_mmap+1
+	ffffffffb401700a sys_mmap_pgoff+266
+	ffffffffb3e334eb sys_mmap+27
+
 ]: 22186
 ```
 
@@ -1810,7 +1842,38 @@ Attaching 1 probe...
 ]: 27
 ```
 
-Note that for this example to work, bash had to be recompiled with frame pointers.
+You can also choose a different output format. Available formats are `bpftrace`
+and `perf`:
+
+```
+# bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(perf)); }'
+Attaching 1 probe...
+
+	5649feec4090 readline+0 (/home/mmarchini/bash/bash/bash)
+	5649fee2bfa6 yy_readline_get+451 (/home/mmarchini/bash/bash/bash)
+	5649fee2bdc6 yy_getc+13 (/home/mmarchini/bash/bash/bash)
+	5649fee2cd36 shell_getc+469 (/home/mmarchini/bash/bash/bash)
+	5649fee2e527 read_token+251 (/home/mmarchini/bash/bash/bash)
+	5649fee2d9e2 yylex+192 (/home/mmarchini/bash/bash/bash)
+	5649fee286fd yyparse+777 (/home/mmarchini/bash/bash/bash)
+	5649fee27dd6 parse_command+54 (/home/mmarchini/bash/bash/bash)
+
+```
+
+It's also possible to use a different output format and limit the number of
+frames:
+
+```
+# bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(perf, 3)); }'
+Attaching 1 probe...
+
+	5649feec4090 readline+0 (/home/mmarchini/bash/bash/bash)
+	5649fee2bfa6 yy_readline_get+451 (/home/mmarchini/bash/bash/bash)
+	5649fee2bdc6 yy_getc+13 (/home/mmarchini/bash/bash/bash)
+```
+
+Note that for these examples to work, bash had to be recompiled with frame
+pointers.
 
 # Map Functions
 

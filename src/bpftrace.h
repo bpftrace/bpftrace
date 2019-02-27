@@ -4,6 +4,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <unordered_map>
 
 #include "ast.h"
 #include "attached_probe.h"
@@ -59,9 +60,9 @@ public:
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
   int clear_map_ident(const std::string &ident);
   int zero_map_ident(const std::string &ident);
-  std::string get_stack(uint64_t stackidpid, bool ustack, size_t limit, int indent=0);
+  std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
-  std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false);
+  std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
   std::string resolve_inet(int af, uint64_t inet);
   std::string resolve_uid(uintptr_t addr);
   uint64_t resolve_kname(const std::string &name);
@@ -81,7 +82,7 @@ public:
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> time_args_;
-  std::map<size_t, std::unique_ptr<IMap>> stackid_maps_;
+  std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;
   std::vector<std::string> probe_ids_;
