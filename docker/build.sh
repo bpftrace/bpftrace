@@ -14,6 +14,7 @@ make "$@"
 
 if [ $RUN_TESTS = 1 ]; then
   set +e
+  mount -t debugfs debugfs /sys/kernel/debug/
   ./tests/bpftrace_test $TEST_ARGS;
   # TODO(mmarchini) re-enable once we figured out how to run it properly on CI
   # make runtime-tests;
