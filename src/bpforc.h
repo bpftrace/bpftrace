@@ -67,8 +67,8 @@ public:
   ModuleHandle addModule(std::unique_ptr<Module> M) {
     // We don't actually care about resolving symbols from other modules
     auto Resolver = createLambdaResolver(
-        [](const std::string &Name) { return JITSymbol(nullptr); },
-        [](const std::string &Name) { return JITSymbol(nullptr); });
+        [](const std::string &) { return JITSymbol(nullptr); },
+        [](const std::string &) { return JITSymbol(nullptr); });
 
     return cantFail(CompileLayer.addModule(std::move(M), std::move(Resolver)));
   }

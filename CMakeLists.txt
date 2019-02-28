@@ -4,7 +4,7 @@ project(bpftrace)
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-add_compile_options("-std=c++17")
+add_compile_options("-std=c++14")
 add_compile_options("-Wno-format-security")
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
@@ -33,10 +33,10 @@ endif()
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
 
 find_package(LibBcc REQUIRED)
-include_directories(${LIBBCC_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
 find_package(LibElf REQUIRED)
-include_directories(${LIBELF_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
@@ -44,6 +44,7 @@ bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc)
 flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
 add_flex_bison_dependency(flex_lexer bison_parser)
 add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
+target_compile_options(parser PRIVATE "-w")
 target_include_directories(parser PUBLIC src src/ast ${CMAKE_BINARY_DIR})
 
 include(CheckSymbolExists)
@@ -65,11 +66,11 @@ check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE 
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
 find_package(LLVM REQUIRED)
-include_directories(${LLVM_INCLUDE_DIRS})
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 find_package(Clang REQUIRED)
-include_directories(${CLANG_INCLUDE_DIRS})
+include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
