@@ -22,7 +22,21 @@
 BEGIN
 {
   printf("Tracing tcp drops. Hit Ctrl-C to end.\n");
-  printf("%-8s %-8s %-16s %-21s %-21s %-8s\n", "TIME", "PID", "COMM", "SADDR:SPORT", "DADDR:DPORT", "STATE")
+  printf("%-8s %-8s %-16s %-21s %-21s %-8s\n", "TIME", "PID", "COMM", "SADDR:SPORT", "DADDR:DPORT", "STATE");
+
+  // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
+  @tcp_states[1] = "ESTABLISHED";
+  @tcp_states[2] = "SYN_SENT";
+  @tcp_states[3] = "SYN_RECV";
+  @tcp_states[4] = "FIN_WAIT1";
+  @tcp_states[5] = "FIN_WAIT2";
+  @tcp_states[6] = "TIME_WAIT";
+  @tcp_states[7] = "CLOSE";
+  @tcp_states[8] = "CLOSE_WAIT";
+  @tcp_states[9] = "LAST_ACK";
+  @tcp_states[10] = "LISTEN";
+  @tcp_states[11] = "CLOSING";
+  @tcp_states[12] = "NEW_SYN_RECV";
 }
 
 kprobe:tcp_drop
@@ -41,25 +55,16 @@ kprobe:tcp_drop
     $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
 
     $state = $sk->__sk_common.skc_state;
-
-    // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
-    $statestr = "";
-    $statestr = $state == 1 ? "ESTABLISHED" : $statestr;
-    $statestr = $state == 2 ? "SYN_SENT" : $statestr;
-    $statestr = $state == 3 ? "SYN_RECV" : $statestr;
-    $statestr = $state == 4 ? "FIN_WAIT1" : $statestr;
-    $statestr = $state == 5 ? "FIN_WAIT2" : $statestr;
-    $statestr = $state == 6 ? "TIME_WAIT" : $statestr;
-    $statestr = $state == 7 ? "CLOSE" : $statestr;
-    $statestr = $state == 8 ? "CLOSE_WAIT" : $statestr;
-    $statestr = $state == 9 ? "LAST_ACK" : $statestr;
-    $statestr = $state == 10 ? "LISTEN" : $statestr;
-    $statestr = $state == 11 ? "CLOSING" : $statestr;
-    $statestr = $state == 12 ? "NEW_SYN_RECV" : $statestr;
+    $statestr = @tcp_states[$state];
 
     time("%H:%M:%S ");
     printf("%-8d %-16s ", pid, comm);
     printf("%14s:%-6d %14s:%-6d %-10s\n", ntop($af_inet, $daddr), $dport, ntop($af_inet, $saddr), $lport, $statestr);
-    printf("%s\n", stack);
+    printf("%s\n", kstack);
   }
+}
+
+END
+{
+  clear(@tcp_states);
 }
