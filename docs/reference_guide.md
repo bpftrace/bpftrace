@@ -544,8 +544,6 @@ i: 5
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
-Note that variables will be implictly declared and initalized to 0 if not already declared or defined.
-
 Example - variable:
 
 ```
@@ -1103,6 +1101,9 @@ slept for 1000 ms
 slept for 1000 ms
 slept for 1000 ms
 ```
+
+Note that scratch variables are local and they will be implictly declared and
+initalized to 0 if used before being declared or defined.
 
 ## 3. `@[]`: Associative Arrays
 
