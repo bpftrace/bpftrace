@@ -776,7 +776,6 @@ void CodegenLLVM::visit(Binop &binop)
         std::cerr << "missing codegen to string operator \"" << opstr(binop) << "\"" << std::endl;
         abort();
     }
-    b_.CreateLifetimeEnd(val);
   }
   else
   {
