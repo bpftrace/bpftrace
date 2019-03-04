@@ -25,15 +25,15 @@ TIMEOUT 5
 
 NAME str
 RUN bpftrace -e 'k:sys_execve { printf("P: %s\n", str(arg0)); exit();}'
-BEFORE sleep 1s && /bin/sh -c 'exit 0' &
-EXPECT P: /bin/sh
+BEFORE sleep 0.1s && /bin/sh -c 'exit 0' &
+EXPECT P: /*.
 TIMEOUT 5
 
 NAME ksym
 RUN bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}'
-EXPECT P: /bin/sh
+EXPECT do_nanosleep
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME system
 RUN bpftrace -e 'i:ms:1 { system("echo 'ok_system'"); exit();}'
@@ -49,52 +49,52 @@ NAME sum
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = sum(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME avg
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME min
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME max
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 TIMEOUT 5
 
 NAME stats
 RUN bpftrace -e 'kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}'
 EXPECT @.*\[.*\]\:\scount\s[0-9]*\,\saverage\s[0-9]*\,\stotal\s[0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME hist
 RUN bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); exit();}'
-EXPECT @bytes:\s\n\n\[.*\,\s.*\]?\)?\s
-BEFORE sleep 1 && sleep 1 &
+EXPECT @bytes:\s\n\n\(?\[?.*
+BEFORE sleep 0.1 && sleep 0.1 &
 TIMEOUT 5
 
 NAME lhist
 RUN bpftrace -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}'
 EXPECT @bytes:\s\n\n\(?\[?.*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME kstack
 RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }'
 EXPECT SUCCESS kstack
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &
 
 NAME ustack
 RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }'
 EXPECT SUCCESS ustack
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 && sleep 0.1 &

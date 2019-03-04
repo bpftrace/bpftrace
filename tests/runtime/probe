@@ -1,32 +1,27 @@
 NAME kprobe
-RUN bpftrace -e 'kprobe:do_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+RUN bpftrace -e 'kprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kprobe [0-9][0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
 
 NAME kprobe_short_name
-RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+RUN bpftrace -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kprobe_short_name [0-9][0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
 
 NAME kprobe_target
 RUN bpftrace -e 'kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT kprobes should not have a target
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
 
 NAME kretprobe
-RUN bpftrace -e 'kretprobe:do_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+RUN bpftrace -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe [0-9][0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
 
 NAME kretprobe_short_name
-RUN bpftrace -e 'kr:do_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+RUN bpftrace -e 'kr:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe_short_name [0-9][0-9]*
 TIMEOUT 5
-BEFORE sleep 1 && sleep 1 &
 
 NAME kretprobe_target
 RUN bpftrace -e 'kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
@@ -37,55 +32,55 @@ NAME uprobe
 RUN bpftrace -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d", arg0); exit();}'
 EXPECT arg0: [0-9]*
 TIMEOUT 5
-BEFORE (sleep 1; /bin/bash -c echo) &
+BEFORE (sleep 0.1; /bin/bash -c echo) &
 
 NAME uretprobe
 RUN bpftrace -e 'uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}'
 EXPECT readline: [0-9]*
 TIMEOUT 5
-BEFORE (sleep 1; /bin/bash -c echo) &
+BEFORE (sleep 0.1; /bin/bash -c echo) &
 
 NAME tracepoint
 RUN bpftrace -e 'tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }'
 EXPECT SUCCESS tracepoint [0-9][0-9]*
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 &
 TIMEOUT 5
 
 NAME tracepoint_short_name
 RUN bpftrace -e 't:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }'
 EXPECT SUCCESS tracepoint_short_name [0-9][0-9]*
-BEFORE sleep 1 && sleep 1 &
+BEFORE sleep 0.1 &
 TIMEOUT 5
 
 NAME profile
-RUN bpftrace -e 'profile:hz:99 { @[tid] = count(); exit();}'
+RUN bpftrace -e 'profile:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
 TIMEOUT 5
 
 NAME profile_short_name
-RUN bpftrace -e 'p:hz:99 { @[tid] = count(); exit();}'
+RUN bpftrace -e 'p:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
 TIMEOUT 5
 
 NAME interval
-RUN bpftrace -e 't:raw_syscalls:sys_enter { @syscalls = count(); } interval:s:1{ print(@syscalls); clear(@syscalls); exit();}'
+RUN bpftrace -e 't:raw_syscalls:sys_enter { @syscalls = count(); } interval:ms:1{ print(@syscalls); clear(@syscalls); exit();}'
 EXPECT @syscalls\:\s[0-9]*
 TIMEOUT 5
 
 NAME interval_short_name
-RUN bpftrace -e 't:raw_syscalls:sys_enter { @syscalls = count(); } i:s:1{ print(@syscalls); clear(@syscalls); exit();}'
+RUN bpftrace -e 't:raw_syscalls:sys_enter { @syscalls = count(); } i:ms:1{ print(@syscalls); clear(@syscalls); exit();}'
 EXPECT @syscalls\:\s[0-9]*
 TIMEOUT 5
 
 NAME software
 RUN bpftrace -e 'software:faults:1 { @[comm] = count(); exit();}'
-BEFORE sleep 2 && sleep 1 &
+BEFORE sleep 2 && sleep 0.1 &
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
 
 NAME hardware
 RUN bpftrace -e 'hardware:cache-misses:10 { @[pid] = count(); exit(); }'
-BEFORE sleep 2 && sleep 1 &
+BEFORE sleep 2 && sleep 0.1 &
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
 

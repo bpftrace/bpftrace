@@ -19,13 +19,13 @@ EXPECT a=hi
 TIMEOUT 5
 
 NAME global_associative_arrays
-RUN bpftrace -e 'k:do_nanosleep { @start[tid] = nsecs; } kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}'
+RUN bpftrace -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}'
 EXPECT slept for [0-9]+ ms
 TIMEOUT 5
 BEFORE (sleep 1; sleep 1) &
 
 NAME scratch
-RUN bpftrace -e 'k:do_nanosleep { @start[tid] = nsecs; } kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }'
+RUN bpftrace -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }'
 EXPECT slept for [0-9]* ms
 TIMEOUT 5
 BEFORE sleep 1 && sleep 1 &
