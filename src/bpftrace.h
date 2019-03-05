@@ -130,12 +130,10 @@ private:
   static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t read_address_from_output(std::string output);
-  static std::string exec_system(const char* cmd);
   static std::string hist_index_label(int power);
   static std::string lhist_index_label(int number);
   static std::vector<std::string> split_string(std::string &str, char split_by);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static std::string resolve_binary_path(const std::string& cmd);
   static int spawn_child(const std::vector<std::string>& args);
   static bool is_pid_alive(int pid);
 };

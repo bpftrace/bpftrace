@@ -844,6 +844,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "uprobes should have a target" << std::endl;
     if (ap.func == "")
       err_ << "uprobes should be attached to a function" << std::endl;
+    ap.target = resolve_binary_path(ap.target);
+    struct stat s;
+    if (stat(ap.target.c_str(), &s) != 0)
+      err_ << "uprobe target file " << ap.target << " does not exist" << std::endl;
   }
   else if (ap.provider == "usdt") {
     if (ap.func == "")
@@ -860,6 +864,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (ap.target == "")
         err_ << "usdt probes must have a target path defined or discovered from a pid" << std::endl;
     }
+    ap.target = resolve_binary_path(ap.target);
     struct stat s;
     if (stat(ap.target.c_str(), &s) != 0)
       err_ << "usdt target file " << ap.target << " does not exist" << std::endl;

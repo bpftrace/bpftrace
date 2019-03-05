@@ -37,5 +37,7 @@ std::vector<std::string> get_kernel_cflags(
     const std::string& ksrc,
     const std::string& kobj);
 std::string is_deprecated(std::string &str);
+std::string exec_system(const char* cmd);
+std::string resolve_binary_path(const std::string& cmd);
 
 } // namespace bpftrace

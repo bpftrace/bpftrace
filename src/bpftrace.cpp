@@ -1215,28 +1215,6 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   return 0;
 }
 
-std::string BPFtrace::resolve_binary_path(const std::string& cmd)
-{
-  std::string query;
-  query += "command -pv ";
-  query += cmd;
-  std::string result = exec_system(query.c_str());
-
-  if (result.size())
-  {
-    // Remove newline at the end
-    auto it = result.rfind('\n');
-    if (it != std::string::npos)
-      result.erase(it);
-
-    return result;
-  }
-  else
-  {
-    return cmd;
-  }
-}
-
 int BPFtrace::spawn_child(const std::vector<std::string>& args)
 {
   static const int maxargs = 256;
@@ -1588,19 +1566,6 @@ std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
 
   const char *call = call_str.c_str();
   return exec_system(call);
-}
-
-std::string BPFtrace::exec_system(const char* cmd)
-{
-  std::array<char, 128> buffer;
-  std::string result;
-  std::shared_ptr<FILE> pipe(popen(cmd, "r"), pclose);
-  if (!pipe) throw std::runtime_error("popen() failed!");
-  while (!feof(pipe.get())) {
-    if (fgets(buffer.data(), 128, pipe.get()) != nullptr)
-      result += buffer.data();
-  }
-  return result;
 }
 
 uint64_t BPFtrace::read_address_from_output(std::string output)
