@@ -8,6 +8,8 @@
 #include <vector>
 #include <string>
 
+#include "bcc_usdt.h"
+
 #include "list.h"
 #include "bpftrace.h"
 
@@ -55,6 +57,14 @@ void list_dir(const std::string path, std::vector<std::string> &files)
     files.push_back(std::string(dep->d_name));
 
   closedir(dp);
+}
+
+typedef std::tuple<std::string, std::string, std::string> usdt_entry;
+static std::vector<usdt_entry> usdt_probes;
+
+void usdt_each(struct bcc_usdt *usdt)
+{
+  usdt_probes.push_back(std::make_tuple(usdt->provider, usdt->name, usdt->bin_path));
 }
 
 void list_probes_from_list(const std::vector<ProbeListItem> &probes_list,
@@ -113,7 +123,7 @@ void print_tracepoint_args(const std::string &category, const std::string &event
   }
 }
 
-void list_probes(const std::string &search_input)
+void list_probes(const std::string &search_input, int pid)
 {
   std::string search = search_input;
 
@@ -145,6 +155,23 @@ void list_probes(const std::string &search_input)
 
   // hardware
   list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
+
+  // usdt
+  if (pid > 0) {
+    void *ctx = bcc_usdt_new_frompid(pid, nullptr);
+    if (ctx == nullptr) {
+      std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
+      return;
+    }
+    bcc_usdt_foreach(ctx, usdt_each);
+    for (const auto &u : usdt_probes) {
+      std::string probe = "usdt:" + std::get<2>(u) + ":" + std::get<1>(u);
+      if (search_probe(probe, re))
+        continue;
+      std::cout << probe << std::endl;
+    }
+    bcc_usdt_close(ctx);
+  }
 
   // tracepoints
   std::vector<std::string> cats = std::vector<std::string>();
@@ -204,12 +231,6 @@ void list_probes(const std::string &search_input)
     std::cout << probe << std::endl;
   }
 
-}
-
-void list_probes()
-{
-  const std::string search = "";
-  list_probes(search);
 }
 
 } // namespace bpftrace

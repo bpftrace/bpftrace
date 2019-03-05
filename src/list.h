@@ -38,7 +38,6 @@ const std::vector<ProbeListItem> HW_PROBE_LIST = {
   { "ref-cycles",          "",         PERF_COUNT_HW_REF_CPU_CYCLES,          1000000 }
 };
 
-void list_probes(const std::string &search);
-void list_probes();
+void list_probes(const std::string &search = "", int pid = 0);
 
 } // namespace bpftrace
