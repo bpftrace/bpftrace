@@ -257,40 +257,59 @@ TEST(Parser, variable_increment)
   test("kprobe:sys_open { $x++; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  ++\n"
-      "   variable: $x\n");
+      "  =\n"
+      "   variable: $x\n"
+      "   +\n"
+      "    variable: $x\n"
+      "    int: 1\n");
   test("kprobe:sys_open { $x--; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  --\n"
-      "   variable: $x\n");
+      "  =\n"
+      "   variable: $x\n"
+      "   -\n"
+      "    variable: $x\n"
+      "    int: 1\n");
 }
 
 TEST(Parser, map_increment)
 {
-
   test("kprobe:sys_open { @++; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  ++\n"
-      "   map: @\n");
+      "  =\n"
+      "   map: @\n"
+      "   +\n"
+      "    map: @\n"
+      "    int: 1\n");
   test("kprobe:sys_open { @--; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  --\n"
-      "   map: @\n");
+      "  =\n"
+      "   map: @\n"
+      "   -\n"
+      "    map: @\n"
+      "    int: 1\n");
   test("kprobe:sys_open { @[probe]++; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  ++\n"
+      "  =\n"
       "   map: @\n"
-      "    builtin: probe\n");
+      "    builtin: probe\n"
+      "   +\n"
+      "    map: @\n"
+      "     builtin: probe\n"
+      "    int: 1\n");
   test("kprobe:sys_open { @[probe]--; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  --\n"
+      "  =\n"
       "   map: @\n"
-      "    builtin: probe\n");
+      "    builtin: probe\n"
+      "   -\n"
+      "    map: @\n"
+      "     builtin: probe\n"
+      "    int: 1\n");
 }
 
 TEST(Parser, bit_shifting)

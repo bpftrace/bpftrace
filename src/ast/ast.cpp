@@ -41,14 +41,6 @@ void Binop::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void IncrementMap::accept(Visitor &v) {
-  v.visit(*this);
-}
-
-void IncrementVariable::accept(Visitor &v) {
-  v.visit(*this);
-}
-
 void Unop::accept(Visitor &v) {
   v.visit(*this);
 }
@@ -124,28 +116,6 @@ std::string opstr(Binop &binop)
     case bpftrace::Parser::token::BXOR:  return "^";
     default:
       std::cerr << "unknown binary operator" << std::endl;
-      abort();
-  }
-}
-
-std::string opstr(IncrementMap &incmap)
-{
-  switch (incmap.op) {
-    case bpftrace::Parser::token::PLUSPLUS: return "++";
-    case bpftrace::Parser::token::MINUSMINUS: return "--";
-    default:
-      std::cerr << "unknown increment operator" << std::endl;
-      abort();
-  }
-}
-
-std::string opstr(IncrementVariable &incvar)
-{
-  switch (incvar.op) {
-    case bpftrace::Parser::token::PLUSPLUS: return "++";
-    case bpftrace::Parser::token::MINUSMINUS: return "--";
-    default:
-      std::cerr << "unknown increment operator" << std::endl;
       abort();
   }
 }

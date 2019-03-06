@@ -19,8 +19,6 @@ public:
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
-  void visit(IncrementMap &incmap) override;
-  void visit(IncrementVariable &incvar) override;
   void visit(Unop &unop) override;
   void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
