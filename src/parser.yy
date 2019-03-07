@@ -194,6 +194,10 @@ block_stmt : IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
 stmt : expr         { $$ = new ast::ExprStatement($1); }
      | map "=" expr { $$ = new ast::AssignMapStatement($1, $3); }
      | var "=" expr { $$ = new ast::AssignVarStatement($1, $3); }
+     | map PLUSPLUS    { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
+     | map MINUSMINUS  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
+     | var PLUSPLUS    { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
+     | var MINUSMINUS  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
      ;
 
 expr : INT             { $$ = new ast::Integer($1); }
@@ -206,10 +210,6 @@ expr : INT             { $$ = new ast::Integer($1); }
      | var             { $$ = $1; }
      | call            { $$ = $1; }
      | "(" expr ")"    { $$ = $2; }
-     | map PLUSPLUS    { $$ = new ast::IncrementMap($1, token::PLUSPLUS); }
-     | map MINUSMINUS  { $$ = new ast::IncrementMap($1, token::MINUSMINUS); }
-     | var PLUSPLUS    { $$ = new ast::IncrementVariable($1, token::PLUSPLUS); }
-     | var MINUSMINUS  { $$ = new ast::IncrementVariable($1, token::MINUSMINUS); }
      | expr EQ expr    { $$ = new ast::Binop($1, token::EQ, $3); }
      | expr NE expr    { $$ = new ast::Binop($1, token::NE, $3); }
      | expr LE expr    { $$ = new ast::Binop($1, token::LE, $3); }
