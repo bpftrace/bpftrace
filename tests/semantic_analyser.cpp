@@ -517,11 +517,17 @@ TEST(semantic_analyser, kprobe)
 
 TEST(semantic_analyser, uprobe)
 {
-  test("uprobe:path:f { 1 }", 0);
+  test("uprobe:/bin/sh:f { 1 }", 0);
+  test("uprobe:sh:f { 1 }", 0);
+  test("uprobe:/notexistfile:f { 1 }", 1);
+  test("uprobe:notexistfile:f { 1 }", 1);
   test("uprobe:f { 1 }", 1);
   test("uprobe { 1 }", 1);
 
-  test("uretprobe:path:f { 1 }", 0);
+  test("uretprobe:/bin/sh:f { 1 }", 0);
+  test("uretprobe:sh:f { 1 }", 0);
+  test("uretprobe:/notexistfile:f { 1 }", 1);
+  test("uretprobe:notexistfile:f { 1 }", 1);
   test("uretprobe:f { 1 }", 1);
   test("uretprobe { 1 }", 1);
 }
@@ -529,8 +535,10 @@ TEST(semantic_analyser, uprobe)
 TEST(semantic_analyser, usdt)
 {
   test("usdt:/bin/sh:probe { 1 }", 0);
+  test("usdt:sh:probe { 1 }", 0);
   test("usdt:/bin/sh:namespace:probe { 1 }", 0);
   test("usdt:/notexistfile:probe { 1 }", 1);
+  test("usdt:notexistfile:probe { 1 }", 1);
   test("usdt { 1 }", 1);
 }
 
@@ -676,8 +684,8 @@ TEST(semantic_analyser, probe_short_name)
   test("t:a:b { args }", 0);
   test("k:f { pid }", 0);
   test("kr:f { pid }", 0);
-  test("u:path:f { 1 }", 0);
-  test("ur:path:f { 1 }", 0);
+  test("u:sh:f { 1 }", 0);
+  test("ur:sh:f { 1 }", 0);
   test("p:hz:997 { 1 }", 0);
   test("h:cache-references:1000000 { 1 }", 0);
   test("s:faults:1000 { 1 }", 0);
