@@ -6,7 +6,6 @@
 #  LIBBCC_LIBRARIES - Link these to use libbcc
 #  LIBBCC_DEFINITIONS - Compiler switches required for using libbcc
 #  LIBBPF_LIBRARY_STATIC - libbpf static library (for static compilation)
-#  LIBBCC_LOADER_LIBRARY_STATIC - libbcc helper static library (for static compilation)
 
 if (LIBBCC_LIBRARIES AND LIBBCC_INCLUDE_DIRS)
   set (LibBcc_FIND_QUIETLY TRUE)
@@ -41,17 +40,6 @@ find_library (LIBBCC_LIBRARIES
 find_library (LIBBPF_LIBRARY_STATIC
   NAMES
     bpf
-  PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
-find_library (LIBBCC_LOADER_LIBRARY_STATIC
-  NAMES
-    bcc-loader-static
   PATHS
     /usr/lib
     /usr/local/lib
