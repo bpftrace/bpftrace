@@ -22,7 +22,21 @@
 BEGIN
 {
   printf("Tracing tcp retransmits. Hit Ctrl-C to end.\n");
-  printf("%-8s %-8s %20s %21s %6s\n", "TIME", "PID", "LADDR:LPORT", "RADDR:RPORT", "STATE" )
+  printf("%-8s %-8s %20s %21s %6s\n", "TIME", "PID", "LADDR:LPORT", "RADDR:RPORT", "STATE");
+
+  // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
+  @tcp_states[1] = "ESTABLISHED";
+  @tcp_states[2] = "SYN_SENT";
+  @tcp_states[3] = "SYN_RECV";
+  @tcp_states[4] = "FIN_WAIT1";
+  @tcp_states[5] = "FIN_WAIT2";
+  @tcp_states[6] = "TIME_WAIT";
+  @tcp_states[7] = "CLOSE";
+  @tcp_states[8] = "CLOSE_WAIT";
+  @tcp_states[9] = "LAST_ACK";
+  @tcp_states[10] = "LISTEN";
+  @tcp_states[11] = "CLOSING";
+  @tcp_states[12] = "NEW_SYN_RECV";
 }
 
 kprobe:tcp_retransmit_skb
@@ -41,23 +55,14 @@ kprobe:tcp_retransmit_skb
     $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
 
     $state = $sk->__sk_common.skc_state;
-
-    // See https://github.com/torvalds/linux/blob/master/include/net/tcp_states.h
-    $statestr = "";
-    $statestr = $state == 1 ? "ESTABLISHED" : $statestr;
-    $statestr = $state == 2 ? "SYN_SENT" : $statestr;
-    $statestr = $state == 3 ? "SYN_RECV" : $statestr;
-    $statestr = $state == 4 ? "FIN_WAIT1" : $statestr;
-    $statestr = $state == 5 ? "FIN_WAIT2" : $statestr;
-    $statestr = $state == 6 ? "TIME_WAIT" : $statestr;
-    $statestr = $state == 7 ? "CLOSE" : $statestr;
-    $statestr = $state == 8 ? "CLOSE_WAIT" : $statestr;
-    $statestr = $state == 9 ? "LAST_ACK" : $statestr;
-    $statestr = $state == 10 ? "LISTEN" : $statestr;
-    $statestr = $state == 11 ? "CLOSING" : $statestr;
-    $statestr = $state == 12 ? "NEW_SYN_RECV" : $statestr;
+    $statestr = @tcp_states[$state];
 
     time("%H:%M:%S ");
     printf("%-8d %14s:%-6d %14s:%-6d %6s\n", pid, ntop($af_inet, $saddr), $lport, ntop($af_inet, $daddr), $dport, $statestr);
   }
+}
+
+END
+{
+  clear(@tcp_states);
 }
