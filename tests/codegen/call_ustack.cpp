@@ -84,13 +84,13 @@ TEST(codegen, call_ustack_mapids)
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
-  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2);
+  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2U);
 
   StackType stack_type;
   stack_type.limit = 5;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1);
+  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
   stack_type.limit = 6;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1);
+  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
 }
 
 TEST(codegen, call_ustack_modes_mapids)
@@ -112,13 +112,13 @@ TEST(codegen, call_ustack_modes_mapids)
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
-  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2);
+  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2U);
 
   StackType stack_type;
   stack_type.mode = StackMode::perf;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1);
+  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
   stack_type.mode = StackMode::bpftrace;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1);
+  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
 }
 
 } // namespace codegen

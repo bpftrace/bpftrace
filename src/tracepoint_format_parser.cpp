@@ -67,7 +67,7 @@ bool TracepointFormatParser::parse(ast::Program *program)
             }
           }
 
-          for (int i = 0; i < glob_result.gl_pathc; ++i) {
+          for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
             std::ifstream format_file(filename);
             std::string prefix("/sys/kernel/debug/tracing/events/" + category + "/");
