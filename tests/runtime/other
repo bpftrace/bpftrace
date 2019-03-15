@@ -37,3 +37,8 @@ NAME if_compare_and_print_string
 RUN bpftrace -e 'k:vfs_write {$name = "test"; if ($name == "test") { printf("name: %s\n", $name);} exit();}'
 EXPECT name: test
 TIMEOUT 5
+
+NAME struct keyword optional when casting
+RUN bpftrace -e 'struct Bar { int x; } struct Foo { struct Bar *bar; } i:ms:1 { $foo = (struct Foo *)0; @x = $foo->bar->x; exit()}'
+EXPECT @x: 0
+TIMEOUT 5

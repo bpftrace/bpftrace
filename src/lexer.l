@@ -1,14 +1,16 @@
-%option yylineno nodefault noyywrap noinput nounput
+%option yylineno nodefault noyywrap noinput
 %option never-interactive
 %option reentrant
 %{
 #include "driver.h"
+#include "utils.h"
 #include "parser.tab.hh"
 
 #undef yywrap
 #define yywrap(x) 1
 
 static bpftrace::location loc;
+static std::string struct_type;
 static std::string buffer;
 static int open_brackets;
 
@@ -114,12 +116,23 @@ bpftrace|perf {
 <STR>.                  { driver.error(loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
 
-struct|union            { BEGIN(STRUCT); buffer = std::string(yytext); open_brackets = 0; }
+struct|union            { BEGIN(STRUCT); buffer = ""; struct_type = std::string(yytext); open_brackets = 0; }
+<STRUCT>"*"|")"         { if (open_brackets == 0) {
+                            BEGIN(INITIAL);
+                            unput(yytext[0]);
+                            return Parser::make_IDENT(trim(buffer), loc);
+                          }
+                          else
+                          {
+                            buffer += std::string(yytext);
+                          }
+                        }
 <STRUCT>"{"             { BEGIN(STRUCT); buffer += std::string(yytext); open_brackets++; }
 <STRUCT>"}"|"};"        { buffer += std::string(yytext);
                           if (open_brackets == 1)
                           {
-                            BEGIN(INITIAL); return Parser::make_STRUCT(buffer, loc);
+                            BEGIN(INITIAL);
+                            return Parser::make_STRUCT(struct_type + buffer, loc);
                           }
                           else
                           {
@@ -127,7 +140,9 @@ struct|union            { BEGIN(STRUCT); buffer = std::string(yytext); open_brac
                           }
                         }
 <STRUCT>\n              { buffer += std::string(yytext); }
-<STRUCT>.               { buffer += std::string(yytext); }
+<STRUCT>.               {
+                          buffer += std::string(yytext);
+                        }
 
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 .                       { driver.error(loc, std::string("invalid character '") +
