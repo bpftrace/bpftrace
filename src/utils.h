@@ -40,4 +40,24 @@ std::string is_deprecated(std::string &str);
 std::string exec_system(const char* cmd);
 std::string resolve_binary_path(const std::string& cmd);
 
+// trim from end of string (right)
+inline std::string& rtrim(std::string& s)
+{
+  s.erase(s.find_last_not_of(" ") + 1);
+  return s;
+}
+
+// trim from beginning of string (left)
+inline std::string& ltrim(std::string& s)
+{
+  s.erase(0, s.find_first_not_of(" "));
+  return s;
+}
+
+// trim from both ends of string (right then left)
+inline std::string& trim(std::string& s)
+{
+  return ltrim(rtrim(s));
+}
+
 } // namespace bpftrace
