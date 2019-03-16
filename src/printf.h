@@ -7,7 +7,7 @@
 
 namespace bpftrace {
 
-struct Field;
+class Field;
 
 std::string verify_format_string(const std::string &fmt, std::vector<Field> args);
 
