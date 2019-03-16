@@ -470,7 +470,7 @@ kprobe example:
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
@@ -660,7 +660,7 @@ As an example of struct arguments:
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
@@ -671,7 +671,7 @@ open path: retrans_time_ms
 [...]
 ```
 
-Here arg0 was casted as a (path \*), since that is the first argument to vfs_open(). The struct support is currently the same as bcc, and based on available kernel headers. This means that many, but not all, structs will be available, and you may need to manually define some structs. In the future, bpftrace will use the newer Linux BTF support so that all kernel structs are always available.
+Here arg0 was casted as a (struct path \*), since that is the first argument to vfs_open(). The struct support is currently the same as bcc, and based on available kernel headers. This means that many, but not all, structs will be available, and you may need to manually define some structs. In the future, bpftrace will use the newer Linux BTF support so that all kernel structs are always available.
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 
@@ -1638,7 +1638,7 @@ A less trivial example of this usage, tracing tcp outbound connections, and prin
 
 ```
 bpftrace -e '#include <net/sock.h>
-kprobe:tcp_connect { $sk = ((sock *) arg0); printf("%s\n", ntop(2, $sk->__sk_common.skc_daddr)); }'
+kprobe:tcp_connect { $sk = ((struct sock *) arg0); printf("%s\n", ntop(2, $sk->__sk_common.skc_daddr)); }'
 Attaching 1 probe...
 169.254.0.1
 ^C

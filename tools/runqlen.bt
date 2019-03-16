@@ -30,8 +30,8 @@ BEGIN
 
 profile:hz:99
 {
-	$task = (task_struct *)curtask;
-	$my_q = (cfs_rq_partial *)$task->se.cfs_rq;
+	$task = (struct task_struct *)curtask;
+	$my_q = (struct cfs_rq_partial *)$task->se.cfs_rq;
 	$len = $my_q->nr_running;
 	$len = $len > 0 ? $len - 1 : 0;	// subtract currently runing task
 	@runqlen = lhist($len, 0, 100, 1);

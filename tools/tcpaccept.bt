@@ -27,7 +27,7 @@ BEGIN
 
 kretprobe:inet_csk_accept
 {
-  $sk = ((sock *) retval);
+  $sk = ((struct sock *) retval);
   $inet_family = $sk->__sk_common.skc_family;
   $af_inet = 2;
 
