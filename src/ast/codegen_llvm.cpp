@@ -1625,7 +1625,7 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   auto bpforc = std::make_unique<BpfOrc>(targetMachine);
   bpforc->compileModule(move(module_));
 
-  return move(bpforc);
+  return bpforc;
 }
 
 } // namespace ast
