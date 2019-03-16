@@ -41,7 +41,7 @@ BEGIN
 
 kprobe:tcp_drop
 {
-  $sk = ((sock *) arg0);
+  $sk = ((struct sock *) arg0);
   $inet_family = $sk->__sk_common.skc_family;
   $af_inet = 2;
 
