@@ -22,7 +22,7 @@ bool TracepointFormatParser::parse(ast::Program *program)
         continue;
       }
 
-  if (probes_with_tracepoint.size() == 0)
+  if (probes_with_tracepoint.empty())
     return true;
 
   ast::TracepointArgsVisitor n{};
@@ -102,11 +102,8 @@ bool TracepointFormatParser::parse(ast::Program *program)
 
           // Check to avoid adding the same struct more than once to definitions
           std::string struct_name = get_struct_name(category, event_name);
-          if (!TracepointFormatParser::struct_list.count(struct_name))
-          {
+          if (TracepointFormatParser::struct_list.insert(struct_name).second)
             program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
-            TracepointFormatParser::struct_list.insert(struct_name);
-          }
         }
       }
     }

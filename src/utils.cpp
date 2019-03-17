@@ -71,12 +71,9 @@ usdt_probe_pair USDTHelper::find(void *ctx, int pid, std::string name) {
 
 bool has_wildcard(const std::string &str)
 {
-  if (str.find("*") != std::string::npos ||
-     (str.find("[") != std::string::npos &&
-      str.find("]") != std::string::npos))
-     return true;
-  else
-     return false;
+  return str.find("*") != std::string::npos ||
+         (str.find("[") != std::string::npos &&
+          str.find("]") != std::string::npos);
 }
 
 std::vector<int> get_online_cpus()
@@ -161,7 +158,7 @@ std::string is_deprecated(std::string &str)
 
   for (item = DEPRECATED_LIST.begin(); item != DEPRECATED_LIST.end(); item++)
   {
-    if (str.compare(item->old_name) == 0)
+    if (str == item->old_name)
     {
       if (item->show_warning)
       {

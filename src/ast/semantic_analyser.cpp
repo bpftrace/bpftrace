@@ -356,9 +356,9 @@ void SemanticAnalyser::visit(Call &call)
         err_ << verify_format_string(fmt.str, args);
 
         if (call.func == "printf")
-          bpftrace_.printf_args_.push_back(std::make_tuple(fmt.str, args));
+          bpftrace_.printf_args_.emplace_back(fmt.str, args);
         else
-          bpftrace_.system_args_.push_back(std::make_tuple(fmt.str, args));
+          bpftrace_.system_args_.emplace_back(fmt.str, args);
       }
     }
 
