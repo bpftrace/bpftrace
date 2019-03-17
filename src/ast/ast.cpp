@@ -158,9 +158,11 @@ void AttachPoint::set_index(std::string name, int index) {
 
 std::string Probe::name() const
 {
-  std::string n = "";
-  for (auto attach_point : *attach_points)
+  std::string n;
+  for (auto &attach_point : *attach_points)
   {
+    if (!n.empty())
+      n += ',';
     n += attach_point->provider;
     if (attach_point->target != "")
       n += ":" + attach_point->target;
@@ -170,9 +172,8 @@ std::string Probe::name() const
       n += ":" + attach_point->func;
     if (attach_point->freq != 0)
       n += ":" + std::to_string(attach_point->freq);
-    n += ",";
   }
-  return n.substr(0, n.size()-1);
+  return n;
 }
 
 int Probe::index() {

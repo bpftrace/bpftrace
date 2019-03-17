@@ -18,21 +18,6 @@ namespace bpftrace {
 const std::string kprobe_path = "/sys/kernel/debug/tracing/available_filter_functions";
 const std::string tp_path = "/sys/kernel/debug/tracing/events";
 
-std::string replace_all(const std::string &str, const std::string &from,
-			const std::string &to)
-{
-    std::string result(str);
-    std::string::size_type
-        index = 0,
-        from_len = from.size(),
-        to_len = to.size();
-    while ((index = result.find(from, index)) != std::string::npos) {
-        result.replace(index, from_len, to);
-        index += to_len;
-    }
-    return result;
-}
-
 inline bool search_probe(const std::string &probe, const std::regex& re)
 {
   try {
@@ -64,7 +49,7 @@ static std::vector<usdt_entry> usdt_probes;
 
 void usdt_each(struct bcc_usdt *usdt)
 {
-  usdt_probes.push_back(std::make_tuple(usdt->provider, usdt->name, usdt->bin_path));
+  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
 }
 
 void list_probes_from_list(const std::vector<ProbeListItem> &probes_list,
@@ -139,15 +124,17 @@ void list_probes(const std::string &search_input, int pid)
     search = probe_name + search.substr(pos, search.length());
   }
 
-  unsigned int i, j;
-  std::string line, probe;
-  std::string glob = "*";
-  std::string regex = ".*";
-  std::string s = replace_all(search,glob,regex);
-  glob = "?";
-  regex = ".";
-  s = replace_all(s,glob,regex);
-  s = "^" + s + "$";
+  std::string s = "^";
+  for (char c : search)
+  {
+    if (c == '*')
+      s += ".*";
+    else if (c == '?')
+      s += '.';
+    else
+      s += c;
+  }
+  s += '$';
   std::regex re(s, std::regex::icase | std::regex::grep | std::regex::nosubs | std::regex::optimize);
 
   // software
@@ -174,19 +161,20 @@ void list_probes(const std::string &search_input, int pid)
   }
 
   // tracepoints
-  std::vector<std::string> cats = std::vector<std::string>();
+  std::string probe;
+  std::vector<std::string> cats;
   list_dir(tp_path, cats);
-  for (i = 0; i < cats.size(); i++)
+  for (const std::string &cat : cats)
   {
-    if (cats[i] == "." || cats[i] == ".." || cats[i] == "enable" || cats[i] == "filter")
+    if (cat == "." || cat == ".." || cat == "enable" || cat == "filter")
       continue;
     std::vector<std::string> events = std::vector<std::string>();
-    list_dir(tp_path + "/" + cats[i], events);
-    for (j = 0; j < events.size(); j++)
+    list_dir(tp_path + "/" + cat, events);
+    for (const std::string &event : events)
     {
-      if (events[j] == "." || events[j] == ".." || events[j] == "enable" || events[j] == "filter")
+      if (event == "." || event == ".." || event == "enable" || event == "filter")
         continue;
-      probe = "tracepoint:" + cats[i] + ":" + events[j];
+      probe = "tracepoint:" + cat + ":" + event;
 
       if (!search.empty())
       {
@@ -196,13 +184,13 @@ void list_probes(const std::string &search_input, int pid)
 
       std::cout << probe << std::endl;
       if (bt_verbose)
-        print_tracepoint_args(cats[i], events[j]);
+        print_tracepoint_args(cat, event);
     }
   }
 
   // Optimization: If the search expression starts with "t" (tracepoint) there is
   // no need to search for kprobes.
-  if (search.rfind("t", 0) == 0)
+  if (search[0] == 't')
       return;
 
   // kprobes
@@ -213,6 +201,7 @@ void list_probes(const std::string &search_input, int pid)
     return;
   }
 
+  std::string line;
   size_t loc;
   while (std::getline(file, line))
   {
