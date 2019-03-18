@@ -6,6 +6,10 @@ add_library(ast
   semantic_analyser.cpp
 )
 
+if(HAVE_GET_CURRENT_CGROUP_ID)
+  target_compile_definitions(ast PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
+endif(HAVE_GET_CURRENT_CGROUP_ID)
+
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})
