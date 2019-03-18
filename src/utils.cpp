@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <array>
 #include <map>
 #include <string>
 #include <tuple>
