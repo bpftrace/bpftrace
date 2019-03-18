@@ -76,7 +76,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::integer, 8);
     if (builtin.ident == "cgroup") {
       #ifndef HAVE_GET_CURRENT_CGROUP_ID
-        err_ << "BPF_FUNC_get_current_group_id is not available for your kernel version" << std::endl;
+        err_ << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version" << std::endl;
       #endif
     }
   }
