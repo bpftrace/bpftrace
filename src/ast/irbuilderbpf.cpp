@@ -436,7 +436,7 @@ CallInst *IRBuilderBPF::CreateGetPidTgid()
 CallInst *IRBuilderBPF::CreateGetCurrentCgroupId()
 {
   #ifndef HAVE_GET_CURRENT_CGROUP_ID
-    std::cerr << "BPF_FUNC_get_current_group_id is not available for your kernel version" << std::endl;
+    std::cerr << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version" << std::endl;
     abort();
   #else
     // u64 bpf_get_current_cgroup_id(void)
