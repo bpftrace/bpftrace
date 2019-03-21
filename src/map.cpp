@@ -84,7 +84,7 @@ Map::Map(const SizedType &type) {
     // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
     std::cerr << "This might have happened because kernel.perf_event_max_stack"
       << "is smaller than " << type.stack_type.limit
-      << ". Try to tweak this value with"
+      << ". Try to tweak this value with "
       << "sysctl kernel.perf_event_max_stack=<new value>" << std::endl;
   }
 }
