@@ -1,7 +1,7 @@
-# BPFtrace Install
+# bpftrace Install
 
 - [Linux Kernel Requirements](#linux-kernel-requirements)
-- [Building BPFtrace](#building-bpftrace)
+- [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
   - [Amazon Linux](#amazon-linux)
@@ -33,9 +33,9 @@ CONFIG_HAVE_EBPF_JIT=y
 CONFIG_BPF_EVENTS=y
 ```
 
-# Building BPFtrace
+# Building bpftrace
 
-BPFtrace's build system will download `gtest` at build time. If you don't want that or don't want tests, you can use the `make bpftrace` target.
+bpftrace's build system will download `gtest` at build time. If you don't want that or don't want tests, you can use the `make bpftrace` target.
 
 ## Ubuntu
 
@@ -137,16 +137,16 @@ The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools i
 
 ## Using Docker
 
-There are currently problems with BPFtrace string comparisons when using the Docker build. The regular build is recommended for now.
+There are currently problems with bpftrace string comparisons when using the Docker build. The regular build is recommended for now.
 
 Building inside a Docker container will produce a statically linked bpftrace executable.
 
 `./build.sh`
 
-There are some more fine-grained options if you find yourself building BPFtrace a lot:
+There are some more fine-grained options if you find yourself building bpftrace a lot:
 - `./build-docker-image.sh` - builds just the `bpftrace-builder` Docker image
-- `./build-debug.sh` - builds BPFtrace with debugging information (requires `./build-docker-image.sh` to have already been run)
-- `./build-release.sh` - builds BPFtrace in a release configuration (requires `./build-docker-image.sh` to have already been run)
+- `./build-debug.sh` - builds bpftrace with debugging information (requires `./build-docker-image.sh` to have already been run)
+- `./build-release.sh` - builds bpftrace in a release configuration (requires `./build-docker-image.sh` to have already been run)
 
 `./build.sh` is equivalent to `./build-docker-image.sh && ./build-release.sh`
 
