@@ -1,4 +1,4 @@
-# BPFtrace Tests
+# bpftrace Tests
 
 There are two test suites in the project.
 

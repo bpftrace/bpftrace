@@ -2,7 +2,7 @@
 .TH "BPFTRACE" "8" "October 2018"
 .
 .SH "NAME"
-\fBBPFtrace\fR \- the eBPF tracing language & frontend
+\fBbpftrace\fR \- the eBPF tracing language & frontend
 .
 .SH "SYNOPSIS"
 bpftrace [\fIOPTIONS\fR] \fIFILE\fR
@@ -11,10 +11,10 @@ bpftrace [\fIOPTIONS\fR] \fIFILE\fR
 bpftrace [\fIOPTIONS\fR] \-e \'program code\'
 .
 .SH "DESCRIPTION"
-BPFtrace is a high\-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4\.x)\.
+bpftrace is a high\-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4\.x)\.
 .
 .P
-BPFtrace uses:
+bpftrace uses:
 .
 .IP "\(bu" 4
 \fILLVM\fR as a backend to compile scripts to BPF\-bytecode
@@ -40,7 +40,7 @@ ccc.
 *USDT = user-level statically defined tracing
 .
 .P
-The BPFtrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap\.
+The bpftrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap\.
 .
 .P
 See \fBEXAMPLES\fR and \fBONELINERS\fR if you are impatient\.
@@ -150,7 +150,7 @@ Profile user\-level stacks at 99 Hertz, for PID 189:
 .SH "PROBE TYPES"
 .
 .SS "KPROBES"
-Attach a BPFtrace script to a kernel function, to be executed when that function is called:
+Attach a bpftrace script to a kernel function, to be executed when that function is called:
 .
 .P
 \fBkprobe:vfs_read { \.\.\. }\fR
