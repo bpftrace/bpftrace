@@ -440,6 +440,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
               true,
               arg.type.stack_type, 8)));
         break;
+      case Type::cast:
+        arg_values.push_back(
+          std::make_unique<PrintableInt>(
+            *reinterpret_cast<uint64_t*>(arg_data+arg.offset)));
+        break;
       default:
         std::cerr << "invalid argument type" << std::endl;
         abort();

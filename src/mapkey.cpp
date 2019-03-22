@@ -55,6 +55,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     const void *data)
 {
   auto arg_data = static_cast<const uint8_t*>(data);
+  std::ostringstream ptr;
   switch (arg.type)
   {
     case Type::integer:
@@ -88,6 +89,10 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return bpftrace.probe_ids_[*(const uint64_t*)data];
     case Type::string:
       return std::string((const char*)data);
+    case Type::cast:
+      // use case: show me these pointer values
+      ptr << "0x" << std::hex << *(const int64_t*)data;
+      return ptr.str();
     default:
       std::cerr << "invalid mapkey argument type" << std::endl;
   }
