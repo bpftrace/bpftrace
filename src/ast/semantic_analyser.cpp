@@ -827,7 +827,7 @@ void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
   if (is_final_pass() && ((pred.expr->type.type != Type::integer) &&
-     (pred.expr->type.type != Type::cast))) {
+     (!(pred.expr->type.is_pointer && pred.expr->type.type == Type::cast)))) {
     err_ << "Invalid type for predicate: " << pred.expr->type.type << std::endl;
   }
 }

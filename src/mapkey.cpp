@@ -90,9 +90,12 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::string:
       return std::string((const char*)data);
     case Type::cast:
-      // use case: show me these pointer values
-      ptr << "0x" << std::hex << *(const int64_t*)data;
-      return ptr.str();
+      if (arg.is_pointer) {
+        // use case: show me these pointer values
+        ptr << "0x" << std::hex << *(const int64_t*)data;
+        return ptr.str();
+      }
+      // fall through
     default:
       std::cerr << "invalid mapkey argument type" << std::endl;
   }
