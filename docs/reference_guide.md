@@ -997,6 +997,7 @@ These are the pre-defined hardware events provided by the Linux kernel, as commo
 - `cache-references`
 - `cache-misses`
 - `branch-instructions` or `branches`
+- `branch-misses`
 - `bus-cycles`
 - `frontend-stalls`
 - `backend-stalls`
