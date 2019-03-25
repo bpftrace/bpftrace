@@ -29,6 +29,7 @@ const std::vector<ProbeListItem> SW_PROBE_LIST = {
 const std::vector<ProbeListItem> HW_PROBE_LIST = {
   { "backend-stalls",      "",         PERF_COUNT_HW_STALLED_CYCLES_BACKEND,  1000000 },
   { "branch-instructions", "branches", PERF_COUNT_HW_BRANCH_INSTRUCTIONS,      100000 },
+  { "branch-misses",       "",         PERF_COUNT_HW_BRANCH_MISSES,            100000 },
   { "bus-cycles",          "",         PERF_COUNT_HW_BUS_CYCLES,               100000 },
   { "cache-misses",        "",         PERF_COUNT_HW_CACHE_MISSES,            1000000 },
   { "cache-references",    "",         PERF_COUNT_HW_CACHE_REFERENCES,        1000000 },
