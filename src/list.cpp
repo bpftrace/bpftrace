@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <fstream>
@@ -148,6 +149,9 @@ void list_probes(const std::string &search_input, int pid)
     void *ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (ctx == nullptr) {
       std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
+      if (kill(pid, 0) == -1 && errno == ESRCH) {
+        std::cerr << "hint: process not running" << std::endl;
+      }
       return;
     }
     bcc_usdt_foreach(ctx, usdt_each);
