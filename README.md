@@ -293,6 +293,14 @@ See the [Reference Guide](docs/reference_guide.md) for more detail.
 
 bpftrace employs various techniques for efficiency, minimizing the instrumentation overhead. Summary statistics are stored in kernel BPF maps, which are asynchronously copied from kernel to user-space, only when needed. Other data, and asynchronous actions, are passed from kernel to user-space via the perf output buffer.
 
+## Contributing
+
+* Have ideas for new bpftrace tools? [CONTRIBUTING-TOOLS.md](CONTRIBUTING-TOOLS.md)
+
+* Bugs reports and feature requests: [Issue Tracker](https://github.com/iovisor/bpftrace/issues)
+
+* bpftrace development IRC: #bpftrace at irc.oftc.net
+
 ## License
 
 Copyright 2019 Alastair Robertson
