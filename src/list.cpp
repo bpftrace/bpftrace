@@ -153,8 +153,11 @@ void list_probes(const std::string &search_input, int pid)
     bcc_usdt_foreach(ctx, usdt_each);
     for (const auto &u : usdt_probes) {
       std::string probe = "usdt:" + std::get<2>(u) + ":" + std::get<1>(u);
-      if (search_probe(probe, re))
-        continue;
+      if (!search.empty())
+      {
+        if (search_probe(probe, re))
+          continue;
+      }
       std::cout << probe << std::endl;
     }
     bcc_usdt_close(ctx);
