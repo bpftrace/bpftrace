@@ -1,0 +1,59 @@
+NAME it shows version
+RUN bpftrace --version
+EXPECT bpftrace v
+TIMEOUT 1
+
+NAME it shows usage with help flag
+RUN bpftrace -h
+EXPECT USAGE
+TIMEOUT 1
+
+NAME it shows usage with bad flag
+RUN bpftrace -idonotexist
+EXPECT USAGE
+TIMEOUT 1
+
+NAME errors on non existent file
+RUN bpftrace non_existent_file.bt
+EXPECT Error: Could not open file 'non_existent_file.bt'
+TIMEOUT 1
+
+NAME it lists kprobes
+RUN bpftrace -l | grep kprobes
+EXPECT kprobe
+TIMEOUT 1
+
+NAME it lists tracepoints
+RUN bpftrace -l | grep tracepoint
+EXPECT tracepoint
+TIMEOUT 1
+
+NAME it lists software events
+RUN bpftrace -l | grep software
+EXPECT software
+TIMEOUT 1
+
+NAME it lists hardware events
+RUN bpftrace -l | grep hardware
+EXPECT hardware
+TIMEOUT 1
+
+NAME it lists kprobes with regex filter
+RUN bpftrace -l "kprobe:*"
+EXPECT kprobe:
+TIMEOUT 1
+
+NAME it lists tracepoints with regex filter
+RUN bpftrace -l "tracepoint:raw_syscalls:*"
+EXPECT tracepoint:raw_syscalls:sys_exit
+TIMEOUT 1
+
+NAME it lists software events with regex filter
+RUN bpftrace -l "software:*"
+EXPECT software
+TIMEOUT 1
+
+NAME it lists hardware events with regex filter
+RUN bpftrace -l "hardware:*"
+EXPECT hardware
+TIMEOUT 1
