@@ -474,6 +474,9 @@ void SemanticAnalyser::visit(Map &map)
     if (map.vargs) {
       for (Expression *expr : *map.vargs) {
         expr->accept(*this);
+        // promote map key to 64-bit:
+        if (!expr->type.IsArray())
+          expr->type.size = 8;
         key.args_.push_back(expr->type);
       }
     }

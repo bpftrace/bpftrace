@@ -1303,7 +1303,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         expr->type.type == Type::inet)
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
-        b_.CreateStore(expr_, offset_val);
+        // promote map key to 64-bit:
+        b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), offset_val);
       offset += expr->type.size;
     }
   }
