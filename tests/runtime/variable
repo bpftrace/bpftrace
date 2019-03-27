@@ -29,3 +29,9 @@ RUN bpftrace -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[
 EXPECT slept for [0-9]* ms
 TIMEOUT 5
 BEFORE sleep 1 && sleep 1 &
+
+NAME 32-bit tracepoint arg
+RUN bpftrace -e 'tracepoint:block:block_rq_issue { @start[args->dev, args->sector] = nsecs; } tracepoint:block:block_rq_complete { @usecs = hist(nsecs - @start[args->dev, args->sector]); exit(); }'
+EXPECT @
+TIMEOUT 5
+BEFORE (sleep 1; sync) &
