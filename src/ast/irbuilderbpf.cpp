@@ -407,6 +407,76 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   return result;
 }
 
+Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
+  /*
+  // This function compares each character of the two string.
+  // It returns true if all are equal and false if any are different
+  // strcmp(String val1, String val2)
+     {
+        for (size_t i = 0; i < bpftrace_.strlen_; i++)
+        {
+
+          if (val1[i] != val2[i])
+          {
+            return false;
+          }
+          if (val1[i] == NULL)
+          {
+            return true;
+          }
+        }
+
+        return true;
+     }
+  */
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
+  AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
+  BasicBlock *done = BasicBlock::Create(module_.getContext(), "strcmp.done", parent);
+
+  CreateStore(getInt1(inverse), store);
+
+  Value *null_byte = getInt8(0);
+
+  for (size_t i = 0; i < bpftrace_.strlen_; i++)
+  {
+    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
+    BasicBlock *loop_null_check = BasicBlock::Create(module_.getContext(), "strcmp.loop_null_cmp", parent);
+
+    AllocaInst *val_char1 = CreateAllocaBPF(getInt8Ty(), "strcmp.char_l");
+    Value *ptr1 = CreateAdd(val1, getInt64(i));
+    CreateProbeRead(val_char1, 1, ptr1);
+    Value *l = CreateLoad(getInt8Ty(), val_char1);
+
+    AllocaInst *val_char2 = CreateAllocaBPF(getInt8Ty(), "strcmp.char_r");
+    Value *ptr2 = CreateAdd(val2, getInt64(i));
+    CreateProbeRead(val_char2, 1, ptr2);
+    Value *r = CreateLoad(getInt8Ty(), val_char2);
+
+    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
+    CreateCondBr(cmp, str_ne, loop_null_check);
+
+    SetInsertPoint(loop_null_check);
+
+    Value *cmp_null = CreateICmpEQ(l, null_byte, "strcmp.cmp_null");
+    CreateCondBr(cmp_null, done, char_eq);
+
+    SetInsertPoint(char_eq);
+  }
+
+  CreateBr(done);
+  SetInsertPoint(done);
+  CreateStore(getInt1(!inverse), store);
+
+  CreateBr(str_ne);
+  SetInsertPoint(str_ne);
+
+  Value *result = CreateLoad(store);
+  CreateLifetimeEnd(store);
+
+  return result;
+}
+
 CallInst *IRBuilderBPF::CreateGetNs()
 {
   // u64 ktime_get_ns()

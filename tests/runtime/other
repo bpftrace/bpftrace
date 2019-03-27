@@ -42,3 +42,18 @@ NAME struct keyword optional when casting
 RUN bpftrace -e 'struct Bar { int x; } struct Foo { struct Bar *bar; } i:ms:1 { $foo = (struct Foo *)0; @x = $foo->bar->x; exit()}'
 EXPECT @x: 0
 TIMEOUT 5
+
+NAME struct positional string compare - equal returns true
+RUN bpftrace -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));}; exit();}' "hello" "hello"
+EXPECT I got hello
+TIMEOUT 5
+
+NAME struct positional string compare - equal returns false
+RUN bpftrace -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");}; exit();}' "hi" "hello"
+EXPECT not equal
+TIMEOUT 5
+
+NAME struct positional string compare - not equal
+RUN bpftrace -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");}; exit();}' "hello" "hello"
+EXPECT not equal
+TIMEOUT 5
