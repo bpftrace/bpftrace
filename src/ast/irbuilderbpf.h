@@ -46,6 +46,7 @@ public:
   CallInst   *CreateProbeReadStr(Value *dst, size_t size, Value *src);
   Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin, int pid);
   Value      *CreateStrcmp(Value* val, std::string str, bool inverse=false);
+  Value      *CreateStrcmp(Value* val1, Value* val2, bool inverse=false);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetCurrentCgroupId();
