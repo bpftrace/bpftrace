@@ -57,3 +57,18 @@ NAME it lists hardware events with regex filter
 RUN bpftrace -l "hardware:*"
 EXPECT hardware
 TIMEOUT 1
+
+NAME pid fails validation with leading non-number
+RUN bpftrace -p a1111
+EXPECT ERROR: pid 'a1111' is not a valid number.
+TIMEOUT 1
+
+NAME pid fails validation with non-number in between
+RUN bpftrace -p 111a1
+EXPECT ERROR: pid '111a1' is not a valid number.
+TIMEOUT 1
+
+NAME pid fails validation with non-numeric argument
+RUN bpftrace -p not_a_pid
+EXPECT ERROR: pid 'not_a_pid' is not a valid number.
+TIMEOUT 1

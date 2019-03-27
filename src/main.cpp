@@ -70,6 +70,16 @@ bool is_root()
     return true;
 }
 
+bool is_numeric(char* string)
+{
+  while(char current_char = *string++)
+  {
+    if (!isdigit(current_char))
+      return false;
+  }
+  return true;
+}
+
 int main(int argc, char *argv[])
 {
   int err;
@@ -159,7 +169,14 @@ int main(int argc, char *argv[])
   // - provide PID in USDT probe specification as a way to override -p.
   bpftrace.pid_ = 0;
   if (pid_str)
-    bpftrace.pid_ = atoi(pid_str);
+  {
+    if (!is_numeric(pid_str))
+    {
+      std::cerr << "ERROR: pid '" << pid_str << "' is not a valid number." << std::endl;
+      return 1;
+    }
+    bpftrace.pid_ = strtol(pid_str, NULL, 10);
+  }
 
   // Listing probes
   if (listing)
@@ -251,12 +268,6 @@ int main(int argc, char *argv[])
       return 1;
     }
   }
-
-  // PID is currently only used for USDT probes that need enabling. Future work:
-  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
-  // - provide PID in USDT probe specification as a way to override -p.
-  if (pid_str)
-    bpftrace.pid_ = atoi(pid_str);
 
   if (cmd_str)
     bpftrace.cmd_ = cmd_str;
