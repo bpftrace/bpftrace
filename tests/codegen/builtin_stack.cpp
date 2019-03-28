@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, builtin_stack)
 {
-  test("kprobe:f { @x = stack }",
+  test("kprobe:f { @x = kstack }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
