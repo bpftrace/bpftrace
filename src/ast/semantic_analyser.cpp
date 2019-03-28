@@ -544,13 +544,15 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_.find(var.ident);
-  if (search_val != variable_val_.end()) {
+  auto search_val = variable_val_[probe_].find(var.ident);
+  if (search_val != variable_val_[probe_].end()) {
     var.type = search_val->second;
   }
   else {
-    var.type = SizedType(Type::integer, 8);
-    variable_val_.insert({var.ident, var.type});
+    if (is_final_pass()) {
+      err_ << "Undefined variable: " << var.ident << std::endl;
+    }
+    var.type = SizedType(Type::none, 0);
   }
 }
 
@@ -808,12 +810,12 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
+  assignment.var->accept(*this);
   assignment.expr->accept(*this);
 
   std::string var_ident = assignment.var->ident;
-  auto search = variable_val_.find(var_ident);
-  assignment.var->type = assignment.expr->type;
-  if (search != variable_val_.end()) {
+  auto search = variable_val_[probe_].find(var_ident);
+  if (search != variable_val_[probe_].end()) {
     if (search->second.type == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined variable: " << var_ident << std::endl;
@@ -831,13 +833,12 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
   else {
     // This variable hasn't been seen before
-    variable_val_.insert({var_ident, assignment.expr->type});
-    assignment.var->type = assignment.expr->type;
+    variable_val_[probe_].insert({var_ident, assignment.expr->type});
   }
 
   if (assignment.expr->type.type == Type::cast) {
     std::string cast_type = assignment.expr->type.cast_type;
-    std::string curr_cast_type = variable_val_[var_ident].cast_type;
+    std::string curr_cast_type = variable_val_[probe_][var_ident].cast_type;
     if (curr_cast_type != "" && curr_cast_type != cast_type) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << cast_type;
@@ -845,7 +846,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       err_ << curr_cast_type << "'\n" << std::endl;
     }
     else {
-      variable_val_[var_ident].cast_type = cast_type;
+      variable_val_[probe_][var_ident].cast_type = cast_type;
     }
   }
 }
@@ -987,7 +988,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 void SemanticAnalyser::visit(Probe &probe)
 {
   // Clear out map of variable names - variables should be probe-local
-  variable_val_.clear();
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
