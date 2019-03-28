@@ -65,7 +65,18 @@ set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
 check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE C)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
-find_package(LLVM REQUIRED)
+# Some users have multiple versions of llvm installed and would like to specify
+# a specific llvm version.
+if(${LLVM_REQUESTED_VERION})
+  find_package(LLVM ${LLVM_REQUESTED_VERION} REQUIRED)
+else()
+  find_package(LLVM REQUIRED)
+endif()
+
+if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
+  message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
+endif()
+
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
