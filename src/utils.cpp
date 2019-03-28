@@ -40,23 +40,61 @@ std::vector<int> read_cpu_range(std::string path)
 namespace bpftrace {
 
 static bool usdt_probe_cached = false;
-static std::map<std::string, usdt_probe_pair> usdt_probe_cache_outer;
+static std::map<std::string, usdt_probe_entry> usdt_probe_cache_outer;
 
-typedef std::tuple<std::string, std::string, std::string> usdt_entry;
-static std::vector<usdt_entry> usdt_probes;
+//typedef std::tuple<std::string, std::string, std::string> usdt_entry;
+//static std::vector<usdt_entry> usdt_probes;
 
-void usdt_list_each(struct bcc_usdt *usdt)
-{
-  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
-}
+//void usdt_list_each(struct bcc_usdt *usdt)
+//{
+//  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
+//}
 
 static void usdt_probe_each(struct bcc_usdt *usdt_probe) {
-  usdt_probe_cache_outer[usdt_probe->name] = std::make_tuple(usdt_probe->provider, usdt_probe->bin_path);
+  // FIXME - using the probe name as the key is really bad, it will lead to collisions like we already have in BCC.
+  // This code is used to look up the provider, but we can get this from pid and just store it.
+  usdt_probe_cache_outer[usdt_probe->name] = std::make_tuple(usdt_probe->bin_path, usdt_probe->provider);
+}
+//    for (const auto &u : usdt_probes) {
+//      if(include_path)
+//        tracepoints +=  std::get<2>(u) + ":" + std::get<0>(u) + ":" + std::get<1>(u) + "\n";
+//      else
+//        tracepoints +=  std::get<0>(u) + ":" + std::get<1>(u) + "\n";
+//    }
+
+
+  //for (auto const& x : bpforc.sections_)
+  //{
+  //    std::cout << x.first  // string (key)
+  //              << std::endl ;
+  //}
+
+usdt_probe_entry USDTHelper::find(int pid, std::string name) {
+
+  read_probes_for_pid(pid);
+  std::map<std::string, usdt_probe_entry>::iterator p = usdt_probe_cache_outer.find(name);
+  if (p == usdt_probe_cache_outer.end())
+    return std::make_tuple("", "");
+  else
+    return p->second;
 }
 
-std::string USDTHelper::list_probes_for_pid(int pid, bool include_path)
+std::string USDTHelper::list_probes_for_pid(int pid)
 {
-  std::string tracepoints = "";
+  std::string probes;
+  read_probes_for_pid(pid);
+  for (auto const& usdt_probe : usdt_probe_cache_outer)
+  {
+    probes += std::get<1>(usdt_probe.second) + ":" + usdt_probe.first + "\n";
+  }
+  return probes;
+}
+
+void USDTHelper::read_probes_for_pid(int pid)
+{
+  if(usdt_probe_cached)
+    return;
+
   if (pid > 0) {
     void *ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (ctx == nullptr) {
@@ -64,48 +102,14 @@ std::string USDTHelper::list_probes_for_pid(int pid, bool include_path)
       if (kill(pid, 0) == -1 && errno == ESRCH) {
         std::cerr << "hint: process not running" << std::endl;
       }
-      return NULL;
+      return;
     }
-    bcc_usdt_foreach(ctx, usdt_list_each);
-    for (const auto &u : usdt_probes) {
-      if(include_path)
-        tracepoints +=  std::get<2>(u) + ":" + std::get<0>(u) + ":" + std::get<1>(u) + "\n";
-      else
-        tracepoints +=  std::get<0>(u) + ":" + std::get<1>(u) + "\n";
-    }
+    bcc_usdt_foreach(ctx, usdt_probe_each);
     bcc_usdt_close(ctx);
   } else {
     std::cerr << "a pid must be specified to list USDT probes by PID" << std::endl;
   }
-
-  return tracepoints;
 }
-
-usdt_probe_pair USDTHelper::find(void *ctx, int pid, std::string name) {
-  bool ctx_created = false;
-
-  if (!usdt_probe_cached) {
-    if (ctx == nullptr) {
-      ctx_created = true;
-      ctx = bcc_usdt_new_frompid(pid, nullptr);
-      if (ctx == nullptr)
-        return std::make_tuple("", "");
-    }
-
-    bcc_usdt_foreach(ctx, usdt_probe_each);
-    usdt_probe_cached = true;
-
-    if (ctx_created)
-      bcc_usdt_close(ctx);
-  }
-
-  std::map<std::string, usdt_probe_pair>::iterator p = usdt_probe_cache_outer.find(name);
-  if (p == usdt_probe_cache_outer.end())
-    return std::make_tuple("", "");
-  else
-    return p->second;
-}
-
 bool has_wildcard(const std::string &str)
 {
   return str.find("*") != std::string::npos ||
