@@ -356,9 +356,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
     std::cerr << "failed to initialize usdt context for probe " << attach_point->target << std::endl;
     exit(-1);
   }
+  bcc_usdt_close(usdt);
 
-  auto u = USDTHelper::find(usdt, 0, attach_point->func);
-  attach_point->target = std::get<1>(u);
+  auto u = USDTHelper::find(0, attach_point->func);
+  attach_point->target = std::get<0>(u);
 
   if(attach_point->ns != "")
     provider_ns = attach_point->ns;
@@ -373,7 +374,6 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
 
   Value *result = CreateUSDTReadArgument(ctx, &argument, builtin);
 
-  bcc_usdt_close(usdt);
   return result;
 }
 

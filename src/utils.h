@@ -9,14 +9,18 @@
 
 namespace bpftrace {
 
-typedef std::tuple<std::string, std::string> usdt_probe_pair;
+//Tuple order: (path, provider)
+typedef std::tuple<std::string, std::string> usdt_probe_entry;
 
 class USDTHelper
 {
 public:
-  static usdt_probe_pair find(void *ctx, int pid, std::string name);
-  static std::string list_probes_for_pid(int pid, bool include_path = false);
+  static usdt_probe_entry find(int pid, std::string name);
+  static std::string list_probes_for_pid(int pid);
+  //static std::string list_probes_for_pid(int pid, bool include_path = false); // FIXME just return the whole tuple
   //static std::string list_probes_for_path(); // FIXME
+private:
+  static void read_probes_for_pid(int pid);
 };
 
 struct DeprecatedName

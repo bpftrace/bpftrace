@@ -138,7 +138,7 @@ void list_probes(const std::string &search_input, int pid)
   if (pid > 0)
   {
     std::string line;
-    auto usdt_probe_stream = std::istringstream(USDTHelper::list_probes_for_pid(pid, true));
+    auto usdt_probe_stream = std::istringstream(USDTHelper::list_probes_for_pid(pid));
 
     while (std::getline(usdt_probe_stream, line))
     {
