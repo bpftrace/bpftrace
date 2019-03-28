@@ -42,8 +42,43 @@ namespace bpftrace {
 static bool usdt_probe_cached = false;
 static std::map<std::string, usdt_probe_pair> usdt_probe_cache_outer;
 
+typedef std::tuple<std::string, std::string, std::string> usdt_entry;
+static std::vector<usdt_entry> usdt_probes;
+
+void usdt_list_each(struct bcc_usdt *usdt)
+{
+  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
+}
+
 static void usdt_probe_each(struct bcc_usdt *usdt_probe) {
   usdt_probe_cache_outer[usdt_probe->name] = std::make_tuple(usdt_probe->provider, usdt_probe->bin_path);
+}
+
+std::string USDTHelper::list_probes_for_pid(int pid, bool include_path)
+{
+  std::string tracepoints = "";
+  if (pid > 0) {
+    void *ctx = bcc_usdt_new_frompid(pid, nullptr);
+    if (ctx == nullptr) {
+      std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
+      if (kill(pid, 0) == -1 && errno == ESRCH) {
+        std::cerr << "hint: process not running" << std::endl;
+      }
+      return NULL;
+    }
+    bcc_usdt_foreach(ctx, usdt_list_each);
+    for (const auto &u : usdt_probes) {
+      if(include_path)
+        tracepoints +=  std::get<2>(u) + ":" + std::get<0>(u) + ":" + std::get<1>(u) + "\n";
+      else
+        tracepoints +=  std::get<0>(u) + ":" + std::get<1>(u) + "\n";
+    }
+    bcc_usdt_close(ctx);
+  } else {
+    std::cerr << "a pid must be specified to list USDT probes by PID" << std::endl;
+  }
+
+  return tracepoints;
 }
 
 usdt_probe_pair USDTHelper::find(void *ctx, int pid, std::string name) {

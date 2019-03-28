@@ -955,24 +955,24 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "uprobe target file " << ap.target << " does not exist" << std::endl;
   }
   else if (ap.provider == "usdt") {
-    if (ap.func == "")
-      err_ << "usdt probe must have a func" << std::endl;
-    if (ap.target == "") {
-      if (bpftrace_.pid_ > 0) {
-        auto const &u = USDTHelper::find(nullptr, bpftrace_.pid_, ap.func);
-        ap.target = std::get<1>(u);
-
-        if (ap.target == "")
-          err_ << "usdt probe " << ap.func << " not found in pid " << bpftrace_.pid_ << std::endl;
-      }
-
-      if (ap.target == "")
-        err_ << "usdt probes must have a target path defined or discovered from a pid" << std::endl;
-    }
-    ap.target = resolve_binary_path(ap.target);
-    struct stat s;
-    if (stat(ap.target.c_str(), &s) != 0)
-      err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
+//    if (ap.func == "")
+//      err_ << "usdt probe must have a func" << std::endl;
+//    if (ap.target == "") {
+//      if (bpftrace_.pid_ > 0) {
+//        auto const &u = USDTHelper::find(nullptr, bpftrace_.pid_, ap.func);
+//        ap.target = std::get<1>(u);
+//
+//        if (ap.target == "")
+//          err_ << "usdt probe " << ap.func << " not found in pid " << bpftrace_.pid_ << std::endl;
+//      }
+//
+//      if (ap.target == "")
+//        err_ << "usdt probes must have a target path defined or discovered from a pid" << std::endl;
+//    }
+//    ap.target = resolve_binary_path(ap.target);
+//    struct stat s;
+//    if (stat(ap.target.c_str(), &s) != 0)
+//      err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
   }
   else if (ap.provider == "tracepoint") {
     if (ap.target == "" || ap.func == "")

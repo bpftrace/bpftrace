@@ -5,6 +5,7 @@
 #include <vector>
 #include <iostream>
 #include <sys/utsname.h>
+#include <signal.h>
 
 namespace bpftrace {
 
@@ -14,6 +15,8 @@ class USDTHelper
 {
 public:
   static usdt_probe_pair find(void *ctx, int pid, std::string name);
+  static std::string list_probes_for_pid(int pid, bool include_path = false);
+  //static std::string list_probes_for_path(); // FIXME
 };
 
 struct DeprecatedName
