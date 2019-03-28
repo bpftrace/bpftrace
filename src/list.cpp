@@ -1,4 +1,3 @@
-#include <signal.h>
 #include <sys/types.h>
 #include <dirent.h>
 #include <fstream>
@@ -9,10 +8,9 @@
 #include <vector>
 #include <string>
 
-#include "bcc_usdt.h"
-
 #include "list.h"
 #include "bpftrace.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -43,14 +41,6 @@ void list_dir(const std::string path, std::vector<std::string> &files)
     files.push_back(std::string(dep->d_name));
 
   closedir(dp);
-}
-
-typedef std::tuple<std::string, std::string, std::string> usdt_entry;
-static std::vector<usdt_entry> usdt_probes;
-
-void usdt_each(struct bcc_usdt *usdt)
-{
-  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
 }
 
 void list_probes_from_list(const std::vector<ProbeListItem> &probes_list,
@@ -145,26 +135,21 @@ void list_probes(const std::string &search_input, int pid)
   list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
   // usdt
-  if (pid > 0) {
-    void *ctx = bcc_usdt_new_frompid(pid, nullptr);
-    if (ctx == nullptr) {
-      std::cerr << "failed to initialize usdt context for pid: " << pid << std::endl;
-      if (kill(pid, 0) == -1 && errno == ESRCH) {
-        std::cerr << "hint: process not running" << std::endl;
-      }
-      return;
+  if (pid > 0)
+  {
+    std::string line;
+    auto usdt_probe_stream = std::istringstream(USDTHelper::list_probes_for_pid(pid, true));
+
+    while (std::getline(usdt_probe_stream, line))
+    {
+      // FIXME handle search here, looks like it's to prevent duplicates
+      //if (!search.empty())
+      //{
+      //  if (search_probe(probe, re))
+      //    continue;
+      //}
+      std::cout << "usdt:" << line << std::endl;
     }
-    bcc_usdt_foreach(ctx, usdt_each);
-    for (const auto &u : usdt_probes) {
-      std::string probe = "usdt:" + std::get<2>(u) + ":" + std::get<1>(u);
-      if (!search.empty())
-      {
-        if (search_probe(probe, re))
-          continue;
-      }
-      std::cout << probe << std::endl;
-    }
-    bcc_usdt_close(ctx);
   }
 
   // tracepoints

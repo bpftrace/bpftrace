@@ -30,6 +30,7 @@
 #include "printf.h"
 #include "triggers.h"
 #include "resolve_cgroupid.h"
+#include "utils.h"
 
 extern char** environ;
 
@@ -116,6 +117,13 @@ int BPFtrace::add_probe(ast::Probe &p)
                                           attach_point->func,
                                           "/sys/kernel/debug/tracing/available_events");
           break;
+        case ProbeType::usdt:
+        {
+          // FIXME should this also handle a case where no pid is specified?
+          auto usdt_symbol_stream = std::istringstream(USDTHelper::list_probes_for_pid(pid_));
+          matches = find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
+          break;
+        }
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
@@ -519,6 +527,13 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   // that includes wildcards.
   std::string index_str = "_" + std::to_string(probe.index);
   auto func = bpforc.sections_.find("s_" + probe.name + index_str);
+
+  //std::map<std::string, std::tuple<uint8_t *, uintptr_t>>::iterator it;
+  //for (auto const& x : bpforc.sections_)
+  //{
+  //    std::cout << x.first  // string (key)
+  //              << std::endl ;
+  //}
   if (func == bpforc.sections_.end())
     func = bpforc.sections_.find("s_" + probe.orig_name + index_str);
   if (func == bpforc.sections_.end())

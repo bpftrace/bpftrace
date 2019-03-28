@@ -4,6 +4,7 @@
 #include "parser.tab.hh"
 #include "arch/arch.h"
 #include "types.h"
+#include "utils.h"
 #include <time.h>
 #include <arpa/inet.h>
 #include "tracepoint_format_parser.h"
@@ -1300,15 +1301,22 @@ void CodegenLLVM::visit(Probe &probe)
         case ProbeType::uprobe:
         case ProbeType::uretprobe:
         {
-            auto symbol_stream = std::istringstream(bpftrace_.extract_func_symbols_from_path(attach_point->target));
-            matches = bpftrace_.find_wildcard_matches("", attach_point->func, symbol_stream);
-            break;
+          auto symbol_stream = std::istringstream(bpftrace_.extract_func_symbols_from_path(attach_point->target));
+          matches = bpftrace_.find_wildcard_matches("", attach_point->func, symbol_stream);
+          break;
         }
         case ProbeType::tracepoint:
           matches = bpftrace_.find_wildcard_matches(attach_point->target,
                                                     attach_point->func,
                                                     "/sys/kernel/debug/tracing/available_events");
           break;
+        case ProbeType::usdt:
+        {
+          // FIXME should this also handle a case where no pid is specified?
+          auto usdt_symbol_stream = std::istringstream(USDTHelper::list_probes_for_pid(bpftrace_.pid_));
+          matches = bpftrace_.find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
+          break;
+        }
         default:
           std::cerr << "Wildcard matches aren't available on probe type '"
                     << attach_point->provider << "'" << std::endl;
