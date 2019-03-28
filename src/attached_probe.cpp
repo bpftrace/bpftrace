@@ -333,15 +333,21 @@ void AttachedProbe::load_prog()
   if (strrchr(name, ':') != NULL)
     namep = strrchr(name, ':') + 1;
 
+  bool found_kernel_version = false;
   for (int attempt=0; attempt<3; attempt++)
   {
+    auto version = kernel_version(attempt);
+    if (version == 0) {
+      continue;
+    }
+    found_kernel_version = true;
 #ifdef HAVE_BCC_PROG_LOAD
     progfd_ = bcc_prog_load(progtype(probe_.type), namep,
 #else
     progfd_ = bpf_prog_load(progtype(probe_.type), namep,
 #endif
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
-        kernel_version(attempt), log_level, log_buf, log_buf_size);
+        version, log_level, log_buf, log_buf_size);
     if (progfd_ >= 0)
       break;
   }
@@ -353,6 +359,9 @@ void AttachedProbe::load_prog()
     dup2(old_stderr, 2);
     close(old_stderr);
   }
+
+  if (!found_kernel_version)
+    throw std::runtime_error("Could not identify kernel version");
 
   if (progfd_ < 0) {
     if (bt_verbose)

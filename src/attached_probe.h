@@ -36,7 +36,7 @@ private:
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;
   std::vector<int> perf_event_fds_;
-  int progfd_;
+  int progfd_ = -1;
 };
 
 } // namespace bpftrace
