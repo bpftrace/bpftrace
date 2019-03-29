@@ -99,6 +99,18 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid)
   return probes;
 }
 
+usdt_probe_list USDTHelper::probes_for_path(std::string path)
+{
+  read_probes_for_path(path);
+
+  usdt_probe_list probes;
+  for (auto const& usdt_probes : usdt_provider_cache)
+  {
+    probes.insert( probes.end(), usdt_probes.second.begin(), usdt_probes.second.end() );
+  }
+  return probes;
+}
+
 std::istringstream USDTHelper::probe_stream(int pid)
 {
   std::string probes;
@@ -136,6 +148,23 @@ void USDTHelper::read_probes_for_pid(int pid)
     std::cerr << "a pid must be specified to list USDT probes by PID" << std::endl;
   }
 }
+
+void USDTHelper::read_probes_for_path(std::string path)
+{
+  if(provider_cache_loaded)
+    return;
+
+  void *ctx = bcc_usdt_new_frompath(path.c_str());
+  if (ctx == nullptr) {
+    std::cerr << "failed to initialize usdt context for path " << path << std::endl;
+    return;
+  }
+  bcc_usdt_foreach(ctx, usdt_probe_each);
+  bcc_usdt_close(ctx);
+
+  provider_cache_loaded = true;
+}
+
 bool has_wildcard(const std::string &str)
 {
   return str.find("*") != std::string::npos ||
