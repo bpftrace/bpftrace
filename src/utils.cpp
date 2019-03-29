@@ -56,7 +56,6 @@ usdt_probe_entry USDTHelper::find(int pid, std::string name)
   for (auto const& usdt_probes : usdt_provider_cache)
   {
     usdt_probe_entry probe = USDTHelper::find(pid, usdt_probes.first, name);
-
     if (std::get<USDT_FNAME_INDEX>(probe) != "")
     {
       matches.push_back(probe);
