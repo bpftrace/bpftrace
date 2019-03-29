@@ -125,7 +125,7 @@ usdt_probe_list USDTHelper::probes_for_path(std::string path)
   return probes;
 }
 
-std::istringstream USDTHelper::probe_stream(int pid)
+std::istringstream USDTHelper::probe_stream(int pid, bool include_provider)
 {
   std::string probes;
   usdt_probe_list usdt_probes = probes_for_pid(pid);
@@ -134,7 +134,10 @@ std::istringstream USDTHelper::probe_stream(int pid)
     std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
     std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
     std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
-    probes += provider + ":" + fname + "\n";
+    if (include_provider)
+      probes += provider + ":" + fname + "\n";
+    else
+      probes += fname + "\n";
   }
 
   return std::istringstream(probes);

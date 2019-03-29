@@ -1312,9 +1312,11 @@ void CodegenLLVM::visit(Probe &probe)
           break;
         case ProbeType::usdt:
         {
-          // FIXME should this also handle a case where no pid is specified?
-          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_);
+          // FIXME should this also handle a case where no pid is specified? - YES
+          bool include_provider = attach_point->ns != "";
+          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_, include_provider);
           matches = bpftrace_.find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
+
           break;
         }
         default:
@@ -1327,6 +1329,13 @@ void CodegenLLVM::visit(Probe &probe)
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;
         join_id_ = starting_join_id_;
+
+        if (attach_point->ns == "")
+        {
+          usdt_probe_entry u = USDTHelper::find(0, match);
+          attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
+        }
+
         probefull_ = attach_point->name(match);
         // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use by args builtin.
         if (probetype(attach_point->provider) == ProbeType::tracepoint)
