@@ -135,16 +135,23 @@ void list_probes(const std::string &search_input, int pid)
   list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
   // usdt
+  usdt_probe_list usdt_probes;
   if (pid > 0)
   {
-    usdt_probe_list usdt_probes = USDTHelper::probes_for_pid(pid);
-    for (auto const& usdt_probe : usdt_probes)
-    {
-      std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
-      std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
-      std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
-      std::cout << "usdt:" << path << ":" << provider << ":" << fname << std::endl;
-    }
+    // PID takes precedence over path, so path from search expression will be ignored if pid specified
+    usdt_probes = USDTHelper::probes_for_pid(pid);
+  } else {
+    // If the *full* path is provided as part of the search expression parse it out and use it
+    std::string usdt_path = search.substr(search.find(":")+1, search.size());
+    usdt_probes = USDTHelper::probes_for_path(usdt_path);
+  }
+
+  for (auto const& usdt_probe : usdt_probes)
+  {
+    std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
+    std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
+    std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
+    std::cout << "usdt:" << path << ":" << provider << ":" << fname << std::endl;
   }
 
   // tracepoints

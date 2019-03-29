@@ -20,9 +20,11 @@ public:
   static usdt_probe_entry find(int pid, std::string name);
   static usdt_probe_entry find(int pid, std::string provider, std::string name);
   static usdt_probe_list probes_for_pid(int pid);
-  static std::istringstream probe_stream(int pid); // FIXME just return the whole tuple
+  static usdt_probe_list probes_for_path(std::string path);
+  static std::istringstream probe_stream(int pid);
 private:
   static void read_probes_for_pid(int pid);
+  static void read_probes_for_path(std::string path);
 };
 
 struct DeprecatedName
