@@ -446,7 +446,6 @@ void AttachedProbe::attach_usdt(int pid)
 {
   struct bcc_usdt_location loc = {};
   int err;
-  std::string provider_ns;
   void *ctx;
 
   if (pid)
@@ -465,7 +464,15 @@ void AttachedProbe::attach_usdt(int pid)
 
   // TODO: fn_name may need a unique suffix for each attachment on the same probe:
   std::string fn_name = "probe_" + probe_.attach_point + "_1";
+#ifdef BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
+  if (probe_.ns == "")
+    err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
+  else
+    err = bcc_usdt_enable_fully_specified_probe(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), fn_name.c_str());
+#else
   err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
+#endif
+
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
