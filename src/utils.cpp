@@ -65,12 +65,13 @@ usdt_probe_entry USDTHelper::find(int pid, std::string name)
 
   if (matches.size() == 1)
     return matches.front();
-  else
-  {
+  else if (matches.size() > 1) {
     std::cerr << "ERROR: Insufficiently specified probe. Probe \"" << name << "\" is defined on " << matches.size() << " providers." << std::endl;
     std::cerr << "You must specify a provider for this probe to uniquely identify it." << std::endl;
-    return std::make_tuple("", "","");
+  } else {
+    std::cerr << "ERROR: no matches found for " << name << std::endl;
   }
+  return std::make_tuple("", "", "");
 }
 
 
@@ -85,6 +86,19 @@ usdt_probe_entry USDTHelper::find(int pid, std::string provider, std::string nam
   } else {
     return std::make_tuple("", "","");
   }
+}
+
+usdt_probe_list USDTHelper::probes_for_provider(std::string provider)
+{
+  usdt_probe_list probes;
+
+  if(!provider_cache_loaded) {
+    std::cerr << "cannot read probes by provider before providers have been loaded by pid or path." << std::endl;
+    return probes;
+  }
+
+  read_probes_for_pid(0);
+  return usdt_provider_cache[provider];
 }
 
 usdt_probe_list USDTHelper::probes_for_pid(int pid)
