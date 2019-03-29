@@ -137,18 +137,13 @@ void list_probes(const std::string &search_input, int pid)
   // usdt
   if (pid > 0)
   {
-    std::string line;
-    auto usdt_probe_stream = std::istringstream(USDTHelper::list_probes_for_pid(pid));
-
-    while (std::getline(usdt_probe_stream, line))
+    usdt_probe_list usdt_probes = USDTHelper::probes_for_pid(pid);
+    for (auto const& usdt_probe : usdt_probes)
     {
-      // FIXME handle search here, looks like it's to prevent duplicates
-      //if (!search.empty())
-      //{
-      //  if (search_probe(probe, re))
-      //    continue;
-      //}
-      std::cout << "usdt:" << line << std::endl;
+      std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
+      std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
+      std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
+      std::cout << "usdt:" << path << ":" << provider << ":" << fname << std::endl;
     }
   }
 

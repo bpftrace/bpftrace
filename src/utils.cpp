@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <string>
@@ -39,60 +40,83 @@ std::vector<int> read_cpu_range(std::string path)
 
 namespace bpftrace {
 
-static bool usdt_probe_cached = false;
-static std::map<std::string, usdt_probe_entry> usdt_probe_cache_outer;
+static bool provider_cache_loaded = false;
 
-//typedef std::tuple<std::string, std::string, std::string> usdt_entry;
-//static std::vector<usdt_entry> usdt_probes;
+// Maps all providers of pid to vector of tracepoints on that provider
+static std::map<std::string, usdt_probe_list> usdt_provider_cache;
 
-//void usdt_list_each(struct bcc_usdt *usdt)
-//{
-//  usdt_probes.emplace_back(usdt->provider, usdt->name, usdt->bin_path);
-//}
-
-static void usdt_probe_each(struct bcc_usdt *usdt_probe) {
-  // FIXME - using the probe name as the key is really bad, it will lead to collisions like we already have in BCC.
-  // This code is used to look up the provider, but we can get this from pid and just store it.
-  usdt_probe_cache_outer[usdt_probe->name] = std::make_tuple(usdt_probe->bin_path, usdt_probe->provider);
-}
-//    for (const auto &u : usdt_probes) {
-//      if(include_path)
-//        tracepoints +=  std::get<2>(u) + ":" + std::get<0>(u) + ":" + std::get<1>(u) + "\n";
-//      else
-//        tracepoints +=  std::get<0>(u) + ":" + std::get<1>(u) + "\n";
-//    }
-
-
-  //for (auto const& x : bpforc.sections_)
-  //{
-  //    std::cout << x.first  // string (key)
-  //              << std::endl ;
-  //}
-
-usdt_probe_entry USDTHelper::find(int pid, std::string name) {
-
-  read_probes_for_pid(pid);
-  std::map<std::string, usdt_probe_entry>::iterator p = usdt_probe_cache_outer.find(name);
-  if (p == usdt_probe_cache_outer.end())
-    return std::make_tuple("", "");
-  else
-    return p->second;
-}
-
-std::string USDTHelper::list_probes_for_pid(int pid)
+static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
-  std::string probes;
-  read_probes_for_pid(pid);
-  for (auto const& usdt_probe : usdt_probe_cache_outer)
+  usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
+}
+
+usdt_probe_entry USDTHelper::find(int pid, std::string name)
+{
+  usdt_probe_list matches;
+  for (auto const& usdt_probes : usdt_provider_cache)
   {
-    probes += std::get<1>(usdt_probe.second) + ":" + usdt_probe.first + "\n";
+    usdt_probe_entry probe = USDTHelper::find(pid, usdt_probes.first, name);
+
+    if (std::get<USDT_FNAME_INDEX>(probe) != "")
+    {
+      matches.push_back(probe);
+    }
+  }
+
+  if (matches.size() == 1)
+    return matches.front();
+  else
+  {
+    std::cerr << "ERROR: Insufficiently specified probe. Probe \"" << name << "\" is defined on " << matches.size() << " providers." << std::endl;
+    std::cerr << "You must specify a provider for this probe to uniquely identify it." << std::endl;
+    return std::make_tuple("", "","");
+  }
+}
+
+
+usdt_probe_entry USDTHelper::find(int pid, std::string provider, std::string name)
+{
+  read_probes_for_pid(pid);
+  usdt_probe_list probes = usdt_provider_cache[provider];
+
+  auto it = std::find_if(probes.begin(), probes.end(), [&name](const usdt_probe_entry& e) {return std::get<USDT_FNAME_INDEX>(e) == name;});
+  if (it != probes.end()) {
+    return *it;
+  } else {
+    return std::make_tuple("", "","");
+  }
+}
+
+usdt_probe_list USDTHelper::probes_for_pid(int pid)
+{
+  read_probes_for_pid(pid);
+
+  usdt_probe_list probes;
+  for (auto const& usdt_probes : usdt_provider_cache)
+  {
+    probes.insert( probes.end(), usdt_probes.second.begin(), usdt_probes.second.end() );
   }
   return probes;
 }
 
+std::istringstream USDTHelper::probe_stream(int pid)
+{
+  std::string probes;
+  usdt_probe_list usdt_probes = probes_for_pid(pid);
+  for (auto const& usdt_probe : usdt_probes)
+  {
+    std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
+    std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
+    std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
+    probes += provider + ":" + fname + "\n";
+  }
+
+  return std::istringstream(probes);
+}
+
 void USDTHelper::read_probes_for_pid(int pid)
 {
-  if(usdt_probe_cached)
+  if(provider_cache_loaded)
     return;
 
   if (pid > 0) {
@@ -106,6 +130,8 @@ void USDTHelper::read_probes_for_pid(int pid)
     }
     bcc_usdt_foreach(ctx, usdt_probe_each);
     bcc_usdt_close(ctx);
+
+    provider_cache_loaded = true;
   } else {
     std::cerr << "a pid must be specified to list USDT probes by PID" << std::endl;
   }

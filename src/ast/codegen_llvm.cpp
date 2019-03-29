@@ -1313,7 +1313,7 @@ void CodegenLLVM::visit(Probe &probe)
         case ProbeType::usdt:
         {
           // FIXME should this also handle a case where no pid is specified?
-          auto usdt_symbol_stream = std::istringstream(USDTHelper::list_probes_for_pid(bpftrace_.pid_));
+          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_);
           matches = bpftrace_.find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
           break;
         }

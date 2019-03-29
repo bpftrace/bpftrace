@@ -469,15 +469,10 @@ void AttachedProbe::attach_usdt(int pid)
   if (err)
     throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
 
-  auto u = USDTHelper::find(pid, probe_.attach_point);
-  probe_.path = std::get<0>(u);
-  // Handle manually specifying probe provider namespace
-  if (probe_.ns != "")
-    provider_ns = probe_.ns;
-  else
-    provider_ns = std::get<1>(u);
+  auto u = USDTHelper::find(pid, probe_.ns, probe_.attach_point);
+  probe_.path = std::get<USDT_PATH_INDEX>(u);
 
-  err = bcc_usdt_get_location(ctx, provider_ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
+  err = bcc_usdt_get_location(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
   bcc_usdt_close(ctx);
   if (err)
     throw std::runtime_error("Error finding location for probe: " + probe_.name);

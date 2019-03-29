@@ -5,20 +5,22 @@
 #include <vector>
 #include <iostream>
 #include <sys/utsname.h>
+#include <sstream>
 #include <signal.h>
 
 namespace bpftrace {
 
-//Tuple order: (path, provider)
-typedef std::tuple<std::string, std::string> usdt_probe_entry;
+typedef enum _USDT_TUPLE_ORDER_ { USDT_PATH_INDEX, USDT_PROVIDER_INDEX, USDT_FNAME_INDEX } usdt_probe_entry_enum;
+typedef std::tuple<std::string, std::string, std::string> usdt_probe_entry;
+typedef std::vector<usdt_probe_entry> usdt_probe_list;
 
 class USDTHelper
 {
 public:
   static usdt_probe_entry find(int pid, std::string name);
-  static std::string list_probes_for_pid(int pid);
-  //static std::string list_probes_for_pid(int pid, bool include_path = false); // FIXME just return the whole tuple
-  //static std::string list_probes_for_path(); // FIXME
+  static usdt_probe_entry find(int pid, std::string provider, std::string name);
+  static usdt_probe_list probes_for_pid(int pid);
+  static std::istringstream probe_stream(int pid); // FIXME just return the whole tuple
 private:
   static void read_probes_for_pid(int pid);
 };
