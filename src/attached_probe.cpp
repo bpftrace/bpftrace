@@ -333,14 +333,17 @@ void AttachedProbe::load_prog()
   if (strrchr(name, ':') != NULL)
     namep = strrchr(name, ':') + 1;
 
-  bool found_kernel_version = false;
   for (int attempt=0; attempt<3; attempt++)
   {
     auto version = kernel_version(attempt);
-    if (version == 0) {
+    if (version == 0 && attempt > 0) {
+      // Recent kernels don't check the version so we should try to call
+      // bcc_prog_load during first iteration even if we failed to determine the
+      // version. We should not do that in subsequent iterations to avoid
+      // zeroing of log_buf on systems with older kernels.
       continue;
     }
-    found_kernel_version = true;
+
 #ifdef HAVE_BCC_PROG_LOAD
     progfd_ = bcc_prog_load(progtype(probe_.type), namep,
 #else
@@ -359,9 +362,6 @@ void AttachedProbe::load_prog()
     dup2(old_stderr, 2);
     close(old_stderr);
   }
-
-  if (!found_kernel_version)
-    throw std::runtime_error("Could not identify kernel version");
 
   if (progfd_ < 0) {
     if (bt_verbose)
