@@ -596,8 +596,6 @@ TEST(semantic_analyser, usdt)
   test("usdt:/bin/sh:probe { 1 }", 0);
   test("usdt:sh:probe { 1 }", 0);
   test("usdt:/bin/sh:namespace:probe { 1 }", 0);
-  test("usdt:/notexistfile:probe { 1 }", 1);
-  test("usdt:notexistfile:probe { 1 }", 1);
   test("usdt { 1 }", 1);
 }
 

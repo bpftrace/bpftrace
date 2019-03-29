@@ -958,30 +958,22 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "")
       err_ << "usdt probe must have a target function or wildcard" << std::endl;
 
-    if (ap.target == "") {
-      if (bpftrace_.pid_ > 0) {
-        // Call USDTHelperfunction to load probes by pid
-        // set target (filename)
+    usdt_probe_list probes;
+    if (bpftrace_.pid_ > 0) {
+       probes = USDTHelper::probes_for_pid(bpftrace_.pid_);
+    } else if (ap.target != "") {
+       probes = USDTHelper::probes_for_path(ap.target);
+    } else {
+      err_ << "usdt probe must specify at least path or pid to probe" << std::endl;
+    }
+
+    if (probes.size() > 1){
+      if (ap.ns != "") {
+        usdt_probe_list provider_probes = USDTHelper::probes_for_provider(ap.ns);
+        if (provider_probes.size() == 0)
+          err_ << "no matching probes usdt probes found on provider " << ap.ns << std::endl;
       }
-//      if (ap.target == "")
-//        err_ << "usdt probes must have a target path defined, or discovered from a pid" << std::endl;
     }
-    else  // Give it a shot loading by file if specified
-    {
-      // Call USDTHelper function to load probes by path
-    }
-
-    // Check if a provider NS was specified.
-    // if ap.ns != ""
-    //   use it
-    // else
-    //   Scan for tuples and look for duplicates. If a duplicate is found, throw an error that the probe
-    //   Isn't sufficiently specified
-    //   If one namespace exists and the probe is fully specified, use it
-
-//  Verify that at least one match was found or throw an error like this:
-//    err_ << "usdt probe " << ap.func << " not found in pid ( OR PATH FIXME)" << bpftrace_.pid_ << std::endl;
-
   }
   else if (ap.provider == "tracepoint") {
     if (ap.target == "" || ap.func == "")
