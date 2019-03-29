@@ -143,7 +143,6 @@ int BPFtrace::add_probe(ast::Probe &p)
         usdt_probe_entry u = USDTHelper::find(0, func);
         attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
       }
-
       Probe probe;
       probe.path = attach_point->target;
       probe.attach_point = func;
@@ -532,12 +531,6 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   // that includes wildcards.
   std::string index_str = "_" + std::to_string(probe.index);
   auto func = bpforc.sections_.find("s_" + probe.name + index_str);
-
-  //for (auto const& x : bpforc.sections_)
-  //{
-  //    std::cout << x.first  // string (key)
-  //              << std::endl ;
-  //}
   if (func == bpforc.sections_.end())
     func = bpforc.sections_.find("s_" + probe.orig_name + index_str);
   if (func == bpforc.sections_.end())
