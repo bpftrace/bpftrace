@@ -528,7 +528,6 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   std::string index_str = "_" + std::to_string(probe.index);
   auto func = bpforc.sections_.find("s_" + probe.name + index_str);
 
-  //std::map<std::string, std::tuple<uint8_t *, uintptr_t>>::iterator it;
   //for (auto const& x : bpforc.sections_)
   //{
   //    std::cout << x.first  // string (key)

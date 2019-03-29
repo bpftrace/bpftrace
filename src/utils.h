@@ -22,7 +22,7 @@ public:
   static usdt_probe_list probes_for_provider(std::string provider);
   static usdt_probe_list probes_for_pid(int pid);
   static usdt_probe_list probes_for_path(std::string path);
-  static std::istringstream probe_stream(int pid);
+  static std::istringstream probe_stream(int pid, bool include_provider = true);
 private:
   static void read_probes_for_pid(int pid);
   static void read_probes_for_path(std::string path);
