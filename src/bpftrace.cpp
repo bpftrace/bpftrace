@@ -119,7 +119,6 @@ int BPFtrace::add_probe(ast::Probe &p)
           break;
         case ProbeType::usdt:
         {
-          // FIXME should this also handle a case where no pid is specified?
           auto usdt_symbol_stream = USDTHelper::probe_stream(pid_);
           matches = find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
           break;
@@ -139,6 +138,12 @@ int BPFtrace::add_probe(ast::Probe &p)
 
     for (auto func : attach_funcs)
     {
+      if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
+      {
+        usdt_probe_entry u = USDTHelper::find(0, func);
+        attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
+      }
+
       Probe probe;
       probe.path = attach_point->target;
       probe.attach_point = func;

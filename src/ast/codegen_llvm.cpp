@@ -1243,9 +1243,11 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
 
-  // needed for uaddr() call:
   for (auto &attach_point : *probe.attach_points) {
     current_attach_point_ = attach_point;
+    // Ensure that USDT probes discover their provider ns if not specified and func name is unique
+    if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
+      probe.need_expansion = true;
     // TODO: semantic analyser should ensure targets are equal when uaddr() is used
     break;
   }
@@ -1312,11 +1314,9 @@ void CodegenLLVM::visit(Probe &probe)
           break;
         case ProbeType::usdt:
         {
-          // FIXME should this also handle a case where no pid is specified? - YES
           bool include_provider = attach_point->ns != "";
           auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_, include_provider);
           matches = bpftrace_.find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
-
           break;
         }
         default:
@@ -1330,7 +1330,7 @@ void CodegenLLVM::visit(Probe &probe)
         time_id_ = starting_time_id_;
         join_id_ = starting_join_id_;
 
-        if (attach_point->ns == "")
+        if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
         {
           usdt_probe_entry u = USDTHelper::find(0, match);
           attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
