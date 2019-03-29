@@ -358,15 +358,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
   }
   bcc_usdt_close(usdt);
 
-  auto u = USDTHelper::find(0, attach_point->func);
-  attach_point->target = std::get<0>(u);
+  auto u = USDTHelper::find(0, attach_point->ns, attach_point->func);
+  attach_point->target = std::get<USDT_PATH_INDEX>(u);
 
-  if(attach_point->ns != "")
-    provider_ns = attach_point->ns;
-  else
-    provider_ns = std::get<0>(u);
-
-  if (bcc_usdt_get_argument(usdt, provider_ns.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
+  if (bcc_usdt_get_argument(usdt, attach_point->ns.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
               << provider_ns << ":" << attach_point->func << std::endl;
     exit(-2);
