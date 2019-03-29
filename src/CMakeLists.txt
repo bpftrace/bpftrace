@@ -47,10 +47,18 @@ target_compile_definitions(bpftrace PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_
 endif()
 
 execute_process(
-  COMMAND git describe --abbrev=4 --dirty --always --tags
+  COMMAND git describe --abbrev=4 --dirty --tags
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   OUTPUT_VARIABLE BPFTRACE_VERSION
+  ERROR_VARIABLE GIT_DESCRIBE_ERROR
   OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE retcode
 )
+
+# If the build is not done from a git repo, get the version information from
+# the version variables in main CMakeLists.txt
+if(NOT "${retcode}" STREQUAL "0")
+  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}")
+endif()
 
 add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
