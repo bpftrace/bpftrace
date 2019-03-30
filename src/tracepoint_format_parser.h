@@ -52,6 +52,9 @@ public:
   void visit(FieldAccess &acc) override {
     acc.expr->accept(*this);
   };
+  void visit(ArrayIndex &acc) override {
+    acc.expr->accept(*this);
+  };
   void visit(Cast &cast) override {
     cast.expr->accept(*this);
   };
