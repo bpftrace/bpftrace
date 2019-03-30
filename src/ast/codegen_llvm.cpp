@@ -1015,7 +1015,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   }
 }
 
-void CodegenLLVM::visit(ArrayIndex &arr)
+void CodegenLLVM::visit(ArrayAccess &arr)
 {
   Value *array, *index, *offset;
   SizedType &type = arr.expr->type;
@@ -1027,7 +1027,7 @@ void CodegenLLVM::visit(ArrayIndex &arr)
   index = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
   offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
 
-  AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_index");
+  AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_access");
   Value *src = b_.CreateAdd(array, offset);
   b_.CreateProbeRead(dst, type.pointee_size, src);
   expr_ = b_.CreateLoad(dst);

@@ -135,9 +135,9 @@ public:
   void accept(Visitor &v) override;
 };
 
-class ArrayIndex : public Expression {
+class ArrayAccess : public Expression {
 public:
-  ArrayIndex(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
+  ArrayAccess(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
   Expression *expr;
   Expression *indexpr;
 
@@ -314,7 +314,7 @@ public:
   virtual void visit(Unop &unop) = 0;
   virtual void visit(Ternary &ternary) = 0;
   virtual void visit(FieldAccess &acc) = 0;
-  virtual void visit(ArrayIndex &arr) = 0;
+  virtual void visit(ArrayAccess &arr) = 0;
   virtual void visit(Cast &cast) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;

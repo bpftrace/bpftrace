@@ -32,7 +32,7 @@ public:
   void visit(Unop &unop) override;
   void visit(Ternary &ternary) override;
   void visit(FieldAccess &acc) override;
-  void visit(ArrayIndex &arr) override;
+  void visit(ArrayAccess &arr) override;
   void visit(Cast &cast) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;

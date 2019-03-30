@@ -57,7 +57,7 @@ void FieldAccess::accept(Visitor &v) {
   v.visit(*this);
 }
 
-void ArrayIndex::accept(Visitor &v) {
+void ArrayAccess::accept(Visitor &v) {
   v.visit(*this);
 }
 

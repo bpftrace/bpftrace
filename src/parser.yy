@@ -237,7 +237,7 @@ expr : INT             { $$ = new ast::Integer($1); }
      | expr PTR ident  { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1), $3); }
      | "(" IDENT ")" expr %prec CAST  { $$ = new ast::Cast($2, false, $4); }
      | "(" IDENT MUL ")" expr %prec CAST  { $$ = new ast::Cast($2, true, $5); }
-     | expr"["expr"]" { $$ = new ast::ArrayIndex($1, $3); }
+     | expr"["expr"]" { $$ = new ast::ArrayAccess($1, $3); }
      ;
 
 ident : IDENT   { $$ = $1; }

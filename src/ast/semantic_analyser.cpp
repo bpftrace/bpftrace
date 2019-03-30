@@ -573,7 +573,7 @@ void SemanticAnalyser::visit(Variable &var)
   }
 }
 
-void SemanticAnalyser::visit(ArrayIndex &arr)
+void SemanticAnalyser::visit(ArrayAccess &arr)
 {
   arr.expr->accept(*this);
   arr.indexpr->accept(*this);

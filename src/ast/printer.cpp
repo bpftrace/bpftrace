@@ -128,7 +128,7 @@ void Printer::visit(FieldAccess &acc)
   out_ << indent << " " << acc.field << std::endl;
 }
 
-void Printer::visit(ArrayIndex &arr)
+void Printer::visit(ArrayAccess &arr)
 {
   std::string indent(depth_, ' ');
   out_ << indent << "[]" << std::endl;
