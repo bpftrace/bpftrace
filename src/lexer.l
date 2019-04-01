@@ -1,18 +1,15 @@
 %option yylineno nodefault noyywrap noinput
 %option never-interactive
 %option reentrant
+%option stack
 %{
 #include "driver.h"
 #include "utils.h"
 #include "parser.tab.hh"
 
-#undef yywrap
-#define yywrap(x) 1
-
 static bpftrace::location loc;
 static std::string struct_type;
 static std::string buffer;
-static int open_brackets;
 
 #define YY_USER_ACTION loc.columns(yyleng);
 #define yyterminate() return bpftrace::Parser::make_END(loc)
@@ -30,6 +27,7 @@ space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
 %x STR
 %x STRUCT
+%x BRACE
 %x COMMENT
 
 %%
@@ -43,13 +41,13 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 
 ^"#!".*$                // executable line
 "//".*$                 // single-line comments
-"/*"                    BEGIN(COMMENT);  // multi-line comments; see flex(1)
-<COMMENT>"/*"           driver.error(loc, std::string("nested comments unsupported"));
-<COMMENT>[^*\n]*	;
-<COMMENT>"*"+[^*/\n]*	;
-<COMMENT>"\n"           loc.lines(1);
-<COMMENT>"*/"           BEGIN(INITIAL);
-<COMMENT>"EOF"          driver.error(loc, std::string("end of file during comment"));
+"/*"                    yy_push_state(COMMENT, yyscanner);
+<COMMENT>{
+  "*/"                  yy_pop_state(yyscanner);
+  [^*\n]+|"*"           {}
+  \n                    loc.lines(1); loc.step();
+  <<EOF>>               yy_pop_state(yyscanner); driver.error(loc, "end of file during comment");
+}
 
 pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|retval|func|probe|curtask|rand|ctx|username|args|elapsed {
                           return Parser::make_BUILTIN(yytext, loc); }
@@ -101,48 +99,42 @@ bpftrace|perf {
 "?"                     { return Parser::make_QUES(loc); }
 "unroll"                { return Parser::make_UNROLL(yytext, loc); }
 
-\"                      { BEGIN(STR); buffer.clear(); }
-<STR>\"                 { BEGIN(INITIAL); return Parser::make_STRING(buffer, loc); }
-<STR>[^\\\n\"]+         { buffer += std::string(yytext); }
-<STR>\\n                { buffer += std::string("\n"); }
-<STR>\\t                { buffer += std::string("\t"); }
-<STR>\\r                { buffer += std::string("\r"); }
-<STR>\\\"               { buffer += std::string("\""); }
-<STR>\\\\               { buffer += std::string("\\"); }
-<STR>\n                 { driver.error(loc, std::string("unterminated string")); BEGIN(INITIAL); }
-<STR><<EOF>>            { driver.error(loc, std::string("unterminated string")); BEGIN(INITIAL); }
-<STR>\\.                { driver.error(loc, std::string("invalid escape character '") +
-                                            std::string(yytext) + std::string("'")); }
-<STR>.                  { driver.error(loc, std::string("invalid character '") +
-                                            std::string(yytext) + std::string("'")); }
+\"                      { yy_push_state(STR, yyscanner); buffer.clear(); }
+<STR>{
+  \"                    { yy_pop_state(yyscanner); return Parser::make_STRING(buffer, loc); }
+  [^\\\n\"]+            buffer += yytext;
+  \\n                   buffer += '\n';
+  \\t                   buffer += '\t';
+  \\r                   buffer += '\r';
+  \\\"                  buffer += '\"';
+  \\\\                  buffer += '\\';
+  \n                    driver.error(loc, "unterminated string"); yy_pop_state(yyscanner); loc.lines(1); loc.step();
+  <<EOF>>               driver.error(loc, "unterminated string"); yy_pop_state(yyscanner);
+  \\.                   { driver.error(loc, std::string("invalid escape character '") +
+                                            yytext + "'"); }
+  .                     driver.error(loc, "invalid character"); yy_pop_state(yyscanner);
+}
 
-struct|union            { BEGIN(STRUCT); buffer = ""; struct_type = std::string(yytext); open_brackets = 0; }
-<STRUCT>"*"|")"         { if (open_brackets == 0) {
-                            BEGIN(INITIAL);
+struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
+<STRUCT,BRACE>{
+  "*"|")"               { if (YY_START == STRUCT) {
+                            yy_pop_state(yyscanner);
                             unput(yytext[0]);
                             return Parser::make_IDENT(trim(buffer), loc);
                           }
-                          else
-                          {
-                            buffer += std::string(yytext);
-                          }
+                          buffer += yytext[0];
                         }
-<STRUCT>"{"             { BEGIN(STRUCT); buffer += std::string(yytext); open_brackets++; }
-<STRUCT>"}"|"};"        { buffer += std::string(yytext);
-                          if (open_brackets == 1)
-                          {
-                            BEGIN(INITIAL);
+  "{"                   yy_push_state(BRACE, yyscanner); buffer += '{';
+  "}"|"};"              { buffer += yytext;
+                          yy_pop_state(yyscanner);
+                          if (YY_START == STRUCT) {
+                            yy_pop_state(yyscanner);
                             return Parser::make_STRUCT(struct_type + buffer, loc);
                           }
-                          else
-                          {
-                            open_brackets--;
-                          }
                         }
-<STRUCT>\n              { buffer += std::string(yytext); }
-<STRUCT>.               {
-                          buffer += std::string(yytext);
-                        }
+  .                     buffer += yytext[0];
+  \n                    buffer += '\n'; loc.lines(1); loc.step();
+}
 
 {ident}                 { return Parser::make_IDENT(yytext, loc); }
 .                       { driver.error(loc, std::string("invalid character '") +

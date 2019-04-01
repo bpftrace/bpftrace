@@ -47,6 +47,11 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { $1 }", "Program\n kprobe:f\n  builtin: $1\n");
 }
 
+TEST(Parser, comment)
+{
+  test("kprobe:f { /*** ***/0; }", "Program\n kprobe:f\n  int: 0\n");
+}
+
 TEST(Parser, map_assign)
 {
   test("kprobe:sys_open { @x = 1; }",
