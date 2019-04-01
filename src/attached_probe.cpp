@@ -335,13 +335,22 @@ void AttachedProbe::load_prog()
 
   for (int attempt=0; attempt<3; attempt++)
   {
+    auto version = kernel_version(attempt);
+    if (version == 0 && attempt > 0) {
+      // Recent kernels don't check the version so we should try to call
+      // bcc_prog_load during first iteration even if we failed to determine the
+      // version. We should not do that in subsequent iterations to avoid
+      // zeroing of log_buf on systems with older kernels.
+      continue;
+    }
+
 #ifdef HAVE_BCC_PROG_LOAD
     progfd_ = bcc_prog_load(progtype(probe_.type), namep,
 #else
     progfd_ = bpf_prog_load(progtype(probe_.type), namep,
 #endif
         reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
-        kernel_version(attempt), log_level, log_buf, log_buf_size);
+        version, log_level, log_buf, log_buf_size);
     if (progfd_ >= 0)
       break;
   }
