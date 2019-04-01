@@ -412,7 +412,7 @@ typedef int (*attach_probe_wrapper_signature)(int, enum bpf_probe_attach_type, c
 
 void AttachedProbe::attach_kprobe()
 {
-  int perf_event_fd = reinterpret_cast<attach_probe_wrapper_signature>(&bpf_attach_kprobe)(progfd_, attachtype(probe_.type),
+  int perf_event_fd = cast_signature<attach_probe_wrapper_signature>(&bpf_attach_kprobe)(progfd_, attachtype(probe_.type),
       eventname().c_str(), probe_.attach_point.c_str(), 0, 0);
 
   if (perf_event_fd < 0) {
