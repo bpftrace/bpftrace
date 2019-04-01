@@ -27,6 +27,19 @@ private:
   static void read_probes_for_path(std::string path);
 };
 
+// Hack used to suppress build warning related to #474
+template <typename new_signature, typename old_signature>
+new_signature cast_signature(old_signature func) {
+#if __GNUC__ >= 8
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
+#endif
+  return reinterpret_cast<new_signature>(func);
+#if __GNUC__ >= 8
+_Pragma("GCC diagnostic pop")
+#endif
+}
+
 struct DeprecatedName
 {
   std::string old_name;
