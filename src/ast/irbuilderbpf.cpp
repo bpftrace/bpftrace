@@ -367,8 +367,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
   }
 
   Value *result = CreateUSDTReadArgument(ctx, &argument, builtin);
-  bcc_usdt_close(usdt);
 
+  bcc_usdt_close(usdt);
   return result;
 }
 

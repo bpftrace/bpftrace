@@ -143,6 +143,7 @@ void list_probes(const std::string &search_input, int pid)
   } else {
     // If the *full* path is provided as part of the search expression parse it out and use it
     std::string usdt_path = search.substr(search.find(":")+1, search.size());
+    usdt_path = usdt_path.substr(0, usdt_path.find(":"));
     usdt_probes = USDTHelper::probes_for_path(usdt_path);
   }
 
@@ -151,7 +152,9 @@ void list_probes(const std::string &search_input, int pid)
     std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
     std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
     std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
-    std::cout << "usdt:" << path << ":" << provider << ":" << fname << std::endl;
+    std::string probe    = "usdt:" + path + ":" + provider + ":" + fname;
+    if (!search_probe(probe, re))
+      std::cout << probe << std::endl;
   }
 
   // tracepoints
