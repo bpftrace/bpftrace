@@ -33,7 +33,7 @@ This prints a welcome message. Run it, then hit Ctrl-C to end.
 # Lesson 3. File Opens
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
@@ -44,7 +44,7 @@ snmpd /proc/net/if_inet6
 
 This traces file opens as they happen, and we're printing the process name and pathname.
 
-- It begins with the probe `tracepoint:syscalls:sys_enter_open`: this is the tracepoint probe type (kernel static tracing), and is instrumenting when the open() syscall begins (is entered). Tracepoints are preferred over kprobes (kernel dynamic tracing, introduced in lesson 6), since tracepoints have stable API.
+- It begins with the probe `tracepoint:syscalls:sys_enter_openat`: this is the tracepoint probe type (kernel static tracing), and is instrumenting when the `openat()` syscall begins (is entered). Tracepoints are preferred over kprobes (kernel dynamic tracing, introduced in lesson 6), since tracepoints have stable API. Note: In modern Linux systems (glibc >= 2.26) the `open` wrapper always calls the `openat` syscall.
 - `comm` is a builtin variable that has the current process's name. Other similar builtins include pid and tid.
 - `arg0` is a builtin variable containing the first probe argument, the meaning of which is defined by the probe type. For `kprobe`, it is the first argument to the function. Other arguments can be accessed as arg1, ..., argN. The sys_open() arguments are: const char *pathname, int flags, mode_t mode (see the open(2) man page). So, arg0 is the pathname pointer.
 - `str()` turns a pointer into the string it points to.
