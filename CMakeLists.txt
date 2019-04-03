@@ -75,7 +75,7 @@ endif()
 
 if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
   message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
-  message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERION=<version>")
+  message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERION=<major version>")
 endif()
 
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
