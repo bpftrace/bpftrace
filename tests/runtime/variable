@@ -35,3 +35,9 @@ RUN bpftrace -e 'tracepoint:block:block_rq_issue { @start[args->dev, args->secto
 EXPECT @
 TIMEOUT 5
 BEFORE (sleep 1; sync) &
+
+NAME tracepoint arg casts in predicates
+RUN bpftrace -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }'
+EXPECT @
+TIMEOUT 5
+BEFORE (sleep 1; sleep 0.1) &

@@ -538,8 +538,11 @@ void SemanticAnalyser::visit(Binop &binop)
   Type &rhs = binop.right->type.type;
 
   if (is_final_pass()) {
-    if (lhs != rhs) {
-      err_ << "Type mismatch for '" << opstr(binop) << "': ";
+    if ((lhs != rhs) &&
+      // allow integer to cast pointer comparisons (eg, ptr != 0):
+      !(lhs == Type::cast && rhs == Type::integer) &&
+      !(lhs == Type::integer && rhs == Type::cast)) {
+      err_ << "TYpe mismatch for '" << opstr(binop) << "': ";
       err_ << "comparing '" << lhs << "' ";
       err_ << "with '" << rhs << "'" << std::endl;
     }
