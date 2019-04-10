@@ -614,9 +614,14 @@ sleep by 3669
 
 ## 2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments
 
-Syntax: `arg0, arg1, ..., argN`
+Syntax:
 
-Arguments can be accessed via these variables names. arg0 is the first argument.
+```
+kprobe: arg0, arg1, ..., argN
+kretprobe: retval
+```
+
+Arguments can be accessed via these variables names. `arg0` is the first argument and can only be accessed with a `kprobe`. `retval` is the return value for the instrumented function, and can only be accessed on `kretprobe`.
 
 Examples:
 
@@ -717,7 +722,7 @@ Syntax:
 
 ```
 uprobe: arg0, arg1, ..., argN
-uretprobe: retval`
+uretprobe: retval
 ```
 
 Arguments can be accessed via these variables names. `arg0` is the first argument, and can only be accessed with a `uprobe`. `retval` is the return value for the instrumented function, and can only be accessed on `uretprobe`.

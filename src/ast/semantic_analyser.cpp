@@ -71,14 +71,25 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "cpu" ||
       builtin.ident == "curtask" ||
       builtin.ident == "rand" ||
-      builtin.ident == "ctx" ||
-      builtin.ident == "retval") {
+      builtin.ident == "ctx") {
     builtin.type = SizedType(Type::integer, 8);
     if (builtin.ident == "cgroup") {
       #ifndef HAVE_GET_CURRENT_CGROUP_ID
         err_ << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version" << std::endl;
       #endif
     }
+  }
+  else if (builtin.ident == "retval") {
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type != ProbeType::kretprobe && type != ProbeType::uretprobe) {
+        err_ << "The retval builtin can only be used with 'kretprobe' and 'uretprobe' probes"
+             << (type == ProbeType::tracepoint ? " (try to use args->ret instead)" : "")
+             << std::endl;
+      }
+    }
+    builtin.type = SizedType(Type::integer, 8);
   }
   else if (builtin.ident == "kstack") {
     builtin.type = SizedType(Type::kstack, StackType());
@@ -111,8 +122,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type == ProbeType::tracepoint)
-        err_ << "The " << builtin.ident << " builtin can not be used with tracepoint probes" << std::endl;
+      if (type != ProbeType::kprobe &&
+          type != ProbeType::uprobe &&
+          type != ProbeType::usdt)
+        err_ << "The " << builtin.ident << " builtin can only be used with "
+             << "'kprobes', 'uprobes' and 'usdt' probes" << std::endl;
     }
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
