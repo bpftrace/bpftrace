@@ -1,6 +1,9 @@
 # bpftrace Install
 
 - [Linux Kernel Requirements](#linux-kernel-requirements)
+- [Package install](#package-install)
+  - [Ubuntu](#ubuntu-snap-package)
+  - [Fedora](#fedora-package)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -8,8 +11,6 @@
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
   - [Generic build](#generic-build)
-- [Package install](#package-install)
-  - [Fedora](#fedora-package)
 
 # Linux Kernel Requirements
 
@@ -31,6 +32,25 @@ CONFIG_BPF_SYSCALL=y
 CONFIG_BPF_JIT=y
 CONFIG_HAVE_EBPF_JIT=y
 CONFIG_BPF_EVENTS=y
+```
+
+# Package install
+
+## Ubuntu snap package
+
+On Ubuntu 16.04 and later, bpftrace is available as a snap package (https://snapcraft.io/bpftrace) and can be installed with snap.
+
+```
+sudo snap install bpftrace
+sudo snap connect bpftrace:system-trace
+```
+
+## Fedora package
+
+For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
+
+```
+sudo dnf install bpftrace
 ```
 
 # Building bpftrace
@@ -184,14 +204,4 @@ To test that the build works, you can try running the test suite, and a one-line
 ```
 ./tests/bpftrace_test
 ./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
-```
-
-# Package install
-
-## Fedora package
-
-For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
-
-```
-sudo dnf install bpftrace
 ```
