@@ -1,0 +1,19 @@
+NAME kretprobe:_raw_spin_lock is banned
+RUN bpftrace -e 'kretprobe:_raw_spin_lock { exit(); }'
+EXPECT error: kretprobe:_raw_spin_lock can't be used as it might lock up your system.
+TIMEOUT 1
+
+NAME kretprobe:queued_spin_lock_slowpath is banned
+RUN bpftrace -e 'kretprobe:queued_spin_lock_slowpath { exit(); }'
+EXPECT error: kretprobe:queued_spin_lock_slowpath can't be used as it might lock up your system.
+TIMEOUT 1
+
+NAME kretprobe:_raw_spin_unlock_irqrestore is banned
+RUN bpftrace -e 'kretprobe:_raw_spin_unlock_irqrestore { exit(); }'
+EXPECT error: kretprobe:_raw_spin_unlock_irqrestore can't be used as it might lock up your system.
+TIMEOUT 1
+
+NAME kretprobe:_raw_spin_lock_irqsave is banned
+RUN bpftrace -e 'kretprobe:_raw_spin_lock_irqsave { exit(); }'
+EXPECT error: kretprobe:_raw_spin_lock_irqsave can't be used as it might lock up your system.
+TIMEOUT 1
