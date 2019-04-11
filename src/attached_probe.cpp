@@ -24,6 +24,15 @@
 namespace bpftrace {
 
 const int BPF_LOG_SIZE = 100 * 1024;
+/*
+ * Kernel functions that are unsafe to trace are excluded in the Kernel with
+ * `notrace`. However, the ones below are not excluded.
+ */
+const std::set<std::string> banned_kretprobes = {
+  "_raw_spin_lock", "_raw_spin_lock_irqsave", "_raw_spin_unlock_irqrestore",
+  "queued_spin_lock_slowpath",
+};
+
 
 bpf_probe_attach_type attachtype(ProbeType t)
 {
@@ -60,6 +69,12 @@ bpf_prog_type progtype(ProbeType t)
   }
 }
 
+void check_banned_kretprobes(std::string const& kprobe_name) {
+  if (banned_kretprobes.find(kprobe_name) != banned_kretprobes.end()) {
+    std::cerr << "error: kretprobe:" << kprobe_name << " can't be used as it might lock up your system." << std::endl;
+    exit(1);
+  }
+}
 
 AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func)
   : probe_(probe), func_(func)
@@ -70,7 +85,10 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   switch (probe_.type)
   {
     case ProbeType::kprobe:
+      attach_kprobe();
+      break;
     case ProbeType::kretprobe:
+      check_banned_kretprobes(probe_.attach_point);
       attach_kprobe();
       break;
     case ProbeType::uprobe:
