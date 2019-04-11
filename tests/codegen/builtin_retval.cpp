@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, builtin_retval)
 {
-  test("kprobe:f { @x = retval }",
+  test("kretprobe:f { @x = retval }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -14,7 +14,7 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kretprobe:f"(i8*) local_unnamed_addr section "s_kretprobe:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
