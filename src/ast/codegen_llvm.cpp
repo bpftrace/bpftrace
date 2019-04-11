@@ -9,9 +9,11 @@
 
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
-#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/PassManager.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Transforms/IPO/AlwaysInliner.h>
+#include <llvm/Transforms/IPO/StripDeadPrototypes.h>
 #include <llvm-c/Transforms/IPO.h>
 
 namespace bpftrace {
@@ -1597,21 +1599,14 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   TargetOptions opt;
   auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
+  targetMachine->setOptLevel(CodeGenOpt::Level::Aggressive);
   module_->setDataLayout(targetMachine->createDataLayout());
 
-  legacy::PassManager PM;
-  PassManagerBuilder PMB;
-  PMB.OptLevel = 3;
-  PM.add(createFunctionInliningPass());
-  /*
-   * llvm < 4.0 needs
-   * PM.add(createAlwaysInlinerPass());
-   * llvm >= 4.0 needs
-   * PM.add(createAlwaysInlinerLegacyPass());
-   * use below 'stable' workaround
-   */
-  LLVMAddAlwaysInlinerPass(reinterpret_cast<LLVMPassManagerRef>(&PM));
-  PMB.populateModulePassManager(PM);
+  ModulePassManager PM(debug != DebugLevel::kNone);
+  FunctionPassManager FPM(debug != DebugLevel::kNone);
+  PM.addPass(AlwaysInlinerPass());
+  PM.addPass(StripDeadPrototypesPass());
+  ModuleAnalysisManager AM;
   if (debug == DebugLevel::kFullDebug)
   {
     raw_os_ostream llvm_ostream(out);
@@ -1620,7 +1615,7 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
     module_->print(llvm_ostream, nullptr, false, true);
   }
 
-  PM.run(*module_.get());
+  PM.run(*module_.get(), AM);
 
   if (debug != DebugLevel::kNone)
   {
