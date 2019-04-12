@@ -17,12 +17,11 @@ typedef std::vector<usdt_probe_entry> usdt_probe_list;
 class USDTHelper
 {
 public:
-  static usdt_probe_entry find(int pid, std::string name);
-  static usdt_probe_entry find(int pid, std::string provider, std::string name);
+  static usdt_probe_entry find(int pid, std::string target, std::string provider, std::string name);
   static usdt_probe_list probes_for_provider(std::string provider);
   static usdt_probe_list probes_for_pid(int pid);
   static usdt_probe_list probes_for_path(std::string path);
-  static std::istringstream probe_stream(int pid, bool include_provider = true);
+  static std::istringstream probe_stream(int pid, std::string target);
 private:
   static void read_probes_for_pid(int pid);
   static void read_probes_for_path(std::string path);

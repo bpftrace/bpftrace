@@ -136,6 +136,7 @@ void list_probes(const std::string &search_input, int pid)
 
   // usdt
   usdt_probe_list usdt_probes;
+  bool usdt_path_list = false;
   if (pid > 0)
   {
     // PID takes precedence over path, so path from search expression will be ignored if pid specified
@@ -143,6 +144,7 @@ void list_probes(const std::string &search_input, int pid)
   } else {
     // If the *full* path is provided as part of the search expression parse it out and use it
     std::string usdt_path = search.substr(search.find(":")+1, search.size());
+    usdt_path_list = usdt_path.find(":") == std::string::npos;
     usdt_path = usdt_path.substr(0, usdt_path.find(":"));
     usdt_probes = USDTHelper::probes_for_path(usdt_path);
   }
@@ -153,7 +155,7 @@ void list_probes(const std::string &search_input, int pid)
     std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
     std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
     std::string probe    = "usdt:" + path + ":" + provider + ":" + fname;
-    if (search.empty() || !search_probe(probe, re))
+    if (usdt_path_list || search.empty() || !search_probe(probe, re))
       std::cout << probe << std::endl;
   }
 

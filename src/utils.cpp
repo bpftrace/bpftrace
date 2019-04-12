@@ -50,33 +50,14 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
   usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
 }
 
-usdt_probe_entry USDTHelper::find(int pid, std::string name)
+usdt_probe_entry USDTHelper::find(int pid, std::string target, std::string provider, std::string name)
 {
-  usdt_probe_list matches;
-  for (auto const& usdt_probes : usdt_provider_cache)
-  {
-    usdt_probe_entry probe = USDTHelper::find(pid, usdt_probes.first, name);
-    if (std::get<USDT_FNAME_INDEX>(probe) != "")
-    {
-      matches.push_back(probe);
-    }
-  }
 
-  if (matches.size() == 1)
-    return matches.front();
-  else if (matches.size() > 1) {
-    throw std::runtime_error("ERROR: Insufficiently specified probe. Probe \"" + name + "\" is defined on " + std::to_string(matches.size()) + " providers.\n" +
-                             "You must specify a provider for this probe to uniquely identify it.\n");
-  } else {
-    std::cerr << "ERROR: no matches found for " << name << std::endl;
-  }
-  return std::make_tuple("", "", "");
-}
+  if (pid > 0)
+    read_probes_for_pid(pid);
+  else
+    read_probes_for_path(target);
 
-
-usdt_probe_entry USDTHelper::find(int pid, std::string provider, std::string name)
-{
-  read_probes_for_pid(pid);
   usdt_probe_list probes = usdt_provider_cache[provider];
 
   auto it = std::find_if(probes.begin(), probes.end(), [&name](const usdt_probe_entry& e) {return std::get<USDT_FNAME_INDEX>(e) == name;});
@@ -124,19 +105,22 @@ usdt_probe_list USDTHelper::probes_for_path(std::string path)
   return probes;
 }
 
-std::istringstream USDTHelper::probe_stream(int pid, bool include_provider)
+std::istringstream USDTHelper::probe_stream(int pid, std::string target)
 {
   std::string probes;
-  usdt_probe_list usdt_probes = probes_for_pid(pid);
+  usdt_probe_list usdt_probes;
+
+  if (pid > 0)
+    usdt_probes = probes_for_pid(pid);
+  else
+    usdt_probes = probes_for_path(target);
+
   for (auto const& usdt_probe : usdt_probes)
   {
     std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
     std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
     std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
-    if (include_provider)
-      probes += provider + ":" + fname + "\n";
-    else
-      probes += fname + "\n";
+    probes += provider + ":" + fname + "\n";
   }
 
   return std::istringstream(probes);

@@ -340,7 +340,6 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin, int pid)
 {
   struct bcc_usdt_argument argument;
-  std::string provider_ns;
 
   void *usdt;
 
@@ -348,7 +347,6 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
     //FIXME use attach_point->target when iovisor/bcc#2064 is merged
     usdt = bcc_usdt_new_frompid(pid, nullptr);
   } else {
-    std::cerr << "initializing usdt context from path" << std::endl;
     usdt = bcc_usdt_new_frompath(attach_point->target.c_str());
   }
 
@@ -357,12 +355,12 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
     exit(-1);
   }
 
-  auto u = USDTHelper::find(0, attach_point->ns, attach_point->func);
-  attach_point->target = std::get<USDT_PATH_INDEX>(u);
+  std::string ns = std::get<USDT_PROVIDER_INDEX>(attach_point->usdt);
+  std::string func = std::get<USDT_FNAME_INDEX>(attach_point->usdt);
 
-  if (bcc_usdt_get_argument(usdt, attach_point->ns.c_str(), attach_point->func.c_str(), 0, arg_num, &argument) != 0) {
+  if (bcc_usdt_get_argument(usdt, ns.c_str(), func.c_str(), 0, arg_num, &argument) != 0) {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
-              << provider_ns << ":" << attach_point->func << std::endl;
+              << attach_point->ns << ":" << attach_point->func << std::endl;
     exit(-2);
   }
 
