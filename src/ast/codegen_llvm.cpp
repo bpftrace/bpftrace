@@ -1151,6 +1151,9 @@ void CodegenLLVM::visit(Predicate &pred)
 
   pred.expr->accept(*this);
 
+  // allow unop casts in predicates:
+  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+
   expr_ = b_.CreateICmpEQ(expr_, b_.getInt64(0), "predcond");
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
