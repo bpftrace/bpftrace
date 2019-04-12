@@ -1,6 +1,7 @@
 #pragma once
 
 #include "struct.h"
+#include "bpftrace.h"
 
 namespace bpftrace {
 
@@ -11,7 +12,7 @@ using StructMap = std::map<std::string, Struct>;
 class ClangParser
 {
 public:
-  void parse(ast::Program *program, StructMap &structs);
+  void parse(ast::Program *program, BPFtrace &bpftrace);
 };
 
 } // namespace bpftrace

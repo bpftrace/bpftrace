@@ -30,7 +30,7 @@ static void test(const std::string &input, const std::string expected_output)
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace.structs_);
+  clang.parse(driver.root_, bpftrace);
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);

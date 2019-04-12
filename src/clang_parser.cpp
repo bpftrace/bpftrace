@@ -172,7 +172,7 @@ static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname
   return std::make_tuple(ksrc, kobj);
 }
 
-void ClangParser::parse(ast::Program *program, StructMap &structs)
+void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   auto input = program->c_definitions;
   if (input.size() == 0)
@@ -259,7 +259,6 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data)
       {
-        auto &structs = *static_cast<StructMap*>(client_data);
 
         if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
             clang_getCursorKind(parent) != CXCursor_UnionDecl)
@@ -267,6 +266,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
+          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
           auto struct_name = get_parent_struct_name(c);
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Cursor_getOffsetOfField(c) / 8;
@@ -290,7 +290,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
         return CXChildVisit_Recurse;
       },
-      &structs);
+      &bpftrace);
 
   clang_disposeTranslationUnit(translation_unit);
   clang_disposeIndex(index);
