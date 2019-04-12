@@ -1243,11 +1243,9 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
 
+  // needed for uaddr() call:
   for (auto &attach_point : *probe.attach_points) {
     current_attach_point_ = attach_point;
-    // Ensure that USDT probes discover their provider ns if not specified and func name is unique
-    if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
-      probe.need_expansion = true;
     // TODO: semantic analyser should ensure targets are equal when uaddr() is used
     break;
   }
@@ -1314,9 +1312,8 @@ void CodegenLLVM::visit(Probe &probe)
           break;
         case ProbeType::usdt:
         {
-          bool include_provider = attach_point->ns != "";
-          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_, include_provider);
-          matches = bpftrace_.find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
+          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_, attach_point->target);
+          matches = bpftrace_.find_usdt_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
           break;
         }
         default:
@@ -1325,23 +1322,40 @@ void CodegenLLVM::visit(Probe &probe)
           return;
       }
       tracepoint_struct_ = "";
-      for (auto &match : matches) {
+      for (auto &match_ : matches) {
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;
         join_id_ = starting_join_id_;
 
-        if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
-        {
-          usdt_probe_entry u = USDTHelper::find(0, match);
-          attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
+        std::string full_func_id = match_;
+
+        // USDT probes must specify both a provider and a function name
+        // So we will extract out the provider namespace to get just the function name
+        if (probetype(attach_point->provider) == ProbeType::usdt) {
+          std::string func_id = match_;
+          std::string orig_ns = attach_point->ns;
+          std::string ns = func_id.substr(0, func_id.find(":"));
+
+          func_id.erase(0, func_id.find(":")+1);
+
+          // Ensure that the full probe name used is the resolved one for this probe,
+          attach_point->ns = ns;
+          probefull_ = attach_point->name(func_id);
+
+          // But propagate the originally specified namespace in case it has a wildcard,
+          attach_point->ns = orig_ns;
+
+          // Set the probe identifier so that we can read arguments later
+          attach_point->usdt = USDTHelper::find(bpftrace_.pid_, attach_point->target, ns, func_id);
+        } else {
+          probefull_ = attach_point->name(full_func_id);
         }
 
-        probefull_ = attach_point->name(match);
         // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use by args builtin.
         if (probetype(attach_point->provider) == ProbeType::tracepoint)
-          tracepoint_struct_ = TracepointFormatParser::get_struct_name(attach_point->target, match);
+          tracepoint_struct_ = TracepointFormatParser::get_struct_name(attach_point->target, full_func_id);
         int index = getNextIndexForProbe(probe.name());
-        attach_point->set_index(match, index);
+        attach_point->set_index(full_func_id, index);
         Function *func = Function::Create(func_type, Function::ExternalLinkage, probefull_, module_.get());
         func->setSection(getSectionNameForProbe(probefull_, index));
         BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);

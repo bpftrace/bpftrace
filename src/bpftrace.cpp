@@ -94,7 +94,8 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
 
     std::vector<std::string> attach_funcs;
-    if (attach_point->need_expansion && has_wildcard(attach_point->func))
+    bool underspecified_usdt_probe = (probetype(attach_point->provider) == ProbeType::usdt  && attach_point->ns.empty());
+    if (attach_point->need_expansion && (has_wildcard(attach_point->func) || underspecified_usdt_probe))
     {
       std::set<std::string> matches;
       switch (probetype(attach_point->provider))
@@ -119,8 +120,8 @@ int BPFtrace::add_probe(ast::Probe &p)
           break;
         case ProbeType::usdt:
         {
-          auto usdt_symbol_stream = USDTHelper::probe_stream(pid_);
-          matches = find_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
+          auto usdt_symbol_stream = USDTHelper::probe_stream(pid_, attach_point->target);
+          matches = find_usdt_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
           break;
         }
         default:
@@ -133,32 +134,77 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
     else
     {
-      attach_funcs.push_back(attach_point->func);
+      if (probetype(attach_point->provider) == ProbeType::usdt && !attach_point->ns.empty())
+        attach_funcs.push_back(attach_point->ns + ":" + attach_point->func);
+      else
+        attach_funcs.push_back(attach_point->func);
     }
 
-    for (auto func : attach_funcs)
+    for (auto func_ : attach_funcs)
     {
-      if (probetype(attach_point->provider) == ProbeType::usdt && attach_point->ns == "")
+      std::string full_func_id = func_;
+      std::string func_id = func_;
+
+      // USDT probes must specify both a provider and a function name for full id
+      // So we will extract out the provider namespace to get just the function name
+      if (probetype(attach_point->provider) == ProbeType::usdt )
       {
-        usdt_probe_entry u = USDTHelper::find(0, func);
-        attach_point->ns = std::get<USDT_PROVIDER_INDEX>(u);
+        std::string ns = func_id.substr(0, func_id.find(":"));
+        func_id.erase(0, func_id.find(":")+1);
+        // Set attach_point ns to be a resolved namespace in case of wildcard
+        attach_point->ns = ns;
+        // Set the function name to be a resolved function id in case of wildcard
+        attach_point->func = func_id;
       }
+
       Probe probe;
       probe.path = attach_point->target;
-      probe.attach_point = func;
+      probe.attach_point = func_id;
       probe.type = probetype(attach_point->provider);
       probe.orig_name = p.name();
       probe.ns = attach_point->ns;
-      probe.name = attach_point->name(func);
+      probe.name = attach_point->name(func_id);
       probe.freq = attach_point->freq;
       probe.loc = 0;
-      probe.index = attach_point->index(func) > 0 ?
-          attach_point->index(func) : p.index();
+      probe.index = attach_point->index(full_func_id) > 0 ?
+          attach_point->index(full_func_id) : p.index();
       probes_.push_back(probe);
     }
   }
 
   return 0;
+}
+
+// FIXME should this really be a separate function?
+std::set<std::string> BPFtrace::find_usdt_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream)
+{
+  // Turn glob into a regex
+  std::string search_str = func;
+  if (prefix == "")
+    search_str = "*:" + func;
+  else
+    search_str = prefix + ":" + func;
+  auto regex_str = "(" + std::regex_replace(search_str, std::regex("\\*"), "[^\\s]*") + ")";
+  regex_str = "^" + regex_str + "$";
+
+  std::regex func_regex(regex_str);
+  std::smatch match;
+
+  std::string line;
+  std::set<std::string> matches;
+  while (std::getline(symbol_name_stream, line))
+  {
+    if (std::regex_search(line, match, func_regex))
+    {
+      assert(match.size() == 2);
+      // skip the ".part.N" kprobe variants, as they can't be traced:
+      if (std::strstr(match.str(1).c_str(), ".part.") == NULL)
+      {
+        matches.insert(match[1]);
+      }
+    }
+  }
+  return matches;
 }
 
 std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream)

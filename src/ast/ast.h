@@ -254,6 +254,7 @@ public:
   std::string target;
   std::string ns;
   std::string func;
+  usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with wildcard matches
   int freq = 0;
   bool need_expansion = false;
 
