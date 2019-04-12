@@ -23,6 +23,7 @@ public:
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
   void visit(StackMode &mode) override;
+  void visit(Identifier &identifier) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;

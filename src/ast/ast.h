@@ -63,6 +63,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Identifier : public Expression {
+public:
+  explicit Identifier(std::string ident) : ident(ident) {}
+  std::string ident;
+
+  void accept(Visitor &v) override;
+};
+
 class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {}
@@ -288,6 +296,7 @@ public:
   virtual void visit(PositionalParameter &integer) = 0;
   virtual void visit(String &string) = 0;
   virtual void visit(Builtin &builtin) = 0;
+  virtual void visit(Identifier &identifier) = 0;
   virtual void visit(StackMode &mode) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Map &map) = 0;

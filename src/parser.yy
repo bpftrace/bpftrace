@@ -203,6 +203,7 @@ stmt : expr         { $$ = new ast::ExprStatement($1); }
 expr : INT             { $$ = new ast::Integer($1); }
      | STRING          { $$ = new ast::String($1); }
      | BUILTIN         { $$ = new ast::Builtin($1); }
+     | IDENT           { $$ = new ast::Identifier($1); }
      | STACK_MODE      { $$ = new ast::StackMode($1); }
      | ternary         { $$ = $1; }
      | param           { $$ = $1; }
