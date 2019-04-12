@@ -43,6 +43,12 @@ void Printer::visit(Builtin &builtin)
   out_ << indent << "builtin: " << builtin.ident << std::endl;
 }
 
+void Printer::visit(Identifier &identifier)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "identifier: " << identifier.ident << std::endl;
+}
+
 void Printer::visit(Call &call)
 {
   std::string indent(depth_, ' ');
