@@ -80,6 +80,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> PATH "path"
 %token <std::string> CPREPROC "preprocessor directive"
 %token <std::string> STRUCT "struct"
+%token <std::string> ENUM "enum"
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
@@ -131,6 +132,7 @@ program : c_definitions probes { driver.root_ = new ast::Program($1, $2); }
 
 c_definitions : CPREPROC c_definitions { $$ = $1 + "\n" + $2; }
               | STRUCT c_definitions   { $$ = $1 + ";\n" + $2; }
+              | ENUM c_definitions     { $$ = $1 + ";\n" + $2; }
               |                        { $$ = std::string(); }
               ;
 

@@ -315,6 +315,13 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace)
             return CXChildVisit_Recurse;
           }
 
+          if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
+          {
+            auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
+            enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
+            return CXChildVisit_Recurse;
+          }
+
           if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
               clang_getCursorKind(parent) != CXCursor_UnionDecl)
             return CXChildVisit_Recurse;

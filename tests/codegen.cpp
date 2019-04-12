@@ -48,6 +48,7 @@
 #include "codegen/call_zero.cpp"
 #include "codegen/dereference.cpp"
 #include "codegen/empty_function.cpp"
+#include "codegen/enum.cpp"
 #include "codegen/if_else_printf.cpp"
 #include "codegen/if_else_variable.cpp"
 #include "codegen/if_nested_printf.cpp"
