@@ -153,7 +153,7 @@ void list_probes(const std::string &search_input, int pid)
     std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
     std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
     std::string probe    = "usdt:" + path + ":" + provider + ":" + fname;
-    if (!search_probe(probe, re))
+    if (search.empty() || !search_probe(probe, re))
       std::cout << probe << std::endl;
   }
 
