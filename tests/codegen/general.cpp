@@ -22,7 +22,7 @@ public:
 TEST(codegen, populate_sections)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
@@ -40,7 +40,7 @@ TEST(codegen, populate_sections)
 TEST(codegen, printf_offsets)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
 
   // TODO (mmarchini): also test printf with a string argument
   ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
@@ -77,7 +77,7 @@ TEST(codegen, probe_count)
   MockBPFtrace bpftrace;
   EXPECT_CALL(bpftrace, add_probe(_)).Times(2);
 
-  Driver driver;
+  Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);

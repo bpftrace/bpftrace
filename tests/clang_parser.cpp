@@ -10,7 +10,7 @@ namespace clang_parser {
 void parse(const std::string &input, BPFtrace &bpftrace)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
-  Driver driver;
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
   ClangParser clang;

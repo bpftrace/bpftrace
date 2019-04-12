@@ -12,7 +12,8 @@ using Printer = ast::Printer;
 
 void test(const std::string &input, const std::string &output)
 {
-  Driver driver;
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
   std::ostringstream out;
@@ -875,7 +876,8 @@ TEST(Parser, cstruct_nested)
 TEST(Parser, unterminated_string)
 {
   // Make sure parser doesn't get stuck in an infinite loop
-  Driver driver;
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
   EXPECT_EQ(driver.parse_str("kprobe:f { \"asdf }"), 1);
 }
 

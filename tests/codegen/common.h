@@ -24,7 +24,7 @@ target triple = "bpf-pc-linux"
 static void test(const std::string &input, const std::string expected_output)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(input), 0);
