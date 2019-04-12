@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
   }
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace.structs_);
+  clang.parse(driver.root_, bpftrace);
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   err = semantics.analyse();

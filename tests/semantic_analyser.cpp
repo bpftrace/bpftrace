@@ -16,7 +16,7 @@ void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expe
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace.structs_);
+  clang.parse(driver.root_, bpftrace);
 
   std::stringstream out;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
