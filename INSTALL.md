@@ -53,6 +53,13 @@ For Fedora 28 (and later), bpftrace is already included in the official repo. Ju
 sudo dnf install bpftrace
 ```
 
+## Gentoo package
+
+On Gentoo, bpftrace is included in the official repo. The package can be installed with emerge.
+```
+sudo emerge -av bpftrace
+```
+
 # Building bpftrace
 
 bpftrace's build system will download `gtest` at build time. If you don't want that or don't want tests, you can use the `make bpftrace` target.
