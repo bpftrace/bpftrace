@@ -10,7 +10,7 @@ namespace clang_parser {
 void parse(const std::string &input, BPFtrace &bpftrace)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
-  Driver driver;
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
   ClangParser clang;
@@ -270,6 +270,18 @@ TEST(clang_parser, builtin_headers)
   EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["z"].type.size, 8U);
   EXPECT_EQ(structs["Foo"].fields["z"].offset, 16);
+}
+
+TEST(clang_parser, macro_preprocessor)
+{
+  // size_t is definied in stddef.h
+  BPFtrace bpftrace;
+  parse("#define FOO size_t\n k:f { 0 }", bpftrace);
+
+  auto &macros = bpftrace.macros_;
+
+  ASSERT_EQ(macros.count("FOO"), 1U);
+  ASSERT_EQ(macros["FOO"], "size_t");
 }
 
 } // namespace clang_parser

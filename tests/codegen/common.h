@@ -24,13 +24,15 @@ target triple = "bpf-pc-linux"
 static void test(const std::string &input, const std::string expected_output)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
+
+  ASSERT_EQ(driver.parse_str(input), 0);
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);

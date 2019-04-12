@@ -10,7 +10,7 @@ extern int yylex_destroy (yyscan_t yyscanner);
 
 namespace bpftrace {
 
-Driver::Driver()
+Driver::Driver(BPFtrace &bpftrace) : bpftrace_(bpftrace)
 {
   yylex_init(&scanner_);
   parser_ = std::make_unique<Parser>(*this, scanner_);

@@ -62,7 +62,7 @@ attributes #1 = { argmemonly nounwind }
 TEST(codegen, call_kstack_mapids)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str("kprobe:f { @x = kstack(5); @y = kstack(6); @z = kstack(6) }"), 0);
@@ -90,7 +90,7 @@ TEST(codegen, call_kstack_mapids)
 TEST(codegen, call_kstack_modes_mapids)
 {
   BPFtrace bpftrace;
-  Driver driver;
+  Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str("kprobe:f { @x = kstack(perf); @y = kstack(bpftrace); @z = kstack() }"), 0);
