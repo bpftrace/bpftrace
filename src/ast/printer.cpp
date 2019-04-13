@@ -135,6 +135,7 @@ void Printer::visit(ArrayAccess &arr)
 
   ++depth_;
   arr.expr->accept(*this);
+  arr.indexpr->accept(*this);
   --depth_;
 }
 

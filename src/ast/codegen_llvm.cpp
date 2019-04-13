@@ -991,7 +991,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
       // pointer internally and dereference later when necessary.
       expr_ = src;
     }
-    else if (field.type.is_pointer)
+    else if (field.type.type == Type::array)
     {
       // For array types, we want to just pass pointer along,
       // since the offset of the field should be the start of the array.

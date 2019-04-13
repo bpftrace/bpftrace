@@ -68,7 +68,7 @@ public:
     stack_type = stack_type_;
   }
   Type type;
-  Type elem_type;
+  Type elem_type; // Array element type if accessing elements of an array
   size_t size;
   StackType stack_type;
   std::string cast_type;
