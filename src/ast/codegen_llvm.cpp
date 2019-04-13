@@ -1243,13 +1243,19 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
 
-  // needed for uaddr() call:
+  // needed for uaddr() calls and usdt probes:
   for (auto &attach_point : *probe.attach_points) {
+
+    // If any attach_point is underspecified, the probe needs expansion
+    if(probetype(attach_point->provider) == ProbeType::usdt &&
+       ((attach_point->ns.empty() || has_wildcard(attach_point->ns)) ||
+        (attach_point->func.empty() || has_wildcard(attach_point->func))))
+      probe.need_expansion = true;
+
     current_attach_point_ = attach_point;
     // TODO: semantic analyser should ensure targets are equal when uaddr() is used
     break;
   }
-
   /*
    * Most of the time, we can take a probe like kprobe:do_f* and build a
    * single BPF program for that, called "s_kprobe:do_f*", and attach it to

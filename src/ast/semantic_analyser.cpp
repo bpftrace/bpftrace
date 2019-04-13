@@ -962,13 +962,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (bpftrace_.pid_ > 0) {
        USDTHelper::probes_for_pid(bpftrace_.pid_);
     } else if (ap.target != "") {
+       USDTHelper::probes_for_path(ap.target);
+    } else {
+      err_ << "usdt probe must specify at least path or pid to probe" << std::endl;
+    }
+
+    if (ap.target != "") {
       ap.target = resolve_binary_path(ap.target);
       struct stat s;
       if (stat(ap.target.c_str(), &s) != 0)
         err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
-       USDTHelper::probes_for_path(ap.target);
-    } else {
-      err_ << "usdt probe must specify at least path or pid to probe" << std::endl;
     }
   }
   else if (ap.provider == "tracepoint") {
