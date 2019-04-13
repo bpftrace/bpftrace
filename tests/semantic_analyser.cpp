@@ -252,12 +252,12 @@ TEST(semantic_analyser, call_sym)
   test("kprobe:f { ksym(arg0); }", 0);
   test("kprobe:f { @x = ksym(arg0); }", 0);
   test("kprobe:f { ksym(); }", 1);
-  test("kprobe:f { ksym(\"hello\"); }", 10);
+  test("kprobe:f { ksym(\"hello\"); }", 1);
 
   test("kprobe:f { sym(arg0); }", 0);
   test("kprobe:f { @x = sym(arg0); }", 0);
   test("kprobe:f { sym(); }", 1);
-  test("kprobe:f { sym(\"hello\"); }", 10);
+  test("kprobe:f { sym(\"hello\"); }", 1);
 }
 
 TEST(semantic_analyser, call_usym)
@@ -265,7 +265,7 @@ TEST(semantic_analyser, call_usym)
   test("kprobe:f { usym(arg0); }", 0);
   test("kprobe:f { @x = usym(arg0); }", 0);
   test("kprobe:f { usym(); }", 1);
-  test("kprobe:f { usym(\"hello\"); }", 10);
+  test("kprobe:f { usym(\"hello\"); }", 1);
 }
 
 TEST(semantic_analyser, call_ntop)

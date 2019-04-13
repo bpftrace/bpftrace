@@ -287,8 +287,12 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "ksym" || call.func == "usym") {
-    check_nargs(call, 1);
-    check_arg(call, Type::integer, 0);
+    if (check_nargs(call, 1)) {
+      // allow symbol lookups on casts (eg, function pointers)
+      auto &arg = *call.vargs->at(0);
+      if (arg.type.type != Type::integer && arg.type.type != Type::cast)
+        err_ << call.func << "() expects an integer or pointer argument" << std::endl;
+    }
 
     if (call.func == "ksym")
       call.type = SizedType(Type::ksym, 8);
