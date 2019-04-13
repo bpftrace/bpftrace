@@ -995,8 +995,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       // For array types, we want to just pass pointer along,
       // since the offset of the field should be the start of the array.
-      // The pointer will be dereferenced when the array is accessed
-      // with an index operation.
+      // The pointer will be dereferenced when the array is accessed by a []
+      // operation
       expr_ = src;
     }
     else if (field.type.type == Type::string)
