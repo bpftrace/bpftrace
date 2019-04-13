@@ -27,6 +27,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [7. `if () {...} else {...}`: if-else statements](#7-if---else--if-else-statements)
     - [8. `unroll () {...}`: unroll](#8-unroll---unroll)
     - [9. `++ and --`: increment operators](#9--and----increment-operators)
+    - [10. `[]`: Array access](#10--array-access)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -571,6 +572,19 @@ Attaching 1 probe...
 ^C
 
 @[kprobe:vfs_read]: 13369
+```
+
+## 10. Array Access
+
+You may access one-dimensional constant arrays with the array acccess operator `[]`.
+
+Example:
+
+```
+# bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
+Attaching 1 probe...
+
+@x: 1
 ```
 
 # Probes
