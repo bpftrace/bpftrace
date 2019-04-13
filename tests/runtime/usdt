@@ -67,6 +67,18 @@ EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE (./testprogs/usdt_test &);
 
+NAME "usdt probes - attach to probe with args by file"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }'
+EXPECT Hello world
+TIMEOUT 5
+BEFORE (./testprogs/usdt_test &);
+
+NAME "usdt probes - attach to probe with args by pid"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }' -p $(pidof usdt_test)
+EXPECT Hello world
+TIMEOUT 5
+BEFORE (./testprogs/usdt_test &);
+
 NAME "usdt probes - attach to probe with probe builtin and args by file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
