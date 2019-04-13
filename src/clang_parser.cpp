@@ -148,7 +148,7 @@ static SizedType get_sized_type(CXType clang_type)
         return SizedType(Type::string, size);
       }
 
-      // Prevent unbounded recursion from get_sized_type call
+      // Only support one-dimensional arrays for now
       if (elem_type.kind != CXType_ConstantArray)
       {
         auto type = get_sized_type(elem_type);
