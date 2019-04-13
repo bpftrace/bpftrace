@@ -587,9 +587,14 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   if (is_final_pass() && !(indextype.type == Type::integer))
     err_ << "The array index operator [] only accepts integer indices." << std::endl;
 
-  // FIXME add sanity check for array bounds here
+  if (is_final_pass() && (indextype.type == Type::integer)) {
+    Integer *index = static_cast<Integer *>(arr.indexpr);
+
+    if ((size_t) index->n >= type.size)
+      err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+  }
+
   arr.type = SizedType(type.elem_type, type.pointee_size);
-  arr.type.is_pointer = true;
 }
 
 void SemanticAnalyser::visit(Binop &binop)

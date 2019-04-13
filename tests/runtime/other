@@ -57,9 +57,3 @@ NAME struct positional string compare - not equal
 RUN bpftrace -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");}; exit();}' "hello" "hello"
 EXPECT not equal
 TIMEOUT 5
-
-NAME array_element_acess
-RUN bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
-EXPECT @x: 1
-TIMEOUT 5
-BEFORE (sleep 1 && ./testprogs/array_access) &

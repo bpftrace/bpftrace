@@ -153,7 +153,6 @@ static SizedType get_sized_type(CXType clang_type)
       {
         auto type = get_sized_type(elem_type);
         auto sized_type = SizedType(Type::array, size);
-        sized_type.is_pointer = true;
         sized_type.pointee_size = type.size;
         sized_type.elem_type = type.type;
         return sized_type;
