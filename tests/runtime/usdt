@@ -1,0 +1,21 @@
+NAME "usdt probes - list probes by file"
+RUN bpftrace -l 'usdt:./testprogs/usdt_test'
+EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
+TIMEOUT 5
+
+NAME "usdt probes - list probes by pid"
+RUN bpftrace -l 'usdt:*' -p $(pidof usdt_test)
+EXPECT usdt_test:tracetest:testprobe
+TIMEOUT 5
+BEFORE (./testprogs/usdt_test &);
+
+NAME "usdt probes - filter probes by file on provider"
+RUN bpftrace -l 'usdt:./testprogs/usdt_test:tracetest2:*'
+EXPECT usdt:./testprogs/usdt_test:tracetest2:testprobe2
+TIMEOUT 5
+
+NAME "usdt probes - filter probes by pid on provider"
+RUN bpftrace -l 'usdt:*:tracetest2:*' -p $(pidof usdt_test)
+EXPECT usdt_test:tracetest2:testprobe2
+TIMEOUT 5
+BEFORE (./testprogs/usdt_test &);
