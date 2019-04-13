@@ -21,6 +21,10 @@ void Builtin::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void Identifier::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void PositionalParameter::accept(Visitor &v) {
   v.visit(*this);
 }

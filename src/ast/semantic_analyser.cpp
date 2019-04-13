@@ -59,6 +59,12 @@ void SemanticAnalyser::visit(StackMode &mode)
   }
 }
 
+void SemanticAnalyser::visit(Identifier &identifier)
+{
+  identifier.type = SizedType(Type::none, 0);
+  err_ << "Unknown identifier: '" << identifier.ident << "'" << std::endl;
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs" ||

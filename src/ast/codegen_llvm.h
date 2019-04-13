@@ -30,6 +30,7 @@ public:
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
+  void visit(Identifier &identifier) override;
   void visit(Builtin &builtin) override;
   void visit(StackMode &) override { };
   void visit(Call &call) override;

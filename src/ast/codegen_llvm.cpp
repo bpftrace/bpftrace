@@ -45,6 +45,12 @@ void CodegenLLVM::visit(String &string)
   expr_ = buf;
 }
 
+void CodegenLLVM::visit(Identifier &identifier)
+{
+  std::cerr << "unknown identifier \"" << identifier.ident << "\"" << std::endl;
+  abort();
+}
+
 void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
