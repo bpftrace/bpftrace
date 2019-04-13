@@ -1,5 +1,3 @@
-#include <unistd.h>
-
 typedef struct MY_STRUCT{
   int x[4];
 
