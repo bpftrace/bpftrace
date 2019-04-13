@@ -43,12 +43,12 @@ void check_uprobe(Probe &p, const std::string &path, const std::string &attach_p
   EXPECT_EQ("uprobe:" + path + ":" + attach_point, p.name);
 }
 
-void check_usdt(Probe &p, const std::string &path, const std::string &attach_point, const std::string &orig_name)
+void check_usdt(Probe &p, const std::string &path, const std::string &provider, const std::string &attach_point, const std::string &orig_name)
 {
   EXPECT_EQ(ProbeType::usdt, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ("usdt:" + path + ":" + attach_point, p.name);
+  EXPECT_EQ("usdt:" + path + ":" + provider + ":" + attach_point, p.name);
 }
 
 void check_tracepoint(Probe &p, const std::string &target, const std::string &func, const std::string &orig_name)
@@ -254,7 +254,7 @@ TEST(bpftrace, add_probes_uprobe)
 
 TEST(bpftrace, add_probes_usdt)
 {
-  ast::AttachPoint a("usdt", "/bin/sh", "foo", true);
+  ast::AttachPoint a("usdt", "/bin/sh", "foo", "bar", false);
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -263,7 +263,7 @@ TEST(bpftrace, add_probes_usdt)
   EXPECT_EQ(0, bpftrace.add_probe(probe));
   EXPECT_EQ(1U, bpftrace.get_probes().size());
   EXPECT_EQ(0U, bpftrace.get_special_probes().size());
-  check_usdt(bpftrace.get_probes().at(0), "/bin/sh", "foo", "usdt:/bin/sh:foo");
+  check_usdt(bpftrace.get_probes().at(0), "/bin/sh", "foo", "bar", "usdt:/bin/sh:foo:bar");
 }
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
