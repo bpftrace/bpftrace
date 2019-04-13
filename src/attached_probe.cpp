@@ -464,6 +464,7 @@ void AttachedProbe::attach_usdt(int pid)
 
   // TODO: fn_name may need a unique suffix for each attachment on the same probe:
   std::string fn_name = "probe_" + probe_.attach_point + "_1";
+// see https://github.com/iovisor/bcc/pull/2294 for BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
 #ifdef BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
   if (probe_.ns == "")
     err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
