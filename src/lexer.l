@@ -140,8 +140,17 @@ struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
                           if (driver.bpftrace_.macros_.count(yytext) != 0) {
                             const char *s = driver.bpftrace_.macros_[yytext].c_str();
                             int z;
-                            for (z=strlen(s) - 1; z >= 0; z--)
-                              unput(s[z]);
+                            // NOTE(mmarchini) workaround for simple recursive
+                            // macros. More complex recursive macros (for
+                            // example, with operators) will go into an
+                            // infinite loop. Yes, we should fix that in the
+                            // future.
+                            if (strcmp(s, yytext) == 0) {
+                              return Parser::make_IDENT(yytext, loc);
+                            } else {
+                              for (z=strlen(s) - 1; z >= 0; z--)
+                                unput(s[z]);
+                            }
                           } else {
                             return Parser::make_IDENT(yytext, loc);
                           }
