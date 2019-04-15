@@ -381,6 +381,32 @@ TEST(Parser, if_block)
        "     builtin: pid\n");
 }
 
+TEST(Parser, if_stmt_if)
+{
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } @pid = pid; if (pid < 1000) { printf(\"%d is low\\n\", pid); } }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    call: printf\n"
+       "     string: %d is high\\n\n"
+       "     builtin: pid\n"
+       "  =\n"
+       "   map: @pid\n"
+       "   builtin: pid\n"
+       "  if\n"
+       "   <\n"
+       "    builtin: pid\n"
+       "    int: 1000\n"
+       "   then\n"
+       "    call: printf\n"
+       "     string: %d is low\\n\n"
+       "     builtin: pid\n");
+}
+
 TEST(Parser, if_block_variable)
 {
   test("kprobe:sys_open { if (pid > 10000) { $s = 10; } }",
@@ -398,7 +424,7 @@ TEST(Parser, if_block_variable)
 
 TEST(Parser, if_else)
 {
-  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; }; printf(\"%d is high\\n\", pid, $s); }",
+  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; } printf(\"%d is high\\n\", pid, $s); }",
        "Program\n"
        " kprobe:sys_open\n"
        "  if\n"
