@@ -53,6 +53,39 @@ static int get_indirect_field_offset(CXCursor c)
   return offset;
 }
 
+// NOTE(mmarchini): as suggested in http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
+static bool translateMacro(CXCursor cursor, std::string &name, std::string &value)
+{
+  CXToken* tokens    = nullptr;
+  unsigned numTokens = 0;
+  CXTranslationUnit transUnit = clang_Cursor_getTranslationUnit(cursor);
+  CXSourceRange srcRange  = clang_getCursorExtent(cursor);
+  clang_tokenize(transUnit, srcRange, &tokens, &numTokens);
+  for (unsigned n=0; n<numTokens; n++)
+  {
+    auto tokenText = clang_getTokenSpelling(transUnit, tokens[n]);
+    if (n == 0)
+    {
+      value.clear();
+      name = clang_getCString(tokenText);
+      if (name[0] == '_')
+        break;
+    }
+    else
+    {
+      CXTokenKind tokenKind = clang_getTokenKind(tokens[n]);
+      if (tokenKind != CXToken_Comment)
+      {
+        const char* text = clang_getCString(tokenText);
+        if (text)
+          value += text;
+      }
+    }
+  }
+  clang_disposeTokens(transUnit, tokens, numTokens);
+  return value.length() != 0;
+}
+
 static SizedType get_sized_type(CXType clang_type)
 {
   auto size = clang_Type_getSizeOf(clang_type);
@@ -172,7 +205,7 @@ static std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname
   return std::make_tuple(ksrc, kobj);
 }
 
-void ClangParser::parse(ast::Program *program, StructMap &structs)
+void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   auto input = program->c_definitions;
   if (input.size() == 0)
@@ -245,7 +278,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
       "definitions.h",
       &args[0], args.size(),
       unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
-      CXTranslationUnit_None,
+      CXTranslationUnit_DetailedPreprocessingRecord,
       &translation_unit);
   if (error)
   {
@@ -259,7 +292,17 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data)
       {
-        auto &structs = *static_cast<StructMap*>(client_data);
+
+        if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
+        {
+          std::string macro_name;
+          std::string macro_value;
+          if (translateMacro(c, macro_name, macro_value)) {
+            auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
+            macros[macro_name] = macro_value;
+          }
+          return CXChildVisit_Recurse;
+        }
 
         if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
             clang_getCursorKind(parent) != CXCursor_UnionDecl)
@@ -267,6 +310,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
+          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
           auto struct_name = get_parent_struct_name(c);
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Cursor_getOffsetOfField(c) / 8;
@@ -290,7 +334,7 @@ void ClangParser::parse(ast::Program *program, StructMap &structs)
 
         return CXChildVisit_Recurse;
       },
-      &structs);
+      &bpftrace);
 
   clang_disposeTranslationUnit(translation_unit);
   clang_disposeIndex(index);

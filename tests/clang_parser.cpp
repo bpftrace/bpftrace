@@ -1,25 +1,28 @@
 #include "gtest/gtest.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "bpftrace.h"
 
 namespace bpftrace {
 namespace test {
 namespace clang_parser {
 
-void parse(const std::string &input, StructMap &structs)
+void parse(const std::string &input, BPFtrace &bpftrace)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
-  Driver driver;
+  Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, structs);
+  clang.parse(driver.root_, bpftrace);
 }
 
 TEST(clang_parser, integers)
 {
-  StructMap structs;
-  parse("struct Foo { int x; int y, z; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { int x; int y, z; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -45,8 +48,10 @@ TEST(clang_parser, integers)
 
 TEST(clang_parser, c_union)
 {
-  StructMap structs;
-  parse("union Foo { char c; short s; int i; long l; }", structs);
+  BPFtrace bpftrace;
+  parse("union Foo { char c; short s; int i; long l; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -77,8 +82,10 @@ TEST(clang_parser, c_union)
 
 TEST(clang_parser, integer_ptr)
 {
-  StructMap structs;
-  parse("struct Foo { int *x; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { int *x; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -96,8 +103,10 @@ TEST(clang_parser, integer_ptr)
 
 TEST(clang_parser, string_ptr)
 {
-  StructMap structs;
-  parse("struct Foo { char *str; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { char *str; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -115,8 +124,10 @@ TEST(clang_parser, string_ptr)
 
 TEST(clang_parser, string_array)
 {
-  StructMap structs;
-  parse("struct Foo { char str[32]; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { char str[32]; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -132,8 +143,10 @@ TEST(clang_parser, string_array)
 
 TEST(clang_parser, nested_struct_named)
 {
-  StructMap structs;
-  parse("struct Bar { int x; } struct Foo { struct Bar bar; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Bar { int x; } struct Foo { struct Bar bar; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -151,8 +164,10 @@ TEST(clang_parser, nested_struct_named)
 
 TEST(clang_parser, nested_struct_ptr_named)
 {
-  StructMap structs;
-  parse("struct Bar { int x; } struct Foo { struct Bar *bar; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Bar { int x; } struct Foo { struct Bar *bar; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -172,8 +187,10 @@ TEST(clang_parser, nested_struct_ptr_named)
 
 TEST(clang_parser, nested_struct_anon)
 {
-  StructMap structs;
-  parse("struct Foo { struct { int x; } bar; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { struct { int x; } bar; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
@@ -190,8 +207,10 @@ TEST(clang_parser, nested_struct_anon)
 
 TEST(clang_parser, nested_struct_indirect_fields)
 {
-  StructMap structs;
-  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs["Foo"].fields.size(), 4U);
   EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
@@ -206,8 +225,10 @@ TEST(clang_parser, nested_struct_indirect_fields)
 
 TEST(clang_parser, nested_struct_anon_union_struct)
 {
-  StructMap structs;
-  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", structs);
+  BPFtrace bpftrace;
+  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs["Foo"].fields.size(), 5U);
   EXPECT_EQ(structs["Foo"].fields["_xy"].offset, 0);
@@ -225,8 +246,10 @@ TEST(clang_parser, nested_struct_anon_union_struct)
 TEST(clang_parser, builtin_headers)
 {
   // size_t is definied in stddef.h
-  StructMap structs;
-  parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", structs);
+  BPFtrace bpftrace;
+  parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.count("Foo"), 1U);
 
@@ -247,6 +270,18 @@ TEST(clang_parser, builtin_headers)
   EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["z"].type.size, 8U);
   EXPECT_EQ(structs["Foo"].fields["z"].offset, 16);
+}
+
+TEST(clang_parser, macro_preprocessor)
+{
+  // size_t is definied in stddef.h
+  BPFtrace bpftrace;
+  parse("#define FOO size_t\n k:f { 0 }", bpftrace);
+
+  auto &macros = bpftrace.macros_;
+
+  ASSERT_EQ(macros.count("FOO"), 1U);
+  ASSERT_EQ(macros["FOO"], "size_t");
 }
 
 } // namespace clang_parser

@@ -22,13 +22,13 @@ using bpftrace::ast::Probe;
 void gen_bytecode(const std::string &input, std::stringstream &out)
 {
 	BPFtrace bpftrace;
-	Driver driver;
+	Driver driver(bpftrace);
 	FakeMap::next_mapfd_ = 1;
 
 	ASSERT_EQ(driver.parse_str(input), 0);
 
 	ClangParser clang;
-	clang.parse(driver.root_, bpftrace.structs_);
+	clang.parse(driver.root_, bpftrace);
 
 	ast::SemanticAnalyser semantics(driver.root_, bpftrace);
 	ASSERT_EQ(semantics.analyse(), 0);

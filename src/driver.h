@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "ast.h"
+#include "bpftrace.h"
 #include "parser.tab.hh"
 
 typedef void* yyscan_t;
@@ -14,7 +15,7 @@ namespace bpftrace {
 class Driver
 {
 public:
-  Driver();
+  explicit Driver(BPFtrace &bpftrace);
   ~Driver();
 
   int parse_stdin();
@@ -25,6 +26,7 @@ public:
 
   ast::Program *root_;
 
+  BPFtrace &bpftrace_;
 private:
   std::unique_ptr<Parser> parser_;
   yyscan_t scanner_;

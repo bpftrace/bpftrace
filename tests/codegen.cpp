@@ -56,6 +56,7 @@
 #include "codegen/int_propagation.cpp"
 #include "codegen/logical_and.cpp"
 #include "codegen/logical_or.cpp"
+#include "codegen/macro_definition.cpp"
 #include "codegen/map_assign_int.cpp"
 #include "codegen/map_assign_string.cpp"
 #include "codegen/map_key_int.cpp"

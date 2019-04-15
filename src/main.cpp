@@ -83,7 +83,6 @@ bool is_numeric(char* string)
 int main(int argc, char *argv[])
 {
   int err;
-  Driver driver;
   char *pid_str = nullptr;
   char *cmd_str = nullptr;
   bool listing = false;
@@ -94,7 +93,7 @@ int main(int argc, char *argv[])
     return 0;
   }
 
-  std::string script, search;
+  std::string script, search, file_name;
   int c;
   while ((c = getopt(argc, argv, "dB:e:hlp:vc:")) != -1)
   {
@@ -163,6 +162,7 @@ int main(int argc, char *argv[])
   }
 
   BPFtrace bpftrace;
+  Driver driver(bpftrace);
 
   // PID is currently only used for USDT probes that need enabling. Future work:
   // - make PID a filter for all probe types: pass to perf_event_open(), etc.
@@ -198,8 +198,8 @@ int main(int argc, char *argv[])
   if (script.empty())
   {
     // Script file
-    char *file_name = argv[optind];
-    if (!file_name)
+    file_name = std::string(argv[optind]);
+    if (file_name.empty())
     {
       std::cerr << "USAGE: filename or -e 'program' required." << std::endl;
       return 1;
@@ -283,7 +283,19 @@ int main(int argc, char *argv[])
   }
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace.structs_);
+  clang.parse(driver.root_, bpftrace);
+
+  if (script.empty())
+  {
+    err = driver.parse_file(file_name);
+  }
+  else
+  {
+    err = driver.parse_str(script);
+  }
+
+  if (err)
+    return err;
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   err = semantics.analyse();

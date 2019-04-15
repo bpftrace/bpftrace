@@ -82,6 +82,7 @@ public:
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
+  std::map<std::string, std::string> macros_;
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> time_args_;
