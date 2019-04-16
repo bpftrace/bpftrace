@@ -280,7 +280,7 @@ Functions:
 - `kaddr(char *name)` - Resolve kernel symbol name
 - `uaddr(char *name)` - Resolve user space symbol name
 - `reg(char *name)` - Returns the value stored in the named register
-- `join(char *arr[])` - Prints the string array
+- `join(char *arr[] [, char *delim])` - Prints the string array
 - `time(char *fmt)` - Print the current time
 - `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace

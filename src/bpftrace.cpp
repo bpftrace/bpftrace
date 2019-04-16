@@ -254,17 +254,18 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
-     const char *joinstr = " ";
-     for (int i = 0; i < bpftrace->join_argnum_; i++) {
-       auto *arg = arg_data+sizeof(uint64_t) + i * bpftrace->join_argsize_;
-       if (arg[0] == 0)
-         break;
-       if (i)
-         printf("%s", joinstr);
-       printf("%s", arg);
-     }
-     printf("\n");
-     return;
+    uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    auto joinstr = bpftrace->join_args_[join_id].c_str();
+    for (int i = 0; i < bpftrace->join_argnum_; i++) {
+      auto *arg = arg_data + 2*sizeof(uint64_t) + i * bpftrace->join_argsize_;
+      if (arg[0] == 0)
+        break;
+      if (i)
+        printf("%s", joinstr);
+      printf("%s", arg);
+    }
+    printf("\n");
+    return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
   {
