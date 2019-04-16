@@ -94,8 +94,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
-%type <ast::StatementList *> block stmts block_stmts
-%type <ast::Statement *> block_stmt stmt
+%type <ast::StatementList *> block stmts
+%type <ast::Statement *> block_stmt stmt semicolon_ended_stmt
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
@@ -173,18 +173,16 @@ ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
 param : DOLLAR INT { $$ = new ast::PositionalParameter($2); }
 
 block : "{" stmts "}"     { $$ = $2; }
-      | "{" stmts ";" "}" { $$ = $2; }
       ;
 
-stmts : stmts ";" stmt             { $$ = $1; $1->push_back($3); }
-      | stmts ";" block_stmts stmt { $$ = $1; $1->insert($1->end(), $3->begin(), $3->end()); $1->push_back($4); }
-      | stmts ";" block_stmts      { $$ = $1; $1->insert($1->end(), $3->begin(), $3->end()); }
-      | block_stmts                { $$ = $1; }
+semicolon_ended_stmt: stmt ";"  { $$ = $1; }
+                    ;
+
+stmts : semicolon_ended_stmt stmts { $$ = $2; $2->insert($2->begin(), $1); }
+      | block_stmt stmts           { $$ = $2; $2->insert($2->begin(), $1); }
       | stmt                       { $$ = new ast::StatementList; $$->push_back($1); }
+      |                            { $$ = new ast::StatementList; }
       ;
-
-block_stmts : block_stmts block_stmt     { $$ = $1; $1->push_back($2); }
-            | block_stmt                 { $$ = new ast::StatementList; $$->push_back($1); }
 
 block_stmt : IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
            | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
