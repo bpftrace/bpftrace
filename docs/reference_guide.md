@@ -352,7 +352,7 @@ This includes `Bytecode:` and then the eBPF bytecode after it was compiled from 
 
 ## 7. Other Options
 
-The -v option prints the bpftrace version:
+The `--version` option prints the bpftrace version:
 
 ```
 # bpftrace --version
@@ -451,7 +451,7 @@ These can be used in bpftrace scripts to document your code.
 tracepoint example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 snmpd /proc/diskstats
 snmpd /proc/stat
@@ -786,7 +786,7 @@ block I/O created by 28941
 Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_open { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 irqbalance /proc/interrupts
 irqbalance /proc/stat
@@ -801,8 +801,8 @@ The available members for each tracepoint can be listed from their /format file 
 
 ```
 # cat /sys/kernel/debug/tracing/events/syscalls/sys_enter_open/format
-name: sys_enter_open
-ID: 603
+name: sys_enter_openat
+ID: 608
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -810,11 +810,12 @@ format:
 	field:int common_pid;	offset:4;	size:4;	signed:1;
 
 	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
-	field:const char * filename;	offset:16;	size:8;	signed:0;
-	field:int flags;	offset:24;	size:8;	signed:0;
-	field:umode_t mode;	offset:32;	size:8;	signed:0;
+	field:int dfd;	offset:16;	size:8;	signed:0;
+	field:const char * filename;	offset:24;	size:8;	signed:0;
+	field:int flags;	offset:32;	size:8;	signed:0;
+	field:umode_t mode;	offset:40;	size:8;	signed:0;
 
-print fmt: "filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->filename)), ((unsigned long)(REC->flags)), ((unsigned long)(REC->mode))
+print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->dfd)), ((unsigned long)(REC->filename)), ((unsigned long)(REC->flags)), ((unsigned long)(REC->mode))
 ```
 
 Apart from the `filename` member, we can also print `flags`, `mode`, and more. After the "common" members listed first, the members are specific to the tracepoint.
@@ -1397,7 +1398,7 @@ Syntax: `printf(fmt, args)`
 This behaves like printf() from C and other languages, with a limited set of format characters. Example:
 
 ```
-# bpftrace -e 'kprobe:sys_execve { printf("%s called %s\n", comm, str(arg0)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 bash called /bin/ls
 bash called /usr/bin/man
@@ -1432,7 +1433,7 @@ Syntax: `join(char *arr[])`
 This joins the array of strings with a space character, and prints it out. This current version does not return a string, so it cannot be used as an argument in printf(). Example:
 
 ```
-# bpftrace -e 'kprobe:sys_execve { join(arg1); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv); }'
 Attaching 1 probe...
 ls --color=auto
 man ls
@@ -1454,10 +1455,10 @@ By default, the string will have size 64 bytes (tuneable using [env var `BPFTRAC
 
 Examples:
 
-We can take the arg0 of sys_execve() (a <tt>const char *filename</tt>), and read the string to which it points. This string can be provided as an argument to printf():
+We can take the `args->filename` of `sys_enter_execve` (a <tt>const char *filename</tt>), and read the string to which it points. This string can be provided as an argument to printf():
 
 ```
-# bpftrace -e 'kprobe:sys_execve { printf("%s called %s\n", comm, str(arg0)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 bash called /bin/ls
 bash called /usr/bin/man
@@ -1498,7 +1499,7 @@ Syntax: `ksym(addr)`
 Examples:
 
 ```
-# ./build/src/bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); }'
+# bpftrace -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); }'
 Attaching 1 probe...
 do_nanosleep
 do_nanosleep
@@ -1561,7 +1562,7 @@ Syntax: `reg(char *name)`
 Examples:
 
 ```
-# ./src/bpftrace -e 'kprobe:tcp_sendmsg { @[ksym(reg("ip"))] = count(); }'
+# bpftrace -e 'kprobe:tcp_sendmsg { @[ksym(reg("ip"))] = count(); }'
 Attaching 1 probe...
 ^C
 
