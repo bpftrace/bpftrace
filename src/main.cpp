@@ -198,12 +198,12 @@ int main(int argc, char *argv[])
   if (script.empty())
   {
     // Script file
-    file_name = std::string(argv[optind]);
-    if (file_name.empty())
+    if (argv[optind] == nullptr)
     {
       std::cerr << "USAGE: filename or -e 'program' required." << std::endl;
       return 1;
     }
+    file_name = std::string(argv[optind]);
     err = driver.parse_file(file_name);
     optind++;
   }
