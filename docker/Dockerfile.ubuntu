@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libelf-dev \
     llvm-5.0-dev \
     zlib1g-dev \
+    linux-headers-$(uname -r) \
     libbpfcc-dev
 
 COPY build.sh /build.sh

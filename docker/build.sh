@@ -4,6 +4,8 @@ set -e
 
 STATIC_LINKING=${STATIC_LINKING:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
+ls /lib/modules
+ls /lib/modules/$(uname -r)
 
 # Build bpftrace
 mkdir -p "$1"
@@ -16,6 +18,7 @@ if [ $RUN_TESTS = 1 ]; then
   set +e
   mount -t debugfs debugfs /sys/kernel/debug/
   ./tests/bpftrace_test $TEST_ARGS;
+  make tools-parsing-test;
   # TODO(mmarchini) re-enable once we figured out how to run it properly on CI
   # make runtime-tests;
 fi

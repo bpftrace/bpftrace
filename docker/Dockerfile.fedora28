@@ -4,6 +4,7 @@ RUN dnf install -y \
     clang-devel \
     cmake \
     elfutils-libelf-devel \
+    kernel-headers \
     flex \
     gcc-c++ \
     git \

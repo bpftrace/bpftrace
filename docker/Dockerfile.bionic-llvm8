@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
       flex \
       g++ \
       git \
+      linux-headers-$(uname -r) \
       libelf-dev \
       zlib1g-dev \
       libbcc \
