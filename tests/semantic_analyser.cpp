@@ -18,6 +18,7 @@ void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expe
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
 
+  ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
   std::stringstream msg;
@@ -700,6 +701,12 @@ TEST(semantic_analyser, positional_parameters)
   // $1 won't be defined, will be tested more in runtime.
   test("kprobe:f { printf(\"%d\", $1); }", 0);
   test("kprobe:f { printf(\"%s\", str($1)); }", 0);
+}
+
+TEST(semantic_analyser, macros)
+{
+  test("#define A 1\nkprobe:f { printf(\"%d\", A); }", 0);
+  test("#define A A\nkprobe:f { printf(\"%d\", A); }", 1);
 }
 
 } // namespace semantic_analyser
