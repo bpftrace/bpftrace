@@ -27,6 +27,7 @@ space  {hspace}|{vspace}
 path   :(\\.|[_\-\./a-zA-Z0-9])*:
 %x STR
 %x STRUCT
+%x ENUM
 %x BRACE
 %x COMMENT
 
@@ -116,7 +117,8 @@ bpftrace|perf {
 }
 
 struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
-<STRUCT,BRACE>{
+enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
+<STRUCT,BRACE,ENUM>{
   "*"|")"               { if (YY_START == STRUCT) {
                             yy_pop_state(yyscanner);
                             unput(yytext[0]);
@@ -130,6 +132,10 @@ struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
                           if (YY_START == STRUCT) {
                             yy_pop_state(yyscanner);
                             return Parser::make_STRUCT(struct_type + buffer, loc);
+                          }
+                          if (YY_START == ENUM) {
+                            yy_pop_state(yyscanner);
+                            return Parser::make_ENUM("enum " + buffer, loc);
                           }
                         }
   .                     buffer += yytext[0];

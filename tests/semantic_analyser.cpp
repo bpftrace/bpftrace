@@ -716,6 +716,12 @@ TEST(semantic_analyser, macros)
 {
   test("#define A 1\nkprobe:f { printf(\"%d\", A); }", 0);
   test("#define A A\nkprobe:f { printf(\"%d\", A); }", 1);
+  test("enum { A = 1 }\n#define A A\nkprobe:f { printf(\"%d\", A); }", 0);
+}
+
+TEST(semantic_analyser, enums)
+{
+  test("enum { a = 1, b } kprobe:f { printf(\"%d\", a); }", 0);
 }
 
 } // namespace semantic_analyser
