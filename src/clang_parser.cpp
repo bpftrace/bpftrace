@@ -46,6 +46,10 @@ static std::string get_parent_struct_name(CXCursor c)
 {
   CXCursor parent = get_indirect_field_parent_struct(c);
 
+  if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
+      clang_getCursorKind(parent) != CXCursor_UnionDecl)
+    return "";
+
   return get_clang_string(clang_getCursorSpelling(parent));
 }
 
