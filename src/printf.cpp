@@ -9,7 +9,7 @@ namespace bpftrace {
 std::string verify_format_string(const std::string &fmt, std::vector<Field> args)
 {
   std::stringstream message;
-  const std::regex re("%-?[0-9]*[a-zA-Z]+");
+  const std::regex re("%-?[0-9]*(\.[0-9]+)?[a-zA-Z]+");
 
   auto tokens_begin = std::sregex_iterator(fmt.begin(), fmt.end(), re);
   auto tokens_end = std::sregex_iterator();
@@ -44,7 +44,8 @@ std::string verify_format_string(const std::string &fmt, std::vector<Field> args
     // skip over format widths during verification
     if (token_iter->str()[offset] == '-')
       offset++;
-    while (token_iter->str()[offset] >= '0' && token_iter->str()[offset] <= '9')
+    while ((token_iter->str()[offset] >= '0' && token_iter->str()[offset] <= '9') ||
+           token_iter->str()[offset] == '.')
       offset++;
 
     const std::string token = token_iter->str().substr(offset);
