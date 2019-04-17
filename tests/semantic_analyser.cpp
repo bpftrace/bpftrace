@@ -507,6 +507,15 @@ TEST(semantic_analyser, join)
   test("kprobe:f { $x = join(arg0) }", 1);
 }
 
+TEST(semantic_analyser, join_delimiter)
+{
+  test("kprobe:f { join(arg0, \",\") }", 0);
+  test("kprobe:f { printf(\"%s\", join(arg0, \",\")) }", 10);
+  test("kprobe:f { $fmt = \"mystring\"; join($fmt, \",\") }", 10);
+  test("kprobe:f { @x = join(arg0, \",\") }", 1);
+  test("kprobe:f { $x = join(arg0, \",\") }", 1);
+}
+
 TEST(semantic_analyser, kprobe)
 {
   test("kprobe:f { 1 }", 0);

@@ -317,10 +317,22 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "join") {
     check_assignment(call, false, false);
-    check_nargs(call, 1);
+    check_varargs(call, 1, 2);
     check_arg(call, Type::integer, 0);
     call.type = SizedType(Type::none, 0);
     needs_join_map_ = true;
+
+    if (is_final_pass()) {
+      if (call.vargs && call.vargs->size() > 1) {
+        check_arg(call, Type::string, 1, true);
+        auto &join_delim_arg = *call.vargs->at(1);
+        String &join_delim_str = static_cast<String&>(join_delim_arg);
+        bpftrace_.join_args_.push_back(join_delim_str.str);
+      } else {
+        std::string join_delim_default = " ";
+        bpftrace_.join_args_.push_back(join_delim_default);
+      }
+    }
   }
   else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
@@ -1083,7 +1095,7 @@ int SemanticAnalyser::create_maps(bool debug)
     {
       // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
       std::string map_ident = "join";
-      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     }
@@ -1095,7 +1107,7 @@ int SemanticAnalyser::create_maps(bool debug)
     {
       // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
       std::string map_ident = "join";
-      SizedType type = SizedType(Type::join, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key);
     }

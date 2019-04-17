@@ -426,19 +426,21 @@ void CodegenLLVM::visit(Call &call)
     // arg0
     b_.SetInsertPoint(notzero);
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
+    b_.CreateStore(b_.getInt64(join_id_), b_.CreateGEP(perfdata, {b_.getInt64(8)}));
+    join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
     b_.CreateProbeRead(arr, 8, expr_);
-    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
+    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8+8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
 
     for (int i = 1; i < bpftrace_.join_argnum_; i++) {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
       b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
-      b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + i * bpftrace_.join_argsize_)), bpftrace_.join_argsize_, b_.CreateLoad(second));
+      b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)), bpftrace_.join_argsize_, b_.CreateLoad(second));
     }
 
     // emit
-    b_.CreatePerfEventOutput(ctx_, perfdata, 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+    b_.CreatePerfEventOutput(ctx_, perfdata, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
 
     b_.CreateBr(zero);
 
@@ -1223,6 +1225,7 @@ void CodegenLLVM::visit(Probe &probe)
      */
     int starting_printf_id_ = printf_id_;
     int starting_time_id_ = time_id_;
+    int starting_join_id_ = join_id_;
 
     for (auto &attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
@@ -1256,6 +1259,7 @@ void CodegenLLVM::visit(Probe &probe)
       for (auto &match : matches) {
         printf_id_ = starting_printf_id_;
         time_id_ = starting_time_id_;
+        join_id_ = starting_join_id_;
         probefull_ = attach_point->name(match);
         // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use by args builtin.
         if (probetype(attach_point->provider) == ProbeType::tracepoint)

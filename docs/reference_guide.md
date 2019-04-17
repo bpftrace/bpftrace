@@ -1368,7 +1368,7 @@ Tracing block I/O sizes > 0 bytes
 
 - `printf(char *fmt, ...)` - Print formatted
 - `time(char *fmt)` - Print formatted time
-- `join(char *arr[])` - Print the array
+- `join(char *arr[] [, char *delim])` - Print the array
 - `str(char *s [, int length])` - Returns the string pointed to by s
 - `ksym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
@@ -1428,9 +1428,11 @@ If a format string is not provided, it defaults to "%H:%M:%S\n".
 
 ## 4. `join()`: Join
 
-Syntax: `join(char *arr[])`
+Syntax: `join(char *arr[] [, char *delim])`
 
-This joins the array of strings with a space character, and prints it out. This current version does not return a string, so it cannot be used as an argument in printf(). Example:
+This joins the array of strings with a space character, and prints it out, separated by delimiters.
+The default delimiter, if none is provided, is the space character. This current version does not
+return a string, so it cannot be used as an argument in printf(). Example:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv); }'
@@ -1442,6 +1444,19 @@ preconv -e UTF-8
 preconv -e UTF-8
 preconv -e UTF-8
 preconv -e UTF-8
+tbl
+[...]
+```
+```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); }'
+Attaching 1 probe...
+ls,--color=auto
+man,ls
+preconv,-e,UTF-8
+preconv,-e,UTF-8
+preconv,-e,UTF-8
+preconv,-e,UTF-8
+preconv,-e,UTF-8
 tbl
 [...]
 ```
