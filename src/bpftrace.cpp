@@ -153,25 +153,31 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
 {
   if (!has_wildcard(func))
     return std::set<std::string>({func});
-  // Turn glob into a regex
-  auto regex_str = "(" + std::regex_replace(func, std::regex("\\*"), "[^\\s]*") + ")";
-  if (prefix != "")
-    regex_str = prefix + ":" + regex_str;
-  regex_str = "^" + regex_str;
-  std::regex func_regex(regex_str);
-  std::smatch match;
+  bool start_wildcard = func[0] == '*';
+  bool end_wildcard = func[func.length() - 1] == '*';
+
+  std::vector<std::string> tokens = split_string(func, '*');
+  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
 
   std::string line;
   std::set<std::string> matches;
+  std::string full_prefix = prefix.empty() ? "" : (prefix + ":");
   while (std::getline(symbol_name_stream, line))
   {
-    if (std::regex_search(line, match, func_regex))
-    {
-      assert(match.size() == 2);
-      // skip the ".part.N" kprobe variants, as they can't be traced:
-      if (std::strstr(match.str(1).c_str(), ".part.") == NULL)
-        matches.insert(match[1]);
+    if (!full_prefix.empty()) {
+      if (line.find(full_prefix, 0) != 0)
+        continue;
+      line = line.substr(full_prefix.length());
     }
+
+    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
+      continue;
+
+    // skip the ".part.N" kprobe variants, as they can't be traced:
+    if (line.find(".part.") != std::string::npos)
+      continue;
+
+    matches.insert(line);
   }
   return matches;
 }
@@ -1497,17 +1503,6 @@ std::string BPFtrace::resolve_uid(uintptr_t addr)
   file.close();
 
   return username;
-}
-
-std::vector<std::string> BPFtrace::split_string(std::string &str, char split_by)
-{
-  std::vector<std::string> elems;
-  std::stringstream ss(str);
-  std::string value;
-  while(std::getline(ss, value, split_by)) {
-      elems.push_back(value);
-  }
-  return elems;
 }
 
 std::string BPFtrace::resolve_ksym(uintptr_t addr, bool show_offset)

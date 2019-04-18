@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <tuple>
+#include <sstream>
 #include <fstream>
 #include <memory>
 
@@ -74,6 +75,38 @@ bool has_wildcard(const std::string &str)
   return str.find("*") != std::string::npos ||
          (str.find("[") != std::string::npos &&
           str.find("]") != std::string::npos);
+}
+
+std::vector<std::string> split_string(const std::string &str, char delimiter) {
+  std::vector<std::string> elems;
+  std::stringstream ss(str);
+  std::string value;
+  while(std::getline(ss, value, delimiter)) {
+    elems.push_back(value);
+  }
+  return elems;
+}
+
+bool wildcard_match(const std::string &str, std::vector<std::string> &tokens, bool start_wildcard, bool end_wildcard) {
+  size_t next = 0;
+
+  if (!start_wildcard)
+    if (str.find(tokens[0], next) != next)
+      return false;
+
+  for (std::string token : tokens) {
+    size_t found = str.find(token, next);
+    if (found == std::string::npos)
+      return false;
+
+    next = found + token.length();
+  }
+
+  if (!end_wildcard)
+    if (str.length() != next)
+      return false;
+
+  return true;
 }
 
 std::vector<int> get_online_cpus()
