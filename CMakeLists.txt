@@ -62,6 +62,7 @@ endif()
 set(CMAKE_REQUIRED_LIBRARIES bcc)
 check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_PROG_LOAD)
 check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_CREATE_MAP)
+check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
 
 include(CheckTypeSize)
 set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
