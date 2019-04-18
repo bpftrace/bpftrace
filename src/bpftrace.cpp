@@ -145,6 +145,8 @@ int BPFtrace::add_probe(ast::Probe &p)
 
 std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, std::istream &symbol_name_stream)
 {
+  if (!has_wildcard(func))
+    return std::set<std::string>({func});
   // Turn glob into a regex
   auto regex_str = "(" + std::regex_replace(func, std::regex("\\*"), "[^\\s]*") + ")";
   if (prefix != "")
@@ -170,6 +172,8 @@ std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix,
 
 std::set<std::string> BPFtrace::find_wildcard_matches(const std::string &prefix, const std::string &func, const std::string &file_name)
 {
+  if (!has_wildcard(func))
+    return std::set<std::string>({func});
   std::ifstream file(file_name);
   if (file.fail())
   {
