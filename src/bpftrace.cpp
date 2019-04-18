@@ -14,9 +14,13 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
+
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <linux/elf.h>
 
 #include "bcc_elf.h"
+#endif
+
 #include "bcc_syms.h"
 #include "perf_reader.h"
 
@@ -1558,12 +1562,18 @@ uint64_t BPFtrace::resolve_cgroupid(const std::string &path)
 
 uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path)
 {
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
   bcc_symbol sym;
   int err = bcc_resolve_symname(path.c_str(), name.c_str(), 0, 0, nullptr, &sym);
   if (err)
     throw std::runtime_error("Could not resolve symbol: " + path + ":" + name);
-
   return sym.offset;
+#else
+  std::string call_str = std::string("objdump -tT ") + path + " | grep -w " + name;
+  const char *call = call_str.c_str();
+  auto result = exec_system(call);
+  return read_address_from_output(result);
+#endif
 }
 
 int add_symbol(const char *symname, uint64_t start, uint64_t size, void *payload) {
@@ -1574,6 +1584,7 @@ int add_symbol(const char *symname, uint64_t start, uint64_t size, void *payload
 
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
 {
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
   bcc_symbol_option symbol_option = {
     .use_debug_file = 1,
     .check_debug_file_crc = 1,
@@ -1586,6 +1597,12 @@ std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
     throw std::runtime_error("Could not list function symbols: " + path);
 
   return syms.str();
+#else
+  std::string call_str = std::string("objdump -tT ") + path +
+    + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
+  const char *call = call_str.c_str();
+  return exec_system(call);
+#endif
 }
 
 uint64_t BPFtrace::read_address_from_output(std::string output)
