@@ -332,7 +332,7 @@ TEST(semantic_analyser, map_use_before_assign)
 
 TEST(semantic_analyser, variable_use_before_assign)
 {
-  test("kprobe:f { @x = $y; $y = 2; }", 0);
+  test("kprobe:f { @x = $y; $y = 2; }", 1);
 }
 
 TEST(semantic_analyser, maps_are_global)
@@ -344,6 +344,7 @@ TEST(semantic_analyser, maps_are_global)
 TEST(semantic_analyser, variables_are_local)
 {
   test("kprobe:f { $x = 1 } kprobe:g { $x = \"abc\"; }", 0);
+  test("kprobe:f { $x = 1 } kprobe:g { @y = $x }", 1);
 }
 
 TEST(semantic_analyser, variable_type)

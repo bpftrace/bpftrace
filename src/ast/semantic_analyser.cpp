@@ -566,8 +566,8 @@ void SemanticAnalyser::visit(Variable &var)
     var.type = search_val->second;
   }
   else {
-    var.type = SizedType(Type::integer, 8);
-    variable_val_.insert({var.ident, var.type});
+    err_ << "Undefined or undeclared variable: " << var.ident << std::endl;
+    var.type = SizedType(Type::none, 0);
   }
 }
 
