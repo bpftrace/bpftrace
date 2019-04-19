@@ -1054,12 +1054,7 @@ Syntax:
 $scratch_name
 ```
 
-bpftrace supports global & per-thread variables (via BPF maps), and scratch
-variables.
-
-If a variable is used but never defined, bpftrace will throw an error. If the
-variable is used but defined (assigned) only later, the variable's type will be
-inferred and it's value will be empty.
+bpftrace supports global & per-thread variables (via BPF maps), and scratch variables.
 
 Examples:
 
@@ -1085,8 +1080,7 @@ at 1648 ms: sleep
 
 ### 2.2. Per-Thread:
 
-These can be implemented as an associative array keyed on the thread ID. For
-example, `@start[tid]`:
+These can be implemented as an associative array keyed on the thread ID. For example, `@start[tid]`:
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
@@ -1115,7 +1109,8 @@ slept for 1000 ms
 slept for 1000 ms
 ```
 
-Note that scratch variables are local.
+Note that scratch variables are local and they will be implictly declared and
+initalized to 0 if used before being declared or defined.
 
 ## 3. `@[]`: Associative Arrays
 
