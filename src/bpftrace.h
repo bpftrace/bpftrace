@@ -137,7 +137,7 @@ private:
   static std::string lhist_index_label(int number);
   static std::vector<std::string> split_string(std::string &str, char split_by);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static int spawn_child(const std::vector<std::string>& args);
+  static int spawn_child(const std::vector<std::string>& args, int *go_fd);
   static bool is_pid_alive(int pid);
 };
 
