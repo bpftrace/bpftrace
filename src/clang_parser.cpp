@@ -334,8 +334,8 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace)
           auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
           auto ptypesize = clang_Type_getSizeOf(ptype);
 
-          if (clang_getCursorKind(c) == CXCursor_StructDecl ||
-              clang_getCursorKind(c) == CXCursor_UnionDecl) {
+          if ((clang_getCursorKind(c) == CXCursor_StructDecl ||
+              clang_getCursorKind(c) == CXCursor_UnionDecl) && clang_isCursorDefinition(c)) {
             auto struct_name = get_clang_string(clang_getTypeSpelling(clang_getCanonicalType(clang_getCursorType(c))));
             indirect_structs[struct_name] = c;
             unvisited_indirect_structs.insert(struct_name);
@@ -377,6 +377,9 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace)
       iterate = false;
     }
   } while (iterate);
+
+  // TODO(mmarchini): validate that a struct doesn't have two fields with the
+  // same offset. Mark struct as invalid otherwise
 
   clang_disposeTranslationUnit(translation_unit);
   clang_disposeIndex(index);
