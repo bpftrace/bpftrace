@@ -346,6 +346,23 @@ TEST(semantic_analyser, variables_are_local)
   test("kprobe:f { $x = 1 } kprobe:g { $x = \"abc\"; }", 0);
 }
 
+TEST(semantic_analyser, array_access) {
+  test("kprobe:f { $s = arg0; @x = $s->y[0];}", 10);
+  test("kprobe:f { $s = 0; @x = $s->y[0];}", 10);
+  test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @x = $s->y[0];}",
+       0);
+  test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @x = $s->y[5];}",
+       10);
+  test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @x = $s->y[-1];}",
+       10);
+  test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @x = $s->y[\"0\"];}",
+       10);
+}
+
 TEST(semantic_analyser, variable_type)
 {
   BPFtrace bpftrace;
