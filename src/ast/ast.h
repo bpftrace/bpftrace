@@ -135,6 +135,15 @@ public:
   void accept(Visitor &v) override;
 };
 
+class ArrayAccess : public Expression {
+public:
+  ArrayAccess(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
+  Expression *expr;
+  Expression *indexpr;
+
+  void accept(Visitor &v) override;
+};
+
 class Cast : public Expression {
 public:
   Cast(const std::string &type, bool is_pointer, Expression *expr)
@@ -305,6 +314,7 @@ public:
   virtual void visit(Unop &unop) = 0;
   virtual void visit(Ternary &ternary) = 0;
   virtual void visit(FieldAccess &acc) = 0;
+  virtual void visit(ArrayAccess &arr) = 0;
   virtual void visit(Cast &cast) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;

@@ -879,6 +879,25 @@ TEST(Parser, field_access_builtin)
       "   count\n");
 }
 
+TEST(Parser, array_access)
+{
+  test("kprobe:sys_read { x[index]; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  []\n"
+      "   identifier: x\n"
+      "   identifier: index\n");
+
+  test("kprobe:sys_read { $val = x[index]; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  =\n"
+      "   variable: $val\n"
+      "   []\n"
+      "    identifier: x\n"
+      "    identifier: index\n");
+}
+
 TEST(Parser, cstruct)
 {
   test("struct Foo { int x, y; char *str; } kprobe:sys_read { 1; }",

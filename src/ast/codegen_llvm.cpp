@@ -991,6 +991,14 @@ void CodegenLLVM::visit(FieldAccess &acc)
       // pointer internally and dereference later when necessary.
       expr_ = src;
     }
+    else if (field.type.type == Type::array)
+    {
+      // For array types, we want to just pass pointer along,
+      // since the offset of the field should be the start of the array.
+      // The pointer will be dereferenced when the array is accessed by a []
+      // operation
+      expr_ = src;
+    }
     else if (field.type.type == Type::string)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
@@ -1005,6 +1013,25 @@ void CodegenLLVM::visit(FieldAccess &acc)
       b_.CreateLifetimeEnd(dst);
     }
   }
+}
+
+void CodegenLLVM::visit(ArrayAccess &arr)
+{
+  Value *array, *index, *offset;
+  SizedType &type = arr.expr->type;
+
+  arr.expr->accept(*this);
+  array = expr_;
+
+  arr.indexpr->accept(*this);
+  index = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+  offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
+
+  AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_access");
+  Value *src = b_.CreateAdd(array, offset);
+  b_.CreateProbeRead(dst, type.pointee_size, src);
+  expr_ = b_.CreateLoad(dst);
+  b_.CreateLifetimeEnd(dst);
 }
 
 void CodegenLLVM::visit(Cast &cast)

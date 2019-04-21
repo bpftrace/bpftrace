@@ -57,6 +57,10 @@ void FieldAccess::accept(Visitor &v) {
   v.visit(*this);
 }
 
+void ArrayAccess::accept(Visitor &v) {
+  v.visit(*this);
+}
+
 void Cast::accept(Visitor &v) {
   v.visit(*this);
 }

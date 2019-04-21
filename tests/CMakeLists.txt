@@ -92,3 +92,12 @@ foreach(runtime_test ${runtime_tests})
 endforeach()
 add_custom_target(runtime-tests COMMAND ./runtime-tests.sh)
 add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
+
+# Compile all testprograms, one per .c file for runtime testing
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
+file(GLOB testprogs testprogs/*)
+foreach(testprog ${testprogs})
+  get_filename_component(bin_name ${testprog} NAME_WE)
+  add_executable (${bin_name} ${testprog})
+  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ )
+endforeach()

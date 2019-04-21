@@ -1,0 +1,17 @@
+NAME array element access - assign to map
+RUN bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
+EXPECT @x: 1
+TIMEOUT 5
+BEFORE (sleep 1 && ./testprogs/array_access) &
+
+NAME array element access - assign to var
+RUN bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; $x = $s->y[0]; printf("%d\n", $x); exit(); }'
+EXPECT 1
+TIMEOUT 5
+BEFORE (sleep 1 && ./testprogs/array_access) &
+
+NAME array element access - out of bounds
+RUN bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; $x = $s->y[5]; printf("%d\n", $x); exit(); }'
+EXPECT the index 5 is out of bounds for array of size 4
+TIMEOUT 5
+BEFORE (sleep 1 && ./testprogs/array_access) &

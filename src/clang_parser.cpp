@@ -147,8 +147,18 @@ static SizedType get_sized_type(CXType clang_type)
       {
         return SizedType(Type::string, size);
       }
-      // TODO add support for arrays
-      return SizedType(Type::none, 0);
+
+      // Only support one-dimensional arrays for now
+      if (elem_type.kind != CXType_ConstantArray)
+      {
+        auto type = get_sized_type(elem_type);
+        auto sized_type = SizedType(Type::array, size);
+        sized_type.pointee_size = type.size;
+        sized_type.elem_type = type.type;
+        return sized_type;
+      } else {
+        return SizedType(Type::none, 0);
+      }
     }
     default:
       return SizedType(Type::none, 0);

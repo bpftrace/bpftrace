@@ -573,6 +573,30 @@ void SemanticAnalyser::visit(Variable &var)
   }
 }
 
+void SemanticAnalyser::visit(ArrayAccess &arr)
+{
+  arr.expr->accept(*this);
+  arr.indexpr->accept(*this);
+
+  SizedType &type = arr.expr->type;
+  SizedType &indextype = arr.indexpr->type;
+
+  if (is_final_pass() && !(type.type == Type::array))
+    err_ << "The array index operator [] can only be used on arrays." << std::endl;
+
+  if (is_final_pass() && !(indextype.type == Type::integer))
+    err_ << "The array index operator [] only accepts integer indices." << std::endl;
+
+  if (is_final_pass() && (indextype.type == Type::integer)) {
+    Integer *index = static_cast<Integer *>(arr.indexpr);
+
+    if ((size_t) index->n >= type.size)
+      err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+  }
+
+  arr.type = SizedType(type.elem_type, type.pointee_size);
+}
+
 void SemanticAnalyser::visit(Binop &binop)
 {
   binop.left->accept(*this);
