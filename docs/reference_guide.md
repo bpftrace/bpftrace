@@ -544,12 +544,14 @@ i: 5
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
-Note that variables will be implictly declared and initalized to 0 if not already declared or defined.
+Note that maps will be implictly declared and initalized to 0 if not already
+declared or defined. Scratch variables must be initalized before using these
+operators.
 
 Example - variable:
 
 ```
-bpftrace -e 'BEGIN { $x++; $x++; printf("x: %d\n", $x); }'
+bpftrace -e 'BEGIN { $x = 0; $x++; $x++; printf("x: %d\n", $x); }'
 Attaching 1 probe...
 x: 2
 ^C
