@@ -1,6 +1,7 @@
 add_executable(bpftrace
   attached_probe.cpp
   bpftrace.cpp
+  btf.cpp
   clang_parser.cpp
   driver.cpp
   fake_map.cpp
@@ -31,6 +32,12 @@ endif(HAVE_BCC_ELF_FOREACH_SYM)
 if(HAVE_GET_CURRENT_CGROUP_ID)
   target_compile_definitions(bpftrace PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
 endif(HAVE_GET_CURRENT_CGROUP_ID)
+if (LIBBPF_BTF_DUMP_FOUND)
+  target_compile_definitions(bpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP)
+  target_include_directories(bpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
+  target_link_libraries(bpftrace ${LIBBPF_LIBRARIES})
+endif(LIBBPF_BTF_DUMP_FOUND)
+
 target_link_libraries(bpftrace arch ast parser resources)
 
 if (STATIC_LINKING)
