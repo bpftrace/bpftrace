@@ -43,4 +43,4 @@ script:
       -v /lib/modules:/lib/modules:ro \
       -v $(readlink -f /lib/modules/$(uname -r)/build):$(readlink -f /lib/modules/$(uname -r)/build):ro \
       -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS \
-      bpftrace-builder-$BASE $(pwd)/build-$TYPE-$BASE $TYPE
+      bpftrace-builder-$BASE $(pwd)/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`
