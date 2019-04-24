@@ -16,9 +16,12 @@ make "$@"
 
 if [ $RUN_TESTS = 1 ]; then
   set +e
-  mount -t debugfs debugfs /sys/kernel/debug/
+  let exit_status=0;
   ./tests/bpftrace_test $TEST_ARGS;
+  let exit_status="$exit_status + $?"
   make tools-parsing-test;
+  let exit_status="$exit_status + $?"
   # TODO(mmarchini) re-enable once we figured out how to run it properly on CI
   # make runtime-tests;
+  exit $exit_status;
 fi
