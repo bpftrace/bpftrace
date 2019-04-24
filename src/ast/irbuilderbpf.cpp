@@ -110,6 +110,9 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   {
     switch (stype.size)
     {
+      case 16:
+        ty = getInt128Ty();
+        break;
       case 8:
         ty = getInt64Ty();
         break;

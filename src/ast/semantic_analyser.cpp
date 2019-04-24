@@ -311,14 +311,37 @@ void SemanticAnalyser::visit(Call &call)
       call.type = SizedType(Type::usym, 16);
   }
   else if (call.func == "ntop") {
-    check_nargs(call, 2);
-    check_arg(call, Type::integer, 0);
-    check_arg(call, Type::integer, 1);
-    // 3 x 64 bit words are needed, hence 24 bytes
-    //  0 - To store address family, but stay word-aligned
-    //  1 - To store ipv4 or first half of ipv6
-    //  2 - Reserved for future use, to store remainder of ipv6
-    call.type = SizedType(Type::inet, 24);
+    if (!check_varargs(call, 1, 2))
+      return;
+
+    auto arg = call.vargs->at(0);
+    if (call.vargs->size() == 2) {
+      arg = call.vargs->at(1);
+      check_arg(call, Type::integer, 0);
+    }
+
+    if (arg->type.type != Type::integer && arg->type.type != Type::array)
+      err_ << call.func << "() expects an integer or array argument, got " << arg->type.type << std::endl;
+
+    // Kind of:
+    //
+    // struct {
+    //   int af_type;
+    //   union {
+    //     char[4] inet4;
+    //     char[16] inet6;
+    //   }
+    // }
+    int buffer_size = 8;
+    if (arg->type.type == Type::array) {
+      if (arg->type.elem_type != Type::integer || arg->type.pointee_size != 1 || !(arg->type.size == 4 || arg->type.size == 16)) {
+        err_ << call.func << "() invalid array" << std::endl;
+      }
+      if (arg->type.size == 16)
+        buffer_size = 20;
+    }
+    call.type = SizedType(Type::inet, buffer_size);
+    call.type.is_internal = true;
   }
   else if (call.func == "join") {
     check_assignment(call, false, false);

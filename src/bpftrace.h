@@ -66,7 +66,7 @@ public:
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
-  std::string resolve_inet(int af, uint64_t inet);
+  std::string resolve_inet(int af, uint8_t* inet);
   std::string resolve_uid(uintptr_t addr);
   uint64_t resolve_kname(const std::string &name);
   uint64_t resolve_uname(const std::string &name, const std::string &path);

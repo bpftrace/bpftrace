@@ -1391,7 +1391,7 @@ Tracing block I/O sizes > 0 bytes
 - `cgroupid(char *path)` - Resolve cgroup ID
 - `kstack([StackMode mode, ][int level])` - Kernel stack trace
 - `ustack([StackMode mode, ][int level])` - User stack trace
-- `ntop(int af, int addr)` - Convert IP address data to text
+- `ntop([int af, ]int|char[4|16] addr)` - Convert IP address data to text
 - `cat(char *filename)` - Print file content
 
 Some of these are asynchronous: the kernel queues the event, but some time
@@ -1657,36 +1657,50 @@ And in other terminal:
 
 ## 14. `ntop()`: Convert IP address data to text
 
-Syntax: `ntop(int af, int addr)`
+Syntax: `ntop([int af, ]int|char[4|16] addr)`
 
-This returns the string representation of an IPv4 address. IPv6 support will be added in the future.
+This returns the string representation of an IPv4 or IPv6 address. ntop will
+infer the address type (IPv4 or IPv6) based on the `addr` type and size. If an
+integer or `char[4]` is given, ntop assumes IPv4, if a `char[16]` is given,
+ntop assumes IPv6. You can also pass the address type explicitly as the first
+parameter.
 
 Examples:
 
 A simple example of ntop with an ipv4 hex-encoded literal:
 
 ```
-bpftrace -e 'BEGIN { $addr_type=2; printf("%s\n", ntop($addr_type, 0x0100007f));}'
+bpftrace -e 'BEGIN { printf("%s\n", ntop(0x0100007f));}'
 127.0.0.1
 ^C
 ```
 
-Note that the literal `2` above is the value of the enum `AF_INET`, and `10` would indicate `AF_INET6` once supported, as per `include/linux/socket.h`.
-
-A less trivial example of this usage, tracing tcp outbound connections, and printing the destination address:
+Same example as before, but passing the address type explicitly to ntop:
 
 ```
-bpftrace -e '#include <net/sock.h>
-kprobe:tcp_connect { $sk = ((struct sock *) arg0); printf("%s\n", ntop(2, $sk->__sk_common.skc_daddr)); }'
+bpftrace -e '#include <linux/socket.h>
+BEGIN { printf("%s\n", ntop(AF_INET, 0x0100007f));}'
+127.0.0.1
+^C
+```
+
+A less trivial example of this usage, tracing tcp state changes, and printing the destination IPv6 address:
+
+```
+bpftrace -e 'tracepoint:tcp:tcp_set_state { printf("%s\n", ntop(args->daddr_v6)) }'
 Attaching 1 probe...
-169.254.0.1
+::ffff:216.58.194.164
+::ffff:216.58.194.164
+::ffff:216.58.194.164
+::ffff:216.58.194.164
+::ffff:216.58.194.164
 ^C
 ```
 
 And initiate a connection to this (or any) address in another terminal:
 
 ```
-curl 169.254.0.1
+curl www.google.com
 ```
 
 ## 15. `kstack()`: Stack Traces, Kernel

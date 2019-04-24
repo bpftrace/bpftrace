@@ -95,6 +95,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { ksym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
+  test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
   test("kprobe:f { @x = count(pid) }", 1);
@@ -272,11 +273,26 @@ TEST(semantic_analyser, call_usym)
 
 TEST(semantic_analyser, call_ntop)
 {
+  std::string structs = "struct inet { unsigned char ipv4[4]; unsigned char ipv6[16]; unsigned char invalid[10]; } ";
+
   test("kprobe:f { ntop(2, arg0); }", 0);
+  test("kprobe:f { ntop(arg0); }", 0);
+  test(structs + "kprobe:f { ntop(10, ((inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { ntop(10, ((inet*)0)->ipv6); }", 0);
+  test(structs + "kprobe:f { ntop(((inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { ntop(((inet*)0)->ipv6); }", 0);
+
   test("kprobe:f { @x = ntop(2, arg0); }", 0);
+  test("kprobe:f { @x = ntop(arg0); }", 0);
   test("kprobe:f { @x = ntop(2, 0xFFFF); }", 0);
+  test("kprobe:f { @x = ntop(0xFFFF); }", 0);
+  test(structs + "kprobe:f { @x = ntop(((inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { @x = ntop(((inet*)0)->ipv6); }", 0);
+
   test("kprobe:f { ntop(); }", 1);
-  test("kprobe:f { ntop(2, \"hello\"); }", 10);
+  test("kprobe:f { ntop(2, \"hello\"); }", 1);
+  test("kprobe:f { ntop(\"hello\"); }", 1);
+  test(structs + "kprobe:f { ntop(((inet*)0)->invalid); }", 1);
 }
 
 TEST(semantic_analyser, call_kaddr)
