@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <unordered_set>
 
 #include "types.h"
 
@@ -34,6 +35,7 @@ public:
   bool is_map = false;
   Expression() : Node(){};
   Expression(location loc) : Node(loc){};
+  static std::unordered_set<std::string>& getResolve();
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -86,12 +88,22 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {}
-  explicit Builtin(std::string ident, location loc) : Expression(loc), ident(is_deprecated(ident)) {}
+  explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {
+    resolve_curtask(ident);
+  }
+  explicit Builtin(std::string ident, location loc) : Expression(loc), ident(is_deprecated(ident)) {
+    resolve_curtask(ident);
+  }
   std::string ident;
   int probe_id;
 
   void accept(Visitor &v) override;
+
+private:
+  void resolve_curtask(std::string& ident) {
+    if (ident == "curtask")
+      getResolve().insert("task_struct");
+  }
 };
 
 class Call : public Expression {
@@ -174,9 +186,13 @@ public:
 class Cast : public Expression {
 public:
   Cast(const std::string &type, bool is_pointer, Expression *expr)
-    : cast_type(type), is_pointer(is_pointer), expr(expr) { }
+    : cast_type(type), is_pointer(is_pointer), expr(expr) {
+    getResolve().insert(type);
+  }
   Cast(const std::string &type, bool is_pointer, Expression *expr, location loc)
-    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr) { }
+    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr) {
+    getResolve().insert(type);
+  }
   std::string cast_type;
   bool is_pointer;
   Expression *expr;
