@@ -9,21 +9,25 @@ services:
 matrix:
   include:
     - name: "Static LLVM 5 Debug"
-      env: BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=-codegen.string_equal_comparison:codegen.string_not_equal_comparison"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=-codegen.string_equal_comparison:codegen.string_not_equal_comparison"
     - name: "Static LLVM 5 Release"
-      env: BASE=alpine TYPE=Release STATIC_LINKING=ON
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON
+
     - name: "LLVM 6 Debug"
-      env: BASE=fedora28 TYPE=Debug
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug
     - name: "LLVM 6 Release"
-      env: BASE=fedora28 TYPE=Release
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release
+
     - name: "LLVM 7 Debug"
-      env: BASE=fedora29 TYPE=Debug
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug
     - name: "LLVM 7 Release"
-      env: BASE=fedora29 TYPE=Release
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Release
+
     - name: "LLVM 8 Debug"
-      env: BASE=bionic-llvm8 TYPE=Debug
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug
     - name: "LLVM 8 Release"
-      env: BASE=bionic-llvm8 TYPE=Release
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Release
+
   allow_failures:
     - name: "Static LLVM 5 Debug"
       env: BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=-codegen.string_equal_comparison:codegen.string_not_equal_comparison"
@@ -32,5 +36,11 @@ matrix:
 
 script:
   - sudo apt-get install linux-headers-$(uname -r)
-  - docker build -t bpftrace-builder-$BASE -f docker/Dockerfile.$BASE docker/
-  - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE $(pwd)/build-$TYPE-$BASE $TYPE
+  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE -f docker/Dockerfile.$BASE docker/
+  - |
+    sudo docker run --privileged --rm -it -v $(pwd):$(pwd) \
+      -v /sys/kernel/debug:/sys/kernel/debug:rw \
+      -v /lib/modules:/lib/modules:ro \
+      -v $(readlink -f /lib/modules/$(uname -r)/build):$(readlink -f /lib/modules/$(uname -r)/build):ro \
+      -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS \
+      bpftrace-builder-$BASE $(pwd)/build-$TYPE-$BASE $TYPE
