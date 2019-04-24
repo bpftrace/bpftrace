@@ -13,6 +13,7 @@ add_executable(bpftrace
   types.cpp
   utils.cpp
   list.cpp
+  btf.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)
@@ -40,6 +41,12 @@ else()
   target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
 endif()
 target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
+
+if (LIBBPF_FOUND AND NOT STATIC_LINKING)
+  target_compile_definitions(bpftrace PRIVATE HAVE_LIBBPF)
+  target_link_libraries(bpftrace ${LIBBPF_LIBRARIES})
+  target_include_directories(bpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
+endif()
 
 install(TARGETS bpftrace DESTINATION bin)
 
