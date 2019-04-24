@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y \
       llvm-${LLVM_VERSION} \
       llvm-${LLVM_VERSION}-dev \
       llvm-${LLVM_VERSION}-runtime \
-      libllvm${LLVM_VERSION}
+      libllvm${LLVM_VERSION} \
+      systemtap-sdt-dev
 
 COPY build.sh /build.sh
 ENTRYPOINT ["bash", "/build.sh"]
