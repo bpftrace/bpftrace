@@ -154,6 +154,130 @@ BTF::BTF(void) : btf(NULL), state(NODATA)
   free(data);
 }
 
+static std::string fix_name(std::string& name, __u32 id)
+{
+  if (name.empty())
+    return "type_" + std::to_string(id);
+
+  return name;
+}
+
+int BTF::resolve_field(__u32 type_id, Field& field, std::map<std::string, Struct> &structs)
+{
+  const struct btf_type *ptr_type, *type = btf__type_by_id(btf, type_id);
+  std::string name;
+  int actual_type_id;
+
+  __s64 size = btf__resolve_size(btf, type_id);
+
+  switch (BTF_INFO_KIND(type->info))
+  {
+  case BTF_KIND_INT:
+  case BTF_KIND_ENUM:
+    field.type = SizedType(Type::integer, size);
+    break;
+  case BTF_KIND_PTR:
+    ptr_type = btf__type_by_id(btf, type->type);
+    name = btf__name_by_offset(btf, ptr_type->name_off);
+    name = fix_name(name, type->type);
+
+    resolve_struct_id(type->type, name, structs);
+
+    field.type = SizedType(Type::cast, size);
+    field.type.is_pointer = true;
+    field.type.cast_type = name;
+    field.type.pointee_size = structs[name].size;
+    break;
+  case BTF_KIND_ARRAY:
+    field.type = SizedType(Type::string, size);
+    break;
+  case BTF_KIND_UNION:
+  case BTF_KIND_STRUCT:
+    name = btf__name_by_offset(btf, type->name_off);
+    name = fix_name(name, type_id);
+
+    resolve_struct_id(type_id, name, structs);
+
+    field.type = SizedType(Type::cast, size);
+    field.type.cast_type = name;
+    break;
+  case BTF_KIND_VOLATILE:
+  case BTF_KIND_CONST:
+  case BTF_KIND_RESTRICT:
+  case BTF_KIND_TYPEDEF:
+    actual_type_id = btf__resolve_type(btf, type_id);
+    if (actual_type_id < 0)
+      return -1;
+
+    if (resolve_field(actual_type_id, field, structs))
+      return -1;
+    break;
+  case BTF_KIND_UNKN:
+  case BTF_KIND_FWD:
+    return -1;
+  default:
+    break;
+  }
+
+  return 0;
+}
+
+static __u32 member_bit_offset(const struct btf_type *struct_type,
+                               const struct btf_member *member)
+{
+  return BTF_INFO_KFLAG(struct_type->info) ?
+         BTF_MEMBER_BIT_OFFSET(member->offset) : member->offset;
+}
+
+void BTF::resolve_struct_id(__u32 type_id, std::string name, std::map<std::string, Struct> &structs,
+                            bool new_struct)
+{
+  const struct btf_type *type = btf__type_by_id(btf, type_id);
+
+  if ((BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT) &&
+      (BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
+    return;
+
+  if (new_struct && structs.count(name))
+    return;
+
+  if (new_struct)
+    structs[name].size = type->size;
+
+  const struct btf_member *m = reinterpret_cast<const struct btf_member*>(type + 1);
+
+  for (unsigned int i = 0; i < BTF_INFO_VLEN(type->info); i++)
+  {
+    std::string m_name = btf__name_by_offset(btf, m[i].name_off);
+
+    /* add annonymous struct/unions to the parent */
+    if (m_name.empty()) {
+      resolve_struct_id(m[i].type, name, structs, false);
+      continue;
+    }
+
+    Field& field = structs[name].fields[m_name];
+    field.offset = member_bit_offset(type, &m[i]) / 8;
+
+    if (resolve_field(m[i].type, field, structs))
+      break;
+  }
+}
+
+void BTF::resolve_struct(std::string name, std::map<std::string, Struct> &structs)
+{
+  __s32 type_id;
+
+  if (!btf || name.empty() || structs.count(name))
+    return;
+
+  type_id = btf__find_by_name(btf, name.c_str());
+  if (type_id < 0)
+    return;
+
+  resolve_struct_id(type_id, name, structs);
+}
+
 BTF::~BTF()
 {
   btf__free(btf);
@@ -171,6 +295,9 @@ namespace bpftrace {
 BTF::BTF() { }
 
 BTF::BTF(unsigned char *data __maybe_unused, unsigned int size __maybe_unused) { }
+
+void BTF::resolve_struct(std::string name __maybe_unused,
+                         std::map<std::string, Struct> &structs __maybe_unused) { }
 
 BTF::~BTF() { }
 
