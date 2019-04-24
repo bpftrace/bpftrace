@@ -100,6 +100,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = count(pid) }", 1);
   test("kprobe:f { @x = sum(pid, 123) }", 1);
   test("kprobe:f { fake() }", 1);
+  test("kprobe:f { cat(\"/proc/uptime\") }", 0);
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -311,6 +312,14 @@ TEST(semantic_analyser, call_probe)
   test("kprobe:f { probe(\"blah\"); }", 1);
   test("kprobe:f { probe(); }", 1);
   test("kprobe:f { probe(123); }", 1);
+}
+
+TEST(semantic_analyser, call_cat)
+{
+  test("kprobe:f { cat(\"/proc/loadavg\"); }", 0);
+  test("kprobe:f { cat(); }", 1);
+  test("kprobe:f { cat(123); }", 1);
+  test("kprobe:f { @x = cat(\"/proc/loadavg\"); }", 1);
 }
 
 TEST(semantic_analyser, map_reassignment)

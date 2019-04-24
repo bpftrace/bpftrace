@@ -88,6 +88,7 @@ public:
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> join_args_;
   std::vector<std::string> time_args_;
+  std::vector<std::string> cat_args_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;

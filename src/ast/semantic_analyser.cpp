@@ -456,6 +456,17 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
+  else if (call.func == "cat") {
+    check_assignment(call, false, false);
+    if (check_nargs(call, 1)) {
+      if (check_arg(call, Type::string, 0, true)) {
+        if (is_final_pass()) {
+          auto &arg = *call.vargs->at(0);
+          bpftrace_.cat_args_.push_back(static_cast<String&>(arg).str);
+        }
+      }
+    }
+  }
   else if (call.func == "kstack") {
     check_stack_call(call, Type::kstack);
   }

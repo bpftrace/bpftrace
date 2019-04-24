@@ -209,4 +209,20 @@ std::string resolve_binary_path(const std::string& cmd)
   }
 }
 
+void cat_file(const char *filename)
+{
+  std::ifstream file(filename);
+  std::string line;
+
+  if (file.fail())
+  {
+    std::cerr << "ERROR: file not found: " << filename << std::endl;
+    return;
+  }
+  while (getline(file, line))
+  {
+    std::cout << line << std::endl;
+  }
+}
+
 } // namespace bpftrace

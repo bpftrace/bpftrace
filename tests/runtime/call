@@ -103,3 +103,8 @@ RUN bpftrace -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), u
 EXPECT SUCCESS ustack
 TIMEOUT 5
 BEFORE sleep 0.1 && sleep 0.1 &
+
+NAME cat
+RUN bpftrace -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
+EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
+TIMEOUT 5
