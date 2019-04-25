@@ -24,7 +24,6 @@ TEST(clang_parser, integers)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 12);
@@ -53,7 +52,6 @@ TEST(clang_parser, c_union)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 8);
@@ -87,7 +85,6 @@ TEST(clang_parser, integer_ptr)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 8);
@@ -108,7 +105,6 @@ TEST(clang_parser, string_ptr)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 8);
@@ -129,7 +125,6 @@ TEST(clang_parser, string_array)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 1U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 32);
@@ -148,7 +143,6 @@ TEST(clang_parser, nested_struct_named)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
   ASSERT_EQ(structs.count("Bar"), 1U);
 
@@ -169,7 +163,6 @@ TEST(clang_parser, nested_struct_ptr_named)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
   ASSERT_EQ(structs.count("Bar"), 1U);
 
@@ -192,7 +185,6 @@ TEST(clang_parser, nested_struct_anon)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
 
   EXPECT_EQ(structs["Foo"].size, 4);
