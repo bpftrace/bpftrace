@@ -68,6 +68,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [14. `ntop()`: Convert IP address data to text](#14-ntop-convert-ip-address-data-to-text)
     - [15. `kstack()`: Stack Traces, Kernel](#15-kstack-stack-traces-kernel)
     - [16. `ustack()`: Stack Traces, User](#16-ustack-stack-traces-user)
+    - [17. `cat()`: Print file content](#17-cat-print-file-content)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -1391,6 +1392,7 @@ Tracing block I/O sizes > 0 bytes
 - `kstack([StackMode mode, ][int level])` - Kernel stack trace
 - `ustack([StackMode mode, ][int level])` - User stack trace
 - `ntop(int af, int addr)` - Convert IP address data to text
+- `cat(char *filename)` - Print file content
 
 Some of these are asynchronous: the kernel queues the event, but some time
 later (milliseconds) it is processed in user-space. The asynchronous actions
@@ -1912,6 +1914,26 @@ Attaching 1 probe...
 
 Note that for these examples to work, bash had to be recompiled with frame
 pointers.
+
+## 17. `cat()`: Print file content
+
+Syntax: `cat(filename)`
+
+This prints the file content. For example:
+
+```
+# bpftrace -e 't:syscalls:sys_enter_execve { printf("%s ", str(args->filename)); cat("/proc/loadavg"); }'
+Attaching 1 probe...
+/usr/libexec/grepconf.sh 3.18 2.90 2.94 2/977 30138
+/usr/bin/grep 3.18 2.90 2.94 4/978 30139
+/usr/bin/flatpak 3.18 2.90 2.94 2/980 30143
+/usr/bin/grep 3.18 2.90 2.94 3/977 30144
+/usr/bin/sed 3.18 2.90 2.94 7/978 30146
+/usr/bin/tclsh 3.18 2.90 2.94 5/978 30150
+/usr/bin/manpath 3.18 2.90 2.94 2/978 30152
+/bin/ps 3.18 2.90 2.94 2/979 30155
+^C
+```
 
 # Map Functions
 

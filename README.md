@@ -282,6 +282,7 @@ Functions:
 - `reg(char *name)` - Returns the value stored in the named register
 - `join(char *arr[] [, char *delim])` - Prints the string array
 - `time(char *fmt)` - Print the current time
+- `cat(char *filename)` - Print file content
 - `system(char *fmt)` - Execute shell command
 - `exit()` - Quit bpftrace
 

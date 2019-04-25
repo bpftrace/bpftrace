@@ -81,6 +81,7 @@ private:
   std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;
   int time_id_ = 0;
+  int cat_id_ = 0;
   uint64_t join_id_ = 0;
   int system_id_ = 0;
 };

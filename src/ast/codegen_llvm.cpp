@@ -703,6 +703,18 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
   }
+  else if (call.func == "cat")
+  {
+    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) * 2);
+    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::cat)), perfdata);
+    b_.CreateStore(b_.getInt64(cat_id_), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
+
+    cat_id_++;
+    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) * 2);
+    b_.CreateLifetimeEnd(perfdata);
+    expr_ = nullptr;
+  }
   else if (call.func == "kstack" || call.func == "ustack")
   {
     Value *stackid = b_.CreateGetStackId(ctx_, call.func == "ustack", call.type.stack_type);

@@ -153,6 +153,7 @@ enum class AsyncAction
   zero,
   time,
   join,
+  cat
 };
 
 uint64_t asyncactionint(AsyncAction a);

@@ -43,6 +43,7 @@
 #include "codegen/call_sum.cpp"
 #include "codegen/call_system.cpp"
 #include "codegen/call_time.cpp"
+#include "codegen/call_cat.cpp"
 #include "codegen/call_usym_key.cpp"
 #include "codegen/call_ustack.cpp"
 #include "codegen/call_zero.cpp"

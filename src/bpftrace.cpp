@@ -262,6 +262,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     printf("%s", timestr);
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::cat))
+  {
+    uint64_t cat_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    auto filename = bpftrace->cat_args_[cat_id].c_str();
+    cat_file(filename);
+    return;
+  }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
     uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
