@@ -1,14 +1,14 @@
 FROM ubuntu:bionic
 
-ENV llvmVersion=8
+ARG LLVM_VERSION
+ENV LLVM_VERSION=$LLVM_VERSION
 
 RUN apt-get update && apt-get install -y curl gnupg &&\
-    llvmRepository='\n\
+    llvmRepository="\n\
 deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic main\n\
 deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic main\n\
-# 8\n\
-deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main\n\
-deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main' && \
+deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n\
+deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n" &&\
     echo $llvmRepository >> /etc/apt/sources.list && \
     curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD && \
@@ -23,14 +23,14 @@ RUN apt-get update && apt-get install -y \
       libelf-dev \
       zlib1g-dev \
       libbcc \
-      clang-${llvmVersion} \
-      libclang-${llvmVersion}-dev \
-      libclang-common-${llvmVersion}-dev \
-      libclang1-${llvmVersion} \
-      llvm-${llvmVersion} \
-      llvm-${llvmVersion}-dev \
-      llvm-${llvmVersion}-runtime \
-      libllvm${llvmVersion}
+      clang-${LLVM_VERSION} \
+      libclang-${LLVM_VERSION}-dev \
+      libclang-common-${LLVM_VERSION}-dev \
+      libclang1-${LLVM_VERSION} \
+      llvm-${LLVM_VERSION} \
+      llvm-${LLVM_VERSION}-dev \
+      llvm-${LLVM_VERSION}-runtime \
+      libllvm${LLVM_VERSION}
 
 COPY build.sh /build.sh
 ENTRYPOINT ["bash", "/build.sh"]
