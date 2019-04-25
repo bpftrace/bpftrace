@@ -137,7 +137,7 @@ private:
   static std::string hist_index_label(int power);
   static std::string lhist_index_label(int number);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static int spawn_child(const std::vector<std::string>& args);
+  static int spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd);
   static bool is_pid_alive(int pid);
 };
 
