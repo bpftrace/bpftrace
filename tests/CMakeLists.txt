@@ -101,3 +101,7 @@ foreach(testprog ${testprogs})
   add_executable (${bin_name} ${testprog})
   set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ )
 endforeach()
+
+configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
+add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
+add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
