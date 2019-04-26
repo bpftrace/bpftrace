@@ -97,7 +97,11 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
+#if defined(__aarch64__)
+  test("kprobe:f { reg(\"pc\") }", 0);
+#else
   test("kprobe:f { reg(\"ip\") }", 0);
+#endif
   test("kprobe:f { @x = count(pid) }", 1);
   test("kprobe:f { @x = sum(pid, 123) }", 1);
   test("kprobe:f { fake() }", 1);
@@ -305,8 +309,13 @@ TEST(semantic_analyser, call_kaddr)
 
 TEST(semantic_analyser, call_reg)
 {
+#if defined(__aarch64__)
+  test("kprobe:f { reg(\"pc\") }", 0);
+  test("kprobe:f { @x = reg(\"pc\"); }", 0);
+#else
   test("kprobe:f { reg(\"ip\"); }", 0);
   test("kprobe:f { @x = reg(\"ip\"); }", 0);
+#endif
   test("kprobe:f { reg(\"blah\"); }", 1);
   test("kprobe:f { reg(); }", 1);
   test("kprobe:f { reg(123); }", 1);
