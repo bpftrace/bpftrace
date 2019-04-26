@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -9,10 +10,29 @@
 #include "driver.h"
 #include "fake_map.h"
 #include "semantic_analyser.h"
+#include "tracepoint_format_parser.h"
 
 namespace bpftrace {
 namespace test {
 namespace codegen {
+
+class MockBPFtrace : public BPFtrace {
+public:
+  MOCK_METHOD1(add_probe, int(ast::Probe &p));
+  MOCK_METHOD3(find_wildcard_matches, std::set<std::string>(
+        const std::string &prefix,
+        const std::string &func,
+        const std::string &file_name));
+};
+
+class MockTracepointFormatParser : public TracepointFormatParser
+{
+public:
+  static std::string get_tracepoint_struct_public(std::istream &format_file, const std::string &category, const std::string &event_name)
+  {
+    return get_tracepoint_struct(format_file, category, event_name);
+  }
+};
 
 const std::string header = R"HEAD(; ModuleID = 'bpftrace'
 source_filename = "bpftrace"

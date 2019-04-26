@@ -4,7 +4,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-TEST(codegen, builtin_stack)
+TEST(codegen, builtin_kstack)
 {
   test("kprobe:f { @x = kstack }",
 

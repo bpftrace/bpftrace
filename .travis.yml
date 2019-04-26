@@ -11,11 +11,12 @@ matrix:
     # Certain tests are disabled on our LLVM 5 builds because they are flaky
     # when bpftrace is compiled with musl libc. They should still be capable
     # of passing occasionally.
-    # String comparisons are the exception - they are just broken in debug builds.
+    # String comparisons and args multiple tracepoints tests are the exception
+    # - they are just broken in debug builds.
     - name: "Static LLVM 5 Debug"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison:codegen.args_multiple_tracepoints*"
     - name: "Static LLVM 5 Release"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.args_multiple_tracepoints*"
 
     - name: "LLVM 6 Debug"
       env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug
