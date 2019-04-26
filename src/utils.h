@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sys/utsname.h>
 
 namespace bpftrace {
 
@@ -34,6 +35,8 @@ std::vector<std::string> split_string(const std::string &str, char delimiter);
 bool wildcard_match(const std::string &str, std::vector<std::string> &tokens, bool start_wildcard, bool end_wildcard);
 std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
+bool is_dir(const std::string& path);
+std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsname);
 std::vector<std::string> get_kernel_cflags(
     const char* uname_machine,
     const std::string& ksrc,
