@@ -8,20 +8,13 @@
 #include "driver.h"
 #include "semantic_analyser.h"
 
+#include "common.h"
+
 namespace bpftrace {
 namespace test {
 namespace codegen {
 
 using ::testing::_;
-
-class MockBPFtrace : public BPFtrace {
-public:
-  MOCK_METHOD1(add_probe, int(ast::Probe &p));
-  MOCK_METHOD3(find_wildcard_matches, std::set<std::string>(
-        const std::string &prefix,
-        const std::string &func,
-        const std::string &file_name));
-};
 
 TEST(codegen, populate_sections)
 {
