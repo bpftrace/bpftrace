@@ -1,38 +1,66 @@
 #!/usr/bin/python
 
-import os
-from os import environ
 import time
 from datetime import timedelta
+import argparse
 
-from utils import Utils
+from utils import Utils, ok, fail, warn
 from parser import TestParser
 
 
-def main():
-    test_suite = TestParser.read_all()
+def main(test_filter = None):
+    if not test_filter:
+        test_filter = "*"
 
-    start_time = time.time()
+    test_suite = list(TestParser.read_all(test_filter))
 
     total_tests = 0
-    total_fail = 0
+    for fname, suite_tests in test_suite:
+        total_tests += len(suite_tests)
 
+    failed_tests = []
+
+
+    print(ok("[==========]") + " Running %d tests from %d test cases.\n" % (total_tests, len(test_suite)))
+
+    start_time = time.time()
+    skipped_tests = []
     for fname, tests in test_suite:
-        print('Test file: ' + fname + '\n')
+        print(ok("[----------]") + " %d tests from %s" % (len(tests), fname))
         for test in tests:
-            success = Utils.run_test(test)
-            total_tests += 1
-            if not success:
-                total_fail += 1
-        print('--------------------------------\n')
-
+            status = Utils.run_test(test)
+            if Utils.skipped(status):
+                skipped_tests.append((fname, test))
+            if Utils.failed(status):
+                failed_tests.append("%s.%s" % (fname, test.name))
+        # TODO(mmarchini) elapsed time per test suite and per test (like gtest)
+        print(ok("[----------]") + " %d tests from %s\n" % (len(tests), fname))
     elapsed = time.time() - start_time
-    print(str(total_tests) + ' tests [fail ' + str(total_fail) + ']')
-    print('Done in ' + str(timedelta(seconds=elapsed)) )
+    total_tests -= len(skipped_tests)
 
-    if total_fail > 0:
+    # TODO(mmarchini) pretty print time
+    print(ok("[==========]") + " %d tests from %d test cases ran. (%s total)" % (total_tests, len(test_suite), elapsed))
+    print(ok("[  PASSED  ]") + " %d tests." % (total_tests - len(failed_tests)))
+
+    if skipped_tests:
+        print(warn("[   SKIP   ]") + " %d tests, listed below:" % len(skipped_tests))
+        for test_suite, test in skipped_tests:
+            print(warn("[   SKIP   ]") + " %s.%s (min Kernel: %s)" % (test_suite, test.name, test.kernel))
+
+    if failed_tests:
+        print(fail("[  FAILED  ]") + " %d tests, listed below:" % len(failed_tests))
+        for failed_test in failed_tests:
+            print(fail("[  FAILED  ]") + " %s" % failed_test)
+
+    if failed_tests:
         exit(1)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Runtime tests for bpftrace.')
+    parser.add_argument('--filter', dest='tests_filter',
+                        help='filter runtime tests')
+
+    args = parser.parse_args()
+
+    main(args.tests_filter)

@@ -55,12 +55,12 @@ EXPECT SUCCESS ustack
 TIMEOUT 5
 
 NAME arg
-RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", arg0); exit(); }'
+RUN bpftrace -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }'
 EXPECT SUCCESS arg -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME retval
-RUN bpftrace -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
+RUN bpftrace -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
 EXPECT SUCCESS retval .*
 TIMEOUT 5
 
@@ -93,3 +93,4 @@ NAME cgroup
 RUN bpftrace -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }'
 EXPECT SUCCESS cgroup -?[0-9][0-9]*
 TIMEOUT 5
+MIN_KERNEL 4.18
