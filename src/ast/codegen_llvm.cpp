@@ -5,6 +5,7 @@
 #include "arch/arch.h"
 #include "types.h"
 #include <time.h>
+#include <arpa/inet.h>
 #include "tracepoint_format_parser.h"
 
 #include <llvm/Support/raw_os_ostream.h>
@@ -475,16 +476,41 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "ntop")
   {
-    // store uint64_t[2] with: [0]: (uint64_t)address_family, [1]: (uint64_t) inet_address
-    // To support ipv6, [2] should be the remaining bytes of the address
+    // struct {
+    //   int af_type;
+    //   union {
+    //     char[4] inet4;
+    //     char[16] inet6;
+    //   }
+    // }
     AllocaInst *buf = b_.CreateAllocaBPF(call.type, "inet");
-    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+
     Value *af_offset = b_.CreateGEP(buf, b_.getInt64(0));
-    Value *inet_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
-    call.vargs->at(0)->accept(*this);
-    b_.CreateStore(expr_, af_offset);
-    call.vargs->at(1)->accept(*this);
-    b_.CreateStore(expr_, inet_offset);
+    Value *af_type;
+
+    auto inet = call.vargs->at(0);
+    if (call.vargs->size() == 1) {
+      if (inet->type.type == Type::integer || inet->type.size == 4) {
+        af_type = b_.getInt32(AF_INET);
+      } else {
+        af_type = b_.getInt32(AF_INET6);
+      }
+    } else {
+      inet = call.vargs->at(1);
+      call.vargs->at(0)->accept(*this);
+      af_type = b_.CreateIntCast(expr_, b_.getInt32Ty(), true);
+    }
+    b_.CreateStore(af_type, af_offset);
+
+    Value *inet_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(4)});
+
+    inet->accept(*this);
+    if (inet->type.type == Type::array) {
+      b_.CreateProbeRead(reinterpret_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
+    } else {
+      b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt32Ty(), false), inet_offset);
+    }
+
     expr_ = buf;
   }
   else if (call.func == "reg")
@@ -1062,24 +1088,17 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || assignment.expr->type.is_internal)
   {
     val = expr;
   }
   else if (map.type.type == Type::cast)
   {
-    if (assignment.expr->type.is_internal)
-    {
-      val = expr;
-    }
-    else
-    {
-      // expr currently contains a pointer to the struct
-      // We now want to read the entire struct in so we can save it
-      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CreateProbeRead(dst, map.type.size, expr);
-      val = dst;
-    }
+    // expr currently contains a pointer to the struct
+    // We now want to read the entire struct in so we can save it
+    AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    b_.CreateProbeRead(dst, map.type.size, expr);
+    val = dst;
   }
   else
   {
@@ -1093,7 +1112,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   }
   b_.CreateMapUpdateElem(map, key, val);
   b_.CreateLifetimeEnd(key);
-  if (!assignment.expr->is_variable)
+  if (!(assignment.expr->is_variable || assignment.expr->type.is_internal))
     b_.CreateLifetimeEnd(val);
 }
 

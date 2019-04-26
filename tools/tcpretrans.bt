@@ -17,6 +17,7 @@
  * 23-Nov-2018  Dale Hamel      created this.
  */
 
+#include <linux/socket.h>
 #include <net/sock.h>
 
 BEGIN
@@ -43,11 +44,15 @@ kprobe:tcp_retransmit_skb
 {
   $sk = ((struct sock *) arg0);
   $inet_family = $sk->__sk_common.skc_family;
-  $af_inet = 2;
 
-  if ($inet_family == $af_inet) {
-    $daddr = $sk->__sk_common.skc_daddr;
-    $saddr = $sk->__sk_common.skc_rcv_saddr;
+  if ($inet_family == AF_INET || $inet_family == AF_INET6) {
+    if ($inet_family == AF_INET) {
+      $daddr = ntop($sk->__sk_common.skc_daddr);
+      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+    } else {
+      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+    }
     $lport = $sk->__sk_common.skc_num;
     $dport = $sk->__sk_common.skc_dport;
 
@@ -58,7 +63,7 @@ kprobe:tcp_retransmit_skb
     $statestr = @tcp_states[$state];
 
     time("%H:%M:%S ");
-    printf("%-8d %14s:%-6d %14s:%-6d %6s\n", pid, ntop($af_inet, $saddr), $lport, ntop($af_inet, $daddr), $dport, $statestr);
+    printf("%-8d %14s:%-6d %14s:%-6d %6s\n", pid, $saddr, $lport, $daddr, $dport, $statestr);
   }
 }
 

@@ -19,24 +19,29 @@
  * 23-Nov-2018	Dale Hamel	created this.
  */
 
+#include <linux/socket.h>
 #include <net/sock.h>
 
 BEGIN
 {
   printf("Tracing tcp connections. Hit Ctrl-C to end.\n");
   printf("%-8s %-8s %-16s ", "TIME", "PID", "COMM");
-  printf("%-14s %-6s %-14s %-6s\n", "SADDR", "SPORT", "DADDR", "DPORT");
+  printf("%-39s %-6s %-39s %-6s\n", "SADDR", "SPORT", "DADDR", "DPORT");
 }
 
 kprobe:tcp_connect
 {
   $sk = ((struct sock *) arg0);
   $inet_family = $sk->__sk_common.skc_family;
-  $af_inet = 2;
 
-  if ($inet_family == $af_inet) {
-    $daddr = $sk->__sk_common.skc_daddr;
-    $saddr = $sk->__sk_common.skc_rcv_saddr;
+  if ($inet_family == AF_INET || $inet_family == AF_INET6) {
+    if ($inet_family == AF_INET) {
+      $daddr = ntop($sk->__sk_common.skc_daddr);
+      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+    } else {
+      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+    }
     $lport = $sk->__sk_common.skc_num;
     $dport = $sk->__sk_common.skc_dport;
 
@@ -45,6 +50,6 @@ kprobe:tcp_connect
 
     time("%H:%M:%S ");
     printf("%-8d %-16s ", pid, comm);
-    printf("%-14s %-6d %-14s %-6d\n", ntop($af_inet, $daddr), $dport, ntop($af_inet, $saddr), $lport);
+    printf("%-39s %-6d %-39s %-6d\n", $daddr, $dport, $saddr, $lport);
   }
 }

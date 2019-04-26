@@ -14,7 +14,6 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
-  %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %"@foo_key5" = alloca i64, align 8
   %"@bar_key" = alloca i64, align 8
@@ -59,7 +58,6 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo3, i64* nonnull %"@bar_key", [8 x i8]* nonnull %tmpcast, i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %6 = bitcast i64* %"@foo_key5" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 0, i64* %"@foo_key5", align 8
@@ -72,22 +70,18 @@ lookup_success8:                                  ; preds = %lookup_merge
   %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_idx = getelementptr inbounds i8, i8* %lookup_elem7, i64 4
   %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_cast = bitcast i8* %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_idx to i64*
   %lookup_elem_val11.sroa.3.0.copyload = load i64, i64* %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_cast, align 1
-  %phitmp17 = and i64 %lookup_elem_val11.sroa.3.0.copyload, 4294967295
+  %phitmp = trunc i64 %lookup_elem_val11.sroa.3.0.copyload to i32
   br label %lookup_merge10
 
 lookup_merge10:                                   ; preds = %lookup_merge, %lookup_success8
-  %lookup_elem_val11.sroa.3.0 = phi i64 [ %phitmp17, %lookup_success8 ], [ 0, %lookup_merge ]
+  %lookup_elem_val11.sroa.3.0 = phi i32 [ %phitmp, %lookup_success8 ], [ 0, %lookup_merge ]
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   %7 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
   store i64 0, i64* %"@x_key", align 8
-  %8 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
-  store i64 %lookup_elem_val11.sroa.3.0, i64* %"@x_val", align 8
   %pseudo14 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
-  %update_elem15 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo14, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem15 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo14, i64* nonnull %"@x_key", i32 %lookup_elem_val11.sroa.3.0, i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   ret i64 0
 }
 
