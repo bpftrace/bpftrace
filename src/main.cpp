@@ -1,6 +1,7 @@
 #include <iostream>
 #include <signal.h>
 #include <sys/resource.h>
+#include <sys/utsname.h>
 #include <cstdio>
 #include <cstring>
 #include <unistd.h>
@@ -283,7 +284,19 @@ int main(int argc, char *argv[])
   }
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  std::vector<std::string> extra_flags;
+  {
+    struct utsname utsname;
+    uname(&utsname);
+    std::string ksrc, kobj;
+    auto kdirs = get_kernel_dirs(utsname);
+    ksrc = std::get<0>(kdirs);
+    kobj = std::get<1>(kdirs);
+
+    if (ksrc != "")
+      extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
+  }
+  clang.parse(driver.root_, bpftrace, extra_flags);
 
   if (script.empty())
   {
