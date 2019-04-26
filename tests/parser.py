@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+from fnmatch import fnmatch
 from collections import namedtuple
 import os
 
@@ -8,33 +9,42 @@ from utils import ERROR_COLOR, NO_COLOR
 class RequiredFieldError(Exception):
     pass
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after')
+TestStruct = namedtuple('TestStruct', 'name run expect timeout before after file_name kernel')
 
 
 class TestParser(object):
     @staticmethod
-    def read_all():
+    def read_all(test_filter):
         try:
             for root, _, files in os.walk('./runtime'):
                 for filename in files:
-                    yield TestParser.read(root + '/' + filename)
+                    if filename.startswith("."):
+                        continue
+                    parser = TestParser.read(root + '/' + filename, test_filter)
+                    if parser[1]:
+                        yield parser
         except RequiredFieldError as error:
             print(ERROR_COLOR + str(error) + NO_COLOR)
 
     @staticmethod
-    def read(file_name):
+    def read(file_name, test_filter):
         tests = []
         test_lines = []
+        test_suite = file_name.split('/')[-1]
         with open (file_name, 'r') as file:
             for line in file.readlines():
                 if line != '\n':
                     test_lines.append(line)
                 else:
-                    tests.append(TestParser.__read_test_struct(test_lines, file_name))
+                    test_struct = TestParser.__read_test_struct(test_lines, file_name)
+                    if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
+                        tests.append(test_struct)
                     test_lines = []
-            tests.append(TestParser.__read_test_struct(test_lines, file_name))
+            test_struct = TestParser.__read_test_struct(test_lines, file_name)
+            if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
+                tests.append(test_struct)
 
-        return (file_name.split('/')[-1], tests)
+        return (test_suite, tests)
 
     @staticmethod
     def __read_test_struct(test, file_name):
@@ -44,6 +54,7 @@ class TestParser(object):
         timeout = ''
         before = ''
         after = ''
+        kernel = ''
 
         for item in test:
             item_split = item.split()
@@ -62,6 +73,8 @@ class TestParser(object):
                 before = line
             elif item_name == 'AFTER':
                 after = line
+            elif item_name == 'MIN_KERNEL':
+                kernel = line
 
         if name == '':
             raise RequiredFieldError('Test NAME is required. File: ' + file_name)
@@ -72,4 +85,4 @@ class TestParser(object):
         elif timeout == '':
             raise RequiredFieldError('Test TIMEOUT is required. File: ' + file_name)
 
-        return TestStruct(name, run, expect, timeout, before, after)
+        return TestStruct(name, run, expect, timeout, before, after, file_name.split('/')[-1], kernel)
