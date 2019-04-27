@@ -79,6 +79,7 @@ EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
 
 NAME hardware
+REQUIRES ls /sys/devices/cpu/events/cache-misses
 RUN bpftrace -e 'hardware:cache-misses:10 { @[pid] = count(); exit(); }'
 BEFORE sleep 2 && sleep 0.1 &
 EXPECT @\[.*\]\:\s[0-9]*
