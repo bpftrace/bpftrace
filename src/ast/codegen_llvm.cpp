@@ -1089,17 +1089,24 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string || assignment.expr->type.is_internal)
+  if (map.type.type == Type::string)
   {
     val = expr;
   }
   else if (map.type.type == Type::cast)
   {
-    // expr currently contains a pointer to the struct
-    // We now want to read the entire struct in so we can save it
-    AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateProbeRead(dst, map.type.size, expr);
-    val = dst;
+    if (assignment.expr->type.is_internal)
+    {
+      val = expr;
+    }
+    else
+    {
+      // expr currently contains a pointer to the struct
+      // We now want to read the entire struct in so we can save it
+      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+      b_.CreateProbeRead(dst, map.type.size, expr);
+      val = dst;
+    }
   }
   else
   {
@@ -1113,7 +1120,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   }
   b_.CreateMapUpdateElem(map, key, val);
   b_.CreateLifetimeEnd(key);
-  if (!(assignment.expr->is_variable || assignment.expr->type.is_internal))
+  if (!assignment.expr->is_variable)
     b_.CreateLifetimeEnd(val);
 }
 
