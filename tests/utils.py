@@ -1,6 +1,6 @@
 import subprocess
 import signal
-from os import environ, uname
+from os import environ, uname, devnull
 from distutils.version import LooseVersion
 import re
 
@@ -31,8 +31,9 @@ class TimeoutError(Exception):
 class Utils(object):
     PASS = 0
     FAIL = 1
-    SKIP = 2
+    SKIP_KERNEL_VERSION = 2
     TIMEOUT = 3
+    SKIP_REQUIREMENT_UNSATISFIED = 4
 
     @staticmethod
     def failed(status):
@@ -40,7 +41,16 @@ class Utils(object):
 
     @staticmethod
     def skipped(status):
-        return status == Utils.SKIP
+        return status in [Utils.SKIP_KERNEL_VERSION, Utils.SKIP_REQUIREMENT_UNSATISFIED]
+
+    @staticmethod
+    def skip_reason(test, status):
+        if status == Utils.SKIP_KERNEL_VERSION:
+            return "min Kernel: %s" % test.kernel
+        elif status == Utils.SKIP_REQUIREMENT_UNSATISFIED:
+            return "unmet condition: '%s'" % test.requirement
+        else:
+            raise ValueError("Invalid skip reason: %d" % status)
 
     @staticmethod
     def prepare_bpf_call(test):
@@ -55,14 +65,20 @@ class Utils(object):
     def run_test(test):
         current_kernel = LooseVersion(uname()[2])
         if test.kernel and LooseVersion(test.kernel) > current_kernel:
-            print(warn("[   SKIP   ] ") + "%s.%s" % (test.file_name, test.name))
-            return Utils.SKIP
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Utils.SKIP_KERNEL_VERSION
 
         signal.signal(signal.SIGALRM, Utils.__handler)
         signal.alarm(test.timeout)
 
         try:
-            print(ok("[ RUN      ] ") + "%s.%s" % (test.file_name, test.name))
+            print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
+            if test.requirement:
+                with open(devnull, 'w') as dn:
+                    if subprocess.call(test.requirement, shell=True, stdout=dn, stderr=dn) != 0:
+                        print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+                        return Utils.SKIP_REQUIREMENT_UNSATISFIED
+
             bpf_call = Utils.prepare_bpf_call(test)
             p = subprocess.Popen(
                 [bpf_call], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -80,16 +96,16 @@ class Utils(object):
             result = re.search(test.expect, output)
 
         except (TimeoutError):
-            print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.file_name, test.name))
+            print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: %s' % bpf_call)
             print('\tTimeout: %s' % test.timeout)
             return Utils.TIMEOUT
 
         if result:
-            print(ok("[       OK ] ") + "%s.%s" % (test.file_name, test.name))
+            print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
             return Utils.PASS
         else:
-            print(fail("[  FAILED  ] ") + "%s.%s" % (test.file_name, test.name))
+            print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tExpected: ' + test.expect)
             print('\tFound: ' + output)

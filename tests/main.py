@@ -30,7 +30,7 @@ def main(test_filter = None):
         for test in tests:
             status = Utils.run_test(test)
             if Utils.skipped(status):
-                skipped_tests.append((fname, test))
+                skipped_tests.append((fname, test, status))
             if Utils.failed(status):
                 failed_tests.append("%s.%s" % (fname, test.name))
         # TODO(mmarchini) elapsed time per test suite and per test (like gtest)
@@ -44,8 +44,8 @@ def main(test_filter = None):
 
     if skipped_tests:
         print(warn("[   SKIP   ]") + " %d tests, listed below:" % len(skipped_tests))
-        for test_suite, test in skipped_tests:
-            print(warn("[   SKIP   ]") + " %s.%s (min Kernel: %s)" % (test_suite, test.name, test.kernel))
+        for test_suite, test, status in skipped_tests:
+            print(warn("[   SKIP   ]") + " %s.%s (%s)" % (test_suite, test.name, Utils.skip_reason(test, status)))
 
     if failed_tests:
         print(fail("[  FAILED  ]") + " %d tests, listed below:" % len(failed_tests))

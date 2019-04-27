@@ -6,10 +6,16 @@ import os
 
 from utils import ERROR_COLOR, NO_COLOR
 
+
 class RequiredFieldError(Exception):
     pass
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after file_name kernel')
+
+class UnknownFieldError(Exception):
+    pass
+
+
+TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement')
 
 
 class TestParser(object):
@@ -36,18 +42,18 @@ class TestParser(object):
                 if line != '\n':
                     test_lines.append(line)
                 else:
-                    test_struct = TestParser.__read_test_struct(test_lines, file_name)
+                    test_struct = TestParser.__read_test_struct(test_lines, test_suite)
                     if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
                         tests.append(test_struct)
                     test_lines = []
-            test_struct = TestParser.__read_test_struct(test_lines, file_name)
+            test_struct = TestParser.__read_test_struct(test_lines, test_suite)
             if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
                 tests.append(test_struct)
 
         return (test_suite, tests)
 
     @staticmethod
-    def __read_test_struct(test, file_name):
+    def __read_test_struct(test, test_suite):
         name = ''
         run = ''
         expect = ''
@@ -55,6 +61,7 @@ class TestParser(object):
         before = ''
         after = ''
         kernel = ''
+        requirement = ''
 
         for item in test:
             item_split = item.split()
@@ -75,14 +82,18 @@ class TestParser(object):
                 after = line
             elif item_name == 'MIN_KERNEL':
                 kernel = line
+            elif item_name == 'REQUIRES':
+                requirement = line
+            else:
+                raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
         if name == '':
-            raise RequiredFieldError('Test NAME is required. File: ' + file_name)
+            raise RequiredFieldError('Test NAME is required. Suite: ' + test_suite)
         elif run == '':
-            raise RequiredFieldError('Test RUN is required. File: ' + file_name)
+            raise RequiredFieldError('Test RUN is required. Suite: ' + test_suite)
         elif expect == '':
-            raise RequiredFieldError('Test EXPECT is required. File: ' + file_name)
+            raise RequiredFieldError('Test EXPECT is required. Suite: ' + test_suite)
         elif timeout == '':
-            raise RequiredFieldError('Test TIMEOUT is required. File: ' + file_name)
+            raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
 
-        return TestStruct(name, run, expect, timeout, before, after, file_name.split('/')[-1], kernel)
+        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement)
