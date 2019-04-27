@@ -66,17 +66,17 @@ public:
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
-  std::string resolve_inet(int af, uint8_t* inet);
-  std::string resolve_uid(uintptr_t addr);
-  uint64_t resolve_kname(const std::string &name);
-  uint64_t resolve_uname(const std::string &name, const std::string &path);
-  std::string extract_func_symbols_from_path(const std::string &path);
-  std::string resolve_probe(uint64_t probe_id);
-  uint64_t resolve_cgroupid(const std::string &path);
+  std::string resolve_inet(int af, const uint8_t* inet) const;
+  std::string resolve_uid(uintptr_t addr) const;
+  uint64_t resolve_kname(const std::string &name) const;
+  uint64_t resolve_uname(const std::string &name, const std::string &path) const;
+  std::string extract_func_symbols_from_path(const std::string &path) const;
+  std::string resolve_probe(uint64_t probe_id) const;
+  uint64_t resolve_cgroupid(const std::string &path) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
   void add_param(const std::string &param);
-  bool is_numeric(std::string str);
-  std::string get_param(size_t index);
+  bool is_numeric(std::string str) const;
+  std::string get_param(size_t index) const;
   std::string cmd_;
   int pid_{0};
 

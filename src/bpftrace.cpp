@@ -481,7 +481,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
   return arg_values;
 }
 
-bool BPFtrace::is_numeric(std::string str)
+bool BPFtrace::is_numeric(std::string str) const
 {
   int i = 0;
   while (str[i]) {
@@ -499,7 +499,7 @@ void BPFtrace::add_param(const std::string &param)
   params_.emplace_back(param);
 }
 
-std::string BPFtrace::get_param(size_t i)
+std::string BPFtrace::get_param(size_t i) const
 {
   if (i > 0 && i < params_.size() + 1)
       return params_[i - 1];
@@ -1513,7 +1513,7 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, StackType stac
   return stack.str();
 }
 
-std::string BPFtrace::resolve_uid(uintptr_t addr)
+std::string BPFtrace::resolve_uid(uintptr_t addr) const
 {
   std::string file_name = "/etc/passwd";
   std::string uid = std::to_string(addr);
@@ -1567,7 +1567,7 @@ std::string BPFtrace::resolve_ksym(uintptr_t addr, bool show_offset)
   return symbol.str();
 }
 
-uint64_t BPFtrace::resolve_kname(const std::string &name)
+uint64_t BPFtrace::resolve_kname(const std::string &name) const
 {
   uint64_t addr = 0;
   std::string file_name = "/proc/kallsyms";
@@ -1601,12 +1601,12 @@ uint64_t BPFtrace::resolve_kname(const std::string &name)
   return addr;
 }
 
-uint64_t BPFtrace::resolve_cgroupid(const std::string &path)
+uint64_t BPFtrace::resolve_cgroupid(const std::string &path) const
 {
   return bpftrace_linux::resolve_cgroupid(path);
 }
 
-uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path)
+uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
   bcc_symbol sym;
@@ -1622,13 +1622,13 @@ uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &pat
 #endif
 }
 
-int add_symbol(const char *symname, uint64_t start, uint64_t size, void *payload) {
+int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
   auto syms = static_cast<std::ostringstream*>(payload);
   *syms << std::string(symname) << std::endl;
   return 0;
 }
 
-std::string BPFtrace::extract_func_symbols_from_path(const std::string &path)
+std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
   bcc_symbol_option symbol_option = {
@@ -1658,21 +1658,21 @@ uint64_t BPFtrace::read_address_from_output(std::string output)
 }
 
 
-static std::string resolve_inetv4(uint8_t* inet) {
+static std::string resolve_inetv4(const uint8_t* inet) {
   char addr_cstr[INET_ADDRSTRLEN];
   inet_ntop(AF_INET, inet, addr_cstr, INET_ADDRSTRLEN);
   return std::string(addr_cstr);
 }
 
 
-static std::string resolve_inetv6(uint8_t* inet) {
+static std::string resolve_inetv6(const uint8_t* inet) {
   char addr_cstr[INET6_ADDRSTRLEN];
   inet_ntop(AF_INET6, inet, addr_cstr, INET6_ADDRSTRLEN);
   return std::string(addr_cstr);
 }
 
 
-std::string BPFtrace::resolve_inet(int af, uint8_t* inet)
+std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
 {
   std::string addrstr;
   switch (af) {
@@ -1735,7 +1735,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
   return symbol.str();
 }
 
-std::string BPFtrace::resolve_probe(uint64_t probe_id)
+std::string BPFtrace::resolve_probe(uint64_t probe_id) const
 {
   assert(probe_id < probe_ids_.size());
   return probe_ids_[probe_id];
