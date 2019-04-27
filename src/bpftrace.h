@@ -93,8 +93,8 @@ public:
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> perf_event_map_;
   std::vector<std::string> probe_ids_;
-  int join_argnum_;
-  int join_argsize_;
+  unsigned int join_argnum_;
+  unsigned int join_argsize_;
 
   uint64_t strlen_ = 64;
   bool demangle_cpp_symbols = true;

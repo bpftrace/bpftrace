@@ -440,7 +440,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateProbeRead(arr, 8, expr_);
     b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8+8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
 
-    for (int i = 1; i < bpftrace_.join_argnum_; i++) {
+    for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++) {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
       b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
