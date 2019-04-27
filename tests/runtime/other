@@ -34,8 +34,8 @@ EXPECT unroll minimum value is 1
 TIMEOUT 5
 
 NAME if_compare_and_print_string
-RUN bpftrace -e 'k:vfs_write {$name = "test"; if ($name == "test") { printf("name: %s\n", $name);} exit();}'
-EXPECT name: test
+RUN bpftrace -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
+EXPECT comm: bpftrace
 TIMEOUT 5
 
 NAME struct keyword optional when casting
