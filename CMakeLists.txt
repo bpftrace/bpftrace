@@ -72,8 +72,8 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 
 # Some users have multiple versions of llvm installed and would like to specify
 # a specific llvm version.
-if(${LLVM_REQUESTED_VERION})
-  find_package(LLVM ${LLVM_REQUESTED_VERION} REQUIRED)
+if(${LLVM_REQUESTED_VERSION})
+  find_package(LLVM ${LLVM_REQUESTED_VERSION} REQUIRED)
 else()
   find_package(LLVM REQUIRED)
 endif()
