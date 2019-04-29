@@ -23,7 +23,7 @@
 
 namespace bpftrace {
 
-const int BPF_LOG_SIZE = 100 * 1024;
+const int BPF_LOG_SIZE = 100 * 4096;
 /*
  * Kernel functions that are unsafe to trace are excluded in the Kernel with
  * `notrace`. However, the ones below are not excluded.

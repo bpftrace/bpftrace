@@ -5,6 +5,8 @@ from distutils.version import LooseVersion
 import re
 
 BPF_PATH = environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
+ATTACH_TIMEOUT = 5
+DEFAULT_TIMEOUT = 5
 
 
 OK_COLOR = '\033[92m'
@@ -54,8 +56,7 @@ class Utils(object):
 
     @staticmethod
     def prepare_bpf_call(test):
-        return ('test={}; '.format(test.name) +
-            test.before + ' {}'.format(BPF_PATH) + test.run + ' ' + test.after)
+        return BPF_PATH + test.run
 
     @staticmethod
     def __handler(signum, frame):
@@ -69,7 +70,6 @@ class Utils(object):
             return Utils.SKIP_KERNEL_VERSION
 
         signal.signal(signal.SIGALRM, Utils.__handler)
-        signal.alarm(test.timeout)
 
         try:
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
@@ -79,27 +79,59 @@ class Utils(object):
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
 
+            before = None
+            if test.before:
+                before = subprocess.Popen(test.before, shell=True)
+
             bpf_call = Utils.prepare_bpf_call(test)
             p = subprocess.Popen(
-                [bpf_call], shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                bpf_call,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                env={"test": test.name},
+                bufsize=1
+            )
 
-            read_max_line = 4
-            total_lines_read = 0
-            line = '-'
-            output = ''
+            signal.alarm(ATTACH_TIMEOUT)
 
-            while (read_max_line > total_lines_read and line):
-                line = p.stdout.readline().decode('utf-8', 'ignore')
-                output += line + '\n'
-                total_lines_read += 1
+            after = None
 
+            output = ""
+
+            while p.poll() is None:
+                nextline = p.stdout.readline()
+                output += nextline
+                if nextline == "Running...\n":
+                    signal.alarm(test.timeout or DEFAULT_TIMEOUT)
+                    if not after and test.after:
+                        after = subprocess.Popen(test.after, shell=True)
+                    break
+
+            output += p.communicate()[0]
+
+            signal.alarm(0)
             result = re.search(test.expect, output)
 
         except (TimeoutError):
-            print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
-            print('\tCommand: %s' % bpf_call)
-            print('\tTimeout: %s' % test.timeout)
-            return Utils.TIMEOUT
+            # Give it a last chance, the test might have worked but the
+            # bpftrace process might still be alive
+            if p.poll() is None:
+                p.kill()
+            output += p.communicate()[0]
+            result = re.search(test.expect, output)
+            if not result:
+                print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
+                print('\tCommand: %s' % bpf_call)
+                print('\tTimeout: %s' % test.timeout)
+                print('\tCurrent output: %s' % output)
+                return Utils.TIMEOUT
+        finally:
+            if before and before.poll() is None:
+                before.kill()
+
+            if after and after.poll() is None:
+                after.kill()
 
         if result:
             print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
