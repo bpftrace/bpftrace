@@ -86,7 +86,7 @@ deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
 EOF
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev libbpfcc-dev
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev libbpfcc-dev systemtap-sdt-dev
 sudo apt-get install clang-6.0 libclang-6.0-dev libclang-common-6.0-dev libclang1-6.0 libllvm6.0 llvm-6.0 llvm-6.0-dev llvm-6.0-runtime
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
@@ -102,7 +102,7 @@ The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools i
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
 ```
-sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel
+sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
