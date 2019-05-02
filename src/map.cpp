@@ -4,6 +4,7 @@
 
 #include "libbpf.h"
 #include "utils.h"
+#include "bpftrace.h"
 
 #include "map.h"
 
@@ -17,7 +18,7 @@ int Map::create_map(enum bpf_map_type map_type, const char *name, int key_size, 
 #endif
 }
 
-Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step)
+Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries)
 {
   name_ = name;
   type_ = type;
@@ -34,7 +35,6 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   if (key_size == 0)
     key_size = 8;
 
-  int max_entries = 128;
   enum bpf_map_type map_type;
   if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
