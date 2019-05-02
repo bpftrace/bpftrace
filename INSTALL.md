@@ -66,36 +66,44 @@ bpftrace's build system will download `gtest` at build time. If you don't want t
 
 ## Ubuntu
 
-You'll want the newest kernel possible (see kernel requirements), eg, by using Ubuntu 18.04 LTS (Bionic Beaver) or newer.
+Due to the kernel requirements Ubuntu 18.04 or newer is highly recommended.
 
-The llvm/clang packages that are currently available for Ubuntu have an issue (see [#76](https://github.com/iovisor/bpftrace/issues/76)), so we'll use the ones from llvm.org for now.
+### 18.04 and 18.10
 
-Ubuntu 18.04's libbpfcc-dev package has a bug where it's missing a header file (see [#335](https://github.com/iovisor/bpftrace/pull/335)). We recommend first trying libbpfcc-dev and then trying [a manual installation](https://github.com/iovisor/bcc) if the package has not already been fixed.
+The versions of `bcc` currently available in Ubuntu 18.04 (Bionic) and 18.10
+(Cosmic) do not have all the requirements for building `bpftrace` so building
+`bcc` first is required. The instructions for building `bcc` can be found
+[here](https://github.com/iovisor/bcc/blob/master/INSTALL.md#install-and-compile-bcc).
+The build dependencies listed below are also required for `bcc` so install those first.
 
-The build instructions are:
+Make sure `bcc` works by testing some of the shipped tools before proceeding. It
+might be required to `ldconfig` to update the linker.
+
+### 19.04 and newer
+
+The version of `bcc` available in Ubuntu 19.04 (Disco) is new enough so
+compilation is not required, install with:
 
 ```
-# see https://apt.llvm.org/ for the following archive signature:
-wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-cat <<EOF | sudo tee -a /etc/apt/sources.list
-# from https://apt.llvm.org/:
-deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial main
-# 6.0
-deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
-deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main
-EOF
+sudo apt-get install libbpfcc-dev
+```
+
+### Building `bpftrace`
+
+```
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev libbpfcc-dev systemtap-sdt-dev
-sudo apt-get install clang-6.0 libclang-6.0-dev libclang-common-6.0-dev libclang1-6.0 libllvm6.0 llvm-6.0 llvm-6.0-dev llvm-6.0-runtime
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
+sudo apt-get install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 git clone https://github.com/iovisor/bpftrace
-cd bpftrace
-mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
+mkdir bpftrace/build; cd bpftrace/build;
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 make install
 ```
 
-The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
+The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools
+in /usr/local/share/bpftrace/tools. You can change the install location using an
+argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
 ## Fedora
 
