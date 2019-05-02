@@ -8,6 +8,10 @@ To learn more about bpftrace, see the [Reference Guide](docs/reference_guide.md)
 
 For build and install instructions, see [INSTALL.md](INSTALL.md).
 
+## Development
+
+For development and testing a [Vagrantfile](Vagrantfile) is available.
+
 ## Examples
 
 Count system calls using tracepoints:
