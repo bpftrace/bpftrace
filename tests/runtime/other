@@ -1,59 +1,59 @@
 NAME if_gt
-RUN bpftrace -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
 EXPECT a=20
 TIMEOUT 5
 
 NAME if_lt
-RUN bpftrace -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
 EXPECT a=10
 TIMEOUT 5
 
 NAME ifelse_go_else
-RUN bpftrace -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
 EXPECT a=hello
 TIMEOUT 5
 
 NAME ifelse_go_if
-RUN bpftrace -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
 EXPECT a=hi
 TIMEOUT 5
 
 NAME unroll
-RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11
 TIMEOUT 5
 
 NAME unroll_max_value
-RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (30) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (30) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
 EXPECT unroll maximum value is 20
 TIMEOUT 5
 
 NAME unroll_min_value
-RUN bpftrace -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
 EXPECT unroll minimum value is 1
 TIMEOUT 5
 
 NAME if_compare_and_print_string
-RUN bpftrace -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
+RUN bpftrace -v -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
 EXPECT comm: bpftrace
 TIMEOUT 5
 
 NAME struct keyword optional when casting
-RUN bpftrace -e 'struct Bar { int x; } struct Foo { struct Bar *bar; } i:ms:1 { $foo = (struct Foo *)0; @x = $foo->bar->x; exit()}'
+RUN bpftrace -v -e 'struct Bar { int x; } struct Foo { struct Bar *bar; } i:ms:1 { $foo = (struct Foo *)0; @x = $foo->bar->x; exit()}'
 EXPECT @x: 0
 TIMEOUT 5
 
 NAME struct positional string compare - equal returns true
-RUN bpftrace -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
+RUN bpftrace -v -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
 EXPECT I got hello
 TIMEOUT 5
 
 NAME struct positional string compare - equal returns false
-RUN bpftrace -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hi" "hello"
+RUN bpftrace -v -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hi" "hello"
 EXPECT not equal
 TIMEOUT 5
 
 NAME struct positional string compare - not equal
-RUN bpftrace -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
+RUN bpftrace -v -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
 EXPECT not equal
 TIMEOUT 5

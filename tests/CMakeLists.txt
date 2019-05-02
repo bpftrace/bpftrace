@@ -100,7 +100,7 @@ file(GLOB testprogs testprogs/*)
 foreach(testprog ${testprogs})
   get_filename_component(bin_name ${testprog} NAME_WE)
   add_executable (${bin_name} ${testprog})
-  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ )
+  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0")
 endforeach()
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
