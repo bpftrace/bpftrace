@@ -37,7 +37,8 @@ void usage()
   std::cerr << "    --version      bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()" << std::endl;
-  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl << std::endl;
+  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
+  std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -268,6 +269,18 @@ int main(int argc, char *argv[])
       std::cerr << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a valid value (0 or 1)." << std::endl;
       return 1;
     }
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_MAP_KEYS_MAX"))
+  {
+    uint64_t proposed;
+    std::istringstream stringstream(env_p);
+    if (!(stringstream >> proposed)) {
+      std::cerr << "Env var 'BPFTRACE_MAP_KEYS_MAX' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      return 1;
+    }
+    // no maximum is enforced. Imagine a map recording a timestamp by struct page *: this could exceed 10M entries.
+    bpftrace.mapmax_ = proposed;
   }
 
   if (cmd_str)

@@ -1136,10 +1136,10 @@ int SemanticAnalyser::create_maps(bool debug)
         Integer &min = static_cast<Integer&>(min_arg);
         Integer &max = static_cast<Integer&>(max_arg);
         Integer &step = static_cast<Integer&>(step_arg);
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n);
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
       }
       else
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key);
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, bpftrace_.mapmax_);
     }
   }
 
@@ -1172,7 +1172,7 @@ int SemanticAnalyser::create_maps(bool debug)
       std::string map_ident = "join";
       SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
       MapKey key;
-      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key);
+      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
     }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }

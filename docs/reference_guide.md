@@ -15,8 +15,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [5. `-d`: Debug Output](#5--d-debug-output)
     - [6. `-v`: Verbose Output](#6--v-verbose-output)
     - [7. Other Options](#7-other-options)
-    - [8. Env: `BPFTRACE_STRLEN`](#8-env-bpftrace_strlen)
-    - [9. Env: `BPFTRACE_NO_CPP_DEMANGLE`](#9-env-bpftrace_no_cpp_demangle)
+    - [8. Environment Variables](#8-environment-variables)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -127,6 +126,7 @@ OPTIONS:
 ENVIRONMENT:
     BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()
     BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling
+    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -361,7 +361,9 @@ The `--version` option prints the bpftrace version:
 bpftrace v0.8-90-g585e-dirty
 ```
 
-## 8. Env: `BPFTRACE_STRLEN`
+## 8. Environment Variables
+
+### 8.1 `BPFTRACE_STRLEN`
 
 Default: 64
 
@@ -373,13 +375,19 @@ Beware that the BPF stack is small (512 bytes), and that you pay the toll again 
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
-## 9. Env: `BPFTRACE_NO_CPP_DEMANGLE`
+### 8.2 `BPFTRACE_NO_CPP_DEMANGLE`
 
 Default: 0
 
 C++ symbol demangling in userspace stack traces is enabled by default.
 
 This feature can be turned off by setting the value of this environment variable to `1`.
+
+### 8.3 `BPFTRACE_MAP_KEYS_MAX`
+
+Default: 4096
+
+This is the maximum number of keys that can be stored in a map. Increasing the value will consume more memory and increase startup times. There are some cases where you will want to: for example, sampling stack traces, recording timestamps for each page, etc.
 
 # Language
 

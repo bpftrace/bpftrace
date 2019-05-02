@@ -97,6 +97,7 @@ public:
   unsigned int join_argsize_;
 
   uint64_t strlen_ = 64;
+  uint64_t mapmax_ = 4096;
   bool demangle_cpp_symbols = true;
 
   static void sort_by_key(std::vector<SizedType> key_args,
