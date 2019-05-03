@@ -13,7 +13,7 @@ bpftrace -l 'tracepoint:syscalls:sys_enter_*'
 "bpftrace -l" lists all probes, and a search term can be added.
 
 - A probe is an instrumentation point for capturing event data.
-- The supplied search term will do partial matches, and wildcards (file globbing) can be used.
+- The supplied search term supports wildcards/globs (`*` and `?`)
 - "bpftrace -l" can also be piped to grep(1) for full regular expression searching.
 
 # Lesson 2. Hello World
