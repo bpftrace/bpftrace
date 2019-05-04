@@ -1172,7 +1172,7 @@ This is provided by the count() function: see the [Count](#2-count-count) sectio
 
 ## 5. `hist()`, `lhist()`: Histograms
 
-These are provided by the hist() and lhist() functions. See the [Log2 Histogram](#8-log2-histogram) and [Linear Histogram](#9-linear-histogram) sections.
+These are provided by the hist() and lhist() functions. See the [Log2 Histogram](#8-hist-log2-histogram) and [Linear Histogram](#9-lhist-linear-histogram) sections.
 
 ## 6. `nsecs`: Timestamps and Time Deltas
 
