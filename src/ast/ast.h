@@ -279,7 +279,7 @@ public:
 
   void accept(Visitor &v) override;
   std::string name() const;
-  bool need_expansion = false;	// must build a BPF program per wildcard match
+  bool need_expansion = false;        // must build a BPF program per wildcard match
   bool need_tp_args_structs = false;  // must import struct for tracepoints
 
   int index();

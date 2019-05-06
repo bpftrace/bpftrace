@@ -1629,15 +1629,15 @@ void CodegenLLVM::createLinearFunction()
   //
   // int lhist(int value, int min, int max, int step)
   // {
-  // 	int result;
+  //   int result;
   //
-  // 	if (value < min)
-  // 		return 0;
-  // 	if (value > max)
-  // 		return 1 + (max - min) / step;
-  // 	result = 1 + (value - min) / step;
+  //   if (value < min)
+  //     return 0;
+  //   if (value > max)
+  //     return 1 + (max - min) / step;
+  //   result = 1 + (value - min) / step;
   //
-  // 	return result;
+  //   return result;
   // }
 
   // inlined function initialization

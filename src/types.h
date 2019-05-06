@@ -132,13 +132,13 @@ class Probe
 {
 public:
   ProbeType type;
-  std::string path;		// file path if used
-  std::string attach_point;	// probe name (last component)
-  std::string orig_name;	// original full probe name,
-				// before wildcard expansion
-  std::string name;		// full probe name
-  std::string ns;		// for USDT probes, if provider namespace not from path
-  uint64_t loc;			// for USDT probes
+  std::string path;             // file path if used
+  std::string attach_point;     // probe name (last component)
+  std::string orig_name;        // original full probe name,
+                                // before wildcard expansion
+  std::string name;             // full probe name
+  std::string ns;               // for USDT probes, if provider namespace not from path
+  uint64_t loc;                 // for USDT probes
   int index = 0;
   int freq;
 };

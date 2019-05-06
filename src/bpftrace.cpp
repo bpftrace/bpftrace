@@ -1265,7 +1265,7 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
 {
   int max_index = -1;
   int max_value = 0;
-  int buckets = (max - min) / step;	// excluding lt and gt buckets
+  int buckets = (max - min) / step; // excluding lt and gt buckets
 
   for (size_t i = 0; i < values.size(); i++)
   {
@@ -1758,8 +1758,8 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 
   // TODO: deal with these:
   symopts = {.use_debug_file = true,
-	     .check_debug_file_crc = true,
-	     .use_symbol_type = BCC_SYM_ALL_TYPES};
+             .check_debug_file_crc = true,
+             .use_symbol_type = BCC_SYM_ALL_TYPES};
 
   if (pid_sym_.find(pid) == pid_sym_.end())
   {

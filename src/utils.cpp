@@ -274,7 +274,7 @@ std::vector<std::string> get_kernel_cflags(
 
   // If ARCH env variable is set, pass this along.
   if (archenv)
-	cflags.push_back("-D__TARGET_ARCH_" + arch);
+    cflags.push_back("-D__TARGET_ARCH_" + arch);
 
   return cflags;
 }
@@ -297,11 +297,11 @@ bool is_dir(const std::string& path)
 //
 // A notable example is Debian, which places pristine kernel headers in
 //
-//	/lib/modules/`uname -r`/source/
+//   /lib/modules/`uname -r`/source/
 //
 // and generated kernel headers in
 //
-//	/lib/modules/`uname -r`/build/
+//   /lib/modules/`uname -r`/build/
 //
 // {"", ""} is returned if no trace of kernel headers was found at all.
 // Both ksrc and kobj are guaranteed to be != "", if at least some trace of kernel sources was found.
@@ -321,19 +321,19 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
 
   // if one of source/ or build/ is not present - try to use the other one for both.
   if (!is_dir(ksrc)) {
-	  ksrc = "";
+    ksrc = "";
   }
   if (!is_dir(kobj)) {
-	  kobj = "";
+    kobj = "";
   }
   if (ksrc == "" && kobj == "") {
-	  return std::make_tuple("", "");
+    return std::make_tuple("", "");
   }
   if (ksrc == "") {
-	  ksrc = kobj;
+    ksrc = kobj;
   }
   else if (kobj == "") {
-	  kobj = ksrc;
+    kobj = ksrc;
   }
 
   return std::make_tuple(ksrc, kobj);
