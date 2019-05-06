@@ -47,6 +47,7 @@ void test(const std::string &input, int expected_result=0)
 
 TEST(semantic_analyser, builtin_variables)
 {
+  // Just check that each builtin variable exists.
   test("kprobe:f { pid }", 0);
   test("kprobe:f { tid }", 0);
   #ifdef HAVE_GET_CURRENT_CGROUP_ID
@@ -63,6 +64,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { ctx }", 0);
   test("kprobe:f { comm }", 0);
   test("kprobe:f { stack }", 0);
+  test("kprobe:f { kstack }", 0);
   test("kprobe:f { ustack }", 0);
   test("kprobe:f { arg0 }", 0);
   test("kretprobe:f { retval }", 0);
@@ -70,11 +72,13 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { probe }", 0);
   test("kprobe:f { $1 }", 0);
   test("tracepoint:a:b { args }", 0);
-//  test("kprobe:f { fake }", 1);
+  test("kprobe:f { fake }", 1);
 }
 
 TEST(semantic_analyser, builtin_functions)
 {
+  // Just check that each function exists.
+  // Each function should also get its own test case for more thorough testing
   test("kprobe:f { @x = hist(123) }", 0);
   test("kprobe:f { @x = count() }", 0);
   test("kprobe:f { @x = sum(pid) }", 0);
@@ -98,8 +102,8 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
-  test("kprobe:f { @x = count(pid) }", 1);
-  test("kprobe:f { @x = sum(pid, 123) }", 1);
+  test("kprobe:f { kstack(1) }", 0);
+  test("kprobe:f { ustack(1) }", 0);
   test("kprobe:f { fake() }", 1);
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
 }
@@ -115,7 +119,7 @@ TEST(semantic_analyser, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }", 0);
   test("kprobe:f / \"str\" / { 123 }", 10);
-  test("kprobe:f / stack / { 123 }", 10);
+  test("kprobe:f / kstack / { 123 }", 10);
   test("kprobe:f / @mymap / { @mymap = \"str\" }", 10);
 }
 
@@ -150,37 +154,38 @@ TEST(semantic_analyser, call_count)
 
 TEST(semantic_analyser, call_sum)
 {
-  test("kprobe:f { @x = sum(); }", 1);
   test("kprobe:f { @x = sum(123); }", 0);
-  test("kprobe:f { sum(); }", 1);
+  test("kprobe:f { @x = sum(); }", 1);
+  test("kprobe:f { @x = sum(123, 456); }", 1);
+  test("kprobe:f { sum(123); }", 1);
 }
 
 TEST(semantic_analyser, call_min)
 {
-  test("kprobe:f { @x = min(); }", 1);
   test("kprobe:f { @x = min(123); }", 0);
-  test("kprobe:f { min(); }", 1);
+  test("kprobe:f { @x = min(); }", 1);
+  test("kprobe:f { min(123); }", 1);
 }
 
 TEST(semantic_analyser, call_max)
 {
-  test("kprobe:f { @x = max(); }", 1);
   test("kprobe:f { @x = max(123); }", 0);
-  test("kprobe:f { max(); }", 1);
+  test("kprobe:f { @x = max(); }", 1);
+  test("kprobe:f { max(123); }", 1);
 }
 
 TEST(semantic_analyser, call_avg)
 {
-  test("kprobe:f { @x = avg(); }", 1);
   test("kprobe:f { @x = avg(123); }", 0);
-  test("kprobe:f { avg(); }", 1);
+  test("kprobe:f { @x = avg(); }", 1);
+  test("kprobe:f { avg(123); }", 1);
 }
 
 TEST(semantic_analyser, call_stats)
 {
-  test("kprobe:f { @x = stats(); }", 1);
   test("kprobe:f { @x = stats(123); }", 0);
-  test("kprobe:f { stats(); }", 1);
+  test("kprobe:f { @x = stats(); }", 1);
+  test("kprobe:f { stats(123); }", 1);
 }
 
 TEST(semantic_analyser, call_delete)
