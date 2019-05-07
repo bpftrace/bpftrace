@@ -12,7 +12,7 @@ using StructMap = std::map<std::string, Struct>;
 class ClangParser
 {
 public:
-  void parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags = {});
+  int parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags = {});
 };
 
 } // namespace bpftrace
