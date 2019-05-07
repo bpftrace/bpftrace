@@ -67,8 +67,8 @@ void print_tracepoint_args(const std::string &category, const std::string &event
 {
   std::string format_file_path = tp_path + "/" + category + "/" + event + "/format";
   std::ifstream format_file(format_file_path.c_str());
-  std::regex re("^	field:.*;$", std::regex::icase | std::regex::grep | std::regex::nosubs |
-                                     std::regex::optimize);
+  std::regex re("^\tfield:.*;$", std::regex::icase | std::regex::grep |
+                                 std::regex::nosubs | std::regex::optimize);
   std::string line;
 
   if (format_file.fail())
