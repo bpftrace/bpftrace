@@ -161,11 +161,11 @@ static SizedType get_sized_type(CXType clang_type)
   }
 }
 
-void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
+int ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
   if (input.size() == 0)
-    return; // We occasionally get crashes in libclang otherwise
+    return 0; // We occasionally get crashes in libclang otherwise
 
   CXUnsavedFile unsaved_files[] =
   {
@@ -238,9 +238,10 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   CXCursor cursor = clang_getTranslationUnitCursor(translation_unit);
 
   bool iterate = true;
+  int err;
 
   do {
-    clang_visitChildren(
+    err = clang_visitChildren(
         cursor,
         [](CXCursor c, CXCursor parent, CXClientData client_data)
         {
@@ -298,6 +299,11 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
               struct_name = ptypestr;
             remove_struct_prefix(struct_name);
 
+            if (clang_Type_getSizeOf(type) < 0) {
+              std::cerr << "Can't get size of '" << ptypestr << "::" << ident << "', please provide proper definiton." << std::endl;
+              return CXChildVisit_Break;
+            }
+
             structs[struct_name].fields[ident].offset = offset;
             structs[struct_name].fields[ident].type = get_sized_type(type);
             structs[struct_name].size = ptypesize;
@@ -306,6 +312,12 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
           return CXChildVisit_Recurse;
         },
         &bpftrace);
+
+    // clang_visitChildren returns a non-zero value if the traversal
+    // was terminated by the visitor returning CXChildVisit_Break.
+    if (err)
+      break;
+
     if (unvisited_indirect_structs.size()) {
       cursor = indirect_structs[*unvisited_indirect_structs.begin()];
       unvisited_indirect_structs.erase(unvisited_indirect_structs.begin());
@@ -319,6 +331,7 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 
   clang_disposeTranslationUnit(translation_unit);
   clang_disposeIndex(index);
+  return err;
 }
 
 } // namespace bpftrace
