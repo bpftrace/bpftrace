@@ -13,8 +13,8 @@
 
 namespace bpftrace {
 
-std::unordered_map<std::string, CXCursor> indirect_structs;
-std::unordered_set<std::string> unvisited_indirect_structs;
+static std::unordered_map<std::string, CXCursor> indirect_structs;
+static std::unordered_set<std::string> unvisited_indirect_structs;
 
 static std::string get_clang_string(CXString string)
 {
