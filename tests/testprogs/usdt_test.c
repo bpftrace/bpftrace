@@ -1,4 +1,8 @@
+#ifdef HAVE_SYSTEMTAP_SYS_SDT_H
 #include <sys/sdt.h>
+#else
+#define DTRACE_PROBE2(a, b, c, d) (void)0
+#endif
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdio.h>

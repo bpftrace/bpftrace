@@ -83,6 +83,9 @@ if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
   message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
 endif()
 
+include(CheckIncludeFile)
+check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
+
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
