@@ -588,7 +588,7 @@ Attaching 1 probe...
 @[kprobe:vfs_read]: 13369
 ```
 
-## 10. Array Access
+## 10. `[]`: Array Access
 
 You may access one-dimensional constant arrays with the array acccess operator `[]`.
 
