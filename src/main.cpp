@@ -6,6 +6,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <string.h>
+#include <getopt.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -29,12 +30,12 @@ void usage()
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
-  std::cerr << "    -h             show this help message" << std::endl;
+  std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    -v             verbose messages" << std::endl;
-  std::cerr << "    --version      bpftrace version" << std::endl << std::endl;
+  std::cerr << "    -V, --version  bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
@@ -88,16 +89,17 @@ int main(int argc, char *argv[])
   char *pid_str = nullptr;
   char *cmd_str = nullptr;
   bool listing = false;
-
-  if (argc > 1 && strcmp(argv[1], "--version") == 0)
-  {
-    std::cout << "bpftrace " << BPFTRACE_VERSION<< "\n" << std::endl;
-    return 0;
-  }
-
   std::string script, search, file_name;
   int c;
-  while ((c = getopt(argc, argv, "dB:e:hlp:vc:")) != -1)
+
+  const char* const short_options = "dB:e:hlp:vc:V";
+  option long_options[] = {
+    option{"help", no_argument, nullptr, 'h'},
+    option{"version", no_argument, nullptr, 'V'},
+    option{nullptr, 0, nullptr, 0},  // Must be last
+  };
+  while ((c = getopt_long(
+              argc, argv, short_options, long_options, nullptr)) != -1)
   {
     switch (c)
     {
@@ -137,6 +139,9 @@ int main(int argc, char *argv[])
         break;
       case 'h':
         usage();
+        return 0;
+      case 'V':
+        std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         return 0;
       default:
         usage();
