@@ -119,6 +119,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::PositionalParameter *> param
 %type <std::string> wildcard
 %type <std::string> ident
+%type <ast::Integer *> int
 
 %right ASSIGN
 %left QUES COLON
@@ -235,7 +236,11 @@ compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1
                     | var BXORASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BXOR,  $3)); }
                     ;
 
-expr : INT             { $$ = new ast::Integer($1); }
+int : MINUS INT    { $$ = new ast::Integer(-1 * $2); }
+    | INT          { $$ = new ast::Integer($1); }
+    ;
+
+expr : int             { $$ = $1; }
      | STRING          { $$ = new ast::String($1); }
      | BUILTIN         { $$ = new ast::Builtin($1); }
      | IDENT           { $$ = new ast::Identifier($1); }

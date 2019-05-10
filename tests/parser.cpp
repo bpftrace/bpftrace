@@ -145,8 +145,7 @@ TEST(Parser, variable_assign)
       " kprobe:sys_open\n"
       "  =\n"
       "   variable: $x\n"
-      "   -\n"
-      "    int: 1\n");
+      "   int: -1\n");
 }
 
 TEST(semantic_analyser, compound_variable_assignments)
