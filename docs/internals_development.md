@@ -308,7 +308,7 @@ Becomes:
 
 ```C++
   AllocaInst *arg_a_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "arg_a");
-  AllocaInst *arg_a_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "arg_a");
+  AllocaInst *arg_b_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "arg_b");
   AllocaInst *sum_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "sum");
 ```
 
