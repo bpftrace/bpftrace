@@ -362,6 +362,16 @@ std::string is_deprecated(std::string &str)
   return str;
 }
 
+bool is_unsafe_func(const std::string &func_name)
+{
+  return std::any_of(
+      UNSAFE_BUILTIN_FUNCS.begin(),
+      UNSAFE_BUILTIN_FUNCS.end(),
+      [&](const auto& cand) {
+        return func_name == cand;
+      });
+}
+
 std::string exec_system(const char* cmd)
 {
   std::array<char, 128> buffer;

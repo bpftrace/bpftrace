@@ -68,6 +68,11 @@ Helper to run CMD. Equivalent to manually running CMD and then giving passing th
 you've traced at least the duration CMD's execution.
 .
 .TP
+\fB\--unsafe\fR
+Enable unsafe builtin functions. By default, bpftrace runs in safe mode. Safe mode ensure programs cannot modify system state.
+Unsafe builtin functions are marked as such in \fBBUILTINS (functions)\fR.
+.
+.TP
 \fB\-v\fR
 Verbose messages.
 .
@@ -384,7 +389,7 @@ Print file content
 Convert IP address data to text
 .
 .TP
-\fBsystem(char *fmt)\fR
+\fBsystem(char *fmt)\fR (unsafe)
 Execute shell command
 .
 .TP

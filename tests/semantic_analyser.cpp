@@ -11,8 +11,14 @@ namespace semantic_analyser {
 
 using ::testing::_;
 
-void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expected_result=0)
+void test(
+    BPFtrace &bpftrace,
+    Driver &driver,
+    const std::string &input,
+    int expected_result=0,
+    bool safe_mode = true)
 {
+  bpftrace.safe_mode = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
@@ -26,23 +32,31 @@ void test(BPFtrace &bpftrace, Driver &driver, const std::string &input, int expe
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
 }
 
-void test(BPFtrace &bpftrace, const std::string &input, int expected_result=0)
+void test(BPFtrace &bpftrace,
+    const std::string &input,
+    int expected_result=0,
+    bool safe_mode = true)
 {
   Driver driver(bpftrace);
-  test(bpftrace, driver, input, expected_result);
+  test(bpftrace, driver, input, expected_result, safe_mode);
 }
 
-void test(Driver &driver, const std::string &input, int expected_result=0)
+void test(Driver &driver,
+    const std::string &input,
+    int expected_result=0,
+    bool safe_mode = true)
 {
   BPFtrace bpftrace;
-  test(bpftrace, driver, input, expected_result);
+  test(bpftrace, driver, input, expected_result, safe_mode);
 }
 
-void test(const std::string &input, int expected_result=0)
+void test(const std::string &input,
+    int expected_result=0,
+    bool safe_mode = true)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  test(bpftrace, driver, input, expected_result);
+  test(bpftrace, driver, input, expected_result, safe_mode);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -94,7 +108,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
-  test("kprobe:f { system(\"ls\\n\") }", 0);
+  test("kprobe:f { system(\"ls\\n\") }", 0, false /* safe_node */);
   test("kprobe:f { join(0) }", 0);
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { ksym(0xffff) }", 0);
@@ -456,10 +470,10 @@ TEST(semantic_analyser, printf)
 
 TEST(semantic_analyser, system)
 {
-  test("kprobe:f { system(\"ls\") }", 0);
-  test("kprobe:f { system(1234) }", 1);
-  test("kprobe:f { system() }", 1);
-  test("kprobe:f { $fmt = \"mystring\"; system($fmt) }", 1);
+  test("kprobe:f { system(\"ls\") }", 0, false /* safe_mode */);
+  test("kprobe:f { system(1234) }", 1, false /* safe_mode */);
+  test("kprobe:f { system() }", 1, false /* safe_mode */);
+  test("kprobe:f { $fmt = \"mystring\"; system($fmt) }", 1, false /* safe_mode */);
 }
 
 TEST(semantic_analyser, printf_format_int)

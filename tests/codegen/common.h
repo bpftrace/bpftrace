@@ -21,9 +21,13 @@ target triple = "bpf-pc-linux"
 
 )HEAD";
 
-static void test(const std::string &input, const std::string expected_output)
+static void test(
+    const std::string &input,
+    const std::string expected_output,
+    bool safe_mode = true)
 {
   BPFtrace bpftrace;
+  bpftrace.safe_mode = safe_mode;
   Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
