@@ -221,10 +221,10 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "lhist") {
     if (check_nargs(call, 4)) {
-      check_arg(call, Type::integer, 0);
-      check_arg(call, Type::integer, 1);
-      check_arg(call, Type::integer, 2);
-      check_arg(call, Type::integer, 3);
+      check_arg(call, Type::integer, 0, false);
+      check_arg(call, Type::integer, 1, true);
+      check_arg(call, Type::integer, 2, true);
+      check_arg(call, Type::integer, 3, true);
     }
 
     if (is_final_pass()) {
@@ -242,6 +242,8 @@ void SemanticAnalyser::visit(Call &call)
         if (buckets > 1000)
           err_ << "lhist() too many buckets, must be <= 1000 (would need " << buckets << ")" << std::endl;
       }
+      if (min.n < 0)
+        err_ << "lhist() min must be non-negative (provided min " << min.n << ")" << std::endl;
       if (min.n > max.n)
         err_ << "lhist() min must be less than max (provided min " << min.n << " and max " << max.n << ")" << std::endl;
       if ((max.n - min.n) < step.n)

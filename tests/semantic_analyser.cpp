@@ -94,6 +94,7 @@ TEST(semantic_analyser, builtin_functions)
   // Just check that each function exists.
   // Each function should also get its own test case for more thorough testing
   test("kprobe:f { @x = hist(123) }", 0);
+  test("kprobe:f { @x = lhist(123, 0, 123, 1) }", 0);
   test("kprobe:f { @x = count() }", 0);
   test("kprobe:f { @x = sum(pid) }", 0);
   test("kprobe:f { @x = min(pid) }", 0);
@@ -249,6 +250,12 @@ TEST(semantic_analyser, call_hist)
   test("kprobe:f { @x = hist(1); }", 0);
   test("kprobe:f { @x = hist(); }", 1);
   test("kprobe:f { hist(); }", 1);
+}
+
+TEST(semantic_analyser, call_lhist)
+{
+  test("kprobe:f { @ = lhist(5, 0, 10, 1); }", 0);
+  test("kprobe:f { @ = lhist(-10, -10, 10, 1); }", 10); // must be positive
 }
 
 TEST(semantic_analyser, call_count)

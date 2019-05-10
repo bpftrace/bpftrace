@@ -2305,7 +2305,7 @@ Syntax:
 @histogram_name[optional_key] = lhist(value, min, max, step)
 ```
 
-This is implemented using a BPF map.
+This is implemented using a BPF map. `min` must be non-negative.
 
 Examples:
 
