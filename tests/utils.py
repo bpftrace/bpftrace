@@ -72,6 +72,9 @@ class Utils(object):
         signal.signal(signal.SIGALRM, Utils.__handler)
 
         try:
+            before = None
+            after = None
+
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
                 with open(devnull, 'w') as dn:
@@ -79,7 +82,6 @@ class Utils(object):
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
 
-            before = None
             if test.before:
                 before = subprocess.Popen(test.before, shell=True)
 
@@ -94,8 +96,6 @@ class Utils(object):
             )
 
             signal.alarm(ATTACH_TIMEOUT)
-
-            after = None
 
             output = ""
 
