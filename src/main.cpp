@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <signal.h>
 #include <sys/resource.h>
 #include <sys/utsname.h>
@@ -28,6 +29,7 @@ void usage()
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -B MODE        output buffering mode ('line', 'full', or 'none')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
+  std::cerr << "    -o file        redirect program output to file" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
@@ -111,10 +113,10 @@ int main(int argc, char *argv[])
   char *cmd_str = nullptr;
   bool listing = false;
   bool safe_mode = true;
-  std::string script, search, file_name;
+  std::string script, search, file_name, output_file;
   int c;
 
-  const char* const short_options = "dB:e:hlp:vc:V";
+  const char* const short_options = "dB:e:hlp:vc:Vo:";
   option long_options[] = {
     option{"help", no_argument, nullptr, 'h'},
     option{"version", no_argument, nullptr, 'V'},
@@ -126,6 +128,9 @@ int main(int argc, char *argv[])
   {
     switch (c)
     {
+      case 'o':
+        output_file = optarg;
+        break;
       case 'd':
         bt_debug++;
         if (bt_debug == DebugLevel::kNone) {
@@ -194,7 +199,18 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  BPFtrace bpftrace;
+  std::ostream * os = &std::cout;
+  std::ofstream output;
+  if (!output_file.empty()) {
+    output.open(output_file);
+    if (output.fail()) {
+      std::cerr << "Failed to open output file: \"" << output_file;
+      std::cerr << "\": " << strerror(errno) <<  std::endl;
+      return 1;
+    }
+    os = &output;
+  }
+  BPFtrace bpftrace(*os);
   Driver driver(bpftrace);
 
   bpftrace.safe_mode = safe_mode;

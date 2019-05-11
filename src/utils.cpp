@@ -390,7 +390,7 @@ std::string resolve_binary_path(const std::string& cmd)
   }
 }
 
-void cat_file(const char *filename, size_t max_bytes)
+void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
 {
   std::ifstream file(filename);
   const size_t BUFSIZE = 4096;
@@ -408,7 +408,7 @@ void cat_file(const char *filename, size_t max_bytes)
   while (bytes_read < max_bytes) {
     size_t size = std::min(BUFSIZE, max_bytes - bytes_read);
     file.read(buf, size);
-    std::cout.write(buf, file.gcount());
+    out.write(buf, file.gcount());
     if (file.eof()) {
       return;
     }
