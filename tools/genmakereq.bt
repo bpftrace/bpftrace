@@ -1,0 +1,43 @@
+#!/usr/bin/env bpftrace
+/*
+ * genmakereq      Trace generic_make_request events.
+ *                 For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: genmakereq.bt 100
+ *
+ * Copyright 2019 Aleksei Zakharov
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ */
+
+
+#include <linux/bio.h>
+#include <linux/genhd.h>
+
+BEGIN
+{
+	@threshold = 1000;
+	if ($1) {
+		@threshold = $1;
+	}
+	printf("Tracing generic_make_request events... Hit Ctrl-C to end.\n");
+	printf("Show requests slower than %d usecs.\n",@threshold);
+	printf("%-8s %-6s %-16s %-16s %s(us)\n", "TIME", "PID", "COMM", "DEVICE","LAT");
+}
+
+kprobe:generic_make_request
+{
+	@start[tid] = nsecs;
+	@disk[tid] = arg0
+}
+
+kretprobe:generic_make_request
+/@start[tid]/
+{
+	$delta = (nsecs-@start[tid])/1000;
+	if ($delta > @threshold) {
+		time("%H:%M:%S ");
+		printf("%-6d %-16s %-16s %ld\n", pid, comm, ((bio *)@disk[tid])->bi_disk->disk_name, $delta);
+	}
+	delete(@start[tid]);
+	delete(@disk[tid]);
+}

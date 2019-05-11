@@ -1,0 +1,29 @@
+Demonstrations of genmakereq, the Linux bpftrace/eBPF version.
+
+
+The genmakereq tool traces generic_make_request calls
+and print additional information if latency is higher
+than a threshold:
+
+# genmakereq.bt 10
+Tracing generic_make_request events... Hit Ctrl-C to end.
+Show requests slower than 10 usecs.
+TIME     PID    COMM             DEVICE           LAT(us)
+16:32:28 23091  kworker/u8:0     nvme0n1          31
+16:32:28 23091  kworker/u8:0     nvme0n1          21
+16:32:28 23091  kworker/u8:0     nvme0n1          363
+16:32:28 23091  kworker/u8:0     nvme0n1          514
+16:32:28 23091  kworker/u8:0     nvme0n1          289
+16:32:28 23091  kworker/u8:0     nvme0n1          393
+16:32:28 23091  kworker/u8:0     nvme0n1          228
+16:32:28 1996   pool             nvme0n1          32
+16:32:28 288    jbd2/nvme0n1p2-  nvme0n1          17
+16:32:28 288    jbd2/nvme0n1p2-  nvme0n1          13
+[...]
+
+This can be useful for correlation with spikes in disk latency, as shown
+by an application. There're few checks in generic_make_request before
+io accounting starts. Using fio with libaio these spikes could be seen as
+submission latency.
+
+This shows timestamp which corresponds when generic_make_request returns.
