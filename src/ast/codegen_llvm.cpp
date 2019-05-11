@@ -1679,12 +1679,12 @@ void CodegenLLVM::createLinearFunction()
   b_.CreateCondBr(cmp1, gt_max, le_max);
 
   b_.SetInsertPoint(gt_max);
-  Value *div = b_.CreateSDiv(b_.CreateSub(b_.CreateLoad(max_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
+  Value *div = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(max_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
   b_.CreateStore(b_.CreateAdd(div, b_.getInt64(1)), result_alloc);
   b_.CreateRet(b_.CreateLoad(result_alloc));
 
   b_.SetInsertPoint(le_max);
-  Value *div3 = b_.CreateSDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
+  Value *div3 = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
   b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
   b_.CreateRet(b_.CreateLoad(result_alloc));
 }
