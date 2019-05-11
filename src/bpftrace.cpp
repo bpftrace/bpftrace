@@ -39,6 +39,43 @@ namespace bpftrace {
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 
+int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
+  int ret = -1;
+  switch(args.size()) {
+    case 0:
+      ret = snprintf(s, n, fmt);
+      break;
+    case 1:
+      ret = snprintf(s, n, fmt, args.at(0)->value());
+      break;
+    case 2:
+      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value());
+      break;
+    case 3:
+      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value());
+      break;
+    case 4:
+      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(), args.at(3)->value());
+      break;
+    case 5:
+      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(),
+        args.at(3)->value(), args.at(4)->value());
+      break;
+    case 6:
+      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(),
+        args.at(3)->value(), args.at(4)->value(), args.at(5)->value());
+      break;
+    default:
+      std::cerr << "format() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
+      abort();
+  }
+  if (ret < 0 && errno != 0) {
+    std::cerr << "format() error occurred: " << std::strerror(errno) << std::endl;
+    abort();
+  }
+  return ret;
+}
+
 BPFtrace::~BPFtrace()
 {
   for (int pid : child_pids_)
@@ -294,7 +331,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
-  int err, ret;
+  auto &out = bpftrace->outputstream();
+  int err;
 
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
@@ -336,23 +374,23 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     t = time(NULL);
     tmp = localtime(&t);
     if (tmp == NULL) {
-      perror("localtime");
+      std::cerr << "localtime: " << strerror(errno) << std::endl;
       return;
     }
     uint64_t time_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
     auto fmt = bpftrace->time_args_[time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
-      fprintf(stderr, "strftime returned 0");
+      std::cerr << "strftime returned 0" << std::endl;
       return;
     }
-    printf("%s", timestr);
+    out << timestr;
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::cat))
   {
     uint64_t cat_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
     auto filename = bpftrace->cat_args_[cat_id].c_str();
-    cat_file(filename, bpftrace->cat_bytes_max_);
+    cat_file(filename, bpftrace->cat_bytes_max_, out);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
@@ -364,10 +402,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       if (arg[0] == 0)
         break;
       if (i)
-        printf("%s", joinstr);
-      printf("%s", arg);
+        out << joinstr;
+      out << arg;
     }
-    printf("\n");
+    out << std::endl;
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
@@ -383,46 +421,16 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     auto args = std::get<1>(bpftrace->system_args_[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-    char buffer [255];
-
-    switch (args.size())
-    {
-      case 0:
-        ret = system(fmt);
-        break;
-      case 1:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value());
-        ret = system(buffer);
-        break;
-      case 2:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value());
-        ret = system(buffer);
-        break;
-      case 3:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value());
-        ret = system(buffer);
-        break;
-      case 4:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-          arg_values.at(3)->value());
-        ret = system(buffer);
-        break;
-      case 5:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-          arg_values.at(3)->value(), arg_values.at(4)->value());
-        ret = system(buffer);
-        break;
-      case 6:
-        snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-          arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
-        ret = system(buffer);
-        break;
-      default:
-        std::cerr << "printf() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
-        abort();
+    const int BUFSIZE = 512;
+    char buffer[BUFSIZE];
+    int size = format(buffer, BUFSIZE, fmt, arg_values);
+    // Return value is required size EXCLUDING null byte
+    if (size >= BUFSIZE) {
+      std::cerr << "syscall() command to long (" << size << " bytes): ";
+      std::cerr << buffer << std::endl;
+      return;
     }
-    (void)ret;
-
+    out << exec_system(buffer);
     return;
   }
 
@@ -431,35 +439,19 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-  switch (args.size())
-  {
-    case 0:
-      printf(fmt);
-      break;
-    case 1:
-      printf(fmt, arg_values.at(0)->value());
-      break;
-    case 2:
-      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value());
-      break;
-    case 3:
-      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value());
-      break;
-    case 4:
-      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-        arg_values.at(3)->value());
-      break;
-    case 5:
-      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-        arg_values.at(3)->value(), arg_values.at(4)->value());
-      break;
-    case 6:
-      printf(fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
-        arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
-      break;
-    default:
-      std::cerr << "printf() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
-      abort();
+  // First try with a stack buffer, if that fails use a heap buffer
+  const int BUFSIZE=512;
+  char buffer[BUFSIZE];
+  int required_size = format(buffer, BUFSIZE, fmt, arg_values);
+  // Return value is required size EXCLUDING null byte
+  if (required_size < BUFSIZE) {
+    out << buffer;
+  } else {
+    auto buf = std::make_unique<char[]>(required_size+1);
+    // if for some reason the size is still wrong the string
+    // will just be silently truncated
+    format(buf.get(), required_size, fmt, arg_values);
+    out << buf.get();
   }
 }
 
@@ -595,7 +587,8 @@ std::string BPFtrace::get_param(size_t i) const
 
 void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
 {
-  printf("Lost %lu events\n", lost);
+  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  bpftrace->outputstream() << "Lost " << lost << " events" << std::endl;
 }
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
@@ -824,7 +817,7 @@ int BPFtrace::print_maps()
       err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
-    std::cout << std::endl;
+    out_ << std::endl;
 
     if (err)
       return err;
@@ -1055,35 +1048,35 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
         continue;
     }
 
-    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
+    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
     if (map.type_.type == Type::kstack)
-      std::cout << get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
+      out_ << get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
     else if (map.type_.type == Type::ustack)
-      std::cout << get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
+      out_ << get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
     else if (map.type_.type == Type::ksym)
-      std::cout << resolve_ksym(*(uintptr_t*)value.data());
+      out_ << resolve_ksym(*(uintptr_t*)value.data());
     else if (map.type_.type == Type::usym)
-      std::cout << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
+      out_ << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
     else if (map.type_.type == Type::inet)
-      std::cout << resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
+      out_ << resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
     else if (map.type_.type == Type::username)
-      std::cout << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
+      out_ << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
     else if (map.type_.type == Type::string)
-      std::cout << value.data() << std::endl;
+      out_ << value.data() << std::endl;
     else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
-      std::cout << reduce_value(value, ncpus_) / div << std::endl;
+      out_ << reduce_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::min)
-      std::cout << min_value(value, ncpus_) / div << std::endl;
+      out_ << min_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::max)
-      std::cout << max_value(value, ncpus_) / div << std::endl;
+      out_ << max_value(value, ncpus_) / div << std::endl;
     else if (map.type_.type == Type::probe)
-      std::cout << resolve_probe(*(uint64_t*)value.data()) << std::endl;
+      out_ << resolve_probe(*(uint64_t*)value.data()) << std::endl;
     else
-      std::cout << *(int64_t*)value.data() / div << std::endl;
+      out_ << *(int64_t*)value.data() / div << std::endl;
   }
   if (i == 0)
-    std::cout << std::endl;
+    out_ << std::endl;
 
   return 0;
 }
@@ -1170,14 +1163,14 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
         continue;
     }
 
-    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
+    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
 
     if (map.type_.type == Type::hist)
       print_hist(value, div);
     else
       print_lhist(value, map.lqmin, map.lqmax, map.lqstep);
 
-    std::cout << std::endl;
+    out_ << std::endl;
   }
 
   return 0;
@@ -1253,7 +1246,7 @@ int BPFtrace::print_map_stats(IMap &map)
   {
     auto &key = key_count.first;
     auto &value = values_by_key[key];
-    std::cout << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
+    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
 
     uint64_t count = value.at(0);
     uint64_t total = value.at(1);
@@ -1263,12 +1256,12 @@ int BPFtrace::print_map_stats(IMap &map)
       average = total / count;
 
     if (map.type_.type == Type::stats)
-      std::cout << "count " << count << ", average " <<  average << ", total " << total << std::endl;
+      out_ << "count " << count << ", average " <<  average << ", total " << total << std::endl;
     else
-      std::cout << average << std::endl;
+      out_ << average << std::endl;
   }
 
-  std::cout << std::endl;
+  out_ << std::endl;
 
   return 0;
 }
@@ -1319,7 +1312,7 @@ int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) cons
     int bar_width = values.at(i)/(float)max_value*max_width;
     std::string bar(bar_width, '@');
 
-    std::cout << std::setw(16) << std::left << header.str()
+    out_ << std::setw(16) << std::left << header.str()
               << std::setw(8) << std::right << (values.at(i) / div)
               << " |" << std::setw(max_width) << std::left << bar << "|"
               << std::endl;
@@ -1380,7 +1373,7 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
 
     std::string bar(bar_width, '@');
 
-    std::cout << std::setw(16) << std::left << header.str()
+    out_ << std::setw(16) << std::left << header.str()
               << std::setw(8) << std::right << values.at(i)
               << " |" << std::setw(max_width) << std::left << bar << "|"
               << std::endl;

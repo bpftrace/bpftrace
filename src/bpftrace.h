@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
@@ -65,10 +66,11 @@ private:
 class BPFtrace
 {
 public:
-  BPFtrace() : ncpus_(get_possible_cpus().size()) { }
+  BPFtrace(std::ostream& o = std::cout) : out_(o),ncpus_(get_possible_cpus().size()) { }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
+  std::ostream& outputstream() const { return out_; }
   int run(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
@@ -137,6 +139,7 @@ protected:
   std::vector<Probe> special_probes_;
 
 private:
+  std::ostream &out_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   void* ksyms_{nullptr};
