@@ -69,7 +69,7 @@ DNS Res~ver #15: /etc/hosts
 
 CPU profiling, sampling kernel stacks at 99 Hertz:
 ```
-# bpftrace -e 'profile:hz:99 { @[stack] = count() }'
+# bpftrace -e 'profile:hz:99 { @[kstack] = count() }'
 Attaching 1 probe...
 ^C
 
