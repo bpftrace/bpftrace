@@ -13,6 +13,7 @@
 BEGIN
 {
 	printf("%-12s %-16s %-6s %7s\n", "TIME(ms)", "COMM", "PID", "LAT(ms)");
+	@trace_start = nsecs;
 }
 
 kprobe:blk_account_io_start
@@ -28,7 +29,7 @@ kprobe:blk_account_io_completion
 {
 	$now = nsecs;
 	printf("%-12u %-16s %-6d %7d\n",
-	    elapsed / 1000000, @iocomm[arg0], @iopid[arg0],
+	    ($now - @trace_start) / 1000000, @iocomm[arg0], @iopid[arg0],
 	    ($now - @start[arg0]) / 1000000);
 
 	delete(@start[arg0]);

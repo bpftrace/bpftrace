@@ -350,9 +350,21 @@ std::string is_deprecated(std::string &str)
     {
       if (item->show_warning)
       {
-        std::cerr << "warning: " << item->old_name << " is deprecated and will be removed in the future. ";
-        std::cerr << "Use " << item->new_name << " instead." << std::endl;
         item->show_warning = false;
+
+        std::cerr << "Warning: " << item->old_name
+                  << " is deprecated and will be removed in the future.";
+        if (item->new_name != "")
+        {
+          std::cerr << " Use " << item->new_name << " instead.";
+        }
+        else
+        {
+          // There is no replacement for this deprecated builtin. Just keep
+          // using the old name until it's removed entirely.
+          item->new_name = item->old_name;
+        }
+        std::cerr << std::endl;
       }
 
       return item->new_name;

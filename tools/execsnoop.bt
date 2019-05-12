@@ -18,10 +18,11 @@
 BEGIN
 {
 	printf("%-10s %-5s %s\n", "TIME(ms)", "PID", "ARGS");
+	@trace_start = nsecs;
 }
 
 tracepoint:syscalls:sys_enter_execve
 {
-	printf("%-10u %-5d ", elapsed / 1000000, pid);
+	printf("%-10u %-5d ", (nsecs - @trace_start) / 1000000, pid);
 	join(args->argv);
 }

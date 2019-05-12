@@ -29,13 +29,14 @@ BEGIN
 {
 	printf("Tracing dcache lookups... Hit Ctrl-C to end.\n");
 	printf("%-8s %-6s %-16s %1s %s\n", "TIME", "PID", "COMM", "T", "FILE");
+	@trace_start = nsecs;
 }
 
 // comment out this block to avoid showing hits:
 kprobe:lookup_fast
 {
 	$nd = (struct nameidata *)arg0;
-	printf("%-8d %-6d %-16s R %s\n", elapsed / 1000000, pid, comm,
+	printf("%-8d %-6d %-16s R %s\n", (nsecs - @trace_start) / 1000000, pid, comm,
 	    str($nd->last.name));
 }
 
@@ -48,7 +49,7 @@ kprobe:d_lookup
 kretprobe:d_lookup
 /@fname[tid]/
 {
-	printf("%-8d %-6d %-16s M %s\n", elapsed / 1000000, pid, comm,
+	printf("%-8d %-6d %-16s M %s\n", (nsecs - @trace_start) / 1000000, pid, comm,
 	    str(@fname[tid]));
 	delete(@fname[tid]);
 }

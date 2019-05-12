@@ -51,6 +51,7 @@ static std::vector<DeprecatedName> DEPRECATED_LIST =
 {
   { "stack", "kstack"},
   { "sym", "ksym"},
+  { "elapsed", ""},
 };
 
 
