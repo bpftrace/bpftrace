@@ -102,6 +102,7 @@ void print_tracepoint_args(const std::string &category, const std::string &event
 void list_probes(const std::string &search_input, int pid)
 {
   std::string search = search_input;
+  std::string probe_name;
 
   std::smatch probe_match;
   std::regex probe_regex(":.*");
@@ -111,7 +112,7 @@ void list_probes(const std::string &search_input, int pid)
   if (probe_match.size())
   {
     auto pos = probe_match.position(0);
-    auto probe_name =  probetypeName(search.substr(0, probe_match.position(0)));
+    probe_name =  probetypeName(search.substr(0, probe_match.position(0)));
     search = probe_name + search.substr(pos, search.length());
   }
 
@@ -141,7 +142,7 @@ void list_probes(const std::string &search_input, int pid)
   {
     // PID takes precedence over path, so path from search expression will be ignored if pid specified
     usdt_probes = USDTHelper::probes_for_pid(pid);
-  } else {
+  } else if (probe_name == "usdt") {
     // If the *full* path is provided as part of the search expression parse it out and use it
     std::string usdt_path = search.substr(search.find(":")+1, search.size());
     usdt_path_list = usdt_path.find(":") == std::string::npos;
