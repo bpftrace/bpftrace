@@ -34,6 +34,9 @@ CONFIG_HAVE_EBPF_JIT=y
 CONFIG_BPF_EVENTS=y
 ```
 
+This can be verified by running the `check_kernel_features` script from the
+`scripts` directory.
+
 # Package install
 
 ## Ubuntu snap package
