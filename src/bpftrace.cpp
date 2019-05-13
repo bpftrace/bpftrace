@@ -1283,7 +1283,7 @@ int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max,
   int start_value = -1;
   int end_value = 0;
 
-  for (int i = 0; i <= buckets + 1; i++)
+  for (unsigned int i = 0; i <= static_cast<unsigned int>(buckets) + 1; i++)
   {
     if (values.at(i) > 0) {
       if (start_value == -1) {
