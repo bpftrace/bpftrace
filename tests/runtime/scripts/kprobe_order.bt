@@ -1,0 +1,25 @@
+kprobe:sys_execve
+{
+  @probe1_ready = 1;
+  if (@go == 1) {
+    printf("first");
+  }
+}
+
+kprobe:sys_execve
+{
+  @probe2_ready = 1;
+  if (@go == 1) {
+    printf(" second\n");
+    exit();
+  }
+}
+
+kprobe:sys_execve
+{
+  // Make sure all probes are attached before letting them print anything
+  // so that the output we get is all from the same event.
+  if (@probe1_ready == 1 && @probe2_ready == 1) {
+    @go = 1;
+  }
+}
