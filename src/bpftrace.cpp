@@ -608,6 +608,27 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   return nullptr;
 }
 
+bool attach_reverse(const Probe &p)
+{
+  switch(p.type)
+  {
+    case ProbeType::kprobe:
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+    case ProbeType::software:
+      return true;
+    case ProbeType::kretprobe:
+    case ProbeType::tracepoint:
+    case ProbeType::profile:
+    case ProbeType::interval:
+    case ProbeType::hardware:
+      return false;
+    default:
+      abort();
+  }
+}
+
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
   int wait_for_tracing_pipe;
@@ -643,16 +664,30 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   BEGIN_trigger();
 
-  // NOTE (mmarchini): Apparently the kernel fires kprobe_events in the reverse
-  // order they were attached, so we insert them backwards to make sure blocks
-  // are executed in the same order they were declared.
-  auto r_probes = probes_.rbegin();
-  for (; r_probes != probes_.rend(); ++r_probes)
+  // The kernel appears to fire some probes in the order that they were
+  // attached and others in reverse order. In order to make sure that blocks
+  // are executed in the same order they were declared, iterate over the probes
+  // twice: in the first pass iterate forward and attach the probes that will
+  // be fired in the same order they were attached, and in the second pass
+  // iterate in reverse and attach the rest.
+  for (auto probes = probes_.begin(); probes != probes_.end(); ++probes)
   {
-    auto attached_probe = attach_probe(*r_probes, *bpforc.get());
-    if (attached_probe == nullptr)
-      return -1;
-    attached_probes_.push_back(std::move(attached_probe));
+    if (!attach_reverse(*probes)) {
+      auto attached_probe = attach_probe(*probes, *bpforc.get());
+      if (attached_probe == nullptr)
+        return -1;
+      attached_probes_.push_back(std::move(attached_probe));
+    }
+  }
+
+  for (auto r_probes = probes_.rbegin(); r_probes != probes_.rend(); ++r_probes)
+  {
+    if (attach_reverse(*r_probes)) {
+      auto attached_probe = attach_probe(*r_probes, *bpforc.get());
+      if (attached_probe == nullptr)
+        return -1;
+      attached_probes_.push_back(std::move(attached_probe));
+    }
   }
 
   // Kick the child to execute the command.

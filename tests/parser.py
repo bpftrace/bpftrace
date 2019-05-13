@@ -22,7 +22,9 @@ class TestParser(object):
     @staticmethod
     def read_all(test_filter):
         try:
-            for root, _, files in os.walk('./runtime'):
+            for root, subdirs, files in os.walk('./runtime'):
+                if "scripts" in subdirs:
+                    subdirs.remove("scripts")
                 for filename in files:
                     if filename.startswith("."):
                         continue
