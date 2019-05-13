@@ -272,7 +272,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
-  int err;
+  int err, ret;
 
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
@@ -360,39 +360,40 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     switch (args.size())
     {
       case 0:
-        system(fmt);
+        ret = system(fmt);
         break;
       case 1:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       case 2:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       case 3:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       case 4:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
           arg_values.at(3)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       case 5:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
           arg_values.at(3)->value(), arg_values.at(4)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       case 6:
         snprintf(buffer, 255, fmt, arg_values.at(0)->value(), arg_values.at(1)->value(), arg_values.at(2)->value(),
           arg_values.at(3)->value(), arg_values.at(4)->value(), arg_values.at(5)->value());
-        system(buffer);
+        ret = system(buffer);
         break;
       default:
         std::cerr << "printf() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
         abort();
     }
+    (void)ret;
 
     return;
   }
