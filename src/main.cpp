@@ -40,7 +40,9 @@ void usage()
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
-  std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl << std::endl;
+  std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl;
+  std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
   std::cerr << "    list probes containing \"sleep\"" << std::endl;
@@ -314,6 +316,17 @@ int main(int argc, char *argv[])
     }
     // no maximum is enforced. Imagine a map recording a timestamp by struct page *: this could exceed 10M entries.
     bpftrace.mapmax_ = proposed;
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
+  {
+    uint64_t proposed;
+    std::istringstream stringstream(env_p);
+    if (!(stringstream >> proposed)) {
+      std::cerr << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      return 1;
+    }
+    bpftrace.cat_bytes_max_ = proposed;
   }
 
   if (cmd_str)

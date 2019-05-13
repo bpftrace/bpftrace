@@ -112,6 +112,7 @@ public:
 
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;
+  size_t cat_bytes_max_ = 10240;
   bool demangle_cpp_symbols = true;
   bool safe_mode = true;
 

@@ -390,19 +390,34 @@ std::string resolve_binary_path(const std::string& cmd)
   }
 }
 
-void cat_file(const char *filename)
+void cat_file(const char *filename, size_t max_bytes)
 {
   std::ifstream file(filename);
-  std::string line;
+  const size_t BUFSIZE = 4096;
 
-  if (file.fail())
-  {
-    std::cerr << "ERROR: file not found: " << filename << std::endl;
+  if (file.fail()){
+    std::cerr << "Error opening file '" << filename << "': ";
+    std::cerr << strerror(errno) << std::endl;
     return;
   }
-  while (getline(file, line))
-  {
-    std::cout << line << std::endl;
+
+  char buf[BUFSIZE];
+  size_t bytes_read = 0;
+  // Read the file batches to avoid allocating a potentially
+  // massive buffer.
+  while (bytes_read < max_bytes) {
+    size_t size = std::min(BUFSIZE, max_bytes - bytes_read);
+    file.read(buf, size);
+    std::cout.write(buf, file.gcount());
+    if (file.eof()) {
+      return;
+    }
+    if (file.fail()) {
+      std::cerr << "Error opening file '" << filename << "': ";
+      std::cerr << strerror(errno) << std::endl;
+      return;
+    }
+    bytes_read += file.gcount();
   }
 }
 
