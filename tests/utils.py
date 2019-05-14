@@ -115,7 +115,7 @@ class Utils(object):
             output += p.communicate()[0].decode()
 
             signal.alarm(0)
-            result = re.search(test.expect, output)
+            result = re.search(test.expect, output, re.M)
 
         except (TimeoutError):
             # Give it a last chance, the test might have worked but the
