@@ -350,6 +350,12 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
   {
+    if (bpftrace->safe_mode)
+    {
+      std::cerr << "syscall() not allowed in safe mode" << std::endl;
+      abort();
+    }
+
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
     auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->system_args_[id]);
