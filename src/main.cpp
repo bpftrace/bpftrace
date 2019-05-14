@@ -57,9 +57,27 @@ static void enforce_infinite_rlimit() {
   rl.rlim_cur = rl.rlim_max;
   err = setrlimit(RLIMIT_MEMLOCK, &rl);
   if (err)
-    std::cerr << std::strerror(err)<<": couldn't set RLIMIT for bpftrace. " <<
-        "If your program is not loading, you can try " <<
+    std::cerr << std::strerror(err)<<": couldn't set RLIMIT_MEMLOCK for " <<
+        "bpftrace. If your program is not loading, you can try " <<
         "\"ulimit -l 8192\" to fix the problem" << std::endl;
+}
+
+static void cap_memory_limits() {
+  struct rlimit rl = {};
+  int err;
+  uint64_t memory_limit_bytes = 1 * 1024 * 1024 * 1024;
+
+  // this is a safety measure for issue #528 "LLVM ERROR: out of memory",
+  // and caps bpftrace memory to 1 Gbyte. This may be removed once the LLVM
+  // issue has been fixed, and this is no longer deemed necessary.
+  rl.rlim_max = memory_limit_bytes;
+  rl.rlim_cur = rl.rlim_max;
+  err = setrlimit(RLIMIT_AS, &rl);
+  err += setrlimit(RLIMIT_RSS, &rl);
+  if (err)
+    std::cerr << std::strerror(err)<<": couldn't set RLIMIT_AS and " <<
+        "RLIMIT_RSS for bpftrace (these are a temporary precaution to stop " <<
+        "accidental large program loads, and are not required" << std::endl;
 }
 
 bool is_root()
@@ -229,6 +247,8 @@ int main(int argc, char *argv[])
   // FIXME (mmarchini): maybe we don't want to always enforce an infinite
   // rlimit?
   enforce_infinite_rlimit();
+
+  cap_memory_limits();
 
   // positional parameters
   while (optind < argc) {
