@@ -1625,7 +1625,7 @@ Syntax: `system(fmt)`
 This runs the provided command at the shell. For example:
 
 ```
-# bpftrace -e 'kprobe:do_nanosleep { system("ps -p %d\n", pid); }'
+# bpftrace --unsafe -e 'kprobe:do_nanosleep { system("ps -p %d\n", pid); }'
 Attaching 1 probe...
   PID TTY          TIME CMD
  1339 ?        00:00:15 iscsid
@@ -1639,6 +1639,8 @@ Attaching 1 probe...
 ```
 
 This can be useful to execute commands or a shell script when an instrumented event happens.
+
+Note this is an unsafe function. To use it, bpftrace must be run with `--unsafe`.
 
 ## 12. `exit()`: Exit
 

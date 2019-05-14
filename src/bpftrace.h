@@ -99,6 +99,7 @@ public:
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;
   bool demangle_cpp_symbols = true;
+  bool safe_mode = true;
 
   static void sort_by_key(std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key);
