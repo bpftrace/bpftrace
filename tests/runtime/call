@@ -19,12 +19,12 @@ EXPECT [0-9]*-[0-9]*
 TIMEOUT 5
 
 NAME join
-RUN bpftrace -v -e 'i:ms:1 { system("echo 'A'"); } kprobe:sys_execve { join(arg1); exit();}'
+RUN bpftrace --unsafe -v -e 'i:ms:1 { system("echo 'A'"); } kprobe:sys_execve { join(arg1); exit();}'
 EXPECT A
 TIMEOUT 5
 
 NAME join_delim
-RUN bpftrace -v -e 'i:ms:1 { system("echo 'A'"); } kprobe:sys_execve { join(arg1, ","); exit();}'
+RUN bpftrace --unsafe -v -e 'i:ms:1 { system("echo 'A'"); } kprobe:sys_execve { join(arg1, ","); exit();}'
 EXPECT A
 TIMEOUT 5
 
@@ -41,7 +41,7 @@ TIMEOUT 5
 AFTER sleep 0.1
 
 NAME system
-RUN bpftrace -v -e 'i:ms:1 { system("echo 'ok_system'"); exit();}'
+RUN bpftrace --unsafe -v -e 'i:ms:1 { system("echo 'ok_system'"); exit();}'
 EXPECT ok_system
 TIMEOUT 5
 
