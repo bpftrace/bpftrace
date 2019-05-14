@@ -88,12 +88,14 @@ class Utils(object):
                 before = subprocess.Popen(test.before, shell=True)
 
             bpf_call = Utils.prepare_bpf_call(test)
+            env = {'test': test.name}
+            env.update(test.env)
             p = subprocess.Popen(
                 bpf_call,
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                env={"test": test.name},
+                env=env,
                 bufsize=1
             )
 
