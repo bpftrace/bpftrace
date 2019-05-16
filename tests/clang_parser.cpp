@@ -7,14 +7,14 @@ namespace bpftrace {
 namespace test {
 namespace clang_parser {
 
-void parse(const std::string &input, BPFtrace &bpftrace)
+static void parse(const std::string &input, BPFtrace &bpftrace, int result = 0)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  ASSERT_EQ(clang.parse(driver.root_, bpftrace), result);
 }
 
 TEST(clang_parser, integers)
@@ -282,6 +282,12 @@ TEST(clang_parser, macro_preprocessor)
 
   ASSERT_EQ(macros.count("FOO"), 1U);
   ASSERT_EQ(macros["FOO"], "size_t");
+}
+
+TEST(clang_parser, parse_fail)
+{
+  BPFtrace bpftrace;
+  parse("struct a { int a; struct b b; };", bpftrace, 1);
 }
 
 } // namespace clang_parser
