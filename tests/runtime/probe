@@ -13,6 +13,12 @@ RUN bpftrace -v -e 'kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test'
 EXPECT kprobes should not have a target
 TIMEOUT 5
 
+NAME kprobe_order
+RUN bpftrace -v runtime/scripts/kprobe_order.bt
+EXPECT first second
+TIMEOUT 5
+AFTER /bin/bash -c : ; /bin/bash -c :
+
 NAME kretprobe
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe [0-9][0-9]*
@@ -28,17 +34,35 @@ RUN bpftrace -v -e 'kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$te
 EXPECT kprobes should not have a target
 TIMEOUT 5
 
+NAME kretprobe_order
+RUN bpftrace -v runtime/scripts/kretprobe_order.bt
+EXPECT first second
+TIMEOUT 5
+AFTER /bin/bash -c : ; /bin/bash -c :
+
 NAME uprobe
 RUN bpftrace -v -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}'
 EXPECT arg0: [0-9]*
 TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
 
+NAME uprobe_order
+RUN bpftrace -v runtime/scripts/uprobe_order.bt
+EXPECT first second
+TIMEOUT 5
+AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
+
 NAME uretprobe
 RUN bpftrace -v -e 'uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}'
 EXPECT readline: [0-9]*
 TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
+
+NAME uretprobe_order
+RUN bpftrace -v runtime/scripts/uretprobe_order.bt
+EXPECT first second
+TIMEOUT 5
+AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME tracepoint
 RUN bpftrace -v -e 'tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }'
@@ -52,6 +76,12 @@ EXPECT SUCCESS tracepoint_short_name [0-9][0-9]*
 AFTER sleep 0.1
 TIMEOUT 5
 
+NAME tracepoint_order
+RUN bpftrace -v runtime/scripts/tracepoint_order.bt
+EXPECT first second
+TIMEOUT 5
+AFTER sleep 0.1; sleep 0.1
+
 NAME profile
 RUN bpftrace -v -e 'profile:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
@@ -60,6 +90,11 @@ TIMEOUT 5
 NAME profile_short_name
 RUN bpftrace -v -e 'p:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
+TIMEOUT 5
+
+NAME profile_order
+RUN bpftrace -v runtime/scripts/profile_order.bt
+EXPECT first second
 TIMEOUT 5
 
 NAME interval
@@ -72,15 +107,31 @@ RUN bpftrace -v -e 't:raw_syscalls:sys_enter { @syscalls = count(); } i:ms:1{ pr
 EXPECT @syscalls\:\s[0-9]*
 TIMEOUT 5
 
+NAME interval_order
+RUN bpftrace -v runtime/scripts/interval_order.bt
+EXPECT first second
+TIMEOUT 5
+
 NAME software
 RUN bpftrace -v -e 'software:faults:1 { @[comm] = count(); exit();}'
 EXPECT @\[.*\]\:\s[0-9]*
+TIMEOUT 5
+
+NAME software_order
+RUN bpftrace -v runtime/scripts/software_order.bt
+EXPECT first second
 TIMEOUT 5
 
 NAME hardware
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 RUN bpftrace -v -e 'hardware:cache-misses:10 { @[pid] = count(); exit(); }'
 EXPECT @\[.*\]\:\s[0-9]*
+TIMEOUT 5
+
+NAME hardware_order
+REQUIRES ls /sys/devices/cpu/events/cache-misses
+RUN bpftrace -v runtime/scripts/hardware_order.bt
+EXPECT first second
 TIMEOUT 5
 
 NAME BEGIN

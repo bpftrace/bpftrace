@@ -37,7 +37,8 @@ int Driver::parse_file(const std::string &f)
 {
   FILE *file;
   if (!(file = fopen(f.c_str(), "r"))) {
-    std::cerr << "Error: Could not open file '" << f << "'" << std::endl;
+    auto msg = "Error opening file '" + f + "'";
+    perror(msg.c_str());
     return -1;
   }
   yyset_in(file, scanner_);
