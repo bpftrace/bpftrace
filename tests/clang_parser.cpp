@@ -7,20 +7,20 @@ namespace bpftrace {
 namespace test {
 namespace clang_parser {
 
-void parse(const std::string &input, BPFtrace &bpftrace)
+static void parse(const std::string &input, BPFtrace &bpftrace, int result)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  ASSERT_EQ(clang.parse(driver.root_, bpftrace), result);
 }
 
 TEST(clang_parser, integers)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { int x; int y, z; }", bpftrace);
+  parse("struct Foo { int x; int y, z; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -49,7 +49,7 @@ TEST(clang_parser, integers)
 TEST(clang_parser, c_union)
 {
   BPFtrace bpftrace;
-  parse("union Foo { char c; short s; int i; long l; }", bpftrace);
+  parse("union Foo { char c; short s; int i; long l; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -83,7 +83,7 @@ TEST(clang_parser, c_union)
 TEST(clang_parser, integer_ptr)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { int *x; }", bpftrace);
+  parse("struct Foo { int *x; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -104,7 +104,7 @@ TEST(clang_parser, integer_ptr)
 TEST(clang_parser, string_ptr)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { char *str; }", bpftrace);
+  parse("struct Foo { char *str; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -125,7 +125,7 @@ TEST(clang_parser, string_ptr)
 TEST(clang_parser, string_array)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { char str[32]; }", bpftrace);
+  parse("struct Foo { char str[32]; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -144,7 +144,7 @@ TEST(clang_parser, string_array)
 TEST(clang_parser, nested_struct_named)
 {
   BPFtrace bpftrace;
-  parse("struct Bar { int x; } struct Foo { struct Bar bar; }", bpftrace);
+  parse("struct Bar { int x; } struct Foo { struct Bar bar; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -165,7 +165,7 @@ TEST(clang_parser, nested_struct_named)
 TEST(clang_parser, nested_struct_ptr_named)
 {
   BPFtrace bpftrace;
-  parse("struct Bar { int x; } struct Foo { struct Bar *bar; }", bpftrace);
+  parse("struct Bar { int x; } struct Foo { struct Bar *bar; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -188,7 +188,7 @@ TEST(clang_parser, nested_struct_ptr_named)
 TEST(clang_parser, nested_struct_anon)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { struct { int x; } bar; }", bpftrace);
+  parse("struct Foo { struct { int x; } bar; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -208,7 +208,7 @@ TEST(clang_parser, nested_struct_anon)
 TEST(clang_parser, nested_struct_indirect_fields)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", bpftrace);
+  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -226,7 +226,7 @@ TEST(clang_parser, nested_struct_indirect_fields)
 TEST(clang_parser, nested_struct_anon_union_struct)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", bpftrace);
+  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -247,7 +247,7 @@ TEST(clang_parser, builtin_headers)
 {
   // size_t is definied in stddef.h
   BPFtrace bpftrace;
-  parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", bpftrace);
+  parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", bpftrace, 0);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -276,12 +276,18 @@ TEST(clang_parser, macro_preprocessor)
 {
   // size_t is definied in stddef.h
   BPFtrace bpftrace;
-  parse("#define FOO size_t\n k:f { 0 }", bpftrace);
+  parse("#define FOO size_t\n k:f { 0 }", bpftrace, 0);
 
   auto &macros = bpftrace.macros_;
 
   ASSERT_EQ(macros.count("FOO"), 1U);
   ASSERT_EQ(macros["FOO"], "size_t");
+}
+
+TEST(clang_parser, parse_fail)
+{
+  BPFtrace bpftrace;
+  parse("struct a { int a; struct b b; };", bpftrace, 1);
 }
 
 } // namespace clang_parser
