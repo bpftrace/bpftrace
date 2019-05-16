@@ -2407,6 +2407,14 @@ examples:
 
 The bcc version is 131 lines of code. The bptrace version is 22.
 
+# Environment
+
+bpftrace compiles programs with clang. Thus environment variable affecting 
+clang can be used. For example, if header files are included from a non-default
+directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set
+to allow clang to locate the files. See clang documentation for more information
+on these environment variables and their usage.
+
 # Errors
 
 ## 1. Looks like the BPF stack limit of 512 bytes is exceeded
