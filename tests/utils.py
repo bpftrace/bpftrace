@@ -103,14 +103,14 @@ class Utils(object):
 
             while p.poll() is None:
                 nextline = p.stdout.readline()
-                output += nextline
+                output += nextline.decode()
                 if nextline == "Running...\n":
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if not after and test.after:
                         after = subprocess.Popen(test.after, shell=True)
                     break
 
-            output += p.communicate()[0]
+            output += p.communicate()[0].decode()
 
             signal.alarm(0)
             result = re.search(test.expect, output)
@@ -120,7 +120,7 @@ class Utils(object):
             # bpftrace process might still be alive
             if p.poll() is None:
                 p.kill()
-            output += p.communicate()[0]
+            output += p.communicate()[0].decode()
             result = re.search(test.expect, output)
             if not result:
                 print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
