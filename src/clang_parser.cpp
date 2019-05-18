@@ -210,7 +210,9 @@ void ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 
   std::vector<const char *> args =
   {
+    "-I", "/usr/local/include",
     "-I", "/bpftrace/include",
+    "-I", "/usr/include",
   };
   for (auto &flag : extra_flags)
   {
