@@ -22,12 +22,10 @@ target triple = "bpf-pc-linux"
 )HEAD";
 
 static void test(
+    BPFtrace &bpftrace,
     const std::string &input,
-    const std::string expected_output,
-    bool safe_mode = true)
+    const std::string &expected_output)
 {
-  BPFtrace bpftrace;
-  bpftrace.safe_mode = safe_mode;
   Driver driver(bpftrace);
   FakeMap::next_mapfd_ = 1;
 
@@ -48,6 +46,16 @@ static void test(
 
   std::string full_expected_output = header + expected_output;
   EXPECT_EQ(full_expected_output, out.str());
+}
+
+static void test(
+    const std::string &input,
+    const std::string &expected_output,
+    bool safe_mode = true)
+{
+  BPFtrace bpftrace;
+  bpftrace.safe_mode = safe_mode;
+  test(bpftrace, input, expected_output);
 }
 
 } // namespace codegen
