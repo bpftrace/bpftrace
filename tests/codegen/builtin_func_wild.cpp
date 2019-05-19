@@ -4,9 +4,19 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
+using ::testing::Return;
+
 TEST(codegen, builtin_func_wild)
 {
-  test("tracepoint:syscalls:sys_enter_nanoslee* { @x = func }",
+  std::set<std::string> wildcard_matches = {
+    "sys_enter_nanosleep"
+  };
+  MockBPFtrace bpftrace;
+  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
+    .WillByDefault(Return(wildcard_matches));
+
+  test(bpftrace,
+      "tracepoint:syscalls:sys_enter_nanoslee* { @x = func }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
