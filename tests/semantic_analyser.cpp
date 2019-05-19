@@ -3,6 +3,7 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "mocks.h"
 #include "semantic_analyser.h"
 
 namespace bpftrace {
@@ -46,17 +47,17 @@ void test(Driver &driver,
     int expected_result=0,
     bool safe_mode = true)
 {
-  BPFtrace bpftrace;
-  test(bpftrace, driver, input, expected_result, safe_mode);
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace, driver, input, expected_result, safe_mode);
 }
 
 void test(const std::string &input,
     int expected_result=0,
     bool safe_mode = true)
 {
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  test(bpftrace, driver, input, expected_result, safe_mode);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
+  test(*bpftrace, driver, input, expected_result, safe_mode);
 }
 
 TEST(semantic_analyser, builtin_variables)

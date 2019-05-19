@@ -1298,40 +1298,11 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_time_id_ = time_id_;
     int starting_join_id_ = join_id_;
 
-    for (auto &attach_point : *probe.attach_points) {
+    for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
-      std::set<std::string> matches;
-      switch (probetype(attach_point->provider))
-      {
-        case ProbeType::kprobe:
-        case ProbeType::kretprobe:
-          matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                    attach_point->func,
-                                                    "/sys/kernel/debug/tracing/available_filter_functions");
-          break;
-        case ProbeType::uprobe:
-        case ProbeType::uretprobe:
-        {
-          auto symbol_stream = std::istringstream(bpftrace_.extract_func_symbols_from_path(attach_point->target));
-          matches = bpftrace_.find_wildcard_matches("", attach_point->func, symbol_stream);
-          break;
-        }
-        case ProbeType::tracepoint:
-          matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                    attach_point->func,
-                                                    "/sys/kernel/debug/tracing/available_events");
-          break;
-        case ProbeType::usdt:
-        {
-          auto usdt_symbol_stream = USDTHelper::probe_stream(bpftrace_.pid_, attach_point->target);
-          matches = bpftrace_.find_usdt_wildcard_matches(attach_point->ns, attach_point->func, usdt_symbol_stream);
-          break;
-        }
-        default:
-          std::cerr << "Wildcard matches aren't available on probe type '"
-                    << attach_point->provider << "'" << std::endl;
-          return;
-      }
+
+      auto matches = bpftrace_.find_wildcard_matches(*attach_point);
+
       tracepoint_struct_ = "";
       for (auto &match_ : matches) {
         printf_id_ = starting_printf_id_;

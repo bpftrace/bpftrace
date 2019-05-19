@@ -50,7 +50,11 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
   usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
 }
 
-usdt_probe_entry USDTHelper::find(int pid, std::string target, std::string provider, std::string name)
+usdt_probe_entry USDTHelper::find(
+    int pid,
+    const std::string &target,
+    const std::string &provider,
+    const std::string &name)
 {
 
   if (pid > 0)
@@ -68,7 +72,7 @@ usdt_probe_entry USDTHelper::find(int pid, std::string target, std::string provi
   }
 }
 
-usdt_probe_list USDTHelper::probes_for_provider(std::string provider)
+usdt_probe_list USDTHelper::probes_for_provider(const std::string &provider)
 {
   usdt_probe_list probes;
 
@@ -93,7 +97,7 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid)
   return probes;
 }
 
-usdt_probe_list USDTHelper::probes_for_path(std::string path)
+usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
 {
   read_probes_for_path(path);
 
@@ -103,27 +107,6 @@ usdt_probe_list USDTHelper::probes_for_path(std::string path)
     probes.insert( probes.end(), usdt_probes.second.begin(), usdt_probes.second.end() );
   }
   return probes;
-}
-
-std::istringstream USDTHelper::probe_stream(int pid, std::string target)
-{
-  std::string probes;
-  usdt_probe_list usdt_probes;
-
-  if (pid > 0)
-    usdt_probes = probes_for_pid(pid);
-  else
-    usdt_probes = probes_for_path(target);
-
-  for (auto const& usdt_probe : usdt_probes)
-  {
-    std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
-    std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
-    std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
-    probes += provider + ":" + fname + "\n";
-  }
-
-  return std::istringstream(probes);
 }
 
 void USDTHelper::read_probes_for_pid(int pid)
@@ -149,7 +132,7 @@ void USDTHelper::read_probes_for_pid(int pid)
   }
 }
 
-void USDTHelper::read_probes_for_path(std::string path)
+void USDTHelper::read_probes_for_path(const std::string &path)
 {
   if(provider_cache_loaded)
     return;
