@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from fnmatch import fnmatch
 from collections import namedtuple

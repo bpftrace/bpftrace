@@ -15,7 +15,7 @@ TIMEOUT 1
 
 NAME errors on non existent file
 RUN bpftrace non_existent_file.bt
-EXPECT Error: Could not open file 'non_existent_file.bt'
+EXPECT Error opening file 'non_existent_file.bt': No such file or directory
 TIMEOUT 1
 
 NAME it lists kprobes
