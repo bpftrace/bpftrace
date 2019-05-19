@@ -6,14 +6,12 @@
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "fake_map.h"
+#include "mocks.h"
 #include "semantic_analyser.h"
 
-namespace bpftrace
-{
-namespace test
-{
-namespace probe
-{
+namespace bpftrace {
+namespace test {
+namespace probe {
 
 using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;
@@ -21,20 +19,20 @@ using bpftrace::ast::Probe;
 
 void gen_bytecode(const std::string &input, std::stringstream &out)
 {
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
   FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_, *bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   codegen.compile(DebugLevel::kDebug, out);
 }
 

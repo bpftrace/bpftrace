@@ -8,6 +8,7 @@ add_executable(bpftrace_test
   clang_parser.cpp
   codegen.cpp
   main.cpp
+  mocks.cpp
   parser.cpp
   probe.cpp
   semantic_analyser.cpp

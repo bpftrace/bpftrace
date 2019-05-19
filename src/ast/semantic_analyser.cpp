@@ -168,12 +168,14 @@ void SemanticAnalyser::visit(Builtin &builtin)
        * 2. sets is_tparg so that codegen does the real type setting after
        *    expansion.
        */
-      std::set<std::string> matches;
-      matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                attach_point->func,
-                                                "/sys/kernel/debug/tracing/available_events");
+      auto symbol_stream = bpftrace_.get_symbols_from_file(
+          "/sys/kernel/debug/tracing/available_events");
+      auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                     attach_point->func,
+                                                     *symbol_stream);
       for (auto &match : matches) {
-        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(attach_point->target, match);
+        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+            attach_point->target, match);
         Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
         builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
         builtin.type.is_pointer = true;
@@ -786,9 +788,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     for (AttachPoint *attach_point : *probe_->attach_points) {
       assert(probetype(attach_point->provider) == ProbeType::tracepoint);
 
-      std::set<std::string> matches = bpftrace_.find_wildcard_matches(
-          attach_point->target, attach_point->func,
+      auto symbol_stream = bpftrace_.get_symbols_from_file(
           "/sys/kernel/debug/tracing/available_events");
+      auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                     attach_point->func,
+                                                     *symbol_stream);
       for (auto &match : matches) {
         std::string tracepoint_struct =
             TracepointFormatParser::get_struct_name(attach_point->target,
