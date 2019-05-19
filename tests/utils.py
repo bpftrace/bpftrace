@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import subprocess
 import signal
 from os import environ, uname, devnull
