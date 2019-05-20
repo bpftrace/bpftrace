@@ -102,8 +102,8 @@ class Utils(object):
             output = ""
 
             while p.poll() is None:
-                nextline = p.stdout.readline()
-                output += nextline.decode()
+                nextline = p.stdout.readline().decode()
+                output += nextline
                 if nextline == "Running...\n":
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if not after and test.after:
