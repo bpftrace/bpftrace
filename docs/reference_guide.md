@@ -393,7 +393,7 @@ This is the maximum number of keys that can be stored in a map. Increasing the v
 
 ## 9. Clang Environment Variables
 
-bpftrace bpftrace parses C header files using libclang, the C interface to Clang.
+bpftrace parses header files using libclang, the C interface to Clang.
 Thus environment variables affecting the clang toolchain can be used. 
 For example, if header files are included from a non-default directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set
 to allow clang to locate the files. See clang documentation for more information
