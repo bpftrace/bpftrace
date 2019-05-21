@@ -299,8 +299,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
   {
-    err = bpftrace->print_maps();
-    exit(err);
+    bpftrace->finalize_ = true;
+    return;
   }
   else if (printf_id == asyncactionint(AsyncAction::print))
   {
@@ -786,7 +786,7 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
     // Return if either
     //   * epoll_wait has encountered an error (eg signal delivery)
     //   * There's no events left and we've been instructed to drain
-    if (ready < 0 || (ready == 0 && drain))
+    if (ready < 0 || (ready == 0 && (drain || finalize_)))
     {
       return;
     }

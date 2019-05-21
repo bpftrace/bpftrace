@@ -93,6 +93,7 @@ public:
   std::string get_param(size_t index) const;
   std::string cmd_;
   int pid_{0};
+  bool finalize_ = false;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
