@@ -76,8 +76,6 @@ static bool translateMacro(CXCursor cursor, std::string &name, std::string &valu
     {
       value.clear();
       name = clang_getCString(tokenText);
-      if (name[0] == '_')
-        break;
     }
     else
     {

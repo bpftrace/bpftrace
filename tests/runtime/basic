@@ -87,3 +87,8 @@ NAME non existent library include fails
 RUN bpftrace -e "$(echo "#include <lol/no.h>"; echo "BEGIN { exit(); }")" 2>&1
 EXPECT file not found
 TIMEOUT 1
+
+NAME defines beginning with underscore are allowed
+RUN bpftrace -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\n", _UNDERSCORE); exit(); }')"
+EXPECT 314
+TIMEOUT 1
