@@ -11,6 +11,7 @@
 
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
+#include <llvm/IR/Constants.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -885,7 +886,10 @@ void CodegenLLVM::visit(Unop &unop)
   if (type.type == Type::integer)
   {
     switch (unop.op) {
-      case bpftrace::Parser::token::LNOT: expr_ = b_.CreateNot(expr_); break;
+      case bpftrace::Parser::token::LNOT: {
+	  Value* zero_value = Constant::getNullValue(expr_->getType());
+	  expr_ = b_.CreateICmpEQ(expr_, zero_value);
+      } break;
       case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateNeg(expr_); break;
       case bpftrace::Parser::token::MUL:
