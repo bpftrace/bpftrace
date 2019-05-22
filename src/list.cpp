@@ -103,6 +103,7 @@ void list_probes(const std::string &search_input, int pid)
 {
   std::string search = search_input;
   std::string probe_name;
+  std::regex re;
 
   std::smatch probe_match;
   std::regex probe_regex(":.*");
@@ -127,7 +128,12 @@ void list_probes(const std::string &search_input, int pid)
       s += c;
   }
   s += '$';
-  std::regex re(s, std::regex::icase | std::regex::grep | std::regex::nosubs | std::regex::optimize);
+  try {
+    re = std::regex(s, std::regex::icase | std::regex::grep | std::regex::nosubs | std::regex::optimize);
+  } catch(std::regex_error& e) {
+    std::cerr << "ERROR: invalid character in search expression." << std::endl;
+    return;
+  }
 
   // software
   list_probes_from_list(SW_PROBE_LIST, "software", search, re);
