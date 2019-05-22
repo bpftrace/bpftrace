@@ -58,6 +58,11 @@ RUN bpftrace -l "hardware:*"
 EXPECT hardware
 TIMEOUT 1
 
+NAME errors on invalid character in search expression
+RUN bpftrace -l '\n'
+EXPECT ERROR: invalid character in search expression
+TIMEOUT 1
+
 NAME pid fails validation with leading non-number
 RUN bpftrace -p a1111
 EXPECT ERROR: pid 'a1111' is not a valid number.
