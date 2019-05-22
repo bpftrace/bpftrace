@@ -786,7 +786,9 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
     // Return if either
     //   * epoll_wait has encountered an error (eg signal delivery)
     //   * There's no events left and we've been instructed to drain
-    if (ready < 0 || (ready == 0 && (drain || finalize_)))
+    //   * finalize_ flag has been set through exit() call and this isn't
+    //     a drain call
+    if (ready < 0 || (ready == 0 && drain) || (finalize_ && !drain))
     {
       return;
     }

@@ -138,3 +138,8 @@ NAME BEGIN
 RUN bpftrace -v -e 'BEGIN { printf("Hello\n"); exit();}'
 EXPECT Hello
 TIMEOUT 2
+
+NAME END_processing_after_exit
+RUN bpftrace -v -e "interval:s:1 { exit(); } END { printf("end"); }"
+EXPECT end
+TIMEOUT 2
