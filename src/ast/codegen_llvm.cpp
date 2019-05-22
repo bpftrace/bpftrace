@@ -890,7 +890,7 @@ void CodegenLLVM::visit(Unop &unop)
 	  Value* zero_value = Constant::getNullValue(expr_->getType());
 	  expr_ = b_.CreateICmpEQ(expr_, zero_value);
       } break;
-      case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNeg(expr_); break;
+      case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNot(expr_); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateNeg(expr_); break;
       case bpftrace::Parser::token::MUL:
       {
