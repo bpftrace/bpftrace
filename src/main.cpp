@@ -33,6 +33,8 @@ void usage()
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
+  std::cerr << "    -I DIR         add the specified DIR to the search path for include files." << std::endl;
+  std::cerr << "    --include FILE adds an implicit #include which is read before the source file is preprocessed." << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
@@ -117,13 +119,16 @@ int main(int argc, char *argv[])
   std::string script, search, file_name, output_file;
   int c;
 
-  const char* const short_options = "dB:e:hlp:vc:Vo:";
+  const char* const short_options = "dB:e:hlp:vc:Vo:I:";
   option long_options[] = {
     option{"help", no_argument, nullptr, 'h'},
     option{"version", no_argument, nullptr, 'V'},
     option{"unsafe", no_argument, nullptr, 'u'},
+    option{"include", required_argument, nullptr, '#'},
     option{nullptr, 0, nullptr, 0},  // Must be last
   };
+  std::vector<std::string> include_dirs;
+  std::vector<std::string> include_files;
   while ((c = getopt_long(
               argc, argv, short_options, long_options, nullptr)) != -1)
   {
@@ -159,6 +164,12 @@ int main(int argc, char *argv[])
         break;
       case 'p':
         pid_str = optarg;
+        break;
+      case 'I':
+        include_dirs.push_back(optarg);
+        break;
+      case '#':
+        include_files.push_back(optarg);
         break;
       case 'l':
         listing = true;
@@ -359,6 +370,24 @@ int main(int argc, char *argv[])
     if (ksrc != "")
       extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
   }
+
+  for (auto dir : include_dirs)
+  {
+    extra_flags.push_back("-I");
+    extra_flags.push_back(dir);
+  }
+  for (auto file : include_files)
+  {
+    extra_flags.push_back("-include");
+    extra_flags.push_back(file);
+  }
+
+  // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
+  // avoid issues in some versions. Since we're including files in the command
+  // line, we want to force parsing, so we make sure C definitions are not
+  // empty before going to clang parser stage.
+  if (!include_files.empty() && driver.root_->c_definitions.empty())
+    driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
 
   if (!clang.parse(driver.root_, bpftrace, extra_flags))
     return 1;
