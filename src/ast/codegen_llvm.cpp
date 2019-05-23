@@ -560,7 +560,8 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
     b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
 
-    b_.CreateStore(b_.getInt64(printf_id_), printf_args);
+    Value *printf_id_offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(0)});
+    b_.CreateStore(b_.getInt64(printf_id_), printf_id_offset);
     for (size_t i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
