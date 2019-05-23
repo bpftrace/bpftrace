@@ -57,3 +57,23 @@ NAME struct positional string compare - not equal
 RUN bpftrace -v -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
 EXPECT not equal
 TIMEOUT 5
+
+NAME lhist can be cleared
+RUN bpftrace -e 'BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }'
+EXPECT .*
+TIMEOUT 1
+
+NAME hist can be cleared
+RUN bpftrace -e 'BEGIN{ @[1] = hist(1); clear(@); exit() }'
+EXPECT .*
+TIMEOUT 1
+
+NAME stats can be cleared
+RUN bpftrace -e 'BEGIN{ @[1] = stats(1); clear(@); exit() }'
+EXPECT .*
+TIMEOUT 1
+
+NAME avg can be cleared
+RUN bpftrace -e 'BEGIN{ @[1] = avg(1); clear(@); exit() }'
+EXPECT .*
+TIMEOUT 1
