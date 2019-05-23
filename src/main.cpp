@@ -44,6 +44,7 @@ void usage()
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -286,27 +287,20 @@ int main(int argc, char *argv[])
   bpftrace.join_argnum_ = 16;
   bpftrace.join_argsize_ = 1024;
 
-  if(const char* env_p = std::getenv("BPFTRACE_STRLEN")) {
-    uint64_t proposed;
-    std::istringstream stringstream(env_p);
-    if (!(stringstream >> proposed)) {
-      std::cerr << "Env var 'BPFTRACE_STRLEN' did not contain a valid uint64_t, or was zero-valued." << std::endl;
-      return 1;
-    }
+  if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
+    return 1;
 
-    // in practice, the largest buffer I've seen fit into the BPF stack was 240 bytes.
-    // I've set the bar lower, in case your program has a deeper stack than the one from my tests,
-    // in the hope that you'll get this instructive error instead of getting the BPF verifier's error.
-    if (proposed > 200) {
-      // the verifier errors you would encounter when attempting larger allocations would be:
-      // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
-      // ~1024= <A call to built-in function 'memset' is not supported.>
-      std::cerr << "'BPFTRACE_STRLEN' " << proposed << " exceeds the current maximum of 200 bytes." << std::endl
-      << "This limitation is because strings are currently stored on the 512 byte BPF stack." << std::endl
-      << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
-      return 1;
-    }
-    bpftrace.strlen_ = proposed;
+  // in practice, the largest buffer I've seen fit into the BPF stack was 240 bytes.
+  // I've set the bar lower, in case your program has a deeper stack than the one from my tests,
+  // in the hope that you'll get this instructive error instead of getting the BPF verifier's error.
+  if (bpftrace.strlen_ > 200) {
+    // the verifier errors you would encounter when attempting larger allocations would be:
+    // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
+    // ~1024= <A call to built-in function 'memset' is not supported.>
+    std::cerr << "'BPFTRACE_STRLEN' " << bpftrace.strlen_ << " exceeds the current maximum of 200 bytes." << std::endl
+    << "This limitation is because strings are currently stored on the 512 byte BPF stack." << std::endl
+    << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
+    return 1;
   }
 
   if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
@@ -322,17 +316,11 @@ int main(int argc, char *argv[])
     }
   }
 
-  if (const char* env_p = std::getenv("BPFTRACE_MAP_KEYS_MAX"))
-  {
-    uint64_t proposed;
-    std::istringstream stringstream(env_p);
-    if (!(stringstream >> proposed)) {
-      std::cerr << "Env var 'BPFTRACE_MAP_KEYS_MAX' did not contain a valid uint64_t, or was zero-valued." << std::endl;
-      return 1;
-    }
-    // no maximum is enforced. Imagine a map recording a timestamp by struct page *: this could exceed 10M entries.
-    bpftrace.mapmax_ = proposed;
-  }
+  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
+    return 1;
+
+  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
+    return 1;
 
   if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
   {
@@ -408,16 +396,25 @@ int main(int argc, char *argv[])
   act.sa_handler = [](int) { };
   sigaction(SIGINT, &act, NULL);
 
-  int num_probes = bpftrace.num_probes();
+  uint64_t num_probes = bpftrace.num_probes();
   if (num_probes == 0)
   {
     std::cout << "No probes to attach" << std::endl;
     return 1;
   }
+  else if (num_probes > bpftrace.max_probes_)
+  {
+    std::cerr << "Can't attach to " << num_probes << " probes because it "
+      << "exceeds the current limit of " << bpftrace.max_probes_ << " probes."
+      << std::endl << "You can increase the limit through the BPFTRACE_MAX_PROBES "
+      << "environment variable, but BE CAREFUL since a high number of probes "
+      << "attached can cause your system to crash." << std::endl;
+    return 1;
+  }
   else if (num_probes == 1)
-    std::cout << "Attaching " << bpftrace.num_probes() << " probe..." << std::endl;
+    std::cout << "Attaching " << num_probes << " probe..." << std::endl;
   else
-    std::cout << "Attaching " << bpftrace.num_probes() << " probes..." << std::endl;
+    std::cout << "Attaching " << num_probes << " probes..." << std::endl;
 
   err = bpftrace.run(move(bpforc));
   if (err)
