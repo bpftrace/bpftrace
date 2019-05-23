@@ -890,7 +890,8 @@ int BPFtrace::clear_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::hist)
+    if (map.type_.type == Type::hist || map.type_.type == Type::lhist ||
+        map.type_.type == Type::stats || map.type_.type == Type::avg)
       // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
