@@ -762,8 +762,8 @@ TEST(semantic_analyser, field_access_pointer)
 
 TEST(semantic_analyser, field_access_sub_struct)
 {
-  std::string structs = "struct type1 { struct type2 *type2ptr; struct type2 type2; }"
-                        "struct type2 { int field; }";
+  std::string structs = "struct type2 { int field; } "
+                        "struct type1 { struct type2 *type2ptr; struct type2 type2; }";
 
   test(structs + "kprobe:f { ((type1)0).type2ptr->field }", 0);
   test(structs + "kprobe:f { ((type1)0).type2.field }", 0);
