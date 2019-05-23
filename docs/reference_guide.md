@@ -14,9 +14,10 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [4. `-l`: Listing Probes](#4--l-listing-probes)
     - [5. `-d`: Debug Output](#5--d-debug-output)
     - [6. `-v`: Verbose Output](#6--v-verbose-output)
-    - [7. Other Options](#7-other-options)
-    - [8. Environment Variables](#8-environment-variables)
-    - [9. Clang Environment Variables](#9-clang-environment-variables)
+    - [7. Preprocessor Options](#7-preprocessor-options)
+    - [8. Other Options](#8-other-options)
+    - [9. Environment Variables](#9-environment-variables)
+    - [10. Clang Environment Variables](#10-clang-environment-variables)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -119,6 +120,8 @@ OPTIONS:
     -dd            verbose debug info dry run
     -e 'program'   execute this program
     -h             show this help message
+    -I DIR         add the specified DIR to the search path for include files.
+    --include FILE adds an implicit #include which is read before the source file is preprocessed.
     -l [search]    list probes
     -p PID         enable USDT probes on PID
     -c 'CMD'       run CMD and enable USDT probes on resulting process
@@ -355,7 +358,39 @@ iscsid is sleeping.
 
 This includes `Bytecode:` and then the eBPF bytecode after it was compiled from the llvm assembly.
 
-## 7. Other Options
+## 7. Preprocessor Options
+
+The `-I` option can be used to add directories to the list of directories that bpftrace uses to look for headers. Can be defined multiple times.
+
+```
+# cat program.bt
+#include <foo.h>
+
+BEGIN { @ = FOO }
+
+# bpftrace program.bt
+definitions.h:1:10: fatal error: 'foo.h' file not found
+
+# /tmp/include
+foo.h
+
+# bpftrace -I /tmp/include program.bt
+Attaching 1 probe...
+```
+
+The `--include` option can be used to include headers by default. Can be defined multiple times. Headers are included in the order they are defined, and they are included before any other include in the program being executed.
+
+
+```
+# bpftrace --include linux/path.h --include linux/dcache.h -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
+Attaching 1 probe...
+open path: .com.google.Chrome.ASsbu2
+open path: .com.google.Chrome.gimc10
+open path: .com.google.Chrome.R1234s
+```
+
+
+## 8. Other Options
 
 The `--version` option prints the bpftrace version:
 
@@ -364,9 +399,9 @@ The `--version` option prints the bpftrace version:
 bpftrace v0.8-90-g585e-dirty
 ```
 
-## 8. Environment Variables
+## 9. Environment Variables
 
-### 8.1 `BPFTRACE_STRLEN`
+### 9.1 `BPFTRACE_STRLEN`
 
 Default: 64
 
@@ -378,7 +413,7 @@ Beware that the BPF stack is small (512 bytes), and that you pay the toll again 
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
-### 8.2 `BPFTRACE_NO_CPP_DEMANGLE`
+### 9.2 `BPFTRACE_NO_CPP_DEMANGLE`
 
 Default: 0
 
@@ -386,19 +421,19 @@ C++ symbol demangling in userspace stack traces is enabled by default.
 
 This feature can be turned off by setting the value of this environment variable to `1`.
 
-### 8.3 `BPFTRACE_MAP_KEYS_MAX`
+### 9.3 `BPFTRACE_MAP_KEYS_MAX`
 
 Default: 4096
 
 This is the maximum number of keys that can be stored in a map. Increasing the value will consume more memory and increase startup times. There are some cases where you will want to: for example, sampling stack traces, recording timestamps for each page, etc.
 
-### 8.4 `BPFTRACE_MAX_PROBES`
+### 9.4 `BPFTRACE_MAX_PROBES`
 
 Default: 512
 
 This is the maximum number of probes that bpftrace can attach to. Increasing the value will consume more memory, increase startup times and can incur high performance overhead or even freeze or crash the system.
 
-## 9. Clang Environment Variables
+## 10. Clang Environment Variables
 
 bpftrace parses header files using libclang, the C interface to Clang.
 Thus environment variables affecting the clang toolchain can be used.
