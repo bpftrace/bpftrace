@@ -129,6 +129,7 @@ ENVIRONMENT:
     BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()
     BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling
     BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map
+    BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -391,10 +392,16 @@ Default: 4096
 
 This is the maximum number of keys that can be stored in a map. Increasing the value will consume more memory and increase startup times. There are some cases where you will want to: for example, sampling stack traces, recording timestamps for each page, etc.
 
+### 8.4 `BPFTRACE_MAX_PROBES`
+
+Default: 512
+
+This is the maximum number of probes that bpftrace can attach to. Increasing the value will consume more memory, increase startup times and can incur high performance overhead or even freeze or crash the system.
+
 ## 9. Clang Environment Variables
 
 bpftrace parses header files using libclang, the C interface to Clang.
-Thus environment variables affecting the clang toolchain can be used. 
+Thus environment variables affecting the clang toolchain can be used.
 For example, if header files are included from a non-default directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set
 to allow clang to locate the files. See clang documentation for more information
 on these environment variables and their usage.

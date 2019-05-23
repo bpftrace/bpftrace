@@ -61,6 +61,7 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS =
 };
 
 
+bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
 bool has_wildcard(const std::string &str);
 std::vector<std::string> split_string(const std::string &str, char delimiter);
 bool wildcard_match(const std::string &str, std::vector<std::string> &tokens, bool start_wildcard, bool end_wildcard);

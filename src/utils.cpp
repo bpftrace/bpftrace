@@ -148,6 +148,20 @@ void USDTHelper::read_probes_for_path(const std::string &path)
   provider_cache_loaded = true;
 }
 
+bool get_uint64_env_var(const std::string &str, uint64_t &dest)
+{
+  if (const char* env_p = std::getenv(str.c_str()))
+  {
+    std::istringstream stringstream(env_p);
+    if (!(stringstream >> dest))
+    {
+      std::cerr << "Env var '" << str << "' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool has_wildcard(const std::string &str)
 {
   return str.find("*") != std::string::npos ||
