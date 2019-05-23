@@ -372,8 +372,7 @@ int main(int argc, char *argv[])
       extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
   }
 
-  err = clang.parse(driver.root_, bpftrace, extra_flags);
-  if (err)
+  if (!clang.parse(driver.root_, bpftrace, extra_flags))
     return 1;
 
   if (script.empty())

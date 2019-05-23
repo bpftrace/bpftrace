@@ -7,7 +7,7 @@ namespace bpftrace {
 namespace test {
 namespace clang_parser {
 
-static void parse(const std::string &input, BPFtrace &bpftrace, int result = 0)
+static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true)
 {
   auto extended_input = input + "kprobe:sys_read { 1 }";
   Driver driver(bpftrace);

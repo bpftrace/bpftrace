@@ -161,11 +161,47 @@ static SizedType get_sized_type(CXType clang_type)
   }
 }
 
-int ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
+ClangParser::ClangParserHandler::ClangParserHandler()
+{
+  index = clang_createIndex(1, 1);
+}
+
+ClangParser::ClangParserHandler::~ClangParserHandler()
+{
+  clang_disposeTranslationUnit(translation_unit);
+  clang_disposeIndex(index);
+}
+
+CXTranslationUnit ClangParser::ClangParserHandler::get_translation_unit() {
+  return translation_unit;
+}
+
+CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
+    const char *source_filename,
+    const char *const *command_line_args,
+    int num_command_line_args,
+    struct CXUnsavedFile *unsaved_files,
+    unsigned num_unsaved_files,
+    unsigned options)
+{
+  return clang_parseTranslationUnit2(
+      index,
+      source_filename,
+      command_line_args, num_command_line_args,
+      unsaved_files, num_unsaved_files,
+      options,
+      &translation_unit);
+}
+
+CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
+  return clang_getTranslationUnitCursor(translation_unit);
+}
+
+bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
   if (input.size() == 0)
-    return 0; // We occasionally get crashes in libclang otherwise
+    return true; // We occasionally get crashes in libclang otherwise
 
   CXUnsavedFile unsaved_files[] =
   {
@@ -217,25 +253,35 @@ int ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<st
     args.push_back(flag.c_str());
   }
 
-  CXIndex index = clang_createIndex(1, 1);
-  CXTranslationUnit translation_unit;
-  CXErrorCode error = clang_parseTranslationUnit2(
-      index,
+  ClangParserHandler handler;
+  CXErrorCode error = handler.parse_translation_unit(
       "definitions.h",
       &args[0], args.size(),
       unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
-      CXTranslationUnit_DetailedPreprocessingRecord,
-      &translation_unit);
+      CXTranslationUnit_DetailedPreprocessingRecord);
   if (error)
   {
-    std::cerr << "Clang error while parsing C definitions: " << error << std::endl;
-    std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+    if (bt_debug == DebugLevel::kFullDebug) {
+      std::cerr << "Clang error while parsing C definitions: " << error << std::endl;
+      std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+    }
+    return false;
+  }
+
+  for (unsigned int i=0; i < clang_getNumDiagnostics(handler.get_translation_unit()); i++) {
+    CXDiagnostic diag = clang_getDiagnostic(handler.get_translation_unit(), i);
+    CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
+    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
+      if (bt_debug >= DebugLevel::kDebug)
+        std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+      return false;
+    }
   }
 
   indirect_structs.clear();
   unvisited_indirect_structs.clear();
 
-  CXCursor cursor = clang_getTranslationUnitCursor(translation_unit);
+  CXCursor cursor = handler.get_translation_unit_cursor();
 
   bool iterate = true;
   int err;
@@ -331,9 +377,7 @@ int ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<st
   // TODO(mmarchini): validate that a struct doesn't have two fields with the
   // same offset. Mark struct as invalid otherwise
 
-  clang_disposeTranslationUnit(translation_unit);
-  clang_disposeIndex(index);
-  return err;
+  return true;
 }
 
 } // namespace bpftrace
