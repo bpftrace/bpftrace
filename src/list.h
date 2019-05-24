@@ -2,6 +2,8 @@
 
 #include <linux/perf_event.h>
 
+#include "bpftrace.h"
+
 namespace bpftrace {
 
 struct ProbeListItem
@@ -39,6 +41,6 @@ const std::vector<ProbeListItem> HW_PROBE_LIST = {
   { "ref-cycles",          "",         PERF_COUNT_HW_REF_CPU_CYCLES,          1000000 }
 };
 
-void list_probes(const std::string &search = "", int pid = 0);
+void list_probes(const BPFtrace &bpftrace, const std::string &search = "");
 
 } // namespace bpftrace

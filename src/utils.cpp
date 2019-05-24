@@ -8,6 +8,7 @@
 #include <sstream>
 #include <fstream>
 #include <memory>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include "utils.h"
@@ -160,6 +161,23 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
     }
   }
   return true;
+}
+
+std::string get_pid_exe(pid_t pid)
+{
+  char proc_path[512];
+  char exe_path[4096];
+  int res;
+
+  sprintf(proc_path, "/proc/%d/exe", pid);
+  res = readlink(proc_path, exe_path, sizeof(exe_path));
+  if (res == -1)
+    return "";
+  if (res >= static_cast<int>(sizeof(exe_path))) {
+    throw std::runtime_error("executable path exceeded maximum supported size of 4096 characters");
+  }
+  exe_path[res] = '\0';
+  return std::string(exe_path);
 }
 
 bool has_wildcard(const std::string &str)

@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <fstream>
 #include <iomanip>
@@ -99,7 +100,7 @@ void print_tracepoint_args(const std::string &category, const std::string &event
   }
 }
 
-void list_probes(const std::string &search_input, int pid)
+void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
 {
   std::string search = search_input;
   std::string probe_name;
@@ -141,13 +142,53 @@ void list_probes(const std::string &search_input, int pid)
   // hardware
   list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
+  // uprobe
+  {
+    std::unique_ptr<std::istream> symbol_stream;
+    std::string executable;
+    std::string absolute_exe;
+    bool show_all = false;
+
+    if (bpftrace.pid_ > 0)
+    {
+      executable = get_pid_exe(bpftrace.pid_);
+      absolute_exe = executable;
+    } else if (probe_name == "uprobe")
+    {
+      executable = search.substr(search.find(":") + 1, search.size());
+      show_all = executable.find(":") == std::string::npos;
+      executable = executable.substr(0, executable.find(":"));
+
+      absolute_exe = resolve_binary_path(executable);
+      struct stat s;
+      if (stat(absolute_exe.c_str(), &s) != 0) {
+        std::cerr << "uprobe target " << executable << " does not exist" << std::endl;
+        return;
+      }
+    }
+
+    if (!executable.empty())
+    {
+      symbol_stream = std::make_unique<std::istringstream>(
+          bpftrace.extract_func_symbols_from_path(absolute_exe));
+
+      std::string line;
+      while (std::getline(*symbol_stream, line))
+      {
+        std::string probe = "uprobe:" + executable + ":" + line;
+        if (show_all || search.empty() || !search_probe(probe, re))
+          std::cout << probe << std::endl;
+      }
+    }
+  }
+
   // usdt
   usdt_probe_list usdt_probes;
   bool usdt_path_list = false;
-  if (pid > 0)
+  if (bpftrace.pid_ > 0)
   {
     // PID takes precedence over path, so path from search expression will be ignored if pid specified
-    usdt_probes = USDTHelper::probes_for_pid(pid);
+    usdt_probes = USDTHelper::probes_for_pid(bpftrace.pid_);
   } else if (probe_name == "usdt") {
     // If the *full* path is provided as part of the search expression parse it out and use it
     std::string usdt_path = search.substr(search.find(":")+1, search.size());

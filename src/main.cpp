@@ -237,9 +237,9 @@ int main(int argc, char *argv[])
       return 1;
 
     if (optind == argc-1)
-      list_probes(argv[optind], bpftrace.pid_);
+      list_probes(bpftrace, argv[optind]);
     else if (optind == argc)
-      list_probes("", bpftrace.pid_);
+      list_probes(bpftrace, "");
     else
     {
       usage();
