@@ -88,12 +88,14 @@ class Utils(object):
                 before = subprocess.Popen(test.before, shell=True)
 
             bpf_call = Utils.prepare_bpf_call(test)
+            env = {'test': test.name}
+            env.update(test.env)
             p = subprocess.Popen(
                 bpf_call,
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                env={"test": test.name},
+                env=env,
                 bufsize=1
             )
 
@@ -113,7 +115,7 @@ class Utils(object):
             output += p.communicate()[0].decode()
 
             signal.alarm(0)
-            result = re.search(test.expect, output)
+            result = re.search(test.expect, output, re.M)
 
         except (TimeoutError):
             # Give it a last chance, the test might have worked but the

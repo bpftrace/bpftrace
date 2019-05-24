@@ -94,3 +94,19 @@ RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }'
 EXPECT SUCCESS cgroup -?[0-9][0-9]*
 TIMEOUT 5
 MIN_KERNEL 4.18
+
+NAME cat
+RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
+EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
+TIMEOUT 5
+
+NAME cat limited output
+ENV BPFTRACE_CAT_BYTES_MAX=1
+RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
+EXPECT ^[0-9]$
+TIMEOUT 5
+
+NAME cat "no such file"
+RUN bpftrace -e 'i:ms:1 { cat("/does/not/exist/file"); exit(); }'
+EXPECT ^Error opening file '/does/not/exist/file': No such file or directory$
+TIMEOUT 5
