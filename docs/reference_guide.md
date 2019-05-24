@@ -1830,9 +1830,9 @@ Attaching 1 probe...
 
 ## 16. `ustack()`: Stack Traces, User
 
-Syntax: `ustack([int level])`
+Syntax: `ustack([StackMode mode, ][int limit])`
 
-This builtin is an alias to `ustack()` (see).
+These are implemented using BPF stack maps.
 
 Examples:
 
