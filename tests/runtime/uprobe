@@ -1,0 +1,26 @@
+NAME "uprobes - list probes by file"
+RUN bpftrace -l 'uprobe:./testprogs/uprobe_test'
+EXPECT uprobe:./testprogs/uprobe_test:function1
+TIMEOUT 5
+
+NAME "uprobes - list probes by file with wildcarded filter"
+RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:func*'
+EXPECT uprobe:./testprogs/uprobe_test:function1
+TIMEOUT 5
+
+NAME "uprobes - list probes by file with specific filter"
+RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:function1'
+EXPECT uprobe:./testprogs/uprobe_test:function1
+TIMEOUT 5
+
+NAME "uprobes - list probes by pid"
+RUN bpftrace -l -p $(pidof uprobe_test)
+EXPECT uprobe:.*/testprogs/uprobe_test:function1
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME "uprobes - list probes by pid, uprobes only"
+RUN bpftrace -l 'uprobe:*' -p $(pidof uprobe_test)
+EXPECT uprobe:.*/testprogs/uprobe_test:function1
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
