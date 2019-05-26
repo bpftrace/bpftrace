@@ -388,9 +388,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "kaddr") {
     if (check_nargs(call, 1)) {
-      if (check_arg(call, Type::string, 0, true)) {
-         ;
-      }
+      check_arg(call, Type::string, 0, true);
     }
     call.type = SizedType(Type::integer, 8);
   }
@@ -398,9 +396,7 @@ void SemanticAnalyser::visit(Call &call)
    {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
-        if (check_alpha_numeric(call, 0)) {
-         ;
-        }
+        check_alpha_numeric(call, 0);
       }
     }
     call.type = SizedType(Type::integer, 8);
