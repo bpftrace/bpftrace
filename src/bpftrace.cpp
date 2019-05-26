@@ -580,9 +580,7 @@ void BPFtrace::add_param(const std::string &param)
 
 std::string BPFtrace::get_param(size_t i) const
 {
-  if (i > 0 && i < params_.size() + 1)
-      return params_[i - 1];
-  return "0";
+  return params_.at(i-1);
 }
 
 void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)

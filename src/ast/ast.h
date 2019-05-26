@@ -41,8 +41,9 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(long n) : n(n) { is_literal = true; }
+  explicit PositionalParameter(long n) : n(n) {}
   long n;
+  bool is_in_str = false;
 
   void accept(Visitor &v) override;
 };
