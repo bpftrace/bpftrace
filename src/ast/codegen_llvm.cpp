@@ -892,6 +892,53 @@ void CodegenLLVM::visit(Unop &unop)
       } break;
       case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNot(expr_); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateNeg(expr_); break;
+      case bpftrace::Parser::token::PLUSPLUS:
+      case bpftrace::Parser::token::MINUSMINUS:
+      {
+        bool is_increment = unop.op == bpftrace::Parser::token::PLUSPLUS;
+
+        if (unop.expr->is_map)
+        {
+          Map &map = static_cast<Map&>(*unop.expr);
+          AllocaInst *key = getMapKey(map);
+          Value *oldval = b_.CreateMapLookupElem(map, key);
+          AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
+          if (is_increment)
+            b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+          else
+            b_.CreateStore(b_.CreateSub(oldval, b_.getInt64(1)), newval);
+          b_.CreateMapUpdateElem(map, key, newval);
+          b_.CreateLifetimeEnd(key);
+
+          if (unop.is_post_op)
+            expr_ = oldval;
+          else
+            expr_ = b_.CreateLoad(newval);
+          b_.CreateLifetimeEnd(newval);
+        }
+        else if (unop.expr->is_variable)
+        {
+          Variable &var = static_cast<Variable&>(*unop.expr);
+          Value *oldval = b_.CreateLoad(variables_[var.ident]);
+          Value *newval;
+          if (is_increment)
+            newval = b_.CreateAdd(oldval, b_.getInt64(1));
+          else
+            newval = b_.CreateSub(oldval, b_.getInt64(1));
+          b_.CreateStore(newval, variables_[var.ident]);
+
+          if (unop.is_post_op)
+            expr_ = oldval;
+          else
+            expr_ = newval;
+        }
+        else
+        {
+          std::cerr << "invalid expression passed to " << opstr(unop) << std::endl;
+          abort();
+        }
+        break;
+      }
       case bpftrace::Parser::token::MUL:
       {
         int size = type.size;
@@ -907,7 +954,7 @@ void CodegenLLVM::visit(Unop &unop)
         break;
       }
       default:
-        std::cerr << "missing codegen to union expression type" << std::endl;
+        std::cerr << "missing codegen for unary operator " << opstr(unop) << std::endl;
         abort();
     }
   }
@@ -917,7 +964,7 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else
   {
-    std::cerr << "missing codegen to union operator \"" << opstr(unop) << "\"" << std::endl;
+    std::cerr << "invalid type (" << type << ") passed to unary operator \"" << opstr(unop) << "\"" << std::endl;
     abort();
   }
 }

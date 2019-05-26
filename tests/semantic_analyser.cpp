@@ -562,6 +562,25 @@ TEST(semantic_analyser, unop_not)
   test("kprobe:f { ~\"0\"; }", 10);
 }
 
+TEST(semantic_analyser, unop_increment_decrement)
+{
+  test("kprobe:f { $x = 0; $x++; }", 0);
+  test("kprobe:f { $x = 0; $x--; }", 0);
+  test("kprobe:f { $x = 0; ++$x; }", 0);
+  test("kprobe:f { $x = 0; --$x; }", 0);
+
+  test("kprobe:f { @x = 0; @x++; }", 0);
+  test("kprobe:f { @x = 0; @x--; }", 0);
+  test("kprobe:f { @x = 0; ++@x; }", 0);
+  test("kprobe:f { @x = 0; --@x; }", 0);
+
+  test("kprobe:f { $x++; }", 1);
+  test("kprobe:f { 0++; }", 1);
+  test("kprobe:f { \"a\"++; }", 1);
+
+  test("kprobe:f { $x = \"a\"; $x++; }", 10);
+}
+
 TEST(semantic_analyser, printf)
 {
   test("kprobe:f { printf(\"hi\") }", 0);

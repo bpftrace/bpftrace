@@ -208,10 +208,6 @@ stmt : expr                { $$ = new ast::ExprStatement($1); }
      | compound_assignment { $$ = $1; }
      | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3); }
      | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3); }
-     | map PLUSPLUS        { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
-     | map MINUSMINUS      { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
-     | var PLUSPLUS        { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  new ast::Integer(1))); }
-     | var MINUSMINUS      { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, new ast::Integer(1))); }
      ;
 
 compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::LEFT,  $3)); }
@@ -271,7 +267,11 @@ expr : int             { $$ = $1; }
      | expr BXOR expr  { $$ = new ast::Binop($1, token::BXOR,  $3); }
      | LNOT expr       { $$ = new ast::Unop(token::LNOT, $2); }
      | BNOT expr       { $$ = new ast::Unop(token::BNOT, $2); }
-     | MINUS expr       { $$ = new ast::Unop(token::MINUS, $2); }
+     | MINUS expr      { $$ = new ast::Unop(token::MINUS, $2); }
+     | expr PLUSPLUS   { $$ = new ast::Unop(token::PLUSPLUS, $1, true); }
+     | expr MINUSMINUS { $$ = new ast::Unop(token::MINUSMINUS, $1, true); }
+     | PLUSPLUS expr   { $$ = new ast::Unop(token::PLUSPLUS, $2); }
+     | MINUSMINUS expr { $$ = new ast::Unop(token::MINUSMINUS, $2); }
      | MUL  expr %prec DEREF { $$ = new ast::Unop(token::MUL,  $2); }
      | expr DOT ident  { $$ = new ast::FieldAccess($1, $3); }
      | expr PTR ident  { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1), $3); }

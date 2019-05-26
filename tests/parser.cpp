@@ -459,64 +459,52 @@ TEST(Parser, expressions)
       "  int: 1\n");
 }
 
-TEST(Parser, variable_increment)
+TEST(Parser, variable_post_increment_decrement)
 {
   test("kprobe:sys_open { $x++; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   +\n"
-      "    variable: $x\n"
-      "    int: 1\n");
+      "  variable: $x\n"
+      "   ++\n");
+  test("kprobe:sys_open { ++$x; }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  ++\n"
+      "   variable: $x\n");
   test("kprobe:sys_open { $x--; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   -\n"
-      "    variable: $x\n"
-      "    int: 1\n");
+      "  variable: $x\n"
+      "   --\n");
+  test("kprobe:sys_open { --$x; }",
+      "Program\n"
+      " kprobe:sys_open\n"
+      "  --\n"
+      "   variable: $x\n");
 }
 
-TEST(Parser, map_increment)
+TEST(Parser, map_increment_decrement)
 {
-  test("kprobe:sys_open { @++; }",
+  test("kprobe:sys_open { @x++; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @\n"
-      "   +\n"
-      "    map: @\n"
-      "    int: 1\n");
-  test("kprobe:sys_open { @--; }",
+      "  map: @x\n"
+      "   ++\n");
+  test("kprobe:sys_open { ++@x; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @\n"
-      "   -\n"
-      "    map: @\n"
-      "    int: 1\n");
-  test("kprobe:sys_open { @[probe]++; }",
+      "  ++\n"
+      "   map: @x\n");
+  test("kprobe:sys_open { @x--; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @\n"
-      "    builtin: probe\n"
-      "   +\n"
-      "    map: @\n"
-      "     builtin: probe\n"
-      "    int: 1\n");
-  test("kprobe:sys_open { @[probe]--; }",
+      "  map: @x\n"
+      "   --\n");
+  test("kprobe:sys_open { --@x; }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @\n"
-      "    builtin: probe\n"
-      "   -\n"
-      "    map: @\n"
-      "     builtin: probe\n"
-      "    int: 1\n");
+      "  --\n"
+      "   map: @x\n");
 }
 
 TEST(Parser, bit_shifting)
