@@ -16,6 +16,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [6. `-v`: Verbose Output](#6--v-verbose-output)
     - [7. Other Options](#7-other-options)
     - [8. Environment Variables](#8-environment-variables)
+    - [9. Clang Environment Variables](#9-clang-environment-variables)
 - [Language](#language)
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
@@ -389,6 +390,15 @@ This feature can be turned off by setting the value of this environment variable
 Default: 4096
 
 This is the maximum number of keys that can be stored in a map. Increasing the value will consume more memory and increase startup times. There are some cases where you will want to: for example, sampling stack traces, recording timestamps for each page, etc.
+
+## 9. Clang Environment Variables
+
+bpftrace parses header files using libclang, the C interface to Clang.
+Thus environment variables affecting the clang toolchain can be used. 
+For example, if header files are included from a non-default directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set
+to allow clang to locate the files. See clang documentation for more information
+on these environment variables and their usage.
+
 
 # Language
 
