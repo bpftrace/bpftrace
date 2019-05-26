@@ -25,15 +25,15 @@ void SemanticAnalyser::visit(PositionalParameter &param)
   param.type = SizedType(Type::integer, 8);
   std::string pstr = bpftrace_.get_param(param.n);
   if (is_final_pass()) {
-    if (!bpftrace_.is_numeric(pstr)) {
-      if (!call_ || call_->func != "str")
-        /*
-         * call_ was added just for this test: ensuring a string parameter is
-         * only used inside str(). Without it, string parameters used as
-         * integers would return their buffer address. Maybe that's ok?
-         * If this behavior is changed, codegen needs to support it.
-         */
-        err_ << "$" << param.n << " used numerically, but given \"" << pstr << "\". Try using str($" << param.n << ")." << std::endl;
+    if (!bpftrace_.is_numeric(pstr) && !param.is_in_str) {
+      err_ << "$" << param.n << " used numerically, but given \"" << pstr
+           << "\". Try using str($" << param.n << ")." << std::endl;
+    }
+    if (bpftrace_.is_numeric(pstr) && param.is_in_str) {
+      // This is blocked due to current limitations in our codegen
+      err_ << "$" << param.n << " used in str(), but given numeric value: "
+           << pstr << ". Try $" << param.n << " instead of str($"
+           << param.n << ")." << std::endl;
     }
   }
 }
@@ -41,7 +41,8 @@ void SemanticAnalyser::visit(PositionalParameter &param)
 void SemanticAnalyser::visit(String &string)
 {
   if (string.str.size() > STRING_SIZE-1) {
-    err_ << "String is too long (over " << STRING_SIZE << " bytes): " << string.str << std::endl;
+    err_ << "String is too long (over " << STRING_SIZE << " bytes): "
+         << string.str << std::endl;
   }
   string.type = SizedType(Type::string, STRING_SIZE);
 }
@@ -199,9 +200,6 @@ void SemanticAnalyser::visit(Call &call)
       << std::endl;
   }
 
-  // needed for positional parameters context:
-  call_ = &call;
-
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
@@ -299,10 +297,11 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
       call.type = SizedType(Type::string, bpftrace_.strlen_);
-      if (is_final_pass()) {
-        if (call.vargs->size() > 1) {
-          check_arg(call, Type::integer, 1, false);
-        }
+      if (is_final_pass() && call.vargs->size() > 1) {
+        check_arg(call, Type::integer, 1, false);
+      }
+      if (auto *param = dynamic_cast<PositionalParameter*>(call.vargs->at(0))) {
+        param->is_in_str = true;
       }
     }
   }

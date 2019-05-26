@@ -85,7 +85,6 @@ TEST(semantic_analyser, builtin_variables)
   test("kretprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
   test("kprobe:f { probe }", 0);
-  test("kprobe:f { $1 }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
 }
@@ -774,9 +773,15 @@ TEST(semantic_analyser, probe_short_name)
 
 TEST(semantic_analyser, positional_parameters)
 {
-  // $1 won't be defined, will be tested more in runtime.
-  test("kprobe:f { printf(\"%d\", $1); }", 0);
-  test("kprobe:f { printf(\"%s\", str($1)); }", 0);
+  BPFtrace bpftrace;
+  bpftrace.add_param("123");
+  bpftrace.add_param("hello");
+
+  test(bpftrace, "kprobe:f { printf(\"%d\", $1); }", 0);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($1)); }", 10);
+
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($2)); }", 0);
+  test(bpftrace, "kprobe:f { printf(\"%d\", $2); }", 10);
 }
 
 TEST(semantic_analyser, macros)
