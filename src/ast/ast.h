@@ -96,6 +96,7 @@ public:
   Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { is_map = true; }
   std::string ident;
   ExpressionList *vargs;
+  bool skip_key_validation = false;
 
   void accept(Visitor &v) override;
 };
