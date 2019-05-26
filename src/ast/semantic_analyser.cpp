@@ -690,6 +690,14 @@ void SemanticAnalyser::visit(Unop &unop)
          << type << "'" << std::endl;
   }
 
+  if (unop.op == Parser::token::PLUSPLUS ||
+      unop.op == Parser::token::MINUSMINUS) {
+    if (!unop.expr->is_map && !unop.expr->is_variable) {
+      err_ << "The " << opstr(unop)
+           << " operator must be applied to a map or variable" << std::endl;
+    }
+  }
+
   if (unop.op == Parser::token::MUL) {
     if (type.type == Type::cast) {
       if (type.is_pointer) {

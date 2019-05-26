@@ -121,9 +121,11 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(int op, Expression *expr) : expr(expr), op(op) { }
+  Unop(int op, Expression *expr, bool is_post_op = false)
+    : expr(expr), op(op), is_post_op(is_post_op) { }
   Expression *expr;
   int op;
+  bool is_post_op;
 
   void accept(Visitor &v) override;
 };

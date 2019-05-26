@@ -134,9 +134,11 @@ std::string opstr(Unop &unop)
     case bpftrace::Parser::token::LNOT: return "!";
     case bpftrace::Parser::token::BNOT: return "~";
     case bpftrace::Parser::token::MINUS: return "-";
-    case bpftrace::Parser::token::MUL:  return "dereference";
+    case bpftrace::Parser::token::MUL: return "dereference";
+    case bpftrace::Parser::token::PLUSPLUS: return "++";
+    case bpftrace::Parser::token::MINUSMINUS: return "--";
     default:
-      std::cerr << "unknown union operator" << std::endl;
+      std::cerr << "unknown unary operator" << std::endl;
       abort();
   }
 }

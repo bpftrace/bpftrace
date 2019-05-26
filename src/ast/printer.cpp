@@ -96,12 +96,23 @@ void Printer::visit(Binop &binop)
 
 void Printer::visit(Unop &unop)
 {
-  std::string indent(depth_, ' ');
-  out_ << indent << opstr(unop) << std::endl;
+  if (!unop.is_post_op)
+  {
+    std::string indent(depth_, ' ');
+    out_ << indent << opstr(unop) << std::endl;
 
-  ++depth_;
-  unop.expr->accept(*this);
-  --depth_;
+    ++depth_;
+    unop.expr->accept(*this);
+    --depth_;
+  }
+
+  if (unop.is_post_op)
+  {
+    std::string indent(depth_+1, ' ');
+
+    unop.expr->accept(*this);
+    out_ << indent << opstr(unop) << std::endl;
+  }
 }
 
 void Printer::visit(Ternary &ternary)

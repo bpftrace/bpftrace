@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, unroll)
 {
-  test("BEGIN { @i = 0; unroll(5) { @i++ } }",
+  test("BEGIN { @i = 0; unroll(5) { @i += 1 } }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0

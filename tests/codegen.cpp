@@ -73,6 +73,7 @@
 #include "codegen/map_key_int.cpp"
 #include "codegen/map_key_probe.cpp"
 #include "codegen/map_key_string.cpp"
+#include "codegen/map_increment_decrement.cpp"
 #include "codegen/multiple_identical_probes.cpp"
 #include "codegen/pred_binop.cpp"
 #include "codegen/string_equal_comparison.cpp"
@@ -96,3 +97,4 @@
 #include "codegen/ternary_str.cpp"
 #include "codegen/unroll.cpp"
 #include "codegen/variable.cpp"
+#include "codegen/variable_increment_decrement.cpp"
