@@ -130,6 +130,28 @@ TEST(semantic_analyser, undefined_map)
   test("kprobe:f / @mymap1 == 1234 / { 1234; @mymap1 = @mymap2; }", 10);
 }
 
+TEST(semantic_analyser, consistent_map_values)
+{
+  test("kprobe:f { @x = 0; @x = 1; }", 0);
+  test("kprobe:f { @x = 0; @x = \"a\"; }", 1);
+}
+
+TEST(semantic_analyser, consistent_map_keys)
+{
+  test("kprobe:f { @x = 0; @x; }", 0);
+  test("kprobe:f { @x[1] = 0; @x[2]; }", 0);
+
+  test("kprobe:f { @x = 0; @x[1]; }", 10);
+  test("kprobe:f { @x[1] = 0; @x; }", 10);
+
+  test("kprobe:f { @x[1,2] = 0; @x[3,4]; }", 0);
+  test("kprobe:f { @x[1,2] = 0; @x[3]; }", 10);
+  test("kprobe:f { @x[1] = 0; @x[2,3]; }", 10);
+
+  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[2,\"b\", kstack]; }", 0);
+  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 10);
+}
+
 TEST(semantic_analyser, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }", 0);
@@ -225,6 +247,9 @@ TEST(semantic_analyser, call_print)
   test("kprobe:f { @x = count(); print(@x, 5, 10); }", 0);
   test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", 1);
   test("kprobe:f { @x = count(); @x = print(); }", 1);
+
+  test("kprobe:f { @x[1,2] = count(); print(@x); }", 0);
+  test("kprobe:f { @x[1,2] = count(); print(@x[3,4]); }", 1);
 }
 
 TEST(semantic_analyser, call_clear)
@@ -232,6 +257,9 @@ TEST(semantic_analyser, call_clear)
   test("kprobe:f { @x = count(); clear(@x); }", 0);
   test("kprobe:f { @x = count(); clear(@x, 1); }", 1);
   test("kprobe:f { @x = count(); @x = clear(); }", 1);
+
+  test("kprobe:f { @x[1,2] = count(); clear(@x); }", 0);
+  test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }", 1);
 }
 
 TEST(semantic_analyser, call_zero)
@@ -239,6 +267,9 @@ TEST(semantic_analyser, call_zero)
   test("kprobe:f { @x = count(); zero(@x); }", 0);
   test("kprobe:f { @x = count(); zero(@x, 1); }", 1);
   test("kprobe:f { @x = count(); @x = zero(); }", 1);
+
+  test("kprobe:f { @x[1,2] = count(); zero(@x); }", 0);
+  test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }", 1);
 }
 
 TEST(semantic_analyser, call_time)
