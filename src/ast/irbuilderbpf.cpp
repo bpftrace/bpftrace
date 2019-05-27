@@ -40,7 +40,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize
     SetInsertPoint(&entry_block);
   else
     SetInsertPoint(&entry_block.front());
-  AllocaInst *alloca = CreateAlloca(ty, arraysize, name); // TODO dodgy
+  AllocaInst *alloca = CreateAlloca(ty, arraysize, name);
   restoreIP(ip);
 
   CreateLifetimeStart(alloca);
