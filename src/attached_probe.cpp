@@ -481,7 +481,6 @@ void AttachedProbe::attach_usdt(int pid)
   probe_.path = std::get<USDT_PATH_INDEX>(u);
 
   err = bcc_usdt_get_location(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
-  bcc_usdt_close(ctx);
   if (err)
     throw std::runtime_error("Error finding location for probe: " + probe_.name);
   probe_.loc = loc.address;

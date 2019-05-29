@@ -125,3 +125,10 @@ EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to probe with semaphore"
+RUN bpftrace -e 'usdt::tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p $(pidof usdt_semaphore_test)
+EXPECT tracetest_testprobe_semaphore: 1
+TIMEOUT 5
+BEFORE ./testprogs/usdt_semaphore_test
+REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
