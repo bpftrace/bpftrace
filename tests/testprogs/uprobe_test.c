@@ -6,6 +6,8 @@ int function1()
 }
 
 int main(int argc, char **argv) {
-  usleep(1000000);
-  return function1();
+  while (1) {
+    function1();
+  }
+  return 0;
 }

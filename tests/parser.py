@@ -41,6 +41,8 @@ class TestParser(object):
         test_suite = file_name.split('/')[-1]
         with open (file_name, 'r') as file:
             for line in file.readlines():
+                if line.startswith("#"):
+                    continue
                 if line != '\n':
                     test_lines.append(line)
                 else:

@@ -103,10 +103,13 @@ add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
 
 # Compile all testprograms, one per .c file for runtime testing
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
-file(GLOB testprogs testprogs/*)
+file(GLOB testprogs testprogs/*.c)
 foreach(testprog ${testprogs})
   get_filename_component(bin_name ${testprog} NAME_WE)
   add_executable (${bin_name} ${testprog})
+  if(HAVE_SYSTEMTAP_SYS_SDT_H)
+    target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
+  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
   set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0")
 endforeach()
 

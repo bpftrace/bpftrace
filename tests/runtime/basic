@@ -89,6 +89,6 @@ EXPECT file not found
 TIMEOUT 1
 
 NAME defines work
-RUN bpftrace -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\n", _UNDERSCORE); exit(); }')"
+RUN bpftrace -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n", _UNDERSCORE); exit(); }')"
 EXPECT 314
 TIMEOUT 1
