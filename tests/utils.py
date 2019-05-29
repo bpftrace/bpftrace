@@ -2,6 +2,7 @@
 
 import subprocess
 import signal
+import os
 from os import environ, uname, devnull
 from distutils.version import LooseVersion
 import re
@@ -85,7 +86,7 @@ class Utils(object):
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
 
             if test.before:
-                before = subprocess.Popen(test.before, shell=True)
+                before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)
 
             bpf_call = Utils.prepare_bpf_call(test)
             env = {'test': test.name}
@@ -96,6 +97,7 @@ class Utils(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 env=env,
+                preexec_fn=os.setsid,
                 bufsize=1
             )
 
@@ -104,15 +106,15 @@ class Utils(object):
             output = ""
 
             while p.poll() is None:
-                nextline = p.stdout.readline().decode()
+                nextline = p.stdout.readline().decode('utf-8', 'ignore')
                 output += nextline
                 if nextline == "Running...\n":
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if not after and test.after:
-                        after = subprocess.Popen(test.after, shell=True)
+                        after = subprocess.Popen(test.after, shell=True, preexec_fn=os.setsid)
                     break
 
-            output += p.communicate()[0].decode()
+            output += p.communicate()[0].decode('utf-8', 'ignore')
 
             signal.alarm(0)
             result = re.search(test.expect, output, re.M)
@@ -121,8 +123,8 @@ class Utils(object):
             # Give it a last chance, the test might have worked but the
             # bpftrace process might still be alive
             if p.poll() is None:
-                p.kill()
-            output += p.communicate()[0].decode()
+                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+            output += p.communicate()[0].decode('utf-8', 'ignore')
             result = re.search(test.expect, output)
             if not result:
                 print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
@@ -132,10 +134,10 @@ class Utils(object):
                 return Utils.TIMEOUT
         finally:
             if before and before.poll() is None:
-                before.kill()
+                os.killpg(os.getpgid(before.pid), signal.SIGKILL)
 
             if after and after.poll() is None:
-                after.kill()
+                os.killpg(os.getpgid(after.pid), signal.SIGKILL)
 
         if result:
             print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))

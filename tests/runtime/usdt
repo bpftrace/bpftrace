@@ -2,91 +2,126 @@ NAME "usdt probes - list probes by file"
 RUN bpftrace -l 'usdt:./testprogs/usdt_test'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - list probes by pid"
 RUN bpftrace -l 'usdt:*' -p $(pidof usdt_test)
 EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - filter probes by file on provider"
 RUN bpftrace -l 'usdt:./testprogs/usdt_test:tracetest2:*'
 EXPECT usdt:./testprogs/usdt_test:tracetest2:testprobe2
 TIMEOUT 5
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - filter probes by pid on provider"
 RUN bpftrace -l 'usdt:*:tracetest2:*' -p $(pidof usdt_test)
 EXPECT usdt_test:tracetest2:testprobe2
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - filter probes by file and wildcard probe name"
 RUN bpftrace -l 'usdt:./testprogs/usdt_test:tracetest:test*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe2
 TIMEOUT 5
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - filter probes by pid and wildcard probe name"
 RUN bpftrace -l 'usdt:*:tracetest:test*' -p $(pidof usdt_test)
 EXPECT usdt_test:tracetest:testprobe2
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to fully specified probe by file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }'
 EXPECT here
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to fully specified probe by pid"
 RUN bpftrace -e 'usdt::tracetest:testprobe { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
 EXPECT here
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - all probes by wildcard and file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }'
 EXPECT Attaching 3 probes...
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
+# TODO(mmarchini): re-enable this test
+# This test has two problems: it relies on the latest version of bcc and it
+# assumes USDTs are coming only from the binary. On Ubuntu, glibc is built with
+# USDT support, which means it will attach to 43 probes instead of 3. Before
+# re-enabling this test, we should:
+#  - Skip if bcc doesn't support multiple probes with the same name
+#  - Fix https://github.com/iovisor/bpftrace/issues/565#issuecomment-496731112
+#    and https://github.com/iovisor/bpftrace/issues/688
 NAME "usdt probes - all probes by wildcard and pid"
 RUN bpftrace -e 'usdt:* { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
 EXPECT Attaching 3 probes...
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES bash -c "exit 1"
+# REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }'
 EXPECT Attaching 2 probes...
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
 RUN bpftrace -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
 EXPECT Attaching 2 probes...
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
+# TODO(mmarchini): re-enable this test
+# This test relies on the latest version of bcc. Before re-enabling this test,
+# we should:
+#  - Skip if bcc doesn't support multiple probes with the same name
 NAME "usdt probes - attach to probe with args by file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }'
 EXPECT Hello world
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES bash -c "exit 1"
+# REQUIRES ./testprogs/usdt_test should_not_skip
 
+# TODO(mmarchini): re-enable this test
+# This test relies on the latest version of bcc. Before re-enabling this test,
+# we should:
+#  - Skip if bcc doesn't support multiple probes with the same name
 NAME "usdt probes - attach to probe with args by pid"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }' -p $(pidof usdt_test)
 EXPECT Hello world
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES bash -c "exit 1"
+# REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe with probe builtin and args by file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe with probe builtin and args by pid"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }' -p $(pidof usdt_test)
 EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
-BEFORE (./testprogs/usdt_test &);
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
