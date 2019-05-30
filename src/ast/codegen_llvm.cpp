@@ -1301,7 +1301,12 @@ void CodegenLLVM::visit(Probe &probe)
     for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
 
-      auto matches = bpftrace_.find_wildcard_matches(*attach_point);
+      std::set<std::string> matches;
+      if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
+        matches.insert(attach_point->provider);
+      } else {
+        matches = bpftrace_.find_wildcard_matches(*attach_point);
+      }
 
       tracepoint_struct_ = "";
       for (auto &match_ : matches) {
@@ -1329,6 +1334,8 @@ void CodegenLLVM::visit(Probe &probe)
 
           // Set the probe identifier so that we can read arguments later
           attach_point->usdt = USDTHelper::find(bpftrace_.pid_, attach_point->target, ns, func_id);
+        } else if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
+          probefull_ = attach_point->provider;
         } else {
           probefull_ = attach_point->name(full_func_id);
         }
