@@ -698,7 +698,7 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Parser::token::MUL) {
     if (type.type == Type::cast) {
       if (type.is_pointer) {
-        if (bpftrace_.structs_.count(type.cast_type) == 0) {
+        if (!bpftrace_.has_struct(type.cast_type)) {
           err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
           return;
         }
@@ -795,7 +795,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
          << std::endl;
     return;
   }
-  if (bpftrace_.structs_.count(type.cast_type) == 0) {
+  if (!bpftrace_.has_struct(type.cast_type)) {
     err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
     return;
   }
@@ -840,7 +840,7 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
-  if (bpftrace_.structs_.count(cast.cast_type) == 0) {
+  if (!bpftrace_.has_struct(cast.cast_type)) {
     err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
     return;
   }

@@ -27,6 +27,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
+  ${CMAKE_SOURCE_DIR}/src/btf.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)

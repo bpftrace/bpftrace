@@ -14,6 +14,7 @@
 #include "struct.h"
 #include "utils.h"
 #include "types.h"
+#include "btf.h"
 
 namespace bpftrace {
 
@@ -97,6 +98,7 @@ public:
   std::string cmd_;
   int pid_{0};
   bool finalize_ = false;
+  bool has_struct(std::string name);
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
@@ -151,6 +153,7 @@ private:
   std::vector<int> child_pids_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+  BTF btf;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();

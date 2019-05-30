@@ -1948,4 +1948,26 @@ bool BPFtrace::is_pid_alive(int pid)
   return true;
 }
 
+bool BPFtrace::has_struct(std::string name)
+{
+  if (structs_.count(name) != 0)
+    return true;
+
+  if (!btf.has_data())
+    return false;
+
+  std::map<std::string, Struct> btf_structs;
+
+  btf.resolve_struct(name, btf_structs);
+
+  if (btf_structs.count(name) == 0)
+    return false;
+
+  if (bt_debug == DebugLevel::kFullDebug)
+    btf.dump_structs(btf_structs);
+
+  structs_.insert(btf_structs.begin(), btf_structs.end());
+  return true;
+}
+
 } // namespace bpftrace
