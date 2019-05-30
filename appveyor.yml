@@ -1,0 +1,34 @@
+image: Ubuntu1804
+
+stack: docker
+
+environment:
+  BASE: bionic
+  GTEST_COLOR: 1
+
+  matrix:
+    - LLVM_VERSION: 6.0
+      TYPE: Debug
+    - LLVM_VERSION: 6.0
+      TYPE: Release
+
+    - LLVM_VERSION: 7
+      TYPE: Debug
+    - LLVM_VERSION: 7
+      TYPE: Release
+
+    - LLVM_VERSION: 8
+      TYPE: Debug
+    - LLVM_VERSION: 8
+      TYPE: Release
+
+install:
+  - sudo apt-get install linux-headers-$(uname -r)
+  - docker pull mmarchini/bpftrace-builder:$LLVM_VERSION
+
+build_script:
+  - sudo docker run --privileged --rm -dt -v $(pwd):/bpftrace -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro --name $BASE-llvm-$LLVM_VERSION-$TYPE mmarchini/bpftrace-builder:$LLVM_VERSION bash
+  - sudo docker exec --privileged $(sudo docker ps -aqf "name=$BASE-llvm-$LLVM_VERSION-$TYPE") bash -c "cmake .. -DCMAKE_BUILD_TYPE=$TYPE && make -j`getconf _NPROCESSORS_ONLN`"
+
+test_script:
+  - sudo docker exec --privileged $(sudo docker ps -aqf "name=$BASE-llvm-$LLVM_VERSION-$TYPE") ctest -V
