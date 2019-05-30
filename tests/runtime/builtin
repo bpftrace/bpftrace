@@ -79,6 +79,12 @@ EXPECT SUCCESS probe kprobe:do_nanosleep
 TIMEOUT 5
 AFTER sleep 0.1
 
+NAME begin probe
+RUN bpftrace -v -e 'BEGIN { printf("%s", probe);exit(); } END{printf("-%s\n", probe); }'
+EXPECT ^BEGIN-END$
+TIMEOUT 5
+AFTER sleep 0.1
+
 NAME curtask
 RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
 EXPECT SUCCESS curtask -?[0-9][0-9]*
