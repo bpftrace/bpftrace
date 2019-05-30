@@ -28,6 +28,7 @@ public:
   bool is_literal = false;
   bool is_variable = false;
   bool is_map = false;
+  bool is_field_access = false;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -121,7 +122,7 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(int op, Expression *expr) : expr(expr), op(op) { }
+  Unop(int op, Expression *expr, bool acc = false) : expr(expr), op(op) { expr->is_field_access = acc; }
   Expression *expr;
   int op;
 
