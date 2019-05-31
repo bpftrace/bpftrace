@@ -17,7 +17,7 @@ NAME kprobe_order
 RUN bpftrace -v runtime/scripts/kprobe_order.bt
 EXPECT first second
 TIMEOUT 5
-AFTER /bin/bash -c : ; /bin/bash -c :
+AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
 
 NAME kretprobe
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
@@ -38,7 +38,7 @@ NAME kretprobe_order
 RUN bpftrace -v runtime/scripts/kretprobe_order.bt
 EXPECT first second
 TIMEOUT 5
-AFTER /bin/bash -c : ; /bin/bash -c :
+AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
 
 NAME uprobe
 RUN bpftrace -v -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}'
