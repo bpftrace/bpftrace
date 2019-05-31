@@ -44,6 +44,15 @@ if(HAVE_GET_CURRENT_CGROUP_ID)
 endif(HAVE_GET_CURRENT_CGROUP_ID)
 target_link_libraries(bpftrace_test arch ast parser resources)
 
+find_library(BPF_LIB bpf)
+
+if (LIBBPF_FOUND AND NOT STATIC_LINKING)
+  target_sources(bpftrace_test PRIVATE btf.cpp)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_LIBBPF)
+  target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
+  target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
+endif()
+
 if (STATIC_LINKING)
   target_link_libraries(bpftrace_test ${LIBBCC_LIBRARIES})
   target_link_libraries(bpftrace_test ${LIBBPF_LIBRARY_STATIC})
