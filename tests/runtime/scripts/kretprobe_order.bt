@@ -1,4 +1,4 @@
-kretprobe:sys_execve
+kretprobe:hrtimer_nanosleep
 {
   @probe1_ready = 1;
   if (@go == 1) {
@@ -6,7 +6,7 @@ kretprobe:sys_execve
   }
 }
 
-kretprobe:sys_execve
+kretprobe:hrtimer_nanosleep
 {
   @probe2_ready = 1;
   if (@go == 1) {
@@ -15,7 +15,7 @@ kretprobe:sys_execve
   }
 }
 
-kretprobe:sys_execve
+kretprobe:hrtimer_nanosleep
 {
   // Make sure all probes are attached before letting them print anything
   // so that the output we get is all from the same event.
