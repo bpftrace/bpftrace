@@ -10,9 +10,10 @@ namespace clang_parser {
 
 using StructMap = std::map<std::string, Struct>;
 
-static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true)
+static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true,
+                  const std::string& probe = "kprobe:sys_read { 1 }")
 {
-  auto extended_input = input + "kprobe:sys_read { 1 }";
+  auto extended_input = input + probe;
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
@@ -379,6 +380,93 @@ TEST(clang_parser, parse_fail)
   BPFtrace bpftrace;
   parse("struct a { int a; struct b b; };", bpftrace, false);
 }
+
+#ifdef HAVE_LIBBPF_BTF_DUMP
+
+#include "btf_data.h"
+
+TEST(clang_parser, btf)
+{
+  char *path = strdup("/tmp/XXXXXX");
+  ASSERT_TRUE(path != NULL);
+
+  int fd = mkstemp(path);
+  ASSERT_TRUE(fd >= 0);
+
+  EXPECT_EQ(write(fd, btf_data, btf_data_len), btf_data_len);
+  close(fd);
+
+  ASSERT_EQ(setenv("BPFTRACE_BTF_TEST", path, true), 0);
+
+  BPFtrace bpftrace;
+  parse("", bpftrace, true,
+        "kprobe:sys_read {\n"
+        "  @x1 = (struct Foo1 *) curtask;\n"
+        "  @x2 = (struct Foo2 *) curtask;\n"
+        "  @x3 = (struct Foo3 *) curtask;\n"
+        "}");
+
+  // clear the environment
+  unsetenv("BPFTRACE_BTF_TEST");
+  std::remove(path);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 3U);
+  ASSERT_EQ(structs.count("Foo1"), 1U);
+  ASSERT_EQ(structs.count("Foo2"), 1U);
+  ASSERT_EQ(structs.count("Foo3"), 1U);
+
+  EXPECT_EQ(structs["Foo1"].size, 16);
+  ASSERT_EQ(structs["Foo1"].fields.size(), 3U);
+  ASSERT_EQ(structs["Foo1"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo1"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo1"].fields.count("c"), 1U);
+
+  EXPECT_EQ(structs["Foo1"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo1"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo1"].fields["a"].offset, 0);
+
+  EXPECT_EQ(structs["Foo1"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo1"].fields["b"].type.size, 1U);
+  EXPECT_EQ(structs["Foo1"].fields["b"].offset, 4);
+
+  EXPECT_EQ(structs["Foo1"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo1"].fields["c"].type.size, 8U);
+  EXPECT_EQ(structs["Foo1"].fields["c"].offset, 8);
+
+  EXPECT_EQ(structs["Foo2"].size, 24);
+  ASSERT_EQ(structs["Foo2"].fields.size(), 2U);
+  ASSERT_EQ(structs["Foo2"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo2"].fields.count("f"), 1U);
+
+  EXPECT_EQ(structs["Foo2"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo2"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo2"].fields["a"].offset, 0);
+
+  EXPECT_EQ(structs["Foo2"].fields["f"].type.type, Type::cast);
+  EXPECT_EQ(structs["Foo2"].fields["f"].type.size, 16U);
+  EXPECT_EQ(structs["Foo2"].fields["f"].offset, 8);
+
+  EXPECT_EQ(structs["Foo3"].size, 16);
+  ASSERT_EQ(structs["Foo3"].fields.size(), 2U);
+  ASSERT_EQ(structs["Foo3"].fields.count("foo1"), 1U);
+  ASSERT_EQ(structs["Foo3"].fields.count("foo2"), 1U);
+
+  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.type, Type::cast);
+  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.size, 8U);
+  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.is_pointer, true);
+  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.cast_type, "Foo1");
+  EXPECT_EQ(structs["Foo3"].fields["foo1"].offset, 0);
+
+  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.type, Type::cast);
+  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.size, 8U);
+  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.is_pointer, true);
+  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.cast_type, "Foo2");
+  EXPECT_EQ(structs["Foo3"].fields["foo2"].offset, 8);
+}
+
+#endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace clang_parser
 } // namespace test
