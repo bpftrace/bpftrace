@@ -41,7 +41,7 @@ TIMEOUT 5
 AFTER sleep 0.1
 
 NAME system
-RUN bpftrace --unsafe -v -e 'i:ms:1 { system("echo 'ok_system'"); exit();}'
+RUN bpftrace --unsafe -v -e 'i:ms:100 { system("echo 'ok_system'"); exit();}'
 EXPECT ok_system
 TIMEOUT 5
 
