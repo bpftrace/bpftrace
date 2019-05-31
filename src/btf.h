@@ -23,6 +23,8 @@ public:
 
   bool has_data(void);
   void resolve_struct(std::string name, std::map<std::string, Struct> &structs);
+  void dump_struct(std::string name);
+  void dump_structs(std::map<std::string, Struct>& structs);
 
 private:
   void init(unsigned char *data, unsigned int size);

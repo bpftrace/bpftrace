@@ -1,4 +1,6 @@
 #include <iostream>
+#include <algorithm>
+#include <iomanip>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -283,6 +285,72 @@ BTF::~BTF()
   btf__free(btf);
 }
 
+typedef std::pair<std::string, bpftrace::Field> pair;
+
+void BTF::dump_structs(std::map<std::string, Struct>& structs)
+{
+  std::cout << "BTF data" << std::endl;
+  std::cout << "--------" << std::endl;
+
+  std::cout << std::setw(6) << "offset" << " " << std::setw(6) << "size" << std::endl;
+
+  std::map<std::string, Struct>::iterator it_s;
+
+  for (it_s = structs.begin(); it_s != structs.end(); it_s++ )
+  {
+    Struct& s = it_s->second;
+
+    std::cout << std::setw(6) << " " << " " << std::setw(6) << s.size;
+    std::cout << "  " << "struct " << it_s->first << std::endl;
+
+    // sort the fields based on offset
+    FieldsMap &map = s.fields;
+    std::vector<pair> vec;
+
+    std::copy(map.begin(), map.end(),
+              std::back_inserter<std::vector<pair>>(vec));
+
+    std::sort(vec.begin(), vec.end(),
+              [](const pair& l, const pair& r) {
+                return l.second.offset < r.second.offset;
+              });
+
+    for (auto const &pair: vec)
+    {
+      const Field& f = pair.second;
+
+      std::cout << std::setw(6) << f.offset << " "
+                << std::setw(6) << f.type.size;
+
+      std::cout << std::right;
+      std::cout << "    "  << std::setw(10) << std::left << f.type << " " << std::setw(20) << pair.first;
+      if (f.type.type == Type::cast)
+        std::cout << "# " << f.type.cast_type;
+      std::cout << std::endl;
+
+      std::cout << std::right;
+    }
+    std::cout << std::endl;
+  }
+}
+
+void BTF::dump_struct(std::string name)
+{
+  std::map<std::string, Struct> structs;
+
+  if (!has_data())
+    return;
+
+  resolve_struct(name, structs);
+
+  if (structs.count(name) == 0) {
+    std::cout << "BTF: " << name << " not found" << std::endl;
+    return;
+  }
+
+  dump_structs(structs);
+}
+
 } // namespace bpftrace
 
 #else // HAVE_LIBBPF
@@ -298,6 +366,10 @@ BTF::BTF(unsigned char *data __maybe_unused, unsigned int size __maybe_unused) {
 
 void BTF::resolve_struct(std::string name __maybe_unused,
                          std::map<std::string, Struct> &structs __maybe_unused) { }
+
+void BTF::dump_struct(std::string name __maybe_unused) { }
+
+void BTF::dump_structs(std::map<std::string, Struct>& structs __maybe_unused) { }
 
 BTF::~BTF() { }
 
