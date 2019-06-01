@@ -60,7 +60,7 @@ public:
 
   void createLog2Function();
   void createLinearFunction();
-  std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cerr);
+  std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
 
 private:
   Node *root_;
