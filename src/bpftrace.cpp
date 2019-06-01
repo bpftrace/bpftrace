@@ -326,6 +326,12 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
+void BPFtrace::request_finalize()
+{
+  finalize_ = true;
+  attached_probes_.clear();
+}
+
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
@@ -334,10 +340,15 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto &out = bpftrace->outputstream();
   int err;
 
+  // Ignore the remaining events if perf_event_printer is called during finalization
+  // stage (exit() builtin has been called)
+  if (bpftrace->finalize_)
+    return;
+
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
   {
-    bpftrace->finalize_ = true;
+    bpftrace->request_finalize();
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::print))
@@ -723,6 +734,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   poll_perf_events(epollfd);
   attached_probes_.clear();
+  // finalize_ should be false from now on otherwise perf_event_printer() can
+  // ignore the END_trigger() events.
+  finalize_ = false;
 
   END_trigger();
   poll_perf_events(epollfd, true);
@@ -776,10 +790,9 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
 
     // Return if either
     //   * epoll_wait has encountered an error (eg signal delivery)
-    //   * There's no events left and we've been instructed to drain
-    //   * finalize_ flag has been set through exit() call and this isn't
-    //     a drain call
-    if (ready < 0 || (ready == 0 && drain) || (finalize_ && !drain))
+    //   * There's no events left and we've been instructed to drain or
+    //     finalization has been requested through exit() builtin.
+    if (ready < 0 || (ready == 0 && (drain || finalize_)))
     {
       return;
     }
