@@ -185,62 +185,146 @@ TEST(clang_parser, nested_struct_ptr_named)
   EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
 }
 
-TEST(clang_parser, nested_struct_anon)
+TEST(clang_parser, nested_struct_no_type)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { struct { int x; } bar; }", bpftrace);
+  // bar and baz's struct/union do not have type names, but are not anonymous
+  // since they are called bar and baz
+  parse("struct Foo { struct { int x; } bar; union { int y; } baz; }", bpftrace);
+
+  std::string bar = "Foo::(anonymous at definitions.h:1:14)";
+  std::string baz = "Foo::(anonymous at definitions.h:1:37)";
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 3U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count(bar), 1U);
+  ASSERT_EQ(structs.count(baz), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 8);
+  ASSERT_EQ(structs["Foo"].fields.size(), 2U);
+  ASSERT_EQ(structs["Foo"].fields.count("bar"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("baz"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["bar"].type.type, Type::cast);
+  EXPECT_EQ(structs["Foo"].fields["bar"].type.cast_type, bar);
+  EXPECT_EQ(structs["Foo"].fields["bar"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
+
+  EXPECT_EQ(structs[bar].size, 4);
+  ASSERT_EQ(structs[bar].fields.size(), 1U);
+  ASSERT_EQ(structs[bar].fields.count("x"), 1U);
+
+  EXPECT_EQ(structs[bar].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs[bar].fields["x"].type.size, 4U);
+  EXPECT_EQ(structs[bar].fields["x"].offset, 0);
+
+
+  EXPECT_EQ(structs["Foo"].fields["baz"].type.type, Type::cast);
+  EXPECT_EQ(structs["Foo"].fields["baz"].type.cast_type, baz);
+  EXPECT_EQ(structs["Foo"].fields["baz"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["baz"].offset, 4);
+
+  EXPECT_EQ(structs[baz].size, 4);
+  ASSERT_EQ(structs[baz].fields.size(), 1U);
+  ASSERT_EQ(structs[baz].fields.count("y"), 1U);
+
+  EXPECT_EQ(structs[baz].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs[baz].fields["y"].type.size, 4U);
+  EXPECT_EQ(structs[baz].fields["y"].offset, 0);
+}
+
+TEST(clang_parser, nested_struct_unnamed_fields)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo"
+        "{"
+        "  struct { int x; int y; };" // Anonymous struct field
+        "  int a;"
+        "  struct Bar { int z; };" // Struct definition - not a field of Foo
+        "}",
+        bpftrace);
 
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
   ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("Bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 4);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("bar"), 1U);
+  EXPECT_EQ(structs["Foo"].size, 12);
+  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.cast_type, "Foo::(anonymous at definitions.h:1:14)");
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
-}
-
-TEST(clang_parser, nested_struct_indirect_fields)
-{
-  BPFtrace bpftrace;
-  parse("struct Foo { struct { int x; int y;}; int a; struct { int z; }; }", bpftrace);
-
-  StructMap &structs = bpftrace.structs_;
-
-  ASSERT_EQ(structs["Foo"].fields.size(), 4U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
-  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+
+
+  EXPECT_EQ(structs["Bar"].size, 4);
+  EXPECT_EQ(structs["Bar"].fields.size(), 1U);
+  EXPECT_EQ(structs["Bar"].fields.count("z"), 1U);
+
+  EXPECT_EQ(structs["Bar"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["Bar"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["Bar"].fields["z"].offset, 0);
 }
 
 TEST(clang_parser, nested_struct_anon_union_struct)
 {
   BPFtrace bpftrace;
-  parse("struct Foo { union { long long _xy; struct { int x; int y;}; }; int a; struct { int z; }; }", bpftrace);
+  parse("struct Foo"
+        "{"
+        "  union"
+        "  {"
+        "    long long _xy;"
+        "    struct { int x; int y;};"
+        "  };"
+        "  int a;"
+        "  struct { int z; };"
+        "}",
+        bpftrace);
 
   StructMap &structs = bpftrace.structs_;
 
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 16);
   ASSERT_EQ(structs["Foo"].fields.size(), 5U);
-  EXPECT_EQ(structs["Foo"].fields["_xy"].offset, 0);
+  ASSERT_EQ(structs["Foo"].fields.count("_xy"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("z"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["_xy"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["_xy"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["Foo"].fields["_xy"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+
+  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+
+  EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
   EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
 }
 
 TEST(clang_parser, builtin_headers)
@@ -274,14 +358,17 @@ TEST(clang_parser, builtin_headers)
 
 TEST(clang_parser, macro_preprocessor)
 {
-  // size_t is definied in stddef.h
   BPFtrace bpftrace;
   parse("#define FOO size_t\n k:f { 0 }", bpftrace);
+  parse("#define _UNDERSCORE 314\n k:f { 0 }", bpftrace);
 
   auto &macros = bpftrace.macros_;
 
   ASSERT_EQ(macros.count("FOO"), 1U);
-  ASSERT_EQ(macros["FOO"], "size_t");
+  EXPECT_EQ(macros["FOO"], "size_t");
+
+  ASSERT_EQ(macros.count("_UNDERSCORE"), 1U);
+  EXPECT_EQ(macros["_UNDERSCORE"], "314");
 }
 
 // TODO(mmarchini): re-enable this test once we figure out how to handle
