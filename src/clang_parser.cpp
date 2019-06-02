@@ -1,8 +1,8 @@
 #include <clang-c/Index.h>
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
 #include <string.h>
+
+#include "llvm/Config/llvm-config.h"
 
 #include "ast.h"
 #include "bpftrace.h"
@@ -13,9 +13,6 @@
 
 namespace bpftrace {
 
-static std::unordered_map<std::string, CXCursor> indirect_structs;
-static std::unordered_set<std::string> unvisited_indirect_structs;
-
 static std::string get_clang_string(CXString string)
 {
   std::string str = clang_getCString(string);
@@ -23,42 +20,128 @@ static std::string get_clang_string(CXString string)
   return str;
 }
 
-static void remove_struct_prefix(std::string &str)
+static void remove_struct_union_prefix(std::string &str)
 {
   if (strncmp(str.c_str(), "struct ", 7) == 0)
     str.erase(0, 7);
+  else if (strncmp(str.c_str(), "union ", 6) == 0)
+    str.erase(0, 6);
 }
 
-static CXCursor get_indirect_field_parent_struct(CXCursor c)
+/*
+ * is_anonymous
+ *
+ * Determine whether the provided cursor points to an anonymous struct.
+ *
+ * This union is anonymous:
+ *   struct { int i; };
+ * This is not, although it is marked as such in LLVM 8:
+ *   struct { int i; } obj;
+ * This is not, and does not actually declare an instance of a struct:
+ *   struct X { int i; };
+ *
+ * The libclang API was changed in LLVM 8 and restored under a different
+ * function in LLVM 9. For LLVM 8 there is no way to properly tell if
+ * a record declaration is anonymous, so we do some hacks here.
+ *
+ * LLVM version differences:
+ *   https://reviews.llvm.org/D54996
+ *   https://reviews.llvm.org/D61232
+ */
+static bool is_anonymous(CXCursor c)
+{
+#if LLVM_VERSION_MAJOR <= 7
+  return clang_Cursor_isAnonymous(c);
+#elif LLVM_VERSION_MAJOR >= 9
+  return clang_Cursor_isAnonymousRecordDecl(c);
+#else // LLVM 8
+  if (!clang_Cursor_isAnonymous(c))
+    return false;
+
+  // In LLVM 8, some structs which the above function says are anonymous
+  // are actually not. We iterate through the siblings of our struct
+  // definition to see if there is a field giving it a name.
+  //
+  // struct Parent                 struct Parent
+  // {                             {
+  //   struct                        struct
+  //   {                             {
+  //     ...                           ...
+  //   } name;                       };
+  //   int sibling;                  int sibling;
+  // };                            };
+  //
+  // Children of parent:           Children of parent:
+  //   Struct: (cursor c)            Struct: (cursor c)
+  //   Field:  (Record)name          Field:  (int)sibling
+  //   Field:  (int)sibling
+  //
+  // Record field found after      No record field found after
+  // cursor - not anonymous        cursor - anonymous
+
+  auto parent = clang_getCursorSemanticParent(c);
+  if (clang_Cursor_isNull(parent))
+    return false;
+
+  struct AnonFinderState
+  {
+    CXCursor struct_to_check;
+    bool is_anon;
+    bool prev_was_definition;
+  } state;
+
+  state.struct_to_check = c;
+  state.is_anon = true;
+  state.prev_was_definition = false;
+
+  clang_visitChildren(
+      parent,
+      [](CXCursor c2, CXCursor, CXClientData client_data)
+      {
+        auto state = static_cast<struct AnonFinderState*>(client_data);
+        if (state->prev_was_definition)
+        {
+          // This is the next child after the definition of the struct we're
+          // interested in. If it is a field containing a record, we assume
+          // that it must be the field for our struct, so our struct is not
+          // anonymous.
+          state->prev_was_definition = false;
+          auto kind = clang_getCursorKind(c2);
+          auto type = clang_getCanonicalType(clang_getCursorType(c2));
+          if (kind == CXCursor_FieldDecl && type.kind == CXType_Record)
+          {
+            state->is_anon = false;
+            return CXChildVisit_Break;
+          }
+        }
+
+        // We've found the definition of the struct we're interested in
+        if (memcmp(c2.data, state->struct_to_check.data, 3*sizeof(uintptr_t)) == 0)
+          state->prev_was_definition = true;
+        return CXChildVisit_Continue;
+      },
+      &state);
+
+  return state.is_anon;
+#endif
+}
+
+/*
+ * get_named_parent
+ *
+ * Find the parent struct of the field pointed to by the cursor.
+ * Anonymous structs are skipped.
+ */
+static CXCursor get_named_parent(CXCursor c)
 {
   CXCursor parent = clang_getCursorSemanticParent(c);
 
-  while (!clang_Cursor_isNull(parent) && indirect_structs.count(get_clang_string(clang_getTypeSpelling(clang_getCanonicalType(clang_getCursorType(parent))))) > 0) {
+  while (!clang_Cursor_isNull(parent) && is_anonymous(parent))
+  {
     parent = clang_getCursorSemanticParent(parent);
   }
 
   return parent;
-}
-
-static std::string get_parent_struct_name(CXCursor c)
-{
-  CXCursor parent = get_indirect_field_parent_struct(c);
-
-  if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
-      clang_getCursorKind(parent) != CXCursor_UnionDecl)
-    return "";
-
-  return get_clang_string(clang_getCursorSpelling(parent));
-}
-
-static int get_indirect_field_offset(CXCursor c)
-{
-  int offset = 0;
-  CXCursor parent = get_indirect_field_parent_struct(c);
-  auto ident = get_clang_string(clang_getCursorSpelling(c));
-  offset = clang_Type_getOffsetOf(clang_getCursorType(parent), ident.c_str()) / 8;
-
-  return offset;
 }
 
 // NOTE(mmarchini): as suggested in http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
@@ -96,7 +179,7 @@ static SizedType get_sized_type(CXType clang_type)
 {
   auto size = clang_Type_getSizeOf(clang_type);
   auto typestr = get_clang_string(clang_getTypeSpelling(clang_type));
-  remove_struct_prefix(typestr);
+  remove_struct_union_prefix(typestr);
 
   switch (clang_type.kind)
   {
@@ -123,7 +206,7 @@ static SizedType get_sized_type(CXType clang_type)
       if (pointee_type.kind == CXType_Record)
       {
         auto pointee_typestr = get_clang_string(clang_getTypeSpelling(pointee_type));
-        remove_struct_prefix(pointee_typestr);
+        remove_struct_union_prefix(pointee_typestr);
         type = SizedType(Type::cast, sizeof(uintptr_t), pointee_typestr);
       }
       else
@@ -278,106 +361,72 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     }
   }
 
-  indirect_structs.clear();
-  unvisited_indirect_structs.clear();
-
   CXCursor cursor = handler.get_translation_unit_cursor();
 
-  bool iterate = true;
-  int err;
-
-  do {
-    err = clang_visitChildren(
-        cursor,
-        [](CXCursor c, CXCursor parent, CXClientData client_data)
+  int err = clang_visitChildren(
+      cursor,
+      [](CXCursor c, CXCursor parent, CXClientData client_data)
+      {
+        if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
         {
-          if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
+          std::string macro_name;
+          std::string macro_value;
+          if (translateMacro(c, macro_name, macro_value))
           {
-            std::string macro_name;
-            std::string macro_value;
-            if (translateMacro(c, macro_name, macro_value)) {
-              auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
-              macros[macro_name] = macro_value;
-            }
-            return CXChildVisit_Recurse;
+            auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
+            macros[macro_name] = macro_value;
           }
+          return CXChildVisit_Recurse;
+        }
 
-          if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
-          {
-            auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
-            enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
-            return CXChildVisit_Recurse;
-          }
+        if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
+        {
+          auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
+          enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
+          return CXChildVisit_Recurse;
+        }
 
-          if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
-              clang_getCursorKind(parent) != CXCursor_UnionDecl)
-            return CXChildVisit_Recurse;
+        if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
+            clang_getCursorKind(parent) != CXCursor_UnionDecl)
+          return CXChildVisit_Recurse;
 
-          auto ptype = clang_getCanonicalType(clang_getCursorType(parent));
+        if (clang_getCursorKind(c) == CXCursor_FieldDecl)
+        {
+          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
+
+          auto named_parent = get_named_parent(c);
+          auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
           auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
           auto ptypesize = clang_Type_getSizeOf(ptype);
 
-          if ((clang_getCursorKind(c) == CXCursor_StructDecl ||
-              clang_getCursorKind(c) == CXCursor_UnionDecl) && clang_isCursorDefinition(c)) {
-            auto struct_name = get_clang_string(clang_getTypeSpelling(clang_getCanonicalType(clang_getCursorType(c))));
-            indirect_structs[struct_name] = c;
-            unvisited_indirect_structs.insert(struct_name);
+          auto ident = get_clang_string(clang_getCursorSpelling(c));
+          auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
+          auto type = clang_getCanonicalType(clang_getCursorType(c));
 
-            return CXChildVisit_Continue;
-          }
+          auto struct_name = get_clang_string(clang_getCursorSpelling(named_parent));
+          if (struct_name == "")
+            struct_name = ptypestr;
+          remove_struct_union_prefix(struct_name);
 
-          if (clang_getCursorKind(c) == CXCursor_FieldDecl)
-          {
-            auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
-            auto struct_name = get_parent_struct_name(c);
-            auto ident = get_clang_string(clang_getCursorSpelling(c));
-            auto offset = clang_Cursor_getOffsetOfField(c) / 8;
-            auto type = clang_getCanonicalType(clang_getCursorType(c));
-            auto typestr = get_clang_string(clang_getTypeSpelling(type));
+          // TODO(mmarchini): re-enable this check once we figure out how to
+          // handle flexible array members.
+          // if (clang_Type_getSizeOf(type) < 0) {
+            // std::cerr << "Can't get size of '" << ptypestr << "::" << ident << "', please provide proper definiton." << std::endl;
+            // return CXChildVisit_Break;
+          // }
 
-            if (indirect_structs.count(typestr))
-              indirect_structs.erase(typestr);
+          structs[struct_name].fields[ident].offset = offset;
+          structs[struct_name].fields[ident].type = get_sized_type(type);
+          structs[struct_name].size = ptypesize;
+        }
 
-            if(indirect_structs.count(ptypestr))
-              offset = get_indirect_field_offset(c);
+        return CXChildVisit_Recurse;
+      },
+      &bpftrace);
 
-            if (struct_name == "")
-              struct_name = ptypestr;
-            remove_struct_prefix(struct_name);
-
-            // TODO(mmarchini): re-enable this check once we figure out how to
-            // handle flexible array members.
-            // if (clang_Type_getSizeOf(type) < 0) {
-              // std::cerr << "Can't get size of '" << ptypestr << "::" << ident << "', please provide proper definiton." << std::endl;
-              // return CXChildVisit_Break;
-            // }
-
-            structs[struct_name].fields[ident].offset = offset;
-            structs[struct_name].fields[ident].type = get_sized_type(type);
-            structs[struct_name].size = ptypesize;
-          }
-
-          return CXChildVisit_Recurse;
-        },
-        &bpftrace);
-
-    // clang_visitChildren returns a non-zero value if the traversal
-    // was terminated by the visitor returning CXChildVisit_Break.
-    if (err)
-      break;
-
-    if (unvisited_indirect_structs.size()) {
-      cursor = indirect_structs[*unvisited_indirect_structs.begin()];
-      unvisited_indirect_structs.erase(unvisited_indirect_structs.begin());
-    } else {
-      iterate = false;
-    }
-  } while (iterate);
-
-  // TODO(mmarchini): validate that a struct doesn't have two fields with the
-  // same offset. Mark struct as invalid otherwise
-
-  return true;
+  // clang_visitChildren returns a non-zero value if the traversal
+  // was terminated by the visitor returning CXChildVisit_Break.
+  return err == 0;
 }
 
 } // namespace bpftrace
