@@ -2,10 +2,13 @@
 #include "clang_parser.h"
 #include "driver.h"
 #include "bpftrace.h"
+#include "struct.h"
 
 namespace bpftrace {
 namespace test {
 namespace clang_parser {
+
+using StructMap = std::map<std::string, Struct>;
 
 static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true)
 {

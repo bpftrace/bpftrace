@@ -1,11 +1,9 @@
-#include <clang-c/Index.h>
 #include <iostream>
 #include <string.h>
 
 #include "llvm/Config/llvm-config.h"
 
 #include "ast.h"
-#include "bpftrace.h"
 #include "clang_parser.h"
 #include "types.h"
 #include "utils.h"
