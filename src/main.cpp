@@ -33,8 +33,8 @@ void usage()
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
-  std::cerr << "    -I DIR         add the specified DIR to the search path for include files." << std::endl;
-  std::cerr << "    --include FILE adds an implicit #include which is read before the source file is preprocessed." << std::endl;
+  std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
+  std::cerr << "    --include FILE add an #include file before preprocessing" << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
@@ -46,7 +46,7 @@ void usage()
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
