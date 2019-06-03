@@ -1,15 +1,11 @@
 #pragma once
 
 #include <clang-c/Index.h>
-
-#include "struct.h"
 #include "bpftrace.h"
 
 namespace bpftrace {
 
 namespace ast { class Program; }
-
-using StructMap = std::map<std::string, Struct>;
 
 class ClangParser
 {
