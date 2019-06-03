@@ -5,6 +5,7 @@
 #include "driver.h"
 #include "mocks.h"
 #include "semantic_analyser.h"
+#include "utils.h"
 
 namespace bpftrace {
 namespace test {
@@ -19,6 +20,7 @@ void test(
     int expected_result=0,
     bool safe_mode = true)
 {
+  suppress_deprecation_warnings();
   bpftrace.safe_mode = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 

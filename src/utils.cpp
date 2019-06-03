@@ -149,6 +149,13 @@ void USDTHelper::read_probes_for_path(const std::string &path)
   provider_cache_loaded = true;
 }
 
+void suppress_deprecation_warnings()
+{
+  for (auto& item : DEPRECATED_LIST) {
+    item.show_warning = false;
+  }
+}
+
 bool get_uint64_env_var(const std::string &str, uint64_t &dest)
 {
   if (const char* env_p = std::getenv(str.c_str()))

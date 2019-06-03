@@ -55,6 +55,10 @@ static std::vector<DeprecatedName> DEPRECATED_LIST =
   { "sym", "ksym"},
 };
 
+// HACK to prevent warnings from being printed out while unit tests
+// run.
+void suppress_deprecation_warnings();
+
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS =
 {
   "system",
