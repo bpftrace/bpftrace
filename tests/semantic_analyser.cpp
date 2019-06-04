@@ -1270,6 +1270,18 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(\"SIGABC\"); }", 1, false);
   test("k:f { signal(\"ABC\"); }", 1, false);
 }
+TEST(semantic_analyser, strncmp)
+{
+  // Test strncmp builtin
+  test("i:s:1 { $a = \"bar\"; strncmp(\"foo\", $a, 1) }", 0);
+  test("i:s:1 { strncmp(\"foo\", \"bar\", 1) }", 0);
+
+  test("i:s:1 { strncmp(1) }", 1);
+  test("i:s:1 { strncmp(1,1,1) }", 10);
+  test("i:s:1 { strncmp(\"a\",1,1) }", 10);
+  test("i:s:1 { strncmp(\"a\",\"a\",-1) }", 1);
+  test("i:s:1 { strncmp(\"a\",\"a\",\"foo\") }", 1);
+}
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

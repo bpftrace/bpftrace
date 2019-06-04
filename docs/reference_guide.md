@@ -73,6 +73,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [16. `ustack()`: Stack Traces, User](#16-ustack-stack-traces-user)
     - [17. `cat()`: Print file content](#17-cat-print-file-content)
     - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
+    - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2132,6 +2133,35 @@ The signal can also be specified using a name, similar to the `kill(1)` command:
 ```
 # bpftrace -e 'k:f { signal("KILL"); }'
 # bpftrace -e 'k:f { signal("SIGINT"); }'
+```
+
+## 19. `strncmp()`: Compare first n characters of two strings
+
+Syntax: `strncmp(char *s1, char *s2, int length)`
+
+Return true if the first `length` characters in `s1` and `s2` are equal, and false otherwise.
+
+Examples:
+
+```
+bpftrace -e 't:syscalls:sys_enter_* /strncmp("mpv", comm, 3)/ { @[comm, probe] = count() }'
+Attaching 320 probes...
+[...]
+@[mpv/vo, tracepoint:syscalls:sys_enter_rt_sigaction]: 238
+@[mpv:gdrv0, tracepoint:syscalls:sys_enter_futex]: 680
+@[mpv/ao, tracepoint:syscalls:sys_enter_write]: 1022
+@[mpv, tracepoint:syscalls:sys_enter_ioctl]: 2677
+@[mpv:cs0, tracepoint:syscalls:sys_enter_ioctl]: 2889
+@[mpv/vo, tracepoint:syscalls:sys_enter_read]: 2993
+@[mpv/demux, tracepoint:syscalls:sys_enter_futex]: 4745
+@[mpv, tracepoint:syscalls:sys_enter_write]: 6936
+@[mpv/vo, tracepoint:syscalls:sys_enter_futex]: 7662
+@[mpv:cs0, tracepoint:syscalls:sys_enter_futex]: 8127
+@[mpv/lua script , tracepoint:syscalls:sys_enter_futex]: 10150
+@[mpv/vo, tracepoint:syscalls:sys_enter_poll]: 10241
+@[mpv/vo, tracepoint:syscalls:sys_enter_recvmsg]: 15018
+@[mpv, tracepoint:syscalls:sys_enter_getpid]: 31178
+@[mpv, tracepoint:syscalls:sys_enter_futex]: 403868
 ```
 
 # Map Functions

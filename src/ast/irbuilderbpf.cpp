@@ -377,6 +377,11 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
 }
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
+  auto cmpAmount = strlen(str.c_str()) + 1;
+  return CreateStrncmp(val, str, cmpAmount, inverse);
+}
+
+Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse) {
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
@@ -384,7 +389,7 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   CreateStore(getInt1(inverse), store);
 
   const char *c_str = str.c_str();
-  for (size_t i = 0; i < strlen(c_str) + 1; i++)
+  for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
     AllocaInst *val_char = CreateAllocaBPF(getInt8Ty(), "strcmp.char");
@@ -406,16 +411,21 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   SetInsertPoint(str_ne);
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
+  result = CreateIntCast(result, getInt64Ty(), true);
   return result;
 }
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
+  return CreateStrncmp(val1, val2, bpftrace_.strlen_, inverse);
+}
+
+Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool inverse) {
   /*
   // This function compares each character of the two string.
   // It returns true if all are equal and false if any are different
   // strcmp(String val1, String val2)
      {
-        for (size_t i = 0; i < bpftrace_.strlen_; i++)
+        for (size_t i = 0; i < n; i++)
         {
 
           if (val1[i] != val2[i])
@@ -440,7 +450,7 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
 
   Value *null_byte = getInt8(0);
 
-  for (size_t i = 0; i < bpftrace_.strlen_; i++)
+  for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
     BasicBlock *loop_null_check = BasicBlock::Create(module_.getContext(), "strcmp.loop_null_cmp", parent);
@@ -475,6 +485,7 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
 
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
+  result = CreateIntCast(result, getInt64Ty(), true);
 
   return result;
 }
