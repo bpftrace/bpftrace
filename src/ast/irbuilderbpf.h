@@ -48,6 +48,8 @@ public:
   Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin, int pid);
   Value      *CreateStrcmp(Value* val, std::string str, bool inverse=false);
   Value      *CreateStrcmp(Value* val1, Value* val2, bool inverse=false);
+  Value      *CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse=false);
+  Value      *CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool inverse=false);
   CallInst   *CreateGetNs();
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetCurrentCgroupId();

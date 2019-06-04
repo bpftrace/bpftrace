@@ -58,6 +58,21 @@ RUN bpftrace -v -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($
 EXPECT not equal
 TIMEOUT 5
 
+NAME string compare map lookup
+RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "cat"/ { @[comm] = 1; }' -c "cat /dev/null"
+EXPECT @\[cat\]: 1
+TIMEOUT 5
+
+NAME struct partial string compare - pass
+RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4)) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
+EXPECT I got hhvm
+TIMEOUT 5
+
+NAME struct partial string compare - pass reverse
+RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4)) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
+EXPECT I got hhvm-proc
+TIMEOUT 5
+
 NAME optional_positional_int
 RUN bpftrace -e 'BEGIN { printf("-%d-\n", $1); exit() }'
 EXPECT -0-

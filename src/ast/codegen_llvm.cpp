@@ -734,6 +734,28 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateSignal(expr_);
     }
   }
+  else if (call.func == "strncmp") {
+    uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
+    const auto& left_arg = call.vargs->at(0);
+    const auto& right_arg = call.vargs->at(1);
+
+    // If one of the strings is fixed, we can avoid storing the
+    // literal in memory by calling a different function.
+    if (right_arg->is_literal) {
+      left_arg->accept(*this);
+      const auto& string_literal = static_cast<String *>(right_arg)->str;
+      expr_ = b_.CreateStrncmp(expr_, string_literal, size, false);
+    } else if (left_arg->is_literal) {
+      right_arg->accept(*this);
+      const auto& string_literal = static_cast<String *>(left_arg)->str;
+      expr_ = b_.CreateStrncmp(expr_, string_literal, size, false);
+    } else {
+      right_arg->accept(*this);
+      Value *right_string = expr_;
+      left_arg->accept(*this);
+      expr_ = b_.CreateStrncmp(expr_, right_string, size, false);
+    }
+  }
   else
   {
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
@@ -787,6 +809,8 @@ void CodegenLLVM::visit(Binop &binop)
 
     bool inverse = binop.op == bpftrace::Parser::token::NE;
 
+    // If one of the strings is fixed, we can avoid storing the
+    // literal in memory by calling a different function.
     if (binop.right->is_literal)
     {
       binop.left->accept(*this);
