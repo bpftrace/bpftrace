@@ -756,14 +756,16 @@ void SemanticAnalyser::visit(Unroll &unroll)
   {
     err_ << "unroll maximum value is 20.\n" << std::endl;
   }
-  else if (unroll.var == 0)
+  else if (unroll.var < 1)
   {
     err_ << "unroll minimum value is 1.\n" << std::endl;
   }
 
-  for (Statement *stmt : *unroll.stmts)
-  {
-    stmt->accept(*this);
+  for (int i=0; i < unroll.var; i++) {
+    for (Statement *stmt : *unroll.stmts)
+    {
+      stmt->accept(*this);
+    }
   }
 }
 
