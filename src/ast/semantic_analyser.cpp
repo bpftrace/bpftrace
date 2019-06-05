@@ -214,11 +214,12 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::hist, 8);
   }
   else if (call.func == "lhist") {
-    check_nargs(call, 4);
-    check_arg(call, Type::integer, 0);
-    check_arg(call, Type::integer, 1);
-    check_arg(call, Type::integer, 2);
-    check_arg(call, Type::integer, 3);
+    if (check_nargs(call, 4)) {
+      check_arg(call, Type::integer, 0);
+      check_arg(call, Type::integer, 1);
+      check_arg(call, Type::integer, 2);
+      check_arg(call, Type::integer, 3);
+    }
 
     if (is_final_pass()) {
       Expression &min_arg = *call.vargs->at(1);
