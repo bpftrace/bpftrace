@@ -460,7 +460,6 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "clear") {
     check_assignment(call, false, false);
-    check_nargs(call, 1);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -477,7 +476,6 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "zero") {
     check_assignment(call, false, false);
-    check_nargs(call, 1);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
