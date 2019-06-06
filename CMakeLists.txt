@@ -91,6 +91,8 @@ if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
 endif()
 
 find_package(LibBpf)
+find_package(LibBfd)
+find_package(LibOpcodes)
 
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
