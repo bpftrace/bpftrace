@@ -83,6 +83,8 @@ if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
   message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
 endif()
 
+find_package(LibBpf)
+
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 
