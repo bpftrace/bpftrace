@@ -671,6 +671,22 @@ TEST(semantic_analyser, tracepoint)
   test("tracepoint { 1 }", 1);
 }
 
+TEST(semantic_analyser, args_builtin_wrong_use)
+{
+  test("BEGIN { args->foo }", 1);
+  test("END { args->foo }", 1);
+  test("kprobe:f { args->foo }", 1);
+  test("kretprobe:f { args->foo }", 1);
+  test("uprobe:f { args->foo }", 1);
+  test("uretprobe:f { args->foo }", 1);
+  test("profile:f { args->foo }", 1);
+  test("usdt:sh:probe { args->foo }", 1);
+  test("profile:ms:100 { args->foo }", 1);
+  test("hardware:cache-references:1000000 { args->foo }", 1);
+  test("software:faults:1000 { args->foo }", 1);
+  test("interval:s:1 { args->foo }", 1);
+}
+
 TEST(semantic_analyser, profile)
 {
   test("profile:hz:997 { 1 }", 0);

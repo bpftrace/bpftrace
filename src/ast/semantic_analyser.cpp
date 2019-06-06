@@ -161,9 +161,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::tracepoint)
-        err_ << "The args builtin can only be used with tracepoint probes"
+      if (type != ProbeType::tracepoint) {
+        err_ << "The args builtin can only be used with tracepoint probes "
              << "(" << attach_point->provider << " used here)" << std::endl;
+        continue;
+      }
 
       /*
        * tracepoint wildcard expansion, part 2 of 3. This:
