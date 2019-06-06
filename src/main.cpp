@@ -461,9 +461,9 @@ int main(int argc, char *argv[])
   if (bt_debug != DebugLevel::kNone)
     return 0;
 
-  // Empty signal handler for cleanly terminating the program
+  // Signal handler that lets us know SIGINT was called.
   struct sigaction act = {};
-  act.sa_handler = [](int) { };
+  act.sa_handler = [](int) { BPFtrace::sigint_recv = true; };
   sigaction(SIGINT, &act, NULL);
 
   uint64_t num_probes = bpftrace.num_probes();
