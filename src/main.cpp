@@ -448,6 +448,11 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
+  // We are now post-processing. If we receive another SIGINT,
+  // handle it normally (exit)
+  act.sa_handler = SIG_DFL;
+  sigaction(SIGINT, &act, NULL);
+
   std::cout << "\n\n";
 
   err = bpftrace.print_maps();
