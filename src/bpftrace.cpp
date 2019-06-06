@@ -38,6 +38,7 @@ namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
+volatile sig_atomic_t BPFtrace::sigint_recv = false;
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
   int ret = -1;
@@ -787,6 +788,10 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
   while (true)
   {
     int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
+    if (ready < 0 && errno == EINTR && !BPFtrace::sigint_recv) {
+      // We received an interrupt not caused by SIGINT, skip and run again
+      continue;
+    }
 
     // Return if either
     //   * epoll_wait has encountered an error (eg signal delivery)
