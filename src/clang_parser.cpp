@@ -321,6 +321,11 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
       .Contents = stdint_h,
       .Length = stdint_h_len,
     },
+    {
+      .Filename = "/bpftrace/include/" ASM_GOTO_WORKAROUND_H,
+      .Contents = asm_goto_workaround_h,
+      .Length = asm_goto_workaround_h_len,
+    },
   };
 
   std::vector<const char *> args =

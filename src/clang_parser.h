@@ -3,6 +3,8 @@
 #include <clang-c/Index.h>
 #include "bpftrace.h"
 
+#define ASM_GOTO_WORKAROUND_H "asm_goto_workaround.h"
+
 namespace bpftrace {
 
 namespace ast { class Program; }
