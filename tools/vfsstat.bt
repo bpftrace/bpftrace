@@ -22,8 +22,8 @@ BEGIN
 
 }
 
-kprobe:vfs_read,
-kprobe:vfs_write,
+kprobe:vfs_read*,
+kprobe:vfs_write*,
 kprobe:vfs_fsync,
 kprobe:vfs_open,
 kprobe:vfs_create

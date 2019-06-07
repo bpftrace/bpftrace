@@ -30,16 +30,8 @@ tracepoint:syscalls:sys_enter_statfs
 	@filename[tid] = args->pathname;
 }
 
-tracepoint:syscalls:sys_enter_statx
-{
-	@filename[tid] = args->filename;
-}
-
-tracepoint:syscalls:sys_enter_newstat
-{
-	@filename[tid] = args->filename;
-}
-
+tracepoint:syscalls:sys_enter_statx,
+tracepoint:syscalls:sys_enter_newstat,
 tracepoint:syscalls:sys_enter_newlstat
 {
 	@filename[tid] = args->filename;
@@ -51,10 +43,15 @@ tracepoint:syscalls:sys_exit_newstat,
 tracepoint:syscalls:sys_exit_newlstat
 /@filename[tid]/
 {
-	$ret = *(ctx + 16);
+	$ret = args->ret;
 	$errno = $ret >= 0 ? 0 : - $ret;
 
 	printf("%-6d %-16s %3d %s\n", pid, comm, $errno,
 	    str(@filename[tid]));
 	delete(@filename[tid]);
+}
+
+END
+{
+	clear(@filename);
 }

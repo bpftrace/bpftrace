@@ -34,5 +34,5 @@ kprobe:oom_kill_process
 	printf("Triggered by PID %d (\"%s\"), ", pid, comm);
 	printf("OOM kill of PID %d (\"%s\"), %d pages, loadavg: ",
 	    $oc->chosen->pid, $oc->chosen->comm, $oc->totalpages);
-	system("cat /proc/loadavg");
+	cat("/proc/loadavg");
 }
