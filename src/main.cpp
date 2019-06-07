@@ -370,6 +370,8 @@ int main(int argc, char *argv[])
     if (ksrc != "")
       extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
   }
+  extra_flags.push_back("-include");
+  extra_flags.push_back(ASM_GOTO_WORKAROUND_H);
 
   for (auto dir : include_dirs)
   {
