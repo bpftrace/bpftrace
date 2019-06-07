@@ -78,6 +78,8 @@ bool is_unsafe_func(const std::string &func_name);
 std::string exec_system(const char* cmd);
 std::string resolve_binary_path(const std::string& cmd);
 void cat_file(const char *filename, size_t, std::ostream&);
+std::string str_join(const std::vector<std::string> &list, const std::string &delim);
+bool is_integer(const std::string &str, bool allow_negative = false);
 
 // trim from end of string (right)
 inline std::string& rtrim(std::string& s)

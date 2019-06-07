@@ -337,7 +337,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
-  auto &out = bpftrace->outputstream();
+  auto &out = bpftrace->out_->outputstream();
   int err;
 
   // Ignore the remaining events if perf_event_printer is called during finalization
@@ -602,7 +602,7 @@ size_t BPFtrace::num_params() const
 void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
-  bpftrace->outputstream() << "Lost " << lost << " events" << std::endl;
+  bpftrace->out_->lost_events(lost);
 }
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
@@ -833,7 +833,6 @@ int BPFtrace::print_maps()
       err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
-    out_ << std::endl;
 
     if (err)
       return err;
@@ -987,6 +986,34 @@ int BPFtrace::zero_map(IMap &map)
   return 0;
 }
 
+std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div)
+{
+  if (map.type_.type == Type::kstack)
+    return get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
+  else if (map.type_.type == Type::ustack)
+    return get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
+  else if (map.type_.type == Type::ksym)
+    return resolve_ksym(*(uintptr_t*)value.data());
+  else if (map.type_.type == Type::usym)
+    return resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
+  else if (map.type_.type == Type::inet)
+    return resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
+  else if (map.type_.type == Type::username)
+    return resolve_uid(*(uint64_t*)(value.data()));
+  else if (map.type_.type == Type::string)
+    return std::string(value.data(), value.data() + value.size());
+  else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
+    return std::to_string(reduce_value(value, ncpus_) / div);
+  else if (map.type_.type == Type::min)
+    return std::to_string(min_value(value, ncpus_) / div);
+  else if (map.type_.type == Type::max)
+    return std::to_string(max_value(value, ncpus_) / div);
+  else if (map.type_.type == Type::probe)
+    return resolve_probe(*(uint64_t*)value.data());
+  else
+    return std::to_string(*(int64_t*)value.data() / div);
+}
+
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
   std::vector<uint8_t> old_key;
@@ -1051,49 +1078,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (div == 0)
     div = 1;
-  uint32_t i = 0;
-  size_t total = values_by_key.size();
-  for (auto &pair : values_by_key)
-  {
-    auto key = pair.first;
-    auto value = pair.second;
-
-    if (top)
-    {
-      if (total > top && i++ < (total - top))
-        continue;
-    }
-
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
-
-    if (map.type_.type == Type::kstack)
-      out_ << get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
-    else if (map.type_.type == Type::ustack)
-      out_ << get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
-    else if (map.type_.type == Type::ksym)
-      out_ << resolve_ksym(*(uintptr_t*)value.data());
-    else if (map.type_.type == Type::usym)
-      out_ << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
-    else if (map.type_.type == Type::inet)
-      out_ << resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
-    else if (map.type_.type == Type::username)
-      out_ << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
-    else if (map.type_.type == Type::string)
-      out_ << value.data() << std::endl;
-    else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
-      out_ << reduce_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::min)
-      out_ << min_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::max)
-      out_ << max_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::probe)
-      out_ << resolve_probe(*(uint64_t*)value.data()) << std::endl;
-    else
-      out_ << *(int64_t*)value.data() / div << std::endl;
-  }
-  if (i == 0)
-    out_ << std::endl;
-
+  out_->map(*this, map, top, div, values_by_key);
   return 0;
 }
 
@@ -1167,28 +1152,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
 
   if (div == 0)
     div = 1;
-  uint32_t i = 0;
-  for (auto &key_count : total_counts_by_key)
-  {
-    auto &key = key_count.first;
-    auto &value = values_by_key[key];
-
-    if (top)
-    {
-      if (i++ < (values_by_key.size() - top))
-        continue;
-    }
-
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
-
-    if (map.type_.type == Type::hist)
-      print_hist(value, div);
-    else
-      print_lhist(value, map.lqmin, map.lqmax, map.lqstep);
-
-    out_ << std::endl;
-  }
-
+  out_->map_hist(*this, map, top, div, values_by_key, total_counts_by_key);
   return 0;
 }
 
@@ -1258,143 +1222,7 @@ int BPFtrace::print_map_stats(IMap &map)
     return a.second < b.second;
   });
 
-  for (auto &key_count : total_counts_by_key)
-  {
-    auto &key = key_count.first;
-    auto &value = values_by_key[key];
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
-
-    uint64_t count = value.at(0);
-    uint64_t total = value.at(1);
-    uint64_t average = 0;
-
-    if (count != 0)
-      average = total / count;
-
-    if (map.type_.type == Type::stats)
-      out_ << "count " << count << ", average " <<  average << ", total " << total << std::endl;
-    else
-      out_ << average << std::endl;
-  }
-
-  out_ << std::endl;
-
-  return 0;
-}
-
-int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) const
-{
-  int min_index = -1;
-  int max_index = -1;
-  int max_value = 0;
-
-  for (size_t i = 0; i < values.size(); i++)
-  {
-    int v = values.at(i);
-    if (v > 0) {
-      if (min_index == -1)
-        min_index = i;
-      max_index = i;
-    }
-    if (v > max_value)
-      max_value = v;
-  }
-
-  if (max_index == -1)
-    return 0;
-
-  for (int i = min_index; i <= max_index; i++)
-  {
-    std::ostringstream header;
-    if (i == 0)
-    {
-      header << "(..., 0)";
-    }
-    else if (i == 1)
-    {
-      header << "[0]";
-    }
-    else if (i == 2)
-    {
-      header << "[1]";
-    }
-    else
-    {
-      header << "[" << hist_index_label(i-2);
-      header << ", " << hist_index_label(i-2+1) << ")";
-    }
-
-    int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
-    std::string bar(bar_width, '@');
-
-    out_ << std::setw(16) << std::left << header.str()
-              << std::setw(8) << std::right << (values.at(i) / div)
-              << " |" << std::setw(max_width) << std::left << bar << "|"
-              << std::endl;
-  }
-
-  return 0;
-}
-
-int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
-{
-  int max_index = -1;
-  int max_value = 0;
-  int buckets = (max - min) / step; // excluding lt and gt buckets
-
-  for (size_t i = 0; i < values.size(); i++)
-  {
-    int v = values.at(i);
-    if (v != 0)
-      max_index = i;
-    if (v > max_value)
-      max_value = v;
-  }
-
-  if (max_index == -1)
-    return 0;
-
-  // trim empty values
-  int start_value = -1;
-  int end_value = 0;
-
-  for (unsigned int i = 0; i <= static_cast<unsigned int>(buckets) + 1; i++)
-  {
-    if (values.at(i) > 0) {
-      if (start_value == -1) {
-        start_value = i;
-      }
-      end_value = i;
-    }
-  }
-
-  if (start_value == -1) {
-    start_value = 0;
-  }
-
-  for (int i = start_value; i <= end_value; i++)
-  {
-    int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
-    std::ostringstream header;
-    if (i == 0) {
-      header << "(..., " << lhist_index_label(min) << ")";
-    } else if (i == (buckets + 1)) {
-      header << "[" << lhist_index_label(max) << ", ...)";
-    } else {
-      header << "[" << lhist_index_label((i - 1) * step + min);
-      header << ", " << lhist_index_label(i * step + min) << ")";
-    }
-
-    std::string bar(bar_width, '@');
-
-    out_ << std::setw(16) << std::left << header.str()
-              << std::setw(8) << std::right << values.at(i)
-              << " |" << std::setw(max_width) << std::left << bar << "|"
-              << std::endl;
-  }
-
+  out_->map_stats(*this, map, values_by_key, total_counts_by_key);
   return 0;
 }
 
@@ -1469,64 +1297,6 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
   }
 
   return -1;  // silence end of control compiler warning
-}
-
-std::string BPFtrace::hist_index_label(int power)
-{
-  char suffix = '\0';
-  if (power >= 40)
-  {
-    suffix = 'T';
-    power -= 40;
-  }
-  else if (power >= 30)
-  {
-    suffix = 'G';
-    power -= 30;
-  }
-  else if (power >= 20)
-  {
-    suffix = 'M';
-    power -= 20;
-  }
-  else if (power >= 10)
-  {
-    suffix = 'K';
-    power -= 10;
-  }
-
-  std::ostringstream label;
-  label << (1<<power);
-  if (suffix)
-    label << suffix;
-  return label.str();
-}
-
-std::string BPFtrace::lhist_index_label(int number)
-{
-  int kilo = 1024;
-  int mega = 1048576;
-
-  std::ostringstream label;
-
-  if (number == 0)
-  {
-    label << number;
-  }
-  else if (number % mega == 0)
-  {
-    label << number / mega << 'M';
-  }
-  else if (number % kilo == 0)
-  {
-    label << number / kilo << 'K';
-  }
-  else
-  {
-    label << number;
-  }
-
-  return label.str();
 }
 
 uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)

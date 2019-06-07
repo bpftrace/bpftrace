@@ -18,6 +18,7 @@
 #include "printer.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
+#include "output.h"
 
 using namespace bpftrace;
 
@@ -28,6 +29,7 @@ void usage()
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -B MODE        output buffering mode ('line', 'full', or 'none')" << std::endl;
+  std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -o file        redirect program output to file" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
@@ -116,10 +118,10 @@ int main(int argc, char *argv[])
   char *cmd_str = nullptr;
   bool listing = false;
   bool safe_mode = true;
-  std::string script, search, file_name, output_file;
+  std::string script, search, file_name, output_file, output_format;
   int c;
 
-  const char* const short_options = "dB:e:hlp:vc:Vo:I:";
+  const char* const short_options = "dB:f:e:hlp:vc:Vo:I:";
   option long_options[] = {
     option{"help", no_argument, nullptr, 'h'},
     option{"version", no_argument, nullptr, 'V'},
@@ -158,6 +160,9 @@ int main(int argc, char *argv[])
           std::cerr << "USAGE: -B must be either 'line', 'full', or 'none'." << std::endl;
           return 1;
         }
+        break;
+      case 'f':
+        output_format = optarg;
         break;
       case 'e':
         script = optarg;
@@ -212,17 +217,30 @@ int main(int argc, char *argv[])
   }
 
   std::ostream * os = &std::cout;
-  std::ofstream output;
+  std::ofstream outputstream;
   if (!output_file.empty()) {
-    output.open(output_file);
-    if (output.fail()) {
+    outputstream.open(output_file);
+    if (outputstream.fail()) {
       std::cerr << "Failed to open output file: \"" << output_file;
       std::cerr << "\": " << strerror(errno) <<  std::endl;
       return 1;
     }
-    os = &output;
+    os = &outputstream;
   }
-  BPFtrace bpftrace(*os);
+
+  std::unique_ptr<Output> output;
+  if (output_format.empty() || output_format == "text") {
+    output = std::make_unique<TextOutput>(*os);
+  }
+  else if (output_format == "json") {
+    output = std::make_unique<JsonOutput>(*os);
+  }
+  else {
+    std::cerr << "Invalid output format \"" << output_format << "\"" << std::endl;
+    std::cerr << "Valid formats: 'text', 'json'" << std::endl;
+    return 1;
+  }
+  BPFtrace bpftrace(move(output));
   Driver driver(bpftrace);
 
   bpftrace.safe_mode = safe_mode;
