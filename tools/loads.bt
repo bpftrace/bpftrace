@@ -20,7 +20,6 @@
 BEGIN
 {
 	printf("Reading load averages... Hit Ctrl-C to end.\n");
-
 }
 
 interval:s:1
