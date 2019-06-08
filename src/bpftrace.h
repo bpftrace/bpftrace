@@ -154,8 +154,8 @@ private:
   int next_probe_id_ = 0;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
-  int setup_perf_events();
-  void poll_perf_events(int epollfd, bool drain=false);
+  std::tuple<int, int> setup_perf_events();
+  void poll_perf_events(int epollfd, int signalfd, bool drain=false);
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);

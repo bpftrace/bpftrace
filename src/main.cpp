@@ -419,11 +419,6 @@ int main(int argc, char *argv[])
   if (bt_debug != DebugLevel::kNone)
     return 0;
 
-  // Empty signal handler for cleanly terminating the program
-  struct sigaction act = {};
-  act.sa_handler = [](int) { };
-  sigaction(SIGINT, &act, NULL);
-
   uint64_t num_probes = bpftrace.num_probes();
   if (num_probes == 0)
   {

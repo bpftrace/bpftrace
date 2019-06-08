@@ -5,6 +5,7 @@
 #include <regex>
 #include <sstream>
 #include <sys/epoll.h>
+#include <sys/signalfd.h>
 #include <time.h>
 #include <arpa/inet.h>
 
@@ -671,7 +672,8 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     special_attached_probes_.push_back(std::move(attached_probe));
   }
 
-  int epollfd = setup_perf_events();
+  int epollfd, signalfd;
+  std::tie(epollfd, signalfd) = setup_perf_events();
   if (epollfd < 0)
     return epollfd;
 
@@ -737,26 +739,26 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (bt_verbose)
     std::cerr << "Running..." << std::endl;
 
-  poll_perf_events(epollfd);
+  poll_perf_events(epollfd, signalfd);
   attached_probes_.clear();
   // finalize_ should be false from now on otherwise perf_event_printer() can
   // ignore the END_trigger() events.
   finalize_ = false;
 
   END_trigger();
-  poll_perf_events(epollfd, true);
+  poll_perf_events(epollfd, signalfd, true);
   special_attached_probes_.clear();
 
   return 0;
 }
 
-int BPFtrace::setup_perf_events()
+std::tuple<int, int> BPFtrace::setup_perf_events()
 {
   int epollfd = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd == -1)
   {
     std::cerr << "Failed to create epollfd" << std::endl;
-    return -1;
+    return std::make_tuple(-1, -1);
   }
 
   std::vector<int> cpus = get_online_cpus();
@@ -768,7 +770,7 @@ int BPFtrace::setup_perf_events()
     if (reader == nullptr)
     {
       std::cerr << "Failed to open perf buffer" << std::endl;
-      return -1;
+      return std::make_tuple(-1, -1);
     }
 
     struct epoll_event ev = {};
@@ -780,13 +782,29 @@ int BPFtrace::setup_perf_events()
     if (epoll_ctl(epollfd, EPOLL_CTL_ADD, reader_fd, &ev) == -1)
     {
       std::cerr << "Failed to add perf reader to epoll" << std::endl;
-      return -1;
+      return std::make_tuple(-1, -1);
     }
   }
-  return epollfd;
+
+  sigset_t sigset;
+  sigemptyset(&sigset);
+  sigaddset(&sigset, SIGINT);
+  sigprocmask(SIG_BLOCK, &sigset, nullptr);
+
+  int signal_fd = signalfd(-1, &sigset, SFD_CLOEXEC);
+  struct epoll_event ev = {};
+  ev.events = EPOLLIN;
+  ev.data.ptr = nullptr;
+  if (epoll_ctl(epollfd, EPOLL_CTL_ADD, signal_fd, &ev) == -1)
+  {
+    std::cerr << "Failed to add signalfd to epoll" << std::endl;
+    return std::make_tuple(-1, -1);
+  }
+
+  return std::make_tuple(epollfd, signal_fd);
 }
 
-void BPFtrace::poll_perf_events(int epollfd, bool drain)
+void BPFtrace::poll_perf_events(int epollfd, int signalfd, bool drain)
 {
   auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
@@ -794,17 +812,29 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
     int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
 
     // Return if either
-    //   * epoll_wait has encountered an error (eg signal delivery)
+    //   * epoll_wait has encountered an error
     //   * There's no events left and we've been instructed to drain or
     //     finalization has been requested through exit() builtin.
-    if (ready < 0 || (ready == 0 && (drain || finalize_)))
+    if ((ready < 0 && errno != EINTR) || (ready == 0 && (drain || finalize_)))
     {
       return;
     }
 
     for (int i=0; i<ready; i++)
     {
-      perf_reader_event_read((perf_reader*)events[i].data.ptr);
+      if (events[i].data.ptr == nullptr)
+      {
+        signalfd_siginfo siginfo;
+        if (read(signalfd, &siginfo, sizeof(siginfo)) != sizeof(siginfo))
+        {
+          std::cerr << "Short read from signalfd" << std::endl;
+        }
+        return;
+      }
+      else
+      {
+        perf_reader_event_read((perf_reader *)events[i].data.ptr);
+      }
     }
 
     // If we are tracing a specific pid and it has exited, we should exit
