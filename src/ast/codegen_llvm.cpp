@@ -27,7 +27,7 @@ void CodegenLLVM::visit(Integer &integer)
 
 void CodegenLLVM::visit(PositionalParameter &param)
 {
-  std::string pstr = bpftrace_.get_param(param.n);
+  std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
   if (bpftrace_.is_numeric(pstr)) {
     expr_ = b_.getInt64(std::stoll(pstr));
   } else {

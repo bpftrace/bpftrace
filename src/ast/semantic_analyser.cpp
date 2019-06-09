@@ -23,12 +23,8 @@ void SemanticAnalyser::visit(Integer &integer)
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
   param.type = SizedType(Type::integer, 8);
-  if (static_cast<size_t>(param.n) > bpftrace_.num_params()) {
-    err_ << "missing positional parameter $" << param.n << std::endl;
-    return;
-  }
-  std::string pstr = bpftrace_.get_param(param.n);
   if (is_final_pass()) {
+    std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
     if (!bpftrace_.is_numeric(pstr) && !param.is_in_str) {
       err_ << "$" << param.n << " used numerically, but given \"" << pstr
            << "\". Try using str($" << param.n << ")." << std::endl;

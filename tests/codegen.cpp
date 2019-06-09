@@ -42,6 +42,7 @@
 #include "codegen/call_ntop_key.cpp"
 #include "codegen/call_print.cpp"
 #include "codegen/call_printf.cpp"
+#include "codegen/optional_positional_parameter.cpp"
 #include "codegen/call_reg.cpp"
 #include "codegen/call_stats.cpp"
 #include "codegen/call_str.cpp"

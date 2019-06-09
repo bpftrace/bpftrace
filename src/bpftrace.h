@@ -92,8 +92,7 @@ public:
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
   void add_param(const std::string &param);
   bool is_numeric(std::string str) const;
-  std::string get_param(size_t index) const;
-  size_t num_params() const;
+  std::string get_param(size_t index, bool is_str) const;
   void request_finalize();
   std::string cmd_;
   int pid_{0};
