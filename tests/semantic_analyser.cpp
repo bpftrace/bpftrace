@@ -906,6 +906,9 @@ TEST(semantic_analyser, positional_parameters)
 
   test(bpftrace, "kprobe:f { printf(\"%s\", str($2)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $2); }", 10);
+
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($3)); }", 0);
+  test(bpftrace, "kprobe:f { printf(\"%d\", $3); }", 0);
 }
 
 TEST(semantic_analyser, macros)

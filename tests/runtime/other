@@ -58,6 +58,16 @@ RUN bpftrace -v -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($
 EXPECT not equal
 TIMEOUT 5
 
+NAME optional_positional_int
+RUN bpftrace -e 'BEGIN { printf("-%d-\n", $1); exit() }'
+EXPECT -0-
+TIMEOUT 1
+
+NAME optional_positional_str
+RUN bpftrace -e 'BEGIN { printf("-%s-\n", str($1)); exit() }'
+EXPECT --
+TIMEOUT 1
+
 NAME lhist can be cleared
 RUN bpftrace -e 'BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }'
 EXPECT .*
