@@ -336,6 +336,12 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   if (bpftrace->finalize_)
     return;
 
+  if (bpftrace->exitsig_recv)
+  {
+    bpftrace->request_finalize();
+    return;
+  }
+
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
   {
@@ -751,9 +757,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   poll_perf_events(epollfd);
   attached_probes_.clear();
-  // finalize_ should be false from now on otherwise perf_event_printer() can
-  // ignore the END_trigger() events.
+  // finalize_ and exitsig_recv should be false from now on otherwise
+  // perf_event_printer() can ignore the END_trigger() events.
   finalize_ = false;
+  exitsig_recv = false;
 
   END_trigger();
   poll_perf_events(epollfd, true);
