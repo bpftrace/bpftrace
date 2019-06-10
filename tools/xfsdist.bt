@@ -40,3 +40,9 @@ kretprobe:xfs_file_fsync
 	delete(@start[tid]);
 	delete(@name[tid]);
 }
+
+END
+{
+	clear(@start);
+	clear(@name);
+}
