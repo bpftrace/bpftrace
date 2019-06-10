@@ -7,6 +7,7 @@ add_executable(bpftrace_test
   bpftrace.cpp
   clang_parser.cpp
   codegen.cpp
+  list.cpp
   main.cpp
   mocks.cpp
   parser.cpp
@@ -27,7 +28,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
-)
+  ${CMAKE_SOURCE_DIR}/src/list.cpp)
 
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
