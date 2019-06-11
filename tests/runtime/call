@@ -96,13 +96,13 @@ NAME kstack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }'
 EXPECT SUCCESS kstack
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER sleep 0.1
 
 NAME ustack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }'
 EXPECT SUCCESS ustack
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER sleep 0.1
 
 NAME cat
 RUN bpftrace -v -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
