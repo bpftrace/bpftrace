@@ -23,7 +23,6 @@
 
 namespace bpftrace {
 
-const int BPF_LOG_SIZE = 400 * 1024;
 /*
  * Kernel functions that are unsafe to trace are excluded in the Kernel with
  * `notrace`. However, the ones below are not excluded.
@@ -325,7 +324,7 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
-  char log_buf[BPF_LOG_SIZE];
+  char log_buf[probe_.log_size];
   char name[STRING_SIZE], *namep;
   unsigned log_buf_size = sizeof (log_buf);
 
