@@ -306,9 +306,8 @@ std::string JsonOutput::json_escape(const std::string &str) const
   return escaped.str();
 }
 
-void TextOutput::message(const std::string type, std::string msg, bool nl) const
+void TextOutput::message(const std::string type __attribute__((unused)), std::string msg, bool nl) const
 {
-  (void)type;
   out_ << msg;
   if (nl)
     out_ << std::endl;
@@ -517,9 +516,8 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
   out_ << "\n}}\n" << std::endl;
 }
 
-void JsonOutput::message(const std::string type, std::string msg, bool nl) const
+void JsonOutput::message(const std::string type, std::string msg, bool nl __attribute__((unused))) const
 {
-  (void)nl;
   out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}\n" << std::endl;
 }
 
