@@ -66,6 +66,9 @@ static void test(
 
   std::string full_expected_output = header + expected_output;
   EXPECT_EQ(full_expected_output, out.str());
+  if(::testing::Test::HasFailure()) {
+    std::cerr << "Program: '" << input <<"'" <<  std::endl;
+  }
 }
 
 static void test(

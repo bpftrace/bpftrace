@@ -436,6 +436,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::integer, 8);
   }
   else if (call.func == "printf" || call.func == "system" || call.func == "cat") {
+    needs_fmtstr_map_ = true;
     check_assignment(call, false, false);
     if (check_varargs(call, 1, 7)) {
       check_arg(call, Type::string, 0, true);
@@ -443,13 +444,16 @@ void SemanticAnalyser::visit(Call &call)
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
+        size_t args_size = 0;
         for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
           auto ty = (*iter)->type;
           // Promote to 64-bit if it's not an array type
           if (!ty.IsArray())
             ty.size = 8;
           args.push_back({ .type =  ty, .offset = 0 });
+          args_size += ty.size;
         }
+        max_fmtstr_args_size_ = std::max(max_fmtstr_args_size_, args_size);
         err_ << verify_format_string(fmt.str, args);
 
         if (call.func == "printf")
@@ -1240,6 +1244,21 @@ int SemanticAnalyser::create_maps(bool debug)
     }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
+  }
+
+  if (needs_fmtstr_map_)
+  {
+    std::string map_ident = "fmtstr";
+
+    SizedType type = SizedType(Type::fmtstr, sizeof(size_t) + max_fmtstr_args_size_);
+    MapKey key;
+    if (debug)
+      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
+    else {
+      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      bpftrace_.fmtstr_map_zero_ = calloc(1, max_fmtstr_args_size_ + sizeof(size_t));
+    }
+    failed_maps += is_invalid_map(bpftrace_.fmtstr_map_->mapfd_);
   }
 
   if (failed_maps > 0)

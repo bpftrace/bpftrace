@@ -74,8 +74,10 @@ private:
   std::map<std::string, ExpressionList> map_args_;
   std::unordered_set<StackType> needs_stackid_maps_;
   bool needs_join_map_ = false;
+  bool needs_fmtstr_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
+  size_t max_fmtstr_args_size_ = 0;
 };
 
 } // namespace ast

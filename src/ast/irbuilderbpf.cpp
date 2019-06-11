@@ -165,6 +165,26 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   return call;
 }
 
+CallInst *IRBuilderBPF::CreateGetFmtStrMap(StructType *printf_struct, int asyncId)
+{
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.fmtstr_map_->mapfd_);
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  Value *keyv = getInt32(0);
+  CreateStore(keyv, key);
+
+  FunctionType *lookup_func_type = FunctionType::get(
+      PointerType::get(printf_struct, 0),
+      {getInt8PtrTy(), getInt8PtrTy()},
+      false);
+  PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
+  Constant *lookup_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_map_lookup_elem),
+      lookup_func_ptr_type);
+  CallInst *call = CreateCall(lookup_func, {map_ptr, key}, "lookup_fmtstr_map");
+  return call;
+}
+
 Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
@@ -253,7 +273,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
   CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
-void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
+void IRBuilderBPF::CreateProbeRead(Value *dst, size_t size, Value *src)
 {
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
