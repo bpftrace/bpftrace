@@ -34,6 +34,10 @@ Vagrant.configure("2") do |config|
       'image' => 'ubuntu/cosmic64',
       'scripts' => [ $ubuntu_18_deps, ],
     },
+    'ubuntu-19.04' => {
+      'image' => 'ubuntu/disco64',
+      'scripts' => [ $ubuntu_18_deps, ],
+    },
   }
   boxes.each do | name, params |
     config.vm.define name do |box|
