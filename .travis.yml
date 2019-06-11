@@ -13,25 +13,24 @@ matrix:
     # of passing occasionally.
     # String comparisons are the exception - they are just broken in debug builds.
     - name: "Static LLVM 5 Debug"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison"
+      env: LLVM_VERSION=5.0 DOCKER_BASE=alpine BUILD_TYPE=debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison"
     - name: "Static LLVM 5 Release"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*"
+      env: LLVM_VERSION=5.0 DOCKER_BASE=alpine BUILD_TYPE=release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*"
 
     - name: "LLVM 6 Debug"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=6.0 DOCKER_BASE=bionic BUILD_TYPE=debug
     - name: "LLVM 6 Release"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=6.0 DOCKER_BASE=bionic BUILD_TYPE=release
 
     - name: "LLVM 7 Debug"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=7 DOCKER_BASE=bionic BUILD_TYPE=debug
     - name: "LLVM 7 Release"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=7 DOCKER_BASE=bionic BUILD_TYPE=release
 
     - name: "LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=8 DOCKER_BASE=bionic BUILD_TYPE=debug
     - name: "LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=8 DOCKER_BASE=bionic BUILD_TYPE=release
 
 script:
-  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION -f docker/Dockerfile.$BASE docker/
-  - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE-llvm-$LLVM_VERSION $(pwd)/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`
+  - sudo RUN_TESTS=1 ./build.sh
