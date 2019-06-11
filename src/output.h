@@ -27,6 +27,7 @@ public:
                          const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                          const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const = 0;
 
+  virtual void message(const std::string type, const std::string msg, bool nl = true) const = 0;
   virtual void lost_events(int lost) const = 0;
 
 protected:
@@ -48,6 +49,7 @@ public:
                  const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
 
+  void message(const std::string type, const std::string msg, bool nl = true) const override;
   void lost_events(int lost) const override;
 
 private:
@@ -70,11 +72,11 @@ public:
                  const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
 
+  void message(const std::string type, const std::string msg, bool nl = true) const override;
   void lost_events(int lost) const override;
 
 private:
   std::string json_escape(const std::string &str) const;
-  std::string json_literal(const std::string &str) const;
 
   void hist(const std::vector<uint64_t> &values, uint32_t div) const;
   void lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;

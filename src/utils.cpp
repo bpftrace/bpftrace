@@ -469,20 +469,4 @@ std::string str_join(const std::vector<std::string> &list, const std::string &de
   return str;
 }
 
-bool is_integer(const std::string &str, bool allow_negative)
-{
-  if (str.empty())
-    return false;
-
-  size_t i = 0;
-  if (allow_negative && str[0] == '-')
-    i++;
-
-  for (; i < str.length(); i++) {
-    if (!isdigit(str[i]))
-      return false;
-  }
-  return true;
-}
-
 } // namespace bpftrace

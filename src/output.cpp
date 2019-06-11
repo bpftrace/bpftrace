@@ -295,10 +295,6 @@ std::string JsonOutput::json_escape(const std::string &str) const
         escaped << "\\t";
         break;
 
-      case '\0':
-        escaped << c;
-        return escaped.str();
-
       default:
         if ('\x00' <= c && c <= '\x1f') {
           escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (int)c;
@@ -310,26 +306,26 @@ std::string JsonOutput::json_escape(const std::string &str) const
   return escaped.str();
 }
 
-void TextOutput::lost_events(int lost) const
+void TextOutput::message(const std::string type, std::string msg, bool nl) const
 {
-  out_ << "Lost " << lost << " events" << std::endl;
+  (void)type;
+  out_ << msg;
+  if (nl)
+    out_ << std::endl;
 }
 
-std::string JsonOutput::json_literal(const std::string &str) const
+void TextOutput::lost_events(int lost) const
 {
-  if (is_integer(str, true))
-    return str;
-  else
-    return "\"" + json_escape(str) + "\"";
+  message("", "Lost " + std::to_string(lost) + " events");
 }
 
 void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
                      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const
 {
-  out_ << "{";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
+  out_ << "{\"type\": \"map\", \"data\": {\n";
+  out_ << "  \"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{";
+    out_ << "{\n";
 
   uint32_t i = 0;
   uint32_t j = 0;
@@ -347,18 +343,26 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
-      out_ << ", ";
+      out_ << ",\n";
     if (args.size() > 0) {
-      out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
+      out_ << "    \"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
-    out_ << json_literal(bpftrace.map_value_to_str(map, value, div));
+    if (map.type_.type == Type::kstack || map.type_.type == Type::ustack || map.type_.type == Type::ksym ||
+        map.type_.type == Type::usym || map.type_.type == Type::inet || map.type_.type == Type::username ||
+        map.type_.type == Type::string || map.type_.type == Type::probe) {
+        out_ << "\"" << json_escape(bpftrace.map_value_to_str(map, value, div)) << "\"";
+    }
+    else {
+      out_ << bpftrace.map_value_to_str(map, value, div);
+    }
+
     i++;
   }
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "}\n" << std::endl;
+  out_ << "\n}}\n" << std::endl;
 }
 
 void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
@@ -372,9 +376,9 @@ void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
   for (int i = min_index; i <= max_index; i++)
   {
     if (i > min_index)
-      out_ << ", \n";
+      out_ << ",\n";
 
-    out_ << "  {";
+    out_ << "      {";
     if (i == 0)
     {
       out_ << "\"max\": -1, ";
@@ -396,7 +400,7 @@ void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
     out_ << "\"count\": " << values.at(i) / div;
     out_ << "}";
   }
-  out_ << "\n]";
+  out_ << "\n    ]";
 }
 
 void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
@@ -410,9 +414,9 @@ void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, in
   for (int i = start_value; i <= end_value; i++)
   {
     if (i > start_value)
-      out_ << ", \n";
+      out_ << ",\n";
 
-    out_ << "  {";
+    out_ << "      {";
     if (i == 0) {
       out_ << "\"max\": " << min - 1 << ", ";
 
@@ -426,17 +430,17 @@ void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, in
     out_ << "\"count\": " << values.at(i);
     out_ << "}";
   }
-  out_ << "\n]";
+  out_ << "\n    ]";
 }
 
 void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
                           const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                           const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
-  out_ << "{";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
+  out_ << "{\"type\": \"hist\", \"data\": {\n";
+  out_ << "  \"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{";
+    out_ << "{\n    ";
 
   uint32_t i = 0;
   uint32_t j = 0;
@@ -468,17 +472,17 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "}\n" << std::endl;
+  out_ << "\n}}\n" << std::endl;
 }
 
 void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
                            const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                            const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
-  out_ << "{";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
+  out_ << "{\"type\": \"stats\", \"data\": {\n";
+  out_ << "  \"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{";
+    out_ << "{\n";
 
   uint32_t i = 0;
   for (auto &key_count : total_counts_by_key)
@@ -488,9 +492,9 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
-      out_ << ", ";
+      out_ << ",\n";
     if (args.size() > 0) {
-      out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
+      out_ << "    \"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
     uint64_t count = value.at(0);
@@ -510,12 +514,18 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "}\n" << std::endl;
+  out_ << "\n}}\n" << std::endl;
+}
+
+void JsonOutput::message(const std::string type, std::string msg, bool nl) const
+{
+  (void)nl;
+  out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}\n" << std::endl;
 }
 
 void JsonOutput::lost_events(int lost) const
 {
-  out_ << "{\"type\": \"info\", \"msg\": \"Lost " << lost << " events\"}\n" << std::endl;
+  message("info", "Lost " + std::to_string(lost) + " events");
 }
 
 } // namespace bpftrace

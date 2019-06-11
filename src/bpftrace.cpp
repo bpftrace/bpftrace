@@ -337,7 +337,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
-  auto &out = bpftrace->out_->outputstream();
   int err;
 
   // Ignore the remaining events if perf_event_printer is called during finalization
@@ -394,29 +393,32 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "strftime returned 0" << std::endl;
       return;
     }
-    out << timestr;
+    bpftrace->out_->message("time", timestr, false);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::cat))
   {
     uint64_t cat_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
     auto filename = bpftrace->cat_args_[cat_id].c_str();
-    cat_file(filename, bpftrace->cat_bytes_max_, out);
+    std::stringstream buf;
+    cat_file(filename, bpftrace->cat_bytes_max_, buf);
+    bpftrace->out_->message("cat", buf.str(), false);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
     uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    auto joinstr = bpftrace->join_args_[join_id].c_str();
+    auto delim = bpftrace->join_args_[join_id].c_str();
+    std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
       auto *arg = arg_data + 2*sizeof(uint64_t) + i * bpftrace->join_argsize_;
       if (arg[0] == 0)
         break;
       if (i)
-        out << joinstr;
-      out << arg;
+        joined << delim;
+      joined << arg;
     }
-    out << std::endl;
+    bpftrace->out_->message("join", joined.str());
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
@@ -441,7 +443,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << buffer << std::endl;
       return;
     }
-    out << exec_system(buffer);
+    bpftrace->out_->message("syscall", exec_system(buffer), false);
     return;
   }
 
@@ -456,13 +458,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   int required_size = format(buffer, BUFSIZE, fmt, arg_values);
   // Return value is required size EXCLUDING null byte
   if (required_size < BUFSIZE) {
-    out << buffer;
+    bpftrace->out_->message("printf", std::string(buffer), false);
   } else {
     auto buf = std::make_unique<char[]>(required_size+1);
     // if for some reason the size is still wrong the string
     // will just be silently truncated
     format(buf.get(), required_size, fmt, arg_values);
-    out << buf.get();
+    bpftrace->out_->message("printf", std::string(buf.get()), false);
   }
 }
 
@@ -1001,7 +1003,7 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::username)
     return resolve_uid(*(uint64_t*)(value.data()));
   else if (map.type_.type == Type::string)
-    return std::string(value.data(), value.data() + value.size());
+    return std::string(reinterpret_cast<const char*>(value.data()));
   else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
     return std::to_string(reduce_value(value, ncpus_) / div);
   else if (map.type_.type == Type::min)
