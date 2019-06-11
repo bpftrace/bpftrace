@@ -557,8 +557,16 @@ void CodegenLLVM::visit(Call &call)
       arg.offset = struct_layout->getElementOffset(i+1); // +1 for the printf_id field
     }
 
-    AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
-    b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
+    Value *printf_args = b_.CreateGetPrintfMap(printf_struct);
+
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(), "printfzero", parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "printfnotzero", parent);
+    b_.CreateCondBr(b_.CreateICmpNE(printf_args, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), PointerType::get(printf_struct, 0)), "printzerocond"), notzero, zero);
+
+    b_.SetInsertPoint(notzero);
+
+    b_.CreateProbeRead(printf_args, struct_size, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(reinterpret_cast<uintptr_t>(bpftrace_.print_map_zero_)), PointerType::get(printf_struct, 0)));
 
     b_.CreateStore(b_.getInt64(printf_id_), printf_args);
     for (size_t i=1; i<call.vargs->size(); i++)
@@ -579,6 +587,11 @@ void CodegenLLVM::visit(Call &call)
     printf_id_++;
     b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
     b_.CreateLifetimeEnd(printf_args);
+
+    b_.CreateBr(zero);
+
+    // done
+    b_.SetInsertPoint(zero);
     expr_ = nullptr;
   }
   else if (call.func == "system")

@@ -32,6 +32,7 @@ enum class Type
   usym,
   cast,
   join,
+  printf,
   probe,
   username,
   inet,
