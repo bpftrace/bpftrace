@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
     return 1;
 
   if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
-		return 1;
+    return 1;
 	
   if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
     return 1;
