@@ -416,6 +416,15 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
           structs[struct_name].fields[ident].offset = offset;
           structs[struct_name].fields[ident].type = get_sized_type(type);
           structs[struct_name].size = ptypesize;
+          // if we find that ident is a data_loc_ dual register it in structs
+          // with the data_loc_ prefix removed.
+          if(ident.rfind("data_loc_", 0) == 0) {
+            auto dl_stripped = ident.substr(9);
+            structs[struct_name].fields[dl_stripped].type.is_data_loc = true;
+            structs[struct_name].fields[dl_stripped].offset = offset;
+            structs[struct_name].fields[dl_stripped].type = get_sized_type(type);
+            structs[struct_name].size = ptypesize;
+          }
         }
 
         return CXChildVisit_Recurse;
