@@ -196,21 +196,21 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
-  if (map.type.type == Type::string || map.type.type == Type::cast)
+  if (map.type.type == Type::string || map.type.type == Type::cast || map.type.type == Type::inet)
     CREATE_MEMCPY(value, call, map.type.size, 1);
   else
     CreateStore(CreateLoad(getInt64Ty(), call), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (map.type.type == Type::string || map.type.type == Type::cast)
+  if (map.type.type == Type::string || map.type.type == Type::cast || map.type.type == Type::inet)
     CreateMemSet(value, getInt8(0), map.type.size, 1);
   else
     CreateStore(getInt64(0), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_merge_block);
-  if (map.type.type == Type::string || map.type.type == Type::cast)
+  if (map.type.type == Type::string || map.type.type == Type::cast || map.type.type == Type::inet)
     return value;
 
   return CreateLoad(value);

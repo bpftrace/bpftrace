@@ -1093,7 +1093,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || assignment.expr->type.type == Type::inet)
   {
     val = expr;
   }
