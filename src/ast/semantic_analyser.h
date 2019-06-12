@@ -56,7 +56,6 @@ private:
   const int num_passes_ = 10;
 
   bool is_final_pass() const;
-  std::string get_cast_type(Expression *expr);
 
   bool check_assignment(const Call &call, bool want_map, bool want_var);
   bool check_nargs(const Call &call, size_t expected_nargs);
@@ -65,6 +64,8 @@ private:
   bool check_alpha_numeric(const Call &call, int arg_num);
 
   void check_stack_call(Call &call, Type type);
+
+  void assign_map_type(const Map &map, const SizedType &type);
 
   Probe *probe_;
   std::map<std::string, SizedType> variable_val_;

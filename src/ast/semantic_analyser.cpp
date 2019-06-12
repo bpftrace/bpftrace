@@ -680,6 +680,20 @@ void SemanticAnalyser::visit(Binop &binop)
 
 void SemanticAnalyser::visit(Unop &unop)
 {
+  if (unop.op == Parser::token::PLUSPLUS ||
+      unop.op == Parser::token::MINUSMINUS) {
+    // Handle ++ and -- before visiting unop.expr, because these
+    // operators should be able to work with undefined maps.
+    if (!unop.expr->is_map && !unop.expr->is_variable) {
+      err_ << "The " << opstr(unop)
+           << " operator must be applied to a map or variable" << std::endl;
+    }
+    if (unop.expr->is_map) {
+      Map &map = static_cast<Map&>(*unop.expr);
+      assign_map_type(map, SizedType(Type::integer, 8));
+    }
+  }
+
   unop.expr->accept(*this);
 
   SizedType &type = unop.expr->type;
@@ -688,14 +702,6 @@ void SemanticAnalyser::visit(Unop &unop)
       !(type.type == Type::cast && unop.op == Parser::token::MUL)) {
     err_ << "The " << opstr(unop) << " operator can not be used on expressions of type '"
          << type << "'" << std::endl;
-  }
-
-  if (unop.op == Parser::token::PLUSPLUS ||
-      unop.op == Parser::token::MINUSMINUS) {
-    if (!unop.expr->is_map && !unop.expr->is_variable) {
-      err_ << "The " << opstr(unop)
-           << " operator must be applied to a map or variable" << std::endl;
-    }
   }
 
   if (unop.op == Parser::token::MUL) {
@@ -871,34 +877,9 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
 
-  std::string map_ident = assignment.map->ident;
-  auto search = map_val_.find(map_ident);
-  if (search != map_val_.end()) {
-    if (search->second.type == Type::none) {
-      if (is_final_pass()) {
-        err_ << "Undefined map: " << map_ident << std::endl;
-      }
-      else {
-        search->second = assignment.expr->type;
-      }
-    }
-    else if (search->second.type != assignment.expr->type.type) {
-      err_ << "Type mismatch for " << map_ident << ": ";
-      err_ << "trying to assign value of type '" << assignment.expr->type;
-      err_ << "'\n\twhen map already contains a value of type '";
-      err_ << search->second << "'\n" << std::endl;
-    }
-  }
-  else {
-    // This map hasn't been seen before
-    map_val_.insert({map_ident, assignment.expr->type});
-    if (map_val_[map_ident].type == Type::integer) {
-      // Store all integer values as 64-bit in maps, so that there will
-      // be space for any integer to be assigned to the map later
-      map_val_[map_ident].size = 8;
-    }
-  }
+  assign_map_type(*assignment.map, assignment.expr->type);
 
+  const std::string &map_ident = assignment.map->ident;
   if (assignment.expr->type.type == Type::cast) {
     std::string cast_type = assignment.expr->type.cast_type;
     std::string curr_cast_type = map_val_[map_ident].cast_type;
@@ -1328,6 +1309,43 @@ bool SemanticAnalyser::check_alpha_numeric(const Call &call, int arg_num __attri
   }
 
   return true;
+}
+
+/*
+ * assign_map_type
+ *
+ *   Semantic analysis for assigning a value of the provided type
+ *   to the given map.
+ */
+void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
+{
+  const std::string &map_ident = map.ident;
+  auto search = map_val_.find(map_ident);
+  if (search != map_val_.end()) {
+    if (search->second.type == Type::none) {
+      if (is_final_pass()) {
+        err_ << "Undefined map: " << map_ident << std::endl;
+      }
+      else {
+        search->second = type;
+      }
+    }
+    else if (search->second.type != type.type) {
+      err_ << "Type mismatch for " << map_ident << ": ";
+      err_ << "trying to assign value of type '" << type;
+      err_ << "'\n\twhen map already contains a value of type '";
+      err_ << search->second << "'\n" << std::endl;
+    }
+  }
+  else {
+    // This map hasn't been seen before
+    map_val_.insert({map_ident, type});
+    if (map_val_[map_ident].type == Type::integer) {
+      // Store all integer values as 64-bit in maps, so that there will
+      // be space for any integer to be assigned to the map later
+      map_val_[map_ident].size = 8;
+    }
+  }
 }
 
 } // namespace ast
