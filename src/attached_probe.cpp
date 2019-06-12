@@ -23,6 +23,7 @@
 
 namespace bpftrace {
 
+const int BPF_LOG_SIZE = 400 * 1024;
 /*
  * Kernel functions that are unsafe to trace are excluded in the Kernel with
  * `notrace`. However, the ones below are not excluded.
@@ -324,7 +325,7 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
-  char log_buf[probe_.log_size];
+  char log_buf[BPF_LOG_SIZE];
   char name[STRING_SIZE], *namep;
   unsigned log_buf_size = sizeof (log_buf);
 
@@ -381,12 +382,8 @@ void AttachedProbe::load_prog()
   }
 
   if (progfd_ < 0) {
-    if (bt_verbose) {
+    if (bt_verbose)
       std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
-      if (errno == ENOSPC) {
-        std::cerr << "Error: No space left on device, try increasing BPFTRACE_LOG_SIZE environment variable" << std::endl;
-      }
-    }
     throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
   }
 

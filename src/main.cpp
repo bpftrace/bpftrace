@@ -47,7 +47,6 @@ void usage()
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes" << std::endl;
-  std::cerr << "    BPFTRACE_LOG_SIZE         [default: 409600] log size in bytes" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -332,9 +331,6 @@ int main(int argc, char *argv[])
     return 1;
 
   if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
-    return 1;
-	
-  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
     return 1;
 
   if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))

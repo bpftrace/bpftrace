@@ -112,17 +112,6 @@ RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
 EXPECT ^[0-9]$
 TIMEOUT 5
 
-NAME log size too small
-ENV BPFTRACE_LOG_SIZE=1
-RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ^Error loading program: BEGIN
-TIMEOUT 5
-
-NAME increase log size 
-RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ^Attaching 1 probe 
-TIMEOUT 5
-
 NAME cat "no such file"
 RUN bpftrace -e 'i:ms:1 { cat("/does/not/exist/file"); exit(); }'
 EXPECT ^Error opening file '/does/not/exist/file': No such file or directory$
