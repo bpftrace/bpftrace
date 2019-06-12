@@ -1,0 +1,17 @@
+FROM fedora:30
+RUN dnf install -y \
+    bison \
+    clang-devel \
+    cmake \
+    elfutils-libelf-devel \
+    flex \
+    gcc-c++ \
+    git \
+    llvm-devel \
+    make \
+    zlib-devel \
+    bcc-devel \
+    systemtap-sdt-devel
+
+COPY build.sh /build.sh
+ENTRYPOINT ["/bin/sh", "/build.sh"]

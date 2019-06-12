@@ -16,12 +16,11 @@
 BEGIN
 {
 	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
-
 }
 
 tracepoint:block:block_rq_issue
 {
-	@[comm] = hist(args->bytes);
+	@[args->comm] = hist(args->bytes);
 }
 
 END

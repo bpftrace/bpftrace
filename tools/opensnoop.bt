@@ -21,12 +21,7 @@ BEGIN
 	printf("%-6s %-16s %4s %3s %s\n", "PID", "COMM", "FD", "ERR", "PATH");
 }
 
-// workaround for #132: the next two code blocks can't be combined yet
-tracepoint:syscalls:sys_enter_open
-{
-	@filename[tid] = args->filename;
-}
-
+tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat
 {
 	@filename[tid] = args->filename;
@@ -36,11 +31,16 @@ tracepoint:syscalls:sys_exit_open,
 tracepoint:syscalls:sys_exit_openat
 /@filename[tid]/
 {
-	$ret = *(ctx + 16);		// workaround for #132
+	$ret = args->ret;
 	$fd = $ret > 0 ? $ret : -1;
 	$errno = $ret > 0 ? 0 : - $ret;
 
 	printf("%-6d %-16s %4d %3d %s\n", pid, comm, $fd, $errno,
 	    str(@filename[tid]));
 	delete(@filename[tid]);
+}
+
+END
+{
+	clear(@filename);
 }

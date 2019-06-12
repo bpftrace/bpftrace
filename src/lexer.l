@@ -69,6 +69,16 @@ bpftrace|perf {
 \//{space}*[\/\{]       { return Parser::make_ENDPRED(loc); } /* If "/" is followed by "/" or "{", choose ENDPRED, otherwise DIV */
 ","                     { return Parser::make_COMMA(loc); }
 "="                     { return Parser::make_ASSIGN(loc); }
+"<<="                   { return Parser::make_LEFTASSIGN(loc); }
+">>="                   { return Parser::make_RIGHTASSIGN(loc); }
+"+="                    { return Parser::make_PLUSASSIGN(loc); }
+"-="                    { return Parser::make_MINUSASSIGN(loc); }
+"*="                    { return Parser::make_MULASSIGN(loc); }
+"/="                    { return Parser::make_DIVASSIGN(loc); }
+"%="                    { return Parser::make_MODASSIGN(loc); }
+"&="                    { return Parser::make_BANDASSIGN(loc); }
+"|="                    { return Parser::make_BORASSIGN(loc); }
+"^="                    { return Parser::make_BXORASSIGN(loc); }
 "=="                    { return Parser::make_EQ(loc); }
 "!="                    { return Parser::make_NE(loc); }
 "<="                    { return Parser::make_LE(loc); }
