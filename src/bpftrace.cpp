@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <regex>
 #include <sstream>
 #include <sys/epoll.h>
 #include <time.h>
@@ -1715,18 +1714,14 @@ uint64_t BPFtrace::resolve_kname(const std::string &name) const
 
   std::string line;
 
-  std::string search = "\\b";
-  search += name;
-  std::regex e (search + "\\b");
-  std::smatch match;
-
   while (std::getline(file, line) && addr == 0)
   {
-    auto found = std::regex_search (line, match, e);
+    auto tokens = split_string(line, ' ');
 
-    if (found)
+    if (name == tokens[2])
     {
       addr = read_address_from_output(line);
+      break;
     }
   }
 
