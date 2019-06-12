@@ -139,7 +139,6 @@ public:
   std::string name;             // full probe name
   std::string ns;               // for USDT probes, if provider namespace not from path
   uint64_t loc;                 // for USDT probes
-  uint64_t log_size;
   int index = 0;
   int freq;
 };

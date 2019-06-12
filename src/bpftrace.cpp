@@ -107,7 +107,6 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = "/proc/self/exe";
       probe.attach_point = "BEGIN_trigger";
       probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
@@ -122,7 +121,6 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = "/proc/self/exe";
       probe.attach_point = "END_trigger";
       probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
@@ -177,7 +175,6 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = attach_point->target;
       probe.attach_point = func_id;
       probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.ns = attach_point->ns;
       probe.name = attach_point->name(func_id);
