@@ -1,5 +1,6 @@
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <string.h>
 #include <glob.h>
 
@@ -152,7 +153,16 @@ std::string TracepointFormatParser::parse_field(const std::string &line)
 
   if (field_type.find("__data_loc") != std::string::npos)
   {
-    field_type = "int";
+    std::regex rgx(".*field:__data_loc\\s(\\w+)(\\[\\])?.*");
+    std::cmatch match;
+    if (std::regex_search(line.c_str(), match, rgx)) {
+      // handle char[] types
+      if (match.size() == 3 && match[1] == "char" && match[2] == "[]") {
+        field_type = "char *";
+      } else {
+        field_type = match[1];
+      }
+    }
     field_name = "data_loc_" + field_name;
   }
 
