@@ -404,21 +404,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     cat_file(filename, bpftrace->cat_bytes_max_, out);
     return;
   }
-  else if (printf_id == asyncactionint(AsyncAction::join))
-  {
-    uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    auto joinstr = bpftrace->join_args_[join_id].c_str();
-    for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
-      auto *arg = arg_data + 2*sizeof(uint64_t) + i * bpftrace->join_argsize_;
-      if (arg[0] == 0)
-        break;
-      if (i)
-        out << joinstr;
-      out << arg;
-    }
-    out << std::endl;
-    return;
-  }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
   {
     if (bpftrace->safe_mode)
@@ -466,6 +451,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
 }
 
+struct JoinData
+{
+  uint64_t join_id;
+  // TODO(mmarchini): this pad should not be required
+  uint64_t pad;
+  const char elements[16][1024];
+};
+
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
@@ -507,6 +500,22 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
           std::make_unique<PrintableCString>(
             reinterpret_cast<char *>(arg_data+arg.offset)));
         break;
+      case Type::join: {
+        // uint64_t join_id = (uint64_t)*(reinterpret_cast<uint64_t*>(arg_data) + sizeof(uint64_t) / sizeof(uint64_t));
+        auto join_data = reinterpret_cast<JoinData*>(arg_data);
+        std::string out;
+        auto joinstr = std::string(join_args_[join_data->join_id].c_str());
+        for (unsigned int i = 0; i < join_argnum_; i++) {
+          auto *arg = join_data->elements[i];
+          if (arg[0] == 0)
+            break;
+          if (i)
+            out += joinstr;
+          out += std::string(arg);
+        }
+        arg_values.push_back(std::make_unique<PrintableString>(out));
+        break;
+      }
       case Type::ksym:
         arg_values.push_back(
           std::make_unique<PrintableString>(

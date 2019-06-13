@@ -106,6 +106,10 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
+  else if (stype.is_pointer)
+  {
+    ty = getInt8PtrTy();
+  }
   else
   {
     switch (stype.size)
@@ -147,13 +151,24 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 
 CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 {
+  std::vector<llvm::Type *> elements = {
+    getInt64Ty() // join_id
+  };
+
+  auto const_string_type = ArrayType::get(getInt8Ty(), bpftrace_.join_argsize_);
+  auto string_array_type = ArrayType::get(const_string_type, bpftrace_.join_argnum_);
+  elements.push_back(string_array_type);
+
+  StructType *join_struct = StructType::create(elements, "join_t", false);
+  PointerType *join_struct_ptr = PointerType::get(join_struct, 0);
+
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.join_map_->mapfd_);
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
   Value *keyv = getInt32(0);
   CreateStore(keyv, key);
 
   FunctionType *lookup_func_type = FunctionType::get(
-      getInt8PtrTy(),
+      join_struct_ptr,
       {getInt8PtrTy(), getInt8PtrTy()},
       false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
@@ -273,20 +288,20 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
   CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
-void IRBuilderBPF::CreateProbeRead(Value *dst, size_t size, Value *src)
+CallInst *IRBuilderBPF::CreateProbeRead(Value *dst, size_t size, Value *src)
 {
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
   FunctionType *proberead_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      {dst->getType(), getInt64Ty(), src->getType()},
       false);
   PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type, 0);
   Constant *proberead_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
+  return CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)

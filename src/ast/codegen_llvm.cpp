@@ -425,38 +425,53 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "join")
   {
     call.vargs->front()->accept(*this);
-    AllocaInst *first = b_.CreateAllocaBPF(SizedType(Type::integer, 8), call.func + "_first");
-    AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_second");
-    Value *perfdata = b_.CreateGetJoinMap(ctx_);
+    Value *joindata = b_.CreateGetJoinMap(ctx_);
+
     Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *zero = BasicBlock::Create(module_->getContext(), "joinzero", parent);
     BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "joinnotzero", parent);
-    b_.CreateCondBr(b_.CreateICmpNE(perfdata, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()), "joinzerocond"), notzero, zero);
+    BasicBlock *cleanup = BasicBlock::Create(module_->getContext(), "joincleanup", parent);
+    b_.CreateCondBr(b_.CreateICmpNE(b_.CreateCast(Instruction::PtrToInt, joindata, b_.getInt64Ty()), b_.getInt64(0), "joinzerocond"), notzero, zero);
+
+    // Join map address should never be zero, something went wrong, abort.
+    b_.SetInsertPoint(zero);
+    // TODO (mmarhcini): how is the return of a trace program interpreted by
+    // the kernel? Should we retrun negative here?
+    b_.CreateRet(b_.getInt64(0));
 
     // arg0
     b_.SetInsertPoint(notzero);
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
-    b_.CreateStore(b_.getInt64(join_id_), b_.CreateGEP(perfdata, {b_.getInt64(8)}));
+
+    Value *join_id_offset = b_.CreateGEP(joindata, {b_.getInt32(0), b_.getInt32(0)});
+    b_.CreateStore(b_.getInt64(join_id_), join_id_offset);
     join_id_++;
-    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
-    b_.CreateProbeRead(arr, 8, expr_);
-    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8+8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
 
-    for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++) {
-      // argi
-      b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
-      b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
-      b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)), bpftrace_.join_argsize_, b_.CreateLoad(second));
+    Value *joindata_strings_array = b_.CreateGEP(joindata, {b_.getInt32(0), b_.getInt32(1)});
+
+    AllocaInst *current_string = b_.CreateAllocaBPF(b_.getInt8PtrTy(), call.func + "_current_string");
+    for (unsigned int i = 0; i < bpftrace_.join_argnum_; i++) {
+      BasicBlock *read_suc = BasicBlock::Create(module_->getContext(), "joinread_suc_" + i, parent);
+      BasicBlock *read_str_suc = BasicBlock::Create(module_->getContext(), "joinread_str_suc_" + i, parent);
+      // TODO (mmarchini): we know expr_ is an array of strings, and we know we
+      // won't try to read more than join_argnum_ times from it, which means
+      // this could be strongly typed (expr_ could be an ArrayType), avoiding
+      // the pointer arithmetic here.
+      Value *current_string_to_read = b_.CreateGEP(expr_, b_.getInt32(i * 8));
+      Value *read_ret = b_.CreateProbeRead(current_string, 8, current_string_to_read);
+
+      b_.CreateCondBr(b_.CreateICmpSLT(read_ret, b_.getInt64(0)), cleanup, read_suc);
+      b_.SetInsertPoint(read_suc);
+
+      Value *offset = b_.CreateGEP(joindata_strings_array, {b_.getInt32(0), b_.getInt32(i)});
+      read_ret = b_.CreateProbeReadStr(offset, bpftrace_.join_argsize_, b_.CreateLoad(current_string));
+      b_.CreateCondBr(b_.CreateICmpSLT(read_ret, b_.getInt64(0)), cleanup, read_str_suc);
+      b_.SetInsertPoint(read_str_suc);
     }
+    b_.CreateBr(cleanup);
+    b_.SetInsertPoint(cleanup);
+    b_.CreateLifetimeEnd(current_string);
 
-    // emit
-    b_.CreatePerfEventOutput(ctx_, perfdata, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
-
-    b_.CreateBr(zero);
-
-    // done
-    b_.SetInsertPoint(zero);
-    expr_ = nullptr;
+    expr_ = joindata;
   }
   else if (call.func == "ksym")
   {
@@ -576,7 +591,7 @@ void CodegenLLVM::visit(Call &call)
       arg.accept(*this);
       Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
       if (arg.type.IsArray())
-        b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
+        b_.CreateProbeRead(offset, arg.type.size, expr_);
       else
         b_.CreateStore(expr_, offset);
 
@@ -1106,7 +1121,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string)
+  if (map.type.type == Type::string || assignment.expr->type.type == Type::join)
   {
     val = expr;
   }
@@ -1400,8 +1415,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string || expr->type.type == Type::usym ||
-        expr->type.type == Type::inet)
-        b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
+        expr->type.type == Type::inet || expr->type.type == Type::join)
+        b_.CreateProbeRead(offset_val, expr->type.size, expr_);
       else
         // promote map key to 64-bit:
         b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), offset_val);
