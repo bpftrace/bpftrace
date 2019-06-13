@@ -7,10 +7,11 @@ extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
 extern void yyset_in(FILE *_in_str, yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy (yyscan_t yyscanner);
+extern bpftrace::location loc;
 
 namespace bpftrace {
 
-Driver::Driver(BPFtrace &bpftrace) : bpftrace_(bpftrace)
+Driver::Driver(BPFtrace &bpftrace, std::ostream &o) : bpftrace_(bpftrace), out_(o)
 {
   yylex_init(&scanner_);
   parser_ = std::make_unique<Parser>(*this, scanner_);
@@ -26,35 +27,32 @@ int Driver::parse_stdin()
   return parser_->parse();
 }
 
-int Driver::parse_str(const std::string &script)
+void Driver::source(std::string filename, std::string script)
 {
-  yy_scan_string(script.c_str(), scanner_);
-  int result = parser_->parse();
-  return result;
+  bpftrace_.source(filename, script);
 }
 
-int Driver::parse_file(const std::string &f)
+// Kept for the test suite
+int Driver::parse_str(std::string script)
 {
-  FILE *file;
-  if (!(file = fopen(f.c_str(), "r"))) {
-    auto msg = "Error opening file '" + f + "'";
-    perror(msg.c_str());
-    return -1;
-  }
-  yyset_in(file, scanner_);
+  source("stdin", script);
+  return parse();
+}
+
+int Driver::parse()
+{
+  // Reset source location info on every pass
+  loc.initialize();
+  yy_scan_string(bpftrace_.source().c_str(), scanner_);
   int result = parser_->parse();
-  fclose(file);
   return result;
 }
 
 void Driver::error(const location &l, const std::string &m)
 {
-  std::cerr << l << ": " << m << std::endl;
+  bpftrace_.error(out_, l, m);
 }
 
-void Driver::error(const std::string &m)
-{
-  std::cerr << m << std::endl;
-}
+void Driver::error(const std::string &m) { out_ << m << std::endl; }
 
 } // namespace bpftrace
