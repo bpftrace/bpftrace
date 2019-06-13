@@ -1116,12 +1116,49 @@ TEST(Parser, cstruct_nested)
       "  int: 1\n");
 }
 
+TEST(Parser, unexpected_symbol)
+{
+  BPFtrace bpftrace;
+  std::stringstream out;
+  Driver driver(bpftrace, out);
+  EXPECT_EQ(driver.parse_str("i:s:1 { < }"), 1);
+  std::string expected =
+      R"(stdin:1:9-10: ERROR: syntax error, unexpected <, expecting }
+i:s:1 { < }
+        ~
+)";
+  EXPECT_EQ(out.str(), expected);
+}
+
+TEST(Parser, string_with_tab)
+{
+  BPFtrace bpftrace;
+  std::stringstream out;
+  Driver driver(bpftrace, out);
+  EXPECT_EQ(driver.parse_str("i:s:1\t\t\t$a"), 1);
+  std::string expected =
+      R"(stdin:1:9-11: ERROR: syntax error, unexpected variable, expecting {
+i:s:1            $a
+                 ~~
+)";
+  EXPECT_EQ(out.str(), expected);
+}
+
 TEST(Parser, unterminated_string)
 {
-  // Make sure parser doesn't get stuck in an infinite loop
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
+  std::stringstream out;
+  Driver driver(bpftrace, out);
   EXPECT_EQ(driver.parse_str("kprobe:f { \"asdf }"), 1);
+  std::string expected =
+      R"(stdin:1:12-19: ERROR: unterminated string
+kprobe:f { "asdf }
+           ~~~~~~~
+stdin:1:12-19: ERROR: syntax error, unexpected end of file, expecting }
+kprobe:f { "asdf }
+           ~~~~~~~
+)";
+  EXPECT_EQ(out.str(), expected);
 }
 
 } // namespace parser

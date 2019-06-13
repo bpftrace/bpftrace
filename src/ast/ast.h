@@ -1,9 +1,10 @@
 #pragma once
 
+#include "location.hh"
+#include "utils.h"
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
-#include "utils.h"
 
 #include "types.h"
 

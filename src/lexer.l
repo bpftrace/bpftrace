@@ -7,7 +7,7 @@
 #include "utils.h"
 #include "parser.tab.hh"
 
-static bpftrace::location loc;
+bpftrace::location loc;
 static std::string struct_type;
 static std::string buffer;
 
@@ -33,10 +33,6 @@ path   :(\\.|[_\-\./a-zA-Z0-9#])*:
 %x COMMENT
 
 %%
-
-%{
-  loc.step();
-%}
 
 {hspace}+               { loc.step(); }
 {vspace}+               { loc.lines(yyleng); loc.step(); }

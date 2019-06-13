@@ -79,6 +79,11 @@ public:
   inline int next_probe_id() {
     return next_probe_id_++;
   };
+  inline void source(std::string filename, std::string source) {
+    src_ = source;
+    filename_ = filename;
+  }
+  inline const std::string &source() { return src_; }
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
@@ -96,6 +101,8 @@ public:
   std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
   void request_finalize();
+  void error(std::ostream &out, const location &l, const std::string &m);
+
   std::string cmd_;
   int pid_{0};
   bool finalize_ = false;
@@ -140,6 +147,7 @@ public:
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
       int pid,
       const std::string &target) const;
+  const std::string get_source_line(unsigned int);
 
 protected:
   std::vector<Probe> probes_;
@@ -155,6 +163,10 @@ private:
   std::vector<int> child_pids_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+
+  std::string src_;
+  std::string filename_;
+  std::vector<std::string> srclines_;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
   int setup_perf_events();
