@@ -374,13 +374,11 @@ TEST(clang_parser, macro_preprocessor)
   EXPECT_EQ(macros["_UNDERSCORE"], "314");
 }
 
-// TODO(mmarchini): re-enable this test once we figure out how to handle
-// flexible array members.
-// TEST(clang_parser, parse_fail)
-// {
-  // BPFtrace bpftrace;
-  // parse("struct a { int a; struct b b; };", bpftrace, 1);
-// }
+TEST(clang_parser, parse_fail)
+{
+  BPFtrace bpftrace;
+  parse("struct a { int a; struct b b; };", bpftrace, false);
+}
 
 } // namespace clang_parser
 } // namespace test
