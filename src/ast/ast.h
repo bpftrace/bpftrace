@@ -17,6 +17,9 @@ class Node {
 public:
   virtual ~Node() { }
   virtual void accept(Visitor &v) = 0;
+  location loc;
+  Node() : loc(location()){};
+  Node(location loc) : loc(loc){};
 };
 
 class Map;
@@ -29,6 +32,8 @@ public:
   bool is_literal = false;
   bool is_variable = false;
   bool is_map = false;
+  Expression() : Node(){};
+  Expression(location loc) : Node(loc){};
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -114,7 +119,8 @@ public:
 
 class Binop : public Expression {
 public:
-  Binop(Expression *left, int op, Expression *right) : left(left), right(right), op(op) { }
+  Binop(Expression *left, int op, Expression *right, location loc)
+      : Expression(loc), left(left), right(right), op(op) {}
   Expression *left, *right;
   int op;
 
