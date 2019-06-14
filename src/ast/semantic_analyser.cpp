@@ -684,20 +684,25 @@ void SemanticAnalyser::visit(Binop &binop)
   Type &lhs = binop.left->type.type;
   Type &rhs = binop.right->type.type;
 
+  std::stringstream buf;
   if (is_final_pass()) {
     if ((lhs != rhs) &&
       // allow integer to cast pointer comparisons (eg, ptr != 0):
       !(lhs == Type::cast && rhs == Type::integer) &&
       !(lhs == Type::integer && rhs == Type::cast)) {
-      err_ << "Type mismatch for '" << opstr(binop) << "': ";
-      err_ << "comparing '" << lhs << "' ";
-      err_ << "with '" << rhs << "'" << std::endl;
+      buf << "Type mismatch for '" << opstr(binop) << "': ";
+      buf << "comparing '" << lhs << "' ";
+      buf << "with '" << rhs << "'";
+      bpftrace_.error(err_, binop.loc, buf.str());
     }
 
-    else if (lhs != Type::integer &&
-             binop.op != Parser::token::EQ &&
-             binop.op != Parser::token::NE) {
-      err_ << "The " << opstr(binop) << " operator can not be used on expressions of type " << lhs << std::endl;
+    else if (lhs != Type::integer
+             && binop.op != Parser::token::EQ
+             && binop.op != Parser::token::NE) {
+      buf << "The " << opstr(binop)
+          << " operator can not be used on expressions of type " << lhs
+          << std::endl;
+      bpftrace_.error(err_, binop.loc, buf.str());
     }
   }
 
