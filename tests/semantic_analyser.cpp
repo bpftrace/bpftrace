@@ -481,6 +481,7 @@ TEST(semantic_analyser, call_probe)
 TEST(semantic_analyser, call_cat)
 {
   test("kprobe:f { cat(\"/proc/loadavg\"); }", 0);
+  test("kprobe:f { cat(\"/proc/%d/cmdline\", 1); }", 0);
   test("kprobe:f { cat(); }", 1);
   test("kprobe:f { cat(123); }", 1);
   test("kprobe:f { @x = cat(\"/proc/loadavg\"); }", 1);

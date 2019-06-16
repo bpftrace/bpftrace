@@ -19,7 +19,7 @@ entry:
   %perfdata = alloca [16 x i8], align 8
   %1 = getelementptr inbounds [16 x i8], [16 x i8]* %perfdata, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 20004, [16 x i8]* %perfdata, align 8
+  store i64 30004, [16 x i8]* %perfdata, align 8
   %2 = getelementptr inbounds [16 x i8], [16 x i8]* %perfdata, i64 0, i64 8
   store i64 0, i8* %2, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)

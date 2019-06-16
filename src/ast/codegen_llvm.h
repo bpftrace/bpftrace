@@ -17,6 +17,8 @@ namespace ast {
 
 using namespace llvm;
 
+using CallArgs = std::vector<std::tuple<std::string, std::vector<Field>>>;
+
 class CodegenLLVM : public Visitor {
 public:
   explicit CodegenLLVM(Node *root, BPFtrace &bpftrace) :
@@ -60,6 +62,8 @@ public:
 
   void createLog2Function();
   void createLinearFunction();
+  void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
+                              const std::string &call_name, AsyncAction async_action);
   std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
 
 private:
