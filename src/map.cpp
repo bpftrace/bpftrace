@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 #include <unistd.h>
 #include <linux/version.h>
@@ -57,7 +58,8 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
+    std::cerr << "Error creating map: '" << name_ << "': " << strerror(errno)
+              << std::endl;
   }
 }
 
@@ -120,18 +122,7 @@ Map::Map(enum bpf_map_type map_type)
   mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::string name;
-    switch (map_type)
-    {
-      case BPF_MAP_TYPE_PERF_EVENT_ARRAY:
-        name = "perf event";
-        break;
-      default:
-        std::cerr << "invalid map type" << std::endl;
-        abort();
-    }
-
-    std::cerr << "Error creating " << name << " map (" << mapfd_ << ")" << std::endl;
+    std::cerr << "Error creating " << name << " map: " << strerror(errno) << std::endl;
   }
 }
 
