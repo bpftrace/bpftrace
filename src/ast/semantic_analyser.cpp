@@ -435,7 +435,7 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "printf" || call.func == "system") {
+  else if (call.func == "printf" || call.func == "system" || call.func == "cat") {
     check_assignment(call, false, false);
     if (check_varargs(call, 1, 7)) {
       check_arg(call, Type::string, 0, true);
@@ -454,8 +454,10 @@ void SemanticAnalyser::visit(Call &call)
 
         if (call.func == "printf")
           bpftrace_.printf_args_.emplace_back(fmt.str, args);
-        else
+        else if (call.func == "system")
           bpftrace_.system_args_.emplace_back(fmt.str, args);
+        else
+          bpftrace_.cat_args_.emplace_back(fmt.str, args);
       }
     }
 
@@ -530,17 +532,6 @@ void SemanticAnalyser::visit(Call &call)
         } else {
           std::string fmt_default = "%H:%M:%S\n";
           bpftrace_.time_args_.push_back(fmt_default.c_str());
-        }
-      }
-    }
-  }
-  else if (call.func == "cat") {
-    check_assignment(call, false, false);
-    if (check_nargs(call, 1)) {
-      if (check_arg(call, Type::string, 0, true)) {
-        if (is_final_pass()) {
-          auto &arg = *call.vargs->at(0);
-          bpftrace_.cat_args_.push_back(static_cast<String&>(arg).str);
         }
       }
     }

@@ -2044,6 +2044,21 @@ Attaching 1 probe...
 ^C
 ```
 
+The `cat()` builtin also supports a format string as argument:
+
+```
+./bpftrace -e 'tracepoint:syscalls:sys_enter_sendmsg { printf("%s => ", comm); cat("/proc/%d/cmdline", pid); printf("\n") }'
+Attaching 1 probe...
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+^C
+```
+
 # Map Functions
 
 Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are also used for some variable types as discussed in the previous section, whenever `@` is used: [globals](#21-global), [per thread variables](#22-per-thread), and [associative arrays](#3--associative-arrays).

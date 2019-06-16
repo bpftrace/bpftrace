@@ -552,105 +552,15 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "printf")
   {
-    /*
-     * perf event output has: uint64_t printf_id, vargs
-     * The printf_id maps to bpftrace_.printf_args_, and is a way to define the
-     * types and offsets of each of the arguments, and share that between BPF and
-     * user-space for printing.
-     */
-    std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // printf ID
-
-    auto &args = std::get<1>(bpftrace_.printf_args_.at(printf_id_));
-    for (Field &arg : args)
-    {
-      llvm::Type *ty = b_.GetType(arg.type);
-      elements.push_back(ty);
-    }
-    StructType *printf_struct = StructType::create(elements, "printf_t", false);
-    int struct_size = layout_.getTypeAllocSize(printf_struct);
-
-    auto *struct_layout = layout_.getStructLayout(printf_struct);
-    for (size_t i=0; i<args.size(); i++)
-    {
-      Field &arg = args[i];
-      arg.offset = struct_layout->getElementOffset(i+1); // +1 for the printf_id field
-    }
-
-    AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
-    b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
-
-    Value *printf_id_offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(0)});
-    b_.CreateStore(b_.getInt64(printf_id_), printf_id_offset);
-    for (size_t i=1; i<call.vargs->size(); i++)
-    {
-      Expression &arg = *call.vargs->at(i);
-      expr_deleter_ = nullptr;
-      arg.accept(*this);
-      Value *offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(i)});
-      if (arg.type.IsArray())
-        b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
-      else
-        b_.CreateStore(expr_, offset);
-
-      if (expr_deleter_)
-        expr_deleter_();
-    }
-
-    printf_id_++;
-    b_.CreatePerfEventOutput(ctx_, printf_args, struct_size);
-    b_.CreateLifetimeEnd(printf_args);
-    expr_ = nullptr;
+    createFormatStringCall(call, printf_id_, bpftrace_.printf_args_, "printf", AsyncAction::printf);
   }
   else if (call.func == "system")
   {
-    /*
-     * perf event output has: uint64_t system_id, vargs
-     * The system_id maps to bpftrace_.system_args_, and is a way to define the
-     * types and offsets of each of the arguments, and share that between BPF and
-     * user-space for printing.
-     */
-    std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // system ID
-
-    auto &args = std::get<1>(bpftrace_.system_args_.at(system_id_));
-    for (Field &arg : args)
-    {
-      llvm::Type *ty = b_.GetType(arg.type);
-      elements.push_back(ty);
-    }
-    StructType *printf_struct = StructType::create(elements, "system_t", false);
-    int struct_size = layout_.getTypeAllocSize(printf_struct);
-
-    auto *struct_layout = layout_.getStructLayout(printf_struct);
-    for (size_t i=0; i<args.size(); i++)
-    {
-      Field &arg = args[i];
-      arg.offset = struct_layout->getElementOffset(i+1); // +1 for the system_id field
-    }
-
-    AllocaInst *system_args = b_.CreateAllocaBPF(printf_struct, "system_args");
-    b_.CreateMemSet(system_args, b_.getInt8(0), struct_size, 1);
-
-    // system_id_ has an offset to avoid be confused with printf
-    b_.CreateStore(b_.getInt64(system_id_ + asyncactionint(AsyncAction::syscall)), system_args);
-    for (size_t i=1; i<call.vargs->size(); i++)
-    {
-      Expression &arg = *call.vargs->at(i);
-      expr_deleter_ = nullptr;
-      arg.accept(*this);
-      Value *offset = b_.CreateGEP(system_args, {b_.getInt32(0), b_.getInt32(i)});
-      if (arg.type.IsArray())
-        b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
-      else
-        b_.CreateStore(expr_, offset);
-
-      if (expr_deleter_)
-        expr_deleter_();
-    }
-
-    system_id_++;
-    b_.CreatePerfEventOutput(ctx_, system_args, struct_size);
-    b_.CreateLifetimeEnd(system_args);
-    expr_ = nullptr;
+    createFormatStringCall(call, system_id_, bpftrace_.system_args_, "system", AsyncAction::syscall);
+  }
+  else if (call.func == "cat")
+  {
+    createFormatStringCall(call, cat_id_, bpftrace_.cat_args_, "cat", AsyncAction::cat);
   }
   else if (call.func == "exit")
   {
@@ -747,18 +657,6 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(time_id_), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
 
     time_id_++;
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) * 2);
-    b_.CreateLifetimeEnd(perfdata);
-    expr_ = nullptr;
-  }
-  else if (call.func == "cat")
-  {
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) * 2);
-    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::cat)), perfdata);
-    b_.CreateStore(b_.getInt64(cat_id_), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
-
-    cat_id_++;
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) * 2);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
@@ -1718,6 +1616,59 @@ void CodegenLLVM::createLinearFunction()
   Value *div3 = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
   b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
   b_.CreateRet(b_.CreateLoad(result_alloc));
+}
+
+void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_args,
+                                         const std::string &call_name, AsyncAction async_action)
+{
+  /*
+   * perf event output has: uint64_t id, vargs
+   * The id maps to bpftrace_.*_args_, and is a way to define the
+   * types and offsets of each of the arguments, and share that between BPF and
+   * user-space for printing.
+   */
+  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
+
+  auto &args = std::get<1>(call_args.at(id));
+  for (Field &arg : args)
+  {
+    llvm::Type *ty = b_.GetType(arg.type);
+    elements.push_back(ty);
+  }
+  StructType *fmt_struct = StructType::create(elements, call_name + "_t", false);
+  int struct_size = layout_.getTypeAllocSize(fmt_struct);
+
+  auto *struct_layout = layout_.getStructLayout(fmt_struct);
+  for (size_t i=0; i<args.size(); i++)
+  {
+    Field &arg = args[i];
+    arg.offset = struct_layout->getElementOffset(i+1); // +1 for the id field
+  }
+
+  AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
+  b_.CreateMemSet(fmt_args, b_.getInt8(0), struct_size, 1);
+
+  Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
+  b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
+  for (size_t i=1; i<call.vargs->size(); i++)
+  {
+    Expression &arg = *call.vargs->at(i);
+    expr_deleter_ = nullptr;
+    arg.accept(*this);
+    Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
+    if (arg.type.IsArray())
+      b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
+    else
+      b_.CreateStore(expr_, offset);
+
+    if (expr_deleter_)
+      expr_deleter_();
+  }
+
+  id++;
+  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
+  b_.CreateLifetimeEnd(fmt_args);
+  expr_ = nullptr;
 }
 
 std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out)

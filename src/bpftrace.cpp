@@ -388,15 +388,6 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   }
-  else if (printf_id == asyncactionint(AsyncAction::cat))
-  {
-    uint64_t cat_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    auto filename = bpftrace->cat_args_[cat_id].c_str();
-    std::stringstream buf;
-    cat_file(filename, bpftrace->cat_bytes_max_, buf);
-    bpftrace->out_->message(MessageType::cat, buf.str(), false);
-    return;
-  }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
     uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
@@ -413,7 +404,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     bpftrace->out_->message(MessageType::join, joined.str());
     return;
   }
-  else if ( printf_id >= asyncactionint(AsyncAction::syscall))
+  else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
+            printf_id < asyncactionint(AsyncAction::syscall) + RESERVED_IDS_PER_ASYNCACTION)
   {
     if (bpftrace->safe_mode_)
     {
@@ -436,6 +428,28 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       return;
     }
     bpftrace->out_->message(MessageType::syscall, exec_system(buffer), false);
+    return;
+  }
+  else if ( printf_id >= asyncactionint(AsyncAction::cat))
+  {
+    auto id = printf_id - asyncactionint(AsyncAction::cat);
+    auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
+    auto args = std::get<1>(bpftrace->cat_args_[id]);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+    const int BUFSIZE = 512;
+    char buffer[BUFSIZE];
+    int size = format(buffer, BUFSIZE, fmt, arg_values);
+    // Return value is required size EXCLUDING null byte
+    if (size >= BUFSIZE) {
+      std::cerr << "cat() command to long (" << size << " bytes): ";
+      std::cerr << buffer << std::endl;
+      return;
+    }
+    std::stringstream buf;
+    cat_file(buffer, bpftrace->cat_bytes_max_, buf);
+    bpftrace->out_->message(MessageType::cat, buf.str(), false);
+
     return;
   }
 

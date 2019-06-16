@@ -151,17 +151,19 @@ public:
   std::string mode;             // for watchpoint probes, watch mode (rwx)
 };
 
+const int RESERVED_IDS_PER_ASYNCACTION = 10000;
+
 enum class AsyncAction
 {
-  // printf reserves 0-9999 for printf_ids
+  printf  = 0,     // printf reserves 0-9999 for printf_ids
   syscall = 10000, // system reserves 10000-19999 for printf_ids
-  exit = 20000,
+  cat     = 20000, // cat reserves 20000-29999 for printf_ids
+  exit    = 30000,
   print,
   clear,
   zero,
   time,
   join,
-  cat
 };
 
 uint64_t asyncactionint(AsyncAction a);

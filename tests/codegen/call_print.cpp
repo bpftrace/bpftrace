@@ -40,7 +40,7 @@ entry:
   %perfdata = alloca [27 x i8], align 8
   %1 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 20001, [27 x i8]* %perfdata, align 8
+  store i64 30001, [27 x i8]* %perfdata, align 8
   %2 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 8
   %str.sroa.0.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 24
   call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %2, i8 0, i64 16, i1 false)
@@ -94,7 +94,7 @@ entry:
   %perfdata = alloca [27 x i8], align 8
   %1 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 20001, [27 x i8]* %perfdata, align 8
+  store i64 30001, [27 x i8]* %perfdata, align 8
   %2 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 8
   %str.sroa.0.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 24
   call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 16, i32 8, i1 false)
@@ -148,7 +148,7 @@ entry:
   %perfdata = alloca [27 x i8], align 8
   %1 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 20001, [27 x i8]* %perfdata, align 8
+  store i64 30001, [27 x i8]* %perfdata, align 8
   %2 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 8
   %str.sroa.0.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 24
   call void @llvm.memset.p0i8.i64(i8* %2, i8 0, i64 16, i32 8, i1 false)

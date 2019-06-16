@@ -39,7 +39,7 @@ entry:
   %perfdata = alloca [11 x i8], align 8
   %1 = getelementptr inbounds [11 x i8], [11 x i8]* %perfdata, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 20003, [11 x i8]* %perfdata, align 8
+  store i64 30003, [11 x i8]* %perfdata, align 8
   %str.sroa.0.0..sroa_idx = getelementptr inbounds [11 x i8], [11 x i8]* %perfdata, i64 0, i64 8
   store i8 64, i8* %str.sroa.0.0..sroa_idx, align 8
   %str.sroa.4.0..sroa_idx = getelementptr inbounds [11 x i8], [11 x i8]* %perfdata, i64 0, i64 9
