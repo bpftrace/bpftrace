@@ -434,10 +434,12 @@ void AttachedProbe::attach_kprobe()
 
 void AttachedProbe::attach_uprobe()
 {
-  int pid = -1;
-
-  int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), offset(), pid);
+  int perf_event_fd = bpf_attach_uprobe(progfd_,
+                                        attachtype(probe_.type),
+                                        eventname().c_str(),
+                                        probe_.path.c_str(),
+                                        offset(),
+                                        probe_.pid);
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
