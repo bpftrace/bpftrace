@@ -337,7 +337,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
     }
 
-    if (arg->type.type != Type::integer && arg->type.type != Type::array)
+    if (arg->type.type != Type::integer && arg->type.type != Type::array && arg->type.type != Type::string)
       err_ << call.func << "() expects an integer or array argument, got " << arg->type.type << std::endl;
 
     // Kind of:
@@ -350,8 +350,8 @@ void SemanticAnalyser::visit(Call &call)
     //   }
     // }
     int buffer_size = 8;
-    if (arg->type.type == Type::array) {
-      if (arg->type.elem_type != Type::integer || arg->type.pointee_size != 1 || !(arg->type.size == 4 || arg->type.size == 16)) {
+    if (arg->type.type == Type::array || arg->type.type == Type::string) {
+      if ((arg->type.type == Type::array || arg->type.pointee_size != 1) || !(arg->type.size == 4 || arg->type.size == 16)) {
         err_ << call.func << "() invalid array" << std::endl;
       }
       if (arg->type.size == 16)

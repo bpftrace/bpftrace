@@ -108,3 +108,9 @@ NAME cat
 RUN bpftrace -v -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
 TIMEOUT 5
+
+NAME ntop_str_arg
+RUN bpftrace -v -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { printf("v4: %s; v6: %s\n", ntop(2, ((union ip*)arg0)->v4), ntop(10, ((union ip*)arg1)->v6)); exit() }'
+AFTER ./testprogs/ntop
+EXPECT v4: 127.0.0.1; v6: ffee:ffee:ddcc:ddcc:bbaa:bbaa:c0a8:1
+TIMEOUT 1

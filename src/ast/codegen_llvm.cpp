@@ -507,7 +507,7 @@ void CodegenLLVM::visit(Call &call)
     Value *inet_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(4)});
 
     inet->accept(*this);
-    if (inet->type.type == Type::array) {
+    if (inet->type.type == Type::array || inet->type.type == Type::string) {
       b_.CreateProbeRead(reinterpret_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
     } else {
       b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt32Ty(), false), inet_offset);
