@@ -666,7 +666,7 @@ Attaching 1 probe...
 - `software` - kernel software events
 - `hardware` - processor-level events
 
-Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`.
+Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`. You may also specify multiple attach points for an action block using a comma separated list.
 
 ## 1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level
 
