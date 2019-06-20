@@ -4,6 +4,8 @@
 #include <fstream>
 #include <iostream>
 #include <link.h>
+#include <linux/perf_event.h>
+#include <linux/hw_breakpoint.h>
 #include <regex>
 #include <sys/auxv.h>
 #include <sys/utsname.h>
@@ -61,6 +63,7 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::interval:      return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     default:
       std::cerr << "program type not found" << std::endl;
@@ -124,6 +127,9 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
     case ProbeType::usdt:
       attach_usdt(pid);
       break;
+    case ProbeType::watchpoint:
+      attach_watchpoint(pid);
+      break;
     default:
       std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\"" << std::endl;
       abort();
@@ -161,6 +167,7 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::software:
+    case ProbeType::watchpoint:
     case ProbeType::hardware:
       break;
     default:
@@ -658,6 +665,33 @@ void AttachedProbe::attach_hardware()
 
     perf_event_fds_.push_back(perf_event_fd);
   }
+}
+
+void AttachedProbe::attach_watchpoint(int pid)
+{
+  // We require the pid to make the initial implementation simpler.
+  // Technically we could walk /proc/*/exe and find which pids symlink to
+  // the provided executable path. This would enable multiple watchpoint
+  // probes in a single bpftrace program.
+  if (!pid) {
+    throw std::runtime_error("pid not provided for " + probe_.name);
+  }
+
+  struct perf_event_attr attr = {};
+  attr.type = PERF_TYPE_BREAKPOINT;
+  attr.size = sizeof(struct perf_event_attr);
+  attr.config = 0;
+  attr.bp_type = HW_BREAKPOINT_RW;  // TODO(danobi): let user choose bp type
+  attr.bp_addr = probe_.addr;
+  attr.bp_len = probe_.len;
+  // Generate a notification every 1 event; we care about every event
+  attr.sample_period = 1;
+
+  int perf_event_fd = bpf_attach_perf_event_raw(progfd_, &attr, pid, -1, -1, 0);
+  if (perf_event_fd < 0)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+  perf_event_fds_.push_back(perf_event_fd);
 }
 
 } // namespace bpftrace

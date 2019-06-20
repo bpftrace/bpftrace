@@ -1055,6 +1055,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq < 0)
       err_ << "software count should be a positive integer" << std::endl;
   }
+  else if (ap.provider == "watchpoint") {
+    if (!ap.addr)
+      err_ << "watchpoint must be attached to a non-zero address" << std::endl;
+    if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
+      err_ << "watchpoint length must be one of (1,2,4,8)" << std::endl;
+  }
   else if (ap.provider == "hardware") {
     if (ap.target == "")
       err_ << "hardware probe must have a hardware event name" << std::endl;

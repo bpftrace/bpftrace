@@ -170,6 +170,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.loc = 0;
       probe.index = attach_point->index(full_func_id) > 0 ?
           attach_point->index(full_func_id) : p.index();
+      probe.addr = attach_point->addr;
+      probe.len = attach_point->len;
       probes_.push_back(probe);
     }
   }
@@ -618,7 +620,7 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   }
   try
   {
-    if (probe.type == ProbeType::usdt)
+    if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
       return std::make_unique<AttachedProbe>(probe, func->second, pid_);
     else
       return std::make_unique<AttachedProbe>(probe, func->second);
@@ -644,6 +646,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::tracepoint:
     case ProbeType::profile:
     case ProbeType::interval:
+    case ProbeType::watchpoint:
     case ProbeType::hardware:
       return false;
     default:
