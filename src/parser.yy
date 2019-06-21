@@ -47,6 +47,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   QUES       "?"
   ENDPRED    "end predicate"
   COMMA      ","
+  PARAMCOUNT "$#"
   ASSIGN     "="
   EQ         "=="
   NE         "!="
@@ -74,7 +75,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
   MINUS      "-"
   MINUSMINUS "--"
-  DOLLAR     "$"
   MUL        "*"
   DIV        "/"
   MOD        "%"
@@ -96,6 +96,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
+%token <std::string> PARAM "positional parameter"
 %token <long> INT "integer"
 %token <std::string> STACK_MODE "stack_mode"
 %nonassoc <std::string> IF "if"
@@ -185,7 +186,9 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2); }
 ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5); }
      ;
 
-param : DOLLAR INT { $$ = new ast::PositionalParameter($2); }
+param : PARAM      { $$ = new ast::PositionalParameter(PositionalParameterType::positional, std::stoll($1.substr(1, $1.size()-1))); }
+      | PARAMCOUNT { $$ = new ast::PositionalParameter(PositionalParameterType::count, 0); }
+      ;
 
 block : "{" stmts "}"     { $$ = $2; }
       ;

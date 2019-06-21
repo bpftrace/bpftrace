@@ -22,23 +22,35 @@ void SemanticAnalyser::visit(Integer &integer)
 
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
-  if (param.n <= 0) {
-    err_ << "$" << param.n << " is not a valid parameter" << std::endl;
-  }
-
   param.type = SizedType(Type::integer, 8);
-  if (is_final_pass()) {
-    std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-    if (!bpftrace_.is_numeric(pstr) && !param.is_in_str) {
-      err_ << "$" << param.n << " used numerically, but given \"" << pstr
-           << "\". Try using str($" << param.n << ")." << std::endl;
-    }
-    if (bpftrace_.is_numeric(pstr) && param.is_in_str) {
-      // This is blocked due to current limitations in our codegen
-      err_ << "$" << param.n << " used in str(), but given numeric value: "
-           << pstr << ". Try $" << param.n << " instead of str($"
-           << param.n << ")." << std::endl;
-    }
+  switch (param.ptype) {
+    case PositionalParameterType::positional:
+      if (param.n <= 0) {
+        err_ << "$" << param.n << " is not a valid parameter" << std::endl;
+      }
+      if (is_final_pass()) {
+        std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
+        if (!bpftrace_.is_numeric(pstr) && !param.is_in_str) {
+          err_ << "$" << param.n << " used numerically, but given \"" << pstr
+               << "\". Try using str($" << param.n << ")." << std::endl;
+        }
+        if (bpftrace_.is_numeric(pstr) && param.is_in_str) {
+          // This is blocked due to current limitations in our codegen
+          err_ << "$" << param.n << " used in str(), but given numeric value: "
+               << pstr << ". Try $" << param.n << " instead of str($"
+               << param.n << ")." << std::endl;
+        }
+      }
+      break;
+    case PositionalParameterType::count:
+      if (is_final_pass() && param.is_in_str) {
+        err_ << "use $#, not str($#)" << std::endl;
+      }
+      break;
+    default:
+      err_ << "unknown parameter type" << std::endl;
+      param.type = SizedType(Type::none, 0);
+      break;
   }
 }
 

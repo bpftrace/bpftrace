@@ -52,7 +52,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [6. `nsecs`: Timestamps and Time Deltas](#6-nsecs-timestamps-and-time-deltas)
     - [7. `kstack`: Stack Traces, Kernel](#7-kstack-stack-traces-kernel)
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
-    - [9. `$1`, ..., `$N`: Positional Parameters](#9-1--n-positional-parameters)
+    - [9. `$1`, ..., `$N`, `$#`: Positional Parameters](#9-1--n--positional-parameters)
 - [Functions](#functions)
     - [1. Builtins](#1-builtins-1)
     - [2. `printf()`: Print Formatted](#2-printf-Printing)
@@ -1131,7 +1131,7 @@ These are special built-in events provided by the bpftrace runtime. `BEGIN` is t
 - `curtask` - Current task struct as a u64
 - `rand` - Random number as a u32
 - `cgroup` - Cgroup ID of the current process
-- `$1`, `$2`, ..., `$N`. - Positional parameters for the bpftrace program
+- `$1`, `$2`, ..., `$N`, `$#`. - Positional parameters for the bpftrace program
 
 Many of these are discussed in other sections (use search).
 
@@ -1378,20 +1378,22 @@ Attaching 1 probe...
 
 Note that for this example to work, bash had to be recompiled with frame pointers.
 
-## 9. `$1`, ..., `$N`: Positional Parameters
+## 9. `$1`, ..., `$N`, `$#`: Positional Parameters
 
-Syntax: `$1`, `$2`, ..., `$N`
+Syntax: `$1`, `$2`, ..., `$N`, `$#`
 
-These are the positional parameters to the bpftrace program, also referred to as command line arguments. If the parameter is numeric (entirerly digits), it can be used as a number. If it is non-numeric, it must be used as a string in the `str()` call. If a parameter is used that was not provided, it will default to zero for numeric context, and "" for string context.
+These are the positional parameters to the bpftrace program, also referred to as command line arguments. If the parameter is numeric (entirely digits), it can be used as a number. If it is non-numeric, it must be used as a string in the `str()` call. If a parameter is used that was not provided, it will default to zero for numeric context, and "" for string context.
+
+`$#` returns the number of positional arguments supplied.
 
 This allows scripts to be written that use basic arguments to change their behavior. If you develop a script that requires more complex argument processing, it may be better suited for bcc instead, which supports Python's argparse and completely custom argument processing.
 
 One-liner example:
 
 ```
-# bpftrace -e 'BEGIN { printf("I got %d, %s\n", $1, str($2)); }' 42 "hello"
+# bpftrace -e 'BEGIN { printf("I got %d, %s (%d args)\n", $1, str($2), $#); }' 42 "hello"
 Attaching 1 probe...
-I got 42, hello
+I got 42, hello (2 args)
 ```
 
 Script example, bsize.d:
