@@ -27,15 +27,28 @@ void CodegenLLVM::visit(Integer &integer)
 
 void CodegenLLVM::visit(PositionalParameter &param)
 {
-  std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-  if (bpftrace_.is_numeric(pstr)) {
-    expr_ = b_.getInt64(std::stoll(pstr));
-  } else {
-    Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
-    AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-    b_.CreateMemSet(buf, b_.getInt8(0), pstr.length() + 1, 1);
-    b_.CreateStore(const_str, buf);
-    expr_ = buf;
+  switch (param.ptype) {
+    case PositionalParameterType::positional:
+      {
+        std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
+        if (bpftrace_.is_numeric(pstr)) {
+          expr_ = b_.getInt64(std::stoll(pstr));
+        } else {
+          Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
+          AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
+          b_.CreateMemSet(buf, b_.getInt8(0), pstr.length() + 1, 1);
+          b_.CreateStore(const_str, buf);
+          expr_ = buf;
+        }
+      }
+      break;
+    case PositionalParameterType::count:
+      expr_ = b_.getInt64(bpftrace_.num_params());
+      break;
+    default:
+      std::cerr << "unknown parameter type" << std::endl;
+      abort();
+      break;
   }
 }
 

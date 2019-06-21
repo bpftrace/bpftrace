@@ -41,7 +41,8 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(long n) : n(n) {}
+  explicit PositionalParameter(PositionalParameterType ptype, long n) : ptype(ptype), n(n) {}
+  PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
 

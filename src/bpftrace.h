@@ -93,6 +93,7 @@ public:
   void add_param(const std::string &param);
   bool is_numeric(std::string str) const;
   std::string get_param(size_t index, bool is_str) const;
+  size_t num_params() const;
   void request_finalize();
   std::string cmd_;
   int pid_{0};

@@ -52,6 +52,11 @@ TEST(Parser, positional_param)
   test("kprobe:f { $1 }", "Program\n kprobe:f\n  param: $1\n");
 }
 
+TEST(Parser, positional_param_count)
+{
+  test("kprobe:f { $# }", "Program\n kprobe:f\n  param: $#\n");
+}
+
 TEST(Parser, comment)
 {
   test("kprobe:f { /*** ***/0; }", "Program\n kprobe:f\n  int: 0\n");

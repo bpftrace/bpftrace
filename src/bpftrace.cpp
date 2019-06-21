@@ -600,6 +600,11 @@ std::string BPFtrace::get_param(size_t i, bool is_str) const
   return params_.at(i-1);
 }
 
+size_t BPFtrace::num_params() const
+{
+  return params_.size();
+}
+
 void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);

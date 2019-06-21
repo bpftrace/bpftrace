@@ -15,7 +15,17 @@ void Printer::visit(Integer &integer)
 void Printer::visit(PositionalParameter &param)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "param: $" << param.n << std::endl;
+
+  switch (param.ptype) {
+    case PositionalParameterType::positional:
+      out_ << indent << "param: $" << param.n << std::endl;
+      break;
+    case PositionalParameterType::count:
+      out_ << indent << "param: $#" << std::endl;
+      break;
+    default:
+      break;
+  }
 }
 
 void Printer::visit(String &string)

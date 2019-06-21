@@ -942,6 +942,9 @@ TEST(semantic_analyser, positional_parameters)
   // Parameters are not required to exist to be used:
   test(bpftrace, "kprobe:f { printf(\"%s\", str($3)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $3); }", 0);
+
+  test(bpftrace, "kprobe:f { printf(\"%d\", $#); }", 0);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 10);
 }
 
 TEST(semantic_analyser, macros)

@@ -93,7 +93,6 @@ bpftrace|perf {
 "-"                     { return Parser::make_MINUS(loc); }
 "++"                    { return Parser::make_PLUSPLUS(loc); }
 "--"                    { return Parser::make_MINUSMINUS(loc); }
-"$"                     { return Parser::make_DOLLAR(loc); }
 "*"                     { return Parser::make_MUL(loc); }
 "/"                     { return Parser::make_DIV(loc); }
 "%"                     { return Parser::make_MOD(loc); }
@@ -104,6 +103,8 @@ bpftrace|perf {
 "~"                     { return Parser::make_BNOT(loc); }
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
+"$"[0-9]+               { return Parser::make_PARAM(yytext, loc); }
+"$"#                    { return Parser::make_PARAMCOUNT(loc); }
 "#"[^!].*               { return Parser::make_CPREPROC(yytext, loc); }
 "if"                    { return Parser::make_IF(yytext, loc); }
 "else"                  { return Parser::make_ELSE(yytext, loc); }
