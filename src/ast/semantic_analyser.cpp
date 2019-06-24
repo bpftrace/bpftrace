@@ -216,6 +216,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::hist, 8);
   }
   else if (call.func == "lhist") {
+    check_assignment(call, true, false);
     if (check_nargs(call, 4)) {
       check_arg(call, Type::integer, 0, false);
       check_arg(call, Type::integer, 1, true);
