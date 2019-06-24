@@ -24,7 +24,7 @@ int    [0-9]+|0[xX][0-9a-fA-F]+
 hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
-path   :(\\.|[_\-\./a-zA-Z0-9])*:
+path   :(\\.|[_\-\./a-zA-Z0-9#])*:
 %x STR
 %x STRUCT
 %x ENUM
