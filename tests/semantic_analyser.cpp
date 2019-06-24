@@ -324,6 +324,7 @@ TEST(semantic_analyser, call_print)
   test("kprobe:f { @x = count(); print(@x, 5, 10, 1); }", 1);
   test("kprobe:f { @x = count(); @x = print(); }", 1);
 
+  test("kprobe:f { print(@x); @x[1,2] = count(); }", 0);
   test("kprobe:f { @x[1,2] = count(); print(@x); }", 0);
   test("kprobe:f { @x[1,2] = count(); print(@x[3,4]); }", 1);
 }
@@ -334,6 +335,7 @@ TEST(semantic_analyser, call_clear)
   test("kprobe:f { @x = count(); clear(@x, 1); }", 1);
   test("kprobe:f { @x = count(); @x = clear(); }", 1);
 
+  test("kprobe:f { clear(@x); @x[1,2] = count(); }", 0);
   test("kprobe:f { @x[1,2] = count(); clear(@x); }", 0);
   test("kprobe:f { @x[1,2] = count(); clear(@x[3,4]); }", 1);
 }
@@ -344,6 +346,7 @@ TEST(semantic_analyser, call_zero)
   test("kprobe:f { @x = count(); zero(@x, 1); }", 1);
   test("kprobe:f { @x = count(); @x = zero(); }", 1);
 
+  test("kprobe:f { zero(@x); @x[1,2] = count(); }", 0);
   test("kprobe:f { @x[1,2] = count(); zero(@x); }", 0);
   test("kprobe:f { @x[1,2] = count(); zero(@x[3,4]); }", 1);
 }

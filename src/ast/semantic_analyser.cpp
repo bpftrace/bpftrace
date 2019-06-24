@@ -587,19 +587,21 @@ void SemanticAnalyser::visit(Map &map)
       }
     }
 
-    auto search = map_key_.find(map.ident);
-    if (search != map_key_.end()) {
-      if (!map.skip_key_validation && search->second != key) {
-        err_ << "Argument mismatch for " << map.ident << ": ";
-        err_ << "trying to access with arguments: ";
-        err_ << key.argument_type_list();
-        err_ << "\n\twhen map expects arguments: ";
-        err_ << search->second.argument_type_list();
-        err_ << "\n" << std::endl;
+    if (!map.skip_key_validation) {
+      auto search = map_key_.find(map.ident);
+      if (search != map_key_.end()) {
+        if (search->second != key) {
+          err_ << "Argument mismatch for " << map.ident << ": ";
+          err_ << "trying to access with arguments: ";
+          err_ << key.argument_type_list();
+          err_ << "\n\twhen map expects arguments: ";
+          err_ << search->second.argument_type_list();
+          err_ << "\n" << std::endl;
+        }
       }
-    }
-    else {
-      map_key_.insert({map.ident, key});
+      else {
+        map_key_.insert({map.ident, key});
+      }
     }
   }
 
