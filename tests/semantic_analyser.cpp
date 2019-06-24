@@ -249,12 +249,18 @@ TEST(semantic_analyser, call_hist)
 {
   test("kprobe:f { @x = hist(1); }", 0);
   test("kprobe:f { @x = hist(); }", 1);
-  test("kprobe:f { hist(); }", 1);
+  test("kprobe:f { hist(1); }", 1);
 }
 
 TEST(semantic_analyser, call_lhist)
 {
   test("kprobe:f { @ = lhist(5, 0, 10, 1); }", 0);
+  test("kprobe:f { @ = lhist(5, 0, 10); }", 1);
+  test("kprobe:f { @ = lhist(5, 0); }", 1);
+  test("kprobe:f { @ = lhist(5); }", 1);
+  test("kprobe:f { @ = lhist(); }", 1);
+  test("kprobe:f { @ = lhist(5, 0, 10, 1, 2); }", 1);
+  test("kprobe:f { lhist(-10, -10, 10, 1); }", 1);
   test("kprobe:f { @ = lhist(-10, -10, 10, 1); }", 10); // must be positive
 }
 
