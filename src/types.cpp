@@ -13,7 +13,14 @@ std::ostream &operator<<(std::ostream &os, Type type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  os << type.type;
+  if (type.type == Type::cast)
+  {
+    os << type.cast_type;
+  }
+  else
+  {
+    os << type.type;
+  }
   if (type.is_pointer)
     os << "*";
   return os;
@@ -55,8 +62,8 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
-    case Type::inet:     return "inet";     break;
     case Type::cast:     return "cast";     break;
+    case Type::inet:     return "inet";     break;
     case Type::probe:    return "probe";    break;
     case Type::array:    return "array";    break;
     default:
