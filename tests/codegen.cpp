@@ -21,7 +21,6 @@
 #include "codegen/builtin_probe_wild.cpp"
 #include "codegen/builtin_rand.cpp"
 #include "codegen/builtin_retval.cpp"
-#include "codegen/builtin_stack.cpp"
 #include "codegen/builtin_uid_gid.cpp"
 #include "codegen/builtin_username.cpp"
 #include "codegen/builtin_ustack.cpp"
