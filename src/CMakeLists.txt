@@ -61,7 +61,7 @@ execute_process(
 # If the build is not done from a git repo, get the version information from
 # the version variables in main CMakeLists.txt
 if(NOT "${retcode}" STREQUAL "0")
-  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}")
+  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}.${bpftrace_VERSION_PATCH}")
 endif()
 
 add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
