@@ -4,6 +4,7 @@ project(bpftrace)
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
 set(bpftrace_VERSION_MINOR 9)
+set(bpftrace_VERSION_PATCH 1)
 
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
