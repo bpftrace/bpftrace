@@ -48,6 +48,7 @@ void usage()
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE         [default: 409600] log size in bytes" << std::endl;
+  std::cerr << "    BPFTRACE_NO_USER_SYMBOLS  [default: 0] disable user symbol resolution" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -346,6 +347,20 @@ int main(int argc, char *argv[])
       return 1;
     }
     bpftrace.cat_bytes_max_ = proposed;
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_NO_USER_SYMBOLS"))
+  {
+    std::string s(env_p);
+    if (s == "1")
+      bpftrace.resolve_user_symbols = false;
+    else if (s == "0")
+      bpftrace.resolve_user_symbols = true;
+    else
+    {
+      std::cerr << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a valid value (0 or 1)." << std::endl;
+      return 1;
+    }
   }
 
   if (cmd_str)

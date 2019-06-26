@@ -1833,7 +1833,6 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
   struct bcc_symbol_option symopts;
   void *psyms;
 
-  // TODO: deal with these:
   symopts = {.use_debug_file = true,
              .check_debug_file_crc = true,
              .use_symbol_type = BCC_SYM_ALL_TYPES};
@@ -1849,7 +1848,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
     psyms = pid_sym_[pid];
   }
 
-  if (bcc_symcache_resolve(psyms, addr, &usym) == 0)
+  if (resolve_user_symbols && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
     if (demangle_cpp_symbols)
       symbol << usym.demangle_name;

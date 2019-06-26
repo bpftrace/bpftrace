@@ -120,6 +120,7 @@ public:
   uint64_t max_probes_ = 512;
   uint64_t log_size_ = 409600;
   bool demangle_cpp_symbols = true;
+  bool resolve_user_symbols = true;
   bool safe_mode = true;
 
   static void sort_by_key(
