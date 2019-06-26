@@ -745,6 +745,10 @@ TEST(Parser, uprobe)
       "Program\n"
       " uprobe:/my/go/program:pkg.func\u2C51\n"
       "  int: 1\n");
+  test ("uprobe:/with#hash:asdf { 1 }",
+      "Program\n"
+      " uprobe:/with#hash:asdf\n"
+      "  int: 1\n");
 }
 
 TEST(Parser, usdt)
