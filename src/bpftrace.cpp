@@ -1831,24 +1831,27 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
   struct bcc_symbol usym;
   std::ostringstream symbol;
   struct bcc_symbol_option symopts;
-  void *psyms;
+  void *psyms = nullptr;
 
   symopts = {.use_debug_file = true,
              .check_debug_file_crc = true,
              .use_symbol_type = BCC_SYM_ALL_TYPES};
 
-  if (pid_sym_.find(pid) == pid_sym_.end())
+  if (resolve_user_symbols)
   {
-    // not cached, create new ProcSyms cache
-    psyms = bcc_symcache_new(pid, &symopts);
-    pid_sym_[pid] = psyms;
-  }
-  else
-  {
-    psyms = pid_sym_[pid];
+    if (pid_sym_.find(pid) == pid_sym_.end())
+    {
+      // not cached, create new ProcSyms cache
+      psyms = bcc_symcache_new(pid, &symopts);
+      pid_sym_[pid] = psyms;
+    }
+    else
+    {
+      psyms = pid_sym_[pid];
+    }
   }
 
-  if (resolve_user_symbols && bcc_symcache_resolve(psyms, addr, &usym) == 0)
+  if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
     if (demangle_cpp_symbols)
       symbol << usym.demangle_name;
