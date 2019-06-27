@@ -159,6 +159,12 @@ std::string TracepointFormatParser::parse_field(const std::string &line)
       // handle char[] types
       if (match.size() == 3 && match[1] == "char" && match[2] == "[]") {
         field_type = "const char *";
+        std::regex offsetRgx(".*offset:(\\d+);.*");
+        std::cmatch offsetMatch;
+        if (std::regex_search(line.c_str(),offsetMatch, offsetRgx)) {
+          field_name = "data_loc_" + field_name;
+          return "  " + field_type + " " + field_name + "; //offset " + offsetMatch.str(1) + "\n";
+        }
       } else {
         field_type = match[1];
       }

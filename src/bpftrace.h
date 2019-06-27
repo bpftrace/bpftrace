@@ -103,6 +103,7 @@ public:
   std::map<std::string, Struct> structs_;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
+  std::map<std::string, int> loc_offsets_;
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> join_args_;

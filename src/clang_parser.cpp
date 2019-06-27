@@ -1,5 +1,9 @@
 #include <iostream>
+#include <regex>
 #include <string.h>
+#include <clang-c/Index.h>
+#include <clang-c/CXString.h>
+
 
 #include "llvm/Config/llvm-config.h"
 
@@ -281,6 +285,8 @@ CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
+  std::cout << "PRINTING C_DEFINITIONS" << std::endl;
+  std::cout << input << std::endl;
   if (input.size() == 0)
     return true; // We occasionally get crashes in libclang otherwise
 
@@ -361,6 +367,15 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 
   CXCursor cursor = handler.get_translation_unit_cursor();
 
+  // this is hacky but we need to strip out the offset here for data_loc fields
+  // example data_loc_name; //offset 12
+  std::regex offsetRgx(".*data_loc_(\\w+);\\s//offset\\s(\\d+)?");
+  std::cmatch offsetMatch;
+  auto f = input.c_str();
+  if (std::regex_search(f, offsetMatch, offsetRgx)) {
+    bpftrace.loc_offsets_[offsetMatch.str(1)] = std::atoi(offsetMatch.str(2).c_str());
+  }
+
   int err = clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data)
@@ -391,6 +406,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
           auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
+          auto &loc_offsets = static_cast<BPFtrace*>(client_data)->loc_offsets_;
 
           auto named_parent = get_named_parent(c);
           auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
@@ -406,6 +422,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
             struct_name = ptypestr;
           remove_struct_union_prefix(struct_name);
 
+
           // TODO(mmarchini): re-enable this check once we figure out how to
           // handle flexible array members.
           // if (clang_Type_getSizeOf(type) < 0) {
@@ -413,16 +430,15 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
             // return CXChildVisit_Break;
           // }
 
-          structs[struct_name].fields[ident].offset = offset;
-          structs[struct_name].fields[ident].type = get_sized_type(type);
-          structs[struct_name].size = ptypesize;
-          // if we find that ident is a data_loc_ dual register it in structs
-          // with the data_loc_ prefix removed.
           if(ident.rfind("data_loc_", 0) == 0) {
             auto dl_stripped = ident.substr(9);
-            structs[struct_name].fields[dl_stripped].type.is_data_loc = true;
-            structs[struct_name].fields[dl_stripped].offset = offset;
             structs[struct_name].fields[dl_stripped].type = get_sized_type(type);
+            structs[struct_name].fields[dl_stripped].type.is_data_loc = true;
+            structs[struct_name].fields[dl_stripped].offset = loc_offsets[dl_stripped];
+            structs[struct_name].size = ptypesize;
+          } else {
+            structs[struct_name].fields[ident].offset = offset;
+            structs[struct_name].fields[ident].type = get_sized_type(type);
             structs[struct_name].size = ptypesize;
           }
         }
