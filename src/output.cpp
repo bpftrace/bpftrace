@@ -313,9 +313,29 @@ void TextOutput::message(const std::string type __attribute__((unused)), std::st
     out_ << std::endl;
 }
 
-void TextOutput::lost_events(int lost) const
+void TextOutput::lost_events(uint64_t lost) const
 {
-  message("", "Lost " + std::to_string(lost) + " events");
+  out_ << "Lost " << lost << " events" << std::endl;
+}
+
+void TextOutput::attached_probes(uint64_t num_probes, uint64_t max_probes) const
+{
+  if (num_probes == 0)
+  {
+    err_ << "No probes to attach" << std::endl;
+  }
+  else if (num_probes > max_probes)
+  {
+    err_ << "Can't attach to " << num_probes << " probes because it "
+      << "exceeds the current limit of " << max_probes << " probes."
+      << std::endl << "You can increase the limit through the BPFTRACE_MAX_PROBES "
+      << "environment variable, but BE CAREFUL since a high number of probes "
+      << "attached can cause your system to crash." << std::endl;
+  }
+  else if (num_probes == 1)
+    out_ << "Attaching " << num_probes << " probe..." << std::endl;
+  else
+    out_ << "Attaching " << num_probes << " probes..." << std::endl;
 }
 
 void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
@@ -521,9 +541,35 @@ void JsonOutput::message(const std::string type, std::string msg, bool nl __attr
   out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}\n" << std::endl;
 }
 
-void JsonOutput::lost_events(int lost) const
+void JsonOutput::message(const std::string type, const std::string field, uint64_t value) const
 {
-  message("info", "Lost " + std::to_string(lost) + " events");
+  out_ << "{\"type\": \"" << type << "\", \"" << field << "\": " << value << "}\n" << std::endl;
+}
+
+void JsonOutput::lost_events(uint64_t lost) const
+{
+  message("lost_events", "events", lost);
+}
+
+void JsonOutput::attached_probes(uint64_t num_probes, uint64_t max_probes) const
+{
+  if (num_probes == 0)
+  {
+    message("error", "No probes to attach");
+  }
+  else if (num_probes > max_probes)
+  {
+    message("error",
+       "Can't attach to " + std::to_string(num_probes) + " probes because it "
+       "exceeds the current limit of " + std::to_string(max_probes) + " probes.\n"
+       "You can increase the limit through the BPFTRACE_MAX_PROBES "
+       "environment variable, but BE CAREFUL since a high number of probes "
+       "attached can cause your system to crash.");
+  }
+  else
+  {
+    message("attached_probes", "probes", num_probes);
+  }
 }
 
 } // namespace bpftrace
