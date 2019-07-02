@@ -411,13 +411,6 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
             struct_name = ptypestr;
           remove_struct_union_prefix(struct_name);
 
-          // TODO(mmarchini): re-enable this check once we figure out how to
-          // handle flexible array members.
-          // if (clang_Type_getSizeOf(type) < 0) {
-            // std::cerr << "Can't get size of '" << ptypestr << "::" << ident << "', please provide proper definiton." << std::endl;
-            // return CXChildVisit_Break;
-          // }
-
           structs[struct_name].fields[ident].offset = offset;
           structs[struct_name].fields[ident].type = get_sized_type(type);
           structs[struct_name].size = ptypesize;
