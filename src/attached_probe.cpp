@@ -21,6 +21,7 @@
 #include "libbpf.h"
 #include "utils.h"
 #include "list.h"
+#include "disasm.h"
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
