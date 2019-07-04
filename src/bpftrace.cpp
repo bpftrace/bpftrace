@@ -170,6 +170,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.ns = attach_point->ns;
       probe.name = attach_point->name(func_id);
       probe.freq = attach_point->freq;
+      probe.address = attach_point->address;
+      probe.func_offset = attach_point->func_offset;
       probe.loc = 0;
       probe.index = attach_point->index(full_func_id) > 0 ?
           attach_point->index(full_func_id) : p.index();

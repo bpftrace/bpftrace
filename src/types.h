@@ -155,6 +155,8 @@ public:
   uint64_t addr = 0;            // for watchpoint probes, start of region
   uint64_t len = 0;             // for watchpoint probes, size of region
   std::string mode;             // for watchpoint probes, watch mode (rwx)
+  uint64_t address = 0;
+  uint64_t func_offset = 0;
 };
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;

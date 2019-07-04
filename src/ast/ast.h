@@ -326,6 +326,8 @@ public:
   uint64_t len = 0;
   std::string mode;
   bool need_expansion = false;
+  uint64_t address = 0;
+  uint64_t func_offset = 0;
 
   void accept(Visitor &v) override;
   std::string name(const std::string &attach_point) const;
