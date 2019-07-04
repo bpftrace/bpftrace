@@ -12,6 +12,10 @@ function(generate_codegen_includes output)
   endforeach()
 endfunction()
 
+if(HAVE_BFD_DISASM)
+  set(BFD_DISASM_SRC ${CMAKE_SOURCE_DIR}/src/bfd-disasm.cpp)
+endif()
+
 generate_codegen_includes(${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
 
 add_executable(bpftrace_test
@@ -42,6 +46,8 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
+  ${CMAKE_SOURCE_DIR}/src/disasm.cpp
+  ${BFD_DISASM_SRC}
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)
@@ -61,6 +67,12 @@ if (LIBBPF_BTF_DUMP_FOUND)
   target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
   target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
 endif(LIBBPF_BTF_DUMP_FOUND)
+if(HAVE_BFD_DISASM)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_BFD_DISASM)
+  target_compile_definitions(bpftrace_test PRIVATE LIBBFD_DISASM_FOUR_ARGS_SIGNATURE=${LIBBFD_DISASM_FOUR_ARGS_SIGNATURE})
+  target_link_libraries(bpftrace_test ${LIBBFD_LIBRARIES})
+  target_link_libraries(bpftrace_test ${LIBOPCODES_LIBRARIES})
+endif(HAVE_BFD_DISASM)
 
 target_link_libraries(bpftrace_test arch ast parser resources)
 
