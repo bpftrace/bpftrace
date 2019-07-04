@@ -1126,8 +1126,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
     if (ap.target == "")
       err_ << "uprobes should have a target" << std::endl;
-    if (ap.func == "")
-      err_ << "uprobes should be attached to a function" << std::endl;
+    if (ap.func == "" && ap.address == 0)
+      err_ << "uprobes should be attached to a function or address" << std::endl;
 
     auto paths = resolve_binary_path(ap.target);
     if (paths.size() > 1)
