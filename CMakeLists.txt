@@ -94,6 +94,10 @@ find_package(LibBpf)
 find_package(LibBfd)
 find_package(LibOpcodes)
 
+if(${LIBBFD_FOUND} AND ${LIBOPCODES_FOUND})
+  set(HAVE_BFD_DISASM TRUE)
+endif()
+
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 

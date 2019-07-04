@@ -1,4 +1,5 @@
 #include "disasm.h"
+#include "bfd-disasm.h"
 
 namespace bpftrace {
 
@@ -13,7 +14,11 @@ class DummyDisasm : public IDisasm
 
 Disasm::Disasm(std::string &path __attribute__((unused)))
 {
+#ifdef HAVE_BFD_DISASM
+  dasm_ = std::make_unique<BfdDisasm>(path);
+#else
   dasm_ = std::make_unique<DummyDisasm>();
+#endif
 }
 
 } // namespace bpftrace
