@@ -21,35 +21,42 @@
 
 BEGIN
 {
-  printf("Tracing tcp accepts. Hit Ctrl-C to end.\n");
-  printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
-  printf("%-39s %-5s %-39s %-5s %s\n", "RADDR", "RPORT", "LADDR", "LPORT", "BL");
+	printf("Tracing TCP accepts. Hit Ctrl-C to end.\n");
+	printf("%-8s %-6s %-14s ", "TIME", "PID", "COMM");
+	printf("%-39s %-5s %-39s %-5s %s\n", "RADDR", "RPORT", "LADDR",
+	    "LPORT", "BL");
 }
 
 kretprobe:inet_csk_accept
 {
-  $sk = ((struct sock *) retval);
-  $inet_family = $sk->__sk_common.skc_family;
+	$sk = (struct sock *)retval;
+	$inet_family = $sk->__sk_common.skc_family;
 
-  if ($inet_family == AF_INET || $inet_family == AF_INET6) {
-    if ($inet_family == AF_INET) {
-      $daddr = ntop($sk->__sk_common.skc_daddr);
-      $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
-    } else {
-      $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
-      $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
-    }
-    $lport = $sk->__sk_common.skc_num;
-    $dport = $sk->__sk_common.skc_dport;
-    $qlen  = $sk->sk_ack_backlog;
-    $qmax  = $sk->sk_max_ack_backlog;
+	if ($inet_family == AF_INET || $inet_family == AF_INET6) {
+		// initialize variable type:
+		$daddr = ntop(0);
+		$saddr = ntop(0);
+		if ($inet_family == AF_INET) {
+			$daddr = ntop($sk->__sk_common.skc_daddr);
+			$saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+		} else {
+			$daddr = ntop(
+			    $sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+			$saddr = ntop(
+			    $sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+		}
+		$lport = $sk->__sk_common.skc_num;
+		$dport = $sk->__sk_common.skc_dport;
+		$qlen  = $sk->sk_ack_backlog;
+		$qmax  = $sk->sk_max_ack_backlog;
 
-    // Destination port is big endian, it must be flipped
-    $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
+		// Destination port is big endian, it must be flipped
+		$dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
 
-    time("%H:%M:%S ");
-    printf("%-6d %-14s ", pid, comm);
-    printf("%-39s %-5d %-39s %-5d ", $daddr, $dport, $saddr, $lport);
-    printf("%d/%d\n", $qlen, $qmax);
-  }
+		time("%H:%M:%S ");
+		printf("%-6d %-14s ", pid, comm);
+		printf("%-39s %-5d %-39s %-5d ", $daddr, $dport, $saddr,
+		    $lport);
+		printf("%d/%d\n", $qlen, $qmax);
+	}
 }
