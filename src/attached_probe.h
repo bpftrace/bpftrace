@@ -22,7 +22,7 @@ private:
   std::string eventprefix() const;
   std::string eventname() const;
   static std::string sanitise(const std::string &str);
-  uint64_t offset() const;
+  void resolve_offset_uprobe();
   void load_prog();
   void attach_kprobe();
   void attach_uprobe();
@@ -38,6 +38,7 @@ private:
   std::tuple<uint8_t *, uintptr_t> func_;
   std::vector<int> perf_event_fds_;
   int progfd_ = -1;
+  uint64_t offset_ = 0;
 };
 
 } // namespace bpftrace

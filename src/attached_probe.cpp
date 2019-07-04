@@ -17,6 +17,7 @@
 #include "utils.h"
 #include "bcc_syms.h"
 #include "bcc_usdt.h"
+#include "bcc_elf.h"
 #include "libbpf.h"
 #include "utils.h"
 #include "list.h"
@@ -204,7 +205,7 @@ std::string AttachedProbe::eventname() const
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
-      offset_str << std::hex << offset();
+      offset_str << std::hex << offset_;
       return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str() + index_str;
     case ProbeType::tracepoint:
       return probe_.attach_point;
@@ -223,16 +224,96 @@ std::string AttachedProbe::sanitise(const std::string &str)
   return std::regex_replace(str, std::regex("[^A-Za-z0-9_]"), "_");
 }
 
-uint64_t AttachedProbe::offset() const
+struct symbol {
+  std::string name;
+  uint64_t    start;
+  uint64_t    size;
+  uint64_t    address;
+};
+
+static int sym_name_cb(const char *symname, uint64_t start,
+                       uint64_t size, void *p)
 {
-  bcc_symbol sym;
-  int err = bcc_resolve_symname(probe_.path.c_str(), probe_.attach_point.c_str(),
-      probe_.loc, 0, nullptr, &sym);
+  struct symbol *sym = static_cast<struct symbol*>(p);
 
-  if (err)
-    throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + probe_.attach_point);
+  if (sym->name == symname)
+  {
+    sym->start = start;
+    sym->size  = size;
+    return -1;
+  }
 
-  return sym.offset;
+  return 0;
+}
+
+static int sym_address_cb(const char *symname, uint64_t start,
+                          uint64_t size, void *p)
+{
+  struct symbol *sym = static_cast<struct symbol*>(p);
+
+  if (sym->address >= start && sym->address < (start + size))
+  {
+    sym->start = start;
+    sym->size  = size;
+    sym->name  = symname;
+    return -1;
+  }
+
+  return 0;
+}
+
+static uint64_t resolve_offset(std::string& path, std::string& symbol, uint64_t loc)
+{
+  bcc_symbol bcc_sym;
+
+  if (bcc_resolve_symname(path.c_str(), symbol.c_str(), loc, 0, nullptr, &bcc_sym))
+     throw std::runtime_error("Could not resolve symbol: " + path + ":" + symbol);
+
+  return bcc_sym.offset;
+}
+
+void AttachedProbe::resolve_offset_uprobe(void)
+{
+  struct bcc_symbol_option option = { };
+  struct symbol sym = { };
+  std::string &symbol = probe_.attach_point;
+  uint64_t func_offset = probe_.func_offset;
+
+  sym.name = "";
+  option.use_debug_file  = 1;
+  option.use_symbol_type = 0xffffffff;
+
+  if (symbol.empty())
+  {
+    sym.address = probe_.address;
+    bcc_elf_foreach_sym(probe_.path.c_str(), sym_address_cb, &option, &sym);
+
+    symbol = sym.name;
+    func_offset = probe_.address - sym.start;
+
+    if (!sym.start) {
+      std::stringstream ss;
+      ss << "0x" << std::hex << probe_.address;
+      throw std::runtime_error("Could not resolve address: " + probe_.path + ":" + ss.str());
+    }
+  }
+  else
+  {
+    sym.name = symbol;
+    bcc_elf_foreach_sym(probe_.path.c_str(), sym_name_cb, &option, &sym);
+
+    if (!sym.start)
+      throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + symbol);
+  }
+
+  if (func_offset >= sym.size) {
+    std::stringstream ss;
+    ss << sym.size;
+    throw std::runtime_error("Offset outside the function bounds ('" + symbol + "' size is " + ss.str() + ")");
+  }
+
+  uint64_t sym_offset = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
+  offset_ = sym_offset + func_offset;
 }
 
 /**
@@ -441,11 +522,13 @@ void AttachedProbe::attach_kprobe()
 
 void AttachedProbe::attach_uprobe()
 {
+  resolve_offset_uprobe();
+
   int perf_event_fd = bpf_attach_uprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),
                                         probe_.path.c_str(),
-                                        offset(),
+                                        offset_,
                                         probe_.pid);
 
   if (perf_event_fd < 0)
@@ -497,8 +580,10 @@ void AttachedProbe::attach_usdt(int pid)
     throw std::runtime_error("Error finding location for probe: " + probe_.name);
   probe_.loc = loc.address;
 
+  offset_ = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
+
   int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), offset(), pid == 0 ? -1 : pid);
+      eventname().c_str(), probe_.path.c_str(), offset_, pid == 0 ? -1 : pid);
 
   if (perf_event_fd < 0)
   {
