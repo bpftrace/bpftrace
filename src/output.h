@@ -21,8 +21,7 @@ enum class MessageType
   join,
   syscall,
   attached_probes,
-  lost_events,
-  error
+  lost_events
 };
 
 std::ostream& operator<<(std::ostream& out, MessageType type);
