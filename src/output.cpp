@@ -4,6 +4,24 @@
 
 namespace bpftrace {
 
+std::ostream& operator<<(std::ostream& out, MessageType type) {
+  switch (type) {
+    case MessageType::map: out << "map"; break;
+    case MessageType::hist: out << "hist"; break;
+    case MessageType::stats: out << "stats"; break;
+    case MessageType::printf: out << "printf"; break;
+    case MessageType::time: out << "time"; break;
+    case MessageType::cat: out << "cat"; break;
+    case MessageType::join: out << "join"; break;
+    case MessageType::syscall: out << "syscall"; break;
+    case MessageType::attached_probes: out << "attached_probes"; break;
+    case MessageType::lost_events: out << "lost_events"; break;
+    case MessageType::error: out << "error"; break;
+    default: out << "?";
+  }
+  return out;
+}
+
 std::string TextOutput::hist_index_label(int power)
 {
   char suffix = '\0';
@@ -306,7 +324,7 @@ std::string JsonOutput::json_escape(const std::string &str) const
   return escaped.str();
 }
 
-void TextOutput::message(const std::string type __attribute__((unused)), std::string msg, bool nl) const
+void TextOutput::message(MessageType type __attribute__((unused)), const std::string& msg, bool nl) const
 {
   out_ << msg;
   if (nl)
@@ -318,21 +336,9 @@ void TextOutput::lost_events(uint64_t lost) const
   out_ << "Lost " << lost << " events" << std::endl;
 }
 
-void TextOutput::attached_probes(uint64_t num_probes, uint64_t max_probes) const
+void TextOutput::attached_probes(uint64_t num_probes) const
 {
-  if (num_probes == 0)
-  {
-    err_ << "No probes to attach" << std::endl;
-  }
-  else if (num_probes > max_probes)
-  {
-    err_ << "Can't attach to " << num_probes << " probes because it "
-      << "exceeds the current limit of " << max_probes << " probes."
-      << std::endl << "You can increase the limit through the BPFTRACE_MAX_PROBES "
-      << "environment variable, but BE CAREFUL since a high number of probes "
-      << "attached can cause your system to crash." << std::endl;
-  }
-  else if (num_probes == 1)
+  if (num_probes == 1)
     out_ << "Attaching " << num_probes << " probe..." << std::endl;
   else
     out_ << "Attaching " << num_probes << " probes..." << std::endl;
@@ -341,10 +347,10 @@ void TextOutput::attached_probes(uint64_t num_probes, uint64_t max_probes) const
 void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
                      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const
 {
-  out_ << "{\"type\": \"map\", \"data\": {\n";
-  out_ << "  \"" << json_escape(map.name_) << "\": ";
+  out_ << "{\"type\": \"" << MessageType::map << "\", \"data\": {";
+  out_ << "\"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{\n";
+    out_ << "{";
 
   uint32_t i = 0;
   uint32_t j = 0;
@@ -362,9 +368,9 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
-      out_ << ",\n";
+      out_ << ", ";
     if (args.size() > 0) {
-      out_ << "    \"" << json_escape(str_join(args, ",")) << "\": ";
+      out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
     if (map.type_.type == Type::kstack || map.type_.type == Type::ustack || map.type_.type == Type::ksym ||
@@ -381,7 +387,7 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "\n}}\n" << std::endl;
+  out_ << "}}" << std::endl;
 }
 
 void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
@@ -391,13 +397,13 @@ void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
   if (max_index == -1)
     return;
 
-  out_ << "[\n";
+  out_ << "[";
   for (int i = min_index; i <= max_index; i++)
   {
     if (i > min_index)
-      out_ << ",\n";
+      out_ << ", ";
 
-    out_ << "      {";
+    out_ << "{";
     if (i == 0)
     {
       out_ << "\"max\": -1, ";
@@ -419,7 +425,7 @@ void JsonOutput::hist(const std::vector<uint64_t> &values, uint32_t div) const
     out_ << "\"count\": " << values.at(i) / div;
     out_ << "}";
   }
-  out_ << "\n    ]";
+  out_ << "]";
 }
 
 void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
@@ -429,13 +435,13 @@ void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, in
   if (max_index == -1)
     return;
 
-  out_ << "[\n";
+  out_ << "[";
   for (int i = start_value; i <= end_value; i++)
   {
     if (i > start_value)
-      out_ << ",\n";
+      out_ << ", ";
 
-    out_ << "      {";
+    out_ << "{";
     if (i == 0) {
       out_ << "\"max\": " << min - 1 << ", ";
 
@@ -449,17 +455,17 @@ void JsonOutput::lhist(const std::vector<uint64_t> &values, int min, int max, in
     out_ << "\"count\": " << values.at(i);
     out_ << "}";
   }
-  out_ << "\n    ]";
+  out_ << "]";
 }
 
 void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
                           const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                           const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
-  out_ << "{\"type\": \"hist\", \"data\": {\n";
-  out_ << "  \"" << json_escape(map.name_) << "\": ";
+  out_ << "{\"type\": \"" << MessageType::hist << "\", \"data\": {";
+  out_ << "\"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{\n    ";
+    out_ << "{";
 
   uint32_t i = 0;
   uint32_t j = 0;
@@ -491,17 +497,17 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "\n}}\n" << std::endl;
+  out_ << "}}" << std::endl;
 }
 
 void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
                            const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                            const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
-  out_ << "{\"type\": \"stats\", \"data\": {\n";
+  out_ << "{\"type\": \"" << MessageType::stats << "\", \"data\": {";
   out_ << "  \"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
-    out_ << "{\n";
+    out_ << "{";
 
   uint32_t i = 0;
   for (auto &key_count : total_counts_by_key)
@@ -511,7 +517,7 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
-      out_ << ",\n";
+      out_ << ", ";
     if (args.size() > 0) {
       out_ << "    \"" << json_escape(str_join(args, ",")) << "\": ";
     }
@@ -533,43 +539,27 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
 
   if (map.key_.size() > 0)
     out_ << "}";
-  out_ << "\n}}\n" << std::endl;
+  out_ << "}}" << std::endl;
 }
 
-void JsonOutput::message(const std::string type, std::string msg, bool nl __attribute__((unused))) const
+void JsonOutput::message(MessageType type, const std::string& msg, bool nl __attribute__((unused))) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}\n" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}" << std::endl;
 }
 
-void JsonOutput::message(const std::string type, const std::string field, uint64_t value) const
+void JsonOutput::message(MessageType type, const std::string& field, uint64_t value) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"" << field << "\": " << value << "}\n" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"" << field << "\": " << value << "}" << std::endl;
 }
 
 void JsonOutput::lost_events(uint64_t lost) const
 {
-  message("lost_events", "events", lost);
+  message(MessageType::lost_events, "events", lost);
 }
 
-void JsonOutput::attached_probes(uint64_t num_probes, uint64_t max_probes) const
+void JsonOutput::attached_probes(uint64_t num_probes) const
 {
-  if (num_probes == 0)
-  {
-    message("error", "No probes to attach");
-  }
-  else if (num_probes > max_probes)
-  {
-    message("error",
-       "Can't attach to " + std::to_string(num_probes) + " probes because it "
-       "exceeds the current limit of " + std::to_string(max_probes) + " probes.\n"
-       "You can increase the limit through the BPFTRACE_MAX_PROBES "
-       "environment variable, but BE CAREFUL since a high number of probes "
-       "attached can cause your system to crash.");
-  }
-  else
-  {
-    message("attached_probes", "probes", num_probes);
-  }
+  message(MessageType::attached_probes, "probes", num_probes);
 }
 
 } // namespace bpftrace

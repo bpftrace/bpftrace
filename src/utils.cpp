@@ -457,14 +457,15 @@ void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
 std::string str_join(const std::vector<std::string> &list, const std::string &delim)
 {
   std::string str;
-  int i = 0;
-  for (auto &elem : list)
+  bool first = true;
+  for (const auto &elem : list)
   {
-    if (i > 0)
+    if (first)
+      first = false;
+    else
       str += delim;
 
     str += elem;
-    i++;
   }
   return str;
 }

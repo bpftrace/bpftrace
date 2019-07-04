@@ -9,12 +9,31 @@
 
 namespace bpftrace {
 
+enum class MessageType
+{
+  // don't forget to update std::ostream& operator<<(std::ostream& out, MessageType type) in output.cpp
+  map,
+  hist,
+  stats,
+  printf,
+  time,
+  cat,
+  join,
+  syscall,
+  attached_probes,
+  lost_events,
+  error
+};
+
+std::ostream& operator<<(std::ostream& out, MessageType type);
+
 class Output
 {
 public:
   explicit Output(std::ostream& out = std::cout, std::ostream& err = std::cerr) : out_(out),err_(err) { }
   Output(const Output &) = delete;
   Output& operator=(const Output &) = delete;
+  virtual ~Output() = default;
 
   virtual std::ostream& outputstream() const { return out_; };
 
@@ -27,9 +46,9 @@ public:
                          const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                          const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const = 0;
 
-  virtual void message(const std::string type, const std::string msg, bool nl = true) const = 0;
+  virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
-  virtual void attached_probes(uint64_t num_probes, uint64_t max_probes) const = 0;
+  virtual void attached_probes(uint64_t num_probes) const = 0;
 
 protected:
   std::ostream &out_;
@@ -51,9 +70,9 @@ public:
                  const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
 
-  void message(const std::string type, const std::string msg, bool nl = true) const override;
+  void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
-  void attached_probes(uint64_t num_probes, uint64_t max_probes) const override;
+  void attached_probes(uint64_t num_probes) const override;
 
 private:
   static std::string hist_index_label(int power);
@@ -75,10 +94,10 @@ public:
                  const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
 
-  void message(const std::string type, const std::string msg, bool nl = true) const override;
-  void message(const std::string type, const std::string field, uint64_t value) const;
+  void message(MessageType type, const std::string& msg, bool nl = true) const override;
+  void message(MessageType type, const std::string& field, uint64_t value) const;
   void lost_events(uint64_t lost) const override;
-  void attached_probes(uint64_t num_probes, uint64_t max_probes) const override;
+  void attached_probes(uint64_t num_probes) const override;
 
 private:
   std::string json_escape(const std::string &str) const;

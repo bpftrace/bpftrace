@@ -393,7 +393,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "strftime returned 0" << std::endl;
       return;
     }
-    bpftrace->out_->message("time", timestr, false);
+    bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::cat))
@@ -402,7 +402,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     auto filename = bpftrace->cat_args_[cat_id].c_str();
     std::stringstream buf;
     cat_file(filename, bpftrace->cat_bytes_max_, buf);
-    bpftrace->out_->message("cat", buf.str(), false);
+    bpftrace->out_->message(MessageType::cat, buf.str(), false);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
@@ -418,7 +418,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
         joined << delim;
       joined << arg;
     }
-    bpftrace->out_->message("join", joined.str());
+    bpftrace->out_->message(MessageType::join, joined.str());
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
@@ -443,7 +443,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << buffer << std::endl;
       return;
     }
-    bpftrace->out_->message("syscall", exec_system(buffer), false);
+    bpftrace->out_->message(MessageType::syscall, exec_system(buffer), false);
     return;
   }
 
@@ -458,13 +458,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   int required_size = format(buffer, BUFSIZE, fmt, arg_values);
   // Return value is required size EXCLUDING null byte
   if (required_size < BUFSIZE) {
-    bpftrace->out_->message("printf", std::string(buffer), false);
+    bpftrace->out_->message(MessageType::printf, std::string(buffer), false);
   } else {
     auto buf = std::make_unique<char[]>(required_size+1);
     // if for some reason the size is still wrong the string
     // will just be silently truncated
     format(buf.get(), required_size, fmt, arg_values);
-    bpftrace->out_->message("printf", std::string(buf.get()), false);
+    bpftrace->out_->message(MessageType::printf, std::string(buf.get()), false);
   }
 }
 

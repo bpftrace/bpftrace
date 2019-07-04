@@ -233,14 +233,14 @@ int main(int argc, char *argv[])
     output = std::make_unique<TextOutput>(*os);
   }
   else if (output_format == "json") {
-    output = std::make_unique<JsonOutput>(*os, *os);
+    output = std::make_unique<JsonOutput>(*os);
   }
   else {
     std::cerr << "Invalid output format \"" << output_format << "\"" << std::endl;
     std::cerr << "Valid formats: 'text', 'json'" << std::endl;
     return 1;
   }
-  BPFtrace bpftrace(move(output));
+  BPFtrace bpftrace(std::move(output));
   Driver driver(bpftrace);
 
   bpftrace.safe_mode = safe_mode;
@@ -443,9 +443,22 @@ int main(int argc, char *argv[])
   sigaction(SIGINT, &act, NULL);
 
   uint64_t num_probes = bpftrace.num_probes();
-  bpftrace.out_->attached_probes(num_probes, bpftrace.max_probes_);
-  if (num_probes == 0 || num_probes > bpftrace.max_probes_)
+  if (num_probes == 0)
+  {
+    std::cout << "No probes to attach" << std::endl;
     return 1;
+  }
+  else if (num_probes > bpftrace.max_probes_)
+  {
+    std::cerr << "Can't attach to " << num_probes << " probes because it "
+      << "exceeds the current limit of " << bpftrace.max_probes_ << " probes."
+      << std::endl << "You can increase the limit through the BPFTRACE_MAX_PROBES "
+      << "environment variable, but BE CAREFUL since a high number of probes "
+      << "attached can cause your system to crash." << std::endl;
+    return 1;
+  }
+  else
+    bpftrace.out_->attached_probes(num_probes);
 
   err = bpftrace.run(move(bpforc));
   if (err)
