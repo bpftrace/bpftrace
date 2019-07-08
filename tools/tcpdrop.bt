@@ -64,7 +64,7 @@ kprobe:tcp_drop
 
     time("%H:%M:%S ");
     printf("%-8d %-16s ", pid, comm);
-    printf("%39s:%-6d %39s:%-6d %-10s\n", $daddr, $dport, $saddr, $lport, $statestr);
+    printf("%39s:%-6d %39s:%-6d %-10s\n", $saddr, $lport, $daddr, $dport, $statestr);
     printf("%s\n", kstack);
   }
 }

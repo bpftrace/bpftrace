@@ -50,6 +50,6 @@ kprobe:tcp_connect
 
     time("%H:%M:%S ");
     printf("%-8d %-16s ", pid, comm);
-    printf("%-39s %-6d %-39s %-6d\n", $daddr, $dport, $saddr, $lport);
+    printf("%-39s %-6d %-39s %-6d\n", $saddr, $lport, $daddr, $dport);
   }
 }
