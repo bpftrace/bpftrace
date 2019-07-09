@@ -930,12 +930,16 @@ TEST(semantic_analyser, positional_parameters)
   bpftrace.add_param("123");
   bpftrace.add_param("hello");
 
+  test(bpftrace, "kprobe:f { printf(\"%d\", $0); }", 1);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($0)); }", 1);
+
   test(bpftrace, "kprobe:f { printf(\"%d\", $1); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%s\", str($1)); }", 10);
 
   test(bpftrace, "kprobe:f { printf(\"%s\", str($2)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $2); }", 10);
 
+  // Parameters are not required to exist to be used:
   test(bpftrace, "kprobe:f { printf(\"%s\", str($3)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $3); }", 0);
 }

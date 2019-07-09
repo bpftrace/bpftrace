@@ -22,6 +22,10 @@ void SemanticAnalyser::visit(Integer &integer)
 
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
+  if (param.n <= 0) {
+    err_ << "$" << param.n << " is not a valid parameter" << std::endl;
+  }
+
   param.type = SizedType(Type::integer, 8);
   if (is_final_pass()) {
     std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
