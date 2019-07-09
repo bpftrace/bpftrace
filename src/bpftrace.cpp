@@ -513,8 +513,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         arg_values.push_back(
           std::make_unique<PrintableString>(
             resolve_inet(
-              *reinterpret_cast<int32_t*>(arg_data+arg.offset),
-              reinterpret_cast<uint8_t*>(arg_data+arg.offset + 4))));
+              *reinterpret_cast<int64_t*>(arg_data+arg.offset),
+              reinterpret_cast<uint8_t*>(arg_data+arg.offset + 8))));
         break;
       case Type::username:
         arg_values.push_back(
@@ -990,7 +990,7 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::usym)
     return resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
   else if (map.type_.type == Type::inet)
-    return resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
+    return resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 8));
   else if (map.type_.type == Type::username)
     return resolve_uid(*(uint64_t*)(value.data()));
   else if (map.type_.type == Type::string)
