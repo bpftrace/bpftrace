@@ -1741,13 +1741,35 @@ uint64_t BPFtrace::resolve_cgroupid(const std::string &path) const
   return bpftrace_linux::resolve_cgroupid(path);
 }
 
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+static int sym_resolve_callback(const char *name, uint64_t addr, uint64_t, void *payload)
+{
+  struct bcc_symbol *sym = (struct bcc_symbol *)payload;
+  if (!strcmp(name, sym->name)) {
+    sym->offset = addr;
+    return -1;
+  }
+  return 0;
+}
+#endif
+
 uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-  bcc_symbol sym;
-  int err = bcc_resolve_symname(path.c_str(), name.c_str(), 0, 0, nullptr, &sym);
-  if (err)
+  struct bcc_symbol_option option = {
+    .use_debug_file = 0,
+    .check_debug_file_crc = 0,
+    .use_symbol_type = (1 << STT_OBJECT),
+  };
+
+  struct bcc_symbol sym;
+  sym.name = name.c_str();
+  sym.offset = 0;
+
+  int err = bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, &sym);
+  if (err == -1 || (err == 0 && sym.offset == 0))
     throw std::runtime_error("Could not resolve symbol: " + path + ":" + name);
+
   return sym.offset;
 #else
   std::string call_str = std::string("objdump -tT ") + path + " | grep -w " + name;
@@ -1757,11 +1779,13 @@ uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &pat
 #endif
 }
 
-int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+static int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
   auto syms = static_cast<std::ostringstream*>(payload);
   *syms << std::string(symname) << std::endl;
   return 0;
 }
+#endif
 
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) const
 {
