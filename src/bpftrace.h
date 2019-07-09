@@ -119,9 +119,9 @@ public:
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;
   uint64_t log_size_ = 409600;
-  bool demangle_cpp_symbols = true;
-  bool resolve_user_symbols = true;
-  bool safe_mode = true;
+  bool demangle_cpp_symbols_ = true;
+  bool resolve_user_symbols_ = true;
+  bool safe_mode_ = true;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,

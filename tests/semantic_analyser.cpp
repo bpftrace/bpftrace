@@ -19,7 +19,7 @@ void test(
     int expected_result=0,
     bool safe_mode = true)
 {
-  bpftrace.safe_mode = safe_mode;
+  bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;

@@ -424,7 +424,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall))
   {
-    if (bpftrace->safe_mode)
+    if (bpftrace->safe_mode_)
     {
       std::cerr << "syscall() not allowed in safe mode" << std::endl;
       abort();
@@ -1837,7 +1837,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
              .check_debug_file_crc = true,
              .use_symbol_type = BCC_SYM_ALL_TYPES};
 
-  if (resolve_user_symbols)
+  if (resolve_user_symbols_)
   {
     if (pid_sym_.find(pid) == pid_sym_.end())
     {
@@ -1853,7 +1853,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 
   if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    if (demangle_cpp_symbols)
+    if (demangle_cpp_symbols_)
       symbol << usym.demangle_name;
     else
       symbol << usym.name;
