@@ -183,7 +183,7 @@ Attaching 25 probes...
 Count process-level events for five seconds, printing a summary.
 
 - sched: The `sched` probe category has high-level scheduler and process events, such as fork, exec, and context switch.
-- name: The full name of the probe.
+- probe: The full name of the probe.
 - interval:s:5: This is a probe that fires once every 5 seconds, on one CPU only. It is used for creating script-level intervals or timeouts.
 - exit(): This exits bpftrace.
 
