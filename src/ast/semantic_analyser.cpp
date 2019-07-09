@@ -346,13 +346,11 @@ void SemanticAnalyser::visit(Call &call)
     //     char[16] inet6;
     //   }
     // }
-    int buffer_size = 8;
+    int buffer_size = 24;
     if (arg->type.type == Type::array) {
       if (arg->type.elem_type != Type::integer || arg->type.pointee_size != 1 || !(arg->type.size == 4 || arg->type.size == 16)) {
         err_ << call.func << "() invalid array" << std::endl;
       }
-      if (arg->type.size == 16)
-        buffer_size = 20;
     }
     call.type = SizedType(Type::inet, buffer_size);
     call.type.is_internal = true;
