@@ -498,7 +498,14 @@ void CodegenLLVM::visit(Call &call)
     //     char[16] inet6;
     //   }
     // }
-    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "inet");
+    //}
+    std::vector<llvm::Type *> elements = {
+      b_.getInt64Ty(), // printf ID
+      ArrayType::get(b_.getInt8Ty(), 16)
+    };
+    StructType *inet_struct = StructType::create(elements, "inet_t", false);
+
+    AllocaInst *buf = b_.CreateAllocaBPF(inet_struct, "inet");
 
     Value *af_offset = b_.CreateGEP(buf, b_.getInt64(0));
     Value *af_type;
@@ -506,18 +513,19 @@ void CodegenLLVM::visit(Call &call)
     auto inet = call.vargs->at(0);
     if (call.vargs->size() == 1) {
       if (inet->type.type == Type::integer || inet->type.size == 4) {
-        af_type = b_.getInt32(AF_INET);
+        af_type = b_.getInt64(AF_INET);
       } else {
-        af_type = b_.getInt32(AF_INET6);
+        af_type = b_.getInt64(AF_INET6);
       }
     } else {
       inet = call.vargs->at(1);
       call.vargs->at(0)->accept(*this);
-      af_type = b_.CreateIntCast(expr_, b_.getInt32Ty(), true);
+      af_type = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
     }
     b_.CreateStore(af_type, af_offset);
 
-    Value *inet_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(4)});
+    Value *inet_offset = b_.CreateGEP(buf, {b_.getInt32(0), b_.getInt32(1)});
+    b_.CreateMemSet(inet_offset, b_.getInt8(0), 16, 1);
 
     inet->accept(*this);
     if (inet->type.type == Type::array) {
