@@ -34,7 +34,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
     AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
     b_.CreateMemSet(buf, b_.getInt8(0), pstr.length() + 1, 1);
-    b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), buf);
+    b_.CreateStore(const_str, buf);
     expr_ = buf;
   }
 }
@@ -44,7 +44,7 @@ void CodegenLLVM::visit(String &string)
   string.str.resize(string.type.size-1);
   Constant *const_str = ConstantDataArray::getString(module_->getContext(), string.str, true);
   AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
-  b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), buf);
+  b_.CreateStore(const_str, buf);
   expr_ = buf;
 }
 
@@ -560,7 +560,8 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *printf_args = b_.CreateAllocaBPF(printf_struct, "printf_args");
     b_.CreateMemSet(printf_args, b_.getInt8(0), struct_size, 1);
 
-    b_.CreateStore(b_.getInt64(printf_id_), printf_args);
+    Value *printf_id_offset = b_.CreateGEP(printf_args, {b_.getInt32(0), b_.getInt32(0)});
+    b_.CreateStore(b_.getInt64(printf_id_), printf_id_offset);
     for (size_t i=1; i<call.vargs->size(); i++)
     {
       Expression &arg = *call.vargs->at(i);
@@ -663,7 +664,7 @@ void CodegenLLVM::visit(Call &call)
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
     AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
     b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
-    b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), str_buf);
+    b_.CreateStore(const_str, str_buf);
     ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
 
@@ -707,7 +708,7 @@ void CodegenLLVM::visit(Call &call)
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
     AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
     b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
-    b_.CreateStore(b_.CreateGEP(const_str, b_.getInt64(0)), str_buf);
+    b_.CreateStore(const_str, str_buf);
     ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
     if (call.func == "clear")

@@ -621,7 +621,13 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   // int bpf_perf_event_output(ctx, map, flags, data, size)
   FunctionType *perfoutput_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty(), getInt8PtrTy(), getInt64Ty()},
+      {
+        getInt8PtrTy(),
+        getInt64Ty(),
+        getInt64Ty(),
+        cast<PointerType>(data->getType()),
+        getInt64Ty()
+      },
       false);
   PointerType *perfoutput_func_ptr_type = PointerType::get(perfoutput_func_type, 0);
   Constant *perfoutput_func = ConstantExpr::getCast(

@@ -24,7 +24,7 @@ entry:
   store i64 0, i8* %2, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [16 x i8]* nonnull %perfdata, i64 16)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, [16 x i8]*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [16 x i8]* nonnull %perfdata, i64 16)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
