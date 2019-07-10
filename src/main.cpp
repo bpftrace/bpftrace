@@ -29,7 +29,7 @@ void usage()
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -B MODE        output buffering mode ('line', 'full', or 'none')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
-  std::cerr << "    -o file        redirect program output to file" << std::endl;
+  std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
