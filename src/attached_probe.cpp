@@ -128,7 +128,7 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       attach_usdt(pid);
       break;
     case ProbeType::watchpoint:
-      attach_watchpoint(pid);
+      attach_watchpoint(pid, probe.mode);
       break;
     default:
       std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\"" << std::endl;
@@ -667,13 +667,9 @@ void AttachedProbe::attach_hardware()
   }
 }
 
-void AttachedProbe::attach_watchpoint(int pid)
+void AttachedProbe::attach_watchpoint(int pid, const std::string& mode)
 {
-  // We require the pid to make the initial implementation simpler.
-  // Technically we could walk /proc/*/exe and find which pids symlink to
-  // the provided executable path. This would enable multiple watchpoint
-  // probes in a single bpftrace program.
-  if (!pid) {
+  if (pid < 1) {
     throw std::runtime_error("pid not provided for " + probe_.name);
   }
 
@@ -681,7 +677,17 @@ void AttachedProbe::attach_watchpoint(int pid)
   attr.type = PERF_TYPE_BREAKPOINT;
   attr.size = sizeof(struct perf_event_attr);
   attr.config = 0;
-  attr.bp_type = HW_BREAKPOINT_RW;  // TODO(danobi): let user choose bp type
+
+  attr.bp_type = HW_BREAKPOINT_EMPTY;
+  for (const char c : mode) {
+    if (c == 'r')
+      attr.bp_type |= HW_BREAKPOINT_R;
+    else if (c == 'w')
+      attr.bp_type |= HW_BREAKPOINT_W;
+    else if (c == 'x')
+      attr.bp_type |= HW_BREAKPOINT_X;
+  }
+
   attr.bp_addr = probe_.addr;
   attr.bp_len = probe_.len;
   // Generate a notification every 1 event; we care about every event

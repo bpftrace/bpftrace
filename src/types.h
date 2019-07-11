@@ -148,6 +148,7 @@ public:
   pid_t pid = -1;
   uint64_t addr = 0;            // for watchpoint probes, start of region
   uint64_t len = 0;             // for watchpoint probes, size of region
+  std::string mode;             // for watchpoint probes, watch mode (rwx)
 };
 
 enum class AsyncAction

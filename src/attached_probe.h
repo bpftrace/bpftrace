@@ -32,7 +32,7 @@ private:
   void attach_interval();
   void attach_software();
   void attach_hardware();
-  void attach_watchpoint(int pid);
+  void attach_watchpoint(int pid, const std::string& mode);
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;

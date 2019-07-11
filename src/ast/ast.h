@@ -257,8 +257,9 @@ public:
   AttachPoint(const std::string &provider,
               const std::string &target,
               uint64_t addr,
-              uint64_t len)
-    : provider(probetypeName(provider)), target(target), addr(addr), len(len) { }
+              uint64_t len,
+              const std::string &mode)
+    : provider(probetypeName(provider)), target(target), addr(addr), len(len), mode(mode) { }
 
   std::string provider;
   std::string target;
@@ -268,6 +269,7 @@ public:
   int freq = 0;
   uint64_t addr = 0;
   uint64_t len = 0;
+  std::string mode;
   bool need_expansion = false;
 
   void accept(Visitor &v) override;
