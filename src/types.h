@@ -3,8 +3,9 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <vector>
+#include <sys/types.h>
 #include <unistd.h>
+#include <vector>
 
 namespace bpftrace {
 
@@ -142,6 +143,7 @@ public:
   uint64_t log_size;
   int index = 0;
   int freq;
+  pid_t pid = -1;
 };
 
 enum class AsyncAction

@@ -8,11 +8,11 @@
 #include <time.h>
 #include <arpa/inet.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/prctl.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/prctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
@@ -101,31 +101,17 @@ int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points)
   {
-    if (attach_point->provider == "BEGIN")
+    if (attach_point->provider == "BEGIN" || attach_point->provider == "END")
     {
       Probe probe;
       probe.path = "/proc/self/exe";
-      probe.attach_point = "BEGIN_trigger";
+      probe.attach_point = attach_point->provider + "_trigger";
       probe.type = probetype(attach_point->provider);
       probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
-      probe.index = attach_point->index(probe.name) > 0 ?
-          attach_point->index(probe.name) : p.index();
-      special_probes_.push_back(probe);
-      continue;
-    }
-    else if (attach_point->provider == "END")
-    {
-      Probe probe;
-      probe.path = "/proc/self/exe";
-      probe.attach_point = "END_trigger";
-      probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
-      probe.orig_name = p.name();
-      probe.name = p.name();
-      probe.loc = 0;
+      probe.pid = getpid();
       probe.index = attach_point->index(probe.name) > 0 ?
           attach_point->index(probe.name) : p.index();
       special_probes_.push_back(probe);
