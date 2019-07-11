@@ -35,6 +35,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
+  ${CMAKE_SOURCE_DIR}/src/output.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
@@ -102,6 +103,7 @@ configure_file(parser.py parser.py COPYONLY)
 configure_file(utils.py utils.py COPYONLY)
 file(GLOB runtime_tests runtime/*)
 list(REMOVE_ITEM runtime_tests ${CMAKE_CURRENT_SOURCE_DIR}/runtime/scripts)
+list(REMOVE_ITEM runtime_tests ${CMAKE_CURRENT_SOURCE_DIR}/runtime/outputs)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/)
 foreach(runtime_test ${runtime_tests})
   configure_file(${runtime_test} ${CMAKE_CURRENT_BINARY_DIR}/runtime/ COPYONLY)
@@ -110,6 +112,11 @@ file(GLOB runtime_test_scripts runtime/scripts/*)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/scripts)
 foreach(runtime_test_script ${runtime_test_scripts})
   configure_file(${runtime_test_script} ${CMAKE_CURRENT_BINARY_DIR}/runtime/scripts/ COPYONLY)
+endforeach()
+file(GLOB runtime_test_outputs runtime/outputs/*)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs)
+foreach(runtime_test_output ${runtime_test_outputs})
+  configure_file(${runtime_test_output} ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs/ COPYONLY)
 endforeach()
 add_custom_target(runtime-tests COMMAND ./runtime-tests.sh)
 add_test(NAME runtime_test COMMAND ./runtime-tests.sh)

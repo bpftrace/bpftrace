@@ -14,6 +14,7 @@
 #include "struct.h"
 #include "utils.h"
 #include "types.h"
+#include "output.h"
 
 namespace bpftrace {
 
@@ -66,11 +67,10 @@ private:
 class BPFtrace
 {
 public:
-  BPFtrace(std::ostream& o = std::cout) : out_(o),ncpus_(get_possible_cpus().size()) { }
+  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout)) : out_(std::move(o)),ncpus_(get_possible_cpus().size()) { }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
-  std::ostream& outputstream() const { return out_; }
   int run(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
@@ -86,6 +86,7 @@ public:
   std::string resolve_uid(uintptr_t addr) const;
   uint64_t resolve_kname(const std::string &name) const;
   uint64_t resolve_uname(const std::string &name, const std::string &path) const;
+  std::string map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div);
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;
@@ -114,6 +115,7 @@ public:
   std::vector<std::string> probe_ids_;
   unsigned int join_argnum_;
   unsigned int join_argsize_;
+  std::unique_ptr<Output> out_;
 
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;
@@ -144,7 +146,6 @@ protected:
   std::vector<Probe> special_probes_;
 
 private:
-  std::ostream &out_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   void* ksyms_{nullptr};
@@ -170,8 +171,6 @@ private:
   static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t read_address_from_output(std::string output);
-  static std::string hist_index_label(int power);
-  static std::string lhist_index_label(int number);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   static int spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd);
   static bool is_pid_alive(int pid);

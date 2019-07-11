@@ -1,0 +1,84 @@
+NAME invalid_format
+RUN bpftrace -f jsonx -e 'BEGIN { @scalar = 5; exit(); }'
+EXPECT ^Invalid output format "jsonx"$
+TIMEOUT 5
+
+NAME scalar
+RUN bpftrace -f json -e 'BEGIN { @scalar = 5; exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME scalar_str
+RUN bpftrace -f json -e 'BEGIN { @scalar_str = "a b \n d e"; exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar_str.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME complex
+RUN bpftrace -f json -e 'BEGIN { @complex[comm,2] = 5; exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/complex.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME map
+RUN bpftrace -f json -e 'BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/map.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME histogram
+RUN bpftrace -f json -e 'BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME multiple histograms
+RUN bpftrace -f json -e 'BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_multiple.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME linear histogram
+RUN bpftrace -f json -e 'BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME multiple linear histograms
+RUN bpftrace -f json -e 'BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist_multiple.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME stats
+RUN bpftrace -f json -e 'BEGIN { @stats = stats(2); @stats = stats(10); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME multiple stats
+RUN bpftrace -f json -e 'BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10); exit(); }' | grep -v attached_probes | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats_multiple.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME printf
+RUN bpftrace -f json -v -e 'BEGIN { printf("test %d", 5); exit(); }'
+EXPECT ^{"type": "printf", "msg": "test 5"}$
+TIMEOUT 5
+
+NAME printf_escaping
+RUN bpftrace -f json -v -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
+EXPECT ^{"type": "printf", "msg": "test \\r \\n \\t \\\\ \\\" bar"}$
+TIMEOUT 5
+
+NAME time
+RUN bpftrace -f json -v -e 'BEGIN { time(); exit(); }'
+EXPECT ^{"type": "time", "msg": "[0-9]*:[0-9]*:[0-9]*\\n"}$
+TIMEOUT 5
+
+NAME syscall
+RUN bpftrace --unsafe -v -f json -e 'BEGIN { system("echo a b c"); exit(); }'
+EXPECT ^{"type": "syscall", "msg": "a b c\\n"}$
+TIMEOUT 5
+
+NAME join_delim
+RUN bpftrace --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); exit(); }' -c "/bin/echo 'A'"
+EXPECT ^{"type": "join", "msg": "/bin/echo,'A'"}
+TIMEOUT 5
+
+NAME cat
+RUN bpftrace -v -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
+EXPECT ^{"type": "cat", "msg": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
+TIMEOUT 5

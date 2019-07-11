@@ -1,0 +1,15 @@
+{"type": "hist", "data": {
+  "@h": [
+      {"min": 0, "max": 9, "count": 1},
+      {"min": 10, "max": 19, "count": 0},
+      {"min": 20, "max": 29, "count": 0},
+      {"min": 30, "max": 39, "count": 0},
+      {"min": 40, "max": 49, "count": 0},
+      {"min": 50, "max": 59, "count": 1},
+      {"min": 60, "max": 69, "count": 0},
+      {"min": 70, "max": 79, "count": 0},
+      {"min": 80, "max": 89, "count": 0},
+      {"min": 90, "max": 99, "count": 0},
+      {"min": 100, "count": 1}
+    ]
+}}

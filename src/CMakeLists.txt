@@ -4,15 +4,16 @@ add_executable(bpftrace
   clang_parser.cpp
   driver.cpp
   fake_map.cpp
+  list.cpp
   main.cpp
   map.cpp
   mapkey.cpp
+  output.cpp
   printf.cpp
   resolve_cgroupid.cpp
   tracepoint_format_parser.cpp
   types.cpp
   utils.cpp
-  list.cpp
 )
 
 if(HAVE_NAME_TO_HANDLE_AT)

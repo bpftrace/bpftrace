@@ -30,24 +30,25 @@ std::string MapKey::argument_type_list() const
   return list.str();
 }
 
-std::string MapKey::argument_value_list(BPFtrace &bpftrace,
+std::vector<std::string> MapKey::argument_value_list(BPFtrace &bpftrace,
+    const std::vector<uint8_t> &data) const
+{
+  std::vector<std::string> list;
+  int offset = 0;
+  for (const SizedType &arg : args_)
+  {
+    list.push_back(argument_value(bpftrace, arg, &data[offset]));
+    offset += arg.size;
+  }
+  return list;
+}
+
+std::string MapKey::argument_value_list_str(BPFtrace &bpftrace,
     const std::vector<uint8_t> &data) const
 {
   if (args_.empty())
     return "";
-  std::string list = "[";
-  int offset = 0;
-  bool first = true;
-  for (const SizedType &arg : args_)
-  {
-    if (first)
-      first = false;
-    else
-      list += ", ";
-    list += argument_value(bpftrace, arg, &data[offset]);
-    offset += arg.size;
-  }
-  return list + "]";
+  return "[" + str_join(argument_value_list(bpftrace, data), ", ") + "]";
 }
 
 std::string MapKey::argument_value(BPFtrace &bpftrace,

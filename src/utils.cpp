@@ -454,4 +454,20 @@ void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
   }
 }
 
+std::string str_join(const std::vector<std::string> &list, const std::string &delim)
+{
+  std::string str;
+  bool first = true;
+  for (const auto &elem : list)
+  {
+    if (first)
+      first = false;
+    else
+      str += delim;
+
+    str += elem;
+  }
+  return str;
+}
+
 } // namespace bpftrace
