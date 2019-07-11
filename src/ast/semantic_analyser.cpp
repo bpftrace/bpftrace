@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "arch/arch.h"
 #include "list.h"
+#include <cstring>
 #include <sys/stat.h>
 #include <regex>
 
@@ -986,7 +987,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     ap.target = resolve_binary_path(ap.target);
     struct stat s;
     if (stat(ap.target.c_str(), &s) != 0)
-      err_ << "uprobe target file " << ap.target << " does not exist" << std::endl;
+      err_ << "failed to stat uprobe target file " << ap.target << ": "
+        << std::strerror(errno) << std::endl;
   }
   else if (ap.provider == "usdt") {
     if (ap.func == "")
