@@ -789,6 +789,19 @@ TEST(semantic_analyser, tracepoint)
   test("tracepoint { 1 }", 1);
 }
 
+TEST(semantic_analyser, watchpoint)
+{
+  test("watchpoint::0x1234:8:rw { 1 }", 0);
+  test("watchpoint:/dev/null:0x1234:8:rw { 1 }", 0);
+  test("watchpoint::0x1234:9:rw { 1 }", 1);
+  test("watchpoint::0x1234:8:rwx { 1 }", 1);
+  test("watchpoint::0x1234:8:rx { 1 }", 1);
+  test("watchpoint::0x1234:8:b { 1 }", 1);
+  test("watchpoint::0x1234:8:rww { 1 }", 1);
+  test("watchpoint::0x0:8:rww { 1 }", 1);
+}
+
+
 TEST(semantic_analyser, args_builtin_wrong_use)
 {
   test("BEGIN { args->foo }", 1);
