@@ -12,10 +12,10 @@ int main() {
       -1,
       0);
 
-  if (addr < 0) {
+  if ((long)addr < 0) {
     perror("mmap");
     return 1;
   }
 
-  *((uint8_t*)addr) = 2;
+  *((volatile uint8_t*)addr) = 2;
 }
