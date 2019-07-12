@@ -114,6 +114,8 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { ksym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
+  test("kprobe:f { kaddr(\"sym\") }", 0);
+  test("kprobe:f { uaddr(\"sym\") }", 0);
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
@@ -437,6 +439,16 @@ TEST(semantic_analyser, call_kaddr)
   test("kprobe:f { @x = kaddr(\"avenrun\"); }", 0);
   test("kprobe:f { kaddr(); }", 1);
   test("kprobe:f { kaddr(123); }", 1);
+}
+
+TEST(semantic_analyser, call_uaddr)
+{
+  test("kprobe:f { uaddr(\"counter\"); }", 0);
+  test("kprobe:f { uaddr(\"github.com/golang/glog.severityName\"); }", 0);
+  test("kprobe:f { @x = uaddr(\"counter\"); }", 0);
+  test("kprobe:f { uaddr(); }", 1);
+  test("kprobe:f { uaddr(123); }", 1);
+  test("kprobe:f { uaddr(\"?\"); }", 1);
 }
 
 TEST(semantic_analyser, call_reg)

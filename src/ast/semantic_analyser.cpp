@@ -418,7 +418,7 @@ void SemanticAnalyser::visit(Call &call)
    {
     if (check_nargs(call, 1)) {
       if (check_arg(call, Type::string, 0, true)) {
-        check_alpha_numeric(call, 0);
+        check_symbol(call, 0);
       }
     }
     call.type = SizedType(Type::integer, 8);
@@ -1314,17 +1314,18 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
   return true;
 }
 
-bool SemanticAnalyser::check_alpha_numeric(const Call &call, int arg_num __attribute__((unused)))
+bool SemanticAnalyser::check_symbol(const Call &call, int arg_num __attribute__((unused)))
 {
   if (!call.vargs)
     return false;
 
   auto &arg = static_cast<String&>(*call.vargs->at(0)).str;
 
-  bool is_alpha = std::regex_match(arg, std::regex("^[a-zA-Z0-9_-]+$"));
-  if (!is_alpha)
+  std::string re = "^[a-zA-Z0-9./_-]+$";
+  bool is_valid = std::regex_match(arg, std::regex(re));
+  if (!is_valid)
   {
-    err_ << call.func << "() expects an alpha numeric string as input";
+    err_ << call.func << "() expects a string that is a valid symbol (" << re << ") as input";
     err_ << " (\"" << arg << "\" provided)" << std::endl;
     return false;
   }
