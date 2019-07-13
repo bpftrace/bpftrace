@@ -171,11 +171,10 @@ void CodegenLLVM::visit(Builtin &builtin)
       offset = arch::arg_offset(arg_num);
     }
 
-    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t)));
-    b_.CreateProbeRead(dst, builtin.type.size, src);
-    expr_ = b_.CreateLoad(dst);
-    b_.CreateLifetimeEnd(dst);
+    expr_ = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
+        builtin.ident);
   }
   else if (builtin.ident == "probe")
   {
@@ -546,11 +545,10 @@ void CodegenLLVM::visit(Call &call)
       abort();
     }
 
-    AllocaInst *dst = b_.CreateAllocaBPF(call.type, call.func+"_"+reg_name);
-    Value *src = b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t)));
-    b_.CreateProbeRead(dst, 8, src);
-    expr_ = b_.CreateLoad(dst);
-    b_.CreateLifetimeEnd(dst);
+    expr_ = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
+        call.func+"_"+reg_name);
   }
   else if (call.func == "printf")
   {
