@@ -1615,9 +1615,9 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
   struct bcc_symbol_option symopts;
   void *psyms = nullptr;
 
-  symopts = {.use_debug_file = true,
-             .check_debug_file_crc = true,
-             .use_symbol_type = BCC_SYM_ALL_TYPES};
+  symopts.use_debug_file = true;
+  symopts.check_debug_file_crc = true;
+  symopts.use_symbol_type = BCC_SYM_ALL_TYPES;
 
   if (resolve_user_symbols_)
   {
