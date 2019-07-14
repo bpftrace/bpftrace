@@ -50,6 +50,10 @@ if(HAVE_BFD_DISASM)
   target_link_libraries(bpftrace ${LIBOPCODES_LIBRARIES})
 endif(HAVE_BFD_DISASM)
 
+if (ALLOW_UNSAFE_UPROBE)
+  target_compile_definitions(bpftrace PRIVATE HAVE_UNSAFE_UPROBE)
+endif(ALLOW_UNSAFE_UPROBE)
+
 target_link_libraries(bpftrace arch ast parser resources)
 
 if (STATIC_LINKING)

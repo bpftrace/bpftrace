@@ -80,7 +80,7 @@ void check_banned_kretprobes(std::string const& kprobe_name) {
   }
 }
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func)
+AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
   : probe_(probe), func_(func)
 {
   load_prog();
@@ -97,7 +97,7 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
-      attach_uprobe();
+      attach_uprobe(safe_mode);
       break;
     case ProbeType::tracepoint:
       attach_tracepoint();
@@ -273,7 +273,7 @@ static uint64_t resolve_offset(std::string& path, std::string& symbol, uint64_t 
   return bcc_sym.offset;
 }
 
-void AttachedProbe::resolve_offset_uprobe(void)
+void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
 {
   struct bcc_symbol_option option = { };
   struct symbol sym = { };
@@ -329,16 +329,34 @@ void AttachedProbe::resolve_offset_uprobe(void)
   if (AlignState::Ok == aligned)
     return;
 
+  // If we did not allow unaligned uprobes in the
+  // compile time, force the safe mode now.
+#ifndef HAVE_UNSAFE_UPROBE
+  safe_mode = true;
+#endif
+
   switch (aligned)
   {
     case AlignState::NotAlign:
-      throw std::runtime_error("Could not add uprobe into middle of instruction: " + tmp);
+      if (safe_mode)
+        throw std::runtime_error("Could not add uprobe into middle of instruction: " + tmp);
+      else
+        std::cerr << "Unsafe uprobe in the middle of the instruction: " << tmp << std::endl;
+      break;
 
      case AlignState::Fail:
-       throw std::runtime_error("Failed to check if uprobe is in proper place: " + tmp);
+       if (safe_mode)
+         throw std::runtime_error("Failed to check if uprobe is in proper place: " + tmp);
+       else
+         std::cerr << "Unchecked uprobe: " << tmp << std::endl;
+       break;
 
      case AlignState::NotSupp:
-       throw std::runtime_error("Can't check if uprobe is in proper place (compiled without uprobe offset support): " + tmp);
+       if (safe_mode)
+         throw std::runtime_error("Can't check if uprobe is in proper place (compiled without uprobe offset support): " + tmp);
+       else
+         std::cerr << "Unchecked uprobe: " << tmp << std::endl;
+       break;
 
      default:
        throw std::runtime_error("Internal error: " + tmp);
@@ -549,9 +567,9 @@ void AttachedProbe::attach_kprobe()
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_uprobe()
+void AttachedProbe::attach_uprobe(bool safe_mode)
 {
-  resolve_offset_uprobe();
+  resolve_offset_uprobe(safe_mode);
 
   int perf_event_fd = bpf_attach_uprobe(progfd_,
                                         attachtype(probe_.type),
