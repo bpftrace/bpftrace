@@ -654,7 +654,7 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
     if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
       return std::make_unique<AttachedProbe>(probe, func->second, pid_);
     else
-      return std::make_unique<AttachedProbe>(probe, func->second);
+      return std::make_unique<AttachedProbe>(probe, func->second, safe_mode_);
   }
   catch (std::runtime_error &e)
   {
