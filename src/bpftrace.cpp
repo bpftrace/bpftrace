@@ -1041,7 +1041,13 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       value_size *= ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
@@ -1117,7 +1123,13 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     int value_size = map.type_.size * ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
@@ -1189,7 +1201,13 @@ int BPFtrace::print_map_stats(IMap &map)
     int value_size = map.type_.size * ncpus_;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
