@@ -99,6 +99,7 @@ enum class ProbeType
   interval,
   software,
   hardware,
+  watchpoint,
 };
 
 struct ProbeItem
@@ -121,7 +122,8 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "profile", "p", ProbeType::profile },
   { "interval", "i", ProbeType::interval },
   { "software", "s", ProbeType::software },
-  { "hardware", "h", ProbeType::hardware }
+  { "hardware", "h", ProbeType::hardware },
+  { "watchpoint", "w", ProbeType::watchpoint },
 };
 
 std::string typestr(Type t);
@@ -144,6 +146,9 @@ public:
   int index = 0;
   int freq;
   pid_t pid = -1;
+  uint64_t addr = 0;            // for watchpoint probes, start of region
+  uint64_t len = 0;             // for watchpoint probes, size of region
+  std::string mode;             // for watchpoint probes, watch mode (rwx)
 };
 
 enum class AsyncAction

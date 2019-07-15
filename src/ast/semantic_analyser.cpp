@@ -7,6 +7,7 @@
 #include "utils.h"
 #include "arch/arch.h"
 #include "list.h"
+#include <algorithm>
 #include <cstring>
 #include <sys/stat.h>
 #include <regex>
@@ -1052,6 +1053,23 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "software probe can only have an integer count" << std::endl;
     else if (ap.freq < 0)
       err_ << "software count should be a positive integer" << std::endl;
+  }
+  else if (ap.provider == "watchpoint") {
+    if (!ap.addr)
+      err_ << "watchpoint must be attached to a non-zero address" << std::endl;
+    if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
+      err_ << "watchpoint length must be one of (1,2,4,8)" << std::endl;
+    std::sort(ap.mode.begin(), ap.mode.end());
+    for (const char c : ap.mode) {
+      if (c != 'r' && c != 'w' && c != 'x')
+        err_ << "watchpoint mode must be combination of (r,w,x)" << std::endl;
+    }
+    for (size_t i = 0; i < ap.mode.size() - 1; ++i) {
+      if (ap.mode[i] == ap.mode[i+1])
+        err_ << "watchpoint modes may not be duplicated" << std::endl;
+    }
+    if (ap.mode == "rx" || ap.mode == "wx" || ap.mode == "rwx")
+      err_ << "watchpoint modes (rx, wx, rwx) not allowed" << std::endl;
   }
   else if (ap.provider == "hardware") {
     if (ap.target == "")

@@ -21,6 +21,7 @@ ident  [_a-zA-Z][_a-zA-Z0-9]*
 map    @{ident}|@
 var    ${ident}
 int    [0-9]+|0[xX][0-9a-fA-F]+
+cint   :{int}:
 hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
@@ -54,10 +55,11 @@ pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|retval|func|p
                           return Parser::make_BUILTIN(yytext, loc); }
 bpftrace|perf {
                           return Parser::make_STACK_MODE(yytext, loc); }
+{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
+{cint}                  { return Parser::make_CINT(strtoll(yytext+1, NULL, 0), loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
-{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
 ";"                     { return Parser::make_SEMI(loc); }
 "{"                     { return Parser::make_LBRACE(loc); }

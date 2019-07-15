@@ -254,6 +254,12 @@ public:
               const std::string &target,
               int freq)
     : provider(probetypeName(provider)), target(target), freq(freq), need_expansion(true) { }
+  AttachPoint(const std::string &provider,
+              const std::string &target,
+              uint64_t addr,
+              uint64_t len,
+              const std::string &mode)
+    : provider(probetypeName(provider)), target(target), addr(addr), len(len), mode(mode) { }
 
   std::string provider;
   std::string target;
@@ -261,6 +267,9 @@ public:
   std::string func;
   usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with wildcard matches
   int freq = 0;
+  uint64_t addr = 0;
+  uint64_t len = 0;
+  std::string mode;
   bool need_expansion = false;
 
   void accept(Visitor &v) override;

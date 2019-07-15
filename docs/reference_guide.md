@@ -43,6 +43,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
     - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
     - [13. `BEGIN`/`END`: Built-in events](#13-beginend-built-in-events)
+    - [14. `watchpoint`: Memory watchpoints](#14-watchpoint-memory-watchpoints)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -1109,6 +1110,24 @@ END
 ```
 
 These are special built-in events provided by the bpftrace runtime. `BEGIN` is triggered before all other probes are attached. `END` is triggered after all other probes are detached.
+
+## 14. `watchpoint`: Memory watchpoints
+
+**WARNING**: this feature is experimental and may be subject to interface changes.
+
+Syntax:
+
+```
+watchpoint::hex_address:length:mode
+```
+
+These are memory watchpoints provided by the kernel. Whenever a memory address is written to (`w`), read from (`r`), or executed (`x`), the kernel can generate an event. Note that a pid (`-p`) or a command (`-c`) must be provided to bpftrace. Also note you may not monitor for execution while monitoring read or write.
+
+Examples:
+
+```
+bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
+```
 
 # Variables
 
