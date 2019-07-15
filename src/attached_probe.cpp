@@ -315,6 +315,34 @@ void AttachedProbe::resolve_offset_uprobe(void)
 
   uint64_t sym_offset = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
   offset_ = sym_offset + func_offset;
+
+  // If we are not aligned to the start of the symbol,
+  // check if we are on the instruction boundary.
+  if (func_offset == 0)
+    return;
+
+  Disasm dasm(probe_.path);
+  AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
+
+  std::string tmp = probe_.path + ":" + symbol + "+" + std::to_string(func_offset);
+
+  if (AlignState::Ok == aligned)
+    return;
+
+  switch (aligned)
+  {
+    case AlignState::NotAlign:
+      throw std::runtime_error("Could not add uprobe into middle of instruction: " + tmp);
+
+     case AlignState::Fail:
+       throw std::runtime_error("Failed to check if uprobe is in proper place: " + tmp);
+
+     case AlignState::NotSupp:
+       throw std::runtime_error("Can't check if uprobe is in proper place (compiled without uprobe offset support): " + tmp);
+
+     default:
+       throw std::runtime_error("Internal error: " + tmp);
+  }
 }
 
 /**
