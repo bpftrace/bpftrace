@@ -2,8 +2,10 @@
 
 - [Linux Kernel Requirements](#linux-kernel-requirements)
 - [Package install](#package-install)
-  - [Ubuntu](#ubuntu-snap-package)
+  - [Ubuntu](#ubuntu-packages)
   - [Fedora](#fedora-package)
+  - [Gentoo](#gentoo-package)
+  - [Debian](#debian-package)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -39,14 +41,22 @@ This can be verified by running the `check_kernel_features` script from the
 
 # Package install
 
-## Ubuntu snap package
+## Ubuntu packages
 
-On Ubuntu 16.04 and later, bpftrace is available as a snap package (https://snapcraft.io/bpftrace) and can be installed with snap. The current snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
+```
+sudo apt-get install bpftrace
+```
+
+Should work.
+
+On Ubuntu 16.04 and later, bpftrace is also available as a snap package (https://snapcraft.io/bpftrace), however, the snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
 
 ```
 sudo snap install --devmode bpftrace
 sudo snap connect bpftrace:system-trace
 ```
+
+The snap package also currently has issues with uprobes ([#829](https://github.com/iovisor/bpftrace/issues/829)).
 
 ## Fedora package
 
@@ -62,6 +72,10 @@ On Gentoo, bpftrace is included in the official repo. The package can be install
 ```
 sudo emerge -av bpftrace
 ```
+
+## Debian package
+
+Is available and tracked [here](https://tracker.debian.org/pkg/bpftrace).
 
 # Building bpftrace
 
