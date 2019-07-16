@@ -267,6 +267,7 @@ Variables:
 - `stack` - Kernel stack trace
 - `ustack` - User stack trace
 - `arg0`, `arg1`, ... etc. - Arguments to the function being traced
+- `sarg0`, `sarg1`, ... etc. - Arguments to the function being traced (for programs that store arguments on the stack)
 - `retval` - Return value from function being traced
 - `func` - Name of the function currently being traced
 - `probe` - Full name of the probe
