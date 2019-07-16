@@ -137,8 +137,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       ProbeType type = probetype(attach_point->provider);
       if (type == ProbeType::kprobe ||
-          type == ProbeType::kretprobe ||
-          type == ProbeType::tracepoint)
+          type == ProbeType::kretprobe)
         builtin.type = SizedType(Type::ksym, 8);
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
         builtin.type = SizedType(Type::usym, 16);
@@ -394,6 +393,14 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
+      for (auto &attach_point : *probe_->attach_points) {
+        ProbeType type = probetype(attach_point->provider);
+        if (type == ProbeType::tracepoint) {
+          err_ << "The reg function cannot be used with 'tracepoint' probes" << std::endl;
+          continue;
+        }
+      }
+
       if (check_arg(call, Type::string, 0, true)) {
         auto &arg = *call.vargs->at(0);
         auto &reg_name = static_cast<String&>(arg).str;
