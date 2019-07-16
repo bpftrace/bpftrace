@@ -1187,7 +1187,8 @@ bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
 - `comm` - Process name
 - `kstack` - Kernel stack trace
 - `ustack` - User stack trace
-- `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function
+- `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function; assumed to be 64 bits wide
+- `sarg0`, `sarg1`, ..., `sargN`. - Arguments to the traced function (for programs that store arguments on the stack); assumed to be 64 bits wide
 - `retval` - Return value from traced function
 - `func` - Name of the traced function
 - `probe` - Full name of the probe
