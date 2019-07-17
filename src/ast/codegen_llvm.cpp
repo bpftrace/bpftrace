@@ -176,6 +176,27 @@ void CodegenLLVM::visit(Builtin &builtin)
         b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
         builtin.ident);
   }
+  else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
+      builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9')
+  {
+    int sp_offset = arch::offset("sp");
+    if (sp_offset == -1)
+    {
+      std::cerr << "negative offset for stack pointer" << std::endl;
+      abort();
+    }
+
+    int arg_num = atoi(builtin.ident.substr(4).c_str());
+    Value *sp = b_.CreateLoad(
+        b_.getInt64Ty(),
+        b_.CreateGEP(ctx_, b_.getInt64(sp_offset * sizeof(uintptr_t))),
+        "reg_sp");
+    AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
+    Value *src = b_.CreateAdd(sp, b_.getInt64((arg_num + 1) * sizeof(uintptr_t)));
+    b_.CreateProbeRead(dst, 8, src);
+    expr_ = b_.CreateLoad(dst);
+    b_.CreateLifetimeEnd(dst);
+  }
   else if (builtin.ident == "probe")
   {
     auto begin = bpftrace_.probe_ids_.begin();
