@@ -170,6 +170,27 @@ void SemanticAnalyser::visit(Builtin &builtin)
       buf << arch::name() << " doesn't support " << builtin.ident;
     builtin.type = SizedType(Type::integer, 8);
   }
+  else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
+      builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type != ProbeType::kprobe && type != ProbeType::uprobe)
+        err_ << "The " << builtin.ident << " builtin can only be used with "
+             << "'kprobes' and 'uprobes' probes" << std::endl;
+
+      if (is_final_pass() &&
+          (attach_point->address != 0 || attach_point->func_offset != 0)) {
+        // If sargX values are needed when using an offset, they can be stored in a map
+        // when entering the function and then referenced from an offset-based probe
+        std::stringstream warn_buf;
+        warn_buf << "Using an address offset with the sargX built-in can lead to "
+                 << "unexpected behavior";
+        bpftrace_.warning(out_, builtin.loc, warn_buf.str());
+      }
+    }
+    builtin.type = SizedType(Type::integer, 8);
+  }
   else if (builtin.ident == "probe") {
     builtin.type = SizedType(Type::probe, 8);
     probe_->need_expansion = true;
