@@ -1024,8 +1024,14 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
     return resolve_uid(*(uint64_t*)(value.data()));
   else if (map.type_.type == Type::string)
     return std::string(reinterpret_cast<const char*>(value.data()));
-  else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
-    return std::to_string(reduce_value(value, ncpus_) / div);
+  else if (map.type_.type == Type::count)
+    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
+  else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
+    if (map.type_.is_signed)
+      return std::to_string(reduce_value<int64_t>(value, ncpus_) / div);
+
+    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
+  }
   else if (map.type_.type == Type::min)
     return std::to_string(min_value(value, ncpus_) / div);
   else if (map.type_.type == Type::max)
@@ -1080,9 +1086,12 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
   {
+    bool is_signed = map.type_.is_signed;
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return reduce_value(a.second, ncpus_) < reduce_value(b.second, ncpus_);
+      if (is_signed)
+        return reduce_value<int64_t>(a.second, ncpus_) < reduce_value<int64_t>(b.second, ncpus_);
+      return reduce_value<uint64_t>(a.second, ncpus_) < reduce_value<uint64_t>(b.second, ncpus_);
     });
   }
   else if (map.type_.type == Type::min)
@@ -1163,7 +1172,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, ncpus_);
 
     old_key = key;
   }
@@ -1238,7 +1247,8 @@ int BPFtrace::print_map_stats(IMap &map)
       // New key - create a list of buckets for it
       values_by_key[key_prefix] = std::vector<uint64_t>(2);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
+    // TODO: check
+    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, ncpus_);
 
     old_key = key;
   }
@@ -1345,12 +1355,13 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
   return -1;  // silence end of control compiler warning
 }
 
-uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
+template <typename T>
+T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
 {
-  uint64_t sum = 0;
+  T sum = 0;
   for (int i=0; i<ncpus; i++)
   {
-    sum += *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    sum += *(const T*)(value.data() + i*sizeof(T*));
   }
   return sum;
 }
@@ -1808,7 +1819,7 @@ const std::string BPFtrace::get_source_line(unsigned int n)
 
 void BPFtrace::warning(std::ostream &out, const location &l, const std::string &m) {
   log_with_location("WARNING", out, l, m);
-    }
+}
 
 void BPFtrace::error(std::ostream &out, const location &l, const std::string &m) {
   log_with_location("ERROR", out, l, m);
