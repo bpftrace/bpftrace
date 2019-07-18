@@ -17,7 +17,8 @@ public:
   explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, std::ostream &out = std::cerr)
     : root_(root),
       bpftrace_(bpftrace),
-      out_(out) { }
+      out_(out)
+      { }
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
