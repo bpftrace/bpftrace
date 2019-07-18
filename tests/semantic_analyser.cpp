@@ -579,7 +579,7 @@ TEST(semantic_analyser, variable_type)
   BPFtrace bpftrace;
   Driver driver(bpftrace);
   test(driver, "kprobe:f { $x = 1 }", 0);
-  SizedType st(Type::integer, 8);
+  SizedType st(Type::integer, 8, true);
   auto assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   EXPECT_EQ(st, assignment->var->type);
 }
@@ -600,8 +600,8 @@ TEST(semantic_analyser, map_integer_sizes)
 
   auto var_assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(1));
-  EXPECT_EQ(SizedType(Type::integer, 4), var_assignment->var->type);
-  EXPECT_EQ(SizedType(Type::integer, 8), map_assignment->map->type);
+  EXPECT_EQ(SizedType(Type::integer, 4, true), var_assignment->var->type);
+  EXPECT_EQ(SizedType(Type::integer, 8, true), map_assignment->map->type);
 }
 
 TEST(semantic_analyser, unop_dereference)
@@ -1020,6 +1020,105 @@ TEST(semantic_analyser, enums)
 {
   test("enum { a = 1, b } kprobe:f { printf(\"%d\", a); }", 0);
 }
+
+TEST(semantic_analyser, signed_int_comparison_warnings)
+{
+  bool invert = true;
+  std::string cmp_sign = "comparison of integers of different signs";
+  test_for_warning("kretprobe:f /-1 < retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /-1 > retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /-1 >= retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /-1 <= retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /-1 != retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /-1 == retval/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /retval > -1/ {}", cmp_sign);
+  test_for_warning("kretprobe:f /retval < -1/ {}", cmp_sign);
+
+  // These should not trigger a warning
+  test_for_warning("kretprobe:f /1 < retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /1 > retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /1 >= retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /1 <= retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /1 != retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /1 == retval/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /retval > 1/ {}", cmp_sign, invert);
+  test_for_warning("kretprobe:f /retval < 1/ {}", cmp_sign, invert);
+}
+
+TEST(semantic_analyser, signed_int_arithmetic_warnings)
+{
+  // Test type warnings for arithmetic
+  bool invert = true;
+  std::string msg = "arithmetic on integers of different signs";
+
+  test_for_warning("kprobe:f { @ = -1 - arg0 }", msg);
+  test_for_warning("kprobe:f { @ = -1 + arg0 }", msg);
+  test_for_warning("kprobe:f { @ = -1 * arg0 }", msg);
+  test_for_warning("kprobe:f { @ = -1 / arg0 }", msg);
+
+  test_for_warning("kprobe:f { @ = arg0 + 1 }", msg, invert);
+  test_for_warning("kprobe:f { @ = arg0 - 1 }", msg, invert);
+  test_for_warning("kprobe:f { @ = arg0 * 1 }", msg, invert);
+  test_for_warning("kprobe:f { @ = arg0 / 1 }", msg, invert);
+}
+
+TEST(semantic_analyser, map_as_lookup_table)
+{
+  // Initializing a map should not lead to usage issues
+  test("BEGIN { @[0] = \"abc\"; @[1] = \"def\" } kretprobe:f { printf(\"%s\\n\", @[retval])}");
+}
+
+TEST(semantic_analyser, cast_sign)
+{
+  // The C struct parser should set the is_signed flag on signed types
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  std::string prog =
+    "struct t { int s; unsigned int us; long l; unsigned long ul }; "
+    "kprobe:f { "
+    "  $t = ((t *)0xFF);"
+    "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
+  test(driver, prog, 0);
+
+  auto s  = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
+  auto us = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(2));
+  auto l  = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(3));
+  auto ul = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(4));
+  EXPECT_EQ(SizedType(Type::integer, 4, true),  s->var->type);
+  EXPECT_EQ(SizedType(Type::integer, 4, false), us->var->type);
+  EXPECT_EQ(SizedType(Type::integer, 8, true),  l->var->type);
+  EXPECT_EQ(SizedType(Type::integer, 8, false), ul->var->type);
+}
+
+TEST(semantic_analyser, binop_sign)
+{
+  // Make sure types are correct
+  std::string prog_pre =
+    "struct t { long l; unsigned long ul }; "
+    "kprobe:f { "
+    "  $t = ((t *)0xFF); ";
+
+  std::string operators[] = { "==", "!=", "<", "<=", ">", ">=", "+", "-", "/", "*"};
+  for(std::string op : operators)
+  {
+    BPFtrace bpftrace;
+    Driver driver(bpftrace);
+    std::string prog = prog_pre +
+      "$varA = $t->l "  + op + " $t->l; "
+      "$varB = $t->ul " + op + " $t->l; "
+      "$varC = $t->ul " + op + " $t->ul;"
+      "}";
+
+    test(driver, prog, 0);
+    auto varA = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
+    EXPECT_EQ(SizedType(Type::integer, 8, true), varA->var->type);
+    auto varB = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(2));
+    EXPECT_EQ(SizedType(Type::integer, 8, false), varB->var->type);
+    auto varC = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(3));
+    EXPECT_EQ(SizedType(Type::integer, 8, false), varC->var->type);
+  }
+}
+
 
 } // namespace semantic_analyser
 } // namespace test
