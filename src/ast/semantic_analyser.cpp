@@ -1166,6 +1166,8 @@ int SemanticAnalyser::analyse()
 
 int SemanticAnalyser::create_maps(bool debug)
 {
+  int failed_maps = 0;
+  auto is_invalid_map = [](int a) { return (int)(a < 0); };
   for (auto &map_val : map_val_)
   {
     std::string map_name = map_val.first;
@@ -1174,7 +1176,7 @@ int SemanticAnalyser::create_maps(bool debug)
     auto search_args = map_key_.find(map_name);
     if (search_args == map_key_.end())
     {
-      std::cerr << "map key \"" << map_name << "\" not found" << std::endl;
+      out_ << "map key \"" << map_name << "\" not found" << std::endl;
       abort();
     }
 
@@ -1190,7 +1192,7 @@ int SemanticAnalyser::create_maps(bool debug)
         auto map_args = map_args_.find(map_name);
         if (map_args == map_args_.end())
         {
-          std::cerr << "map arg \"" << map_name << "\" not found" << std::endl;
+          out_ << "map arg \"" << map_name << "\" not found" << std::endl;
           abort();
         }
 
@@ -1201,6 +1203,7 @@ int SemanticAnalyser::create_maps(bool debug)
         Integer &max = static_cast<Integer&>(max_arg);
         Integer &step = static_cast<Integer&>(step_arg);
         bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
+        failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
       }
       else
         bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, bpftrace_.mapmax_);
@@ -1211,9 +1214,14 @@ int SemanticAnalyser::create_maps(bool debug)
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
     if (debug)
+    {
       bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::FakeMap>(SizedType(Type::kstack, stack_type));
+    }
     else
+    {
       bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::Map>(SizedType(Type::kstack, stack_type));
+      failed_maps += is_invalid_map(bpftrace_.stackid_maps_[stack_type]->mapfd_);
+    }
   }
 
   if (debug)
@@ -1237,11 +1245,22 @@ int SemanticAnalyser::create_maps(bool debug)
       SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
     }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
   }
 
-  return 0;
+  if (failed_maps > 0)
+  {
+    out_ << "Creation of the required BPF maps has failed." << std::endl;
+    out_ << "Make sure you have all the required permissions and are not";
+    out_ << " confined (e.g. like" << std::endl;
+    out_ << "snapcraft does). `dmesg` will likely have useful output for";
+    out_ << " further troubleshooting" << std::endl;
+  }
+
+  return failed_maps;
 }
 
 bool SemanticAnalyser::is_final_pass() const
