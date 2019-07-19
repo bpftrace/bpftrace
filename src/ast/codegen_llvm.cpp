@@ -1076,6 +1076,9 @@ void CodegenLLVM::visit(ArrayAccess &arr)
 void CodegenLLVM::visit(Cast &cast)
 {
   cast.expr->accept(*this);
+  if (cast.type.type == Type::integer) {
+    expr_ = b_.CreateIntCast(expr_, b_.getIntNTy(8 * cast.type.size), cast.type.is_signed, "cast");
+  }
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
