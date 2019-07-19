@@ -1,0 +1,16 @@
+NAME Casting retval should work
+RUN bpftrace -v -e 'ur:./testprogs/uprobe_negative_retval:main   /(int32)retval < 0/ { @[(int32)retval]=count(); exit();}'
+AFTER ./testprogs/uprobe_negative_retval
+EXPECT ^@\[-100\]: 1$
+TIMEOUT 5
+
+NAME Sum casted retval
+RUN bpftrace -v -e 'ur:./testprogs/uprobe_negative_retval:function1 { @=stats((int32)retval); exit();} ur:./testprogs/uprobe_negative_retval:main { exit() }'
+AFTER ./testprogs/uprobe_negative_retval
+EXPECT ^@: count 221, average -10, total -2210$
+TIMEOUT 5
+
+NAME Casting ints
+RUN bpftrace -v -e 'BEGIN{printf("Values: %d %d\n", (uint8) -10, (uint16) 131087); exit(); }'
+EXPECT Values: 246 15$
+TIMEOUT 5

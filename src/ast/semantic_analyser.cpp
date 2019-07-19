@@ -611,15 +611,23 @@ void SemanticAnalyser::check_stack_call(Call &call, Type type) {
 
 void SemanticAnalyser::visit(Map &map)
 {
-  if (is_final_pass()) {
-    MapKey key;
-    if (map.vargs) {
-      for (Expression *expr : *map.vargs) {
-        expr->accept(*this);
-        // promote map key to 64-bit:
-        if (!expr->type.IsArray())
-          expr->type.size = 8;
+  MapKey key;
+  if (map.vargs) {
+    for (unsigned int i = 0; i < map.vargs->size(); i++){
+      Expression * expr = map.vargs->at(i);
+      expr->accept(*this);
 
+      // Insert a cast to 64 bits if needed by injecting
+      // a cast into the ast.
+      if (expr->type.type == Type::integer && expr->type.size < 8) {
+        std::string type = expr->type.is_signed ? "int64" : "uint64";
+        Expression * cast = new ast::Cast(type, false, expr);
+        cast->accept(*this);
+        map.vargs->at(i) = cast;
+        expr = cast;
+      }
+
+      if (is_final_pass()) {
         // Skip is_signed when comparing keys to not break existing scripts
         // which use maps as a lookup table
         // TODO (fbs): This needs a better solution
@@ -628,7 +636,9 @@ void SemanticAnalyser::visit(Map &map)
         key.args_.push_back(keytype);
       }
     }
+  }
 
+  if (is_final_pass()) {
     if (!map.skip_key_validation) {
       auto search = map_key_.find(map.ident);
       if (search != map_key_.end()) {
@@ -980,6 +990,30 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
+
+  const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
+      {"uint8", {1, false}},
+      {"int8", {1, true}},
+      {"uint16", {2, false}},
+      {"int16", {2, true}},
+      {"uint32", {4, false}},
+      {"int32", {4, true}},
+      {"uint64", {8, false}},
+      {"int64", {8, true}},
+  };
+
+  auto k_v = intcasts.find(cast.cast_type);
+  if (k_v != intcasts.end()) {
+    auto v = k_v->second;
+    cast.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
+
+    auto rhs = cast.expr->type.type;
+    if (! (rhs == Type::integer || rhs == Type::cast)) {
+      err_ << "Casts are not supported for type: \"" << rhs << "\"" << std::endl;
+    }
+
+    return;
+  }
 
   if (bpftrace_.structs_.count(cast.cast_type) == 0) {
     err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
