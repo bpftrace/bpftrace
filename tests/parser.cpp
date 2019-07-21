@@ -41,6 +41,7 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { kstack }", "Program\n kprobe:f\n  builtin: kstack\n");
   test("kprobe:f { ustack }", "Program\n kprobe:f\n  builtin: ustack\n");
   test("kprobe:f { arg0 }", "Program\n kprobe:f\n  builtin: arg0\n");
+  test("kprobe:f { sarg0 }", "Program\n kprobe:f\n  builtin: sarg0\n");
   test("kprobe:f { retval }", "Program\n kprobe:f\n  builtin: retval\n");
   test("kprobe:f { func }", "Program\n kprobe:f\n  builtin: func\n");
   test("kprobe:f { probe }", "Program\n kprobe:f\n  builtin: probe\n");
