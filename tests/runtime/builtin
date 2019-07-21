@@ -58,6 +58,12 @@ RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }
 EXPECT SUCCESS arg -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME sarg
+RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+EXPECT SUCCESS sarg 32 64
+TIMEOUT 5
+AFTER ./testprogs/stack_args
+
 NAME retval
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
 EXPECT SUCCESS retval .*

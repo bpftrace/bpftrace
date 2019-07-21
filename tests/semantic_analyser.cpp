@@ -118,6 +118,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { kstack }", 0);
   test("kprobe:f { ustack }", 0);
   test("kprobe:f { arg0 }", 0);
+  test("kprobe:f { sarg0 }", 0);
   test("kretprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
   test("kprobe:f { probe }", 0);
