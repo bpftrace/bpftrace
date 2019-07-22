@@ -46,8 +46,8 @@ EXPECT ok_system
 TIMEOUT 5
 
 NAME count
-RUN bpftrace -v -e 'i:ms:100 { @[sym(reg("ip"))] = count(); exit();}'
-EXPECT @\[[0-9]*\]\:\s[0-9]*
+RUN bpftrace -v -e 'i:ms:100 { @ = count(); exit();}'
+EXPECT @:\s[0-9]+
 TIMEOUT 5
 
 NAME sum
