@@ -30,6 +30,7 @@ add_executable(bpftrace_test
 
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
+  ${CMAKE_SOURCE_DIR}/src/btf.cpp
   ${CMAKE_SOURCE_DIR}/src/clang_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
@@ -55,6 +56,12 @@ endif(HAVE_BCC_CREATE_MAP)
 if(HAVE_GET_CURRENT_CGROUP_ID)
   target_compile_definitions(bpftrace PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
 endif(HAVE_GET_CURRENT_CGROUP_ID)
+if (LIBBPF_BTF_DUMP_FOUND)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_LIBBPF_BTF_DUMP)
+  target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
+  target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
+endif(LIBBPF_BTF_DUMP_FOUND)
+
 target_link_libraries(bpftrace_test arch ast parser resources)
 
 if (STATIC_LINKING)
