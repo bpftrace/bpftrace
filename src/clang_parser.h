@@ -15,6 +15,7 @@ public:
   bool parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags = {});
 private:
   bool visit_children(CXCursor &cursor, BPFtrace &bpftrace);
+  bool parse_btf_definitions(BPFtrace &bpftrace);
 
   class ClangParserHandler
   {

@@ -8,6 +8,7 @@
 #include "types.h"
 #include "utils.h"
 #include "headers.h"
+#include "btf.h"
 
 namespace bpftrace {
 
@@ -340,9 +341,22 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
             struct_name = ptypestr;
           remove_struct_union_prefix(struct_name);
 
-          structs[struct_name].fields[ident].offset = offset;
-          structs[struct_name].fields[ident].type = get_sized_type(type);
-          structs[struct_name].size = ptypesize;
+          // Warn if we already have the struct member defined and is
+          // different type and keep the current definition in place.
+          if (structs.count(struct_name) != 0 &&
+              structs[struct_name].fields.count(ident)  != 0 &&
+              structs[struct_name].fields[ident].offset != offset &&
+              structs[struct_name].fields[ident].type   != get_sized_type(type) &&
+              structs[struct_name].size                 != ptypesize)
+          {
+            std::cerr << "type mismatch for " << struct_name << "::" << ident << std::endl;
+          }
+          else
+          {
+            structs[struct_name].fields[ident].offset = offset;
+            structs[struct_name].fields[ident].type = get_sized_type(type);
+            structs[struct_name].size = ptypesize;
+          }
         }
 
         return CXChildVisit_Recurse;
@@ -354,8 +368,52 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
   return err == 0;
 }
 
+bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
+{
+  if (ast::Expression::getResolve().size() == 0)
+    return true;
+
+  BTF btf = BTF();
+
+  if (!btf.has_data())
+    return true;
+
+  std::string input = btf.c_def(ast::Expression::getResolve());
+
+  CXUnsavedFile unsaved_files =
+  {
+    .Filename = "btf.h",
+    .Contents = input.c_str(),
+    .Length   = input.size(),
+  };
+
+  ClangParserHandler handler;
+  CXErrorCode error = handler.parse_translation_unit(
+    "btf.h", NULL, 0, &unsaved_files, 1,
+    CXTranslationUnit_DetailedPreprocessingRecord);
+  if (error)
+  {
+    if (bt_debug == DebugLevel::kFullDebug) {
+      std::cerr << "Clang error while parsing BTF C definitions: " << error << std::endl;
+      std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+    }
+    return false;
+  }
+
+  if (!handler.check_diagnostics(input))
+    return false;
+
+  CXCursor cursor = handler.get_translation_unit_cursor();
+  return visit_children(cursor, bpftrace);
+}
+
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
+  // Add BTF definitions, but do not bail out
+  // in case of error, just notify
+  if (!parse_btf_definitions(bpftrace))
+    std::cerr << "Failed to parse BTF data." << std::endl;
+
   auto input = program->c_definitions;
   if (input.size() == 0)
     return true; // We occasionally get crashes in libclang otherwise
