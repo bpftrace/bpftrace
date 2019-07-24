@@ -183,6 +183,63 @@ BTF::~BTF()
   btf__free(btf);
 }
 
+static void dump_printf(void *ctx, const char *fmt, va_list args)
+{
+  std::string *ret = static_cast<std::string*>(ctx);
+  char *str;
+
+  if (vasprintf(&str, fmt, args) < 0)
+    return;
+
+  *ret += str;
+  free(str);
+}
+
+static const char *btf_str(const struct btf *btf, __u32 off)
+{
+  if (!off)
+    return "(anon)";
+
+  return btf__name_by_offset(btf, off) ? : "(invalid)";
+}
+
+std::string BTF::c_def(std::unordered_set<std::string>& set)
+{
+  std::string ret = std::string("");
+  struct btf_dump_opts opts = { .ctx = &ret, };
+  struct btf_dump *dump;
+  char err_buf[256];
+  int err;
+
+  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  err = libbpf_get_error(dump);
+  if (err)
+  {
+      libbpf_strerror(err, err_buf, sizeof(err_buf));
+      std::cerr << "BTF: failed to initialize dump (" << err_buf << ")" << std::endl;
+      return std::string("");
+  }
+
+  std::unordered_set<std::string> myset(set);
+  __s32 id, max = (__s32) btf__get_nr_types(btf);
+
+  for (id = 1; id <= max && myset.size(); id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+    const char *str = btf_str(btf, t->name_off);
+
+    auto it = myset.find(str);
+    if (it != myset.end())
+    {
+      btf_dump__dump_type(dump, id);
+      myset.erase(it);
+    }
+  }
+
+  btf_dump__free(dump);
+  return ret;
+}
+
 } // namespace bpftrace
 
 #else // HAVE_LIBBPF_BTF_DUMP
@@ -192,6 +249,8 @@ namespace bpftrace {
 BTF::BTF() { }
 
 BTF::~BTF() { }
+
+std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unused__))) { return std::string(""); }
 
 } // namespace bpftrace
 
