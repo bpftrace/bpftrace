@@ -279,6 +279,67 @@ CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
   return clang_getTranslationUnitCursor(translation_unit);
 }
 
+bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
+{
+  int err = clang_visitChildren(
+      cursor,
+      [](CXCursor c, CXCursor parent, CXClientData client_data)
+      {
+        if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
+        {
+          std::string macro_name;
+          std::string macro_value;
+          if (translateMacro(c, macro_name, macro_value))
+          {
+            auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
+            macros[macro_name] = macro_value;
+          }
+          return CXChildVisit_Recurse;
+        }
+
+        if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
+        {
+          auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
+          enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
+          return CXChildVisit_Recurse;
+        }
+
+        if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
+            clang_getCursorKind(parent) != CXCursor_UnionDecl)
+          return CXChildVisit_Recurse;
+
+        if (clang_getCursorKind(c) == CXCursor_FieldDecl)
+        {
+          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
+
+          auto named_parent = get_named_parent(c);
+          auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
+          auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
+          auto ptypesize = clang_Type_getSizeOf(ptype);
+
+          auto ident = get_clang_string(clang_getCursorSpelling(c));
+          auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
+          auto type = clang_getCanonicalType(clang_getCursorType(c));
+
+          auto struct_name = get_clang_string(clang_getCursorSpelling(named_parent));
+          if (struct_name == "")
+            struct_name = ptypestr;
+          remove_struct_union_prefix(struct_name);
+
+          structs[struct_name].fields[ident].offset = offset;
+          structs[struct_name].fields[ident].type = get_sized_type(type);
+          structs[struct_name].size = ptypesize;
+        }
+
+        return CXChildVisit_Recurse;
+      },
+      &bpftrace);
+
+  // clang_visitChildren returns a non-zero value if the traversal
+  // was terminated by the visitor returning CXChildVisit_Break.
+  return err == 0;
+}
+
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
@@ -366,64 +427,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   }
 
   CXCursor cursor = handler.get_translation_unit_cursor();
-
-  int err = clang_visitChildren(
-      cursor,
-      [](CXCursor c, CXCursor parent, CXClientData client_data)
-      {
-        if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
-        {
-          std::string macro_name;
-          std::string macro_value;
-          if (translateMacro(c, macro_name, macro_value))
-          {
-            auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
-            macros[macro_name] = macro_value;
-          }
-          return CXChildVisit_Recurse;
-        }
-
-        if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
-        {
-          auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
-          enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
-          return CXChildVisit_Recurse;
-        }
-
-        if (clang_getCursorKind(parent) != CXCursor_StructDecl &&
-            clang_getCursorKind(parent) != CXCursor_UnionDecl)
-          return CXChildVisit_Recurse;
-
-        if (clang_getCursorKind(c) == CXCursor_FieldDecl)
-        {
-          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
-
-          auto named_parent = get_named_parent(c);
-          auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
-          auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
-          auto ptypesize = clang_Type_getSizeOf(ptype);
-
-          auto ident = get_clang_string(clang_getCursorSpelling(c));
-          auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
-          auto type = clang_getCanonicalType(clang_getCursorType(c));
-
-          auto struct_name = get_clang_string(clang_getCursorSpelling(named_parent));
-          if (struct_name == "")
-            struct_name = ptypestr;
-          remove_struct_union_prefix(struct_name);
-
-          structs[struct_name].fields[ident].offset = offset;
-          structs[struct_name].fields[ident].type = get_sized_type(type);
-          structs[struct_name].size = ptypesize;
-        }
-
-        return CXChildVisit_Recurse;
-      },
-      &bpftrace);
-
-  // clang_visitChildren returns a non-zero value if the traversal
-  // was terminated by the visitor returning CXChildVisit_Break.
-  return err == 0;
+  return visit_children(cursor, bpftrace);
 }
 
 } // namespace bpftrace
