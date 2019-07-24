@@ -1429,7 +1429,7 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   Value *lhs;
   binop.left->accept(*this);
   lhs = expr_;
-  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.getInt64(0), "lhs_true_cond"),
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
                   lhs_true_block,
                   false_block);
 
@@ -1437,7 +1437,7 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   Value *rhs;
   binop.right->accept(*this);
   rhs = expr_;
-  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.getInt64(0), "rhs_true_cond"),
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
                   true_block,
                   false_block);
 
@@ -1468,7 +1468,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   Value *lhs;
   binop.left->accept(*this);
   lhs = expr_;
-  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.getInt64(0), "lhs_true_cond"),
+  b_.CreateCondBr(b_.CreateICmpNE(lhs, b_.GetIntSameSize(0, lhs), "lhs_true_cond"),
                   true_block,
                   lhs_false_block);
 
@@ -1476,7 +1476,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   Value *rhs;
   binop.right->accept(*this);
   rhs = expr_;
-  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.getInt64(0), "rhs_true_cond"),
+  b_.CreateCondBr(b_.CreateICmpNE(rhs, b_.GetIntSameSize(0, rhs), "rhs_true_cond"),
                   true_block,
                   false_block);
 

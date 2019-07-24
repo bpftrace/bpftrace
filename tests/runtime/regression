@@ -4,6 +4,12 @@ RUN bpftrace -e 'struct Foo { int m; struct { int x; int y; } bar; int n; } BEGI
 EXPECT done
 TIMEOUT 1
 
+NAME logical_and_or_different_sizes
+RUN bpftrace -v -e 'struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struct Foo*)arg0; printf("%d %d %d %d %d\n", $foo->m, $foo->m && 0, 1 && $foo->m, $foo->m || 0, 0 || $foo->m); exit(); }'
+AFTER ./testprogs/simple_struct
+EXPECT 2 0 1 1 1
+TIMEOUT 5
+
 # https://github.com/iovisor/bpftrace/issues/759
 # Update test once https://github.com/iovisor/bpftrace/pull/781 lands
 # NAME ntop_map_printf
