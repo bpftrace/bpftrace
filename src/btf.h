@@ -2,6 +2,7 @@
 
 #include <linux/types.h>
 #include <unistd.h>
+#include <unordered_set>
 
 struct btf;
 
@@ -19,6 +20,7 @@ public:
   ~BTF();
 
   bool has_data(void);
+  std::string c_def(std::unordered_set<std::string>& set);
 
 private:
   struct btf *btf;
