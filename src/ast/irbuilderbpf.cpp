@@ -162,7 +162,7 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 
   FunctionType *lookup_func_type = FunctionType::get(
       getInt8PtrTy(),
-      {getInt8PtrTy(), getInt8PtrTy()},
+      {getInt8PtrTy(), key->getType()},
       false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
@@ -181,7 +181,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
   // Return: Map value or NULL
   FunctionType *lookup_func_type = FunctionType::get(
       getInt8PtrTy(),
-      {getInt8PtrTy(), getInt8PtrTy()},
+      {getInt8PtrTy(), key->getType()},
       false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
@@ -233,7 +233,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
   // Return: 0 on success or negative error
   FunctionType *update_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt8PtrTy(), getInt64Ty()},
+      {getInt8PtrTy(), key->getType(), val->getType(), getInt64Ty()},
       false);
   PointerType *update_func_ptr_type = PointerType::get(update_func_type, 0);
   Constant *update_func = ConstantExpr::getCast(
@@ -267,7 +267,7 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
   // Return: 0 on success or negative error
   FunctionType *proberead_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      {dst->getType(), getInt64Ty(), src->getType()},
       false);
   PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type, 0);
   Constant *proberead_func = ConstantExpr::getCast(
