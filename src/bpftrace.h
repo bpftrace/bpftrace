@@ -103,6 +103,8 @@ public:
   size_t num_params() const;
   void request_finalize();
   void error(std::ostream &out, const location &l, const std::string &m);
+  void warning(std::ostream &out, const location &l, const std::string &m);
+  void log_with_location(std::string, std::ostream &, const location &, const std::string &);
 
   std::string cmd_;
   int pid_{0};
