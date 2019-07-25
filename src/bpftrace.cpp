@@ -1806,7 +1806,15 @@ const std::string BPFtrace::get_source_line(unsigned int n)
   return buf;
 }
 
-void BPFtrace::error(std::ostream &out, const location &l, const std::string &m)
+void BPFtrace::warning(std::ostream &out, const location &l, const std::string &m) {
+  log_with_location("WARNING", out, l, m);
+    }
+
+void BPFtrace::error(std::ostream &out, const location &l, const std::string &m) {
+  log_with_location("ERROR", out, l, m);
+}
+
+void BPFtrace::log_with_location(std::string level, std::ostream &out, const location &l, const std::string &m)
 {
   if (filename_ != "") {
     out << filename_ << ":";
@@ -1814,13 +1822,13 @@ void BPFtrace::error(std::ostream &out, const location &l, const std::string &m)
 
   // print only the message if location info wasn't set
   if (l.begin.line == 0) {
-    out << "ERROR: " << m << std::endl;
+    out << level << ": " << m << std::endl;
     return;
   }
 
   if (l.begin.line > l.end.line) {
     out << "BUG: begin > end: " << l.begin << ":" << l.end << std::endl;
-    out << "ERROR: " << m << std::endl;
+    out << level << ": " << m << std::endl;
     return;
   }
 
@@ -1846,7 +1854,7 @@ void BPFtrace::error(std::ostream &out, const location &l, const std::string &m)
             ~~~~~~~~~~
   */
   out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": ERROR: " << m << std::endl;
+  out << ": " << level << ": " << m << std::endl;
   std::string srcline = get_source_line(l.begin.line - 1);
 
   if (srcline == "")
