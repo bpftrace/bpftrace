@@ -1684,7 +1684,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     if (arg.type.IsArray())
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
     else
-      b_.CreateStore(expr_, offset);
+      // Promote to 64-bits to match `offset` type
+      b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), offset);
 
     if (expr_deleter_)
       expr_deleter_();
