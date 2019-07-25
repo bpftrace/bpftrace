@@ -10,6 +10,24 @@ AFTER ./testprogs/simple_struct
 EXPECT 2 0 1 1 1
 TIMEOUT 5
 
+# https://github.com/iovisor/bpftrace/pull/711#issuecomment-505097671
+NAME invalid_var_scope
+RUN bpftrace -e 'BEGIN { @x = 0; if (@x == 1) { $var = 1234 } printf("result: %d\n", $var); exit() }'
+EXPECT ^result: 0$
+TIMEOUT 1
+
+# https://github.com/iovisor/bpftrace/issues/528
+NAME llvm_oom_1
+RUN bpftrace -de 'struct Foo { u8 field[4] } BEGIN { $a = (struct Foo)0; $ip = $a.field; printf("%d\n", $ip[1])  }'
+EXPECT { argmemonly nounwind }
+TIMEOUT 1
+
+# https://github.com/iovisor/bpftrace/issues/528
+NAME llvm_oom_2
+RUN bpftrace --include "linux/sched.h" -de 'struct struct_b { int data; }; struct struct_a { int member_a; struct struct_b member_b; }; BEGIN { $task = (struct task_struct *)curtask; @u = $task->last_wakee; $s = (struct struct_a *)@u; printf("%d\n", $s->member_b.data); }'
+EXPECT { argmemonly nounwind }
+TIMEOUT 1
+
 # https://github.com/iovisor/bpftrace/issues/759
 # Update test once https://github.com/iovisor/bpftrace/pull/781 lands
 # NAME ntop_map_printf
