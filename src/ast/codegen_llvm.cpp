@@ -991,7 +991,12 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // The struct we are reading from has not been pulled into BPF-memory,
     // so expr_ will contain an external pointer to the start of the struct
 
-    Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
+    // LLVM doesn't like Binops with different types, so we convert our pointer
+    // to integer and then back to pointer.
+    // Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
+    Value *src = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
+    src = b_.CreateAdd(src, b_.getInt64(field.offset));
+    src = b_.CreateIntToPtr(src, b_.getInt8PtrTy());
 
     if (field.type.type == Type::cast && !field.type.is_pointer)
     {
