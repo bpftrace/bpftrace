@@ -69,16 +69,18 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   else
     SetInsertPoint(&entry_block.front());
 
-  llvm::Type *ty = GetType(stype);
-  AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
+  AllocaInst *alloca;
 
-  if (!stype.IsArray())
+  if (!stype.IsArray() && !stype.is_pointer)
   {
+    llvm::Type *ty = GetType(stype);
+    alloca = CreateAllocaBPF(ty, nullptr, name);
     CreateStore(getInt64(0), alloca);
   }
   else
   {
-    CreateMemSet(alloca, getInt64(0), stype.size, 1);
+    alloca = CreateAllocaBPF(getIntPtrTy(module_.getDataLayout()), nullptr, name);
+    CreateMemSet(alloca, getInt8(0), stype.size, 1);
   }
 
   restoreIP(ip);
