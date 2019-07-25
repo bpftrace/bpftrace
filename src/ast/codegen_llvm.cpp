@@ -1048,7 +1048,14 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
 
   AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_access");
-  Value *src = b_.CreateAdd(array, offset);
+  // Value *src = b_.CreateAdd(array, offset);
+
+  // LLVM doesn't like Binops with different types, so we convert our pointer
+  // to integer and then back to pointer.
+  Value *src = b_.CreatePtrToInt(array, b_.getInt64Ty());
+  src = b_.CreateAdd(src, offset);
+  src = b_.CreateIntToPtr(src, b_.getInt8PtrTy());
+
   b_.CreateProbeRead(dst, type.pointee_size, src);
   expr_ = b_.CreateLoad(dst);
   b_.CreateLifetimeEnd(dst);
