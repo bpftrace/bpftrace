@@ -28,6 +28,7 @@ class Variable;
 class Expression : public Node {
 public:
   SizedType type;
+  Map *key_for_map = nullptr;
   Map *map = nullptr; // Only set when this expression is assigned to a map
   Variable *var = nullptr; // Set when this expression is assigned to a variable
   bool is_literal = false;
@@ -120,10 +121,16 @@ public:
 
 class Map : public Expression {
 public:
-  explicit Map(std::string &ident) : ident(ident), vargs(nullptr) { is_map = true; }
   explicit Map(std::string &ident, location loc) : Expression(loc), ident(ident), vargs(nullptr) { is_map = true; }
   Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { is_map = true; }
-  Map(std::string &ident, ExpressionList *vargs, location loc) : Expression(loc), ident(ident), vargs(vargs) { is_map = true; }
+  Map(std::string &ident, ExpressionList *vargs, location loc) : Expression(loc), ident(ident), vargs(vargs)
+  {
+    is_map = true;
+    for (auto expr : *vargs)
+    {
+      expr->key_for_map = this;
+    }
+  }
   std::string ident;
   ExpressionList *vargs;
   bool skip_key_validation = false;
