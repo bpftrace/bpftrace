@@ -40,6 +40,7 @@ using ExpressionList = std::vector<Expression *>;
 class Integer : public Expression {
 public:
   explicit Integer(long n) : n(n) { is_literal = true; }
+  explicit Integer(long n, location loc) : Expression(loc), n(n) { is_literal = true; }
   long n;
 
   void accept(Visitor &v) override;
@@ -48,6 +49,7 @@ public:
 class PositionalParameter : public Expression {
 public:
   explicit PositionalParameter(PositionalParameterType ptype, long n) : ptype(ptype), n(n) {}
+  explicit PositionalParameter(PositionalParameterType ptype, long n, location loc) : Expression(loc), ptype(ptype), n(n) {}
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
@@ -58,6 +60,7 @@ public:
 class String : public Expression {
 public:
   explicit String(std::string str) : str(str) { is_literal = true; }
+  explicit String(std::string str, location loc) : Expression(loc), str(str) { is_literal = true; }
   std::string str;
 
   void accept(Visitor &v) override;
@@ -66,6 +69,7 @@ public:
 class StackMode : public Expression {
 public:
   explicit StackMode(std::string mode) : mode(mode) {}
+  explicit StackMode(std::string mode, location loc) : Expression(loc), mode(mode) {}
   std::string mode;
 
   void accept(Visitor &v) override;
@@ -74,6 +78,7 @@ public:
 class Identifier : public Expression {
 public:
   explicit Identifier(std::string ident) : ident(ident) {}
+  explicit Identifier(std::string ident, location loc) : Expression(loc), ident(ident) {}
   std::string ident;
 
   void accept(Visitor &v) override;
@@ -82,6 +87,7 @@ public:
 class Builtin : public Expression {
 public:
   explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {}
+  explicit Builtin(std::string ident, location loc) : Expression(loc), ident(is_deprecated(ident)) {}
   std::string ident;
   int probe_id;
 
@@ -91,7 +97,9 @@ public:
 class Call : public Expression {
 public:
   explicit Call(std::string &func) : func(is_deprecated(func)), vargs(nullptr) { }
+  explicit Call(std::string &func, location loc) : Expression(loc), func(is_deprecated(func)), vargs(nullptr) { }
   Call(std::string &func, ExpressionList *vargs) : func(is_deprecated(func)), vargs(vargs) { }
+  Call(std::string &func, ExpressionList *vargs, location loc) : Expression(loc), func(is_deprecated(func)), vargs(vargs) { }
   std::string func;
   ExpressionList *vargs;
 
@@ -101,7 +109,9 @@ public:
 class Map : public Expression {
 public:
   explicit Map(std::string &ident) : ident(ident), vargs(nullptr) { is_map = true; }
+  explicit Map(std::string &ident, location loc) : Expression(loc), ident(ident), vargs(nullptr) { is_map = true; }
   Map(std::string &ident, ExpressionList *vargs) : ident(ident), vargs(vargs) { is_map = true; }
+  Map(std::string &ident, ExpressionList *vargs, location loc) : Expression(loc), ident(ident), vargs(vargs) { is_map = true; }
   std::string ident;
   ExpressionList *vargs;
   bool skip_key_validation = false;
@@ -112,6 +122,7 @@ public:
 class Variable : public Expression {
 public:
   explicit Variable(std::string &ident) : ident(ident) { is_variable = true; }
+  explicit Variable(std::string &ident, location loc) : Expression(loc), ident(ident) { is_variable = true; }
   std::string ident;
 
   void accept(Visitor &v) override;
@@ -129,8 +140,10 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(int op, Expression *expr, bool is_post_op = false)
-    : expr(expr), op(op), is_post_op(is_post_op) { }
+ Unop(int op, Expression *expr, location loc = location())
+   : Expression(loc), expr(expr), op(op), is_post_op(false) { }
+  Unop(int op, Expression *expr, bool is_post_op = false, location loc = location())
+    : Expression(loc), expr(expr), op(op), is_post_op(is_post_op) { }
   Expression *expr;
   int op;
   bool is_post_op;
@@ -141,6 +154,7 @@ public:
 class FieldAccess : public Expression {
 public:
   FieldAccess(Expression *expr, const std::string &field) : expr(expr), field(field) { }
+  FieldAccess(Expression *expr, const std::string &field, location loc) : Expression(loc), expr(expr), field(field) { }
   Expression *expr;
   std::string field;
 
@@ -150,6 +164,7 @@ public:
 class ArrayAccess : public Expression {
 public:
   ArrayAccess(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
+  ArrayAccess(Expression *expr, Expression* indexpr, location loc) : Expression(loc), expr(expr), indexpr(indexpr) { }
   Expression *expr;
   Expression *indexpr;
 
@@ -160,6 +175,8 @@ class Cast : public Expression {
 public:
   Cast(const std::string &type, bool is_pointer, Expression *expr)
     : cast_type(type), is_pointer(is_pointer), expr(expr) { }
+  Cast(const std::string &type, bool is_pointer, Expression *expr, location loc)
+    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr) { }
   std::string cast_type;
   bool is_pointer;
   Expression *expr;
@@ -168,12 +185,16 @@ public:
 };
 
 class Statement : public Node {
+public:
+  Statement() {}
+  Statement(location loc) : Node(loc) {}
 };
 using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
   explicit ExprStatement(Expression *expr) : expr(expr) { }
+  explicit ExprStatement(Expression *expr, location loc) : Statement(loc), expr(expr) { }
   Expression *expr;
 
   void accept(Visitor &v) override;
@@ -181,9 +202,9 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr) : map(map), expr(expr) {
+ AssignMapStatement(Map *map, Expression *expr, location loc = location()) : Statement(loc), map(map), expr(expr) {
     expr->map = map;
-  }
+  };
   Map *map;
   Expression *expr;
 
@@ -195,6 +216,8 @@ public:
   AssignVarStatement(Variable *var, Expression *expr) : var(var), expr(expr) {
     expr->var = var;
   }
+  AssignVarStatement(Variable *var, Expression *expr, location loc)
+    : Statement(loc), var(var), expr(expr) { expr->var = var; }
   Variable *var;
   Expression *expr;
 
@@ -226,6 +249,7 @@ public:
 class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr) : expr(expr) { }
+  explicit Predicate(Expression *expr, location loc) : Node(loc), expr(expr) { }
   Expression *expr;
 
   void accept(Visitor &v) override;
@@ -233,7 +257,10 @@ public:
 
 class Ternary : public Expression {
 public:
-  Ternary(Expression *cond, Expression *left, Expression *right) : cond(cond), left(left), right(right) { }
+  Ternary(Expression *cond, Expression *left, Expression *right)
+    : cond(cond), left(left), right(right) { }
+  Ternary(Expression *cond, Expression *left, Expression *right, location loc)
+    : Expression(loc), cond(cond), left(left), right(right) { }
   Expression *cond, *left, *right;
 
   void accept(Visitor &v) override;
@@ -241,32 +268,37 @@ public:
 
 class AttachPoint : public Node {
 public:
-  explicit AttachPoint(const std::string &provider)
-    : provider(probetypeName(provider)) { }
+  explicit AttachPoint(const std::string &provider, location loc=location())
+    : Node(loc), provider(probetypeName(provider)) { }
   AttachPoint(const std::string &provider,
-              const std::string &func)
-    : provider(probetypeName(provider)), func(func), need_expansion(true) { }
+              const std::string &func,
+              location loc=location())
+    : Node(loc), provider(probetypeName(provider)), func(func), need_expansion(true) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               const std::string &func,
-              bool need_expansion)
-    : provider(probetypeName(provider)), target(target), func(func), need_expansion(need_expansion) { }
+              bool need_expansion,
+              location loc=location())
+    : Node(loc), provider(probetypeName(provider)), target(target), func(func), need_expansion(need_expansion) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               const std::string &ns,
               const std::string &func,
-              bool need_expansion)
-    : provider(probetypeName(provider)), target(target), ns(ns), func(func), need_expansion(need_expansion) { }
+              bool need_expansion,
+              location loc=location())
+    : Node(loc), provider(probetypeName(provider)), target(target), ns(ns), func(func), need_expansion(need_expansion) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
-              int freq)
-    : provider(probetypeName(provider)), target(target), freq(freq), need_expansion(true) { }
+              int freq,
+              location loc=location())
+    : Node(loc), provider(probetypeName(provider)), target(target), freq(freq), need_expansion(true) { }
   AttachPoint(const std::string &provider,
               const std::string &target,
               uint64_t addr,
               uint64_t len,
-              const std::string &mode)
-    : provider(probetypeName(provider)), target(target), addr(addr), len(len), mode(mode) { }
+              const std::string &mode,
+              location loc=location())
+    : Node(loc), provider(probetypeName(provider)), target(target), addr(addr), len(len), mode(mode) { }
 
   std::string provider;
   std::string target;
