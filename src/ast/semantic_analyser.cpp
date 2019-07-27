@@ -91,6 +91,7 @@ void SemanticAnalyser::visit(Identifier &identifier)
 
 void SemanticAnalyser::visit(Builtin &builtin)
 {
+  std::stringstream buf;
   if (builtin.ident == "nsecs" ||
       builtin.ident == "elapsed" ||
       builtin.ident == "pid" ||
@@ -105,7 +106,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::integer, 8);
     if (builtin.ident == "cgroup") {
       #ifndef HAVE_GET_CURRENT_CGROUP_ID
-        err_ << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version" << std::endl;
+      buf << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version";
       #endif
     }
   }
@@ -114,9 +115,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::kretprobe && type != ProbeType::uretprobe) {
-        err_ << "The retval builtin can only be used with 'kretprobe' and 'uretprobe' probes"
-             << (type == ProbeType::tracepoint ? " (try to use args->ret instead)" : "")
-             << std::endl;
+        buf << "The retval builtin can only be used with 'kretprobe' and 'uretprobe' probes"
+            << (type == ProbeType::tracepoint ? " (try to use args->ret instead)" : "");
       }
     }
     builtin.type = SizedType(Type::integer, 8);
@@ -142,8 +142,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
         builtin.type = SizedType(Type::usym, 16);
       else
-        err_ << "The func builtin can not be used with '" << attach_point->provider
-             << "' probes" << std::endl;
+        buf << "The func builtin can not be used with '" << attach_point->provider
+            << "' probes";
     }
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
@@ -154,12 +154,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
       if (type != ProbeType::kprobe &&
           type != ProbeType::uprobe &&
           type != ProbeType::usdt)
-        err_ << "The " << builtin.ident << " builtin can only be used with "
-             << "'kprobes', 'uprobes' and 'usdt' probes" << std::endl;
+        buf << "The " << builtin.ident << " builtin can only be used with "
+            << "'kprobes', 'uprobes' and 'usdt' probes";
     }
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
-      err_ << arch::name() << " doesn't support " << builtin.ident << std::endl;
+      buf << arch::name() << " doesn't support " << builtin.ident;
     builtin.type = SizedType(Type::integer, 8);
   }
   else if (builtin.ident == "probe") {
@@ -175,8 +175,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       ProbeType type = probetype(attach_point->provider);
       if (type != ProbeType::tracepoint) {
-        err_ << "The args builtin can only be used with tracepoint probes "
-             << "(" << attach_point->provider << " used here)" << std::endl;
+        buf << "The args builtin can only be used with tracepoint probes "
+             << "(" << attach_point->provider << " used here)";
         continue;
       }
 
@@ -206,7 +206,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else {
     builtin.type = SizedType(Type::none, 0);
-    err_ << "Unknown builtin variable: '" << builtin.ident << "'" << std::endl;
+    buf << "Unknown builtin variable: '" << builtin.ident << "'";
+  }
+
+  std::string err = buf.str();
+  if (err.size() > 0) {
+    bpftrace_.error(err_, builtin.loc, err);
   }
 }
 
