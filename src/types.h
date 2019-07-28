@@ -85,7 +85,9 @@ public:
   bool IsArray() const;
   bool IsStack() const;
 
+  bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
+  bool operator!=(const SizedType &t) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
