@@ -32,6 +32,8 @@ private:
                             unsigned num_unsaved_files,
                             unsigned options);
 
+    bool check_diagnostics(const std::string& input);
+
     CXCursor get_translation_unit_cursor();
 
   private:

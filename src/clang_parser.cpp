@@ -275,6 +275,20 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
       &translation_unit);
 }
 
+bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input)
+{
+  for (unsigned int i=0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
+    CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
+    CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
+    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
+      if (bt_debug >= DebugLevel::kDebug)
+        std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+      return false;
+    }
+  }
+  return true;
+}
+
 CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
   return clang_getTranslationUnitCursor(translation_unit);
 }
@@ -416,15 +430,8 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     return false;
   }
 
-  for (unsigned int i=0; i < clang_getNumDiagnostics(handler.get_translation_unit()); i++) {
-    CXDiagnostic diag = clang_getDiagnostic(handler.get_translation_unit(), i);
-    CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
-    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
-      if (bt_debug >= DebugLevel::kDebug)
-        std::cerr << "Input (" << input.size() << "): " << input << std::endl;
-      return false;
-    }
-  }
+  if (!handler.check_diagnostics(input))
+    return false;
 
   CXCursor cursor = handler.get_translation_unit_cursor();
   return visit_children(cursor, bpftrace);
