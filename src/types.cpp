@@ -32,9 +32,19 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   return os;
 }
 
-bool SizedType::operator==(const SizedType &t) const
+bool SizedType::IsEqual(const SizedType &t) const
 {
   return type == t.type && size == t.size && is_signed == t.is_signed;
+}
+
+bool SizedType::operator!=(const SizedType &t) const
+{
+  return !IsEqual(t);
+}
+
+bool SizedType::operator==(const SizedType &t) const
+{
+  return IsEqual(t);
 }
 
 bool SizedType::IsArray() const
