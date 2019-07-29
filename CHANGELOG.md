@@ -8,8 +8,62 @@ and this project adheres to
 
 ## Unreleased
 
-  - Fail in case there's unresolved type in definitions (ecb7a1b) by Jiri Olsa &lt;jolsa@kernel.org&gt;
-    - Reverted in 2239756, waiting for a PR to fix an issue we found before re-enabling it
+## [0.9.2] 2019-07-31
+
+### Highlights
+
+ - New environment variables (BPFTRACE_NO_USER_SYMBOLS, BPFTRACE_LOG_SIZE)
+ - New probe type: memory `watchpoint`
+ - Support for JSON output
+
+### All Changes
+
+#### Added
+ - Add vargs support for cat() builtin (similar to system) (7f1aa7b) by Augusto Caringi &lt;acaringi@redhat.com&gt;
+ - Add memory watchpoint probe type (#790) (854cd4b) by Dan Xu &lt;dxu@dxuuu.xyz&gt;
+ - Add support for Go symbol names to uaddr (#805) (e6eb3dd) by Jason Keene &lt;jasonkeene@gmail.com&gt;
+ - add option for JSON output (5c6f20a) by Andreas Gerstmayr &lt;andreas@gerstmayr.me&gt;
+ - Add $# for number of positional arguments (ec8b61a) by Mark Drayton &lt;mdrayton@gmail.com&gt;
+ - Add BPFTRACE_NO_USER_SYMBOLS environment variable (#800) (41d2c9f) by Dan Xu &lt;dxu@dxuuu.xyz&gt;
+ - Add line numbers to parser error messages (a584752, 2233ea7) by bas smit &lt;bas@baslab.org&gt;
+ - Add new environment variable BPFTRACE_LOG_SIZE (2f7dc75, 7de1e84, 2f7dc75) by Ray Jenkins &lt;ray.jenkins@segment.com&gt;
+
+#### Changed
+ - Terminate when map creation fails (6936ca6) by bas smit &lt;bas@baslab.org&gt;
+ - Print more descriptive error message on uprobe stat failure (0737ec8) by Dan Xu &lt;dxu@dxuuu.xyz&gt;
+ - Allow '#' in attach point path (2dfbc93) by Dan Xu &lt;dxu@dxuuu.xyz&gt;
+ - Disable `func`, `retval` and `reg` for tracepoints since tracepoints can't access this information (7bfc0f8) by bas smit &lt;bas@baslab.org&gt;
+
+#### Fixed
+ - Skip keys which were removed during iteration on `print` (bfd1c07) by Andreas Gerstmayr &lt;agerstmayr@redhat.com&gt;
+ - Fix exiting prematurely on strace attach (a584752..0e97b2c) by Jay Kamat &lt;jaygkamat@gmail.com&gt;
+ - Fix unused variable warnings (9d07eb5) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+ - Fix alignment issues on `ntop` (2006424) by Matheus Marchini &lt;mat@mmarchini.me&gt;
+ - Fix BEGIN being triggered multiple times when bpftrace is run a second time (14bc835) by bas smit &lt;bas@baslab.org&gt;
+ - Fix crash when using $0 (b41d66d) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+ - Fix tcp tools printing errors (206b36c) by bas smit &lt;bas@baslab.org&gt;
+
+#### Documentation
+ - Update Ubuntu install instructions (4e3ffc3) by Brendan Gregg &lt;bgregg@netflix.com&gt;
+ - Clarify help message for `-o` (d6e9478) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+ - `opensnoop.bt` was incorrectly linked to load.bt (d74fae0) by southpawflo &lt;16946610+southpawflo@users.noreply.github.com&gt;
+ - Document multiple attach points for probes (21bc5bf) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+ - Fix incorrect reference to the `probe` key (83d473c) by Jeremy Baumont &lt;jeremy.baumont@gmail.com&gt;
+
+#### Internal
+ - Fix failing test (086c018) by bas smit &lt;bas@baslab.org&gt;
+ - Collapse bcc symbol resolvers by process executable (63ff8b0) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+ - Remove unneeded probe read (7d0aa99) by bas smit &lt;bas@baslab.org&gt;
+ - Fix runtime test parser to not break with commented out tests (#824) (b73c963) by Augusto Mecking Caringi &lt;acaringi@redhat.com&gt;
+ - bpftrace: optimize resolve_kname (#765) (ec5278d) by Matheus Marchini &lt;mat@mmarchini.me&gt;
+ - Resolve symbol names using bcc_elf_foreach_sym (#811) (a2d9298) by Jason Keene &lt;jasonkeene@gmail.com&gt;
+ - Add basic editorconfig for defining style (#775) (5b20829) by Jay Kamat &lt;jaygkamat@gmail.com&gt;
+ - Auto-generate list of includes for codegen tests (e3b8ecd) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+ - Do not emit GEP instruction when pushing string literals to stack (#667) (e98530c) by Michał Gregorczyk &lt;michalgr@users.noreply.github.com&gt;
+ - tool style tweaks (8bb0940) by Brendan Gregg &lt;bgregg@netflix.com&gt;
+ - Clean up unused variable (#787) (8627e84) by Dan Xu &lt;dxu@dxuuu.xyz&gt;
+ - Make member variables end with underscores (c76a8e4) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+ - Fail in case there's unresolved type in definitions (ecb7a1b, 2239756, a6a4fb3) by Jiri Olsa &lt;jolsa@kernel.org&gt;
 
 ## [0.9.1] 2019-06-25
 
