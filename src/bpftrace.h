@@ -137,6 +137,7 @@ public:
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
   bool safe_mode_ = true;
+  bool force_btf_ = false;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,
