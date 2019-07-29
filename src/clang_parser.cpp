@@ -409,12 +409,14 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
 
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
+  auto input = program->c_definitions;
+
   // Add BTF definitions, but do not bail out
   // in case of error, just notify
-  if (!parse_btf_definitions(bpftrace))
+  if ((input.size() == 0 || bpftrace.force_btf_) &&
+      !parse_btf_definitions(bpftrace))
     std::cerr << "Failed to parse BTF data." << std::endl;
 
-  auto input = program->c_definitions;
   if (input.size() == 0)
     return true; // We occasionally get crashes in libclang otherwise
 
