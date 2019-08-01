@@ -610,7 +610,7 @@ size_t BPFtrace::num_params() const
   return params_.size();
 }
 
-void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
+void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   bpftrace->out_->lost_events(lost);
