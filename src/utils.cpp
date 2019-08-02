@@ -307,7 +307,7 @@ bool is_dir(const std::string& path)
 
 namespace {
   class KernelHeaderTmpDir {
-    KernelHeaderTmpDir()
+    KernelHeaderTmpDir(const std::string& prefix) : path{prefix + "XXXXXX"}
     {
       if (::mkdtemp(&path[0]) == nullptr) {
         throw std::runtime_error("creating temporary path for kheaders.tar.xz failed");
@@ -322,7 +322,7 @@ namespace {
       }
     }
 
-    std::string path{"/tmp/bpftrace-XXXXXX"};
+    std::string path;
 
     friend std::string unpack_kheaders_tar_xz(const struct utsname&);
 
@@ -338,8 +338,12 @@ namespace {
 
   std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
   {
-    std::string shared_path("/tmp/kheaders-");
-    shared_path += utsname.release;
+    std::string path_prefix{"/tmp"};
+    if (const char* tmpdir = ::getenv("TMPDIR")) {
+      path_prefix = tmpdir;
+    }
+    path_prefix += "/kheaders-";
+    std::string shared_path{path_prefix + utsname.release};
 
     struct stat stat_buf;
 
@@ -359,7 +363,7 @@ namespace {
       }
     }
 
-    KernelHeaderTmpDir tmpdir;
+    KernelHeaderTmpDir tmpdir{path_prefix};
 
     FILE* tar = popen(("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
     if (!tar) {
