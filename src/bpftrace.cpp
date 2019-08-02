@@ -1555,11 +1555,9 @@ static int sym_resolve_callback(const char *name, uint64_t addr, uint64_t, void 
 uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-  struct bcc_symbol_option option = {
-    .use_debug_file = 0,
-    .check_debug_file_crc = 0,
-    .use_symbol_type = (1 << STT_OBJECT),
-  };
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_symbol_type = (1 << STT_OBJECT);
 
   struct bcc_symbol sym;
   sym.name = name.c_str();
@@ -1589,11 +1587,11 @@ static int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-  bcc_symbol_option symbol_option = {
-    .use_debug_file = 1,
-    .check_debug_file_crc = 1,
-    .use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC)
-  };
+  struct bcc_symbol_option symbol_option;
+  memset(&symbol_option, 0, sizeof(symbol_option));
+  symbol_option.use_debug_file = 1;
+  symbol_option.check_debug_file_crc = 1;
+  symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
 
   std::ostringstream syms;
   int err = bcc_elf_foreach_sym(path.c_str(), add_symbol, &symbol_option, &syms);
@@ -1653,12 +1651,13 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 {
   struct bcc_symbol usym;
   std::ostringstream symbol;
-  struct bcc_symbol_option symopts;
   void *psyms = nullptr;
+  struct bcc_symbol_option symopts;
 
-  symopts = {.use_debug_file = true,
-             .check_debug_file_crc = true,
-             .use_symbol_type = BCC_SYM_ALL_TYPES};
+  memset(&symopts, 0, sizeof(symopts));
+  symopts.use_debug_file = 1;
+  symopts.check_debug_file_crc = 1;
+  symopts.use_symbol_type = BCC_SYM_ALL_TYPES;
 
   if (resolve_user_symbols_)
   {
