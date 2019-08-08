@@ -22,7 +22,7 @@ TIME     PID    COMM             DEVICE           LAT(us)
 [...]
 
 This can be useful for correlation with spikes in disk latency, as shown
-by an application. There're few checks in generic_make_request before
+by an application. There are few checks in generic_make_request before
 io accounting starts. Latency spikes during those checks could be seen
 as submission latency while running fio with libaio.
 
