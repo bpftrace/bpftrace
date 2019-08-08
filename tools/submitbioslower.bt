@@ -1,9 +1,9 @@
 #!/usr/bin/env bpftrace
 /*
- * genmakereq      Trace generic_make_request events.
- *                 For Linux, uses bpftrace and eBPF.
+ * submitbioslower	Trace submit_bio events.
+ *			For Linux, uses bpftrace and eBPF.
  *
- * USAGE: genmakereq.bt 100
+ * USAGE: submitbioslower.bt 100
  *
  * Copyright 2019 Aleksei Zakharov
  * Licensed under the Apache License, Version 2.0 (the "License")
@@ -19,18 +19,18 @@ BEGIN
 	if ($1) {
 		@threshold = $1;
 	}
-	printf("Tracing generic_make_request events... Hit Ctrl-C to end.\n");
+	printf("Tracing submit_bio events... Hit Ctrl-C to end.\n");
 	printf("Show requests slower than %d usecs.\n",@threshold);
 	printf("%-8s %-6s %-16s %-16s %s(us)\n", "TIME", "PID", "COMM", "DEVICE","LAT");
 }
 
-kprobe:generic_make_request
+kprobe:submit_bio
 {
 	@start[tid] = nsecs;
 	@disk[tid] = arg0
 }
 
-kretprobe:generic_make_request
+kretprobe:submit_bio
 /@start[tid]/
 {
 	$delta = (nsecs-@start[tid])/1000;

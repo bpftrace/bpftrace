@@ -1,12 +1,12 @@
-Demonstrations of genmakereq, the Linux bpftrace/eBPF version.
+Demonstrations of submitbioslower, the Linux bpftrace/eBPF version.
 
 
-The genmakereq tool traces generic_make_request calls
+The submitbioslower tool traces submit_bio calls
 and print additional information if latency is higher
 than a threshold:
 
-# genmakereq.bt 10
-Tracing generic_make_request events... Hit Ctrl-C to end.
+# submitbioslower.bt 10
+Tracing submit_bio events... Hit Ctrl-C to end.
 Show requests slower than 10 usecs.
 TIME     PID    COMM             DEVICE           LAT(us)
 16:32:28 23091  kworker/u8:0     nvme0n1          31
@@ -23,7 +23,7 @@ TIME     PID    COMM             DEVICE           LAT(us)
 
 This can be useful for correlation with spikes in disk latency, as shown
 by an application. There're few checks in generic_make_request before
-io accounting starts. Using fio with libaio these spikes could be seen as
-submission latency.
+io accounting starts. Latency spikes during those checks could be seen
+as submission latency while running fio with libaio.
 
-This shows timestamp which corresponds when generic_make_request returns.
+This shows timestamp which corresponds when submit_bio returns.

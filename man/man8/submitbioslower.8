@@ -1,0 +1,54 @@
+.TH submitbioslower 8  "2019-06-25" "USER COMMANDS"
+.SH NAME
+submitbioslower.bt \- Block I/O submission tracing tool, showing I/O latency higher threshold. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B submitbioslower.bt
+.SH DESCRIPTION
+This is a disk I/O submission tracing tool. It is showing I/O which submission
+latency is higher than a threshold. This can be used to investigate disk I/O
+performance issues. This tool shows submission latency for I/O requests, so it is possible to
+find latency spike occured before request accounting started.
+
+This tool currently works by dynamic tracing of the submit_bio()
+function call and return.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace block submission I/O events, printing requests which are submitted slower than 1000usec(default):
+#
+.B submitbioslower.bt
+.SH FIELDS
+.TP
+TIME
+Time of the I/O submission finish, in human-readable format HH:MM:SS.
+.TP
+PID
+Issuing process ID. This often identifies the issuing application process, but I/O may be initiated from kernel threads only.
+.TP
+COMM
+Issuing process name. This often identifies the issuing application process, but I/O may be initiated from kernel threads only.
+.TP
+DEVICE
+Device name. This is a device name from an I/O request (struct bio).
+.SH OVERHEAD
+Since block device I/O usually has a relatively low frequency (< 10,000/s),
+the overhead for this tool is expected to be negligible. For high IOPS storage
+systems, test and quantify before use.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Aleksei Zakharov
+.SH SEE ALSO
+submitbioslower(8)
