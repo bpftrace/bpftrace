@@ -47,7 +47,7 @@ This can be verified by running the `check_kernel_features` script from the
 sudo apt-get install bpftrace
 ```
 
-Should work.
+Should work on Ubuntu 19.04 and later.
 
 On Ubuntu 16.04 and later, bpftrace is also available as a snap package (https://snapcraft.io/bpftrace), however, the snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
 
