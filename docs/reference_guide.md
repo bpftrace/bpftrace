@@ -2493,7 +2493,7 @@ examples:
     ./xfsdist -m 5       # 5s summaries, milliseconds
 ```
 
-The bcc version is 131 lines of code. The bptrace version is 22.
+The bcc version is 131 lines of code. The bpftrace version is 22.
 
 # Errors
 
