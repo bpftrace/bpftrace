@@ -6,6 +6,7 @@
   - [Fedora](#fedora-package)
   - [Gentoo](#gentoo-package)
   - [Debian](#debian-package)
+  - [openSUSE](#openSUSE-package)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -76,6 +77,10 @@ sudo emerge -av bpftrace
 ## Debian package
 
 Is available and tracked [here](https://tracker.debian.org/pkg/bpftrace).
+
+## openSUSE package
+
+Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
 
 # Building bpftrace
 
