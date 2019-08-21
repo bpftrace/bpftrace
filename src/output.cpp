@@ -285,6 +285,26 @@ void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
   out_ << std::endl;
 }
 
+void TextOutput::message(MessageType type __attribute__((unused)), const std::string& msg, bool nl) const
+{
+  out_ << msg;
+  if (nl)
+    out_ << std::endl;
+}
+
+void TextOutput::lost_events(uint64_t lost) const
+{
+  out_ << "Lost " << lost << " events" << std::endl;
+}
+
+void TextOutput::attached_probes(uint64_t num_probes) const
+{
+  if (num_probes == 1)
+    out_ << "Attaching " << num_probes << " probe..." << std::endl;
+  else
+    out_ << "Attaching " << num_probes << " probes..." << std::endl;
+}
+
 std::string JsonOutput::json_escape(const std::string &str) const
 {
   std::ostringstream escaped;
@@ -323,29 +343,12 @@ std::string JsonOutput::json_escape(const std::string &str) const
   return escaped.str();
 }
 
-void TextOutput::message(MessageType type __attribute__((unused)), const std::string& msg, bool nl) const
-{
-  out_ << msg;
-  if (nl)
-    out_ << std::endl;
-}
-
-void TextOutput::lost_events(uint64_t lost) const
-{
-  out_ << "Lost " << lost << " events" << std::endl;
-}
-
-void TextOutput::attached_probes(uint64_t num_probes) const
-{
-  if (num_probes == 1)
-    out_ << "Attaching " << num_probes << " probe..." << std::endl;
-  else
-    out_ << "Attaching " << num_probes << " probes..." << std::endl;
-}
-
 void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
                      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const
 {
+  if (values_by_key.empty())
+    return;
+
   out_ << "{\"type\": \"" << MessageType::map << "\", \"data\": {";
   out_ << "\"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
@@ -461,6 +464,9 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
                           const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                           const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
+  if (total_counts_by_key.empty())
+    return;
+
   out_ << "{\"type\": \"" << MessageType::hist << "\", \"data\": {";
   out_ << "\"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
@@ -503,8 +509,11 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
                            const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
                            const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
+  if (total_counts_by_key.empty())
+    return;
+
   out_ << "{\"type\": \"" << MessageType::stats << "\", \"data\": {";
-  out_ << "  \"" << json_escape(map.name_) << "\": ";
+  out_ << "\"" << json_escape(map.name_) << "\": ";
   if (map.key_.size() > 0) // check if this map has keys
     out_ << "{";
 
