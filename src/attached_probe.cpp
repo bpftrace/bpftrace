@@ -492,23 +492,28 @@ void AttachedProbe::attach_usdt(int pid)
   auto u = USDTHelper::find(pid, probe_.path, probe_.ns, probe_.attach_point);
   probe_.path = std::get<USDT_PATH_INDEX>(u);
 
-  err = bcc_usdt_get_location(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
-  if (err)
-    throw std::runtime_error("Error finding location for probe: " + probe_.name);
-  probe_.loc = loc.address;
+  for (int index = 0;; ++index) {
+    err = bcc_usdt_get_location(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), index, &loc);
+    if (err) {
+      if (index != 0)
+	break;
+      throw std::runtime_error("Error finding location for probe: " + probe_.name);
+    }
+    probe_.loc = loc.address;
 
-  int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.path.c_str(), offset(), pid == 0 ? -1 : pid);
+    int perf_event_fd = bpf_attach_uprobe(progfd_, attachtype(probe_.type),
+        eventname().c_str(), probe_.path.c_str(), offset(), pid == 0 ? -1 : pid);
 
-  if (perf_event_fd < 0)
-  {
-    if (pid)
-      throw std::runtime_error("Error attaching probe: " + probe_.name + ", to PID: " + std::to_string(pid));
-    else
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+    if (perf_event_fd < 0)
+    {
+      if (pid)
+        throw std::runtime_error("Error attaching probe: " + probe_.name + ", to PID: " + std::to_string(pid));
+      else
+        throw std::runtime_error("Error attaching probe: " + probe_.name);
+    }
+
+    perf_event_fds_.push_back(perf_event_fd);
   }
-
-  perf_event_fds_.push_back(perf_event_fd);
 }
 
 void AttachedProbe::attach_tracepoint()
