@@ -2,6 +2,8 @@
 
 #include "irbuilderbpf.h"
 #include "libbpf.h"
+#include "bcc_elf.h"
+#include "bcc_syms.h"
 #include "bcc_usdt.h"
 #include "arch/arch.h"
 #include "utils.h"
@@ -365,6 +367,27 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
   }
 
   Value *result = CreateUSDTReadArgument(ctx, &argument, builtin);
+
+  AllocaInst *pc = nullptr;
+  for (int index = 1;; ++index) {
+    bcc_usdt_location loc;
+    if (bcc_usdt_get_location(usdt, ns.c_str(), func.c_str(), index, &loc) != 0 ||
+        bcc_usdt_get_argument(usdt, ns.c_str(), func.c_str(), index, arg_num, &argument) != 0)
+      break;
+    uint64_t addr = loc.address;
+    if (pid && bcc_elf_is_shared_obj(loc.bin_path))
+      bcc_resolve_global_addr(pid, loc.bin_path, addr, pid != 0, &addr);
+    if (pc == nullptr) {
+      Value *pcreg = CreateGEP(ctx, getInt64(arch::pc_offset() * sizeof(uintptr_t)), "load_pc");
+      pc = CreateAllocaBPF(builtin.type, builtin.ident);
+      CreateProbeRead(pc, builtin.type.size, pcreg);
+    }
+    Value *alternative = CreateUSDTReadArgument(ctx, &argument, builtin);
+    Value *cmp = CreateICmpEQ(CreateLoad(pc), getInt64(addr));
+    result = CreateSelect(cmp, alternative, result);
+  }
+  if (pc != nullptr)
+    CreateLifetimeEnd(pc);
 
   bcc_usdt_close(usdt);
   return result;
