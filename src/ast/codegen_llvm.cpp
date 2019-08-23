@@ -1,3 +1,4 @@
+#include <fstream>
 #include "bpforc.h"
 #include "codegen_llvm.h"
 #include "ast.h"
@@ -1837,6 +1838,27 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
+
+  if (bpftrace_.object_.size())
+  {
+    std::unique_ptr<SmallVectorImpl<char>> buf(new SmallVector<char, 0>());
+    raw_svector_ostream ostream(*buf);
+
+    legacy::PassManager PM;
+    bool NotAdded;
+
+    NotAdded = targetMachine->addPassesToEmitFile(PM, ostream, nullptr,
+                                                  TargetMachine::CGFT_ObjectFile);
+    if (NotAdded)
+      throw new std::runtime_error("Could not generated object");
+
+    PM.run(*module_.get());
+
+    std::ofstream file(bpftrace_.object_.c_str(), std::ios::out | std::ios::binary);
+    file.write(buf->data(), buf->size_in_bytes());
+
+    std::cout << "ELF object generated: " << bpftrace_.object_ << std::endl;
+  }
 
   legacy::PassManager PM;
   PassManagerBuilder PMB;

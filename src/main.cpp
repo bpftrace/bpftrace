@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
   bool listing = false;
   bool safe_mode = true;
   bool force_btf = false;
-  std::string script, search, file_name, output_file, output_format;
+  std::string script, search, file_name, output_file, output_format, object;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
     option{"unsafe", no_argument, nullptr, 'u'},
     option{"btf", no_argument, nullptr, 'b'},
     option{"include", required_argument, nullptr, '#'},
+    option{"elf", required_argument, nullptr, 'E'},
     option{nullptr, 0, nullptr, 0},  // Must be last
   };
   std::vector<std::string> include_dirs;
@@ -181,6 +182,9 @@ int main(int argc, char *argv[])
         break;
       case 'e':
         script = optarg;
+        break;
+      case 'E':
+        object = optarg;
         break;
       case 'p':
         pid_str = optarg;
@@ -280,6 +284,7 @@ int main(int argc, char *argv[])
 
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.force_btf_ = force_btf;
+  bpftrace.object_ = object;
 
   // PID is currently only used for USDT probes that need enabling. Future work:
   // - make PID a filter for all probe types: pass to perf_event_open(), etc.

@@ -110,6 +110,7 @@ public:
   int spawn_child();
   void kill_child();
 
+  std::string object_;
   std::string cmd_;
   int pid_{0};
   bool finalize_ = false;
