@@ -49,6 +49,17 @@ find_library (LIBBPF_LIBRARY_STATIC
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
+find_library (LIBBCC_BPF_LIBRARY_STATIC
+  NAMES
+    bcc_bpf
+  PATHS
+    /usr/lib
+    /usr/local/lib
+    /opt/local/lib
+    /sw/lib
+    ENV LIBRARY_PATH
+    ENV LD_LIBRARY_PATH)
+
 find_library (LIBBCC_LOADER_LIBRARY_STATIC
   NAMES
     bcc-loader-static

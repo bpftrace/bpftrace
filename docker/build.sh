@@ -9,6 +9,7 @@ RUN_TESTS=${RUN_TESTS:-1}
 mkdir -p "$1"
 cd "$1"
 cmake -DCMAKE_BUILD_TYPE="$2" -DSTATIC_LINKING:BOOL=$STATIC_LINKING ../
+find . -type f -name link.txt | xargs sed -e 's|-Wl,-Bdynamic /usr/lib/llvm8/lib/libLLVM-8.so ||' -i
 shift 2
 make "$@"
 
