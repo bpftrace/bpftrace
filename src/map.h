@@ -6,9 +6,9 @@ namespace bpftrace {
 
 class Map : public IMap {
 public:
-  Map(const std::string &name, const SizedType &type, const MapKey &key, int max_entries)
-    : Map(name, type, key, 0, 0, 0, max_entries) {};
-  Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries);
+  Map(const std::string &name, const SizedType &type, const MapKey &key, int max_entries, bool has_global_data = false)
+    : Map(name, type, key, 0, 0, 0, max_entries, has_global_data) {};
+  Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries, bool has_global_data = false);
   Map(const SizedType &type);
   Map(enum bpf_map_type map_type);
   virtual ~Map() override;

@@ -19,7 +19,7 @@ int Map::create_map(enum bpf_map_type map_type, const char *name, int key_size, 
 #endif
 }
 
-Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries)
+Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries, bool has_global_data)
 {
   name_ = name;
   type_ = type;
@@ -37,12 +37,25 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
     key_size = 8;
 
   enum bpf_map_type map_type;
-  if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
+  if ((type.type == Type::hist || type.type == Type::lhist ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
       type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
   {
       map_type = BPF_MAP_TYPE_PERCPU_HASH;
+  }
+  else if (type.type == Type::count)
+  {
+    if (has_global_data)
+    {
+      map_type = BPF_MAP_TYPE_ARRAY;
+      max_entries = 1;
+      key_size = 4;
+    }
+    else
+    {
+      map_type = BPF_MAP_TYPE_PERCPU_HASH;
+    }
   }
   else if (type.type == Type::join)
   {
@@ -60,6 +73,16 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   {
     std::cerr << "Error creating map: '" << name_ << "': " << strerror(errno)
               << std::endl;
+  }
+
+  if (type.type == Type::count && has_global_data)
+  {
+    __u64 key = 0, val = 0;
+    if (bpf_update_elem(mapfd_, &key, &val, 0))
+    {
+      std::cerr << "Error creating map: '" << name_ << "': " << strerror(errno)
+                << std::endl;
+    }
   }
 }
 

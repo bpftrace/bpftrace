@@ -241,15 +241,27 @@ void CodegenLLVM::visit(Call &call)
   if (call.func == "count")
   {
     Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
 
-    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
-    b_.CreateLifetimeEnd(key);
-    b_.CreateLifetimeEnd(newval);
+    if (!map.vargs && bpftrace_.has_global_data())
+    {
+      Value *map_ptr = b_.CreateBpfPseudoCallValue(map);
+
+      b_.CreateAtomicRMW(AtomicRMWInst::Add, map_ptr,
+                         ConstantInt::get(module_->getContext(), APInt(64, 1)),
+                         AtomicOrdering::Monotonic);
+    }
+    else
+    {
+      AllocaInst *key = getMapKey(map);
+      Value *oldval = b_.CreateMapLookupElem(map, key);
+      AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+      b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
+      b_.CreateMapUpdateElem(map, key, newval);
+
+      // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+      b_.CreateLifetimeEnd(key);
+      b_.CreateLifetimeEnd(newval);
+    }
     expr_ = nullptr;
   }
   else if (call.func == "sum")
