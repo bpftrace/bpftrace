@@ -139,21 +139,21 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   return ty;
 }
 
-CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
+CallInst *IRBuilderBPF::CreateBpfPseudoCallFd(int mapfd)
 {
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
   return CreateCall(pseudo_func, {getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapfd)}, "pseudo");
 }
 
-CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
+CallInst *IRBuilderBPF::CreateBpfPseudoCallFd(Map &map)
 {
   int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
-  return CreateBpfPseudoCall(mapfd);
+  return CreateBpfPseudoCallFd(mapfd);
 }
 
 CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 {
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.join_map_->mapfd_);
+  Value *map_ptr = CreateBpfPseudoCallFd(bpftrace_.join_map_->mapfd_);
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
   Value *keyv = getInt32(0);
   CreateStore(keyv, key);
@@ -173,7 +173,7 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 
 Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *map_ptr = CreateBpfPseudoCallFd(map);
 
   // void *map_lookup_elem(&map, &key)
   // Return: Map value or NULL
@@ -224,7 +224,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 
 void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
 {
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *map_ptr = CreateBpfPseudoCallFd(map);
   Value *flags = getInt64(0);
 
   // int map_update_elem(&map, &key, &value, flags)
@@ -243,7 +243,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
 
 void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
 {
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *map_ptr = CreateBpfPseudoCallFd(map);
 
   // int map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
@@ -591,7 +591,7 @@ CallInst *IRBuilderBPF::CreateGetRandom()
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stack_type)
 {
   assert(bpftrace_.stackid_maps_.count(stack_type) == 1);
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[stack_type]->mapfd_);
+  Value *map_ptr = CreateBpfPseudoCallFd(bpftrace_.stackid_maps_[stack_type]->mapfd_);
 
   int flags = 0;
   if (ustack)
@@ -630,7 +630,7 @@ void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 {
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
+  Value *map_ptr = CreateBpfPseudoCallFd(bpftrace_.perf_event_map_->mapfd_);
 
   Value *flags_val = CreateGetCpuId();
   Value *size_val = getInt64(size);

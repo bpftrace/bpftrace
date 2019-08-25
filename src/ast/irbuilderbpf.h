@@ -36,8 +36,8 @@ public:
   AllocaInst *CreateAllocaBPF(int bytes, const std::string &name="");
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
-  CallInst   *CreateBpfPseudoCall(int mapfd);
-  CallInst   *CreateBpfPseudoCall(Map &map);
+  CallInst   *CreateBpfPseudoCallFd(int mapfd);
+  CallInst   *CreateBpfPseudoCallFd(Map &map);
   Value      *CreateMapLookupElem(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
   void        CreateMapDeleteElem(Map &map, AllocaInst *key);
