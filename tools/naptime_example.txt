@@ -1,0 +1,20 @@
+Demonstrations of naptime, the Linux bpftrace/eBPF version.
+
+
+Tracing application sleeps via the nanosleep(2) syscall:
+
+# ./naptime.bt
+Attaching 2 probes...
+Tracing sleeps. Hit Ctrl-C to end.
+TIME     PCOMM  PPID             COMM   PID              SECONDS
+15:50:00 1      systemd          1319   mysqld           1.000
+15:50:01 4388   bash             25250  sleep            5.000
+15:50:01 1      systemd          1319   mysqld           1.000
+15:50:01 1      systemd          1180   cron             60.000
+15:50:01 1      systemd          1180   cron             60.000
+15:50:02 1      systemd          1319   mysqld           1.000
+[...]
+
+The output shows mysqld performing a one second sleep every second (likely
+a daemon thread), a sleep(1) command sleeping for five seconds and called
+by bash, and cron threads sleeping for 60 seconds.
