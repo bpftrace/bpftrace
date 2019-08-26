@@ -1,0 +1,40 @@
+Demonstrations of setuids, the Linux bpftrace/eBPF version.
+
+
+This tool traces privilege escalation via setuid syscalls (setuid(2),
+setfsuid(2), retresuid(2)). For example, here are the setuid calls during an
+ssh login:
+
+# setuids.bt
+Attaching 7 probes...
+Tracing setuid(2) family syscalls. Hit Ctrl-C to end.
+TIME     PID    COMM             UID    SYSCALL   ARGS (RET)
+14:28:22 21785  ssh              1000   setresuid ruid=-1 euid=1000 suid=-1 (0)
+14:28:22 21787  sshd             0      setresuid ruid=122 euid=122 suid=122 (0)
+14:28:22 21787  sshd             122    setuid    uid=0 (-1)
+14:28:22 21787  sshd             122    setresuid ruid=-1 euid=0 suid=-1 (-1)
+14:28:24 21786  sshd             0      setresuid ruid=-1 euid=1000 suid=-1 (0)
+14:28:24 21786  sshd             0      setresuid ruid=-1 euid=0 suid=-1 (0)
+14:28:24 21786  sshd             0      setresuid ruid=-1 euid=1000 suid=-1 (0)
+14:28:24 21786  sshd             0      setresuid ruid=-1 euid=0 suid=-1 (0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=0)
+14:28:24 21786  sshd             0      setfsuid  uid=1000 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=1000)
+14:28:24 21786  sshd             0      setfsuid  uid=0 (prevuid=0)
+14:28:24 21851  sshd             0      setresuid ruid=1000 euid=1000 suid=1000 (0)
+14:28:24 21851  sshd             1000   setuid    uid=0 (-1)
+14:28:24 21851  sshd             1000   setresuid ruid=-1 euid=0 suid=-1 (-1)
+
+Why does sshd make so many calls? I don't know! Nevertheless, this shows what
+this tool can do: it shows the caller details (PID, COMM, and UID), the syscall
+(SYSCALL), and the syscall arguments (ARGS) and return value (RET). You can
+modify this tool to print user stack traces for each call, which will show the
+code path in sshd (provided it is compiled with frame pointers).
