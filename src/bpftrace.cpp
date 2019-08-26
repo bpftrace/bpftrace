@@ -31,6 +31,30 @@
 #include "resolve_cgroupid.h"
 #include "utils.h"
 
+#include <linux/filter.h>
+
+#ifndef BPF_LD_IMM64_RAW_FULL
+#define BPF_LD_IMM64_RAW_FULL(DST, SRC, OFF1, OFF2, IMM1, IMM2)\
+       ((struct bpf_insn) {                                    \
+               .code  = BPF_LD | BPF_DW | BPF_IMM,             \
+               .dst_reg = DST,                                 \
+               .src_reg = SRC,                                 \
+               .off   = OFF1,                                  \
+               .imm   = IMM1 }),                               \
+       ((struct bpf_insn) {                                    \
+               .code  = 0, /* zero is reserved opcode */       \
+               .dst_reg = 0,                                   \
+               .src_reg = 0,                                   \
+               .off   = OFF2,                                  \
+               .imm   = IMM2 })
+#endif // BPF_LD_IMM64_RAW_FULL
+
+#ifndef BPF_LD_MAP_VALUE
+#define BPF_LD_MAP_VALUE(DST, MAP_FD, VALUE_OFF)                \
+        BPF_LD_IMM64_RAW_FULL(DST, BPF_PSEUDO_MAP_VALUE, 0, 0,  \
+                              MAP_FD, VALUE_OFF)
+#endif // BPF_LD_MAP_VALUE
+
 extern char** environ;
 
 namespace bpftrace {
@@ -76,6 +100,44 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
     abort();
   }
   return ret;
+}
+
+static bool detect_global_data(void)
+{
+  int ret, map;
+
+  map = bcc_create_map(BPF_MAP_TYPE_ARRAY, "test", sizeof(int), 32, 1, 0);
+  if (map < 0)
+    return false;
+
+  struct bpf_insn insns[] = {
+    BPF_LD_MAP_VALUE(BPF_REG_1, 0, 16),
+    BPF_ST_MEM(BPF_DW, BPF_REG_1, 0, 42),
+    BPF_MOV64_IMM(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  insns[0].imm = map;
+
+  ret = bcc_prog_load(BPF_PROG_TYPE_SOCKET_FILTER, "test",
+                      insns, sizeof(insns), "GPL", 0, 0, NULL, 0);
+  if (ret >= 0)
+    close(ret);
+
+  close(map);
+  return ret >= 0;
+}
+
+BPFfeature* BPFfeature::instance;
+
+BPFfeature::BPFfeature(void)
+{
+  has_global_data = detect_global_data();
+}
+
+bool BPFtrace::has_global_data(void)
+{
+  return BPFfeature::getInstance()->has_global_data;
 }
 
 BPFtrace::~BPFtrace()

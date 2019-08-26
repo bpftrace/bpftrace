@@ -65,6 +65,25 @@ private:
   std::string msg_;
 };
 
+class BPFfeature
+{
+public:
+  static BPFfeature* getInstance(void)
+  {
+    if (!instance)
+      instance = new BPFfeature();
+    return instance;
+  }
+
+  bool has_global_data;
+
+  ~BPFfeature();
+
+private:
+  BPFfeature();
+  static BPFfeature* instance;
+};
+
 class BPFtrace
 {
 public:
@@ -159,6 +178,8 @@ public:
       int pid,
       const std::string &target) const;
   const std::string get_source_line(unsigned int);
+
+  bool has_global_data(void);
 
 protected:
   std::vector<Probe> probes_;
