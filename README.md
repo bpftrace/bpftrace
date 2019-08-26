@@ -164,6 +164,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[runqlen.bt](tools/runqlen.bt): CPU scheduler run queue length as a histogram. [Examples](tools/runqlen_example.txt).
 - tools/[setuids.bt](tools/setuids.bt): Trace the setuid syscalls: privilege escalation. [Examples](tools/setuids_example.txt).
 - tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
+- tools/[swapin.bt](tools/swapin.bt): Show swapins by process. [Examples](tools/swapin_example.txt).
 - tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).
 - tools/[syscount.bt](tools/syscount.bt): Count system calls. [Examples](tools/syscount_example.txt).
 - tools/[tcpaccept](tools/tcpaccept.bt): Trace TCP passive connections (accept()). [Examples](tools/tcpaccept_example.txt).
