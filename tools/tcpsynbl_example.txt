@@ -1,0 +1,24 @@
+Demonstrations of tcpsynbl, the Linux bpftrace/eBPF version.
+
+
+This tool shows the TCP SYN backlog size during SYN arrival as a histogram.
+This lets you see how close your applications are to hitting the backlog limit
+and dropping SYNs (causing performance issues with SYN retransmits). For
+example:
+
+# ./tcpsynbl.bt 
+Attaching 4 probes...
+Tracing SYN backlog size. Ctrl-C to end.
+^C
+@backlog[backlog limit]: histogram of backlog size
+
+
+@backlog[500]: 
+[0]                 2266 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[1]                    3 |                                                    |
+[2, 4)                 1 |                                                    |
+
+This output shows that for the backlog limit of 500, there were 2266 SYN
+arrivals where the backlog was zero, three where the backlog was one, and
+one where the backlog was either two or three. This indicates that we are
+nowhere near this limit.

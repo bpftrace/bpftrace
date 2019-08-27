@@ -1,0 +1,65 @@
+.TH setuids 8  "2019-07-05" "USER COMMANDS"
+.SH NAME
+setuids.bt \- Trace setuid family of syscalls. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B setuids.bt
+.SH DESCRIPTION
+This tool traces privilege escalation via setuid syscalls, and can be used
+for debugging, whitelist creation, and intrusion detection.
+
+It works by tracing the setuid(2), setfsuid(2), and retresuid(2) syscalls
+using the syscall tracepoints.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace setuid syscalls:
+#
+.B setuids.bt
+.SH FIELDS
+.TP
+PID
+The calling process ID.
+.TP
+COMM
+The calling process (thread) name.
+.TP
+UID
+The UID of the caller.
+.TP
+SYSCALL
+The syscall name.
+.TP
+ARGS
+The arguments to the syscall
+.TP
+(RET)
+The return value for the syscall: 0 == success, other numbers indicate an
+error code.
+.SH OVERHEAD
+setuid calls are expected to be low frequency (<< 100/s), so the overhead of
+this tool is expected to be negligible.
+.SH SOURCE
+This tool originated from the book "BPF Performance Tools", published by
+Addison Wesley (2019):
+.IP
+http://www.brendangregg.com/bpf-performance-tools-book.html
+.PP
+See the book for more documentation on this tool.
+.PP
+This version is in the bpftrace repository:
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+capable(8)

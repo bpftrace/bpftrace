@@ -1,0 +1,25 @@
+#!/usr/local/bin/bpftrace
+/*
+ * threadsnoop - List new thread creation.
+ *
+ * See BPF Performance Tools, Chapter 13, for an explanation of this tool.
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 15-Feb-2019  Brendan Gregg   Created this.
+ */
+
+BEGIN
+{
+	printf("%-10s %-6s %-16s %s\n", "TIME(ms)", "PID", "COMM", "FUNC");
+}
+
+uprobe:/lib/x86_64-linux-gnu/libpthread.so.0:pthread_create
+{
+	printf("%-10u %-6d %-16s %s\n", elapsed / 1000000, pid, comm,
+	    usym(arg2));
+}
