@@ -55,30 +55,30 @@ TIMEOUT 5
 
 NAME printf
 RUN bpftrace -f json -v -e 'BEGIN { printf("test %d", 5); exit(); }'
-EXPECT ^{"type": "printf", "msg": "test 5"}$
+EXPECT ^{"type": "printf", "data": "test 5"}$
 TIMEOUT 5
 
 NAME printf_escaping
 RUN bpftrace -f json -v -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
-EXPECT ^{"type": "printf", "msg": "test \\r \\n \\t \\\\ \\\" bar"}$
+EXPECT ^{"type": "printf", "data": "test \\r \\n \\t \\\\ \\\" bar"}$
 TIMEOUT 5
 
 NAME time
 RUN bpftrace -f json -v -e 'BEGIN { time(); exit(); }'
-EXPECT ^{"type": "time", "msg": "[0-9]*:[0-9]*:[0-9]*\\n"}$
+EXPECT ^{"type": "time", "data": "[0-9]*:[0-9]*:[0-9]*\\n"}$
 TIMEOUT 5
 
 NAME syscall
 RUN bpftrace --unsafe -v -f json -e 'BEGIN { system("echo a b c"); exit(); }'
-EXPECT ^{"type": "syscall", "msg": "a b c\\n"}$
+EXPECT ^{"type": "syscall", "data": "a b c\\n"}$
 TIMEOUT 5
 
 NAME join_delim
 RUN bpftrace --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); exit(); }' -c "/bin/echo 'A'"
-EXPECT ^{"type": "join", "msg": "/bin/echo,'A'"}
+EXPECT ^{"type": "join", "data": "/bin/echo,'A'"}
 TIMEOUT 5
 
 NAME cat
 RUN bpftrace -v -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
-EXPECT ^{"type": "cat", "msg": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
+EXPECT ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 TIMEOUT 5
