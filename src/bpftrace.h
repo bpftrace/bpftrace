@@ -107,8 +107,8 @@ public:
   std::string cmd_;
   int pid_{0};
   bool finalize_ = false;
-  // Global variable checking if a sigint was received
-  static volatile sig_atomic_t sigint_recv;
+  // Global variable checking if an exit signal was received
+  static volatile sig_atomic_t exitsig_recv;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
