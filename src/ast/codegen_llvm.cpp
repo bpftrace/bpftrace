@@ -796,9 +796,22 @@ void CodegenLLVM::visit(Binop &binop)
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
+static bool unop_skip_accept(Unop &unop)
+{
+  if (unop.expr->type.type == Type::integer)
+  {
+    if (unop.op == bpftrace::Parser::token::PLUSPLUS ||
+        unop.op == bpftrace::Parser::token::MINUSMINUS)
+      return unop.expr->is_map || unop.expr->is_variable;
+  }
+
+  return false;
+}
+
 void CodegenLLVM::visit(Unop &unop)
 {
-  unop.expr->accept(*this);
+  if (!unop_skip_accept(unop))
+    unop.expr->accept(*this);
 
   SizedType &type = unop.expr->type;
   if (type.type == Type::integer)
