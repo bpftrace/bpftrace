@@ -34,4 +34,5 @@ RUN apt-get update && apt-get install -y \
       systemtap-sdt-dev
 
 COPY build.sh /build.sh
+RUN chmod 755 /build.sh
 ENTRYPOINT ["bash", "/build.sh"]

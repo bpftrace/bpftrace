@@ -36,4 +36,5 @@ RUN cd /bcc && mkdir build && cd build && cmake .. && make install -j4 && \
 
 
 COPY build.sh /build.sh
+RUN chmod 755 /build.sh
 ENTRYPOINT ["/bin/sh", "/build.sh"]
