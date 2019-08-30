@@ -552,12 +552,13 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
 
 void JsonOutput::message(MessageType type, const std::string& msg, bool nl __attribute__((unused))) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"msg\": \"" << json_escape(msg) << "\"}" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"data\": \"" << json_escape(msg) << "\"}" << std::endl;
 }
 
 void JsonOutput::message(MessageType type, const std::string& field, uint64_t value) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"" << field << "\": " << value << "}" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"data\": " <<  "{\"" << field
+       << "\": " << value << "}" << "}" << std::endl;
 }
 
 void JsonOutput::lost_events(uint64_t lost) const
