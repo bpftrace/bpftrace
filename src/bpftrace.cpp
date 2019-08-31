@@ -1322,6 +1322,7 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
 
     if (bf == CHILD_EXIT_QUIETLY)
     {
+      close(wait_for_tracing_pipe[0]);
       exit(0);
     }
 
