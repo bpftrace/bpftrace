@@ -38,7 +38,8 @@ namespace bpftrace {
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
-const char CHILD_EXIT_QUIETLY = '\0';
+constexpr char CHILD_EXIT_QUIETLY = '\0';
+constexpr char CHILD_GO = 'g';
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
   int ret = -1;
@@ -741,9 +742,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   // Kick the child to execute the command.
   if (cmd_.size())
   {
-    char bf;
-
-    int ret = write(wait_for_tracing_pipe, &bf, 1);
+    int ret = write(wait_for_tracing_pipe, &CHILD_GO, 1);
     if (ret < 0)
     {
       perror("unable to write to 'go' pipe");
