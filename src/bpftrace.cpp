@@ -38,6 +38,7 @@ namespace bpftrace {
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
+const char CHILD_EXIT_QUIETLY = '\0';
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
   int ret = -1;
@@ -716,7 +717,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     if (!attach_reverse(*probes)) {
       auto attached_probe = attach_probe(*probes, *bpforc.get());
       if (attached_probe == nullptr)
+      {
+        write(wait_for_tracing_pipe, &CHILD_EXIT_QUIETLY, 1);
         return -1;
+      }
       attached_probes_.push_back(std::move(attached_probe));
     }
   }
@@ -726,7 +730,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     if (attach_reverse(*r_probes)) {
       auto attached_probe = attach_probe(*r_probes, *bpforc.get());
       if (attached_probe == nullptr)
+      {
+        write(wait_for_tracing_pipe, &CHILD_EXIT_QUIETLY, 1);
         return -1;
+      }
       attached_probes_.push_back(std::move(attached_probe));
     }
   }
@@ -1311,6 +1318,12 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
     {
       perror("failed to read 'go' pipe");
       return -1;
+    }
+
+    if (bf == CHILD_EXIT_QUIETLY)
+    {
+      close(wait_for_tracing_pipe[0]);
+      exit(0);
     }
 
     if (execve(argv[0], argv, environ))
