@@ -25,7 +25,7 @@ cint   :{int}:
 hspace [ \t]
 vspace [\n\r]
 space  {hspace}|{vspace}
-path   :(\\.|[_\-\./a-zA-Z0-9#])*:
+path   :(\\.|[_\-\./a-zA-Z0-9#\*])*:
 %x STR
 %x STRUCT
 %x ENUM
