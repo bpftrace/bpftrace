@@ -770,7 +770,20 @@ TEST(Parser, usdt_namespaced_probe)
       "Program\n"
       " usdt:/my/program:namespace:probe\n"
       "  int: 1\n");
+  test("usdt:/my/program*:namespace:probe { 1; }",
+      "Program\n"
+      " usdt:/my/program*:namespace:probe\n"
+      "  int: 1\n");
+  test("usdt:/my/*program:namespace:probe { 1; }",
+      "Program\n"
+      " usdt:/my/*program:namespace:probe\n"
+      "  int: 1\n");
+  test("usdt:*my/program*:namespace:probe { 1; }",
+      "Program\n"
+      " usdt:*my/program*:namespace:probe\n"
+      "  int: 1\n");
 }
+
 TEST(Parser, escape_chars)
 {
   test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
@@ -879,6 +892,42 @@ TEST(Parser, wildcard_attach_points)
       "   map: @x\n"
       "   dereference\n"
       "    builtin: arg0\n");
+}
+
+TEST(Parser, wildcard_path)
+{
+  test("uprobe:/my/program*:* { 1; }",
+      "Program\n"
+      " uprobe:/my/program*:*\n"
+      "  int: 1\n");
+  test("uprobe:/my/program*:func { 1; }",
+      "Program\n"
+      " uprobe:/my/program*:func\n"
+      "  int: 1\n");
+  test("uprobe:*my/program*:func { 1; }",
+      "Program\n"
+      " uprobe:*my/program*:func\n"
+      "  int: 1\n");
+  test("uprobe:/my/program*foo:func { 1; }",
+      "Program\n"
+      " uprobe:/my/program*foo:func\n"
+      "  int: 1\n");
+  test("usdt:/my/program*:* { 1; }",
+      "Program\n"
+      " usdt:/my/program*:*\n"
+      "  int: 1\n");
+  test("usdt:/my/program*:func { 1; }",
+      "Program\n"
+      " usdt:/my/program*:func\n"
+      "  int: 1\n");
+  test("usdt:*my/program*:func { 1; }",
+      "Program\n"
+      " usdt:*my/program*:func\n"
+      "  int: 1\n");
+  test("usdt:/my/program*foo:func { 1; }",
+      "Program\n"
+      " usdt:/my/program*foo:func\n"
+      "  int: 1\n");
 }
 
 TEST(Parser, short_map_name)
