@@ -1152,7 +1152,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
     }
 
-    usdt_probe_list probes;
     if (bpftrace_.pid_ > 0) {
        USDTHelper::probes_for_pid(bpftrace_.pid_);
     } else if (ap.target != "") {
