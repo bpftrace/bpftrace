@@ -698,7 +698,13 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (cmd_.size())
   {
     auto args = split_string(cmd_, ' ');
-    args[0] = resolve_binary_path(args[0]);  // does path lookup on executable
+    auto paths = resolve_binary_path(args[0]); // does path lookup on executable
+    if (paths.size() > 1)
+    {
+      std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+      return -1;
+    }
+    args[0] = paths.front().c_str();
     int pid = spawn_child(args, &wait_for_tracing_pipe);
     if (pid < 0)
     {

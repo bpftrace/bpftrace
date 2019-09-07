@@ -1128,7 +1128,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       err_ << "uprobes should have a target" << std::endl;
     if (ap.func == "")
       err_ << "uprobes should be attached to a function" << std::endl;
-    ap.target = resolve_binary_path(ap.target);
+
+    auto paths = resolve_binary_path(ap.target);
+    if (paths.size() > 1)
+      err_ << "path '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+    ap.target = paths.front();
     struct stat s;
     if (stat(ap.target.c_str(), &s) != 0)
       err_ << "failed to stat uprobe target file " << ap.target << ": "
@@ -1148,7 +1152,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
 
     if (ap.target != "") {
-      ap.target = resolve_binary_path(ap.target);
+      auto paths = resolve_binary_path(ap.target);
+      if (paths.size() > 1)
+        err_ << "path '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+      ap.target = paths.front();
       struct stat s;
       if (stat(ap.target.c_str(), &s) != 0)
         err_ << "usdt target file " << ap.target << " does not exist" << std::endl;

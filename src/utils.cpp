@@ -477,7 +477,7 @@ std::string exec_system(const char* cmd)
   return result;
 }
 
-std::string resolve_binary_path(const std::string& cmd)
+std::vector<std::string> resolve_binary_path(const std::string& cmd)
 {
   std::string query;
   query += "command -v ";
@@ -486,16 +486,11 @@ std::string resolve_binary_path(const std::string& cmd)
 
   if (result.size())
   {
-    // Remove newline at the end
-    auto it = result.rfind('\n');
-    if (it != std::string::npos)
-      result.erase(it);
-
-    return result;
+    return split_string(result, '\n');
   }
   else
   {
-    return cmd;
+    return { cmd };
   }
 }
 
