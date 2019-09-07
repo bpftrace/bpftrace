@@ -181,7 +181,7 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
       std::string line;
       while (std::getline(*symbol_stream, line))
       {
-        std::string probe = "uprobe:" + executable + ":" + line;
+        std::string probe = "uprobe:" + absolute_exe + ":" + line;
         if (show_all || search.empty() || !search_probe(probe, re))
           std::cout << probe << std::endl;
       }
