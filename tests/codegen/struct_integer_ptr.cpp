@@ -20,7 +20,6 @@ entry:
   %deref = alloca i32, align 4
   %Foo.x = alloca i64, align 8
   %"$foo" = alloca i64, align 8
-  %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %1, i64 0, i64 8, i1 false)
@@ -29,7 +28,7 @@ entry:
   store i64 %2, i64* %"$foo", align 8
   %3 = bitcast i64* %Foo.x to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, [8 x i8]* nonnull %tmpcast)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, i8* nonnull %1)
   %4 = load i64, i64* %Foo.x, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i32* %deref to i8*
@@ -138,7 +137,7 @@ entry:
   %Foo.x = alloca i64, align 8
   %1 = bitcast i64* %Foo.x to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.x, i64 8, i8* null)
   %2 = load i64, i64* %Foo.x, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = bitcast i32* %deref to i8*

@@ -25,7 +25,7 @@ entry:
   call void @llvm.memcpy.p0i8.p64i8.i64(i8* nonnull align 1 %1, i8 addrspace(64)* align 536870912 null, i64 32, i1 false)
   %2 = getelementptr inbounds [32 x i8], [32 x i8]* %Foo.str, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, [32 x i8]* nonnull %"$foo")
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, i8* nonnull %1)
   %3 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@mystr_key", align 8
@@ -112,7 +112,7 @@ entry:
   %Foo.str = alloca [32 x i8], align 1
   %1 = getelementptr inbounds [32 x i8], [32 x i8]* %Foo.str, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, i8* null)
   %2 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@mystr_key", align 8
