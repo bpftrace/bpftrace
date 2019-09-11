@@ -24,7 +24,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@x_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i64*)*)(i64 %pseudo, i64* nonnull %"@x_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -39,14 +39,14 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 %lookup_elem_val.0, i64* %"@x_num", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_num", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, i64*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_num", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %4 = bitcast i64* %"@x_key2" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 1, i64* %"@x_key2", align 8
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem4 = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo3, i64* nonnull %"@x_key2")
+  %lookup_elem4 = call i8* inttoptr (i64 1 to i8* (i8*, i64*)*)(i64 %pseudo3, i64* nonnull %"@x_key2")
   %map_lookup_cond9 = icmp eq i8* %lookup_elem4, null
   br i1 %map_lookup_cond9, label %lookup_merge7, label %lookup_success5
 
@@ -63,7 +63,7 @@ lookup_merge7:                                    ; preds = %lookup_merge, %look
   %8 = add i64 %7, %lookup_elem_val8.0
   store i64 %8, i64* %"@x_val", align 8
   %pseudo10 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem11 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo10, i64* nonnull %"@x_key2", i64* nonnull %"@x_val", i64 0)
+  %update_elem11 = call i64 inttoptr (i64 2 to i64 (i8*, i64*, i64*, i64)*)(i64 %pseudo10, i64* nonnull %"@x_key2", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0

@@ -38,13 +38,13 @@ entry:
   %6 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 0
   store i64 0, i64* %6, align 8
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.m, i64 4, i8* nonnull %1)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i64, i8*)*)(i32* nonnull %Foo.m, i64 4, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %7 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1
   store i64 0, i64* %7, align 8
   %8 = bitcast i32* %Foo.m6 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
-  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.m6, i64 4, i8* nonnull %1)
+  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i32*, i64, i8*)*)(i32* nonnull %Foo.m6, i64 4, i8* nonnull %1)
   %9 = load i32, i32* %Foo.m6, align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   %rhs_true_cond = icmp ne i32 %9, 0
@@ -53,7 +53,7 @@ entry:
   store i64 %"&&_result5.0", i64* %10, align 8
   %11 = bitcast i32* %Foo.m8 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %11)
-  %probe_read9 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.m8, i64 4, i8* nonnull %1)
+  %probe_read9 = call i64 inttoptr (i64 4 to i64 (i32*, i64, i8*)*)(i32* nonnull %Foo.m8, i64 4, i8* nonnull %1)
   %12 = load i32, i32* %Foo.m8, align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %11)
   %lhs_true_cond10 = icmp ne i32 %12, 0
@@ -62,7 +62,7 @@ entry:
   store i64 %"||_result.0", i64* %13, align 8
   %14 = bitcast i32* %Foo.m16 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %14)
-  %probe_read17 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Foo.m16, i64 4, i8* nonnull %1)
+  %probe_read17 = call i64 inttoptr (i64 4 to i64 (i32*, i64, i8*)*)(i32* nonnull %Foo.m16, i64 4, i8* nonnull %1)
   %15 = load i32, i32* %Foo.m16, align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %14)
   %rhs_true_cond18 = icmp ne i32 %15, 0

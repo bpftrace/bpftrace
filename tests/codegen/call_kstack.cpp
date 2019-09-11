@@ -27,7 +27,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 %get_stackid, i64* %"@x_val", align 8
   %pseudo1 = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, i64*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
@@ -39,7 +39,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %get_stackid3, i64* %"@y_val", align 8
   %pseudo4 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %update_elem5 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo4, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
+  %update_elem5 = call i64 inttoptr (i64 2 to i64 (i8*, i64*, i64*, i64)*)(i64 %pseudo4, i64* nonnull %"@y_key", i64* nonnull %"@y_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
