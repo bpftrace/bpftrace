@@ -18,34 +18,32 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %Foo.x = alloca i16, align 2
-  %"$foo" = alloca i16, align 2
-  %1 = bitcast i16* %"$foo" to i8*
+  %"$foo" = alloca i64, align 8
+  %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 2 %1, i64 0, i64 2, i1 false)
+  %2 = bitcast i64* %"$foo" to i16*
+  store i16 0, i16* %2, align 8
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %2 = load i16, i16 addrspace(64)* null, align 536870912
-  store i16 %2, i16* %"$foo", align 2
-  %3 = bitcast i16* %Foo.x to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
+  %3 = load i16, i16 addrspace(64)* null, align 536870912
+  store i16 %3, i16* %2, align 8
+  %4 = bitcast i16* %Foo.x to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i16* nonnull %Foo.x, i64 2, i8* nonnull %1)
-  %4 = load i16, i16* %Foo.x, align 2
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
-  %5 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
+  %5 = load i16, i16* %Foo.x, align 2
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  %6 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 0, i64* %"@x_key", align 8
-  %6 = zext i16 %4 to i64
-  %7 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
-  store i64 %6, i64* %"@x_val", align 8
+  %7 = zext i16 %5 to i64
+  %8 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
+  store i64 %7, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   ret i64 0
 }
-
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
