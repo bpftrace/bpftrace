@@ -68,7 +68,7 @@ entry:
   %"$foo" = alloca i64, align 8
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull %1, i64 0, i64 8, i32 8, i1 false)
+  store i64 0, i64* %"$foo", align 8
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = load i64, i64 addrspace(64)* null, align 536870912
   store i64 %2, i64* %"$foo", align 8

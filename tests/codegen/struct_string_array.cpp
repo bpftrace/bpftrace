@@ -59,12 +59,12 @@ define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kpr
 entry:
   %"@mystr_key" = alloca i64, align 8
   %Foo.str = alloca [32 x i8], align 1
-  %"$foo" = alloca [32 x i8], align 1
-  %1 = getelementptr inbounds [32 x i8], [32 x i8]* %"$foo", i64 0, i64 0
+  %"$foo" = alloca i64, align 8
+  %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull %1, i64 0, i64 32, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %1, i8 0, i64 32, i32 8, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memcpy.p0i8.p64i8.i64(i8* nonnull %1, i8 addrspace(64)* null, i64 32, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p64i8.i64(i8* nonnull %1, i8 addrspace(64)* null, i64 32, i32 8, i1 false)
   %2 = getelementptr inbounds [32 x i8], [32 x i8]* %Foo.str, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([32 x i8]* nonnull %Foo.str, i64 32, i8* nonnull %1)
