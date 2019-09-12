@@ -110,7 +110,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, [64 x i8]*, i64)*)(i64 %pseudo, [128 x i8]* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, [128 x i8]*, i64*, i64)*)(i64 %pseudo, [128 x i8]* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
