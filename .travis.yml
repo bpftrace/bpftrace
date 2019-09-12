@@ -1,7 +1,11 @@
 sudo: required
 
+dist: bionic
+
 language:
-  - cpp
+  # Trick Travis into using bionic (see https://travis-ci.community/t/for-dist-bionic-xenial-vm-is-used-instead-with-language-rust/4487/3)
+  # We're building on Docker, so the actual laguange doesn't matter.
+  - python
 
 services:
   - docker
@@ -19,20 +23,23 @@ matrix:
       env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.args_multiple_tracepoints*"
 
     - name: "LLVM 6 Debug"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1
     - name: "LLVM 6 Release"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release RUN_ALL_TESTS=1
 
     - name: "LLVM 7 Debug"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1
     - name: "LLVM 7 Release"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Release RUN_ALL_TESTS=1
 
     - name: "LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1
     - name: "LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Release RUN_ALL_TESTS=1
+
+install:
+  - sudo apt-get install linux-headers-$(uname -r)
+  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION -f docker/Dockerfile.$BASE docker/
 
 script:
-  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION -f docker/Dockerfile.$BASE docker/
-  - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE-llvm-$LLVM_VERSION $(pwd)/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`
+  - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=$STATIC_LINKING -e RUN_ALL_TESTS=$RUN_ALL_TESTS -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE-llvm-$LLVM_VERSION $(pwd)/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`

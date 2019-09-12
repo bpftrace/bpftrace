@@ -31,7 +31,8 @@ RUN apt-get update && apt-get install -y \
       llvm-${LLVM_VERSION}-dev \
       llvm-${LLVM_VERSION}-runtime \
       libllvm${LLVM_VERSION} \
-      systemtap-sdt-dev
+      systemtap-sdt-dev \
+      python3
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
