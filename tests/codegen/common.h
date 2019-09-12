@@ -65,7 +65,7 @@ static void test(
   codegen.compile(DebugLevel::kDebug, out);
 
   std::string full_expected_output = header + expected_output;
-  EXPECT_EQ(full_expected_output, out.str());
+  EXPECT_EQ(full_expected_output, out.str()) << "the following program failed: '" << input << "'";
 }
 
 static void test(
