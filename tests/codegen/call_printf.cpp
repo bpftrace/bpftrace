@@ -34,7 +34,7 @@ entry:
   store i8 %3, i64* %4, align 8
   %5 = bitcast i64* %Foo.l to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.l, i64 8, i8* inttoptr (i64 8 to i8*))
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i64*, i64, i8*)*)(i64* nonnull %Foo.l, i64 8, i8* inttoptr (i64 8 to i8*))
   %6 = load i64, i64* %Foo.l, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %7 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 2

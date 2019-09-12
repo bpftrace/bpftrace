@@ -79,13 +79,13 @@ entry:
   store i64 %2, i64* %"$foo", align 8
   %3 = bitcast i64* %Foo.bar to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, i8* nonnull %1)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, i8* nonnull %1)
   %4 = bitcast i64* %Foo.bar to i8**
   %5 = load i8*, i8** %4, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %6 = bitcast i32* %Bar.x to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i8* %5)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i32*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i8* %5)
   %7 = load i32, i32* %Bar.x, align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   %8 = bitcast i64* %"@x_key" to i8*
@@ -96,7 +96,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %10)
   store i64 %9, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, i64*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %10)
   ret i64 0

@@ -189,13 +189,13 @@ entry:
   %5 = inttoptr i64 %4 to i8*
   %6 = bitcast i64* %_tracepoint_syscalls_sys_enter_open.filename to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_open.filename, i64 8, i8* %5)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_open.filename, i64 8, i8* %5)
   %7 = load i64, i64* %_tracepoint_syscalls_sys_enter_open.filename, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %7)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %1, i8* nonnull %2, i64 64, i32 1, i1 false)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i64*)*)(i64 %pseudo, [64 x i8]* nonnull %"@_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, [64 x i8]*)*)(i64 %pseudo, [64 x i8]* nonnull %"@_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -210,7 +210,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
   store i64 %lookup_elem_val.0, i64* %"@_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, [64 x i8]*, i64)*)(i64 %pseudo1, [64 x i8]* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, [64 x i8]*, i64*, i64)*)(i64 %pseudo1, [64 x i8]* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
   ret i64 0
@@ -241,13 +241,13 @@ entry:
   %5 = inttoptr i64 %4 to i8*
   %6 = bitcast i64* %_tracepoint_syscalls_sys_enter_openat.filename to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_openat.filename, i64 8, i8* %5)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_openat.filename, i64 8, i8* %5)
   %7 = load i64, i64* %_tracepoint_syscalls_sys_enter_openat.filename, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %7)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %1, i8* nonnull %2, i64 64, i32 1, i1 false)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i64*)*)(i64 %pseudo, [64 x i8]* nonnull %"@_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, [64 x i8]*)*)(i64 %pseudo, [64 x i8]* nonnull %"@_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -262,7 +262,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
   store i64 %lookup_elem_val.0, i64* %"@_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i64*, [64 x i8]*, i64)*)(i64 %pseudo1, [64 x i8]* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, [64 x i8]*, i64*, i64)*)(i64 %pseudo1, [64 x i8]* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
   ret i64 0
