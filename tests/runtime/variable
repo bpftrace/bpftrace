@@ -31,10 +31,10 @@ TIMEOUT 5
 AFTER cat /dev/null
 
 NAME 32-bit tracepoint arg
-RUN bpftrace -v -e 'tracepoint:block:block_rq_issue { @start[args->dev, args->sector] = nsecs; } tracepoint:block:block_rq_complete { @usecs = hist(nsecs - @start[args->dev, args->sector]); exit(); }'
-EXPECT @
+RUN bpftrace -v -e 'tracepoint:random:random_read { $i = args->got_bits; printf("bits: %d\n", $i); if ($i == 24) { exit() } }'
+EXPECT bits: 24
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER dd if=/dev/random bs=3 count=1
 
 NAME tracepoint arg casts in predicates
 RUN bpftrace -v -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }'
