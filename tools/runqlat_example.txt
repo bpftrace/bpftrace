@@ -5,7 +5,7 @@ This traces time spent waiting in the CPU scheduler for a turn on-CPU. This
 metric is often called run queue latency, or scheduler latency. This tool shows
 this latency as a power-of-2 histogram in nanoseconds. For example:
 
-# runqlat.bt
+# ./runqlat.bt
 Attaching 5 probes...
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
@@ -50,7 +50,7 @@ the CPU caches should be hotter.
 I'll now add a single-threaded CPU bound workload to this system, and bind
 it on one CPU:
 
-# runqlat.bt
+# ./runqlat.bt
 Attaching 5 probes...
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
@@ -86,7 +86,7 @@ That didn't make much difference.
 Now I'll add a second single-threaded CPU workload, and bind it to the same
 CPU, causing contention:
 
-# runqlat.bt
+# ./runqlat.bt
 Attaching 5 probes...
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C
@@ -121,7 +121,7 @@ wait its turn on the one CPU.
 
 Now I'l run 10 CPU-bound throuds on one CPU:
 
-# runqlat.bt
+# ./runqlat.bt
 Attaching 5 probes...
 Tracing CPU scheduler... Hit Ctrl-C to end.
 ^C

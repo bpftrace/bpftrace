@@ -3,7 +3,7 @@ Demonstrations of pidpersec, the Linux bpftrace/eBPF version.
 
 Tracing new procesess:
 
-# pidpersec.bt
+# ./pidpersec.bt
 Attaching 4 probes...
 Tracing new processes... Hit Ctrl-C to end.
 22:29:50 PIDs/sec: @: 121
@@ -29,7 +29,7 @@ new processes per second.
 The following example shows a Linux build launched at 6:33:40, on a 36 CPU
 server, with make -j36:
 
-# pidpersec.bt
+# ./pidpersec.bt
 Attaching 4 probes...
 Tracing new processes... Hit Ctrl-C to end.
 06:33:38 PIDs/sec:

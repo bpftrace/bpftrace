@@ -5,7 +5,7 @@ This tool shows the lifespan of TCP sessions, including througphut statistics,
 and for efficiency only instruments TCP state changes (rather than all packets).
 For example:
 
-# tcplife
+# ./tcplife.bt
 PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
 20976 ssh        127.0.0.1       56766 127.0.0.1       22         6 10584 3059
 20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059

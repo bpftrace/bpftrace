@@ -3,7 +3,7 @@ Demonstrations of syncsnoop, the Linux bpftrace/eBPF version.
 
 Tracing file system sync events:
 
-# syncsnoop.bt
+# ./syncsnoop.bt
 Attaching 7 probes...
 Tracing sync syscalls... Hit Ctrl-C to end.
 TIME      PID    COMM             EVENT

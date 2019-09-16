@@ -4,7 +4,7 @@ Demonstrations of swapin, the Linux BCC/eBPF version.
 This tool counts swapins by process, to show which process is affected by
 swapping. For example:
 
-# swapin.bt 
+# ./swapin.bt 
 Attaching 2 probes...
 13:36:59
 

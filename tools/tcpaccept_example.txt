@@ -5,7 +5,7 @@ This tool traces the kernel function accepting TCP socket connections (eg, a
 passive connection via accept(); not connect()). Some example output (IP
 addresses changed to protect the innocent):
 
-# ./tcpaccept
+# ./tcpaccept.bt
 Tracing tcp accepts. Hit Ctrl-C to end.
 TIME     PID     COMM           RADDR          RPORT LADDR          LPORT BL
 00:34:19 3949061 nginx          10.228.22.228  44226 10.229.20.169  8080  0/128
