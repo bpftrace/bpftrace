@@ -306,20 +306,14 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::max, 8, sign);
   }
   else if (call.func == "avg") {
-    bool sign = false;
     check_assignment(call, true, false);
-    if (check_nargs(call, 1)) {
-      sign = call.vargs->at(0)->type.is_signed;
-    }
-    call.type = SizedType(Type::avg, 8, sign);
+    check_nargs(call, 1);
+    call.type = SizedType(Type::avg, 8, true);
   }
   else if (call.func == "stats") {
-    bool sign = false;
     check_assignment(call, true, false);
-    if (check_nargs(call, 1)) {
-      sign = call.vargs->at(0)->type.is_signed;
-    }
-    call.type = SizedType(Type::stats, 8, sign);
+    check_nargs(call, 1);
+    call.type = SizedType(Type::stats, 8, true);
   }
   else if (call.func == "delete") {
     check_assignment(call, false, false);
