@@ -3,7 +3,7 @@ Demonstrations of vfscount, the Linux bpftrace/eBPF version.
 
 Tracing all VFS calls:
 
-# vfscount.bt
+# ./vfscount.bt
 Attaching 54 probes...
 cannot attach kprobe, Invalid argument
 Warning: could not attach probe kprobe:vfs_dedupe_get_page.isra.21, skipping.

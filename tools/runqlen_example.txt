@@ -5,7 +5,7 @@ This tool samples the length of the CPU scheduler run queues, showing these
 sampled lengths as a histogram. This can be used to characterize demand for
 CPU resources. For example:
 
-# runqlen.bt 
+# ./runqlen.bt 
 Attaching 2 probes...
 Sampling run queue length at 99 Hertz... Hit Ctrl-C to end.
 ^C

@@ -5,7 +5,7 @@ This tool traces privilege escalation via setuid syscalls (setuid(2),
 setfsuid(2), retresuid(2)). For example, here are the setuid calls during an
 ssh login:
 
-# setuids.bt
+# ./setuids.bt
 Attaching 7 probes...
 Tracing setuid(2) family syscalls. Hit Ctrl-C to end.
 TIME     PID    COMM             UID    SYSCALL   ARGS (RET)
