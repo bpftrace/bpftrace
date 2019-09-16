@@ -1217,7 +1217,7 @@ int BPFtrace::print_map_stats(IMap &map)
   }
   auto key(old_key);
 
-  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
+  std::map<std::vector<uint8_t>, std::vector<int64_t>> values_by_key;
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
@@ -1245,22 +1245,21 @@ int BPFtrace::print_map_stats(IMap &map)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      values_by_key[key_prefix] = std::vector<uint64_t>(2);
+      values_by_key[key_prefix] = std::vector<int64_t>(2);
     }
-    // TODO: check
-    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value, ncpus_);
 
     old_key = key;
   }
 
   // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
+  std::vector<std::pair<std::vector<uint8_t>, int64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key)
   {
     assert(map_elem.second.size() == 2);
-    uint64_t count = map_elem.second.at(0);
-    uint64_t total = map_elem.second.at(1);
-    uint64_t value = 0;
+    int64_t count = map_elem.second.at(0);
+    int64_t total = map_elem.second.at(1);
+    int64_t value = 0;
 
     if (count != 0)
       value = total / count;
