@@ -11,6 +11,42 @@ namespace test {
 namespace semantic_analyser {
 
 using ::testing::_;
+using ::testing::HasSubstr;
+
+void test_for_warning(
+          BPFtrace &bpftrace,
+          const std::string &input,
+          const std::string &warning,
+          bool invert = false,
+          bool safe_mode = true)
+{
+  Driver driver(bpftrace);
+  bpftrace.safe_mode_ = safe_mode;
+  ASSERT_EQ(driver.parse_str(input), 0);
+
+  ClangParser clang;
+  clang.parse(driver.root_, bpftrace);
+
+  ASSERT_EQ(driver.parse_str(input), 0);
+  std::stringstream out;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
+  semantics.analyse();
+  if (invert)
+    EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
+  else
+    EXPECT_THAT(out.str(), HasSubstr(warning));
+}
+
+void test_for_warning(
+                      const std::string &input,
+                      const std::string &warning,
+                      bool invert = false,
+                      bool safe_mode = true)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test_for_warning(*bpftrace, input, warning, invert, safe_mode);
+}
+
 
 void test(
     BPFtrace &bpftrace,
