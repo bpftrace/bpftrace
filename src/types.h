@@ -76,7 +76,7 @@ public:
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
-  size_t pointee_size;
+  size_t pointee_size = 0;
 
   bool IsArray() const;
   bool IsStack() const;
