@@ -797,10 +797,7 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
       case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
-      case bpftrace::Parser::token::DIV: {
-        expr_ = do_signed ? b_.CreateSDiv(lhs, rhs) : b_.CreateUDiv(lhs, rhs);
-        break;
-      }
+      case bpftrace::Parser::token::DIV:   expr_ = b_.CreateUDiv   (lhs, rhs); break;
       case bpftrace::Parser::token::MOD: {
         expr_ = do_signed ? b_.CreateSRem(lhs, rhs) : b_.CreateURem(lhs, rhs);
         break;
