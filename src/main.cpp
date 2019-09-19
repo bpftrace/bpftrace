@@ -22,13 +22,22 @@
 
 using namespace bpftrace;
 
+namespace {
+enum class OutputBufferConfig {
+  UNSET = 0,
+  LINE,
+  FULL,
+  NONE,
+};
+} // namespace
+
 void usage()
 {
   std::cerr << "USAGE:" << std::endl;
   std::cerr << "    bpftrace [options] filename" << std::endl;
   std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
-  std::cerr << "    -B MODE        output buffering mode ('line', 'full', or 'none')" << std::endl;
+  std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
@@ -121,6 +130,7 @@ int main(int argc, char *argv[])
   bool listing = false;
   bool safe_mode = true;
   std::string script, search, file_name, output_file, output_format;
+  OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
   const char* const short_options = "dB:f:e:hlp:vc:Vo:I:";
@@ -153,11 +163,11 @@ int main(int argc, char *argv[])
         break;
       case 'B':
         if (std::strcmp(optarg, "line") == 0) {
-          std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+          obc = OutputBufferConfig::LINE;
         } else if (std::strcmp(optarg, "full") == 0) {
-          std::setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+          obc = OutputBufferConfig::FULL;
         } else if (std::strcmp(optarg, "none") == 0) {
-          std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+          obc = OutputBufferConfig::NONE;
         } else {
           std::cerr << "USAGE: -B must be either 'line', 'full', or 'none'." << std::endl;
           return 1;
@@ -242,6 +252,23 @@ int main(int argc, char *argv[])
     std::cerr << "Valid formats: 'text', 'json'" << std::endl;
     return 1;
   }
+
+  switch (obc) {
+    case OutputBufferConfig::UNSET:
+    case OutputBufferConfig::LINE:
+      std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+      break;
+    case OutputBufferConfig::FULL:
+      std::setvbuf(stdout, NULL, _IOFBF, BUFSIZ);
+      break;
+    case OutputBufferConfig::NONE:
+      std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+      break;
+    default:
+      // Should never get here
+      std::abort();
+  }
+
   BPFtrace bpftrace(std::move(output));
   Driver driver(bpftrace);
 
