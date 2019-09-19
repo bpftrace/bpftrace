@@ -19,12 +19,12 @@ namespace ast {
 
 void SemanticAnalyser::visit(Integer &integer)
 {
-  integer.type = SizedType(Type::integer, 8);
+  integer.type = SizedType(Type::integer, 8, true);
 }
 
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
-  param.type = SizedType(Type::integer, 8);
+  param.type = SizedType(Type::integer, 8, true);
   switch (param.ptype) {
     case PositionalParameterType::positional:
       if (param.n <= 0) {
@@ -102,7 +102,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "curtask" ||
       builtin.ident == "rand" ||
       builtin.ident == "ctx") {
-    builtin.type = SizedType(Type::integer, 8);
+    builtin.type = SizedType(Type::integer, 8, false);
     if (builtin.ident == "cgroup") {
       #ifndef HAVE_GET_CURRENT_CGROUP_ID
         err_ << "BPF_FUNC_get_current_cgroup_id is not available for your kernel version" << std::endl;
@@ -277,34 +277,38 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "sum") {
+    bool sign = false;
     check_assignment(call, true, false);
-    check_nargs(call, 1);
-
-    call.type = SizedType(Type::sum, 8);
+    if (check_nargs(call, 1)) {
+      sign = call.vargs->at(0)->type.is_signed;
+    }
+    call.type = SizedType(Type::sum, 8, sign);
   }
   else if (call.func == "min") {
+    bool sign = false;
     check_assignment(call, true, false);
-    check_nargs(call, 1);
-
-    call.type = SizedType(Type::min, 8);
+    if (check_nargs(call, 1)) {
+      sign = call.vargs->at(0)->type.is_signed;
+    }
+    call.type = SizedType(Type::min, 8, sign);
   }
   else if (call.func == "max") {
+    bool sign = false;
     check_assignment(call, true, false);
-    check_nargs(call, 1);
-
-    call.type = SizedType(Type::max, 8);
+    if (check_nargs(call, 1)) {
+      sign = call.vargs->at(0)->type.is_signed;
+    }
+    call.type = SizedType(Type::max, 8, sign);
   }
   else if (call.func == "avg") {
     check_assignment(call, true, false);
     check_nargs(call, 1);
-
-    call.type = SizedType(Type::avg, 8);
+    call.type = SizedType(Type::avg, 8, true);
   }
   else if (call.func == "stats") {
     check_assignment(call, true, false);
     check_nargs(call, 1);
-
-    call.type = SizedType(Type::stats, 8);
+    call.type = SizedType(Type::stats, 8, true);
   }
   else if (call.func == "delete") {
     check_assignment(call, false, false);
@@ -598,7 +602,13 @@ void SemanticAnalyser::visit(Map &map)
         // promote map key to 64-bit:
         if (!expr->type.IsArray())
           expr->type.size = 8;
-        key.args_.push_back(expr->type);
+
+        // Skip is_signed when comparing keys to not break existing scripts
+        // which use maps as a lookup table
+        // TODO (fbs): This needs a better solution
+        SizedType keytype = expr->type;
+        keytype.is_signed = false;
+        key.args_.push_back(keytype);
       }
     }
 
@@ -674,6 +684,8 @@ void SemanticAnalyser::visit(Binop &binop)
   binop.right->accept(*this);
   Type &lhs = binop.left->type.type;
   Type &rhs = binop.right->type.type;
+  bool lsign = binop.left->type.is_signed;
+  bool rsign = binop.right->type.is_signed;
 
   std::stringstream buf;
   if (is_final_pass()) {
@@ -686,7 +698,58 @@ void SemanticAnalyser::visit(Binop &binop)
       buf << "with '" << rhs << "'";
       bpftrace_.error(err_, binop.loc, buf.str());
     }
+    // Follow what C does
+    else if (lhs == Type::integer && rhs == Type::integer) {
+      auto &left = binop.left;
+      auto &right = binop.right;
+      if (lsign != rsign) {
+        // In case of:
+        //
+        // unsigned int a;
+        // if (a > 10) ...;
+        //
+        // No warning should be emitted as we know that 10 can be
+        // represented as unsigned int
+        if (lsign && !rsign && left->is_literal &&
+            (static_cast<ast::Integer*>(binop.left))->n >= 0) {
+          left->type.is_signed = lsign = false;
 
+        }
+        // The reverse (10 < a) should also hold
+        else if (!lsign && rsign && right->is_literal &&
+            (static_cast<ast::Integer*>(binop.right))->n >= 0) {
+          right->type.is_signed = rsign = false;
+        }
+        else {
+          switch (binop.op) {
+          case bpftrace::Parser::token::EQ:
+          case bpftrace::Parser::token::NE:
+          case bpftrace::Parser::token::LE:
+          case bpftrace::Parser::token::GE:
+          case bpftrace::Parser::token::LT:
+          case bpftrace::Parser::token::GT:
+            buf << "comparison of integers of different signs: '"
+                << binop.left->type << "' and '"
+                << binop.right->type << "'"
+                << " can lead to undefined behavior";
+            bpftrace_.warning(out_, binop.loc, buf.str());
+            break;
+          case bpftrace::Parser::token::PLUS:
+          case bpftrace::Parser::token::MINUS:
+          case bpftrace::Parser::token::MUL:
+          case bpftrace::Parser::token::DIV:
+          case bpftrace::Parser::token::MOD:
+            buf << "arithmetic on integers of different signs: '"
+                << left->type << "' and '" << right->type << "'"
+                << " can lead to undefined behavior";
+            bpftrace_.warning(out_, binop.loc, buf.str());
+            break;
+          default:
+            break;
+          }
+        }
+      }
+    }
     else if (lhs != Type::integer
              && binop.op != Parser::token::EQ
              && binop.op != Parser::token::NE) {
@@ -697,7 +760,17 @@ void SemanticAnalyser::visit(Binop &binop)
     }
   }
 
-  binop.type = SizedType(Type::integer, 8);
+  bool is_signed = lsign && rsign;
+  switch (binop.op) {
+    case bpftrace::Parser::token::LEFT:
+    case bpftrace::Parser::token::RIGHT:
+      is_signed = lsign;
+      break;
+    default:
+      break;
+  }
+
+  binop.type = SizedType(Type::integer, 8, is_signed);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
@@ -712,7 +785,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     if (unop.expr->is_map) {
       Map &map = static_cast<Map&>(*unop.expr);
-      assign_map_type(map, SizedType(Type::integer, 8));
+      assign_map_type(map, SizedType(Type::integer, 8, true));
     }
   }
 
@@ -743,11 +816,14 @@ void SemanticAnalyser::visit(Unop &unop)
       }
     }
     else if (type.type == Type::integer) {
-      unop.type = SizedType(Type::integer, type.size);
+      unop.type = SizedType(Type::integer, type.size, type.is_signed);
     }
   }
+  else if (unop.op == Parser::token::LNOT) {
+    unop.type = SizedType(Type::integer, type.size, false);
+  }
   else {
-    unop.type = SizedType(Type::integer, 8);
+    unop.type = SizedType(Type::integer, 8, type.is_signed);
   }
 }
 
@@ -768,7 +844,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
   if (lhs == Type::string)
     ternary.type = SizedType(lhs, STRING_SIZE);
   else if (lhs == Type::integer)
-    ternary.type = SizedType(lhs, 8);
+    ternary.type = SizedType(lhs, 8, ternary.left->type.is_signed);
   else {
     err_ << "Ternary return type unsupported " << lhs << std::endl;
   }

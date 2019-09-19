@@ -229,7 +229,8 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     call.vargs->front()->accept(*this);
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    // promote int to 64-bit
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     b_.CreateStore(b_.CreateAdd(expr_, oldval), newval);
     b_.CreateMapUpdateElem(map, key, newval);
 
@@ -249,7 +250,8 @@ void CodegenLLVM::visit(Call &call)
     // elements will always store on the first occurrance. Revent this later when printing.
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    // promote int to 64-bit
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     Value *inverted = b_.CreateSub(b_.getInt64(0xffffffff), expr_);
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
@@ -274,7 +276,8 @@ void CodegenLLVM::visit(Call &call)
 
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    // promote int to 64-bit
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
     b_.CreateCondBr(b_.CreateICmpSGE(expr_, oldval), ge, lt);
@@ -307,7 +310,8 @@ void CodegenLLVM::visit(Call &call)
     Value *total_old = b_.CreateMapLookupElem(map, total_key);
     AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     call.vargs->front()->accept(*this);
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    // promote int to 64-bit
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     b_.CreateStore(b_.CreateAdd(expr_, total_old), total_new);
     b_.CreateMapUpdateElem(map, total_key, total_new);
     b_.CreateLifetimeEnd(total_key);
@@ -319,7 +323,8 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     call.vargs->front()->accept(*this);
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+    // promote int to 64-bit
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     Function *log2_func = module_->getFunction("log2");
     Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
@@ -356,7 +361,7 @@ void CodegenLLVM::visit(Call &call)
     step = expr_;
 
     // promote int to 64-bit
-    value = b_.CreateIntCast(value, b_.getInt64Ty(), false);
+    value = b_.CreateIntCast(value, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     min = b_.CreateIntCast(min, b_.getInt64Ty(), false);
     max = b_.CreateIntCast(max, b_.getInt64Ty(), false);
     step = b_.CreateIntCast(step, b_.getInt64Ty(), false);
@@ -761,38 +766,56 @@ void CodegenLLVM::visit(Binop &binop)
     binop.right->accept(*this);
     rhs = expr_;
 
+    bool lsign = binop.left->type.is_signed;
+    bool rsign = binop.right->type.is_signed;
+    bool do_signed = lsign && rsign;
     // promote int to 64-bit
-    lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), false);
-    rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), false);
+    lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
+    rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
 
     switch (binop.op) {
       case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
       case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
-      case bpftrace::Parser::token::LE:    expr_ = b_.CreateICmpSLE(lhs, rhs); break;
-      case bpftrace::Parser::token::GE:    expr_ = b_.CreateICmpSGE(lhs, rhs); break;
-      case bpftrace::Parser::token::LT:    expr_ = b_.CreateICmpSLT(lhs, rhs); break;
-      case bpftrace::Parser::token::GT:    expr_ = b_.CreateICmpSGT(lhs, rhs); break;
+      case bpftrace::Parser::token::LE: {
+        expr_ = do_signed ? b_.CreateICmpSLE(lhs, rhs) : b_.CreateICmpULE(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::GE: {
+        expr_ = do_signed ? b_.CreateICmpSGE(lhs, rhs) : b_.CreateICmpUGE(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::LT: {
+        expr_ = do_signed ? b_.CreateICmpSLT(lhs, rhs) : b_.CreateICmpULT(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::GT: {
+        expr_ = do_signed ? b_.CreateICmpSGT(lhs, rhs) : b_.CreateICmpUGT(lhs, rhs);
+        break;
+      }
       case bpftrace::Parser::token::LEFT:  expr_ = b_.CreateShl    (lhs, rhs); break;
       case bpftrace::Parser::token::RIGHT: expr_ = b_.CreateLShr   (lhs, rhs); break;
       case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
       case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
       case bpftrace::Parser::token::DIV:   expr_ = b_.CreateUDiv   (lhs, rhs); break;
-      case bpftrace::Parser::token::MOD:   expr_ = b_.CreateURem   (lhs, rhs); break;
+      case bpftrace::Parser::token::MOD: {
+        expr_ = do_signed ? b_.CreateSRem(lhs, rhs) : b_.CreateURem(lhs, rhs);
+        break;
+      }
       case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
       case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
       case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
       case bpftrace::Parser::token::LAND:
-        std::cerr << "\"" << opstr(binop) << "\" was handled earlier" << std::endl;
-        abort();
       case bpftrace::Parser::token::LOR:
         std::cerr << "\"" << opstr(binop) << "\" was handled earlier" << std::endl;
         abort();
       default:
-        std::cerr << "missing codegen (LLVM) to string operator \"" << opstr(binop) << "\"" << std::endl;
+        std::cerr << "missing codegen (LLVM) to string operator \""
+                  << opstr(binop) << "\"" << std::endl;
         abort();
     }
   }
+  // Using signed extension will result in -1 which will likely confuse users
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
@@ -1039,7 +1062,8 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   array = expr_;
 
   arr.indexpr->accept(*this);
-  index = b_.CreateIntCast(expr_, b_.getInt64Ty(), false); // promote int to 64-bit
+  // promote int to 64-bit
+  index = b_.CreateIntCast(expr_, b_.getInt64Ty(), arr.expr->type.is_signed);
   offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
 
   AllocaInst *dst = b_.CreateAllocaBPF(SizedType(Type::integer, type.pointee_size), "array_access");
@@ -1095,7 +1119,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     if (map.type.type == Type::integer)
     {
       // Integers are always stored as 64-bit in map values
-      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), false);
+      expr = b_.CreateIntCast(expr, b_.getInt64Ty(), map.type.is_signed);
     }
     val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(expr, val);
@@ -1369,7 +1393,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
       else
         // promote map key to 64-bit:
-        b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), false), offset_val);
+        b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed), offset_val);
       offset += expr->type.size;
     }
   }
@@ -1746,6 +1770,5 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
 
   return bpforc;
 }
-
 } // namespace ast
 } // namespace bpftrace

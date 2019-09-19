@@ -33,7 +33,7 @@ entry:
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
-  %5 = zext i8 %3 to i64
+  %5 = sext i8 %3 to i64
   %6 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 %5, i64* %"@x_val", align 8
@@ -79,7 +79,7 @@ entry:
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
-  %5 = zext i8 %3 to i64
+  %5 = sext i8 %3 to i64
   %6 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   store i64 %5, i64* %"@x_val", align 8
@@ -127,7 +127,7 @@ entry:
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
-  %3 = zext i8 %1 to i64
+  %3 = sext i8 %1 to i64
   %4 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %3, i64* %"@x_val", align 8
