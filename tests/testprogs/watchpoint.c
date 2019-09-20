@@ -17,5 +17,9 @@ int main() {
     return 1;
   }
 
-  *((volatile uint8_t*)addr) = 2;
+
+  uint8_t i = 0;
+  while (1) {
+    *((volatile uint8_t*)addr) = i++;
+  }
 }

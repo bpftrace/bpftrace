@@ -1,4 +1,4 @@
 NAME watchpoint - absolute address
-RUN bpftrace -v -e 'watchpoint::0x10000000:8:w { printf("hit!\n"); }' -c ./testprogs/watchpoint
+RUN bpftrace -v -e 'watchpoint::0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
 EXPECT hit!
 TIMEOUT 5
