@@ -324,6 +324,11 @@ void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
+
+  for (int pid : child_pids_)
+  {
+    kill(pid, SIGTERM);
+  }
 }
 
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
