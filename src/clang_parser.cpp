@@ -182,22 +182,21 @@ static SizedType get_sized_type(CXType clang_type)
   switch (clang_type.kind)
   {
     case CXType_Bool:
+    case CXType_Char_S:
     case CXType_Char_U:
+    case CXType_SChar:
     case CXType_UChar:
+    case CXType_Short:
     case CXType_UShort:
+    case CXType_Int:
     case CXType_UInt:
+    case CXType_Long:
     case CXType_ULong:
+    case CXType_LongLong:
     case CXType_ULongLong:
       return SizedType(Type::integer, size);
     case CXType_Record:
       return SizedType(Type::cast, size, typestr);
-    case CXType_Char_S:
-    case CXType_SChar:
-    case CXType_Short:
-    case CXType_Long:
-    case CXType_LongLong:
-    case CXType_Int:
-      return SizedType(Type::integer, size, true);
     case CXType_Pointer:
     {
       auto pointee_type = clang_getPointeeType(clang_type);

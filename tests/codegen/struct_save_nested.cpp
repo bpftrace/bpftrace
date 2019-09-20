@@ -72,8 +72,7 @@ lookup_success8:                                  ; preds = %lookup_merge
   %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_idx = getelementptr inbounds i8, i8* %lookup_elem7, i64 4
   %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_cast = bitcast i8* %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_idx to i64*
   %lookup_elem_val11.sroa.3.0.copyload = load i64, i64* %lookup_elem_val11.sroa.3.0.lookup_elem7.sroa_cast, align 1
-  %sext = shl i64 %lookup_elem_val11.sroa.3.0.copyload, 32
-  %phitmp17 = ashr exact i64 %sext, 32
+  %phitmp17 = and i64 %lookup_elem_val11.sroa.3.0.copyload, 4294967295
   br label %lookup_merge10
 
 lookup_merge10:                                   ; preds = %lookup_merge, %lookup_success8

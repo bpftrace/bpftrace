@@ -1024,14 +1024,8 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
     return resolve_uid(*(uint64_t*)(value.data()));
   else if (map.type_.type == Type::string)
     return std::string(reinterpret_cast<const char*>(value.data()));
-  else if (map.type_.type == Type::count)
-    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
-  else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
-    if (map.type_.is_signed)
-      return std::to_string(reduce_value<int64_t>(value, ncpus_) / div);
-
-    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
-  }
+  else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
+    return std::to_string(reduce_value(value, ncpus_) / div);
   else if (map.type_.type == Type::min)
     return std::to_string(min_value(value, ncpus_) / div);
   else if (map.type_.type == Type::max)
@@ -1086,12 +1080,9 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
   {
-    bool is_signed = map.type_.is_signed;
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      if (is_signed)
-        return reduce_value<int64_t>(a.second, ncpus_) < reduce_value<int64_t>(b.second, ncpus_);
-      return reduce_value<uint64_t>(a.second, ncpus_) < reduce_value<uint64_t>(b.second, ncpus_);
+      return reduce_value(a.second, ncpus_) < reduce_value(b.second, ncpus_);
     });
   }
   else if (map.type_.type == Type::min)
@@ -1172,7 +1163,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
 
     old_key = key;
   }
@@ -1217,7 +1208,7 @@ int BPFtrace::print_map_stats(IMap &map)
   }
   auto key(old_key);
 
-  std::map<std::vector<uint8_t>, std::vector<int64_t>> values_by_key;
+  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
@@ -1245,21 +1236,21 @@ int BPFtrace::print_map_stats(IMap &map)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      values_by_key[key_prefix] = std::vector<int64_t>(2);
+      values_by_key[key_prefix] = std::vector<uint64_t>(2);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
 
     old_key = key;
   }
 
   // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, int64_t>> total_counts_by_key;
+  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key)
   {
     assert(map_elem.second.size() == 2);
-    int64_t count = map_elem.second.at(0);
-    int64_t total = map_elem.second.at(1);
-    int64_t value = 0;
+    uint64_t count = map_elem.second.at(0);
+    uint64_t total = map_elem.second.at(1);
+    uint64_t value = 0;
 
     if (count != 0)
       value = total / count;
@@ -1354,13 +1345,12 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
   return -1;  // silence end of control compiler warning
 }
 
-template <typename T>
-T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
+uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
 {
-  T sum = 0;
+  uint64_t sum = 0;
   for (int i=0; i<ncpus; i++)
   {
-    sum += *(const T*)(value.data() + i*sizeof(T*));
+    sum += *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
   }
   return sum;
 }
@@ -1816,15 +1806,7 @@ const std::string BPFtrace::get_source_line(unsigned int n)
   return buf;
 }
 
-void BPFtrace::warning(std::ostream &out, const location &l, const std::string &m) {
-  log_with_location("WARNING", out, l, m);
-}
-
-void BPFtrace::error(std::ostream &out, const location &l, const std::string &m) {
-  log_with_location("ERROR", out, l, m);
-}
-
-void BPFtrace::log_with_location(std::string level, std::ostream &out, const location &l, const std::string &m)
+void BPFtrace::error(std::ostream &out, const location &l, const std::string &m)
 {
   if (filename_ != "") {
     out << filename_ << ":";
@@ -1832,13 +1814,13 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
 
   // print only the message if location info wasn't set
   if (l.begin.line == 0) {
-    out << level << ": " << m << std::endl;
+    out << "ERROR: " << m << std::endl;
     return;
   }
 
   if (l.begin.line > l.end.line) {
     out << "BUG: begin > end: " << l.begin << ":" << l.end << std::endl;
-    out << level << ": " << m << std::endl;
+    out << "ERROR: " << m << std::endl;
     return;
   }
 
@@ -1864,7 +1846,7 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
             ~~~~~~~~~~
   */
   out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": " << level << ": " << m << std::endl;
+  out << ": ERROR: " << m << std::endl;
   std::string srcline = get_source_line(l.begin.line - 1);
 
   if (srcline == "")

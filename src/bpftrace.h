@@ -103,8 +103,6 @@ public:
   size_t num_params() const;
   void request_finalize();
   void error(std::ostream &out, const location &l, const std::string &m);
-  void warning(std::ostream &out, const location &l, const std::string &m);
-  void log_with_location(std::string, std::ostream &, const location &, const std::string &);
 
   std::string cmd_;
   int pid_{0};
@@ -184,7 +182,7 @@ private:
   int print_map_stats(IMap &map);
   int print_hist(const std::vector<uint64_t> &values, uint32_t div) const;
   int print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
-  template <typename T> static T reduce_value(const std::vector<uint8_t> &value, int ncpus);
+  static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
   static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t read_address_from_output(std::string output);

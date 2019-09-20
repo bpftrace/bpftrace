@@ -260,8 +260,8 @@ void TextOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
 }
 
 void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
-                           const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-                           const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const
+                           const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
+                           const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
   for (auto &key_count : total_counts_by_key)
   {
@@ -269,9 +269,9 @@ void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     auto &value = values_by_key.at(key);
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": ";
 
-    int64_t count = (int64_t)value.at(0);
-    int64_t total = value.at(1);
-    int64_t average = 0;
+    uint64_t count = value.at(0);
+    uint64_t total = value.at(1);
+    uint64_t average = 0;
 
     if (count != 0)
       average = total / count;
@@ -506,8 +506,8 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
 }
 
 void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
-                           const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-                           const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const
+                           const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
+                           const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const
 {
   if (total_counts_by_key.empty())
     return;
@@ -531,8 +531,8 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     }
 
     uint64_t count = value.at(0);
-    int64_t total = value.at(1);
-    int64_t average = 0;
+    uint64_t total = value.at(1);
+    uint64_t average = 0;
 
     if (count != 0)
       average = total / count;
