@@ -17,24 +17,18 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   {
     os << type.cast_type;
   }
-  else if (type.type == Type::integer)
-  {
-    os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
-  }
   else
   {
     os << type.type;
   }
-
   if (type.is_pointer)
     os << "*";
-
   return os;
 }
 
 bool SizedType::operator==(const SizedType &t) const
 {
-  return type == t.type && size == t.size && is_signed == t.is_signed;
+  return type == t.type && size == t.size;
 }
 
 bool SizedType::IsArray() const
