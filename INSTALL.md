@@ -45,7 +45,7 @@ This can be verified by running the `check_kernel_features` script from the
 ## Ubuntu packages
 
 ```
-sudo apt-get install bpftrace
+sudo apt-get install -y bpftrace
 ```
 
 Should work on Ubuntu 19.04 and later.
@@ -64,7 +64,7 @@ The snap package also currently has issues with uprobes ([#829](https://github.c
 For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
 
 ```
-sudo dnf install bpftrace
+sudo dnf install -y bpftrace
 ```
 
 ## Gentoo package
@@ -107,7 +107,7 @@ The version of `bcc` available in Ubuntu 19.04 (Disco) is new enough so
 compilation is not required, install with:
 
 ```
-sudo apt-get install libbpfcc-dev
+sudo apt-get install -y libbpfcc-dev
 ```
 
 ### Building `bpftrace`
@@ -115,7 +115,7 @@ sudo apt-get install libbpfcc-dev
 ```
 sudo apt-get update
 sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
-sudo apt-get install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
+sudo apt-get install -y llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
 cmake -DCMAKE_BUILD_TYPE=Release ..
