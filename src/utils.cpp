@@ -306,11 +306,19 @@ bool is_dir(const std::string& path)
 }
 
 namespace {
-  class KernelHeaderTmpDir {
+  struct KernelHeaderTmpDir {
     KernelHeaderTmpDir(const std::string& prefix) : path{prefix + "XXXXXX"}
     {
       if (::mkdtemp(&path[0]) == nullptr) {
         throw std::runtime_error("creating temporary path for kheaders.tar.xz failed");
+      }
+    }
+
+    ~KernelHeaderTmpDir()
+    {
+      if (path.size() > 0) {
+        // move_to either did not succeed or did not run, so clean up after ourselves
+        exec_system(("rm -rf " + path).c_str());
       }
     }
 
@@ -323,17 +331,6 @@ namespace {
     }
 
     std::string path;
-
-    friend std::string unpack_kheaders_tar_xz(const struct utsname&);
-
-  public:
-    ~KernelHeaderTmpDir()
-    {
-      if (path.size() > 0) {
-        // move_to either did not succeed or did not run, so clean up after ourselves
-        exec_system(("rm -rf " + path).c_str());
-      }
-    }
   };
 
   std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
@@ -353,7 +350,7 @@ namespace {
     }
 
     if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
-      FILE* modprobe = popen("modprobe kheaders", "w");
+      FILE* modprobe = ::popen("modprobe kheaders", "w");
       if (modprobe == nullptr || pclose(modprobe) != 0) {
         return "";
       }
@@ -365,12 +362,12 @@ namespace {
 
     KernelHeaderTmpDir tmpdir{path_prefix};
 
-    FILE* tar = popen(("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
+    FILE* tar = ::popen(("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
     if (!tar) {
       return "";
     }
 
-    int rc = pclose(tar);
+    int rc = ::pclose(tar);
     if (rc == 0) {
       tmpdir.move_to(shared_path);
       return shared_path;
