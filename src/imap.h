@@ -21,6 +21,9 @@ public:
   SizedType type_;
   MapKey key_;
   enum bpf_map_type map_type_;
+  bool is_per_cpu_type() {
+    return map_type_ == BPF_MAP_TYPE_PERCPU_HASH || map_type_ == BPF_MAP_TYPE_PERCPU_ARRAY;
+  }
 
   // used by lhist(). TODO: move to separate Map object.
   int lqmin;
