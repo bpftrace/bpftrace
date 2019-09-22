@@ -184,9 +184,9 @@ private:
   int print_map_stats(IMap &map);
   int print_hist(const std::vector<uint64_t> &values, uint32_t div) const;
   int print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
-  template <typename T> static T reduce_value(const std::vector<uint8_t> &value, int ncpus);
-  static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
-  static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
+  template <typename T> static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
+  static int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
+  static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   static int spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd);
