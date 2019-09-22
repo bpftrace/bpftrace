@@ -969,6 +969,7 @@ int BPFtrace::clear_map(IMap &map)
 // zero a map
 int BPFtrace::zero_map(IMap &map)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -995,12 +996,7 @@ int BPFtrace::zero_map(IMap &map)
     old_key = key;
   }
 
-  int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::sum ||
-      map.type_.type == Type::min || map.type_.type == Type::max ||
-      map.type_.type == Type::avg || map.type_.type == Type::hist ||
-      map.type_.type == Type::lhist || map.type_.type == Type::stats )
-    value_size *= ncpus_;
+  int value_size = map.type_.size * nvalues;
   std::vector<uint8_t> zero(value_size, 0);
   for (auto &key : keys)
   {
@@ -1018,6 +1014,7 @@ int BPFtrace::zero_map(IMap &map)
 
 std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   if (map.type_.type == Type::kstack)
     return get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
   else if (map.type_.type == Type::ustack)
@@ -1033,17 +1030,17 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::string)
     return std::string(reinterpret_cast<const char*>(value.data()));
   else if (map.type_.type == Type::count)
-    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
+    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
     if (map.type_.is_signed)
-      return std::to_string(reduce_value<int64_t>(value, ncpus_) / div);
+      return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
-    return std::to_string(reduce_value<uint64_t>(value, ncpus_) / div);
+    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   }
   else if (map.type_.type == Type::min)
-    return std::to_string(min_value(value, ncpus_) / div);
+    return std::to_string(min_value(value, nvalues) / div);
   else if (map.type_.type == Type::max)
-    return std::to_string(max_value(value, ncpus_) / div);
+    return std::to_string(max_value(value, nvalues) / div);
   else if (map.type_.type == Type::probe)
     return resolve_probe(*(uint64_t*)value.data());
   else
@@ -1052,6 +1049,7 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
 
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -1070,9 +1068,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     int value_size = map.type_.size;
-    if (map.type_.type == Type::count || map.type_.type == Type::sum ||
-        map.type_.type == Type::min || map.type_.type == Type::max || map.type_.type == Type::integer)
-      value_size *= ncpus_;
+    value_size *= nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err == -1)
@@ -1098,22 +1094,22 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
       if (is_signed)
-        return reduce_value<int64_t>(a.second, ncpus_) < reduce_value<int64_t>(b.second, ncpus_);
-      return reduce_value<uint64_t>(a.second, ncpus_) < reduce_value<uint64_t>(b.second, ncpus_);
+        return reduce_value<int64_t>(a.second, nvalues) < reduce_value<int64_t>(b.second, nvalues);
+      return reduce_value<uint64_t>(a.second, nvalues) < reduce_value<uint64_t>(b.second, nvalues);
     });
   }
   else if (map.type_.type == Type::min)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return min_value(a.second, ncpus_) < min_value(b.second, ncpus_);
+      return min_value(a.second, nvalues) < min_value(b.second, nvalues);
     });
   }
   else if (map.type_.type == Type::max)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return max_value(a.second, ncpus_) < max_value(b.second, ncpus_);
+      return max_value(a.second, nvalues) < max_value(b.second, nvalues);
     });
   }
   else
@@ -1134,6 +1130,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   // e.g. A map defined as: @x[1, 2] = @hist(3);
   // would actually be stored with the key: [1, 2, 3]
 
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -1157,7 +1154,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
-    int value_size = map.type_.size * ncpus_;
+    int value_size = map.type_.size * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err == -1)
@@ -1180,7 +1177,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, nvalues);
 
     old_key = key;
   }
@@ -1209,6 +1206,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
 
 int BPFtrace::print_map_stats(IMap &map)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   // stats() and avg() maps add an extra 8 bytes onto the end of their key for
   // storing the bucket number.
 
@@ -1235,7 +1233,7 @@ int BPFtrace::print_map_stats(IMap &map)
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
-    int value_size = map.type_.size * ncpus_;
+    int value_size = map.type_.size * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
     if (err == -1)
@@ -1255,7 +1253,7 @@ int BPFtrace::print_map_stats(IMap &map)
       // New key - create a list of buckets for it
       values_by_key[key_prefix] = std::vector<int64_t>(2);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value, nvalues);
 
     old_key = key;
   }
@@ -1384,20 +1382,20 @@ pid_t BPFtrace::spawn_child()
 }
 
 template <typename T>
-T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
+T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int nvalues)
 {
   T sum = 0;
-  for (int i=0; i<ncpus; i++)
+  for (int i=0; i<nvalues; i++)
   {
     sum += *(const T*)(value.data() + i*sizeof(T*));
   }
   return sum;
 }
 
-uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
+uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int nvalues)
 {
   uint64_t val, max = 0;
-  for (int i=0; i<ncpus; i++)
+  for (int i=0; i<nvalues; i++)
   {
     val = *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
     if (val > max)
@@ -1406,10 +1404,10 @@ uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
   return max;
 }
 
-int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
+int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int nvalues)
 {
   int64_t val, max = 0, retval;
-  for (int i=0; i<ncpus; i++)
+  for (int i=0; i<nvalues; i++)
   {
     val = *(const int64_t*)(value.data() + i*sizeof(int64_t*));
     if (val > max)
@@ -1436,12 +1434,8 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
-  int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::hist ||
-      map.type_.type == Type::sum || map.type_.type == Type::min ||
-      map.type_.type == Type::max || map.type_.type == Type::avg ||
-      map.type_.type == Type::stats || map.type_.type == Type::lhist)
-    value_size *= ncpus_;
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
+  int value_size = map.type_.size * nvalues;
   auto value = std::vector<uint8_t>(value_size);
 
   if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
