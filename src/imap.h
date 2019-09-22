@@ -20,6 +20,7 @@ public:
   std::string name_;
   SizedType type_;
   MapKey key_;
+  enum bpf_map_type map_type_;
 
   // used by lhist(). TODO: move to separate Map object.
   int lqmin;
