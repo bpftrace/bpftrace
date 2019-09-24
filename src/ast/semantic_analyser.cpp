@@ -719,22 +719,25 @@ void SemanticAnalyser::visit(Binop &binop)
     else if (lhs == Type::integer && rhs == Type::integer) {
       auto &left = binop.left;
       auto &right = binop.right;
+      long lval = static_cast<ast::Integer*>(binop.left)->n;
+      long rval = static_cast<ast::Integer*>(binop.right)->n;
+
       if (lsign != rsign) {
-        // In case of:
+        // Convert operands to unsigned if it helps make (lsign == rsign)
+        //
+        // For example:
         //
         // unsigned int a;
         // if (a > 10) ...;
         //
         // No warning should be emitted as we know that 10 can be
         // represented as unsigned int
-        if (lsign && !rsign && left->is_literal &&
-            (static_cast<ast::Integer*>(binop.left))->n >= 0) {
+        if (lsign && !rsign && left->is_literal && lval >= 0) {
           left->type.is_signed = lsign = false;
 
         }
         // The reverse (10 < a) should also hold
-        else if (!lsign && rsign && right->is_literal &&
-            (static_cast<ast::Integer*>(binop.right))->n >= 0) {
+        else if (!lsign && rsign && right->is_literal && rval >= 0) {
           right->type.is_signed = rsign = false;
         }
         else {
@@ -764,6 +767,19 @@ void SemanticAnalyser::visit(Binop &binop)
           default:
             break;
           }
+        }
+      }
+      else if (lval < 0 || rval < 0) {
+        // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
+        // in kernel sources
+        switch (binop.op) {
+          case bpftrace::Parser::token::DIV:
+            buf << "signed division can lead to undefined behavior"
+                << std::endl;
+            bpftrace_.warning(out_, binop.loc, buf.str());
+            break;
+          default:
+            break;
         }
       }
     }
