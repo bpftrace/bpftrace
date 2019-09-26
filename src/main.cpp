@@ -42,6 +42,7 @@ void usage()
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
+  std::cerr << "    -b             force BTF (BPF type format) processing" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
-  const char* const short_options = "dB:f:e:hlp:vc:Vo:I:";
+  const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:";
   option long_options[] = {
     option{"help", no_argument, nullptr, 'h'},
     option{"version", no_argument, nullptr, 'V'},
