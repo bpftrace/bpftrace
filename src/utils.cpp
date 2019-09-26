@@ -305,6 +305,78 @@ bool is_dir(const std::string& path)
   return S_ISDIR(buf.st_mode);
 }
 
+namespace {
+  struct KernelHeaderTmpDir {
+    KernelHeaderTmpDir(const std::string& prefix) : path{prefix + "XXXXXX"}
+    {
+      if (::mkdtemp(&path[0]) == nullptr) {
+        throw std::runtime_error("creating temporary path for kheaders.tar.xz failed");
+      }
+    }
+
+    ~KernelHeaderTmpDir()
+    {
+      if (path.size() > 0) {
+        // move_to either did not succeed or did not run, so clean up after ourselves
+        exec_system(("rm -rf " + path).c_str());
+      }
+    }
+
+    void move_to(const std::string& new_path)
+    {
+      int err = ::rename(path.c_str(), new_path.c_str());
+      if (err == 0) {
+        path = "";
+      }
+    }
+
+    std::string path;
+  };
+
+  std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
+  {
+    std::string path_prefix{"/tmp"};
+    if (const char* tmpdir = ::getenv("TMPDIR")) {
+      path_prefix = tmpdir;
+    }
+    path_prefix += "/kheaders-";
+    std::string shared_path{path_prefix + utsname.release};
+
+    struct stat stat_buf;
+
+    if (::stat(shared_path.c_str(), &stat_buf) == 0) {
+      // already unpacked
+      return shared_path;
+    }
+
+    if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+      FILE* modprobe = ::popen("modprobe kheaders", "w");
+      if (modprobe == nullptr || pclose(modprobe) != 0) {
+        return "";
+      }
+
+      if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+        return "";
+      }
+    }
+
+    KernelHeaderTmpDir tmpdir{path_prefix};
+
+    FILE* tar = ::popen(("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
+    if (!tar) {
+      return "";
+    }
+
+    int rc = ::pclose(tar);
+    if (rc == 0) {
+      tmpdir.move_to(shared_path);
+      return shared_path;
+    }
+
+    return "";
+  }
+} // namespace
+
 // get_kernel_dirs returns {ksrc, kobj} - directories for pristine and
 // generated kernel sources.
 //
@@ -343,6 +415,10 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
     kobj = "";
   }
   if (ksrc == "" && kobj == "") {
+    const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
+    if (kheaders_tar_xz_path.size() > 0) {
+      return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
+    }
     return std::make_tuple("", "");
   }
   if (ksrc == "") {
