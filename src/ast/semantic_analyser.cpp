@@ -774,8 +774,7 @@ void SemanticAnalyser::visit(Binop &binop)
         // in kernel sources
         switch (binop.op) {
           case bpftrace::Parser::token::DIV:
-            buf << "signed division can lead to undefined behavior"
-                << std::endl;
+            buf << "signed division can lead to undefined behavior";
             bpftrace_.warning(out_, binop.loc, buf.str());
             break;
           default:
