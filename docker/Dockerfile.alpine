@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM alpine:3.10
 RUN apk add --update \
   bison \
   build-base \
@@ -10,15 +10,15 @@ RUN apk add --update \
   flex-dev \
   git \
   linux-headers \
-  llvm5-dev \
-  llvm5-static \
+  llvm8-dev \
+  llvm8-static \
   python \
   zlib-dev
 
 # Put LLVM directories where CMake expects them to be
-RUN ln -s /usr/lib/cmake/llvm5 /usr/lib/cmake/llvm
-RUN ln -s /usr/include/llvm5/llvm /usr/include/llvm
-RUN ln -s /usr/include/llvm5/llvm-c /usr/include/llvm-c
+RUN ln -s /usr/lib/cmake/llvm8 /usr/lib/cmake/llvm
+RUN ln -s /usr/include/llvm8/llvm /usr/include/llvm
+RUN ln -s /usr/include/llvm8/llvm-c /usr/include/llvm-c
 
 # Alpine currently does not have a package for bcc. Until they do,
 # we'll peg the alpine build to bcc v0.8.0
