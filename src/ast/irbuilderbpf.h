@@ -38,7 +38,8 @@ public:
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   CallInst   *CreateBpfPseudoCall(int mapfd);
   CallInst   *CreateBpfPseudoCall(Map &map);
-  Value      *CreateMapLookupElem(Map &map, AllocaInst *key);
+  CallInst   *CreateMapLookupElem(Map &map, AllocaInst *key);
+  Value      *CreateMapLookupElemValue(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
   void        CreateMapDeleteElem(Map &map, AllocaInst *key);
   void        CreateProbeRead(AllocaInst *dst, size_t size, Value *src);
@@ -59,6 +60,7 @@ public:
   CallInst   *CreateGetJoinMap(Value *ctx);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
+  Constant   *GetNULLPtr();
 
 private:
   Module &module_;

@@ -45,22 +45,22 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   %4 = bitcast i64* %"@x_key2" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 1, i64* %"@x_key2", align 8
-  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem4 = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo3, i64* nonnull %"@x_key2")
-  %map_lookup_cond9 = icmp eq i8* %lookup_elem4, null
-  br i1 %map_lookup_cond9, label %lookup_merge7, label %lookup_success5
+  %pseudo7 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %lookup_elem8 = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo7, i64* nonnull %"@x_key2")
+  %map_lookup_cond9 = icmp eq i8* %lookup_elem8, null
+  br i1 %map_lookup_cond9, label %lookup_merge5, label %lookup_success3
 
-lookup_success5:                                  ; preds = %lookup_merge
-  %5 = load i64, i8* %lookup_elem4, align 8
-  br label %lookup_merge7
+lookup_success3:                                  ; preds = %lookup_merge
+  %5 = load i64, i8* %lookup_elem8, align 8
+  br label %lookup_merge5
 
-lookup_merge7:                                    ; preds = %lookup_merge, %lookup_success5
-  %lookup_elem_val8.0 = phi i64 [ %5, %lookup_success5 ], [ 0, %lookup_merge ]
+lookup_merge5:                                    ; preds = %lookup_merge, %lookup_success3
+  %lookup_elem_val6.0 = phi i64 [ %5, %lookup_success3 ], [ 0, %lookup_merge ]
   %6 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
   %7 = lshr i64 %get_pid_tgid, 32
-  %8 = add i64 %7, %lookup_elem_val8.0
+  %8 = add i64 %7, %lookup_elem_val6.0
   store i64 %8, i64* %"@x_val", align 8
   %pseudo10 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem11 = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo10, i64* nonnull %"@x_key2", i64* nonnull %"@x_val", i64 0)

@@ -171,7 +171,13 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   return call;
 }
 
-Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
+Constant * IRBuilderBPF::GetNULLPtr() {
+  return ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy());
+}
+
+
+// CreateMapLookup
+CallInst* IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCall(map);
 
@@ -186,26 +192,33 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_lookup_elem),
       lookup_func_ptr_type);
-  CallInst *call = CreateCall(lookup_func, {map_ptr, key}, "lookup_elem");
+  return CreateCall(lookup_func, {map_ptr, key}, "lookup_elem");
+}
 
-  // Check if result == 0
+
+Value* IRBuilderBPF::CreateMapLookupElemValue(Map &map, AllocaInst *key)
+{
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(), "lookup_success", parent);
   BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
   BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
 
   AllocaInst *value = CreateAllocaBPF(map.type, "lookup_elem_val");
+
+  Value *call = CreateMapLookupElem(map, key);
+  Value *elem = CreateIntCast(call, getInt8PtrTy(), true);
+
   Value *condition = CreateICmpNE(
-      CreateIntCast(call, getInt8PtrTy(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
+      elem,
+      GetNULLPtr(),
       "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
   if (map.type.type == Type::string || map.type.type == Type::cast || map.type.type == Type::inet)
-    CREATE_MEMCPY(value, call, map.type.size, 1);
+    CREATE_MEMCPY(value, elem, map.type.size, 1);
   else
-    CreateStore(CreateLoad(getInt64Ty(), call), value);
+    CreateStore(CreateLoad(getInt64Ty(), elem), value);
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);

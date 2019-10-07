@@ -211,7 +211,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
@@ -225,7 +225,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     call.vargs->front()->accept(*this);
@@ -243,7 +243,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
@@ -271,7 +271,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     Function *parent = b_.GetInsertBlock()->getParent();
@@ -299,7 +299,7 @@ void CodegenLLVM::visit(Call &call)
     Map &map = *call.map;
 
     AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-    Value *count_old = b_.CreateMapLookupElem(map, count_key);
+    Value *count_old = b_.CreateMapLookupElemValue(map, count_key);
     AllocaInst *count_new = b_.CreateAllocaBPF(map.type, map.ident + "_num");
     b_.CreateStore(b_.CreateAdd(count_old, b_.getInt64(1)), count_new);
     b_.CreateMapUpdateElem(map, count_key, count_new);
@@ -307,7 +307,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(count_new);
 
     AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
-    Value *total_old = b_.CreateMapLookupElem(map, total_key);
+    Value *total_old = b_.CreateMapLookupElemValue(map, total_key);
     AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
@@ -329,7 +329,7 @@ void CodegenLLVM::visit(Call &call)
     Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
 
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
@@ -370,7 +370,7 @@ void CodegenLLVM::visit(Call &call)
 
     AllocaInst *key = getHistMapKey(map, linear);
 
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(map, key, newval);
@@ -692,7 +692,7 @@ void CodegenLLVM::visit(Call &call)
 void CodegenLLVM::visit(Map &map)
 {
   AllocaInst *key = getMapKey(map);
-  expr_ = b_.CreateMapLookupElem(map, key);
+  expr_ = b_.CreateMapLookupElemValue(map, key);
   b_.CreateLifetimeEnd(key);
 }
 
@@ -855,7 +855,7 @@ void CodegenLLVM::visit(Unop &unop)
         {
           Map &map = static_cast<Map&>(*unop.expr);
           AllocaInst *key = getMapKey(map);
-          Value *oldval = b_.CreateMapLookupElem(map, key);
+          Value *oldval = b_.CreateMapLookupElemValue(map, key);
           AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
           if (is_increment)
             b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
