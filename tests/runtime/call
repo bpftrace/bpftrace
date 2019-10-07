@@ -62,16 +62,24 @@ EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
 AFTER cat /dev/null
 
-NAME min
-RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}'
-EXPECT @.*\[.*\]\:\s[0-9]*
+NAME min negative value
+RUN bpftrace -v -e 'i:ms:100 { @=min(100); min(-444); exit() }'
+EXPECT @.*-444
 TIMEOUT 5
-AFTER cat /dev/null
 
-NAME max
-RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}'
-EXPECT @.*\[.*\]\:\s[0-9]*
-AFTER cat /dev/null
+NAME max negative value
+RUN bpftrace -v -e 'i:ms:100 { @=max(-1000); max(-444); exit() }'
+EXPECT @.*-444
+TIMEOUT 5
+
+NAME max zero value
+RUN bpftrace -v -e 'i:ms:100 { @=max(0); exit() }'
+EXPECT @: *0
+TIMEOUT 5
+
+NAME max 64 bit values
+RUN bpftrace -v -e 'i:ms:100 { @=max(100); @=max(9223372036854775807); exit() }'
+EXPECT @: *9223372036854775807
 TIMEOUT 5
 
 NAME stats

@@ -1031,13 +1031,8 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
     if (map.type_.is_signed)
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
-
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   }
-  else if (map.type_.type == Type::min)
-    return std::to_string(min_value(value, nvalues) / div);
-  else if (map.type_.type == Type::max)
-    return std::to_string(max_value(value, nvalues) / div);
   else if (map.type_.type == Type::probe)
     return resolve_probe(*(uint64_t*)value.data());
   else
@@ -1095,19 +1090,9 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       return reduce_value<uint64_t>(a.second, nvalues) < reduce_value<uint64_t>(b.second, nvalues);
     });
   }
-  else if (map.type_.type == Type::min)
+  else if (map.type_.type == Type::min || map.type_.type == Type::max)
   {
-    std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-    {
-      return min_value(a.second, nvalues) < min_value(b.second, nvalues);
-    });
-  }
-  else if (map.type_.type == Type::max)
-  {
-    std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-    {
-      return max_value(a.second, nvalues) < max_value(b.second, nvalues);
-    });
+
   }
   else
   {
@@ -1366,44 +1351,6 @@ T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int nvalues)
     sum += *(const T*)(value.data() + i*sizeof(T*));
   }
   return sum;
-}
-
-uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  uint64_t val, max = 0;
-  for (int i=0; i<nvalues; i++)
-  {
-    val = *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
-    if (val > max)
-      max = val;
-  }
-  return max;
-}
-
-int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  int64_t val, max = 0, retval;
-  for (int i=0; i<nvalues; i++)
-  {
-    val = *(const int64_t*)(value.data() + i*sizeof(int64_t*));
-    if (val > max)
-      max = val;
-  }
-
-  /*
-   * This is a hack really until the code generation for the min() function
-   * is sorted out. The way it is currently implemented doesn't allow >
-   * 32 bit quantities and also means we have to do gymnastics with the return
-   * value owing to the way it is stored (i.e., 0xffffffff - val).
-   */
-  if (max == 0) /* If we have applied the zero() function */
-    retval = max;
-  else if ((0xffffffff - max) <= 0) /* A negative 32 bit value */
-    retval =  0 - (max - 0xffffffff);
-  else
-    retval =  0xffffffff - max; /* A positive 32 bit value */
-
-  return retval;
 }
 
 std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const

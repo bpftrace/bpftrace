@@ -239,48 +239,31 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
-  else if (call.func == "min")
+  else if (call.func == "max" || call.func == "min")
   {
+    auto fn = call.func;
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElemValue(map, key);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    Value *valptr = b_.CreateMapLookupElem(map, key);
 
-    // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
-    // elements will always store on the first occurrance. Revent this later when printing.
-    Function *parent = b_.GetInsertBlock()->getParent();
-    call.vargs->front()->accept(*this);
-    // promote int to 64-bit
-    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
-    Value *inverted = b_.CreateSub(b_.getInt64(0xffffffff), expr_);
-    BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
-    BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(inverted, oldval), ge, lt);
-
-    b_.SetInsertPoint(ge);
-    b_.CreateStore(inverted, newval);
-    b_.CreateMapUpdateElem(map, key, newval);
-    b_.CreateBr(lt);
-
-    b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(key);
-    b_.CreateLifetimeEnd(newval);
-    expr_ = nullptr;
-  }
-  else if (call.func == "max")
-  {
-    Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElemValue(map, key);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
-    BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
-    BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(expr_, oldval), ge, lt);
+    BasicBlock *ok = BasicBlock::Create(module_->getContext(), fn+".ok", parent);
+    BasicBlock *lt = BasicBlock::Create(module_->getContext(), fn+".lt", parent);
+    BasicBlock *ge = BasicBlock::Create(module_->getContext(), fn+".ge", parent);
+    b_.CreateCondBr(b_.CreateICmpEQ(valptr, b_.GetNULLPtr()), ge, ok);
+
+    b_.SetInsertPoint(ok);
+    Value *oldval = b_.CreateLoad(b_.getInt64Ty(), valptr);
+    if (fn == "max") {
+      b_.CreateCondBr(b_.CreateICmpSGT(expr_, oldval), ge, lt);
+    } else {
+      b_.CreateCondBr(b_.CreateICmpSLT(expr_, oldval), ge, lt);
+    }
 
     b_.SetInsertPoint(ge);
     b_.CreateStore(expr_, newval);

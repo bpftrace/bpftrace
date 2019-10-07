@@ -37,8 +37,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
     key_size = 8;
 
   if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
-      type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
-      type.type == Type::avg || type.type == Type::stats) &&
+      type.type == Type::sum || type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
   {
       map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
