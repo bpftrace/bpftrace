@@ -1835,6 +1835,12 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
     out << filename_ << ":";
   }
 
+  std::string msg(m);
+
+  if (! msg.empty() && msg[msg.length() -1 ] == '\n') {
+    msg.erase(msg.length()-1);
+  }
+
   // print only the message if location info wasn't set
   if (l.begin.line == 0) {
     out << level << ": " << m << std::endl;
