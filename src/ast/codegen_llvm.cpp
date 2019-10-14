@@ -9,7 +9,6 @@
 #include <arpa/inet.h>
 #include "tracepoint_format_parser.h"
 
-#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -1753,7 +1752,7 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
     raw_os_ostream llvm_ostream(out);
     llvm_ostream << "Before optimization\n";
     llvm_ostream << "-------------------\n\n";
-    module_->print(llvm_ostream, nullptr, false, true);
+    DumpIR(llvm_ostream);
   }
 
   PM.run(*module_.get());
@@ -1765,7 +1764,7 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
       llvm_ostream << "\nAfter optimization\n";
       llvm_ostream << "------------------\n\n";
     }
-    module_->print(llvm_ostream, nullptr, false, true);
+    DumpIR(llvm_ostream);
   }
 
   auto bpforc = std::make_unique<BpfOrc>(targetMachine);
@@ -1773,5 +1772,15 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
 
   return bpforc;
 }
+
+void CodegenLLVM::DumpIR() {
+  raw_os_ostream llvm_ostream(std::cout);
+  DumpIR(llvm_ostream);
+}
+
+void CodegenLLVM::DumpIR(raw_os_ostream &out) {
+  module_->print(out, nullptr, false, true);
+}
+
 } // namespace ast
 } // namespace bpftrace
