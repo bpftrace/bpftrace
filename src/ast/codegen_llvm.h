@@ -8,6 +8,7 @@
 #include "irbuilderbpf.h"
 #include "map.h"
 
+#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
@@ -60,6 +61,8 @@ public:
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
+  void DumpIR();
+  void DumpIR(llvm::raw_os_ostream &out);
   void createLog2Function();
   void createLinearFunction();
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
