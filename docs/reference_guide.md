@@ -764,7 +764,8 @@ Here arg0 was casted as a (struct path \*), since that is the first argument to 
 Syntax:
 
 ```
-uprobe:library_name:function_name
+uprobe:library_name:function_name[+offset]
+uprobe:library_name:address
 uretprobe:library_name:function_name
 ```
 
@@ -796,6 +797,49 @@ read a line
 ```
 
 While tracing, this has caught a few executions of the `readline()` function in /bin/bash. This example is continued in the next section.
+
+It's also possible to specify uprobe with virtual address, like:
+
+```
+# objdump -tT /bin/bash | grep main
+...
+000000000002ec00 g    DF .text  0000000000001868  Base        main
+...
+# bpftrace -e 'uprobe:/bin/bash:0x2ec00 { printf("in here\n"); }'
+Attaching 1 probe...
+```
+
+And to specify offset within the probed function:
+
+```
+# objdump -d /bin/bash
+...
+000000000002ec00 <main@@Base>:
+   2ec00:       f3 0f 1e fa             endbr64
+   2ec04:       41 57                   push   %r15
+   2ec06:       41 56                   push   %r14
+   2ec08:       41 55                   push   %r13
+   ...
+# bpftrace -e 'uprobe:/bin/bash:main+4 { printf("in here\n"); }'
+Attaching 1 probe...
+...
+```
+
+The address is being checked if it's aligned with instruction boundaries.
+If it's not, we fail to add it:
+```
+# bpftrace -e 'uprobe:/bin/bash:main+1 { printf("in here\n"); }'
+Attaching 1 probe...
+Could not add uprobe into middle of instruction: /bin/bash:main+1
+```
+
+Unless you use --unsafe option:
+
+```
+# bpftrace -e 'uprobe:/bin/bash:main+1 { printf("in here\n"); } --unsafe'
+Attaching 1 probe...
+Unsafe uprobe in the middle of the instruction: /bin/bash:main+1
+```
 
 ## 4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments
 
