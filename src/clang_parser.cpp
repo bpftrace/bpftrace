@@ -415,7 +415,7 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
   if (ast::Expression::getResolve().size() == 0)
     return true;
 
-  BTF btf = BTF();
+  BTF &btf = bpftrace.btf_;
 
   if (!btf.has_data())
     return true;
