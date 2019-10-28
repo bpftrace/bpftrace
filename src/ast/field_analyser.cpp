@@ -27,8 +27,10 @@ void FieldAnalyser::visit(Identifier &identifier __attribute__((unused)))
 
 void FieldAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "curtask")
+  if (builtin.ident == "curtask") {
     type_ = "task_struct";
+    bpftrace_.btf_set_.insert(type_);
+  }
 }
 
 void FieldAnalyser::visit(Call &call)
@@ -105,14 +107,18 @@ void FieldAnalyser::visit(Unroll &unroll)
 void FieldAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
-  if (!type_.empty())
+  if (!type_.empty()) {
     type_ = bpftrace_.btf_.type_of(type_, acc.field);
+    bpftrace_.btf_set_.insert(type_);
+  }
 }
 
 void FieldAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
   type_ = cast.cast_type;
+  assert(!type_.empty());
+  bpftrace_.btf_set_.insert(type_);
 }
 
 void FieldAnalyser::visit(ExprStatement &expr)

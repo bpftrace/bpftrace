@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "headers.h"
 #include "btf.h"
+#include "field_analyser.h"
 
 namespace bpftrace {
 
@@ -372,7 +373,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
 bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
 {
-  if (ast::Expression::getResolve().size() == 0)
+  if (!bpftrace.btf_set_.size())
     return true;
 
   BTF &btf = bpftrace.btf_;
@@ -380,7 +381,7 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
   if (!btf.has_data())
     return true;
 
-  std::string input = btf.c_def(ast::Expression::getResolve());
+  std::string input = btf.c_def(bpftrace.btf_set_);
 
   CXUnsavedFile unsaved_files =
   {

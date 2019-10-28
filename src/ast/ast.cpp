@@ -5,11 +5,6 @@
 namespace bpftrace {
 namespace ast {
 
-std::unordered_set<std::string>& Expression::getResolve() {
-  static std::unordered_set<std::string> s;
-  return s;
-}
-
 void Integer::accept(Visitor &v) {
   v.visit(*this);
 }
