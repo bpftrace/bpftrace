@@ -283,6 +283,50 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
   return ret;
 }
 
+std::string BTF::type_of(std::string name, std::string field)
+{
+  __s32 type_id = btf__find_by_name(btf, name.c_str());
+
+  if (type_id < 0)
+    return std::string("");
+
+  const struct btf_type *type = btf__type_by_id(btf, type_id);
+
+  if (!type ||
+      (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
+       BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
+    return std::string("");
+
+  // We need to walk through oaa the struct/union members
+  // and try to find the requested field name.
+  //
+  // More info on struct/union members:
+  //  https://www.kernel.org/doc/html/latest/bpf/btf.html#btf-kind-union
+  const struct btf_member *m = reinterpret_cast<const struct btf_member*>(type + 1);
+
+  for (unsigned int i = 0; i < BTF_INFO_VLEN(type->info); i++)
+  {
+    std::string m_name = btf__name_by_offset(btf, m[i].name_off);
+
+    if (m_name != field)
+      continue;
+
+    const struct btf_type *f = btf__type_by_id(btf, m[i].type);
+
+    if (!f)
+      break;
+
+    // Get rid of all the pointers on the way to the actual type.
+    while (BTF_INFO_KIND(f->info) == BTF_KIND_PTR) {
+      f = btf__type_by_id(btf, f->type);
+    }
+
+    return btf_str(btf, f->name_off);
+  }
+
+  return std::string("");
+}
+
 } // namespace bpftrace
 
 #else // HAVE_LIBBPF_BTF_DUMP
@@ -294,6 +338,9 @@ BTF::BTF() { }
 BTF::~BTF() { }
 
 std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unused__))) { return std::string(""); }
+
+std::string BTF::type_of(std::string name __attribute__((__unused__)),
+                         std::string field __attribute__((__unused__))) { return std::string(""); }
 
 } // namespace bpftrace
 

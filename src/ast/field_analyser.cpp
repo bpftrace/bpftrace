@@ -105,7 +105,8 @@ void FieldAnalyser::visit(Unroll &unroll)
 void FieldAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
-  type_ = type_ + "::" + acc.field;
+  if (!type_.empty())
+    type_ = bpftrace_.btf_.type_of(type_, acc.field);
 }
 
 void FieldAnalyser::visit(Cast &cast)
@@ -160,7 +161,8 @@ void FieldAnalyser::visit(Program &program)
 
 int FieldAnalyser::analyse()
 {
-  root_->accept(*this);
+  if (bpftrace_.btf_.has_data())
+    root_->accept(*this);
   return 0;
 }
 
