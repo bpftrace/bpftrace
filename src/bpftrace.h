@@ -16,6 +16,7 @@
 #include "utils.h"
 #include "types.h"
 #include "output.h"
+#include "btf.h"
 
 namespace bpftrace {
 
@@ -158,6 +159,8 @@ public:
       int pid,
       const std::string &target) const;
   const std::string get_source_line(unsigned int);
+
+  BTF btf_;
 
 protected:
   std::vector<Probe> probes_;
