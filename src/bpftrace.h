@@ -161,6 +161,7 @@ public:
   const std::string get_source_line(unsigned int);
 
   BTF btf_;
+  std::unordered_set<std::string> btf_set_;
 
 protected:
   std::vector<Probe> probes_;

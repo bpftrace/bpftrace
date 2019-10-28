@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <unordered_set>
 #include "ast.h"
 #include "bpftrace.h"
 

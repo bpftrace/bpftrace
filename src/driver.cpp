@@ -11,7 +11,6 @@ namespace bpftrace {
 
 Driver::Driver(BPFtrace &bpftrace, std::ostream &o) : bpftrace_(bpftrace), out_(o)
 {
-  ast::Expression::getResolve().clear();
   yylex_init(&scanner_);
   parser_ = std::make_unique<Parser>(*this, scanner_);
 }
