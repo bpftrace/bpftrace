@@ -4,6 +4,7 @@ add_library(ast
   irbuilderbpf.cpp
   printer.cpp
   semantic_analyser.cpp
+  field_analyser.cpp
 )
 
 if(HAVE_GET_CURRENT_CGROUP_ID)
