@@ -17,6 +17,7 @@
 #include "list.h"
 #include "printer.h"
 #include "semantic_analyser.h"
+#include "field_analyser.h"
 #include "tracepoint_format_parser.h"
 #include "output.h"
 
@@ -348,6 +349,11 @@ int main(int argc, char *argv[])
 
   if (!is_root())
     return 1;
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  err = fields.analyse();
+  if (err)
+    return err;
 
   // FIXME (mmarchini): maybe we don't want to always enforce an infinite
   // rlimit?
