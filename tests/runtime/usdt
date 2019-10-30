@@ -94,11 +94,6 @@ TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 
-NAME "usdt probes - attach to probe with ambiguous wildcard file fails"
-RUN bpftrace -e 'usdt:./testprogs/u*::* { printf("here\n" ); exit(); }'
-EXPECT must refer to a unique binary
-TIMEOUT 5
-
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
 RUN bpftrace -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
 EXPECT Attaching 2 probes...
