@@ -199,6 +199,8 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_LongLong:
     case CXType_Int:
       return SizedType(Type::integer, size, true);
+    case CXType_Enum:
+      return SizedType(Type::integer, size);
     case CXType_Pointer:
     {
       auto pointee_type = clang_getPointeeType(clang_type);
