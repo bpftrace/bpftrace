@@ -84,6 +84,18 @@ TEST(clang_parser, c_union)
   EXPECT_EQ(structs["Foo"].fields["l"].offset, 0);
 }
 
+TEST(clang_parser, c_enum)
+{
+  BPFtrace bpftrace;
+  parse("enum E {NONE}; struct Foo { enum E e; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  EXPECT_EQ(structs["Foo"].fields["e"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["e"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["e"].offset, 0);
+}
+
 TEST(clang_parser, integer_ptr)
 {
   BPFtrace bpftrace;
