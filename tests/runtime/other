@@ -73,6 +73,11 @@ RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I g
 EXPECT I got hhvm-proc
 TIMEOUT 5
 
+NAME strncmp function argument
+RUN bpftrace -v -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
+EXPECT @: 0
+TIMEOUT 5
+
 NAME optional_positional_int
 RUN bpftrace -e 'BEGIN { printf("-%d-\n", $1); exit() }'
 EXPECT -0-

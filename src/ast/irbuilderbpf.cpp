@@ -392,14 +392,10 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
   for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
-    AllocaInst *val_char = CreateAllocaBPF(getInt8Ty(), "strcmp.char");
     Value *ptr = CreateAdd(
         val,
         getInt64(i));
-    CreateProbeRead(val_char, 1, ptr);
-
-    Value *l = CreateLoad(getInt8Ty(), val_char);
-    CreateLifetimeEnd(store);
+    Value *l = CreateLoad(getInt8Ty(), ptr);
     Value *r = getInt8(c_str[i]);
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, char_eq);
