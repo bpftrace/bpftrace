@@ -992,14 +992,14 @@ void SemanticAnalyser::visit(Cast &cast)
   cast.expr->accept(*this);
 
   const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
-      {"uint8", {1, false}},
-      {"int8", {1, true}},
-      {"uint16", {2, false}},
-      {"int16", {2, true}},
-      {"uint32", {4, false}},
-      {"int32", {4, true}},
-      {"uint64", {8, false}},
-      {"int64", {8, true}},
+      {"uint8", std::tuple<size_t, bool>{1, false}},
+      {"int8", std::tuple<size_t, bool>{1, true}},
+      {"uint16", std::tuple<size_t, bool>{2, false}},
+      {"int16", std::tuple<size_t, bool>{2, true}},
+      {"uint32", std::tuple<size_t, bool>{4, false}},
+      {"int32", std::tuple<size_t, bool>{4, true}},
+      {"uint64", std::tuple<size_t, bool>{8, false}},
+      {"int64", std::tuple<size_t, bool>{8, true}},
   };
 
   auto k_v = intcasts.find(cast.cast_type);
