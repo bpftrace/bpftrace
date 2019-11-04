@@ -957,7 +957,22 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else if (type.type == Type::cast)
   {
-    // Do nothing
+    switch (unop.op) {
+      case bpftrace::Parser::token::MUL:
+      {
+        if (type.is_pointer && unop.type.type == Type::integer)
+        {
+          int size = unop.type.size;
+          AllocaInst *dst = b_.CreateAllocaBPF(unop.type, "deref");
+          b_.CreateProbeRead(dst, size, expr_);
+          expr_ = b_.CreateLoad(dst);
+          b_.CreateLifetimeEnd(dst);
+        }
+        break;
+      }
+      default:
+        ; // Do nothing
+    }
   }
   else
   {

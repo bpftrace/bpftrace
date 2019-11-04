@@ -1,0 +1,11 @@
+NAME Sum casted value
+RUN bpftrace -v -e 'k:vfs_read { @=sum(*(uint8*)(reg("bp")-1)); exit();}'
+EXPECT ^@: [0-9]*
+TIMEOUT 5
+AFTER cat /dev/null
+
+NAME Casting ints
+RUN bpftrace -v -e 'k:vfs_read { $a=*(uint8*)(reg("bp")-1); printf("%d\n", $a); exit();}'
+EXPECT [0-9]*
+TIMEOUT 5
+AFTER cat /dev/null
