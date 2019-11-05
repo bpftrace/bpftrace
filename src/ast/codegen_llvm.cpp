@@ -1108,6 +1108,14 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     {
       val = expr;
     }
+    else if (assignment.expr->type.is_pointer)
+    {
+      // expr currently contains a pointer to the struct
+      // and that's what we are saving
+      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
+      b_.CreateStore(expr, dst);
+      val = dst;
+    }
     else
     {
       // expr currently contains a pointer to the struct
