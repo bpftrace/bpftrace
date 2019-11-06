@@ -228,54 +228,11 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
     const struct btf_type *t = btf__type_by_id(btf, id);
     const char *str = btf_str(btf, t->name_off);
 
-    /*
-     * TODO(danobi): Only resolve necessary types. This can be
-     * accomlished by doing something like:
-     *
-     *    for (...) {
-     *      const struct btf_type *t = ...
-     *      const char *str = ...
-     *
-     *      if (myset.find(str) != myset.end()) {
-     *        btf_dump__dump_type(...);
-     *        myset.erase(str);
-     *
-     *        <dump required forward declared types>
-     *      }
-     *    }
-     *
-     * Care are must be taken to fully resolve any accesses
-     * via a pointer. libbpf currently does not fully resolve types
-     * that are used as a pointer. For example, if in the kernel there
-     * was:
-     *
-     *    struct Bar {
-     *      int x;
-     *    };
-     *
-     *    struct Foo {
-     *      struct Bar *b;
-     *    };
-     *
-     * b would not be fully resolved. Instead, libbpf will dump a
-     * forward declaration. So the libbpf output would look like:
-     *
-     *    struct Bar;
-     *    struct Foo {
-     *      struct Bar *b;
-     *    }
-     *
-     * So for now, we read in every type BTF exposes. It's slower
-     * and less memory efficient, but it's more ergonomic for the
-     * user to not have to do an explicit cast every time they
-     * access a pointer.
-     */
-
-    for (id = 1; id <= max; id++)
+    auto it = myset.find(str);
+    if (it != myset.end())
     {
-      const struct btf_type *t = btf__type_by_id(btf, id);
-      const char *str = btf_str(btf, t->name_off);
       btf_dump__dump_type(dump, id);
+      myset.erase(it);
     }
   }
 
