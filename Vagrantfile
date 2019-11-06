@@ -7,7 +7,7 @@
 
 $ubuntu_18_deps = <<EOF
 apt-get -qq update
-apt-get -qq install linux-headers-$(uname -r)
+apt-get -qq install linux-headers-$(uname -r) binutils-dev
 apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
 apt-get -qq install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 EOF
