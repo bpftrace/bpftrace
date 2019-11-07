@@ -37,7 +37,6 @@ TIMEOUT 5
 AFTER dd if=/dev/random bs=3 count=1
 
 NAME tracepoint arg casts in predicates
-RUN bpftrace -v -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }'
-EXPECT @
+RUN bpftrace -v -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
+EXPECT @: 1
 TIMEOUT 5
-AFTER sleep 1 || wait $!
