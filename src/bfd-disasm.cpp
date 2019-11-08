@@ -5,6 +5,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+// bfd.h assumes everyone is using autotools and will error out unless
+// PACKAGE is defined. Some distros patch this check out.
+#define PACKAGE "bpftrace"
 #include <bfd.h>
 #include <dis-asm.h>
 #include "bcc_syms.h"

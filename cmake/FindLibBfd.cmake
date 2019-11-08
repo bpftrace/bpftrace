@@ -46,6 +46,8 @@ SET(CMAKE_REQUIRED_LIBRARIES bfd opcodes)
 INCLUDE(CheckCXXSourceCompiles)
 CHECK_CXX_SOURCE_COMPILES("
 #include <string.h>
+// See comment in bfd-disasm.cpp for why this needs to exist
+#define PACKAGE \"bpftrace-test\"
 #include <bfd.h>
 #include <dis-asm.h>
 int main(void) {
