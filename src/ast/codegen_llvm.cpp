@@ -1286,6 +1286,8 @@ void CodegenLLVM::visit(Probe &probe)
      * can restore it for the next pass (printf_id_, time_id_).
      */
     int starting_printf_id_ = printf_id_;
+    int starting_cat_id_ = cat_id_;
+    int starting_system_id_ = system_id_;
     int starting_time_id_ = time_id_;
     int starting_join_id_ = join_id_;
 
@@ -1302,6 +1304,8 @@ void CodegenLLVM::visit(Probe &probe)
       tracepoint_struct_ = "";
       for (auto &match_ : matches) {
         printf_id_ = starting_printf_id_;
+        cat_id_ = starting_cat_id_;
+        system_id_ = starting_system_id_;
         time_id_ = starting_time_id_;
         join_id_ = starting_join_id_;
 
