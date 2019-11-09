@@ -65,6 +65,8 @@ private:
   bool check_symbol(const Call &call, int arg_num);
 
   void check_stack_call(Call &call, Type type);
+  void error(const std::string &msg, const location &loc);
+  void warning(const std::string &msg, const location &loc);
 
   void assign_map_type(const Map &map, const SizedType &type);
 
