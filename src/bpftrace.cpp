@@ -1861,13 +1861,13 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
 
   // print only the message if location info wasn't set
   if (l.begin.line == 0) {
-    out << level << ": " << m << std::endl;
+    out << level << ": " << msg << std::endl;
     return;
   }
 
   if (l.begin.line > l.end.line) {
     out << "BUG: begin > end: " << l.begin << ":" << l.end << std::endl;
-    out << level << ": " << m << std::endl;
+    out << level << ": " << msg << std::endl;
     return;
   }
 
@@ -1875,7 +1875,7 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
      <filename>:<start_line>-<end_line>: ERROR: <message>
   */
   if (l.begin.line < l.end.line) {
-    out << l.begin.line << "-" << l.end.line << ": ERROR: " << m << std::endl;
+    out << l.begin.line << "-" << l.end.line << ": ERROR: " << msg << std::endl;
     return;
   }
 
@@ -1893,7 +1893,7 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
             ~~~~~~~~~~
   */
   out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": " << level << ": " << m << std::endl;
+  out << ": " << level << ": " << msg << std::endl;
   std::string srcline = get_source_line(l.begin.line - 1);
 
   if (srcline == "")
