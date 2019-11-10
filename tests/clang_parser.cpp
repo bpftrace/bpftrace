@@ -3,6 +3,8 @@
 #include "driver.h"
 #include "bpftrace.h"
 #include "struct.h"
+#include "field_analyser.h"
+#include <iostream>
 
 namespace bpftrace {
 namespace test {
@@ -16,6 +18,9 @@ static void parse(const std::string &input, BPFtrace &bpftrace, bool result = tr
   auto extended_input = input + probe;
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   ASSERT_EQ(clang.parse(driver.root_, bpftrace), result);
@@ -531,19 +536,45 @@ TEST(clang_parser, parse_fail)
 
 #include "btf_data.h"
 
-TEST(clang_parser, btf)
+class clang_parser_btf : public ::testing::Test {
+ protected:
+  void SetUp() override
+  {
+    char *path = strdup("/tmp/XXXXXX");
+    if (!path)
+      return;
+
+    int fd = mkstemp(path);
+    if (fd < 0)
+    {
+      std::remove(path);
+      return;
+    }
+
+    if (write(fd, btf_data, btf_data_len) != btf_data_len)
+    {
+      close(fd);
+      std::remove(path);
+      return;
+    }
+
+    close(fd);
+    setenv("BPFTRACE_BTF_TEST", path, true);
+    path_ = path;
+  }
+
+  void TearDown() override
+  {
+    // clear the environment and remove the temp file
+    unsetenv("BPFTRACE_BTF_TEST");
+    std::remove(path_);
+  }
+
+  char *path_;
+};
+
+TEST_F(clang_parser_btf, btf)
 {
-  char *path = strdup("/tmp/XXXXXX");
-  ASSERT_TRUE(path != NULL);
-
-  int fd = mkstemp(path);
-  ASSERT_TRUE(fd >= 0);
-
-  EXPECT_EQ(write(fd, btf_data, btf_data_len), btf_data_len);
-  close(fd);
-
-  ASSERT_EQ(setenv("BPFTRACE_BTF_TEST", path, true), 0);
-
   BPFtrace bpftrace;
   parse("", bpftrace, true,
         "kprobe:sys_read {\n"
@@ -551,10 +582,6 @@ TEST(clang_parser, btf)
         "  @x2 = (struct Foo2 *) curtask;\n"
         "  @x3 = (struct Foo3 *) curtask;\n"
         "}");
-
-  // clear the environment
-  unsetenv("BPFTRACE_BTF_TEST");
-  std::remove(path);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -612,6 +639,21 @@ TEST(clang_parser, btf)
   EXPECT_EQ(structs["Foo3"].fields["foo2"].offset, 8);
 }
 
+TEST_F(clang_parser_btf, btf_field_struct)
+{
+  BPFtrace bpftrace;
+  parse("", bpftrace, true,
+        "kprobe:sys_read {\n"
+        "  @x3 = ((struct Foo3 *) curtask)->foo2->a;\n"
+        "}");
+
+  /* task_struct->Foo3->Foo2->int */
+  EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
+  EXPECT_NE(bpftrace.btf_set_.find("task_struct"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("Foo3"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("Foo2"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("int"), bpftrace.btf_set_.end());
+}
 #endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace clang_parser
