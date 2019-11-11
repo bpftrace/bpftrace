@@ -42,6 +42,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBfd "Please install the libbfd development 
 
 mark_as_advanced(LIBBFD_INCLUDE_DIRS LIBBFD_LIBRARIES)
 
+if(${LIBBFD_FOUND})
 SET(CMAKE_REQUIRED_LIBRARIES bfd opcodes)
 INCLUDE(CheckCXXSourceCompiles)
 CHECK_CXX_SOURCE_COMPILES("
@@ -58,3 +59,4 @@ int main(void) {
   return 0;
 }" LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
 SET(CMAKE_REQUIRED_LIBRARIES)
+endif()
