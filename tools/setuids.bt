@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * setuids - Trace the setuid syscalls: privilege escalation.
  *
