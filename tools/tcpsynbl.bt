@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * tcpsynbl - Show TCP SYN backlog as a histogram.
  *
