@@ -57,3 +57,4 @@ int main(void) {
                abfd);
   return 0;
 }" LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
+SET(CMAKE_REQUIRED_LIBRARIES)
