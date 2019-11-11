@@ -1,4 +1,4 @@
-#!/usr/local/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * biostacks - Show disk I/O latency with initialization stacks.
  *
