@@ -784,6 +784,28 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
+  else if (call.func == "override_return")
+  {
+    if (!feature_.has_helper_send_signal())
+    {
+      error("BPF_FUNC_override_return not available for your kernel version",
+            call.loc);
+    }
+
+    check_assignment(call, false, false, false);
+    if (check_varargs(call, 1, 1))
+    {
+      check_arg(call, Type::integer, 0, false);
+    }
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type != ProbeType::kprobe)
+      {
+        error(call.func + " can only be used with kprobes.", call.loc);
+      }
+    }
+  }
   else {
     error("Unknown function: '" + call.func + "'", call.loc);
     call.type = SizedType(Type::none, 0);

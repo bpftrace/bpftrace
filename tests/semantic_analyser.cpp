@@ -1388,12 +1388,27 @@ TEST(semantic_analyser, strncmp)
   // Test strncmp builtin
   test("i:s:1 { $a = \"bar\"; strncmp(\"foo\", $a, 1) }", 0);
   test("i:s:1 { strncmp(\"foo\", \"bar\", 1) }", 0);
-
   test("i:s:1 { strncmp(1) }", 1);
   test("i:s:1 { strncmp(1,1,1) }", 10);
   test("i:s:1 { strncmp(\"a\",1,1) }", 10);
   test("i:s:1 { strncmp(\"a\",\"a\",-1) }", 1);
   test("i:s:1 { strncmp(\"a\",\"a\",\"foo\") }", 1);
+}
+
+TEST(semantic_analyser, override_return)
+{
+  // literals
+  test("k:f { override_return(-1); }", 0, false);
+
+  // variables
+  test("k:f { override_return(arg0); }", 0, false);
+
+  // Probe types
+  test("kr:f { override_return(-1); }", 1, false);
+  test("u:f { override_return(-1); }", 1, false);
+  test("t:syscalls:sys_enter_openat { override_return(-1); }", 1, false);
+  test("i:s:1 { override_return(-1); }", 1, false);
+  test("p:hz:1 { override_return(-1); }", 1, false);
 }
 
 TEST(semantic_analyser, struct_member_keywords)

@@ -802,6 +802,15 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateLifetimeEnd(right_string);
     }
   }
+  else if (call.func == "override_return")
+  {
+    // int bpf_override_return(struct pt_regs *regs, u64 rc)
+    // returns: 0
+    auto &arg = *call.vargs->at(0);
+    arg.accept(*this);
+    expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.is_signed);
+    b_.CreateOverrideReturn(ctx_, expr_);
+  }
   else
   {
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;

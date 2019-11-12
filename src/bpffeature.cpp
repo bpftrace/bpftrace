@@ -72,11 +72,24 @@ static bool detect_signal(void)
   return try_load("test_signal", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
 }
 
+static bool detect_override_return(void)
+{
+  struct bpf_insn insns[] = {
+    BPF_LD_IMM64(BPF_REG_2, 11),
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_override_return),
+    BPF_EXIT_INSN(),
+  };
+
+  return try_load(
+      "test_override_return", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
+}
+
 BPFfeature::BPFfeature(void)
 {
   has_loop_ = detect_loop();
   has_signal_ = detect_signal();
   has_get_current_cgroup_id_ = detect_get_current_cgroup_id();
+  has_override_return_ = detect_override_return();
 }
 
 std::string BPFfeature::report(void)
@@ -87,6 +100,8 @@ std::string BPFfeature::report(void)
       << "  get_current_cgroup_id: "
       << to_str(has_helper_get_current_cgroup_id()) << std::endl
       << "  send_signal: " << to_str(has_helper_send_signal()) << std::endl
+      << "  override_return: " << to_str(has_helper_override_return())
+      << std::endl
       << std::endl
       << "Kernel features" << std::endl
       << "  Loop support: " << to_str(has_loop()) << std::endl

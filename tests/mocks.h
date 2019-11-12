@@ -53,7 +53,8 @@ class MockBPFfeature : public BPFfeature
 public:
   MockBPFfeature(bool has_features = true)
   {
-    has_loop_ = has_signal_ = has_get_current_cgroup_id_ = has_features;
+    has_loop_ = has_signal_ = has_get_current_cgroup_id_ =
+        has_override_return_ = has_features;
   };
 };
 
