@@ -14,7 +14,7 @@ public:
 
 private:
   int fd_ = -1;
-  uint64_t size;
+  uint64_t size_;
 };
 
 } // namespace bpftrace
