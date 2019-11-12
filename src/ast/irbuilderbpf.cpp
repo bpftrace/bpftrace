@@ -683,5 +683,19 @@ void IRBuilderBPF::CreateSignal(Value *sig)
   CreateCall(signal_func, {sig}, "signal");
 }
 
+void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
+{
+  // int bpf_override_return(struct pt_regs *regs, u64 rc)
+  // Return: 0
+  FunctionType *override_func_type = FunctionType::get(
+      getInt64Ty(), { getInt8PtrTy(), getInt64Ty() }, false);
+  PointerType *override_func_ptr_type = PointerType::get(override_func_type, 0);
+  Constant *override_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                  getInt64(
+                                                      BPF_FUNC_override_return),
+                                                  override_func_ptr_type);
+  CreateCall(override_func, { ctx, rc }, "override_return");
+}
+
 } // namespace ast
 } // namespace bpftrace

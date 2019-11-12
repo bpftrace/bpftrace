@@ -64,6 +64,7 @@ public:
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *sig);
+  void        CreateOverrideReturn(Value *ctx, Value *rc);
 
 private:
   Module &module_;
