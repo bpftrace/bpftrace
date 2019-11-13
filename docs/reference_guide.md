@@ -2104,6 +2104,34 @@ Gecko_IOThread => /usr/lib64/firefox/firefox
 ^C
 ```
 
+## 18. `signal()`: Send a signal to current task
+
+Syntax: `signal(u32 signal)`
+Syntax: `signal("SIG")`
+
+Kernel: 5.3
+
+Supported Probe Types:
+- k(ret)probes
+- u(ret)probes
+- USDT
+- profile
+
+`signal` sends the specified signal to the current task:
+
+```
+# bpftrace  -e 'kprobe:__x64_sys_execve /comm == "bash"/ { signal(5); }' --unsafe
+$ ls
+Trace/breakpoint trap (core dumped)
+```
+
+The signal can also be specified using a name, similar to the `kill(1)` command:
+
+```
+# bpftrace -e 'k:f { signal("KILL"); }'
+# bpftrace -e 'k:f { signal("SIGINT"); }'
+```
+
 # Map Functions
 
 Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are also used for some variable types as discussed in the previous section, whenever `@` is used: [globals](#21-global), [per thread variables](#22-per-thread), and [associative arrays](#3--associative-arrays).
