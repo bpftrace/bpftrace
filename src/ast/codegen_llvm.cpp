@@ -701,7 +701,18 @@ void CodegenLLVM::visit(Call &call)
     }
     expr_ = stackid;
   }
-
+  else if (call.func == "signal") {
+    // int bpf_send_signal(u32 sig)
+    auto &arg = *call.vargs->at(0);
+    arg.accept(*this);
+    if (arg.is_literal) {
+      b_.CreateSignal(b_.getInt32(static_cast<Integer&>(arg).n));
+    }
+    else {
+      expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
+      b_.CreateSignal(expr_);
+    }
+  }
   else
   {
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
