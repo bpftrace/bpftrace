@@ -1196,6 +1196,7 @@ bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
 - `curtask` - Current task struct as a u64
 - `rand` - Random number as a u32
 - `cgroup` - Cgroup ID of the current process
+- `cpid` - Child pid(u32), only valid with the `-c command` flag
 - `$1`, `$2`, ..., `$N`, `$#`. - Positional parameters for the bpftrace program
 
 Many of these are discussed in other sections (use search).

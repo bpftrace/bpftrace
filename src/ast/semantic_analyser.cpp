@@ -212,6 +212,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
   else if (builtin.ident == "username") {
     builtin.type = SizedType(Type::username, 8);
   }
+  else if (builtin.ident == "cpid") {
+    if (! bpftrace_.has_child_cmd()) {
+      buf << "cpid cannot be used without child command";
+    }
+    builtin.type = SizedType(Type::integer, 4);
+  }
   else if (builtin.ident == "args") {
     probe_->need_expansion = true;
     for (auto &attach_point : *probe_->attach_points)

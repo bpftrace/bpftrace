@@ -105,6 +105,10 @@ public:
   void error(std::ostream &out, const location &l, const std::string &m);
   void warning(std::ostream &out, const location &l, const std::string &m);
   void log_with_location(std::string, std::ostream &, const location &, const std::string &);
+  bool has_child_cmd() { return cmd_.size() != 0; }
+  virtual pid_t child_pid() { return child_pids_.size() ? child_pids_.front() : 0; }
+  int spawn_child();
+  void kill_children();
 
   std::string cmd_;
   int pid_{0};
@@ -166,9 +170,11 @@ private:
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
   int ncpus_;
   int online_cpus_;
-  std::vector<int> child_pids_;
+  std::vector<pid_t> child_pids_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+  bool child_running_ = false; // true when `CHILD_GO` has been sent (child execve)
+  int child_start_pipe_ = -1;
 
   std::string src_;
   std::string filename_;
@@ -190,7 +196,6 @@ private:
   static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static int spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd);
   static bool is_pid_alive(int pid);
 };
 
