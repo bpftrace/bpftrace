@@ -101,4 +101,5 @@ inline std::string& trim(std::string& s)
   return ltrim(rtrim(s));
 }
 
+int signal_name_to_num(std::string &signal);
 } // namespace bpftrace

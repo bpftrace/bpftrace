@@ -20,6 +20,7 @@ add_executable(bpftrace
   types.cpp
   utils.cpp
   disasm.cpp
+  signal.cpp
   ${BFD_DISASM_SRC}
 )
 

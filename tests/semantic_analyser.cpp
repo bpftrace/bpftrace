@@ -1172,6 +1172,10 @@ TEST(semantic_analyser, signal)
   test("k:f { @=1; signal(@); }", 0, false);
   test("k:f { @=1; signal((int32)arg0); }", 0, false);
 
+  // String
+  test("k:f { signal(\"KILL\"); }", 0, false);
+  test("k:f { signal(\"SIGKILL\"); }", 0, false);
+
   // Not allowed for:
   test("hardware:pcm:1000 { signal(1); }", 1, false);
   test("software:pcm:1000 { signal(1); }", 1, false);
@@ -1183,6 +1187,8 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(0); }", 1, false);
   test("k:f { signal(-100); }", 1, false);
   test("k:f { signal(100); }", 1, false);
+  test("k:f { signal(\"SIGABC\"); }", 1, false);
+  test("k:f { signal(\"ABC\"); }", 1, false);
 }
 
 

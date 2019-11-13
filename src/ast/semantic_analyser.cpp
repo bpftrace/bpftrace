@@ -586,15 +586,24 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 1)) {
       return;
     }
-    check_arg(call, Type::integer, 0, false);
+
     auto &arg = *call.vargs->at(0);
-    if(arg.is_literal){
+    if (arg.type.type == Type::string && arg.is_literal) {
+      auto sig = static_cast<String&>(arg).str;
+      if (signal_name_to_num(sig) < 1) {
+        bpftrace_.error(err_, call.loc, sig + " is not a valid signal");
+      }
+    }
+    else if(arg.type.type == Type::integer && arg.is_literal) {
       auto sig = static_cast<Integer&>(arg).n;
       if (sig < 1 || sig > 64) {
         std::stringstream buf;
         buf << sig << " is not a valid signal, allowed range: [1,64]";
         bpftrace_.error(err_, call.loc, buf.str());
       }
+    }
+    else if(arg.type.type != Type::integer) {
+      buf << "signal only accepts string literals or integers";
     }
 
     for (auto &ap : *probe_->attach_points) {
