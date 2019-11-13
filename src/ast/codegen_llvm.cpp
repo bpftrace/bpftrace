@@ -214,6 +214,15 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     expr_ = ctx_;
   }
+  else if (builtin.ident == "cpid")
+  {
+    pid_t cpid = bpftrace_.child_pid();
+    if (cpid < 1) {
+      std::cerr << "BUG: Invalid cpid: " << cpid << std::endl;
+      abort();
+    }
+    expr_ = b_.getInt32(cpid);
+  }
   else if (builtin.ident == "ctx")
   {
     // undocumented builtin: for debugging

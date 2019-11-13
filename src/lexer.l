@@ -47,7 +47,7 @@ path   :(\\.|[_\-\./a-zA-Z0-9#\*])*:
   <<EOF>>               yy_pop_state(yyscanner); driver.error(loc, "end of file during comment");
 }
 
-pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|sarg[0-9]|retval|func|probe|curtask|rand|ctx|username|args|elapsed {
+pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|sarg[0-9]|retval|func|probe|curtask|rand|ctx|username|args|elapsed|cpid {
                           return Parser::make_BUILTIN(yytext, loc); }
 bpftrace|perf {
                           return Parser::make_STACK_MODE(yytext, loc); }

@@ -124,6 +124,15 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { probe }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
+
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace, "i:ms:100 { printf(\"%d\\n\", cpid); }", 1, false);
+  test(*bpftrace, "i:ms:100 { @=cpid }", 1, false);
+  test(*bpftrace, "i:ms:100 { $a=cpid }", 1, false);
+  bpftrace->cmd_ = "sleep 1";
+  test(*bpftrace, "i:ms:100 { printf(\"%d\\n\", cpid); }", 0, false);
+  test(*bpftrace, "i:ms:100 { @=cpid }", 0, false);
+  test(*bpftrace, "i:ms:100 { $a=cpid }", 0, false);
 }
 
 TEST(semantic_analyser, builtin_functions)
@@ -1258,8 +1267,6 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(\"SIGABC\"); }", 1, false);
   test("k:f { signal(\"ABC\"); }", 1, false);
 }
-
-
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

@@ -80,6 +80,7 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
 
 BPFtrace::~BPFtrace()
 {
+  kill_children();
   for (int pid : child_pids_)
   {
     // We don't care if waitpid returns any errors. We're just trying
@@ -322,15 +323,27 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
+void BPFtrace::kill_children()
+{
+  if (child_pids_.size() == 0)
+    return;
+
+  if (child_running_) {
+    for (int pid : child_pids_)
+    {
+      kill(pid, SIGTERM);
+    }
+  } else {
+    write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+  }
+}
+
 void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
+  kill_children();
 
-  for (int pid : child_pids_)
-  {
-    kill(pid, SIGTERM);
-  }
 }
 
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
@@ -687,8 +700,6 @@ bool attach_reverse(const Probe &p)
 
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
-  int wait_for_tracing_pipe;
-
   auto r_special_probes = special_probes_.rbegin();
   for (; r_special_probes != special_probes_.rend(); ++r_special_probes)
   {
@@ -701,28 +712,6 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   int epollfd = setup_perf_events();
   if (epollfd < 0)
     return epollfd;
-
-  // Spawn a child process if we've been passed a command to run
-  if (cmd_.size())
-  {
-    auto args = split_string(cmd_, ' ');
-    auto paths = resolve_binary_path(args[0]); // does path lookup on executable
-    if (paths.size() > 1)
-    {
-      std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched " << paths.size() << std::endl;
-      return -1;
-    }
-    args[0] = paths.front().c_str();
-    int pid = spawn_child(args, &wait_for_tracing_pipe);
-    if (pid < 0)
-    {
-      std::cerr << "Failed to spawn child=" << cmd_ << std::endl;
-      return pid;
-    }
-
-    child_pids_.emplace_back(pid);
-    pid_ = pid;
-  }
 
   BEGIN_trigger();
 
@@ -738,7 +727,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        write(wait_for_tracing_pipe, &CHILD_EXIT_QUIETLY, 1);
+        kill_children();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -751,7 +740,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*r_probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        write(wait_for_tracing_pipe, &CHILD_EXIT_QUIETLY, 1);
+        kill_children();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -759,16 +748,17 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   }
 
   // Kick the child to execute the command.
-  if (cmd_.size())
+  if (has_child_cmd())
   {
-    int ret = write(wait_for_tracing_pipe, &CHILD_GO, 1);
+    int ret = write(child_start_pipe_, &CHILD_GO, 1);
     if (ret < 0)
     {
       perror("unable to write to 'go' pipe");
       return ret;
     }
 
-    close(wait_for_tracing_pipe);
+    child_running_ = true;
+    close(child_start_pipe_);
   }
 
   if (bt_verbose)
@@ -1295,23 +1285,33 @@ int BPFtrace::print_map_stats(IMap &map)
   return 0;
 }
 
-int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd)
+pid_t BPFtrace::spawn_child()
 {
   static const int maxargs = 256;
   char* argv[maxargs];
   int wait_for_tracing_pipe[2];
 
+  auto args = split_string(cmd_, ' ');
+  auto paths = resolve_binary_path(args[0]); // does path lookup on executable
+  if (paths.size() > 1)
+  {
+    std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched "
+              << paths.size() << " binaries" << std::endl;
+    return -1;
+  }
+  args[0] = paths.front().c_str();
+
+  if (args.size() >= (maxargs - 1))
+  {
+    std::cerr << "Too many args passed into spawn_child (" << args.size()
+              << " > " << maxargs - 1 << ")" << std::endl;
+    return -1;
+  }
+
   // Convert vector of strings into raw array of C-strings for execve(2)
   int idx = 0;
   for (const auto& arg : args)
   {
-    if (idx == maxargs - 1)
-    {
-      std::cerr << "Too many args passed into spawn_child (" << args.size()
-        << " > " << maxargs - 1 << ")" << std::endl;
-      return -1;
-    }
-
     argv[idx] = const_cast<char*>(arg.c_str());
     ++idx;
   }
@@ -1324,8 +1324,8 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
   }
 
   // Fork and exec
-  int ret = fork();
-  if (ret == 0)
+  pid_t pid = fork();
+  if (pid == 0)
   {
     // Receive SIGTERM if parent dies
     //
@@ -1341,7 +1341,7 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
 
     char bf;
 
-    ret = read(wait_for_tracing_pipe[0], &bf, 1);
+    int ret = read(wait_for_tracing_pipe[0], &bf, 1);
     if (ret != 1)
     {
       perror("failed to read 'go' pipe");
@@ -1356,18 +1356,22 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
 
     if (execve(argv[0], argv, environ))
     {
-      perror("execve");
+      auto err = "Failed to execve: " + std::string(argv[0]);
+      perror(err.c_str());
       return -1;
     }
   }
-  else if (ret > 0)
+  else if (pid > 0)
   {
-    *notify_trace_start_pipe_fd = wait_for_tracing_pipe[1];
-    return ret;
+    close(wait_for_tracing_pipe[0]);
+    child_start_pipe_ = wait_for_tracing_pipe[1];
+    child_pids_.emplace_back(pid);
+    pid_ = pid;
+    return pid;
   }
   else
   {
-    perror("fork");
+    perror("Failed to fork");
     return -1;
   }
 

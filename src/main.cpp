@@ -489,6 +489,9 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
+  if (bpftrace.has_child_cmd() && (bpftrace.spawn_child() < 0))
+    return 1;
+
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
   auto bpforc = llvm.compile(bt_debug);
 

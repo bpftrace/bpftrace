@@ -102,3 +102,8 @@ NAME increment/decrement variable
 RUN bpftrace -e 'BEGIN { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x); exit(); }'
 EXPECT 10 12 12 10
 TIMEOUT 1
+
+NAME spawn child
+RUN bpftrace -e 'i:ms:500 { printf("%d\n", cpid); }' -c 'sleep 1'
+EXPECT [0-9]+
+TIMEOUT 1
