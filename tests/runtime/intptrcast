@@ -1,11 +1,11 @@
 NAME Sum casted value
-RUN bpftrace -v -e 'k:vfs_read { @=sum(*(uint8*)(reg("bp")-1)); exit();}'
-EXPECT ^@: [0-9]*
+RUN bpftrace -v -e 'uprobe:.*/testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}'
+EXPECT ^@: 3258
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN bpftrace -v -e 'k:vfs_read { $a=*(uint8*)(reg("bp")-1); printf("%d\n", $a); exit();}'
-EXPECT [0-9]*
+RUN bpftrace -v -e 'uprobe:.*/testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}'
+EXPECT 3258
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/intptrcast
