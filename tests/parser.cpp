@@ -1211,6 +1211,24 @@ kprobe:f { "asdf }
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST(Parser, uprobe_offset)
+{
+  test("u:./test:fn+1 {}",
+       "Program\n"
+       " uprobe:./test:fn+1\n");
+  test("u:./test:fn+0x10 {}",
+       "Program\n"
+       " uprobe:./test:fn+16\n");
+
+  test("u:./test:\"fn.abc\"+1 {}",
+       "Program\n"
+       " uprobe:./test:fn.abc+1\n");
+  test("u:./test:\"fn.abc\"+0x10 {}",
+       "Program\n"
+       " uprobe:./test:fn.abc+16\n");
+}
+
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

@@ -167,6 +167,7 @@ attach_point : ident               { $$ = new ast::AttachPoint($1, @$); }
              | ident PATH STRING   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, false, @$); }
              | ident PATH wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, true, @$); }
              | ident PATH wildcard PLUS INT { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, (uint64_t) $5); }
+             | ident PATH STRING PLUS INT { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, (uint64_t) $5); }
              | ident PATH INT      { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, @$); }
              | ident PATH INT CINT ident  { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $4, $5, @$); }
              | ident PATH STRING ":" STRING  { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $5, false, @$); }
