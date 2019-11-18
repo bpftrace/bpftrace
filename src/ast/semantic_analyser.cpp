@@ -506,7 +506,16 @@ void SemanticAnalyser::visit(Call &call)
           // Promote to 64-bit if it's not an array type
           if (!ty.IsArray())
             ty.size = 8;
-          args.push_back({ .type =  ty, .offset = 0 });
+          args.push_back(Field{
+            .type =  ty,
+            .offset = 0,
+            .is_bitfield = false,
+            .bitfield = Bitfield{
+              .read_bytes = 0,
+              .access_rshift = 0,
+              .mask = 0,
+            },
+          });
         }
         buf << verify_format_string(fmt.str, args);
 

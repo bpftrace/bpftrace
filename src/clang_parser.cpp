@@ -143,6 +143,40 @@ static CXCursor get_named_parent(CXCursor c)
   return parent;
 }
 
+// @returns true on success, false otherwise
+static bool getBitfield(CXCursor c, Bitfield &bitfield)
+{
+  if (!clang_Cursor_isBitField(c)) {
+    return false;
+  }
+
+  // Algorithm description:
+  // To handle bitfields, we need to give codegen 3 additional pieces
+  // of information: `read_bytes`, `access_rshift`, and `mask`.
+  //
+  // `read_bytes` tells codegen how many bytes to read starting at `Field::offset`.
+  // This information is necessary because we can't always issue, for example, a
+  // 1 byte read, as the bitfield could be the last 4 bits of the struct. Reading
+  // past the end of the struct could cause a page fault. Therefore, we compute the
+  // minimum number of bytes necessary to fully read the bitfield. This will always
+  // keep the read within the bounds of the struct.
+  //
+  // `access_rshift` tells codegen how much to shift the masked value so that the
+  // LSB of the bitfield is the LSB of the interpreted integer.
+  //
+  // `mask` tells codegen how to mask out the surrounding bitfields.
+
+  size_t bitfield_offset = clang_Cursor_getOffsetOfField(c) % 8;
+  size_t bitfield_bitwidth = clang_getFieldDeclBitWidth(c);
+
+  bitfield.mask = (1 << bitfield_bitwidth) - 1;
+  bitfield.access_rshift = bitfield_offset;
+  // Round up to nearest byte
+  bitfield.read_bytes = (bitfield_offset + bitfield_bitwidth + 7) / 8;
+
+  return true;
+}
+
 // NOTE(mmarchini): as suggested in http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
 static bool translateMacro(CXCursor cursor, std::string &name, std::string &value)
 {
@@ -337,6 +371,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
           auto type = clang_getCanonicalType(clang_getCursorType(c));
+          Bitfield bitfield;
+          bool is_bitfield = getBitfield(c, bitfield);
 
           auto struct_name = get_clang_string(clang_getCursorSpelling(named_parent));
           if (struct_name == "")
@@ -346,10 +382,12 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           // Warn if we already have the struct member defined and is
           // different type and keep the current definition in place.
           if (structs.count(struct_name) != 0 &&
-              structs[struct_name].fields.count(ident)  != 0 &&
-              structs[struct_name].fields[ident].offset != offset &&
-              structs[struct_name].fields[ident].type   != get_sized_type(type) &&
-              structs[struct_name].size                 != ptypesize)
+              structs[struct_name].fields.count(ident)    != 0 &&
+              structs[struct_name].fields[ident].offset   != offset &&
+              structs[struct_name].fields[ident].type     != get_sized_type(type) &&
+              structs[struct_name].fields[ident].is_bitfield && is_bitfield &&
+              structs[struct_name].fields[ident].bitfield != bitfield &&
+              structs[struct_name].size                   != ptypesize)
           {
             std::cerr << "type mismatch for " << struct_name << "::" << ident << std::endl;
           }
@@ -357,6 +395,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           {
             structs[struct_name].fields[ident].offset = offset;
             structs[struct_name].fields[ident].type = get_sized_type(type);
+            structs[struct_name].fields[ident].is_bitfield = is_bitfield;
+            structs[struct_name].fields[ident].bitfield = bitfield;
             structs[struct_name].size = ptypesize;
           }
         }

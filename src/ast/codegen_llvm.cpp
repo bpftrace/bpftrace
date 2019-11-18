@@ -1134,6 +1134,18 @@ void CodegenLLVM::visit(FieldAccess &acc)
       b_.CreateProbeRead(dst, field.type.size, src);
       expr_ = dst;
     }
+    else if (field.type.type == Type::integer && field.is_bitfield)
+    {
+      AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
+      // memset so verifier doesn't complain about reading uninitialized stack
+      b_.CreateMemSet(dst, b_.getInt8(0), field.type.size, 1);
+      b_.CreateProbeRead(dst, field.bitfield.read_bytes, src);
+      Value *raw = b_.CreateLoad(dst);
+      Value *shifted = b_.CreateLShr(raw, field.bitfield.access_rshift);
+      Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
+      expr_ = masked;
+      b_.CreateLifetimeEnd(dst);
+    }
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
