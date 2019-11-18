@@ -5,17 +5,15 @@
 
 namespace bpftrace {
 
-class Field {
-public:
+struct Field {
   SizedType type;
   int offset;
 };
 
 using FieldsMap = std::map<std::string, Field>;
 
-class Struct
+struct Struct
 {
-public:
   int size;
   FieldsMap fields;
 };
