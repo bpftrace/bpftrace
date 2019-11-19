@@ -59,6 +59,7 @@ public:
   CallInst   *CreateGetJoinMap(Value *ctx);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
+  void        CreateSignal(Value *sig);
 
 private:
   Module &module_;

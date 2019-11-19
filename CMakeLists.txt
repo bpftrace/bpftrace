@@ -75,6 +75,7 @@ include(CheckTypeSize)
 set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
 # This will set HAVE_GET_CURRENT_CGROUP_ID to TRUE or FALSE
 check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE C)
+check_type_size("BPF_FUNC_send_signal" SEND_SIGNAL LANGUAGE C)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
 # Some users have multiple versions of llvm installed and would like to specify

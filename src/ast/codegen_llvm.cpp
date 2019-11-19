@@ -8,6 +8,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include "tracepoint_format_parser.h"
+#include "signal.h"
 
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/Constants.h>
@@ -701,7 +702,29 @@ void CodegenLLVM::visit(Call &call)
     }
     expr_ = stackid;
   }
-
+  else if (call.func == "signal") {
+    // int bpf_send_signal(u32 sig)
+    auto &arg = *call.vargs->at(0);
+    if (arg.type.type == Type::string) {
+      auto signame = static_cast<String&>(arg).str;
+      int sigid = signal_name_to_num(signame);
+      // Should be caught in semantic analyser
+      if (sigid < 1) {
+        std::cerr << "BUG: Invalid signal ID for \"" << signame << "\"";
+        abort();
+      }
+      b_.CreateSignal(b_.getInt32(sigid));
+      return;
+    }
+    arg.accept(*this);
+    if (arg.is_literal) {
+      b_.CreateSignal(b_.getInt32(static_cast<Integer&>(arg).n));
+    }
+    else {
+      expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
+      b_.CreateSignal(expr_);
+    }
+  }
   else
   {
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;

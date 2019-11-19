@@ -32,6 +32,7 @@ add_executable(bpftrace_test
 
   ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
 
+  ${CMAKE_SOURCE_DIR}/src/signal.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/btf.cpp
@@ -43,10 +44,14 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/output.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
   ${CMAKE_SOURCE_DIR}/src/disasm.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
   ${BFD_DISASM_SRC}
 )
 
@@ -75,6 +80,17 @@ if(HAVE_BFD_DISASM)
   target_link_libraries(bpftrace_test ${LIBBFD_LIBRARIES})
   target_link_libraries(bpftrace_test ${LIBOPCODES_LIBRARIES})
 endif(HAVE_BFD_DISASM)
+
+if (NOT HAVE_SEND_SIGNAL)
+set_property(
+  SOURCE ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
+  APPEND
+  PROPERTY COMPILE_DEFINITIONS
+  BPF_FUNC_send_signal=109
+)
+endif()
+target_compile_definitions(bpftrace_test PRIVATE HAVE_SEND_SIGNAL)
+
 
 target_link_libraries(bpftrace_test arch ast parser resources)
 

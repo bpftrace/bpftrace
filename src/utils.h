@@ -58,6 +58,7 @@ static std::vector<DeprecatedName> DEPRECATED_LIST =
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS =
 {
   "system",
+  "signal",
 };
 
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
@@ -100,4 +101,5 @@ inline std::string& trim(std::string& s)
   return ltrim(rtrim(s));
 }
 
+int signal_name_to_num(std::string &signal);
 } // namespace bpftrace

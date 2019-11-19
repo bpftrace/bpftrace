@@ -10,6 +10,10 @@ if(HAVE_GET_CURRENT_CGROUP_ID)
   target_compile_definitions(ast PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
 endif(HAVE_GET_CURRENT_CGROUP_ID)
 
+if(HAVE_SEND_SIGNAL)
+  target_compile_definitions(ast PRIVATE HAVE_SEND_SIGNAL)
+endif(HAVE_SEND_SIGNAL)
+
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})

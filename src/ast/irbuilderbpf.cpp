@@ -643,5 +643,27 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   CreateCall(perfoutput_func, {ctx, map_ptr, flags_val, data, size_val}, "perf_event_output");
 }
 
+void IRBuilderBPF::CreateSignal(Value *sig)
+{
+#ifdef HAVE_SEND_SIGNAL
+  // int bpf_send_signal(u32 sig)
+  // Return: 0 or error
+  FunctionType *signal_func_type = FunctionType::get(
+      getInt64Ty(),
+      {getInt32Ty()},
+      false);
+  PointerType *signal_func_ptr_type = PointerType::get(signal_func_type, 0);
+  Constant *signal_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(BPF_FUNC_send_signal),
+      signal_func_ptr_type);
+  CreateCall(signal_func, {sig}, "signal");
+#else
+  (void)sig;
+  std::cerr << "BPF_FUNC_signal is not available for your kernel version" << std::endl;
+  abort();
+#endif
+}
+
 } // namespace ast
 } // namespace bpftrace

@@ -1159,6 +1159,39 @@ TEST(semantic_analyser, int_cast_usage)
 }
 
 
+TEST(semantic_analyser, signal)
+{
+  // int literals
+  test("k:f { signal(1); }", 0, false);
+  test("kr:f { signal(1); }", 0, false);
+  test("u:/bin/sh:f { signal(11); }", 0, false);
+  test("ur:/bin/sh:f { signal(11); }", 0, false);
+  test("p:hz:1 { signal(1); }", 0, false);
+
+  // vars
+  test("k:f { @=1; signal(@); }", 0, false);
+  test("k:f { @=1; signal((int32)arg0); }", 0, false);
+
+  // String
+  test("k:f { signal(\"KILL\"); }", 0, false);
+  test("k:f { signal(\"SIGKILL\"); }", 0, false);
+
+  // Not allowed for:
+  test("hardware:pcm:1000 { signal(1); }", 1, false);
+  test("software:pcm:1000 { signal(1); }", 1, false);
+  test("BEGIN { signal(1); }", 1, false);
+  test("END { signal(1); }", 1, false);
+  test("i:s:1 { signal(1); }", 1, false);
+
+  // invalid signals
+  test("k:f { signal(0); }", 1, false);
+  test("k:f { signal(-100); }", 1, false);
+  test("k:f { signal(100); }", 1, false);
+  test("k:f { signal(\"SIGABC\"); }", 1, false);
+  test("k:f { signal(\"ABC\"); }", 1, false);
+}
+
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

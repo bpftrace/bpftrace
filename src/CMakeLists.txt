@@ -20,6 +20,7 @@ add_executable(bpftrace
   types.cpp
   utils.cpp
   disasm.cpp
+  signal.cpp
   ${BFD_DISASM_SRC}
 )
 
@@ -38,6 +39,9 @@ endif(HAVE_BCC_ELF_FOREACH_SYM)
 if(HAVE_GET_CURRENT_CGROUP_ID)
   target_compile_definitions(bpftrace PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
 endif(HAVE_GET_CURRENT_CGROUP_ID)
+if(HAVE_SEND_SIGNAL)
+  target_compile_definitions(bpftrace PRIVATE HAVE_SEND_SIGNAL)
+endif(HAVE_SEND_SIGNAL)
 if (LIBBPF_BTF_DUMP_FOUND)
   target_compile_definitions(bpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP)
   target_include_directories(bpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
