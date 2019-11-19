@@ -343,6 +343,140 @@ TEST(clang_parser, nested_struct_anon_union_struct)
   EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
 }
 
+TEST(clang_parser, bitfields)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int a:8, b:8, c:16; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 4);
+  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 1);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["c"].offset, 2);
+  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 0x2U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0xFFFFU);
+}
+
+TEST(clang_parser, bitfields_uneven_fields)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int a:1, b:1, c:3, d:20, e:7; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 4);
+  ASSERT_EQ(structs["Foo"].fields.size(), 5U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("d"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("e"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0x1U);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0x1U);
+
+  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["c"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 2U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0x7U);
+
+  EXPECT_EQ(structs["Foo"].fields["d"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["d"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["d"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["d"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.access_rshift, 5U);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.mask, 0xFFFFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["e"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["e"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["e"].offset, 3);
+  EXPECT_TRUE(structs["Foo"].fields["e"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.mask, 0x7FU);
+}
+
+TEST(clang_parser, bitfields_with_padding)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int pad; int a:28, b:4; long int end;}", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 16);
+  ASSERT_EQ(structs["Foo"].fields.size(), 4U);
+  ASSERT_EQ(structs["Foo"].fields.count("pad"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("end"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 4);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFFFFFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 7);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFU);
+}
+
 TEST(clang_parser, builtin_headers)
 {
   // size_t is definied in stddef.h
