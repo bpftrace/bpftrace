@@ -113,3 +113,9 @@ RUN bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo");
 EXPECT end
 TIMEOUT 5
 AFTER  sleep 2; pkill -SIGINT bpftrace
+
+NAME bitfield access
+RUN bpftrace -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'
+EXPECT 1 2 5 0 65535
+TIMEOUT 5
+AFTER ./testprogs/bitfield_test
