@@ -17,6 +17,20 @@
 namespace bpftrace {
 namespace ast {
 
+static const std::map<std::string, std::tuple<size_t, bool>>& getIntcasts() {
+  static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
+    {"uint8", std::tuple<size_t, bool>{1, false}},
+    {"int8", std::tuple<size_t, bool>{1, true}},
+    {"uint16", std::tuple<size_t, bool>{2, false}},
+    {"int16", std::tuple<size_t, bool>{2, true}},
+    {"uint32", std::tuple<size_t, bool>{4, false}},
+    {"int32", std::tuple<size_t, bool>{4, true}},
+    {"uint64", std::tuple<size_t, bool>{8, false}},
+    {"int64", std::tuple<size_t, bool>{8, true}},
+  };
+  return intcasts;
+}
+
 void SemanticAnalyser::visit(Integer &integer)
 {
   integer.type = SizedType(Type::integer, 8, true);
@@ -865,12 +879,20 @@ void SemanticAnalyser::visit(Unop &unop)
   if (unop.op == Parser::token::MUL) {
     if (type.type == Type::cast) {
       if (type.is_pointer) {
-        if (bpftrace_.structs_.count(type.cast_type) == 0) {
+        int cast_size;
+        auto &intcasts = getIntcasts();
+        auto k_v = intcasts.find(type.cast_type);
+        if (k_v == intcasts.end() && bpftrace_.structs_.count(type.cast_type) == 0) {
           err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
           return;
         }
-        int cast_size = bpftrace_.structs_[type.cast_type].size;
-        unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+        if (k_v != intcasts.end()) {
+          auto &v = k_v->second;
+          unop.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
+        } else {
+          cast_size = bpftrace_.structs_[type.cast_type].size;
+          unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+        }
         unop.type.is_tparg = type.is_tparg;
       }
       else {
@@ -1012,20 +1034,24 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
-  const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
-      {"uint8", std::tuple<size_t, bool>{1, false}},
-      {"int8", std::tuple<size_t, bool>{1, true}},
-      {"uint16", std::tuple<size_t, bool>{2, false}},
-      {"int16", std::tuple<size_t, bool>{2, true}},
-      {"uint32", std::tuple<size_t, bool>{4, false}},
-      {"int32", std::tuple<size_t, bool>{4, true}},
-      {"uint64", std::tuple<size_t, bool>{8, false}},
-      {"int64", std::tuple<size_t, bool>{8, true}},
-  };
-
+  auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
+  int cast_size;
+
+  if (k_v == intcasts.end() && bpftrace_.structs_.count(cast.cast_type) == 0) {
+    err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
+    return;
+  }
+
+  if (cast.is_pointer) {
+    cast_size = sizeof(uintptr_t);
+    cast.type = SizedType(Type::cast, cast_size, cast.cast_type);
+    cast.type.is_pointer = cast.is_pointer;
+    return;
+  }
+
   if (k_v != intcasts.end()) {
-    auto v = k_v->second;
+    auto &v = k_v->second;
     cast.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
 
     auto rhs = cast.expr->type.type;
@@ -1036,18 +1062,7 @@ void SemanticAnalyser::visit(Cast &cast)
     return;
   }
 
-  if (bpftrace_.structs_.count(cast.cast_type) == 0) {
-    err_ << "Unknown struct/union: '" << cast.cast_type << "'" << std::endl;
-    return;
-  }
-
-  int cast_size;
-  if (cast.is_pointer) {
-    cast_size = sizeof(uintptr_t);
-  }
-  else {
-    cast_size = bpftrace_.structs_[cast.cast_type].size;
-  }
+  cast_size = bpftrace_.structs_[cast.cast_type].size;
   cast.type = SizedType(Type::cast, cast_size, cast.cast_type);
   cast.type.is_pointer = cast.is_pointer;
 }
