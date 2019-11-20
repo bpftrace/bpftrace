@@ -74,6 +74,12 @@ RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", func); exit(); }
 EXPECT SUCCESS func .*
 TIMEOUT 5
 
+NAME func_uprobe
+RUN bpftrace -v -e 'uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }'
+EXPECT SUCCESS function1
+AFTER ./testprogs/uprobe_negative_retval
+TIMEOUT 5
+
 NAME username
 RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %s\n", username); exit(); }'
 EXPECT SUCCESS username .*
