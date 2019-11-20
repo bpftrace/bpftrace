@@ -1194,6 +1194,33 @@ TEST(semantic_analyser, int_cast_usage)
   test("kprobe:f { @=avg((int32)\"abc\") }", 1);
 }
 
+TEST(semantic_analyser, intptr_cast_types)
+{
+  test("kretprobe:f { @ = *(int8*)retval }", 0);
+  test("kretprobe:f { @ = *(int16*)retval }", 0);
+  test("kretprobe:f { @ = *(int32*)retval }", 0);
+  test("kretprobe:f { @ = *(int64*)retval }", 0);
+  test("kretprobe:f { @ = *(uint8*)retval }", 0);
+  test("kretprobe:f { @ = *(uint16*)retval }", 0);
+  test("kretprobe:f { @ = *(uint32*)retval }", 0);
+  test("kretprobe:f { @ = *(uint64*)retval }", 0);
+
+  test("kretprobe:f { @ = *(int2*)retval }", 1);
+  test("kretprobe:f { @ = *(uint2*)retval }", 1);
+}
+
+TEST(semantic_analyser, intptr_cast_usage)
+{
+  test("kretprobe:f /(*(int32*) retval) < 0 / {}", 0);
+  test("kprobe:f /(*(int32*) arg0) < 0 / {}", 0);
+  test("kprobe:f { @=sum(*(int32*)arg0) }", 0);
+  test("kprobe:f { @=avg(*(int32*)arg0) }", 0);
+  test("kprobe:f { @=avg(*(int32*)arg0) }", 0);
+
+  // This is OK (@ = 0x636261)
+  test("kprobe:f { @=avg(*(int32*)\"abc\") }", 0);
+  test("kprobe:f { @=avg(*(int32*)123) }", 0);
+}
 
 TEST(semantic_analyser, signal)
 {
