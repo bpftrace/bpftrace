@@ -928,7 +928,7 @@ void SemanticAnalyser::visit(Unop &unop)
           return;
         }
         if (k_v != intcasts.end()) {
-          auto v = k_v->second;
+          auto &v = k_v->second;
           unop.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
         } else {
           cast_size = bpftrace_.structs_[type.cast_type].size;
@@ -1091,7 +1091,7 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (k_v != intcasts.end()) {
-    auto v = k_v->second;
+    auto &v = k_v->second;
     cast.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
 
     auto rhs = cast.expr->type.type;
