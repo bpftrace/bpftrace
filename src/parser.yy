@@ -88,6 +88,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 ;
 
 %token <std::string> BUILTIN "builtin"
+%token <std::string> CALL "call"
+%token <std::string> CALL_BUILTIN "call_builtin"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
 %token <std::string> CPREPROC "preprocessor directive"
@@ -246,6 +248,7 @@ int : MINUS INT    { $$ = new ast::Integer(-1 * $2, @$); }
 expr : int             { $$ = $1; }
      | STRING          { $$ = new ast::String($1, @$); }
      | BUILTIN         { $$ = new ast::Builtin($1, @$); }
+     | CALL_BUILTIN    { $$ = new ast::Builtin($1, @$); }
      | IDENT           { $$ = new ast::Identifier($1, @$); }
      | STACK_MODE      { $$ = new ast::StackMode($1, @$); }
      | ternary         { $$ = $1; }
@@ -287,12 +290,18 @@ expr : int             { $$ = $1; }
      | "(" IDENT MUL ")" expr %prec CAST  { $$ = new ast::Cast($2, true, $5, @1 + @4); }
      ;
 
-ident : IDENT   { $$ = $1; }
-      | BUILTIN { $$ = $1; }
+ident : IDENT         { $$ = $1; }
+      | BUILTIN       { $$ = $1; }
+      | CALL          { $$ = $1; }
+      | CALL_BUILTIN  { $$ = $1; }
       ;
 
-call : ident "(" ")"       { $$ = new ast::Call($1, @$); }
-     | ident "(" vargs ")" { $$ = new ast::Call($1, $3, @$); }
+call : CALL "(" ")"               { $$ = new ast::Call($1, @$); }
+     | CALL "(" vargs ")"         { $$ = new ast::Call($1, $3, @$); }
+     | CALL_BUILTIN  "(" ")"      { $$ = new ast::Call($1, @$); }
+     | CALL_BUILTIN "(" vargs ")" { $$ = new ast::Call($1, $3, @$); }
+     | ident "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | ident "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
      ;
 
 map : MAP               { $$ = new ast::Map($1, @$); }

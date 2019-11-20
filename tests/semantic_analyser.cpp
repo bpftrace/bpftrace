@@ -170,7 +170,6 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { reg(\"ip\") }", 0);
   test("kprobe:f { kstack(1) }", 0);
   test("kprobe:f { ustack(1) }", 0);
-  test("kprobe:f { fake() }", 1);
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
 }
 
@@ -547,18 +546,12 @@ TEST(semantic_analyser, call_func)
 {
   test("kprobe:f { @[func] = count(); }", 0);
   test("kprobe:f { printf(\"%s\", func);  }", 0);
-  test("kprobe:f { func(\"blah\"); }", 1);
-  test("kprobe:f { func(); }", 1);
-  test("kprobe:f { func(123); }", 1);
 }
 
 TEST(semantic_analyser, call_probe)
 {
   test("kprobe:f { @[probe] = count(); }", 0);
   test("kprobe:f { printf(\"%s\", probe);  }", 0);
-  test("kprobe:f { probe(\"blah\"); }", 1);
-  test("kprobe:f { probe(); }", 1);
-  test("kprobe:f { probe(123); }", 1);
 }
 
 TEST(semantic_analyser, call_cat)
@@ -1270,6 +1263,7 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(\"SIGABC\"); }", 1, false);
   test("k:f { signal(\"ABC\"); }", 1, false);
 }
+
 TEST(semantic_analyser, strncmp)
 {
   // Test strncmp builtin
@@ -1281,6 +1275,20 @@ TEST(semantic_analyser, strncmp)
   test("i:s:1 { strncmp(\"a\",1,1) }", 10);
   test("i:s:1 { strncmp(\"a\",\"a\",-1) }", 1);
   test("i:s:1 { strncmp(\"a\",\"a\",\"foo\") }", 1);
+}
+
+TEST(semantic_analyser, struct_member_keywords)
+{
+  std::string keywords[] = {
+    "arg0", "args", "curtask", "func", "gid" "rand", "uid",
+    "avg", "cat", "exit", "kaddr", "min", "printf", "usym",
+    "kstack", "ustack"
+  };
+  for(auto kw : keywords)
+  {
+    test("struct S{ int " + kw + ";}; k:f { ((struct S*)arg0)->" + kw + "}", 0);
+    test("struct S{ int " + kw + ";}; k:f { ((struct S)arg0)." + kw + "}", 0);
+  }
 }
 } // namespace semantic_analyser
 } // namespace test
