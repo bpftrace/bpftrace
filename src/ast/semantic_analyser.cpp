@@ -17,7 +17,8 @@
 namespace bpftrace {
 namespace ast {
 
-const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
+static const std::map<std::string, std::tuple<size_t, bool>>& getIntcasts() {
+  static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
     {"uint8", std::tuple<size_t, bool>{1, false}},
     {"int8", std::tuple<size_t, bool>{1, true}},
     {"uint16", std::tuple<size_t, bool>{2, false}},
@@ -26,7 +27,9 @@ const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
     {"int32", std::tuple<size_t, bool>{4, true}},
     {"uint64", std::tuple<size_t, bool>{8, false}},
     {"int64", std::tuple<size_t, bool>{8, true}},
-};
+  };
+  return intcasts;
+}
 
 void SemanticAnalyser::visit(Integer &integer)
 {
@@ -922,6 +925,7 @@ void SemanticAnalyser::visit(Unop &unop)
     if (type.type == Type::cast) {
       if (type.is_pointer) {
         int cast_size;
+        auto &intcasts = getIntcasts();
         auto k_v = intcasts.find(type.cast_type);
         if (k_v == intcasts.end() && bpftrace_.structs_.count(type.cast_type) == 0) {
           err_ << "Unknown struct/union: '" << type.cast_type << "'" << std::endl;
@@ -1075,6 +1079,7 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
+  auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
   int cast_size;
 
