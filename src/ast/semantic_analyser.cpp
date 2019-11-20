@@ -855,12 +855,12 @@ void SemanticAnalyser::visit(Binop &binop)
         }
       }
     }
-    else if (lhs != Type::integer
+    else if (!(lhs == Type::integer && rhs == Type::integer)
              && binop.op != Parser::token::EQ
              && binop.op != Parser::token::NE) {
       buf << "The " << opstr(binop)
-          << " operator can not be used on expressions of type " << lhs
-          << std::endl;
+          << " operator can not be used on expressions of types " << lhs
+          << ", " << rhs << std::endl;
       bpftrace_.error(err_, binop.loc, buf.str());
     }
   }
