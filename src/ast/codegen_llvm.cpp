@@ -175,6 +175,18 @@ void CodegenLLVM::visit(Builtin &builtin)
         b_.getInt64Ty(),
         b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
         builtin.ident);
+
+    if (builtin.type.type == Type::usym)
+    {
+      AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "func");
+      b_.CreateMemSet(buf, b_.getInt8(0), builtin.type.size, 1);
+      Value *pid = b_.CreateLShr(b_.CreateGetPidTgid(), 32);
+      Value *addr_offset = b_.CreateGEP(buf, b_.getInt64(0));
+      Value *pid_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
+      b_.CreateStore(expr_, addr_offset);
+      b_.CreateStore(pid, pid_offset);
+      expr_ = buf;
+    }
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9')

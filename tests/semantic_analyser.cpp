@@ -121,6 +121,7 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { sarg0 }", 0);
   test("kretprobe:f { retval }", 0);
   test("kprobe:f { func }", 0);
+  test("uprobe:/bin/sh:f { func }", 0);
   test("kprobe:f { probe }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
@@ -548,6 +549,8 @@ TEST(semantic_analyser, call_func)
 {
   test("kprobe:f { @[func] = count(); }", 0);
   test("kprobe:f { printf(\"%s\", func);  }", 0);
+  test("uprobe:/bin/sh:f { @[func] = count(); }", 0);
+  test("uprobe:/bin/sh:f { printf(\"%s\", func);  }", 0);
 }
 
 TEST(semantic_analyser, call_probe)
