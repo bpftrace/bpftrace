@@ -294,6 +294,7 @@ ident : IDENT         { $$ = $1; }
       | BUILTIN       { $$ = $1; }
       | CALL          { $$ = $1; }
       | CALL_BUILTIN  { $$ = $1; }
+      | STACK_MODE    { $$ = $1; }
       ;
 
 call : CALL "(" ")"               { $$ = new ast::Call($1, @$); }
