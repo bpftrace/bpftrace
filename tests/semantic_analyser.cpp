@@ -819,6 +819,11 @@ TEST(semantic_analyser, kprobe)
 TEST(semantic_analyser, uprobe)
 {
   test("uprobe:/bin/sh:f { 1 }", 0);
+  test("u:/bin/sh:f { 1 }", 0);
+  test("uprobe:/bin/sh:0x10 { 1 }", 0);
+  test("u:/bin/sh:0x10 { 1 }", 0);
+  test("uprobe:/bin/sh:f+0x10 { 1 }", 0);
+  test("u:/bin/sh:f+0x10 { 1 }", 0);
   test("uprobe:sh:f { 1 }", 0);
   test("uprobe:/notexistfile:f { 1 }", 1);
   test("uprobe:notexistfile:f { 1 }", 1);

@@ -56,6 +56,11 @@ TEST(ast, probe_name_uprobe)
   AttachPointList attach_points4 = { &ap1, &ap2, &ap3, &ap4 };
   Probe uprobe4(&attach_points4, nullptr, nullptr);
   EXPECT_EQ(uprobe4.name(), "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/sh:1000,uprobe:/bin/sh:somefunc+10");
+
+  AttachPoint ap5("u", "/bin/sh", (uint64_t) 10);
+  AttachPointList attach_points5 = { &ap5 };
+  Probe uprobe5(&attach_points5, nullptr, nullptr);
+  EXPECT_EQ(uprobe5.name(), "uprobe:/bin/sh:10");
 }
 
 TEST(ast, probe_name_usdt)

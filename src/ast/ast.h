@@ -316,7 +316,7 @@ public:
               location loc=location())
     : Node(loc), provider(probetypeName(provider)), target(target), need_expansion(true)
   {
-    if (provider == "uprobe")
+    if (this->provider == "uprobe")
       address = val;
     else
       freq = val;
