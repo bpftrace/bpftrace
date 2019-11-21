@@ -19,6 +19,10 @@ Please squash + rebase all pull requests (with no merge commit). In other words,
 there should be one commit in master per pull request. This makes generating
 changelogs both trivial and precise with the least amount of noise.
 
+The exception to this is PRs with complicated changes. If this is the case and
+the commits are well structured, a rebase + merge (no merge commit) is acceptable.
+The rule of thumb is the commit titles should make sense in a changelog.
+
 ## Semantic versioning
 
 We choose to follow semantic versioning. Note that this doesn't matter much for
