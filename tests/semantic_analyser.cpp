@@ -1282,7 +1282,7 @@ TEST(semantic_analyser, struct_member_keywords)
   std::string keywords[] = {
     "arg0", "args", "curtask", "func", "gid" "rand", "uid",
     "avg", "cat", "exit", "kaddr", "min", "printf", "usym",
-    "kstack", "ustack"
+    "kstack", "ustack", "bpftrace", "perf", "uprobe", "kprobe",
   };
   for(auto kw : keywords)
   {

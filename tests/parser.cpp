@@ -947,6 +947,44 @@ TEST(Parser, wildcard_path)
       "Program\n"
       " usdt:/my/program*foo:func\n"
       "  int: 1\n");
+  // Make sure calls or builtins don't cause issues
+  test("usdt:/my/program*avg:func { 1; }",
+       "Program\n"
+       " usdt:/my/program*avg:func\n"
+       "  int: 1\n");
+  test("usdt:/my/program*nsecs:func { 1; }",
+       "Program\n"
+       " usdt:/my/program*nsecs:func\n"
+       "  int: 1\n");
+}
+
+TEST(Parser, wildcard_func)
+{
+  test("usdt:/my/program:abc*cd { 1; }",
+       "Program\n"
+       " usdt:/my/program:abc*cd\n"
+       "  int: 1\n");
+  test("usdt:/my/program:abc*c*d { 1; }",
+       "Program\n"
+       " usdt:/my/program:abc*c*d\n"
+       "  int: 1\n");
+
+  std::string keywords[] = {
+    "arg0", "args", "curtask", "func", "gid" "rand", "uid",
+    "avg", "cat", "exit", "kaddr", "min", "printf", "usym",
+    "kstack", "ustack", "bpftrace", "perf", "uprobe", "kprobe",
+  };
+  for(auto kw : keywords)
+  {
+    test("usdt:/my/program:"+ kw +"*c*d { 1; }",
+         "Program\n"
+         " usdt:/my/program:"+ kw + "*c*d\n"
+         "  int: 1\n");
+    test("usdt:/my/program:abc*"+ kw +"*c*d { 1; }",
+         "Program\n"
+         " usdt:/my/program:abc*"+ kw + "*c*d\n"
+         "  int: 1\n");
+  }
 }
 
 TEST(Parser, short_map_name)
