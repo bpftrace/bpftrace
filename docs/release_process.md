@@ -13,6 +13,12 @@ more get in the way than provide order. If master is really busy or really buggy
 the RM can choose to cut a release branch (titled `X.Y.Z_release`) to try and
 stabilize the code without including work in progress into the release.
 
+## Merging pull requests
+
+Please squash + rebase all pull requests (with no merge commit). In other words,
+there should be one commit in master per pull request. This makes generating
+changelogs both trivial and precise with the least amount of noise.
+
 ## Semantic versioning
 
 We choose to follow semantic versioning. Note that this doesn't matter much for
