@@ -72,6 +72,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [15. `kstack()`: Stack Traces, Kernel](#15-kstack-stack-traces-kernel)
     - [16. `ustack()`: Stack Traces, User](#16-ustack-stack-traces-user)
     - [17. `cat()`: Print file content](#17-cat-print-file-content)
+    - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
