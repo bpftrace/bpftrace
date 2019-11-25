@@ -124,7 +124,10 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { probe }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
+}
 
+TEST(semantic_analyser, builtin_cpid)
+{
   auto bpftrace = get_mock_bpftrace();
   test(*bpftrace, "i:ms:100 { printf(\"%d\\n\", cpid); }", 1, false);
   test(*bpftrace, "i:ms:100 { @=cpid }", 1, false);

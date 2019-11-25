@@ -106,9 +106,9 @@ public:
   void warning(std::ostream &out, const location &l, const std::string &m);
   void log_with_location(std::string, std::ostream &, const location &, const std::string &);
   bool has_child_cmd() { return cmd_.size() != 0; }
-  virtual pid_t child_pid() { return child_pids_.size() ? child_pids_.front() : 0; }
+  virtual pid_t child_pid() { return child_pid_; };
   int spawn_child();
-  void kill_children();
+  void kill_child();
 
   std::string cmd_;
   int pid_{0};
@@ -170,9 +170,10 @@ private:
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
   int ncpus_;
   int online_cpus_;
-  std::vector<pid_t> child_pids_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+
+  pid_t child_pid_ = 0;
   bool child_running_ = false; // true when `CHILD_GO` has been sent (child execve)
   int child_start_pipe_ = -1;
 
