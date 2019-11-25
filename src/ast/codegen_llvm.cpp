@@ -1083,7 +1083,21 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
     Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
 
-    if (field.type.type == Type::cast && !field.type.is_pointer)
+    if (acc.is_context_access &&
+         (field.type.type == Type::integer ||
+         (field.type.type == Type::cast && field.type.is_pointer)))
+    {
+      // Use a load instruction to access a context field
+
+      // When storing ctx to a local variable, bpftrace treats the value as
+      // integer. e.g., $a = (struct perf_evet_data*)ctx; $a->sample_period;
+      // In this case, a type of $a is integer in LLVM point of view. Cast the
+      // value so that it can be used as an operand of a load instruction.
+      if (src->getType()->isIntegerTy())
+        src = b_.CreateIntToPtr(src, b_.GetType(field.type)->getPointerTo());
+      expr_ = b_.CreateLoad(b_.GetType(field.type), src);
+    }
+    else if (field.type.type == Type::cast && !field.type.is_pointer)
     {
       // struct X
       // {

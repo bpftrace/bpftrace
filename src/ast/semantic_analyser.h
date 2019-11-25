@@ -57,6 +57,7 @@ private:
   const int num_passes_ = 10;
 
   bool is_final_pass() const;
+  bool is_context_access(Expression *expr, bool is_pointer_dereferenced=false);
 
   bool check_assignment(const Call &call, bool want_map, bool want_var, bool want_map_key);
   bool check_nargs(const Call &call, size_t expected_nargs);
@@ -69,7 +70,7 @@ private:
   void assign_map_type(const Map &map, const SizedType &type);
 
   Probe *probe_;
-  std::map<std::string, SizedType> variable_val_;
+  std::map<std::string, Expression*> variable_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   std::map<std::string, ExpressionList> map_args_;

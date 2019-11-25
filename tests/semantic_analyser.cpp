@@ -1270,6 +1270,21 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(\"SIGABC\"); }", 1, false);
   test("k:f { signal(\"ABC\"); }", 1, false);
 }
+
+TEST(semantic_analyser, perf_ctx)
+{
+  test(R"(#include <linux/bpf_perf_event.h>
+          software:faults:1000 / ((struct bpf_perf_event_data*)ctx)->sample_period / {})", 0);
+  test(R"(#include <linux/bpf_perf_event.h>
+          profile:ms:100 { @=((struct bpf_perf_event_data*)ctx)->sample_period;})", 0);
+  test(R"(#include <linux/bpf_perf_event.h>
+          hardware:cache-references:1000000 { @=((struct bpf_perf_event_data*)ctx)->regs.rip;})", 0);
+  test(R"(#include <linux/bpf_perf_event.h>
+          software:faults:1000 { $a=(struct bpf_perf_event_data*)ctx; @=$a->sample_period;})", 0);
+  test(R"(#include <linux/bpf_perf_event.h>
+          interval:s:1 { $a=(struct bpf_perf_event_data*)ctx; @=$a->regs.rip; })", 0);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

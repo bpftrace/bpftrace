@@ -757,9 +757,9 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_.find(var.ident);
-  if (search_val != variable_val_.end()) {
-    var.type = search_val->second;
+  auto search = variable_.find(var.ident);
+  if (search != variable_.end()) {
+    var.type = search->second->type;
   }
   else {
     err_ << "Undefined or undeclared variable: " << var.ident << std::endl;
@@ -1023,6 +1023,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
+  acc.is_context_access = is_context_access(&acc);
 
   SizedType &type = acc.expr->type;
   if (type.type != Type::cast) {
@@ -1151,34 +1152,34 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 {
   assignment.expr->accept(*this);
 
-  std::string var_ident = assignment.var->ident;
-  auto search = variable_val_.find(var_ident);
+  std::string &var_ident = assignment.var->ident;
+  auto search = variable_.find(var_ident);
   assignment.var->type = assignment.expr->type;
-  if (search != variable_val_.end()) {
-    if (search->second.type == Type::none) {
+  if (search != variable_.end()) {
+    if (search->second->type.type == Type::none) {
       if (is_final_pass()) {
         err_ << "Undefined variable: " << var_ident << std::endl;
       }
       else {
-        search->second = assignment.expr->type;
+        search->second = assignment.expr;
       }
     }
-    else if (search->second.type != assignment.expr->type.type) {
+    else if (search->second->type.type != assignment.expr->type.type) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << assignment.expr->type;
       err_ << "'\n\twhen variable already contains a value of type '";
-      err_ << search->second << "'\n" << std::endl;
+      err_ << search->second->type << "'\n" << std::endl;
     }
   }
   else {
     // This variable hasn't been seen before
-    variable_val_.insert({var_ident, assignment.expr->type});
+    variable_.insert({var_ident, assignment.expr});
     assignment.var->type = assignment.expr->type;
   }
 
   if (assignment.expr->type.type == Type::cast) {
     std::string cast_type = assignment.expr->type.cast_type;
-    std::string curr_cast_type = variable_val_[var_ident].cast_type;
+    std::string curr_cast_type = variable_[var_ident]->type.cast_type;
     if (curr_cast_type != "" && curr_cast_type != cast_type) {
       err_ << "Type mismatch for " << var_ident << ": ";
       err_ << "trying to assign value of type '" << cast_type;
@@ -1186,7 +1187,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       err_ << curr_cast_type << "'\n" << std::endl;
     }
     else {
-      variable_val_[var_ident].cast_type = cast_type;
+      variable_[var_ident] = assignment.expr;
     }
   }
 }
@@ -1352,7 +1353,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 void SemanticAnalyser::visit(Probe &probe)
 {
   // Clear out map of variable names - variables should be probe-local
-  variable_val_.clear();
+  variable_.clear();
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
@@ -1708,6 +1709,33 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
       map_val_[map_ident].size = 8;
     }
   }
+}
+
+bool SemanticAnalyser::is_context_access(Expression *expr, bool is_pointer_dereferenced)
+{
+  // Example:
+  //   1. args->filename;
+  //   2. ((struct perf_event_data*)ctx)->regs.ip;
+  //   3. $a = ((struct perf_event_data*)ctx); $a->sample_period;
+
+  if (auto *p = dynamic_cast<Builtin*>(expr))
+    return p->ident == "ctx" || p->ident == "args";
+  else if (auto *p = dynamic_cast<Variable*>(expr))
+    return is_context_access(variable_[p->ident], is_pointer_dereferenced);
+  else if (auto *p = dynamic_cast<Binop*>(expr))
+    return is_context_access(p->left, is_pointer_dereferenced) ||
+             is_context_access(p->right, is_pointer_dereferenced);
+  else if (auto *p = dynamic_cast<FieldAccess*>(expr))
+    return is_context_access(p->expr, is_pointer_dereferenced);
+  else if (auto *p = dynamic_cast<Cast*>(expr))
+    return is_context_access(p->expr, is_pointer_dereferenced);
+  else if (auto *p = dynamic_cast<Unop*>(expr))
+  {
+    // Exclude an access such as args->a->b
+    if ((p->op != Parser::token::MUL) || !is_pointer_dereferenced)
+      return is_context_access(p->expr, (p->op == Parser::token::MUL) | is_pointer_dereferenced);
+  }
+  return false;
 }
 
 } // namespace ast

@@ -176,6 +176,7 @@ public:
   FieldAccess(Expression *expr, const std::string &field, location loc) : Expression(loc), expr(expr), field(field) { }
   Expression *expr;
   std::string field;
+  bool is_context_access = false;
 
   void accept(Visitor &v) override;
 };
