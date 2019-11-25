@@ -80,14 +80,14 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
 
 BPFtrace::~BPFtrace()
 {
-  kill_children();
-  for (int pid : child_pids_)
+  kill_child();
+  if (child_pid() != 0)
   {
     // We don't care if waitpid returns any errors. We're just trying
     // to make a best effort here. It's not like we could recover from
     // an error.
     int status;
-    waitpid(pid, &status, 0);
+    waitpid(child_pid(), &status, 0);
   }
 
   for (const auto& pair : exe_sym_)
@@ -323,18 +323,16 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
-void BPFtrace::kill_children()
+void BPFtrace::kill_child()
 {
-  if (child_pids_.size() == 0)
+  if (child_pid() == 0)
     return;
 
   if (child_running_) {
-    for (int pid : child_pids_)
-    {
-      kill(pid, SIGTERM);
-    }
+    kill(child_pid(), SIGTERM);
   } else {
     write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+    close(child_start_pipe_);
   }
 }
 
@@ -342,7 +340,7 @@ void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
-  kill_children();
+  kill_child();
 
 }
 
@@ -727,7 +725,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        kill_children();
+        kill_child();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -740,7 +738,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*r_probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        kill_children();
+        kill_child();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -1365,7 +1363,7 @@ pid_t BPFtrace::spawn_child()
   {
     close(wait_for_tracing_pipe[0]);
     child_start_pipe_ = wait_for_tracing_pipe[1];
-    child_pids_.emplace_back(pid);
+    child_pid_ = pid;
     pid_ = pid;
     return pid;
   }
