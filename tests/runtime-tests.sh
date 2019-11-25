@@ -2,9 +2,9 @@
 
 set -e;
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
+pushd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1
 
-BPFTRACE_RUNTIME_TEST_EXECUTABLE=${BPFTRACE_RUNTIME_TEST_EXECUTABLE:-$DIR/../src/};
+BPFTRACE_RUNTIME_TEST_EXECUTABLE=${BPFTRACE_RUNTIME_TEST_EXECUTABLE:-../src/};
 export BPFTRACE_RUNTIME_TEST_EXECUTABLE;
 
 python3 main.py $@
