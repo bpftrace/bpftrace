@@ -115,7 +115,7 @@ sudo apt-get install -y libbpfcc-dev
 
 ```
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev binutils-dev
 sudo apt-get install -y llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
@@ -133,7 +133,7 @@ argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
 ```
-sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel
+sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel binutils-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -221,6 +221,7 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - LLVM & Clang 5.0+ development packages
 - BCC development package
 - LibElf
+- Binutils development package
 - Kernel requirements described earlier
 
 ### Compilation

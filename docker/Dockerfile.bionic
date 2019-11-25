@@ -16,6 +16,7 @@ deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n
 
 RUN apt-get update && apt-get install -y \
       bison \
+      binutils-dev \
       cmake \
       flex \
       g++ \
