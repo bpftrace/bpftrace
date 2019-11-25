@@ -1,11 +1,11 @@
 NAME Sum casted value
-RUN bpftrace -v -e 'uprobe:.*/testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}'
+RUN bpftrace -v -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}'
 EXPECT ^@: 3258
 TIMEOUT 5
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN bpftrace -v -e 'uprobe:.*/testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}'
+RUN bpftrace -v -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}'
 EXPECT 3258
 TIMEOUT 5
 AFTER ./testprogs/intptrcast
