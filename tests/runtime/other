@@ -94,7 +94,7 @@ EXPECT .*
 TIMEOUT 1
 
 NAME sigint under heavy load
-RUN ./bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
+RUN bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
 EXPECT end
 TIMEOUT 5
 AFTER  sleep 2; pkill -SIGINT bpftrace
