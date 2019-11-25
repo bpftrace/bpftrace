@@ -5,6 +5,7 @@
 #  LIBBFD_INCLUDE_DIRS - the libbfd include directory
 #  LIBBFD_LIBRARIES - Link these to use libbfd
 #  LIBBFD_DEFINITIONS - Compiler switches required for using libbfd
+#  LIBIBERTY_LIBRARIES - libiberty static library (for static compilation)
 
 #if (LIBBFD_LIBRARIES AND LIBBFD_INCLUDE_DIRS)
 #  set (LibBpf_FIND_QUIETLY TRUE)
@@ -23,6 +24,21 @@ find_path (LIBBFD_INCLUDE_DIRS
 find_library (LIBBFD_LIBRARIES
   NAMES
     bfd
+  PATHS
+    /lib
+    /usr/lib
+    /usr/local/lib
+    /opt/local/lib
+    /sw/lib
+    ENV LIBRARY_PATH
+    ENV LD_LIBRARY_PATH)
+
+# libbfd.so is statically linked with libiberty.a but libbfd.a
+# is not. So if we do a static bpftrace build, we must link in
+# libiberty.a
+find_library (LIBIBERTY_LIBRARIES
+  NAMES
+    libiberty.a
   PATHS
     /lib
     /usr/lib
