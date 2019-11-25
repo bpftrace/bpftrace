@@ -1285,11 +1285,11 @@ void CodegenLLVM::visit(Probe &probe)
      * We begin by saving state that gets changed by the codegen pass, so we
      * can restore it for the next pass (printf_id_, time_id_).
      */
-    int starting_printf_id_ = printf_id_;
-    int starting_cat_id_ = cat_id_;
-    int starting_system_id_ = system_id_;
-    int starting_time_id_ = time_id_;
-    int starting_join_id_ = join_id_;
+    int starting_printf_id = printf_id_;
+    int starting_cat_id = cat_id_;
+    int starting_system_id = system_id_;
+    int starting_time_id = time_id_;
+    int starting_join_id = join_id_;
 
     for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
@@ -1303,11 +1303,11 @@ void CodegenLLVM::visit(Probe &probe)
 
       tracepoint_struct_ = "";
       for (auto &match_ : matches) {
-        printf_id_ = starting_printf_id_;
-        cat_id_ = starting_cat_id_;
-        system_id_ = starting_system_id_;
-        time_id_ = starting_time_id_;
-        join_id_ = starting_join_id_;
+        printf_id_ = starting_printf_id;
+        cat_id_ = starting_cat_id;
+        system_id_ = starting_system_id;
+        time_id_ = starting_time_id;
+        join_id_ = starting_join_id;
 
         std::string full_func_id = match_;
 
