@@ -64,12 +64,12 @@ EXPECT @\[cat\]: 1
 TIMEOUT 5
 
 NAME struct partial string compare - pass
-RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4)) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
+RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
 EXPECT I got hhvm
 TIMEOUT 5
 
 NAME struct partial string compare - pass reverse
-RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4)) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
+RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
 EXPECT I got hhvm-proc
 TIMEOUT 5
 

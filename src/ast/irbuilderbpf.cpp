@@ -378,7 +378,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   auto cmpAmount = strlen(str.c_str()) + 1;
-  return CreateStrncmp(val, str, cmpAmount, inverse);
+  return CreateStrncmp(val, str, cmpAmount, !inverse);
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse) {
@@ -386,7 +386,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
 
-  CreateStore(getInt1(inverse), store);
+  CreateStore(getInt1(!inverse), store);
 
   const char *c_str = str.c_str();
   for (size_t i = 0; i < n; i++)
@@ -405,7 +405,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
     CreateCondBr(cmp, str_ne, char_eq);
     SetInsertPoint(char_eq);
   }
-  CreateStore(getInt1(!inverse), store);
+  CreateStore(getInt1(inverse), store);
   CreateBr(str_ne);
 
   SetInsertPoint(str_ne);
@@ -416,7 +416,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
 }
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
-  return CreateStrncmp(val1, val2, bpftrace_.strlen_, inverse);
+  return CreateStrncmp(val1, val2, bpftrace_.strlen_, !inverse);
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool inverse) {
@@ -446,7 +446,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
   BasicBlock *done = BasicBlock::Create(module_.getContext(), "strcmp.done", parent);
 
-  CreateStore(getInt1(inverse), store);
+  CreateStore(getInt1(!inverse), store);
 
   Value *null_byte = getInt8(0);
 
@@ -478,7 +478,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
 
   CreateBr(done);
   SetInsertPoint(done);
-  CreateStore(getInt1(!inverse), store);
+  CreateStore(getInt1(inverse), store);
 
   CreateBr(str_ne);
   SetInsertPoint(str_ne);
