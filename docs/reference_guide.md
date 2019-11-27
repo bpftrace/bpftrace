@@ -2139,12 +2139,12 @@ The signal can also be specified using a name, similar to the `kill(1)` command:
 
 Syntax: `strncmp(char *s1, char *s2, int length)`
 
-Return true if the first `length` characters in `s1` and `s2` are equal, and false otherwise.
+Return zero if the first `length` characters in `s1` and `s2` are equal, and non-zero otherwise.
 
 Examples:
 
 ```
-bpftrace -e 't:syscalls:sys_enter_* /strncmp("mpv", comm, 3)/ { @[comm, probe] = count() }'
+bpftrace -e 't:syscalls:sys_enter_* /strncmp("mpv", comm, 3) == 0/ { @[comm, probe] = count() }'
 Attaching 320 probes...
 [...]
 @[mpv/vo, tracepoint:syscalls:sys_enter_rt_sigaction]: 238
