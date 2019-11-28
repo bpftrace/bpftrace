@@ -703,6 +703,20 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (epollfd < 0)
     return epollfd;
 
+  if (elapsed_map_)
+  {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    auto nsec = 1000000000ULL * ts.tv_sec + ts.tv_nsec;
+    uint64_t key = 0;
+
+    if (bpf_update_elem(elapsed_map_->mapfd_, &key, &nsec, 0) < 0)
+    {
+      perror("Failed to write start time to elapsed map");
+      return -1;
+    }
+  }
+
   BEGIN_trigger();
 
   // The kernel appears to fire some probes in the order that they were

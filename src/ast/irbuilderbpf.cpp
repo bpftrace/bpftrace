@@ -165,7 +165,7 @@ CallInst *IRBuilderBPF::createMapLookup(int mapfd, AllocaInst *key)
       Instruction::IntToPtr,
       getInt64(BPF_FUNC_map_lookup_elem),
       lookup_func_ptr_type);
-  return CreateCall(lookup_func, {map_ptr, key}, "lookup_elem");
+  return CreateCall(lookup_func, { map_ptr, key }, "lookup_elem");
 }
 
 CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
@@ -173,7 +173,7 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
   CreateStore(getInt32(0), key);
 
-  CallInst * call = createMapLookup(bpftrace_.join_map_->mapfd_, key);
+  CallInst *call = createMapLookup(bpftrace_.join_map_->mapfd_, key);
   return call;
 }
 
@@ -184,7 +184,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key) {
 
 Value *IRBuilderBPF::CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &type)
 {
-  CallInst * call = createMapLookup(mapfd, key);
+  CallInst *call = createMapLookup(mapfd, key);
 
   // Check if result == 0
   Function *parent = GetInsertBlock()->getParent();
@@ -200,8 +200,8 @@ Value *IRBuilderBPF::CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   bool is_array = (type.type == Type::string ||
-                (type.type == Type::cast && !type.is_pointer) ||
-                type.type == Type::inet);
+                   (type.type == Type::cast && !type.is_pointer) ||
+                   type.type == Type::inet);
 
   SetInsertPoint(lookup_success_block);
   if (is_array)

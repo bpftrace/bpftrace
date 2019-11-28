@@ -127,6 +127,7 @@ public:
   std::vector<std::tuple<std::string, std::vector<Field>>> cat_args_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
+  std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;
   std::vector<std::string> probe_ids_;
   unsigned int join_argnum_;
