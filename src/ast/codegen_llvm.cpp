@@ -86,10 +86,15 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "elapsed")
   {
-    struct timespec ts;
-    // this time will be calculated during codegen and baked into the BPF
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    expr_ = b_.CreateSub(b_.CreateGetNs(), b_.getInt64(1000000000ULL * ts.tv_sec + ts.tv_nsec));
+    AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
+    b_.CreateStore(b_.getInt64(0), key);
+
+    auto &map = bpftrace_.elapsed_map_;
+    auto type = SizedType(Type::integer, 8);
+    auto start = b_.CreateMapLookupElem(map->mapfd_, key, type);
+    expr_ = b_.CreateSub(b_.CreateGetNs(), start);
+    // start won't be on stack, no need to LifeTimeEnd it
+    b_.CreateLifetimeEnd(key);
   }
   else if (builtin.ident == "kstack" || builtin.ident == "ustack")
   {

@@ -147,6 +147,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
             builtin.loc);
 #endif
     }
+    else if (builtin.ident == "elapsed")
+    {
+      needs_elapsed_map_ = true;
+    }
     else if (builtin.ident == "curtask")
     {
       /*
@@ -786,6 +790,7 @@ void SemanticAnalyser::check_stack_call(Call &call, Type type) {
 void SemanticAnalyser::visit(Map &map)
 {
   MapKey key;
+
   if (map.vargs) {
     for (unsigned int i = 0; i < map.vargs->size(); i++){
       Expression * expr = map.vargs->at(i);
@@ -1604,6 +1609,15 @@ int SemanticAnalyser::create_maps(bool debug)
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     }
+    if (needs_elapsed_map_)
+    {
+      std::string map_ident = "elapsed";
+      SizedType type = SizedType(Type::integer, 8);
+      MapKey key;
+      bpftrace_.elapsed_map_ =
+          std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
+    }
+
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
   }
   else
@@ -1616,6 +1630,15 @@ int SemanticAnalyser::create_maps(bool debug)
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
       failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
+    }
+    if (needs_elapsed_map_)
+    {
+      std::string map_ident = "elapsed";
+      SizedType type = SizedType(Type::integer, 8);
+      MapKey key;
+      bpftrace_.elapsed_map_ =
+          std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
     }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
