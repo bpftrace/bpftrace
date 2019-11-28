@@ -13,7 +13,7 @@
   - [Amazon Linux](#amazon-linux)
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
-  - [Generic build](#generic-build)
+  - [Generic build](#generic-build-process)
 
 # Linux Kernel Requirements
 
