@@ -1733,7 +1733,7 @@ bool SemanticAnalyser::is_context_access(Expression *expr, bool is_pointer_deref
   {
     // Exclude an access such as args->a->b
     if ((p->op != Parser::token::MUL) || !is_pointer_dereferenced)
-      return is_context_access(p->expr, (p->op == Parser::token::MUL) | is_pointer_dereferenced);
+      return is_context_access(p->expr, (p->op == Parser::token::MUL) || is_pointer_dereferenced);
   }
   return false;
 }
