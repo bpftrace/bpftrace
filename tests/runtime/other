@@ -100,11 +100,11 @@ TIMEOUT 5
 AFTER  sleep 2; pkill -SIGINT bpftrace
 
 NAME perf ctx access
-RUN ./bpftrace --include linux/bpf_perf_event.h -e 'software:cpu:100000000 { printf("%d\n", ((struct bpf_perf_event_data*)ctx)->sample_period); exit();}'
+RUN bpftrace --include linux/bpf_perf_event.h -e 'software:cpu:100000000 { printf("%d\n", ((struct bpf_perf_event_data*)ctx)->sample_period); exit();}'
 EXPECT 100000000
 TIMEOUT 5
 
 NAME perf ctx access2
-RUN ./bpftrace --include linux/bpf_perf_event.h -e 'software:cpu:100000000 { $a=(struct bpf_perf_event_data*)ctx; @x=$a->sample_period; exit(); }'
+RUN bpftrace --include linux/bpf_perf_event.h -e 'software:cpu:100000000 { $a=(struct bpf_perf_event_data*)ctx; @x=$a->sample_period; exit(); }'
 EXPECT @x: 100000000
 TIMEOUT 5
