@@ -40,6 +40,7 @@ public:
   CallInst   *CreateBpfPseudoCall(Map &map);
   Value      *CreateMapLookupElem(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
+  Value      *CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &type);
   void        CreateMapDeleteElem(Map &map, AllocaInst *key);
   void        CreateProbeRead(AllocaInst *dst, size_t size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src);
@@ -68,6 +69,7 @@ private:
   BPFtrace &bpftrace_;
 
   Value      *CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin);
+  CallInst   *createMapLookup(int mapfd, AllocaInst *key);
 };
 
 } // namespace ast
