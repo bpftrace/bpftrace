@@ -800,6 +800,9 @@ void SemanticAnalyser::visit(Binop &binop)
   bool lsign = binop.left->type.is_signed;
   bool rsign = binop.right->type.is_signed;
 
+  if (is_context(binop.left) || is_context(binop.right))
+    bpftrace_.error(err_, binop.left->loc + binop.right->loc, "Calculation to context is not supported");
+
   std::stringstream buf;
   if (is_final_pass()) {
     if ((lhs != rhs) &&
@@ -1711,6 +1714,13 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
   }
 }
 
+bool SemanticAnalyser::is_context(Expression *expr)
+{
+  if (auto *p = dynamic_cast<Builtin*>(expr))
+    return p->ident == "ctx" || p->ident == "args";
+  return false;
+}
+
 bool SemanticAnalyser::is_context_access(Expression *expr, bool is_pointer_dereferenced)
 {
   // Example:
@@ -1722,9 +1732,6 @@ bool SemanticAnalyser::is_context_access(Expression *expr, bool is_pointer_deref
     return p->ident == "ctx" || p->ident == "args";
   else if (auto *p = dynamic_cast<Variable*>(expr))
     return is_context_access(variable_[p->ident], is_pointer_dereferenced);
-  else if (auto *p = dynamic_cast<Binop*>(expr))
-    return is_context_access(p->left, is_pointer_dereferenced) ||
-             is_context_access(p->right, is_pointer_dereferenced);
   else if (auto *p = dynamic_cast<FieldAccess*>(expr))
     return is_context_access(p->expr, is_pointer_dereferenced);
   else if (auto *p = dynamic_cast<Cast*>(expr))

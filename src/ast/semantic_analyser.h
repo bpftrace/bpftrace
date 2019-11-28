@@ -57,6 +57,7 @@ private:
   const int num_passes_ = 10;
 
   bool is_final_pass() const;
+  bool is_context(Expression *expr);
   bool is_context_access(Expression *expr, bool is_pointer_dereferenced=false);
 
   bool check_assignment(const Call &call, bool want_map, bool want_var, bool want_map_key);
