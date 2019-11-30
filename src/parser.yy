@@ -297,12 +297,16 @@ ident : IDENT         { $$ = $1; }
       | STACK_MODE    { $$ = $1; }
       ;
 
-call : CALL "(" ")"               { $$ = new ast::Call($1, @$); }
-     | CALL "(" vargs ")"         { $$ = new ast::Call($1, $3, @$); }
-     | CALL_BUILTIN  "(" ")"      { $$ = new ast::Call($1, @$); }
-     | CALL_BUILTIN "(" vargs ")" { $$ = new ast::Call($1, $3, @$); }
-     | ident "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
-     | ident "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
+call : CALL "(" ")"                 { $$ = new ast::Call($1, @$); }
+     | CALL "(" vargs ")"           { $$ = new ast::Call($1, $3, @$); }
+     | CALL_BUILTIN  "(" ")"        { $$ = new ast::Call($1, @$); }
+     | CALL_BUILTIN "(" vargs ")"   { $$ = new ast::Call($1, $3, @$); }
+     | IDENT "(" ")"                { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | IDENT "(" vargs ")"          { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | BUILTIN "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | BUILTIN "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | STACK_MODE "(" ")"           { error(@1, "Unknown function: " + $1); YYERROR;  }
+     | STACK_MODE "(" vargs ")"     { error(@1, "Unknown function: " + $1); YYERROR;  }
      ;
 
 map : MAP               { $$ = new ast::Map($1, @$); }
