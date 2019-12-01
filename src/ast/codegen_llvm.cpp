@@ -903,8 +903,8 @@ static bool unop_skip_accept(Unop &unop)
 {
   if (unop.expr->type.type == Type::integer)
   {
-    if (unop.op == bpftrace::Parser::token::PLUSPLUS ||
-        unop.op == bpftrace::Parser::token::MINUSMINUS)
+    if (unop.op == bpftrace::Parser::token::INCREMENT ||
+        unop.op == bpftrace::Parser::token::DECREMENT)
       return unop.expr->is_map || unop.expr->is_variable;
   }
 
@@ -926,10 +926,10 @@ void CodegenLLVM::visit(Unop &unop)
       } break;
       case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNot(expr_); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateNeg(expr_); break;
-      case bpftrace::Parser::token::PLUSPLUS:
-      case bpftrace::Parser::token::MINUSMINUS:
+      case bpftrace::Parser::token::INCREMENT:
+      case bpftrace::Parser::token::DECREMENT:
       {
-        bool is_increment = unop.op == bpftrace::Parser::token::PLUSPLUS;
+        bool is_increment = unop.op == bpftrace::Parser::token::INCREMENT;
 
         if (unop.expr->is_map)
         {

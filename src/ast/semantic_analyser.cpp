@@ -947,8 +947,8 @@ void SemanticAnalyser::visit(Binop &binop)
 
 void SemanticAnalyser::visit(Unop &unop)
 {
-  if (unop.op == Parser::token::PLUSPLUS ||
-      unop.op == Parser::token::MINUSMINUS) {
+  if (unop.op == Parser::token::INCREMENT ||
+      unop.op == Parser::token::DECREMENT) {
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
     if (!unop.expr->is_map && !unop.expr->is_variable) {
