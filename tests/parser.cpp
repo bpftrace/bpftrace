@@ -805,10 +805,10 @@ TEST(Parser, usdt_namespaced_probe)
 
 TEST(Parser, escape_chars)
 {
-  test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here\" }",
+  test("kprobe:sys_open { \"newline\\nand tab\\tbackslash\\\\quote\\\"here oct\\1009hex\\x309\" }",
       "Program\n"
       " kprobe:sys_open\n"
-      "  string: newline\\nand tab\\tbackslash\\\\quote\\\"here\n");
+      "  string: newline\\nand tab\\tbackslash\\\\quote\\\"here oct@9hex09\n");
 }
 
 TEST(Parser, begin_probe)

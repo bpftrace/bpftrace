@@ -22,6 +22,8 @@ map     @{ident}|@
 var     ${ident}
 int     [0-9]+|0[xX][0-9a-fA-F]+
 cint    :{int}:
+hex     (x|X)[0-9a-fA-F]{1,2}
+oct     [0-7]{1,3}
 hspace  [ \t]
 vspace  [\n\r]
 space   {hspace}|{vspace}
@@ -123,6 +125,8 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   \\r                   buffer += '\r';
   \\\"                  buffer += '\"';
   \\\\                  buffer += '\\';
+  \\{oct}               buffer += strtoll(yytext+1, NULL, 8);
+  \\{hex}               buffer += strtoll(yytext+2, NULL, 16);
   \n                    driver.error(loc, "unterminated string"); yy_pop_state(yyscanner); loc.lines(1); loc.step();
   <<EOF>>               driver.error(loc, "unterminated string"); yy_pop_state(yyscanner);
   \\.                   { driver.error(loc, std::string("invalid escape character '") +
