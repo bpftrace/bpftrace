@@ -140,8 +140,8 @@ std::string opstr(Unop &unop)
     case bpftrace::Parser::token::BNOT: return "~";
     case bpftrace::Parser::token::MINUS: return "-";
     case bpftrace::Parser::token::MUL: return "dereference";
-    case bpftrace::Parser::token::PLUSPLUS: return "++";
-    case bpftrace::Parser::token::MINUSMINUS: return "--";
+    case bpftrace::Parser::token::INCREMENT: return "++";
+    case bpftrace::Parser::token::DECREMENT: return "--";
     default:
       std::cerr << "unknown unary operator" << std::endl;
       abort();

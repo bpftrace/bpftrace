@@ -60,7 +60,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   LAND       "&&"
   LOR        "||"
   PLUS       "+"
-  PLUSPLUS   "++"
+  INCREMENT  "++"
 
   LEFTASSIGN   "<<="
   RIGHTASSIGN  ">>="
@@ -74,7 +74,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   BXORASSIGN  "^="
 
   MINUS      "-"
-  MINUSMINUS "--"
+  DECREMENT  "--"
   MUL        "*"
   DIV        "/"
   MOD        "%"
@@ -123,6 +123,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::PositionalParameter *> param
 %type <std::string> wildcard
 %type <std::string> ident
+%type <ast::Expression *> map_or_var
+%type <ast::Expression *> pre_post_op
 %type <ast::Integer *> int
 
 %right ASSIGN
@@ -253,7 +255,7 @@ expr : int                                      { $$ = $1; }
      | STACK_MODE                               { $$ = new ast::StackMode($1, @$); }
      | ternary                                  { $$ = $1; }
      | param                                    { $$ = $1; }
-     | variable                                 { $$ = $1; }
+     | map_or_var                               { $$ = $1; }
      | call                                     { $$ = $1; }
      | "(" expr ")"                             { $$ = $2; }
      | expr EQ expr                             { $$ = new ast::Binop($1, token::EQ, $3, @2); }
@@ -286,6 +288,17 @@ expr : int                                      { $$ = $1; }
      | pre_post_op                              { $$ = $1; }
      ;
 
+
+pre_post_op : map_or_var INCREMENT   { $$ = new ast::Unop(token::INCREMENT, $1, true, @2); }
+            | map_or_var DECREMENT   { $$ = new ast::Unop(token::DECREMENT, $1, true, @2); }
+            | INCREMENT map_or_var   { $$ = new ast::Unop(token::INCREMENT, $2, @1); }
+            | DECREMENT map_or_var   { $$ = new ast::Unop(token::DECREMENT, $2, @1); }
+            | ident INCREMENT      { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
+            | INCREMENT ident      { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
+            | ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
+            | DECREMENT ident      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
+            ;
+
 ident : IDENT         { $$ = $1; }
       | BUILTIN       { $$ = $1; }
       | CALL          { $$ = $1; }
@@ -311,6 +324,10 @@ map : MAP               { $$ = new ast::Map($1, @$); }
 
 var : VAR { $$ = new ast::Variable($1, @$); }
     ;
+
+map_or_var : var { $$ = $1; }
+           | map { $$ = $1; }
+           ;
 
 vargs : vargs "," expr { $$ = $1; $1->push_back($3); }
       | expr           { $$ = new ast::ExpressionList; $$->push_back($1); }

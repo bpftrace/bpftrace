@@ -97,8 +97,8 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 "||"                    { return Parser::make_LOR(loc); }
 "+"                     { return Parser::make_PLUS(loc); }
 "-"                     { return Parser::make_MINUS(loc); }
-"++"                    { return Parser::make_PLUSPLUS(loc); }
-"--"                    { return Parser::make_MINUSMINUS(loc); }
+"++"                    { return Parser::make_INCREMENT(loc); }
+"--"                    { return Parser::make_DECREMENT(loc); }
 "*"                     { return Parser::make_MUL(loc); }
 "/"                     { return Parser::make_DIV(loc); }
 "%"                     { return Parser::make_MOD(loc); }

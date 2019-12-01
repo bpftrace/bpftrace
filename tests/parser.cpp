@@ -1284,6 +1284,15 @@ TEST(Parser, uprobe_offset)
        " uprobe:./test:fn.abc+16\n");
 }
 
+TEST(Parser, invalid_increment_decrement)
+{
+  test_parse_failure("i:s:1 { @=5++}");
+  test_parse_failure("i:s:1 { @=++5}");
+  test_parse_failure("i:s:1 { @=5--}");
+  test_parse_failure("i:s:1 { @=--5}");
+  test_parse_failure("i:s:1 { @=\"a\"++}");
+}
+
 
 } // namespace parser
 } // namespace test

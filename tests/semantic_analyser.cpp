@@ -675,9 +675,6 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { --@x; }", 0);
 
   test("kprobe:f { $x++; }", 1);
-  test("kprobe:f { 0++; }", 1);
-  test("kprobe:f { \"a\"++; }", 1);
-
   test("kprobe:f { @x = \"a\"; @x++; }", 1);
   test("kprobe:f { $x = \"a\"; $x++; }", 10);
 }
