@@ -12,8 +12,9 @@ using Printer = ast::Printer;
 
 void test_parse_failure(const std::string &input)
 {
+  std::stringstream os;
   BPFtrace bpftrace;
-  Driver driver(bpftrace);
+  Driver driver(bpftrace, os);
   ASSERT_EQ(driver.parse_str(input), 1);
 }
 
