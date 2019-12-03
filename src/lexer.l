@@ -3,6 +3,7 @@
 %option reentrant
 %option stack
 %{
+#include <climits>
 #include "driver.h"
 #include "utils.h"
 #include "parser.tab.hh"
@@ -125,8 +126,14 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   \\r                   buffer += '\r';
   \\\"                  buffer += '\"';
   \\\\                  buffer += '\\';
-  \\{oct}               buffer += strtoll(yytext+1, NULL, 8);
-  \\{hex}               buffer += strtoll(yytext+2, NULL, 16);
+  \\{oct}               {
+                            long value = strtol(yytext+1, NULL, 8);
+                            if (value > UCHAR_MAX)
+                              driver.error(loc, std::string("octal escape sequence out of range. "
+                                           "The value will be truncated: ") + yytext);
+                            buffer += value;
+                        }
+  \\{hex}               buffer += strtol(yytext+2, NULL, 16);
   \n                    driver.error(loc, "unterminated string"); yy_pop_state(yyscanner); loc.lines(1); loc.step();
   <<EOF>>               driver.error(loc, "unterminated string"); yy_pop_state(yyscanner);
   \\.                   { driver.error(loc, std::string("invalid escape character '") +
