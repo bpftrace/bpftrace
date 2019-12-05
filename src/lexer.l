@@ -129,8 +129,8 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   \\{oct}               {
                             long value = strtol(yytext+1, NULL, 8);
                             if (value > UCHAR_MAX)
-                              driver.error(loc, std::string("octal escape sequence out of range. "
-                                           "The value will be truncated: ") + yytext);
+                              driver.error(loc, std::string("octal escape sequence out of range '") +
+                                                yytext + "'");
                             buffer += value;
                         }
   \\{hex}               buffer += strtol(yytext+2, NULL, 16);

@@ -2,9 +2,7 @@
 
 #include "driver.h"
 
-extern FILE *yyin;
 extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
-extern void yyset_in(FILE *_in_str, yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
 extern int yylex_destroy (yyscan_t yyscanner);
 extern bpftrace::location loc;
@@ -21,11 +19,6 @@ Driver::Driver(BPFtrace &bpftrace, std::ostream &o) : bpftrace_(bpftrace), out_(
 Driver::~Driver()
 {
   yylex_destroy(scanner_);
-}
-
-int Driver::parse_stdin()
-{
-  return parser_->parse();
 }
 
 void Driver::source(std::string filename, std::string script)
@@ -45,15 +38,24 @@ int Driver::parse()
   // Reset source location info on every pass
   loc.initialize();
   yy_scan_string(bpftrace_.source().c_str(), scanner_);
-  int result = parser_->parse();
-  return result;
+  parser_->parse();
+
+  // Keep track of errors thrown ourselves, since the result of
+  // parser_->parse() doesn't take scanner errors into account,
+  // only parser errors.
+  return failed_;
 }
 
 void Driver::error(const location &l, const std::string &m)
 {
   bpftrace_.error(out_, l, m);
+  failed_ = true;
 }
 
-void Driver::error(const std::string &m) { out_ << m << std::endl; }
+void Driver::error(const std::string &m)
+{
+  out_ << m << std::endl;
+  failed_ = true;
+}
 
 } // namespace bpftrace
