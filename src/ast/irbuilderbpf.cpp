@@ -411,7 +411,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
   SetInsertPoint(str_ne);
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), true);
+  result = CreateIntCast(result, getInt64Ty(), false);
   return result;
 }
 
@@ -485,7 +485,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
 
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), true);
+  result = CreateIntCast(result, getInt64Ty(), false);
 
   return result;
 }
