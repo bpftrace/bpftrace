@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <glob.h>
 #include <map>
 #include <string>
 #include <tuple>
@@ -35,6 +36,36 @@ std::vector<int> read_cpu_range(std::string path)
     }
   }
   return cpus;
+}
+
+std::vector<std::string> expand_wildcard_path(const std::string& path)
+{
+  glob_t glob_result;
+  memset(&glob_result, 0, sizeof(glob_result));
+
+  if (glob(path.c_str(), GLOB_NOCHECK, nullptr, &glob_result)) {
+    globfree(&glob_result);
+    throw std::runtime_error("glob() failed");
+  }
+
+  std::vector<std::string> matching_paths;
+  for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
+    matching_paths.push_back(std::string(glob_result.gl_pathv[i]));
+  }
+
+  globfree(&glob_result);
+  return matching_paths;
+}
+
+std::vector<std::string> expand_wildcard_paths(const std::vector<std::string>& paths)
+{
+  std::vector<std::string> expanded_paths;
+  for (const auto& p : paths)
+  {
+    auto ep = expand_wildcard_path(p);
+    expanded_paths.insert(expanded_paths.end(), ep.begin(), ep.end());
+  }
+  return expanded_paths;
 }
 
 } // namespace
@@ -479,19 +510,22 @@ std::string exec_system(const char* cmd)
 
 std::vector<std::string> resolve_binary_path(const std::string& cmd)
 {
-  std::string query;
-  query += "command -v ";
-  query += cmd;
-  std::string result = exec_system(query.c_str());
+  std::vector<std::string> candidate_paths = { cmd };
+  const char *env_paths = getenv("PATH");
 
-  if (result.size())
-  {
-    return split_string(result, '\n');
-  }
-  else
-  {
-    return { cmd };
-  }
+  if (env_paths != nullptr && cmd.find("/") == std::string::npos)
+    for (const auto& path : split_string(env_paths, ':'))
+      candidate_paths.push_back(path + "/" + cmd);
+
+  if (cmd.find("*") != std::string::npos)
+    candidate_paths = ::expand_wildcard_paths(candidate_paths);
+
+  std::vector<std::string> valid_executable_paths;
+  for (const auto& path : candidate_paths)
+    if (access(path.c_str(), X_OK) == 0)
+      valid_executable_paths.push_back(path);
+
+  return valid_executable_paths;
 }
 
 void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
