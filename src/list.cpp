@@ -160,15 +160,16 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
       executable = executable.substr(0, executable.find(":"));
 
       auto paths = resolve_binary_path(executable);
-      if (paths.size() > 1)
+      switch (paths.size())
       {
-        std::cerr << "path '" << executable << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+      case 0:
+        std::cerr << "uprobe target '" << executable << "' does not exist or is not executable" << std::endl;
         return;
-      }
-      absolute_exe = paths.front();
-      struct stat s;
-      if (stat(absolute_exe.c_str(), &s) != 0) {
-        std::cerr << "uprobe target " << executable << " does not exist" << std::endl;
+      case 1:
+        absolute_exe = paths.front();
+        break;
+      default:
+        std::cerr << "path '" << executable << "' must refer to a unique binary but matched " << paths.size() << std::endl;
         return;
       }
     }
@@ -201,12 +202,18 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
     usdt_path_list = usdt_path.find(":") == std::string::npos;
     usdt_path = usdt_path.substr(0, usdt_path.find(":"));
     auto paths = resolve_binary_path(usdt_path);
-    if (paths.size() > 1)
+    switch (paths.size())
     {
-      std::cerr << "path '" << usdt_path << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+    case 0:
+      std::cerr << "usdt target '" << usdt_path << "' does not exist or is not executable" << std::endl;
+      return;
+    case 1:
+      usdt_probes = USDTHelper::probes_for_path(paths.front());
+      break;
+    default:
+      std::cerr << "usdt target '" << usdt_path << "' must refer to a unique binary but matched " << paths.size() << std::endl;
       return;
     }
-    usdt_probes = USDTHelper::probes_for_path(paths.front());
   }
 
   for (auto const& usdt_probe : usdt_probes)
