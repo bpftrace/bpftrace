@@ -9,7 +9,7 @@ TEST(codegen, ternary_str)
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"hi\"; }",
 
 #if LLVM_VERSION_MAJOR > 6
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -27,18 +27,18 @@ entry:
 
 left:                                             ; preds = %entry
   store i8 108, i8* %1, align 1
-  %str.sroa.3.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
-  store i8 111, i8* %str.sroa.3.0..sroa_idx, align 1
-  %str.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str.sroa.4.0..sroa_idx, i8 0, i64 61, i1 false)
+  %str.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
+  store i8 111, i8* %str.sroa.4.0..sroa_idx, align 1
+  %str.sroa.5.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str.sroa.5.0..sroa_idx, i8 0, i64 61, i1 false)
   br label %done
 
 right:                                            ; preds = %entry
   store i8 104, i8* %1, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
-  store i8 105, i8* %str1.sroa.3.0..sroa_idx, align 1
-  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str1.sroa.4.0..sroa_idx, i8 0, i64 61, i1 false)
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
+  store i8 105, i8* %str1.sroa.4.0..sroa_idx, align 1
+  %str1.sroa.5.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str1.sroa.5.0..sroa_idx, i8 0, i64 61, i1 false)
   br label %done
 
 done:                                             ; preds = %right, %left
@@ -64,7 +64,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #elif LLVM_VERSION_MAJOR == 6
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -82,18 +82,18 @@ entry:
 
 left:                                             ; preds = %entry
   store i8 108, i8* %1, align 1
-  %str.sroa.3.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
-  store i8 111, i8* %str.sroa.3.0..sroa_idx, align 1
-  %str.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
-  call void @llvm.memset.p0i8.i64(i8* nonnull %str.sroa.4.0..sroa_idx, i8 0, i64 61, i32 1, i1 false)
+  %str.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
+  store i8 111, i8* %str.sroa.4.0..sroa_idx, align 1
+  %str.sroa.5.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
+  call void @llvm.memset.p0i8.i64(i8* nonnull %str.sroa.5.0..sroa_idx, i8 0, i64 61, i32 1, i1 false)
   br label %done
 
 right:                                            ; preds = %entry
   store i8 104, i8* %1, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
-  store i8 105, i8* %str1.sroa.3.0..sroa_idx, align 1
-  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
-  call void @llvm.memset.p0i8.i64(i8* nonnull %str1.sroa.4.0..sroa_idx, i8 0, i64 61, i32 1, i1 false)
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
+  store i8 105, i8* %str1.sroa.4.0..sroa_idx, align 1
+  %str1.sroa.5.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
+  call void @llvm.memset.p0i8.i64(i8* nonnull %str1.sroa.5.0..sroa_idx, i8 0, i64 61, i32 1, i1 false)
   br label %done
 
 done:                                             ; preds = %right, %left
@@ -119,7 +119,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #else
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -136,11 +136,11 @@ entry:
   %.sink128 = select i1 %2, i8 108, i8 104
   %.sink = select i1 %2, i8 111, i8 105
   store i8 %.sink128, i8* %1, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
-  store i8 %.sink, i8* %str1.sroa.3.0..sroa_idx, align 1
-  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 1
+  store i8 %.sink, i8* %str1.sroa.4.0..sroa_idx, align 1
+  %str1.sroa.5.0..sroa_idx = getelementptr inbounds [64 x i8], [64 x i8]* %buf, i64 0, i64 2
   %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.memset.p0i8.i64(i8* %str1.sroa.4.0..sroa_idx, i8 0, i64 62, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %str1.sroa.5.0..sroa_idx, i8 0, i64 62, i32 1, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)

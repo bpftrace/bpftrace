@@ -10,9 +10,10 @@ TEST(codegen, map_key_probe)
   auto bpftrace = get_mock_bpftrace();
 
   test(*bpftrace,
-      "tracepoint:sched:sched_one,tracepoint:sched:sched_two { @x[probe] = @x[probe] + 1 }",
+       "tracepoint:sched:sched_one,tracepoint:sched:sched_two { @x[probe] = "
+       "@x[probe] + 1 }",
 
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -25,7 +26,7 @@ entry:
   %"@x_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@x_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 0, i8* %1, align 8
+  store i64 0, [8 x i8]* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, [8 x i8]* nonnull %"@x_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
@@ -41,7 +42,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = getelementptr inbounds [8 x i8], [8 x i8]* %"@x_key1", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  store i64 0, i8* %3, align 8
+  store i64 0, [8 x i8]* %"@x_key1", align 8
   %4 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
@@ -62,7 +63,7 @@ entry:
   %"@x_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@x_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 1, i8* %1, align 8
+  store i64 1, [8 x i8]* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, [8 x i8]* nonnull %"@x_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
@@ -78,7 +79,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = getelementptr inbounds [8 x i8], [8 x i8]* %"@x_key1", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  store i64 1, i8* %3, align 8
+  store i64 1, [8 x i8]* %"@x_key1", align 8
   %4 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
