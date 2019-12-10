@@ -774,17 +774,28 @@ void CodegenLLVM::visit(Call &call)
     // literal in memory by calling a different function.
     if (right_arg->is_literal) {
       left_arg->accept(*this);
+      Value *left_string = expr_;
       const auto& string_literal = static_cast<String *>(right_arg)->str;
-      expr_ = b_.CreateStrncmp(expr_, string_literal, size, false);
+      expr_ = b_.CreateStrncmp(left_string, string_literal, size, false);
+      if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
+        b_.CreateLifetimeEnd(left_string);
     } else if (left_arg->is_literal) {
       right_arg->accept(*this);
+      Value *right_string = expr_;
       const auto& string_literal = static_cast<String *>(left_arg)->str;
-      expr_ = b_.CreateStrncmp(expr_, string_literal, size, false);
+      expr_ = b_.CreateStrncmp(right_string, string_literal, size, false);
+      if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
+        b_.CreateLifetimeEnd(right_string);
     } else {
       right_arg->accept(*this);
       Value *right_string = expr_;
       left_arg->accept(*this);
-      expr_ = b_.CreateStrncmp(expr_, right_string, size, false);
+      Value *left_string = expr_;
+      expr_ = b_.CreateStrncmp(left_string, right_string, size, false);
+      if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
+        b_.CreateLifetimeEnd(left_string);
+      if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
+        b_.CreateLifetimeEnd(right_string);
     }
   }
   else
@@ -1086,11 +1097,15 @@ void CodegenLLVM::visit(Ternary &ternary)
     b_.SetInsertPoint(left_block);
     ternary.left->accept(*this);
     b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
+    if (!ternary.left->is_variable && dyn_cast<AllocaInst>(expr_))
+      b_.CreateLifetimeEnd(expr_);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     ternary.right->accept(*this);
     b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
+    if (!ternary.right->is_variable && dyn_cast<AllocaInst>(expr_))
+      b_.CreateLifetimeEnd(expr_);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
@@ -1300,6 +1315,8 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   else
   {
     b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.size, 1);
+    if (!assignment.expr->is_variable && dyn_cast<AllocaInst>(expr_))
+      b_.CreateLifetimeEnd(expr_);
   }
 }
 
@@ -1532,28 +1549,63 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
 {
   AllocaInst *key;
   if (map.vargs) {
-    size_t size = 0;
-    for (Expression *expr : *map.vargs)
+    // A single value as a map key (e.g., @[comm] = 0;)
+    if (map.vargs->size() == 1)
     {
-      size += expr->type.size;
-    }
-    key = b_.CreateAllocaBPF(size, map.ident + "_key");
-
-    int offset = 0;
-    for (Expression *expr : *map.vargs) {
+      Expression *expr = map.vargs->at(0);
       expr->accept(*this);
-      Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string || expr->type.type == Type::usym ||
         expr->type.type == Type::inet)
-        b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
+      {
+        // The value is already in the stack; Skip copy
+        key = dyn_cast<AllocaInst>(expr_);
+      }
       else
-        // promote map key to 64-bit:
-        b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed), offset_val);
-      offset += expr->type.size;
+      {
+        key = b_.CreateAllocaBPF(expr->type.size, map.ident + "_key");
+        b_.CreateStore(
+            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed),
+            key);
+      }
+    }
+    else
+    {
+      // Two or more values as a map key (e.g, @[comm, pid] = 1;)
+      size_t size = 0;
+      for (Expression *expr : *map.vargs)
+      {
+        size += expr->type.size;
+      }
+      key = b_.CreateAllocaBPF(size, map.ident + "_key");
+
+      int offset = 0;
+      // Construct a map key in the stack
+      for (Expression *expr : *map.vargs)
+      {
+        expr->accept(*this);
+        Value *offset_val =
+            b_.CreateGEP(key, { b_.getInt64(0), b_.getInt64(offset) });
+        if (expr->type.type == Type::string || expr->type.type == Type::usym ||
+            expr->type.type == Type::inet)
+        {
+          b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
+          if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
+            b_.CreateLifetimeEnd(expr_);
+        }
+        else
+        {
+          // promote map key to 64-bit:
+          b_.CreateStore(
+              b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed),
+              offset_val);
+        }
+        offset += expr->type.size;
+      }
     }
   }
   else
   {
+    // No map key (e.g., @ = 1;). Use 0 as a key.
     key = b_.CreateAllocaBPF(SizedType(Type::integer, 8), map.ident + "_key");
     b_.CreateStore(b_.getInt64(0), key);
   }
@@ -1577,7 +1629,11 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (expr->type.type == Type::string || expr->type.type == Type::usym ||
         expr->type.type == Type::inet)
+      {
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
+        if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
+          b_.CreateLifetimeEnd(expr_);
+      }
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
@@ -1849,7 +1905,11 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     arg.accept(*this);
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
+    {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
+      if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))
+        b_.CreateLifetimeEnd(expr_);
+    }
     else
       b_.CreateStore(expr_, offset);
 

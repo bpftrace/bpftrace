@@ -9,7 +9,7 @@ TEST(codegen, map_key_string)
   test("kprobe:f { @x[\"a\", \"b\"] = 44 }",
 
 #if LLVM_VERSION_MAJOR > 6
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -22,13 +22,13 @@ entry:
   %1 = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 97, i8* %1, align 1
-  %str.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
+  %str.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
   %str1.sroa.0.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 64
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str.sroa.3.0..sroa_idx, i8 0, i64 63, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str.sroa.4.0..sroa_idx, i8 0, i64 63, i1 false)
   store i8 98, i8* %str1.sroa.0.0..sroa_idx, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str1.sroa.3.0..sroa_idx, i8 0, i64 63, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %str1.sroa.4.0..sroa_idx, i8 0, i64 63, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -48,7 +48,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #elif LLVM_VERSION_MAJOR == 6
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -61,13 +61,13 @@ entry:
   %1 = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 97, i8* %1, align 1
-  %str.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
+  %str.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
   %str1.sroa.0.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 64
-  call void @llvm.memset.p0i8.i64(i8* nonnull %str.sroa.3.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %str.sroa.4.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
   store i8 98, i8* %str1.sroa.0.0..sroa_idx, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.memset.p0i8.i64(i8* nonnull %str1.sroa.3.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull %str1.sroa.4.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -87,7 +87,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #else
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -100,13 +100,13 @@ entry:
   %1 = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i8 97, i8* %1, align 1
-  %str.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
+  %str.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 1
   %str1.sroa.0.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 64
-  call void @llvm.memset.p0i8.i64(i8* %str.sroa.3.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %str.sroa.4.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
   store i8 98, i8* %str1.sroa.0.0..sroa_idx, align 1
-  %str1.sroa.3.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
+  %str1.sroa.4.0..sroa_idx = getelementptr inbounds [128 x i8], [128 x i8]* %"@x_key", i64 0, i64 65
   %2 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.memset.p0i8.i64(i8* %str1.sroa.3.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* %str1.sroa.4.0..sroa_idx, i8 0, i64 63, i32 1, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 44, i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
