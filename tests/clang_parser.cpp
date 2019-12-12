@@ -567,10 +567,11 @@ class clang_parser_btf : public ::testing::Test {
   {
     // clear the environment and remove the temp file
     unsetenv("BPFTRACE_BTF_TEST");
-    std::remove(path_);
+    if (path_)
+      std::remove(path_);
   }
 
-  char *path_;
+  char *path_ = nullptr;
 };
 
 TEST_F(clang_parser_btf, btf)

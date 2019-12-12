@@ -21,7 +21,7 @@ public:
 
   bool has_data(void);
   std::string c_def(std::unordered_set<std::string>& set);
-  std::string type_of(std::string name, std::string field);
+  std::string type_of(const std::string& name, const std::string& field);
 
 private:
   struct btf *btf;
