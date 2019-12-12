@@ -240,7 +240,7 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
   return ret;
 }
 
-std::string BTF::type_of(std::string name, std::string field)
+std::string BTF::type_of(const std::string& name, const std::string& field)
 {
   __s32 type_id = btf__find_by_name(btf, name.c_str());
 
@@ -296,8 +296,10 @@ BTF::~BTF() { }
 
 std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unused__))) { return std::string(""); }
 
-std::string BTF::type_of(std::string name __attribute__((__unused__)),
-                         std::string field __attribute__((__unused__))) { return std::string(""); }
+std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
+                         const std::string& field __attribute__((__unused__))) {
+  return std::string("");
+}
 
 } // namespace bpftrace
 
