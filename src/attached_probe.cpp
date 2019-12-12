@@ -307,6 +307,13 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
       throw std::runtime_error("Could not resolve symbol: " + probe_.path + ":" + symbol);
   }
 
+  if (probe_.type == ProbeType::uretprobe && func_offset != 0) {
+    std::stringstream msg;
+    msg << "uretprobes cannot be attached at function offset. "
+        << "(address resolved to: " << symbol << "+" << func_offset << ")";
+    throw std::runtime_error(msg.str());
+  }
+
   if (func_offset >= sym.size) {
     std::stringstream ss;
     ss << sym.size;

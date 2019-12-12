@@ -836,7 +836,13 @@ TEST(semantic_analyser, uprobe)
   test("uprobe { 1 }", 1);
 
   test("uretprobe:/bin/sh:f { 1 }", 0);
+  test("ur:/bin/sh:f { 1 }", 0);
   test("uretprobe:sh:f { 1 }", 0);
+  test("ur:sh:f { 1 }", 0);
+  test("uretprobe:/bin/sh:0x10 { 1 }", 0);
+  test("ur:/bin/sh:0x10 { 1 }", 0);
+  test("uretprobe:/bin/sh:f+0x10 { 1 }", 1);
+  test("ur:/bin/sh:f+0x10 { 1 }", 1);
   test("uretprobe:/notexistfile:f { 1 }", 1);
   test("uretprobe:notexistfile:f { 1 }", 1);
   test("uretprobe:f { 1 }", 1);
