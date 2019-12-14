@@ -2,6 +2,7 @@
 
 #include "gmock/gmock.h"
 #include "bpftrace.h"
+#include "utils.h"
 
 namespace bpftrace {
 namespace test {
@@ -14,6 +15,7 @@ public:
       std::unique_ptr<std::istream>(int pid, const std::string &target));
   MOCK_CONST_METHOD1(extract_func_symbols_from_path,
       std::string(const std::string &path));
+
   std::vector<Probe> get_probes()
   {
     return probes_;
@@ -21,6 +23,26 @@ public:
   std::vector<Probe> get_special_probes()
   {
     return special_probes_;
+  }
+
+  int resolve_uname(const std::string &name,
+                    struct symbol *sym,
+                    const std::string &path) const override
+  {
+    (void)path;
+    sym->name = name;
+    if (name[0] > 'A' && name[0] < 'z')
+    {
+      sym->address = 12345;
+      sym->size = 4;
+    }
+    else
+    {
+      auto fields = split_string(name, '_');
+      sym->address = std::stoull(fields.at(0));
+      sym->size = std::stoull(fields.at(1));
+    }
+    return 0;
   }
 };
 

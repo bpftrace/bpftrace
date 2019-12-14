@@ -20,6 +20,14 @@
 
 namespace bpftrace {
 
+struct symbol
+{
+  std::string name;
+  uint64_t start;
+  uint64_t size;
+  uint64_t address;
+};
+
 class BpfOrc;
 enum class DebugLevel;
 
@@ -94,7 +102,9 @@ public:
   std::string resolve_inet(int af, const uint8_t* inet) const;
   std::string resolve_uid(uintptr_t addr) const;
   uint64_t resolve_kname(const std::string &name) const;
-  uint64_t resolve_uname(const std::string &name, const std::string &path) const;
+  virtual int resolve_uname(const std::string &name,
+                            struct symbol *sym,
+                            const std::string &path) const;
   std::string map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div);
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;

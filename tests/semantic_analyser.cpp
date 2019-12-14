@@ -165,13 +165,13 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { ksym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { kaddr(\"sym\") }", 0);
-  test("kprobe:f { uaddr(\"sym\") }", 0);
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
   test("kprobe:f { reg(\"ip\") }", 0);
   test("kprobe:f { kstack(1) }", 0);
   test("kprobe:f { ustack(1) }", 0);
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
+  test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\") }", 0);
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -528,12 +528,44 @@ TEST(semantic_analyser, call_kaddr)
 
 TEST(semantic_analyser, call_uaddr)
 {
-  test("kprobe:f { uaddr(\"counter\"); }", 0);
-  test("kprobe:f { uaddr(\"github.com/golang/glog.severityName\"); }", 0);
-  test("kprobe:f { @x = uaddr(\"counter\"); }", 0);
-  test("kprobe:f { uaddr(); }", 1);
-  test("kprobe:f { uaddr(123); }", 1);
-  test("kprobe:f { uaddr(\"?\"); }", 1);
+  test("u:/bin/bash:main { uaddr(\"github.com/golang/glog.severityName\"); }", 0);
+  test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\"); }", 0);
+  test("u:/bin/bash:main,u:/bin/bash:readline { uaddr(\"glob_asciirange\"); }",
+       0);
+  test("uprobe:/bin/bash:main { @x = uaddr(\"glob_asciirange\"); }", 0);
+  test("uprobe:/bin/bash:main { uaddr(); }", 1);
+  test("uprobe:/bin/bash:main { uaddr(123); }", 1);
+  test("uprobe:/bin/bash:main { uaddr(\"?\"); }", 1);
+  test("uprobe:/bin/bash:main { $str = \"glob_asciirange\"; uaddr($str); }", 1);
+  test("uprobe:/bin/bash:main { @str = \"glob_asciirange\"; uaddr(@str); }", 1);
+
+  test("k:f { uaddr(\"A\"); }", 1);
+  test("i:s:1 { uaddr(\"A\"); }", 1);
+
+  // The C struct parser should set the is_signed flag on signed types
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  std::string prog = "uprobe:/bin/bash:main {"
+                     "$a = uaddr(\"12345_1\");"
+                     "$b = uaddr(\"12345_2\");"
+                     "$c = uaddr(\"12345_4\");"
+                     "$d = uaddr(\"12345_8\");"
+                     "$e = uaddr(\"12345_5\");"
+                     "$f = uaddr(\"12345_33\");"
+                     "}";
+
+  test(driver, prog, 0);
+
+  std::vector<int> sizes = { 1, 2, 4, 8, 8, 8 };
+
+  for (size_t i = 0; i < sizes.size(); i++)
+  {
+    auto v = static_cast<ast::AssignVarStatement *>(
+        driver.root_->probes->at(0)->stmts->at(i));
+    EXPECT_EQ(SizedType(Type::integer, 8, false), v->var->type);
+    EXPECT_EQ(true, v->var->type.is_pointer);
+    EXPECT_EQ((unsigned long int)sizes.at(i), v->var->type.pointee_size);
+  }
 }
 
 TEST(semantic_analyser, call_reg)

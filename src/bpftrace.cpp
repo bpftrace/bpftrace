@@ -1592,38 +1592,44 @@ uint64_t BPFtrace::resolve_cgroupid(const std::string &path) const
 }
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-static int sym_resolve_callback(const char *name, uint64_t addr, uint64_t, void *payload)
+static int sym_resolve_callback(const char *name,
+                                uint64_t addr,
+                                uint64_t size,
+                                void *payload)
 {
-  struct bcc_symbol *sym = (struct bcc_symbol *)payload;
-  if (!strcmp(name, sym->name)) {
-    sym->offset = addr;
+  struct symbol *sym = (struct symbol *)payload;
+  if (!strcmp(name, sym->name.c_str()))
+  {
+    sym->address = addr;
+    sym->size = size;
     return -1;
   }
   return 0;
 }
 #endif
 
-uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path) const
+int BPFtrace::resolve_uname(const std::string &name,
+                            struct symbol *sym,
+                            const std::string &path) const
 {
+  sym->name = name;
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
   struct bcc_symbol_option option;
   memset(&option, 0, sizeof(option));
   option.use_symbol_type = (1 << STT_OBJECT);
 
-  struct bcc_symbol sym;
-  sym.name = name.c_str();
-  sym.offset = 0;
-
-  int err = bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, &sym);
-  if (err == -1 || (err == 0 && sym.offset == 0))
-    throw std::runtime_error("Could not resolve symbol: " + path + ":" + name);
-
-  return sym.offset;
+  return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
 #else
-  std::string call_str = std::string("objdump -tT ") + path + " | grep -w " + name;
+  std::string call_str =
+      std::string("objdump -tT ") + path + " | grep -w " + sym->name;
   const char *call = call_str.c_str();
   auto result = exec_system(call);
-  return read_address_from_output(result);
+  sym->address = read_address_from_output(result);
+  /* Trying to grab the size from objdump output is not that easy. foreaech_sym
+     has been around for a while, users should switch to that.
+  */
+  sym->size = 8;
+  return 0;
 #endif
 }
 
@@ -1663,7 +1669,6 @@ uint64_t BPFtrace::read_address_from_output(std::string output)
   std::string first_word = output.substr(0, output.find(" "));
   return std::stoull(first_word, 0, 16);
 }
-
 
 static std::string resolve_inetv4(const uint8_t* inet) {
   char addr_cstr[INET_ADDRSTRLEN];

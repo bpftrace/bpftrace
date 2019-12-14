@@ -225,13 +225,6 @@ std::string AttachedProbe::sanitise(const std::string &str)
   return std::regex_replace(str, std::regex("[^A-Za-z0-9_]"), "_");
 }
 
-struct symbol {
-  std::string name;
-  uint64_t    start;
-  uint64_t    size;
-  uint64_t    address;
-};
-
 static int sym_name_cb(const char *symname, uint64_t start,
                        uint64_t size, void *p)
 {

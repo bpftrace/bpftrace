@@ -532,14 +532,64 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
-   else if (call.func == "uaddr")
-   {
-    if (check_nargs(call, 1)) {
-      if (check_arg(call, Type::string, 0, true)) {
-        check_symbol(call, 0);
+  else if (call.func == "uaddr")
+  {
+    if (!check_nargs(call, 1))
+      return;
+    if (!(check_arg(call, Type::string, 0, true) && check_symbol(call, 0)))
+      return;
+
+    std::vector<int> sizes;
+    auto &name = static_cast<String &>(*call.vargs->at(0)).str;
+    for (auto &ap : *probe_->attach_points)
+    {
+      ProbeType type = probetype(ap->provider);
+      if (type != ProbeType::usdt && type != ProbeType::uretprobe &&
+          type != ProbeType::uprobe)
+      {
+        bpftrace_.error(
+            err_,
+            call.loc,
+            "uaddr can only be used with u(ret)probes and usdt probes");
+        sizes.push_back(0);
+        continue;
+      }
+      struct symbol sym = {};
+      int err = bpftrace_.resolve_uname(name, &sym, ap->target);
+      if (err < 0 || sym.address == 0)
+      {
+        bpftrace_.error(err_,
+                        call.loc,
+                        "Could not resolve symbol: " + ap->target + ":" + name);
+      }
+      sizes.push_back(sym.size);
+    }
+
+    for (size_t i = 1; i < sizes.size(); i++)
+    {
+      if (sizes.at(0) != sizes.at(i))
+      {
+        std::stringstream msg;
+        msg << "Symbol size mismatch between probes. Symbol \"" << name
+            << "\" has size " << sizes.at(0) << " for probe \""
+            << probe_->attach_points->at(0)->name("") << "\" but size "
+            << sizes.at(i) << " for probe \""
+            << probe_->attach_points->at(i)->name("") << "\"";
+        bpftrace_.error(err_, call.loc, msg.str());
       }
     }
     call.type = SizedType(Type::integer, 8);
+    call.type.is_pointer = true;
+    switch (sizes.at(0))
+    {
+      case 1:
+      case 2:
+      case 4:
+        call.type.pointee_size = sizes.at(0);
+        break;
+      default:
+        call.type.pointee_size = 8;
+    }
   }
   else if (call.func == "cgroupid") {
     if (check_nargs(call, 1)) {

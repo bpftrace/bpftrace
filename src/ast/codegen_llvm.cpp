@@ -479,10 +479,14 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "uaddr")
   {
-   uint64_t addr;
     auto &name = static_cast<String&>(*call.vargs->at(0)).str;
-    addr = bpftrace_.resolve_uname(name, current_attach_point_->target);
-    expr_ = b_.getInt64(addr);
+    struct symbol sym = {};
+    int err =
+        bpftrace_.resolve_uname(name, &sym, current_attach_point_->target);
+    if (err < 0 || sym.address == 0)
+      throw std::runtime_error("Could not resolve symbol: " +
+                               current_attach_point_->target + ":" + name);
+    expr_ = b_.getInt64(sym.address);
   }
   else if (call.func == "cgroupid")
   {
@@ -1406,7 +1410,6 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
 
-  // needed for uaddr() calls and usdt probes:
   for (auto &attach_point : *probe.attach_points) {
 
     // All usdt probes need expansion to be able to read arguments
@@ -1414,7 +1417,6 @@ void CodegenLLVM::visit(Probe &probe)
       probe.need_expansion = true;
 
     current_attach_point_ = attach_point;
-    // TODO: semantic analyser should ensure targets are equal when uaddr() is used
     break;
   }
   /*
