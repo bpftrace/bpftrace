@@ -1785,7 +1785,26 @@ const char *usbcore_name = "usbcore";
 
 ## 9. `uaddr()`: Address resolution, user-level
 
-Syntax: `uaddr(char *name)`
+Syntax:
+- `u64 *uaddr(symbol)` (default)
+- `u64 *uaddr(symbol)`
+- `u32 *uaddr(symbol)`
+- `u16 *uaddr(symbol)`
+- `u8  *uaddr(symbol)`
+
+Supported Probe Types:
+- u(ret)probes
+- USDT
+
+**Does not work with ASLR, see issue [#75](https://github.com/iovisor/bpftrace/75)**
+
+The `uaddr` function returns the address of the specified symbol. This lookup
+happens during program compilation and cannot be used dynamically.
+
+The default return type is `u64*`. If the ELF object size matches a known
+integer size (1, 2, 4 or 8 bytes) the return type is modified to match the width
+(`u8*`, `u16*`, `u32*` or `u64*` resp.). As ELF does not contain type info the
+type is always assumed to be unsigned.
 
 Examples:
 
@@ -1797,7 +1816,8 @@ PS1: \[\e[34;1m\]\u@\h:\w>\[\e[0m\]
 ^C
 ```
 
-This is printing the `ps1_prompt` string from /bin/bash, whenever a `readline()` function is executed.
+This is printing the `ps1_prompt` string from /bin/bash, whenever a `readline()`
+function is executed.
 
 ## 10. `reg()`: Registers
 
