@@ -434,6 +434,102 @@ int BTF::resolve_args(const std::string &func,
   return -1;
 }
 
+void BTF::display_funcs(void) const
+{
+  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  std::string type = std::string("");
+  struct btf_dump_opts opts = {
+    .ctx = &type,
+  };
+  struct btf_dump *dump;
+  char err_buf[256];
+  int err;
+
+  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  err = libbpf_get_error(dump);
+  if (err)
+  {
+    libbpf_strerror(err, err_buf, sizeof(err_buf));
+    std::cerr << "BTF: failed to initialize dump (" << err_buf << ")"
+              << std::endl;
+    return;
+  }
+
+  for (id = 1; id <= max; id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+
+    if (!btf_is_func(t))
+      continue;
+
+    const char *func_name = btf__name_by_offset(btf, t->name_off);
+
+    t = btf__type_by_id(btf, t->type);
+    if (!btf_is_func_proto(t))
+    {
+      /* bad.. */
+      if (!bt_verbose)
+        std::cerr << "ERROR: " << func_name
+                  << " function does not have FUNC_PROTO record" << std::endl;
+      break;
+    }
+
+    std::cout << "kfunc:" << func_name << std::endl;
+
+#ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
+
+    if (!bt_verbose)
+      continue;
+
+    DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
+                        decl_opts,
+                        .field_name = "",
+                        .indent_level = 0, );
+
+    const struct btf_param *p;
+    int j;
+
+    for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++)
+    {
+      // set by dump_printf callback
+      type = std::string("");
+      const char *arg_name = btf__name_by_offset(btf, p->name_off);
+
+      err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
+      if (err)
+      {
+        std::cerr << "ERROR: failed to dump argument: " << arg_name
+                  << std::endl;
+        break;
+      }
+
+      std::cout << "    " << type << " " << arg_name << ";" << std::endl;
+    }
+
+    if (!t->type)
+      continue;
+
+    // set by dump_printf callback
+    type = std::string("");
+
+    err = btf_dump__emit_type_decl(dump, t->type, &decl_opts);
+    if (err)
+    {
+      std::cerr << "ERROR: failed to dump type for: " << func_name << std::endl;
+      break;
+    }
+
+    std::cout << "    " << type << " retval;" << std::endl;
+#endif
+  }
+
+  if (id != (max + 1))
+    std::cerr << "ERROR: BTF data inconsistency " << id << "," << max
+              << std::endl;
+
+  btf_dump__free(dump);
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -456,6 +552,10 @@ int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
                       bool ret __attribute__((__unused__)))
 {
   return -1;
+}
+
+void BTF::display_funcs(void) const
+{
 }
 
 } // namespace bpftrace

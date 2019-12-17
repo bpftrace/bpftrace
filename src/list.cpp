@@ -9,8 +9,9 @@
 #include <vector>
 #include <string>
 
-#include "list.h"
 #include "bpftrace.h"
+#include "btf.h"
+#include "list.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -286,6 +287,8 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
     std::cout << probe << std::endl;
   }
 
+  // kfuncs
+  bpftrace.btf_.display_funcs();
 }
 
 } // namespace bpftrace
