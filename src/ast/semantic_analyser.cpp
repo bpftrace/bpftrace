@@ -1413,8 +1413,8 @@ int SemanticAnalyser::analyse()
 
 int SemanticAnalyser::create_maps(bool debug)
 {
-  int failed_maps = 0;
-  auto is_invalid_map = [](int a) { return (int)(a < 0); };
+  uint32_t failed_maps = 0;
+  auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
   for (auto &map_val : map_val_)
   {
     std::string map_name = map_val.first;
