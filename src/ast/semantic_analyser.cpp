@@ -1341,7 +1341,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
       error("uretprobes can not be attached to a function offset", ap.loc);
 
-    auto paths = resolve_binary_path(ap.target);
+    auto paths = resolve_binary_path(ap.target, bpftrace_.pid_);
     switch (paths.size())
     {
     case 0:

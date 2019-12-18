@@ -14,6 +14,22 @@ typedef enum _USDT_TUPLE_ORDER_ { USDT_PATH_INDEX, USDT_PROVIDER_INDEX, USDT_FNA
 typedef std::tuple<std::string, std::string, std::string> usdt_probe_entry;
 typedef std::vector<usdt_probe_entry> usdt_probe_list;
 
+class MountNSException : public std::exception
+{
+public:
+  MountNSException(const std::string &msg) : msg_(msg)
+  {
+  }
+
+  const char *what() const noexcept override
+  {
+    return msg_.c_str();
+  }
+
+private:
+  std::string msg_;
+};
+
 class USDTHelper
 {
 public:
@@ -78,6 +94,8 @@ std::string is_deprecated(std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 std::string exec_system(const char* cmd);
 std::vector<std::string> resolve_binary_path(const std::string& cmd);
+std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);
+std::string path_for_pid_mountns(int pid, const std::string &path);
 void cat_file(const char *filename, size_t, std::ostream&);
 std::string str_join(const std::vector<std::string> &list, const std::string &delim);
 bool is_numeric(const std::string &str);

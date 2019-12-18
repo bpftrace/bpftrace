@@ -2,15 +2,16 @@
 
 #include <algorithm>
 #include <array>
+#include <fcntl.h>
+#include <fstream>
 #include <glob.h>
 #include <map>
-#include <string>
-#include <tuple>
-#include <sstream>
-#include <fstream>
 #include <memory>
-#include <unistd.h>
+#include <sstream>
+#include <string>
 #include <sys/stat.h>
+#include <tuple>
+#include <unistd.h>
 
 #include "utils.h"
 #include "bcc_usdt.h"
@@ -76,6 +77,10 @@ static bool provider_cache_loaded = false;
 
 // Maps all providers of pid to vector of tracepoints on that provider
 static std::map<std::string, usdt_probe_list> usdt_provider_cache;
+
+static bool pid_in_different_mountns(int pid);
+static std::vector<std::string>
+resolve_binary_path(const std::string &cmd, const char *env_paths, int pid);
 
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
@@ -508,10 +513,59 @@ std::string exec_system(const char* cmd)
   return result;
 }
 
+/*
+Original resolve_binary_path API defaulting to bpftrace's mount namespace
+*/
 std::vector<std::string> resolve_binary_path(const std::string& cmd)
 {
-  std::vector<std::string> candidate_paths = { cmd };
   const char *env_paths = getenv("PATH");
+  return resolve_binary_path(cmd, env_paths, -1);
+}
+
+/*
+If a pid is specified, the binary path is taken relative to its own PATH if
+it is in a different mount namespace. Otherwise, the path is resolved relative
+to the local PATH env var for bpftrace's own mount namespace if it is set
+*/
+std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
+{
+  std::string env_paths = "";
+  std::ostringstream pid_environ_path;
+
+  if (pid > 0 && pid_in_different_mountns(pid))
+  {
+    pid_environ_path << "/proc/" << pid << "/environ";
+    std::ifstream environ(pid_environ_path.str());
+
+    if (environ)
+    {
+      std::string env_var;
+      std::string pathstr = ("PATH=");
+      while (std::getline(environ, env_var, '\0'))
+      {
+        if (env_var.find(pathstr) != std::string::npos)
+        {
+          env_paths = env_var.substr(pathstr.length());
+          break;
+        }
+      }
+    }
+    return resolve_binary_path(cmd, env_paths.c_str(), pid);
+  }
+  else
+  {
+    return resolve_binary_path(cmd, getenv("PATH"), pid);
+  }
+}
+
+/*
+Private interface to resolve_binary_path, used for the exposed variants above,
+allowing for a PID whose mount namespace should be optionally considered.
+*/
+static std::vector<std::string>
+resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
+{
+  std::vector<std::string> candidate_paths = { cmd };
 
   if (env_paths != nullptr && cmd.find("/") == std::string::npos)
     for (const auto& path : split_string(env_paths, ':'))
@@ -521,11 +575,100 @@ std::vector<std::string> resolve_binary_path(const std::string& cmd)
     candidate_paths = ::expand_wildcard_paths(candidate_paths);
 
   std::vector<std::string> valid_executable_paths;
-  for (const auto& path : candidate_paths)
-    if (access(path.c_str(), X_OK) == 0)
-      valid_executable_paths.push_back(path);
+  for (const auto &path : candidate_paths)
+  {
+    std::string rel_path;
+    if (pid > 0 && pid_in_different_mountns(pid))
+      rel_path = path_for_pid_mountns(pid, path);
+    else
+      rel_path = path;
+    if (access(rel_path.c_str(), X_OK) == 0)
+      valid_executable_paths.push_back(rel_path);
+  }
 
   return valid_executable_paths;
+}
+
+std::string path_for_pid_mountns(int pid, const std::string &path)
+{
+  std::ostringstream pid_relative_path;
+  std::string root =
+      (path.length() >= 1 && path.at(0) == '/') ? "/root" : "/root/";
+  pid_relative_path << "/proc/" << pid << root << path;
+  return pid_relative_path.str();
+}
+
+/*
+Determines if the target process is in a different mount namespace from
+bpftrace.
+
+If a process is in a different mount namespace (eg, container) it is very
+likely that any references to local paths will not be valid, and that paths
+need to be made relative to the PID.
+
+If an invalid PID is specified or doesn't exist, it returns false.
+True is only returned if the namespace of the target process could be read and
+it doesn't match that of bpftrace. If there was an error reading either mount
+namespace, it will throw an exception
+*/
+static bool pid_in_different_mountns(int pid)
+{
+
+  struct stat self_stat, target_stat;
+  int self_fd = -1, target_fd = -1;
+  std::stringstream errmsg;
+  char buf[64];
+
+  if (pid <= 0)
+    return false;
+
+  if ((size_t)snprintf(buf, sizeof(buf), "/proc/%d/ns/mnt", pid) >= sizeof(buf))
+  {
+    errmsg << "Reading mountNS would overflow buffer.";
+    goto error;
+  }
+
+  self_fd = open("/proc/self/ns/mnt", O_RDONLY);
+  if (self_fd < 0)
+  {
+    errmsg << "open(/proc/self/ns/mnt): " << strerror(errno);
+    goto error;
+  }
+
+  target_fd = open(buf, O_RDONLY);
+  if (target_fd < 0)
+  {
+    errmsg << "open(/proc/<pid>/ns/mnt): " << strerror(errno);
+    goto error;
+  }
+
+  if (fstat(self_fd, &self_stat))
+  {
+    errmsg << "fstat(self_fd): " << strerror(errno);
+    goto error;
+  }
+
+  if (fstat(target_fd, &target_stat))
+  {
+    errmsg << "fstat(target_fd)" << strerror(errno);
+    goto error;
+  }
+
+  close(self_fd);
+  close(target_fd);
+  return self_stat.st_ino != target_stat.st_ino;
+
+error:
+  if (self_fd >= 0)
+    close(self_fd);
+  if (target_fd >= 0)
+    close(target_fd);
+
+  throw MountNSException("Failed to compare mount ns with PID " +
+                         std::to_string(pid) + ". " + "The error was " +
+                         errmsg.str());
+
+  return false;
 }
 
 void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
