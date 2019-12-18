@@ -39,6 +39,7 @@ class Utils(object):
     SKIP_KERNEL_VERSION = 2
     TIMEOUT = 3
     SKIP_REQUIREMENT_UNSATISFIED = 4
+    SKIP_ENVIRONMENT_DISABLED = 5
 
     @staticmethod
     def failed(status):
@@ -46,7 +47,11 @@ class Utils(object):
 
     @staticmethod
     def skipped(status):
-        return status in [Utils.SKIP_KERNEL_VERSION, Utils.SKIP_REQUIREMENT_UNSATISFIED]
+        return status in [
+            Utils.SKIP_KERNEL_VERSION,
+            Utils.SKIP_REQUIREMENT_UNSATISFIED,
+            Utils.SKIP_ENVIRONMENT_DISABLED,
+        ]
 
     @staticmethod
     def skip_reason(test, status):
@@ -54,6 +59,8 @@ class Utils(object):
             return "min Kernel: %s" % test.kernel
         elif status == Utils.SKIP_REQUIREMENT_UNSATISFIED:
             return "unmet condition: '%s'" % test.requirement
+        elif status == Utils.SKIP_ENVIRONMENT_DISABLED:
+            return "disabled by environment variable"
         else:
             raise ValueError("Invalid skip reason: %d" % status)
 
@@ -71,6 +78,11 @@ class Utils(object):
         if test.kernel and LooseVersion(test.kernel) > current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Utils.SKIP_KERNEL_VERSION
+
+        full_test_name = test.suite + "." + test.name
+        if full_test_name in os.getenv("RUNTIME_TEST_DISABLE", "").split(","):
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Utils.SKIP_ENVIRONMENT_DISABLED
 
         signal.signal(signal.SIGALRM, Utils.__handler)
 
