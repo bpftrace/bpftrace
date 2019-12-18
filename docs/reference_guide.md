@@ -1537,9 +1537,9 @@ Tracing block I/O sizes > 0 bytes
 
 Some of these are asynchronous: the kernel queues the event, but some time
 later (milliseconds) it is processed in user-space. The asynchronous actions
-are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both
-<tt>ksym()</tt> and <tt>usym()</tt>, as well as the variables <tt>kstack</tt>
-and </tt>ustack</tt>, record addresses synchronously, but then do symbol
+are: `printf()`, `time()`, and `join()`. Both
+`ksym()` and `usym()`, as well as the variables `kstack`
+and `ustack`, record addresses synchronously, but then do symbol
 translation asynchronously.
 
 A selection of these are discussed in the following sections.
@@ -1623,7 +1623,7 @@ By default, the string will have size 64 bytes (tuneable using [env var `BPFTRAC
 
 Examples:
 
-We can take the `args->filename` of `sys_enter_execve` (a <tt>const char *filename</tt>), and read the string to which it points. This string can be provided as an argument to printf():
+We can take the `args->filename` of `sys_enter_execve` (a `const char *filename`), and read the string to which it points. This string can be provided as an argument to printf():
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
@@ -2206,7 +2206,7 @@ END
 - `clear(@x)` - Delete all keys from the map
 - `zero(@x)` - Set all map values to zero
 
-Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>print()</tt>, <tt>clear()</tt>, and <tt>zero()</tt>.
+Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: `print()`, `clear()`, and `zero()`.
 
 ## 2. `count()`: Count
 
@@ -2467,7 +2467,7 @@ Attaching 1 probe...
 
 Syntax: ```print(@map [, top [, divisor]])```
 
-The <tt>print()</tt> function will print a map, similar to the automatic printing when bpftrace ends. Two optional arguments can be provided: a top number, so that only the top number of entries are printed, and a divisor, which divides the value. A couple of examples will explain their use.
+The `print()` function will print a map, similar to the automatic printing when bpftrace ends. Two optional arguments can be provided: a top number, so that only the top number of entries are printed, and a divisor, which divides the value. A couple of examples will explain their use.
 
 As an example of top, tracing `vfs` operations and printing the top 5:
 
@@ -2482,7 +2482,7 @@ Attaching 54 probes...
 @[vfs_read]: 405
 ```
 
-The final <tt>clear()</tt> is used to prevent printing the map automatically on exit.
+The final `clear()` is used to prevent printing the map automatically on exit.
 
 As an example of divisor, summing total time in vfs_read() by process name as milliseconds:
 
@@ -2490,7 +2490,7 @@ As an example of divisor, summing total time in vfs_read() by process name as mi
 # bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); } END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
 ```
 
-This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, <tt>sum((nsecs - @start[tid]) / 1000000)</tt>), the value would often be rounded to zero, and not accumulate as it should.
+This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, `sum((nsecs - @start[tid]) / 1000000)`), the value would often be rounded to zero, and not accumulate as it should.
 
 # Output
 
@@ -2560,13 +2560,13 @@ Attaching 1 probe...
 [2K, 4K)               2 |                                                    |
 ```
 
-Histograms can also be printed on-demand, using the <tt>print()</tt> function. Eg:
+Histograms can also be printed on-demand, using the `print()` function. Eg:
 
-<pre>
+```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); } interval:s:1 { print(@bytes); clear(@bytes); }'
 
 [...]
-</pre>
+```
 
 # Advanced Tools
 
