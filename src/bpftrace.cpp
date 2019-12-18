@@ -331,7 +331,7 @@ void BPFtrace::kill_child()
   if (child_running_) {
     kill(child_pid(), SIGTERM);
   } else {
-    write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+    (void)write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
     close(child_start_pipe_);
   }
 }
