@@ -185,10 +185,10 @@ For example, listing the sleepers.bt file using `cat -n` (which enumerates the o
 
 ```
 # cat -n sleepers.bt
-     1	tracepoint:syscalls:sys_enter_nanosleep
-     2	{
-     3		printf("%s is sleeping.\n", comm);
-     4	}
+1 tracepoint:syscalls:sys_enter_nanosleep
+2 {
+3   printf("%s is sleeping.\n", comm);
+4 }
 ```
 
 Running sleepers.bt:
@@ -204,13 +204,13 @@ iscsid is sleeping.
 It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
 
 ```
-     1	#!/usr/local/bin/bpftrace
-     1	#!/usr/bin/env bpftrace
-     2
-     3	tracepoint:syscalls:sys_enter_nanosleep
-     4	{
-     5	        printf("%s is sleeping.\n", comm);
-     6	}
+1 #!/usr/local/bin/bpftrace
+1 #!/usr/bin/env bpftrace
+2
+3 tracepoint:syscalls:sys_enter_nanosleep
+4 {
+5   printf("%s is sleeping.\n", comm);
+6 }
 ```
 
 Then make it executable:
@@ -385,7 +385,8 @@ The `--include` option can be used to include headers by default. Can be defined
 
 
 ```
-# bpftrace --include linux/path.h --include linux/dcache.h -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
+# bpftrace --include linux/path.h --include linux/dcache.h \
+    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
 Attaching 1 probe...
 open path: .com.google.Chrome.ASsbu2
 open path: .com.google.Chrome.gimc10
@@ -582,7 +583,8 @@ Attaching 1 probe...
 Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count(); if (args->count > 1024) { @large = count(); } }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count();
+    if (args->count > 1024) { @large = count(); } }'
 Attaching 1 probe...
 ^C
 @large: 72
@@ -650,7 +652,8 @@ You may access one-dimensional constant arrays with the array access operator `[
 Example:
 
 ```
-# bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
+# bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct {
+    $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
 Attaching 1 probe...
 
 @x: 1
@@ -1242,7 +1245,8 @@ These can be implemented as an associative array keyed on the thread ID. For exa
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ {
+        printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1260,7 +1264,8 @@ For example, `$delta`:
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid];
+        printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1277,7 +1282,8 @@ For example, `@start[tid]`:
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ {
+        printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1647,7 +1653,8 @@ We can trace strings that are displayed in a bash shell. Some length tuning is e
   - we increase BPFTRACE_STRLEN to accommodate the large messages
 
 ```
-# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/ { printf("<%s>\n", str(args->buf, args->count)); }'
+# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/
+    { printf("<%s>\n", str(args->buf, args->count)); }'
 # type pwd into terminal 23506
 <p>
 <w>
@@ -1782,7 +1789,8 @@ Syntax: `cgroupid(char *path)`
 This returns a cgroup ID of a specific cgroup, and can be combined with the `cgroup` builtin to filter the tasks that belong to the specific cgroup, for example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/ { printf("%s\n", str(args->filename)); }':
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/
+    { printf("%s\n", str(args->filename)); }':
 Attaching 1 probe...
 /etc/ld.so.cache
 /lib64/libc.so.6
@@ -2095,7 +2103,8 @@ Attaching 1 probe...
 The `cat()` builtin also supports a format string as argument:
 
 ```
-./bpftrace -e 'tracepoint:syscalls:sys_enter_sendmsg { printf("%s => ", comm); cat("/proc/%d/cmdline", pid); printf("\n") }'
+./bpftrace -e 'tracepoint:syscalls:sys_enter_sendmsg { printf("%s => ", comm);
+    cat("/proc/%d/cmdline", pid); printf("\n") }'
 Attaching 1 probe...
 Gecko_IOThread => /usr/lib64/firefox/firefox
 Gecko_IOThread => /usr/lib64/firefox/firefox
@@ -2487,7 +2496,9 @@ The final `clear()` is used to prevent printing the map automatically on exit.
 As an example of divisor, summing total time in vfs_read() by process name as milliseconds:
 
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); } END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; }
+    kretprobe:vfs_read /@start[tid]/ {@ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); }
+    END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
 ```
 
 This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, `sum((nsecs - @start[tid]) / 1000000)`), the value would often be rounded to zero, and not accumulate as it should.
@@ -2519,7 +2530,8 @@ Syntax: `interval:s:duration_seconds`
 Examples:
 
 ```
-# bpftrace -e 'kprobe:do_sys_open { @opens = @opens + 1; } interval:s:1 { printf("opens/sec: %d\n", @opens); @opens = 0; }'
+# bpftrace -e 'kprobe:do_sys_open { @opens = @opens + 1; }
+    interval:s:1 { printf("opens/sec: %d\n", @opens); @opens = 0; }'
 Attaching 2 probes...
 opens/sec: 16
 opens/sec: 2
