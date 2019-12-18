@@ -35,6 +35,8 @@ RUN apt-get update && apt-get install -y \
       systemtap-sdt-dev \
       python3
 
+RUN cat /usr/include/linux/bpf.h
+
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
 ENTRYPOINT ["bash", "/build.sh"]
