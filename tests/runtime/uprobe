@@ -34,3 +34,15 @@ RUN bpftrace -l 'uprobe:*' -p $(pidof uprobe_test)
 EXPECT uprobe:.*/testprogs/uprobe_test:function1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
+
+NAME "uprobes - list probes by pid in separate mount namespace"
+RUN bpftrace -l -p $(pidof uprobe_test) | grep -e '^uprobe'
+EXPECT uprobe:.*/bpftrace-unshare-mountns-test/uprobe_test:function1
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper uprobe_test
+
+NAME "uprobes - attach to probe for executable in separate mount namespace"
+RUN bpftrace -e 'uprobe:/tmp/bpftrace-unshare-mountns-test/uprobe_test:function1 { printf("here\n" ); exit(); }' -p $(pidof uprobe_test)
+EXPECT Attaching 1 probe...
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper uprobe_test

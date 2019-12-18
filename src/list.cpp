@@ -152,7 +152,7 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
     if (bpftrace.pid_ > 0)
     {
       executable = get_pid_exe(bpftrace.pid_);
-      absolute_exe = executable;
+      absolute_exe = path_for_pid_mountns(bpftrace.pid_, executable);
     } else if (probe_name == "uprobe")
     {
       executable = search.substr(search.find(":") + 1, search.size());
