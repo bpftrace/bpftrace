@@ -2469,12 +2469,13 @@ Syntax: ```print(@map [, top [, divisor]])```
 
 The <tt>print()</tt> function will print a map, similar to the automatic printing when bpftrace ends. Two optional arguments can be provided: a top number, so that only the top number of entries are printed, and a divisor, which divides the value. A couple of examples will explain their use.
 
-As an example of top, tracing the top 5 syscalls via kprobe:SyS_*:
+As an example of top, tracing `vfs` operations and printing the top 5:
 
 ```
 # bpftrace -e 'kprobe:vfs_* { @[func] = count(); } END { print(@, 5); clear(@); }'
 Attaching 54 probes...
-^C@[vfs_getattr]: 91
+^C
+@[vfs_getattr]: 91
 @[vfs_getattr_nosec]: 92
 @[vfs_statx_fd]: 135
 @[vfs_open]: 188
