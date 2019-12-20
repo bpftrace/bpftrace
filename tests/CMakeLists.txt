@@ -174,7 +174,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs)
 foreach(runtime_test_output ${runtime_test_outputs})
   configure_file(${runtime_test_output} ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs/ COPYONLY)
 endforeach()
-add_custom_target(runtime-tests COMMAND ./runtime-tests.sh)
+add_custom_target(
+  runtime-tests
+  COMMAND ./runtime-tests.sh
+  DEPENDS ${compiled_testprogs} ${CMAKE_BINARY_DIR}/src/bpftrace
+)
 add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
