@@ -875,7 +875,11 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
       case bpftrace::Parser::token::DIV:   expr_ = b_.CreateUDiv   (lhs, rhs); break;
       case bpftrace::Parser::token::MOD: {
-        expr_ = do_signed ? b_.CreateSRem(lhs, rhs) : b_.CreateURem(lhs, rhs);
+        // Always do an unsigned modulo operation here even if `do_signed`
+        // is true. bpf instruction set does not support signed divison.
+        // We already warn in the semantic analyser that signed modulo can
+        // lead to undefined behavior (because we will treat it as unsigned).
+        expr_ = b_.CreateURem(lhs, rhs);
         break;
       }
       case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
