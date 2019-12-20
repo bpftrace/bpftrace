@@ -895,7 +895,8 @@ void SemanticAnalyser::visit(Binop &binop)
       //
       // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
       // in kernel sources
-      if (binop.op == bpftrace::Parser::token::DIV) {
+      if (binop.op == bpftrace::Parser::token::DIV ||
+          binop.op == bpftrace::Parser::token::MOD) {
         // Convert operands to unsigned if possible
         if (lsign && left->is_literal && get_int_literal(left) >= 0)
           left->type.is_signed = lsign = false;
