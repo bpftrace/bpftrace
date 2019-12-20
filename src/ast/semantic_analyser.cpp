@@ -831,14 +831,17 @@ void SemanticAnalyser::visit(Binop &binop)
       buf << "comparing '" << lhs << "' ";
       buf << "with '" << rhs << "'";
       bpftrace_.error(err_, binop.left->loc + binop.right->loc, buf.str());
+      buf.str({});
     }
     // Follow what C does
     else if (lhs == Type::integer && rhs == Type::integer) {
+      auto get_int_literal = [](const auto expr) -> long {
+        return static_cast<ast::Integer*>(expr)->n;
+      };
       auto left = binop.left;
       auto right = binop.right;
-      long lval = static_cast<ast::Integer*>(binop.left)->n;
-      long rval = static_cast<ast::Integer*>(binop.right)->n;
 
+      // First check if operand signedness is the same
       if (lsign != rsign) {
         // Convert operands to unsigned if it helps make (lsign == rsign)
         //
@@ -849,12 +852,11 @@ void SemanticAnalyser::visit(Binop &binop)
         //
         // No warning should be emitted as we know that 10 can be
         // represented as unsigned int
-        if (lsign && !rsign && left->is_literal && lval >= 0) {
+        if (lsign && !rsign && left->is_literal && get_int_literal(left) >= 0) {
           left->type.is_signed = lsign = false;
-
         }
         // The reverse (10 < a) should also hold
-        else if (!lsign && rsign && right->is_literal && rval >= 0) {
+        else if (!lsign && rsign && right->is_literal && get_int_literal(right) >= 0) {
           right->type.is_signed = rsign = false;
         }
         else {
@@ -870,6 +872,7 @@ void SemanticAnalyser::visit(Binop &binop)
                 << binop.right->type << "'"
                 << " can lead to undefined behavior";
             bpftrace_.warning(out_, binop.loc, buf.str());
+            buf.str({});
             break;
           case bpftrace::Parser::token::PLUS:
           case bpftrace::Parser::token::MINUS:
@@ -880,22 +883,32 @@ void SemanticAnalyser::visit(Binop &binop)
                 << left->type << "' and '" << right->type << "'"
                 << " can lead to undefined behavior";
             bpftrace_.warning(out_, binop.loc, buf.str());
+            buf.str({});
             break;
           default:
             break;
           }
         }
       }
-      else if (lval < 0 || rval < 0) {
-        // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
-        // in kernel sources
-        switch (binop.op) {
-          case bpftrace::Parser::token::DIV:
-            buf << "signed division can lead to undefined behavior";
-            bpftrace_.warning(out_, binop.loc, buf.str());
-            break;
-          default:
-            break;
+
+      // Next, warn on any operations that require signed division.
+      //
+      // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
+      // in kernel sources
+      if (binop.op == bpftrace::Parser::token::DIV) {
+        // Convert operands to unsigned if possible
+        if (lsign && left->is_literal && get_int_literal(left) >= 0)
+          left->type.is_signed = lsign = false;
+        if (rsign && right->is_literal && get_int_literal(right) >= 0)
+          right->type.is_signed = rsign = false;
+
+        // If they're still signed, we have to warn
+        if (lsign || rsign) {
+          buf << "signed operands for '" << opstr(binop)
+              << "' can lead to undefined behavior "
+              << "(cast to unsigned to silence warning)";
+          bpftrace_.warning(out_, binop.loc, buf.str());
+          buf.str({});
         }
       }
     }
@@ -906,6 +919,7 @@ void SemanticAnalyser::visit(Binop &binop)
           << " operator can not be used on expressions of types " << lhs
           << ", " << rhs << std::endl;
       bpftrace_.error(err_, binop.loc, buf.str());
+      buf.str({});
     }
   }
 
