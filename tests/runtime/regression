@@ -17,3 +17,8 @@ TIMEOUT 5
 # AFTER ./testprogs/ntop
 # EXPECT v4: 127.0.0.1; v6: ffee:ffee:ddcc:ddcc:bbaa:bbaa:c0a8:1
 # TIMEOUT 1
+
+NAME modulo_operator
+RUN bpftrace -v -e 'BEGIN { @x = 4; printf("%d\n", @x % 2) }'
+EXPECT 0
+TIMEOUT 5

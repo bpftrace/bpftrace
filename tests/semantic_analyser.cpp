@@ -1121,6 +1121,18 @@ TEST(semantic_analyser, signed_int_division_warnings)
   test_for_warning("kprobe:f { @ = -(1 / 1) }", msg, invert);
 }
 
+TEST(semantic_analyser, signed_int_modulo_warnings)
+{
+  bool invert = true;
+  std::string msg = "signed operands";
+  test_for_warning("kprobe:f { @ = -1 % 1 }", msg);
+  test_for_warning("kprobe:f { @ = 1 % -1 }", msg);
+
+  // These should not trigger a warning
+  test_for_warning("kprobe:f { @ = 1 % 1 }", msg, invert);
+  test_for_warning("kprobe:f { @ = -(1 % 1) }", msg, invert);
+}
+
 TEST(semantic_analyser, map_as_lookup_table)
 {
   // Initializing a map should not lead to usage issues
