@@ -834,8 +834,8 @@ void SemanticAnalyser::visit(Binop &binop)
     }
     // Follow what C does
     else if (lhs == Type::integer && rhs == Type::integer) {
-      auto &left = binop.left;
-      auto &right = binop.right;
+      auto left = binop.left;
+      auto right = binop.right;
       long lval = static_cast<ast::Integer*>(binop.left)->n;
       long rval = static_cast<ast::Integer*>(binop.right)->n;
 
