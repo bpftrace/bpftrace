@@ -1112,7 +1112,7 @@ TEST(semantic_analyser, signed_int_arithmetic_warnings)
 TEST(semantic_analyser, signed_int_division_warnings)
 {
   bool invert = true;
-  std::string msg = "signed division";
+  std::string msg = "signed operands";
   test_for_warning("kprobe:f { @ = -1 / 1 }", msg);
   test_for_warning("kprobe:f { @ = 1 / -1 }", msg);
 
