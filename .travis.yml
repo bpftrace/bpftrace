@@ -12,6 +12,11 @@ services:
 
 matrix:
   include:
+    - name: "clang-format"
+      script:
+        - git clang-format master
+        - git diff --exit-code
+      env: LLVM_VERSION=8 BASE=bionic
     # Certain tests are disabled on our LLVM 5 builds because they are flaky
     # when bpftrace is compiled with musl libc. They should still be capable
     # of passing occasionally.
