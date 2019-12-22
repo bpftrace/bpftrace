@@ -6,6 +6,7 @@
 namespace bpftrace {
 namespace arch {
 
+// clang-format off
 static std::array<std::string, 27> registers = {
   "r15",
   "r14",
@@ -44,6 +45,7 @@ static std::array<std::string, 6> arg_registers = {
   "r8",
   "r9",
 };
+// clang-format on
 
 int offset(std::string reg_name)
 {
