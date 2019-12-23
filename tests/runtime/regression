@@ -1,6 +1,6 @@
 # https://github.com/iovisor/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
-RUN bpftrace -e 'struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (Foo)0; @bar = @foo.bar; @x = @foo.bar.x; printf("done\n"); exit(); }'
+RUN bpftrace -e 'struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (struct Foo)0; @bar = @foo.bar; @x = @foo.bar.x; printf("done\n"); exit(); }'
 EXPECT done
 TIMEOUT 1
 

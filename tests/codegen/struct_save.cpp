@@ -39,14 +39,14 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { int x, y, z; }"
        "kprobe:f"
        "{"
-       "  @foo = (Foo)0;"
+       "  @foo = (struct Foo)0;"
        "}",
        expected);
 
   test("struct Foo { int x, y, z; }"
        "kprobe:f"
        "{"
-       "  @foo = *(Foo*)0;"
+       "  @foo = *(struct Foo*)0;"
        "}",
        expected);
 }

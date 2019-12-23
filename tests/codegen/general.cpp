@@ -40,7 +40,7 @@ TEST(codegen, printf_offsets)
   Driver driver(bpftrace);
 
   // TODO (mmarchini): also test printf with a string argument
-  ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
+  ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (struct Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
   ast::SemanticAnalyser semantics(driver.root_, bpftrace);

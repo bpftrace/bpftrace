@@ -18,8 +18,8 @@ entry:
   %"@x_key" = alloca i64, align 8
   %"@foo_key5" = alloca i64, align 8
   %"@bar_key" = alloca i64, align 8
-  %internal_Foo.bar = alloca i64, align 8
-  %tmpcast = bitcast i64* %internal_Foo.bar to [8 x i8]*
+  %"internal_struct Foo.bar" = alloca i64, align 8
+  %tmpcast = bitcast i64* %"internal_struct Foo.bar" to [8 x i8]*
   %"@foo_key1" = alloca i64, align 8
   %"@foo_val" = alloca [16 x i8], align 1
   %"@foo_key" = alloca i64, align 8
@@ -50,9 +50,9 @@ lookup_success:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %entry, %lookup_success
   %lookup_elem_val.sroa.3.0 = phi i64 [ %lookup_elem_val.sroa.3.0.copyload, %lookup_success ], [ 0, %entry ]
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
-  %4 = bitcast i64* %internal_Foo.bar to i8*
+  %4 = bitcast i64* %"internal_struct Foo.bar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  store i64 %lookup_elem_val.sroa.3.0, i64* %internal_Foo.bar, align 8
+  store i64 %lookup_elem_val.sroa.3.0, i64* %"internal_struct Foo.bar", align 8
   %5 = bitcast i64* %"@bar_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@bar_key", align 8
@@ -102,7 +102,7 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { int m; struct { int x; int y; } bar; int n; }"
        "kprobe:f"
        "{"
-       "  @foo = (Foo)0;"
+       "  @foo = (struct Foo)0;"
        "  @bar = @foo.bar;"
        "  @x = @foo.bar.x;"
        "}",

@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_ntop_char4)
 {
-  test("struct inet { unsigned char addr[4] } kprobe:f { @x = ntop(((inet*)0)->addr); }",
+  test("struct inet { unsigned char addr[4] } kprobe:f { @x = ntop(((struct inet*)0)->addr); }",
 
 #if LLVM_VERSION_MAJOR < 6
 R"EXPECTED(%inet_t = type { i64, [16 x i8] }

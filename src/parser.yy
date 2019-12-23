@@ -85,6 +85,11 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   BNOT       "~"
   DOT        "."
   PTR        "->"
+  IF         "if"
+  ELSE       "else"
+  UNROLL     "unroll"
+  STRUCT     "struct"
+  UNION      "union"
 ;
 
 %token <std::string> BUILTIN "builtin"
@@ -93,7 +98,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
 %token <std::string> CPREPROC "preprocessor directive"
-%token <std::string> STRUCT "struct"
+%token <std::string> STRUCT_DEFN "struct definition"
 %token <std::string> ENUM "enum"
 %token <std::string> STRING "string"
 %token <std::string> MAP "map"
@@ -102,9 +107,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <long> INT "integer"
 %token <long> CINT "colon surrounded integer"
 %token <std::string> STACK_MODE "stack_mode"
-%nonassoc <std::string> IF "if"
-%nonassoc <std::string> ELSE "else"
-%nonassoc <std::string> UNROLL "unroll"
 
 %type <std::string> c_definitions
 %type <ast::ProbeList *> probes
@@ -149,10 +151,10 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 program : c_definitions probes { driver.root_ = new ast::Program($1, $2); }
         ;
 
-c_definitions : CPREPROC c_definitions { $$ = $1 + "\n" + $2; }
-              | STRUCT c_definitions   { $$ = $1 + ";\n" + $2; }
-              | ENUM c_definitions     { $$ = $1 + ";\n" + $2; }
-              |                        { $$ = std::string(); }
+c_definitions : CPREPROC c_definitions    { $$ = $1 + "\n" + $2; }
+              | STRUCT_DEFN c_definitions { $$ = $1 + ";\n" + $2; }
+              | ENUM c_definitions        { $$ = $1 + ";\n" + $2; }
+              |                           { $$ = std::string(); }
               ;
 
 probes : probes probe { $$ = $1; $1->push_back($2); }

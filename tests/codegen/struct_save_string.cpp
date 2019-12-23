@@ -143,7 +143,7 @@ attributes #1 = { argmemonly nounwind }
   test("struct Foo { char str[32]; }"
        "kprobe:f"
        "{"
-       "  @foo = (Foo)0;"
+       "  @foo = (struct Foo)0;"
        "  @str = @foo.str;"
        "}",
        expected);
