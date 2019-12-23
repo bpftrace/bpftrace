@@ -1048,6 +1048,34 @@ TEST(Parser, brackets)
 
 TEST(Parser, cast)
 {
+  test("kprobe:sys_read { (struct mytype)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (struct mytype)\n"
+      "   builtin: arg0\n");
+  test("kprobe:sys_read { (union mytype)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (union mytype)\n"
+      "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_ptr)
+{
+  test("kprobe:sys_read { (struct mytype*)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (struct mytype*)\n"
+      "   builtin: arg0\n");
+  test("kprobe:sys_read { (union mytype*)arg0; }",
+      "Program\n"
+      " kprobe:sys_read\n"
+      "  (union mytype*)\n"
+      "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_typedef)
+{
   test("kprobe:sys_read { (mytype)arg0; }",
       "Program\n"
       " kprobe:sys_read\n"
@@ -1055,7 +1083,7 @@ TEST(Parser, cast)
       "   builtin: arg0\n");
 }
 
-TEST(Parser, cast_ptr)
+TEST(Parser, cast_ptr_typedef)
 {
   test("kprobe:sys_read { (mytype*)arg0; }",
       "Program\n"

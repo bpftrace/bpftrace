@@ -34,25 +34,25 @@ TEST(clang_parser, integers)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 12);
-  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
-  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("z"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 12);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("z"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].offset, 4);
 
-  EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["z"].offset, 8);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].offset, 8);
 }
 
 TEST(clang_parser, c_union)
@@ -63,30 +63,30 @@ TEST(clang_parser, c_union)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("union Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 8);
-  ASSERT_EQ(structs["Foo"].fields.size(), 4U);
-  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("s"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("i"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("l"), 1U);
+  EXPECT_EQ(structs["union Foo"].size, 8);
+  ASSERT_EQ(structs["union Foo"].fields.size(), 4U);
+  ASSERT_EQ(structs["union Foo"].fields.count("c"), 1U);
+  ASSERT_EQ(structs["union Foo"].fields.count("s"), 1U);
+  ASSERT_EQ(structs["union Foo"].fields.count("i"), 1U);
+  ASSERT_EQ(structs["union Foo"].fields.count("l"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 1U);
-  EXPECT_EQ(structs["Foo"].fields["c"].offset, 0);
+  EXPECT_EQ(structs["union Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["union Foo"].fields["c"].type.size, 1U);
+  EXPECT_EQ(structs["union Foo"].fields["c"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["s"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["s"].type.size, 2U);
-  EXPECT_EQ(structs["Foo"].fields["s"].offset, 0);
+  EXPECT_EQ(structs["union Foo"].fields["s"].type.type, Type::integer);
+  EXPECT_EQ(structs["union Foo"].fields["s"].type.size, 2U);
+  EXPECT_EQ(structs["union Foo"].fields["s"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["i"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["i"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["i"].offset, 0);
+  EXPECT_EQ(structs["union Foo"].fields["i"].type.type, Type::integer);
+  EXPECT_EQ(structs["union Foo"].fields["i"].type.size, 4U);
+  EXPECT_EQ(structs["union Foo"].fields["i"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["l"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["l"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["l"].offset, 0);
+  EXPECT_EQ(structs["union Foo"].fields["l"].type.type, Type::integer);
+  EXPECT_EQ(structs["union Foo"].fields["l"].type.size, 8U);
+  EXPECT_EQ(structs["union Foo"].fields["l"].offset, 0);
 }
 
 TEST(clang_parser, c_enum)
@@ -96,9 +96,16 @@ TEST(clang_parser, c_enum)
 
   StructMap &structs = bpftrace.structs_;
 
-  EXPECT_EQ(structs["Foo"].fields["e"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["e"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["e"].offset, 0);
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
+
+  EXPECT_EQ(structs["struct Foo"].size, 4);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("e"), 1U);
+
+  EXPECT_EQ(structs["struct Foo"].fields["e"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].offset, 0);
 }
 
 TEST(clang_parser, integer_ptr)
@@ -109,17 +116,17 @@ TEST(clang_parser, integer_ptr)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 8);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 8);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["Foo"].fields["x"].type.is_pointer, true);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.pointee_size, sizeof(int));
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, sizeof(uintptr_t));
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.is_pointer, true);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.pointee_size, sizeof(int));
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 }
 
 TEST(clang_parser, string_ptr)
@@ -130,17 +137,17 @@ TEST(clang_parser, string_ptr)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 8);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("str"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 8);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("str"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["str"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["str"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["Foo"].fields["str"].type.is_pointer, true);
-  EXPECT_EQ(structs["Foo"].fields["str"].type.pointee_size, 1U);
-  EXPECT_EQ(structs["Foo"].fields["str"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.size, sizeof(uintptr_t));
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.is_pointer, true);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.pointee_size, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].offset, 0);
 }
 
 TEST(clang_parser, string_array)
@@ -151,15 +158,15 @@ TEST(clang_parser, string_array)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 32);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("str"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 32);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("str"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["str"].type.type, Type::string);
-  EXPECT_EQ(structs["Foo"].fields["str"].type.size, 32U);
-  EXPECT_EQ(structs["Foo"].fields["str"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.type, Type::string);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].type.size, 32U);
+  EXPECT_EQ(structs["struct Foo"].fields["str"].offset, 0);
 }
 
 TEST(clang_parser, nested_struct_named)
@@ -170,17 +177,17 @@ TEST(clang_parser, nested_struct_named)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
-  ASSERT_EQ(structs.count("Bar"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 4);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("bar"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 4);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.cast_type, "Bar");
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, "struct Bar");
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
 }
 
 TEST(clang_parser, nested_struct_ptr_named)
@@ -191,19 +198,19 @@ TEST(clang_parser, nested_struct_ptr_named)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
-  ASSERT_EQ(structs.count("Bar"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 8);
-  ASSERT_EQ(structs["Foo"].fields.size(), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("bar"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 8);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.cast_type, "Bar");
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.is_pointer, true);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.pointee_size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, "struct Bar");
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, sizeof(uintptr_t));
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.is_pointer, true);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.pointee_size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
 }
 
 TEST(clang_parser, nested_struct_no_type)
@@ -213,25 +220,30 @@ TEST(clang_parser, nested_struct_no_type)
   // since they are called bar and baz
   parse("struct Foo { struct { int x; } bar; union { int y; } baz; }", bpftrace);
 
-  std::string bar = "Foo::(anonymous at definitions.h:1:14)";
-  std::string baz = "Foo::(anonymous at definitions.h:1:37)";
+  std::string bar = "struct Foo::(anonymous at definitions.h:1:14)";
+  std::string baz = "union Foo::(anonymous at definitions.h:1:37)";
 
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 3U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
   ASSERT_EQ(structs.count(bar), 1U);
   ASSERT_EQ(structs.count(baz), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 8);
-  ASSERT_EQ(structs["Foo"].fields.size(), 2U);
-  ASSERT_EQ(structs["Foo"].fields.count("bar"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("baz"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 8);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 2U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("baz"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.cast_type, bar);
-  EXPECT_EQ(structs["Foo"].fields["bar"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["bar"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, bar);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
+
+  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.cast_type, baz);
+  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["baz"].offset, 4);
 
   EXPECT_EQ(structs[bar].size, 4);
   ASSERT_EQ(structs[bar].fields.size(), 1U);
@@ -240,12 +252,6 @@ TEST(clang_parser, nested_struct_no_type)
   EXPECT_EQ(structs[bar].fields["x"].type.type, Type::integer);
   EXPECT_EQ(structs[bar].fields["x"].type.size, 4U);
   EXPECT_EQ(structs[bar].fields["x"].offset, 0);
-
-
-  EXPECT_EQ(structs["Foo"].fields["baz"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo"].fields["baz"].type.cast_type, baz);
-  EXPECT_EQ(structs["Foo"].fields["baz"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["baz"].offset, 4);
 
   EXPECT_EQ(structs[baz].size, 4);
   ASSERT_EQ(structs[baz].fields.size(), 1U);
@@ -270,33 +276,33 @@ TEST(clang_parser, nested_struct_unnamed_fields)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 2U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
-  ASSERT_EQ(structs.count("Bar"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Bar"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 12);
-  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
-  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 12);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("a"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
-  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].offset, 8);
 
 
-  EXPECT_EQ(structs["Bar"].size, 4);
-  EXPECT_EQ(structs["Bar"].fields.size(), 1U);
-  EXPECT_EQ(structs["Bar"].fields.count("z"), 1U);
+  EXPECT_EQ(structs["struct Bar"].size, 4);
+  EXPECT_EQ(structs["struct Bar"].fields.size(), 1U);
+  EXPECT_EQ(structs["struct Bar"].fields.count("z"), 1U);
 
-  EXPECT_EQ(structs["Bar"].fields["z"].type.type, Type::integer);
-  EXPECT_EQ(structs["Bar"].fields["z"].type.size, 4U);
-  EXPECT_EQ(structs["Bar"].fields["z"].offset, 0);
+  EXPECT_EQ(structs["struct Bar"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Bar"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["struct Bar"].fields["z"].offset, 0);
 }
 
 TEST(clang_parser, nested_struct_anon_union_struct)
@@ -317,35 +323,35 @@ TEST(clang_parser, nested_struct_anon_union_struct)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 16);
-  ASSERT_EQ(structs["Foo"].fields.size(), 5U);
-  ASSERT_EQ(structs["Foo"].fields.count("_xy"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("z"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 16);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 5U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("_xy"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("z"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["_xy"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["_xy"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["_xy"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["_xy"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["_xy"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo"].fields["_xy"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 4);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].offset, 4);
 
-  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 8);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].offset, 8);
 
-  EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].offset, 12);
 }
 
 TEST(clang_parser, bitfields)
@@ -356,37 +362,37 @@ TEST(clang_parser, bitfields)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 4);
-  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
-  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 4);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("c"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
-  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 0x1U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFU);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["struct Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.mask, 0xFFU);
 
-  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["b"].offset, 1);
-  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 0x1U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 0U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFFU);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].offset, 1);
+  EXPECT_TRUE(structs["struct Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.mask, 0xFFU);
 
-  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["c"].offset, 2);
-  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 0x2U);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 0U);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0xFFFFU);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].offset, 2);
+  EXPECT_TRUE(structs["struct Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.read_bytes, 0x2U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.mask, 0xFFFFU);
 }
 
 TEST(clang_parser, bitfields_uneven_fields)
@@ -397,55 +403,55 @@ TEST(clang_parser, bitfields_uneven_fields)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 4);
-  ASSERT_EQ(structs["Foo"].fields.size(), 5U);
-  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("d"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("e"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 4);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 5U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("c"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("d"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("e"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
-  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 1U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0x1U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["struct Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.mask, 0x1U);
 
-  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["b"].offset, 0);
-  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 1U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0x1U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].offset, 0);
+  EXPECT_TRUE(structs["struct Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.mask, 0x1U);
 
-  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["c"].offset, 0);
-  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 1U);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 2U);
-  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0x7U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].offset, 0);
+  EXPECT_TRUE(structs["struct Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.access_rshift, 2U);
+  EXPECT_EQ(structs["struct Foo"].fields["c"].bitfield.mask, 0x7U);
 
-  EXPECT_EQ(structs["Foo"].fields["d"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["d"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["d"].offset, 0);
-  EXPECT_TRUE(structs["Foo"].fields["d"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.read_bytes, 4U);
-  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.access_rshift, 5U);
-  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.mask, 0xFFFFFU);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].offset, 0);
+  EXPECT_TRUE(structs["struct Foo"].fields["d"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].bitfield.access_rshift, 5U);
+  EXPECT_EQ(structs["struct Foo"].fields["d"].bitfield.mask, 0xFFFFFU);
 
-  EXPECT_EQ(structs["Foo"].fields["e"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["e"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["e"].offset, 3);
-  EXPECT_TRUE(structs["Foo"].fields["e"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.read_bytes, 1U);
-  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.access_rshift, 1U);
-  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.mask, 0x7FU);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].offset, 3);
+  EXPECT_TRUE(structs["struct Foo"].fields["e"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["e"].bitfield.mask, 0x7FU);
 }
 
 TEST(clang_parser, bitfields_with_padding)
@@ -456,30 +462,30 @@ TEST(clang_parser, bitfields_with_padding)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 16);
-  ASSERT_EQ(structs["Foo"].fields.size(), 4U);
-  ASSERT_EQ(structs["Foo"].fields.count("pad"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("end"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 16);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 4U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("pad"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("end"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].offset, 4);
-  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 4U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
-  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFFFFFFU);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].offset, 4);
+  EXPECT_TRUE(structs["struct Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["struct Foo"].fields["a"].bitfield.mask, 0xFFFFFFFU);
 
-  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
-  EXPECT_EQ(structs["Foo"].fields["b"].offset, 7);
-  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 4U);
-  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFU);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].offset, 7);
+  EXPECT_TRUE(structs["struct Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.access_rshift, 4U);
+  EXPECT_EQ(structs["struct Foo"].fields["b"].bitfield.mask, 0xFU);
 }
 
 TEST(clang_parser, builtin_headers)
@@ -490,25 +496,25 @@ TEST(clang_parser, builtin_headers)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.count("Foo"), 1U);
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
 
-  EXPECT_EQ(structs["Foo"].size, 24);
-  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
-  ASSERT_EQ(structs["Foo"].fields.count("x"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("y"), 1U);
-  ASSERT_EQ(structs["Foo"].fields.count("z"), 1U);
+  EXPECT_EQ(structs["struct Foo"].size, 24);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("y"), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("z"), 1U);
 
-  EXPECT_EQ(structs["Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["x"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["x"].offset, 0);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 
-  EXPECT_EQ(structs["Foo"].fields["y"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["y"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["y"].offset, 8);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo"].fields["y"].offset, 8);
 
-  EXPECT_EQ(structs["Foo"].fields["z"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo"].fields["z"].type.size, 8U);
-  EXPECT_EQ(structs["Foo"].fields["z"].offset, 16);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo"].fields["z"].offset, 16);
 }
 
 TEST(clang_parser, macro_preprocessor)
@@ -591,53 +597,53 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_EQ(structs.count("Foo2"), 1U);
   ASSERT_EQ(structs.count("Foo3"), 1U);
 
-  EXPECT_EQ(structs["Foo1"].size, 16);
-  ASSERT_EQ(structs["Foo1"].fields.size(), 3U);
-  ASSERT_EQ(structs["Foo1"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo1"].fields.count("b"), 1U);
-  ASSERT_EQ(structs["Foo1"].fields.count("c"), 1U);
+  EXPECT_EQ(structs["struct Foo1"].size, 16);
+  ASSERT_EQ(structs["struct Foo1"].fields.size(), 3U);
+  ASSERT_EQ(structs["struct Foo1"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo1"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["struct Foo1"].fields.count("c"), 1U);
 
-  EXPECT_EQ(structs["Foo1"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo1"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo1"].fields["a"].offset, 0);
+  EXPECT_EQ(structs["struct Foo1"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo1"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo1"].fields["a"].offset, 0);
 
-  EXPECT_EQ(structs["Foo1"].fields["b"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo1"].fields["b"].type.size, 1U);
-  EXPECT_EQ(structs["Foo1"].fields["b"].offset, 4);
+  EXPECT_EQ(structs["struct Foo1"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo1"].fields["b"].type.size, 1U);
+  EXPECT_EQ(structs["struct Foo1"].fields["b"].offset, 4);
 
-  EXPECT_EQ(structs["Foo1"].fields["c"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo1"].fields["c"].type.size, 8U);
-  EXPECT_EQ(structs["Foo1"].fields["c"].offset, 8);
+  EXPECT_EQ(structs["struct Foo1"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo1"].fields["c"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo1"].fields["c"].offset, 8);
 
-  EXPECT_EQ(structs["Foo2"].size, 24);
-  ASSERT_EQ(structs["Foo2"].fields.size(), 2U);
-  ASSERT_EQ(structs["Foo2"].fields.count("a"), 1U);
-  ASSERT_EQ(structs["Foo2"].fields.count("f"), 1U);
+  EXPECT_EQ(structs["struct Foo2"].size, 24);
+  ASSERT_EQ(structs["struct Foo2"].fields.size(), 2U);
+  ASSERT_EQ(structs["struct Foo2"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["struct Foo2"].fields.count("f"), 1U);
 
-  EXPECT_EQ(structs["Foo2"].fields["a"].type.type, Type::integer);
-  EXPECT_EQ(structs["Foo2"].fields["a"].type.size, 4U);
-  EXPECT_EQ(structs["Foo2"].fields["a"].offset, 0);
+  EXPECT_EQ(structs["struct Foo2"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo2"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["struct Foo2"].fields["a"].offset, 0);
 
-  EXPECT_EQ(structs["Foo2"].fields["f"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo2"].fields["f"].type.size, 16U);
-  EXPECT_EQ(structs["Foo2"].fields["f"].offset, 8);
+  EXPECT_EQ(structs["struct Foo2"].fields["f"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo2"].fields["f"].type.size, 16U);
+  EXPECT_EQ(structs["struct Foo2"].fields["f"].offset, 8);
 
-  EXPECT_EQ(structs["Foo3"].size, 16);
-  ASSERT_EQ(structs["Foo3"].fields.size(), 2U);
-  ASSERT_EQ(structs["Foo3"].fields.count("foo1"), 1U);
-  ASSERT_EQ(structs["Foo3"].fields.count("foo2"), 1U);
+  EXPECT_EQ(structs["struct Foo3"].size, 16);
+  ASSERT_EQ(structs["struct Foo3"].fields.size(), 2U);
+  ASSERT_EQ(structs["struct Foo3"].fields.count("foo1"), 1U);
+  ASSERT_EQ(structs["struct Foo3"].fields.count("foo2"), 1U);
 
-  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.size, 8U);
-  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.is_pointer, true);
-  EXPECT_EQ(structs["Foo3"].fields["foo1"].type.cast_type, "Foo1");
-  EXPECT_EQ(structs["Foo3"].fields["foo1"].offset, 0);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.is_pointer, true);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.cast_type, "Foo1");
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].offset, 0);
 
-  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.type, Type::cast);
-  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.size, 8U);
-  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.is_pointer, true);
-  EXPECT_EQ(structs["Foo3"].fields["foo2"].type.cast_type, "Foo2");
-  EXPECT_EQ(structs["Foo3"].fields["foo2"].offset, 8);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.is_pointer, true);
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.cast_type, "Foo2");
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].offset, 8);
 }
 
 TEST_F(clang_parser_btf, btf_field_struct)
@@ -656,6 +662,45 @@ TEST_F(clang_parser_btf, btf_field_struct)
   EXPECT_NE(bpftrace.btf_set_.find("int"), bpftrace.btf_set_.end());
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
+
+TEST(clang_parser, struct_typedef)
+{
+  // Make sure we can differentiate between "struct max_align_t {}" and
+  // "typedef struct {} max_align_t"
+  BPFtrace bpftrace;
+  parse("#include <__stddef_max_align_t.h>\n"
+        "struct max_align_t { int x; };", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 2U);
+  ASSERT_EQ(structs.count("struct max_align_t"), 1U);
+  ASSERT_EQ(structs.count("max_align_t"), 1U);
+
+  // Non-typedef'd struct
+  EXPECT_EQ(structs["struct max_align_t"].size, 4);
+  ASSERT_EQ(structs["struct max_align_t"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct max_align_t"].fields.count("x"), 1U);
+
+  EXPECT_EQ(structs["struct max_align_t"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct max_align_t"].fields["x"].type.size, 4U);
+  EXPECT_EQ(structs["struct max_align_t"].fields["x"].offset, 0);
+
+  // typedef'd struct (defined in __stddef_max_align_t.h builtin header)
+  EXPECT_EQ(structs["max_align_t"].size, 32);
+  ASSERT_EQ(structs["max_align_t"].fields.size(), 2U);
+  ASSERT_EQ(structs["max_align_t"].fields.count("__clang_max_align_nonce1"), 1U);
+  ASSERT_EQ(structs["max_align_t"].fields.count("__clang_max_align_nonce2"), 1U);
+
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce1"].type.type, Type::integer);
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce1"].type.size, 8U);
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce1"].offset, 0);
+
+  // double are not parsed correctly yet so these fields are junk for now
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce2"].type.type, Type::none);
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce2"].type.size, 0U);
+  EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce2"].offset, 16);
+}
 
 } // namespace clang_parser
 } // namespace test

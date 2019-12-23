@@ -499,22 +499,22 @@ TEST(semantic_analyser, call_ntop)
 
   test("kprobe:f { ntop(2, arg0); }", 0);
   test("kprobe:f { ntop(arg0); }", 0);
-  test(structs + "kprobe:f { ntop(10, ((inet*)0)->ipv4); }", 0);
-  test(structs + "kprobe:f { ntop(10, ((inet*)0)->ipv6); }", 0);
-  test(structs + "kprobe:f { ntop(((inet*)0)->ipv4); }", 0);
-  test(structs + "kprobe:f { ntop(((inet*)0)->ipv6); }", 0);
+  test(structs + "kprobe:f { ntop(10, ((struct inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { ntop(10, ((struct inet*)0)->ipv6); }", 0);
+  test(structs + "kprobe:f { ntop(((struct inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { ntop(((struct inet*)0)->ipv6); }", 0);
 
   test("kprobe:f { @x = ntop(2, arg0); }", 0);
   test("kprobe:f { @x = ntop(arg0); }", 0);
   test("kprobe:f { @x = ntop(2, 0xFFFF); }", 0);
   test("kprobe:f { @x = ntop(0xFFFF); }", 0);
-  test(structs + "kprobe:f { @x = ntop(((inet*)0)->ipv4); }", 0);
-  test(structs + "kprobe:f { @x = ntop(((inet*)0)->ipv6); }", 0);
+  test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv4); }", 0);
+  test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv6); }", 0);
 
   test("kprobe:f { ntop(); }", 1);
   test("kprobe:f { ntop(2, \"hello\"); }", 1);
   test("kprobe:f { ntop(\"hello\"); }", 1);
-  test(structs + "kprobe:f { ntop(((inet*)0)->invalid); }", 1);
+  test(structs + "kprobe:f { ntop(((struct inet*)0)->invalid); }", 1);
 }
 
 TEST(semantic_analyser, call_kaddr)
@@ -681,7 +681,7 @@ TEST(semantic_analyser, map_integer_sizes)
   BPFtrace bpftrace;
   Driver driver(bpftrace);
   std::string structs = "struct type1 { int x; }";
-  test(driver, structs + "kprobe:f { $x = ((type1)0).x; @x = $x; }", 0);
+  test(driver, structs + "kprobe:f { $x = ((struct type1)0).x; @x = $x; }", 0);
 
   auto var_assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(1));
@@ -692,16 +692,16 @@ TEST(semantic_analyser, map_integer_sizes)
 TEST(semantic_analyser, unop_dereference)
 {
   test("kprobe:f { *0; }", 0);
-  test("struct X { int n; } kprobe:f { $x = (X*)0; *$x; }", 0);
-  test("struct X { int n; } kprobe:f { $x = (X)0; *$x; }", 1);
+  test("struct X { int n; } kprobe:f { $x = (struct X*)0; *$x; }", 0);
+  test("struct X { int n; } kprobe:f { $x = (struct X)0; *$x; }", 1);
   test("kprobe:f { *\"0\"; }", 10);
 }
 
 TEST(semantic_analyser, unop_not)
 {
   test("kprobe:f { ~0; }", 0);
-  test("struct X { int n; } kprobe:f { $x = (X*)0; ~$x; }", 10);
-  test("struct X { int n; } kprobe:f { $x = (X)0; ~$x; }", 10);
+  test("struct X { int n; } kprobe:f { $x = (struct X*)0; ~$x; }", 10);
+  test("struct X { int n; } kprobe:f { $x = (struct X)0; ~$x; }", 10);
   test("kprobe:f { ~\"0\"; }", 10);
 }
 
@@ -967,48 +967,48 @@ TEST(semantic_analyser, profile)
 TEST(semantic_analyser, variable_cast_types)
 {
   std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { $x = (type1)cpu; $x = (type1)cpu; }", 0);
-  test(structs + "kprobe:f { $x = (type1)cpu; $x = (type2)cpu; }", 1);
+  test(structs + "kprobe:f { $x = (struct type1)cpu; $x = (struct type1)cpu; }", 0);
+  test(structs + "kprobe:f { $x = (struct type1)cpu; $x = (struct type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, map_cast_types)
 {
   std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { @x = (type1)cpu; @x = (type1)cpu; }", 0);
-  test(structs + "kprobe:f { @x = (type1)cpu; @x = (type2)cpu; }", 1);
+  test(structs + "kprobe:f { @x = (struct type1)cpu; @x = (struct type1)cpu; }", 0);
+  test(structs + "kprobe:f { @x = (struct type1)cpu; @x = (struct type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, variable_casts_are_local)
 {
   std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { $x = (type1)cpu } kprobe:g { $x = (type2)cpu; }", 0);
+  test(structs + "kprobe:f { $x = (struct type1)cpu } kprobe:g { $x = (struct type2)cpu; }", 0);
 }
 
 TEST(semantic_analyser, map_casts_are_global)
 {
   std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { @x = (type1)cpu } kprobe:g { @x = (type2)cpu; }", 1);
+  test(structs + "kprobe:f { @x = (struct type1)cpu } kprobe:g { @x = (struct type2)cpu; }", 1);
 }
 
 TEST(semantic_analyser, cast_unknown_type)
 {
-  test("kprobe:f { (faketype)cpu }", 1);
+  test("kprobe:f { (struct faketype)cpu }", 1);
 }
 
 TEST(semantic_analyser, field_access)
 {
   std::string structs = "struct type1 { int field; }";
-  test(structs + "kprobe:f { ((type1)cpu).field }", 0);
-  test(structs + "kprobe:f { $x = (type1)cpu; $x.field }", 0);
-  test(structs + "kprobe:f { @x = (type1)cpu; @x.field }", 0);
+  test(structs + "kprobe:f { ((struct type1)cpu).field }", 0);
+  test(structs + "kprobe:f { $x = (struct type1)cpu; $x.field }", 0);
+  test(structs + "kprobe:f { @x = (struct type1)cpu; @x.field }", 0);
 }
 
 TEST(semantic_analyser, field_access_wrong_field)
 {
   std::string structs = "struct type1 { int field; }";
-  test(structs + "kprobe:f { ((type1)cpu).blah }", 1);
-  test(structs + "kprobe:f { $x = (type1)cpu; $x.blah }", 1);
-  test(structs + "kprobe:f { @x = (type1)cpu; @x.blah }", 1);
+  test(structs + "kprobe:f { ((struct type1)cpu).blah }", 1);
+  test(structs + "kprobe:f { $x = (struct type1)cpu; $x.blah }", 1);
+  test(structs + "kprobe:f { @x = (struct type1)cpu; @x.blah }", 1);
 }
 
 TEST(semantic_analyser, field_access_wrong_expr)
@@ -1022,22 +1022,22 @@ TEST(semantic_analyser, field_access_types)
   std::string structs = "struct type1 { int field; char mystr[8]; }"
                         "struct type2 { int field; }";
 
-  test(structs + "kprobe:f { ((type1)0).field == 123 }", 0);
-  test(structs + "kprobe:f { ((type1)0).field == \"abc\" }", 10);
+  test(structs + "kprobe:f { ((struct type1)0).field == 123 }", 0);
+  test(structs + "kprobe:f { ((struct type1)0).field == \"abc\" }", 10);
 
-  test(structs + "kprobe:f { ((type1)0).mystr == \"abc\" }", 0);
-  test(structs + "kprobe:f { ((type1)0).mystr == 123 }", 10);
+  test(structs + "kprobe:f { ((struct type1)0).mystr == \"abc\" }", 0);
+  test(structs + "kprobe:f { ((struct type1)0).mystr == 123 }", 10);
 
-  test(structs + "kprobe:f { ((type1)0).field == ((type2)0).field }", 0);
-  test(structs + "kprobe:f { ((type1)0).mystr == ((type2)0).field }", 10);
+  test(structs + "kprobe:f { ((struct type1)0).field == ((struct type2)0).field }", 0);
+  test(structs + "kprobe:f { ((struct type1)0).mystr == ((struct type2)0).field }", 10);
 }
 
 TEST(semantic_analyser, field_access_pointer)
 {
   std::string structs = "struct type1 { int field; }";
-  test(structs + "kprobe:f { ((type1*)0)->field }", 0);
-  test(structs + "kprobe:f { ((type1*)0).field }", 1);
-  test(structs + "kprobe:f { *((type1*)0) }", 0);
+  test(structs + "kprobe:f { ((struct type1*)0)->field }", 0);
+  test(structs + "kprobe:f { ((struct type1*)0).field }", 1);
+  test(structs + "kprobe:f { *((struct type1*)0) }", 0);
 }
 
 TEST(semantic_analyser, field_access_sub_struct)
@@ -1045,12 +1045,12 @@ TEST(semantic_analyser, field_access_sub_struct)
   std::string structs = "struct type2 { int field; } "
                         "struct type1 { struct type2 *type2ptr; struct type2 type2; }";
 
-  test(structs + "kprobe:f { ((type1)0).type2ptr->field }", 0);
-  test(structs + "kprobe:f { ((type1)0).type2.field }", 0);
-  test(structs + "kprobe:f { $x = (type2)0; $x = ((type1)0).type2 }", 0);
-  test(structs + "kprobe:f { $x = (type2*)0; $x = ((type1)0).type2ptr }", 0);
-  test(structs + "kprobe:f { $x = (type1)0; $x = ((type1)0).type2 }", 1);
-  test(structs + "kprobe:f { $x = (type1*)0; $x = ((type1)0).type2ptr }", 1);
+  test(structs + "kprobe:f { ((struct type1)0).type2ptr->field }", 0);
+  test(structs + "kprobe:f { ((struct type1)0).type2.field }", 0);
+  test(structs + "kprobe:f { $x = (struct type2)0; $x = ((struct type1)0).type2 }", 0);
+  test(structs + "kprobe:f { $x = (struct type2*)0; $x = ((struct type1)0).type2ptr }", 0);
+  test(structs + "kprobe:f { $x = (struct type1)0; $x = ((struct type1)0).type2 }", 1);
+  test(structs + "kprobe:f { $x = (struct type1*)0; $x = ((struct type1)0).type2ptr }", 1);
 }
 
 TEST(semantic_analyser, field_access_is_internal)
@@ -1059,11 +1059,11 @@ TEST(semantic_analyser, field_access_is_internal)
   Driver driver(bpftrace);
   std::string structs = "struct type1 { int x; }";
 
-  test(driver, structs + "kprobe:f { $x = ((type1)0).x }", 0);
+  test(driver, structs + "kprobe:f { $x = ((struct type1)0).x }", 0);
   auto var_assignment1 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   EXPECT_EQ(false, var_assignment1->var->type.is_internal);
 
-  test(driver, structs + "kprobe:f { @type1 = (type1)0; $x = @type1.x }", 0);
+  test(driver, structs + "kprobe:f { @type1 = (struct type1)0; $x = @type1.x }", 0);
   auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   auto var_assignment2 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
   EXPECT_EQ(true, map_assignment->map->type.is_internal);
@@ -1197,7 +1197,7 @@ TEST(semantic_analyser, cast_sign)
   std::string prog =
     "struct t { int s; unsigned int us; long l; unsigned long ul }; "
     "kprobe:f { "
-    "  $t = ((t *)0xFF);"
+    "  $t = ((struct t *)0xFF);"
     "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
   test(driver, prog, 0);
 
@@ -1217,7 +1217,7 @@ TEST(semantic_analyser, binop_sign)
   std::string prog_pre =
     "struct t { long l; unsigned long ul }; "
     "kprobe:f { "
-    "  $t = ((t *)0xFF); ";
+    "  $t = ((struct t *)0xFF); ";
 
   std::string operators[] = { "==", "!=", "<", "<=", ">", ">=", "+", "-", "/", "*"};
   for(std::string op : operators)
@@ -1352,6 +1352,18 @@ TEST(semantic_analyser, struct_member_keywords)
     test("struct S{ int " + kw + ";}; k:f { ((struct S)arg0)." + kw + "}", 0);
   }
 }
+
+TEST(semantic_analyser, builtin_args)
+{
+  auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace, "t:sched:sched_one { args->common_field }", 0);
+  test(*bpftrace, "t:sched:sched_two { args->common_field }", 0);
+  test(*bpftrace, "t:sched:sched_one,"
+                  "t:sched:sched_two { args->common_field }", 0);
+  test(*bpftrace, "t:sched:sched_* { args->common_field }", 0);
+  test(*bpftrace, "t:sched:sched_one { args->not_a_field }", 1);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace

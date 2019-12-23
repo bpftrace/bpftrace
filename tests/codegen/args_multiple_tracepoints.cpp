@@ -71,7 +71,7 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_open"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_open_1" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_open.filename = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_open.filename" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %"@_key" = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %"@_key", i64 0, i64 0
@@ -80,10 +80,10 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %2, i8 0, i64 64, i1 false)
   %3 = add i8* %0, i64 16
-  %4 = bitcast i64* %_tracepoint_syscalls_sys_enter_open.filename to i8*
+  %4 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_open.filename" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_open.filename, i64 8, i8* %3)
-  %5 = load i64, i64* %_tracepoint_syscalls_sys_enter_open.filename, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_open.filename", i64 8, i8* %3)
+  %5 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_open.filename", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %5)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %1, i8* nonnull align 1 %2, i64 64, i1 false)
@@ -121,7 +121,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 define i64 @"tracepoint:syscalls:sys_enter_openat"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_openat_2" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_openat.filename = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_openat.filename" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %"@_key" = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %"@_key", i64 0, i64 0
@@ -130,10 +130,10 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %2, i8 0, i64 64, i1 false)
   %3 = add i8* %0, i64 24
-  %4 = bitcast i64* %_tracepoint_syscalls_sys_enter_openat.filename to i8*
+  %4 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_openat.filename" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_openat.filename, i64 8, i8* %3)
-  %5 = load i64, i64* %_tracepoint_syscalls_sys_enter_openat.filename, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_openat.filename", i64 8, i8* %3)
+  %5 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_openat.filename", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %5)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %1, i8* nonnull align 1 %2, i64 64, i1 false)
@@ -172,7 +172,7 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_open"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_open_1" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_open.filename = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_open.filename" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %"@_key" = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %"@_key", i64 0, i64 0
@@ -181,10 +181,10 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 64, i32 1, i1 false)
   %3 = add i8* %0, i64 16
-  %4 = bitcast i64* %_tracepoint_syscalls_sys_enter_open.filename to i8*
+  %4 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_open.filename" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_open.filename, i64 8, i8* %3)
-  %5 = load i64, i64* %_tracepoint_syscalls_sys_enter_open.filename, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_open.filename", i64 8, i8* %3)
+  %5 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_open.filename", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %5)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %1, i8* nonnull %2, i64 64, i32 1, i1 false)
@@ -222,7 +222,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture r
 define i64 @"tracepoint:syscalls:sys_enter_openat"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_openat_2" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_openat.filename = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_openat.filename" = alloca i64, align 8
   %str = alloca [64 x i8], align 1
   %"@_key" = alloca [64 x i8], align 1
   %1 = getelementptr inbounds [64 x i8], [64 x i8]* %"@_key", i64 0, i64 0
@@ -231,10 +231,10 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 64, i32 1, i1 false)
   %3 = add i8* %0, i64 24
-  %4 = bitcast i64* %_tracepoint_syscalls_sys_enter_openat.filename to i8*
+  %4 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_openat.filename" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_openat.filename, i64 8, i8* %3)
-  %5 = load i64, i64* %_tracepoint_syscalls_sys_enter_openat.filename, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_openat.filename", i64 8, i8* %3)
+  %5 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_openat.filename", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %5)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %1, i8* nonnull %2, i64 64, i32 1, i1 false)

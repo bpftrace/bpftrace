@@ -17,8 +17,8 @@ define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kpr
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %Bar.x = alloca i32, align 4
-  %Foo.bar = alloca i64, align 8
+  %"struct Bar.x" = alloca i32, align 4
+  %"struct Foo.bar" = alloca i64, align 8
   %"$foo" = alloca i64, align 8
   %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
   %1 = bitcast i64* %"$foo" to i8*
@@ -27,15 +27,15 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = load i64, i64 addrspace(64)* null, align 536870912
   store i64 %2, i64* %"$foo", align 8
-  %3 = bitcast i64* %Foo.bar to i8*
+  %3 = bitcast i64* %"struct Foo.bar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, [8 x i8]* nonnull %tmpcast)
-  %4 = load i64, i64* %Foo.bar, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct Foo.bar", i64 8, [8 x i8]* nonnull %tmpcast)
+  %4 = load i64, i64* %"struct Foo.bar", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
-  %5 = bitcast i32* %Bar.x to i8*
+  %5 = bitcast i32* %"struct Bar.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i64 %4)
-  %6 = load i32, i32* %Bar.x, align 4
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %"struct Bar.x", i64 4, i64 %4)
+  %6 = load i32, i32* %"struct Bar.x", align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %7 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
@@ -71,8 +71,8 @@ define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kpr
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %Bar.x = alloca i32, align 4
-  %Foo.bar = alloca i64, align 8
+  %"struct Bar.x" = alloca i32, align 4
+  %"struct Foo.bar" = alloca i64, align 8
   %"$foo" = alloca i64, align 8
   %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
   %1 = bitcast i64* %"$foo" to i8*
@@ -81,15 +81,15 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = load i64, i64 addrspace(64)* null, align 536870912
   store i64 %2, i64* %"$foo", align 8
-  %3 = bitcast i64* %Foo.bar to i8*
+  %3 = bitcast i64* %"struct Foo.bar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, [8 x i8]* nonnull %tmpcast)
-  %4 = load i64, i64* %Foo.bar, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct Foo.bar", i64 8, [8 x i8]* nonnull %tmpcast)
+  %4 = load i64, i64* %"struct Foo.bar", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
-  %5 = bitcast i32* %Bar.x to i8*
+  %5 = bitcast i32* %"struct Bar.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i64 %4)
-  %6 = load i32, i32* %Bar.x, align 4
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %"struct Bar.x", i64 4, i64 %4)
+  %6 = load i32, i32* %"struct Bar.x", align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %7 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
@@ -119,7 +119,7 @@ attributes #1 = { argmemonly nounwind }
   test("struct Bar { int x; } struct Foo { struct Bar *bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo)0;"
+       "  $foo = (struct Foo)0;"
        "  @x = $foo.bar->x;"
        "}",
        expected);
@@ -134,17 +134,17 @@ define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kpr
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
-  %Bar.x = alloca i32, align 4
-  %Foo.bar = alloca i64, align 8
-  %1 = bitcast i64* %Foo.bar to i8*
+  %"struct Bar.x" = alloca i32, align 4
+  %"struct Foo.bar" = alloca i64, align 8
+  %1 = bitcast i64* %"struct Foo.bar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %Foo.bar, i64 8, i64 0)
-  %2 = load i64, i64* %Foo.bar, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct Foo.bar", i64 8, i64 0)
+  %2 = load i64, i64* %"struct Foo.bar", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
-  %3 = bitcast i32* %Bar.x to i8*
+  %3 = bitcast i32* %"struct Bar.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %Bar.x, i64 4, i64 %2)
-  %4 = load i32, i32* %Bar.x, align 4
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %"struct Bar.x", i64 4, i64 %2)
+  %4 = load i32, i32* %"struct Bar.x", align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
@@ -170,7 +170,7 @@ attributes #1 = { argmemonly nounwind }
   test("struct Bar { int x; } struct Foo { struct Bar *bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (Foo*)0;"
+       "  $foo = (struct Foo*)0;"
        "  @x = $foo->bar->x;"
        "}",
        expected);

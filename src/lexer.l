@@ -112,10 +112,10 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 "$"[0-9]+               { return Parser::make_PARAM(yytext, loc); }
 "$"#                    { return Parser::make_PARAMCOUNT(loc); }
 "#"[^!].*               { return Parser::make_CPREPROC(yytext, loc); }
-"if"                    { return Parser::make_IF(yytext, loc); }
-"else"                  { return Parser::make_ELSE(yytext, loc); }
+"if"                    { return Parser::make_IF(loc); }
+"else"                  { return Parser::make_ELSE(loc); }
 "?"                     { return Parser::make_QUES(loc); }
-"unroll"                { return Parser::make_UNROLL(yytext, loc); }
+"unroll"                { return Parser::make_UNROLL(loc); }
 
 \"                      { yy_push_state(STR, yyscanner); buffer.clear(); }
 <STR>{
@@ -141,26 +141,32 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   .                     driver.error(loc, "invalid character"); yy_pop_state(yyscanner);
 }
 
-struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
-enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
-<STRUCT,BRACE,ENUM>{
-  "*"|")"               { if (YY_START == STRUCT) {
+struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
+<STRUCT,BRACE>{
+  "*"|")"               {
+                          if (YY_START == STRUCT)
+                          {
+                            // Finished parsing the typename of a cast
+                            // Put the cast type into a canonical form by trimming
+                            // and then inserting a single space.
                             yy_pop_state(yyscanner);
                             unput(yytext[0]);
-                            return Parser::make_IDENT(trim(buffer), loc);
+                            return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);
                           }
                           buffer += yytext[0];
                         }
   "{"                   yy_push_state(BRACE, yyscanner); buffer += '{';
-  "}"|"};"              { buffer += yytext;
+  "}"|"};"              {
+                          buffer += yytext;
                           yy_pop_state(yyscanner);
-                          if (YY_START == STRUCT) {
+                          if (YY_START == STRUCT)
+                          {
+                            // Finished parsing a struct definition
+                            // Trimming isn't needed here since the typenames
+                            // will go through Clang before we get them back
+                            // anyway.
                             yy_pop_state(yyscanner);
-                            return Parser::make_STRUCT(struct_type + buffer, loc);
-                          }
-                          if (YY_START == ENUM) {
-                            yy_pop_state(yyscanner);
-                            return Parser::make_ENUM("enum " + buffer, loc);
+                            return Parser::make_STRUCT_DEFN(struct_type + buffer, loc);
                           }
                         }
   .                     buffer += yytext[0];
@@ -168,7 +174,8 @@ enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
 }
 
 {ident}                 {
-                          if (driver.bpftrace_.macros_.count(yytext) != 0) {
+                          if (driver.bpftrace_.macros_.count(yytext) != 0)
+                          {
                             const char *s = driver.bpftrace_.macros_[yytext].c_str();
                             int z;
                             // NOTE(mmarchini) workaround for simple recursive
@@ -176,9 +183,12 @@ enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
                             // example, with operators) will go into an
                             // infinite loop. Yes, we should fix that in the
                             // future.
-                            if (strcmp(s, yytext) == 0) {
+                            if (strcmp(s, yytext) == 0)
+                            {
                               return Parser::make_IDENT(yytext, loc);
-                            } else {
+                            }
+                            else
+                            {
                               for (z=strlen(s) - 1; z >= 0; z--)
                                 unput(s[z]);
                             }

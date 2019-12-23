@@ -94,15 +94,15 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_recvfrom"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvfrom_1" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvfrom.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 40
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvfrom.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvfrom.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvfrom.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -133,15 +133,15 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_recvmmsg"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvmmsg_2" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvmmsg.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 40
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvmmsg.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvmmsg.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvmmsg.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -169,15 +169,15 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
 define i64 @"tracepoint:syscalls:sys_enter_recvmsg"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvmsg_3" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvmsg.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 32
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvmsg.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvmsg.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvmsg.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -215,15 +215,15 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_recvfrom"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvfrom_1" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvfrom.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 40
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvfrom.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvfrom.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvfrom.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvfrom.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -254,15 +254,15 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 define i64 @"tracepoint:syscalls:sys_enter_recvmmsg"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvmmsg_2" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvmmsg.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 40
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvmmsg.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvmmsg.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvmmsg.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvmmsg.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
@@ -290,15 +290,15 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
 define i64 @"tracepoint:syscalls:sys_enter_recvmsg"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_recvmsg_3" {
 entry:
   %"@_val" = alloca i64, align 8
-  %_tracepoint_syscalls_sys_enter_recvmsg.flags = alloca i64, align 8
+  %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags" = alloca i64, align 8
   %"@_key" = alloca [8 x i8], align 8
   %1 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = add i8* %0, i64 32
-  %3 = bitcast i64* %_tracepoint_syscalls_sys_enter_recvmsg.flags to i8*
+  %3 = bitcast i64* %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %_tracepoint_syscalls_sys_enter_recvmsg.flags, i64 8, i8* %2)
-  %4 = load i64, i64* %_tracepoint_syscalls_sys_enter_recvmsg.flags, align 8
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags", i64 8, i8* %2)
+  %4 = load i64, i64* %"struct _tracepoint_syscalls_sys_enter_recvmsg.flags", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   store i64 %4, i8* %1, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)

@@ -20,14 +20,6 @@ static std::string get_clang_string(CXString string)
   return str;
 }
 
-static void remove_struct_union_prefix(std::string &str)
-{
-  if (strncmp(str.c_str(), "struct ", 7) == 0)
-    str.erase(0, 7);
-  else if (strncmp(str.c_str(), "union ", 6) == 0)
-    str.erase(0, 6);
-}
-
 /*
  * is_anonymous
  *
@@ -213,7 +205,6 @@ static SizedType get_sized_type(CXType clang_type)
 {
   auto size = clang_Type_getSizeOf(clang_type);
   auto typestr = get_clang_string(clang_getTypeSpelling(clang_type));
-  remove_struct_union_prefix(typestr);
 
   switch (clang_type.kind)
   {
@@ -243,7 +234,6 @@ static SizedType get_sized_type(CXType clang_type)
       if (pointee_type.kind == CXType_Record)
       {
         auto pointee_typestr = get_clang_string(clang_getTypeSpelling(pointee_type));
-        remove_struct_union_prefix(pointee_typestr);
         type = SizedType(Type::cast, sizeof(uintptr_t), pointee_typestr);
       }
       else
@@ -375,30 +365,25 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           Bitfield bitfield;
           bool is_bitfield = getBitfield(c, bitfield);
 
-          auto struct_name = get_clang_string(clang_getCursorSpelling(named_parent));
-          if (struct_name == "")
-            struct_name = ptypestr;
-          remove_struct_union_prefix(struct_name);
-
           // Warn if we already have the struct member defined and is
           // different type and keep the current definition in place.
-          if (structs.count(struct_name) != 0 &&
-              structs[struct_name].fields.count(ident)    != 0 &&
-              structs[struct_name].fields[ident].offset   != offset &&
-              structs[struct_name].fields[ident].type     != get_sized_type(type) &&
-              structs[struct_name].fields[ident].is_bitfield && is_bitfield &&
-              structs[struct_name].fields[ident].bitfield != bitfield &&
-              structs[struct_name].size                   != ptypesize)
+          if (structs.count(ptypestr) != 0 &&
+              structs[ptypestr].fields.count(ident)    != 0 &&
+              structs[ptypestr].fields[ident].offset   != offset &&
+              structs[ptypestr].fields[ident].type     != get_sized_type(type) &&
+              structs[ptypestr].fields[ident].is_bitfield && is_bitfield &&
+              structs[ptypestr].fields[ident].bitfield != bitfield &&
+              structs[ptypestr].size                   != ptypesize)
           {
-            std::cerr << "type mismatch for " << struct_name << "::" << ident << std::endl;
+            std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
           }
           else
           {
-            structs[struct_name].fields[ident].offset = offset;
-            structs[struct_name].fields[ident].type = get_sized_type(type);
-            structs[struct_name].fields[ident].is_bitfield = is_bitfield;
-            structs[struct_name].fields[ident].bitfield = bitfield;
-            structs[struct_name].size = ptypesize;
+            structs[ptypestr].fields[ident].offset = offset;
+            structs[ptypestr].fields[ident].type = get_sized_type(type);
+            structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
+            structs[ptypestr].fields[ident].bitfield = bitfield;
+            structs[ptypestr].size = ptypesize;
           }
         }
 

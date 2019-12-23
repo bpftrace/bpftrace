@@ -38,11 +38,6 @@ RUN bpftrace -v -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm)
 EXPECT comm: bpftrace
 TIMEOUT 5
 
-NAME struct keyword optional when casting
-RUN bpftrace -v -e 'struct Bar { int x; } struct Foo { struct Bar *bar; } i:ms:1 { $foo = (struct Foo *)0; @x = $foo->bar->x; exit()}'
-EXPECT @x: 0
-TIMEOUT 5
-
 NAME struct positional string compare - equal returns true
 RUN bpftrace -v -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
 EXPECT I got hello
