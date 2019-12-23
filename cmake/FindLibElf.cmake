@@ -39,6 +39,7 @@ find_library (LIBELF_LIBRARIES
     /usr/lib
     /usr/local/lib
     /opt/local/lib
+    /usr/lib/x86_64-linux-gnu/
     /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)

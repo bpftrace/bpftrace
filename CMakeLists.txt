@@ -6,10 +6,32 @@ set(bpftrace_VERSION_MAJOR 0)
 set(bpftrace_VERSION_MINOR 9)
 set(bpftrace_VERSION_PATCH 3)
 
-set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
+set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with musl. Has issues with dlopen.")
+set(EMBED_LLVM OFF CACHE BOOL "Build LLVM static libs as an ExternalProject and link to these instead of system libs.")
+set(EMBED_CLANG OFF CACHE BOOL "Build Clang static libs as an ExternalProject and link to these instead of system libs.")
+set(EMBED_LIBCLANG_ONLY OFF CACHE BOOL "Build only libclang.a, and link to system libraries statically")
+set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+if(EMBED_LLVM OR EMBED_CLANG)
+  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
+  include(embed_helpers)
+  if (NOT STATIC_LINKING)
+    set(CONFIG_ERROR "Dependencies can only be embedded for a static build.\n"
+                     "Enable STATIC_LINKING=ON to embed static libs.")
+    message(FATAL_ERROR ${CONFIG_ERROR})
+  elseif(STATIC_LIBC)
+    message(WARNING "static libc is known to cause problems, consider STATIC_LIBC=OFF. Proceed at your own risk") #iovisor/bpftrace/issues/266
+  endif()
+endif()
+
+if(EMBED_LIBCLANG_ONLY AND NOT EMBED_CLANG)
+    message(FATAL_ERROR "Cannot set EMBED_LIBCLANG_ONLY without also setting EMBED_CLANG")
+endif()
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,12 +58,20 @@ endif()
 
 include(CTest)
 
-if (STATIC_LINKING)
-  set(CMAKE_EXE_LINKER_FLAGS "-static")
+if(STATIC_LINKING)
+  if(STATIC_LIBC)
+    set(CMAKE_EXE_LINKER_FLAGS "-static")
+  elseif(EMBED_LLVM OR EMBED_CLANG)
+    set(EMBEDDED_LINK_FLAGS "-static-libgcc -static-libstdc++ -Wl,--start-group")
+    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lrt")
+    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lpthread")
+    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -ldl -lm")
+    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bstatic -lz")
+  endif(STATIC_LIBC)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set(CMAKE_LINK_SEARCH_START_STATIC TRUE)
   set(CMAKE_LINK_SEARCH_END_STATIC TRUE)
-endif()
+endif(STATIC_LINKING)
 
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
 
@@ -85,19 +115,6 @@ check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE 
 check_type_size("BPF_FUNC_send_signal" SEND_SIGNAL LANGUAGE C)
 set(CMAKE_EXTRA_INCLUDE_FILES)
 
-# Some users have multiple versions of llvm installed and would like to specify
-# a specific llvm version.
-if(${LLVM_REQUESTED_VERSION})
-  find_package(LLVM ${LLVM_REQUESTED_VERSION} REQUIRED)
-else()
-  find_package(LLVM REQUIRED)
-endif()
-
-if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
-  message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
-  message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
-endif()
-
 find_package(LibBpf)
 find_package(LibBfd)
 find_package(LibOpcodes)
@@ -109,11 +126,32 @@ endif()
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 
-include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
+if (EMBED_LLVM)
+  include(embed_llvm)
+else()
+  # Some users have multiple versions of llvm installed and would like to specify
+  # a specific llvm version.
+  if(${LLVM_REQUESTED_VERSION})
+    find_package(LLVM ${LLVM_REQUESTED_VERSION} REQUIRED)
+  else()
+    find_package(LLVM REQUIRED)
+  endif()
 
-find_package(Clang REQUIRED)
-include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
+  if(${LLVM_VERSION_MAJOR} VERSION_LESS 5)
+    message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
+    message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
+  endif()
+
+  include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
+  add_definitions(${LLVM_DEFINITIONS})
+endif()
+
+if(EMBED_CLANG)
+  include(embed_clang)
+else()
+  find_package(Clang REQUIRED)
+  include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
+endif()
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
