@@ -557,13 +557,19 @@ void CodegenLLVM::visit(Call &call)
     Value *af_type;
 
     auto inet = call.vargs->at(0);
-    if (call.vargs->size() == 1) {
-      if (inet->type.type == Type::integer || inet->type.size == 4) {
+    if (call.vargs->size() == 1)
+    {
+      if (inet->type.type == Type::integer || inet->type.size == 4)
+      {
         af_type = b_.getInt64(AF_INET);
-      } else {
+      }
+      else
+      {
         af_type = b_.getInt64(AF_INET6);
       }
-    } else {
+    }
+    else
+    {
       inet = call.vargs->at(1);
       call.vargs->at(0)->accept(*this);
       af_type = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
@@ -574,9 +580,12 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMemSet(inet_offset, b_.getInt8(0), 16, 1);
 
     inet->accept(*this);
-    if (inet->type.type == Type::array) {
-      b_.CreateProbeRead(reinterpret_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
-    } else {
+    if (inet->type.type == Type::array)
+    {
+      b_.CreateProbeRead(static_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
+    }
+    else
+    {
       b_.CreateStore(b_.CreateIntCast(expr_, b_.getInt32Ty(), false), inet_offset);
     }
 
