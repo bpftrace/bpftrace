@@ -69,8 +69,9 @@ public:
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(std::string mode) : mode(mode) {}
-  explicit StackMode(std::string mode, location loc) : Expression(loc), mode(mode) {}
+  explicit StackMode(std::string mode) : mode(mode) { is_literal = true; }
+  explicit StackMode(std::string mode, location loc) : Expression(loc), mode(mode)
+    { is_literal = true; }
   std::string mode;
 
   void accept(Visitor &v) override;

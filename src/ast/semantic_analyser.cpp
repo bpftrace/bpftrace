@@ -439,10 +439,11 @@ void SemanticAnalyser::visit(Call &call)
 
     if (is_final_pass()) {
       if (call.vargs && call.vargs->size() > 1) {
-        check_arg(call, Type::string, 1, true);
-        auto &join_delim_arg = *call.vargs->at(1);
-        String &join_delim_str = static_cast<String&>(join_delim_arg);
-        bpftrace_.join_args_.push_back(join_delim_str.str);
+        if (check_arg(call, Type::string, 1, true)) {
+          auto &join_delim_arg = *call.vargs->at(1);
+          String &join_delim_str = static_cast<String&>(join_delim_arg);
+          bpftrace_.join_args_.push_back(join_delim_str.str);
+        }
       } else {
         std::string join_delim_default = " ";
         bpftrace_.join_args_.push_back(join_delim_default);
@@ -592,10 +593,11 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
         if (call.vargs && call.vargs->size() > 0) {
-          check_arg(call, Type::string, 0, true);
-          auto &fmt_arg = *call.vargs->at(0);
-          String &fmt = static_cast<String&>(fmt_arg);
-          bpftrace_.time_args_.push_back(fmt.str);
+          if (check_arg(call, Type::string, 0, true)) {
+            auto &fmt_arg = *call.vargs->at(0);
+            String &fmt = static_cast<String&>(fmt_arg);
+            bpftrace_.time_args_.push_back(fmt.str);
+          }
         } else {
           std::string fmt_default = "%H:%M:%S\n";
           bpftrace_.time_args_.push_back(fmt_default.c_str());
@@ -685,23 +687,27 @@ void SemanticAnalyser::check_stack_call(Call &call, Type type) {
         case 0: break;
         case 1: {
           auto &arg = *call.vargs->at(0);
-          if (is_final_pass() && arg.type.type != Type::stack_mode) {
-            check_arg(call, Type::integer, 0, true);
-            stack_type.limit = static_cast<Integer&>(arg).n;
+          // If we have a single argument it can be either
+          // stack-mode or stack-size
+          if (arg.type.type == Type::stack_mode) {
+            if (check_arg(call, Type::stack_mode, 0, true))
+              stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
           } else {
-            check_arg(call, Type::stack_mode, 0, false);
-            stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
+            if (check_arg(call, Type::integer, 0, true))
+              stack_type.limit = static_cast<Integer&>(arg).n;
           }
           break;
         }
         case 2: {
-          check_arg(call, Type::stack_mode, 0, false);
-          auto &mode_arg = *call.vargs->at(0);
-          stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
+          if (check_arg(call, Type::stack_mode, 0, true)) {
+            auto &mode_arg = *call.vargs->at(0);
+            stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
+          }
 
-          check_arg(call, Type::integer, 1, true);
-          auto &limit_arg = *call.vargs->at(1);
-          stack_type.limit = static_cast<Integer&>(limit_arg).n;
+          if (check_arg(call, Type::integer, 1, true)) {
+            auto &limit_arg = *call.vargs->at(1);
+            stack_type.limit = static_cast<Integer&>(limit_arg).n;
+          }
           break;
         }
         default:
@@ -796,17 +802,19 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
 
-  if (is_final_pass() && !(type.type == Type::array))
-    err_ << "The array index operator [] can only be used on arrays." << std::endl;
+  if (is_final_pass()) {
+    if (type.type != Type::array)
+      err_ << "The array index operator [] can only be used on arrays." << std::endl;
 
-  if (is_final_pass() && !(indextype.type == Type::integer))
-    err_ << "The array index operator [] only accepts integer indices." << std::endl;
+    if (indextype.type == Type::integer && arr.indexpr->is_literal) {
+      Integer *index = static_cast<Integer *>(arr.indexpr);
 
-  if (is_final_pass() && (indextype.type == Type::integer)) {
-    Integer *index = static_cast<Integer *>(arr.indexpr);
-
-    if ((size_t) index->n >= type.size)
-      err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+      if ((size_t) index->n >= type.size)
+        err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+    }
+    else {
+      err_ << "The array index operator [] only accepts literal integer indices." << std::endl;
+    }
   }
 
   arr.type = SizedType(type.elem_type, type.pointee_size);

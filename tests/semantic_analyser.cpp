@@ -447,6 +447,8 @@ TEST(semantic_analyser, call_time)
   test("kprobe:f { @x = time(); }", 1);
   test("kprobe:f { $x = time(); }", 1);
   test("kprobe:f { @[time()] = 1; }", 1);
+  test("kprobe:f { time(1); }", 10);
+  test("kprobe:f { $x = \"str\"; time($x); }", 10);
 }
 
 TEST(semantic_analyser, call_str)
@@ -565,6 +567,44 @@ TEST(semantic_analyser, call_cat)
   test("kprobe:f { @[cat(\"/proc/loadavg\")] = 1; }", 1);
 }
 
+TEST(semantic_analyser, call_stack)
+{
+  test("kprobe:f { kstack() }", 0);
+  test("kprobe:f { ustack() }", 0);
+  test("kprobe:f { kstack(bpftrace) }", 0);
+  test("kprobe:f { ustack(bpftrace) }", 0);
+  test("kprobe:f { kstack(perf) }", 0);
+  test("kprobe:f { ustack(perf) }", 0);
+  test("kprobe:f { kstack(3) }", 0);
+  test("kprobe:f { ustack(3) }", 0);
+  test("kprobe:f { kstack(perf, 3) }", 0);
+  test("kprobe:f { ustack(perf, 3) }", 0);
+
+  // Wrong arguments
+  test("kprobe:f { kstack(3, perf) }", 10);
+  test("kprobe:f { ustack(3, perf) }", 10);
+  test("kprobe:f { kstack(perf, 3, 4) }", 1);
+  test("kprobe:f { ustack(perf, 3, 4) }", 1);
+  test("kprobe:f { kstack(bob) }", 1);
+  test("kprobe:f { ustack(bob) }", 1);
+  test("kprobe:f { kstack(\"str\") }", 10);
+  test("kprobe:f { ustack(\"str\") }", 10);
+  test("kprobe:f { kstack(perf, \"str\") }", 10);
+  test("kprobe:f { ustack(perf, \"str\") }", 10);
+  test("kprobe:f { kstack(\"str\", 3) }", 10);
+  test("kprobe:f { ustack(\"str\", 3) }", 10);
+
+  // Non-literals
+  test("kprobe:f { @x = perf; kstack(@x) }", 10);
+  test("kprobe:f { @x = perf; ustack(@x) }", 10);
+  test("kprobe:f { @x = perf; kstack(@x, 3) }", 10);
+  test("kprobe:f { @x = perf; ustack(@x, 3) }", 10);
+  test("kprobe:f { @x = 3; kstack(@x) }", 10);
+  test("kprobe:f { @x = 3; ustack(@x) }", 10);
+  test("kprobe:f { @x = 3; kstack(perf, @x) }", 10);
+  test("kprobe:f { @x = 3; ustack(perf, @x) }", 10);
+}
+
 TEST(semantic_analyser, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }", 0);
@@ -613,6 +653,9 @@ TEST(semantic_analyser, array_access) {
        10);
   test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
        "arg0; @x = $s->y[\"0\"];}",
+       10);
+  test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; $idx = 0; @x = $s->y[$idx];}",
        10);
 }
 
@@ -808,6 +851,7 @@ TEST(semantic_analyser, join_delimiter)
   test("kprobe:f { $fmt = \"mystring\"; join($fmt, \",\") }", 10);
   test("kprobe:f { @x = join(arg0, \",\") }", 1);
   test("kprobe:f { $x = join(arg0, \",\") }", 1);
+  test("kprobe:f { join(arg0, 3) }", 10);
 }
 
 TEST(semantic_analyser, kprobe)
