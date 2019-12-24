@@ -1,4 +1,5 @@
 #include "common.h"
+#include "../mocks.h"
 
 namespace bpftrace {
 namespace test {
@@ -6,7 +7,10 @@ namespace codegen {
 
 TEST(codegen, map_key_probe)
 {
-  test("tracepoint:syscalls:sys_enter_nanosleep,tracepoint:syscalls:sys_enter_openat { @x[probe] = @x[probe] + 1 }",
+  auto bpftrace = get_mock_bpftrace();
+
+  test(*bpftrace,
+      "tracepoint:sched:sched_one,tracepoint:sched:sched_two { @x[probe] = @x[probe] + 1 }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -14,7 +18,7 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"tracepoint:syscalls:sys_enter_nanosleep"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_nanosleep_1" {
+define i64 @"tracepoint:sched:sched_one"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:sched:sched_one_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key1" = alloca [8 x i8], align 8
@@ -51,7 +55,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
-define i64 @"tracepoint:syscalls:sys_enter_openat"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_openat_2" {
+define i64 @"tracepoint:sched:sched_two"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:sched:sched_two_2" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key1" = alloca [8 x i8], align 8

@@ -9,6 +9,7 @@
 #include "semantic_analyser.h"
 
 #include "common.h"
+#include "../mocks.h"
 
 namespace bpftrace {
 namespace test {
@@ -19,14 +20,14 @@ using ::testing::_;
 
 TEST(codegen, regression_957)
 {
-  MockBPFtrace bpftrace;
-  Driver driver(bpftrace);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
 
-  ASSERT_EQ(driver.parse_str("t:syscalls:sys_enter_wait* { cat(\"%s\", probe); }"), 0);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ASSERT_EQ(driver.parse_str("t:sched:sched_one* { cat(\"%s\", probe); }"), 0);
+  ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   codegen.compile();
 }
 

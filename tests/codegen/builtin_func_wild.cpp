@@ -1,4 +1,5 @@
 #include "common.h"
+#include "../mocks.h"
 
 namespace bpftrace {
 namespace test {
@@ -8,14 +9,9 @@ using ::testing::Return;
 
 TEST(codegen, builtin_func_wild)
 {
-  std::set<std::string> wildcard_matches = {
-    "do_execve"
-  };
-  MockBPFtrace bpftrace;
-  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
-    .WillByDefault(Return(wildcard_matches));
+  auto bpftrace = get_mock_bpftrace();
 
-  test(bpftrace,
+  test(*bpftrace,
       "kprobe:do_execve* { @x = func }",
 
 R"EXPECTED(; Function Attrs: nounwind

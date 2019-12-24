@@ -16,25 +16,6 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-class MockBPFtrace : public BPFtrace {
-public:
-  MOCK_METHOD1(add_probe, int(ast::Probe &p));
-  MOCK_METHOD0(child_pid, int(void));
-  MOCK_METHOD3(find_wildcard_matches, std::set<std::string>(
-        const std::string &prefix,
-        const std::string &func,
-        const std::string &file_name));
-};
-
-class MockTracepointFormatParser : public TracepointFormatParser
-{
-public:
-  static std::string get_tracepoint_struct_public(std::istream &format_file, const std::string &category, const std::string &event_name)
-  {
-    return get_tracepoint_struct(format_file, category, event_name);
-  }
-};
-
 const std::string header = R"HEAD(; ModuleID = 'bpftrace'
 source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"

@@ -16,6 +16,11 @@ namespace codegen {
 
 using ::testing::_;
 
+class MockBPFtrace : public BPFtrace {
+public:
+  MOCK_METHOD1(add_probe, int(ast::Probe &p));
+};
+
 TEST(codegen, populate_sections)
 {
   BPFtrace bpftrace;

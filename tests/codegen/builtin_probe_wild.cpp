@@ -1,4 +1,5 @@
 #include "common.h"
+#include "../mocks.h"
 
 namespace bpftrace {
 namespace test {
@@ -8,15 +9,10 @@ using ::testing::Return;
 
 TEST(codegen, builtin_probe_wild)
 {
-  std::set<std::string> wildcard_matches = {
-    "sys_enter_nanosleep"
-  };
-  MockBPFtrace bpftrace;
-  ON_CALL(bpftrace, find_wildcard_matches(_, _, _))
-    .WillByDefault(Return(wildcard_matches));
+  auto bpftrace = get_mock_bpftrace();
 
-  test(bpftrace,
-      "tracepoint:syscalls:sys_enter_nanoslee* { @x = probe }",
+  test(*bpftrace,
+      "tracepoint:sched:sched_on* { @x = probe }",
 
 R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -24,7 +20,7 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"tracepoint:syscalls:sys_enter_nanosleep"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_nanosleep_1" {
+define i64 @"tracepoint:sched:sched_one"(i8* nocapture readnone) local_unnamed_addr section "s_tracepoint:sched:sched_one_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
