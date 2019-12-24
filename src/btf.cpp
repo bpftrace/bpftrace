@@ -228,59 +228,60 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
     const struct btf_type *t = btf__type_by_id(btf, id);
     const char *str = btf_str(btf, t->name_off);
 
-    /*
-     * TODO(danobi): Only resolve necessary types. This can be
-     * accomlished by doing something like:
-     *
-     *    for (...) {
-     *      const struct btf_type *t = ...
-     *      const char *str = ...
-     *
-     *      if (myset.find(str) != myset.end()) {
-     *        btf_dump__dump_type(...);
-     *        myset.erase(str);
-     *
-     *        <dump required forward declared types>
-     *      }
-     *    }
-     *
-     * Care are must be taken to fully resolve any accesses
-     * via a pointer. libbpf currently does not fully resolve types
-     * that are used as a pointer. For example, if in the kernel there
-     * was:
-     *
-     *    struct Bar {
-     *      int x;
-     *    };
-     *
-     *    struct Foo {
-     *      struct Bar *b;
-     *    };
-     *
-     * b would not be fully resolved. Instead, libbpf will dump a
-     * forward declaration. So the libbpf output would look like:
-     *
-     *    struct Bar;
-     *    struct Foo {
-     *      struct Bar *b;
-     *    }
-     *
-     * So for now, we read in every type BTF exposes. It's slower
-     * and less memory efficient, but it's more ergonomic for the
-     * user to not have to do an explicit cast every time they
-     * access a pointer.
-     */
-
-    for (id = 1; id <= max; id++)
+    auto it = myset.find(str);
+    if (it != myset.end())
     {
-      const struct btf_type *t = btf__type_by_id(btf, id);
-      const char *str = btf_str(btf, t->name_off);
       btf_dump__dump_type(dump, id);
+      myset.erase(it);
     }
   }
 
   btf_dump__free(dump);
   return ret;
+}
+
+std::string BTF::type_of(const std::string& name, const std::string& field)
+{
+  __s32 type_id = btf__find_by_name(btf, name.c_str());
+
+  if (type_id < 0)
+    return std::string("");
+
+  const struct btf_type *type = btf__type_by_id(btf, type_id);
+
+  if (!type ||
+      (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
+       BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
+    return std::string("");
+
+  // We need to walk through oaa the struct/union members
+  // and try to find the requested field name.
+  //
+  // More info on struct/union members:
+  //  https://www.kernel.org/doc/html/latest/bpf/btf.html#btf-kind-union
+  const struct btf_member *m = reinterpret_cast<const struct btf_member*>(type + 1);
+
+  for (unsigned int i = 0; i < BTF_INFO_VLEN(type->info); i++)
+  {
+    std::string m_name = btf__name_by_offset(btf, m[i].name_off);
+
+    if (m_name != field)
+      continue;
+
+    const struct btf_type *f = btf__type_by_id(btf, m[i].type);
+
+    if (!f)
+      break;
+
+    // Get rid of all the pointers on the way to the actual type.
+    while (BTF_INFO_KIND(f->info) == BTF_KIND_PTR) {
+      f = btf__type_by_id(btf, f->type);
+    }
+
+    return btf_str(btf, f->name_off);
+  }
+
+  return std::string("");
 }
 
 } // namespace bpftrace
@@ -294,6 +295,11 @@ BTF::BTF() { }
 BTF::~BTF() { }
 
 std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unused__))) { return std::string(""); }
+
+std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
+                         const std::string& field __attribute__((__unused__))) {
+  return std::string("");
+}
 
 } // namespace bpftrace
 

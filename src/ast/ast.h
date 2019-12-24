@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <unordered_set>
 
 #include "types.h"
 
@@ -36,7 +35,6 @@ public:
   bool is_map = false;
   Expression() : Node(){};
   Expression(location loc) : Node(loc){};
-  static std::unordered_set<std::string>& getResolve();
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -71,8 +69,9 @@ public:
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(std::string mode) : mode(mode) {}
-  explicit StackMode(std::string mode, location loc) : Expression(loc), mode(mode) {}
+  explicit StackMode(std::string mode) : mode(mode) { is_literal = true; }
+  explicit StackMode(std::string mode, location loc) : Expression(loc), mode(mode)
+    { is_literal = true; }
   std::string mode;
 
   void accept(Visitor &v) override;
@@ -89,22 +88,12 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(std::string ident) : ident(is_deprecated(ident)) {
-    resolve_curtask(ident);
-  }
-  explicit Builtin(std::string ident, location loc) : Expression(loc), ident(is_deprecated(ident)) {
-    resolve_curtask(ident);
-  }
+  explicit Builtin(std::string ident) : ident(is_deprecated(ident)) { }
+  explicit Builtin(std::string ident, location loc) : Expression(loc), ident(is_deprecated(ident)) { }
   std::string ident;
   int probe_id;
 
   void accept(Visitor &v) override;
-
-private:
-  void resolve_curtask(std::string& ident) {
-    if (ident == "curtask")
-      getResolve().insert("task_struct");
-  }
 };
 
 class Call : public Expression {
@@ -193,13 +182,9 @@ public:
 class Cast : public Expression {
 public:
   Cast(const std::string &type, bool is_pointer, Expression *expr)
-    : cast_type(type), is_pointer(is_pointer), expr(expr) {
-    getResolve().insert(type);
-  }
+    : cast_type(type), is_pointer(is_pointer), expr(expr) { }
   Cast(const std::string &type, bool is_pointer, Expression *expr, location loc)
-    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr) {
-    getResolve().insert(type);
-  }
+    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr) { }
   std::string cast_type;
   bool is_pointer;
   Expression *expr;
@@ -316,7 +301,7 @@ public:
               location loc=location())
     : Node(loc), provider(probetypeName(provider)), target(target), need_expansion(true)
   {
-    if (this->provider == "uprobe")
+    if (this->provider == "uprobe" || this->provider == "uretprobe")
       address = val;
     else
       freq = val;

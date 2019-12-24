@@ -3,6 +3,8 @@
 #include "driver.h"
 #include "bpftrace.h"
 #include "struct.h"
+#include "field_analyser.h"
+#include <iostream>
 
 namespace bpftrace {
 namespace test {
@@ -16,6 +18,9 @@ static void parse(const std::string &input, BPFtrace &bpftrace, bool result = tr
   auto extended_input = input + probe;
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   ASSERT_EQ(clang.parse(driver.root_, bpftrace), result);
@@ -343,6 +348,140 @@ TEST(clang_parser, nested_struct_anon_union_struct)
   EXPECT_EQ(structs["Foo"].fields["z"].offset, 12);
 }
 
+TEST(clang_parser, bitfields)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int a:8, b:8, c:16; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 4);
+  ASSERT_EQ(structs["Foo"].fields.size(), 3U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 1);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 0x1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["c"].offset, 2);
+  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 0x2U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0xFFFFU);
+}
+
+TEST(clang_parser, bitfields_uneven_fields)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int a:1, b:1, c:3, d:20, e:7; }", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 4);
+  ASSERT_EQ(structs["Foo"].fields.size(), 5U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("c"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("d"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("e"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0x1U);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0x1U);
+
+  EXPECT_EQ(structs["Foo"].fields["c"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["c"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["c"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["c"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.access_rshift, 2U);
+  EXPECT_EQ(structs["Foo"].fields["c"].bitfield.mask, 0x7U);
+
+  EXPECT_EQ(structs["Foo"].fields["d"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["d"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["d"].offset, 0);
+  EXPECT_TRUE(structs["Foo"].fields["d"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.access_rshift, 5U);
+  EXPECT_EQ(structs["Foo"].fields["d"].bitfield.mask, 0xFFFFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["e"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["e"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["e"].offset, 3);
+  EXPECT_TRUE(structs["Foo"].fields["e"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.access_rshift, 1U);
+  EXPECT_EQ(structs["Foo"].fields["e"].bitfield.mask, 0x7FU);
+}
+
+TEST(clang_parser, bitfields_with_padding)
+{
+  BPFtrace bpftrace;
+  parse("struct Foo { int pad; int a:28, b:4; long int end;}", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("Foo"), 1U);
+
+  EXPECT_EQ(structs["Foo"].size, 16);
+  ASSERT_EQ(structs["Foo"].fields.size(), 4U);
+  ASSERT_EQ(structs["Foo"].fields.count("pad"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("a"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("b"), 1U);
+  ASSERT_EQ(structs["Foo"].fields.count("end"), 1U);
+
+  EXPECT_EQ(structs["Foo"].fields["a"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["a"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].offset, 4);
+  EXPECT_TRUE(structs["Foo"].fields["a"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.read_bytes, 4U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.access_rshift, 0U);
+  EXPECT_EQ(structs["Foo"].fields["a"].bitfield.mask, 0xFFFFFFFU);
+
+  EXPECT_EQ(structs["Foo"].fields["b"].type.type, Type::integer);
+  EXPECT_EQ(structs["Foo"].fields["b"].type.size, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].offset, 7);
+  EXPECT_TRUE(structs["Foo"].fields["b"].is_bitfield);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.read_bytes, 1U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.access_rshift, 4U);
+  EXPECT_EQ(structs["Foo"].fields["b"].bitfield.mask, 0xFU);
+}
+
 TEST(clang_parser, builtin_headers)
 {
   // size_t is definied in stddef.h
@@ -397,19 +536,46 @@ TEST(clang_parser, parse_fail)
 
 #include "btf_data.h"
 
-TEST(clang_parser, btf)
+class clang_parser_btf : public ::testing::Test {
+ protected:
+  void SetUp() override
+  {
+    char *path = strdup("/tmp/XXXXXX");
+    if (!path)
+      return;
+
+    int fd = mkstemp(path);
+    if (fd < 0)
+    {
+      std::remove(path);
+      return;
+    }
+
+    if (write(fd, btf_data, btf_data_len) != btf_data_len)
+    {
+      close(fd);
+      std::remove(path);
+      return;
+    }
+
+    close(fd);
+    setenv("BPFTRACE_BTF_TEST", path, true);
+    path_ = path;
+  }
+
+  void TearDown() override
+  {
+    // clear the environment and remove the temp file
+    unsetenv("BPFTRACE_BTF_TEST");
+    if (path_)
+      std::remove(path_);
+  }
+
+  char *path_ = nullptr;
+};
+
+TEST_F(clang_parser_btf, btf)
 {
-  char *path = strdup("/tmp/XXXXXX");
-  ASSERT_TRUE(path != NULL);
-
-  int fd = mkstemp(path);
-  ASSERT_TRUE(fd >= 0);
-
-  EXPECT_EQ(write(fd, btf_data, btf_data_len), btf_data_len);
-  close(fd);
-
-  ASSERT_EQ(setenv("BPFTRACE_BTF_TEST", path, true), 0);
-
   BPFtrace bpftrace;
   parse("", bpftrace, true,
         "kprobe:sys_read {\n"
@@ -417,10 +583,6 @@ TEST(clang_parser, btf)
         "  @x2 = (struct Foo2 *) curtask;\n"
         "  @x3 = (struct Foo3 *) curtask;\n"
         "}");
-
-  // clear the environment
-  unsetenv("BPFTRACE_BTF_TEST");
-  std::remove(path);
 
   StructMap &structs = bpftrace.structs_;
 
@@ -478,6 +640,21 @@ TEST(clang_parser, btf)
   EXPECT_EQ(structs["Foo3"].fields["foo2"].offset, 8);
 }
 
+TEST_F(clang_parser_btf, btf_field_struct)
+{
+  BPFtrace bpftrace;
+  parse("", bpftrace, true,
+        "kprobe:sys_read {\n"
+        "  @x3 = ((struct Foo3 *) curtask)->foo2->a;\n"
+        "}");
+
+  /* task_struct->Foo3->Foo2->int */
+  EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
+  EXPECT_NE(bpftrace.btf_set_.find("task_struct"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("Foo3"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("Foo2"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("int"), bpftrace.btf_set_.end());
+}
 #endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace clang_parser

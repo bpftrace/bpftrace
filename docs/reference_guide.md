@@ -96,7 +96,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
 
 Term | Description
 ---- | -----------
-BPF | Berkely Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions)
+BPF | Berkeley Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions)
 eBPF | Enhanced BPF: a kernel technology that extends BPF so that it can execute more generic programs on any events, such as the bpftrace programs listed below. It makes use of the BPF sandboxed virtual machine environment. Also note that eBPF is often just referred to as BPF.
 probe | An instrumentation point in software or hardware, that generates events that can execute bpftrace programs.
 static tracing | Hard-coded instrumentation points in code. Since these are fixed, they may be provided as part of a stable API, and documented.
@@ -2469,12 +2469,13 @@ Syntax: ```print(@map [, top [, divisor]])```
 
 The <tt>print()</tt> function will print a map, similar to the automatic printing when bpftrace ends. Two optional arguments can be provided: a top number, so that only the top number of entries are printed, and a divisor, which divides the value. A couple of examples will explain their use.
 
-As an example of top, tracing the top 5 syscalls via kprobe:SyS_*:
+As an example of top, tracing `vfs` operations and printing the top 5:
 
 ```
 # bpftrace -e 'kprobe:vfs_* { @[func] = count(); } END { print(@, 5); clear(@); }'
 Attaching 54 probes...
-^C@[vfs_getattr]: 91
+^C
+@[vfs_getattr]: 91
 @[vfs_getattr_nosec]: 92
 @[vfs_statx_fd]: 135
 @[vfs_open]: 188

@@ -59,7 +59,7 @@ EXPECT not equal
 TIMEOUT 5
 
 NAME string compare map lookup
-RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "cat"/ { @[comm] = 1; }' -c "cat /dev/null"
+RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "cat"/ { @[comm] = 1; }' -c "/bin/cat /dev/null"
 EXPECT @\[cat\]: 1
 TIMEOUT 5
 
@@ -71,6 +71,11 @@ TIMEOUT 5
 NAME struct partial string compare - pass reverse
 RUN bpftrace -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
 EXPECT I got hhvm-proc
+TIMEOUT 5
+
+NAME strncmp function argument
+RUN bpftrace -v -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
+EXPECT @: 0
 TIMEOUT 5
 
 NAME optional_positional_int
@@ -113,3 +118,9 @@ RUN bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo");
 EXPECT end
 TIMEOUT 5
 AFTER  sleep 2; pkill -SIGINT bpftrace
+
+NAME bitfield access
+RUN bpftrace -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'
+EXPECT 1 2 5 0 65535
+TIMEOUT 5
+AFTER ./testprogs/bitfield_test

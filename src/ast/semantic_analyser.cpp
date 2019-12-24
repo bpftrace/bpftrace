@@ -439,10 +439,11 @@ void SemanticAnalyser::visit(Call &call)
 
     if (is_final_pass()) {
       if (call.vargs && call.vargs->size() > 1) {
-        check_arg(call, Type::string, 1, true);
-        auto &join_delim_arg = *call.vargs->at(1);
-        String &join_delim_str = static_cast<String&>(join_delim_arg);
-        bpftrace_.join_args_.push_back(join_delim_str.str);
+        if (check_arg(call, Type::string, 1, true)) {
+          auto &join_delim_arg = *call.vargs->at(1);
+          String &join_delim_str = static_cast<String&>(join_delim_arg);
+          bpftrace_.join_args_.push_back(join_delim_str.str);
+        }
       } else {
         std::string join_delim_default = " ";
         bpftrace_.join_args_.push_back(join_delim_default);
@@ -506,7 +507,16 @@ void SemanticAnalyser::visit(Call &call)
           // Promote to 64-bit if it's not an array type
           if (!ty.IsArray())
             ty.size = 8;
-          args.push_back({ .type =  ty, .offset = 0 });
+          args.push_back(Field{
+            .type =  ty,
+            .offset = 0,
+            .is_bitfield = false,
+            .bitfield = Bitfield{
+              .read_bytes = 0,
+              .access_rshift = 0,
+              .mask = 0,
+            },
+          });
         }
         buf << verify_format_string(fmt.str, args);
 
@@ -583,10 +593,11 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
         if (call.vargs && call.vargs->size() > 0) {
-          check_arg(call, Type::string, 0, true);
-          auto &fmt_arg = *call.vargs->at(0);
-          String &fmt = static_cast<String&>(fmt_arg);
-          bpftrace_.time_args_.push_back(fmt.str);
+          if (check_arg(call, Type::string, 0, true)) {
+            auto &fmt_arg = *call.vargs->at(0);
+            String &fmt = static_cast<String&>(fmt_arg);
+            bpftrace_.time_args_.push_back(fmt.str);
+          }
         } else {
           std::string fmt_default = "%H:%M:%S\n";
           bpftrace_.time_args_.push_back(fmt_default.c_str());
@@ -676,23 +687,27 @@ void SemanticAnalyser::check_stack_call(Call &call, Type type) {
         case 0: break;
         case 1: {
           auto &arg = *call.vargs->at(0);
-          if (is_final_pass() && arg.type.type != Type::stack_mode) {
-            check_arg(call, Type::integer, 0, true);
-            stack_type.limit = static_cast<Integer&>(arg).n;
+          // If we have a single argument it can be either
+          // stack-mode or stack-size
+          if (arg.type.type == Type::stack_mode) {
+            if (check_arg(call, Type::stack_mode, 0, true))
+              stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
           } else {
-            check_arg(call, Type::stack_mode, 0, false);
-            stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
+            if (check_arg(call, Type::integer, 0, true))
+              stack_type.limit = static_cast<Integer&>(arg).n;
           }
           break;
         }
         case 2: {
-          check_arg(call, Type::stack_mode, 0, false);
-          auto &mode_arg = *call.vargs->at(0);
-          stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
+          if (check_arg(call, Type::stack_mode, 0, true)) {
+            auto &mode_arg = *call.vargs->at(0);
+            stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
+          }
 
-          check_arg(call, Type::integer, 1, true);
-          auto &limit_arg = *call.vargs->at(1);
-          stack_type.limit = static_cast<Integer&>(limit_arg).n;
+          if (check_arg(call, Type::integer, 1, true)) {
+            auto &limit_arg = *call.vargs->at(1);
+            stack_type.limit = static_cast<Integer&>(limit_arg).n;
+          }
           break;
         }
         default:
@@ -787,17 +802,19 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &type = arr.expr->type;
   SizedType &indextype = arr.indexpr->type;
 
-  if (is_final_pass() && !(type.type == Type::array))
-    err_ << "The array index operator [] can only be used on arrays." << std::endl;
+  if (is_final_pass()) {
+    if (type.type != Type::array)
+      err_ << "The array index operator [] can only be used on arrays." << std::endl;
 
-  if (is_final_pass() && !(indextype.type == Type::integer))
-    err_ << "The array index operator [] only accepts integer indices." << std::endl;
+    if (indextype.type == Type::integer && arr.indexpr->is_literal) {
+      Integer *index = static_cast<Integer *>(arr.indexpr);
 
-  if (is_final_pass() && (indextype.type == Type::integer)) {
-    Integer *index = static_cast<Integer *>(arr.indexpr);
-
-    if ((size_t) index->n >= type.size)
-      err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+      if ((size_t) index->n >= type.size)
+        err_ << "the index " << index->n << " is out of bounds for array of size " << type.size << std::endl;
+    }
+    else {
+      err_ << "The array index operator [] only accepts literal integer indices." << std::endl;
+    }
   }
 
   arr.type = SizedType(type.elem_type, type.pointee_size);
@@ -822,14 +839,17 @@ void SemanticAnalyser::visit(Binop &binop)
       buf << "comparing '" << lhs << "' ";
       buf << "with '" << rhs << "'";
       bpftrace_.error(err_, binop.left->loc + binop.right->loc, buf.str());
+      buf.str({});
     }
     // Follow what C does
     else if (lhs == Type::integer && rhs == Type::integer) {
-      auto &left = binop.left;
-      auto &right = binop.right;
-      long lval = static_cast<ast::Integer*>(binop.left)->n;
-      long rval = static_cast<ast::Integer*>(binop.right)->n;
+      auto get_int_literal = [](const auto expr) -> long {
+        return static_cast<ast::Integer*>(expr)->n;
+      };
+      auto left = binop.left;
+      auto right = binop.right;
 
+      // First check if operand signedness is the same
       if (lsign != rsign) {
         // Convert operands to unsigned if it helps make (lsign == rsign)
         //
@@ -840,12 +860,11 @@ void SemanticAnalyser::visit(Binop &binop)
         //
         // No warning should be emitted as we know that 10 can be
         // represented as unsigned int
-        if (lsign && !rsign && left->is_literal && lval >= 0) {
+        if (lsign && !rsign && left->is_literal && get_int_literal(left) >= 0) {
           left->type.is_signed = lsign = false;
-
         }
         // The reverse (10 < a) should also hold
-        else if (!lsign && rsign && right->is_literal && rval >= 0) {
+        else if (!lsign && rsign && right->is_literal && get_int_literal(right) >= 0) {
           right->type.is_signed = rsign = false;
         }
         else {
@@ -861,6 +880,7 @@ void SemanticAnalyser::visit(Binop &binop)
                 << binop.right->type << "'"
                 << " can lead to undefined behavior";
             bpftrace_.warning(out_, binop.loc, buf.str());
+            buf.str({});
             break;
           case bpftrace::Parser::token::PLUS:
           case bpftrace::Parser::token::MINUS:
@@ -871,22 +891,33 @@ void SemanticAnalyser::visit(Binop &binop)
                 << left->type << "' and '" << right->type << "'"
                 << " can lead to undefined behavior";
             bpftrace_.warning(out_, binop.loc, buf.str());
+            buf.str({});
             break;
           default:
             break;
           }
         }
       }
-      else if (lval < 0 || rval < 0) {
-        // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
-        // in kernel sources
-        switch (binop.op) {
-          case bpftrace::Parser::token::DIV:
-            buf << "signed division can lead to undefined behavior";
-            bpftrace_.warning(out_, binop.loc, buf.str());
-            break;
-          default:
-            break;
+
+      // Next, warn on any operations that require signed division.
+      //
+      // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
+      // in kernel sources
+      if (binop.op == bpftrace::Parser::token::DIV ||
+          binop.op == bpftrace::Parser::token::MOD) {
+        // Convert operands to unsigned if possible
+        if (lsign && left->is_literal && get_int_literal(left) >= 0)
+          left->type.is_signed = lsign = false;
+        if (rsign && right->is_literal && get_int_literal(right) >= 0)
+          right->type.is_signed = rsign = false;
+
+        // If they're still signed, we have to warn
+        if (lsign || rsign) {
+          buf << "signed operands for '" << opstr(binop)
+              << "' can lead to undefined behavior "
+              << "(cast to unsigned to silence warning)";
+          bpftrace_.warning(out_, binop.loc, buf.str());
+          buf.str({});
         }
       }
     }
@@ -897,6 +928,7 @@ void SemanticAnalyser::visit(Binop &binop)
           << " operator can not be used on expressions of types " << lhs
           << ", " << rhs << std::endl;
       bpftrace_.error(err_, binop.loc, buf.str());
+      buf.str({});
     }
   }
 
@@ -1224,18 +1256,25 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   }
   else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
     if (ap.target == "")
-      err_ << "uprobes should have a target" << std::endl;
+      err_ << ap.provider << " should have a target" << std::endl;
     if (ap.func == "" && ap.address == 0)
-      err_ << "uprobes should be attached to a function or address" << std::endl;
+      err_ << ap.provider << " should be attached to a function and/or address" << std::endl;
+
+    if (ap.provider == "uretprobe" && ap.func_offset != 0)
+      err_ << "uretprobes can not be attached to a function offset" << std::endl;
 
     auto paths = resolve_binary_path(ap.target);
-    if (paths.size() > 1)
-      err_ << "path '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
-    ap.target = paths.front();
-    struct stat s;
-    if (stat(ap.target.c_str(), &s) != 0)
-      err_ << "failed to stat uprobe target file " << ap.target << ": "
-        << std::strerror(errno) << std::endl;
+    switch (paths.size())
+    {
+    case 0:
+      err_ << "uprobe target file '" << ap.target << "' does not exist or is not executable" << std::endl;
+      break;
+    case 1:
+      ap.target = paths.front();
+      break;
+    default:
+      err_ << "uprobe target file '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+    }
   }
   else if (ap.provider == "usdt") {
     if (ap.func == "")
@@ -1243,12 +1282,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
     if (ap.target != "") {
       auto paths = resolve_binary_path(ap.target);
-      if (paths.size() > 1)
-        err_ << "path '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
-      ap.target = paths.front();
-      struct stat s;
-      if (stat(ap.target.c_str(), &s) != 0)
-        err_ << "usdt target file " << ap.target << " does not exist" << std::endl;
+      switch (paths.size())
+      {
+      case 0:
+        err_ << "usdt target file '" << ap.target << "' does not exist or is not executable" << std::endl;
+        break;
+      case 1:
+        ap.target = paths.front();
+        break;
+      default:
+        err_ << "usdt target file '" << ap.target << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+      }
     }
 
     if (bpftrace_.pid_ > 0) {
@@ -1404,8 +1448,8 @@ int SemanticAnalyser::analyse()
 
 int SemanticAnalyser::create_maps(bool debug)
 {
-  int failed_maps = 0;
-  auto is_invalid_map = [](int a) { return (int)(a < 0); };
+  uint32_t failed_maps = 0;
+  auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
   for (auto &map_val : map_val_)
   {
     std::string map_name = map_val.first;

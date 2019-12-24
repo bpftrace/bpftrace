@@ -79,8 +79,11 @@ std::string typestr(Type t)
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
     case Type::cast:     return "cast";     break;
-    case Type::inet:     return "inet";     break;
+    case Type::join:     return "join";     break;
     case Type::probe:    return "probe";    break;
+    case Type::username: return "username"; break;
+    case Type::inet:     return "inet";     break;
+    case Type::stack_mode:return "stack mode";break;
     case Type::array:    return "array";    break;
     default:
       std::cerr << "call or probe type not found" << std::endl;

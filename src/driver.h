@@ -19,7 +19,6 @@ public:
   explicit Driver(BPFtrace &bpftrace, std::ostream &o = std::cerr);
   ~Driver();
 
-  int parse_stdin();
   int parse();
   int parse_str(std::string script);
   void source(std::string, std::string);
@@ -33,6 +32,7 @@ private:
   std::unique_ptr<Parser> parser_;
   std::ostream &out_;
   yyscan_t scanner_;
+  bool failed_ = false;
 };
 
 } // namespace bpftrace

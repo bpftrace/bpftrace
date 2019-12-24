@@ -45,6 +45,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
   ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/struct.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
@@ -137,6 +138,21 @@ target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
+# Compile all testprograms, one per .c file for runtime testing
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
+file(GLOB testprogs testprogs/*.c)
+set(compiled_testprogs "")
+foreach(testprog ${testprogs})
+  get_filename_component(bin_name ${testprog} NAME_WE)
+  add_executable (${bin_name} ${testprog})
+  if(HAVE_SYSTEMTAP_SYS_SDT_H)
+    target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
+  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
+  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0")
+  list(APPEND compiled_testprogs ${CMAKE_CURRENT_BINARY_DIR}/testprogs/${bin_name})
+endforeach()
+add_custom_target(testprogs DEPENDS ${compiled_testprogs})
+
 configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
 configure_file(main.py main.py COPYONLY)
 configure_file(parser.py parser.py COPYONLY)
@@ -158,20 +174,12 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs)
 foreach(runtime_test_output ${runtime_test_outputs})
   configure_file(${runtime_test_output} ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs/ COPYONLY)
 endforeach()
-add_custom_target(runtime-tests COMMAND ./runtime-tests.sh)
+add_custom_target(
+  runtime-tests
+  COMMAND ./runtime-tests.sh
+  DEPENDS ${compiled_testprogs} ${CMAKE_BINARY_DIR}/src/bpftrace
+)
 add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
-
-# Compile all testprograms, one per .c file for runtime testing
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
-file(GLOB testprogs testprogs/*.c)
-foreach(testprog ${testprogs})
-  get_filename_component(bin_name ${testprog} NAME_WE)
-  add_executable (${bin_name} ${testprog})
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0")
-endforeach()
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)

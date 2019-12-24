@@ -17,6 +17,7 @@
 #include "list.h"
 #include "printer.h"
 #include "semantic_analyser.h"
+#include "field_analyser.h"
 #include "tracepoint_format_parser.h"
 #include "output.h"
 
@@ -306,9 +307,8 @@ int main(int argc, char *argv[])
     else if (optind == argc)
       list_probes(bpftrace, "");
     else
-    {
       usage();
-    }
+
     return 0;
   }
 
@@ -322,15 +322,20 @@ int main(int argc, char *argv[])
     }
     std::string filename(argv[optind]);
     std::ifstream file(filename);
-    if (file.fail()) {
+    if (file.fail())
+    {
       std::cerr << "Error opening file '" << filename << "': ";
       std::cerr << std::strerror(errno) << std::endl;
       return -1;
     }
+
     std::stringstream buf;
     buf << file.rdbuf();
     driver.source(filename, buf.str());
     err = driver.parse();
+    if (err)
+      return err;
+
     optind++;
   }
   else
@@ -338,11 +343,15 @@ int main(int argc, char *argv[])
     // Script is provided as a command line argument
     driver.source("stdin", script);
     err = driver.parse();
+    if (err)
+      return err;
   }
 
   if (!is_root())
     return 1;
 
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  err = fields.analyse();
   if (err)
     return err;
 
@@ -475,8 +484,7 @@ int main(int argc, char *argv[])
   if (!clang.parse(driver.root_, bpftrace, extra_flags))
     return 1;
 
-  driver.parse();
-
+  err = driver.parse();
   if (err)
     return err;
 

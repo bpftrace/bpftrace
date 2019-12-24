@@ -20,7 +20,6 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                             "my_one\n"
                             "my_two\n";
         auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
-        printf("doing ok\n");
         return myval;
       });
 

@@ -331,7 +331,7 @@ void BPFtrace::kill_child()
   if (child_running_) {
     kill(child_pid(), SIGTERM);
   } else {
-    write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+    (void)write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
     close(child_start_pipe_);
   }
 }
@@ -1291,13 +1291,20 @@ pid_t BPFtrace::spawn_child()
 
   auto args = split_string(cmd_, ' ');
   auto paths = resolve_binary_path(args[0]); // does path lookup on executable
-  if (paths.size() > 1)
+  switch (paths.size())
   {
+  case 0:
+    std::cerr << "path '" << args[0] << "' does not exist or is not executable" << std::endl;
+    return -1;
+  case 1:
+    args[0] = paths.front().c_str();
+    break;
+  default:
     std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched "
               << paths.size() << " binaries" << std::endl;
     return -1;
   }
-  args[0] = paths.front().c_str();
+
 
   if (args.size() >= (maxargs - 1))
   {

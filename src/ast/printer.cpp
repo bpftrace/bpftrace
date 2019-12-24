@@ -40,12 +40,14 @@ void Printer::visit(String &string)
     // the argument of isprint() must be an unsigned char or EOF
     int code = static_cast<unsigned char>(c);
     if (std::isprint(code))
+    {
       if (c == '\\')
         ss << "\\\\";
       else if (c == '"')
         ss << "\\\"";
       else
         ss << c;
+    }
     else
     {
       if (c == '\n')

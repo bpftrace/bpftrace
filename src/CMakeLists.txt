@@ -16,6 +16,7 @@ add_executable(bpftrace
   output.cpp
   printf.cpp
   resolve_cgroupid.cpp
+  struct.cpp
   tracepoint_format_parser.cpp
   types.cpp
   utils.cpp
