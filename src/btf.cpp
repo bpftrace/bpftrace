@@ -172,7 +172,7 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
     libbpf_set_print(libbpf_print);
     state = OK;
   }
-  else
+  else if (bt_debug != DebugLevel::kNone)
   {
     std::cerr << "BTF: failed to find BTF data " << std::endl;
   }
