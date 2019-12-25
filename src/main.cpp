@@ -40,8 +40,8 @@ void usage()
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
-  std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
+  std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -b             force BTF (BPF type format) processing" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
