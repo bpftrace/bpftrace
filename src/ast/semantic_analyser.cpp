@@ -2394,7 +2394,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_) << "software count should be a positive integer";
   }
   else if (ap.provider == "watchpoint") {
-    if (!ap.address)
+    if (ap.func.size())
+    {
+      if (bpftrace_.pid() <= 0 && !has_child_)
+        LOG(ERROR, ap.loc, err_) << "-p PID or -c CMD required for watchpoint";
+
+      if (ap.address > static_cast<uint64_t>(arch::max_arg()))
+        LOG(ERROR, ap.loc, err_)
+            << arch::name() << " doesn't support arg" << ap.address;
+    }
+    else if (!ap.address)
       LOG(ERROR, ap.loc, err_)
           << "watchpoint must be attached to a non-zero address";
     if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
@@ -2413,8 +2422,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       if (ap.mode[i - 1] == ap.mode[i])
         LOG(ERROR, ap.loc, err_) << "watchpoint modes may not be duplicated";
     }
-    if (ap.mode == "rx" || ap.mode == "wx" || ap.mode == "rwx")
-      LOG(ERROR, ap.loc, err_) << "watchpoint modes (rx, wx, rwx) not allowed";
+    const auto invalid_modes = arch::invalid_watchpoint_modes();
+    if (std::any_of(invalid_modes.cbegin(),
+                    invalid_modes.cend(),
+                    [&](const auto &mode) { return mode == ap.mode; }))
+      LOG(ERROR, ap.loc, err_) << "invalid watchpoint mode: " << ap.mode;
   }
   else if (ap.provider == "hardware") {
     if (ap.target == "")

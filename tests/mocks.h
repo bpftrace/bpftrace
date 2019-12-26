@@ -1,9 +1,11 @@
 #pragma once
 
+#include "gmock/gmock.h"
+
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "child.h"
-#include "gmock/gmock.h"
+#include "procmon.h"
 
 namespace bpftrace {
 namespace test {
@@ -95,6 +97,25 @@ public:
   {
     (void)pause;
   };
+};
+
+class MockProcMon : public ProcMonBase
+{
+public:
+  MockProcMon(pid_t pid)
+  {
+    pid_ = pid;
+  }
+
+  ~MockProcMon() override = default;
+
+  bool is_alive(void) override
+  {
+    if (pid_ > 0)
+      return true;
+    else
+      return false;
+  }
 };
 
 } // namespace test
