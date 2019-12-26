@@ -147,5 +147,15 @@ std::string name()
   return std::string("aarch64");
 }
 
+std::vector<std::string> invalid_watchpoint_modes()
+{
+  // See arch/arm/kernel/hw_breakpoint.c:arch_build_bp_info in kernel source
+  return std::vector<std::string>{
+    "rx",
+    "wx",
+    "rwx",
+  };
+}
+
 } // namespace arch
 } // namespace bpftrace
