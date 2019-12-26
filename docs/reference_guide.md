@@ -140,12 +140,13 @@ OPTIONS:
     --version      bpftrace version
 
 ENVIRONMENT:
-    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()
-    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling
-    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map
-    BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to
-    BPFTRACE_VMLINUX          [default: None] vmlinux path used for kernel symbol resolution
-    BPFTRACE_BTF              [default: None] BTF file
+    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()
+    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling
+    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map
+    BPFTRACE_MAX_PROBES         [default: 512] max number of probes bpftrace can attach to
+    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache
+    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution
+    BPFTRACE_BTF                [default: none] BTF file
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -464,7 +465,16 @@ This is the maximum number of probes that bpftrace can attach to. Increasing the
 memory, increase startup times and can incur high performance overhead or even freeze or crash the
 system.
 
-### 9.5 `BPFTRACE_VMLINUX`
+### 9.5 `BPFTRACE_CACHE_USER_SYMBOLS`
+
+Default: 0 if ASLR is enabled on system and `-c` option is not given; otherwise 1
+
+By default, bpftrace caches the results of symbols resolutions only when ASLR (Address Space Layout
+Randomization) is disabled. This is because the symbol addresses change with each execution with ASLR.
+However, disabling caching may incur some performance. Set this env variable to 1 to force bpftrace to
+cache. This is fine if only trace one program execution.
+
+### 9.6 `BPFTRACE_VMLINUX`
 
 Default: None
 
@@ -472,7 +482,7 @@ This specifies the vmlinux path used for kernel symbol resolution when attaching
 If this value is not given, bpftrace searches vmlinux from pre defined locations.
 See src/attached_probe.cpp:find_vmlinux() for details.
 
-### 9.6 `BPFTRACE_BTF`
+### 9.7 `BPFTRACE_BTF`
 
 Default: None
 

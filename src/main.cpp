@@ -57,15 +57,16 @@ void usage()
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -V, --version  bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
-  std::cerr << "    BPFTRACE_STRLEN           [default: 64] bytes on BPF stack per str()" << std::endl;
-  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling" << std::endl;
-  std::cerr << "    BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map" << std::endl;
-  std::cerr << "    BPFTRACE_CAT_BYTES_MAX    [default: 10k] maximum bytes read by cat builtin" << std::endl;
-  std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes" << std::endl;
-  std::cerr << "    BPFTRACE_LOG_SIZE         [default: 409600] log size in bytes" << std::endl;
-  std::cerr << "    BPFTRACE_NO_USER_SYMBOLS  [default: 0] disable user symbol resolution" << std::endl;
-  std::cerr << "    BPFTRACE_VMLINUX          [default: None] vmlinux path used for kernel symbol resolution" << std::endl;
-  std::cerr << "    BPFTRACE_BTF              [default: None] BTF file" << std::endl;
+  std::cerr << "    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()" << std::endl;
+  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling" << std::endl;
+  std::cerr << "    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map" << std::endl;
+  std::cerr << "    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_PROBES         [default: 512] max number of probes" << std::endl;
+  std::cerr << "    BPFTRACE_LOG_SIZE           [default: 409600] log size in bytes" << std::endl;
+  std::cerr << "    BPFTRACE_NO_USER_SYMBOLS    [default: 0] disable user symbol resolution" << std::endl;
+  std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache" << std::endl;
+  std::cerr << "    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
+  std::cerr << "    BPFTRACE_BTF                [default: none] BTF file" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -441,6 +442,28 @@ int main(int argc, char *argv[])
       std::cerr << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a valid value (0 or 1)." << std::endl;
       return 1;
     }
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
+  {
+    std::string s(env_p);
+    if (s == "1")
+      bpftrace.cache_user_symbols_ = true;
+    else if (s == "0")
+      bpftrace.cache_user_symbols_ = false;
+    else
+    {
+      std::cerr << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
+                   "valid value (0 or 1)."
+                << std::endl;
+      return 1;
+    }
+  }
+  else
+  {
+    // enable user symbol cache if ASLR is disabled on system or `-c` option is
+    // given
+    bpftrace.cache_user_symbols_ = cmd_str || !bpftrace.is_aslr_enabled(-1);
   }
 
   if (cmd_str)

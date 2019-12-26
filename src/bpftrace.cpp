@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 
 #include <fcntl.h>
+#include <sys/personality.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -1707,6 +1708,51 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
   return addrstr;
 }
 
+// /proc/sys/kernel/randomize_va_space >= 1 and        // system-wide
+// (/proc/<pid>/personality & ADDR_NO_RNDOMIZE) == 0   // this pid
+// if pid == -1, then only check system-wide setting
+bool BPFtrace::is_aslr_enabled(int pid)
+{
+  std::string randomize_va_space_file = "/proc/sys/kernel/randomize_va_space";
+  std::string personality_file = "/proc/" + std::to_string(pid) +
+                                 "/personality";
+
+  {
+    std::ifstream file(randomize_va_space_file);
+    if (file.fail())
+    {
+      if (bt_verbose)
+        std::cerr << strerror(errno) << ": " << randomize_va_space_file
+                  << std::endl;
+      // conservatively return true
+      return true;
+    }
+
+    std::string line;
+    if (std::getline(file, line) && std::stoi(line) < 1)
+      return false;
+  }
+
+  if (pid == -1)
+    return true;
+
+  {
+    std::ifstream file(personality_file);
+    if (file.fail())
+    {
+      if (bt_verbose)
+        std::cerr << strerror(errno) << ": " << personality_file << std::endl;
+      return true;
+    }
+    std::string line;
+    if (std::getline(file, line) &&
+        ((std::stoi(line) & ADDR_NO_RANDOMIZE) == 0))
+      return true;
+  }
+
+  return false;
+}
+
 std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bool show_module)
 {
   struct bcc_symbol usym;
@@ -1721,16 +1767,23 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 
   if (resolve_user_symbols_)
   {
-    std::string pid_exe = get_pid_exe(pid);
-    if (exe_sym_.find(pid_exe) == exe_sym_.end())
+    if (cache_user_symbols_)
     {
-      // not cached, create new ProcSyms cache
-      psyms = bcc_symcache_new(pid, &symopts);
-      exe_sym_[pid_exe] = std::make_pair(pid, psyms);
+      std::string pid_exe = get_pid_exe(pid);
+      if (exe_sym_.find(pid_exe) == exe_sym_.end())
+      {
+        // not cached, create new ProcSyms cache
+        psyms = bcc_symcache_new(pid, &symopts);
+        exe_sym_[pid_exe] = std::make_pair(pid, psyms);
+      }
+      else
+      {
+        psyms = exe_sym_[pid_exe].second;
+      }
     }
     else
     {
-      psyms = exe_sym_[pid_exe].second;
+      psyms = bcc_symcache_new(pid, &symopts);
     }
   }
 
@@ -1751,6 +1804,9 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
     if (show_module)
       symbol << " ([unknown])";
   }
+
+  if (psyms && !cache_user_symbols_)
+    bcc_free_symcache(psyms, pid);
 
   return symbol.str();
 }
