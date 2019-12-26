@@ -121,6 +121,7 @@ public:
   virtual pid_t child_pid() { return child_pid_; };
   int spawn_child();
   void kill_child();
+  bool is_aslr_enabled(int pid);
 
   std::string cmd_;
   int pid_{0};
@@ -153,6 +154,7 @@ public:
   uint64_t log_size_ = 409600;
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
+  bool cache_user_symbols_ = true;
   bool safe_mode_ = true;
   bool force_btf_ = false;
 
