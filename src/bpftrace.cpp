@@ -195,6 +195,21 @@ BPFtrace::~BPFtrace()
     bcc_free_symcache(ksyms_, -1);
 }
 
+Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
+                                             const ast::AttachPoint &ap,
+                                             const ast::Probe &probe)
+{
+  Probe setup_probe;
+  setup_probe.name = get_watchpoint_setup_probe_name(ap.name(func));
+  setup_probe.type = ProbeType::uprobe;
+  setup_probe.path = ap.target;
+  setup_probe.attach_point = func;
+  setup_probe.orig_name = get_watchpoint_setup_probe_name(probe.name());
+  setup_probe.index = ap.index(func) > 0 ? ap.index(func) : probe.index();
+
+  return setup_probe;
+}
+
 int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points)
@@ -254,7 +269,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
     else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
-              probetype(attach_point->provider) == ProbeType::uretprobe) &&
+              probetype(attach_point->provider) == ProbeType::uretprobe ||
+              probetype(attach_point->provider) == ProbeType::watchpoint) &&
              !attach_point->func.empty())
     {
       std::set<std::string> matches;
@@ -288,8 +304,9 @@ int BPFtrace::add_probe(ast::Probe &p)
         attach_funcs.push_back(attach_point->func);
     }
 
-    for (const auto &func : attach_funcs)
+    for (const auto &f : attach_funcs)
     {
+      std::string func = f;
       std::string func_id = func;
       std::string target = attach_point->target;
 
@@ -316,6 +333,11 @@ int BPFtrace::add_probe(ast::Probe &p)
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.
         target = erase_prefix(func_id);
+      }
+      else if (probetype(attach_point->provider) == ProbeType::watchpoint)
+      {
+        target = erase_prefix(func_id);
+        erase_prefix(func);
       }
 
       Probe probe;
@@ -349,6 +371,12 @@ int BPFtrace::add_probe(ast::Probe &p)
 
           probes_.emplace_back(std::move(probe_copy));
         }
+      }
+      else if (probetype(attach_point->provider) == ProbeType::watchpoint &&
+               attach_point->func.size())
+      {
+        probes_.emplace_back(
+            generateWatchpointSetupProbe(func_id, *attach_point, p));
       }
       else
       {

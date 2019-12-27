@@ -2139,6 +2139,10 @@ void CodegenLLVM::generateProbe(Probe &probe,
     auto scoped_del = accept(stmt);
   }
   b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+
+  if (probetype(current_attach_point_->provider) == ProbeType::watchpoint &&
+      current_attach_point_->func.size())
+    generateWatchpointSetupProbe(func_type, section_name, index);
 }
 
 void CodegenLLVM::visit(Probe &probe)
@@ -2205,9 +2209,10 @@ void CodegenLLVM::visit(Probe &probe)
       }
 
       tracepoint_struct_ = "";
-      for (const auto &match : matches)
+      for (const auto &m : matches)
       {
         reset_ids();
+        std::string match = m;
 
         // USDT probes must specify a target binary path, a provider,
         // and a function name.
@@ -2272,6 +2277,13 @@ void CodegenLLVM::visit(Probe &probe)
             std::string category = erase_prefix(func);
 
             probefull_ = attach_point->name(category, func);
+          }
+          else if (probetype(attach_point->provider) == ProbeType::watchpoint)
+          {
+            // Watchpoint probes comes with target prefix. Strip the target to
+            // get the function
+            erase_prefix(match);
+            probefull_ = attach_point->name(match);
           }
           else
             probefull_ = attach_point->name(match);
@@ -2725,6 +2737,29 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
   b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
+}
+
+void CodegenLLVM::generateWatchpointSetupProbe(
+    FunctionType *func_type,
+    const std::string &expanded_probe_name,
+    int index)
+{
+  Function *func = Function::Create(func_type,
+                                    Function::ExternalLinkage,
+                                    get_watchpoint_setup_probe_name(
+                                        expanded_probe_name),
+                                    module_.get());
+  func->setSection(
+      get_section_name_for_watchpoint_setup(expanded_probe_name, index));
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+  b_.SetInsertPoint(entry);
+
+  b_.CreateSignal(ctx_, b_.getInt32(SIGSTOP), current_attach_point_->loc);
+
+  // XXX: implement steps 2 & 3
+  // Value *ctx = func->arg_begin();
+
+  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 }
 
 void CodegenLLVM::createPrintMapCall(Call &call)
