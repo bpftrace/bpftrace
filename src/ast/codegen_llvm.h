@@ -119,6 +119,20 @@ private:
   void binop_buf(Binop &binop);
   void binop_int(Binop &binop);
 
+  // Every time we see a watchpoint that specifies a function + arg pair, we
+  // generate a special "setup" probe that:
+  //
+  // * sends SIGSTOP to the tracee
+  // * pulls out the function arg
+  // * sends an asyncaction to the bpftrace runtime and specifies the arg value
+  //   and which of the "real" probes to attach to the addr in the arg
+  //
+  // We need a separate "setup" probe per probe because we hard code the index
+  // of the "real" probe the setup probe is to be replaced by.
+  void generateWatchpointSetupProbe(FunctionType *func_type,
+                                    const std::string &expanded_probe_name,
+                                    int index);
+
   Node *root_ = nullptr;
   LLVMContext context_;
   std::unique_ptr<Module> module_;
