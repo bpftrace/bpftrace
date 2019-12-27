@@ -2108,7 +2108,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
                                 const std::string &section_name,
                                 FunctionType *func_type,
-                                bool expansion)
+                                bool expansion,
+                                std::optional<int> usdt_location_index)
 {
   // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
   // by args builtin.
@@ -2121,7 +2122,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
     probe.set_index(index);
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, section_name, module_.get());
-  func->setSection(getSectionNameForProbe(section_name, index));
+  func->setSection(
+      get_section_name_for_probe(section_name, index, usdt_location_index));
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -2244,10 +2246,8 @@ void CodegenLLVM::visit(Probe &probe)
           {
             reset_ids();
 
-            std::string loc_suffix = "_loc" + std::to_string(i);
-            std::string full_func_id = match + loc_suffix;
-            std::string section_name = probefull_ + loc_suffix;
-            generateProbe(probe, full_func_id, section_name, func_type, true);
+            std::string full_func_id = match + "_loc" + std::to_string(i);
+            generateProbe(probe, full_func_id, probefull_, func_type, true, i);
             current_usdt_location_index_++;
           }
 
@@ -2297,10 +2297,6 @@ int CodegenLLVM::getNextIndexForProbe(const std::string &probe_name) {
   int index = next_probe_index_[probe_name];
   next_probe_index_[probe_name] += 1;
   return index;
-}
-
-std::string CodegenLLVM::getSectionNameForProbe(const std::string &probe_name, int index) {
-  return "s_" + probe_name + "_" + std::to_string(index);
 }
 
 AllocaInst *CodegenLLVM::getMapKey(Map &map)

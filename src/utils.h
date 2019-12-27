@@ -3,6 +3,7 @@
 #include <csignal>
 #include <cstring>
 #include <iostream>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <sys/utsname.h>
@@ -151,6 +152,22 @@ bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 pid_t parse_pid(const std::string &str);
 std::string hex_format_buffer(const char *buf, size_t size);
 std::string abs_path(const std::string &rel_path);
+
+// Generate object file section name for a given probe
+inline std::string get_section_name_for_probe(
+    const std::string &probe_name,
+    int index,
+    std::optional<int> usdt_location_index = std::nullopt)
+{
+  auto ret = "s_" + probe_name;
+
+  if (usdt_location_index)
+    ret += "_loc" + std::to_string(*usdt_location_index);
+
+  ret += "_" + std::to_string(index);
+
+  return ret;
+}
 
 // trim from end of string (right)
 inline std::string &rtrim(std::string &s)

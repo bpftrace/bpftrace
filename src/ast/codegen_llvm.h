@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <optional>
 #include <ostream>
 
 #include "bpftrace.h"
@@ -55,7 +56,6 @@ public:
   AllocaInst *getMapKey(Map &map);
   AllocaInst *getHistMapKey(Map &map, Value *log2);
   int         getNextIndexForProbe(const std::string &probe_name);
-  std::string getSectionNameForProbe(const std::string &probe_name, int index);
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
@@ -105,7 +105,9 @@ private:
                      const std::string &full_func_id,
                      const std::string &section_name,
                      FunctionType *func_type,
-                     bool expansion);
+                     bool expansion,
+                     std::optional<int> usdt_location_index = std::nullopt);
+
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
