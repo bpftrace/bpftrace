@@ -477,9 +477,9 @@ void AttachedProbe::load_prog()
     log_level = 15;
   else
   {
-    old_stderr = dup(2);
+    old_stderr = dup(STDERR_FILENO);
     new_stderr = open("/dev/null", O_WRONLY);
-    dup2(new_stderr, 2);
+    dup2(new_stderr, STDERR_FILENO);
     close(new_stderr);
   }
 
@@ -518,7 +518,7 @@ void AttachedProbe::load_prog()
   if (bt_debug == DebugLevel::kNone)
   {
     fflush(stderr);
-    dup2(old_stderr, 2);
+    dup2(old_stderr, STDERR_FILENO);
     close(old_stderr);
   }
 
