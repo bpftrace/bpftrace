@@ -7,6 +7,7 @@
   - [Gentoo](#gentoo-package)
   - [Debian](#debian-package)
   - [openSUSE](#openSUSE-package)
+  - [CentOS](#CentOS-package)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -82,6 +83,11 @@ Is available and tracked [here](https://tracker.debian.org/pkg/bpftrace).
 ## openSUSE package
 
 Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
+
+## CentOS package
+
+A build maintained by @fbs can be found
+[here](https://github.com/fbs/el7-bpf-specs/blob/master/README.md#repository).
 
 # Building bpftrace
 
