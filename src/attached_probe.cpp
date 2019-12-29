@@ -263,7 +263,8 @@ static int sym_address_cb(const char *symname, uint64_t start,
   return 0;
 }
 
-static uint64_t resolve_offset(std::string& path, std::string& symbol, uint64_t loc)
+static uint64_t
+resolve_offset(const std::string &path, const std::string &symbol, uint64_t loc)
 {
   bcc_symbol bcc_sym;
 
