@@ -92,16 +92,45 @@ public:
   std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
 
   BpfOrc(TargetMachine *TM_)
-    : TM(TM_),
-      Resolver(createLegacyLookupResolver(ES,
-        [](const std::string &Name __attribute__((unused))) -> JITSymbol { return nullptr; },
-        [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
-#if LLVM_VERSION_MAJOR >= 8
-      ObjectLayer(ES, [this](VModuleKey) { return LegacyRTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
+      : TM(TM_),
+        Resolver(createLegacyLookupResolver(
+            ES,
+            [](const std::string &Name __attribute__((unused))) -> JITSymbol {
+              return nullptr;
+            },
+            [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
+#if LLVM_VERSION_MAJOR > 8
+        ObjectLayer(AcknowledgeORCv1Deprecation,
+                    ES,
+                    [this](VModuleKey) {
+                      return LegacyRTDyldObjectLinkingLayer::Resources{
+                        std::make_shared<MemoryManager>(sections_), Resolver
+                      };
+                    }),
+        CompileLayer(AcknowledgeORCv1Deprecation,
+                     ObjectLayer,
+                     SimpleCompiler(*TM))
+  {
+  }
+#elif LLVM_VERSION_MAJOR == 8
+        ObjectLayer(ES,
+                    [this](VModuleKey) {
+                      return LegacyRTDyldObjectLinkingLayer::Resources{
+                        std::make_shared<MemoryManager>(sections_), Resolver
+                      };
+                    }),
+        CompileLayer(ObjectLayer, SimpleCompiler(*TM))
+  {
+  }
 #else
-      ObjectLayer(ES, [this](VModuleKey) { return RTDyldObjectLinkingLayer::Resources{std::make_shared<MemoryManager>(sections_), Resolver}; }),
+        ObjectLayer(ES,
+                    [this](VModuleKey) {
+                      return RTDyldObjectLinkingLayer::Resources{
+                        std::make_shared<MemoryManager>(sections_), Resolver
+                      };
+                    }),
+        CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}
 #endif
-      CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}
 
   void compileModule(std::unique_ptr<Module> M) {
     auto K = addModule(move(M));
