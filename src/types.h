@@ -58,12 +58,16 @@ struct StackType
   }
 };
 
-class SizedType
+struct SizedType
 {
-public:
   SizedType() : type(Type::none), size(0) { }
- SizedType(Type type, size_t size_, bool is_signed, const std::string &cast_type = "")
-    : type(type), size(size_), is_signed(is_signed), cast_type(cast_type) { }
+  SizedType(Type type,
+            size_t size_,
+            bool is_signed,
+            const std::string &cast_type = "")
+      : type(type), size(size_), is_signed(is_signed), cast_type(cast_type)
+  {
+  }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
     : type(type), size(size_), cast_type(cast_type) { }
 
@@ -137,9 +141,8 @@ ProbeType probetype(const std::string &type);
 std::string probetypeName(const std::string &type);
 std::string probetypeName(ProbeType t);
 
-class Probe
+struct Probe
 {
-public:
   ProbeType type;
   std::string path;             // file path if used
   std::string attach_point;     // probe name (last component)
