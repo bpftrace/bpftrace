@@ -7,6 +7,7 @@ add_executable(bpftrace
   bpftrace.cpp
   btf.cpp
   clang_parser.cpp
+  disasm.cpp
   driver.cpp
   fake_map.cpp
   list.cpp
@@ -16,12 +17,11 @@ add_executable(bpftrace
   output.cpp
   printf.cpp
   resolve_cgroupid.cpp
+  signal.cpp
   struct.cpp
   tracepoint_format_parser.cpp
   types.cpp
   utils.cpp
-  disasm.cpp
-  signal.cpp
   ${BFD_DISASM_SRC}
 )
 

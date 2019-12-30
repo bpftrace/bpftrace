@@ -22,4 +22,4 @@ You can add test programs for your runtime tests by placing a `.c` file correspo
 
 The test file `tests/testprogs/my_test.c` will result in an executable that you can call and probe in your runtime test at `./testprogs/my_test`
 
-This intended to be useful for testing uprobes and USDT probes, or using uprobes to verify some other behavior in bpftrace.
+This is intended to be useful for testing uprobes and USDT probes, or using uprobes to verify some other behavior in bpftrace.

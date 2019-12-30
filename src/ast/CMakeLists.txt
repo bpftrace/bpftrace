@@ -1,10 +1,10 @@
 add_library(ast
   ast.cpp
   codegen_llvm.cpp
+  field_analyser.cpp
   irbuilderbpf.cpp
   printer.cpp
   semantic_analyser.cpp
-  field_analyser.cpp
 )
 
 if(HAVE_GET_CURRENT_CGROUP_ID)

@@ -32,11 +32,14 @@ add_executable(bpftrace_test
 
   ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
 
-  ${CMAKE_SOURCE_DIR}/src/signal.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
+  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/btf.cpp
   ${CMAKE_SOURCE_DIR}/src/clang_parser.cpp
+  ${CMAKE_SOURCE_DIR}/src/disasm.cpp
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
@@ -44,15 +47,11 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/output.cpp
   ${CMAKE_SOURCE_DIR}/src/printf.cpp
   ${CMAKE_SOURCE_DIR}/src/resolve_cgroupid.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
+  ${CMAKE_SOURCE_DIR}/src/signal.cpp
   ${CMAKE_SOURCE_DIR}/src/struct.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
-  ${CMAKE_SOURCE_DIR}/src/disasm.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
   ${BFD_DISASM_SRC}
 )
 
