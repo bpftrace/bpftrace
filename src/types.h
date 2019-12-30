@@ -484,7 +484,8 @@ enum class AsyncAction
   join,
   helper_error,
   print_non_map,
-  strftime
+  strftime,
+  watchpoint_attach,
   // clang-format on
 };
 

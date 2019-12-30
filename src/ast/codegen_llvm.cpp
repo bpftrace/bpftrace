@@ -2142,7 +2142,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
 
   if (probetype(current_attach_point_->provider) == ProbeType::watchpoint &&
       current_attach_point_->func.size())
-    generateWatchpointSetupProbe(func_type, section_name, index);
+    generateWatchpointSetupProbe(
+        func_type, section_name, current_attach_point_->address, index);
 }
 
 void CodegenLLVM::visit(Probe &probe)
@@ -2742,6 +2743,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 void CodegenLLVM::generateWatchpointSetupProbe(
     FunctionType *func_type,
     const std::string &expanded_probe_name,
+    int arg_num,
     int index)
 {
   Function *func = Function::Create(func_type,
@@ -2754,10 +2756,34 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
+  // Send SIGSTOP to curtask
   b_.CreateSignal(ctx_, b_.getInt32(SIGSTOP), current_attach_point_->loc);
 
-  // XXX: implement steps 2 & 3
-  // Value *ctx = func->arg_begin();
+  // Pull out function argument
+  Value *ctx = func->arg_begin();
+  int offset = arch::arg_offset(arg_num);
+  Value *addr = b_.CreateLoad(
+      b_.getInt64Ty(),
+      b_.CreateGEP(ctx, b_.getInt64(offset * sizeof(uintptr_t))),
+      "arg" + std::to_string(arg_num));
+
+  // Tell userspace to setup the real watchpoint
+  auto elements = AsyncEvent::Watchpoint().asLLVMType(b_);
+  StructType *watchpoint_struct = b_.GetStructType("watchpoint_t",
+                                                   elements,
+                                                   true);
+  AllocaInst *buf = b_.CreateAllocaBPF(watchpoint_struct, "watchpoint");
+  size_t struct_size = layout_.getTypeAllocSize(watchpoint_struct);
+
+  // Fill in perf event struct
+  b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::watchpoint_attach)),
+                 b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+  b_.CreateStore(b_.getInt64(watchpoint_id_),
+                 b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
+  watchpoint_id_++;
+  b_.CreateStore(addr, b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
+  b_.CreatePerfEventOutput(ctx, buf, struct_size);
+  b_.CreateLifetimeEnd(buf);
 
   b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
 }

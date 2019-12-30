@@ -246,6 +246,11 @@ AttachedProbe::~AttachedProbe()
     close(progfd_);
 }
 
+const Probe &AttachedProbe::probe() const
+{
+  return probe_;
+}
+
 std::string AttachedProbe::eventprefix() const
 {
   switch (attachtype(probe_.type))

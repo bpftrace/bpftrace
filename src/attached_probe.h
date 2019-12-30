@@ -30,6 +30,8 @@ public:
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
+  const Probe &probe() const;
+
 private:
   std::string eventprefix() const;
   std::string eventname() const;
