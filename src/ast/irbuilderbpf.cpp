@@ -380,7 +380,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
   auto cmpAmount = strlen(str.c_str()) + 1;
-  return CreateStrncmp(val, str, cmpAmount, !inverse);
+  return CreateStrncmp(val, str, cmpAmount, inverse);
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse) {
@@ -414,7 +414,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
 }
 
 Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
-  return CreateStrncmp(val1, val2, bpftrace_.strlen_, !inverse);
+  return CreateStrncmp(val1, val2, bpftrace_.strlen_, inverse);
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool inverse) {
