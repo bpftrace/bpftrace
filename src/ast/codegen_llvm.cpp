@@ -832,7 +832,8 @@ void CodegenLLVM::visit(Binop &binop)
 
     std::string string_literal("");
 
-    bool inverse = binop.op == bpftrace::Parser::token::NE;
+    // strcmp returns 0 when strings are equal
+    bool inverse = binop.op == bpftrace::Parser::token::EQ;
 
     // If one of the strings is fixed, we can avoid storing the
     // literal in memory by calling a different function.
