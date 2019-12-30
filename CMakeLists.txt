@@ -9,6 +9,7 @@ set(bpftrace_VERSION_PATCH 3)
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 
 set (CMAKE_CXX_STANDARD 14)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
