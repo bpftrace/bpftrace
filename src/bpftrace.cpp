@@ -11,6 +11,7 @@
 #include <sys/epoll.h>
 
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/personality.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -30,8 +31,6 @@
 #include <llvm/Demangle/Demangle.h>
 
 #include "ast/async_event_types.h"
-#include "attached_probe.h"
-#include "bpforc.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "printf.h"
@@ -377,6 +376,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       {
         probes_.emplace_back(
             generateWatchpointSetupProbe(func_id, *attach_point, p));
+
+        watchpoint_probes_.emplace_back(std::move(probe));
       }
       else
       {
@@ -695,6 +696,60 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     else
       msg << return_value;
     LOG(WARNING, info.loc, std::cerr) << msg.str();
+  }
+  else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach))
+  {
+    bool abort = false;
+    auto watchpoint = static_cast<AsyncEvent::Watchpoint *>(data);
+    uint64_t probe_idx = watchpoint->watchpoint_idx;
+    uint64_t addr = watchpoint->addr;
+
+    if (probe_idx >= bpftrace->watchpoint_probes_.size())
+    {
+      std::cerr << "Invalid watchpoint probe idx=" << probe_idx << std::endl;
+      abort = true;
+      goto out;
+    }
+
+    // Ignore duplicate watchpoints (idx && addr same), but allow the same
+    // address to be watched by different probes.
+    //
+    // NB: this check works b/c we set Probe::addr below
+    //
+    // TODO: Should we be printing a warning or info message out here?
+    if (bpftrace->watchpoint_probes_[probe_idx].address == addr)
+      goto out;
+
+    // Attach the real watchpoint probe
+    {
+      Probe &wp_probe = bpftrace->watchpoint_probes_[probe_idx];
+      wp_probe.address = addr;
+      auto aps = bpftrace->attach_probe(wp_probe, *bpftrace->bpforc_);
+      if (aps.empty())
+      {
+        std::cerr << "Unable to attach real watchpoint probe" << std::endl;
+        abort = true;
+        goto out;
+      }
+
+      for (auto &ap : aps)
+        bpftrace->attached_probes_.emplace_back(std::move(ap));
+    }
+
+  out:
+    // Let the tracee continue
+    pid_t pid = bpftrace->child_
+                    ? bpftrace->child_->pid()
+                    : (bpftrace->procmon_ ? bpftrace->procmon_->pid() : -1);
+    if (pid == -1 || ::kill(pid, SIGCONT) != 0)
+    {
+      std::cerr << "Failed to SIGCONT tracee: " << strerror(errno) << std::endl;
+      abort = true;
+    }
+
+    if (abort)
+      std::abort();
+
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
@@ -1105,6 +1160,8 @@ int BPFtrace::run_special_probe(std::string name,
 
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
+  bpforc_ = std::move(bpforc);
+
   int epollfd = setup_perf_events();
   if (epollfd < 0)
     return epollfd;
@@ -1126,7 +1183,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     }
   }
 
-  if (run_special_probe("BEGIN_trigger", *bpforc.get(), BEGIN_trigger))
+  if (run_special_probe("BEGIN_trigger", *bpforc_, BEGIN_trigger))
     return -1;
 
   if (child_ && has_usdt_)
@@ -1151,7 +1208,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   for (auto probes = probes_.begin(); probes != probes_.end(); ++probes)
   {
     if (!attach_reverse(*probes)) {
-      auto aps = attach_probe(*probes, *bpforc.get());
+      auto aps = attach_probe(*probes, *bpforc_);
 
       if (aps.empty())
         return -1;
@@ -1164,7 +1221,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   for (auto r_probes = probes_.rbegin(); r_probes != probes_.rend(); ++r_probes)
   {
     if (attach_reverse(*r_probes)) {
-      auto aps = attach_probe(*r_probes, *bpforc.get());
+      auto aps = attach_probe(*r_probes, *bpforc_);
 
       if (aps.empty())
         return -1;
@@ -1201,7 +1258,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   finalize_ = false;
   exitsig_recv = false;
 
-  if (run_special_probe("END_trigger", *bpforc.get(), END_trigger))
+  if (run_special_probe("END_trigger", *bpforc_, END_trigger))
     return -1;
 
   poll_perf_events(epollfd, true);
