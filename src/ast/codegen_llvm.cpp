@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "bpforc.h"
 #include "codegen_llvm.h"
 #include "ast.h"
@@ -862,7 +863,8 @@ void CodegenLLVM::visit(Binop &binop)
       binop.left->accept(*this);
       Value * left_string = expr_;
 
-      expr_ = b_.CreateStrcmp(left_string, right_string, inverse);
+      size_t len = std::min(binop.left->type.size, binop.right->type.size);
+      expr_ = b_.CreateStrncmp(left_string, right_string, len + 1, inverse);
     }
   }
   else
