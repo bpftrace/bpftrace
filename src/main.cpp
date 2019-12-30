@@ -85,6 +85,11 @@ static void enforce_infinite_rlimit() {
         "\"ulimit -l 8192\" to fix the problem" << std::endl;
 }
 
+#ifdef BUILD_ASAN
+static void cap_memory_limits()
+{
+}
+#else
 static void cap_memory_limits() {
   struct rlimit rl = {};
   int err;
@@ -102,6 +107,7 @@ static void cap_memory_limits() {
         "RLIMIT_RSS for bpftrace (these are a temporary precaution to stop " <<
         "accidental large program loads, and are not required" << std::endl;
 }
+#endif // BUILD_ASAN
 
 bool is_root()
 {
