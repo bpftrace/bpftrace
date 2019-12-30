@@ -504,8 +504,8 @@ public:
   std::string name(const std::string &attach_target,
                    const std::string &attach_point) const;
 
-  int index(std::string name);
-  void set_index(std::string name, int index);
+  int index(const std::string &name) const;
+  void set_index(const std::string &name, int index);
 
 private:
   AttachPoint(const AttachPoint &other) = default;
@@ -531,7 +531,7 @@ public:
   int tp_args_structs_level = -1;     // number of levels of structs that must
                                       // be imported/resolved for tracepoints
 
-  int index();
+  int index() const;
   void set_index(int index);
 
 private:
