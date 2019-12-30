@@ -446,20 +446,20 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
 
   Value *null_byte = getInt8(0);
 
+  AllocaInst *val_l = CreateAllocaBPF(getInt8Ty(), "strcmp.char_l");
+  AllocaInst *val_r = CreateAllocaBPF(getInt8Ty(), "strcmp.char_r");
   for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
     BasicBlock *loop_null_check = BasicBlock::Create(module_.getContext(), "strcmp.loop_null_cmp", parent);
 
-    AllocaInst *val_char1 = CreateAllocaBPF(getInt8Ty(), "strcmp.char_l");
     Value *ptr1 = CreateAdd(val1, getInt64(i));
-    CreateProbeRead(val_char1, 1, ptr1);
-    Value *l = CreateLoad(getInt8Ty(), val_char1);
+    CreateProbeRead(val_l, 1, ptr1);
+    Value *l = CreateLoad(getInt8Ty(), val_l);
 
-    AllocaInst *val_char2 = CreateAllocaBPF(getInt8Ty(), "strcmp.char_r");
     Value *ptr2 = CreateAdd(val2, getInt64(i));
-    CreateProbeRead(val_char2, 1, ptr2);
-    Value *r = CreateLoad(getInt8Ty(), val_char2);
+    CreateProbeRead(val_r, 1, ptr2);
+    Value *r = CreateLoad(getInt8Ty(), val_r);
 
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, loop_null_check);
@@ -481,6 +481,8 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
 
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
+  CreateLifetimeEnd(val_l);
+  CreateLifetimeEnd(val_r);
   result = CreateIntCast(result, getInt64Ty(), false);
 
   return result;
