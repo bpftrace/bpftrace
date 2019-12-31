@@ -331,7 +331,12 @@ void BPFtrace::kill_child()
   if (child_running_) {
     kill(child_pid(), SIGTERM);
   } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+    // We need to disable this warning for some GCC/libc combinations despite
+    // using the void cast: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66425
     (void)write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+#pragma GCC diagnostic pop
     close(child_start_pipe_);
   }
 }

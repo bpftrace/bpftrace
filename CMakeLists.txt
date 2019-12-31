@@ -7,6 +7,7 @@ set(bpftrace_VERSION_MINOR 9)
 set(bpftrace_VERSION_PATCH 3)
 
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
+set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 set (CMAKE_CXX_STANDARD 14)
@@ -26,8 +27,11 @@ add_compile_options("-Wswitch-default")
 #add_compile_options("-Wconversion")
 add_compile_options("-Wunreachable-code")
 #add_compile_options("-Wformat=2")
-add_compile_options("-Wstrict-overflow=5")
 add_compile_options("-Wdisabled-optimization")
+
+if (WARNINGS_AS_ERRORS)
+  add_compile_options("-Werror")
+endif()
 
 include(CTest)
 
