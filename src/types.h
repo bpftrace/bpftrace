@@ -117,6 +117,8 @@ enum class ProbeType
   software,
   hardware,
   watchpoint,
+  kfunc,
+  kretfunc,
 };
 
 struct ProbeItem
@@ -141,6 +143,8 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "software", "s", ProbeType::software },
   { "hardware", "h", ProbeType::hardware },
   { "watchpoint", "w", ProbeType::watchpoint },
+  { "kfunc", "f", ProbeType::kfunc },
+  { "kretfunc", "fr", ProbeType::kretfunc },
 };
 
 std::string typestr(Type t);

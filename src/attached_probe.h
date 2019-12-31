@@ -41,12 +41,17 @@ private:
   void attach_software();
   void attach_hardware();
   void attach_watchpoint(int pid, const std::string &mode);
+  void attach_kfunc(void);
+  int detach_kfunc(void);
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;
   std::vector<int> perf_event_fds_;
   int progfd_ = -1;
   uint64_t offset_ = 0;
+#ifdef HAVE_KFUNC
+  int tracing_fd_ = -1;
+#endif
 };
 
 } // namespace bpftrace
