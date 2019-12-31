@@ -31,6 +31,7 @@ private:
   int software_parser();
   int hardware_parser();
   int watchpoint_parser();
+  int kfunc_parser();
 
   Program *root_{ nullptr }; // Non-owning pointer
   BPFtrace &bpftrace_;

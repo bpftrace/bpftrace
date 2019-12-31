@@ -127,6 +127,9 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return hardware_parser();
     case ProbeType::watchpoint:
       return watchpoint_parser();
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+      return kfunc_parser();
     default:
       errs_ << "Unrecognized probe type: " << ap_->provider << std::endl;
       return 1;
@@ -542,6 +545,24 @@ int AttachPointParser::watchpoint_parser()
 
   ap_->mode = parts_[4];
 
+  return 0;
+}
+
+int AttachPointParser::kfunc_parser()
+{
+  if (parts_.size() != 2)
+  {
+    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
+    return 1;
+  }
+
+  if (parts_[1].find('*') != std::string::npos)
+  {
+    errs_ << "wildcard expansion is not supported for kfunc/kretfunc probes" << std::endl;
+    return 1;
+  }
+
+  ap_->func = parts_[1];
   return 0;
 }
 

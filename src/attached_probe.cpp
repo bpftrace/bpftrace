@@ -66,6 +66,16 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
+#ifdef HAVE_KFUNC
+    case ProbeType::kfunc:      return BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::kretfunc:   return BPF_PROG_TYPE_TRACING; break;
+#else
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+      std::cerr << "ERROR: kfunc not available for your kernel version"
+                << std::endl;
+      return BPF_PROG_TYPE_UNSPEC;
+#endif
     default:
       std::cerr << "program type not found" << std::endl;
       abort();
@@ -93,6 +103,33 @@ void check_banned_kretprobes(std::string const& kprobe_name) {
     exit(1);
   }
 }
+
+#ifdef HAVE_KFUNC
+void AttachedProbe::attach_kfunc(void)
+{
+  tracing_fd_ = bpf_attach_kfunc(progfd_);
+  if (tracing_fd_ < 0)
+    throw std::runtime_error("Error attaching probe: " + probe_.name);
+}
+
+int AttachedProbe::detach_kfunc(void)
+{
+  close(tracing_fd_);
+  return bpf_detach_kfunc(progfd_, NULL);
+}
+#else
+void AttachedProbe::attach_kfunc(void)
+{
+  throw std::runtime_error("Error attaching probe: " + probe_.name +
+                           ", kfunc not available for your kernel version");
+}
+
+int AttachedProbe::detach_kfunc(void)
+{
+  std::cerr << "kfunc not available for your kernel version" << std::endl;
+  return -1;
+}
+#endif // HAVE_KFUNC
 
 AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
   : probe_(probe), func_(func)
@@ -128,6 +165,10 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
     case ProbeType::hardware:
       attach_hardware();
       break;
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+      attach_kfunc();
+      break;
     default:
       std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\"" << std::endl;
       abort();
@@ -154,9 +195,6 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
 
 AttachedProbe::~AttachedProbe()
 {
-  if (progfd_ >= 0)
-    close(progfd_);
-
   int err = 0;
   for (int perf_event_fd : perf_event_fds_)
   {
@@ -171,6 +209,10 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
       err = bpf_detach_kprobe(eventname().c_str());
+      break;
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+      err = detach_kfunc();
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -192,6 +234,9 @@ AttachedProbe::~AttachedProbe()
   }
   if (err)
     std::cerr << "Error detaching probe: " << probe_.name << std::endl;
+
+  if (progfd_ >= 0)
+    close(progfd_);
 }
 
 std::string AttachedProbe::eventprefix() const
@@ -590,8 +635,10 @@ void AttachedProbe::load_prog()
   const char *license = "GPL";
   int log_level = 0;
   char log_buf[probe_.log_size];
-  char name[STRING_SIZE], *namep;
+  char name[STRING_SIZE];
+  const char *namep;
   unsigned log_buf_size = sizeof (log_buf);
+  std::string tracing_type, tracing_name;
 
   {
     // Redirect stderr, so we don't get error messages from BCC
@@ -610,6 +657,17 @@ void AttachedProbe::load_prog()
     namep = name;
     if (strrchr(name, ':') != NULL)
       namep = strrchr(name, ':') + 1;
+
+    // The bcc_prog_load function now recognizes 'kfunc__/kretfunc__'
+    // prefixes and detects and fills in all the necessary BTF related
+    // attributes for loading the kfunc program.
+
+    tracing_type = probetypeName(probe_.type);
+    if (!tracing_type.empty())
+    {
+      tracing_name = tracing_type + "__" + namep;
+      namep = tracing_name.c_str();
+    }
 
     for (int attempt = 0; attempt < 3; attempt++)
     {

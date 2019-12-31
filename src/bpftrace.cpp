@@ -772,7 +772,9 @@ bool attach_reverse(const Probe &p)
     case ProbeType::uretprobe:
     case ProbeType::usdt:
     case ProbeType::software:
+    case ProbeType::kfunc:
       return true;
+    case ProbeType::kretfunc:
     case ProbeType::kretprobe:
     case ProbeType::tracepoint:
     case ProbeType::profile:
