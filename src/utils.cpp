@@ -487,7 +487,7 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
   return std::make_tuple(ksrc, kobj);
 }
 
-std::string is_deprecated(std::string &str)
+const std::string &is_deprecated(const std::string &str)
 {
 
   std::vector<DeprecatedName>::iterator item;

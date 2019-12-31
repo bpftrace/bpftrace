@@ -108,7 +108,7 @@ std::tuple<std::string, std::string> get_kernel_dirs(
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &ksrc,
                                            const std::string &kobj);
-std::string is_deprecated(std::string &str);
+const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 std::string exec_system(const char *cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
