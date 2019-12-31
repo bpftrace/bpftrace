@@ -79,8 +79,8 @@ install(TARGETS bpftrace DESTINATION bin)
 
 set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 if (KERNEL_HEADERS_DIR)
-MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
-target_compile_definitions(bpftrace PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
+  MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
+  target_compile_definitions(bpftrace PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
 endif()
 
 execute_process(
