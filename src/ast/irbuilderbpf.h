@@ -62,6 +62,7 @@ public:
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *sig);
+  void CreateFdPath(AllocaInst *path, Value *fd);
 
 private:
   Module &module_;

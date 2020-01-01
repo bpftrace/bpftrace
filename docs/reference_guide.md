@@ -1534,6 +1534,7 @@ Tracing block I/O sizes > 0 bytes
 - `ustack([StackMode mode, ][int level])` - User stack trace
 - `ntop([int af, ]int|char[4|16] addr)` - Convert IP address data to text
 - `cat(char *filename)` - Print file content
+- `fdpath(int fd)` - Returns path of the file referenced by file descriptor in argument
 
 Some of these are asynchronous: the kernel queues the event, but some time
 later (milliseconds) it is processed in user-space. The asynchronous actions
@@ -2162,6 +2163,24 @@ Attaching 320 probes...
 @[mpv/vo, tracepoint:syscalls:sys_enter_recvmsg]: 15018
 @[mpv, tracepoint:syscalls:sys_enter_getpid]: 31178
 @[mpv, tracepoint:syscalls:sys_enter_futex]: 403868
+```
+## 20. `fdpath()`: Returns path of the file referenced by file descriptor in argument
+
+Syntax: `fdpath(int fd)`
+
+Examples:
+
+```
+$ bpftrace -e 't:syscalls:sys_enter_newfstat { printf("%s\n", fdpath(args->fd)); }'
+Attaching 1 probe...
+/etc/ld.so.cache
+/usr/lib64/libselinux.so.1
+/usr/lib64/libcap.so.2.26
+/usr/lib64/libc-2.30.so
+/usr/lib64/libpcre2-8.so.0.8.0
+/usr/lib64/libdl-2.30.so
+/usr/lib64/libpthread-2.30.so
+/usr/share/locale/locale.alias
 ```
 
 # Map Functions

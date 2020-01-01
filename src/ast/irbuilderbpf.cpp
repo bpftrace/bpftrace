@@ -672,5 +672,26 @@ void IRBuilderBPF::CreateSignal(Value *sig)
 #endif
 }
 
+void IRBuilderBPF::CreateFdPath(AllocaInst *path, Value *fd)
+{
+#ifdef HAVE_GET_FD_PATH
+  // int bpf_get_fdpath(char *path, u32 size, int fd)
+  // Return: 0 or error
+  FunctionType *fdpath_func_type = FunctionType::get(
+      getInt64Ty(), { getInt8PtrTy(), getInt32Ty(), getInt32Ty() }, false);
+  PointerType *fdpath_func_ptr_type = PointerType::get(fdpath_func_type, 0);
+  Constant *fdpath_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                getInt64(BPF_FUNC_get_fd_path),
+                                                fdpath_func_ptr_type);
+  CreateCall(fdpath_func, { path, getInt64(bpftrace_.strlen_), fd }, "fdpath");
+#else
+  (void)path;
+  (void)fd;
+  std::cerr << "BPF_FUNC_get_fd_path is not available for your kernel version"
+            << std::endl;
+  abort();
+#endif
+}
+
 } // namespace ast
 } // namespace bpftrace

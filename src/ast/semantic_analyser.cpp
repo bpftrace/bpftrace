@@ -717,6 +717,19 @@ void SemanticAnalyser::visit(Call &call)
           call.loc);
 #endif
   }
+  else if (call.func == "fdpath")
+  {
+#ifdef HAVE_GET_FD_PATH
+    if (check_varargs(call, 1, 1))
+    {
+      check_arg(call, Type::integer, 0);
+      call.type = SizedType(Type::string, bpftrace_.strlen_);
+    }
+#else
+    error("BPF_FUNC_get_fd_path not available for your kernel version",
+          call.loc);
+#endif
+  }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
       check_arg(call, Type::string, 0);

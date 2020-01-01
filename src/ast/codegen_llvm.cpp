@@ -464,6 +464,14 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
   }
+  else if (call.func == "fdpath")
+  {
+    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
+    call.vargs->front()->accept(*this);
+    b_.CreateFdPath(buf, expr_);
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  }
   else if (call.func == "kaddr")
   {
     uint64_t addr;
