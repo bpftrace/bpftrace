@@ -90,6 +90,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [22. `sizeof()`: Size of type or expression](#22-sizeof-size-of-type-or-expression)
     - [23. `print()`: Print Value](#23-print-print-value)
     - [24. `strftime()`: Formatted timestamp](#24-strftime-formatted-timestamp)
+    - [25. `path()`: Return full path](#25-path-return-full-path)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -1959,6 +1960,7 @@ Tracing block I/O sizes > 0 bytes
 - `signal(char[] signal | u32 signal)` - Send a signal to the current task
 - `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
 - `override(u64 rc)` - Override return value
+- `path(struct path *path)` - Return full path
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
@@ -2751,6 +2753,33 @@ Attaching 1 probe...
 13:11:25
 13:11:26
 ^C
+```
+
+## 25. `path()`: Return full path
+
+Syntax:
+- `path(struct path *path)`
+
+Return full path referenced by struct path pointer in argument.
+There's list of allowed kernel functions, that can use this
+helper in probe.
+
+Examples:
+```
+# bpftrace  -e 'kfunc:filp_close { printf("%s\n", path(args->filp->f_path)); }'
+Attaching 1 probe...
+/proc/sys/net/ipv6/conf/eno2/disable_ipv6
+/proc/sys/net/ipv6/conf/eno2/use_tempaddr
+socket:[23276]
+/proc/sys/net/ipv6/conf/eno2/disable_ipv6
+socket:[17655]
+/sys/devices/pci0000:00/0000:00:1c.5/0000:04:00.1/net/eno2/type
+socket:[38745]
+/proc/sys/net/ipv6/conf/eno2/disable_ipv6
+
+# bpftrace  -e 'kretfunc:dentry_open { printf("%s\n", path(retval->f_path)); }'
+Attaching 1 probe...
+/dev/pts/1 -> /dev/pts/1
 ```
 
 # Map Functions

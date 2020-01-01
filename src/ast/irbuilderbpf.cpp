@@ -1147,5 +1147,19 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
   SetInsertPoint(helper_merge_block);
 }
 
+void IRBuilderBPF::CreatePath(AllocaInst *buf, Value *path)
+{
+  // int bpf_d_path(struct path *path, char *buf, u32 sz)
+  // Return: 0 or error
+  FunctionType *d_path_func_type = FunctionType::get(
+      getInt64Ty(), { getInt8PtrTy(), buf->getType(), getInt32Ty() }, false);
+  PointerType *d_path_func_ptr_type = PointerType::get(d_path_func_type, 0);
+  Constant *d_path_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                getInt64(
+                                                    libbpf::BPF_FUNC_d_path),
+                                                d_path_func_ptr_type);
+  createCall(d_path_func, { path, buf, getInt32(bpftrace_.strlen_) }, "d_path");
+}
+
 } // namespace ast
 } // namespace bpftrace

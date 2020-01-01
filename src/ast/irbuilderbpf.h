@@ -159,6 +159,7 @@ public:
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  void        CreatePath(AllocaInst *buf, Value *path);
   int helper_error_id_ = 0;
 
 private:

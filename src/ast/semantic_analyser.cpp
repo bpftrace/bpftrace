@@ -1076,6 +1076,42 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateUInt64();
   }
+  else if (call.func == "path")
+  {
+    if (!bpftrace_.feature_->has_d_path())
+    {
+      LOG(ERROR, call.loc, err_)
+          << "BPF_FUNC_d_path not available for your kernel version";
+    }
+
+    if (check_varargs(call, 1, 1))
+    {
+      // Argument for path can be both record and pointer.
+      // It's pointer when it's passed directly from the probe
+      // argument, like: path(args->path))
+      // It's record when it's referenced as object pointer
+      // member, like: path(args->filp->f_path))
+      if (!check_arg(call, Type::record, 0, false, false) &&
+          !check_arg(call, Type::pointer, 0, false, false))
+      {
+        auto &arg = *call.vargs->at(0);
+
+        LOG(ERROR, call.loc, err_)
+            << "path() only supports pointer or record argument ("
+            << arg.type.type << " provided)";
+      }
+
+      call.type = SizedType(Type::string, bpftrace_.strlen_);
+    }
+
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType type = probetype(attach_point->provider);
+      if (type != ProbeType::kfunc && type != ProbeType::kretfunc)
+        LOG(ERROR, call.loc, err_) << "The path function can only be used with "
+                                   << "'kfunc', 'kretfunc' probes";
+    }
+  }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
       check_arg(call, Type::string, 0);
