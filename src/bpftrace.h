@@ -99,7 +99,6 @@ public:
   uint64_t resolve_cgroupid(const std::string &path) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
   void add_param(const std::string &param);
-  bool is_numeric(std::string str) const;
   std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
   void request_finalize();

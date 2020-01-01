@@ -58,18 +58,21 @@ void SemanticAnalyser::visit(Integer &integer)
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
   param.type = SizedType(Type::integer, 8, true);
-  switch (param.ptype) {
+  switch (param.ptype)
+  {
     case PositionalParameterType::positional:
       if (param.n <= 0)
         ERR("$" << param.n + " is not a valid parameter", param.loc);
       if (is_final_pass()) {
         std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        if (!bpftrace_.is_numeric(pstr) && !param.is_in_str) {
+        if (!is_numeric(pstr) && !param.is_in_str)
+        {
           ERR(param.loc << "$" << param.n << " used numerically << but given \""
                         << pstr << "\". Try using str($" << param.n << ").",
               param.loc);
         }
-        if (bpftrace_.is_numeric(pstr) && param.is_in_str) {
+        if (is_numeric(pstr) && param.is_in_str)
+        {
           // This is blocked due to current limitations in our codegen
           ERR("$" << param.n << " used in str(), but given numeric value: "
                   << pstr << ". Try $" << param.n << " instead of str($"

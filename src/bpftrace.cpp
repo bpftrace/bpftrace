@@ -610,19 +610,6 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
   return arg_values;
 }
 
-bool BPFtrace::is_numeric(std::string str) const
-{
-  int i = 0;
-  while (str[i]) {
-    if (str[i] < '0' || str[i] > '9')
-      return false;
-    i++;
-  }
-  if (i == 0)
-    return false;
-  return true;
-}
-
 void BPFtrace::add_param(const std::string &param)
 {
   params_.emplace_back(param);

@@ -120,16 +120,6 @@ bool is_root()
     return true;
 }
 
-bool is_numeric(char* string)
-{
-  while(char current_char = *string++)
-  {
-    if (!isdigit(current_char))
-      return false;
-  }
-  return true;
-}
-
 int main(int argc, char *argv[])
 {
   int err;

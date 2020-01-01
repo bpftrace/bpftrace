@@ -575,4 +575,9 @@ std::string str_join(const std::vector<std::string> &list, const std::string &de
   return str;
 }
 
+bool is_numeric(const std::string &s)
+{
+  return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+}
+
 } // namespace bpftrace

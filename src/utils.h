@@ -80,6 +80,7 @@ std::string exec_system(const char* cmd);
 std::vector<std::string> resolve_binary_path(const std::string& cmd);
 void cat_file(const char *filename, size_t, std::ostream&);
 std::string str_join(const std::vector<std::string> &list, const std::string &delim);
+bool is_numeric(const std::string &str);
 
 // trim from end of string (right)
 inline std::string& rtrim(std::string& s)
