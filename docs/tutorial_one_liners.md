@@ -301,7 +301,7 @@ The context of this probe is important: this fires when the I/O is issued to the
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
@@ -316,7 +316,7 @@ This uses kernel dynamic tracing of the vfs_open() function, which has a (struct
 
 - kprobe: As mentioned earlier, this is the kernel dynamic tracing probe type, which traces the entry of kernel functions (use kretprobe to trace their returns).
 - `arg0` is a builtin variable containing the first probe argument, the meaning of which is defined by the probe type. For `kprobe`, it is the first argument to the function. Other arguments can be accessed as arg1, ..., argN.
-- `((path *)arg0)->dentry->d_name.name`: this casts `arg0` as `path *`, then dereferences dentry, etc.
+- `((struct path *)arg0)->dentry->d_name.name`: this casts `arg0` as `struct path *`, then dereferences dentry, etc.
 - #include: these were necessary to include struct definitions for path and dentry.
 
 The kernel struct support is currently the same as bcc, making use of kernel headers. This means that many structs are available, but not everything, and sometimes it might be necessary to manually include a struct. For an example of this, see the [dcsnoop tool](../tools/dcsnoop.bt), which includes a portion of struct nameidata manually as it wasn't in the available headers. In the future, bpftrace will use the newer Linux BTF support, so that all structs are available.
