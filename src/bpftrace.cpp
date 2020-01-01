@@ -98,6 +98,9 @@ BPFtrace::~BPFtrace()
 
   if (ksyms_)
     bcc_free_symcache(ksyms_, -1);
+
+  for (void *reader : perf_readers_)
+    perf_reader_free(reader);
 }
 
 int BPFtrace::add_probe(ast::Probe &p)
@@ -793,6 +796,7 @@ int BPFtrace::setup_perf_events()
 
   std::vector<int> cpus = get_online_cpus();
   online_cpus_ = cpus.size();
+  perf_readers_.reserve(online_cpus_);
   for (int cpu : cpus)
   {
     int page_cnt = 64;
@@ -802,6 +806,8 @@ int BPFtrace::setup_perf_events()
       std::cerr << "Failed to open perf buffer" << std::endl;
       return -1;
     }
+
+    perf_readers_.emplace_back(reader);
 
     struct epoll_event ev = {};
     ev.events = EPOLLIN;

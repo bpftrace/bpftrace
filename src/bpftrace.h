@@ -202,6 +202,7 @@ private:
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   static bool is_pid_alive(int pid);
+  std::vector<void *> perf_readers_;
 };
 
 } // namespace bpftrace
