@@ -76,6 +76,10 @@ endif()
 target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
 
 if (BUILD_ASAN)
+  if(${CMAKE_VERSION} VERSION_LESS "3.13.0")
+    # target_link_options is supported in CMake 3.13 and newer
+    message("Please use CMake 3.13 or newer to enable ASAN")
+  endif()
   target_compile_definitions(bpftrace PRIVATE BUILD_ASAN)
   target_compile_options(bpftrace PUBLIC "-fsanitize=address")
   target_link_options(bpftrace PUBLIC "-fsanitize=address")
