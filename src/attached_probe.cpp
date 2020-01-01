@@ -271,6 +271,10 @@ resolve_offset(const std::string &path, const std::string &symbol, uint64_t loc)
   if (bcc_resolve_symname(path.c_str(), symbol.c_str(), loc, 0, nullptr, &bcc_sym))
      throw std::runtime_error("Could not resolve symbol: " + path + ":" + symbol);
 
+  // This cstring is caller freed
+  if (bcc_sym.module)
+    ::free(const_cast<char *>(bcc_sym.module));
+
   return bcc_sym.offset;
 }
 
