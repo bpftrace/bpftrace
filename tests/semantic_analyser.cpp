@@ -608,6 +608,16 @@ TEST(semantic_analyser, call_stack)
   test("kprobe:f { @x = 3; ustack(perf, @x) }", 10);
 }
 
+TEST(semantic_analyser, call_fdpath)
+{
+  test("kprobe:f { $k = fdpath( 1 ) }", 0);
+  test("kretprobe:f { $k = fdpath( 1 ) }", 0);
+  test("tracepoint:category:event { $k = fdpath( 1 ) }", 0);
+  test("kprobe:f { $k = fdpath( arg0 ) }", 0);
+  test("kretprobe:f{ $k = fdpath( \"abc\" ) }", 10);
+  test("tracepoint:category:event { $k = fdpath( -100 ) }", 0);
+}
+
 TEST(semantic_analyser, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }", 0);
