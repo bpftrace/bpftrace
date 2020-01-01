@@ -376,8 +376,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   else if (printf_id == asyncactionint(AsyncAction::print))
   {
     std::string arg = (const char *)(static_cast<uint8_t*>(data) + sizeof(uint64_t) + 2 * sizeof(uint64_t));
-    uint64_t top = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    uint64_t div = (uint64_t)*(static_cast<uint64_t*>(data) + (sizeof(uint64_t) + sizeof(uint64_t)) / sizeof(uint64_t));
+    uint64_t top = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
+    uint64_t div = (uint64_t) * (static_cast<uint64_t *>(data) + 2);
     err = bpftrace->print_map_ident(arg, top, div);
     if (err)
       throw std::runtime_error("Could not print map with ident \"" + arg + "\", err=" + std::to_string(err));
@@ -410,7 +410,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "localtime: " << strerror(errno) << std::endl;
       return;
     }
-    uint64_t time_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    uint64_t time_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
     auto fmt = bpftrace->time_args_[time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
       std::cerr << "strftime returned 0" << std::endl;
@@ -421,7 +421,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
-    uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    uint64_t join_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
     auto delim = bpftrace->join_args_[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
