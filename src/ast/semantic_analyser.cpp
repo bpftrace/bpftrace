@@ -150,7 +150,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       * Retype curtask to its original type: struct task_truct.
       */
       builtin.type.type = Type::cast;
-      builtin.type.cast_type = "task_struct";
+      builtin.type.cast_type = "struct task_struct";
       builtin.type.is_pointer = true;
     }
   }
