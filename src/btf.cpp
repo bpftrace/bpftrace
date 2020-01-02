@@ -1,4 +1,5 @@
 #include <iostream>
+#include <regex>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -203,6 +204,24 @@ static const char *btf_str(const struct btf *btf, __u32 off)
   return btf__name_by_offset(btf, off) ? : "(invalid)";
 }
 
+static std::string full_type_str(const struct btf *btf, const struct btf_type *type)
+{
+  const char *str = btf_str(btf, type->name_off);
+
+  if (BTF_INFO_KIND(type->info) == BTF_KIND_STRUCT)
+    return std::string("struct ") + str;
+
+  if (BTF_INFO_KIND(type->info) == BTF_KIND_UNION)
+    return std::string("union ") + str;
+
+  return str;
+}
+
+static std::string btf_type_str(const std::string& type)
+{
+  return std::regex_replace(type, std::regex("^(struct )|(union )"), "");
+}
+
 std::string BTF::c_def(std::unordered_set<std::string>& set)
 {
   std::string ret = std::string("");
@@ -226,7 +245,7 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
   for (id = 1; id <= max && myset.size(); id++)
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
-    const char *str = btf_str(btf, t->name_off);
+    std::string str = full_type_str(btf, t);
 
     auto it = myset.find(str);
     if (it != myset.end())
@@ -242,7 +261,7 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
 
 std::string BTF::type_of(const std::string& name, const std::string& field)
 {
-  __s32 type_id = btf__find_by_name(btf, name.c_str());
+  __s32 type_id = btf__find_by_name(btf, btf_type_str(name).c_str());
 
   if (type_id < 0)
     return std::string("");
@@ -278,7 +297,7 @@ std::string BTF::type_of(const std::string& name, const std::string& field)
       f = btf__type_by_id(btf, f->type);
     }
 
-    return btf_str(btf, f->name_off);
+    return full_type_str(btf, f);
   }
 
   return std::string("");

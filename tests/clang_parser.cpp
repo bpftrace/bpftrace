@@ -593,9 +593,9 @@ TEST_F(clang_parser_btf, btf)
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 3U);
-  ASSERT_EQ(structs.count("Foo1"), 1U);
-  ASSERT_EQ(structs.count("Foo2"), 1U);
-  ASSERT_EQ(structs.count("Foo3"), 1U);
+  ASSERT_EQ(structs.count("struct Foo1"), 1U);
+  ASSERT_EQ(structs.count("struct Foo2"), 1U);
+  ASSERT_EQ(structs.count("struct Foo3"), 1U);
 
   EXPECT_EQ(structs["struct Foo1"].size, 16);
   ASSERT_EQ(structs["struct Foo1"].fields.size(), 3U);
@@ -636,13 +636,13 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.type, Type::cast);
   EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.size, 8U);
   EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.cast_type, "Foo1");
+  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.cast_type, "struct Foo1");
   EXPECT_EQ(structs["struct Foo3"].fields["foo1"].offset, 0);
 
   EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.type, Type::cast);
   EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.size, 8U);
   EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.cast_type, "Foo2");
+  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.cast_type, "struct Foo2");
   EXPECT_EQ(structs["struct Foo3"].fields["foo2"].offset, 8);
 }
 
@@ -656,9 +656,9 @@ TEST_F(clang_parser_btf, btf_field_struct)
 
   /* task_struct->Foo3->Foo2->int */
   EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
-  EXPECT_NE(bpftrace.btf_set_.find("task_struct"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("Foo3"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("Foo2"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("struct task_struct"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
   EXPECT_NE(bpftrace.btf_set_.find("int"), bpftrace.btf_set_.end());
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
