@@ -28,7 +28,7 @@ void FieldAnalyser::visit(Identifier &identifier __attribute__((unused)))
 void FieldAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "curtask") {
-    type_ = "task_struct";
+    type_ = "struct task_struct";
     bpftrace_.btf_set_.insert(type_);
   }
 }
