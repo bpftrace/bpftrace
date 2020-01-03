@@ -25,12 +25,12 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 
   ON_CALL(bpftrace,
           get_symbols_from_file("/sys/kernel/debug/tracing/available_events"))
-      .WillByDefault([](const std::string &)
-      {
+      .WillByDefault([](const std::string &) {
         std::string tracepoints = "sched:sched_one\n"
                                   "sched:sched_two\n"
                                   "sched:foo\n"
-                                  "notsched:bar\n";
+                                  "notsched:bar\n"
+                                  "file:filename\n";
         return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
       });
 
@@ -74,6 +74,20 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
         .is_bitfield = false,
         .bitfield = {},
       }}},
+  };
+
+  auto ptr_type = SizedType(Type::integer, 8, false);
+  ptr_type.is_pointer = true;
+  ptr_type.pointee_size = 1;
+  bpftrace.structs_["struct _tracepoint_file_filename"] = Struct{
+    .size = 8,
+    .fields = { { "filename",
+                  Field{
+                      .type = ptr_type,
+                      .offset = 8,
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
   };
 }
 
