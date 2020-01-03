@@ -45,6 +45,8 @@ endif()
 
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
 
+include_directories(SYSTEM ${KERNEL_INCLUDE_DIRS})
+
 find_package(LibBcc REQUIRED)
 include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
@@ -80,10 +82,12 @@ set(CMAKE_REQUIRED_LINK_OPTIONS)
 
 include(CheckTypeSize)
 set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
+set(CMAKE_REQUIRED_INCLUDES ${KERNEL_INCLUDE_DIRS})
 # This will set HAVE_GET_CURRENT_CGROUP_ID to TRUE or FALSE
 check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE C)
 check_type_size("BPF_FUNC_send_signal" SEND_SIGNAL LANGUAGE C)
 set(CMAKE_EXTRA_INCLUDE_FILES)
+set(CMAKE_REQUIRED_INCLUDES)
 
 # Some users have multiple versions of llvm installed and would like to specify
 # a specific llvm version.
