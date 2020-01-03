@@ -77,6 +77,8 @@ endif(STATIC_LINKING)
 
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
 
+include_directories(SYSTEM ${KERNEL_INCLUDE_DIRS})
+
 find_package(LibBcc REQUIRED)
 include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 
