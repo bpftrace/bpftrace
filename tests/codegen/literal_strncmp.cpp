@@ -9,7 +9,7 @@ TEST(codegen, literal_strncmp)
   test("kretprobe:vfs_read /strncmp(comm, \"sshd\", 2)/ { @[comm] = count(); }",
 
 #if LLVM_VERSION_MAJOR > 6
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -81,7 +81,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #else
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
