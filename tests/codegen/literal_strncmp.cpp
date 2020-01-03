@@ -4,7 +4,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-TEST(codegen, strncmp_test)
+TEST(codegen, literal_strncmp)
 {
   test("kretprobe:vfs_read /strncmp(comm, \"sshd\", 2)/ { @[comm] = count(); }",
 
