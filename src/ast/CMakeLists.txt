@@ -15,6 +15,10 @@ if(HAVE_SEND_SIGNAL)
   target_compile_definitions(ast PRIVATE HAVE_SEND_SIGNAL)
 endif(HAVE_SEND_SIGNAL)
 
+if(HAVE_GET_FD_PATH)
+  target_compile_definitions(ast PRIVATE HAVE_GET_FD_PATH)
+endif(HAVE_GET_FD_PATH)
+
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})

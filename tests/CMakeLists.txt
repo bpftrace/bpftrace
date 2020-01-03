@@ -94,6 +94,16 @@ set_property(
 endif()
 target_compile_definitions(bpftrace_test PRIVATE HAVE_SEND_SIGNAL)
 
+if (NOT HAVE_GET_FD_PATH)
+set_property(
+  SOURCE ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
+  APPEND
+  PROPERTY COMPILE_DEFINITIONS
+  BPF_FUNC_get_fd_path=116
+)
+endif()
+
+target_compile_definitions(bpftrace_test PRIVATE HAVE_GET_FD_PATH)
 
 target_link_libraries(bpftrace_test arch ast parser resources)
 
