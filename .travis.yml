@@ -23,7 +23,7 @@ matrix:
     # String comparisons and args multiple tracepoints tests are the exception
     # - they are just broken in debug builds.
     - name: "Static LLVM 5 Debug"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison:codegen.strncmp_test:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison:codegen.literal_strncmp:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
     - name: "Static LLVM 5 Release"
       env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
 
