@@ -15,7 +15,7 @@ class Visitor;
 
 class Node {
 public:
-  virtual ~Node() { }
+  virtual ~Node() = default;
   virtual void accept(Visitor &v) = 0;
   location loc;
   Node() : loc(location()){};
@@ -35,6 +35,8 @@ public:
   bool is_map = false;
   Expression() : Node(){};
   Expression(location loc) : Node(loc){};
+  // NB: do not free any of non-owned pointers we store
+  virtual ~Expression() = default;
 };
 using ExpressionList = std::vector<Expression *>;
 
@@ -102,6 +104,15 @@ public:
   explicit Call(std::string &func, location loc) : Expression(loc), func(is_deprecated(func)), vargs(nullptr) { }
   Call(std::string &func, ExpressionList *vargs) : func(is_deprecated(func)), vargs(vargs) { }
   Call(std::string &func, ExpressionList *vargs, location loc) : Expression(loc), func(is_deprecated(func)), vargs(vargs) { }
+  ~Call()
+  {
+    if (vargs)
+      for (Expression *expr : *vargs)
+        delete expr;
+
+    delete vargs;
+    vargs = nullptr;
+  }
   std::string func;
   ExpressionList *vargs;
 
@@ -119,6 +130,15 @@ public:
     {
       expr->key_for_map = this;
     }
+  }
+  ~Map()
+  {
+    if (vargs)
+      for (Expression *expr : *vargs)
+        delete expr;
+
+    delete vargs;
+    vargs = nullptr;
   }
   std::string ident;
   ExpressionList *vargs;
@@ -140,6 +160,13 @@ class Binop : public Expression {
 public:
   Binop(Expression *left, int op, Expression *right, location loc)
       : Expression(loc), left(left), right(right), op(op) {}
+  ~Binop()
+  {
+    delete left;
+    delete right;
+    left = nullptr;
+    right = nullptr;
+  }
   Expression *left, *right;
   int op;
 
@@ -152,6 +179,11 @@ public:
    : Expression(loc), expr(expr), op(op), is_post_op(false) { }
   Unop(int op, Expression *expr, bool is_post_op = false, location loc = location())
     : Expression(loc), expr(expr), op(op), is_post_op(is_post_op) { }
+  ~Unop()
+  {
+    delete expr;
+    expr = nullptr;
+  }
   Expression *expr;
   int op;
   bool is_post_op;
@@ -163,6 +195,11 @@ class FieldAccess : public Expression {
 public:
   FieldAccess(Expression *expr, const std::string &field) : expr(expr), field(field) { }
   FieldAccess(Expression *expr, const std::string &field, location loc) : Expression(loc), expr(expr), field(field) { }
+  ~FieldAccess()
+  {
+    delete expr;
+    expr = nullptr;
+  }
   Expression *expr;
   std::string field;
 
@@ -173,6 +210,13 @@ class ArrayAccess : public Expression {
 public:
   ArrayAccess(Expression *expr, Expression* indexpr) : expr(expr), indexpr(indexpr) { }
   ArrayAccess(Expression *expr, Expression* indexpr, location loc) : Expression(loc), expr(expr), indexpr(indexpr) { }
+  ~ArrayAccess()
+  {
+    delete expr;
+    delete indexpr;
+    expr = nullptr;
+    indexpr = nullptr;
+  }
   Expression *expr;
   Expression *indexpr;
 
@@ -203,6 +247,11 @@ class ExprStatement : public Statement {
 public:
   explicit ExprStatement(Expression *expr) : expr(expr) { }
   explicit ExprStatement(Expression *expr, location loc) : Statement(loc), expr(expr) { }
+  ~ExprStatement()
+  {
+    delete expr;
+    expr = nullptr;
+  }
   Expression *expr;
 
   void accept(Visitor &v) override;
@@ -213,6 +262,13 @@ public:
  AssignMapStatement(Map *map, Expression *expr, location loc = location()) : Statement(loc), map(map), expr(expr) {
     expr->map = map;
   };
+  ~AssignMapStatement()
+  {
+    delete map;
+    delete expr;
+    map = nullptr;
+    expr = nullptr;
+  }
   Map *map;
   Expression *expr;
 
@@ -226,6 +282,13 @@ public:
   }
   AssignVarStatement(Variable *var, Expression *expr, location loc)
     : Statement(loc), var(var), expr(expr) { expr->var = var; }
+  ~AssignVarStatement()
+  {
+    delete var;
+    delete expr;
+    var = nullptr;
+    expr = nullptr;
+  }
   Variable *var;
   Expression *expr;
 
@@ -237,6 +300,23 @@ public:
   If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts) { }
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
     : cond(cond), stmts(stmts), else_stmts(else_stmts) { }
+  ~If()
+  {
+    delete cond;
+    cond = nullptr;
+
+    if (stmts)
+      for (Statement *s : *stmts)
+        delete s;
+    delete stmts;
+    stmts = nullptr;
+
+    if (else_stmts)
+      for (Statement *s : *else_stmts)
+        delete s;
+    delete else_stmts;
+    else_stmts = nullptr;
+  }
   Expression *cond;
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
@@ -247,7 +327,14 @@ public:
 class Unroll : public Statement {
 public:
   Unroll(long int var, StatementList *stmts) : var(var), stmts(stmts) {}
-
+  ~Unroll()
+  {
+    if (stmts)
+      for (Statement *s : *stmts)
+        delete s;
+    delete stmts;
+    stmts = nullptr;
+  }
   long int var = 0;
   StatementList *stmts;
 
@@ -258,6 +345,11 @@ class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr) : expr(expr) { }
   explicit Predicate(Expression *expr, location loc) : Node(loc), expr(expr) { }
+  ~Predicate()
+  {
+    delete expr;
+    expr = nullptr;
+  }
   Expression *expr;
 
   void accept(Visitor &v) override;
@@ -269,6 +361,15 @@ public:
     : cond(cond), left(left), right(right) { }
   Ternary(Expression *cond, Expression *left, Expression *right, location loc)
     : Expression(loc), cond(cond), left(left), right(right) { }
+  ~Ternary()
+  {
+    delete cond;
+    delete left;
+    delete right;
+    cond = nullptr;
+    left = nullptr;
+    right = nullptr;
+  }
   Expression *cond, *left, *right;
 
   void accept(Visitor &v) override;
@@ -347,6 +448,23 @@ class Probe : public Node {
 public:
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts)
     : attach_points(attach_points), pred(pred), stmts(stmts) { }
+  ~Probe()
+  {
+    if (attach_points)
+      for (AttachPoint *ap : *attach_points)
+        delete ap;
+    delete attach_points;
+    attach_points = nullptr;
+
+    delete pred;
+    pred = nullptr;
+
+    if (stmts)
+      for (Statement *s : *stmts)
+        delete s;
+    delete stmts;
+    stmts = nullptr;
+  }
 
   AttachPointList *attach_points;
   Predicate *pred;
@@ -368,6 +486,14 @@ class Program : public Node {
 public:
   Program(const std::string &c_definitions, ProbeList *probes)
     : c_definitions(c_definitions), probes(probes) { }
+  ~Program()
+  {
+    if (probes)
+      for (Probe *p : *probes)
+        delete p;
+    delete probes;
+    probes = nullptr;
+  }
   std::string c_definitions;
   ProbeList *probes;
 
