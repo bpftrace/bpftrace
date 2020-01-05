@@ -108,22 +108,31 @@ target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
 
 find_package(Threads REQUIRED)
 
+# Ninja build system needs the byproducts set explicilty so it can
+# check for missing dependencies.
+# https://cmake.org/pipermail/cmake/2015-April/060234.html
+set(gtest_byproducts
+  <BINARY_DIR>/googlemock/gtest/libgtest.a
+  <BINARY_DIR>/googlemock/gtest/libgtest_main.a
+  <BINARY_DIR>/googlemock/libgmock.a
+)
+include(ExternalProject)
 if (OFFLINE_BUILDS)
-  include(ExternalProject)
   ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     UPDATE_DISCONNECTED 1
+    BUILD_BYPRODUCTS ${gtest_byproducts}
     )
 else()
-  include(ExternalProject)
   ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
+    BUILD_BYPRODUCTS ${gtest_byproducts}
     )
 endif()
 add_dependencies(bpftrace_test gtest-git-build)
