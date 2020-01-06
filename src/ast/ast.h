@@ -238,8 +238,9 @@ public:
 
 class Statement : public Node {
 public:
-  Statement() {}
+  Statement() = default;
   Statement(location loc) : Node(loc) {}
+  virtual ~Statement() = default;
 };
 using StatementList = std::vector<Statement *>;
 
@@ -259,38 +260,61 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
- AssignMapStatement(Map *map, Expression *expr, location loc = location()) : Statement(loc), map(map), expr(expr) {
+  AssignMapStatement(Map *map,
+                     Expression *expr,
+                     bool compound = false,
+                     location loc = location())
+      : Statement(loc), map(map), expr(expr), compound(compound)
+  {
     expr->map = map;
   };
   ~AssignMapStatement()
   {
-    delete map;
+    // In a compound assignment, the expression owns the map so
+    // we shouldn't free
+    if (!compound)
+      delete map;
     delete expr;
     map = nullptr;
     expr = nullptr;
   }
   Map *map;
   Expression *expr;
+  bool compound;
 
   void accept(Visitor &v) override;
 };
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var, Expression *expr) : var(var), expr(expr) {
+  AssignVarStatement(Variable *var, Expression *expr, bool compound = false)
+      : var(var), expr(expr), compound(compound)
+  {
+    expr->var = var;
+  }
+  AssignVarStatement(Variable *var,
+                     Expression *expr,
+                     bool compound,
+                     location loc)
+      : Statement(loc), var(var), expr(expr), compound(compound)
+  {
     expr->var = var;
   }
   AssignVarStatement(Variable *var, Expression *expr, location loc)
     : Statement(loc), var(var), expr(expr) { expr->var = var; }
   ~AssignVarStatement()
   {
-    delete var;
+    // In a compound assignment, the expression owns the map so
+    // we shouldn't free
+    if (!compound)
+      delete var;
     delete expr;
     var = nullptr;
     expr = nullptr;
   }
   Variable *var;
   Expression *expr;
+  bool compound;
 
   void accept(Visitor &v) override;
 };
