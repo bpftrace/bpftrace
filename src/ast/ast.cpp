@@ -185,22 +185,23 @@ ExprStatement::ExprStatement(Expression *expr, location loc)
 {
 }
 
-
-AssignMapStatement::AssignMapStatement(Map *map, Expression *expr, location loc)
-    : Statement(loc), map(map), expr(expr)
+AssignMapStatement::AssignMapStatement(Map *map,
+                                       Expression *expr,
+                                       bool compound,
+                                       location loc)
+    : Statement(loc), map(map), expr(expr), compound(compound)
 {
   expr->map = map;
 };
 
-
 AssignVarStatement::AssignVarStatement(Variable *var,
                                        Expression *expr,
+                                       bool compound,
                                        location loc)
-    : Statement(loc), var(var), expr(expr)
+    : Statement(loc), var(var), expr(expr), compound(compound)
 {
   expr->var = var;
 }
-
 
 Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
 {
