@@ -21,7 +21,8 @@ AlwaysBreakTemplateDeclarations: false
 BinPackArguments: false
 BinPackParameters: false
 BraceWrapping:
-  AfterCaseLabel:        true
+  # AfterCaseLabel was added in clang9
+  #AfterCaseLabel:        true
   AfterClass:            true
   AfterControlStatement: true
   AfterEnum:             true
