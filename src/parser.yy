@@ -265,31 +265,31 @@ block_or_if : block        { $$ = $1; }
 stmt : expr                { $$ = new ast::ExprStatement($1, @1); }
      | compound_assignment { $$ = $1; }
      | jump_stmt           { $$ = $1; }
-     | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3, @2); }
-     | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3, @2); }
+     | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3, false, @2); }
+     | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3, false, @2); }
      | tuple_assignment
      ;
 
-compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::LEFT,  $3, @2), @$); }
-                    | var LEFTASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::LEFT,  $3, @2), @$); }
-                    | map RIGHTASSIGN expr { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::RIGHT, $3, @2), @$); }
-                    | var RIGHTASSIGN expr { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::RIGHT, $3, @2), @$); }
-                    | map PLUSASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  $3, @2), @$); }
-                    | var PLUSASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  $3, @2), @$); }
-                    | map MINUSASSIGN expr { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, $3, @2), @$); }
-                    | var MINUSASSIGN expr { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, $3, @2), @$); }
-                    | map MULASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MUL,   $3, @2), @$); }
-                    | var MULASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MUL,   $3, @2), @$); }
-                    | map DIVASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::DIV,   $3, @2), @$); }
-                    | var DIVASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::DIV,   $3, @2), @$); }
-                    | map MODASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MOD,   $3, @2), @$); }
-                    | var MODASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MOD,   $3, @2), @$); }
-                    | map BANDASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BAND,  $3, @2), @$); }
-                    | var BANDASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BAND,  $3, @2), @$); }
-                    | map BORASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BOR,   $3, @2), @$); }
-                    | var BORASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BOR,   $3, @2), @$); }
-                    | map BXORASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BXOR,  $3, @2), @$); }
-                    | var BXORASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BXOR,  $3, @2), @$); }
+compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::LEFT,  $3, @2), true, @$); }
+                    | var LEFTASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::LEFT,  $3, @2), true, @$); }
+                    | map RIGHTASSIGN expr { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::RIGHT, $3, @2), true, @$); }
+                    | var RIGHTASSIGN expr { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::RIGHT, $3, @2), true, @$); }
+                    | map PLUSASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::PLUS,  $3, @2), true, @$); }
+                    | var PLUSASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::PLUS,  $3, @2), true, @$); }
+                    | map MINUSASSIGN expr { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MINUS, $3, @2), true, @$); }
+                    | var MINUSASSIGN expr { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MINUS, $3, @2), true, @$); }
+                    | map MULASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MUL,   $3, @2), true, @$); }
+                    | var MULASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MUL,   $3, @2), true, @$); }
+                    | map DIVASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::DIV,   $3, @2), true, @$); }
+                    | var DIVASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::DIV,   $3, @2), true, @$); }
+                    | map MODASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::MOD,   $3, @2), true, @$); }
+                    | var MODASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::MOD,   $3, @2), true, @$); }
+                    | map BANDASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BAND,  $3, @2), true, @$); }
+                    | var BANDASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BAND,  $3, @2), true, @$); }
+                    | map BORASSIGN expr   { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BOR,   $3, @2), true, @$); }
+                    | var BORASSIGN expr   { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BOR,   $3, @2), true, @$); }
+                    | map BXORASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BXOR,  $3, @2), true, @$); }
+                    | var BXORASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BXOR,  $3, @2), true, @$); }
                     ;
 
 tuple_assignment : expr DOT INT "=" expr { error(@1 + @5, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead."); YYERROR; }
