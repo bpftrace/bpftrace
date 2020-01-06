@@ -1506,6 +1506,12 @@ TEST(semantic_analyser, struct_member_keywords)
   }
 }
 
+TEST(semantic_analyser, while_loop)
+{
+  test("i:s:1 { $a = 1; while ($a < 10) { $a++ }}", 0);
+  test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}", 0);
+}
+
 TEST(semantic_analyser, builtin_args)
 {
   auto bpftrace = get_mock_bpftrace();

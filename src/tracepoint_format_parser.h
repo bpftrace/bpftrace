@@ -19,6 +19,7 @@ public:
   void visit(__attribute__((unused)) String &string) override { };  // Leaf
   void visit(__attribute__((unused)) StackMode &mode) override { };  // Leaf
   void visit(__attribute__((unused)) Identifier &identifier) override { };  // Leaf
+  void visit(__attribute__((unused)) Jump &jump) override{}; // Leaf
   void visit(Builtin &builtin) override {  // Leaf
     if (builtin.ident == "args")
       probe_->need_tp_args_structs = true;
@@ -87,6 +88,15 @@ public:
       stmt->accept(*this);
     }
   };
+  void visit(While &while_block) override
+  {
+    while_block.cond->accept(*this);
+
+    for (Statement *stmt : *while_block.stmts)
+    {
+      stmt->accept(*this);
+    }
+  }
   void visit(Predicate &pred) override {
     pred.expr->accept(*this);
   };

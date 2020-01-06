@@ -26,6 +26,10 @@ void FieldAnalyser::visit(Identifier &identifier)
   bpftrace_.btf_set_.insert(identifier.ident);
 }
 
+void FieldAnalyser::visit(Jump &jump __attribute__((unused)))
+{
+}
+
 void FieldAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -107,6 +111,16 @@ void FieldAnalyser::visit(Ternary &ternary)
   ternary.cond->accept(*this);
   ternary.left->accept(*this);
   ternary.right->accept(*this);
+}
+
+void FieldAnalyser::visit(While &while_block)
+{
+  while_block.cond->accept(*this);
+
+  for (Statement *stmt : *while_block.stmts)
+  {
+    stmt->accept(*this);
+  }
 }
 
 void FieldAnalyser::visit(If &if_block)

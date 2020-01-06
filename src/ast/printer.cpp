@@ -261,6 +261,30 @@ void Printer::visit(Unroll &unroll)
   --depth_;
 }
 
+void Printer::visit(While &while_block)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "while(" << std::endl;
+
+  ++depth_;
+  while_block.cond->accept(*this);
+
+  ++depth_;
+  out_ << indent << " )" << std::endl;
+
+  for (Statement *stmt : *while_block.stmts)
+  {
+    stmt->accept(*this);
+  }
+}
+
+void Printer::visit(Jump &jump)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << opstr(jump) << std::endl;
+}
+
 void Printer::visit(Predicate &pred)
 {
   std::string indent(depth_, ' ');

@@ -353,6 +353,16 @@ Probe::Probe(AttachPointList *attach_points,
 {
 }
 
+void While::accept(Visitor &v)
+{
+  v.visit(*this);
+}
+
+void Jump::accept(Visitor &v)
+{
+  v.visit(*this);
+}
+
 void Probe::accept(Visitor &v) {
   v.visit(*this);
 }
@@ -364,6 +374,21 @@ Program::Program(const std::string &c_definitions, ProbeList *probes)
 
 void Program::accept(Visitor &v) {
   v.visit(*this);
+}
+
+std::string opstr(Jump &jump)
+{
+  switch (jump.ident)
+  {
+    case bpftrace::Parser::token::RETURN:
+      return "return";
+    case bpftrace::Parser::token::BREAK:
+      return "break";
+    case bpftrace::Parser::token::CONTINUE:
+      return "continue";
+    default:
+      throw std::runtime_error("Unknown jump");
+  }
 }
 
 std::string opstr(Binop &binop)
