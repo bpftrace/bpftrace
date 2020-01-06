@@ -35,6 +35,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [9. `++ and --`: increment operators](#9--and----increment-operators)
     - [10. `[]`: Array access](#10--array-access)
     - [11. Integer casts](#11-integer-casts)
+    - [12. Looping constructs](#12-looping-constructs)
+    - [13. `return`: Terminate Early](#13-return-terminate-early)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -747,6 +749,25 @@ Attaching 1 probe...
 0 65536
 ^C
 ```
+
+## 12. Looping Constructs
+
+**Experimental**
+
+Kernel: 5.3
+
+bpftrace supports C style while loops:
+
+```
+# bpftrace -e 'i:ms:100 { $i = 0; while ($i <= 100) { printf("%d ", $i); $i++} exit(); }'
+```
+
+Loops can be short circuited by using the `continue` and `break` keywords.
+
+## 13. `return`: Terminate Early
+
+The `return` keyword is used to exit the current probe. This differs from
+`exit()` in that it doesn't exit bpftrace.
 
 # Probes
 
@@ -2526,7 +2547,7 @@ they don't corrupt the terminal display. The resulting string can be provided as
 printf() using the `%r` format specifier:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_sendto 
+# bpftrace -e 'tracepoint:syscalls:sys_enter_sendto
     { printf("Datagram bytes: %r\n", buf(args->buff, args->len)); }' -c 'ping 8.8.8.8 -c1'
 Attaching 1 probe...
 PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.

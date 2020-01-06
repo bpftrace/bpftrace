@@ -92,6 +92,12 @@ private:
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);
 
+  bool in_loop(void)
+  {
+    return loop_depth_ > 0;
+  };
+  void accept_statements(StatementList *stmts);
+
   Probe *probe_;
   std::string func_;
   std::map<std::string, SizedType> variable_val_;
@@ -100,6 +106,7 @@ private:
   std::map<std::string, ExpressionList> map_args_;
   std::map<std::string, SizedType> ap_args_;
   std::unordered_set<StackType> needs_stackid_maps_;
+  uint32_t loop_depth_ = 0;
   bool needs_join_map_ = false;
   bool needs_elapsed_map_ = false;
   bool has_begin_probe_ = false;

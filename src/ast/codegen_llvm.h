@@ -98,6 +98,8 @@ private:
   {
     return layout_.getTypeAllocSize(s);
   }
+
+  std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
 };
 
 } // namespace ast

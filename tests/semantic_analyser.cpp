@@ -1506,10 +1506,42 @@ TEST(semantic_analyser, struct_member_keywords)
   }
 }
 
+TEST(semantic_analyser, jumps)
+{
+  test("i:s:1 { return; }", 0);
+  // must be used in loops
+  test("i:s:1 { break; }", 1);
+  test("i:s:1 { continue; }", 1);
+}
+
 TEST(semantic_analyser, while_loop)
 {
   test("i:s:1 { $a = 1; while ($a < 10) { $a++ }}", 0);
   test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}", 0);
+  test("i:s:1 { $a = 1; while ($a < 10) { $a++ }}", 0);
+  test("i:s:1 { $a = 1; while (1) { if($a > 50) { break } $a++ }}", 0);
+  test("i:s:1 { $a = 1; while (1) { if($a > 50) { return } $a++ }}", 0);
+  test(R"PROG(
+i:s:1 {
+  $a = 1;
+  while ($a < 10) {
+    $a++; $j=0;
+    while ($j < 10) {
+      $j++;
+    }
+  }
+})PROG",
+       0);
+
+  test_for_warning("i:s:1 { $a = 1; while ($a < 10) { break; $a++ }}",
+                   "code after a 'break'");
+  test_for_warning("i:s:1 { $a = 1; while ($a < 10) { continue; $a++ }}",
+                   "code after a 'continue'");
+  test_for_warning("i:s:1 { $a = 1; while ($a < 10) { return; $a++ }}",
+                   "code after a 'return'");
+
+  test_for_warning("i:s:1 { $a = 1; while ($a < 10) { @=$a++; print(@); }}",
+                   "'print()' in a loop");
 }
 
 TEST(semantic_analyser, builtin_args)

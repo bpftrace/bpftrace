@@ -818,6 +818,13 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "print") {
     check_assignment(call, false, false, false);
+    if (in_loop() && is_final_pass())
+    {
+      warning("Due to it's asynchronous nature using 'print()' in a loop can "
+              "lead to unexpected behavior. The map will likely be updated "
+              "before the runtime can 'print' it.",
+              call.loc);
+    }
     if (check_varargs(call, 1, 3)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -1393,44 +1400,54 @@ void SemanticAnalyser::visit(If &if_block)
       ERR("Invalid condition in if(): " << cond, if_block.loc);
   }
 
-  for (Statement *stmt : *if_block.stmts) {
-    stmt->accept(*this);
-  }
+  accept_statements(if_block.stmts);
 
-  if (if_block.else_stmts) {
-    for (Statement *stmt : *if_block.else_stmts) {
-      stmt->accept(*this);
-    }
-  }
+  if (if_block.else_stmts)
+    accept_statements(if_block.else_stmts);
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
   if (unroll.var > 20)
-  {
     error("unroll maximum value is 20", location(0));
-  }
   else if (unroll.var < 1)
-  {
     error("unroll minimum value is 1", location(0));
-  }
 
-  for (int i=0; i < unroll.var; i++) {
-    for (Statement *stmt : *unroll.stmts)
-    {
-      stmt->accept(*this);
-    }
-  }
+  for (int i = 0; i < unroll.var; i++)
+    accept_statements(unroll.stmts);
 }
 
 void SemanticAnalyser::visit(Jump &jump)
 {
-  error(opstr(jump) + " has not yet been implemented", jump.loc);
+  switch (jump.ident)
+  {
+    case bpftrace::Parser::token::RETURN:
+      // return can be used outside of loops
+      break;
+    case bpftrace::Parser::token::BREAK:
+    case bpftrace::Parser::token::CONTINUE:
+      if (!in_loop())
+        error(opstr(jump) + " used outside of a loop", jump.loc);
+      break;
+    default:
+      error("Unknown jump: '" + opstr(jump) + "'", jump.loc);
+  }
 }
 
 void SemanticAnalyser::visit(While &while_block)
 {
-  error("While has not yet been implemented", while_block.loc);
+  if (is_final_pass() && !feature_.has_loop())
+  {
+    warning("Kernel does not support bounded loops. Depending"
+            " on LLVMs loop unroll to generate loadable code.",
+            while_block.loc);
+  }
+
+  while_block.cond->accept(*this);
+
+  loop_depth_++;
+  accept_statements(while_block.stmts);
+  loop_depth_--;
 }
 
 void SemanticAnalyser::visit(FieldAccess &acc)
@@ -2380,6 +2397,25 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
       // Store all integer values as 64-bit in maps, so that there will
       // be space for any integer to be assigned to the map later
       map_val_[map_ident].size = 8;
+    }
+  }
+}
+
+void SemanticAnalyser::accept_statements(StatementList *stmts)
+{
+  for (size_t i = 0; i < stmts->size(); i++)
+  {
+    auto stmt = stmts->at(i);
+    stmt->accept(*this);
+
+    if (is_final_pass())
+    {
+      auto *jump = dynamic_cast<Jump *>(stmt);
+      if (jump && i < (stmts->size() - 1))
+      {
+        warning("All code after a '" + opstr(*jump) + "' is unreachable.",
+                jump->loc);
+      }
     }
   }
 }

@@ -1543,6 +1543,24 @@ TEST(Parser, empty_arguments)
   test_parse_failure(":w:0x10000000:8:rw { 1 }");
 }
 
+TEST(Parser, while_loop)
+{
+  test("i:ms:100 { $a = 0; while($a < 10) { $a++ }}",
+       R"PROG(Program
+ interval:ms:100
+  =
+   variable: $a
+   int: 0
+  while(
+   <
+    variable: $a
+    int: 10
+   )
+    variable: $a
+     ++
+)PROG");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace
