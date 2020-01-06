@@ -117,3 +117,9 @@ NAME info flag
 RUN bpftrace --info
 EXPECT perf_event_array: yes
 TIMEOUT 1
+
+NAME basic while loop
+RUN bpftrace -e 'BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) } exit(); }'
+EXPECT @: 50
+TIMEOUT 5
+REQUIRES bpftrace --info 2>&1 | grep "Loop support: yes"

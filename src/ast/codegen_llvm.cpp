@@ -1516,41 +1516,56 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 void CodegenLLVM::visit(If &if_block)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
-  BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
+  BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
+                                           "if_body",
+                                           parent);
+  BasicBlock *if_end = BasicBlock::Create(module_->getContext(),
+                                          "if_end",
+                                          parent);
+  BasicBlock *if_else = nullptr;
 
   if_block.cond->accept(*this);
-  Value *cond = expr_;
+  Value *zero_value = Constant::getNullValue(expr_->getType());
+  Value *cond = b_.CreateICmpNE(expr_, zero_value, "true_cond");
 
-  Value *zero_value = Constant::getNullValue(cond->getType());
-  b_.CreateCondBr(b_.CreateICmpNE(cond, zero_value, "true_cond"),
-                  if_true,
-                  if_false);
-
-  b_.SetInsertPoint(if_true);
-  for (Statement *stmt : *if_block.stmts)
-  {
-    stmt->accept(*this);
-  }
-
+  // 3 possible flows:
+  //
+  // if condition is true
+  //   parent -> if_body -> if_end
+  //
+  // if condition is false, no else
+  //   parent -> if_end
+  //
+  // if condition is false, with else
+  //   parent -> if_else -> if_end
+  //
   if (if_block.else_stmts)
   {
-    BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(if_false);
-    for (Statement *stmt : *if_block.else_stmts)
-    {
-      stmt->accept(*this);
-    }
-    b_.CreateBr(done);
-
-    b_.SetInsertPoint(done);
+    // LLVM doesn't accept empty basic block, only create when needed
+    if_else = BasicBlock::Create(module_->getContext(), "else_body", parent);
+    b_.CreateCondBr(cond, if_true, if_else);
   }
   else
   {
-      b_.CreateBr(if_false);
-      b_.SetInsertPoint(if_false);
+    b_.CreateCondBr(cond, if_true, if_end);
+  }
+
+  b_.SetInsertPoint(if_true);
+  for (Statement *stmt : *if_block.stmts)
+    stmt->accept(*this);
+
+  b_.CreateBr(if_end);
+
+  b_.SetInsertPoint(if_end);
+
+  if (if_block.else_stmts)
+  {
+    b_.SetInsertPoint(if_else);
+    for (Statement *stmt : *if_block.else_stmts)
+      stmt->accept(*this);
+
+    b_.CreateBr(if_end);
+    b_.SetInsertPoint(if_end);
   }
 }
 
@@ -1566,12 +1581,79 @@ void CodegenLLVM::visit(Unroll &unroll)
 
 void CodegenLLVM::visit(Jump &jump)
 {
-  return;
+  switch (jump.ident)
+  {
+    case bpftrace::Parser::token::RETURN:
+      // return can be used outside of loops
+      b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+      break;
+    case bpftrace::Parser::token::BREAK:
+      b_.CreateBr(std::get<1>(loops_.back()));
+      break;
+    case bpftrace::Parser::token::CONTINUE:
+      b_.CreateBr(std::get<0>(loops_.back()));
+      break;
+    default:
+      throw std::runtime_error("Unknown jump: " + opstr(jump));
+  }
+
+  // LLVM doesn't like having instructions after an unconditional branch (segv)
+  // This can be avoided by putting all instructions in a unreachable basicblock
+  // which will be optimize out.
+  //
+  // e.g. in the case of `while (..) { $i++; break; $i++ }` the ir will be:
+  //
+  // while_body:
+  //   ...
+  //   br label %while_end
+  //
+  // while_end:
+  //   ...
+  //
+  // unreach:
+  //   $i++
+  //   br label %while_cond
+  //
+
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *unreach = BasicBlock::Create(module_->getContext(),
+                                           "unreach",
+                                           parent);
+  b_.SetInsertPoint(unreach);
 }
 
 void CodegenLLVM::visit(While &while_block)
 {
-  return;
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
+                                              "while_cond",
+                                              parent);
+  BasicBlock *while_body = BasicBlock::Create(module_->getContext(),
+                                              "while_body",
+                                              parent);
+  BasicBlock *while_end = BasicBlock::Create(module_->getContext(),
+                                             "while_end",
+                                             parent);
+
+  loops_.push_back(std::make_tuple(while_cond, while_end));
+
+  b_.CreateBr(while_cond);
+
+  b_.SetInsertPoint(while_cond);
+  while_block.cond->accept(*this);
+  Value *zero_value = Constant::getNullValue(expr_->getType());
+  auto *cond = b_.CreateICmpNE(expr_, zero_value, "true_cond");
+  b_.CreateCondBr(cond, while_body, while_end);
+
+  b_.SetInsertPoint(while_body);
+  for (Statement *stmt : *while_block.stmts)
+  {
+    stmt->accept(*this);
+  }
+  b_.CreateBr(while_cond);
+
+  b_.SetInsertPoint(while_end);
+  loops_.pop_back();
 }
 
 void CodegenLLVM::visit(Predicate &pred)
