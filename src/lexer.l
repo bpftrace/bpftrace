@@ -114,6 +114,11 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 "else"                  { return Parser::make_ELSE(loc); }
 "?"                     { return Parser::make_QUES(loc); }
 "unroll"                { return Parser::make_UNROLL(loc); }
+"while"                 { return Parser::make_WHILE(loc); }
+"for"                   { return Parser::make_FOR(loc); }
+"return"                { return Parser::make_RETURN(loc); }
+"continue"              { return Parser::make_CONTINUE(loc); }
+"break"                 { return Parser::make_BREAK(loc); }
 
 \"                      { yy_push_state(STR, yyscanner); buffer.clear(); }
 <STR>{
