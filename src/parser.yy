@@ -120,7 +120,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
 %type <ast::StatementList *> block stmts block_or_if
-%type <ast::Statement *> if_stmt block_stmt stmt semicolon_ended_stmt compound_assignment
+%type <ast::Statement *> if_stmt block_stmt stmt semicolon_ended_stmt compound_assignment jump_stmt loop_stmt
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
@@ -198,7 +198,7 @@ pred : DIV expr ENDPRED { $$ = new ast::Predicate($2, @$); }
      ;
 
 ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5, @$); }
-     ;
+        ;
 
 param : PARAM      {
                      try {
@@ -225,7 +225,17 @@ stmts : semicolon_ended_stmt stmts { $$ = $2; $2->insert($2->begin(), $1); }
       ;
 
 block_stmt : if_stmt                  { $$ = $1; }
-           | UNROLL "(" INT ")" block { $$ = new ast::Unroll($3, $5); }
+           | jump_stmt                { $$ = $1; }
+           | loop_stmt                { $$ = $1; }
+           ;
+
+jump_stmt  : BREAK    { $$ = new ast::Jump(token::BREAK, @$); }
+           | CONTINUE { $$ = new ast::Jump(token::CONTINUE, @$); }
+           | RETURN   { $$ = new ast::Jump(token::RETURN, @$); }
+           ;
+
+loop_stmt  : UNROLL "(" INT ")" block             { $$ = new ast::Unroll($3, $5); }
+           | WHILE  "(" expr ")" block            { $$ = new ast::While($3, $5, @1); }
            ;
 
 if_stmt : IF "(" expr ")" block                  { $$ = new ast::If($3, $5); }
@@ -238,6 +248,7 @@ block_or_if : block        { $$ = $1; }
 
 stmt : expr                { $$ = new ast::ExprStatement($1); }
      | compound_assignment { $$ = $1; }
+     | jump_stmt           { $$ = $1; }
      | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3, @2); }
      | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3, @2); }
      ;
@@ -308,7 +319,6 @@ expr : int                                      { $$ = $1; }
      | "(" IDENT MUL ")" expr %prec CAST        { $$ = new ast::Cast($2, true, $5, @1 + @4); }
      | pre_post_op                              { $$ = $1; }
      ;
-
 
 pre_post_op : map_or_var INCREMENT   { $$ = new ast::Unop(token::INCREMENT, $1, true, @2); }
             | map_or_var DECREMENT   { $$ = new ast::Unop(token::DECREMENT, $1, true, @2); }

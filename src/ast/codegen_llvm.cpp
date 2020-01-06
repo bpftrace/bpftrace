@@ -1564,6 +1564,16 @@ void CodegenLLVM::visit(Unroll &unroll)
   }
 }
 
+void CodegenLLVM::visit(Jump &jump)
+{
+  return;
+}
+
+void CodegenLLVM::visit(While &while_block)
+{
+  return;
+}
+
 void CodegenLLVM::visit(Predicate &pred)
 {
   Function *parent = b_.GetInsertBlock()->getParent();

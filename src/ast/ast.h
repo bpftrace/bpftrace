@@ -242,6 +242,19 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Jump : public Statement
+{
+public:
+  Jump(int ident, location loc = location()) : loc(loc), ident(ident)
+  {
+  }
+
+  location loc;
+  int ident;
+
+  void accept(Visitor &v) override;
+};
+
 class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr);
@@ -256,6 +269,20 @@ public:
   Ternary(Expression *cond, Expression *left, Expression *right);
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
   Expression *cond, *left, *right;
+
+  void accept(Visitor &v) override;
+};
+
+class While : public Statement
+{
+public:
+  While(Expression *cond, StatementList *stmts, location loc)
+      : cond(cond), stmts(stmts), loc(loc)
+  {
+  }
+  Expression *cond;
+  StatementList *stmts = nullptr;
+  location loc;
 
   void accept(Visitor &v) override;
 };
@@ -340,7 +367,9 @@ public:
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
   virtual void visit(If &if_block) = 0;
+  virtual void visit(Jump &jump) = 0;
   virtual void visit(Unroll &unroll) = 0;
+  virtual void visit(While &while_block) = 0;
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
@@ -349,6 +378,7 @@ public:
 
 std::string opstr(Binop &binop);
 std::string opstr(Unop &unop);
+std::string opstr(Jump &jump);
 
 } // namespace ast
 } // namespace bpftrace

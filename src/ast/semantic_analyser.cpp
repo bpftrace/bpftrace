@@ -1423,6 +1423,16 @@ void SemanticAnalyser::visit(Unroll &unroll)
   }
 }
 
+void SemanticAnalyser::visit(Jump &jump)
+{
+  error(opstr(jump) + " has not yet been implemented", jump.loc);
+}
+
+void SemanticAnalyser::visit(While &while_block)
+{
+  error("While has not yet been implemented", while_block.loc);
+}
+
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
