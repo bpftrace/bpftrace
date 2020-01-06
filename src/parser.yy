@@ -92,6 +92,11 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   UNROLL     "unroll"
   STRUCT     "struct"
   UNION      "union"
+  WHILE      "while"
+  FOR        "for"
+  RETURN     "return"
+  CONTINUE   "continue"
+  BREAK      "break"
 ;
 
 %token <std::string> BUILTIN "builtin"
