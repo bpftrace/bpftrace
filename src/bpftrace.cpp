@@ -358,8 +358,9 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
 
   // Ignore the remaining events if perf_event_printer is called during finalization
   // stage (exit() builtin has been called)
-  if (bpftrace->finalize_)
+  if (bpftrace->finalize_) {
     return;
+  }
 
   if (bpftrace->exitsig_recv)
   {
