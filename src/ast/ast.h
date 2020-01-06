@@ -313,11 +313,17 @@ public:
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr, location loc = location());
+  AssignMapStatement(Map *map,
+                     Expression *expr,
+                     bool compound = false,
+                     location loc = location());
   AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
   ~AssignMapStatement()
   {
-    delete map;
+    // In a compound assignment, the expression owns the map so
+    // we shouldn't free
+    if (!compound)
+      delete map;
     delete expr;
     map = nullptr;
     expr = nullptr;
@@ -325,18 +331,24 @@ public:
 
   Map *map = nullptr;
   Expression *expr = nullptr;
+  bool compound;
 
   DEFINE_ACCEPT
 };
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var, Expression *expr);
-  AssignVarStatement(Variable *var, Expression *expr, location loc);
+  AssignVarStatement(Variable *var,
+                     Expression *expr,
+                     bool compound = false,
+                     location loc = location());
   AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
   ~AssignVarStatement()
   {
-    delete var;
+    // In a compound assignment, the expression owns the map so
+    // we shouldn't free
+    if (!compound)
+      delete var;
     delete expr;
     var = nullptr;
     expr = nullptr;
@@ -344,6 +356,7 @@ public:
 
   Variable *var = nullptr;
   Expression *expr = nullptr;
+  bool compound;
 
   DEFINE_ACCEPT
 };
