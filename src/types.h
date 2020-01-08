@@ -486,6 +486,7 @@ enum class AsyncAction
   print_non_map,
   strftime,
   watchpoint_attach,
+  watchpoint_detach,
   // clang-format on
 };
 

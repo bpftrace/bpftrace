@@ -722,10 +722,24 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     // Attach the real watchpoint probe
     {
+      bool registers_available = true;
       Probe &wp_probe = bpftrace->watchpoint_probes_[probe_idx];
       wp_probe.address = addr;
-      auto aps = bpftrace->attach_probe(wp_probe, *bpftrace->bpforc_);
-      if (aps.empty())
+      std::vector<std::unique_ptr<AttachedProbe>> aps;
+      try
+      {
+        aps = bpftrace->attach_probe(wp_probe, *bpftrace->bpforc_);
+      }
+      catch (const EnospcException &ex)
+      {
+        registers_available = false;
+        bpftrace->out_->message(MessageType::lost_events,
+                                "Failed to attach watchpoint probe. You are "
+                                "out of watchpoint registers.");
+        goto out;
+      }
+
+      if (aps.empty() && registers_available)
       {
         std::cerr << "Unable to attach real watchpoint probe" << std::endl;
         abort = true;
@@ -749,6 +763,25 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     if (abort)
       std::abort();
+
+    return;
+  }
+  else if (printf_id == asyncactionint(AsyncAction::watchpoint_detach))
+  {
+    auto unwatch = static_cast<AsyncEvent::WatchpointUnwatch *>(data);
+    uint64_t addr = unwatch->addr;
+
+    // Remove all probes watching `addr`. Note how we fail silently here
+    // (ie invalid addr). This lets script writers be a bit more aggressive
+    // when unwatch'ing addresses, especially if they're sampling a portion
+    // of addresses they're interested in watching.
+    bpftrace->attached_probes_.erase(
+        std::remove_if(bpftrace->attached_probes_.begin(),
+                       bpftrace->attached_probes_.end(),
+                       [&](const auto &ap) {
+                         return ap->probe().address == addr;
+                       }),
+        bpftrace->attached_probes_.end());
 
     return;
   }
@@ -1105,7 +1138,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
       return ret;
     }
   }
-  catch (std::runtime_error &e)
+  catch (const EnospcException &e)
+  {
+    // Caller will handle
+    throw e;
+  }
+  catch (const std::runtime_error &e)
   {
     LOG(ERROR) << e.what();
     ret.clear();
