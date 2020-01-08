@@ -1781,6 +1781,21 @@ TEST(semantic_analyser, override)
   test("p:hz:1 { override(-1); }", 1, false);
 }
 
+TEST(semantic_analyser, unwatch)
+{
+  test("i:s:1 { unwatch(12345) }", 0);
+  test("i:s:1 { unwatch(0x1234) }", 0);
+  test("i:s:1 { $x = 1; unwatch($x); }", 0);
+  test("i:s:1 { @x = 1; @x++; unwatch(@x); }", 0);
+  test("k:f { unwatch(arg0); }", 0);
+  test("k:f { unwatch((int64)arg0); }", 0);
+  test("k:f { unwatch(*(int64*)arg0); }", 0);
+
+  test("i:s:1 { unwatch(\"asdf\") }", 10);
+  test("i:s:1 { @x[\"hi\"] = \"world\"; unwatch(@x[\"hi\"]) }", 10);
+  test("i:s:1 { printf(\"%d\", unwatch(2)) }", 10);
+}
+
 TEST(semantic_analyser, struct_member_keywords)
 {
   std::string keywords[] = {

@@ -1,3 +1,7 @@
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -7,9 +11,15 @@
 #include <linux/limits.h>
 #include <linux/perf_event.h>
 #include <regex>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <sys/utsname.h>
 #include <tuple>
 #include <unistd.h>
+
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_syms.h>
+#include <bcc/bcc_usdt.h>
 
 #include "attached_probe.h"
 #include "bpftrace.h"
@@ -17,10 +27,6 @@
 #include "list.h"
 #include "log.h"
 #include "usdt.h"
-#include <bcc/bcc_elf.h>
-#include <bcc/bcc_syms.h>
-#include <bcc/bcc_usdt.h>
-#include <linux/perf_event.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER
@@ -1127,10 +1133,34 @@ void AttachedProbe::attach_watchpoint(int pid, const std::string& mode)
 
   for (int cpu : cpus)
   {
-    int perf_event_fd = bpf_attach_perf_event_raw(
-        progfd_, &attr, pid, cpu, -1, 0);
+    // We copy paste the code from bcc's bpf_attach_perf_event_raw here
+    // because we need to know the exact error codes (and also we don't
+    // want bcc's noisy error messages).
+    int perf_event_fd = syscall(
+        __NR_perf_event_open, &attr, pid, cpu, -1, PERF_FLAG_FD_CLOEXEC);
     if (perf_event_fd < 0)
-      throw std::runtime_error("Error attaching probe: " + probe_.name);
+    {
+      if (errno == ENOSPC)
+        throw EnospcException("No more HW registers left");
+      else
+        throw std::system_error(errno,
+                                std::generic_category(),
+                                "Error attaching probe: " + probe_.name);
+    }
+    if (ioctl(perf_event_fd, PERF_EVENT_IOC_SET_BPF, progfd_) != 0)
+    {
+      close(perf_event_fd);
+      throw std::system_error(errno,
+                              std::generic_category(),
+                              "Error attaching probe: " + probe_.name);
+    }
+    if (ioctl(perf_event_fd, PERF_EVENT_IOC_ENABLE, 0) != 0)
+    {
+      close(perf_event_fd);
+      throw std::system_error(errno,
+                              std::generic_category(),
+                              "Error attaching probe: " + probe_.name);
+    }
 
     perf_event_fds_.push_back(perf_event_fd);
   }

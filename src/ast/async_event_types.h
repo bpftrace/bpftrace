@@ -140,5 +140,19 @@ struct Watchpoint
   }
 } __attribute__((packed));
 
+struct WatchpointUnwatch
+{
+  uint64_t action_id;
+  uint64_t addr;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b)
+  {
+    return {
+      b.getInt64Ty(), // asyncid
+      b.getInt64Ty(), // addr
+    };
+  }
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace

@@ -2,6 +2,7 @@
 
 #include <csignal>
 #include <cstring>
+#include <exception>
 #include <iostream>
 #include <optional>
 #include <sstream>
@@ -51,6 +52,14 @@ public:
 
 private:
   std::string msg_;
+};
+
+class EnospcException : public std::runtime_error
+{
+public:
+  // C++11 feature: bring base class constructor into scope to automatically
+  // forward constructor calls to base class
+  using std::runtime_error::runtime_error;
 };
 
 class StdioSilencer
