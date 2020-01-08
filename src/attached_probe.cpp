@@ -527,7 +527,12 @@ void AttachedProbe::load_prog()
     if (bt_verbose) {
       std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
       if (errno == ENOSPC) {
-        std::cerr << "Error: No space left on device, try increasing BPFTRACE_LOG_SIZE environment variable" << std::endl;
+        // TODO: Can we extract the current value of bpftrace.log_size_ here to
+        // print it out?
+        std::cerr << "Error: Verification buffer not big enough, try "
+                  << "increasing BPFTRACE_LOG_SIZE environment variable "
+                  << "beyond its current value"
+                  << std::endl;
       }
     }
     throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
