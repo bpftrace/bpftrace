@@ -610,8 +610,8 @@ i: 5
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
-Note that maps will be implictly declared and initalized to 0 if not already
-declared or defined. Scratch variables must be initalized before using these
+Note that maps will be implictly declared and initialized to 0 if not already
+declared or defined. Scratch variables must be initialized before using these
 operators.
 
 Example - variable:
@@ -645,7 +645,7 @@ Attaching 1 probe...
 
 ## 10. `[]`: Array Access
 
-You may access one-dimensional constant arrays with the array acccess operator `[]`.
+You may access one-dimensional constant arrays with the array access operator `[]`.
 
 Example:
 

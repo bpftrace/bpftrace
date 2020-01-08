@@ -299,7 +299,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
-    // elements will always store on the first occurrance. Revent this later when printing.
+    // elements will always store on the first occurrence. Revent this later when printing.
     Function *parent = b_.GetInsertBlock()->getParent();
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
@@ -909,7 +909,7 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::DIV:   expr_ = b_.CreateUDiv   (lhs, rhs); break;
       case bpftrace::Parser::token::MOD: {
         // Always do an unsigned modulo operation here even if `do_signed`
-        // is true. bpf instruction set does not support signed divison.
+        // is true. bpf instruction set does not support signed division.
         // We already warn in the semantic analyser that signed modulo can
         // lead to undefined behavior (because we will treat it as unsigned).
         expr_ = b_.CreateURem(lhs, rhs);

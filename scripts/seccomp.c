@@ -75,7 +75,7 @@ void list(void) {
 }
 
 // Search the bpf_commands table for an entry for with symbol or name matches
-// the agument name
+// the argument name
 //
 // Return the bpf command value or -1 if the lookup failed
 int lookup_cmd(char* name) {
@@ -103,7 +103,7 @@ int add_errno(scmp_filter_ctx* ctx, char* str) {
   char* buf = malloc((keysize + 1) * sizeof(char));
   assert(buf != NULL);
   strncpy(buf, str, keysize);
-  // convert ERRNO to postive int
+  // convert ERRNO to positive int
   int err = atoi(substr + 1);
   if (err < 0) {
     err *= -1;
