@@ -14,7 +14,7 @@
 #include <linux/sched.h>
 
 // Until BTF is available, we'll need to declare some of this struct manually,
-// since it isn't avaible to be #included. This will need maintenance to match
+// since it isn't available to be #included. This will need maintenance to match
 // your kernel version. It is from kernel/sched/sched.h:
 struct cfs_rq_partial {
 	struct load_weight load;
@@ -33,6 +33,6 @@ profile:hz:99
 	$task = (struct task_struct *)curtask;
 	$my_q = (struct cfs_rq_partial *)$task->se.cfs_rq;
 	$len = $my_q->nr_running;
-	$len = $len > 0 ? $len - 1 : 0;	// subtract currently runing task
+	$len = $len > 0 ? $len - 1 : 0;	// subtract currently running task
 	@runqlen = lhist($len, 0, 100, 1);
 }
