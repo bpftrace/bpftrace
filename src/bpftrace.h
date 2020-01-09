@@ -134,6 +134,7 @@ public:
   void request_finalize();
   bool is_aslr_enabled(int pid);
   std::string get_string_literal(const ast::Expression *expr) const;
+  std::optional<std::string> get_watchpoint_binary_path() const;
 
   std::string cmd_;
   bool finalize_ = false;

@@ -46,6 +46,8 @@ private:
   int watchpoint_parser();
   int kfunc_parser();
 
+  std::optional<uint64_t> stoull(const std::string &str);
+
   Program *root_{ nullptr }; // Non-owning pointer
   BPFtrace &bpftrace_;
   std::ostream &sink_;

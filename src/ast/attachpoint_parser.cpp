@@ -520,53 +520,80 @@ int AttachPointParser::hardware_parser()
   return 0;
 }
 
+std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
+{
+  try
+  {
+    std::size_t idx;
+    uint64_t ret = std::stoull(str, &idx, 0);
+
+    if (idx != str.size())
+    {
+      errs_ << "Found trailing non-numeric characters: " << str << std::endl;
+      return std::nullopt;
+    }
+
+    return ret;
+  }
+  catch (const std::exception &ex)
+  {
+    errs_ << "Failed to parse '" << str << "': " << ex.what() << std::endl;
+    return std::nullopt;
+  }
+}
+
 int AttachPointParser::watchpoint_parser()
 {
-  if (parts_.size() != 5)
+  if (parts_.size() != 4)
   {
-    errs_ << ap_->provider << " probe type requires 4 arguments" << std::endl;
+    errs_ << ap_->provider << " probe type requires 3 arguments" << std::endl;
     return 1;
   }
 
-  try
+  if (parts_[1].find('+') == std::string::npos)
   {
-    std::size_t idx;
-    ap_->address = std::stoull(parts_[2], &idx, 0);
-
-    if (idx != parts_[2].size())
+    auto parsed = stoull(parts_[1]);
+    if (parsed)
+      ap_->address = *parsed;
+    else
+      return 1;
+  }
+  else
+  {
+    auto func_arg_parts = split_string(parts_[1], '+', true);
+    if (func_arg_parts.size() != 2)
     {
-      errs_ << "Found trailing non-numeric characters: " << parts_[2]
-            << std::endl;
+      errs_ << "Invalid function/address argument" << std::endl;
       return 1;
     }
-  }
-  catch (const std::exception &ex)
-  {
-    errs_ << "Failed to parse '" << parts_[2] << "': " << ex.what()
-          << std::endl;
-    return 1;
-  }
 
-  try
-  {
-    std::size_t idx;
-    ap_->len = std::stoull(parts_[3], &idx, 0);
+    ap_->func = func_arg_parts[0];
+    if (ap_->func.find('*') != std::string::npos)
+      ap_->need_expansion = true;
 
-    if (idx != parts_[3].size())
+    if (func_arg_parts[1].size() <= 3 || func_arg_parts[1].find("arg") != 0)
     {
-      errs_ << "Found trailing non-numeric characters: " << parts_[3]
-            << std::endl;
+      errs_ << "Invalid function argument" << std::endl;
       return 1;
     }
-  }
-  catch (const std::exception &ex)
-  {
-    errs_ << "Failed to parse '" << parts_[3] << "': " << ex.what()
-          << std::endl;
-    return 1;
+
+    auto parsed = stoull(func_arg_parts[1].substr(3));
+    if (parsed)
+      ap_->address = *parsed;
+    else
+      return 1;
   }
 
-  ap_->mode = parts_[4];
+  auto len_parsed = stoull(parts_[2]);
+  if (len_parsed)
+    ap_->len = *len_parsed;
+  else
+    return 1;
+
+  // Semantic analyser will ensure a cmd/pid was provided
+  ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
+
+  ap_->mode = parts_[3];
 
   return 0;
 }
