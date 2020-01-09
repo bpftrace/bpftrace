@@ -75,13 +75,15 @@ MacroBlockBegin: ''
 MacroBlockEnd: ''
 MaxEmptyLinesToKeep: 1
 NamespaceIndentation: None
-PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
-PenaltyBreakComment: 300
-PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 1000
-PenaltyExcessCharacter: 1000000
-PenaltyReturnTypeOnItsOwnLine: 60
+# Note: These penalties are not only relative to each other, but also to
+# penalties for more cases hardcoded into clang-format
+PenaltyBreakAssignment: 100
+PenaltyBreakBeforeFirstCallParameter: 75
+PenaltyBreakComment: 1
+PenaltyBreakFirstLessLess: 50
+PenaltyBreakString: 500
+PenaltyExcessCharacter: 1000
+PenaltyReturnTypeOnItsOwnLine: 1000000
 PointerAlignment: Right
 ReflowComments: true
 SortIncludes: true
