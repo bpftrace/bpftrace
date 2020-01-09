@@ -8,7 +8,7 @@ TEST(codegen, call_lhist)
 {
   test("kprobe:f { @x = lhist(pid, 0, 100, 1) }",
 
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -28,7 +28,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %linear3, i64* %"@x_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@x_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* nonnull %"@x_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
