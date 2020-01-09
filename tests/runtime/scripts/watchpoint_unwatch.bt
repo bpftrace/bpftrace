@@ -1,0 +1,21 @@
+BEGIN
+{
+  @count = 0;
+}
+
+uprobe:./testprogs/watchpoint_unwatch:increment
+{
+  @addr = (uint64)arg0;
+}
+
+watchpoint:increment+arg0:4:w
+{
+  printf("hello world\n");
+  @count++;
+  unwatch(@addr);
+}
+
+END
+{
+  printf("count=%d\n", @count);
+}

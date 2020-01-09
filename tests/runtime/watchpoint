@@ -1,5 +1,5 @@
 NAME watchpoint - absolute address
-RUN bpftrace -v -e 'watchpoint:0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
+RUN bpftrace -v -e 'watchpoint::0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
 EXPECT hit!
 ARCH aarch64|ppc64|ppc64le|x86_64
 TIMEOUT 5
@@ -10,3 +10,39 @@ EXPECT hit
 ARCH aarch64|ppc64|ppc64le|x86_64
 TIMEOUT 5
 REQUIRES awk '$3 == "jiffies" {got=1} END {exit !got}' /proc/kallsyms
+
+NAME function_arg_addr
+RUN bpftrace -v -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_func
+EXPECT hit!
+TIMEOUT 5
+
+NAME function_arg_addr_process_flag
+RUN bpftrace -v -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -p $(pidof watchpoint_func)
+BEFORE ./testprogs/watchpoint_func
+EXPECT hit!
+TIMEOUT 5
+
+NAME many_function_probes
+RUN bpftrace -e 'watchpoint:increment+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_many_probes
+EXPECT You are out of watchpoint registers
+TIMEOUT 5
+
+NAME unwatch
+RUN bpftrace runtime/scripts/watchpoint_unwatch.bt -c ./testprogs/watchpoint_unwatch
+EXPECT count=1
+TIMEOUT 5
+
+NAME function_multiattach
+RUN bpftrace -v runtime/scripts/watchpoint_multiattach.bt -c ./testprogs/watchpoint_func_wildcard
+EXPECT count=3
+TIMEOUT 5
+
+NAME wildcarded_function
+RUN bpftrace -v -e 'watchpoint:increment_*+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_wildcard
+EXPECT You are out of watchpoint registers
+TIMEOUT 5
+
+NAME unique_probe_bodies
+RUN bpftrace -v -e 'watchpoint:increment_*+arg0:4:w { printf("%s!\n", probe) }' -c ./testprogs/watchpoint_func_wildcard
+EXPECT .*increment_0:4:w!
+TIMEOUT 5
