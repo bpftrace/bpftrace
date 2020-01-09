@@ -34,7 +34,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@foo_key1", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo2, i64* nonnull %"@foo_key1")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo2, i64* nonnull %"@foo_key1")
   %4 = getelementptr inbounds [32 x i8], [32 x i8]* %lookup_elem_val, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
@@ -100,7 +100,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@foo_key1", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo2, i64* nonnull %"@foo_key1")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo2, i64* nonnull %"@foo_key1")
   %4 = getelementptr inbounds [32 x i8], [32 x i8]* %lookup_elem_val, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null

@@ -157,19 +157,23 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 
 CallInst *IRBuilderBPF::createMapLookup(int mapfd, AllocaInst *key)
 {
-  Value *map_ptr = CreateBpfPseudoCall(mapfd);
-  // void *map_lookup_elem(&map, &key)
+  Value *map = CreateBpfPseudoCall(mapfd);
+  // void *map_lookup_elem(struct bpf_map * map, void * key)
   // Return: Map value or NULL
+
+  assert(key->getType()->isPointerTy());
+  assert(map->getType()->isIntegerTy());
   FunctionType *lookup_func_type = FunctionType::get(
       getInt8PtrTy(),
-      {getInt8PtrTy(), getInt8PtrTy()},
+      // bpfPseudoCall returns an int64
+      {getInt64Ty(), key->getType()},
       false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_map_lookup_elem),
       lookup_func_ptr_type);
-  return CreateCall(lookup_func, { map_ptr, key }, "lookup_elem");
+  return CreateCall(lookup_func, { map, key }, "lookup_elem");
 }
 
 CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))

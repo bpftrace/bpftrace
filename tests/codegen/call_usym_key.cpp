@@ -26,7 +26,7 @@ entry:
   store i64 0, [16 x i8]* %usym, align 8
   store i64 %2, i8* %3, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, [16 x i8]* nonnull %usym)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* nonnull %usym)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 

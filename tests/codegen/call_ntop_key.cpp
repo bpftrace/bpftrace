@@ -29,7 +29,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* %3, i8 0, i64 16, i32 8, i1 false)
   store i32 -1, [16 x i8]* %2, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, %inet_t* nonnull %inet)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* nonnull %inet)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -80,7 +80,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %3, i8 0, i64 16, i1 false)
   store i32 -1, [16 x i8]* %2, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, %inet_t* nonnull %inet)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* nonnull %inet)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -131,7 +131,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* nonnull %3, i8 0, i64 16, i32 8, i1 false)
   store i32 -1, [16 x i8]* %2, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, %inet_t* nonnull %inet)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* nonnull %inet)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 

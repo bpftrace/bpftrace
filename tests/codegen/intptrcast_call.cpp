@@ -8,7 +8,7 @@ TEST(codegen, intptrcast_call)
 {
   // Casting should work inside a call
   test("kretprobe:f { @=sum(*(int8*)(reg(\"bp\")-1)) }",
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -23,7 +23,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   store i64 0, i64* %"@_key", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, i64* nonnull %"@_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* nonnull %"@_key")
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 

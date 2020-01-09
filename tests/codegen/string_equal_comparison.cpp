@@ -37,7 +37,7 @@ pred_true:                                        ; preds = %strcmp.loop5
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %3, i8 0, i64 16, i1 false)
   %get_comm10 = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm9, i64 16)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, [16 x i8]* nonnull %comm9)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* nonnull %comm9)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
@@ -120,7 +120,7 @@ pred_true:                                        ; preds = %strcmp.loop5
   call void @llvm.memset.p0i8.i64(i8* nonnull %3, i8 0, i64 16, i32 1, i1 false)
   %get_comm10 = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm9, i64 16)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i8*, i8*)*)(i64 %pseudo, [16 x i8]* nonnull %comm9)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* nonnull %comm9)
   %map_lookup_cond = icmp eq i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
