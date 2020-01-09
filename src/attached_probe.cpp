@@ -528,10 +528,10 @@ void AttachedProbe::load_prog()
       std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
       if (errno == ENOSPC) {
         std::stringstream errmsg;
-          errmsg << "Error: Failed to load program, verification log buffer "
-            << "not big enough, try increasing the BPFTRACE_LOG_SIZE "
-            << "environment variable beyond the current value of "
-            << probe_.log_size << " bytes";
+        errmsg << "Error: Failed to load program, verification log buffer "
+               << "not big enough, try increasing the BPFTRACE_LOG_SIZE "
+               << "environment variable beyond the current value of "
+               << probe_.log_size << " bytes";
 
         throw std::runtime_error(errmsg.str());
       }
