@@ -1115,14 +1115,16 @@ TEST(Parser, hardware_probe)
 
 TEST(Parser, watchpoint_probe)
 {
-  test("watchpoint::1234:8:w { 1 }",
+  test("watchpoint:1234:8:w { 1 }",
        "Program\n"
        " watchpoint:1234:8:w\n"
        "  int: 1\n");
 
-  test_parse_failure("watchpoint::1b:8:w { 1 }");
-  test_parse_failure("watchpoint::1:8a:w { 1 }");
-  test_parse_failure("watchpoint::1b:8a:w { 1 }");
+  test_parse_failure("watchpoint:1b:8:w { 1 }");
+  test_parse_failure("watchpoint:1:8a:w { 1 }");
+  test_parse_failure("watchpoint:1b:8a:w { 1 }");
+  test_parse_failure("watchpoint:+arg0:8:rw { 1 }");
+  test_parse_failure("watchpoint:func1:8:rw { 1 }");
 }
 
 TEST(Parser, multiple_attach_points_kprobe)
@@ -1709,7 +1711,7 @@ TEST(Parser, abs_knl_address)
   char in_cstr[64];
   char out_cstr[64];
 
-  snprintf(in_cstr, sizeof(in_cstr), "watchpoint::0x%lx:4:w { 1; }", ULONG_MAX);
+  snprintf(in_cstr, sizeof(in_cstr), "watchpoint:0x%lx:4:w { 1; }", ULONG_MAX);
   snprintf(out_cstr,
            sizeof(out_cstr),
            "Program\n"
