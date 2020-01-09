@@ -1,11 +1,12 @@
 #pragma once
 
-#include <map>
 #include "types.h"
+#include <map>
 
 namespace bpftrace {
 
-struct Bitfield {
+struct Bitfield
+{
   bool operator==(const Bitfield &other) const;
   bool operator!=(const Bitfield &other) const;
 
@@ -17,7 +18,8 @@ struct Bitfield {
   size_t mask;
 };
 
-struct Field {
+struct Field
+{
   SizedType type;
   int offset;
 

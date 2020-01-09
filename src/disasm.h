@@ -1,11 +1,17 @@
 #pragma once
 
-#include <string>
 #include <memory>
+#include <string>
 
 namespace bpftrace {
 
-enum class AlignState { Ok, Fail, NotAlign, NotSupp };
+enum class AlignState
+{
+  Ok,
+  Fail,
+  NotAlign,
+  NotSupp
+};
 
 class IDisasm
 {

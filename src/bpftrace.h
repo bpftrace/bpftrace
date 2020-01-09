@@ -4,19 +4,19 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <vector>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "ast.h"
 #include "attached_probe.h"
+#include "btf.h"
 #include "imap.h"
+#include "output.h"
 #include "printf.h"
 #include "struct.h"
-#include "utils.h"
 #include "types.h"
-#include "output.h"
-#include "btf.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -27,15 +27,17 @@ enum class DebugLevel;
 extern DebugLevel bt_debug;
 extern bool bt_verbose;
 
-enum class DebugLevel {
+enum class DebugLevel
+{
   kNone,
   kDebug,
   kFullDebug
 };
 
-inline DebugLevel operator++(DebugLevel& level, int)
+inline DebugLevel operator++(DebugLevel &level, int)
 {
-  switch (level) {
+  switch (level)
+  {
     case DebugLevel::kNone:
       level = DebugLevel::kDebug;
       break;
@@ -146,15 +148,16 @@ public:
 
   static void sort_by_key(
       std::vector<SizedType> key_args,
-      std::vector<std::pair<std::vector<uint8_t>,
-      std::vector<uint8_t>>> &values_by_key);
+      std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key);
   std::set<std::string> find_wildcard_matches(
       const ast::AttachPoint &attach_point) const;
   std::set<std::string> find_wildcard_matches(
       const std::string &prefix,
       const std::string &func,
       std::istream &symbol_stream) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_file(const std::string &path) const;
+  virtual std::unique_ptr<std::istream> get_symbols_from_file(
+      const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
       int pid,
       const std::string &target) const;
@@ -178,16 +181,18 @@ private:
   int next_probe_id_ = 0;
 
   pid_t child_pid_ = 0;
-  bool child_running_ = false; // true when `CHILD_GO` has been sent (child execve)
+  bool child_running_ = false; // true when `CHILD_GO` has been sent (child
+                               // execve)
   int child_start_pipe_ = -1;
 
   std::string src_;
   std::string filename_;
   std::vector<std::string> srclines_;
 
-  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
+  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe,
+                                              const BpfOrc &bpforc);
   int setup_perf_events();
-  void poll_perf_events(int epollfd, bool drain=false);
+  void poll_perf_events(int epollfd, bool drain = false);
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
@@ -195,8 +200,12 @@ private:
   int print_map_lhist(IMap &map);
   int print_map_stats(IMap &map);
   int print_hist(const std::vector<uint64_t> &values, uint32_t div) const;
-  int print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
-  template <typename T> static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
+  int print_lhist(const std::vector<uint64_t> &values,
+                  int min,
+                  int max,
+                  int step) const;
+  template <typename T>
+  static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
   static int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);

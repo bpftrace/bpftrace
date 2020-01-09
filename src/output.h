@@ -1,9 +1,9 @@
 #pragma once
 
-#include <iostream>
 #include <iomanip>
-#include <vector>
+#include <iostream>
 #include <map>
+#include <vector>
 
 #include "imap.h"
 
@@ -102,7 +102,10 @@ private:
   std::string json_escape(const std::string &str) const;
 
   void hist(const std::vector<uint64_t> &values, uint32_t div) const;
-  void lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
+  void lhist(const std::vector<uint64_t> &values,
+             int min,
+             int max,
+             int step) const;
 };
 
 } // namespace bpftrace

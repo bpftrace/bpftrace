@@ -69,14 +69,17 @@ struct SizedType
   {
   }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
-    : type(type), size(size_), cast_type(cast_type) { }
+      : type(type), size(size_), cast_type(cast_type)
+  {
+  }
 
-  SizedType(Type type, StackType stack_type_)
-    : SizedType(type, 8) {
+  SizedType(Type type, StackType stack_type_) : SizedType(type, 8)
+  {
     stack_type = stack_type_;
   }
   Type type;
-  Type elem_type = Type::none; // Array element type if accessing elements of an array
+  Type elem_type = Type::none; // Array element type if accessing elements of an
+                               // array
   size_t size;
   StackType stack_type;
   bool is_signed = false;
@@ -187,14 +190,14 @@ enum class PositionalParameterType
 
 } // namespace bpftrace
 
-
 namespace std {
-template<>
+template <>
 struct hash<bpftrace::StackType>
 {
-  size_t operator()(const bpftrace::StackType& obj) const
+  size_t operator()(const bpftrace::StackType &obj) const
   {
-    switch (obj.mode) {
+    switch (obj.mode)
+    {
       case bpftrace::StackMode::bpftrace:
         return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
       case bpftrace::StackMode::perf:
@@ -205,4 +208,4 @@ struct hash<bpftrace::StackType>
     }
   }
 };
-}
+} // namespace std

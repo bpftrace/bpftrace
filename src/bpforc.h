@@ -1,14 +1,14 @@
 #pragma once
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Config/llvm-config.h"
 
 namespace bpftrace {
 
@@ -64,7 +64,8 @@ public:
     CompileLayer.emitAndFinalize(mod);
   }
 
-  ModuleHandle addModule(std::unique_ptr<Module> M) {
+  ModuleHandle addModule(std::unique_ptr<Module> M)
+  {
     // We don't actually care about resolving symbols from other modules
     auto Resolver = createLambdaResolver(
         [](const std::string &) { return JITSymbol(nullptr); },
@@ -129,15 +130,19 @@ public:
                         std::make_shared<MemoryManager>(sections_), Resolver
                       };
                     }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {}
+        CompileLayer(ObjectLayer, SimpleCompiler(*TM))
+  {
+  }
 #endif
 
-  void compileModule(std::unique_ptr<Module> M) {
+  void compileModule(std::unique_ptr<Module> M)
+  {
     auto K = addModule(move(M));
     cantFail(CompileLayer.emitAndFinalize(K));
   }
 
-  VModuleKey addModule(std::unique_ptr<Module> M) {
+  VModuleKey addModule(std::unique_ptr<Module> M)
+  {
     auto K = ES.allocateVModule();
     cantFail(CompileLayer.addModule(K, std::move(M)));
     return K;

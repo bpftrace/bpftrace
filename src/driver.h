@@ -28,6 +28,7 @@ public:
   ast::Program *root_;
 
   BPFtrace &bpftrace_;
+
 private:
   std::unique_ptr<Parser> parser_;
   std::ostream &out_;

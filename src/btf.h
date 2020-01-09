@@ -10,7 +10,8 @@ namespace bpftrace {
 
 class BTF
 {
-  enum state {
+  enum state
+  {
     NODATA,
     OK,
   };
@@ -24,7 +25,7 @@ public:
   std::string type_of(const std::string& name, const std::string& field);
 
 private:
-  struct btf *btf;
+  struct btf* btf;
   enum state state = NODATA;
 };
 
