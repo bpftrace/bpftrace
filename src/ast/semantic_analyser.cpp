@@ -1342,6 +1342,26 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       map_val_[map_ident].is_internal = true;
     }
   }
+  else if (assignment.expr->type.type == Type::string)
+  {
+    auto map_size = map_val_[map_ident].size;
+    auto expr_size = assignment.expr->type.size;
+    if (map_size != expr_size)
+    {
+      std::stringstream buf;
+      buf << "String size mismatch: " << map_size << " != " << expr_size << ".";
+      if (map_size < expr_size)
+      {
+        buf << " The value may be truncated.";
+        bpftrace_.warning(out_, assignment.loc, buf.str());
+      }
+      else
+      {
+        // bpf_map_update_elem() expects map_size-length value
+        error(buf.str(), assignment.loc);
+      }
+    }
+  }
 }
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
@@ -1388,6 +1408,21 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     }
     else {
       variable_val_[var_ident].cast_type = cast_type;
+    }
+  }
+  else if (assignment.expr->type.type == Type::string)
+  {
+    auto var_size = variable_val_[var_ident].size;
+    auto expr_size = assignment.expr->type.size;
+    if (var_size != expr_size)
+    {
+      std::stringstream buf;
+      buf << "String size mismatch: " << var_size << " != " << expr_size << ".";
+      if (var_size < expr_size)
+        buf << " The value may be truncated.";
+      else
+        buf << " The value may contain garbage.";
+      bpftrace_.warning(out_, assignment.loc, buf.str());
     }
   }
 }
