@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <cassert>
+#include <cstring>
 #include <ctime>
 #include <fstream>
 #include <iomanip>
@@ -542,10 +543,12 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         }
         break;
       case Type::string:
-        arg_values.push_back(
-          std::make_unique<PrintableCString>(
-            reinterpret_cast<char *>(arg_data+arg.offset)));
+      {
+        auto p = reinterpret_cast<char *>(arg_data + arg.offset);
+        arg_values.push_back(std::make_unique<PrintableString>(
+            std::string(p, strnlen(p, arg.type.size))));
         break;
+      }
       case Type::ksym:
         arg_values.push_back(
           std::make_unique<PrintableString>(
@@ -1038,7 +1041,10 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::username)
     return resolve_uid(read_data<uint64_t>(value.data()));
   else if (map.type_.type == Type::string)
-    return std::string(reinterpret_cast<const char*>(value.data()));
+  {
+    auto p = reinterpret_cast<const char *>(value.data());
+    return std::string(p, strnlen(p, map.type_.size));
+  }
   else if (map.type_.type == Type::count)
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
