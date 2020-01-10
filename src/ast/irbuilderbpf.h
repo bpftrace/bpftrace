@@ -1,17 +1,19 @@
 #pragma once
 
 #include "ast.h"
-#include "bpftrace.h"
 #include "bcc_usdt.h"
+#include "bpftrace.h"
 #include "types.h"
 
-#include <llvm/IR/IRBuilder.h>
 #include <llvm/Config/llvm-config.h>
+#include <llvm/IR/IRBuilder.h>
 
 #if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
-#define CREATE_MEMCPY(dst, src, size, algn) CreateMemCpy((dst), (src), (size), (algn))
+#define CREATE_MEMCPY(dst, src, size, algn)                                    \
+  CreateMemCpy((dst), (src), (size), (algn))
 #elif LLVM_VERSION_MAJOR >= 7
-#define CREATE_MEMCPY(dst, src, size, algn) CreateMemCpy((dst), (algn), (src), (algn), (size))
+#define CREATE_MEMCPY(dst, src, size, algn)                                    \
+  CreateMemCpy((dst), (algn), (src), (algn), (size))
 #else
 #error Unsupported LLVM version
 #endif
@@ -24,10 +26,9 @@ using namespace llvm;
 class IRBuilderBPF : public IRBuilder<>
 {
 public:
-  IRBuilderBPF(LLVMContext &context,
-               Module &module,
-               BPFtrace &bpftrace);
+  IRBuilderBPF(LLVMContext &context, Module &module, BPFtrace &bpftrace);
 
+  // clang-format off
   AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="");
   AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
   AllocaInst *CreateAllocaBPFInit(const SizedType &stype, const std::string &name);
@@ -70,6 +71,7 @@ private:
 
   Value      *CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin);
   CallInst   *createMapLookup(int mapfd, AllocaInst *key);
+  // clang-format on
 };
 
 } // namespace ast
