@@ -415,6 +415,13 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
       func = attach_point.target + ":" + attach_point.func;
       break;
     }
+    case ProbeType::watchpoint:
+    {
+      symbol_stream = std::make_unique<std::istringstream>(
+          extract_func_symbols_from_path(attach_point.target));
+      func = attach_point.target + ":" + attach_point.func;
+      break;
+    }
     case ProbeType::tracepoint:
     {
       symbol_stream = get_symbols_from_file(
