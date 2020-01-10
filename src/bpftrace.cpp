@@ -1914,8 +1914,12 @@ void BPFtrace::log_with_location(std::string level, std::ostream &out, const loc
   }
   out << std::endl;
 
-  for (unsigned int x = 0; x < srcline.size() && x < (l.end.column - 1); x++) {
-    char marker = (x < (l.begin.column - 1)) ? ' ' : '~';
+  for (unsigned int x = 0;
+       x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
+       x++)
+  {
+    char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
+                                                                        : '~';
     if (srcline[x] == '\t') {
       out << std::string(4, marker);
     } else {
