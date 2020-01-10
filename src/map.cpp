@@ -67,7 +67,7 @@ Map::Map(const SizedType &type) {
   // TODO (mmarchini): replace with DCHECK
   if (!type.IsStack()) {
     std::cerr << "Map::Map(SizedType) constructor should be called only with stack types" << std::endl;
-    abort()
+    abort();
   }
 #endif
   type_ = type;
