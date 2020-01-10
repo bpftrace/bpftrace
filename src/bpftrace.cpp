@@ -1868,12 +1868,12 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
     }
     else if (arg.type == Type::string)
     {
-      std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-      {
-        return strncmp((const char*)(a.first.data() + arg_offset),
-                       (const char*)(b.first.data() + arg_offset),
-                       STRING_SIZE) < 0;
-      });
+      std::stable_sort(
+          values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+            return strncmp((const char *)(a.first.data() + arg_offset),
+                           (const char *)(b.first.data() + arg_offset),
+                           arg.size) < 0;
+          });
     }
 
     // Other types don't get sorted
