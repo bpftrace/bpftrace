@@ -21,6 +21,15 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   {
     os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
   }
+  else if (type.type == Type::array)
+  {
+    os << (type.is_signed ? "" : "unsigned ") << "int" << 8 * type.pointee_size;
+    os << "[" << type.size << "]";
+  }
+  else if (type.type == Type::string)
+  {
+    os << type.type << "[" << type.size << "]";
+  }
   else
   {
     os << type.type;
