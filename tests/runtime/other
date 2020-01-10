@@ -73,6 +73,11 @@ RUN bpftrace -v -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=st
 EXPECT @: 0
 TIMEOUT 5
 
+NAME short non null-terminated string print
+RUN bpftrace -v -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a = ((struct F*)arg0)->s; printf("%s %s\n", $a, $a); }' -c ./testprogs/string_args
+EXPECT hello hello
+TIMEOUT 5
+
 NAME optional_positional_int
 RUN bpftrace -e 'BEGIN { printf("-%d-\n", $1); exit() }'
 EXPECT -0-

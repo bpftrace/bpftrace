@@ -1,5 +1,7 @@
-#include "mapkey.h"
+#include <cstring>
+
 #include "bpftrace.h"
+#include "mapkey.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -94,7 +96,10 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::probe:
       return bpftrace.probe_ids_[read_data<uint64_t>(data)];
     case Type::string:
-      return std::string((const char*)data);
+    {
+      auto p = static_cast<const char *>(data);
+      return std::string(p, strnlen(p, arg.size));
+    }
     case Type::cast:
       if (arg.is_pointer) {
         // use case: show me these pointer values
