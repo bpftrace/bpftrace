@@ -27,7 +27,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 lookup_success:                                   ; preds = %entry
-  %2 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %2 = load i64, i64* %cast, align 8
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %entry, %lookup_success
@@ -40,8 +41,8 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   %5 = ashr exact i64 %sext, 32
   %6 = add i64 %5, %lookup_elem_val.0
   store i64 %6, i64* %"@_val", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
+  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   ret i64 0

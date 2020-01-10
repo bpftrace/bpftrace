@@ -33,7 +33,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 lookup_success:                                   ; preds = %entry
-  %2 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %2 = load i64, i64* %cast, align 8
   %phitmp = add i64 %2, 1
   br label %lookup_merge
 
@@ -47,7 +48,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo2, [8 x i8]* nonnull %"@x_key1", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [8 x i8]*, i64*, i64)*)(i64 %pseudo2, [8 x i8]* nonnull %"@x_key1", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
@@ -70,7 +71,8 @@ entry:
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 lookup_success:                                   ; preds = %entry
-  %2 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %2 = load i64, i64* %cast, align 8
   %phitmp = add i64 %2, 1
   br label %lookup_merge
 
@@ -84,7 +86,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo2, [8 x i8]* nonnull %"@x_key1", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [8 x i8]*, i64*, i64)*)(i64 %pseudo2, [8 x i8]* nonnull %"@x_key1", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
@@ -98,4 +100,3 @@ attributes #1 = { argmemonly nounwind }
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace
-

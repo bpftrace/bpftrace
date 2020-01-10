@@ -60,7 +60,8 @@ log2.exit:                                        ; preds = %entry, %hist.is_not
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 lookup_success:                                   ; preds = %log2.exit
-  %27 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %27 = load i64, i64* %cast, align 8
   %phitmp = add i64 %27, 1
   br label %lookup_merge
 
@@ -70,7 +71,7 @@ lookup_merge:                                     ; preds = %log2.exit, %lookup_
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %28)
   store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %26)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %28)
   ret i64 0

@@ -66,7 +66,8 @@ strcmp.loop5:                                     ; preds = %strcmp.loop3
   br i1 %strcmp.cmp8, label %pred_false, label %pred_true
 
 lookup_success:                                   ; preds = %pred_true
-  %12 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %12 = load i64, i64* %cast, align 8
   %phitmp = add i64 %12, 1
   br label %lookup_merge
 
@@ -76,7 +77,7 @@ lookup_merge:                                     ; preds = %pred_true, %lookup_
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %13)
   store i64 %lookup_elem_val.0, i64* %"@_val", align 8
   %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo11, [16 x i8]* nonnull %comm9, i64* nonnull %"@_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo11, [16 x i8]* nonnull %comm9, i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %13)
   ret i64 0
@@ -149,7 +150,8 @@ strcmp.loop5:                                     ; preds = %strcmp.loop3
   br i1 %strcmp.cmp8, label %pred_false, label %pred_true
 
 lookup_success:                                   ; preds = %pred_true
-  %12 = load i64, i8* %lookup_elem, align 8
+  %cast = bitcast i8* %lookup_elem to i64*
+  %12 = load i64, i64* %cast, align 8
   %phitmp = add i64 %12, 1
   br label %lookup_merge
 
@@ -159,7 +161,7 @@ lookup_merge:                                     ; preds = %pred_true, %lookup_
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %13)
   store i64 %lookup_elem_val.0, i64* %"@_val", align 8
   %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo11, [16 x i8]* nonnull %comm9, i64* nonnull %"@_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo11, [16 x i8]* nonnull %comm9, i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %13)
   ret i64 0

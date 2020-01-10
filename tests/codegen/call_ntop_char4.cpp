@@ -6,10 +6,11 @@ namespace codegen {
 
 TEST(codegen, call_ntop_char4)
 {
-  test("struct inet { unsigned char addr[4] } kprobe:f { @x = ntop(((struct inet*)0)->addr); }",
+  test("struct inet { unsigned char addr[4] } kprobe:f { @x = ntop(((struct "
+       "inet*)0)->addr); }",
 
 #if LLVM_VERSION_MAJOR < 6
-R"EXPECTED(%inet_t = type { i64, [16 x i8] }
+       R"EXPECTED(%inet_t = type { i64, [16 x i8] }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -32,7 +33,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %inet_t*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
@@ -48,7 +49,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #elif LLVM_VERSION_MAJOR > 6
-R"EXPECTED(%inet_t = type { i64, [16 x i8] }
+       R"EXPECTED(%inet_t = type { i64, [16 x i8] }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -71,7 +72,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %inet_t*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
@@ -87,7 +88,7 @@ attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
 #else
-R"EXPECTED(%inet_t = type { i64, [16 x i8] }
+       R"EXPECTED(%inet_t = type { i64, [16 x i8] }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
@@ -110,7 +111,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %inet_t*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", %inet_t* nonnull %inet, i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
@@ -131,4 +132,3 @@ attributes #1 = { argmemonly nounwind }
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace
-
