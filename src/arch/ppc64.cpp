@@ -94,6 +94,11 @@ int pc_offset()
   return offset("nip");
 }
 
+int sp_offset()
+{
+  return offset("r1");
+}
+
 std::string name()
 {
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
