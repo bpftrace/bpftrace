@@ -8,7 +8,7 @@ TEST(codegen, logical_or)
 {
   test("kprobe:f { @x = pid == 1234 || pid == 1235 }",
 
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -41,7 +41,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %"||_result.0", i64* %"@x_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0

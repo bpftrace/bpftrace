@@ -30,7 +30,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@mystr_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [32 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
@@ -72,7 +72,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@mystr_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [32 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   ret i64 0
@@ -117,7 +117,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@mystr_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [32 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@mystr_key", [32 x i8]* nonnull %"struct Foo.str", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0

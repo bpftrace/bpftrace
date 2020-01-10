@@ -8,7 +8,7 @@ TEST(codegen, intcast_retval)
 {
   // Make sure the result is truncated to 32 bit and sign extended to 64
   test("kretprobe:f { @=(int32)retval }",
-R"EXPECTED(; Function Attrs: nounwind
+       R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 ; Function Attrs: argmemonly nounwind
@@ -29,7 +29,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 %3, i64* %"@_val", align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i8*, i8*, i8*, i64)*)(i64 %pseudo, i64* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   ret i64 0
