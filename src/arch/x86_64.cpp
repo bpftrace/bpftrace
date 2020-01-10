@@ -75,6 +75,11 @@ int pc_offset()
   return offset("ip");
 }
 
+int sp_offset()
+{
+  return offset("sp");
+}
+
 std::string name()
 {
   return std::string("x86_64");

@@ -85,6 +85,11 @@ int pc_offset()
   return offset("pc");
 }
 
+int sp_offset()
+{
+  return offset("sp");
+}
+
 std::string name()
 {
   return std::string("aarch64");

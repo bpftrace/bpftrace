@@ -201,7 +201,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9')
   {
-    int sp_offset = arch::offset("sp");
+    int sp_offset = arch::sp_offset();
     if (sp_offset == -1)
     {
       std::cerr << "negative offset for stack pointer" << std::endl;
