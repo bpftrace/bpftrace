@@ -1,0 +1,70 @@
+name: Embedded Builds
+
+on: push
+jobs:
+  llvm_clang:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        env:
+        - TYPE: Debug
+          NAME: debian_llvm+libclang+glibc2.27
+          LLVM_VERSION: 8
+          STATIC_LINKING: ON
+          STATIC_LIBC: OFF
+          EMBED_LLVM: OFF
+          EMBED_CLANG: ON
+          EMBED_LIBCLANG_ONLY: ON
+          EMBED_BCC: OFF
+          EMBED_LIBELF: OFF
+          EMBED_BINUTILS: OFF
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup
+        - TYPE: Release
+          NAME: debian_llvm+libclang+glibc2.27
+          LLVM_VERSION: 8
+          STATIC_LINKING: ON
+          STATIC_LIBC: OFF
+          EMBED_LLVM: OFF
+          EMBED_CLANG: ON
+          EMBED_LIBCLANG_ONLY: ON
+          EMBED_BCC: OFF
+          EMBED_LIBELF: OFF
+          EMBED_BINUTILS: OFF
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup
+        - TYPE: Release
+          NAME: vanilla_llvm+clang+glibc2.27
+          LLVM_VERSION: 8
+          STATIC_LINKING: ON
+          STATIC_LIBC: OFF
+          EMBED_LLVM: ON
+          EMBED_CLANG: ON
+          EMBED_LIBCLANG_ONLY: OFF
+          EMBED_BCC: OFF
+          EMBED_LIBELF: OFF
+          EMBED_BINUTILS: OFF
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build docker container
+      run: |
+        docker build -t bpftrace-embedded -f docker/Dockerfile.bionic-glibc docker/
+    - name: bpftrace embedded build
+      env: ${{ matrix.env }}
+      run: |
+        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} bpftrace-embedded $(pwd)/build-embedded ${TYPE} -j`nproc`
+    - name: Strip artifacts
+      env: ${{ matrix.env }}
+      if: matrix.env['TYPE'] == 'Release'
+      run: |
+        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} --entrypoint /bin/bash bpftrace-embedded -c "strip --keep-symbol BEGIN_trigger $(pwd)/build-embedded/src/bpftrace"
+    - uses: actions/upload-artifact@v1
+      with:
+        name: bpftrace-${{ matrix.env['TYPE'] }}-${{ matrix.env['NAME'] }}
+        path: build-embedded/src/bpftrace
+    - uses: actions/upload-artifact@v1
+      with:
+        name: bpftrace_test-${{ matrix.env['TYPE'] }}-${{ matrix.env['NAME'] }}
+        path: build-embedded/tests/bpftrace_test

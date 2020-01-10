@@ -47,7 +47,9 @@ endif()
 
 if(EMBED_LIBCLANG_ONLY)
   set(CLANG_LIBRARY_TARGETS clang)
-  set(CLANG_BUILD_COMMAND BUILD_COMMAND "${CMAKE_MAKE_PROGRAM} libclang_static -j${nproc}")
+  set(CLANG_BUILD_COMMAND BUILD_COMMAND /bin/bash -c
+      "${CMAKE_MAKE_PROGRAM} libclang_static -j${nproc}"
+     )
   set(CLANG_INSTALL_COMMAND INSTALL_COMMAND /bin/bash -c "${LIBCLANG_INSTALL_COMMAND}")
 
   # Include system clang here to deal with the rest of the targets
