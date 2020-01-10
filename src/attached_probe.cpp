@@ -471,56 +471,53 @@ void AttachedProbe::load_prog()
   char name[STRING_SIZE], *namep;
   unsigned log_buf_size = sizeof (log_buf);
 
-  // Redirect stderr, so we don't get error messages from BCC
-  int old_stderr = -1, new_stderr;
-  fflush(stderr);
-  if (bt_debug != DebugLevel::kNone)
-    log_level = 15;
-  else
   {
-    old_stderr = dup(STDERR_FILENO);
-    new_stderr = open("/dev/null", O_WRONLY);
-    dup2(new_stderr, STDERR_FILENO);
-    close(new_stderr);
-  }
+    // Redirect stderr, so we don't get error messages from BCC
+    StderrSilencer silencer;
+    if (bt_debug == DebugLevel::kNone)
+      silencer.silence();
 
-   if (bt_verbose)
-    log_level = 1;
+    if (bt_debug != DebugLevel::kNone)
+      log_level = 15;
 
-  // bpf_prog_load rejects colons in the probe name
-  strncpy(name, probe_.name.c_str(), STRING_SIZE - 1);
-  namep = name;
-  if (strrchr(name, ':') != NULL)
-    namep = strrchr(name, ':') + 1;
+    if (bt_verbose)
+      log_level = 1;
 
-  for (int attempt=0; attempt<3; attempt++)
-  {
-    auto version = kernel_version(attempt);
-    if (version == 0 && attempt > 0) {
-      // Recent kernels don't check the version so we should try to call
-      // bcc_prog_load during first iteration even if we failed to determine the
-      // version. We should not do that in subsequent iterations to avoid
-      // zeroing of log_buf on systems with older kernels.
-      continue;
-    }
+    // bpf_prog_load rejects colons in the probe name
+    strncpy(name, probe_.name.c_str(), STRING_SIZE - 1);
+    namep = name;
+    if (strrchr(name, ':') != NULL)
+      namep = strrchr(name, ':') + 1;
+
+    for (int attempt = 0; attempt < 3; attempt++)
+    {
+      auto version = kernel_version(attempt);
+      if (version == 0 && attempt > 0)
+      {
+        // Recent kernels don't check the version so we should try to call
+        // bcc_prog_load during first iteration even if we failed to determine
+        // the version. We should not do that in subsequent iterations to avoid
+        // zeroing of log_buf on systems with older kernels.
+        continue;
+      }
 
 #ifdef HAVE_BCC_PROG_LOAD
-    progfd_ = bcc_prog_load(progtype(probe_.type), namep,
+      progfd_ = bcc_prog_load(progtype(probe_.type),
+                              namep,
 #else
-    progfd_ = bpf_prog_load(progtype(probe_.type), namep,
+      progfd_ = bpf_prog_load(progtype(probe_.type),
+                              namep,
 #endif
-        reinterpret_cast<struct bpf_insn*>(insns), prog_len, license,
-        version, log_level, log_buf, log_buf_size);
-    if (progfd_ >= 0)
-      break;
-  }
-
-  // Restore stderr
-  if (bt_debug == DebugLevel::kNone)
-  {
-    fflush(stderr);
-    dup2(old_stderr, STDERR_FILENO);
-    close(old_stderr);
+                              reinterpret_cast<struct bpf_insn *>(insns),
+                              prog_len,
+                              license,
+                              version,
+                              log_level,
+                              log_buf,
+                              log_buf_size);
+      if (progfd_ >= 0)
+        break;
+    }
   }
 
   if (progfd_ < 0) {

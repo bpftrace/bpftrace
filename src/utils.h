@@ -35,6 +35,17 @@ private:
   std::string msg_;
 };
 
+class StderrSilencer
+{
+public:
+  StderrSilencer() = default;
+  ~StderrSilencer();
+  void silence();
+
+private:
+  int old_stderr_ = -1;
+};
+
 class USDTHelper
 {
 public:
