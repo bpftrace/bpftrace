@@ -358,18 +358,26 @@ AttachPoint::AttachPoint(const std::string &provider,
 }
 
 AttachPoint::AttachPoint(const std::string &provider,
-                         const std::string &target,
+                         const std::string &str,
                          uint64_t val,
                          location loc)
-    : Node(loc),
-      provider(probetypeName(provider)),
-      target(target),
-      need_expansion(true)
+    : Node(loc), provider(probetypeName(provider)), need_expansion(true)
 {
   if (this->provider == "uprobe" || this->provider == "uretprobe")
+  {
+    target = str;
     address = val;
+  }
+  else if (this->provider == "kprobe")
+  {
+    func = str;
+    func_offset = val;
+  }
   else
+  {
+    target = str;
     freq = val;
+  }
 }
 
 AttachPoint::AttachPoint(const std::string &provider,

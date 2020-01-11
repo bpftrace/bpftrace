@@ -64,9 +64,9 @@ if(HAVE_BFD_DISASM)
   endif(STATIC_LINKING)
 endif(HAVE_BFD_DISASM)
 
-if (ALLOW_UNSAFE_UPROBE)
-  target_compile_definitions(bpftrace PRIVATE HAVE_UNSAFE_UPROBE)
-endif(ALLOW_UNSAFE_UPROBE)
+if (ALLOW_UNSAFE_PROBE)
+  target_compile_definitions(bpftrace PRIVATE HAVE_UNSAFE_PROBE)
+endif(ALLOW_UNSAFE_PROBE)
 
 target_link_libraries(bpftrace arch ast parser resources)
 

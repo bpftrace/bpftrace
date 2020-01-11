@@ -65,6 +65,7 @@ void usage()
   std::cerr << "    BPFTRACE_MAX_PROBES       [default: 512] max number of probes" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE         [default: 409600] log size in bytes" << std::endl;
   std::cerr << "    BPFTRACE_NO_USER_SYMBOLS  [default: 0] disable user symbol resolution" << std::endl;
+  std::cerr << "    BPFTRACE_VMLINUX          [default: None] vmlinux path used for kernel symbol resolution" << std::endl;
   std::cerr << "    BPFTRACE_BTF              [default: None] BTF file" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;

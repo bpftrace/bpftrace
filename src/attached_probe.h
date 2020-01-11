@@ -24,9 +24,10 @@ private:
   std::string eventprefix() const;
   std::string eventname() const;
   static std::string sanitise(const std::string &str);
+  void resolve_offset_kprobe(bool safe_mode);
   void resolve_offset_uprobe(bool safe_mode);
   void load_prog();
-  void attach_kprobe();
+  void attach_kprobe(bool safe_mode);
   void attach_uprobe(bool safe_mode);
   void attach_usdt(int pid);
   void attach_tracepoint();

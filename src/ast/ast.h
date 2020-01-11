@@ -278,7 +278,7 @@ public:
               bool need_expansion,
               location loc = location());
   AttachPoint(const std::string &provider,
-              const std::string &target,
+              const std::string &str,
               uint64_t val,
               location loc = location());
   AttachPoint(const std::string &provider,
