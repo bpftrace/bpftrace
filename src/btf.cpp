@@ -267,7 +267,11 @@ std::string BTF::type_of(const std::string& name, const std::string& field)
     return std::string("");
 
   const struct btf_type *type = btf__type_by_id(btf, type_id);
+  return type_of(type, field);
+}
 
+std::string BTF::type_of(const btf_type *type, const std::string &field)
+{
   if (!type ||
       (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
        BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
@@ -283,6 +287,15 @@ std::string BTF::type_of(const std::string& name, const std::string& field)
   for (unsigned int i = 0; i < BTF_INFO_VLEN(type->info); i++)
   {
     std::string m_name = btf__name_by_offset(btf, m[i].name_off);
+
+    // anonymous struct/union
+    if (m_name == "")
+    {
+      const struct btf_type *type = btf__type_by_id(btf, m[i].type);
+      std::string type_name = type_of(type, field);
+      if (!type_name.empty())
+        return type_name;
+    }
 
     if (m_name != field)
       continue;
