@@ -143,6 +143,7 @@ ENVIRONMENT:
     BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling
     BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map
     BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to
+    BPFTRACE_VMLINUX          [default: None] vmlinux path used for kernel symbol resolution
     BPFTRACE_BTF              [default: None] BTF file
 
 EXAMPLES:
@@ -462,7 +463,15 @@ This is the maximum number of probes that bpftrace can attach to. Increasing the
 memory, increase startup times and can incur high performance overhead or even freeze or crash the
 system.
 
-### 9.5 `BPFTRACE_BTF`
+### 9.5 `BPFTRACE_VMLINUX`
+
+Default: None
+
+This specifies the vmlinux path used for kernel symbol resolution when attaching kprobe to offset.
+If this value is not given, bpftrace searches vmlinux from pre defined locations.
+See src/attached_probe.cpp:find_vmlinux() for details.
+
+### 9.6 `BPFTRACE_BTF`
 
 Default: None
 
@@ -719,7 +728,7 @@ multiple attach points for an action block using a comma separated list.
 Syntax:
 
 ```
-kprobe:function_name
+kprobe:function_name[+offset]
 kretprobe:function_name
 ```
 
@@ -738,6 +747,36 @@ sleep by 27662
 sleep by 3669
 ^C
 ```
+
+It's also possible to specify offset within the probed function:
+
+```
+# gdb -q /usr/lib/debug/boot/vmlinux-`uname -r` --ex 'disassemble do_sys_open'
+Reading symbols from /usr/lib/debug/boot/vmlinux-5.0.0-32-generic...done.
+Dump of assembler code for function do_sys_open:
+   0xffffffff812b2ed0 <+0>:     callq  0xffffffff81c01820 <__fentry__>
+   0xffffffff812b2ed5 <+5>:     push   %rbp
+   0xffffffff812b2ed6 <+6>:     mov    %rsp,%rbp
+   0xffffffff812b2ed9 <+9>:     push   %r15
+...
+# bpftrace -e 'kprobe:do_sys_open+9 { printf("in here\n"); }'
+Attaching 1 probe...
+in here
+...
+```
+
+The address is being checked using vmlinux (with debug symbols) if it's aligned with instruction
+boundaries and within the function.  If it's not, we fail to add it:
+```
+# bpftrace -e 'kprobe:do_sys_open+1 { printf("in here\n"); }'
+Attaching 1 probe...
+Could not add kprobe into middle of instruction: /usr/lib/debug/boot/vmlinux-5.0.0-32-generic:do_sys_open+1
+```
+
+If bpftrace is compiled with `ALLOW_UNSAFE_PROBE` option, you can use --unsafe option to skip the check.
+In this case, linux kernel still checks instruction alignment.
+
+The default vmlinux path can be overridden using the environment variable `BPFTRACE_VMLINUX`.
 
 ## 2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments
 
@@ -907,7 +946,7 @@ Attaching 1 probe...
 Could not add uprobe into middle of instruction: /bin/bash:main+1
 ```
 
-Unless you use --unsafe option:
+If bpftrace is compiled with `ALLOW_UNSAFE_PROBE` option, you can use --unsafe option to skip the check:
 
 ```
 # bpftrace -e 'uprobe:/bin/bash:main+1 { printf("in here\n"); } --unsafe'

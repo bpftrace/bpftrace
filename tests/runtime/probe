@@ -19,6 +19,16 @@ EXPECT first second
 TIMEOUT 5
 AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
 
+NAME kprobe_offset
+RUN bpftrace -v -e 'kprobe:vfs_read+0 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+EXPECT SUCCESS kprobe_offset [0-9][0-9]*
+TIMEOUT 5
+
+NAME kprobe_offset_fail_size
+RUN bpftrace -v -e 'kprobe:vfs_read+1000000 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+EXPECT Offset outside the function bounds \('vfs_read' size is*
+TIMEOUT 5
+
 NAME kretprobe
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe [0-9][0-9]*

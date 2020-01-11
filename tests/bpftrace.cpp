@@ -10,12 +10,23 @@ namespace bpftrace {
 using ::testing::ContainerEq;
 using ::testing::StrictMock;
 
-void check_kprobe(Probe &p, const std::string &attach_point, const std::string &orig_name)
+static const std::string kprobe_name(const std::string &attach_point,
+                                     uint64_t func_offset)
+{
+  auto str = func_offset ? "+" + std::to_string(func_offset) : "";
+  return "kprobe:" + attach_point + str;
+}
+
+void check_kprobe(Probe &p,
+                  const std::string &attach_point,
+                  const std::string &orig_name,
+                  uint64_t func_offset = 0)
 {
   EXPECT_EQ(ProbeType::kprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ("kprobe:" + attach_point, p.name);
+  EXPECT_EQ(kprobe_name(attach_point, func_offset), p.name);
+  EXPECT_EQ(func_offset, p.func_offset);
 }
 
 static const std::string uprobe_name(const std::string &path, const std::string &attach_point,
@@ -201,6 +212,23 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
   std::string probe_orig_name = "kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write";
   check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
+}
+
+TEST(bpftrace, add_probes_offset)
+{
+  uint64_t offset = 10;
+  ast::AttachPoint a("kprobe", "sys_read", offset);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:sys_read+" + std::to_string(offset);
+  check_kprobe(
+      bpftrace.get_probes().at(0), "sys_read", probe_orig_name, offset);
 }
 
 TEST(bpftrace, add_probes_uprobe)

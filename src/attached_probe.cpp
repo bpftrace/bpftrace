@@ -4,8 +4,9 @@
 #include <fstream>
 #include <iostream>
 #include <link.h>
-#include <linux/perf_event.h>
 #include <linux/hw_breakpoint.h>
+#include <linux/limits.h>
+#include <linux/perf_event.h>
 #include <regex>
 #include <sys/auxv.h>
 #include <sys/utsname.h>
@@ -89,11 +90,11 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   switch (probe_.type)
   {
     case ProbeType::kprobe:
-      attach_kprobe();
+      attach_kprobe(safe_mode);
       break;
     case ProbeType::kretprobe:
       check_banned_kretprobes(probe_.attach_point);
-      attach_kprobe();
+      attach_kprobe(safe_mode);
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -202,7 +203,9 @@ std::string AttachedProbe::eventname() const
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      return eventprefix() + sanitise(probe_.attach_point) + index_str;
+      offset_str << std::hex << offset_;
+      return eventprefix() + sanitise(probe_.attach_point) + "_" +
+             offset_str.str() + index_str;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
@@ -267,6 +270,63 @@ resolve_offset(const std::string &path, const std::string &symbol, uint64_t loc)
   return bcc_sym.offset;
 }
 
+static void check_alignment(std::string &path,
+                            std::string &symbol,
+                            uint64_t sym_offset,
+                            uint64_t func_offset,
+                            bool safe_mode,
+                            ProbeType type)
+{
+  Disasm dasm(path);
+  AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
+  std::string probe_name = probetypeName(type);
+
+  std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
+
+  if (AlignState::Ok == aligned)
+    return;
+
+    // If we did not allow unaligned uprobes in the
+    // compile time, force the safe mode now.
+#ifndef HAVE_UNSAFE_PROBE
+  safe_mode = true;
+#endif
+
+  switch (aligned)
+  {
+    case AlignState::NotAlign:
+      if (safe_mode)
+        throw std::runtime_error("Could not add " + probe_name +
+                                 " into middle of instruction: " + tmp);
+      else
+        std::cerr << "Unsafe " + probe_name +
+                         " in the middle of the instruction: "
+                  << tmp << std::endl;
+      break;
+
+    case AlignState::Fail:
+      if (safe_mode)
+        throw std::runtime_error("Failed to check if " + probe_name +
+                                 " is in proper place: " + tmp);
+      else
+        std::cerr << "Unchecked " + probe_name + ": " << tmp << std::endl;
+      break;
+
+    case AlignState::NotSupp:
+      if (safe_mode)
+        throw std::runtime_error("Can't check if " + probe_name +
+                                 " is in proper place (compiled without "
+                                 "(k|u)probe offset support): " +
+                                 tmp);
+      else
+        std::cerr << "Unchecked " + probe_name + " : " << tmp << std::endl;
+      break;
+
+    default:
+      throw std::runtime_error("Internal error: " + tmp);
+  }
+}
+
 void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
 {
   struct bcc_symbol_option option = { };
@@ -322,46 +382,102 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
   if (func_offset == 0)
     return;
 
-  Disasm dasm(probe_.path);
-  AlignState aligned = dasm.is_aligned(sym_offset, func_offset);
+  check_alignment(
+      probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+}
 
-  std::string tmp = probe_.path + ":" + symbol + "+" + std::to_string(func_offset);
+static std::string find_vmlinux()
+{
+  char *path = std::getenv("BPFTRACE_VMLINUX");
+  if (path)
+    return path;
 
-  if (AlignState::Ok == aligned)
-    return;
+  struct utsname buf;
+  uname(&buf);
 
-  // If we did not allow unaligned uprobes in the
-  // compile time, force the safe mode now.
-#ifndef HAVE_UNSAFE_UPROBE
+  // based on btf_location in btf.cpp
+  const char *vmlinux_locs[] = {
+    "/boot/vmlinux-%1$s",
+    "/lib/modules/%1$s/vmlinux-%1$s",
+    "/lib/modules/%1$s/build/vmlinux",
+    "/usr/lib/modules/%1$s/kernel/vmlinux",
+    "/usr/lib/debug/boot/vmlinux-%1$s",
+    "/usr/lib/debug/boot/vmlinux-%1$s.debug",
+    "/usr/lib/debug/lib/modules/%1$s/vmlinux",
+    nullptr,
+  };
+
+  for (int i = 0; vmlinux_locs[i]; i++)
+  {
+    char path[PATH_MAX + 1];
+    snprintf(path, PATH_MAX, vmlinux_locs[i], buf.release);
+    if (access(path, R_OK))
+      continue;
+    return path;
+  }
+
+  return "";
+}
+
+void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
+{
+  struct bcc_symbol_option option = {};
+  struct symbol sym = {};
+  std::string &symbol = probe_.attach_point;
+  uint64_t func_offset = probe_.func_offset;
+  offset_ = func_offset;
+
+#ifndef HAVE_UNSAFE_PROBE
   safe_mode = true;
 #endif
 
-  switch (aligned)
+  if (func_offset == 0)
+    return;
+
+  sym.name = symbol;
+  option.use_debug_file = 0;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES;
+
+  std::string path = find_vmlinux();
+  if (path.empty())
   {
-    case AlignState::NotAlign:
-      if (safe_mode)
-        throw std::runtime_error("Could not add uprobe into middle of instruction: " + tmp);
-      else
-        std::cerr << "Unsafe uprobe in the middle of the instruction: " << tmp << std::endl;
-      break;
-
-     case AlignState::Fail:
-       if (safe_mode)
-         throw std::runtime_error("Failed to check if uprobe is in proper place: " + tmp);
-       else
-         std::cerr << "Unchecked uprobe: " << tmp << std::endl;
-       break;
-
-     case AlignState::NotSupp:
-       if (safe_mode)
-         throw std::runtime_error("Can't check if uprobe is in proper place (compiled without uprobe offset support): " + tmp);
-       else
-         std::cerr << "Unchecked uprobe: " << tmp << std::endl;
-       break;
-
-     default:
-       throw std::runtime_error("Internal error: " + tmp);
+    if (safe_mode)
+    {
+      std::stringstream buf;
+      buf << "Could not find vmlinux to check the offset.";
+      buf << " Use BPFTRACE_VMLINUX env variable to specify vmlinux path.";
+#ifdef HAVE_UNSAFE_PROBE
+      buf << " Use --unsafe to skip the userspace check.";
+#else
+      buf << " Compile bpftrace with ALLOW_UNAFE_PROBE option to force skip "
+             "the check.";
+#endif
+      throw std::runtime_error(buf.str());
+    }
+    else
+    {
+      // linux kernel checks alignment, but not the function bounds
+      if (bt_verbose)
+        std::cout << "No vmlinux found. Skip offset checking." << std::endl;
+      return;
+    }
   }
+  if (bt_verbose)
+    std::cout << "vmlinux: using " << path << std::endl;
+  bcc_elf_foreach_sym(path.c_str(), sym_name_cb, &option, &sym);
+
+  if (!sym.start)
+    throw std::runtime_error("Could not resolve symbol: " + path + ":" +
+                             symbol);
+
+  if (func_offset >= sym.size)
+    throw std::runtime_error("Offset outside the function bounds ('" + symbol +
+                             "' size is " + std::to_string(sym.size) + ")");
+
+  uint64_t sym_offset = resolve_offset(path, probe_.attach_point, probe_.loc);
+
+  check_alignment(
+      path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
 /**
@@ -552,10 +668,16 @@ void AttachedProbe::load_prog()
 // although not ideal.
 typedef int (*attach_probe_wrapper_signature)(int, enum bpf_probe_attach_type, const char*, const char*, uint64_t, int);
 
-void AttachedProbe::attach_kprobe()
+void AttachedProbe::attach_kprobe(bool safe_mode)
 {
-  int perf_event_fd = cast_signature<attach_probe_wrapper_signature>(&bpf_attach_kprobe)(progfd_, attachtype(probe_.type),
-      eventname().c_str(), probe_.attach_point.c_str(), 0, 0);
+  resolve_offset_kprobe(safe_mode);
+  int perf_event_fd = cast_signature<attach_probe_wrapper_signature>(
+      &bpf_attach_kprobe)(progfd_,
+                          attachtype(probe_.type),
+                          eventname().c_str(),
+                          probe_.attach_point.c_str(),
+                          offset_,
+                          0);
 
   if (perf_event_fd < 0) {
     if (probe_.orig_name != probe_.name) {

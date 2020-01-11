@@ -33,6 +33,12 @@ TEST(ast, probe_name_kprobe)
   AttachPointList attach_points2 = { &ap1, &ap2 };
   Probe kprobe2(&attach_points2, nullptr, nullptr);
   EXPECT_EQ(kprobe2.name(), "kprobe:sys_read,kprobe:sys_write");
+
+  AttachPoint ap3("kprobe", "sys_read", (uint64_t)10);
+  AttachPointList attach_points3 = { &ap1, &ap2, &ap3 };
+  Probe kprobe3(&attach_points3, nullptr, nullptr);
+  EXPECT_EQ(kprobe3.name(),
+            "kprobe:sys_read,kprobe:sys_write,kprobe:sys_read+10");
 }
 
 TEST(ast, probe_name_uprobe)
