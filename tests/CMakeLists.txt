@@ -180,6 +180,22 @@ foreach(testprog ${testprogs})
 endforeach()
 add_custom_target(testprogs DEPENDS ${compiled_testprogs})
 
+# Similarly compile all test libs
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/)
+file(GLOB testlibs testlibs/*.c)
+set(compiled_testlibs "")
+foreach(testlib_source ${testlibs})
+  get_filename_component(testlib_name ${testlib_source} NAME_WE)
+  add_library(${testlib_name} SHARED ${testlib_source})
+  set_target_properties(${testlib_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/ COMPILE_FLAGS "-g -O0")
+  # clear the executable bit
+  add_custom_command(TARGET ${testlib_name}
+    POST_BUILD
+    COMMAND chmod -x ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
+  list(APPEND compiled_testlibs ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
+endforeach()
+add_custom_target(testlibs DEPENDS ${compiled_testlibs})
+
 configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
 configure_file(main.py main.py COPYONLY)
 configure_file(parser.py parser.py COPYONLY)
@@ -204,7 +220,7 @@ endforeach()
 add_custom_target(
   runtime-tests
   COMMAND ./runtime-tests.sh
-  DEPENDS ${compiled_testprogs} ${CMAKE_BINARY_DIR}/src/bpftrace
+  DEPENDS ${compiled_testprogs} ${compiled_testlibs} ${CMAKE_BINARY_DIR}/src/bpftrace
 )
 add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
 

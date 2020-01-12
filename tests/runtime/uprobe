@@ -46,3 +46,13 @@ RUN bpftrace -e 'uprobe:/tmp/bpftrace-unshare-mountns-test/uprobe_test:function1
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 BEFORE ./testprogs/mountns_wrapper uprobe_test
+
+NAME "uprobes - list probes in non-executable library"
+RUN bpftrace -l 'uprobe:./testlibs/libsimple.so:fun'
+EXPECT uprobe:./testlibs/libsimple.so:fun
+TIMEOUT 5
+
+NAME "uprobes - probe function in non-executable library"
+RUN bpftrace -e 'uprobe:./testlibs/libsimple.so:fun {}'
+EXPECT Attaching 1 probe...
+TIMEOUT 5
