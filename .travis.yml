@@ -33,24 +33,24 @@ matrix:
       env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON STATIC_LIBC=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
 
     - name: "LLVM 6 Debug"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 6 Release"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "LLVM 7 Debug"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 7 Release"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "Static+glibc-2.27 Debian-linked LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "Static+glibc-2.27 Debian-linked LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup
+      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
 install:
   - sudo apt-get install linux-headers-$(uname -r)
