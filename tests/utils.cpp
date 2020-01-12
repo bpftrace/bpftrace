@@ -1,9 +1,11 @@
+#include "utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include "utils.h"
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace bpftrace {
 namespace test {
@@ -75,15 +77,28 @@ TEST(utils, wildcard_match)
   EXPECT_EQ(wildcard_match("foobarbiz", tokens_foo_biz, false, false), true);
 }
 
+static void symlink_test_binary(const std::string& destination)
+{
+  if (symlink("/proc/self/exe", destination.c_str()))
+  {
+    throw std::runtime_error("Couldn't symlink /proc/self/exe to " +
+                             destination + ": " + strerror(errno));
+  }
+}
+
 TEST(utils, resolve_binary_path)
 {
   std::string path = "/tmp/bpftrace-test-utils-XXXXXX";
   if (::mkdtemp(&path[0]) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
+
+  // We need real elf executables, linking test binary allows us to do that
+  // without additional dependencies.
+  symlink_test_binary(path + "/executable");
+  symlink_test_binary(path + "/executable2");
+
   int fd;
-  fd = open((path + "/executable").c_str(), O_CREAT, S_IRWXU); close(fd);
-  fd = open((path + "/executable2").c_str(), O_CREAT, S_IRWXU); close(fd);
   fd = open((path + "/nonexecutable").c_str(), O_CREAT, S_IRUSR); close(fd);
   fd = open((path + "/nonexecutable2").c_str(), O_CREAT, S_IRUSR); close(fd);
 
