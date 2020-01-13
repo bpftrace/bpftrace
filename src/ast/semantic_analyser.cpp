@@ -129,17 +129,18 @@ void SemanticAnalyser::visit(Identifier &identifier)
 
 void SemanticAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "nsecs" ||
-      builtin.ident == "elapsed" ||
-      builtin.ident == "pid" ||
-      builtin.ident == "tid" ||
-      builtin.ident == "cgroup" ||
-      builtin.ident == "uid" ||
-      builtin.ident == "gid" ||
-      builtin.ident == "cpu" ||
-      builtin.ident == "curtask" ||
-      builtin.ident == "rand" ||
-      builtin.ident == "ctx") {
+  if (builtin.ident == "ctx")
+  {
+    builtin.type = SizedType(Type::ctx, sizeof(uintptr_t), false);
+    builtin.type.is_pointer = true;
+    builtin.type.cast_type = "";
+  }
+  else if (builtin.ident == "nsecs" || builtin.ident == "elapsed" ||
+           builtin.ident == "pid" || builtin.ident == "tid" ||
+           builtin.ident == "cgroup" || builtin.ident == "uid" ||
+           builtin.ident == "gid" || builtin.ident == "cpu" ||
+           builtin.ident == "curtask" || builtin.ident == "rand")
+  {
     builtin.type = SizedType(Type::integer, 8, false);
     if (builtin.ident == "cgroup" &&
         !feature_.has_helper_get_current_cgroup_id())
@@ -284,7 +285,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             attach_point->target, match);
         Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-        builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
+        builtin.type = SizedType(Type::ctx, cstruct.size, tracepoint_struct);
         builtin.type.is_pointer = true;
         builtin.type.is_tparg = true;
       }
@@ -942,7 +943,8 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &indextype = arr.indexpr->type;
 
   if (is_final_pass()) {
-    if (type.type != Type::array)
+    if (!((type.type == Type::array || type.type == Type::ctx) &&
+          type.elem_type != Type::none))
       error("The array index operator [] can only be used on arrays.", arr.loc);
 
     if (indextype.type == Type::integer && arr.indexpr->is_literal) {
@@ -1106,9 +1108,10 @@ void SemanticAnalyser::visit(Unop &unop)
   unop.expr->accept(*this);
 
   SizedType &type = unop.expr->type;
-  if (is_final_pass() &&
-      !(type.type == Type::integer) &&
-      !(type.type == Type::cast && unop.op == Parser::token::MUL)) {
+  if (is_final_pass() && !(type.type == Type::integer) &&
+      !((type.type == Type::cast || type.type == Type::ctx) &&
+        unop.op == Parser::token::MUL))
+  {
     ERR("The " << opstr(unop)
                << " operator can not be used on expressions of type '" << type
                << "'",
@@ -1116,7 +1119,8 @@ void SemanticAnalyser::visit(Unop &unop)
   }
 
   if (unop.op == Parser::token::MUL) {
-    if (type.type == Type::cast) {
+    if (type.type == Type::cast || type.type == Type::ctx)
+    {
       if (type.is_pointer) {
         int cast_size;
         auto &intcasts = getIntcasts();
@@ -1130,7 +1134,7 @@ void SemanticAnalyser::visit(Unop &unop)
           unop.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
         } else {
           cast_size = bpftrace_.structs_[type.cast_type].size;
-          unop.type = SizedType(Type::cast, cast_size, type.cast_type);
+          unop.type = SizedType(type.type, cast_size, type.cast_type);
         }
         unop.type.is_tparg = type.is_tparg;
       }
@@ -1216,7 +1220,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   acc.expr->accept(*this);
 
   SizedType &type = acc.expr->type;
-  if (type.type != Type::cast) {
+  if (type.type != Type::cast && type.type != Type::ctx)
+  {
     if (is_final_pass()) {
       ERR("Can not access field '" << acc.field << "' on expression of type '"
                                    << type << "'",
@@ -1269,6 +1274,14 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     }
     else {
       acc.type = fields[acc.field].type;
+      if (acc.expr->type.type == Type::ctx &&
+          ((acc.type.type == Type::cast && !acc.type.is_pointer) ||
+           acc.type.type == Type::array))
+      {
+        // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
+        // in this case, the type of FieldAccess to "regs" is Type::ctx
+        acc.type.type = Type::ctx;
+      }
       acc.type.is_internal = type.is_internal;
     }
   }
@@ -1278,6 +1291,7 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
+  bool is_ctx = cast.expr->type.type == Type::ctx;
   auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
   int cast_size;
@@ -1288,8 +1302,12 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if (cast.is_pointer) {
+    if (k_v != intcasts.end() && is_ctx)
+      error("Integer pointer casts are not supported for type: ctx", cast.loc);
     cast_size = sizeof(uintptr_t);
-    cast.type = SizedType(Type::cast, cast_size, cast.cast_type);
+    cast.type = SizedType(is_ctx ? Type::ctx : Type::cast,
+                          cast_size,
+                          cast.cast_type);
     cast.type.is_pointer = cast.is_pointer;
     return;
   }
@@ -1299,7 +1317,11 @@ void SemanticAnalyser::visit(Cast &cast)
     cast.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
 
     auto rhs = cast.expr->type.type;
-    if (! (rhs == Type::integer || rhs == Type::cast)) {
+    // Casting Type::ctx to Type::integer is supported to access a
+    // tracepoint's __data_loc field. See #990 and #770
+    // In this case, the context information will be lost
+    if (!(rhs == Type::integer || rhs == Type::cast || rhs == Type::ctx))
+    {
       ERR("Casts are not supported for type: \"" << rhs << "\"", cast.loc);
     }
 
@@ -1307,7 +1329,9 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   cast_size = bpftrace_.structs_[cast.cast_type].size;
-  cast.type = SizedType(Type::cast, cast_size, cast.cast_type);
+  cast.type = SizedType(is_ctx ? Type::ctx : Type::cast,
+                        cast_size,
+                        cast.cast_type);
   cast.type.is_pointer = cast.is_pointer;
 }
 
@@ -1324,7 +1348,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assign_map_type(*assignment.map, assignment.expr->type);
 
   const std::string &map_ident = assignment.map->ident;
-  if (assignment.expr->type.type == Type::cast) {
+  if (assignment.expr->type.type == Type::cast)
+  {
     std::string cast_type = assignment.expr->type.cast_type;
     std::string curr_cast_type = map_val_[map_ident].cast_type;
     if (curr_cast_type != "" && curr_cast_type != cast_type) {
@@ -1393,7 +1418,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     assignment.var->type = assignment.expr->type;
   }
 
-  if (assignment.expr->type.type == Type::cast) {
+  if (assignment.expr->type.type == Type::cast ||
+      assignment.expr->type.type == Type::ctx)
+  {
     std::string cast_type = assignment.expr->type.cast_type;
     std::string curr_cast_type = variable_val_[var_ident].cast_type;
     if (curr_cast_type != "" && curr_cast_type != cast_type) {
@@ -1428,8 +1455,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
-  if (is_final_pass() && ((pred.expr->type.type != Type::integer) &&
-     (!(pred.expr->type.is_pointer && pred.expr->type.type == Type::cast)))) {
+  if (is_final_pass() &&
+      ((pred.expr->type.type != Type::integer) &&
+       (!(pred.expr->type.is_pointer && (pred.expr->type.type == Type::cast ||
+                                         pred.expr->type.type == Type::ctx)))))
+  {
     ERR("Invalid type for predicate: " << pred.expr->type.type, pred.loc);
   }
 }

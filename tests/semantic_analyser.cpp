@@ -1429,6 +1429,71 @@ TEST(semantic_analyser, builtin_args)
   test(*bpftrace, "t:sched:sched_one { args->not_a_field }", 1);
 }
 
+TEST(semantic_analyser, type_ctx)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  std::string structs = "struct c {char c} struct x { long a; short b[4]; "
+                        "struct c c; struct c *d;}";
+  test(driver,
+       structs + "kprobe:f { $x = (struct x*)ctx; $a = $x->a; $b = $x->b[0]; "
+                 "$c = $x->c.c; $d = $x->d->c;}",
+       0);
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $x = (struct x*)ctx;
+  auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+  EXPECT_EQ(SizedType(Type::ctx, 8, false), assignment->var->type);
+
+  // $a = $x->a;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
+  EXPECT_EQ(SizedType(Type::integer, 8, true), assignment->var->type);
+  auto fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
+  EXPECT_EQ(SizedType(Type::integer, 8, true), fieldaccess->type);
+  auto unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  auto var = static_cast<ast::Variable *>(unop->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+
+  // $b = $x->b[0];
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(2));
+  EXPECT_EQ(SizedType(Type::integer, 2, true), assignment->var->type);
+  auto arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
+  EXPECT_EQ(SizedType(Type::integer, 2, true), arrayaccess->type);
+  fieldaccess = static_cast<ast::FieldAccess *>(arrayaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 4, true), fieldaccess->type);
+  unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  var = static_cast<ast::Variable *>(unop->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+
+  // $c = $x->c.c;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(3));
+  EXPECT_EQ(SizedType(Type::integer, 1, true), assignment->var->type);
+  fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
+  EXPECT_EQ(SizedType(Type::integer, 1, true), fieldaccess->type);
+  fieldaccess = static_cast<ast::FieldAccess *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 1, false), fieldaccess->type);
+  unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  var = static_cast<ast::Variable *>(unop->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+
+  // $d = $x->d->c;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(4));
+  EXPECT_EQ(SizedType(Type::integer, 1, true), assignment->var->type);
+  fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
+  EXPECT_EQ(SizedType(Type::integer, 1, true), fieldaccess->type);
+  unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::cast, 1, false), unop->type);
+  fieldaccess = static_cast<ast::FieldAccess *>(unop->expr);
+  EXPECT_EQ(SizedType(Type::cast, 8, false), fieldaccess->type);
+  unop = static_cast<ast::Unop *>(fieldaccess->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  var = static_cast<ast::Variable *>(unop->expr);
+  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace
