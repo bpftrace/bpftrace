@@ -879,6 +879,11 @@ void SemanticAnalyser::visit(Map &map)
         map.vargs->at(i) = cast;
         expr = cast;
       }
+      else if (expr->type.type == Type::ctx)
+      {
+        // map functions only accepts a pointer to a element in the stack
+        error("context cannot be used as a map key", map.loc);
+      }
 
       if (is_final_pass()) {
         // Skip is_signed when comparing keys to not break existing scripts
@@ -1348,7 +1353,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assign_map_type(*assignment.map, assignment.expr->type);
 
   const std::string &map_ident = assignment.map->ident;
-  if (assignment.expr->type.type == Type::cast)
+  auto type = assignment.expr->type.type;
+  if (type == Type::cast)
   {
     std::string cast_type = assignment.expr->type.cast_type;
     std::string curr_cast_type = map_val_[map_ident].cast_type;
@@ -1365,7 +1371,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       map_val_[map_ident].is_internal = true;
     }
   }
-  else if (assignment.expr->type.type == Type::string)
+  else if (type == Type::string)
   {
     auto map_size = map_val_[map_ident].size;
     auto expr_size = assignment.expr->type.size;
@@ -1384,6 +1390,11 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
         error(buf.str(), assignment.loc);
       }
     }
+  }
+  else if (type == Type::ctx)
+  {
+    // bpf_map_update_elem() only accepts a pointer to a element in the stack
+    error("context cannot be assigned to a map", assignment.loc);
   }
 }
 
