@@ -17,6 +17,10 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   {
     os << type.cast_type;
   }
+  else if (type.type == Type::ctx)
+  {
+    os << "(ctx) " << type.cast_type;
+  }
   else if (type.type == Type::integer)
   {
     os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
@@ -58,9 +62,9 @@ bool SizedType::operator==(const SizedType &t) const
 
 bool SizedType::IsArray() const
 {
-  return type == Type::array || type == Type::string ||
-         type == Type::usym  || type == Type::inet ||
-         (type == Type::cast && !is_pointer);
+  return type == Type::array || type == Type::string || type == Type::usym ||
+         type == Type::inet ||
+         ((type == Type::cast || type == Type::ctx) && !is_pointer);
 }
 
 bool SizedType::IsStack() const
@@ -72,6 +76,7 @@ std::string typestr(Type t)
 {
   switch (t)
   {
+    // clang-format off
     case Type::none:     return "none";     break;
     case Type::integer:  return "integer";  break;
     case Type::hist:     return "hist";     break;
@@ -94,6 +99,8 @@ std::string typestr(Type t)
     case Type::inet:     return "inet";     break;
     case Type::stack_mode:return "stack mode";break;
     case Type::array:    return "array";    break;
+    case Type::ctx:      return "ctx";      break;
+    // clang-format on
     default:
       std::cerr << "call or probe type not found" << std::endl;
       abort();

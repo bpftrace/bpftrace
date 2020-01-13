@@ -16,6 +16,7 @@ const int COMM_SIZE = 16;
 
 enum class Type
 {
+  // clang-format off
   none,
   integer,
   hist,
@@ -38,6 +39,9 @@ enum class Type
   inet,
   stack_mode,
   array,
+  // BPF program context; needing a different access method to satisfy the verifier
+  ctx,
+  // clang-format on
 };
 
 std::ostream &operator<<(std::ostream &os, Type type);
