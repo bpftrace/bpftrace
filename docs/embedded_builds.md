@@ -86,8 +86,7 @@ libraries shipped with the target system.
 This can save time by avoiding building LLVM altogether, but as distributions
 LLVM libraries may have more dependencies and other bloat than the embedded
 LLVM, this can result in a larger executable. On Ubuntu, the size of the
-bpftrace executable is increased from 52MB to 88MB, due to the extra libraries
-that must be pulled in.
+bpftrace executable is increased from 36MB to 75MB (as of Jan 13 2020).
 
 This is still a desirable time-saver where space doesn't matter, such as when
 doing Debug builds - it can avoid building 15GB of LLVM libraries.
