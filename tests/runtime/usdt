@@ -150,3 +150,19 @@ EXPECT tracetest_testprobe_semaphore: 1
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+
+NAME "usdt probes - list probes by pid in separate mountns"
+RUN bpftrace -l 'usdt:*' -p $(pidof usdt_test)
+EXPECT usdt:.*/tmp/bpftrace-unshare-mountns-test/usdt_test:tracetest:testprobe
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper usdt_test
+
+# TODO(dalehamel): re-enable this test
+# This test relies on the latest version of bcc (expected to be released as 0.13.0)
+# Once we build against this version with USDT fixes, we should re-enable this test.
+NAME "usdt probes - attach to fully specified probe by pid in separate mountns"
+RUN bpftrace -e 'usdt:/tmp/bpftrace-unshare-mountns-test/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
+EXPECT here
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper usdt_test
+REQUIRES bash -c "exit 1"

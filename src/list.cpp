@@ -201,7 +201,7 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
     std::string usdt_path = search.substr(search.find(":")+1, search.size());
     usdt_path_list = usdt_path.find(":") == std::string::npos;
     usdt_path = usdt_path.substr(0, usdt_path.find(":"));
-    auto paths = resolve_binary_path(usdt_path);
+    auto paths = resolve_binary_path(usdt_path, bpftrace.pid_);
     switch (paths.size())
     {
     case 0:
