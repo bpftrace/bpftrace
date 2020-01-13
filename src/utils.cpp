@@ -628,9 +628,20 @@ resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
 std::string path_for_pid_mountns(int pid, const std::string &path)
 {
   std::ostringstream pid_relative_path;
-  std::string root =
-      (path.length() >= 1 && path.at(0) == '/') ? "/root" : "/root/";
-  pid_relative_path << "/proc/" << pid << root << path;
+  char pid_root[64];
+
+  snprintf(pid_root, sizeof(pid_root), "/proc/%d/root", pid);
+
+  if (path.find(pid_root) != 0)
+  {
+    std::string sep = (path.length() >= 1 && path.at(0) == '/') ? "" : "/";
+    pid_relative_path << pid_root << sep << path;
+  }
+  else
+  {
+    // The path is already relative to the pid's root
+    pid_relative_path << path;
+  }
   return pid_relative_path.str();
 }
 

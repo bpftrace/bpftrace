@@ -1560,7 +1560,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       error("usdt probe must have a target function or wildcard", ap.loc);
 
     if (ap.target != "") {
-      auto paths = resolve_binary_path(ap.target);
+      auto paths = resolve_binary_path(ap.target, bpftrace_.pid_);
       switch (paths.size())
       {
       case 0:
