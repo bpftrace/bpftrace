@@ -4,6 +4,7 @@ endif()
 
 add_executable(bpftrace
   attached_probe.cpp
+  bpffeature.cpp
   bpftrace.cpp
   btf.cpp
   clang_parser.cpp
