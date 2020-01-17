@@ -565,14 +565,14 @@ class clang_parser_btf : public ::testing::Test {
     }
 
     close(fd);
-    setenv("BPFTRACE_BTF_TEST", path, true);
+    setenv("BPFTRACE_BTF", path, true);
     path_ = path;
   }
 
   void TearDown() override
   {
     // clear the environment and remove the temp file
-    unsetenv("BPFTRACE_BTF_TEST");
+    unsetenv("BPFTRACE_BTF");
     if (path_)
       std::remove(path_);
   }

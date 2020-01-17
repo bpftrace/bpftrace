@@ -158,8 +158,8 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
 
   struct btf_location *locs = locs_normal;
 
-  // Try to get BTF file from BPFTRACE_BTF_TEST env
-  char *path = std::getenv("BPFTRACE_BTF_TEST");
+  // Try to get BTF file from BPFTRACE_BTF env
+  char *path = std::getenv("BPFTRACE_BTF");
 
   if (path)
   {
