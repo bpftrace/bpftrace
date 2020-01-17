@@ -616,9 +616,10 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(structs["struct Foo1"].fields["c"].offset, 8);
 
   EXPECT_EQ(structs["struct Foo2"].size, 24);
-  ASSERT_EQ(structs["struct Foo2"].fields.size(), 2U);
+  ASSERT_EQ(structs["struct Foo2"].fields.size(), 3U);
   ASSERT_EQ(structs["struct Foo2"].fields.count("a"), 1U);
   ASSERT_EQ(structs["struct Foo2"].fields.count("f"), 1U);
+  ASSERT_EQ(structs["struct Foo2"].fields.count("g"), 1U);
 
   EXPECT_EQ(structs["struct Foo2"].fields["a"].type.type, Type::integer);
   EXPECT_EQ(structs["struct Foo2"].fields["a"].type.size, 4U);
@@ -627,6 +628,10 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(structs["struct Foo2"].fields["f"].type.type, Type::cast);
   EXPECT_EQ(structs["struct Foo2"].fields["f"].type.size, 16U);
   EXPECT_EQ(structs["struct Foo2"].fields["f"].offset, 8);
+
+  EXPECT_EQ(structs["struct Foo2"].fields["g"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo2"].fields["g"].type.size, 1U);
+  EXPECT_EQ(structs["struct Foo2"].fields["g"].offset, 8);
 
   EXPECT_EQ(structs["struct Foo3"].size, 16);
   ASSERT_EQ(structs["struct Foo3"].fields.size(), 2U);
@@ -649,17 +654,19 @@ TEST_F(clang_parser_btf, btf)
 TEST_F(clang_parser_btf, btf_field_struct)
 {
   BPFtrace bpftrace;
-  parse("", bpftrace, true,
+  parse("",
+        bpftrace,
+        true,
         "kprobe:sys_read {\n"
-        "  @x3 = ((struct Foo3 *) curtask)->foo2->a;\n"
+        "  @x3 = ((struct Foo3 *) curtask)->foo2->g;\n"
         "}");
 
-  /* task_struct->Foo3->Foo2->int */
+  /* task_struct->Foo3->Foo2->char */
   EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
   EXPECT_NE(bpftrace.btf_set_.find("struct task_struct"), bpftrace.btf_set_.end());
   EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
   EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("int"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("char"), bpftrace.btf_set_.end());
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
 
