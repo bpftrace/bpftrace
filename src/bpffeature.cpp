@@ -7,7 +7,10 @@
 
 #include "utils.h"
 
-namespace bpftrace {
+namespace libbpf {
+#undef __BPF_FUNC_MAPPER
+#include "libbpf/bpf.h"
+} // namespace libbpf
 
 namespace bpftrace {
 
@@ -46,34 +49,37 @@ static bool detect_loop(void)
 
   return try_load("test_loop", BPF_PROG_TYPE_TRACEPOINT, insns, sizeof(insns));
 }
+
+static bool detect_get_current_cgroup_id(void)
+{
+  struct bpf_insn insns[] = {
+    BPF_RAW_INSN(
+        BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_get_current_cgroup_id),
+    BPF_EXIT_INSN(),
+  };
+
+  return try_load(
+      "test_cgroup_id", BPF_PROG_TYPE_TRACEPOINT, insns, sizeof(insns));
+}
+
+static bool detect_signal(void)
+{
+  struct bpf_insn insns[] = {
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_send_signal),
+    BPF_EXIT_INSN(),
+  };
+
+  return try_load("test_signal", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
 }
 
 BPFfeature::BPFfeature(void)
 {
   has_loop_ = detect_loop();
+  has_signal_ = detect_signal();
+  has_get_current_cgroup_id_ = detect_get_current_cgroup_id();
 }
 
-bool BPFfeature::has_loop(void)
 {
-  return has_loop_;
-}
-
-bool BPFfeature::has_helper_get_current_cgroup_id(void)
-{
-#ifdef HAVE_GET_CURRENT_CGROUP_ID
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool BPFfeature::has_helper_send_signal(void)
-{
-#ifdef HAVE_SEND_SIGNAL
-  return true;
-#else
-  return false;
-#endif
 }
 
 } // namespace bpftrace

@@ -6,7 +6,6 @@ namespace codegen {
 
 TEST(codegen, call_cgroup)
 {
-#ifdef HAVE_GET_CURRENT_CGROUP_ID
 test("tracepoint:syscalls:sys_enter_openat /cgroup == 0x100000001/ { @x = cgroup }",
 
 R"EXPECTED(; Function Attrs: nounwind
@@ -47,7 +46,6 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }
 )EXPECTED");
-#endif
 }
 
 } // namespace codegen

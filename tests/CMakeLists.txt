@@ -32,9 +32,6 @@ add_executable(bpftrace_test
 
   ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
 
-  ${CMAKE_SOURCE_DIR}/src/ast/semantic_analyser.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/codegen_llvm.cpp
-  ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/bpffeature.cpp
@@ -65,9 +62,6 @@ endif(HAVE_BCC_PROG_LOAD)
 if(HAVE_BCC_CREATE_MAP)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_BCC_CREATE_MAP)
 endif(HAVE_BCC_CREATE_MAP)
-if(HAVE_GET_CURRENT_CGROUP_ID)
-  target_compile_definitions(bpftrace PRIVATE HAVE_GET_CURRENT_CGROUP_ID)
-endif(HAVE_GET_CURRENT_CGROUP_ID)
 if (LIBBPF_BTF_DUMP_FOUND)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_LIBBPF_BTF_DUMP)
   target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
@@ -93,17 +87,6 @@ if(HAVE_BFD_DISASM)
     target_link_libraries(bpftrace_test ${LIBOPCODES_LIBRARIES})
   endif(STATIC_LINKING)
 endif(HAVE_BFD_DISASM)
-
-if (NOT HAVE_SEND_SIGNAL)
-set_property(
-  SOURCE ${CMAKE_SOURCE_DIR}/src/ast/irbuilderbpf.cpp
-  APPEND
-  PROPERTY COMPILE_DEFINITIONS
-  BPF_FUNC_send_signal=109
-)
-endif()
-target_compile_definitions(bpftrace_test PRIVATE HAVE_SEND_SIGNAL)
-
 
 target_link_libraries(bpftrace_test arch ast parser resources)
 

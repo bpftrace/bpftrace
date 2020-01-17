@@ -9,17 +9,18 @@
 #include <string.h>
 #include <getopt.h>
 
+#include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
+#include "field_analyser.h"
 #include "list.h"
+#include "output.h"
 #include "printer.h"
 #include "semantic_analyser.h"
-#include "field_analyser.h"
 #include "tracepoint_format_parser.h"
-#include "output.h"
 
 using namespace bpftrace;
 
@@ -484,7 +485,9 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  BPFfeature features;
+
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, features);
   err = semantics.analyse();
   if (err)
     return err;

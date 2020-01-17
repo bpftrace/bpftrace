@@ -108,13 +108,6 @@ check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc_elf.h" HAVE_
 set(CMAKE_REQUIRED_LIBRARIES)
 set(CMAKE_REQUIRED_LINK_OPTIONS)
 
-include(CheckTypeSize)
-set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
-# This will set HAVE_GET_CURRENT_CGROUP_ID to TRUE or FALSE
-check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE C)
-check_type_size("BPF_FUNC_send_signal" SEND_SIGNAL LANGUAGE C)
-set(CMAKE_EXTRA_INCLUDE_FILES)
-
 find_package(LibBpf)
 find_package(LibBfd)
 find_package(LibOpcodes)
