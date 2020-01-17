@@ -1,10 +1,11 @@
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
+#include "semantic_analyser.h"
+#include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
-#include "semantic_analyser.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace {
 namespace test {
@@ -28,8 +29,9 @@ void test_for_warning(
   clang.parse(driver.root_, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
+  MockBPFfeature feature;
   std::stringstream out;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature, out);
   semantics.analyse();
   if (invert)
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
@@ -47,13 +49,12 @@ void test_for_warning(
   test_for_warning(*bpftrace, input, warning, invert, safe_mode);
 }
 
-
-void test(
-    BPFtrace &bpftrace,
-    Driver &driver,
-    const std::string &input,
-    int expected_result=0,
-    bool safe_mode = true)
+void test(BPFtrace &bpftrace,
+          BPFfeature &feature,
+          Driver &driver,
+          const std::string &input,
+          int expected_result = 0,
+          bool safe_mode = true)
 {
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
@@ -63,7 +64,7 @@ void test(
 
   ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature, out);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
@@ -75,7 +76,8 @@ void test(BPFtrace &bpftrace,
     bool safe_mode = true)
 {
   Driver driver(bpftrace);
-  test(bpftrace, driver, input, expected_result, safe_mode);
+  MockBPFfeature feature = MockBPFfeature();
+  test(bpftrace, feature, driver, input, expected_result, safe_mode);
 }
 
 void test(Driver &driver,
@@ -84,16 +86,26 @@ void test(Driver &driver,
     bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, driver, input, expected_result, safe_mode);
+  MockBPFfeature feature = MockBPFfeature();
+  test(*bpftrace, feature, driver, input, expected_result, safe_mode);
+}
+
+void test(BPFfeature &feature,
+          const std::string &input,
+          int expected_result = 0,
+          bool safe_mode = true)
+{
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
+  test(*bpftrace, feature, driver, input, expected_result, safe_mode);
 }
 
 void test(const std::string &input,
     int expected_result=0,
     bool safe_mode = true)
 {
-  auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-  test(*bpftrace, driver, input, expected_result, safe_mode);
+  MockBPFfeature feature = MockBPFfeature();
+  test(feature, input, expected_result, safe_mode);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -101,9 +113,7 @@ TEST(semantic_analyser, builtin_variables)
   // Just check that each builtin variable exists.
   test("kprobe:f { pid }", 0);
   test("kprobe:f { tid }", 0);
-  #ifdef HAVE_GET_CURRENT_CGROUP_ID
-    test("kprobe:f { cgroup }", 0);
-  #endif
+  test("kprobe:f { cgroup }", 0);
   test("kprobe:f { uid }", 0);
   test("kprobe:f { username }", 0);
   test("kprobe:f { gid }", 0);
@@ -125,6 +135,9 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { probe }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
+
+  MockBPFfeature feature(false);
+  test(feature, "k:f { cgroup }", 1);
 }
 
 TEST(semantic_analyser, builtin_cpid)
@@ -1363,6 +1376,11 @@ TEST(semantic_analyser, signal)
   test("k:f { signal(100); }", 1, false);
   test("k:f { signal(\"SIGABC\"); }", 1, false);
   test("k:f { signal(\"ABC\"); }", 1, false);
+
+  // Missing kernel support
+  MockBPFfeature feature(false);
+  test(feature, "k:f { signal(1) }", 1, false);
+  test(feature, "k:f { signal(\"KILL\"); }", 1, false);
 }
 
 TEST(semantic_analyser, strncmp)

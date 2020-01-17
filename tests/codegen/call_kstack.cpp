@@ -70,7 +70,8 @@ TEST(codegen, call_kstack_mapids)
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
@@ -98,7 +99,8 @@ TEST(codegen, call_kstack_modes_mapids)
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 

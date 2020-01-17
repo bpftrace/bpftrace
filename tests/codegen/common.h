@@ -3,6 +3,8 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+#include "../mocks.h"
+#include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -38,7 +40,8 @@ static void test(
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 

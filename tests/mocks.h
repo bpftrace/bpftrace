@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gmock/gmock.h"
+#include "bpffeature.h"
 #include "bpftrace.h"
-#include "utils.h"
+#include "gmock/gmock.h"
 
 namespace bpftrace {
 namespace test {
@@ -15,7 +15,6 @@ public:
       std::unique_ptr<std::istream>(int pid, const std::string &target));
   MOCK_CONST_METHOD1(extract_func_symbols_from_path,
       std::string(const std::string &path));
-
   std::vector<Probe> get_probes()
   {
     return probes_;
@@ -48,6 +47,15 @@ public:
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
 std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
+
+class MockBPFfeature : public BPFfeature
+{
+public:
+  MockBPFfeature(bool has_features = true)
+  {
+    has_loop_ = has_signal_ = has_get_current_cgroup_id_ = has_features;
+  };
+};
 
 } // namespace test
 } // namespace bpftrace

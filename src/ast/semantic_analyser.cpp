@@ -140,12 +140,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.ident == "rand" ||
       builtin.ident == "ctx") {
     builtin.type = SizedType(Type::integer, 8, false);
-    if (builtin.ident == "cgroup") {
-#ifndef HAVE_GET_CURRENT_CGROUP_ID
+    if (builtin.ident == "cgroup" &&
+        !feature_.has_helper_get_current_cgroup_id())
+    {
       error("BPF_FUNC_get_current_cgroup_id is not available for your kernel "
             "version",
             builtin.loc);
-#endif
     }
     else if (builtin.ident == "elapsed")
     {
@@ -722,7 +722,12 @@ void SemanticAnalyser::visit(Call &call)
     check_stack_call(call, Type::ustack);
   }
   else if (call.func == "signal") {
-#ifdef HAVE_SEND_SIGNAL
+    if (!feature_.has_helper_send_signal())
+    {
+      error("BPF_FUNC_send_signal not available for your kernel version",
+            call.loc);
+    }
+
     if (!check_assignment(call, false, false, false)) {
       return;
     }
@@ -766,10 +771,6 @@ void SemanticAnalyser::visit(Call &call)
               call.loc);
       }
     }
-#else
-    error("BPF_FUNC_send_signal not available for your kernel version",
-          call.loc);
-#endif
   }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
