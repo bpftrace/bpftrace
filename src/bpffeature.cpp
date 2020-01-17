@@ -79,7 +79,19 @@ BPFfeature::BPFfeature(void)
   has_get_current_cgroup_id_ = detect_get_current_cgroup_id();
 }
 
+std::string BPFfeature::report(void)
 {
+  std::stringstream buf;
+  auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
+  buf << "Kernel helpers" << std::endl
+      << "  get_current_cgroup_id: "
+      << to_str(has_helper_get_current_cgroup_id()) << std::endl
+      << "  send_signal: " << to_str(has_helper_send_signal()) << std::endl
+      << std::endl
+      << "Kernel features" << std::endl
+      << "  Loop support: " << to_str(has_loop()) << std::endl
+      << std::endl;
+  return buf.str();
 }
 
 } // namespace bpftrace
