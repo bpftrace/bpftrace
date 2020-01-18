@@ -1492,6 +1492,10 @@ TEST(semantic_analyser, type_ctx)
   EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
   var = static_cast<ast::Variable *>(unop->expr);
   EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+
+  test(driver, "k:f, kr:f { @ = (uint64)ctx; }", 0);
+  test(driver, "k:f, i:s:1 { @ = (uint64)ctx; }", 1);
+  test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
 
 } // namespace semantic_analyser
