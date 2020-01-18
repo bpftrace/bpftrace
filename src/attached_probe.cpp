@@ -74,6 +74,21 @@ bpf_prog_type progtype(ProbeType t)
   }
 }
 
+std::string progtypeName(bpf_prog_type t)
+{
+  switch (t)
+  {
+    // clang-format off
+    case BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
+    case BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
+    case BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
+    // clang-format on
+    default:
+      std::cerr << "invalid program type: " << t << std::endl;
+      abort();
+  }
+}
+
 void check_banned_kretprobes(std::string const& kprobe_name) {
   if (banned_kretprobes.find(kprobe_name) != banned_kretprobes.end()) {
     std::cerr << "error: kretprobe:" << kprobe_name << " can't be used as it might lock up your system." << std::endl;

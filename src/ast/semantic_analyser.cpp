@@ -133,7 +133,33 @@ void SemanticAnalyser::visit(Builtin &builtin)
   {
     builtin.type = SizedType(Type::ctx, sizeof(uintptr_t), false);
     builtin.type.is_pointer = true;
-    builtin.type.cast_type = "";
+
+    ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
+    bpf_prog_type bt = progtype(pt);
+    for (auto &attach_point : *probe_->attach_points)
+    {
+      ProbeType pt = probetype(attach_point->provider);
+      bpf_prog_type bt2 = progtype(pt);
+      if (bt != bt2)
+        ERR("ctx cannot be used in different BPF program types: "
+                << progtypeName(bt) << " and " << progtypeName(bt2),
+            builtin.loc);
+    }
+    switch (bt)
+    {
+      case BPF_PROG_TYPE_KPROBE:
+        builtin.type.cast_type = "struct pt_regs";
+        break;
+      case BPF_PROG_TYPE_TRACEPOINT:
+        error("Use args instead of ctx in tracepoint", builtin.loc);
+        break;
+      case BPF_PROG_TYPE_PERF_EVENT:
+        builtin.type.cast_type = "struct bpf_perf_event_data";
+        break;
+      default:
+        error("invalid program type", builtin.loc);
+        break;
+    }
   }
   else if (builtin.ident == "nsecs" || builtin.ident == "elapsed" ||
            builtin.ident == "pid" || builtin.ident == "tid" ||

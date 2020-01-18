@@ -11,7 +11,10 @@ namespace ast {
 class FieldAnalyser : public Visitor {
 public:
   explicit FieldAnalyser(Node *root, BPFtrace &bpftrace)
-    : type_(""), root_(root), bpftrace_(bpftrace)
+      : type_(""),
+        root_(root),
+        bpftrace_(bpftrace),
+        prog_type_(BPF_PROG_TYPE_UNSPEC)
   { }
 
   void visit(Integer &integer) override;
@@ -45,6 +48,7 @@ private:
   std::string    type_;
   Node          *root_;
   BPFtrace      &bpftrace_;
+  bpf_prog_type prog_type_;
 };
 
 } // namespace ast

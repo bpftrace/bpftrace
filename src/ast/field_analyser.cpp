@@ -27,7 +27,22 @@ void FieldAnalyser::visit(Identifier &identifier __attribute__((unused)))
 
 void FieldAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "curtask") {
+  if (builtin.ident == "ctx")
+  {
+    switch (prog_type_)
+    {
+      case BPF_PROG_TYPE_KPROBE:
+        bpftrace_.btf_set_.insert("struct pt_regs");
+        break;
+      case BPF_PROG_TYPE_PERF_EVENT:
+        bpftrace_.btf_set_.insert("struct bpf_perf_event_data");
+        break;
+      default:
+        break;
+    }
+  }
+  else if (builtin.ident == "curtask")
+  {
     type_ = "struct task_struct";
     bpftrace_.btf_set_.insert(type_);
   }
@@ -150,6 +165,8 @@ void FieldAnalyser::visit(Probe &probe)
 {
   for (AttachPoint *ap : *probe.attach_points) {
     ap->accept(*this);
+    ProbeType pt = probetype(ap->provider);
+    prog_type_ = progtype(pt);
   }
   if (probe.pred) {
     probe.pred->accept(*this);
