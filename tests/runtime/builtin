@@ -118,6 +118,11 @@ EXPECT SUCCESS cgroup -?[0-9][0-9]*
 TIMEOUT 5
 MIN_KERNEL 4.18
 
+NAME ctx
+RUN bpftrace -v -e 'struct x {unsigned long x}; i:ms:1 { printf("SUCCESS '$test' %d\n", ((struct x*)ctx)->x); exit(); }'
+EXPECT SUCCESS ctx -?[0-9][0-9]*
+TIMEOUT 5
+
 NAME cat
 RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
 EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
