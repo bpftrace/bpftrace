@@ -386,34 +386,32 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
       probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
-static std::string find_vmlinux()
+// find vmlinux file containing the given symbol information
+static std::string find_vmlinux(const struct vmlinux_location *locs,
+                                struct symbol &sym)
 {
-  char *path = std::getenv("BPFTRACE_VMLINUX");
-  if (path)
-    return path;
-
+  struct bcc_symbol_option option = {};
+  option.use_debug_file = 0;
+  option.use_symbol_type = BCC_SYM_ALL_TYPES;
   struct utsname buf;
+
   uname(&buf);
 
-  // based on btf_location in btf.cpp
-  const char *vmlinux_locs[] = {
-    "/boot/vmlinux-%1$s",
-    "/lib/modules/%1$s/vmlinux-%1$s",
-    "/lib/modules/%1$s/build/vmlinux",
-    "/usr/lib/modules/%1$s/kernel/vmlinux",
-    "/usr/lib/debug/boot/vmlinux-%1$s",
-    "/usr/lib/debug/boot/vmlinux-%1$s.debug",
-    "/usr/lib/debug/lib/modules/%1$s/vmlinux",
-    nullptr,
-  };
-
-  for (int i = 0; vmlinux_locs[i]; i++)
+  for (int i = 0; locs[i].path; i++)
   {
+    if (locs[i].raw)
+      continue; // This file is for BTF. skip
     char path[PATH_MAX + 1];
-    snprintf(path, PATH_MAX, vmlinux_locs[i], buf.release);
+    snprintf(path, PATH_MAX, locs[i].path, buf.release);
     if (access(path, R_OK))
       continue;
-    return path;
+    bcc_elf_foreach_sym(path, sym_name_cb, &option, &sym);
+    if (sym.start)
+    {
+      if (bt_verbose)
+        std::cout << "vmlinux: using " << path << std::endl;
+      return path;
+    }
   }
 
   return "";
@@ -421,7 +419,6 @@ static std::string find_vmlinux()
 
 void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
 {
-  struct bcc_symbol_option option = {};
   struct symbol sym = {};
   std::string &symbol = probe_.attach_point;
   uint64_t func_offset = probe_.func_offset;
@@ -435,16 +432,25 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
     return;
 
   sym.name = symbol;
-  option.use_debug_file = 0;
-  option.use_symbol_type = BCC_SYM_ALL_TYPES;
+  const struct vmlinux_location *locs = vmlinux_locs;
+  struct vmlinux_location locs_env[] = {
+    { nullptr, true },
+    { nullptr, false },
+  };
+  char *env_path = std::getenv("BPFTRACE_VMLINUX");
+  if (env_path)
+  {
+    locs_env[0].path = env_path;
+    locs = locs_env;
+  }
 
-  std::string path = find_vmlinux();
+  std::string path = find_vmlinux(locs, sym);
   if (path.empty())
   {
     if (safe_mode)
     {
       std::stringstream buf;
-      buf << "Could not find vmlinux to check the offset.";
+      buf << "Could not resolve symbol " << symbol << ".";
       buf << " Use BPFTRACE_VMLINUX env variable to specify vmlinux path.";
 #ifdef HAVE_UNSAFE_PROBE
       buf << " Use --unsafe to skip the userspace check.";
@@ -458,17 +464,11 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
     {
       // linux kernel checks alignment, but not the function bounds
       if (bt_verbose)
-        std::cout << "No vmlinux found. Skip offset checking." << std::endl;
+        std::cout << "Could not resolve symbol " << symbol
+                  << ". Skip offset checking." << std::endl;
       return;
     }
   }
-  if (bt_verbose)
-    std::cout << "vmlinux: using " << path << std::endl;
-  bcc_elf_foreach_sym(path.c_str(), sym_name_cb, &option, &sym);
-
-  if (!sym.start)
-    throw std::runtime_error("Could not resolve symbol: " + path + ":" +
-                             symbol);
 
   if (func_offset >= sym.size)
     throw std::runtime_error("Offset outside the function bounds ('" + symbol +
