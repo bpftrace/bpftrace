@@ -1,15 +1,16 @@
-#include <iostream>
-#include <regex>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/utsname.h>
-#include <string.h>
-#include <linux/limits.h>
 #include "btf.h"
-#include "types.h"
 #include "bpftrace.h"
+#include "types.h"
+#include "utils.h"
+#include <fcntl.h>
+#include <iostream>
+#include <linux/limits.h>
+#include <regex>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/utsname.h>
+#include <unistd.h>
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
 #include <linux/bpf.h>
@@ -18,11 +19,6 @@
 #include <bpf/libbpf.h>
 
 namespace bpftrace {
-
-struct btf_location {
-  const char *path; // path with possible "%s" format to be replaced current release
-  bool        raw;  // file is either as ELF (false) or raw BTF data (true)
-};
 
 static unsigned char *get_data(const char *file, ssize_t *sizep)
 {
@@ -88,7 +84,7 @@ static int libbpf_print(enum libbpf_print_level level, const char *msg, va_list 
   return vfprintf(stderr, msg, ap);
 }
 
-static struct btf *btf_open(struct btf_location *locs)
+static struct btf *btf_open(const struct vmlinux_location *locs)
 {
   struct utsname buf;
 
@@ -135,36 +131,20 @@ static struct btf *btf_open(struct btf_location *locs)
 
 BTF::BTF(void) : btf(nullptr), state(NODATA)
 {
-  // 'borrowed' from libbpf's bpf_core_find_kernel_btf
-  // from Andrii Nakryiko
-  struct btf_location locs_normal[] =
-  {
-    { "/sys/kernel/btf/vmlinux",                 true  },
-    { "/boot/vmlinux-%1$s",                      false },
-    { "/lib/modules/%1$s/vmlinux-%1$s",          false },
-    { "/lib/modules/%1$s/build/vmlinux",         false },
-    { "/usr/lib/modules/%1$s/kernel/vmlinux",    false },
-    { "/usr/lib/debug/boot/vmlinux-%1$s",        false },
-    { "/usr/lib/debug/boot/vmlinux-%1$s.debug",  false },
-    { "/usr/lib/debug/lib/modules/%1$s/vmlinux", false },
+  struct vmlinux_location locs_env[] = {
+    { nullptr, true },
     { nullptr, false },
   };
 
-  struct btf_location locs_test[] =
-  {
-    { nullptr, true  },
-    { nullptr, false },
-  };
-
-  struct btf_location *locs = locs_normal;
+  const struct vmlinux_location *locs = vmlinux_locs;
 
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
 
   if (path)
   {
-    locs_test[0].path = path;
-    locs = locs_test;
+    locs_env[0].path = path;
+    locs = locs_env;
   }
 
   btf = btf_open(locs);

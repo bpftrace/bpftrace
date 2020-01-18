@@ -10,6 +10,14 @@
 
 namespace bpftrace {
 
+struct vmlinux_location
+{
+  const char *path; // path with possible "%s" format to be replaced current
+                    // release
+  bool raw;         // file is either as ELF (false) or raw BTF data (true)
+};
+extern const struct vmlinux_location vmlinux_locs[];
+
 typedef enum _USDT_TUPLE_ORDER_
 {
   USDT_PATH_INDEX,

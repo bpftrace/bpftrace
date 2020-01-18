@@ -74,6 +74,20 @@ std::vector<std::string> expand_wildcard_paths(const std::vector<std::string>& p
 
 namespace bpftrace {
 
+//'borrowed' from libbpf's bpf_core_find_kernel_btf
+// from Andrii Nakryiko
+const struct vmlinux_location vmlinux_locs[] = {
+  { "/sys/kernel/btf/vmlinux", true },
+  { "/boot/vmlinux-%1$s", false },
+  { "/lib/modules/%1$s/vmlinux-%1$s", false },
+  { "/lib/modules/%1$s/build/vmlinux", false },
+  { "/usr/lib/modules/%1$s/kernel/vmlinux", false },
+  { "/usr/lib/debug/boot/vmlinux-%1$s", false },
+  { "/usr/lib/debug/boot/vmlinux-%1$s.debug", false },
+  { "/usr/lib/debug/lib/modules/%1$s/vmlinux", false },
+  { nullptr, false },
+};
+
 static bool provider_cache_loaded = false;
 
 // Maps all providers of pid to vector of tracepoints on that provider
