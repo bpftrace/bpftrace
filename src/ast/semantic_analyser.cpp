@@ -936,7 +936,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
   }
 
-  arr.type = SizedType(type.elem_type, type.pointee_size);
+  arr.type = SizedType(type.elem_type, type.pointee_size, type.is_signed);
 }
 
 void SemanticAnalyser::visit(Binop &binop)
