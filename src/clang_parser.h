@@ -3,7 +3,7 @@
 #include "bpftrace.h"
 #include <clang-c/Index.h>
 
-#define ASM_GOTO_WORKAROUND_H "asm_goto_workaround.h"
+#define CLANG_WORKAROUNDS_H "clang_workarounds.h"
 
 namespace bpftrace {
 
