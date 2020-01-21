@@ -19,7 +19,7 @@ static bool try_load(const char* name,
                      struct bpf_insn* insns,
                      size_t len)
 {
-  int log_size = 40960;
+  constexpr int log_size = 40960;
   char logbuf[log_size] = {};
   int loglevel = 0;
   int ret = 0;
