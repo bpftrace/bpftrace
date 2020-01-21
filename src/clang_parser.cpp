@@ -449,47 +449,46 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   if (input.size() == 0)
     return true; // We occasionally get crashes in libclang otherwise
 
-  CXUnsavedFile unsaved_files[] =
-  {
+  CXUnsavedFile unsaved_files[] = {
     {
-      .Filename = "definitions.h",
-      .Contents = input.c_str(),
-      .Length = input.size(),
+        .Filename = "definitions.h",
+        .Contents = input.c_str(),
+        .Length = input.size(),
     },
     {
-      .Filename = "/bpftrace/include/__stddef_max_align_t.h",
-      .Contents = __stddef_max_align_t_h,
-      .Length = __stddef_max_align_t_h_len,
+        .Filename = "/bpftrace/include/__stddef_max_align_t.h",
+        .Contents = __stddef_max_align_t_h,
+        .Length = __stddef_max_align_t_h_len,
     },
     {
-      .Filename = "/bpftrace/include/float.h",
-      .Contents = float_h,
-      .Length = float_h_len,
+        .Filename = "/bpftrace/include/float.h",
+        .Contents = float_h,
+        .Length = float_h_len,
     },
     {
-      .Filename = "/bpftrace/include/limits.h",
-      .Contents = limits_h,
-      .Length = limits_h_len,
+        .Filename = "/bpftrace/include/limits.h",
+        .Contents = limits_h,
+        .Length = limits_h_len,
     },
     {
-      .Filename = "/bpftrace/include/stdarg.h",
-      .Contents = stdarg_h,
-      .Length = stdarg_h_len,
+        .Filename = "/bpftrace/include/stdarg.h",
+        .Contents = stdarg_h,
+        .Length = stdarg_h_len,
     },
     {
-      .Filename = "/bpftrace/include/stddef.h",
-      .Contents = stddef_h,
-      .Length = stddef_h_len,
+        .Filename = "/bpftrace/include/stddef.h",
+        .Contents = stddef_h,
+        .Length = stddef_h_len,
     },
     {
-      .Filename = "/bpftrace/include/stdint.h",
-      .Contents = stdint_h,
-      .Length = stdint_h_len,
+        .Filename = "/bpftrace/include/stdint.h",
+        .Contents = stdint_h,
+        .Length = stdint_h_len,
     },
     {
-      .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
-      .Contents = clang_workarounds_h,
-      .Length = clang_workarounds_h_len,
+        .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
+        .Contents = clang_workarounds_h,
+        .Length = clang_workarounds_h_len,
     },
   };
 
