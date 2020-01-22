@@ -691,9 +691,8 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
       getInt64Ty(), { getInt8PtrTy(), getInt64Ty() }, false);
   PointerType *override_func_ptr_type = PointerType::get(override_func_type, 0);
   Constant *override_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                  getInt64(
-                                                      BPF_FUNC_override_return),
-                                                  override_func_ptr_type);
+      getInt64(libbpf::BPF_FUNC_override_return),
+      override_func_ptr_type);
   CreateCall(override_func, { ctx, rc }, "override_return");
 }
 
