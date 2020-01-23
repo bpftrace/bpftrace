@@ -264,71 +264,83 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
 
 void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
 {
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *mapid = CreateBpfPseudoCall(map);
+
+  assert(key->getType()->isPointerTy());
+  assert(mapid->getType()->isIntegerTy());
 
   // int map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
   FunctionType *delete_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy()},
+      {getInt64Ty(), key->getType()},
       false);
   PointerType *delete_func_ptr_type = PointerType::get(delete_func_type, 0);
   Constant *delete_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_map_delete_elem),
       delete_func_ptr_type);
-  CreateCall(delete_func, {map_ptr, key}, "delete_elem");
+  CreateCall(delete_func, {mapid, key}, "delete_elem");
 }
 
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
 {
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
+
+  assert(dst->getType()->isPointerTy());
+
   FunctionType *proberead_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      {dst->getType(), getInt32Ty(), src->getType()},
       false);
   PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type, 0);
   Constant *proberead_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
+  CreateCall(proberead_func, {dst, getInt32(size), src}, "probe_read");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
 {
-  return CreateProbeReadStr(dst, getInt64(size), src);
+  return CreateProbeReadStr(dst, getInt32(size), src);
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src)
 {
+  assert(dst->getType()->isPointerTy());
+  assert(size->getType()->isIntegerTy());
+
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      {dst->getType(), getInt32Ty(), src->getType()},
       false);
   PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
   Constant *probereadstr_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
-  return CreateCall(probereadstr_func, {dst, size, src}, "probe_read_str");
+  auto isize = CreatePointerCast(size, getInt32Ty(), "cast");
+  return CreateCall(probereadstr_func, {dst, isize, src}, "probe_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
 {
+  assert(dst->getType()->isPointerTy());
+  assert(src->getType()->isIntegerTy());
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
+      {dst->getType(), getInt32Ty(), src->getType()},
       false);
   PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
   Constant *probereadstr_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_probe_read_str),
       probereadstr_func_ptr_type);
-  return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "map_read_str");
+  return CreateCall(probereadstr_func, {dst, getInt32(size), src}, "map_read_str");
 }
 
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin) {
@@ -604,7 +616,7 @@ CallInst *IRBuilderBPF::CreateGetRandom()
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stack_type)
 {
   assert(bpftrace_.stackid_maps_.count(stack_type) == 1);
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[stack_type]->mapfd_);
+  Value *mapid = CreateBpfPseudoCall(bpftrace_.stackid_maps_[stack_type]->mapfd_);
 
   int flags = 0;
   if (ustack)
@@ -615,23 +627,25 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stac
   // Return: >= 0 stackid on success or negative error
   FunctionType *getstackid_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty()},
+      {getInt8PtrTy(), getInt64Ty(), getInt64Ty()},
       false);
   PointerType *getstackid_func_ptr_type = PointerType::get(getstackid_func_type, 0);
   Constant *getstackid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_get_stackid),
       getstackid_func_ptr_type);
-  return CreateCall(getstackid_func, {ctx, map_ptr, flags_val}, "get_stackid");
+  return CreateCall(getstackid_func, {ctx, mapid, flags_val}, "get_stackid");
 }
 
 void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
 {
+  assert(buf->getType()->isPointerTy() &&
+         buf->getType()->getElementType()->getArrayNumElements() == COMM_SIZE);
   // int bpf_get_current_comm(char *buf, int size_of_buf)
   // Return: 0 on success or negative error
   FunctionType *getcomm_func_type = FunctionType::get(
       getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty()},
+      {buf->getType(), getInt64Ty()},
       false);
   PointerType *getcomm_func_ptr_type = PointerType::get(getcomm_func_type, 0);
   Constant *getcomm_func = ConstantExpr::getCast(
@@ -655,7 +669,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
         getInt8PtrTy(),
         getInt64Ty(),
         getInt64Ty(),
-        cast<PointerType>(data->getType()),
+        data->getType(),
         getInt64Ty()
       },
       false);
