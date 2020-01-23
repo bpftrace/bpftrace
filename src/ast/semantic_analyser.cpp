@@ -237,7 +237,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         bpftrace_.warning(out_, builtin.loc, msg);
       }
     }
-    builtin.type = SizedType(Type::integer, 8);
+    builtin.type = SizedType(Type::integer, sizeof(uintptr_t));
   }
   else if (builtin.ident == "probe") {
     builtin.type = SizedType(Type::probe, 8);

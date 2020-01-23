@@ -208,14 +208,23 @@ void CodegenLLVM::visit(Builtin &builtin)
       abort();
     }
 
-    int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *sp = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(sp_offset * sizeof(uintptr_t))),
-        "reg_sp");
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    Value *src = b_.CreateAdd(sp, b_.getInt64((arg_num + 1) * sizeof(uintptr_t)));
-    b_.CreateProbeRead(dst, 8, src);
+    int arg_num = atoi(builtin.ident.substr(4).c_str());
+    // Register size is architecture dependent
+    ssize_t reg_size = sizeof(uintptr_t);
+    auto *valueTy = b_.getIntNTy(8*reg_size);
+    // ctx_ has type (pt_regs*)
+    // sp is an pointer to an stack frame
+    // both can be which can be treated as an array of elements that are
+    // register sized
+    auto *ctx = b_.CreatePointerCast(ctx_, valueTy->getPointerTo()->getPointerTo());
+    Value *sp = b_.CreateLoad(valueTy->getPointerTo(),
+                              b_.CreateGEP(ctx, b_.getInt64(sp_offset)),
+                              "reg_sp");
+    // Now index from SP
+    Value *src = b_.CreateGEP(sp, b_.getInt64(arg_num+1));
+
+    b_.CreateProbeRead(dst, reg_size, src);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
