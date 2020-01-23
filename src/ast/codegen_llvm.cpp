@@ -181,10 +181,12 @@ void CodegenLLVM::visit(Builtin &builtin)
       offset = arch::arg_offset(arg_num);
     }
 
-    expr_ = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
-        builtin.ident);
+    ssize_t reg_size = sizeof(uintptr_t);
+    auto *valueTy = b_.getIntNTy(8*reg_size);
+    auto *ctx = b_.CreatePointerCast(ctx_, valueTy->getPointerTo());
+    expr_ = b_.CreateLoad(valueTy,
+                          b_.CreateGEP(ctx, b_.getInt64(offset)),
+                          builtin.ident);
 
     if (builtin.type.type == Type::usym)
     {
