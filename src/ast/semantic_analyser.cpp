@@ -608,8 +608,10 @@ void SemanticAnalyser::visit(Call &call)
         for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
           auto ty = (*iter)->type;
           // Promote to 64-bit if it's not an array type
-          if (!ty.IsArray())
+          if (!ty.IsArray()) {
+            // The codegen always inserts an intcast -> u64
             ty.size = 8;
+          }
           args.push_back(Field{
             .type =  ty,
             .offset = 0,

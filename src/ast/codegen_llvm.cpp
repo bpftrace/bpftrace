@@ -1941,7 +1941,14 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
         b_.CreateLifetimeEnd(expr_);
     }
     else
-      b_.CreateStore(expr_, offset);
+    {
+      // Type size is always set to u64 in the semantic analyser
+      // cast has to happen here
+      b_.CreateStore(b_.CreateIntCast(expr_,
+                                      b_.getInt64Ty(),
+                                      call.vargs->at(i)->type.is_signed),
+                     offset);
+    }
 
     if (expr_deleter_)
       expr_deleter_();
