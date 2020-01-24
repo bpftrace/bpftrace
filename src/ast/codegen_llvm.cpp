@@ -515,12 +515,18 @@ void CodegenLLVM::visit(Call &call)
     Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *zero = BasicBlock::Create(module_->getContext(), "joinzero", parent);
     BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "joinnotzero", parent);
-    b_.CreateCondBr(b_.CreateICmpNE(perfdata, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()), "joinzerocond"), notzero, zero);
+    auto *cond = b_.CreateICmpNE(perfdata,
+                                 ConstantExpr::getCast(Instruction::IntToPtr,
+                                                       b_.getInt64(0),
+                                                       b_.getInt8PtrTy()),
+                                 "joinzerocond");
+    b_.CreateCondBr(cond, notzero, zero);
 
     // arg0
     b_.SetInsertPoint(notzero);
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
-    b_.CreateStore(b_.getInt64(join_id_), b_.CreateGEP(perfdata, {b_.getInt64(8)}));
+    b_.CreateStore(b_.getInt64(join_id_),
+                   b_.CreateGEP(perfdata, { b_.getInt64(8) }));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
     b_.CreateProbeRead(arr, 8, expr_);
@@ -626,10 +632,12 @@ void CodegenLLVM::visit(Call &call)
       abort();
     }
 
-    expr_ = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
-        call.func+"_"+reg_name);
+    ssize_t reg_size = sizeof(uintptr_t);
+    auto *valueTy = b_.getIntNTy(8*reg_size);
+    auto *ctx = b_.CreatePointerCast(ctx_, valueTy->getPointerTo());
+    expr_ = b_.CreateLoad(valueTy,
+                          b_.CreateGEP(ctx, b_.getInt64(offset)),
+                          call.func + "_" + reg_name);
   }
   else if (call.func == "printf")
   {
