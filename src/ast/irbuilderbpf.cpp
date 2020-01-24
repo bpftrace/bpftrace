@@ -82,7 +82,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   }
   else
   {
-    CreateMemSet(alloca, getInt64(0), stype.size, 1);
+    CreateMemSet(alloca, getInt8(0), stype.size, 1);
   }
 
   restoreIP(ip);
