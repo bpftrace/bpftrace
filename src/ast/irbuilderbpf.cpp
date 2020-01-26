@@ -316,6 +316,13 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
 
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
 {
+  return CreateProbeRead(dst, getInt32(size), src);
+}
+
+void IRBuilderBPF::CreateProbeRead(AllocaInst *dst,
+                                   llvm::Value *size,
+                                   Value *src)
+{
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
   FunctionType *proberead_func_type = FunctionType::get(
@@ -325,7 +332,7 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_probe_read),
       proberead_func_ptr_type);
-  CreateCall(proberead_func, { dst, getInt32(size), src }, "probe_read");
+  CreateCall(proberead_func, { dst, size, src }, "probe_read");
 }
 
 Constant *IRBuilderBPF::createProbeReadStrFn(llvm::Type *dst, llvm::Type *src)
