@@ -534,6 +534,58 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
+  else if (call.func == "buf")
+  {
+    if (!check_varargs(call, 1, 2))
+      return;
+
+    auto &arg = *call.vargs->at(0);
+    if (!(arg.type.type == Type::integer || arg.type.type == Type::string ||
+          arg.type.type == Type::array))
+      error(call.func +
+                "() expects an integer, string, or array argument but saw " +
+                typestr(arg.type.type),
+            call.loc);
+
+    size_t max_buffer_size = bpftrace_.strlen_;
+    size_t buffer_size = max_buffer_size;
+
+    if (call.vargs->size() == 1)
+      if (arg.type.type == Type::array)
+        buffer_size = arg.type.pointee_size * arg.type.size;
+      else
+        error(call.func + "() expects a length argument for non-array type " +
+                  typestr(arg.type.type),
+              call.loc);
+    else
+    {
+      if (is_final_pass())
+        check_arg(call, Type::integer, 1, false);
+
+      auto &size_arg = *call.vargs->at(1);
+      if (size_arg.is_literal)
+        buffer_size = static_cast<Integer &>(size_arg).n;
+    }
+
+    if (buffer_size > max_buffer_size)
+    {
+      if (is_final_pass())
+        warning(call.func + "() length is too long and will be shortened to " +
+                    std::to_string(bpftrace_.strlen_) +
+                    " bytes (see BPFTRACE_STRLEN)",
+                call.loc);
+
+      buffer_size = max_buffer_size;
+    }
+
+    buffer_size++; // extra byte is used to embed the length of the buffer
+    call.type = SizedType(Type::buffer, buffer_size);
+
+    if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
+    {
+      param->is_in_str = true;
+    }
+  }
   else if (call.func == "ksym" || call.func == "usym") {
     if (check_nargs(call, 1)) {
       // allow symbol lookups on casts (eg, function pointers)
