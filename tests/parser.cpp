@@ -959,6 +959,14 @@ TEST(Parser, wildcard_path)
        "  int: 1\n");
 }
 
+TEST(Parser, dot_in_func)
+{
+  test("uprobe:/my/go/program:runtime.main.func1 { 1; }",
+       "Program\n"
+       " uprobe:/my/go/program:runtime.main.func1\n"
+       "  int: 1\n");
+}
+
 TEST(Parser, wildcard_func)
 {
   test("usdt:/my/program:abc*cd { 1; }",

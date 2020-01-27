@@ -187,6 +187,7 @@ wildcard : wildcard ident    { $$ = $1 + $2; }
          | wildcard MUL      { $$ = $1 + "*"; }
          | wildcard LBRACKET { $$ = $1 + "["; }
          | wildcard RBRACKET { $$ = $1 + "]"; }
+         | wildcard DOT      { $$ = $1 + "."; }
          |                   { $$ = ""; }
          ;
 
