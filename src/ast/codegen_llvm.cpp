@@ -3,13 +3,13 @@
 #include "ast.h"
 #include "bpforc.h"
 #include "parser.tab.hh"
-#include "signal.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "utils.h"
 #include <algorithm>
 #include <arpa/inet.h>
-#include <time.h>
+#include <csignal>
+#include <ctime>
 
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/Constants.h>

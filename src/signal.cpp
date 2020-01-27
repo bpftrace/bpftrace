@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <string>
 
-#include <signal.h>
+#include <csignal>
 
 namespace bpftrace {
 

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <csignal>
 #include <cstring>
 #include <iostream>
-#include <signal.h>
 #include <sstream>
 #include <string>
 #include <sys/utsname.h>

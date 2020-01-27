@@ -1,11 +1,11 @@
-#include <assert.h>
+#include <arpa/inet.h>
+#include <cassert>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <sys/epoll.h>
-#include <time.h>
-#include <arpa/inet.h>
 
 #include <fcntl.h>
 #include <sys/prctl.h>

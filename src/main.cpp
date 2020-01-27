@@ -1,13 +1,12 @@
-#include <iostream>
-#include <fstream>
-#include <signal.h>
-#include <sys/resource.h>
-#include <sys/utsname.h>
+#include <csignal>
 #include <cstdio>
 #include <cstring>
-#include <unistd.h>
-#include <string.h>
+#include <fstream>
 #include <getopt.h>
+#include <iostream>
+#include <sys/resource.h>
+#include <sys/utsname.h>
+#include <unistd.h>
 
 #include "bpffeature.h"
 #include "bpforc.h"

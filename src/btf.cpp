@@ -2,11 +2,11 @@
 #include "bpftrace.h"
 #include "types.h"
 #include "utils.h"
+#include <cstring>
 #include <fcntl.h>
 #include <iostream>
 #include <linux/limits.h>
 #include <regex>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
