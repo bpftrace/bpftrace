@@ -19,7 +19,8 @@ jobs:
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          DISTRO: bionic
         - TYPE: Release
           NAME: debian_llvm+libclang+glibc2.27
           LLVM_VERSION: 8
@@ -32,7 +33,8 @@ jobs:
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          DISTRO: bionic
         - TYPE: Release
           NAME: vanilla_llvm+clang+glibc2.27
           LLVM_VERSION: 8
@@ -45,27 +47,41 @@ jobs:
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          DISTRO: bionic
+        - TYPE: Release
+          NAME: vanilla_llvm+clang+glibc2.23
+          LLVM_VERSION: 8
+          STATIC_LINKING: ON
+          STATIC_LIBC: OFF
+          EMBED_LLVM: ON
+          EMBED_CLANG: ON
+          EMBED_LIBCLANG_ONLY: OFF
+          EMBED_BCC: OFF
+          EMBED_LIBELF: OFF
+          EMBED_BINUTILS: OFF
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size,other.string compare map lookup
+          DISTRO: xenial
+          CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
     steps:
     - uses: actions/checkout@v2
     - name: Build docker container
       run: |
-        docker build -t bpftrace-embedded -f docker/Dockerfile.bionic-glibc docker/
+        docker build -t bpftrace-embedded-${{ matrix.env['DISTRO'] }} -f docker/Dockerfile.ubuntu-glibc --build-arg bcc_ref=${{ matrix.env['BCC_REF'] }} --build-arg DISTRO=${{ matrix.env['DISTRO'] }}  docker/
     - name: bpftrace embedded build
       env: ${{ matrix.env }}
       run: |
-        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} bpftrace-embedded $(pwd)/build-embedded ${TYPE} -j`nproc`
+        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} -e RUN_ALL_TESTS=${RUN_ALL_TESTS} -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}" -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}" bpftrace-embedded-${{ matrix.env['DISTRO'] }} $(pwd)/build-embedded ${TYPE} -j`nproc`
     - name: Check linked libs
       env: ${{ matrix.env }}
       run: |
-        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} --entrypoint /bin/bash bpftrace-embedded -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
+        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} --entrypoint /bin/bash bpftrace-embedded-${{ matrix.env['DISTRO'] }} -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
     - name: Strip artifacts
       env: ${{ matrix.env }}
       if: matrix.env['TYPE'] == 'Release'
       run: |
-        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} --entrypoint /bin/bash bpftrace-embedded -c "strip --keep-symbol BEGIN_trigger $(pwd)/build-embedded/src/bpftrace"
-
-
+        docker run --privileged -v $(pwd):$(pwd) -w $(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=${STATIC_LINKING} -e STATIC_LIBC=${STATIC_LIBC} -e EMBED_LLVM=${EMBED_LLVM} -e EMBED_CLANG=${EMBED_CLANG} -e EMBED_BCC=${EMBED_BCC} -e EMBED_LIBELF=${EMBED_LIBELF} -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY} -e EMBED_BINUTILS=${EMBED_BINUTILS} --entrypoint /bin/bash bpftrace-embedded-${{ matrix.env['DISTRO'] }} -c "strip --keep-symbol BEGIN_trigger $(pwd)/build-embedded/src/bpftrace"
     - uses: actions/upload-artifact@v1
       with:
         name: bpftrace-${{ matrix.env['TYPE'] }}-${{ matrix.env['NAME'] }}

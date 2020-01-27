@@ -48,9 +48,9 @@ matrix:
       env: LLVM_VERSION=8 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "Static+glibc-2.27 Debian-linked LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
+      env: LLVM_VERSION=8 BASE=ubuntu-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "Static+glibc-2.27 Debian-linked LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
+      env: LLVM_VERSION=8 BASE=ubuntu-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
 install:
   - sudo apt-get install linux-headers-$(uname -r)
