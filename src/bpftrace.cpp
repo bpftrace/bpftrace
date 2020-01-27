@@ -45,7 +45,7 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
   int ret = -1;
   switch(args.size()) {
     case 0:
-      ret = snprintf(s, n, fmt);
+      ret = snprintf(s, n, "%s", fmt);
       break;
     case 1:
       ret = snprintf(s, n, fmt, args.at(0)->value());
