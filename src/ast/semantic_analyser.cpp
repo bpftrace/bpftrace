@@ -1431,10 +1431,21 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       ap.target = paths.front();
       break;
     default:
-      error("uprobe target file '" + ap.target +
-                "' must refer to a unique binary but matched " +
-                std::to_string(paths.size()),
-            ap.loc);
+      // If we are doing a PATH lookup (ie not glob), we follow shell
+      // behavior and take the first match.
+      if (ap.target.find("*") == std::string::npos)
+      {
+        warning("attaching to uprobe target file '" + paths.front() +
+                    "' but matched " + std::to_string(paths.size()) +
+                    " binaries",
+                ap.loc);
+        ap.target = paths.front();
+      }
+      else
+        error("uprobe target file '" + ap.target +
+                  "' must refer to a unique binary but matched " +
+                  std::to_string(paths.size()),
+              ap.loc);
     }
   }
   else if (ap.provider == "usdt") {
@@ -1454,10 +1465,21 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap.target = paths.front();
         break;
       default:
-        error("usdt target file '" + ap.target +
-                  "' must refer to a unique binary but matched " +
-                  std::to_string(paths.size()),
-              ap.loc);
+        // If we are doing a PATH lookup (ie not glob), we follow shell
+        // behavior and take the first match.
+        if (ap.target.find("*") == std::string::npos)
+        {
+          warning("attaching to usdt target file '" + paths.front() +
+                      "' but matched " + std::to_string(paths.size()) +
+                      " binaries",
+                  ap.loc);
+          ap.target = paths.front();
+        }
+        else
+          error("usdt target file '" + ap.target +
+                    "' must refer to a unique binary but matched " +
+                    std::to_string(paths.size()),
+                ap.loc);
       }
     }
 
