@@ -1,8 +1,8 @@
 #include "utils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstring>
 #include <fcntl.h>
-#include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

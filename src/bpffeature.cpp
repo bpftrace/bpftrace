@@ -1,8 +1,8 @@
 #include <bcc/libbpf.h>
 #include <bpffeature.h>
+#include <cstddef>
+#include <cstdio>
 #include <fcntl.h>
-#include <stddef.h>
-#include <stdio.h>
 #include <unistd.h>
 
 #include "utils.h"

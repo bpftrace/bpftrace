@@ -1,10 +1,10 @@
-#include <iostream>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <cstdlib>
+#include <cstring>
 #include <fcntl.h>
+#include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 // bfd.h assumes everyone is using autotools and will error out unless
 // PACKAGE is defined. Some distros patch this check out.
 #define PACKAGE "bpftrace"

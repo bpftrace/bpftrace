@@ -1,5 +1,5 @@
+#include <cstring>
 #include <iostream>
-#include <string.h>
 
 #include "llvm/Config/llvm-config.h"
 
