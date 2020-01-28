@@ -509,7 +509,8 @@ void CodegenLLVM::visit(Call &call)
     // arg0
     b_.SetInsertPoint(notzero);
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
-    b_.CreateStore(b_.getInt64(join_id_), b_.CreateGEP(perfdata, {b_.getInt64(8)}));
+    b_.CreateStore(b_.getInt64(join_id_),
+                   b_.CreateGEP(perfdata, b_.getInt64(8)));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
     b_.CreateProbeRead(arr, 8, expr_);
