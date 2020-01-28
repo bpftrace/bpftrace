@@ -17,6 +17,7 @@ class IDisasm
 {
 public:
   virtual AlignState is_aligned(uint64_t offset, uint64_t pc) = 0;
+  virtual ~IDisasm() = default;
 };
 
 class Disasm
