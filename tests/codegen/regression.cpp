@@ -16,7 +16,6 @@ namespace codegen {
 
 using ::testing::_;
 
-
 TEST(codegen, regression_957)
 {
   auto bpftrace = get_mock_bpftrace();
