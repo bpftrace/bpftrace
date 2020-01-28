@@ -1420,15 +1420,15 @@ void CodegenLLVM::visit(Probe &probe)
       {b_.getInt8PtrTy()}, // struct pt_regs *ctx
       false);
 
-  for (auto &attach_point : *probe.attach_points) {
+  // Probe has at least one attach point (required by the parser)
+  auto &attach_point = (*probe.attach_points)[0];
 
-    // All usdt probes need expansion to be able to read arguments
-    if(probetype(attach_point->provider) == ProbeType::usdt)
-      probe.need_expansion = true;
+  // All usdt probes need expansion to be able to read arguments
+  if (probetype(attach_point->provider) == ProbeType::usdt)
+    probe.need_expansion = true;
 
-    current_attach_point_ = attach_point;
-    break;
-  }
+  current_attach_point_ = attach_point;
+
   /*
    * Most of the time, we can take a probe like kprobe:do_f* and build a
    * single BPF program for that, called "s_kprobe:do_f*", and attach it to

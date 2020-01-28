@@ -277,14 +277,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
       auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
                                                      attach_point->func,
                                                      *symbol_stream);
-      for (auto &match : matches) {
+      if (!matches.empty())
+      {
+        auto &match = *matches.begin();
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             attach_point->target, match);
         Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
         builtin.type = SizedType(Type::cast, cstruct.size, tracepoint_struct);
         builtin.type.is_pointer = true;
         builtin.type.is_tparg = true;
-        break;
       }
     }
   }
