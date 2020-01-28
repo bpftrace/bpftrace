@@ -258,11 +258,17 @@ bool has_wildcard(const std::string &str)
           str.find("]") != std::string::npos);
 }
 
-std::vector<std::string> split_string(const std::string &str, char delimiter) {
+std::vector<std::string> split_string(const std::string &str,
+                                      char delimiter,
+                                      bool remove_empty)
+{
   std::vector<std::string> elems;
   std::stringstream ss(str);
   std::string value;
   while(std::getline(ss, value, delimiter)) {
+    if (remove_empty && value.empty())
+      continue;
+
     elems.push_back(value);
   }
   return elems;

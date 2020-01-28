@@ -25,6 +25,7 @@ TEST(utils, split_string)
   EXPECT_EQ(split_string("", '-'), tokens_empty);
   EXPECT_EQ(split_string("-", '-'), tokens_one_empty);
   EXPECT_EQ(split_string("--", '-'), tokens_two_empty);
+  EXPECT_EQ(split_string("--", '-', true), tokens_empty);
   EXPECT_EQ(split_string("-f-", '-'), tokens_f);
   EXPECT_EQ(split_string("-foo-bar-", '-'), tokens_empty_foo_bar);
   EXPECT_EQ(split_string("-foo--bar-", '-'), tokens_empty_foo_empty_bar);

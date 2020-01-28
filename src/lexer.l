@@ -22,7 +22,6 @@ ident   [_a-zA-Z][_a-zA-Z0-9]*
 map     @{ident}|@
 var     ${ident}
 int     [0-9]+|0[xX][0-9a-fA-F]+
-cint    :{int}:
 hex     (x|X)[0-9a-fA-F]{1,2}
 oct     [0-7]{1,3}
 hspace  [ \t]
@@ -60,7 +59,6 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
-{cint}                  { return Parser::make_CINT(strtoll(yytext+1, NULL, 0), loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }

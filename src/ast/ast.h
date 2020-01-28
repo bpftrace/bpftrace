@@ -262,36 +262,10 @@ public:
 
 class AttachPoint : public Node {
 public:
-  explicit AttachPoint(const std::string &provider, location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &func,
-              location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &target,
-              const std::string &func,
-              bool need_expansion,
-              location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &target,
-              const std::string &ns,
-              const std::string &func,
-              bool need_expansion,
-              location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &str,
-              uint64_t val,
-              location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &target,
-              uint64_t addr,
-              uint64_t len,
-              const std::string &mode,
-              location loc = location());
-  AttachPoint(const std::string &provider,
-              const std::string &target,
-              const std::string &func,
-              uint64_t offset,
-              location loc = location());
+  explicit AttachPoint(const std::string &raw_input, location loc = location());
+
+  // Raw, unparsed input from user, eg. kprobe:vfs_read
+  std::string raw_input;
 
   std::string provider;
   std::string target;

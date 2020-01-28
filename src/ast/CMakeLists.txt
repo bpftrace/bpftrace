@@ -1,5 +1,6 @@
 add_library(ast
   ast.cpp
+  attachpoint_parser.cpp
   codegen_llvm.cpp
   field_analyser.cpp
   irbuilderbpf.cpp
