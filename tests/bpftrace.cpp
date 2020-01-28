@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "bpftrace.h"
@@ -517,9 +519,11 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::ve
 
   for (size_t i=0; i<key.size(); i++)
   {
-    *(uint64_t*)(key_data + sizeof(uint64_t)*i) = key.at(i);
+    uint64_t k = key.at(i);
+    std::memcpy(key_data + sizeof(uint64_t) * i, &k, sizeof(k));
   }
-  *(uint64_t*)val_data = val;
+  uint64_t v = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }
@@ -537,7 +541,8 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::ve
   {
     strncpy((char*)key_data + STRING_SIZE*i, key.at(i).c_str(), STRING_SIZE);
   }
-  *(uint64_t*)val_data = val;
+  uint64_t v = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }
@@ -551,9 +556,10 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(int
   uint8_t *key_data = pair.first.data();
   uint8_t *val_data = pair.second.data();
 
-  *(uint64_t*)key_data = myint;
+  uint64_t k = myint, v = val;
+  std::memcpy(key_data, &k, sizeof(k));
   strncpy((char*)key_data + sizeof(uint64_t), mystr.c_str(), STRING_SIZE);
-  *(uint64_t*)val_data = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }
