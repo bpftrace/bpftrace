@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <iostream>
 #include <signal.h>
 #include <sstream>
@@ -148,4 +149,13 @@ inline std::string &trim(std::string &s)
 }
 
 int signal_name_to_num(std::string &signal);
+
+template <typename T>
+T read_data(const void *src)
+{
+  T v;
+  std::memcpy(&v, src, sizeof(v));
+  return v;
+}
+
 } // namespace bpftrace

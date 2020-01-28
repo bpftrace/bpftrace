@@ -1022,17 +1022,21 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
 {
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   if (map.type_.type == Type::kstack)
-    return get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
+    return get_stack(
+        read_data<uint64_t>(value.data()), false, map.type_.stack_type, 8);
   else if (map.type_.type == Type::ustack)
-    return get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
+    return get_stack(
+        read_data<uint64_t>(value.data()), true, map.type_.stack_type, 8);
   else if (map.type_.type == Type::ksym)
-    return resolve_ksym(*(uintptr_t*)value.data());
+    return resolve_ksym(read_data<uintptr_t>(value.data()));
   else if (map.type_.type == Type::usym)
-    return resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
+    return resolve_usym(read_data<uintptr_t>(value.data()),
+                        read_data<uintptr_t>(value.data() + 8));
   else if (map.type_.type == Type::inet)
-    return resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 8));
+    return resolve_inet(read_data<uint32_t>(value.data()),
+                        (uint8_t *)(value.data() + 8));
   else if (map.type_.type == Type::username)
-    return resolve_uid(*(uint64_t*)(value.data()));
+    return resolve_uid(read_data<uint64_t>(value.data()));
   else if (map.type_.type == Type::string)
     return std::string(reinterpret_cast<const char*>(value.data()));
   else if (map.type_.type == Type::count)
@@ -1048,9 +1052,9 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::max)
     return std::to_string(max_value(value, nvalues) / div);
   else if (map.type_.type == Type::probe)
-    return resolve_probe(*(uint64_t*)value.data());
+    return resolve_probe(read_data<uint64_t>(value.data()));
   else
-    return std::to_string(*(int64_t*)value.data() / div);
+    return std::to_string(read_data<int64_t>(value.data()) / div);
 }
 
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
@@ -1393,7 +1397,7 @@ T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int nvalues)
   T sum = 0;
   for (int i=0; i<nvalues; i++)
   {
-    sum += *(const T*)(value.data() + i*sizeof(T*));
+    sum += read_data<T>(value.data() + i * sizeof(T));
   }
   return sum;
 }
@@ -1403,7 +1407,7 @@ uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int nvalues)
   uint64_t val, max = 0;
   for (int i=0; i<nvalues; i++)
   {
-    val = *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    val = read_data<uint64_t>(value.data() + i * sizeof(uint64_t));
     if (val > max)
       max = val;
   }
@@ -1415,7 +1419,7 @@ int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int nvalues)
   int64_t val, max = 0, retval;
   for (int i=0; i<nvalues; i++)
   {
-    val = *(const int64_t*)(value.data() + i*sizeof(int64_t*));
+    val = read_data<int64_t>(value.data() + i * sizeof(int64_t));
     if (val > max)
       max = val;
   }
@@ -1777,17 +1781,21 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
     {
       if (arg.size == 8)
       {
-        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-        {
-          return *(const uint64_t*)(a.first.data() + arg_offset) < *(const uint64_t*)(b.first.data() + arg_offset);
-        });
+        std::stable_sort(
+            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+              auto va = read_data<uint64_t>(a.first.data() + arg_offset);
+              auto vb = read_data<uint64_t>(b.first.data() + arg_offset);
+              return va < vb;
+            });
       }
       else if (arg.size == 4)
       {
-        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-        {
-          return *(const uint32_t*)(a.first.data() + arg_offset) < *(const uint32_t*)(b.first.data() + arg_offset);
-        });
+        std::stable_sort(
+            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+              auto va = read_data<uint32_t>(a.first.data() + arg_offset);
+              auto vb = read_data<uint32_t>(b.first.data() + arg_offset);
+              return va < vb;
+            });
       }
       else
       {
