@@ -105,7 +105,6 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
 %token <long> INT "integer"
-%token <long> CINT "colon surrounded integer"
 %token <std::string> STACK_MODE "stack_mode"
 
 %type <std::string> c_definitions
@@ -122,8 +121,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ExpressionList *> vargs
 %type <ast::AttachPointList *> attach_points
 %type <ast::AttachPoint *> attach_point
+%type <std::string> attach_point_def
 %type <ast::PositionalParameter *> param
-%type <std::string> wildcard
 %type <std::string> ident
 %type <ast::Expression *> map_or_var
 %type <ast::Expression *> pre_post_op
@@ -168,28 +167,21 @@ attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }
               | attach_point                   { $$ = new ast::AttachPointList; $$->push_back($1); }
               ;
 
-attach_point : ident                            { $$ = new ast::AttachPoint($1, @$); }
-             | ident ":" wildcard               { $$ = new ast::AttachPoint($1, $3, @$); }
-             | ident ":" wildcard PLUS INT      { $$ = new ast::AttachPoint($1, $3, $5, @$); }
-             | ident PATH STRING                { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, false, @$); }
-             | ident PATH wildcard              { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, true, @$); }
-             | ident PATH wildcard PLUS INT     { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, (uint64_t) $5, @$); }
-             | ident PATH STRING PLUS INT       { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, (uint64_t) $5, @$); }
-             | ident PATH INT                   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, @$); }
-             | ident PATH INT CINT ident        { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $4, $5, @$); }
-             | ident PATH STRING ":" STRING     { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $5, false, @$); }
-             | ident PATH STRING ":" wildcard   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $5, true, @$); }
-             | ident PATH wildcard ":" STRING   { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $5, true, @$); }
-             | ident PATH wildcard ":" wildcard { $$ = new ast::AttachPoint($1, $2.substr(1, $2.size()-2), $3, $5, true, @$); }
+attach_point : attach_point_def                { $$ = new ast::AttachPoint($1, @$); }
              ;
 
-wildcard : wildcard ident    { $$ = $1 + $2; }
-         | wildcard MUL      { $$ = $1 + "*"; }
-         | wildcard LBRACKET { $$ = $1 + "["; }
-         | wildcard RBRACKET { $$ = $1 + "]"; }
-         | wildcard DOT      { $$ = $1 + "."; }
-         |                   { $$ = ""; }
-         ;
+attach_point_def : attach_point_def ident    { $$ = $1 + $2; }
+                 | attach_point_def STRING   { $$ = $1 + $2; }
+                 | attach_point_def PATH     { $$ = $1 + $2; }
+                 | attach_point_def INT      { $$ = $1 + std::to_string($2); }
+                 | attach_point_def COLON    { $$ = $1 + ":"; }
+                 | attach_point_def DOT      { $$ = $1 + "."; }
+                 | attach_point_def PLUS     { $$ = $1 + "+"; }
+                 | attach_point_def MUL      { $$ = $1 + "*"; }
+                 | attach_point_def LBRACKET { $$ = $1 + "["; }
+                 | attach_point_def RBRACKET { $$ = $1 + "]"; }
+                 |                           { $$ = ""; }
+                 ;
 
 pred : DIV expr ENDPRED { $$ = new ast::Predicate($2, @$); }
      |                  { $$ = nullptr; }

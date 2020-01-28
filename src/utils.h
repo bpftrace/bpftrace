@@ -102,7 +102,9 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
 std::string get_pid_exe(pid_t pid);
 bool has_wildcard(const std::string &str);
-std::vector<std::string> split_string(const std::string &str, char delimiter);
+std::vector<std::string> split_string(const std::string &str,
+                                      char delimiter,
+                                      bool remove_empty = false);
 bool wildcard_match(const std::string &str,
                     std::vector<std::string> &tokens,
                     bool start_wildcard,

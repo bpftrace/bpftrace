@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "ast/attachpoint_parser.h"
 #include "driver.h"
 
 extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
@@ -38,6 +39,10 @@ int Driver::parse()
   loc.initialize();
   yy_scan_string(bpftrace_.source().c_str(), scanner_);
   parser_->parse();
+
+  ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
+  if (ap_parser.parse())
+    failed_ = true;
 
   // Keep track of errors thrown ourselves, since the result of
   // parser_->parse() doesn't take scanner errors into account,
