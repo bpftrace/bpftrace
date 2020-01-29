@@ -773,6 +773,9 @@ TEST(Parser, uprobe)
       "Program\n"
       " uprobe:/with#hash:asdf\n"
       "  int: 1\n");
+
+  test_parse_failure("uprobe:f { 1 }");
+  test_parse_failure("uprobe { 1 }");
 }
 
 TEST(Parser, usdt)
@@ -781,6 +784,8 @@ TEST(Parser, usdt)
       "Program\n"
       " usdt:/my/program:probe\n"
       "  int: 1\n");
+
+  test_parse_failure("usdt { 1 }");
 }
 
 TEST(Parser, usdt_namespaced_probe)
@@ -817,6 +822,20 @@ TEST(Parser, begin_probe)
       "Program\n"
       " BEGIN\n"
       "  int: 1\n");
+
+  test_parse_failure("BEGIN:f { 1 }");
+  test_parse_failure("BEGIN:path:f { 1 }");
+}
+
+TEST(Parser, end_probe)
+{
+  test("END { 1 }",
+       "Program\n"
+       " END\n"
+       "  int: 1\n");
+
+  test_parse_failure("END:f { 1 }");
+  test_parse_failure("END:path:f { 1 }");
 }
 
 TEST(Parser, tracepoint_probe)
@@ -825,6 +844,9 @@ TEST(Parser, tracepoint_probe)
       "Program\n"
       " tracepoint:sched:sched_switch\n"
       "  int: 1\n");
+
+  test_parse_failure("tracepoint:f { 1 }");
+  test_parse_failure("tracepoint { 1 }");
 }
 
 TEST(Parser, profile_probe)
@@ -833,6 +855,10 @@ TEST(Parser, profile_probe)
       "Program\n"
       " profile:ms:997\n"
       "  int: 1\n");
+
+  test_parse_failure("profile:ms:nan { 1 }");
+  test_parse_failure("profile:f { 1 }");
+  test_parse_failure("profile { 1 }");
 }
 
 TEST(Parser, interval_probe)
@@ -1303,6 +1329,29 @@ kprobe:f { "asdf }
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST(Parser, kprobe_offset)
+{
+  test("k:fn+1 {}",
+       "Program\n"
+       " kprobe:fn+1\n");
+  test("k:fn+0x10 {}",
+       "Program\n"
+       " kprobe:fn+16\n");
+
+  test("k:\"fn.abc\"+1 {}",
+       "Program\n"
+       " kprobe:fn.abc+1\n");
+  test("k:\"fn.abc\"+0x10 {}",
+       "Program\n"
+       " kprobe:fn.abc+16\n");
+}
+
+TEST(Parser, kretprobe_offset)
+{
+  // Not supported yet
+  test_parse_failure("kr:fn+1 { 1 }");
+}
+
 TEST(Parser, uprobe_offset)
 {
   test("u:./test:fn+1 {}",
@@ -1318,6 +1367,13 @@ TEST(Parser, uprobe_offset)
   test("u:./test:\"fn.abc\"+0x10 {}",
        "Program\n"
        " uprobe:./test:fn.abc+16\n");
+}
+
+TEST(Parser, uretprobe_offset)
+{
+  // Not supported yet
+  test_parse_failure("ur:./test:fn+1 { 1 }");
+  test_parse_failure("uretprobe:/bin/sh:f+0x10 { 1 }");
 }
 
 TEST(Parser, invalid_increment_decrement)

@@ -901,12 +901,7 @@ TEST(semantic_analyser, join_delimiter)
 TEST(semantic_analyser, kprobe)
 {
   test("kprobe:f { 1 }", 0);
-  test("kprobe:path:f { 1 }", 1);
-  test("kprobe { 1 }", 1);
-
   test("kretprobe:f { 1 }", 0);
-  test("kretprobe:path:f { 1 }", 1);
-  test("kretprobe { 1 }", 1);
 }
 
 TEST(semantic_analyser, uprobe)
@@ -920,8 +915,6 @@ TEST(semantic_analyser, uprobe)
   test("uprobe:sh:f { 1 }", 0);
   test("uprobe:/notexistfile:f { 1 }", 1);
   test("uprobe:notexistfile:f { 1 }", 1);
-  test("uprobe:f { 1 }", 1);
-  test("uprobe { 1 }", 1);
 
   test("uretprobe:/bin/sh:f { 1 }", 0);
   test("ur:/bin/sh:f { 1 }", 0);
@@ -929,12 +922,8 @@ TEST(semantic_analyser, uprobe)
   test("ur:sh:f { 1 }", 0);
   test("uretprobe:/bin/sh:0x10 { 1 }", 0);
   test("ur:/bin/sh:0x10 { 1 }", 0);
-  test("uretprobe:/bin/sh:f+0x10 { 1 }", 1);
-  test("ur:/bin/sh:f+0x10 { 1 }", 1);
   test("uretprobe:/notexistfile:f { 1 }", 1);
   test("uretprobe:notexistfile:f { 1 }", 1);
-  test("uretprobe:f { 1 }", 1);
-  test("uretprobe { 1 }", 1);
 }
 
 TEST(semantic_analyser, usdt)
@@ -944,27 +933,20 @@ TEST(semantic_analyser, usdt)
   test("usdt:/bin/sh:namespace:probe { 1 }", 0);
   test("usdt:/notexistfile:probe { 1 }", 1);
   test("usdt:notexistfile:probe { 1 }", 1);
-  test("usdt { 1 }", 1);
 }
 
 TEST(semantic_analyser, begin_end_probes)
 {
   test("BEGIN { 1 }", 0);
-  test("BEGIN:f { 1 }", 1);
-  test("BEGIN:path:f { 1 }", 1);
   test("BEGIN { 1 } BEGIN { 2 }", 10);
 
   test("END { 1 }", 0);
-  test("END:f { 1 }", 1);
-  test("END:path:f { 1 }", 1);
   test("END { 1 } END { 2 }", 10);
 }
 
 TEST(semantic_analyser, tracepoint)
 {
   test("tracepoint:category:event { 1 }", 0);
-  test("tracepoint:f { 1 }", 1);
-  test("tracepoint { 1 }", 1);
 }
 
 TEST(semantic_analyser, watchpoint)
@@ -986,9 +968,9 @@ TEST(semantic_analyser, args_builtin_wrong_use)
   test("END { args->foo }", 1);
   test("kprobe:f { args->foo }", 1);
   test("kretprobe:f { args->foo }", 1);
-  test("uprobe:f { args->foo }", 1);
-  test("uretprobe:f { args->foo }", 1);
-  test("profile:f { args->foo }", 1);
+  test("uprobe:/bin/sh:f { args->foo }", 1);
+  test("uretprobe:/bin/sh/:f { args->foo }", 1);
+  test("profile:ms:1 { args->foo }", 1);
   test("usdt:sh:probe { args->foo }", 1);
   test("profile:ms:100 { args->foo }", 1);
   test("hardware:cache-references:1000000 { args->foo }", 1);
@@ -1002,10 +984,7 @@ TEST(semantic_analyser, profile)
   test("profile:s:10 { 1 }", 0);
   test("profile:ms:100 { 1 }", 0);
   test("profile:us:100 { 1 }", 0);
-  test("profile:ms:nan { 1 }", 1);
   test("profile:unit:100 { 1 }", 1);
-  test("profile:f { 1 }", 1);
-  test("profile { 1 }", 1);
 }
 
 TEST(semantic_analyser, variable_cast_types)
@@ -1398,7 +1377,7 @@ TEST(semantic_analyser, override)
 
   // Probe types
   test("kr:f { override(-1); }", 1, false);
-  test("u:f { override(-1); }", 1, false);
+  test("u:/bin/sh:f { override(-1); }", 1, false);
   test("t:syscalls:sys_enter_openat { override(-1); }", 1, false);
   test("i:s:1 { override(-1); }", 1, false);
   test("p:hz:1 { override(-1); }", 1, false);
