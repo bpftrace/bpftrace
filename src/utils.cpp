@@ -759,4 +759,12 @@ bool is_numeric(const std::string &s)
   return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
 
+bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
+{
+  if (!sym_name.rfind("_Z", 0) || !sym_name.rfind("____Z", 0))
+    return true;
+  else
+    return false;
+}
+
 } // namespace bpftrace

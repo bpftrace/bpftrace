@@ -321,6 +321,68 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
   check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo+10", 0, 10);
 }
 
+TEST(bpftrace, add_probes_uprobe_cpp_symbol)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_mangled", true);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace, extract_func_symbols_from_path("/bin/sh")).Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "_Z11cpp_mangledi",
+               "uprobe:/bin/sh:cpp_mangled");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "_Z11cpp_mangledv",
+               "uprobe:/bin/sh:cpp_mangled");
+}
+
+TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_mangled(int)", true);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace, extract_func_symbols_from_path("/bin/sh")).Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "_Z11cpp_mangledi",
+               "uprobe:/bin/sh:cpp_mangled(int)");
+}
+
+TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_man*", true);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace, extract_func_symbols_from_path("/bin/sh")).Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "_Z11cpp_mangledi",
+               "uprobe:/bin/sh:cpp_man*");
+  check_uprobe(bpftrace->get_probes().at(1),
+               "/bin/sh",
+               "_Z11cpp_mangledv",
+               "uprobe:/bin/sh:cpp_man*");
+}
+
 TEST(bpftrace, add_probes_usdt)
 {
   ast::AttachPoint a("usdt", "/bin/sh", "prov1", "mytp", false);

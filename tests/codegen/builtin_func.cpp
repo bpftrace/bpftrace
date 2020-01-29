@@ -43,7 +43,10 @@ attributes #1 = { argmemonly nounwind }
 
 TEST(codegen, builtin_func_uprobe)
 {
-  test("uprobe:/bin/sh:f { @x = func }",
+  auto bpftrace = get_mock_bpftrace();
+
+  test(*bpftrace,
+       "uprobe:/bin/sh:f { @x = func }",
 
        R"EXPECTED(; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0

@@ -19,6 +19,17 @@ using ::testing::_;
 class MockBPFtrace : public BPFtrace {
 public:
   MOCK_METHOD1(add_probe, int(ast::Probe &p));
+
+  int resolve_uname(const std::string &name,
+                    struct symbol *sym,
+                    const std::string &path) const override
+  {
+    (void)path;
+    sym->name = name;
+    sym->address = 12345;
+    sym->size = 4;
+    return 0;
+  }
 };
 
 TEST(codegen, populate_sections)

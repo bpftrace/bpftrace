@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstring>
 #include <ctime>
+#include <cxxabi.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -139,6 +140,26 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
+    else if (probetype(attach_point->provider) == ProbeType::uprobe &&
+             !attach_point->func.empty())
+    {
+      std::set<std::string> matches;
+
+      struct symbol sym = {};
+      int err = resolve_uname(attach_point->func, &sym, attach_point->target);
+      if (err < 0 || sym.address == 0)
+      {
+        // As the C++ language supports function overload, a given function name
+        // (without parameters) could have multiple matches even when no
+        // wildcards are used.
+        matches = find_symbol_matches(*attach_point);
+        attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
+      }
+      else
+      {
+        attach_funcs.push_back(attach_point->func);
+      }
+    }
     else
     {
       if (probetype(attach_point->provider) == ProbeType::usdt && !attach_point->ns.empty())
@@ -274,13 +295,78 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     }
 
     if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
+    {
+      if (symbol_has_cpp_mangled_signature(line))
+      {
+        char *demangled_name = abi::__cxa_demangle(
+            line.c_str(), nullptr, nullptr, nullptr);
+        if (demangled_name)
+        {
+          if (!wildcard_match(demangled_name, tokens, true, true))
+          {
+            free(demangled_name);
+          }
+          else
+          {
+            free(demangled_name);
+            goto out;
+          }
+        }
+      }
       continue;
-
+    }
+  out:
     // skip the ".part.N" kprobe variants, as they can't be traced:
     if (line.find(".part.") != std::string::npos)
       continue;
 
     matches.insert(line);
+  }
+  return matches;
+}
+
+std::set<std::string> BPFtrace::find_symbol_matches(
+    const ast::AttachPoint &attach_point) const
+{
+  std::unique_ptr<std::istream> symbol_stream;
+  std::string prefix, func;
+
+  symbol_stream = std::make_unique<std::istringstream>(
+      extract_func_symbols_from_path(attach_point.target));
+  func = attach_point.func;
+
+  std::string line;
+  std::set<std::string> matches;
+  while (std::getline(*symbol_stream, line))
+  {
+    if (line != func)
+    {
+      if (symbol_has_cpp_mangled_signature(line))
+      {
+        char *demangled_name = abi::__cxa_demangle(
+            line.c_str(), nullptr, nullptr, nullptr);
+        if (demangled_name)
+        {
+          std::string symbol_name;
+          // If the specified function name has a '(', try to match it against
+          // the full demangled symbol (including parameters), otherwise just
+          // against the function name (without parameters)
+          if (func.find('(') != std::string::npos)
+            symbol_name = demangled_name;
+          else
+            symbol_name =
+                std::string(demangled_name)
+                    .substr(0, std::string(demangled_name).find_first_of("("));
+          free(demangled_name);
+          if (symbol_name == func)
+            matches.insert(line);
+        }
+      }
+    }
+    else
+    {
+      matches.insert(line);
+    }
   }
   return matches;
 }
