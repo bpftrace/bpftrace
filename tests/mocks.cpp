@@ -37,7 +37,9 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   std::string usyms = "first_open\n"
                       "second_open\n"
                       "open_as_well\n"
-                      "something_else\n";
+                      "something_else\n"
+                      "_Z11cpp_mangledi\n"
+                      "_Z11cpp_mangledv\n";
   ON_CALL(bpftrace, extract_func_symbols_from_path(_))
       .WillByDefault(Return(usyms));
 

@@ -166,6 +166,8 @@ public:
       const std::string &prefix,
       const std::string &func,
       std::istream &symbol_stream) const;
+  std::set<std::string> find_symbol_matches(
+      const ast::AttachPoint &attach_point) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
