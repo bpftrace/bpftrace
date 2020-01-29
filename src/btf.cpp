@@ -15,7 +15,10 @@
 #ifdef HAVE_LIBBPF_BTF_DUMP
 #include <linux/bpf.h>
 #include <linux/btf.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
 #include <bpf/btf.h>
+#pragma GCC diagnostic pop
 #include <bpf/libbpf.h>
 
 namespace bpftrace {
