@@ -111,7 +111,8 @@ void check_special_probe(Probe &p, const std::string &attach_point, const std::s
 
 TEST(bpftrace, add_begin_probe)
 {
-  ast::AttachPoint a("BEGIN");
+  ast::AttachPoint a("");
+  a.provider = "BEGIN";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -125,7 +126,8 @@ TEST(bpftrace, add_begin_probe)
 
 TEST(bpftrace, add_end_probe)
 {
-  ast::AttachPoint a("END");
+  ast::AttachPoint a("");
+  a.provider = "END";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -139,7 +141,9 @@ TEST(bpftrace, add_end_probe)
 
 TEST(bpftrace, add_probes_single)
 {
-  ast::AttachPoint a("kprobe", "sys_read");
+  ast::AttachPoint a("");
+  a.provider = "kprobe";
+  a.func = "sys_read";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -153,8 +157,12 @@ TEST(bpftrace, add_probes_single)
 
 TEST(bpftrace, add_probes_multiple)
 {
-  ast::AttachPoint a1("kprobe", "sys_read");
-  ast::AttachPoint a2("kprobe", "sys_write");
+  ast::AttachPoint a1("");
+  a1.provider = "kprobe";
+  a1.func = "sys_read";
+  ast::AttachPoint a2("");
+  a2.provider = "kprobe";
+  a2.func = "sys_write";
   ast::AttachPointList attach_points = { &a1, &a2 };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -170,9 +178,16 @@ TEST(bpftrace, add_probes_multiple)
 
 TEST(bpftrace, add_probes_wildcard)
 {
-  ast::AttachPoint a1("kprobe", "sys_read");
-  ast::AttachPoint a2("kprobe", "my_*");
-  ast::AttachPoint a3("kprobe", "sys_write");
+  ast::AttachPoint a1("");
+  a1.provider = "kprobe";
+  a1.func = "sys_read";
+  ast::AttachPoint a2("");
+  a2.provider = "kprobe";
+  a2.func = "my_*";
+  a2.need_expansion = true;
+  ast::AttachPoint a3("");
+  a3.provider = "kprobe";
+  a3.func = "sys_write";
   ast::AttachPointList attach_points = { &a1, &a2, &a3 };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -195,9 +210,16 @@ TEST(bpftrace, add_probes_wildcard)
 
 TEST(bpftrace, add_probes_wildcard_no_matches)
 {
-  ast::AttachPoint a1("kprobe", "sys_read");
-  ast::AttachPoint a2("kprobe", "not_here_*");
-  ast::AttachPoint a3("kprobe", "sys_write");
+  ast::AttachPoint a1("");
+  a1.provider = "kprobe";
+  a1.func = "sys_read";
+  ast::AttachPoint a2("");
+  a2.provider = "kprobe";
+  a2.func = "not_here_*";
+  a2.need_expansion = true;
+  ast::AttachPoint a3("");
+  a3.provider = "kprobe";
+  a3.func = "sys_write";
   ast::AttachPointList attach_points = { &a1, &a2, &a3 };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -219,7 +241,10 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
 TEST(bpftrace, add_probes_offset)
 {
   uint64_t offset = 10;
-  ast::AttachPoint a("kprobe", "sys_read", offset);
+  ast::AttachPoint a("");
+  a.provider = "kprobe";
+  a.func = "sys_read";
+  a.func_offset = offset;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -235,7 +260,10 @@ TEST(bpftrace, add_probes_offset)
 
 TEST(bpftrace, add_probes_uprobe)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "foo";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -249,7 +277,11 @@ TEST(bpftrace, add_probes_uprobe)
 
 TEST(bpftrace, add_probes_uprobe_wildcard)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "*open", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "*open";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -267,7 +299,11 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
 
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo*", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "foo*";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -281,7 +317,10 @@ TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
 
 TEST(bpftrace, add_probes_uprobe_string_literal)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo*", false);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "foo*";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -295,7 +334,10 @@ TEST(bpftrace, add_probes_uprobe_string_literal)
 
 TEST(bpftrace, add_probes_uprobe_address)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", 1024);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.address = 1024;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -309,7 +351,11 @@ TEST(bpftrace, add_probes_uprobe_address)
 
 TEST(bpftrace, add_probes_uprobe_string_offset)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "foo", (uint64_t) 10);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "foo";
+  a.func_offset = 10;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -323,7 +369,11 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_mangled", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "cpp_mangled";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -345,7 +395,11 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_mangled(int)", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "cpp_mangled(int)";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -363,7 +417,11 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
 {
-  ast::AttachPoint a("uprobe", "/bin/sh", "cpp_man*", true);
+  ast::AttachPoint a("");
+  a.provider = "uprobe";
+  a.target = "/bin/sh";
+  a.func = "cpp_man*";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -385,7 +443,11 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
 
 TEST(bpftrace, add_probes_usdt)
 {
-  ast::AttachPoint a("usdt", "/bin/sh", "prov1", "mytp", false);
+  ast::AttachPoint a("");
+  a.provider = "usdt";
+  a.target = "/bin/sh";
+  a.ns = "prov1";
+  a.func = "mytp";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -401,7 +463,12 @@ TEST(bpftrace, add_probes_usdt)
 
 TEST(bpftrace, add_probes_usdt_wildcard)
 {
-  ast::AttachPoint a("usdt", "/bin/sh", "prov*", "tp*", true);
+  ast::AttachPoint a("");
+  a.provider = "usdt";
+  a.target = "/bin/sh";
+  a.ns = "prov*";
+  a.func = "tp*";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -424,7 +491,12 @@ TEST(bpftrace, add_probes_usdt_wildcard)
 
 TEST(bpftrace, add_probes_usdt_empty_namespace)
 {
-  ast::AttachPoint a("usdt", "/bin/sh", "", "tp", true);
+  ast::AttachPoint a("");
+  a.provider = "usdt";
+  a.target = "/bin/sh";
+  a.ns = "";
+  a.func = "tp";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -444,7 +516,10 @@ TEST(bpftrace, add_probes_usdt_empty_namespace)
 
 TEST(bpftrace, add_probes_tracepoint)
 {
-  ast::AttachPoint a("tracepoint", "sched", "sched_switch", true);
+  ast::AttachPoint a("");
+  a.provider = "tracepoint";
+  a.target = "sched";
+  a.func = "sched_switch";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -460,7 +535,11 @@ TEST(bpftrace, add_probes_tracepoint)
 
 TEST(bpftrace, add_probes_tracepoint_wildcard)
 {
-  ast::AttachPoint a("tracepoint", "sched", "sched_*", true);
+  ast::AttachPoint a("");
+  a.provider = "tracepoint";
+  a.target = "sched";
+  a.func = "sched_*";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -481,7 +560,11 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
 
 TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
 {
-  ast::AttachPoint a("tracepoint", "typo", "typo_*", true);
+  ast::AttachPoint a("");
+  a.provider = "tracepoint";
+  a.target = "typo";
+  a.func = "typo_*";
+  a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -497,7 +580,10 @@ TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
 
 TEST(bpftrace, add_probes_profile)
 {
-  ast::AttachPoint a("profile", "ms", 997);
+  ast::AttachPoint a("");
+  a.provider = "profile";
+  a.target = "ms";
+  a.freq = 997;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -513,7 +599,10 @@ TEST(bpftrace, add_probes_profile)
 
 TEST(bpftrace, add_probes_interval)
 {
-  ast::AttachPoint a("interval", "s", 1);
+  ast::AttachPoint a("");
+  a.provider = "interval";
+  a.target = "s";
+  a.freq = 1;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -529,7 +618,10 @@ TEST(bpftrace, add_probes_interval)
 
 TEST(bpftrace, add_probes_software)
 {
-  ast::AttachPoint a("software", "faults", 1000);
+  ast::AttachPoint a("");
+  a.provider = "software";
+  a.target = "faults";
+  a.freq = 1000;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -545,7 +637,10 @@ TEST(bpftrace, add_probes_software)
 
 TEST(bpftrace, add_probes_hardware)
 {
-  ast::AttachPoint a("hardware", "cache-references", 1000000);
+  ast::AttachPoint a("");
+  a.provider = "hardware";
+  a.target = "cache-references";
+  a.freq = 1000000;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -561,7 +656,9 @@ TEST(bpftrace, add_probes_hardware)
 
 TEST(bpftrace, invalid_provider)
 {
-  ast::AttachPoint a("lookatme", "invalid");
+  ast::AttachPoint a("");
+  a.provider = "lookatme";
+  a.func = "invalid";
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
