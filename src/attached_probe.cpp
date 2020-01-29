@@ -961,7 +961,7 @@ void AttachedProbe::attach_watchpoint(int pid, const std::string& mode)
       attr.bp_type |= HW_BREAKPOINT_X;
   }
 
-  attr.bp_addr = probe_.addr;
+  attr.bp_addr = probe_.address;
   attr.bp_len = probe_.len;
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;

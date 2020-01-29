@@ -199,7 +199,6 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.loc = 0;
       probe.index = attach_point->index(full_func_id) > 0 ?
           attach_point->index(full_func_id) : p.index();
-      probe.addr = attach_point->addr;
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
       probes_.push_back(probe);

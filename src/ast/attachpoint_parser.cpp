@@ -457,7 +457,7 @@ int AttachPointParser::watchpoint_parser()
   try
   {
     std::size_t idx;
-    ap_->addr = std::stoull(parts_[2], &idx, 0);
+    ap_->address = std::stoull(parts_[2], &idx, 0);
 
     if (idx != parts_[2].size())
     {
