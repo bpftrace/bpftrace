@@ -10,7 +10,7 @@ TIMEOUT 5
 
 NAME kprobe_target
 RUN bpftrace -v -e 'kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
-EXPECT kprobes should not have a target
+EXPECT kprobe probe type requires 1 argument
 TIMEOUT 5
 
 NAME kprobe_order
@@ -41,7 +41,7 @@ TIMEOUT 5
 
 NAME kretprobe_target
 RUN bpftrace -v -e 'kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
-EXPECT kprobes should not have a target
+EXPECT kretprobe probe type requires 1 argument
 TIMEOUT 5
 
 NAME kretprobe_order
