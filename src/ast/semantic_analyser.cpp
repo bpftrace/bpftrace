@@ -1644,7 +1644,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       error("software count should be a positive integer", ap.loc);
   }
   else if (ap.provider == "watchpoint") {
-    if (!ap.addr)
+    if (!ap.address)
       error("watchpoint must be attached to a non-zero address", ap.loc);
     if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
       error("watchpoint length must be one of (1,2,4,8)", ap.loc);
