@@ -79,7 +79,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [17. `cat()`: Print file content](#17-cat-print-file-content)
     - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
     - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
-    - [20. `override_return()`: Override return value](#18-override_return-override-return-value)
+    - [20. `override()`: Override return value](#20-override-override-return-value)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2329,9 +2329,9 @@ Attaching 320 probes...
 @[mpv, tracepoint:syscalls:sys_enter_futex]: 403868
 ```
 
-## 20. `override_return()`: Override return value
+## 20. `override()`: Override return value
 
-Syntax: `override_return(u64 rc)`
+Syntax: `override(u64 rc)`
 
 Kernel: 4.16
 
@@ -2341,7 +2341,7 @@ The probed function will not be executed, instead a helper will be executed
 that will just return `rc`.
 
 ```
-# bpftrace -e 'k:__x64_sys_getuid /comm == "id"/ { override_return(2<<21); }' --unsafe -c id
+# bpftrace -e 'k:__x64_sys_getuid /comm == "id"/ { override(2<<21); }' --unsafe -c id
 uid=4194304 gid=0(root) euid=0(root) groups=0(root)
 ```
 
