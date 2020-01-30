@@ -784,9 +784,9 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "override_return")
+  else if (call.func == "override")
   {
-    if (!feature_.has_helper_send_signal())
+    if (!feature_.has_helper_override_return())
     {
       error("BPF_FUNC_override_return not available for your kernel version",
             call.loc);

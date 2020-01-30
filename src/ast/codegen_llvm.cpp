@@ -802,9 +802,9 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateLifetimeEnd(right_string);
     }
   }
-  else if (call.func == "override_return")
+  else if (call.func == "override")
   {
-    // int bpf_override_return(struct pt_regs *regs, u64 rc)
+    // int bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
     auto &arg = *call.vargs->at(0);
     arg.accept(*this);

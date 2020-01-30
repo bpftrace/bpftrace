@@ -693,7 +693,7 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
   Constant *override_func = ConstantExpr::getCast(Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_override_return),
       override_func_ptr_type);
-  CreateCall(override_func, { ctx, rc }, "override_return");
+  CreateCall(override_func, { ctx, rc }, "override");
 }
 
 } // namespace ast
