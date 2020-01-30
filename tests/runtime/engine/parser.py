@@ -23,7 +23,7 @@ class TestParser(object):
     def read_all(test_filter):
         try:
             for root, subdirs, files in os.walk('./runtime'):
-                for ignore_dir in ["scripts", "outputs"]:
+                for ignore_dir in ["engine", "scripts", "outputs"]:
                     if ignore_dir in subdirs:
                         subdirs.remove(ignore_dir)
                 for filename in files:

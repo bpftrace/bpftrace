@@ -20,6 +20,9 @@ Runtime tests will call the bpftrace executable.
 
 You can add test programs for your runtime tests by placing a `.c` file corresponding to your test program in `tests/testprogs`.
 
+You can add test libraries for your runtime tests by placing a `.c` file corresponding to your test library in `tests/testlibs`.
+
 The test file `tests/testprogs/my_test.c` will result in an executable that you can call and probe in your runtime test at `./testprogs/my_test`
 
-This is intended to be useful for testing uprobes and USDT probes, or using uprobes to verify some other behavior in bpftrace.
+This is intended to be useful for testing uprobes and USDT probes, or using uprobes to verify some other behavior in bpftrace. It can also
+be used to tightly control what code paths are triggered in the system.

@@ -540,7 +540,7 @@ TEST(clang_parser, parse_fail)
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
-#include "btf_data.h"
+#include "data/btf_data.h"
 
 class clang_parser_btf : public ::testing::Test {
  protected:
