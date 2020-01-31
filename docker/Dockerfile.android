@@ -1,0 +1,49 @@
+FROM ubuntu:bionic
+
+ENV ANDROID_NDK_HOME /opt/android-ndk
+ARG ANDROID_NDK_VERSION=r21-beta2
+ENV ANDROID_NDK_VERSION=$ANDROID_NDK_VERSION
+
+# Needed to build host clang-tblgen when cross-compiling
+ARG LLVM_VERSION=8
+ENV LLVM_VERSION=$LLVM_VERSION
+
+# ------------------------------------------------------
+# --- Install required tools
+
+RUN apt-get update && apt-get install -y \
+      automake \
+      bison \
+      flex \
+      build-essential \
+      cmake \
+      git \
+      unzip \
+      libz-dev \
+      llvm-${LLVM_VERSION} \
+      python3 \
+      quilt \
+      wget
+
+
+# Based on https://github.com/bitrise-io/android-ndk/blob/master/Dockerfile
+# ------------------------------------------------------
+# --- Android NDK
+
+# FIXME move downloading this out of band, so the file can be cached on CI and just
+# added to the container, since the container isn't cached anyways.
+RUN mkdir /opt/android-ndk-tmp && \
+    cd /opt/android-ndk-tmp && \
+    wget -q https://dl.google.com/android/repository/android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip && \
+    unzip -q android-ndk-${ANDROID_NDK_VERSION}-linux-x86_64.zip && \
+    mv ./android-ndk-${ANDROID_NDK_VERSION} ${ANDROID_NDK_HOME} && \
+    cd ${ANDROID_NDK_HOME} && \
+    rm -rf /opt/android-ndk-tmp
+
+# add to PATH
+ENV PATH ${PATH}:${ANDROID_NDK_HOME}
+ENV PATH ${PATH}:opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/
+
+COPY build.sh /build.sh
+RUN chmod 755 /build.sh
+ENTRYPOINT ["bash", "/build.sh"]
