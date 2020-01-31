@@ -8,6 +8,204 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.9.4] 2020-02-04
+
+### Highlights
+
+  - New calls: `signal`, `override`, `strncmp`
+  - Support for attaching to `kprobes` at an offset
+  - Support for struct bitfields
+
+### All Changes
+
+#### Added
+  - Add support to attach kprobe to offset (e31e398) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Add `--info` flag (afafbf5) by bas smit &lt;bas@baslab.org&gt;
+  - Mark 'override_return' as unsafe (49cd031) by bas smit &lt;bas@baslab.org&gt;
+  - Implement bpf_override_return (784c64e) by bas smit &lt;bas@baslab.org&gt;
+  - arch: Add support for powerpc64 registers (472f5ed) by Sandipan Das &lt;sandipan@linux.ibm.com&gt;
+  - Add source line information to error messages (46e62c0) by bas smit &lt;bas@baslab.org&gt;
+  - Support octal and hexadecimal escape sequences in string (873d7ba) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Implement `signal` (32bb577) by bas smit &lt;bas@baslab.org&gt;
+  - Make `signal` unsafe (be676b5) by bas smit &lt;bas@baslab.org&gt;
+  - Implement strncmp (a1d0263) by Jay Kamat &lt;jaygkamat@gmail.com&gt;
+  - Add builtin: cpid (cae4dcf) by bas smit &lt;bas@baslab.org&gt;
+  - Allow uprobe offset on quoted attach points (6432609) by bas smit &lt;bas@baslab.org&gt;
+  - Allow string literals as signal specifiers (0230f98) by bas smit &lt;bas@baslab.org&gt;
+  - Implement bitfield support (8822cc2) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+
+#### Changed
+  - Take first binary match for PATH lookup on uprobe and USDT (ec5c2c3) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Infer `uaddr` pointer type from ELF symbol size (59b0659) by bas smit &lt;bas@baslab.org&gt;
+  - Rename `override_return` to `override` (96cb4b5) by bas smit &lt;bas@baslab.org&gt;
+  - Runtime feature testing (17f3c82) by bas smit &lt;bas@baslab.org&gt;
+  - Silenced unsigned/signed comparison warning (75101f9) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - error message for verification buffer size (41c0ab8) by Gordon Marler &lt;gmarler@bloomberg.net&gt;
+  - Reimplement `elapsed` using a hidden map (2613ea6) by bas smit &lt;bas@baslab.org&gt;
+  - Remove dependency on 'command' shell builtin (3f7a94a) by Adam Jensen &lt;acjensen@gmail.com&gt;
+  - Make parsing fail if lexing fails (d092cb1) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Limit increment/decrement to variables (c126441) by bas smit &lt;bas@baslab.org&gt;
+  - Only warn about missing BTF info in debug mode (f84ae5c) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Allow uretprobe at an address (f0785b5) by bas smit &lt;bas@baslab.org&gt;
+  - fix uprobe address on short name (f7ed963) by bas smit &lt;bas@baslab.org&gt;
+  - Reverse return value of strncmp (384640e) by Jay Kamat &lt;jaygkamat@gmail.com&gt;
+  - Make strcmp return 0 on match (8d9069c) by bas smit &lt;bas@baslab.org&gt;
+  - Differentiate between regular structs and typedef'd structs (8d34209) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+
+#### Fixed
+  - Support "." in attach point function argument (c532159) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - clang_parser: workaround for asm_inline in 5.4+ kernel headers (c30e4dd) by Andreas Gerstmayr &lt;agerstmayr@redhat.com&gt;
+  - Consider signed array (9bb6a8b) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Support anonymous struct/union in BTF::type_of() (36d9914) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Allow resolving binary paths in different mount ns (124e569) by Dale Hamel &lt;dale.hamel@shopify.com&gt;
+  - Avoid useless allocations in strncmp (551664e) by bas smit &lt;bas@baslab.org&gt;
+  - Avoid comparing past string length (b10dc32) by bas smit &lt;bas@baslab.org&gt;
+  - Call llvm.lifetime.end after memcpy if the expression is not a variable (8b2d219) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - bug: Strip newlines from log message (361d1fc) by bas smit &lt;bas@baslab.org&gt;
+  - Fix buggy signed binop warnings (e87897c) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Reuse `cat` and `system` ID when expanding probes (79aada5) by bas smit &lt;bas@baslab.org&gt;
+  - Remove unneeded `probe_read`s from `strcmp` (43b4e4c) by bas smit &lt;bas@baslab.org&gt;
+  - Fix func variable in uprobe (d864f18) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Add space for the error message about kernel.perf_event_max_stack (de2a7a8) by Kenta Tada &lt;Kenta.Tada@sony.com&gt;
+  - Improve uprobe/usdt visitor error handling and messaging (5005902) by Adam Jensen &lt;acjensen@gmail.com&gt;
+  - Fix some semantic analyser crashes (b11dc75) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Fix codegen for modulo operation (fe0ed5a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+
+#### Documentation
+  - Document `override_return` (b83b51d) by bas smit &lt;bas@baslab.org&gt;
+  - Add documentation on BTF (6623f25) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - docs: limit to 105 chars (91e9dad) by bas smit &lt;bas@baslab.org&gt;
+  - docs: Remove double shebang (da8b10c) by bas smit &lt;bas@baslab.org&gt;
+  - docs: improve readability of code snippets (34a394a) by bas smit &lt;bas@baslab.org&gt;
+  - docs: remove unneeded html elements (06d8662) by bas smit &lt;bas@baslab.org&gt;
+  - Fix typos (e5ad6b9) by Michael Prokop &lt;michael.prokop@synpro.solutions&gt;
+  - One-liner tutorial: Use "struct" when casting (7a5624c) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - docs: Add centos 7 repo (1b4cb8f) by bas smit &lt;bas@baslab.org&gt;
+  - docs: Fix typo (b38dbd0) by bas smit &lt;bas@baslab.org&gt;
+  - Move debug flags closer to each other in help message (df61049) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add binutils dependency to documentation (c57204c) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add documentation on release procedure (#981) (528fd6e) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - fix: Minor spelling correction (b3a6aee) by Jason Wohlgemuth &lt;jhwohlgemuth@users.noreply.github.com&gt;
+  - Document `signal` (d5f3c75) by bas smit &lt;bas@baslab.org&gt;
+  - INSTALL.md: Fix TOC link (1ab0a71) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Amend sizes in documentation and provide date (ddd10fe) by Dale Hamel &lt;dale.hamel@shopify.com&gt;
+  - Docs: add missing TOC entry (8c1d4e9) by bas smit &lt;bas@baslab.org&gt;
+  - Add the chinese version for one liners tutorial (15a930e) by supersojo &lt;suyanjun218@163.com&gt;
+
+#### Internal
+  - Reorganize tests/ directory (193177b) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Fix typing issues in `CreateMapUpdateElem` (e86b9bb) by bas smit &lt;bas@baslab.org&gt;
+  - Fix typing issues in `CreateMapLookup` (14af118) by bas smit &lt;bas@baslab.org&gt;
+  - Fix build: Add namespace to BPF_FUNC_override_return (b6de734) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Unify vmlinux and BTF location list (1d39776) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Disable probe.kprobe_offset_fail_size runtime test in CI (1497434) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - fmt: update formatting in clang_parser.cpp (aefc424) by Andreas Gerstmayr &lt;agerstmayr@redhat.com&gt;
+  - Use constexpr (b59c3a7) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Make use of feature testing (b01f89c) by bas smit &lt;bas@baslab.org&gt;
+  - Import libbpf (132e1ee) by bas smit &lt;bas@baslab.org&gt;
+  - Rename BPFTRACE_BTF_TEST to BPFTRACE_BTF (5bbeb31) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Add test for anonymous struct/union processing using BTF (240f59a) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Switch tests suite to `bcc_foreach_sym` (a251477) by bas smit &lt;bas@baslab.org&gt;
+  - Make resolve_binary_paths include non-executable shared objects in its return. (c3d1095) by Michał Gregorczyk &lt;michalgr@fb.com&gt;
+  - Remove full static builds from travis (4fe9064) by Dale Hamel &lt;dale.hamel@srvthe.net&gt;
+  - Move ast.h definitions into ast.cpp (f0dd0b4) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Use subprocess.Popen text mode (47de78b) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Fix debian libclang only linking (a9a2f0f) by Dale Hamel &lt;dale.hamel@srvthe.net&gt;
+  - Build static+libc images using github actions (4794aba) by Dale Hamel &lt;dale.hamel@srvthe.net&gt;
+  - Enable static+glibc builds and embedding LLVM deps (b1ae710) by Dale Hamel &lt;dale.hamel@shopify.com&gt;
+  - Create StderrSilencer helper class to redirect stderr (b59b97a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add missing semicolon (add4117) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - ast: codegen: Add abstraction for stack pointer offset (d19614d) by Sandipan Das &lt;sandipan@linux.ibm.com&gt;
+  - clang-format: avoid breaking indent in irbuilderbpf.h (5b6d236) by bas smit &lt;bas@baslab.org&gt;
+  - Non-invasive formatting of src/*.h (98328f1) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Clang Format: Update line-break penalties (30d5b8d) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - correct for clang-format check (bb30265) by Gordon Marler &lt;gmarler@bloomberg.net&gt;
+  - Add requested msg prefix (f3327bd) by Gordon Marler &lt;gmarler@bloomberg.net&gt;
+  - add requested changes. (c9453b5) by Gordon Marler &lt;gmarler@bloomberg.net&gt;
+  - Show current log size in msg as starting point (7942b9d) by Gordon Marler &lt;gmarler@bloomberg.net&gt;
+  - Fix CI clang-format (13556f9) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Make ninja work with build system (76bb97a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Clang Format: switch/case bracketing style fixes (f4e46b2) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Clang Format: Don't wrap braces after namespace (4b26e3f) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Add non-literal strncmp test (1c41333) by bas smit &lt;bas@baslab.org&gt;
+  - Rename literal test (4295985) by bas smit &lt;bas@baslab.org&gt;
+  - refactor CreateMapLookupElem (7b7ab95) by bas smit &lt;bas@baslab.org&gt;
+  - Add a semantic and runtime test to test task_struct field accesses (8519550) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Use `struct task_struct` instead of `task_struct` (d39db3a) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - BTF leftover for full type rename (5088682) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Create a single is_numeric() function in utils (374ca46) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Warn if cmake is less than 3.13 when building with ASAN (ad3b9f3) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Remove unnecessary division (81b7c0a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add build option, BUILD_ASAN, to turn on address sanitizer (04d015e) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Properly indent cmake config (24a7695) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Use mocks consistently in codegen tests so they don't require root to run (b261833) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Enable -Werror on CI builds (2f0f5db) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - CMakeLists cleanups (6b8d7ad) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Disable deprecated ORCv1 warning in llvm (607b8af) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Normalize code (0878020) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Pass location to uprobe+offset probe (8c1a355) by bas smit &lt;bas@baslab.org&gt;
+  - Use symbolic constants instead of numeric literal (457aab9) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add clang-format rule to travis CI (3b9e959) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Turn off clang-format for specific long lists (bcbfaa0) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add .clang-format file (b04e478) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Change reinterpret_cast to static cast and fix formatting (03d2d67) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Add PER_CPU detection helper (594fd34) by bas smit &lt;bas@baslab.org&gt;
+  - Store the BPF map type in the map object (2e850c5) by bas smit &lt;bas@baslab.org&gt;
+  - format: align parser (b3680e6) by bas smit &lt;bas@baslab.org&gt;
+  - Make ASSERTs in helper functions fail the parent testcase (ddaa482) by Alastair Robertson &lt;alastair@ajor.co.uk&gt;
+  - Add dependency on testprogs and bpftrace to runtime tests (7870091) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add custom target for testprogs (d799e83) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Move testprogs cmake definition before runtime test definitions (6783448) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add tests for resolve_binary_path (8fb727a) by Adam Jensen &lt;acjensen@gmail.com&gt;
+  - Fix tests to run without $PATH (c1c60c2) by Adam Jensen &lt;acjensen@gmail.com&gt;
+  - Add runtime tests for ambiguous wildcard matches (cca9040) by Adam Jensen &lt;acjensen@gmail.com&gt;
+  - Add regression tests for modulo operation (0a1cb65) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Don't take reference of a pointer (61ba68a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Silence test suite (8d1f691) by bas smit &lt;bas@baslab.org&gt;
+  - Disable builtin.cgroup runtime test in CI (8277876) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add a RUNTIME_TEST_DISABLE environment to runtime tests (6c984ea) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add script to compare tool codegen between builds (d95a2d1) by bas smit &lt;bas@baslab.org&gt;
+  - Minor btf cleanups (a10479b) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add FieldAnalyser to the clang parser tests (13b06d2) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Iterate only over detected types in BTF::c_def (409d7ad) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Add BPFtrace::btf_set_ to replace global BTF type set (06a09ca) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Add BTF::type_of function (4378e24) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Adding FieldAnalyser class (ec3c621) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Move BTF object into BPFtrace class (fdf3940) by Jiri Olsa &lt;jolsa@kernel.org&gt;
+  - Add runtime test (db81d25) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Add clang_parser test (6cae624) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Use struct instead of class (fbe3bf6) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - Make `strncmp` codegen unsigned (af54c9b) by bas smit &lt;bas@baslab.org&gt;
+  - Avoid shift/reduce warnings (3761904) by bas smit &lt;bas@baslab.org&gt;
+  - Treat stackmode as identifier (e018da5) by bas smit &lt;bas@baslab.org&gt;
+  - Define all `call`s in the lexer to avoid redefinition (b8ddf25) by bas smit &lt;bas@baslab.org&gt;
+  - Remove `_` suffix from local variables (34d4654) by bas smit &lt;bas@baslab.org&gt;
+  - Add regression test for #957 (253cfd6) by bas smit &lt;bas@baslab.org&gt;
+  - Fix paths in tests (a8dcb02) by bas smit &lt;bas@baslab.org&gt;
+  - Allow runtime tests to be ran from any directory (9139bed) by bas smit &lt;bas@baslab.org&gt;
+  - Link libiberty during static builds (aa8c7ba) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - cpid vector -> single (52ff6e3) by bas smit &lt;bas@baslab.org&gt;
+  - 0.9.3 Changelog (f4ea282) by bas smit &lt;bas@baslab.org&gt;
+  - Bump to 0.9.3 (3d1e022) by bas smit &lt;bas@baslab.org&gt;
+  - Add `signal` tests (95cba2b) by bas smit &lt;bas@baslab.org&gt;
+  - Add missing kernel option in INSTALL.md (099d1c9) by Edouard Dausque &lt;git@edouard.dausque.net&gt;
+  - Make printing the LLVM IR from a debugger easier (d534295) by bas smit &lt;bas@baslab.org&gt;
+  - Make `uprobes - list probes by pid` test more quiet (b2a570a) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+  - vagrant: add binutils-dev dependency (2e73e04) by Matheus Marchini &lt;mmarchini@netflix.com&gt;
+  - Fix maptype bugs (028c869) by bas smit &lt;bas@baslab.org&gt;
+  - Disable -Winconsistent-missing-override in mock.h (d3cb095) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Disable -Wcast-qual for bpf/btf.h (b308a9c) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Import used headers (979992e) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix modernize-deprecated-headers warnings (b09836b) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wcast-align (ce45470) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wdelete-abstract-non-virtual-dtor (cb78da3) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wstring-plus-int (3e52a3d) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wunreachable-code-loop-increment (f354911) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wbraced-scalar-init (6fc82ed) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wmismatched-tags (e29a4f2) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix -Wformat-security (cc3ef62) by Masanori Misono &lt;m.misono760@gmail.com&gt;
+  - Fix some compiler warnings (9a85f10) by Daniel Xu &lt;dxu@dxuuu.xyz&gt;
+
 ## [0.9.3] 2019-11-22
 
 ### Highlights
