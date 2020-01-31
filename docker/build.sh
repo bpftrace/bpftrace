@@ -9,6 +9,10 @@ LLVM_VERSION=${LLVM_VERSION:-8} # default llvm to latest version
 EMBED_LLVM=${EMBED_LLVM:-OFF}
 EMBED_CLANG=${EMBED_CLANG:-OFF}
 EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY:-OFF}
+EMBED_BCC=${EMBED_BCC:-OFF}
+EMBED_LIBELF=${EMBED_LIBELF:-OFF}
+EMBED_BINUTILS=${EMBED_BINUTILS:-OFF}
+ANDROID_ABI=${ANDROID_ABI:-""}
 DEPS_ONLY=${DEPS_ONLY:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
@@ -48,10 +52,28 @@ with_timeout()
 # Build bpftrace
 mkdir -p "$1"
 cd "$1"
+
+if [[ -n "$ANDROID_ABI"  ]];then
+  # https://developer.android.com/ndk/guides/abis
+  # Valid ABIS are:
+  # - armeabi-v7a
+  # - arm64-v8a
+  # - x86_64
+  cmake_extra_flags="-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+                     -DANDROID_ABI=${ANDROID_ABI} -DANDROID_NATIVE_API_LEVEL=28"
+else
+  cmake_extra_flags=""
+fi
+
+# FIXME build the embed string separately, like is done for android, this is
+# getting out of hand
 cmake -DCMAKE_BUILD_TYPE="$2" -DWARNINGS_AS_ERRORS:BOOL=$WARNINGS_AS_ERRORS \
       -DSTATIC_LINKING:BOOL=$STATIC_LINKING -DSTATIC_LIBC:BOOL=$STATIC_LIBC \
       -DEMBED_LLVM:BOOL=$EMBED_LLVM -DEMBED_CLANG:BOOL=$EMBED_CLANG \
       -DEMBED_LIBCLANG_ONLY:BOOL=$EMBED_LIBCLANG_ONLY \
+      -DEMBED_BCC:BOOL=$EMBED_BCC -DEMBED_LIBELF:BOOL=$EMBED_LIBELF \
+      -DEMBED_BINUTILS=$EMBED_BINUTILS \
+       ${cmake_extra_flags} \
       -DLLVM_VERSION=$LLVM_VERSION  ../
 shift 2
 
@@ -59,6 +81,8 @@ shift 2
 # so that their headers can be referenced
 [[ $EMBED_LLVM  == "ON" ]] && with_timeout make embedded_llvm "$@"
 [[ $EMBED_CLANG == "ON" ]] && with_timeout make embedded_clang "$@"
+[[ $EMBED_BCC == "ON" ]] && with_timeout make embedded_bcc "$@"
+[[ $EMBED_BINUTILS == "ON" ]] && with_timeout make embedded_binutils "$@"
 [[ $DEPS_ONLY == "ON" ]] && exit 0
 make "$@"
 

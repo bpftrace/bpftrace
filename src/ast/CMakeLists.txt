@@ -42,7 +42,7 @@ if (STATIC_LINKING)
   endif()
 
   if(EMBED_LLVM)
-    target_link_libraries(ast ${LLVM_EMBEDDED_CMAKE_TARGETS})
+    target_link_libraries(ast ${LLVM_EMBEDDED_CMAKE_TARGETS} -Wl,--end-group) # FIXME this must be done conditionally in a cleaner way, this is hacky
   else()
     llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit orcjit ${LLVM_TARGETS_TO_BUILD})
     target_link_libraries(ast ${clang_libs})

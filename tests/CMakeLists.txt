@@ -64,8 +64,10 @@ if(HAVE_BCC_CREATE_MAP)
 endif(HAVE_BCC_CREATE_MAP)
 if (LIBBPF_BTF_DUMP_FOUND)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_LIBBPF_BTF_DUMP)
-  target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
-  target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
+  if(NOT EMBED_BCC)
+    target_include_directories(bpftrace_test PUBLIC ${LIBBPF_INCLUDE_DIRS})
+    target_link_libraries(bpftrace_test ${LIBBPF_LIBRARIES})
+  endif()
 endif(LIBBPF_BTF_DUMP_FOUND)
 if(HAVE_BFD_DISASM)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_BFD_DISASM)
@@ -73,15 +75,19 @@ if(HAVE_BFD_DISASM)
     target_compile_definitions(bpftrace_test PRIVATE LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
   endif(LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
   if(STATIC_LINKING)
-    add_library(LIBBFD STATIC IMPORTED)
-    set_property(TARGET LIBBFD PROPERTY IMPORTED_LOCATION ${LIBBFD_LIBRARIES})
-    target_link_libraries(bpftrace_test LIBBFD)
-    add_library(LIBOPCODES STATIC IMPORTED)
-    set_property(TARGET LIBOPCODES PROPERTY IMPORTED_LOCATION ${LIBOPCODES_LIBRARIES})
-    target_link_libraries(bpftrace_test LIBOPCODES)
-    add_library(LIBIBERTY STATIC IMPORTED)
-    set_property(TARGET LIBIBERTY PROPERTY IMPORTED_LOCATION ${LIBIBERTY_LIBRARIES})
-    target_link_libraries(bpftrace_test LIBIBERTY)
+    if(EMBED_BINUTILS)
+      target_link_libraries(bpftrace_test ${BINUTILS_EMBEDDED_CMAKE_TARGETS})
+    else()
+      add_library(LIBBFD STATIC IMPORTED)
+      set_property(TARGET LIBBFD PROPERTY IMPORTED_LOCATION ${LIBBFD_LIBRARIES})
+      target_link_libraries(bpftrace_test LIBBFD)
+      add_library(LIBOPCODES STATIC IMPORTED)
+      set_property(TARGET LIBOPCODES PROPERTY IMPORTED_LOCATION ${LIBOPCODES_LIBRARIES})
+      target_link_libraries(bpftrace_test LIBOPCODES)
+      add_library(LIBIBERTY STATIC IMPORTED)
+      set_property(TARGET LIBIBERTY PROPERTY IMPORTED_LOCATION ${LIBIBERTY_LIBRARIES})
+      target_link_libraries(bpftrace_test LIBIBERTY)
+    endif()
   else()
     target_link_libraries(bpftrace_test ${LIBBFD_LIBRARIES})
     target_link_libraries(bpftrace_test ${LIBOPCODES_LIBRARIES})
@@ -95,13 +101,21 @@ if (STATIC_LINKING)
     set_target_properties(bpftrace_test PROPERTIES LINK_FLAGS "${EMBEDDED_LINK_FLAGS}")
   endif()
 
-  target_link_libraries(bpftrace_test ${LIBBCC_LIBRARIES})
-  target_link_libraries(bpftrace_test ${LIBBPF_LIBRARY_STATIC})
-  target_link_libraries(bpftrace_test ${LIBBCC_LOADER_LIBRARY_STATIC})
+  if(EMBED_BCC)
+    target_link_libraries(bpftrace_test ${BCC_EMBEDDED_CMAKE_TARGETS})
+  else()
+    target_link_libraries(bpftrace_test ${LIBBCC_LIBRARIES})
+    target_link_libraries(bpftrace_test ${LIBBPF_LIBRARY_STATIC})
+    target_link_libraries(bpftrace_test ${LIBBCC_LOADER_LIBRARY_STATIC})
+  endif()
 
-  add_library(LIBELF STATIC IMPORTED)
-  set_property(TARGET LIBELF PROPERTY IMPORTED_LOCATION ${LIBELF_LIBRARIES})
-  target_link_libraries(bpftrace_test LIBELF)
+  if(EMBED_ELF)
+    target_link_libraries(bpftrace_test elf)
+  else()
+    add_library(LIBELF STATIC IMPORTED)
+    set_property(TARGET LIBELF PROPERTY IMPORTED_LOCATION ${LIBELF_LIBRARIES})
+    target_link_libraries(bpftrace_test LIBELF)
+  endif()
 else()
   target_link_libraries(bpftrace_test ${LIBBCC_LIBRARIES})
   target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
@@ -118,12 +132,21 @@ set(gtest_byproducts
   <BINARY_DIR>/googlemock/libgmock.a
 )
 include(ExternalProject)
+
+if(${TARGET_TRIPLE} MATCHES android)
+  set(GOOGLETEST_CMAKE_ARGS CMAKE_ARGS
+      -DCMAKE_TOOLCHAIN_FILE=/opt/android-ndk/build/cmake/android.toolchain.cmake
+      -DANDROID_ABI=${ANDROID_ABI}
+      -DANDROID_NATIVE_API_LEVEL=${ANDROID_NATIVE_API_LEVEL}
+     )
+endif()
 if (OFFLINE_BUILDS)
   ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
+    ${GOOGLETEST_CMAKE_ARGS}
     UPDATE_DISCONNECTED 1
     BUILD_BYPRODUCTS ${gtest_byproducts}
     )
@@ -132,6 +155,7 @@ else()
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.8.1
     STEP_TARGETS build update
+    ${GOOGLETEST_CMAKE_ARGS}
     EXCLUDE_FROM_ALL 1
     BUILD_BYPRODUCTS ${gtest_byproducts}
     )

@@ -12,6 +12,8 @@ set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with m
 set(EMBED_LLVM OFF CACHE BOOL "Build LLVM static libs as an ExternalProject and link to these instead of system libs.")
 set(EMBED_CLANG OFF CACHE BOOL "Build Clang static libs as an ExternalProject and link to these instead of system libs.")
 set(EMBED_LIBCLANG_ONLY OFF CACHE BOOL "Build only libclang.a, and link to system libraries statically")
+set(EMBED_BCC OFF CACHE BOOL "Build bcc libs as an ExternalProject and link to these instead of system libs.")
+set(EMBED_LIBELF OFF CACHE BOOL "Build bcc libs as an ExternalProject and link to these instead of system libs.")
 set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 
@@ -62,8 +64,14 @@ if(STATIC_LINKING)
     set(CMAKE_EXE_LINKER_FLAGS "-static")
   elseif(EMBED_LLVM OR EMBED_CLANG)
     set(EMBEDDED_LINK_FLAGS "-static-libgcc -static-libstdc++ -Wl,--start-group")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lrt")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lpthread")
+    get_target_triple(TARGET_TRIPLE)
+
+    # If this starts to get ugly this should move to a function in embed_helpers
+    if(NOT ${TARGET_TRIPLE} MATCHES android)
+      # Android bionic libc doesn't have separate libs for these
+      set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lrt")
+      set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lpthread")
+    endif()
     set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -ldl -lm")
     set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bstatic -lz")
   endif(STATIC_LIBC)
@@ -73,50 +81,6 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
-
-find_package(LibBcc REQUIRED)
-include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
-
-find_package(LibElf REQUIRED)
-include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
-
-find_package(BISON REQUIRED)
-find_package(FLEX REQUIRED)
-bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc VERBOSE)
-flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
-add_flex_bison_dependency(flex_lexer bison_parser)
-add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
-target_compile_options(parser PRIVATE "-w")
-target_include_directories(parser PUBLIC src src/ast ${CMAKE_BINARY_DIR})
-
-include(CheckSymbolExists)
-set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
-check_symbol_exists(name_to_handle_at "sys/types.h;sys/stat.h;fcntl.h" HAVE_NAME_TO_HANDLE_AT)
-set(CMAKE_REQUIRED_DEFINITIONS)
-
-if(POLICY CMP0075)
-  cmake_policy(SET CMP0075 NEW)
-endif()
-set(CMAKE_REQUIRED_LIBRARIES bcc)
-get_filename_component(LIBBCC_LIBDIR ${LIBBCC_LIBRARIES} DIRECTORY)
-set(CMAKE_REQUIRED_LINK_OPTIONS -L${LIBBCC_LIBDIR})
-
-check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_PROG_LOAD)
-check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_CREATE_MAP)
-check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
-set(CMAKE_REQUIRED_LIBRARIES)
-set(CMAKE_REQUIRED_LINK_OPTIONS)
-
-find_package(LibBpf)
-find_package(LibBfd)
-find_package(LibOpcodes)
-
-if(${LIBBFD_FOUND} AND ${LIBOPCODES_FOUND})
-  set(HAVE_BFD_DISASM TRUE)
-endif()
-
-include(CheckIncludeFile)
-check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 
 if (EMBED_LLVM)
   include(embed_llvm)
@@ -145,12 +109,91 @@ else()
   include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 endif()
 
+if(EMBED_LIBELF)
+  include(embed_libelf)
+  set(LIBELF_LIBRARIES "${EMBEDDED_LIBELF_INSTALL_DIR}/usr/lib/libelf.a")
+else()
+  find_package(LibElf REQUIRED)
+  include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
+endif()
+
+include(CheckSymbolExists)
+
+if(EMBED_BCC)
+  include(embed_bcc)
+  include_directories(SYSTEM "${EMBEDDED_BCC_INSTALL_DIR}/include")
+  include_directories(SYSTEM "${EMBEDDED_BCC_INSTALL_DIR}/include/bcc")
+
+  # Since we are embedding, we know the symbol exists
+  set(HAVE_BCC_PROG_LOAD ON)
+  set(HAVE_BCC_CREATE_MAP ON)
+  set(HAVE_BCC_ELF_FOREACH ON)
+  set(LIBBPF_BTF_DUMP_FOUND TRUE)
+else()
+  find_package(LibBcc REQUIRED)
+  include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
+
+  # NOTE thes emust be before the check_symbol_exists calls or they will fail
+  set(CMAKE_REQUIRED_LIBRARIES bcc)
+  get_filename_component(LIBBCC_LIBDIR ${LIBBCC_LIBRARIES} DIRECTORY)
+  set(CMAKE_REQUIRED_LINK_OPTIONS -L${LIBBCC_LIBDIR})
+
+  check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_PROG_LOAD)
+  check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/libbpf.h" HAVE_BCC_CREATE_MAP)
+  check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
+
+  set(CMAKE_REQUIRED_LIBRARIES)
+  set(CMAKE_REQUIRED_LINK_OPTIONS)
+
+  find_package(LibBpf) # For BTF
+endif()
+
+# flex and bison are only required in the host toolchain, not target when cross compiling.
+find_package(BISON REQUIRED)
+find_package(FLEX REQUIRED)
+bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc VERBOSE)
+flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
+add_flex_bison_dependency(flex_lexer bison_parser)
+add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
+target_compile_options(parser PRIVATE "-w")
+target_include_directories(parser PUBLIC src src/ast ${CMAKE_BINARY_DIR})
+
+set(CMAKE_REQUIRED_DEFINITIONS -D_GNU_SOURCE)
+check_symbol_exists(name_to_handle_at "sys/types.h;sys/stat.h;fcntl.h" HAVE_NAME_TO_HANDLE_AT)
+set(CMAKE_REQUIRED_DEFINITIONS)
+
+if(POLICY CMP0075)
+  cmake_policy(SET CMP0075 NEW)
+endif()
+
+include(CheckTypeSize)
+set(CMAKE_EXTRA_INCLUDE_FILES linux/bpf.h)
+# This will set HAVE_GET_CURRENT_CGROUP_ID to TRUE or FALSE
+check_type_size("BPF_FUNC_get_current_cgroup_id" GET_CURRENT_CGROUP_ID LANGUAGE C)
+check_type_size("BPF_FUNC_send_signal" SEND_SIGNAL LANGUAGE C)
+set(CMAKE_EXTRA_INCLUDE_FILES)
+
+if(EMBED_BINUTILS)
+  include(embed_binutils)
+  set(HAVE_BFD_DISASM TRUE)
+  include_directories(SYSTEM "${EMBEDDED_BINUTILS_INSTALL_DIR}/include")
+else()
+  find_package(LibBfd)
+  find_package(LibOpcodes)
+
+  if(${LIBBFD_FOUND} AND ${LIBOPCODES_FOUND})
+    set(HAVE_BFD_DISASM TRUE)
+  endif()
+endif()
+
+include(CheckIncludeFile)
+check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
+
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
 add_subdirectory(src)
 if (BUILD_TESTING)
   add_subdirectory(tests)
 endif()
-add_subdirectory(resources)
 add_subdirectory(tools)
 add_subdirectory(man)
