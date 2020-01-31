@@ -3,22 +3,6 @@ if(NOT EMBED_LLVM)
 endif()
 include(embed_helpers)
 
-# TO DO
-# Set up cross-compilation
-# https://cmake.org/cmake/help/v3.6/manual/cmake-toolchains.7.html#cross-compiling-using-clang
-get_host_triple(CHOST)
-get_target_triple(CBUILD)
-
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  # Same as debian, see
-  # https://salsa.debian.org/pkg-llvm-team/llvm-toolchain/blob/8/debian/rules
-  set(EMBEDDED_BUILD_TYPE "RelWithDebInfo")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(EMBEDDED_BUILD_TYPE "MinSizeRel")
-else()
-  set(EMBEDDED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
-endif()
-
 if(${LLVM_VERSION} VERSION_GREATER_EQUAL "9")
   set(LLVM_FULL_VERSION "9.0.1")
   set(LLVM_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz")
@@ -100,19 +84,27 @@ set(LLVM_LIBRARY_TARGETS
     LLVMSupport
     )
 
+get_host_triple(CHOST)
+get_target_triple(CBUILD)
 # These build flags are based off of Alpine, Debian and Gentoo packages
 # optimized for compatibility and reducing build targets
 set(LLVM_CONFIGURE_FLAGS
     -Wno-dev
     -DLLVM_TARGETS_TO_BUILD=BPF
-    -DCMAKE_BUILD_TYPE=${EMBEDDED_BUILD_TYPE}
+    -DCMAKE_BUILD_TYPE=MinSizeRel
     -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     -DLLVM_BINUTILS_INCDIR=/usr/include
     -DLLVM_BUILD_DOCS=OFF
     -DLLVM_BUILD_EXAMPLES=OFF
+    -DLLVM_INCLUDE_EXAMPLES=OFF
     -DLLVM_BUILD_EXTERNAL_COMPILER_RT=ON
     -DLLVM_BUILD_LLVM_DYLIB=ON
+    -DLLVM_LINK_LLVM_DYLIB=OFF
     -DLLVM_BUILD_TESTS=OFF
+    -DLLVM_INCLUDE_TESTS=OFF
+    -DLLVM_BUILD_TOOLS=OFF
+    -DLLVM_INCLUDE_TOOLS=OFF
+    -DLLVM_INCLUDE_BENCHMARKS=OFF
     -DLLVM_DEFAULT_TARGET_TRIPLE=${CBUILD}
     -DLLVM_ENABLE_ASSERTIONS=OFF
     -DLLVM_ENABLE_CXX1Y=ON
@@ -127,10 +119,14 @@ set(LLVM_CONFIGURE_FLAGS
     -DLLVM_ENABLE_TERMINFO=OFF
     -DLLVM_ENABLE_ZLIB=ON
     -DLLVM_HOST_TRIPLE=${CHOST}
-    -DLLVM_INCLUDE_EXAMPLES=OFF
-    -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_APPEND_VC_REV=OFF
     )
+
+
+llvm_platform_config(LLVM_PATCH_COMMAND
+                    "${LLVM_CONFIGURE_FLAGS}"
+                    LLVM_BUILD_COMMAND
+                    LLVM_INSTALL_COMMAND)
 
 set(LLVM_TARGET_LIBS "")
 foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
@@ -141,6 +137,8 @@ ExternalProject_Add(embedded_llvm
   URL "${LLVM_DOWNLOAD_URL}"
   URL_HASH "${LLVM_URL_CHECKSUM}"
   CMAKE_ARGS "${LLVM_CONFIGURE_FLAGS}"
+  ${LLVM_BUILD_COMMAND}
+  ${LLVM_INSTALL_COMMAND}
   BUILD_BYPRODUCTS ${LLVM_TARGET_LIBS}
   UPDATE_DISCONNECTED 1
   DOWNLOAD_NO_PROGRESS 1
@@ -150,7 +148,6 @@ ExternalProject_Add(embedded_llvm
 ExternalProject_Get_Property(embedded_llvm INSTALL_DIR)
 set(EMBEDDED_LLVM_INSTALL_DIR ${INSTALL_DIR})
 set(LLVM_EMBEDDED_CMAKE_TARGETS "")
-
 include_directories(SYSTEM ${EMBEDDED_LLVM_INSTALL_DIR}/include)
 
 foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)

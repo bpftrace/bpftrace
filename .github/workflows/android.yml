@@ -41,12 +41,20 @@ jobs:
       env: ${{ matrix.env }}
       run: |
         docker run --privileged -v ${PWD}:${PWD} -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=ON -e EMBED_LLVM=ON -e EMBED_CLANG=ON -e EMBED_BCC=ON -e EMBED_LIBELF=ON -e EMBED_BINUTILS=ON -e RUN_TESTS=0 -e ANDROID_ABI=${ANDROID_ABI} bpftrace-android ${PWD}/build-android ${TYPE} -j9
+    - name: Check linked libs
+      env: ${{ matrix.env }}
+      run: |
         docker run --privileged -v ${PWD}:${PWD} -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=ON -e EMBED_LLVM=ON -e EMBED_CLANG=ON -e EMBED_BCC=ON -e EMBED_LIBELF=ON -e EMBED_BINUTILS=ON -e RUN_TESTS=0 -e ANDROID_ABI=${ANDROID_ABI} --entrypoint /bin/bash bpftrace-android -c "[[ -f $(pwd)/build-android/src/bpftrace ]] && ! /opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/${READELF_CMD} --dynamic $(pwd)/build-android/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
-    - name: Strip artifacts
+    - name: Strip bpftrace
       env: ${{ matrix.env }}
       if: matrix.env['TYPE'] == 'Release'
       run: |
         docker run --privileged -v ${PWD}:${PWD} -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=ON -e EMBED_LLVM=ON -e EMBED_CLANG=ON -e EMBED_BCC=ON -e EMBED_LIBELF=ON -e EMBED_BINUTILS=ON -e RUN_TESTS=0 -e ANDROID_ABI=${ANDROID_ABI} --entrypoint /bin/bash bpftrace-android -c "/opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/${STRIP_CMD} --keep-symbol BEGIN_trigger $(pwd)/build-android/src/bpftrace"
+#    - name: Build test binary
+#      env: ${{ matrix.env }}
+#      run: |
+#        docker run --privileged -v ${PWD}:${PWD} -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e STATIC_LINKING=ON -e EMBED_LLVM=ON -e EMBED_CLANG=ON -e EMBED_BCC=ON -e EMBED_LIBELF=ON -e EMBED_BINUTILS=ON -e RUN_TESTS=0 -e ANDROID_ABI=${ANDROID_ABI} bpftrace-android ${PWD}/build-android ${TYPE} bpftrace_test -j9
+
     - uses: actions/upload-artifact@v1
       with:
         name: bpftrace-${{ matrix.env['TYPE'] }}-${{ matrix.env['ANDROID_ABI'] }}

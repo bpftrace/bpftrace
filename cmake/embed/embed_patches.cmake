@@ -1,3 +1,8 @@
+# This file is for handling the logic of downloading and applying any necessary
+# patches to external projects, using helper functions and the `quilt` utility
+# Each package that needs to be patched should define their own patch function
+# that can handle the logic necessary to correctly patch the project.
+
 # Patch function for clang to be able to link to system LLVM
 function(prepare_clang_patches patch_command)
   message("Building embedded Clang against host LLVM, checking compatibiilty...")
@@ -56,3 +61,28 @@ function(prepare_clang_patches patch_command)
   endif()
   set(${patch_command} "${CLANG_PATCH_COMMAND}" PARENT_SCOPE)
 endfunction(prepare_clang_patches patch_command)
+
+function(prepare_libelf_patches patch_command)
+  get_target_triple(TARGET_TRIPLE)
+
+  # FIXME this should actually check if toolchain is LLVM, not android. Nothing
+  # here is android specific, android toolchain just happens to use LLVM
+  if(${TARGET_TRIPLE} MATCHES android)
+    set(LIBELF_LLVM_PATCH_URL "https://github.com/dalehamel/bpftrace-android-patches/archive/master.tar.gz")
+    set(LIBELF_LLVM_PATCH_CHECKSUM 1634a81578ecb480a32b8e9477fcda511c7273adf498c5473277e1f6e6e02a4c)
+
+    set(PATCH_NAME "bpftrace-android-patches.tar.gz")
+    set(PATCH_PATH "${CMAKE_CURRENT_BINARY_DIR}/bpftrace-android-patches/")
+
+    set(LIBELF_LLVM_PATCH_SERIES "")
+    list(APPEND LIBELF_LLVM_PATCH_SERIES "libelf/libelf-configure.patch -p1")
+    list(APPEND LIBELF_LLVM_PATCH_SERIES "libelf/clang-lib-Makefile_in-warnings.patch -p2")
+
+    list(LENGTH LIBELF_LLVM_PATCH_SERIES NUM_PATCHES)
+    message("${NUM_PATCHES} patches will be applied for libelf to be built by LLVM toolchain.")
+    fetch_patches(${PATCH_NAME} ${PATCH_PATH} ${LIBELF_LLVM_PATCH_URL} ${LIBELF_LLVM_PATCH_CHECKSUM} 1)
+    prepare_patch_series("${LIBELF_LLVM_PATCH_SERIES}" ${PATCH_PATH})
+    set(LIBELF_LLVM_PATCH_COMMAND "(QUILT_PATCHES=${PATCH_PATH} quilt push -a || [[ $? -eq 2 ]])")
+  endif()
+  set(${patch_command} "${LIBELF_LLVM_PATCH_COMMAND}" PARENT_SCOPE)
+endfunction(prepare_libelf_patches patch_command)

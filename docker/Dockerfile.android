@@ -40,6 +40,9 @@ RUN mkdir /opt/android-ndk-tmp && \
     cd ${ANDROID_NDK_HOME} && \
     rm -rf /opt/android-ndk-tmp
 
+# Cannot build with full debug symbols on github actions, the files get to be too big for the 14GB limit
+RUN sed -i 's/-g$//g' /opt/android-ndk/build/cmake/android.toolchain.cmake
+
 # add to PATH
 ENV PATH ${PATH}:${ANDROID_NDK_HOME}
 ENV PATH ${PATH}:opt/android-ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/

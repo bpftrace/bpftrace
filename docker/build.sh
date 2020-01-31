@@ -79,10 +79,10 @@ shift 2
 
 # It is necessary to build embedded llvm and clang targets first,
 # so that their headers can be referenced
-[[ $EMBED_LLVM  == "ON" ]] && with_timeout make embedded_llvm "$@"
-[[ $EMBED_CLANG == "ON" ]] && with_timeout make embedded_clang "$@"
-[[ $EMBED_BCC == "ON" ]] && with_timeout make embedded_bcc "$@"
-[[ $EMBED_BINUTILS == "ON" ]] && with_timeout make embedded_binutils "$@"
+[[ $EMBED_LLVM  == "ON" ]] && with_timeout make embedded_llvm -j`nproc`
+[[ $EMBED_CLANG == "ON" ]] && with_timeout make embedded_clang -j`nproc`
+[[ $EMBED_BCC == "ON" ]] && with_timeout make embedded_bcc -j`nproc`
+[[ $EMBED_BINUTILS == "ON" ]] && with_timeout make embedded_binutils -j`nproc`
 [[ $DEPS_ONLY == "ON" ]] && exit 0
 make "$@"
 
