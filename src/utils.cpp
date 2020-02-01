@@ -600,7 +600,12 @@ allowing for a PID whose mount namespace should be optionally considered.
 static std::vector<std::string>
 resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
 {
-  std::vector<std::string> candidate_paths = { cmd };
+  std::vector<std::string> candidate_paths;
+
+  if (cmd[0] != '/' && cmd[0] != '.')
+    candidate_paths.push_back("./" + cmd);
+  else
+    candidate_paths.push_back(cmd);
 
   if (env_paths != nullptr && cmd.find("/") == std::string::npos)
     for (const auto& path : split_string(env_paths, ':'))
