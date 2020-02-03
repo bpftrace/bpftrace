@@ -15,6 +15,13 @@ For build and install instructions, see [INSTALL.md](INSTALL.md).
 
 For development and testing a [Vagrantfile](Vagrantfile) is available.
 
+Make sure you have the `vbguest` plugin installed, it is required to correctly
+install the shared file system driver on the ubuntu boxes.
+
+```
+$ vagrant plugin install vagrant-vbguest
+```
+
 ## Examples
 
 Count system calls using tracepoints:
