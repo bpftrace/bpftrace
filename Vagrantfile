@@ -30,21 +30,22 @@ Vagrant.configure("2") do |config|
       'image' => 'ubuntu/bionic64',
       'scripts' => [ $ubuntu_18_deps, ],
     },
-    'ubuntu-18.10' => {
-      'image' => 'ubuntu/cosmic64',
+    'ubuntu-19.10' => {
+      'image' => 'ubuntu/eoan64',
       'scripts' => [ $ubuntu_18_deps, ],
+      'fix_console' => 1
     },
-    'ubuntu-19.04' => {
-      'image' => 'ubuntu/disco64',
-      'scripts' => [ $ubuntu_18_deps, ],
-    },
-  }
+}
   boxes.each do | name, params |
     config.vm.define name do |box|
       box.vm.box = params['image']
       box.vm.provider "virtualbox" do |v|
         v.memory = 2048
         v.cpus = 2
+        if (params['fix_console'] || 0) == 1
+          v.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
+          v.customize ["modifyvm", :id, "--uartmode1", "file", "./#{name}_ttyS0.log"]
+        end
       end
       box.vm.provider :libvirt do |v|
         v.memory = 2048
