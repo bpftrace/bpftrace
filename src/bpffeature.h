@@ -24,10 +24,15 @@ public:
   {
     return has_override_return_;
   };
+  bool instruction_limit(void)
+  {
+    return insns_limit_;
+  };
   std::string report(void);
 
 protected:
   bool has_loop_;
+  int insns_limit_;
 
   /* Helpers */
   bool has_signal_;
