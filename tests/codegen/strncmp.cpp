@@ -38,7 +38,7 @@ entry:
   %3 = ptrtoint i8* %0 to i64
   %4 = add i64 %3, 8
   %5 = inttoptr i64 %4 to i64*
-  %6 = load i64, i64* %5, align 8
+  %6 = load volatile i64, i64* %5, align 8
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %6)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char_l)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char_r)
@@ -336,7 +336,7 @@ entry:
   %3 = ptrtoint i8* %0 to i64
   %4 = add i64 %3, 8
   %5 = inttoptr i64 %4 to i64*
-  %6 = load i64, i64* %5, align 8
+  %6 = load volatile i64, i64* %5, align 8
   %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 64, i64 %6)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char_l)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %strcmp.char_r)

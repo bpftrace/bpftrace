@@ -30,7 +30,7 @@ entry:
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 8
   %3 = inttoptr i64 %2 to i64*
-  %4 = load i64, i64* %3, align 8
+  %4 = load volatile i64, i64* %3, align 8
   %5 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %4, [8 x i8]* %"@_key", align 8
@@ -67,7 +67,7 @@ entry:
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 16
   %3 = inttoptr i64 %2 to i64*
-  %4 = load i64, i64* %3, align 8
+  %4 = load volatile i64, i64* %3, align 8
   %5 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %4, [8 x i8]* %"@_key", align 8
@@ -111,7 +111,7 @@ entry:
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 8
   %3 = inttoptr i64 %2 to i64*
-  %4 = load i64, i64* %3, align 8
+  %4 = load volatile i64, i64* %3, align 8
   %5 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %4, [8 x i8]* %"@_key", align 8
@@ -148,7 +148,7 @@ entry:
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 16
   %3 = inttoptr i64 %2 to i64*
-  %4 = load i64, i64* %3, align 8
+  %4 = load volatile i64, i64* %3, align 8
   %5 = getelementptr inbounds [8 x i8], [8 x i8]* %"@_key", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 %4, [8 x i8]* %"@_key", align 8

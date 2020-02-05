@@ -14,7 +14,7 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kretprobe:f"(i8* nocapture readonly) local_unnamed_addr section "s_kretprobe:f_1" {
+define i64 @"kretprobe:f"(i8*) local_unnamed_addr section "s_kretprobe:f_1" {
 entry:
   %deref = alloca i8, align 1
   %"@_val" = alloca i64, align 8
@@ -37,7 +37,7 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   %3 = bitcast i64* %"@_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   %4 = getelementptr i8, i8* %0, i64 32
-  %reg_bp = load i64, i8* %4, align 8
+  %reg_bp = load volatile i64, i8* %4, align 8
   %5 = add i64 %reg_bp, -1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %deref)
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %deref, i64 1, i64 %5)
