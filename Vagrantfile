@@ -12,6 +12,10 @@ apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev sys
 apt-get -qq install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 EOF
 
+$fedora_deps = <<EOF
+dnf builddep -q -y bpftrace
+EOF
+
 $build_bcc = <<EOF
 if [ -e /usr/local/lib/libbcc.so ]; then
    echo "libbcc already built, skipping"
@@ -35,6 +39,11 @@ Vagrant.configure("2") do |config|
       'scripts' => [ $ubuntu_18_deps, ],
       'fix_console' => 1
     },
+    'fedora-31'        => {
+      'image'          => 'fedora/31-cloud-base',
+      'scripts'        => [ $fedora_deps, ],
+      'skip_bcc_build' => 1
+    }
 }
   boxes.each do | name, params |
     config.vm.define name do |box|
@@ -42,7 +51,7 @@ Vagrant.configure("2") do |config|
       box.vm.provider "virtualbox" do |v|
         v.memory = 2048
         v.cpus = 2
-        if (params['fix_console'] || 0) == 1
+        if params['fix_console'] == 1
           v.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
           v.customize ["modifyvm", :id, "--uartmode1", "file", "./#{name}_ttyS0.log"]
         end
@@ -54,7 +63,7 @@ Vagrant.configure("2") do |config|
       (params['scripts'] || []).each do |script|
         box.vm.provision :shell, inline: script
       end
-      unless ENV['SKIP_BCC_BUILD']
+      unless ENV['SKIP_BCC_BUILD'] || (params['skip_bcc_build'] == 1)
         box.vm.provision :shell, privileged: false, inline: $build_bcc
       end
       config.vm.post_up_message = <<-HEREDOC
