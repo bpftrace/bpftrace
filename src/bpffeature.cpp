@@ -84,12 +84,58 @@ static bool detect_override_return(void)
       "test_override_return", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
 }
 
+static int detect_instruction_limit(void)
+{
+  struct bpf_insn insns[] = {
+    BPF_LD_IMM64(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  constexpr int log_size = 4096;
+  char logbuf[log_size] = {};
+  int loglevel = 1;
+  int ret = 0;
+#ifdef HAVE_BCC_PROG_LOAD
+  ret = bcc_prog_load(BPF_PROG_TYPE_KPROBE,
+                      "ins_count",
+                      insns,
+                      sizeof(insns),
+                      "GPL",
+                      0,
+                      loglevel,
+                      logbuf,
+                      log_size);
+#else
+  ret = bpf_prog_load(BPF_PROG_TYPE_KPROBE,
+                      "ins_count",
+                      insns,
+                      sizeof(insns),
+                      "GPL",
+                      0,
+                      loglevel,
+                      logbuf,
+                      log_size);
+#endif
+  if (ret >= 0)
+    close(ret);
+
+  // Extract limit from the verifier log:
+  // processed 2 insns (limit 131072), stack depth 0
+  std::string log(logbuf, log_size);
+  std::size_t line_start = log.find("processed 2 insns");
+  std::size_t begin = log.find("limit", line_start) + /* "limit " = 6*/ 6;
+  std::size_t end = log.find(")", begin);
+  std::string cnt = log.substr(begin, end - begin);
+  return std::stoi(cnt);
+}
+
 BPFfeature::BPFfeature(void)
 {
   has_loop_ = detect_loop();
   has_signal_ = detect_signal();
   has_get_current_cgroup_id_ = detect_get_current_cgroup_id();
   has_override_return_ = detect_override_return();
+  insns_limit_ = detect_instruction_limit();
 }
 
 std::string BPFfeature::report(void)
@@ -104,6 +150,7 @@ std::string BPFfeature::report(void)
       << std::endl
       << std::endl
       << "Kernel features" << std::endl
+      << "  Instruction limit: " << std::to_string(insns_limit_) << std::endl
       << "  Loop support: " << to_str(has_loop()) << std::endl
       << std::endl;
   return buf.str();
