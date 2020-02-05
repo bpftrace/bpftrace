@@ -6,6 +6,8 @@ set(bpftrace_VERSION_MAJOR 0)
 set(bpftrace_VERSION_MINOR 9)
 set(bpftrace_VERSION_PATCH 4)
 
+include(GNUInstallDirs)
+
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with musl. Has issues with dlopen.")

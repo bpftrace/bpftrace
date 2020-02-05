@@ -97,7 +97,7 @@ if (BUILD_ASAN)
   target_link_options(bpftrace PUBLIC "-fsanitize=address")
 endif()
 
-install(TARGETS bpftrace DESTINATION bin)
+install(TARGETS bpftrace DESTINATION ${CMAKE_INSTALL_BINDIR})
 
 set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
 if (KERNEL_HEADERS_DIR)
