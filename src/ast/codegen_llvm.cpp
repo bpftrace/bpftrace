@@ -181,10 +181,16 @@ void CodegenLLVM::visit(Builtin &builtin)
       offset = arch::arg_offset(arg_num);
     }
 
+    // LLVM optimization is possible to transform `(uint64*)ctx` into
+    // `(uint8*)ctx`, but sometimes this causes invalid context access.
+    // Mark every context acess to supporess any LLVM optimization.
     expr_ = b_.CreateLoad(
         b_.getInt64Ty(),
         b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
         builtin.ident);
+    // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
+    // so call setVolatile() manually
+    dyn_cast<LoadInst>(expr_)->setVolatile(true);
 
     if (builtin.type.type == Type::usym)
     {
@@ -213,6 +219,7 @@ void CodegenLLVM::visit(Builtin &builtin)
         b_.getInt64Ty(),
         b_.CreateGEP(ctx_, b_.getInt64(sp_offset * sizeof(uintptr_t))),
         "reg_sp");
+    dyn_cast<LoadInst>(sp)->setVolatile(true);
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     Value *src = b_.CreateAdd(sp, b_.getInt64((arg_num + 1) * sizeof(uintptr_t)));
     b_.CreateProbeRead(dst, 8, src);
@@ -618,6 +625,7 @@ void CodegenLLVM::visit(Call &call)
         b_.getInt64Ty(),
         b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
         call.func+"_"+reg_name);
+    dyn_cast<LoadInst>(expr_)->setVolatile(true);
   }
   else if (call.func == "printf")
   {
@@ -1197,10 +1205,15 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
       if (type.type == Type::ctx)
-        b_.CREATE_MEMCPY(dst,
-                         b_.CreateIntToPtr(src, field_ty->getPointerTo()),
-                         field.type.size,
-                         1);
+      {
+        // Map functions only accept a pointer to a element in the stack
+        // Copy data to avoid the above issue
+        b_.CREATE_MEMCPY_VOLATILE(dst,
+                                  b_.CreateIntToPtr(src,
+                                                    field_ty->getPointerTo()),
+                                  field.type.size,
+                                  1);
+      }
       else
         b_.CreateProbeRead(dst, field.type.size, src);
       expr_ = dst;
@@ -1209,7 +1222,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       Value *raw;
       if (type.type == Type::ctx)
-        raw = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()));
+        raw = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
+                            true);
       else
       {
         AllocaInst *dst = b_.CreateAllocaBPF(field.type,
@@ -1228,7 +1242,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
              (field.type.type == Type::integer ||
               (field.type.type == Type::cast && field.type.is_pointer)))
     {
-      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()));
+      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
+                            true);
     }
     else
     {
@@ -1258,7 +1273,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   if (arr.expr->type.type == Type::ctx)
   {
     auto ty = b_.GetType(stype);
-    expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()));
+    expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
   }
   else
   {

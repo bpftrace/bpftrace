@@ -11,9 +11,13 @@
 #if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
 #define CREATE_MEMCPY(dst, src, size, algn)                                    \
   CreateMemCpy((dst), (src), (size), (algn))
+#define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
+  CreateMemCpy((dst), (src), (size), (algn), true)
 #elif LLVM_VERSION_MAJOR >= 7
 #define CREATE_MEMCPY(dst, src, size, algn)                                    \
   CreateMemCpy((dst), (algn), (src), (algn), (size))
+#define CREATE_MEMCPY_VOLATILE(dst, src, size, algn)                           \
+  CreateMemCpy((dst), (algn), (src), (algn), (size), true)
 #else
 #error Unsupported LLVM version
 #endif

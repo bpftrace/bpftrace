@@ -14,14 +14,14 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
-define i64 @"kprobe:f"(i8* nocapture readonly) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
   %"@y_val" = alloca i64, align 8
   %"@y_key" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %1 = getelementptr i8, i8* %0, i64 112
-  %arg0 = load i64, i8* %1, align 8
+  %arg0 = load volatile i64, i8* %1, align 8
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@x_key", align 8
@@ -33,7 +33,7 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %4 = getelementptr i8, i8* %0, i64 96
-  %arg2 = load i64, i8* %4, align 8
+  %arg2 = load volatile i64, i8* %4, align 8
   %5 = bitcast i64* %"@y_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@y_key", align 8
