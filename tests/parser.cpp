@@ -773,6 +773,15 @@ TEST(Parser, uprobe)
       "Program\n"
       " uprobe:/with#hash:asdf\n"
       "  int: 1\n");
+  test("uprobe:/my/program:1234 { 1; }",
+       "Program\n"
+       " uprobe:/my/program:1234\n"
+       "  int: 1\n");
+  // Trailing alnum chars are allowed (turns the entire arg into a symbol name)
+  test("uprobe:/my/program:1234abc { 1; }",
+       "Program\n"
+       " uprobe:/my/program:1234abc\n"
+       "  int: 1\n");
 
   test_parse_failure("uprobe:f { 1 }");
   test_parse_failure("uprobe { 1 }");
@@ -859,6 +868,7 @@ TEST(Parser, profile_probe)
   test_parse_failure("profile:ms:nan { 1 }");
   test_parse_failure("profile:f { 1 }");
   test_parse_failure("profile { 1 }");
+  test_parse_failure("profile:s:1b { 1 }");
 }
 
 TEST(Parser, interval_probe)
@@ -867,6 +877,8 @@ TEST(Parser, interval_probe)
       "Program\n"
       " interval:s:1\n"
       "  int: 1\n");
+
+  test_parse_failure("interval:s:1b { 1 }");
 }
 
 TEST(Parser, software_probe)
@@ -875,6 +887,8 @@ TEST(Parser, software_probe)
       "Program\n"
       " software:faults:1000\n"
       "  int: 1\n");
+
+  test_parse_failure("software:faults:1b { 1 }");
 }
 
 TEST(Parser, hardware_probe)
@@ -883,6 +897,20 @@ TEST(Parser, hardware_probe)
       "Program\n"
       " hardware:cache-references:1000000\n"
       "  int: 1\n");
+
+  test_parse_failure("hardware:cache-references:1b { 1 }");
+}
+
+TEST(Parser, watchpoint_probe)
+{
+  test("watchpoint::1234:8:w { 1 }",
+       "Program\n"
+       " watchpoint:1234:8:w\n"
+       "  int: 1\n");
+
+  test_parse_failure("watchpoint::1b:8:w { 1 }");
+  test_parse_failure("watchpoint::1:8a:w { 1 }");
+  test_parse_failure("watchpoint::1b:8a:w { 1 }");
 }
 
 TEST(Parser, multiple_attach_points_kprobe)
@@ -1344,6 +1372,8 @@ TEST(Parser, kprobe_offset)
   test("k:\"fn.abc\"+0x10 {}",
        "Program\n"
        " kprobe:fn.abc+16\n");
+
+  test_parse_failure("k:asdf+123abc");
 }
 
 TEST(Parser, kretprobe_offset)
