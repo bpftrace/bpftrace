@@ -56,7 +56,13 @@ static std::string rewrite_memset_call(const std::string &line)
 #endif
 }
 
-#if LLVM_VERSION_MAJOR < 7
+#if LLVM_VERSION_MAJOR == 9
+static std::string rewrite_memset_decl(const std::string &line
+                                       __attribute__((unused)))
+{
+  return std::string("declare void @llvm.memset.p0i8.i64(i8* nocapture "
+                     "writeonly, i8, i64, i1 immarg) #1");
+#elif LLVM_VERSION_MAJOR < 7
 static std::string rewrite_memset_decl(const std::string &line
                                        __attribute__((unused)))
 {
@@ -106,7 +112,15 @@ static std::string rewrite_memcpy_call(const std::string &line)
 
 static std::string rewrite_memcpy_decl(const std::string &line)
 {
-#if LLVM_VERSION_MAJOR < 7
+#if LLVM_VERSION_MAJOR == 9
+  (void)line;
+  if (line.find("addrspace") != std::string::npos)
+    return std::string(
+        "declare void @llvm.memcpy.p0i8.p64i8.i64(i8* nocapture writeonly, i8 "
+        "addrspace(64)* nocapture readonly, i64, i1 immarg) #1");
+  return std::string("declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture "
+                     "writeonly, i8* nocapture readonly, i64, i1 immarg) #1");
+#elif LLVM_VERSION_MAJOR < 7
   if (line.find("addrspace") != std::string::npos)
     return std::string(
         "declare void @llvm.memcpy.p0i8.p64i8.i64(i8* nocapture writeonly, i8 "
@@ -118,6 +132,27 @@ static std::string rewrite_memcpy_decl(const std::string &line)
 #endif
 }
 
+static std::string rewrite_lifetime_end_decl(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR == 9
+  (void)line;
+  return std::string(
+      "declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1");
+#else
+  return line;
+#endif
+}
+
+static std::string rewrite_lifetime_start_decl(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR == 9
+  (void)line;
+  return std::string(
+      "declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1");
+#else
+  return line;
+#endif
+}
 static std::string rewrite(const std::string &ir)
 {
   std::stringstream buf;
@@ -131,6 +166,11 @@ static std::string rewrite(const std::string &ir)
       buf << rewrite_memcpy_call(line);
     else if (line.find("declare void @llvm.memcpy") != std::string::npos)
       buf << rewrite_memcpy_decl(line);
+    else if (line.find("declare void @llvm.lifetime.start") !=
+             std::string::npos)
+      buf << rewrite_lifetime_start_decl(line);
+    else if (line.find("declare void @llvm.lifetime.end") != std::string::npos)
+      buf << rewrite_lifetime_end_decl(line);
     else
       buf << line;
     buf << std::endl;
