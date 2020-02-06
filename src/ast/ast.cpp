@@ -423,6 +423,10 @@ std::string AttachPoint::name(const std::string &attach_point) const
     n += ":" + std::to_string(address);
   if (freq != 0)
     n += ":" + std::to_string(freq);
+  if (len != 0)
+    n += ":" + std::to_string(len);
+  if (mode.size())
+    n += ":" + mode;
   return n;
 }
 
