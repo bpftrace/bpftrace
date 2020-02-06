@@ -95,28 +95,36 @@ static int detect_instruction_limit(void)
   char logbuf[log_size] = {};
   int loglevel = 1;
   int ret = 0;
+  {
+    // Don't want to spam unit tests with failure messages
+    StderrSilencer silencer;
+    silencer.silence();
+
 #ifdef HAVE_BCC_PROG_LOAD
-  ret = bcc_prog_load(BPF_PROG_TYPE_KPROBE,
-                      "ins_count",
-                      insns,
-                      sizeof(insns),
-                      "GPL",
-                      0,
-                      loglevel,
-                      logbuf,
-                      log_size);
+    ret = bcc_prog_load(BPF_PROG_TYPE_KPROBE,
+                        "ins_count",
+                        insns,
+                        sizeof(insns),
+                        "GPL",
+                        0,
+                        loglevel,
+                        logbuf,
+                        log_size);
 #else
-  ret = bpf_prog_load(BPF_PROG_TYPE_KPROBE,
-                      "ins_count",
-                      insns,
-                      sizeof(insns),
-                      "GPL",
-                      0,
-                      loglevel,
-                      logbuf,
-                      log_size);
+    ret = bpf_prog_load(BPF_PROG_TYPE_KPROBE,
+                        "ins_count",
+                        insns,
+                        sizeof(insns),
+                        "GPL",
+                        0,
+                        loglevel,
+                        logbuf,
+                        log_size);
 #endif
-  if (ret >= 0)
+  }
+  if (ret < 0)
+    return 0;
+  else
     close(ret);
 
   // Extract limit from the verifier log:
@@ -150,7 +158,8 @@ std::string BPFfeature::report(void)
       << std::endl
       << std::endl
       << "Kernel features" << std::endl
-      << "  Instruction limit: " << std::to_string(insns_limit_) << std::endl
+      << "  Instruction limit: "
+      << (insns_limit_ ? std::to_string(insns_limit_) : "?") << std::endl
       << "  Loop support: " << to_str(has_loop()) << std::endl
       << std::endl;
   return buf.str();
