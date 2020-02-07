@@ -91,8 +91,6 @@ struct DeprecatedName
 
 static std::vector<DeprecatedName> DEPRECATED_LIST =
 {
-  { "stack", "kstack"},
-  { "sym", "ksym"},
 };
 
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {

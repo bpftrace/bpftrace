@@ -124,7 +124,6 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { rand }", 0);
   test("kprobe:f { ctx }", 0);
   test("kprobe:f { comm }", 0);
-  test("kprobe:f { stack }", 0);
   test("kprobe:f { kstack }", 0);
   test("kprobe:f { ustack }", 0);
   test("kprobe:f { arg0 }", 0);
@@ -174,7 +173,6 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { printf(\"hello\\n\") }", 0);
   test("kprobe:f { system(\"ls\\n\") }", 0, false /* safe_node */);
   test("kprobe:f { join(0) }", 0);
-  test("kprobe:f { sym(0xffff) }", 0);
   test("kprobe:f { ksym(0xffff) }", 0);
   test("kprobe:f { usym(0xffff) }", 0);
   test("kprobe:f { kaddr(\"sym\") }", 0);
@@ -486,17 +484,12 @@ TEST(semantic_analyser, call_str_2_expr)
   test("kprobe:f { @x = str(arg0, arg1); }", 0);
 }
 
-TEST(semantic_analyser, call_sym)
+TEST(semantic_analyser, call_ksym)
 {
   test("kprobe:f { ksym(arg0); }", 0);
   test("kprobe:f { @x = ksym(arg0); }", 0);
   test("kprobe:f { ksym(); }", 1);
   test("kprobe:f { ksym(\"hello\"); }", 1);
-
-  test("kprobe:f { sym(arg0); }", 0);
-  test("kprobe:f { @x = sym(arg0); }", 0);
-  test("kprobe:f { sym(); }", 1);
-  test("kprobe:f { sym(\"hello\"); }", 1);
 }
 
 TEST(semantic_analyser, call_usym)
