@@ -80,8 +80,9 @@ target_link_libraries(bpftrace arch ast parser resources)
 
 target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
 if(STATIC_LINKING)
-  # These two are not part of the static libbcc so have to be added separate
-  target_link_libraries(bpftrace ${LIBBPF_LIBRARY_STATIC})
+  # These are not part of the static libbcc so have to be added separate
+  target_link_libraries(bpftrace ${LIBBCC_BPF_LIBRARY_STATIC})
+  target_link_libraries(bpftrace ${LIBBPF_LIBRARIES})
   target_link_libraries(bpftrace ${LIBBCC_LOADER_LIBRARY_STATIC})
 
   add_library(LIBELF STATIC IMPORTED)
