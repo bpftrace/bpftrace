@@ -82,7 +82,8 @@ RUN cd /src/bcc && git checkout $bcc_ref && git submodule update && \
     make install &&  mkdir -p /usr/local/lib && \
     cp src/cc/libbcc.a /usr/local/lib/libbcc.a && \
     cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a && \
-    cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a
+    cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a && \
+    cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbcc_bpf.a
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh

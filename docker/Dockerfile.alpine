@@ -22,6 +22,8 @@ RUN apk add --update \
 
 WORKDIR /
 
+RUN mv /usr/lib/libbccbpf.a /usr/lib/libbcc_bpf.a
+
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
 ENTRYPOINT ["/bin/sh", "/build.sh"]
