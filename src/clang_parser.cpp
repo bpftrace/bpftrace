@@ -309,26 +309,25 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
 
 bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input)
 {
-    for (unsigned int i = 0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
-        CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
-        CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
-        if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
-            if (bt_debug >= DebugLevel::kDebug)
-                std::cerr << "Input (" << input.size() << "): " << input << std::endl;
-            return false;
-        }
+  for (unsigned int i=0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
+    CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
+    CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
+    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
+      if (bt_debug >= DebugLevel::kDebug)
+        std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
   return clang_getTranslationUnitCursor(translation_unit);
 }
 
-
 bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 {
-    int err = clang_visitChildren(
+  int err = clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data)
       {
@@ -355,49 +354,49 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
             clang_getCursorKind(parent) != CXCursor_UnionDecl)
           return CXChildVisit_Recurse;
 
-        if (clang_getCursorKind(c) == CXCursor_FieldDecl) {
-            auto &structs = static_cast<BPFtrace *>(client_data)->structs_;
-            auto &loc_offsets = static_cast<BPFtrace *>(client_data)->loc_offsets_;
+        if (clang_getCursorKind(c) == CXCursor_FieldDecl)
+        {
+          auto &structs = static_cast<BPFtrace *>(client_data)->structs_;
+          auto &loc_offsets = static_cast<BPFtrace *>(client_data)->loc_offsets_;
 
-            auto named_parent = get_named_parent(c);
-            auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
-            auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
-            auto ptypesize = clang_Type_getSizeOf(ptype);
+          auto named_parent = get_named_parent(c);
+          auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
+          auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
+          auto ptypesize = clang_Type_getSizeOf(ptype);
 
-            auto ident = get_clang_string(clang_getCursorSpelling(c));
-            auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
-            auto type = clang_getCanonicalType(clang_getCursorType(c));
+          auto ident = get_clang_string(clang_getCursorSpelling(c));
+          auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
+          auto type = clang_getCanonicalType(clang_getCursorType(c));
+          Bitfield bitfield;
+          bool is_bitfield = getBitfield(c, bitfield);
 
-            //remove_struct_union_prefix(struct_name);
-            Bitfield bitfield;
-            bool is_bitfield = getBitfield(c, bitfield);
-
-
-            if (ident.rfind("data_loc_", 0) == 0) {
-                auto dl_stripped = ident.substr(9);
-                structs[ptypestr].fields[dl_stripped].type = get_sized_type(type);
-                structs[ptypestr].fields[dl_stripped].type.is_data_loc = true;
-                structs[ptypestr].fields[dl_stripped].offset = loc_offsets[dl_stripped];
-                structs[ptypestr].size = ptypesize;
-            } else {
-                // Warn if we already have the struct member defined and is
-                // different type and keep the current definition in place.
-                if (structs.count(ptypestr) != 0 &&
-                    structs[ptypestr].fields.count(ident) != 0 &&
-                    structs[ptypestr].fields[ident].offset != offset &&
-                    structs[ptypestr].fields[ident].type != get_sized_type(type) &&
-                    structs[ptypestr].fields[ident].is_bitfield && is_bitfield &&
-                    structs[ptypestr].fields[ident].bitfield != bitfield &&
-                    structs[ptypestr].size != ptypesize) {
-                    std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
-                } else {
-                    structs[ptypestr].fields[ident].offset = offset;
-                    structs[ptypestr].fields[ident].type = get_sized_type(type);
-                    structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
-                    structs[ptypestr].fields[ident].bitfield = bitfield;
-                    structs[ptypestr].size = ptypesize;
-                }
+          if (ident.rfind("data_loc_", 0) == 0) {
+            auto dl_stripped = ident.substr(9);
+            structs[ptypestr].fields[dl_stripped].type = get_sized_type(type);
+              structs[ptypestr].fields[dl_stripped].type.is_data_loc = true;
+              structs[ptypestr].fields[dl_stripped].offset = loc_offsets[dl_stripped];
+              structs[ptypestr].size = ptypesize;
+          } else {
+          // Warn if we already have the struct member defined and is
+          // different type and keep the current definition in place.
+            if (structs.count(ptypestr) != 0 &&
+                structs[ptypestr].fields.count(ident) != 0 &&
+                structs[ptypestr].fields[ident].offset != offset &&
+                structs[ptypestr].fields[ident].type != get_sized_type(type) &&
+                structs[ptypestr].fields[ident].is_bitfield && is_bitfield &&
+                structs[ptypestr].fields[ident].bitfield != bitfield &&
+                structs[ptypestr].size != ptypesize)
+            {
+              std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
+            } else
+            {
+              structs[ptypestr].fields[ident].offset = offset;
+              structs[ptypestr].fields[ident].type = get_sized_type(type);
+              structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
+              structs[ptypestr].fields[ident].bitfield = bitfield;
+              structs[ptypestr].size = ptypesize;
             }
+          }
         }
         return CXChildVisit_Recurse;
       },
