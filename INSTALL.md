@@ -2,15 +2,19 @@
 
 - [Linux Kernel Requirements](#linux-kernel-requirements)
 - [Package install](#package-install)
-  - [Ubuntu](#ubuntu-snap-package)
+  - [Ubuntu](#ubuntu-packages)
   - [Fedora](#fedora-package)
+  - [Gentoo](#gentoo-package)
+  - [Debian](#debian-package)
+  - [openSUSE](#openSUSE-package)
+  - [CentOS](#CentOS-package)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
   - [Amazon Linux](#amazon-linux)
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
-  - [Generic build](#generic-build)
+  - [Generic build](#generic-build-process)
 
 # Linux Kernel Requirements
 
@@ -32,6 +36,7 @@ CONFIG_BPF_SYSCALL=y
 CONFIG_BPF_JIT=y
 CONFIG_HAVE_EBPF_JIT=y
 CONFIG_BPF_EVENTS=y
+CONFIG_FTRACE_SYSCALLS=y
 ```
 
 This can be verified by running the `check_kernel_features` script from the
@@ -39,21 +44,29 @@ This can be verified by running the `check_kernel_features` script from the
 
 # Package install
 
-## Ubuntu snap package
+## Ubuntu packages
 
-On Ubuntu 16.04 and later, bpftrace is available as a snap package (https://snapcraft.io/bpftrace) and can be installed with snap. The current snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
+```
+sudo apt-get install -y bpftrace
+```
+
+Should work on Ubuntu 19.04 and later.
+
+On Ubuntu 16.04 and later, bpftrace is also available as a snap package (https://snapcraft.io/bpftrace), however, the snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
 
 ```
 sudo snap install --devmode bpftrace
 sudo snap connect bpftrace:system-trace
 ```
 
+The snap package also currently has issues with uprobes ([#829](https://github.com/iovisor/bpftrace/issues/829)).
+
 ## Fedora package
 
 For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
 
 ```
-sudo dnf install bpftrace
+sudo dnf install -y bpftrace
 ```
 
 ## Gentoo package
@@ -62,6 +75,19 @@ On Gentoo, bpftrace is included in the official repo. The package can be install
 ```
 sudo emerge -av bpftrace
 ```
+
+## Debian package
+
+Is available and tracked [here](https://tracker.debian.org/pkg/bpftrace).
+
+## openSUSE package
+
+Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
+
+## CentOS package
+
+A build maintained by @fbs can be found
+[here](https://github.com/fbs/el7-bpf-specs/blob/master/README.md#repository).
 
 # Building bpftrace
 
@@ -88,15 +114,15 @@ The version of `bcc` available in Ubuntu 19.04 (Disco) is new enough so
 compilation is not required, install with:
 
 ```
-sudo apt-get install libbpfcc-dev
+sudo apt-get install -y libbpfcc-dev
 ```
 
 ### Building `bpftrace`
 
 ```
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
-sudo apt-get install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
+sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev binutils-dev
+sudo apt-get install -y llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -113,7 +139,7 @@ argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
 ```
-sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel
+sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel binutils-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -201,6 +227,7 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - LLVM & Clang 5.0+ development packages
 - BCC development package
 - LibElf
+- Binutils development package
 - Kernel requirements described earlier
 
 ### Compilation
@@ -213,7 +240,7 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-By default bpftrace will be built as a dynamically linked executable. If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the Docker method below will always result in a statically linked executable. A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
+By default bpftrace will be built as a dynamically linked executable. If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the alpine Docker image below will result in a statically linked executable, and additional flags allow for compiling and statically linking the dependencies of bpftrace, see [the embedded build docs](./docs/embedded_builds.md) for more about this type of build. A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
 
 The latest version of Google Test will be downloaded on each build. To speed up builds and only download its source on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
 

@@ -1,0 +1,39 @@
+#!/usr/bin/env bpftrace
+/*
+ * biostacks - Show disk I/O latency with initialization stacks.
+ *
+ * See BPF Performance Tools, Chapter 9, for an explanation of this tool.
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 19-Mar-2019  Brendan Gregg   Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing block I/O with init stacks. Hit Ctrl-C to end.\n");
+}
+
+kprobe:blk_account_io_start
+{
+	@reqstack[arg0] = kstack;
+	@reqts[arg0] = nsecs;
+}
+
+kprobe:blk_start_request,
+kprobe:blk_mq_start_request
+/@reqts[arg0]/
+{
+	@usecs[@reqstack[arg0]] = hist(nsecs - @reqts[arg0]);
+	delete(@reqstack[arg0]);
+	delete(@reqts[arg0]);
+}
+
+END
+{
+	clear(@reqstack); clear(@reqts);
+}

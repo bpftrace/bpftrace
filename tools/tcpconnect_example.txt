@@ -5,7 +5,7 @@ This tool traces the kernel function performing active TCP connections
 (eg, via a connect() syscall; accept() are passive connections). Some example
 output (IP addresses changed to protect the innocent):
 
-# ./tcpconnect
+# ./tcpconnect.bt
 TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
 00:36:45 1798396  agent            127.0.0.1      5001   10.229.20.82   56114
 00:36:45 1798396  curl             127.0.0.1      10255  10.229.20.82   56606

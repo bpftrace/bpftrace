@@ -1,0 +1,32 @@
+Demonstrations of swapin, the Linux BCC/eBPF version.
+
+
+This tool counts swapins by process, to show which process is affected by
+swapping. For example:
+
+# ./swapin.bt 
+Attaching 2 probes...
+13:36:59
+
+13:37:00
+@[chrome, 4536]: 10809
+@[gnome-shell, 2239]: 12410
+
+13:37:01
+@[chrome, 4536]: 3826
+
+13:37:02
+@[cron, 1180]: 23
+@[gnome-shell, 2239]: 2462
+
+13:37:03
+@[gnome-shell, 1444]: 4
+@[gnome-shell, 2239]: 3420
+
+13:37:04
+
+13:37:05
+[...]
+
+While tracing, this showed that PID 2239 (gnome-shell) and PID 4536 (chrome)
+suffered over ten thousand swapins.

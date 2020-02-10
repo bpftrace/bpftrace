@@ -8,13 +8,23 @@ RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:func*'
 EXPECT uprobe:./testprogs/uprobe_test:function1
 TIMEOUT 5
 
+NAME "uprobes - list probes with ambiguous wildcarded file fails"
+RUN bpftrace -l 'uprobe:./testprogs/u*:*'
+EXPECT must refer to a unique binary
+TIMEOUT 5
+
+NAME "uprobes - list probes by file with wildcarded file and filter"
+RUN bpftrace -l 'uprobe:./testprogs/uprobe_test*:func*'
+EXPECT uprobe:./testprogs/uprobe_test:function1
+TIMEOUT 5
+
 NAME "uprobes - list probes by file with specific filter"
 RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:function1'
 EXPECT uprobe:./testprogs/uprobe_test:function1
 TIMEOUT 5
 
 NAME "uprobes - list probes by pid"
-RUN bpftrace -l -p $(pidof uprobe_test)
+RUN bpftrace -l -p $(pidof uprobe_test) | grep -e '^uprobe'
 EXPECT uprobe:.*/testprogs/uprobe_test:function1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
@@ -24,3 +34,25 @@ RUN bpftrace -l 'uprobe:*' -p $(pidof uprobe_test)
 EXPECT uprobe:.*/testprogs/uprobe_test:function1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
+
+NAME "uprobes - list probes by pid in separate mount namespace"
+RUN bpftrace -l -p $(pidof uprobe_test) | grep -e '^uprobe'
+EXPECT uprobe:.*/bpftrace-unshare-mountns-test/uprobe_test:function1
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper uprobe_test
+
+NAME "uprobes - attach to probe for executable in separate mount namespace"
+RUN bpftrace -e 'uprobe:/tmp/bpftrace-unshare-mountns-test/uprobe_test:function1 { printf("here\n" ); exit(); }' -p $(pidof uprobe_test)
+EXPECT Attaching 1 probe...
+TIMEOUT 5
+BEFORE ./testprogs/mountns_wrapper uprobe_test
+
+NAME "uprobes - list probes in non-executable library"
+RUN bpftrace -l 'uprobe:./testlibs/libsimple.so:fun'
+EXPECT uprobe:./testlibs/libsimple.so:fun
+TIMEOUT 5
+
+NAME "uprobes - probe function in non-executable library"
+RUN bpftrace -e 'uprobe:./testlibs/libsimple.so:fun {}'
+EXPECT Attaching 1 probe...
+TIMEOUT 5

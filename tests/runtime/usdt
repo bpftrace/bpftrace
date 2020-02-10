@@ -24,6 +24,12 @@ TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 
+NAME "usdt probes - filter probes by wildcard file and wildcard probe name"
+RUN bpftrace -l 'usdt:./testprogs/usdt_test*:tracetest:test*'
+EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe2
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_test should_not_skip
+
 NAME "usdt probes - filter probes by file and wildcard probe name"
 RUN bpftrace -l 'usdt:./testprogs/usdt_test:tracetest:test*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe2
@@ -74,12 +80,24 @@ BEFORE ./testprogs/usdt_test
 REQUIRES bash -c "exit 1"
 # REQUIRES ./testprogs/usdt_test should_not_skip
 
-NAME "usdt probes - attach to probe on multiple providers by wildcard and file"
+NAME "usdt probes - attach to probe by wildcard and file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }'
 EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to probes by wildcard file"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }'
+EXPECT Attaching 3 probes...
+TIMEOUT 5
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to probe with ambiguous wildcard file fails"
+RUN bpftrace -e 'usdt:./testprogs/u*::* { printf("here\n" ); exit(); }'
+EXPECT must refer to a unique binary
+TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
 RUN bpftrace -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
@@ -125,3 +143,10 @@ EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to probe with semaphore"
+RUN bpftrace -e 'usdt::tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p $(pidof usdt_semaphore_test)
+EXPECT tracetest_testprobe_semaphore: 1
+TIMEOUT 5
+BEFORE ./testprogs/usdt_semaphore_test
+REQUIRES ./testprogs/usdt_semaphore_test should_not_skip

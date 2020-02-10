@@ -1,3 +1,4 @@
+#include <cstring>
 #include <iostream>
 #include <unistd.h>
 #include <linux/version.h>
@@ -35,29 +36,29 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   if (key_size == 0)
     key_size = 8;
 
-  enum bpf_map_type map_type;
   if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
       type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
   {
-      map_type = BPF_MAP_TYPE_PERCPU_HASH;
+      map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
   }
   else if (type.type == Type::join)
   {
-    map_type = BPF_MAP_TYPE_PERCPU_ARRAY;
+    map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
     max_entries = 1;
     key_size = 4;
   }
   else
-    map_type = BPF_MAP_TYPE_HASH;
+    map_type_ = BPF_MAP_TYPE_HASH;
 
   int value_size = type.size;
   int flags = 0;
-  mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
+  mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating map: '" << name_ << "'" << std::endl;
+    std::cerr << "Error creating map: '" << name_ << "': " << strerror(errno)
+              << std::endl;
   }
 }
 
@@ -66,7 +67,7 @@ Map::Map(const SizedType &type) {
   // TODO (mmarchini): replace with DCHECK
   if (!type.IsStack()) {
     std::cerr << "Map::Map(SizedType) constructor should be called only with stack types" << std::endl;
-    abort()
+    abort();
   }
 #endif
   type_ = type;
@@ -82,7 +83,7 @@ Map::Map(const SizedType &type) {
   {
     std::cerr << "Error creating stack id map" << std::endl;
     // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
-    std::cerr << "This might have happened because kernel.perf_event_max_stack"
+    std::cerr << "This might have happened because kernel.perf_event_max_stack "
       << "is smaller than " << type.stack_type.limit
       << ". Try to tweak this value with "
       << "sysctl kernel.perf_event_max_stack=<new value>" << std::endl;
@@ -92,6 +93,7 @@ Map::Map(const SizedType &type) {
 Map::Map(enum bpf_map_type map_type)
 {
   int key_size, value_size, max_entries, flags;
+  map_type_ = map_type;
 
   std::string name;
 #ifdef DEBUG
@@ -120,18 +122,7 @@ Map::Map(enum bpf_map_type map_type)
   mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::string name;
-    switch (map_type)
-    {
-      case BPF_MAP_TYPE_PERF_EVENT_ARRAY:
-        name = "perf event";
-        break;
-      default:
-        std::cerr << "invalid map type" << std::endl;
-        abort();
-    }
-
-    std::cerr << "Error creating " << name << " map (" << mapfd_ << ")" << std::endl;
+    std::cerr << "Error creating " << name << " map: " << strerror(errno) << std::endl;
   }
 }
 

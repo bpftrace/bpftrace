@@ -1,0 +1,65 @@
+.TH naptime 8  "2019-07-05" "USER COMMANDS"
+.SH NAME
+naptime.bt \- Trace voluntary sleep calls. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B naptime.bt
+.SH DESCRIPTION
+This tool traces application sleeps, and can be used for debugging high latency
+that may be caused by deliberate sleeps placed in application routines,
+especially administration scripts.
+
+This tool works by tracing the nanosleep(2) syscall using the syscall
+tracepoints.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace application sleeps via nanosleep(2):
+#
+.B naptime.bt
+.SH FIELDS
+.TP
+TIME
+A timestamp in HH:MM:SS format.
+.TP
+PPID
+Parent process ID.
+.TP
+PCOMM
+Parent process name.
+.TP
+PID
+The sleeping process ID.
+.TP
+COMM
+The sleeping process name.
+.TP
+SECONDS
+The requested duration of the sleep.
+.SH OVERHEAD
+nanosleep(2) calls are expected to be low frequency (<< 100/s), so the overhead
+of this tool is expected to be negligible.
+.SH SOURCE
+This tool originated from the book "BPF Performance Tools", published by
+Addison Wesley (2019):
+.IP
+http://www.brendangregg.com/bpf-performance-tools-book.html
+.PP
+See the book for more documentation on this tool.
+.PP
+This version is in the bpftrace repository:
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+capable(8)

@@ -1,18 +1,17 @@
-#include <assert.h>
+#include <arpa/inet.h>
+#include <cassert>
+#include <ctime>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <regex>
 #include <sstream>
 #include <sys/epoll.h>
-#include <time.h>
-#include <arpa/inet.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/prctl.h>
-#include <sys/wait.h>
 #include <fcntl.h>
+#include <sys/prctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
@@ -38,12 +37,15 @@ namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
+volatile sig_atomic_t BPFtrace::exitsig_recv = false;
+constexpr char CHILD_EXIT_QUIETLY = '\0';
+constexpr char CHILD_GO = 'g';
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
   int ret = -1;
   switch(args.size()) {
     case 0:
-      ret = snprintf(s, n, fmt);
+      ret = snprintf(s, n, "%s", fmt);
       break;
     case 1:
       ret = snprintf(s, n, fmt, args.at(0)->value());
@@ -78,19 +80,20 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
 
 BPFtrace::~BPFtrace()
 {
-  for (int pid : child_pids_)
+  kill_child();
+  if (child_pid() != 0)
   {
     // We don't care if waitpid returns any errors. We're just trying
     // to make a best effort here. It's not like we could recover from
     // an error.
     int status;
-    waitpid(pid, &status, 0);
+    waitpid(child_pid(), &status, 0);
   }
 
-  for (const auto& pair : pid_sym_)
+  for (const auto& pair : exe_sym_)
   {
-    if (pair.second)
-      bcc_free_symcache(pair.second, pair.first);
+    if (pair.second.second)
+      bcc_free_symcache(pair.second.second, pair.second.first);
   }
 
   if (ksyms_)
@@ -101,29 +104,17 @@ int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points)
   {
-    if (attach_point->provider == "BEGIN")
+    if (attach_point->provider == "BEGIN" || attach_point->provider == "END")
     {
       Probe probe;
       probe.path = "/proc/self/exe";
-      probe.attach_point = "BEGIN_trigger";
+      probe.attach_point = attach_point->provider + "_trigger";
       probe.type = probetype(attach_point->provider);
+      probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
-      probe.index = attach_point->index(probe.name) > 0 ?
-          attach_point->index(probe.name) : p.index();
-      special_probes_.push_back(probe);
-      continue;
-    }
-    else if (attach_point->provider == "END")
-    {
-      Probe probe;
-      probe.path = "/proc/self/exe";
-      probe.attach_point = "END_trigger";
-      probe.type = probetype(attach_point->provider);
-      probe.orig_name = p.name();
-      probe.name = p.name();
-      probe.loc = 0;
+      probe.pid = getpid();
       probe.index = attach_point->index(probe.name) > 0 ?
           attach_point->index(probe.name) : p.index();
       special_probes_.push_back(probe);
@@ -175,13 +166,19 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = attach_point->target;
       probe.attach_point = func_id;
       probe.type = probetype(attach_point->provider);
+      probe.log_size = log_size_;
       probe.orig_name = p.name();
       probe.ns = attach_point->ns;
       probe.name = attach_point->name(func_id);
       probe.freq = attach_point->freq;
+      probe.address = attach_point->address;
+      probe.func_offset = attach_point->func_offset;
       probe.loc = 0;
       probe.index = attach_point->index(full_func_id) > 0 ?
           attach_point->index(full_func_id) : p.index();
+      probe.addr = attach_point->addr;
+      probe.len = attach_point->len;
+      probe.mode = attach_point->mode;
       probes_.push_back(probe);
     }
   }
@@ -326,10 +323,30 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
+void BPFtrace::kill_child()
+{
+  if (child_pid() == 0)
+    return;
+
+  if (child_running_) {
+    kill(child_pid(), SIGTERM);
+  } else {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-result"
+    // We need to disable this warning for some GCC/libc combinations despite
+    // using the void cast: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66425
+    (void)write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
+#pragma GCC diagnostic pop
+    close(child_start_pipe_);
+  }
+}
+
 void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
+  kill_child();
+
 }
 
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
@@ -337,13 +354,18 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
-  auto &out = bpftrace->outputstream();
   int err;
 
   // Ignore the remaining events if perf_event_printer is called during finalization
   // stage (exit() builtin has been called)
   if (bpftrace->finalize_)
     return;
+
+  if (bpftrace->exitsig_recv)
+  {
+    bpftrace->request_finalize();
+    return;
+  }
 
   // async actions
   if (printf_id == asyncactionint(AsyncAction::exit))
@@ -354,8 +376,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   else if (printf_id == asyncactionint(AsyncAction::print))
   {
     std::string arg = (const char *)(static_cast<uint8_t*>(data) + sizeof(uint64_t) + 2 * sizeof(uint64_t));
-    uint64_t top = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    uint64_t div = (uint64_t)*(static_cast<uint64_t*>(data) + (sizeof(uint64_t) + sizeof(uint64_t)) / sizeof(uint64_t));
+    uint64_t top = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
+    uint64_t div = (uint64_t) * (static_cast<uint64_t *>(data) + 2);
     err = bpftrace->print_map_ident(arg, top, div);
     if (err)
       throw std::runtime_error("Could not print map with ident \"" + arg + "\", err=" + std::to_string(err));
@@ -388,40 +410,35 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "localtime: " << strerror(errno) << std::endl;
       return;
     }
-    uint64_t time_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
+    uint64_t time_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
     auto fmt = bpftrace->time_args_[time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
       std::cerr << "strftime returned 0" << std::endl;
       return;
     }
-    out << timestr;
-    return;
-  }
-  else if (printf_id == asyncactionint(AsyncAction::cat))
-  {
-    uint64_t cat_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    auto filename = bpftrace->cat_args_[cat_id].c_str();
-    cat_file(filename, bpftrace->cat_bytes_max_, out);
+    bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
-    uint64_t join_id = (uint64_t)*(static_cast<uint64_t*>(data) + sizeof(uint64_t) / sizeof(uint64_t));
-    auto joinstr = bpftrace->join_args_[join_id].c_str();
+    uint64_t join_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
+    auto delim = bpftrace->join_args_[join_id].c_str();
+    std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
       auto *arg = arg_data + 2*sizeof(uint64_t) + i * bpftrace->join_argsize_;
       if (arg[0] == 0)
         break;
       if (i)
-        out << joinstr;
-      out << arg;
+        joined << delim;
+      joined << arg;
     }
-    out << std::endl;
+    bpftrace->out_->message(MessageType::join, joined.str());
     return;
   }
-  else if ( printf_id >= asyncactionint(AsyncAction::syscall))
+  else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
+            printf_id < asyncactionint(AsyncAction::syscall) + RESERVED_IDS_PER_ASYNCACTION)
   {
-    if (bpftrace->safe_mode)
+    if (bpftrace->safe_mode_)
     {
       std::cerr << "syscall() not allowed in safe mode" << std::endl;
       abort();
@@ -441,7 +458,29 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << buffer << std::endl;
       return;
     }
-    out << exec_system(buffer);
+    bpftrace->out_->message(MessageType::syscall, exec_system(buffer), false);
+    return;
+  }
+  else if ( printf_id >= asyncactionint(AsyncAction::cat))
+  {
+    auto id = printf_id - asyncactionint(AsyncAction::cat);
+    auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
+    auto args = std::get<1>(bpftrace->cat_args_[id]);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+
+    const int BUFSIZE = 512;
+    char buffer[BUFSIZE];
+    int size = format(buffer, BUFSIZE, fmt, arg_values);
+    // Return value is required size EXCLUDING null byte
+    if (size >= BUFSIZE) {
+      std::cerr << "cat() command to long (" << size << " bytes): ";
+      std::cerr << buffer << std::endl;
+      return;
+    }
+    std::stringstream buf;
+    cat_file(buffer, bpftrace->cat_bytes_max_, buf);
+    bpftrace->out_->message(MessageType::cat, buf.str(), false);
+
     return;
   }
 
@@ -456,13 +495,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   int required_size = format(buffer, BUFSIZE, fmt, arg_values);
   // Return value is required size EXCLUDING null byte
   if (required_size < BUFSIZE) {
-    out << buffer;
+    bpftrace->out_->message(MessageType::printf, std::string(buffer), false);
   } else {
     auto buf = std::make_unique<char[]>(required_size+1);
     // if for some reason the size is still wrong the string
     // will just be silently truncated
     format(buf.get(), required_size, fmt, arg_values);
-    out << buf.get();
+    bpftrace->out_->message(MessageType::printf, std::string(buf.get()), false);
   }
 }
 
@@ -523,8 +562,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         arg_values.push_back(
           std::make_unique<PrintableString>(
             resolve_inet(
-              *reinterpret_cast<int32_t*>(arg_data+arg.offset),
-              reinterpret_cast<uint8_t*>(arg_data+arg.offset + 4))));
+              *reinterpret_cast<int64_t*>(arg_data+arg.offset),
+              reinterpret_cast<uint8_t*>(arg_data+arg.offset + 8))));
         break;
       case Type::username:
         arg_values.push_back(
@@ -571,26 +610,16 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
   return arg_values;
 }
 
-bool BPFtrace::is_numeric(std::string str) const
-{
-  int i = 0;
-  while (str[i]) {
-    if (str[i] < '0' || str[i] > '9')
-      return false;
-    i++;
-  }
-  if (i == 0)
-    return false;
-  return true;
-}
-
 void BPFtrace::add_param(const std::string &param)
 {
   params_.emplace_back(param);
 }
 
-std::string BPFtrace::get_param(size_t i) const
+std::string BPFtrace::get_param(size_t i, bool is_str) const
 {
+  if (params_.size() < i) {
+    return is_str ? "" : "0";
+  }
   return params_.at(i-1);
 }
 
@@ -599,10 +628,10 @@ size_t BPFtrace::num_params() const
   return params_.size();
 }
 
-void perf_event_lost(void *cb_cookie __attribute__((unused)), uint64_t lost)
+void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
-  bpftrace->outputstream() << "Lost " << lost << " events" << std::endl;
+  bpftrace->out_->lost_events(lost);
 }
 
 std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
@@ -625,10 +654,10 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   }
   try
   {
-    if (probe.type == ProbeType::usdt)
+    if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
       return std::make_unique<AttachedProbe>(probe, func->second, pid_);
     else
-      return std::make_unique<AttachedProbe>(probe, func->second);
+      return std::make_unique<AttachedProbe>(probe, func->second, safe_mode_);
   }
   catch (std::runtime_error &e)
   {
@@ -651,6 +680,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::tracepoint:
     case ProbeType::profile:
     case ProbeType::interval:
+    case ProbeType::watchpoint:
     case ProbeType::hardware:
       return false;
     default:
@@ -660,8 +690,6 @@ bool attach_reverse(const Probe &p)
 
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
-  int wait_for_tracing_pipe;
-
   auto r_special_probes = special_probes_.rbegin();
   for (; r_special_probes != special_probes_.rend(); ++r_special_probes)
   {
@@ -675,20 +703,18 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (epollfd < 0)
     return epollfd;
 
-  // Spawn a child process if we've been passed a command to run
-  if (cmd_.size())
+  if (elapsed_map_)
   {
-    auto args = split_string(cmd_, ' ');
-    args[0] = resolve_binary_path(args[0]);  // does path lookup on executable
-    int pid = spawn_child(args, &wait_for_tracing_pipe);
-    if (pid < 0)
-    {
-      std::cerr << "Failed to spawn child=" << cmd_ << std::endl;
-      return pid;
-    }
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    auto nsec = 1000000000ULL * ts.tv_sec + ts.tv_nsec;
+    uint64_t key = 0;
 
-    child_pids_.emplace_back(pid);
-    pid_ = pid;
+    if (bpf_update_elem(elapsed_map_->mapfd_, &key, &nsec, 0) < 0)
+    {
+      perror("Failed to write start time to elapsed map");
+      return -1;
+    }
   }
 
   BEGIN_trigger();
@@ -704,7 +730,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     if (!attach_reverse(*probes)) {
       auto attached_probe = attach_probe(*probes, *bpforc.get());
       if (attached_probe == nullptr)
+      {
+        kill_child();
         return -1;
+      }
       attached_probes_.push_back(std::move(attached_probe));
     }
   }
@@ -714,24 +743,26 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     if (attach_reverse(*r_probes)) {
       auto attached_probe = attach_probe(*r_probes, *bpforc.get());
       if (attached_probe == nullptr)
+      {
+        kill_child();
         return -1;
+      }
       attached_probes_.push_back(std::move(attached_probe));
     }
   }
 
   // Kick the child to execute the command.
-  if (cmd_.size())
+  if (has_child_cmd())
   {
-    char bf;
-
-    int ret = write(wait_for_tracing_pipe, &bf, 1);
+    int ret = write(child_start_pipe_, &CHILD_GO, 1);
     if (ret < 0)
     {
       perror("unable to write to 'go' pipe");
       return ret;
     }
 
-    close(wait_for_tracing_pipe);
+    child_running_ = true;
+    close(child_start_pipe_);
   }
 
   if (bt_verbose)
@@ -739,9 +770,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   poll_perf_events(epollfd);
   attached_probes_.clear();
-  // finalize_ should be false from now on otherwise perf_event_printer() can
-  // ignore the END_trigger() events.
+  // finalize_ and exitsig_recv should be false from now on otherwise
+  // perf_event_printer() can ignore the END_trigger() events.
   finalize_ = false;
+  exitsig_recv = false;
 
   END_trigger();
   poll_perf_events(epollfd, true);
@@ -792,6 +824,10 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
   while (true)
   {
     int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
+    if (ready < 0 && errno == EINTR && !BPFtrace::exitsig_recv) {
+      // We received an interrupt not caused by SIGINT, skip and run again
+      continue;
+    }
 
     // Return if either
     //   * epoll_wait has encountered an error (eg signal delivery)
@@ -833,7 +869,6 @@ int BPFtrace::print_maps()
       err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
-    out_ << std::endl;
 
     if (err)
       return err;
@@ -940,6 +975,7 @@ int BPFtrace::clear_map(IMap &map)
 // zero a map
 int BPFtrace::zero_map(IMap &map)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -966,12 +1002,7 @@ int BPFtrace::zero_map(IMap &map)
     old_key = key;
   }
 
-  int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::sum ||
-      map.type_.type == Type::min || map.type_.type == Type::max ||
-      map.type_.type == Type::avg || map.type_.type == Type::hist ||
-      map.type_.type == Type::lhist || map.type_.type == Type::stats )
-    value_size *= ncpus_;
+  int value_size = map.type_.size * nvalues;
   std::vector<uint8_t> zero(value_size, 0);
   for (auto &key : keys)
   {
@@ -987,8 +1018,48 @@ int BPFtrace::zero_map(IMap &map)
   return 0;
 }
 
+std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div)
+{
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
+  if (map.type_.type == Type::kstack)
+    return get_stack(
+        read_data<uint64_t>(value.data()), false, map.type_.stack_type, 8);
+  else if (map.type_.type == Type::ustack)
+    return get_stack(
+        read_data<uint64_t>(value.data()), true, map.type_.stack_type, 8);
+  else if (map.type_.type == Type::ksym)
+    return resolve_ksym(read_data<uintptr_t>(value.data()));
+  else if (map.type_.type == Type::usym)
+    return resolve_usym(read_data<uintptr_t>(value.data()),
+                        read_data<uintptr_t>(value.data() + 8));
+  else if (map.type_.type == Type::inet)
+    return resolve_inet(read_data<uint32_t>(value.data()),
+                        (uint8_t *)(value.data() + 8));
+  else if (map.type_.type == Type::username)
+    return resolve_uid(read_data<uint64_t>(value.data()));
+  else if (map.type_.type == Type::string)
+    return std::string(reinterpret_cast<const char*>(value.data()));
+  else if (map.type_.type == Type::count)
+    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+  else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
+    if (map.type_.is_signed)
+      return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
+
+    return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+  }
+  else if (map.type_.type == Type::min)
+    return std::to_string(min_value(value, nvalues) / div);
+  else if (map.type_.type == Type::max)
+    return std::to_string(max_value(value, nvalues) / div);
+  else if (map.type_.type == Type::probe)
+    return resolve_probe(read_data<uint64_t>(value.data()));
+  else
+    return std::to_string(read_data<int64_t>(value.data()) / div);
+}
+
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -1007,12 +1078,16 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     int value_size = map.type_.size;
-    if (map.type_.type == Type::count || map.type_.type == Type::sum ||
-        map.type_.type == Type::min || map.type_.type == Type::max || map.type_.type == Type::integer)
-      value_size *= ncpus_;
+    value_size *= nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
@@ -1025,23 +1100,26 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
   {
+    bool is_signed = map.type_.is_signed;
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return reduce_value(a.second, ncpus_) < reduce_value(b.second, ncpus_);
+      if (is_signed)
+        return reduce_value<int64_t>(a.second, nvalues) < reduce_value<int64_t>(b.second, nvalues);
+      return reduce_value<uint64_t>(a.second, nvalues) < reduce_value<uint64_t>(b.second, nvalues);
     });
   }
   else if (map.type_.type == Type::min)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return min_value(a.second, ncpus_) < min_value(b.second, ncpus_);
+      return min_value(a.second, nvalues) < min_value(b.second, nvalues);
     });
   }
   else if (map.type_.type == Type::max)
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
-      return max_value(a.second, ncpus_) < max_value(b.second, ncpus_);
+      return max_value(a.second, nvalues) < max_value(b.second, nvalues);
     });
   }
   else
@@ -1051,49 +1129,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (div == 0)
     div = 1;
-  uint32_t i = 0;
-  size_t total = values_by_key.size();
-  for (auto &pair : values_by_key)
-  {
-    auto key = pair.first;
-    auto value = pair.second;
-
-    if (top)
-    {
-      if (total > top && i++ < (total - top))
-        continue;
-    }
-
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
-
-    if (map.type_.type == Type::kstack)
-      out_ << get_stack(*(uint64_t*)value.data(), false, map.type_.stack_type, 8);
-    else if (map.type_.type == Type::ustack)
-      out_ << get_stack(*(uint64_t*)value.data(), true, map.type_.stack_type, 8);
-    else if (map.type_.type == Type::ksym)
-      out_ << resolve_ksym(*(uintptr_t*)value.data());
-    else if (map.type_.type == Type::usym)
-      out_ << resolve_usym(*(uintptr_t*)value.data(), *(uint64_t*)(value.data() + 8));
-    else if (map.type_.type == Type::inet)
-      out_ << resolve_inet(*(int32_t*)value.data(), (uint8_t*)(value.data() + 4));
-    else if (map.type_.type == Type::username)
-      out_ << resolve_uid(*(uint64_t*)(value.data())) << std::endl;
-    else if (map.type_.type == Type::string)
-      out_ << value.data() << std::endl;
-    else if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
-      out_ << reduce_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::min)
-      out_ << min_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::max)
-      out_ << max_value(value, ncpus_) / div << std::endl;
-    else if (map.type_.type == Type::probe)
-      out_ << resolve_probe(*(uint64_t*)value.data()) << std::endl;
-    else
-      out_ << *(int64_t*)value.data() / div << std::endl;
-  }
-  if (i == 0)
-    out_ << std::endl;
-
+  out_->map(*this, map, top, div, values_by_key);
   return 0;
 }
 
@@ -1104,6 +1140,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   // e.g. A map defined as: @x[1, 2] = @hist(3);
   // would actually be stored with the key: [1, 2, 3]
 
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try
   {
@@ -1127,10 +1164,16 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
-    int value_size = map.type_.size * ncpus_;
+    int value_size = map.type_.size * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
@@ -1144,7 +1187,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, nvalues);
 
     old_key = key;
   }
@@ -1167,33 +1210,13 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
 
   if (div == 0)
     div = 1;
-  uint32_t i = 0;
-  for (auto &key_count : total_counts_by_key)
-  {
-    auto &key = key_count.first;
-    auto &value = values_by_key[key];
-
-    if (top)
-    {
-      if (i++ < (values_by_key.size() - top))
-        continue;
-    }
-
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": " << std::endl;
-
-    if (map.type_.type == Type::hist)
-      print_hist(value, div);
-    else
-      print_lhist(value, map.lqmin, map.lqmax, map.lqstep);
-
-    out_ << std::endl;
-  }
-
+  out_->map_hist(*this, map, top, div, values_by_key, total_counts_by_key);
   return 0;
 }
 
 int BPFtrace::print_map_stats(IMap &map)
 {
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   // stats() and avg() maps add an extra 8 bytes onto the end of their key for
   // storing the bucket number.
 
@@ -1210,7 +1233,7 @@ int BPFtrace::print_map_stats(IMap &map)
   }
   auto key(old_key);
 
-  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
+  std::map<std::vector<uint8_t>, std::vector<int64_t>> values_by_key;
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
@@ -1220,10 +1243,16 @@ int BPFtrace::print_map_stats(IMap &map)
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
 
-    int value_size = map.type_.size * ncpus_;
+    int value_size = map.type_.size * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err)
+    if (err == -1)
+    {
+      // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
+      // let's skip this key
+      continue;
+    }
+    else if (err)
     {
       std::cerr << "Error looking up elem: " << err << std::endl;
       return -1;
@@ -1232,21 +1261,21 @@ int BPFtrace::print_map_stats(IMap &map)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      values_by_key[key_prefix] = std::vector<uint64_t>(2);
+      values_by_key[key_prefix] = std::vector<int64_t>(2);
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value(value, ncpus_);
+    values_by_key[key_prefix].at(bucket) = reduce_value<int64_t>(value, nvalues);
 
     old_key = key;
   }
 
   // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
+  std::vector<std::pair<std::vector<uint8_t>, int64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key)
   {
     assert(map_elem.second.size() == 2);
-    uint64_t count = map_elem.second.at(0);
-    uint64_t total = map_elem.second.at(1);
-    uint64_t value = 0;
+    int64_t count = map_elem.second.at(0);
+    int64_t total = map_elem.second.at(1);
+    int64_t value = 0;
 
     if (count != 0)
       value = total / count;
@@ -1258,163 +1287,44 @@ int BPFtrace::print_map_stats(IMap &map)
     return a.second < b.second;
   });
 
-  for (auto &key_count : total_counts_by_key)
-  {
-    auto &key = key_count.first;
-    auto &value = values_by_key[key];
-    out_ << map.name_ << map.key_.argument_value_list(*this, key) << ": ";
-
-    uint64_t count = value.at(0);
-    uint64_t total = value.at(1);
-    uint64_t average = 0;
-
-    if (count != 0)
-      average = total / count;
-
-    if (map.type_.type == Type::stats)
-      out_ << "count " << count << ", average " <<  average << ", total " << total << std::endl;
-    else
-      out_ << average << std::endl;
-  }
-
-  out_ << std::endl;
-
+  out_->map_stats(*this, map, values_by_key, total_counts_by_key);
   return 0;
 }
 
-int BPFtrace::print_hist(const std::vector<uint64_t> &values, uint32_t div) const
-{
-  int min_index = -1;
-  int max_index = -1;
-  int max_value = 0;
-
-  for (size_t i = 0; i < values.size(); i++)
-  {
-    int v = values.at(i);
-    if (v > 0) {
-      if (min_index == -1)
-        min_index = i;
-      max_index = i;
-    }
-    if (v > max_value)
-      max_value = v;
-  }
-
-  if (max_index == -1)
-    return 0;
-
-  for (int i = min_index; i <= max_index; i++)
-  {
-    std::ostringstream header;
-    if (i == 0)
-    {
-      header << "(..., 0)";
-    }
-    else if (i == 1)
-    {
-      header << "[0]";
-    }
-    else if (i == 2)
-    {
-      header << "[1]";
-    }
-    else
-    {
-      header << "[" << hist_index_label(i-2);
-      header << ", " << hist_index_label(i-2+1) << ")";
-    }
-
-    int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
-    std::string bar(bar_width, '@');
-
-    out_ << std::setw(16) << std::left << header.str()
-              << std::setw(8) << std::right << (values.at(i) / div)
-              << " |" << std::setw(max_width) << std::left << bar << "|"
-              << std::endl;
-  }
-
-  return 0;
-}
-
-int BPFtrace::print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const
-{
-  int max_index = -1;
-  int max_value = 0;
-  int buckets = (max - min) / step; // excluding lt and gt buckets
-
-  for (size_t i = 0; i < values.size(); i++)
-  {
-    int v = values.at(i);
-    if (v != 0)
-      max_index = i;
-    if (v > max_value)
-      max_value = v;
-  }
-
-  if (max_index == -1)
-    return 0;
-
-  // trim empty values
-  int start_value = -1;
-  int end_value = 0;
-
-  for (unsigned int i = 0; i <= static_cast<unsigned int>(buckets) + 1; i++)
-  {
-    if (values.at(i) > 0) {
-      if (start_value == -1) {
-        start_value = i;
-      }
-      end_value = i;
-    }
-  }
-
-  if (start_value == -1) {
-    start_value = 0;
-  }
-
-  for (int i = start_value; i <= end_value; i++)
-  {
-    int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
-    std::ostringstream header;
-    if (i == 0) {
-      header << "(..., " << lhist_index_label(min) << ")";
-    } else if (i == (buckets + 1)) {
-      header << "[" << lhist_index_label(max) << ", ...)";
-    } else {
-      header << "[" << lhist_index_label((i - 1) * step + min);
-      header << ", " << lhist_index_label(i * step + min) << ")";
-    }
-
-    std::string bar(bar_width, '@');
-
-    out_ << std::setw(16) << std::left << header.str()
-              << std::setw(8) << std::right << values.at(i)
-              << " |" << std::setw(max_width) << std::left << bar << "|"
-              << std::endl;
-  }
-
-  return 0;
-}
-
-int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd)
+pid_t BPFtrace::spawn_child()
 {
   static const int maxargs = 256;
   char* argv[maxargs];
   int wait_for_tracing_pipe[2];
 
+  auto args = split_string(cmd_, ' ');
+  auto paths = resolve_binary_path(args[0]); // does path lookup on executable
+  switch (paths.size())
+  {
+  case 0:
+    std::cerr << "path '" << args[0] << "' does not exist or is not executable" << std::endl;
+    return -1;
+  case 1:
+    args[0] = paths.front().c_str();
+    break;
+  default:
+    std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched "
+              << paths.size() << " binaries" << std::endl;
+    return -1;
+  }
+
+
+  if (args.size() >= (maxargs - 1))
+  {
+    std::cerr << "Too many args passed into spawn_child (" << args.size()
+              << " > " << maxargs - 1 << ")" << std::endl;
+    return -1;
+  }
+
   // Convert vector of strings into raw array of C-strings for execve(2)
   int idx = 0;
   for (const auto& arg : args)
   {
-    if (idx == maxargs - 1)
-    {
-      std::cerr << "Too many args passed into spawn_child (" << args.size()
-        << " > " << maxargs - 1 << ")" << std::endl;
-      return -1;
-    }
-
     argv[idx] = const_cast<char*>(arg.c_str());
     ++idx;
   }
@@ -1427,8 +1337,8 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
   }
 
   // Fork and exec
-  int ret = fork();
-  if (ret == 0)
+  pid_t pid = fork();
+  if (pid == 0)
   {
     // Receive SIGTERM if parent dies
     //
@@ -1444,119 +1354,72 @@ int BPFtrace::spawn_child(const std::vector<std::string>& args, int *notify_trac
 
     char bf;
 
-    ret = read(wait_for_tracing_pipe[0], &bf, 1);
+    int ret = read(wait_for_tracing_pipe[0], &bf, 1);
     if (ret != 1)
     {
       perror("failed to read 'go' pipe");
       return -1;
     }
 
+    if (bf == CHILD_EXIT_QUIETLY)
+    {
+      close(wait_for_tracing_pipe[0]);
+      exit(0);
+    }
+
     if (execve(argv[0], argv, environ))
     {
-      perror("execve");
+      auto err = "Failed to execve: " + std::string(argv[0]);
+      perror(err.c_str());
       return -1;
     }
   }
-  else if (ret > 0)
+  else if (pid > 0)
   {
-    *notify_trace_start_pipe_fd = wait_for_tracing_pipe[1];
-    return ret;
+    close(wait_for_tracing_pipe[0]);
+    child_start_pipe_ = wait_for_tracing_pipe[1];
+    child_pid_ = pid;
+    pid_ = pid;
+    return pid;
   }
   else
   {
-    perror("fork");
+    perror("Failed to fork");
     return -1;
   }
 
   return -1;  // silence end of control compiler warning
 }
 
-std::string BPFtrace::hist_index_label(int power)
+template <typename T>
+T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int nvalues)
 {
-  char suffix = '\0';
-  if (power >= 40)
+  T sum = 0;
+  for (int i=0; i<nvalues; i++)
   {
-    suffix = 'T';
-    power -= 40;
-  }
-  else if (power >= 30)
-  {
-    suffix = 'G';
-    power -= 30;
-  }
-  else if (power >= 20)
-  {
-    suffix = 'M';
-    power -= 20;
-  }
-  else if (power >= 10)
-  {
-    suffix = 'K';
-    power -= 10;
-  }
-
-  std::ostringstream label;
-  label << (1<<power);
-  if (suffix)
-    label << suffix;
-  return label.str();
-}
-
-std::string BPFtrace::lhist_index_label(int number)
-{
-  int kilo = 1024;
-  int mega = 1048576;
-
-  std::ostringstream label;
-
-  if (number == 0)
-  {
-    label << number;
-  }
-  else if (number % mega == 0)
-  {
-    label << number / mega << 'M';
-  }
-  else if (number % kilo == 0)
-  {
-    label << number / kilo << 'K';
-  }
-  else
-  {
-    label << number;
-  }
-
-  return label.str();
-}
-
-uint64_t BPFtrace::reduce_value(const std::vector<uint8_t> &value, int ncpus)
-{
-  uint64_t sum = 0;
-  for (int i=0; i<ncpus; i++)
-  {
-    sum += *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    sum += read_data<T>(value.data() + i * sizeof(T));
   }
   return sum;
 }
 
-uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int ncpus)
+uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int nvalues)
 {
   uint64_t val, max = 0;
-  for (int i=0; i<ncpus; i++)
+  for (int i=0; i<nvalues; i++)
   {
-    val = *(const uint64_t*)(value.data() + i*sizeof(uint64_t*));
+    val = read_data<uint64_t>(value.data() + i * sizeof(uint64_t));
     if (val > max)
       max = val;
   }
   return max;
 }
 
-int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int ncpus)
+int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int nvalues)
 {
   int64_t val, max = 0, retval;
-  for (int i=0; i<ncpus; i++)
+  for (int i=0; i<nvalues; i++)
   {
-    val = *(const int64_t*)(value.data() + i*sizeof(int64_t*));
+    val = read_data<int64_t>(value.data() + i * sizeof(int64_t));
     if (val > max)
       max = val;
   }
@@ -1581,12 +1444,8 @@ std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
 {
   if (size == 0) size = 8;
   auto key = std::vector<uint8_t>(size);
-  int value_size = map.type_.size;
-  if (map.type_.type == Type::count || map.type_.type == Type::hist ||
-      map.type_.type == Type::sum || map.type_.type == Type::min ||
-      map.type_.type == Type::max || map.type_.type == Type::avg ||
-      map.type_.type == Type::stats || map.type_.type == Type::lhist)
-    value_size *= ncpus_;
+  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
+  int value_size = map.type_.size * nvalues;
   auto value = std::vector<uint8_t>(value_size);
 
   if (bpf_lookup_elem(map.mapfd_, key.data(), value.data()))
@@ -1715,18 +1574,14 @@ uint64_t BPFtrace::resolve_kname(const std::string &name) const
 
   std::string line;
 
-  std::string search = "\\b";
-  search += name;
-  std::regex e (search + "\\b");
-  std::smatch match;
-
   while (std::getline(file, line) && addr == 0)
   {
-    auto found = std::regex_search (line, match, e);
+    auto tokens = split_string(line, ' ');
 
-    if (found)
+    if (name == tokens[2])
     {
       addr = read_address_from_output(line);
+      break;
     }
   }
 
@@ -1740,36 +1595,64 @@ uint64_t BPFtrace::resolve_cgroupid(const std::string &path) const
   return bpftrace_linux::resolve_cgroupid(path);
 }
 
-uint64_t BPFtrace::resolve_uname(const std::string &name, const std::string &path) const
-{
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-  bcc_symbol sym;
-  int err = bcc_resolve_symname(path.c_str(), name.c_str(), 0, 0, nullptr, &sym);
-  if (err)
-    throw std::runtime_error("Could not resolve symbol: " + path + ":" + name);
-  return sym.offset;
+static int sym_resolve_callback(const char *name,
+                                uint64_t addr,
+                                uint64_t size,
+                                void *payload)
+{
+  struct symbol *sym = (struct symbol *)payload;
+  if (!strcmp(name, sym->name.c_str()))
+  {
+    sym->address = addr;
+    sym->size = size;
+    return -1;
+  }
+  return 0;
+}
+#endif
+
+int BPFtrace::resolve_uname(const std::string &name,
+                            struct symbol *sym,
+                            const std::string &path) const
+{
+  sym->name = name;
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_symbol_type = (1 << STT_OBJECT);
+
+  return bcc_elf_foreach_sym(path.c_str(), sym_resolve_callback, &option, sym);
 #else
-  std::string call_str = std::string("objdump -tT ") + path + " | grep -w " + name;
+  std::string call_str =
+      std::string("objdump -tT ") + path + " | grep -w " + sym->name;
   const char *call = call_str.c_str();
   auto result = exec_system(call);
-  return read_address_from_output(result);
+  sym->address = read_address_from_output(result);
+  /* Trying to grab the size from objdump output is not that easy. foreaech_sym
+     has been around for a while, users should switch to that.
+  */
+  sym->size = 8;
+  return 0;
 #endif
 }
 
-int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+static int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
   auto syms = static_cast<std::ostringstream*>(payload);
   *syms << std::string(symname) << std::endl;
   return 0;
 }
+#endif
 
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) const
 {
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-  bcc_symbol_option symbol_option = {
-    .use_debug_file = 1,
-    .check_debug_file_crc = 1,
-    .use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC)
-  };
+  struct bcc_symbol_option symbol_option;
+  memset(&symbol_option, 0, sizeof(symbol_option));
+  symbol_option.use_debug_file = 1;
+  symbol_option.check_debug_file_crc = 1;
+  symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
 
   std::ostringstream syms;
   int err = bcc_elf_foreach_sym(path.c_str(), add_symbol, &symbol_option, &syms);
@@ -1790,7 +1673,6 @@ uint64_t BPFtrace::read_address_from_output(std::string output)
   std::string first_word = output.substr(0, output.find(" "));
   return std::stoull(first_word, 0, 16);
 }
-
 
 static std::string resolve_inetv4(const uint8_t* inet) {
   char addr_cstr[INET_ADDRSTRLEN];
@@ -1829,28 +1711,32 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 {
   struct bcc_symbol usym;
   std::ostringstream symbol;
+  void *psyms = nullptr;
   struct bcc_symbol_option symopts;
-  void *psyms;
 
-  // TODO: deal with these:
-  symopts = {.use_debug_file = true,
-             .check_debug_file_crc = true,
-             .use_symbol_type = BCC_SYM_ALL_TYPES};
+  memset(&symopts, 0, sizeof(symopts));
+  symopts.use_debug_file = 1;
+  symopts.check_debug_file_crc = 1;
+  symopts.use_symbol_type = BCC_SYM_ALL_TYPES;
 
-  if (pid_sym_.find(pid) == pid_sym_.end())
+  if (resolve_user_symbols_)
   {
-    // not cached, create new ProcSyms cache
-    psyms = bcc_symcache_new(pid, &symopts);
-    pid_sym_[pid] = psyms;
+    std::string pid_exe = get_pid_exe(pid);
+    if (exe_sym_.find(pid_exe) == exe_sym_.end())
+    {
+      // not cached, create new ProcSyms cache
+      psyms = bcc_symcache_new(pid, &symopts);
+      exe_sym_[pid_exe] = std::make_pair(pid, psyms);
+    }
+    else
+    {
+      psyms = exe_sym_[pid_exe].second;
+    }
   }
-  else
-  {
-    psyms = pid_sym_[pid];
-  }
 
-  if (bcc_symcache_resolve(psyms, addr, &usym) == 0)
+  if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    if (demangle_cpp_symbols)
+    if (demangle_cpp_symbols_)
       symbol << usym.demangle_name;
     else
       symbol << usym.name;
@@ -1895,17 +1781,21 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
     {
       if (arg.size == 8)
       {
-        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-        {
-          return *(const uint64_t*)(a.first.data() + arg_offset) < *(const uint64_t*)(b.first.data() + arg_offset);
-        });
+        std::stable_sort(
+            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+              auto va = read_data<uint64_t>(a.first.data() + arg_offset);
+              auto vb = read_data<uint64_t>(b.first.data() + arg_offset);
+              return va < vb;
+            });
       }
       else if (arg.size == 4)
       {
-        std::stable_sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
-        {
-          return *(const uint32_t*)(a.first.data() + arg_offset) < *(const uint32_t*)(b.first.data() + arg_offset);
-        });
+        std::stable_sort(
+            values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {
+              auto va = read_data<uint32_t>(a.first.data() + arg_offset);
+              auto vb = read_data<uint32_t>(b.first.data() + arg_offset);
+              return va < vb;
+            });
       }
       else
       {
@@ -1951,6 +1841,105 @@ bool BPFtrace::is_pid_alive(int pid)
   close(fd);
 
   return true;
+}
+
+const std::string BPFtrace::get_source_line(unsigned int n)
+{
+  // Get the Nth source line. Return an empty string if it doesn't exist
+  std::string buf;
+  std::stringstream ss(src_);
+  for (unsigned int idx = 0; idx <= n; idx++) {
+    std::getline(ss, buf);
+    if (ss.eof() && idx == n)
+      return buf;
+    if (!ss)
+      return "";
+  }
+  return buf;
+}
+
+void BPFtrace::warning(std::ostream &out, const location &l, const std::string &m) {
+  log_with_location("WARNING", out, l, m);
+}
+
+void BPFtrace::error(std::ostream &out, const location &l, const std::string &m) {
+  log_with_location("ERROR", out, l, m);
+}
+
+void BPFtrace::log_with_location(std::string level, std::ostream &out, const location &l, const std::string &m)
+{
+  if (filename_ != "") {
+    out << filename_ << ":";
+  }
+
+  std::string msg(m);
+
+  if (! msg.empty() && msg[msg.length() -1 ] == '\n') {
+    msg.erase(msg.length()-1);
+  }
+
+  // print only the message if location info wasn't set
+  if (l.begin.line == 0) {
+    out << level << ": " << msg << std::endl;
+    return;
+  }
+
+  if (l.begin.line > l.end.line) {
+    out << "BUG: begin > end: " << l.begin << ":" << l.end << std::endl;
+    out << level << ": " << msg << std::endl;
+    return;
+  }
+
+  /* For a multi line error only the line range is printed:
+     <filename>:<start_line>-<end_line>: ERROR: <message>
+  */
+  if (l.begin.line < l.end.line) {
+    out << l.begin.line << "-" << l.end.line << ": ERROR: " << msg << std::endl;
+    return;
+  }
+
+  /*
+    For a single line error the format is:
+
+    <filename>:<line>:<start_col>-<end_col>: ERROR: <message>
+    <source line>
+    <marker>
+
+    E.g.
+
+    file.bt:1:10-20: error: <message>
+    i:s:1   /1 < "str"/
+            ~~~~~~~~~~
+  */
+  out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
+  out << ": " << level << ": " << msg << std::endl;
+  std::string srcline = get_source_line(l.begin.line - 1);
+
+  if (srcline == "")
+    return;
+
+  // To get consistent printing all tabs will be replaced with 4 spaces
+  for (auto c : srcline) {
+    if (c == '\t')
+      out << "    ";
+    else
+      out << c;
+  }
+  out << std::endl;
+
+  for (unsigned int x = 0;
+       x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
+       x++)
+  {
+    char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
+                                                                        : '~';
+    if (srcline[x] == '\t') {
+      out << std::string(4, marker);
+    } else {
+      out << marker;
+    }
+  }
+  out << std::endl;
 }
 
 } // namespace bpftrace

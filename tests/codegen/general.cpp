@@ -8,6 +8,8 @@
 #include "driver.h"
 #include "semantic_analyser.h"
 
+#include "common.h"
+
 namespace bpftrace {
 namespace test {
 namespace codegen {
@@ -17,10 +19,6 @@ using ::testing::_;
 class MockBPFtrace : public BPFtrace {
 public:
   MOCK_METHOD1(add_probe, int(ast::Probe &p));
-  MOCK_METHOD3(find_wildcard_matches, std::set<std::string>(
-        const std::string &prefix,
-        const std::string &func,
-        const std::string &file_name));
 };
 
 TEST(codegen, populate_sections)
@@ -29,7 +27,8 @@ TEST(codegen, populate_sections)
   Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
@@ -47,10 +46,11 @@ TEST(codegen, printf_offsets)
   Driver driver(bpftrace);
 
   // TODO (mmarchini): also test printf with a string argument
-  ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
+  ASSERT_EQ(driver.parse_str("struct Foo { char c; int i; } kprobe:f { $foo = (struct Foo*)0; printf(\"%c %u\\n\", $foo->c, $foo->i) }"), 0);
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
@@ -84,7 +84,8 @@ TEST(codegen, probe_count)
   Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   codegen.compile();

@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "bpftrace.h"
@@ -10,20 +12,45 @@ namespace bpftrace {
 using ::testing::ContainerEq;
 using ::testing::StrictMock;
 
-void check_kprobe(Probe &p, const std::string &attach_point, const std::string &orig_name)
+static const std::string kprobe_name(const std::string &attach_point,
+                                     uint64_t func_offset)
+{
+  auto str = func_offset ? "+" + std::to_string(func_offset) : "";
+  return "kprobe:" + attach_point + str;
+}
+
+void check_kprobe(Probe &p,
+                  const std::string &attach_point,
+                  const std::string &orig_name,
+                  uint64_t func_offset = 0)
 {
   EXPECT_EQ(ProbeType::kprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ("kprobe:" + attach_point, p.name);
+  EXPECT_EQ(kprobe_name(attach_point, func_offset), p.name);
+  EXPECT_EQ(func_offset, p.func_offset);
 }
 
-void check_uprobe(Probe &p, const std::string &path, const std::string &attach_point, const std::string &orig_name)
+static const std::string uprobe_name(const std::string &path, const std::string &attach_point,
+                                     uint64_t address, uint64_t func_offset)
+{
+  if (attach_point.empty()) {
+    return "uprobe:" + path + ":" + std::to_string(address);
+  } else {
+    auto str = func_offset ? "+" + std::to_string(func_offset) : "";
+    return "uprobe:" + path + ":" + attach_point + str;
+  }
+}
+
+void check_uprobe(Probe &p, const std::string &path, const std::string &attach_point, const std::string &orig_name,
+                  uint64_t address = 0, uint64_t func_offset = 0)
 {
   EXPECT_EQ(ProbeType::uprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ("uprobe:" + path + ":" + attach_point, p.name);
+  EXPECT_EQ(uprobe_name(path, attach_point, address, func_offset), p.name);
+  EXPECT_EQ(address, p.address);
+  EXPECT_EQ(func_offset, p.func_offset);
 }
 
 void check_usdt(Probe &p, const std::string &path, const std::string &provider, const std::string &attach_point, const std::string &orig_name)
@@ -189,6 +216,23 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_offset)
+{
+  uint64_t offset = 10;
+  ast::AttachPoint a("kprobe", "sys_read", offset);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:sys_read+" + std::to_string(offset);
+  check_kprobe(
+      bpftrace.get_probes().at(0), "sys_read", probe_orig_name, offset);
+}
+
 TEST(bpftrace, add_probes_uprobe)
 {
   ast::AttachPoint a("uprobe", "/bin/sh", "foo", true);
@@ -247,6 +291,34 @@ TEST(bpftrace, add_probes_uprobe_string_literal)
   ASSERT_EQ(1U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
   check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo*", "uprobe:/bin/sh:foo*");
+}
+
+TEST(bpftrace, add_probes_uprobe_address)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", 1024);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+  check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "", "uprobe:/bin/sh:1024", 1024);
+}
+
+TEST(bpftrace, add_probes_uprobe_string_offset)
+{
+  ast::AttachPoint a("uprobe", "/bin/sh", "foo", (uint64_t) 10);
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+  check_uprobe(bpftrace.get_probes().at(0), "/bin/sh", "foo", "uprobe:/bin/sh:foo+10", 0, 10);
 }
 
 TEST(bpftrace, add_probes_usdt)
@@ -447,9 +519,11 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::ve
 
   for (size_t i=0; i<key.size(); i++)
   {
-    *(uint64_t*)(key_data + sizeof(uint64_t)*i) = key.at(i);
+    uint64_t k = key.at(i);
+    std::memcpy(key_data + sizeof(uint64_t) * i, &k, sizeof(k));
   }
-  *(uint64_t*)val_data = val;
+  uint64_t v = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }
@@ -467,7 +541,8 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::ve
   {
     strncpy((char*)key_data + STRING_SIZE*i, key.at(i).c_str(), STRING_SIZE);
   }
-  *(uint64_t*)val_data = val;
+  uint64_t v = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }
@@ -481,9 +556,10 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(int
   uint8_t *key_data = pair.first.data();
   uint8_t *val_data = pair.second.data();
 
-  *(uint64_t*)key_data = myint;
+  uint64_t k = myint, v = val;
+  std::memcpy(key_data, &k, sizeof(k));
   strncpy((char*)key_data + sizeof(uint64_t), mystr.c_str(), STRING_SIZE);
-  *(uint64_t*)val_data = val;
+  std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
 }

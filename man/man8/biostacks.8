@@ -1,0 +1,63 @@
+.TH biostacks 8  "2019-07-12" "USER COMMANDS"
+.SH NAME
+biostacks \- Show disk I/O latency with initialization stacks. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B biostacks
+.SH DESCRIPTION
+This tool shows disk I/O latency histograms for each block I/O initialization
+path. This can help reveal the reason for different latencies, as some may
+be created by log flushing, others by application reads, etc.
+
+This works by tracing the blk_account_io_start() and the
+blk_start_request() or blk_mq_start_request() functions using dynamic
+instrumentation.
+Linux 5.0 removed the classic I/O scheduler, so the blk_start_request()
+probe can be removed from the tool (just delete it). This tool may need other
+maintenance to keep working if these functions change in later kernels.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace disk I/O latency with initialization stacks:
+#
+.B biostacks.bt
+.SH FIELDS
+.TP
+0th
+An initialization kernel stack trace (shown in "@[...]") is printed before each I/O histogram.
+.TP
+1st, 2nd
+This is a range of I/O latency, in microseconds (shown in "[...)" set notation).
+.TP
+3rd
+A column showing the count of I/O in this range.
+.TP
+4th
+This is an ASCII histogram representing the count column.
+.SH OVERHEAD
+The rate of biostacks should be low (bounded by device IOPS), such that
+the overhead of this tool is expected to be negligible.
+.SH SOURCE
+This tool originated from the book "BPF Performance Tools", published by
+Addison Wesley (2019):
+.IP
+http://www.brendangregg.com/bpf-performance-tools-book.html
+.PP
+See the book for more documentation on this tool.
+.PP
+This version is in the bpftrace repository:
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Brendan Gregg
+.SH SEE ALSO
+biosnoop(8)

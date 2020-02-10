@@ -15,5 +15,3 @@ function(embed_headers output)
 endfunction()
 
 embed_headers(${CMAKE_BINARY_DIR}/resources/headers.cpp)
-
-

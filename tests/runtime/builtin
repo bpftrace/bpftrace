@@ -58,6 +58,12 @@ RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }
 EXPECT SUCCESS arg -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME sarg
+RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+EXPECT SUCCESS sarg 32 64
+TIMEOUT 5
+AFTER ./testprogs/stack_args
+
 NAME retval
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
 EXPECT SUCCESS retval .*
@@ -66,6 +72,12 @@ TIMEOUT 5
 NAME func
 RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", func); exit(); }'
 EXPECT SUCCESS func .*
+TIMEOUT 5
+
+NAME func_uprobe
+RUN bpftrace -v -e 'uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }'
+EXPECT SUCCESS .*
+AFTER ./testprogs/uprobe_negative_retval
 TIMEOUT 5
 
 NAME username
@@ -90,6 +102,11 @@ RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
 EXPECT SUCCESS curtask -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME curtask_field
+RUN bpftrace -v -e 'struct task_struct {int x;} i:ms:1 { printf("SUCCESS '$test' %d\n", curtask->x); exit(); }'
+EXPECT SUCCESS curtask_field -?[0-9][0-9]*
+TIMEOUT 5
+
 NAME rand
 RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", rand); exit(); }'
 EXPECT SUCCESS rand -?[0-9][0-9]*
@@ -110,6 +127,22 @@ NAME cat limited output
 ENV BPFTRACE_CAT_BYTES_MAX=1
 RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
 EXPECT ^[0-9]$
+TIMEOUT 5
+
+NAME cat format str
+RUN bpftrace -e 'i:ms:1 { $s = "loadavg"; cat("/proc/%s", $s); exit(); }'
+EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
+TIMEOUT 5
+
+NAME log size too small
+ENV BPFTRACE_LOG_SIZE=1
+RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+EXPECT ^Error loading program: BEGIN
+TIMEOUT 5
+
+NAME increase log size
+RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+EXPECT ^Attaching 1 probe
 TIMEOUT 5
 
 NAME cat "no such file"

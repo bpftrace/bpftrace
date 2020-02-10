@@ -39,6 +39,7 @@ find_library (LIBELF_LIBRARIES
     /usr/lib
     /usr/local/lib
     /opt/local/lib
+    /usr/lib/x86_64-linux-gnu/
     /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
@@ -60,5 +61,6 @@ int main() {
   elf_getshdrstrndx(e, &sz);
   return 0;
 }" ELF_GETSHDRSTRNDX)
+SET(CMAKE_REQUIRED_LIBRARIES)
 
 mark_as_advanced(LIBELF_INCLUDE_DIRS LIBELF_LIBRARIES ELF_GETSHDRSTRNDX)

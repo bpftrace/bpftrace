@@ -4,7 +4,7 @@ Demonstrations of capable, the Linux bpftrace/eBPF version.
 capable traces calls to the kernel cap_capable() function, which does security
 capability checks, and prints details for each call. For example:
 
-# capable.bt
+# ./capable.bt
 TIME      UID    PID    COMM             CAP  NAME                 AUDIT
 22:11:23  114    2676   snmpd            12   CAP_NET_ADMIN        1
 22:11:23  0      6990   run              24   CAP_SYS_RESOURCE     1

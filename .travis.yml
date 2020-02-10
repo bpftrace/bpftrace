@@ -1,37 +1,73 @@
 sudo: required
 
+dist: bionic
+
 language:
-  - cpp
+  # Trick Travis into using bionic (see https://travis-ci.community/t/for-dist-bionic-xenial-vm-is-used-instead-with-language-rust/4487/3)
+  # We're building on Docker, so the actual language doesn't matter.
+  - python
 
 services:
   - docker
 
+cache:
+  directories:
+    - $HOME/build/iovisor/bpftrace/build-$TYPE-$BASE/embedded_llvm-prefix/
+    - $HOME/build/iovisor/bpftrace/build-$TYPE-$BASE/embedded_clang-prefix/
+
 matrix:
   include:
+    - name: "clang-format"
+      script:
+        - git clang-format master
+        - git diff --exit-code
+      env: LLVM_VERSION=8 BASE=bionic
     # Certain tests are disabled on our LLVM 5 builds because they are flaky
     # when bpftrace is compiled with musl libc. They should still be capable
     # of passing occasionally.
-    # String comparisons are the exception - they are just broken in debug builds.
+    # String comparisons and args multiple tracepoints tests are the exception
+    # - they are just broken in debug builds.
     - name: "Static LLVM 5 Debug"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Debug STATIC_LINKING=ON STATIC_LIBC=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.string_equal_comparison:codegen.string_not_equal_comparison:codegen.literal_strncmp:codegen.strncmp:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
     - name: "Static LLVM 5 Release"
-      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*"
+      env: LLVM_VERSION=5.0 BASE=alpine TYPE=Release STATIC_LINKING=ON STATIC_LIBC=ON TEST_ARGS="--gtest_filter=codegen.*:-codegen.call_ntop_char4:codegen.call_ntop_char16:codegen.call_printf:codegen.enum_declaration:codegen.macro_definition:codegen.printf_offsets:codegen.struct_*:codegen.args_multiple_tracepoints*:codegen.logical_and_or_different_type"
 
     - name: "LLVM 6 Debug"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 6 Release"
-      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=6.0 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "LLVM 7 Debug"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 7 Release"
-      env: LLVM_VERSION=7 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=7 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
 
     - name: "LLVM 8 Debug"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
     - name: "LLVM 8 Release"
-      env: LLVM_VERSION=8 BASE=bionic TYPE=Release
+      env: LLVM_VERSION=8 BASE=bionic TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
+
+    - name: "Static+glibc-2.27 Debian-linked LLVM 8 Debug"
+      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Debug RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
+    - name: "Static+glibc-2.27 Debian-linked LLVM 8 Release"
+      env: LLVM_VERSION=8 BASE=bionic-glibc STATIC_LINKING=ON STATIC_LIBC=OFF EMBED_LLVM=OFF EMBED_CLANG=ON EMBED_LIBCLANG_ONLY=ON TYPE=Release RUN_ALL_TESTS=1 RUNTIME_TEST_DISABLE=builtin.cgroup,probe.kprobe_offset_fail_size
+
+install:
+  - sudo apt-get install linux-headers-$(uname -r)
+  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION -f docker/Dockerfile.$BASE docker/
 
 script:
-  - docker build --build-arg LLVM_VERSION=$LLVM_VERSION -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION -f docker/Dockerfile.$BASE docker/
-  - sudo docker run --privileged --rm -it -v $(pwd):$(pwd) -v /sys/kernel/debug:/sys/kernel/debug:rw -e STATIC_LINKING=$STATIC_LINKING -e TEST_ARGS=$TEST_ARGS bpftrace-builder-$BASE-llvm-$LLVM_VERSION $(pwd)/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`
+  - sudo docker run --privileged --rm -it -v ${PWD}:${PWD} -v /sys/kernel/debug:/sys/kernel/debug:rw -v /lib/modules:/lib/modules:ro -v /usr/src:/usr/src:ro -e WARNINGS_AS_ERRORS=ON -e STATIC_LINKING=$STATIC_LINKING -e STATIC_LIBC=$STATIC_LIBC -e EMBED_LLVM=$EMBED_LLVM -e EMBED_CLANG=$EMBED_CLANG -e EMBED_LIBCLANG_ONLY=$EMBED_LIBCLANG_ONLY -e LLVM_VERSION=$LLVM_VERSION -e RUN_ALL_TESTS=$RUN_ALL_TESTS -e TEST_ARGS=$TEST_ARGS -e RUNTIME_TEST_DISABLE=$RUNTIME_TEST_DISABLE bpftrace-builder-$BASE-llvm-$LLVM_VERSION ${PWD}/build-$TYPE-$BASE $TYPE -j`getconf _NPROCESSORS_ONLN`
+
+notifications:
+  irc:
+    channels:
+      # Running the following command generates an encrypted string that only
+      # decrypts properly in iovisor/bpftrace. This prevents forks from
+      # spamming the IRC channel.
+      #
+      #     travis encrypt -r "iovisor/bpftrace" "irc.oftc.net#bpftrace"
+      #
+      - secure: "wIAz2oF8z8Kirt0pjAdOT2z9GOm3KtlPfZzdMUHvnDkehT0dIVLcbMvmPOdje/0MJVQXpl3/XguT31wqJ+qhR0el/ZWAxc53ZT7lQRP6v/yKS9AJWO2RYYFMjHldTkdYe5TyKcX3IEY7ixSblkO0eDGyKDC2eYqghSFnclbC83oQVe0qDNewxo4W5gjQjW9Bmly6c7QYxHp/qTYkwP58zOvjMXKupPgk6xjqhI1sShpT5V/1tx6ATq5BPOUWJtIz7VvdrFar1F5r+RuBLz7z4kNhu9ofXfbxOpyuuNIaTPgGBRLa98oHm6xCNNCPouVM+zNXiJLcb5aDcL1DkhueMOYrbOXHp5DAvq58t29zLiksDWY89mo/gp555ZrVibnhj47mIxQ6QFv77I0nJWsk5F11tsVI0zDcBye6nlHJfLqZIPzGdrp4JPpAghLZq2Fgnhqq1gcdax1pHIp4f90XsuPZsf7My24/2oDXnrKMofNIaA4ubzreTDGxhL+xgQK15Tz2XVcjn5MRAup0z6WN+nEWbDF52iQxyKBhU62zXCuvFG62lho3E8lU0e7dQXlFJnG/KY/bW1fhjeC8BLYdejqE/iZkZp2jxqTiAAoTcrTws/AhaXHFNVVTiiVpekvbTbGWEbd8Hffl/+LNmCrjEDrQyCe//QLyy9bjcG+I+Jk="
+    on_success: change
+    on_failure: always

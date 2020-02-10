@@ -5,6 +5,7 @@
 #include <unordered_set>
 
 #include "ast.h"
+#include "bpffeature.h"
 #include "bpftrace.h"
 #include "map.h"
 #include "types.h"
@@ -14,10 +15,13 @@ namespace ast {
 
 class SemanticAnalyser : public Visitor {
 public:
-  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, std::ostream &out = std::cerr)
-    : root_(root),
-      bpftrace_(bpftrace),
-      out_(out) { }
+  explicit SemanticAnalyser(Node *root,
+                            BPFtrace &bpftrace,
+                            BPFfeature &feature,
+                            std::ostream &out = std::cerr)
+      : root_(root), bpftrace_(bpftrace), feature_(feature), out_(out)
+  {
+  }
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -50,21 +54,25 @@ public:
 private:
   Node *root_;
   BPFtrace &bpftrace_;
+  BPFfeature &feature_;
   std::ostream &out_;
   std::ostringstream err_;
   int pass_;
   const int num_passes_ = 10;
 
   bool is_final_pass() const;
-  std::string get_cast_type(Expression *expr);
 
-  bool check_assignment(const Call &call, bool want_map, bool want_var);
+  bool check_assignment(const Call &call, bool want_map, bool want_var, bool want_map_key);
   bool check_nargs(const Call &call, size_t expected_nargs);
   bool check_varargs(const Call &call, size_t min_nargs, size_t max_nargs);
   bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
-  bool check_alpha_numeric(const Call &call, int arg_num);
+  bool check_symbol(const Call &call, int arg_num);
 
   void check_stack_call(Call &call, Type type);
+  void error(const std::string &msg, const location &loc);
+  void warning(const std::string &msg, const location &loc);
+
+  void assign_map_type(const Map &map, const SizedType &type);
 
   Probe *probe_;
   std::map<std::string, SizedType> variable_val_;
@@ -73,6 +81,7 @@ private:
   std::map<std::string, ExpressionList> map_args_;
   std::unordered_set<StackType> needs_stackid_maps_;
   bool needs_join_map_ = false;
+  bool needs_elapsed_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
 };

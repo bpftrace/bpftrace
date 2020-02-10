@@ -1,6 +1,7 @@
 FROM alpine:3.8
 RUN apk add --update \
   bison \
+  binutils-dev \
   build-base \
   clang-dev \
   clang-static \
@@ -36,4 +37,5 @@ RUN cd /bcc && mkdir build && cd build && cmake .. && make install -j4 && \
 
 
 COPY build.sh /build.sh
+RUN chmod 755 /build.sh
 ENTRYPOINT ["/bin/sh", "/build.sh"]

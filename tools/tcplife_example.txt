@@ -1,0 +1,26 @@
+Demonstrations of tcplife, the Linux bpftrace/eBPF version.
+
+
+This tool shows the lifespan of TCP sessions, including througphut statistics,
+and for efficiency only instruments TCP state changes (rather than all packets).
+For example:
+
+# ./tcplife.bt
+PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
+20976 ssh        127.0.0.1       56766 127.0.0.1       22         6 10584 3059
+20977 sshd       127.0.0.1       22    127.0.0.1       56766  10584     6 3059
+14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
+4496  Chrome_IOT 7f00:6:5ea7::a00:0 42846 0:0:bb01::      443        0     3 12441
+4496  Chrome_IOT 7f00:6:5aa7::a00:0 42842 0:0:bb01::      443        0     3 12436
+4496  Chrome_IOT 7f00:6:62a7::a00:0 42850 0:0:bb01::      443        0     3 12436
+4496  Chrome_IOT 7f00:6:5ca7::a00:0 42844 0:0:bb01::      443        0     3 12442
+4496  Chrome_IOT 7f00:6:60a7::a00:0 42848 0:0:bb01::      443        0     3 12436
+4496  Chrome_IOT 10.0.0.65       33342 54.241.2.241    443        0     3 10717
+4496  Chrome_IOT 10.0.0.65       33350 54.241.2.241    443        0     3 10711
+4496  Chrome_IOT 10.0.0.65       33352 54.241.2.241    443        0     3 10712
+14519 monitord   127.0.0.1       44832 127.0.0.1       44444      0     0 0
+
+The output begins with a localhost ssh connection, so both endpoints can be
+seen: the ssh process (PID 20976) which received 10584 Kbytes, and the sshd
+process (PID 20977) which transmitted 10584 Kbytes. This session lasted 3059
+milliseconds. Other sessions can also be seen, including IPv6 connections.

@@ -3,9 +3,9 @@ typedef struct MY_STRUCT{
 
 }mystruct;
 
-void test_struct(mystruct *s) { }
+void test_struct(mystruct *s __attribute__((unused))) { }
 
-int main(int argc, char **argv)
+int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
 {
   mystruct s;
   s.x[0] = 1;

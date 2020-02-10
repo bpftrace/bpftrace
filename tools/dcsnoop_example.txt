@@ -5,7 +5,7 @@ dcsnoop traces directory entry cache (dcache) lookups, and can be used for
 further investigation beyond dcstat(8). The output is likely verbose, as
 dcache lookups are likely frequent. For example:
 
-# dcsnoop.bt
+# ./dcsnoop.bt
 Attaching 4 probes...
 Tracing dcache lookups... Hit Ctrl-C to end.
 TIME     PID    COMM             T FILE

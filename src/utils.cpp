@@ -1,18 +1,21 @@
-#include <string.h>
+#include <cstring>
 
 #include <algorithm>
 #include <array>
-#include <map>
-#include <string>
-#include <tuple>
-#include <sstream>
+#include <fcntl.h>
 #include <fstream>
+#include <glob.h>
+#include <map>
 #include <memory>
-#include <unistd.h>
+#include <sstream>
+#include <string>
 #include <sys/stat.h>
+#include <tuple>
+#include <unistd.h>
 
-#include "utils.h"
+#include "bcc_elf.h"
 #include "bcc_usdt.h"
+#include "utils.h"
 
 namespace {
 
@@ -37,18 +40,86 @@ std::vector<int> read_cpu_range(std::string path)
   return cpus;
 }
 
+std::vector<std::string> expand_wildcard_path(const std::string& path)
+{
+  glob_t glob_result;
+  memset(&glob_result, 0, sizeof(glob_result));
+
+  if (glob(path.c_str(), GLOB_NOCHECK, nullptr, &glob_result)) {
+    globfree(&glob_result);
+    throw std::runtime_error("glob() failed");
+  }
+
+  std::vector<std::string> matching_paths;
+  for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
+    matching_paths.push_back(std::string(glob_result.gl_pathv[i]));
+  }
+
+  globfree(&glob_result);
+  return matching_paths;
+}
+
+std::vector<std::string> expand_wildcard_paths(const std::vector<std::string>& paths)
+{
+  std::vector<std::string> expanded_paths;
+  for (const auto& p : paths)
+  {
+    auto ep = expand_wildcard_path(p);
+    expanded_paths.insert(expanded_paths.end(), ep.begin(), ep.end());
+  }
+  return expanded_paths;
+}
+
 } // namespace
 
 namespace bpftrace {
+
+//'borrowed' from libbpf's bpf_core_find_kernel_btf
+// from Andrii Nakryiko
+const struct vmlinux_location vmlinux_locs[] = {
+  { "/sys/kernel/btf/vmlinux", true },
+  { "/boot/vmlinux-%1$s", false },
+  { "/lib/modules/%1$s/vmlinux-%1$s", false },
+  { "/lib/modules/%1$s/build/vmlinux", false },
+  { "/usr/lib/modules/%1$s/kernel/vmlinux", false },
+  { "/usr/lib/debug/boot/vmlinux-%1$s", false },
+  { "/usr/lib/debug/boot/vmlinux-%1$s.debug", false },
+  { "/usr/lib/debug/lib/modules/%1$s/vmlinux", false },
+  { nullptr, false },
+};
 
 static bool provider_cache_loaded = false;
 
 // Maps all providers of pid to vector of tracepoints on that provider
 static std::map<std::string, usdt_probe_list> usdt_provider_cache;
 
+static bool pid_in_different_mountns(int pid);
+static std::vector<std::string>
+resolve_binary_path(const std::string &cmd, const char *env_paths, int pid);
+
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
   usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
+}
+
+void StderrSilencer::silence()
+{
+  fflush(stderr);
+  old_stderr_ = dup(STDERR_FILENO);
+  int new_stderr_ = open("/dev/null", O_WRONLY);
+  dup2(new_stderr_, STDERR_FILENO);
+  close(new_stderr_);
+}
+
+StderrSilencer::~StderrSilencer()
+{
+  if (old_stderr_ != -1)
+  {
+    fflush(stderr);
+    dup2(old_stderr_, STDERR_FILENO);
+    close(old_stderr_);
+    old_stderr_ = -1;
+  }
 }
 
 usdt_probe_entry USDTHelper::find(
@@ -305,6 +376,78 @@ bool is_dir(const std::string& path)
   return S_ISDIR(buf.st_mode);
 }
 
+namespace {
+  struct KernelHeaderTmpDir {
+    KernelHeaderTmpDir(const std::string& prefix) : path{prefix + "XXXXXX"}
+    {
+      if (::mkdtemp(&path[0]) == nullptr) {
+        throw std::runtime_error("creating temporary path for kheaders.tar.xz failed");
+      }
+    }
+
+    ~KernelHeaderTmpDir()
+    {
+      if (path.size() > 0) {
+        // move_to either did not succeed or did not run, so clean up after ourselves
+        exec_system(("rm -rf " + path).c_str());
+      }
+    }
+
+    void move_to(const std::string& new_path)
+    {
+      int err = ::rename(path.c_str(), new_path.c_str());
+      if (err == 0) {
+        path = "";
+      }
+    }
+
+    std::string path;
+  };
+
+  std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
+  {
+    std::string path_prefix{"/tmp"};
+    if (const char* tmpdir = ::getenv("TMPDIR")) {
+      path_prefix = tmpdir;
+    }
+    path_prefix += "/kheaders-";
+    std::string shared_path{path_prefix + utsname.release};
+
+    struct stat stat_buf;
+
+    if (::stat(shared_path.c_str(), &stat_buf) == 0) {
+      // already unpacked
+      return shared_path;
+    }
+
+    if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+      FILE* modprobe = ::popen("modprobe kheaders", "w");
+      if (modprobe == nullptr || pclose(modprobe) != 0) {
+        return "";
+      }
+
+      if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+        return "";
+      }
+    }
+
+    KernelHeaderTmpDir tmpdir{path_prefix};
+
+    FILE* tar = ::popen(("tar xf /sys/kernel/kheaders.tar.xz -C " + tmpdir.path).c_str(), "w");
+    if (!tar) {
+      return "";
+    }
+
+    int rc = ::pclose(tar);
+    if (rc == 0) {
+      tmpdir.move_to(shared_path);
+      return shared_path;
+    }
+
+    return "";
+  }
+} // namespace
+
 // get_kernel_dirs returns {ksrc, kobj} - directories for pristine and
 // generated kernel sources.
 //
@@ -343,6 +486,10 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
     kobj = "";
   }
   if (ksrc == "" && kobj == "") {
+    const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
+    if (kheaders_tar_xz_path.size() > 0) {
+      return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
+    }
     return std::make_tuple("", "");
   }
   if (ksrc == "") {
@@ -355,7 +502,7 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
   return std::make_tuple(ksrc, kobj);
 }
 
-std::string is_deprecated(std::string &str)
+const std::string &is_deprecated(const std::string &str)
 {
 
   std::vector<DeprecatedName>::iterator item;
@@ -401,26 +548,163 @@ std::string exec_system(const char* cmd)
   return result;
 }
 
-std::string resolve_binary_path(const std::string& cmd)
+/*
+Original resolve_binary_path API defaulting to bpftrace's mount namespace
+*/
+std::vector<std::string> resolve_binary_path(const std::string& cmd)
 {
-  std::string query;
-  query += "command -v ";
-  query += cmd;
-  std::string result = exec_system(query.c_str());
+  const char *env_paths = getenv("PATH");
+  return resolve_binary_path(cmd, env_paths, -1);
+}
 
-  if (result.size())
+/*
+If a pid is specified, the binary path is taken relative to its own PATH if
+it is in a different mount namespace. Otherwise, the path is resolved relative
+to the local PATH env var for bpftrace's own mount namespace if it is set
+*/
+std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid)
+{
+  std::string env_paths = "";
+  std::ostringstream pid_environ_path;
+
+  if (pid > 0 && pid_in_different_mountns(pid))
   {
-    // Remove newline at the end
-    auto it = result.rfind('\n');
-    if (it != std::string::npos)
-      result.erase(it);
+    pid_environ_path << "/proc/" << pid << "/environ";
+    std::ifstream environ(pid_environ_path.str());
 
-    return result;
+    if (environ)
+    {
+      std::string env_var;
+      std::string pathstr = ("PATH=");
+      while (std::getline(environ, env_var, '\0'))
+      {
+        if (env_var.find(pathstr) != std::string::npos)
+        {
+          env_paths = env_var.substr(pathstr.length());
+          break;
+        }
+      }
+    }
+    return resolve_binary_path(cmd, env_paths.c_str(), pid);
   }
   else
   {
-    return cmd;
+    return resolve_binary_path(cmd, getenv("PATH"), pid);
   }
+}
+
+/*
+Private interface to resolve_binary_path, used for the exposed variants above,
+allowing for a PID whose mount namespace should be optionally considered.
+*/
+static std::vector<std::string>
+resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
+{
+  std::vector<std::string> candidate_paths = { cmd };
+
+  if (env_paths != nullptr && cmd.find("/") == std::string::npos)
+    for (const auto& path : split_string(env_paths, ':'))
+      candidate_paths.push_back(path + "/" + cmd);
+
+  if (cmd.find("*") != std::string::npos)
+    candidate_paths = ::expand_wildcard_paths(candidate_paths);
+
+  std::vector<std::string> valid_executable_paths;
+  for (const auto &path : candidate_paths)
+  {
+    std::string rel_path;
+    if (pid > 0 && pid_in_different_mountns(pid))
+      rel_path = path_for_pid_mountns(pid, path);
+    else
+      rel_path = path;
+    if (bcc_elf_is_exe(rel_path.c_str()) ||
+        bcc_elf_is_shared_obj(rel_path.c_str()))
+      valid_executable_paths.push_back(rel_path);
+  }
+
+  return valid_executable_paths;
+}
+
+std::string path_for_pid_mountns(int pid, const std::string &path)
+{
+  std::ostringstream pid_relative_path;
+  std::string root =
+      (path.length() >= 1 && path.at(0) == '/') ? "/root" : "/root/";
+  pid_relative_path << "/proc/" << pid << root << path;
+  return pid_relative_path.str();
+}
+
+/*
+Determines if the target process is in a different mount namespace from
+bpftrace.
+
+If a process is in a different mount namespace (eg, container) it is very
+likely that any references to local paths will not be valid, and that paths
+need to be made relative to the PID.
+
+If an invalid PID is specified or doesn't exist, it returns false.
+True is only returned if the namespace of the target process could be read and
+it doesn't match that of bpftrace. If there was an error reading either mount
+namespace, it will throw an exception
+*/
+static bool pid_in_different_mountns(int pid)
+{
+
+  struct stat self_stat, target_stat;
+  int self_fd = -1, target_fd = -1;
+  std::stringstream errmsg;
+  char buf[64];
+
+  if (pid <= 0)
+    return false;
+
+  if ((size_t)snprintf(buf, sizeof(buf), "/proc/%d/ns/mnt", pid) >= sizeof(buf))
+  {
+    errmsg << "Reading mountNS would overflow buffer.";
+    goto error;
+  }
+
+  self_fd = open("/proc/self/ns/mnt", O_RDONLY);
+  if (self_fd < 0)
+  {
+    errmsg << "open(/proc/self/ns/mnt): " << strerror(errno);
+    goto error;
+  }
+
+  target_fd = open(buf, O_RDONLY);
+  if (target_fd < 0)
+  {
+    errmsg << "open(/proc/<pid>/ns/mnt): " << strerror(errno);
+    goto error;
+  }
+
+  if (fstat(self_fd, &self_stat))
+  {
+    errmsg << "fstat(self_fd): " << strerror(errno);
+    goto error;
+  }
+
+  if (fstat(target_fd, &target_stat))
+  {
+    errmsg << "fstat(target_fd)" << strerror(errno);
+    goto error;
+  }
+
+  close(self_fd);
+  close(target_fd);
+  return self_stat.st_ino != target_stat.st_ino;
+
+error:
+  if (self_fd >= 0)
+    close(self_fd);
+  if (target_fd >= 0)
+    close(target_fd);
+
+  throw MountNSException("Failed to compare mount ns with PID " +
+                         std::to_string(pid) + ". " + "The error was " +
+                         errmsg.str());
+
+  return false;
 }
 
 void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
@@ -452,6 +736,27 @@ void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
     }
     bytes_read += file.gcount();
   }
+}
+
+std::string str_join(const std::vector<std::string> &list, const std::string &delim)
+{
+  std::string str;
+  bool first = true;
+  for (const auto &elem : list)
+  {
+    if (first)
+      first = false;
+    else
+      str += delim;
+
+    str += elem;
+  }
+  return str;
+}
+
+bool is_numeric(const std::string &s)
+{
+  return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
 }
 
 } // namespace bpftrace

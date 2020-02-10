@@ -6,6 +6,7 @@
 namespace bpftrace {
 namespace arch {
 
+// clang-format off
 static std::array<std::string, 35> registers = {
   "r0",
   "r1",
@@ -54,6 +55,7 @@ static std::array<std::string, 8> arg_registers = {
   "r6",
   "r7",
 };
+// clang-format on
 
 int offset(std::string reg_name)
 {
@@ -81,6 +83,11 @@ int ret_offset()
 int pc_offset()
 {
   return offset("pc");
+}
+
+int sp_offset()
+{
+  return offset("sp");
 }
 
 std::string name()

@@ -3,8 +3,9 @@
 #include <ostream>
 #include <sstream>
 #include <string>
-#include <vector>
+#include <sys/types.h>
 #include <unistd.h>
+#include <vector>
 
 namespace bpftrace {
 
@@ -57,31 +58,44 @@ struct StackType
   }
 };
 
-class SizedType
+struct SizedType
 {
-public:
   SizedType() : type(Type::none), size(0) { }
+  SizedType(Type type,
+            size_t size_,
+            bool is_signed,
+            const std::string &cast_type = "")
+      : type(type), size(size_), is_signed(is_signed), cast_type(cast_type)
+  {
+  }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
-    : type(type), size(size_), cast_type(cast_type) { }
-  SizedType(Type type, StackType stack_type_)
-    : SizedType(type, 8) {
+      : type(type), size(size_), cast_type(cast_type)
+  {
+  }
+
+  SizedType(Type type, StackType stack_type_) : SizedType(type, 8)
+  {
     stack_type = stack_type_;
   }
   Type type;
-  Type elem_type; // Array element type if accessing elements of an array
+  Type elem_type = Type::none; // Array element type if accessing elements of an
+                               // array
   size_t size;
   StackType stack_type;
+  bool is_signed = false;
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
   bool is_data_loc = false;
-  size_t pointee_size;
+  size_t pointee_size = 0;
 
   bool IsArray() const;
   bool IsStack() const;
 
+  bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
+  bool operator!=(const SizedType &t) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
@@ -99,6 +113,7 @@ enum class ProbeType
   interval,
   software,
   hardware,
+  watchpoint,
 };
 
 struct ProbeItem
@@ -121,7 +136,8 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "profile", "p", ProbeType::profile },
   { "interval", "i", ProbeType::interval },
   { "software", "s", ProbeType::software },
-  { "hardware", "h", ProbeType::hardware }
+  { "hardware", "h", ProbeType::hardware },
+  { "watchpoint", "w", ProbeType::watchpoint },
 };
 
 std::string typestr(Type t);
@@ -129,9 +145,8 @@ ProbeType probetype(const std::string &type);
 std::string probetypeName(const std::string &type);
 std::string probetypeName(ProbeType t);
 
-class Probe
+struct Probe
 {
-public:
   ProbeType type;
   std::string path;             // file path if used
   std::string attach_point;     // probe name (last component)
@@ -140,35 +155,50 @@ public:
   std::string name;             // full probe name
   std::string ns;               // for USDT probes, if provider namespace not from path
   uint64_t loc;                 // for USDT probes
+  uint64_t log_size;
   int index = 0;
   int freq;
+  pid_t pid = -1;
+  uint64_t addr = 0;            // for watchpoint probes, start of region
+  uint64_t len = 0;             // for watchpoint probes, size of region
+  std::string mode;             // for watchpoint probes, watch mode (rwx)
+  uint64_t address = 0;
+  uint64_t func_offset = 0;
 };
+
+const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 
 enum class AsyncAction
 {
-  // printf reserves 0-9999 for printf_ids
+  printf  = 0,     // printf reserves 0-9999 for printf_ids
   syscall = 10000, // system reserves 10000-19999 for printf_ids
-  exit = 20000,
+  cat     = 20000, // cat reserves 20000-29999 for printf_ids
+  exit    = 30000,
   print,
   clear,
   zero,
   time,
   join,
-  cat
 };
 
 uint64_t asyncactionint(AsyncAction a);
 
+enum class PositionalParameterType
+{
+  positional,
+  count
+};
+
 } // namespace bpftrace
 
-
 namespace std {
-template<>
+template <>
 struct hash<bpftrace::StackType>
 {
-  size_t operator()(const bpftrace::StackType& obj) const
+  size_t operator()(const bpftrace::StackType &obj) const
   {
-    switch (obj.mode) {
+    switch (obj.mode)
+    {
       case bpftrace::StackMode::bpftrace:
         return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
       case bpftrace::StackMode::perf:
@@ -179,4 +209,4 @@ struct hash<bpftrace::StackType>
     }
   }
 };
-}
+} // namespace std

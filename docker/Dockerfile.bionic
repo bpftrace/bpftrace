@@ -16,6 +16,7 @@ deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n
 
 RUN apt-get update && apt-get install -y \
       bison \
+      binutils-dev \
       cmake \
       flex \
       g++ \
@@ -31,7 +32,9 @@ RUN apt-get update && apt-get install -y \
       llvm-${LLVM_VERSION}-dev \
       llvm-${LLVM_VERSION}-runtime \
       libllvm${LLVM_VERSION} \
-      systemtap-sdt-dev
+      systemtap-sdt-dev \
+      python3
 
 COPY build.sh /build.sh
+RUN chmod 755 /build.sh
 ENTRYPOINT ["bash", "/build.sh"]

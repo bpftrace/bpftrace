@@ -5,7 +5,7 @@ This tool traces when the kernel writeback procedure is writing dirtied pages
 to disk, and shows details such as the time, device numbers, reason for the
 write back, and the duration. For example:
 
-# writeback.bt
+# ./writeback.bt
 Attaching 4 probes...
 Tracing writeback... Hit Ctrl-C to end.
 TIME      DEVICE   PAGES    REASON           ms

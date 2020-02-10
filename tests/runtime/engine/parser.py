@@ -23,8 +23,9 @@ class TestParser(object):
     def read_all(test_filter):
         try:
             for root, subdirs, files in os.walk('./runtime'):
-                if "scripts" in subdirs:
-                    subdirs.remove("scripts")
+                for ignore_dir in ["engine", "scripts", "outputs"]:
+                    if ignore_dir in subdirs:
+                        subdirs.remove(ignore_dir)
                 for filename in files:
                     if filename.startswith("."):
                         continue
@@ -40,19 +41,20 @@ class TestParser(object):
         test_lines = []
         test_suite = file_name.split('/')[-1]
         with open (file_name, 'r') as file:
-            for line in file.readlines():
+            lines = file.readlines()
+            line_num = 0
+            for line in lines:
+                line_num += 1
                 if line.startswith("#"):
                     continue
                 if line != '\n':
                     test_lines.append(line)
-                else:
-                    test_struct = TestParser.__read_test_struct(test_lines, test_suite)
-                    if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
-                        tests.append(test_struct)
-                    test_lines = []
-            test_struct = TestParser.__read_test_struct(test_lines, test_suite)
-            if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
-                tests.append(test_struct)
+                if line == '\n' or line_num == len(lines):
+                    if test_lines:
+                        test_struct = TestParser.__read_test_struct(test_lines, test_suite)
+                        if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
+                            tests.append(test_struct)
+                        test_lines = []
 
         return (test_suite, tests)
 

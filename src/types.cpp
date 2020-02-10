@@ -13,15 +13,38 @@ std::ostream &operator<<(std::ostream &os, Type type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  os << type.type;
+  if (type.type == Type::cast)
+  {
+    os << type.cast_type;
+  }
+  else if (type.type == Type::integer)
+  {
+    os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
+  }
+  else
+  {
+    os << type.type;
+  }
+
   if (type.is_pointer)
     os << "*";
+
   return os;
+}
+
+bool SizedType::IsEqual(const SizedType &t) const
+{
+  return type == t.type && size == t.size && is_signed == t.is_signed;
+}
+
+bool SizedType::operator!=(const SizedType &t) const
+{
+  return !IsEqual(t);
 }
 
 bool SizedType::operator==(const SizedType &t) const
 {
-  return type == t.type && size == t.size;
+  return IsEqual(t);
 }
 
 bool SizedType::IsArray() const
@@ -55,9 +78,12 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
-    case Type::inet:     return "inet";     break;
     case Type::cast:     return "cast";     break;
+    case Type::join:     return "join";     break;
     case Type::probe:    return "probe";    break;
+    case Type::username: return "username"; break;
+    case Type::inet:     return "inet";     break;
+    case Type::stack_mode:return "stack mode";break;
     case Type::array:    return "array";    break;
     default:
       std::cerr << "call or probe type not found" << std::endl;

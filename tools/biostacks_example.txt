@@ -1,0 +1,63 @@
+Demonstrations of biostacks, the Linux BCC/eBPF version.
+
+
+This tool shows block I/O latency as a histogram, with the kernel stack trace
+that initiated the I/O. This can help explain disk I/O that is not directly
+requested by applications (eg, metadata reads on writes, resilvering, etc).
+For example:
+
+# ./biostacks.bt 
+Attaching 5 probes...
+Tracing block I/O with init stacks. Hit Ctrl-C to end.
+^C
+
+@usecs[
+    blk_account_io_start+1
+    blk_mq_make_request+1102
+    generic_make_request+292
+    submit_bio+115
+    _xfs_buf_ioapply+798
+    xfs_buf_submit+101
+    xlog_bdstrat+43
+    xlog_sync+705
+    xlog_state_release_iclog+108
+    _xfs_log_force+542
+    xfs_log_force+44
+    xfsaild+428
+    kthread+289
+    ret_from_fork+53
+]: 
+[64K, 128K)            1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+[...]
+
+@usecs[
+    blk_account_io_start+1
+    blk_mq_make_request+707
+    generic_make_request+292
+    submit_bio+115
+    xfs_add_to_ioend+455
+    xfs_do_writepage+758
+    write_cache_pages+524
+    xfs_vm_writepages+190
+    do_writepages+75
+    __writeback_single_inode+69
+    writeback_sb_inodes+481
+    __writeback_inodes_wb+103
+    wb_writeback+625
+    wb_workfn+384
+    process_one_work+478
+    worker_thread+50
+    kthread+289
+    ret_from_fork+53
+]: 
+[8K, 16K)            560 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[16K, 32K)           218 |@@@@@@@@@@@@@@@@@@@@                                |
+[32K, 64K)            26 |@@                                                  |
+[64K, 128K)            2 |                                                    |
+[128K, 256K)          53 |@@@@                                                |
+[256K, 512K)          60 |@@@@@                                               |
+
+This output shows the most frequent stack was XFS writeback, with latencies
+between 8 and 512 microseconds. The other stack included here shows an XFS
+log sync.

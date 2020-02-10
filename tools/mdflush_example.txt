@@ -4,7 +4,7 @@ Demonstrations of mdflush, the Linux bpftrace/eBPF version.
 The mdflush tool traces flushes at the md driver level, and prints details
 including the time of the flush:
 
-# mdflush.bt
+# ./mdflush.bt
 Tracing md flush requests... Hit Ctrl-C to end.
 TIME     PID    COMM             DEVICE
 03:13:49 16770  sync             md0

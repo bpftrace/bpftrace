@@ -4,18 +4,29 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <vector>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "ast.h"
 #include "attached_probe.h"
+#include "btf.h"
 #include "imap.h"
+#include "output.h"
 #include "printf.h"
 #include "struct.h"
-#include "utils.h"
 #include "types.h"
+#include "utils.h"
 
 namespace bpftrace {
+
+struct symbol
+{
+  std::string name;
+  uint64_t start;
+  uint64_t size;
+  uint64_t address;
+};
 
 class BpfOrc;
 enum class DebugLevel;
@@ -24,15 +35,17 @@ enum class DebugLevel;
 extern DebugLevel bt_debug;
 extern bool bt_verbose;
 
-enum class DebugLevel {
+enum class DebugLevel
+{
   kNone,
   kDebug,
   kFullDebug
 };
 
-inline DebugLevel operator++(DebugLevel& level, int)
+inline DebugLevel operator++(DebugLevel &level, int)
 {
-  switch (level) {
+  switch (level)
+  {
     case DebugLevel::kNone:
       level = DebugLevel::kDebug;
       break;
@@ -66,11 +79,10 @@ private:
 class BPFtrace
 {
 public:
-  BPFtrace(std::ostream& o = std::cout) : out_(o),ncpus_(get_possible_cpus().size()) { }
+  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout)) : out_(std::move(o)),ncpus_(get_possible_cpus().size()) { }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
-  std::ostream& outputstream() const { return out_; }
   int run(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
   int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
@@ -79,25 +91,42 @@ public:
   inline int next_probe_id() {
     return next_probe_id_++;
   };
+  inline void source(std::string filename, std::string source) {
+    src_ = source;
+    filename_ = filename;
+  }
+  inline const std::string &source() { return src_; }
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
   std::string resolve_inet(int af, const uint8_t* inet) const;
   std::string resolve_uid(uintptr_t addr) const;
   uint64_t resolve_kname(const std::string &name) const;
-  uint64_t resolve_uname(const std::string &name, const std::string &path) const;
+  virtual int resolve_uname(const std::string &name,
+                            struct symbol *sym,
+                            const std::string &path) const;
+  std::string map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div);
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;
   std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
   void add_param(const std::string &param);
-  bool is_numeric(std::string str) const;
-  std::string get_param(size_t index) const;
+  std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
   void request_finalize();
+  void error(std::ostream &out, const location &l, const std::string &m);
+  void warning(std::ostream &out, const location &l, const std::string &m);
+  void log_with_location(std::string, std::ostream &, const location &, const std::string &);
+  bool has_child_cmd() { return cmd_.size() != 0; }
+  virtual pid_t child_pid() { return child_pid_; };
+  int spawn_child();
+  void kill_child();
+
   std::string cmd_;
   int pid_{0};
   bool finalize_ = false;
+  // Global variable checking if an exit signal was received
+  static volatile sig_atomic_t exitsig_recv;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
   std::map<std::string, Struct> structs_;
@@ -108,55 +137,73 @@ public:
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
   std::vector<std::string> join_args_;
   std::vector<std::string> time_args_;
-  std::vector<std::string> cat_args_;
+  std::vector<std::tuple<std::string, std::vector<Field>>> cat_args_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
+  std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;
   std::vector<std::string> probe_ids_;
   unsigned int join_argnum_;
   unsigned int join_argsize_;
+  std::unique_ptr<Output> out_;
 
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;
-  bool demangle_cpp_symbols = true;
-  bool safe_mode = true;
+  uint64_t log_size_ = 409600;
+  bool demangle_cpp_symbols_ = true;
+  bool resolve_user_symbols_ = true;
+  bool safe_mode_ = true;
+  bool force_btf_ = false;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,
-      std::vector<std::pair<std::vector<uint8_t>,
-      std::vector<uint8_t>>> &values_by_key);
+      std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key);
   std::set<std::string> find_wildcard_matches(
       const ast::AttachPoint &attach_point) const;
   std::set<std::string> find_wildcard_matches(
       const std::string &prefix,
       const std::string &func,
       std::istream &symbol_stream) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_file(const std::string &path) const;
+  virtual std::unique_ptr<std::istream> get_symbols_from_file(
+      const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
       int pid,
       const std::string &target) const;
+  const std::string get_source_line(unsigned int);
+
+  BTF btf_;
+  std::unordered_set<std::string> btf_set_;
 
 protected:
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
 
 private:
-  std::ostream &out_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   void* ksyms_{nullptr};
-  std::map<int, void *> pid_sym_;
+  std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
   int ncpus_;
   int online_cpus_;
-  std::vector<int> child_pids_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
 
-  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe, const BpfOrc &bpforc);
+  pid_t child_pid_ = 0;
+  bool child_running_ = false; // true when `CHILD_GO` has been sent (child
+                               // execve)
+  int child_start_pipe_ = -1;
+
+  std::string src_;
+  std::string filename_;
+  std::vector<std::string> srclines_;
+
+  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe,
+                                              const BpfOrc &bpforc);
   int setup_perf_events();
-  void poll_perf_events(int epollfd, bool drain=false);
+  void poll_perf_events(int epollfd, bool drain = false);
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
@@ -164,15 +211,16 @@ private:
   int print_map_lhist(IMap &map);
   int print_map_stats(IMap &map);
   int print_hist(const std::vector<uint64_t> &values, uint32_t div) const;
-  int print_lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
-  static uint64_t reduce_value(const std::vector<uint8_t> &value, int ncpus);
-  static int64_t min_value(const std::vector<uint8_t> &value, int ncpus);
-  static uint64_t max_value(const std::vector<uint8_t> &value, int ncpus);
+  int print_lhist(const std::vector<uint64_t> &values,
+                  int min,
+                  int max,
+                  int step) const;
+  template <typename T>
+  static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
+  static int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
+  static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);
-  static std::string hist_index_label(int power);
-  static std::string lhist_index_label(int number);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static int spawn_child(const std::vector<std::string>& args, int *notify_trace_start_pipe_fd);
   static bool is_pid_alive(int pid);
 };
 

@@ -20,18 +20,17 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                             "my_one\n"
                             "my_two\n";
         auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
-        printf("doing ok\n");
         return myval;
       });
 
   ON_CALL(bpftrace,
           get_symbols_from_file("/sys/kernel/debug/tracing/available_events"))
-      .WillByDefault([](const std::string &)
-      {
+      .WillByDefault([](const std::string &) {
         std::string tracepoints = "sched:sched_one\n"
                                   "sched:sched_two\n"
                                   "sched:foo\n"
-                                  "notsched:bar\n";
+                                  "notsched:bar\n"
+                                  "file:filename\n";
         return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
       });
 
@@ -52,6 +51,44 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                                 "nahprov:tp\n";
         return std::unique_ptr<std::istream>(new std::istringstream(usdt_syms));
       });
+
+  // Fill in some default tracepoint struct definitions
+  bpftrace.structs_["struct _tracepoint_sched_sched_one"] = Struct
+  {
+    .size = 8,
+    .fields = {{"common_field", Field
+      {
+        .type = SizedType(Type::integer, 8, false),
+        .offset = 8,
+        .is_bitfield = false,
+        .bitfield = {},
+      }}},
+  };
+  bpftrace.structs_["struct _tracepoint_sched_sched_two"] = Struct
+  {
+    .size = 8,
+    .fields = {{"common_field", Field
+      {
+        .type = SizedType(Type::integer, 8, false),
+        .offset = 16, // different offset than sched_one.common_field
+        .is_bitfield = false,
+        .bitfield = {},
+      }}},
+  };
+
+  auto ptr_type = SizedType(Type::integer, 8, false);
+  ptr_type.is_pointer = true;
+  ptr_type.pointee_size = 1;
+  bpftrace.structs_["struct _tracepoint_file_filename"] = Struct{
+    .size = 8,
+    .fields = { { "filename",
+                  Field{
+                      .type = ptr_type,
+                      .offset = 8,
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
+  };
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

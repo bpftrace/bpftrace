@@ -1,8 +1,10 @@
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <regex>
 #include <string.h>
 #include <glob.h>
+#include <iostream>
 
 #include "ast.h"
 #include "struct.h"
@@ -80,6 +82,7 @@ bool TracepointFormatParser::parse(ast::Program *program)
             if (!TracepointFormatParser::struct_list.count(struct_name))
             {
               program->c_definitions += get_tracepoint_struct(format_file, category, real_event);
+              std::cout << program->c_definitions << std::endl;
               TracepointFormatParser::struct_list.insert(struct_name);
             }
           }
@@ -114,7 +117,7 @@ bool TracepointFormatParser::parse(ast::Program *program)
 
 std::string TracepointFormatParser::get_struct_name(const std::string &category, const std::string &event_name)
 {
-  return "_tracepoint_" + category + "_" + event_name;
+  return "struct _tracepoint_" + category + "_" + event_name;
 }
 
 std::string TracepointFormatParser::parse_field(const std::string &line)
@@ -200,7 +203,7 @@ std::string TracepointFormatParser::adjust_integer_types(const std::string &fiel
 
 std::string TracepointFormatParser::get_tracepoint_struct(std::istream &format_file, const std::string &category, const std::string &event_name)
 {
-  std::string format_struct = "struct " + get_struct_name(category, event_name) + "\n{\n";
+  std::string format_struct = get_struct_name(category, event_name) + "\n{\n";
 
   for (std::string line; getline(format_file, line); )
   {

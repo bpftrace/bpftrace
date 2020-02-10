@@ -3,11 +3,12 @@
 %option reentrant
 %option stack
 %{
+#include <climits>
 #include "driver.h"
 #include "utils.h"
 #include "parser.tab.hh"
 
-static bpftrace::location loc;
+bpftrace::location loc;
 static std::string struct_type;
 static std::string buffer;
 
@@ -17,14 +18,22 @@ static std::string buffer;
 using namespace bpftrace;
 %}
 
-ident  [_a-zA-Z][_a-zA-Z0-9]*
-map    @{ident}|@
-var    ${ident}
-int    [0-9]+|0[xX][0-9a-fA-F]+
-hspace [ \t]
-vspace [\n\r]
-space  {hspace}|{vspace}
-path   :(\\.|[_\-\./a-zA-Z0-9])*:
+ident   [_a-zA-Z][_a-zA-Z0-9]*
+map     @{ident}|@
+var     ${ident}
+int     [0-9]+|0[xX][0-9a-fA-F]+
+cint    :{int}:
+hex     (x|X)[0-9a-fA-F]{1,2}
+oct     [0-7]{1,3}
+hspace  [ \t]
+vspace  [\n\r]
+space   {hspace}|{vspace}
+path    :(\\.|[_\-\./a-zA-Z0-9#\*])*:
+builtin arg[0-9]|args|cgroup|comm|cpid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
+call    avg|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|ksym|lhist|max|min|ntop|override|print|printf|reg|signal|stats|str|strncmp|sum|system|time|uaddr|usym|zero
+
+/* Don't add to this! Use builtin OR call not both */
+call_and_builtin kstack|ustack
 %x STR
 %x STRUCT
 %x ENUM
@@ -32,10 +41,6 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
 %x COMMENT
 
 %%
-
-%{
-  loc.step();
-%}
 
 {hspace}+               { loc.step(); }
 {vspace}+               { loc.lines(yyleng); loc.step(); }
@@ -50,14 +55,15 @@ path   :(\\.|[_\-\./a-zA-Z0-9])*:
   <<EOF>>               yy_pop_state(yyscanner); driver.error(loc, "end of file during comment");
 }
 
-pid|tid|cgroup|uid|gid|nsecs|cpu|comm|kstack|stack|ustack|arg[0-9]|retval|func|probe|curtask|rand|ctx|username|args|elapsed {
-                          return Parser::make_BUILTIN(yytext, loc); }
-bpftrace|perf {
-                          return Parser::make_STACK_MODE(yytext, loc); }
+bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
+{builtin}               { return Parser::make_BUILTIN(yytext, loc); }
+{call}                  { return Parser::make_CALL(yytext, loc); }
+{call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
+{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
+{cint}                  { return Parser::make_CINT(strtoll(yytext+1, NULL, 0), loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
-{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
 ":"                     { return Parser::make_COLON(loc); }
 ";"                     { return Parser::make_SEMI(loc); }
 "{"                     { return Parser::make_LBRACE(loc); }
@@ -91,9 +97,8 @@ bpftrace|perf {
 "||"                    { return Parser::make_LOR(loc); }
 "+"                     { return Parser::make_PLUS(loc); }
 "-"                     { return Parser::make_MINUS(loc); }
-"++"                    { return Parser::make_PLUSPLUS(loc); }
-"--"                    { return Parser::make_MINUSMINUS(loc); }
-"$"                     { return Parser::make_DOLLAR(loc); }
+"++"                    { return Parser::make_INCREMENT(loc); }
+"--"                    { return Parser::make_DECREMENT(loc); }
 "*"                     { return Parser::make_MUL(loc); }
 "/"                     { return Parser::make_DIV(loc); }
 "%"                     { return Parser::make_MOD(loc); }
@@ -104,11 +109,13 @@ bpftrace|perf {
 "~"                     { return Parser::make_BNOT(loc); }
 "."                     { return Parser::make_DOT(loc); }
 "->"                    { return Parser::make_PTR(loc); }
+"$"[0-9]+               { return Parser::make_PARAM(yytext, loc); }
+"$"#                    { return Parser::make_PARAMCOUNT(loc); }
 "#"[^!].*               { return Parser::make_CPREPROC(yytext, loc); }
-"if"                    { return Parser::make_IF(yytext, loc); }
-"else"                  { return Parser::make_ELSE(yytext, loc); }
+"if"                    { return Parser::make_IF(loc); }
+"else"                  { return Parser::make_ELSE(loc); }
 "?"                     { return Parser::make_QUES(loc); }
-"unroll"                { return Parser::make_UNROLL(yytext, loc); }
+"unroll"                { return Parser::make_UNROLL(loc); }
 
 \"                      { yy_push_state(STR, yyscanner); buffer.clear(); }
 <STR>{
@@ -119,6 +126,14 @@ bpftrace|perf {
   \\r                   buffer += '\r';
   \\\"                  buffer += '\"';
   \\\\                  buffer += '\\';
+  \\{oct}               {
+                            long value = strtol(yytext+1, NULL, 8);
+                            if (value > UCHAR_MAX)
+                              driver.error(loc, std::string("octal escape sequence out of range '") +
+                                                yytext + "'");
+                            buffer += value;
+                        }
+  \\{hex}               buffer += strtol(yytext+2, NULL, 16);
   \n                    driver.error(loc, "unterminated string"); yy_pop_state(yyscanner); loc.lines(1); loc.step();
   <<EOF>>               driver.error(loc, "unterminated string"); yy_pop_state(yyscanner);
   \\.                   { driver.error(loc, std::string("invalid escape character '") +
@@ -126,26 +141,32 @@ bpftrace|perf {
   .                     driver.error(loc, "invalid character"); yy_pop_state(yyscanner);
 }
 
-struct|union            yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
-enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
-<STRUCT,BRACE,ENUM>{
-  "*"|")"               { if (YY_START == STRUCT) {
+struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
+<STRUCT,BRACE>{
+  "*"|")"               {
+                          if (YY_START == STRUCT)
+                          {
+                            // Finished parsing the typename of a cast
+                            // Put the cast type into a canonical form by trimming
+                            // and then inserting a single space.
                             yy_pop_state(yyscanner);
                             unput(yytext[0]);
-                            return Parser::make_IDENT(trim(buffer), loc);
+                            return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);
                           }
                           buffer += yytext[0];
                         }
   "{"                   yy_push_state(BRACE, yyscanner); buffer += '{';
-  "}"|"};"              { buffer += yytext;
+  "}"|"};"              {
+                          buffer += yytext;
                           yy_pop_state(yyscanner);
-                          if (YY_START == STRUCT) {
+                          if (YY_START == STRUCT)
+                          {
+                            // Finished parsing a struct definition
+                            // Trimming isn't needed here since the typenames
+                            // will go through Clang before we get them back
+                            // anyway.
                             yy_pop_state(yyscanner);
-                            return Parser::make_STRUCT(struct_type + buffer, loc);
-                          }
-                          if (YY_START == ENUM) {
-                            yy_pop_state(yyscanner);
-                            return Parser::make_ENUM("enum " + buffer, loc);
+                            return Parser::make_STRUCT_DEFN(struct_type + buffer, loc);
                           }
                         }
   .                     buffer += yytext[0];
@@ -153,7 +174,8 @@ enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
 }
 
 {ident}                 {
-                          if (driver.bpftrace_.macros_.count(yytext) != 0) {
+                          if (driver.bpftrace_.macros_.count(yytext) != 0)
+                          {
                             const char *s = driver.bpftrace_.macros_[yytext].c_str();
                             int z;
                             // NOTE(mmarchini) workaround for simple recursive
@@ -161,9 +183,12 @@ enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
                             // example, with operators) will go into an
                             // infinite loop. Yes, we should fix that in the
                             // future.
-                            if (strcmp(s, yytext) == 0) {
+                            if (strcmp(s, yytext) == 0)
+                            {
                               return Parser::make_IDENT(yytext, loc);
-                            } else {
+                            }
+                            else
+                            {
                               for (z=strlen(s) - 1; z >= 0; z--)
                                 unput(s[z]);
                             }
@@ -171,6 +196,7 @@ enum                    yy_push_state(ENUM, yyscanner); buffer.clear();
                             return Parser::make_IDENT(yytext, loc);
                           }
                         }
+
 .                       { driver.error(loc, std::string("invalid character '") +
                                             std::string(yytext) + std::string("'")); }
 

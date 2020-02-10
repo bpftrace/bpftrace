@@ -1,0 +1,37 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcpsynbl - Show TCP SYN backlog as a histogram.
+ *
+ * See BPF Performance Tools, Chapter 10, for an explanation of this tool.
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 19-Apr-2019  Brendan Gregg   Created this.
+ */
+
+#include <net/sock.h>
+
+BEGIN
+{
+	printf("Tracing SYN backlog size. Ctrl-C to end.\n");
+}
+
+kprobe:tcp_v4_syn_recv_sock,
+kprobe:tcp_v6_syn_recv_sock
+{
+	$sock = (struct sock *)arg0;
+	@backlog[$sock->sk_max_ack_backlog & 0xffffffff] =
+	    hist($sock->sk_ack_backlog);
+	if ($sock->sk_ack_backlog > $sock->sk_max_ack_backlog) {
+		time("%H:%M:%S dropping a SYN.\n");
+	}
+}
+
+END
+{
+	printf("\n@backlog[backlog limit]: histogram of backlog size\n");
+}

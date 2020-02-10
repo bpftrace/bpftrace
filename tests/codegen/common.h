@@ -1,7 +1,10 @@
 #pragma once
 
 #include "gtest/gtest.h"
+#include "gmock/gmock.h"
 
+#include "../mocks.h"
+#include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
@@ -9,6 +12,7 @@
 #include "driver.h"
 #include "fake_map.h"
 #include "semantic_analyser.h"
+#include "tracepoint_format_parser.h"
 
 namespace bpftrace {
 namespace test {
@@ -36,7 +40,8 @@ static void test(
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  MockBPFfeature feature;
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
@@ -45,7 +50,7 @@ static void test(
   codegen.compile(DebugLevel::kDebug, out);
 
   std::string full_expected_output = header + expected_output;
-  EXPECT_EQ(full_expected_output, out.str());
+  EXPECT_EQ(full_expected_output, out.str()) << "the following program failed: '" << input << "'";
 }
 
 static void test(
@@ -54,7 +59,7 @@ static void test(
     bool safe_mode = true)
 {
   BPFtrace bpftrace;
-  bpftrace.safe_mode = safe_mode;
+  bpftrace.safe_mode_ = safe_mode;
   test(bpftrace, input, expected_output);
 }
 

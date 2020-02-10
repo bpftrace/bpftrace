@@ -46,8 +46,8 @@ EXPECT ok_system
 TIMEOUT 5
 
 NAME count
-RUN bpftrace -v -e 'i:ms:100 { @[sym(reg("ip"))] = count(); exit();}'
-EXPECT @\[[0-9]*\]\:\s[0-9]*
+RUN bpftrace -v -e 'i:ms:100 { @ = count(); exit();}'
+EXPECT @:\s[0-9]+
 TIMEOUT 5
 
 NAME sum
@@ -96,15 +96,20 @@ NAME kstack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }'
 EXPECT SUCCESS kstack
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER sleep 0.1
 
 NAME ustack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }'
 EXPECT SUCCESS ustack
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER sleep 0.1
 
 NAME cat
 RUN bpftrace -v -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
+TIMEOUT 5
+
+NAME uaddr
+RUN bpftrace -v -e 'uprobe:testprogs/uprobe_test:function1 { printf("0x%lx -- 0x%lx\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
+EXPECT 0x55555555 -- 0x33333333
 TIMEOUT 5

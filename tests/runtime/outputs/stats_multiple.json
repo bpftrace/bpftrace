@@ -1,0 +1,5 @@
+{"type": "stats", "data": {
+  "@stats": {
+    "curl": {"count": 1, "average": 2, "total": 2},
+    "zsh": {"count": 1, "average": 10, "total": 10}}
+}}

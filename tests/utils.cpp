@@ -1,5 +1,11 @@
-#include "gtest/gtest.h"
 #include "utils.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include <cstring>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 namespace bpftrace {
 namespace test {
@@ -71,7 +77,46 @@ TEST(utils, wildcard_match)
   EXPECT_EQ(wildcard_match("foobarbiz", tokens_foo_biz, false, false), true);
 }
 
-} // namespace ast
+static void symlink_test_binary(const std::string& destination)
+{
+  if (symlink("/proc/self/exe", destination.c_str()))
+  {
+    throw std::runtime_error("Couldn't symlink /proc/self/exe to " +
+                             destination + ": " + strerror(errno));
+  }
+}
+
+TEST(utils, resolve_binary_path)
+{
+  std::string path = "/tmp/bpftrace-test-utils-XXXXXX";
+  if (::mkdtemp(&path[0]) == nullptr) {
+    throw std::runtime_error("creating temporary path for tests failed");
+  }
+
+  // We need real elf executables, linking test binary allows us to do that
+  // without additional dependencies.
+  symlink_test_binary(path + "/executable");
+  symlink_test_binary(path + "/executable2");
+
+  int fd;
+  fd = open((path + "/nonexecutable").c_str(), O_CREAT, S_IRUSR); close(fd);
+  fd = open((path + "/nonexecutable2").c_str(), O_CREAT, S_IRUSR); close(fd);
+
+  std::vector<std::string> paths_empty = {};
+  std::vector<std::string> paths_one_executable = {path + "/executable"};
+  std::vector<std::string> paths_all_executables = {path + "/executable", path + "/executable2"};
+
+  EXPECT_EQ(resolve_binary_path(path + "/does/not/exist"), paths_empty);
+  EXPECT_EQ(resolve_binary_path(path + "/does/not/exist*"), paths_empty);
+  EXPECT_EQ(resolve_binary_path(path + "/nonexecutable"), paths_empty);
+  EXPECT_EQ(resolve_binary_path(path + "/nonexecutable*"), paths_empty);
+  EXPECT_EQ(resolve_binary_path(path + "/executable"), paths_one_executable);
+  EXPECT_EQ(resolve_binary_path(path + "/executable*"), paths_all_executables);
+  EXPECT_EQ(resolve_binary_path(path + "/*executable*"), paths_all_executables);
+
+  exec_system(("rm -rf " + path).c_str());
+}
+
+} // namespace utils
 } // namespace test
 } // namespace bpftrace
-

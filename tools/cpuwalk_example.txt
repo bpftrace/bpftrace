@@ -4,7 +4,7 @@ Demonstrations of cpuwalk, the Linux bpftrace/eBPF version.
 cpuwalk samples which CPUs processes are running on, and prints a summary
 histogram. For example, here is a Linux kernel build on a 36-CPU server:
 
-# cpuwalk.bt
+# ./cpuwalk.bt
 Attaching 2 probes...
 Sampling CPU at 99hz... Hit Ctrl-C to end.
 ^C
@@ -52,7 +52,7 @@ This shows that all 36 CPUs were active, with some busier than others.
 
 Compare that output to the following workload from an application:
 
-# cpuwalk.bt
+# ./cpuwalk.bt
 Attaching 2 probes...
 Sampling CPU at 99hz... Hit Ctrl-C to end.
 ^C

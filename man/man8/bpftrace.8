@@ -73,6 +73,10 @@ Enable unsafe builtin functions. By default, bpftrace runs in safe mode. Safe mo
 Unsafe builtin functions are marked as such in \fBBUILTINS (functions)\fR.
 .
 .TP
+\fB\--btf\fR
+Force BTF data processing if it's available. By default it's enabled only if the user does not specify any types/includes.
+.
+.TP
 \fB\-v\fR
 Verbose messages.
 .
@@ -353,7 +357,7 @@ Print a map, with optional top entry count and divisor
 Delete all key/values from a map
 .
 .TP
-\fBsym(void *p)\fR
+\fBksym(void *p)\fR
 Resolve kernel address
 .
 .TP

@@ -14,6 +14,8 @@
 
 #endif
 
+#include <cerrno>
+#include <cstring>
 #include <fcntl.h>
 
 #include <stdexcept>
@@ -80,9 +82,10 @@ std::uint64_t resolve_cgroupid(const std::string &path)
 {
   cgid_file_handle cfh;
   int mount_id;
-  auto err = name_to_handle_at(AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
+  int err = name_to_handle_at(AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
   if (err < 0) {
-    throw std::runtime_error("cgroup '" + path + "' not found");
+    auto emsg = std::strerror(errno);
+    throw std::runtime_error("Failed to get `cgroupid` for path: \"" + path + "\": " + emsg);
   }
 
   return cfh.cgid;

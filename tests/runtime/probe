@@ -19,6 +19,16 @@ EXPECT first second
 TIMEOUT 5
 AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
 
+NAME kprobe_offset
+RUN bpftrace -v -e 'kprobe:vfs_read+0 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+EXPECT SUCCESS kprobe_offset [0-9][0-9]*
+TIMEOUT 5
+
+NAME kprobe_offset_fail_size
+RUN bpftrace -v -e 'kprobe:vfs_read+1000000 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+EXPECT Offset outside the function bounds \('vfs_read' size is*
+TIMEOUT 5
+
 NAME kretprobe
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe [0-9][0-9]*
@@ -45,6 +55,28 @@ RUN bpftrace -v -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); 
 EXPECT arg0: [0-9]*
 TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
+
+NAME uprobe_offset
+RUN bpftrace -v -e 'uprobe:/bin/bash:echo_builtin+0 { printf("arg0: %d\n", arg0); exit();}'
+EXPECT arg0: [0-9]*
+TIMEOUT 5
+AFTER /bin/bash -c "echo lala"
+
+NAME uprobe_offset
+RUN bpftrace -v -e 'uprobe:/bin/bash:"echo_builtin"+0 { printf("arg0: %d\n", arg0); exit();}'
+EXPECT arg0: [0-9]*
+TIMEOUT 5
+AFTER /bin/bash -c "echo lala"
+
+NAME uprobe_offset_fail_size
+RUN bpftrace -e 'uprobe:/bin/bash:echo_builtin+1000000 { printf("arg0: %d\n", arg0); exit();}'
+EXPECT Offset outside the function bounds \('echo_builtin' size is*
+TIMEOUT 5
+
+NAME uprobe_address_fail_resolve
+RUN bpftrace -e 'uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}'
+EXPECT Could not resolve address: /bin/bash:0xa
+TIMEOUT 5
 
 NAME uprobe_order
 RUN bpftrace -v runtime/scripts/uprobe_order.bt

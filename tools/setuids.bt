@@ -1,0 +1,67 @@
+#!/usr/bin/env bpftrace
+/*
+ * setuids - Trace the setuid syscalls: privilege escalation.
+ *
+ * See BPF Performance Tools, Chapter 11, for an explanation of this tool.
+ *
+ * Copyright (c) 2019 Brendan Gregg.
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * This was originally created for the BPF Performance Tools book
+ * published by Addison Wesley. ISBN-13: 9780136554820
+ * When copying or porting, include this comment.
+ *
+ * 26-Feb-2019  Brendan Gregg   Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing setuid(2) family syscalls. Hit Ctrl-C to end.\n");
+	printf("%-8s %-6s %-16s %-6s %-9s %s\n", "TIME",
+	    "PID", "COMM", "UID", "SYSCALL", "ARGS (RET)");
+}
+
+tracepoint:syscalls:sys_enter_setuid,
+tracepoint:syscalls:sys_enter_setfsuid
+{
+	@uid[tid] = uid;
+	@setuid[tid] = args->uid;
+	@seen[tid] = 1;
+}
+
+tracepoint:syscalls:sys_enter_setresuid
+{
+	@uid[tid] = uid;
+	@ruid[tid] = args->ruid;
+	@euid[tid] = args->euid;
+	@suid[tid] = args->suid;
+	@seen[tid] = 1;
+}
+
+tracepoint:syscalls:sys_exit_setuid
+/@seen[tid]/
+{
+	time("%H:%M:%S ");
+	printf("%-6d %-16s %-6d setuid    uid=%d (%d)\n", pid, comm,
+	    @uid[tid], @setuid[tid], args->ret);
+	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
+}
+
+tracepoint:syscalls:sys_exit_setfsuid
+/@seen[tid]/
+{
+	time("%H:%M:%S ");
+	printf("%-6d %-16s %-6d setfsuid  uid=%d (prevuid=%d)\n", pid, comm,
+	    @uid[tid], @setuid[tid], args->ret);
+	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
+}
+
+tracepoint:syscalls:sys_exit_setresuid
+/@seen[tid]/
+{
+	time("%H:%M:%S ");
+	printf("%-6d %-16s %-6d setresuid ", pid, comm, @uid[tid]);
+	printf("ruid=%d euid=%d suid=%d (%d)\n", @ruid[tid], @euid[tid],
+	    @suid[tid], args->ret);
+	delete(@seen[tid]); delete(@uid[tid]); delete(@ruid[tid]);
+	delete(@euid[tid]); delete(@suid[tid]);
+}

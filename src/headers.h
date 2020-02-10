@@ -15,5 +15,7 @@ extern const char stddef_h[];
 extern const unsigned stddef_h_len;
 extern const char stdint_h[];
 extern const unsigned stdint_h_len;
+extern const char clang_workarounds_h[];
+extern const unsigned clang_workarounds_h_len;
 
 } // namespace bpftrace

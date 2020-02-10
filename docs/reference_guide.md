@@ -1,8 +1,13 @@
 # bpftrace Reference Guide
 
-For a reference summary, see the [README.md](../README.md) for the sections on [Probe types](../README.md#probe-types) and [Builtins](../README.md#builtins).
+For a reference summary, see the [README.md](../README.md) for the sections on
+[Probe types](../README.md#probe-types) and [Builtins](../README.md#builtins).
 
-This is a work in progress. If something is missing, check the bpftrace source to see if these docs are just out of date. And if you find something, please file an issue or pull request to update these docs. Also, please keep these docs as terse as possible to maintain it's brevity (inspired by the 6-page awk summary from page 106 of [v7vol2b.pdf](https://9p.io/7thEdMan/bswv7.html)). Leave longer examples and discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog posts and other articles.
+This is a work in progress. If something is missing, check the bpftrace source to see if these docs are
+just out of date. And if you find something, please file an issue or pull request to update these docs.
+Also, please keep these docs as terse as possible to maintain it's brevity (inspired by the 6-page awk
+summary from page 106 of [v7vol2b.pdf](https://9p.io/7thEdMan/bswv7.html)). Leave longer examples and
+discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog posts and other articles.
 
 ## Contents
 
@@ -43,6 +48,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
     - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
     - [13. `BEGIN`/`END`: Built-in events](#13-beginend-built-in-events)
+    - [14. `watchpoint`: Memory watchpoints](#14-watchpoint-memory-watchpoints)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -52,7 +58,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [6. `nsecs`: Timestamps and Time Deltas](#6-nsecs-timestamps-and-time-deltas)
     - [7. `kstack`: Stack Traces, Kernel](#7-kstack-stack-traces-kernel)
     - [8. `ustack`: Stack Traces, User](#8-ustack-stack-traces-user)
-    - [9. `$1`, ..., `$N`: Positional Parameters](#9-1--n-positional-parameters)
+    - [9. `$1`, ..., `$N`, `$#`: Positional Parameters](#9-1--n--positional-parameters)
 - [Functions](#functions)
     - [1. Builtins](#1-builtins-1)
     - [2. `printf()`: Print Formatted](#2-printf-Printing)
@@ -71,6 +77,9 @@ This is a work in progress. If something is missing, check the bpftrace source t
     - [15. `kstack()`: Stack Traces, Kernel](#15-kstack-stack-traces-kernel)
     - [16. `ustack()`: Stack Traces, User](#16-ustack-stack-traces-user)
     - [17. `cat()`: Print file content](#17-cat-print-file-content)
+    - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
+    - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
+    - [20. `override()`: Override return value](#20-override-override-return-value)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -93,7 +102,7 @@ This is a work in progress. If something is missing, check the bpftrace source t
 
 Term | Description
 ---- | -----------
-BPF | Berkely Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions)
+BPF | Berkeley Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions)
 eBPF | Enhanced BPF: a kernel technology that extends BPF so that it can execute more generic programs on any events, such as the bpftrace programs listed below. It makes use of the BPF sandboxed virtual machine environment. Also note that eBPF is often just referred to as BPF.
 probe | An instrumentation point in software or hardware, that generates events that can execute bpftrace programs.
 static tracing | Hard-coded instrumentation points in code. Since these are fixed, they may be provided as part of a stable API, and documented.
@@ -103,6 +112,7 @@ kprobes | A Linux kernel technology for providing dynamic tracing of kernel func
 uprobes | A Linux kernel technology for providing dynamic tracing of user-level functions.
 USDT | User Statically-Defined Tracing: static tracing points for user-level software. Some applications support USDT.
 BPF map | A BPF memory object, which is used by bpftrace to create many higher-level objects.
+BTF | BPF Type Format: the metadata format which encodes the debug info related to BPF program/map.
 
 # Usage
 
@@ -118,6 +128,7 @@ OPTIONS:
     -B MODE        output buffering mode ('line', 'full', or 'none')
     -d             debug info dry run
     -dd            verbose debug info dry run
+    -b             force BTF (BPF type format) processing
     -e 'program'   execute this program
     -h             show this help message
     -I DIR         add the specified DIR to the search path for include files.
@@ -133,6 +144,8 @@ ENVIRONMENT:
     BPFTRACE_NO_CPP_DEMANGLE  [default: 0] disable C++ symbol demangling
     BPFTRACE_MAP_KEYS_MAX     [default: 4096] max keys in a map
     BPFTRACE_MAX_PROBES       [default: 512] max number of probes bpftrace can attach to
+    BPFTRACE_VMLINUX          [default: None] vmlinux path used for kernel symbol resolution
+    BPFTRACE_BTF              [default: None] BTF file
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -154,9 +167,11 @@ Hello, World!
 ^C
 ```
 
-The syntax to this program will be explained in the [Language](#language) section. In this section, we'll cover tool usage.
+The syntax to this program will be explained in the [Language](#language) section. In this section, we'll
+cover tool usage.
 
-A program will continue running until Ctrl-C is hit, or an `exit()` function is called. When a program exits, all populated maps are printed: this behavior, and maps, are explained in later sections.
+A program will continue running until Ctrl-C is hit, or an `exit()` function is called. When a program
+exits, all populated maps are printed: this behavior, and maps, are explained in later sections.
 
 ## 2. `-e 'program'`: One-Liners
 
@@ -172,20 +187,22 @@ iscsid is sleeping.
 [...]
 ```
 
-This example is printing when processes call the nanosleep syscall. Again, the syntax of the program will be explained in the [Language](#language) section.
+This example is printing when processes call the nanosleep syscall. Again, the syntax of the program will
+be explained in the [Language](#language) section.
 
 ## 3. `filename`: Program Files
 
-Programs saved as files are often called scripts, and can be executed by specifying their file name. We'll often use a `.bt` file extension, short for bpftrace, but the extension is ignored.
+Programs saved as files are often called scripts, and can be executed by specifying their file name.
+We'll often use a `.bt` file extension, short for bpftrace, but the extension is ignored.
 
 For example, listing the sleepers.bt file using `cat -n` (which enumerates the output lines):
 
 ```
 # cat -n sleepers.bt
-     1	tracepoint:syscalls:sys_enter_nanosleep
-     2	{
-     3		printf("%s is sleeping.\n", comm);
-     4	}
+1 tracepoint:syscalls:sys_enter_nanosleep
+2 {
+3   printf("%s is sleeping.\n", comm);
+4 }
 ```
 
 Running sleepers.bt:
@@ -198,16 +215,17 @@ iscsid is sleeping.
 [...]
 ```
 
-It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env` (usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
+It can also be made executable to run stand-alone. Start by adding an interpreter line at the top (`#!`)
+with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env`
+(usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
 
 ```
-     1	#!/usr/local/bin/bpftrace
-     1	#!/usr/bin/env bpftrace
-     2
-     3	tracepoint:syscalls:sys_enter_nanosleep
-     4	{
-     5	        printf("%s is sleeping.\n", comm);
-     6	}
+1 #!/usr/local/bin/bpftrace
+2
+3 tracepoint:syscalls:sys_enter_nanosleep
+4 {
+5   printf("%s is sleeping.\n", comm);
+6 }
 ```
 
 Then make it executable:
@@ -236,7 +254,8 @@ tracepoint:xfs:xfs_attr_list_leaf_end
 46260
 ```
 
-Other libraries generate probes dynamically, such as uprobe, and require specific ways to determine available probes. See the later [Probes](#probes) sections.
+Other libraries generate probes dynamically, such as uprobe, and require specific ways to determine
+available probes. See the later [Probes](#probes) sections.
 
 Search terms can be added:
 
@@ -251,7 +270,8 @@ kprobe:hrtimer_nanosleep
 [...]
 ```
 
-The `-v` option when listing tracepoints will show their arguments for use from the args builtin. For example:
+The `-v` option when listing tracepoints will show their arguments for use from the args builtin. For
+example:
 
 ```
 # bpftrace -lv tracepoint:syscalls:sys_enter_open
@@ -264,10 +284,12 @@ tracepoint:syscalls:sys_enter_open
 
 ## 5. `-d`: Debug Output
 
-The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging issues with bpftrace itself.
-You can also use `-dd` to produce a more verbose debug output, which will also print unoptimized IR.
+The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging
+issues with bpftrace itself. You can also use `-dd` to produce a more verbose debug output, which will
+also print unoptimized IR.
 
-**If you are an end-user of bpftrace, you should not normally need the `-d` or `-v` options, and you can skip to the [Language](#language) section.**
+**If you are an end-user of bpftrace, you should not normally need the `-d` or `-v` options, and you can
+skip to the [Language](#language) section.**
 
 
 ```
@@ -360,7 +382,8 @@ This includes `Bytecode:` and then the eBPF bytecode after it was compiled from 
 
 ## 7. Preprocessor Options
 
-The `-I` option can be used to add directories to the list of directories that bpftrace uses to look for headers. Can be defined multiple times.
+The `-I` option can be used to add directories to the list of directories that bpftrace uses to look for
+headers. Can be defined multiple times.
 
 ```
 # cat program.bt
@@ -378,11 +401,14 @@ foo.h
 Attaching 1 probe...
 ```
 
-The `--include` option can be used to include headers by default. Can be defined multiple times. Headers are included in the order they are defined, and they are included before any other include in the program being executed.
+The `--include` option can be used to include headers by default. Can be defined multiple times. Headers
+are included in the order they are defined, and they are included before any other include in the program
+being executed.
 
 
 ```
-# bpftrace --include linux/path.h --include linux/dcache.h -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
+# bpftrace --include linux/path.h --include linux/dcache.h \
+    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
 Attaching 1 probe...
 open path: .com.google.Chrome.ASsbu2
 open path: .com.google.Chrome.gimc10
@@ -409,7 +435,8 @@ Number of bytes allocated on the BPF stack for the string returned by str().
 
 Make this larger if you wish to read bigger strings with str().
 
-Beware that the BPF stack is small (512 bytes), and that you pay the toll again inside printf() (whilst it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
+Beware that the BPF stack is small (512 bytes), and that you pay the toll again inside printf() (whilst
+it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
@@ -425,21 +452,39 @@ This feature can be turned off by setting the value of this environment variable
 
 Default: 4096
 
-This is the maximum number of keys that can be stored in a map. Increasing the value will consume more memory and increase startup times. There are some cases where you will want to: for example, sampling stack traces, recording timestamps for each page, etc.
+This is the maximum number of keys that can be stored in a map. Increasing the value will consume more
+memory and increase startup times. There are some cases where you will want to: for example, sampling
+stack traces, recording timestamps for each page, etc.
 
 ### 9.4 `BPFTRACE_MAX_PROBES`
 
 Default: 512
 
-This is the maximum number of probes that bpftrace can attach to. Increasing the value will consume more memory, increase startup times and can incur high performance overhead or even freeze or crash the system.
+This is the maximum number of probes that bpftrace can attach to. Increasing the value will consume more
+memory, increase startup times and can incur high performance overhead or even freeze or crash the
+system.
+
+### 9.5 `BPFTRACE_VMLINUX`
+
+Default: None
+
+This specifies the vmlinux path used for kernel symbol resolution when attaching kprobe to offset.
+If this value is not given, bpftrace searches vmlinux from pre defined locations.
+See src/attached_probe.cpp:find_vmlinux() for details.
+
+### 9.6 `BPFTRACE_BTF`
+
+Default: None
+
+The path to a BTF file. By default, bpftrace searches several locations to find a BTF file.
+See src/btf.cpp for the details.
 
 ## 10. Clang Environment Variables
 
-bpftrace parses header files using libclang, the C interface to Clang.
-Thus environment variables affecting the clang toolchain can be used.
-For example, if header files are included from a non-default directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set
-to allow clang to locate the files. See clang documentation for more information
-on these environment variables and their usage.
+bpftrace parses header files using libclang, the C interface to Clang. Thus environment variables
+affecting the clang toolchain can be used. For example, if header files are included from a non-default
+directory, the `CPATH` or `C_INCLUDE_PATH` environment variables can be set to allow clang to locate the
+files. See clang documentation for more information on these environment variables and their usage.
 
 
 # Language
@@ -463,13 +508,16 @@ opening: /proc/vmstat
 [...]
 ```
 
-This is a one-liner invocation of bpftrace. The probe is `kprobe:do_sys_open`. When that probe "fires" (the instrumentation event occurred) the action will be executed, which consists of a `print()` statement. Explanations of the probe and action are in the sections that follow.
+This is a one-liner invocation of bpftrace. The probe is `kprobe:do_sys_open`. When that probe "fires"
+(the instrumentation event occurred) the action will be executed, which consists of a `print()`
+statement. Explanations of the probe and action are in the sections that follow.
 
 ## 2. `/.../`: Filtering
 
 Syntax: `/filter/`
 
-Filters (also known as predicates) can be added after probe names. The probe still fires, but it will skip the action unless the filter is true.
+Filters (also known as predicates) can be added after probe names. The probe still fires, but it will
+skip the action unless the filter is true.
 
 Examples:
 
@@ -522,7 +570,9 @@ snmpd /proc/vmstat
 [...]
 ```
 
-This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the tracepoint arguments. See the [Static Tracing, Kernel-Level Arguments](#6-tracepoint-static-tracing-kernel-level-arguments) section for the contents of this struct.
+This is returning the `filename` member from the `args` struct, which for tracepoint probes contains the
+tracepoint arguments. See the [Static Tracing, Kernel-Level
+Arguments](#6-tracepoint-static-tracing-kernel-level-arguments) section for the contents of this struct.
 
 kprobe example:
 
@@ -544,7 +594,8 @@ open path: retrans_time_ms
 [...]
 ```
 
-This uses dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt. Some kernel headers needed to be included to understand the `path` and `dentry` structs.
+This uses dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt. Some kernel
+headers needed to be included to understand the `path` and `dentry` structs.
 
 ## 5. `struct`: Struct Declaration
 
@@ -559,7 +610,9 @@ struct nameidata {
 };
 ```
 
-You can define your own structs when needed. In some cases, kernel structs are not declared in the kernel headers package, and are declared manually in bpftrace tools (or partial structs are: enough to reach the member to dereference).
+You can define your own structs when needed. In some cases, kernel structs are not declared in the kernel
+headers package, and are declared manually in bpftrace tools (or partial structs are: enough to reach the
+member to dereference).
 
 ## 6. `? :`: ternary operators
 
@@ -579,7 +632,8 @@ Attaching 1 probe...
 Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count(); if (args->count > 1024) { @large = count(); } }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count();
+    if (args->count > 1024) { @large = count(); } }'
 Attaching 1 probe...
 ^C
 @large: 72
@@ -607,8 +661,8 @@ i: 5
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
-Note that maps will be implictly declared and initalized to 0 if not already
-declared or defined. Scratch variables must be initalized before using these
+Note that maps will be implictly declared and initialized to 0 if not already
+declared or defined. Scratch variables must be initialized before using these
 operators.
 
 Example - variable:
@@ -642,12 +696,13 @@ Attaching 1 probe...
 
 ## 10. `[]`: Array Access
 
-You may access one-dimensional constant arrays with the array acccess operator `[]`.
+You may access one-dimensional constant arrays with the array access operator `[]`.
 
 Example:
 
 ```
-# bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct { $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
+# bpftrace -e 'struct MyStruct { int y[4]; } uprobe:./testprogs/array_access:test_struct {
+    $s = (struct MyStruct *) arg0; @x = $s->y[0]; exit(); }'
 Attaching 1 probe...
 
 @x: 1
@@ -666,18 +721,20 @@ Attaching 1 probe...
 - `software` - kernel software events
 - `hardware` - processor-level events
 
-Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`.
+Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`. You may also specify
+multiple attach points for an action block using a comma separated list.
 
 ## 1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level
 
 Syntax:
 
 ```
-kprobe:function_name
+kprobe:function_name[+offset]
 kretprobe:function_name
 ```
 
-These use kprobes (a Linux kernel capability). `kprobe` instruments the beginning of a function's execution, and `kretprobe` instruments the end (its return).
+These use kprobes (a Linux kernel capability). `kprobe` instruments the beginning of a function's
+execution, and `kretprobe` instruments the end (its return).
 
 Examples:
 
@@ -692,6 +749,36 @@ sleep by 3669
 ^C
 ```
 
+It's also possible to specify offset within the probed function:
+
+```
+# gdb -q /usr/lib/debug/boot/vmlinux-`uname -r` --ex 'disassemble do_sys_open'
+Reading symbols from /usr/lib/debug/boot/vmlinux-5.0.0-32-generic...done.
+Dump of assembler code for function do_sys_open:
+   0xffffffff812b2ed0 <+0>:     callq  0xffffffff81c01820 <__fentry__>
+   0xffffffff812b2ed5 <+5>:     push   %rbp
+   0xffffffff812b2ed6 <+6>:     mov    %rsp,%rbp
+   0xffffffff812b2ed9 <+9>:     push   %r15
+...
+# bpftrace -e 'kprobe:do_sys_open+9 { printf("in here\n"); }'
+Attaching 1 probe...
+in here
+...
+```
+
+The address is being checked using vmlinux (with debug symbols) if it's aligned with instruction
+boundaries and within the function.  If it's not, we fail to add it:
+```
+# bpftrace -e 'kprobe:do_sys_open+1 { printf("in here\n"); }'
+Attaching 1 probe...
+Could not add kprobe into middle of instruction: /usr/lib/debug/boot/vmlinux-5.0.0-32-generic:do_sys_open+1
+```
+
+If bpftrace is compiled with `ALLOW_UNSAFE_PROBE` option, you can use --unsafe option to skip the check.
+In this case, linux kernel still checks instruction alignment.
+
+The default vmlinux path can be overridden using the environment variable `BPFTRACE_VMLINUX`.
+
 ## 2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments
 
 Syntax:
@@ -701,7 +788,9 @@ kprobe: arg0, arg1, ..., argN
 kretprobe: retval
 ```
 
-Arguments can be accessed via these variables names. `arg0` is the first argument and can only be accessed with a `kprobe`. `retval` is the return value for the instrumented function, and can only be accessed on `kretprobe`.
+Arguments can be accessed via these variables names. `arg0` is the first argument and can only be
+accessed with a `kprobe`. `retval` is the return value for the instrumented function, and can only be
+accessed on `kretprobe`.
 
 Examples:
 
@@ -756,20 +845,45 @@ open path: retrans_time_ms
 [...]
 ```
 
-Here arg0 was casted as a (struct path \*), since that is the first argument to vfs_open(). The struct support is currently the same as bcc, and based on available kernel headers. This means that many, but not all, structs will be available, and you may need to manually define some structs. In the future, bpftrace will use the newer Linux BTF support so that all kernel structs are always available.
+Here arg0 was casted as a (struct path \*), since that is the first argument to vfs_open(). The struct
+support is the same as bcc, and based on available kernel headers. This means that many, but not all,
+structs will be available, and you may need to manually define some structs.
+
+If the kernel has BTF (BPF Type Format) data, all kernel structs are always available without defining
+them. For example:
+
+```
+# bpftrace -e 'kprobe:vfs_open { printf("open path: %s\n", \
+                                 str(((struct path *)arg0)->dentry->d_name.name)); }'
+Attaching 1 probe...
+open path: cmdline
+open path: interrupts
+[...]
+```
+
+Requirements for using BTF:
+
+- Linux 4.18+ with `CONFIG_DEBUG_INFO_BTF=y`
+    - Building requires dwarves with pahole v1.13+
+- bpftrace v0.9.3+ with BTF support (built with libbpf v0.0.4+)
+
+See [kernel documentation](https://www.kernel.org/doc/html/latest/bpf/btf.html) for more information on BTF.
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 
 Syntax:
 
 ```
-uprobe:library_name:function_name
+uprobe:library_name:function_name[+offset]
+uprobe:library_name:address
 uretprobe:library_name:function_name
 ```
 
-These use uprobes (a Linux kernel capability). `uprobe` instruments the beginning of a user-level function's execution, and `uretprobe` instruments the end (its return).
+These use uprobes (a Linux kernel capability). `uprobe` instruments the beginning of a user-level
+function's execution, and `uretprobe` instruments the end (its return).
 
-To list available uprobes, you can use any program to list the text segment symbols from a binary, such as `objdump` and `nm`. For example:
+To list available uprobes, you can use any program to list the text segment symbols from a binary, such
+as `objdump` and `nm`. For example:
 
 ```
 # objdump -tT /bin/bash | grep readline
@@ -781,7 +895,8 @@ To list available uprobes, you can use any program to list the text segment symb
 [...]
 ```
 
-This has listed various functions containing "readline" from /bin/bash. These can be instrumented using `uprobe` and `uretprobe`.
+This has listed various functions containing "readline" from /bin/bash. These can be instrumented using
+`uprobe` and `uretprobe`.
 
 Examples:
 
@@ -794,7 +909,51 @@ read a line
 ^C
 ```
 
-While tracing, this has caught a few executions of the `readline()` function in /bin/bash. This example is continued in the next section.
+While tracing, this has caught a few executions of the `readline()` function in /bin/bash. This example
+is continued in the next section.
+
+It's also possible to specify uprobe with virtual address, like:
+
+```
+# objdump -tT /bin/bash | grep main
+...
+000000000002ec00 g    DF .text  0000000000001868  Base        main
+...
+# bpftrace -e 'uprobe:/bin/bash:0x2ec00 { printf("in here\n"); }'
+Attaching 1 probe...
+```
+
+And to specify offset within the probed function:
+
+```
+# objdump -d /bin/bash
+...
+000000000002ec00 <main@@Base>:
+   2ec00:       f3 0f 1e fa             endbr64
+   2ec04:       41 57                   push   %r15
+   2ec06:       41 56                   push   %r14
+   2ec08:       41 55                   push   %r13
+   ...
+# bpftrace -e 'uprobe:/bin/bash:main+4 { printf("in here\n"); }'
+Attaching 1 probe...
+...
+```
+
+The address is being checked if it's aligned with instruction boundaries.
+If it's not, we fail to add it:
+```
+# bpftrace -e 'uprobe:/bin/bash:main+1 { printf("in here\n"); }'
+Attaching 1 probe...
+Could not add uprobe into middle of instruction: /bin/bash:main+1
+```
+
+If bpftrace is compiled with `ALLOW_UNSAFE_PROBE` option, you can use --unsafe option to skip the check:
+
+```
+# bpftrace -e 'uprobe:/bin/bash:main+1 { printf("in here\n"); } --unsafe'
+Attaching 1 probe...
+Unsafe uprobe in the middle of the instruction: /bin/bash:main+1
+```
 
 ## 4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments
 
@@ -805,7 +964,9 @@ uprobe: arg0, arg1, ..., argN
 uretprobe: retval
 ```
 
-Arguments can be accessed via these variables names. `arg0` is the first argument, and can only be accessed with a `uprobe`. `retval` is the return value for the instrumented function, and can only be accessed on `uretprobe`.
+Arguments can be accessed via these variables names. `arg0` is the first argument, and can only be
+accessed with a `uprobe`. `retval` is the return value for the instrumented function, and can only be
+accessed on `uretprobe`.
 
 Examples:
 
@@ -818,7 +979,8 @@ arg0: 19755784
 ^C
 ```
 
-What does `arg0` of `readline()` in /bin/bash contain? I don't know. I'd need to look at the bash source code to find out what its arguments were.
+What does `arg0` of `readline()` in /bin/bash contain? I don't know. I'd need to look at the bash source
+code to find out what its arguments were.
 
 ```
 # bpftrace -e 'uprobe:/lib/x86_64-linux-gnu/libc-2.23.so:fopen { printf("fopen: %s\n", str(arg0)); }'
@@ -829,7 +991,10 @@ fopen: /proc/self/mountinfo
 ^C
 ```
 
-In this case, I know that the first argument of libc `fopen()` is the pathname (see the fopen(3) man page), so I've traced it using a uprobe. Adjust the path to libc to match your system (it may not be libc-2.23.so). A `str()` call is necessary to turn the char * pointer to a string, as explained in a later section.
+In this case, I know that the first argument of libc `fopen()` is the pathname (see the fopen(3) man
+page), so I've traced it using a uprobe. Adjust the path to libc to match your system (it may not be
+libc-2.23.so). A `str()` call is necessary to turn the char * pointer to a string, as explained in a
+later section.
 
 ```
 # bpftrace -e 'uretprobe:/bin/bash:readline { printf("readline: \"%s\"\n", str(retval)); }'
@@ -841,7 +1006,8 @@ readline: "uname -r"
 ^C
 ```
 
-Back to the bash `readline()` example: after checking the source code, I saw that the return value was the string read. So I can use a `uretprobe` and the `retval` variable to see the read string.
+Back to the bash `readline()` example: after checking the source code, I saw that the return value was
+the string read. So I can use a `uretprobe` and the `retval` variable to see the read string.
 
 ## 5. `tracepoint`: Static Tracing, Kernel-Level
 
@@ -898,7 +1064,8 @@ format:
 print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->dfd)), ((unsigned long)(REC->filename)), ((unsigned long)(REC->flags)), ((unsigned long)(REC->mode))
 ```
 
-Apart from the `filename` member, we can also print `flags`, `mode`, and more. After the "common" members listed first, the members are specific to the tracepoint.
+Apart from the `filename` member, we can also print `flags`, `mode`, and more. After the "common" members
+listed first, the members are specific to the tracepoint.
 
 ## 7. `usdt`: Static Tracing, User-Level
 
@@ -925,8 +1092,10 @@ hi
 hi
 ^C
 ```
-The basename of a path will be used for the namespace of a probe. If it doesn't match, the probe won't be found.
-In this example, the function name `loop` is in the namespace `tick`. If we rename the binary to `tock`, it won't be found:
+
+The basename of a path will be used for the namespace of a probe. If it doesn't match, the probe won't be
+found. In this example, the function name `loop` is in the namespace `tick`. If we rename the binary to
+`tock`, it won't be found:
 
 ```
 mv /root/tick /root/tock
@@ -935,8 +1104,8 @@ Attaching 1 probe...
 Error finding location for probe: usdt:/root/tock:loop
 ```
 
-The probe namespace can be manually specified, between the path and probe function name. This allows for the probe to be
-found, regardless of the name of the binary:
+The probe namespace can be manually specified, between the path and probe function name. This allows for
+the probe to be found, regardless of the name of the binary:
 
 ```
 bpftrace -e 'usdt:/root/tock:tick:loop { printf("hi\n"); }'
@@ -1027,7 +1196,9 @@ software:event_name:count
 software:event_name:
 ```
 
-These are the pre-defined software events provided by the Linux kernel, as commonly traced via the perf utility. They are similar to tracepoints, but there is only about a dozen of these, and they are documented in the perf\_event\_open(2) man page. The event names are:
+These are the pre-defined software events provided by the Linux kernel, as commonly traced via the perf
+utility. They are similar to tracepoints, but there is only about a dozen of these, and they are
+documented in the perf\_event\_open(2) man page. The event names are:
 
 - `cpu-clock` or `cpu`
 - `task-clock`
@@ -1041,7 +1212,8 @@ These are the pre-defined software events provided by the Linux kernel, as commo
 - `dummy`
 - `bpf-output`
 
-The count is the trigger for the probe, which will fire once for every count events. If the count is not provided, a default is used.
+The count is the trigger for the probe, which will fire once for every count events. If the count is not
+provided, a default is used.
 
 Examples:
 
@@ -1065,7 +1237,8 @@ Attaching 1 probe...
 @[man]: 97
 ```
 
-This roughly counts who is causing page faults, by sampling the process name for every one in one hundred faults.
+This roughly counts who is causing page faults, by sampling the process name for every one in one hundred
+faults.
 
 ## 12. `hardware`: Pre-defined Hardware Events
 
@@ -1076,7 +1249,10 @@ hardware:event_name:count
 hardware:event_name:
 ```
 
-These are the pre-defined hardware events provided by the Linux kernel, as commonly traced by the perf utility. They are implemented using performance monitoring counters (PMCs): hardware resources on the processor. There are about ten of these, and they are documented in the perf\_event\_open(2) man page. The event names are:
+These are the pre-defined hardware events provided by the Linux kernel, as commonly traced by the perf
+utility. They are implemented using performance monitoring counters (PMCs): hardware resources on the
+processor. There are about ten of these, and they are documented in the perf\_event\_open(2) man page.
+The event names are:
 
 - `cpu-cycles` or `cycles`
 - `instructions`
@@ -1089,7 +1265,8 @@ These are the pre-defined hardware events provided by the Linux kernel, as commo
 - `backend-stalls`
 - `ref-cycles`
 
-The count is the trigger for the probe, which will fire once for every count events. If the count is not provided, a default is used.
+The count is the trigger for the probe, which will fire once for every count events. If the count is not
+provided, a default is used.
 
 Examples:
 
@@ -1108,7 +1285,29 @@ BEGIN
 END
 ```
 
-These are special built-in events provided by the bpftrace runtime. `BEGIN` is triggered before all other probes are attached. `END` is triggered after all other probes are detached.
+These are special built-in events provided by the bpftrace runtime. `BEGIN` is triggered before all other
+probes are attached. `END` is triggered after all other probes are detached.
+
+## 14. `watchpoint`: Memory watchpoints
+
+**WARNING**: this feature is experimental and may be subject to interface changes.
+
+Syntax:
+
+```
+watchpoint::hex_address:length:mode
+```
+
+These are memory watchpoints provided by the kernel. Whenever a memory address is written to (`w`), read
+from (`r`), or executed (`x`), the kernel can generate an event. Note that a pid (`-p`) or a command
+(`-c`) must be provided to bpftrace. Also note you may not monitor for execution while monitoring read or
+write.
+
+Examples:
+
+```
+bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
+```
 
 # Variables
 
@@ -1124,14 +1323,17 @@ These are special built-in events provided by the bpftrace runtime. `BEGIN` is t
 - `comm` - Process name
 - `kstack` - Kernel stack trace
 - `ustack` - User stack trace
-- `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function
+- `arg0`, `arg1`, ..., `argN`. - Arguments to the traced function; assumed to be 64 bits wide
+- `sarg0`, `sarg1`, ..., `sargN`. - Arguments to the traced function (for programs that store arguments
+  on the stack); assumed to be 64 bits wide
 - `retval` - Return value from traced function
 - `func` - Name of the traced function
 - `probe` - Full name of the probe
 - `curtask` - Current task struct as a u64
 - `rand` - Random number as a u32
 - `cgroup` - Cgroup ID of the current process
-- `$1`, `$2`, ..., `$N`. - Positional parameters for the bpftrace program
+- `cpid` - Child pid(u32), only valid with the `-c command` flag
+- `$1`, `$2`, ..., `$N`, `$#`. - Positional parameters for the bpftrace program
 
 Many of these are discussed in other sections (use search).
 
@@ -1175,7 +1377,8 @@ These can be implemented as an associative array keyed on the thread ID. For exa
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ {
+        printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1193,7 +1396,8 @@ For example, `$delta`:
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ { $delta = nsecs - @start[tid];
+        printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1210,7 +1414,8 @@ For example, `@start[tid]`:
 
 ```
 # bpftrace -e 'kprobe:do_nanosleep { @start[tid] = nsecs; }
-    kretprobe:do_nanosleep /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
+    kretprobe:do_nanosleep /@start[tid] != 0/ {
+        printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); }'
 Attaching 2 probes...
 slept for 1000 ms
 slept for 1000 ms
@@ -1224,7 +1429,8 @@ This is provided by the count() function: see the [Count](#2-count-count) sectio
 
 ## 5. `hist()`, `lhist()`: Histograms
 
-These are provided by the hist() and lhist() functions. See the [Log2 Histogram](#8-hist-log2-histogram) and [Linear Histogram](#9-lhist-linear-histogram) sections.
+These are provided by the hist() and lhist() functions. See the [Log2 Histogram](#8-hist-log2-histogram)
+and [Linear Histogram](#9-lhist-linear-histogram) sections.
 
 ## 6. `nsecs`: Timestamps and Time Deltas
 
@@ -1378,20 +1584,27 @@ Attaching 1 probe...
 
 Note that for this example to work, bash had to be recompiled with frame pointers.
 
-## 9. `$1`, ..., `$N`: Positional Parameters
+## 9. `$1`, ..., `$N`, `$#`: Positional Parameters
 
-Syntax: `$1`, `$2`, ..., `$N`
+Syntax: `$1`, `$2`, ..., `$N`, `$#`
 
-These are the positional parameters to the bpftrace program, also referred to as command line arguments. If the parameter is numeric (entirerly digits), it can be used as a number. If it is non-numeric, it must be used as a string in the `str()` call. If a parameter is used that was not provided, it will default to zero for numeric context, and "" for string context.
+These are the positional parameters to the bpftrace program, also referred to as command line arguments.
+If the parameter is numeric (entirely digits), it can be used as a number. If it is non-numeric, it must
+be used as a string in the `str()` call. If a parameter is used that was not provided, it will default to
+zero for numeric context, and "" for string context.
 
-This allows scripts to be written that use basic arguments to change their behavior. If you develop a script that requires more complex argument processing, it may be better suited for bcc instead, which supports Python's argparse and completely custom argument processing.
+`$#` returns the number of positional arguments supplied.
+
+This allows scripts to be written that use basic arguments to change their behavior. If you develop a
+script that requires more complex argument processing, it may be better suited for bcc instead, which
+supports Python's argparse and completely custom argument processing.
 
 One-liner example:
 
 ```
-# bpftrace -e 'BEGIN { printf("I got %d, %s\n", $1, str($2)); }' 42 "hello"
+# bpftrace -e 'BEGIN { printf("I got %d, %s (%d args)\n", $1, str($2), $#); }' 42 "hello"
 Attaching 1 probe...
-I got 42, hello
+I got 42, hello (2 args)
 ```
 
 Script example, bsize.d:
@@ -1466,12 +1679,10 @@ Tracing block I/O sizes > 0 bytes
 - `ntop([int af, ]int|char[4|16] addr)` - Convert IP address data to text
 - `cat(char *filename)` - Print file content
 
-Some of these are asynchronous: the kernel queues the event, but some time
-later (milliseconds) it is processed in user-space. The asynchronous actions
-are: <tt>printf()</tt>, <tt>time()</tt>, and <tt>join()</tt>. Both
-<tt>ksym()</tt> and <tt>usym()</tt>, as well as the variables <tt>kstack</tt>
-and </tt>ustack</tt>, record addresses synchronously, but then do symbol
-translation asynchronously.
+Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
+processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
+and `usym()`, as well as the variables `kstack` and `ustack`, record addresses synchronously, but then do
+symbol translation asynchronously.
 
 A selection of these are discussed in the following sections.
 
@@ -1514,9 +1725,9 @@ If a format string is not provided, it defaults to "%H:%M:%S\n".
 
 Syntax: `join(char *arr[] [, char *delim])`
 
-This joins the array of strings with a space character, and prints it out, separated by delimiters.
-The default delimiter, if none is provided, is the space character. This current version does not
-return a string, so it cannot be used as an argument in printf(). Example:
+This joins the array of strings with a space character, and prints it out, separated by delimiters. The
+default delimiter, if none is provided, is the space character. This current version does not return a
+string, so it cannot be used as an argument in printf(). Example:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv); }'
@@ -1549,12 +1760,14 @@ tbl
 
 Syntax: `str(char *s [, int length])`
 
-Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce a null-terminator.
-By default, the string will have size 64 bytes (tuneable using [env var `BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)).
+Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
+a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
+`BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)).
 
 Examples:
 
-We can take the `args->filename` of `sys_enter_execve` (a <tt>const char *filename</tt>), and read the string to which it points. This string can be provided as an argument to printf():
+We can take the `args->filename` of `sys_enter_execve` (a `const char *filename`), and read the string to
+which it points. This string can be provided as an argument to printf():
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
@@ -1578,7 +1791,8 @@ We can trace strings that are displayed in a bash shell. Some length tuning is e
   - we increase BPFTRACE_STRLEN to accommodate the large messages
 
 ```
-# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/ { printf("<%s>\n", str(args->buf, args->count)); }'
+# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/
+    { printf("<%s>\n", str(args->buf, args->count)); }'
 # type pwd into terminal 23506
 <p>
 <w>
@@ -1640,7 +1854,26 @@ const char *usbcore_name = "usbcore";
 
 ## 9. `uaddr()`: Address resolution, user-level
 
-Syntax: `uaddr(char *name)`
+Syntax:
+- `u64 *uaddr(symbol)` (default)
+- `u64 *uaddr(symbol)`
+- `u32 *uaddr(symbol)`
+- `u16 *uaddr(symbol)`
+- `u8  *uaddr(symbol)`
+
+Supported Probe Types:
+- u(ret)probes
+- USDT
+
+**Does not work with ASLR, see issue [#75](https://github.com/iovisor/bpftrace/75)**
+
+The `uaddr` function returns the address of the specified symbol. This lookup
+happens during program compilation and cannot be used dynamically.
+
+The default return type is `u64*`. If the ELF object size matches a known
+integer size (1, 2, 4 or 8 bytes) the return type is modified to match the width
+(`u8*`, `u16*`, `u32*` or `u64*` resp.). As ELF does not contain type info the
+type is always assumed to be unsigned.
 
 Examples:
 
@@ -1652,7 +1885,8 @@ PS1: \[\e[34;1m\]\u@\h:\w>\[\e[0m\]
 ^C
 ```
 
-This is printing the `ps1_prompt` string from /bin/bash, whenever a `readline()` function is executed.
+This is printing the `ps1_prompt` string from /bin/bash, whenever a `readline()`
+function is executed.
 
 ## 10. `reg()`: Registers
 
@@ -1698,7 +1932,8 @@ Note this is an unsafe function. To use it, bpftrace must be run with `--unsafe`
 
 Syntax: `exit()`
 
-This exits bpftrace, and can be combined with an interval probe to record statistics for a certain duration. Example:
+This exits bpftrace, and can be combined with an interval probe to record statistics for a certain
+duration. Example:
 
 ```
 # bpftrace -e 'kprobe:do_sys_open { @opens = count(); } interval:s:1 { exit(); }'
@@ -1710,10 +1945,12 @@ Attaching 2 probes...
 
 Syntax: `cgroupid(char *path)`
 
-This returns a cgroup ID of a specific cgroup, and can be combined with the `cgroup` builtin to filter the tasks that belong to the specific cgroup, for example:
+This returns a cgroup ID of a specific cgroup, and can be combined with the `cgroup` builtin to filter
+the tasks that belong to the specific cgroup, for example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/ { printf("%s\n", str(args->filename)); }':
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/
+    { printf("%s\n", str(args->filename)); }':
 Attaching 1 probe...
 /etc/ld.so.cache
 /lib64/libc.so.6
@@ -1733,10 +1970,9 @@ And in other terminal:
 
 Syntax: `ntop([int af, ]int|char[4|16] addr)`
 
-This returns the string representation of an IPv4 or IPv6 address. ntop will
-infer the address type (IPv4 or IPv6) based on the `addr` type and size. If an
-integer or `char[4]` is given, ntop assumes IPv4, if a `char[16]` is given,
-ntop assumes IPv6. You can also pass the address type explicitly as the first
+This returns the string representation of an IPv4 or IPv6 address. ntop will infer the address type (IPv4
+or IPv6) based on the `addr` type and size. If an integer or `char[4]` is given, ntop assumes IPv4, if a
+`char[16]` is given, ntop assumes IPv6. You can also pass the address type explicitly as the first
 parameter.
 
 Examples:
@@ -1758,7 +1994,8 @@ BEGIN { printf("%s\n", ntop(AF_INET, 0x0100007f));}'
 ^C
 ```
 
-A less trivial example of this usage, tracing tcp state changes, and printing the destination IPv6 address:
+A less trivial example of this usage, tracing tcp state changes, and printing the destination IPv6
+address:
 
 ```
 bpftrace -e 'tracepoint:tcp:tcp_set_state { printf("%s\n", ntop(args->daddr_v6)) }'
@@ -1848,8 +2085,7 @@ Attaching 1 probe...
 ]: 22186
 ```
 
-You can also choose a different output format. Available formats are `bpftrace`
-and `perf`:
+You can also choose a different output format. Available formats are `bpftrace` and `perf`:
 
 ```
 # bpftrace -e 'kprobe:do_mmap { @[kstack(perf)] = count(); }'
@@ -1865,8 +2101,7 @@ Attaching 1 probe...
 ]: 22186
 ```
 
-It's also possible to use a different output format and limit the number of
-frames:
+It's also possible to use a different output format and limit the number of frames:
 
 ```
 # bpftrace -e 'kprobe:do_mmap { @[kstack(perf, 3)] = count(); }'
@@ -1970,8 +2205,7 @@ Attaching 1 probe...
 ]: 27
 ```
 
-You can also choose a different output format. Available formats are `bpftrace`
-and `perf`:
+You can also choose a different output format. Available formats are `bpftrace` and `perf`:
 
 ```
 # bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(perf)); }'
@@ -1988,8 +2222,7 @@ Attaching 1 probe...
 
 ```
 
-It's also possible to use a different output format and limit the number of
-frames:
+It's also possible to use a different output format and limit the number of frames:
 
 ```
 # bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(perf, 3)); }'
@@ -2000,8 +2233,7 @@ Attaching 1 probe...
 	5649fee2bdc6 yy_getc+13 (/home/mmarchini/bash/bash/bash)
 ```
 
-Note that for these examples to work, bash had to be recompiled with frame
-pointers.
+Note that for these examples to work, bash had to be recompiled with frame pointers.
 
 ## 17. `cat()`: Print file content
 
@@ -2023,11 +2255,116 @@ Attaching 1 probe...
 ^C
 ```
 
+The `cat()` builtin also supports a format string as argument:
+
+```
+./bpftrace -e 'tracepoint:syscalls:sys_enter_sendmsg { printf("%s => ", comm);
+    cat("/proc/%d/cmdline", pid); printf("\n") }'
+Attaching 1 probe...
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+Gecko_IOThread => /usr/lib64/firefox/firefox
+^C
+```
+
+## 18. `signal()`: Send a signal to current task
+
+Syntax:
+- `signal(u32 signal)`
+- `signal("SIG")`
+
+Kernel: 5.3
+
+Supported Probe Types:
+- k(ret)probes
+- u(ret)probes
+- USDT
+- profile
+
+`signal` sends the specified signal to the current task:
+
+```
+# bpftrace  -e 'kprobe:__x64_sys_execve /comm == "bash"/ { signal(5); }' --unsafe
+$ ls
+Trace/breakpoint trap (core dumped)
+```
+
+The signal can also be specified using a name, similar to the `kill(1)` command:
+
+```
+# bpftrace -e 'k:f { signal("KILL"); }'
+# bpftrace -e 'k:f { signal("SIGINT"); }'
+```
+
+## 19. `strncmp()`: Compare first n characters of two strings
+
+Syntax: `strncmp(char *s1, char *s2, int length)`
+
+Return zero if the first `length` characters in `s1` and `s2` are equal, and non-zero otherwise.
+
+Examples:
+
+```
+bpftrace -e 't:syscalls:sys_enter_* /strncmp("mpv", comm, 3) == 0/ { @[comm, probe] = count() }'
+Attaching 320 probes...
+[...]
+@[mpv/vo, tracepoint:syscalls:sys_enter_rt_sigaction]: 238
+@[mpv:gdrv0, tracepoint:syscalls:sys_enter_futex]: 680
+@[mpv/ao, tracepoint:syscalls:sys_enter_write]: 1022
+@[mpv, tracepoint:syscalls:sys_enter_ioctl]: 2677
+@[mpv:cs0, tracepoint:syscalls:sys_enter_ioctl]: 2889
+@[mpv/vo, tracepoint:syscalls:sys_enter_read]: 2993
+@[mpv/demux, tracepoint:syscalls:sys_enter_futex]: 4745
+@[mpv, tracepoint:syscalls:sys_enter_write]: 6936
+@[mpv/vo, tracepoint:syscalls:sys_enter_futex]: 7662
+@[mpv:cs0, tracepoint:syscalls:sys_enter_futex]: 8127
+@[mpv/lua script , tracepoint:syscalls:sys_enter_futex]: 10150
+@[mpv/vo, tracepoint:syscalls:sys_enter_poll]: 10241
+@[mpv/vo, tracepoint:syscalls:sys_enter_recvmsg]: 15018
+@[mpv, tracepoint:syscalls:sys_enter_getpid]: 31178
+@[mpv, tracepoint:syscalls:sys_enter_futex]: 403868
+```
+
+## 20. `override()`: Override return value
+
+Syntax: `override(u64 rc)`
+
+Kernel: 4.16
+
+Supported Probe Types: kprobes
+
+The probed function will not be executed, instead a helper will be executed
+that will just return `rc`.
+
+```
+# bpftrace -e 'k:__x64_sys_getuid /comm == "id"/ { override(2<<21); }' --unsafe -c id
+uid=4194304 gid=0(root) euid=0(root) groups=0(root)
+```
+
+This feature only works on kernels compiled with `CONFIG_BPF_KPROBE_OVERRIDE`
+and only works on functions tagged `ALLOW_ERROR_INJECTION`.
+
+bpftrace does not test whether error injection is allowed for the probed
+function, instead if will fail to load the program into the kernel:
+
+```
+ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
+Error attaching probe: 'kprobe:vfs_read'
+```
+
 # Map Functions
 
-Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are also used for some variable types as discussed in the previous section, whenever `@` is used: [globals](#21-global), [per thread variables](#22-per-thread), and [associative arrays](#3--associative-arrays).
+Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are
+also used for some variable types as discussed in the previous section, whenever `@` is used:
+[globals](#21-global), [per thread variables](#22-per-thread), and [associative
+arrays](#3--associative-arrays).
 
-When bpftrace exits, all maps are printed. For example (the `count()` function is covered in the sections that follow):
+When bpftrace exits, all maps are printed. For example (the `count()` function is covered in the sections
+that follow):
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @[comm] = count(); }'
@@ -2041,7 +2378,8 @@ Attaching 1 probe...
 @[snmp-pass]: 374
 ```
 
-The map was printed after the Ctrl-C to end the program. If you use maps that you do not wish to be automatically printed on exit, you can add an END block that clears the maps. For example:
+The map was printed after the Ctrl-C to end the program. If you use maps that you do not wish to be
+automatically printed on exit, you can add an END block that clears the maps. For example:
 
 ```
 END
@@ -2065,7 +2403,8 @@ END
 - `clear(@x)` - Delete all keys from the map
 - `zero(@x)` - Set all map values to zero
 
-Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is processed in user-space. The asynchronous actions are: <tt>print()</tt>, <tt>clear()</tt>, and <tt>zero()</tt>.
+Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
+processed in user-space. The asynchronous actions are: `print()`, `clear()`, and `zero()`.
 
 ## 2. `count()`: Count
 
@@ -2085,7 +2424,8 @@ Attaching 1 probe...
 
 That shows there were 119 calls to vfs_read() while tracing.
 
-This next example includes the `comm` variable as a key, so that the value is broken down by each process name. For example, `@reads[comm]`:
+This next example includes the `comm` variable as a key, so that the value is broken down by each process
+name. For example, `@reads[comm]`:
 
 ```
 # bpftrace -e 'kprobe:vfs_read { @reads[comm] = count(); }'
@@ -2121,7 +2461,8 @@ Attaching 1 probe...
 @bytes[sshd]: 262144
 ```
 
-That is summing requested bytes via the vfs_read() kernel function, which is one of two possible entry points for the read syscall. To see actual bytes read:
+That is summing requested bytes via the vfs_read() kernel function, which is one of two possible entry
+points for the read syscall. To see actual bytes read:
 
 ```
 # bpftrace -e 'kretprobe:vfs_read /retval > 0/ { @bytes[comm] = sum(retval); }'
@@ -2137,7 +2478,9 @@ Attaching 1 probe...
 @bytes[snmp-pass]: 55681
 ```
 
-Now a filter is used to ensure the return value was positive before it is used in the sum(). The return value may be negative in cases of error, as is the case with other functions. Remember this whenever using sum() on a retval.
+Now a filter is used to ensure the return value was positive before it is used in the sum(). The return
+value may be negative in cases of error, as is the case with other functions. Remember this whenever
+using sum() on a retval.
 
 ## 4. `avg()`: Average
 
@@ -2231,7 +2574,8 @@ Attaching 1 probe...
 @bytes[sshd]: count 15, average 16384, total 245760
 ```
 
-This stats() function returns three statistics: the count of events, the average for the argument value, and the total of the argument value. This is similar to using count(), avg(), and sum().
+This stats() function returns three statistics: the count of events, the average for the argument value,
+and the total of the argument value. This is similar to using count(), avg(), and sum().
 
 ## 8. `hist()`: Log2 Histogram
 
@@ -2273,8 +2617,7 @@ Attaching 1 probe...
 
 ```
 # bpftrace -e 'kretprobe:do_sys_open { @bytes[comm] = hist(retval); }'
-Attaching 1 probe...
-^C
+Attaching 1 probe... ^C
 
 @bytes[snmp-pass]:
 [4, 8)                 6 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
@@ -2305,7 +2648,7 @@ Syntax:
 @histogram_name[optional_key] = lhist(value, min, max, step)
 ```
 
-This is implemented using a BPF map.
+This is implemented using a BPF map. `min` must be non-negative.
 
 Examples:
 
@@ -2326,29 +2669,37 @@ Attaching 1 probe...
 
 Syntax: ```print(@map [, top [, divisor]])```
 
-The <tt>print()</tt> function will print a map, similar to the automatic printing when bpftrace ends. Two optional arguments can be provided: a top number, so that only the top number of entries are printed, and a divisor, which divides the value. A couple of examples will explain their use.
+The `print()` function will print a map, similar to the automatic printing when bpftrace ends. Two
+optional arguments can be provided: a top number, so that only the top number of entries are printed, and
+a divisor, which divides the value. A couple of examples will explain their use.
 
-As an example of top, tracing the top 5 syscalls via kprobe:SyS_*:
+As an example of top, tracing `vfs` operations and printing the top 5:
 
 ```
 # bpftrace -e 'kprobe:vfs_* { @[func] = count(); } END { print(@, 5); clear(@); }'
 Attaching 54 probes...
-^C@[vfs_getattr]: 91
+^C
+@[vfs_getattr]: 91
 @[vfs_getattr_nosec]: 92
 @[vfs_statx_fd]: 135
 @[vfs_open]: 188
 @[vfs_read]: 405
 ```
 
-The final <tt>clear()</tt> is used to prevent printing the map automatically on exit.
+The final `clear()` is used to prevent printing the map automatically on exit.
 
 As an example of divisor, summing total time in vfs_read() by process name as milliseconds:
 
 ```
-# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid]/ { @ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); } END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
+# bpftrace -e 'kprobe:vfs_read { @start[tid] = nsecs; }
+    kretprobe:vfs_read /@start[tid]/ {@ms[pid] = sum(nsecs - @start[tid]); delete(@start[tid]); }
+    END { print(@ms, 0, 1000000); clear(@ms); clear(@start); }'
 ```
 
-This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds when printing. Without this capability, should one try to divide to milliseconds when summing (eg, <tt>sum((nsecs - @start[tid]) / 1000000)</tt>), the value would often be rounded to zero, and not accumulate as it should.
+This one-liner sums the vfs_read() durations as nanoseconds, and then does the division to milliseconds
+when printing. Without this capability, should one try to divide to milliseconds when summing (eg,
+`sum((nsecs - @start[tid]) / 1000000)`), the value would often be rounded to zero, and not accumulate as
+it should.
 
 # Output
 
@@ -2377,7 +2728,8 @@ Syntax: `interval:s:duration_seconds`
 Examples:
 
 ```
-# bpftrace -e 'kprobe:do_sys_open { @opens = @opens + 1; } interval:s:1 { printf("opens/sec: %d\n", @opens); @opens = 0; }'
+# bpftrace -e 'kprobe:do_sys_open { @opens = @opens + 1; }
+    interval:s:1 { printf("opens/sec: %d\n", @opens); @opens = 0; }'
 Attaching 2 probes...
 opens/sec: 16
 opens/sec: 2
@@ -2392,7 +2744,8 @@ opens/sec: 2
 
 ## 3. `hist()`, `print()`: Histogram Printing
 
-Declared histograms are automatically printed out on program termination. See [5. Histograms](#5-histograms) for declarations.
+Declared histograms are automatically printed out on program termination. See [5.
+Histograms](#5-histograms) for declarations.
 
 Examples:
 
@@ -2418,21 +2771,29 @@ Attaching 1 probe...
 [2K, 4K)               2 |                                                    |
 ```
 
-Histograms can also be printed on-demand, using the <tt>print()</tt> function. Eg:
+Histograms can also be printed on-demand, using the `print()` function. Eg:
 
-<pre>
+```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); } interval:s:1 { print(@bytes); clear(@bytes); }'
 
 [...]
-</pre>
+```
 
 # Advanced Tools
 
-bpftrace can be used to create some powerful one-liners and some simple tools. For complex tools, which may involve command line options, positional parameters, argument processing, and customized output, consider switching to [bcc](https://github.com/iovisor/bcc). bcc provides Python (and other) front-ends, enabling usage of all the other Python libraries (including argparse), as well as a direct control of the kernel BPF program. The down side is that bcc is much more verbose and laborious to program. Together, bpftrace and bcc are complimentary.
+bpftrace can be used to create some powerful one-liners and some simple tools. For complex tools, which
+may involve command line options, positional parameters, argument processing, and customized output,
+consider switching to [bcc](https://github.com/iovisor/bcc). bcc provides Python (and other) front-ends,
+enabling usage of all the other Python libraries (including argparse), as well as a direct control of the
+kernel BPF program. The down side is that bcc is much more verbose and laborious to program. Together,
+bpftrace and bcc are complimentary.
 
-An expected development path would be exploration with bpftrace one-liners, then and ad hoc scripting with bpftrace, then finally, when needed, advanced tooling with bcc.
+An expected development path would be exploration with bpftrace one-liners, then and ad hoc scripting
+with bpftrace, then finally, when needed, advanced tooling with bcc.
 
-As an example of bpftrace vs bcc differences, the bpftrace xfsdist.bt tool also exists in bcc as xfsdist.py. Both measure the same functions and produce the same summary of information. However, the bcc version supports various arguments:
+As an example of bpftrace vs bcc differences, the bpftrace xfsdist.bt tool also exists in bcc as
+xfsdist.py. Both measure the same functions and produce the same summary of information. However, the bcc
+version supports various arguments:
 
 ```
 # ./xfsdist.py -h
@@ -2457,17 +2818,20 @@ examples:
     ./xfsdist -m 5       # 5s summaries, milliseconds
 ```
 
-The bcc version is 131 lines of code. The bptrace version is 22.
+The bcc version is 131 lines of code. The bpftrace version is 22.
 
 # Errors
 
 ## 1. Looks like the BPF stack limit of 512 bytes is exceeded
 
-BPF programs that operate on many data items may hit this limit. There are a number of things you can try to stay within the limit:
+BPF programs that operate on many data items may hit this limit. There are a number of things you can try
+to stay within the limit:
 
-1. Find ways to reduce the size of the data used in the program. Eg, avoid strings if they are unnecessary: use `pid` instead of `comm`. Use fewer map keys.
+1. Find ways to reduce the size of the data used in the program. Eg, avoid strings if they are
+   unnecessary: use `pid` instead of `comm`. Use fewer map keys.
 1. Split your program over multiple probes.
-1. Check the status of the BPF stack limit in Linux (it may be increased in the future, maybe as a tuneabe).
+1. Check the status of the BPF stack limit in Linux (it may be increased in the future, maybe as a
+   tuneabe).
 1. (advanced): Run -d and examine the LLVM IR, and look for ways to optimize src/ast/codegen_llvm.cpp.
 
 ## 2. Kernel headers not found
