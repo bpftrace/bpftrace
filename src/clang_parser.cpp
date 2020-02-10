@@ -23,14 +23,6 @@ static std::string get_clang_string(CXString string)
   return str;
 }
 
-static void remove_struct_union_prefix(std::string &str)
-{
-    if (strncmp(str.c_str(), "struct ", 7) == 0)
-        str.erase(0, 7);
-    else if (strncmp(str.c_str(), "union ", 6) == 0)
-        str.erase(0, 6);
-}
-
 /*
  * is_anonymous
  *
@@ -317,7 +309,6 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
 
 bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input)
 {
-
     for (unsigned int i = 0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
         CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
         CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
@@ -337,9 +328,6 @@ CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
 
 bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 {
-
-
-
     int err = clang_visitChildren(
       cursor,
       [](CXCursor c, CXCursor parent, CXClientData client_data)
