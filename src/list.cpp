@@ -1,13 +1,14 @@
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <cxxabi.h>
 #include <dirent.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <regex>
-#include <vector>
+#include <sstream>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <vector>
 
 #include "list.h"
 #include "bpftrace.h"
@@ -100,6 +101,18 @@ void print_tracepoint_args(const std::string &category, const std::string &event
   }
 }
 
+static inline bool sym_name_matches(const std::string &sym,
+                                    const std::string &search)
+{
+  // If the search expression doesn't have a '(', try to match it against
+  // the symbol name without parameters (for demangled symbol names)
+  if (search.find('(') == std::string::npos)
+    if (sym.substr(0, sym.find_first_of("(")) == search)
+      return true;
+
+  return false;
+}
+
 void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
 {
   std::string search = search_input;
@@ -180,10 +193,28 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
           bpftrace.extract_func_symbols_from_path(absolute_exe));
 
       std::string line;
+      std::string sym_name;
+      char *demangled_name;
       while (std::getline(*symbol_stream, line))
       {
-        std::string probe = "uprobe:" + absolute_exe + ":" + line;
-        if (show_all || search.empty() || !search_probe(probe, re))
+        demangled_name = nullptr;
+        if (!bt_verbose && symbol_has_cpp_mangled_signature(line))
+        {
+          demangled_name = abi::__cxa_demangle(
+              line.c_str(), nullptr, nullptr, nullptr);
+        }
+        if (demangled_name)
+        {
+          sym_name = demangled_name;
+          free(demangled_name);
+        }
+        else
+        {
+          sym_name = line;
+        }
+        std::string probe = "uprobe:" + absolute_exe + ":" + sym_name;
+        if (show_all || search.empty() || !search_probe(probe, re) ||
+            (demangled_name != nullptr && sym_name_matches(probe, search)))
           std::cout << probe << std::endl;
       }
     }

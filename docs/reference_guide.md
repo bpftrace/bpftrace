@@ -892,18 +892,21 @@ uretprobe:library_name:function_name
 These use uprobes (a Linux kernel capability). `uprobe` instruments the beginning of a user-level
 function's execution, and `uretprobe` instruments the end (its return).
 
-To list available uprobes, you can use any program to list the text segment symbols from a binary, such
-as `objdump` and `nm`. For example:
+To list available uprobes, you can use bpftrace (or any other program to list the text segment symbols
+from a binary, such as `objdump` and `nm`). For example:
 
 ```
-# objdump -tT /bin/bash | grep readline
-00000000007003f8 g    DO .bss	0000000000000004  Base        rl_readline_state
-0000000000499e00 g    DF .text	00000000000001c5  Base        readline_internal_char
-00000000004993d0 g    DF .text	0000000000000126  Base        readline_internal_setup
-000000000046d400 g    DF .text	000000000000004b  Base        posix_readline_initialize
-000000000049a520 g    DF .text	0000000000000081  Base        readline
+# bpftrace -l 'uprobe:/bin/bash:*readline*'
+uprobe:/bin/bash:initialize_readline
+uprobe:/bin/bash:pcomp_set_readline_variables
+uprobe:/bin/bash:posix_readline_initialize
+uprobe:/bin/bash:readline
+uprobe:/bin/bash:readline_internal_char
 [...]
 ```
+
+Note: When listing uprobes, bpftrace automatically demangles C++ symbols. It's also possible to list them
+in the mangled format using the '-lv' flag.
 
 This has listed various functions containing "readline" from /bin/bash. These can be instrumented using
 `uprobe` and `uretprobe`.

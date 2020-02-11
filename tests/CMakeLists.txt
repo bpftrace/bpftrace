@@ -151,7 +151,7 @@ add_test(NAME bpftrace_test COMMAND bpftrace_test)
 
 # Compile all testprograms, one per .c file for runtime testing
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
-file(GLOB testprogs testprogs/*.c)
+file(GLOB testprogs testprogs/*.c testprogs/*.cpp)
 set(compiled_testprogs "")
 foreach(testprog ${testprogs})
   get_filename_component(bin_name ${testprog} NAME_WE)
