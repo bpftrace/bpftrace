@@ -1,18 +1,18 @@
+#include "llvm/Config/llvm-config.h"
+#include <clang-c/CXString.h>
+#include <clang-c/Index.h>
 #include <cstring>
 #include <iostream>
 #include <regex>
 #include <string.h>
-#include <clang-c/Index.h>
-#include <clang-c/CXString.h>
-#include "llvm/Config/llvm-config.h"
 
 #include "ast.h"
+#include "btf.h"
 #include "clang_parser.h"
+#include "field_analyser.h"
+#include "headers.h"
 #include "types.h"
 #include "utils.h"
-#include "headers.h"
-#include "btf.h"
-#include "field_analyser.h"
 
 namespace bpftrace {
 
@@ -91,9 +91,8 @@ static bool is_anonymous(CXCursor c)
 
   clang_visitChildren(
       parent,
-      [](CXCursor c2, CXCursor, CXClientData client_data)
-      {
-        auto state = static_cast<struct AnonFinderState*>(client_data);
+      [](CXCursor c2, CXCursor, CXClientData client_data) {
+        auto state = static_cast<struct AnonFinderState *>(client_data);
         if (state->prev_was_definition)
         {
           // This is the next child after the definition of the struct we're
@@ -111,7 +110,9 @@ static bool is_anonymous(CXCursor c)
         }
 
         // We've found the definition of the struct we're interested in
-        if (memcmp(c2.data, state->struct_to_check.data, 3*sizeof(uintptr_t)) == 0)
+        if (memcmp(c2.data,
+                   state->struct_to_check.data,
+                   3 * sizeof(uintptr_t)) == 0)
           state->prev_was_definition = true;
         return CXChildVisit_Continue;
       },
@@ -142,7 +143,8 @@ static CXCursor get_named_parent(CXCursor c)
 // @returns true on success, false otherwise
 static bool getBitfield(CXCursor c, Bitfield &bitfield)
 {
-  if (!clang_Cursor_isBitField(c)) {
+  if (!clang_Cursor_isBitField(c))
+  {
     return false;
   }
 
@@ -150,15 +152,16 @@ static bool getBitfield(CXCursor c, Bitfield &bitfield)
   // To handle bitfields, we need to give codegen 3 additional pieces
   // of information: `read_bytes`, `access_rshift`, and `mask`.
   //
-  // `read_bytes` tells codegen how many bytes to read starting at `Field::offset`.
-  // This information is necessary because we can't always issue, for example, a
-  // 1 byte read, as the bitfield could be the last 4 bits of the struct. Reading
-  // past the end of the struct could cause a page fault. Therefore, we compute the
-  // minimum number of bytes necessary to fully read the bitfield. This will always
-  // keep the read within the bounds of the struct.
+  // `read_bytes` tells codegen how many bytes to read starting at
+  // `Field::offset`. This information is necessary because we can't always
+  // issue, for example, a 1 byte read, as the bitfield could be the last 4 bits
+  // of the struct. Reading past the end of the struct could cause a page fault.
+  // Therefore, we compute the minimum number of bytes necessary to fully read
+  // the bitfield. This will always keep the read within the bounds of the
+  // struct.
   //
-  // `access_rshift` tells codegen how much to shift the masked value so that the
-  // LSB of the bitfield is the LSB of the interpreted integer.
+  // `access_rshift` tells codegen how much to shift the masked value so that
+  // the LSB of the bitfield is the LSB of the interpreted integer.
   //
   // `mask` tells codegen how to mask out the surrounding bitfields.
 
@@ -173,15 +176,18 @@ static bool getBitfield(CXCursor c, Bitfield &bitfield)
   return true;
 }
 
-// NOTE(mmarchini): as suggested in http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
-static bool translateMacro(CXCursor cursor, std::string &name, std::string &value)
+// NOTE(mmarchini): as suggested in
+// http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
+static bool translateMacro(CXCursor cursor,
+                           std::string &name,
+                           std::string &value)
 {
-  CXToken* tokens    = nullptr;
+  CXToken *tokens = nullptr;
   unsigned numTokens = 0;
   CXTranslationUnit transUnit = clang_Cursor_getTranslationUnit(cursor);
-  CXSourceRange srcRange  = clang_getCursorExtent(cursor);
+  CXSourceRange srcRange = clang_getCursorExtent(cursor);
   clang_tokenize(transUnit, srcRange, &tokens, &numTokens);
-  for (unsigned n=0; n<numTokens; n++)
+  for (unsigned n = 0; n < numTokens; n++)
   {
     auto tokenText = clang_getTokenSpelling(transUnit, tokens[n]);
     if (n == 0)
@@ -194,7 +200,7 @@ static bool translateMacro(CXCursor cursor, std::string &name, std::string &valu
       CXTokenKind tokenKind = clang_getTokenKind(tokens[n]);
       if (tokenKind != CXToken_Comment)
       {
-        const char* text = clang_getCString(tokenText);
+        const char *text = clang_getCString(tokenText);
         if (text)
           value += text;
       }
@@ -230,13 +236,13 @@ static SizedType get_sized_type(CXType clang_type)
       return SizedType(Type::integer, size, true);
     case CXType_Enum:
       return SizedType(Type::integer, size);
-    case CXType_Pointer:
-    {
+    case CXType_Pointer: {
       auto pointee_type = clang_getPointeeType(clang_type);
       SizedType type;
       if (pointee_type.kind == CXType_Record)
       {
-        auto pointee_typestr = get_clang_string(clang_getTypeSpelling(pointee_type));
+        auto pointee_typestr = get_clang_string(
+            clang_getTypeSpelling(pointee_type));
         type = SizedType(Type::cast, sizeof(uintptr_t), pointee_typestr);
       }
       else
@@ -248,8 +254,7 @@ static SizedType get_sized_type(CXType clang_type)
       type.pointee_size = pointee_size;
       return type;
     }
-    case CXType_ConstantArray:
-    {
+    case CXType_ConstantArray: {
       auto elem_type = clang_getArrayElementType(clang_type);
       auto size = clang_getArraySize(clang_type);
       if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U)
@@ -266,7 +271,9 @@ static SizedType get_sized_type(CXType clang_type)
         sized_type.elem_type = type.type;
         sized_type.is_signed = type.is_signed;
         return sized_type;
-      } else {
+      }
+      else
+      {
         return SizedType(Type::none, 0);
       }
     }
@@ -286,7 +293,8 @@ ClangParser::ClangParserHandler::~ClangParserHandler()
   clang_disposeIndex(index);
 }
 
-CXTranslationUnit ClangParser::ClangParserHandler::get_translation_unit() {
+CXTranslationUnit ClangParser::ClangParserHandler::get_translation_unit()
+{
   return translation_unit;
 }
 
@@ -298,21 +306,26 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
     unsigned num_unsaved_files,
     unsigned options)
 {
-  return clang_parseTranslationUnit2(
-      index,
-      source_filename,
-      command_line_args, num_command_line_args,
-      unsaved_files, num_unsaved_files,
-      options,
-      &translation_unit);
+  return clang_parseTranslationUnit2(index,
+                                     source_filename,
+                                     command_line_args,
+                                     num_command_line_args,
+                                     unsaved_files,
+                                     num_unsaved_files,
+                                     options,
+                                     &translation_unit);
 }
 
-bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input)
+bool ClangParser::ClangParserHandler::check_diagnostics(
+    const std::string &input)
 {
-  for (unsigned int i=0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
+  for (unsigned int i = 0; i < clang_getNumDiagnostics(get_translation_unit());
+       i++)
+  {
     CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
     CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
-    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
+    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal)
+    {
       if (bt_debug >= DebugLevel::kDebug)
         std::cerr << "Input (" << input.size() << "): " << input << std::endl;
       return false;
@@ -321,7 +334,8 @@ bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input
   return true;
 }
 
-CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
+CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor()
+{
   return clang_getTranslationUnitCursor(translation_unit);
 }
 
@@ -329,15 +343,14 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 {
   int err = clang_visitChildren(
       cursor,
-      [](CXCursor c, CXCursor parent, CXClientData client_data)
-      {
+      [](CXCursor c, CXCursor parent, CXClientData client_data) {
         if (clang_getCursorKind(c) == CXCursor_MacroDefinition)
         {
           std::string macro_name;
           std::string macro_value;
           if (translateMacro(c, macro_name, macro_value))
           {
-            auto &macros = static_cast<BPFtrace*>(client_data)->macros_;
+            auto &macros = static_cast<BPFtrace *>(client_data)->macros_;
             macros[macro_name] = macro_value;
           }
           return CXChildVisit_Recurse;
@@ -345,8 +358,9 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
         if (clang_getCursorKind(parent) == CXCursor_EnumDecl)
         {
-          auto &enums = static_cast<BPFtrace*>(client_data)->enums_;
-          enums[get_clang_string(clang_getCursorSpelling(c))] = clang_getEnumConstantDeclValue(c);
+          auto &enums = static_cast<BPFtrace *>(client_data)->enums_;
+          enums[get_clang_string(clang_getCursorSpelling(c))] =
+              clang_getEnumConstantDeclValue(c);
           return CXChildVisit_Recurse;
         }
 
@@ -357,10 +371,12 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
           auto &structs = static_cast<BPFtrace *>(client_data)->structs_;
-          auto &loc_offsets = static_cast<BPFtrace *>(client_data)->loc_offsets_;
+          auto &loc_offsets =
+              static_cast<BPFtrace *>(client_data)->loc_offsets_;
 
           auto named_parent = get_named_parent(c);
-          auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
+          auto ptype = clang_getCanonicalType(
+              clang_getCursorType(named_parent));
           auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
           auto ptypesize = clang_Type_getSizeOf(ptype);
 
@@ -370,15 +386,19 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           Bitfield bitfield;
           bool is_bitfield = getBitfield(c, bitfield);
 
-          if (ident.rfind("data_loc_", 0) == 0) {
+          if (ident.rfind("data_loc_", 0) == 0)
+          {
             auto dl_stripped = ident.substr(9);
             structs[ptypestr].fields[dl_stripped].type = get_sized_type(type);
-              structs[ptypestr].fields[dl_stripped].type.is_data_loc = true;
-              structs[ptypestr].fields[dl_stripped].offset = loc_offsets[dl_stripped];
-              structs[ptypestr].size = ptypesize;
-          } else {
-          // Warn if we already have the struct member defined and is
-          // different type and keep the current definition in place.
+            structs[ptypestr].fields[dl_stripped].type.is_data_loc = true;
+            structs[ptypestr].fields[dl_stripped].offset =
+                loc_offsets[dl_stripped];
+            structs[ptypestr].size = ptypesize;
+          }
+          else
+          {
+            // Warn if we already have the struct member defined and is
+            // different type and keep the current definition in place.
             if (structs.count(ptypestr) != 0 &&
                 structs[ptypestr].fields.count(ident) != 0 &&
                 structs[ptypestr].fields[ident].offset != offset &&
@@ -387,8 +407,10 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
                 structs[ptypestr].fields[ident].bitfield != bitfield &&
                 structs[ptypestr].size != ptypesize)
             {
-              std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
-            } else
+              std::cerr << "type mismatch for " << ptypestr << "::" << ident
+                        << std::endl;
+            }
+            else
             {
               structs[ptypestr].fields[ident].offset = offset;
               structs[ptypestr].fields[ident].type = get_sized_type(type);
@@ -419,21 +441,26 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
 
   std::string input = btf.c_def(bpftrace.btf_set_);
 
-  CXUnsavedFile unsaved_files =
-  {
+  CXUnsavedFile unsaved_files = {
     .Filename = "btf.h",
     .Contents = input.c_str(),
-    .Length   = input.size(),
+    .Length = input.size(),
   };
 
   ClangParserHandler handler;
   CXErrorCode error = handler.parse_translation_unit(
-    "btf.h", NULL, 0, &unsaved_files, 1,
-    CXTranslationUnit_DetailedPreprocessingRecord);
+      "btf.h",
+      NULL,
+      0,
+      &unsaved_files,
+      1,
+      CXTranslationUnit_DetailedPreprocessingRecord);
   if (error)
   {
-    if (bt_debug == DebugLevel::kFullDebug) {
-      std::cerr << "Clang error while parsing BTF C definitions: " << error << std::endl;
+    if (bt_debug == DebugLevel::kFullDebug)
+    {
+      std::cerr << "Clang error while parsing BTF C definitions: " << error
+                << std::endl;
       std::cerr << "Input (" << input.size() << "): " << input << std::endl;
     }
     return false;
@@ -446,7 +473,9 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
   return visit_children(cursor, bpftrace);
 }
 
-bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
+bool ClangParser::parse(ast::Program *program,
+                        BPFtrace &bpftrace,
+                        std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
 
@@ -464,11 +493,13 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   std::regex offsetRgx(".*data_loc_(\\w+);\\s//offset\\s(\\d+)?");
   std::cmatch offsetMatch;
   auto f = input.c_str();
-  if (std::regex_search(f, offsetMatch, offsetRgx)) {
-      bpftrace.loc_offsets_[offsetMatch.str(0)] = std::atoi(offsetMatch.str(2).c_str());
+  if (std::regex_search(f, offsetMatch, offsetRgx))
+  {
+    bpftrace.loc_offsets_[offsetMatch.str(0)] = std::atoi(
+        offsetMatch.str(2).c_str());
   }
 
-    CXUnsavedFile unsaved_files[] = {
+  CXUnsavedFile unsaved_files[] = {
     {
         .Filename = "definitions.h",
         .Contents = input.c_str(),
@@ -511,11 +542,9 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     },
   };
 
-  std::vector<const char *> args =
-  {
-    "-isystem", "/usr/local/include",
-    "-isystem", "/bpftrace/include",
-    "-isystem", "/usr/include",
+  std::vector<const char *> args = {
+    "-isystem",          "/usr/local/include", "-isystem",
+    "/bpftrace/include", "-isystem",           "/usr/include",
   };
   for (auto &flag : extra_flags)
   {
@@ -525,13 +554,17 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   ClangParserHandler handler;
   CXErrorCode error = handler.parse_translation_unit(
       "definitions.h",
-      &args[0], args.size(),
-      unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
+      &args[0],
+      args.size(),
+      unsaved_files,
+      sizeof(unsaved_files) / sizeof(CXUnsavedFile),
       CXTranslationUnit_DetailedPreprocessingRecord);
   if (error)
   {
-    if (bt_debug == DebugLevel::kFullDebug) {
-      std::cerr << "Clang error while parsing C definitions: " << error << std::endl;
+    if (bt_debug == DebugLevel::kFullDebug)
+    {
+      std::cerr << "Clang error while parsing C definitions: " << error
+                << std::endl;
       std::cerr << "Input (" << input.size() << "): " << input << std::endl;
     }
     return false;
