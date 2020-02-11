@@ -390,7 +390,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
                 structs[ptypestr].fields[ident].bitfield != bitfield &&
                 structs[ptypestr].size != ptypesize)
             {
-              std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
+              std::cerr << "type mismatch for " << ptypestr << "::" << ident
+                        << std::endl;
             }
             else
             {
