@@ -11,6 +11,12 @@ std::ostream &operator<<(std::ostream &os, Type type)
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, ProbeType type)
+{
+  os << probetypeName(type);
+  return os;
+}
+
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
   if (type.type == Type::cast)
