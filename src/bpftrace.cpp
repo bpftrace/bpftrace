@@ -1646,8 +1646,8 @@ int BPFtrace::resolve_uname(const std::string &name,
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
 static int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/, void *payload) {
-  auto syms = static_cast<std::ostringstream*>(payload);
-  *syms << std::string(symname) << std::endl;
+  auto syms = static_cast<std::set<std::string> *>(payload);
+  syms->insert(std::string(symname));
   return 0;
 }
 #endif
@@ -1661,12 +1661,21 @@ std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) co
   symbol_option.check_debug_file_crc = 1;
   symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
 
-  std::ostringstream syms;
+  // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
+  // it's also found in debug info (#1138), so a std::set is used here (and in
+  // the add_symbol callback) to ensure that each symbol will be unique in the
+  // returned string.
+  std::set<std::string> syms;
   int err = bcc_elf_foreach_sym(path.c_str(), add_symbol, &symbol_option, &syms);
   if (err)
     throw std::runtime_error("Could not list function symbols: " + path);
 
-  return syms.str();
+  std::ostringstream oss;
+  std::copy(syms.begin(),
+            syms.end(),
+            std::ostream_iterator<std::string>(oss, "\n"));
+
+  return oss.str();
 #else
   std::string call_str = std::string("objdump -tT ") + path +
     + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
