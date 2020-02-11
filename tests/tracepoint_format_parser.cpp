@@ -79,7 +79,7 @@ TEST(tracepoint_format_parser, data_loc)
   std::string expected =
     "struct _tracepoint_syscalls_sys_enter_read\n"
     "{\n"
-    "  const char * data_loc_msg;\n"
+    "  const char * data_loc_msg; //offset 8\n"
     "};\n";
 
   std::istringstream format_file(input);

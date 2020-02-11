@@ -449,8 +449,6 @@ bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
-  std::cout << "PRINTING C_DEFINITIONS" << std::endl;
-  std::cout << input << std::endl;
 
   // Add BTF definitions, but do not bail out
   // in case of error, just notify
