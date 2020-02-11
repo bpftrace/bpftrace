@@ -339,6 +339,8 @@ enum class ProbeType
   kretfunc,
 };
 
+std::ostream &operator<<(std::ostream &os, ProbeType type);
+
 struct ProbeItem
 {
   std::string name;
