@@ -355,7 +355,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
           auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
-          auto &loc_offsets = static_cast<BPFtrace*>(client_data)->loc_offsets_;
+          auto &loc_offsets =
+              static_cast<BPFtrace *>(client_data)->loc_offsets_;
 
           auto named_parent = get_named_parent(c);
           auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
