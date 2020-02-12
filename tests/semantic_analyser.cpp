@@ -55,7 +55,8 @@ void test(BPFtrace &bpftrace,
           Driver &driver,
           const std::string &input,
           int expected_result = 0,
-          bool safe_mode = true)
+          bool safe_mode = true,
+          bool has_child = false)
 {
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
@@ -68,7 +69,8 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature, out);
+  ast::SemanticAnalyser semantics(
+      driver.root_, bpftrace, feature, out, has_child);
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
@@ -105,11 +107,15 @@ void test(BPFfeature &feature,
 }
 
 void test(const std::string &input,
-    int expected_result=0,
-    bool safe_mode = true)
+          int expected_result = 0,
+          bool safe_mode = true,
+          bool has_child = false)
 {
   MockBPFfeature feature;
-  test(feature, input, expected_result, safe_mode);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
+  test(
+      *bpftrace, feature, driver, input, expected_result, safe_mode, has_child);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -145,14 +151,13 @@ TEST(semantic_analyser, builtin_variables)
 
 TEST(semantic_analyser, builtin_cpid)
 {
-  auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace, "i:ms:100 { printf(\"%d\\n\", cpid); }", 1, false);
-  test(*bpftrace, "i:ms:100 { @=cpid }", 1, false);
-  test(*bpftrace, "i:ms:100 { $a=cpid }", 1, false);
-  bpftrace->cmd_ = "sleep 1";
-  test(*bpftrace, "i:ms:100 { printf(\"%d\\n\", cpid); }", 0, false);
-  test(*bpftrace, "i:ms:100 { @=cpid }", 0, false);
-  test(*bpftrace, "i:ms:100 { $a=cpid }", 0, false);
+  test("i:ms:100 { printf(\"%d\\n\", cpid); }", 1, false, false);
+  test("i:ms:100 { @=cpid }", 1, false, false);
+  test("i:ms:100 { $a=cpid }", 1, false, false);
+
+  test("i:ms:100 { printf(\"%d\\n\", cpid); }", 0, false, true);
+  test("i:ms:100 { @=cpid }", 0, false, true);
+  test("i:ms:100 { $a=cpid }", 0, false, true);
 }
 
 TEST(semantic_analyser, builtin_functions)

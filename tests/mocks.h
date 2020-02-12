@@ -2,6 +2,7 @@
 
 #include "bpffeature.h"
 #include "bpftrace.h"
+#include "child.h"
 #include "gmock/gmock.h"
 
 namespace bpftrace {
@@ -65,6 +66,28 @@ public:
     has_send_signal_ = std::make_unique<bool>(has_features);
     has_get_current_cgroup_id_ = std::make_unique<bool>(has_features);
     has_override_return_ = std::make_unique<bool>(has_features);
+  };
+};
+
+class MockChildProc : public ChildProcBase
+{
+public:
+  MockChildProc(std::string cmd __attribute__((unused)))
+  {
+    child_pid_ = 1337;
+  };
+  ~MockChildProc(){};
+
+  void terminate(bool force __attribute__((unused)) = false) override{};
+  bool is_alive() override
+  {
+    return true;
+  };
+  void resume(void) override{};
+
+  void run(bool pause = false) override
+  {
+    (void)pause;
   };
 };
 

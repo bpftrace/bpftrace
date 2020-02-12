@@ -7,6 +7,7 @@ add_executable(bpftrace
   bpffeature.cpp
   bpftrace.cpp
   btf.cpp
+  child.cpp
   clang_parser.cpp
   disasm.cpp
   driver.cpp
