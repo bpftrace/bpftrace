@@ -35,15 +35,11 @@
 #include "triggers.h"
 #include "utils.h"
 
-extern char** environ;
-
 namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
-constexpr char CHILD_EXIT_QUIETLY = '\0';
-constexpr char CHILD_GO = 'g';
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
   // Args have been made safe for printing by now, so replace nonstandard format
@@ -95,16 +91,6 @@ int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPr
 
 BPFtrace::~BPFtrace()
 {
-  kill_child();
-  if (child_pid() != 0)
-  {
-    // We don't care if waitpid returns any errors. We're just trying
-    // to make a best effort here. It's not like we could recover from
-    // an error.
-    int status;
-    waitpid(child_pid(), &status, 0);
-  }
-
   for (const auto& pair : exe_sym_)
   {
     if (pair.second.second)
@@ -423,30 +409,12 @@ int BPFtrace::num_probes() const
   return special_probes_.size() + probes_.size();
 }
 
-void BPFtrace::kill_child()
-{
-  if (child_pid() == 0)
-    return;
-
-  if (child_running_) {
-    kill(child_pid(), SIGTERM);
-  } else {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-    // We need to disable this warning for some GCC/libc combinations despite
-    // using the void cast: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=66425
-    (void)write(child_start_pipe_, &CHILD_EXIT_QUIETLY, 1);
-#pragma GCC diagnostic pop
-    close(child_start_pipe_);
-  }
-}
-
 void BPFtrace::request_finalize()
 {
   finalize_ = true;
   attached_probes_.clear();
-  kill_child();
-
+  if (child_)
+    child_->terminate();
 }
 
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
@@ -774,7 +742,10 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   try
   {
     if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
-      return std::make_unique<AttachedProbe>(probe, func->second, pid_);
+    {
+      pid_t pid = child_ ? child_->pid() : pid_;
+      return std::make_unique<AttachedProbe>(probe, func->second, pid);
+    }
     else
       return std::make_unique<AttachedProbe>(probe, func->second, safe_mode_);
   }
@@ -863,7 +834,6 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        kill_child();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -876,7 +846,6 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
       auto attached_probe = attach_probe(*r_probes, *bpforc.get());
       if (attached_probe == nullptr)
       {
-        kill_child();
         return -1;
       }
       attached_probes_.push_back(std::move(attached_probe));
@@ -884,17 +853,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   }
 
   // Kick the child to execute the command.
-  if (has_child_cmd())
+  if (child_)
   {
-    int ret = write(child_start_pipe_, &CHILD_GO, 1);
-    if (ret < 0)
-    {
-      perror("unable to write to 'go' pipe");
-      return ret;
-    }
-
-    child_running_ = true;
-    close(child_start_pipe_);
+    child_->run();
   }
 
   if (bt_verbose)
@@ -982,7 +943,7 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
     // Note that there technically is a race with a new process using the
     // same pid, but we're polling at 100ms and it would be unlikely that
     // the pids wrap around that fast.
-    if (pid_ > 0 && !is_pid_alive(pid_))
+    if ((pid_ > 0 && !is_pid_alive(pid_)) || (child_ && !child_->is_alive()))
     {
       return;
     }
@@ -1380,106 +1341,6 @@ int BPFtrace::print_map_stats(IMap &map)
 
   out_->map_stats(*this, map, values_by_key, total_counts_by_key);
   return 0;
-}
-
-pid_t BPFtrace::spawn_child()
-{
-  static const int maxargs = 256;
-  char* argv[maxargs];
-  int wait_for_tracing_pipe[2];
-
-  auto args = split_string(cmd_, ' ');
-  auto paths = resolve_binary_path(args[0]); // does path lookup on executable
-  switch (paths.size())
-  {
-  case 0:
-    std::cerr << "path '" << args[0] << "' does not exist or is not executable" << std::endl;
-    return -1;
-  case 1:
-    args[0] = paths.front().c_str();
-    break;
-  default:
-    std::cerr << "path '" << args[0] << "' must refer to a unique binary but matched "
-              << paths.size() << " binaries" << std::endl;
-    return -1;
-  }
-
-
-  if (args.size() >= (maxargs - 1))
-  {
-    std::cerr << "Too many args passed into spawn_child (" << args.size()
-              << " > " << maxargs - 1 << ")" << std::endl;
-    return -1;
-  }
-
-  // Convert vector of strings into raw array of C-strings for execve(2)
-  int idx = 0;
-  for (const auto& arg : args)
-  {
-    argv[idx] = const_cast<char*>(arg.c_str());
-    ++idx;
-  }
-  argv[idx] = nullptr;  // must be null terminated
-
-  if (pipe(wait_for_tracing_pipe) < 0)
-  {
-    perror("failed to create 'go' pipe");
-    return -1;
-  }
-
-  // Fork and exec
-  pid_t pid = fork();
-  if (pid == 0)
-  {
-    // Receive SIGTERM if parent dies
-    //
-    // Useful if user doesn't kill the bpftrace process group
-    if (prctl(PR_SET_PDEATHSIG, SIGTERM))
-      perror("prctl(PR_SET_PDEATHSIG)");
-
-    // Closing the parent's end and wait until the
-    // parent tells us to go. Set the child's end
-    // to be closed on exec.
-    close(wait_for_tracing_pipe[1]);
-    fcntl(wait_for_tracing_pipe[0], F_SETFD, FD_CLOEXEC);
-
-    char bf;
-
-    int ret = read(wait_for_tracing_pipe[0], &bf, 1);
-    if (ret != 1)
-    {
-      perror("failed to read 'go' pipe");
-      return -1;
-    }
-
-    if (bf == CHILD_EXIT_QUIETLY)
-    {
-      close(wait_for_tracing_pipe[0]);
-      exit(0);
-    }
-
-    if (execve(argv[0], argv, environ))
-    {
-      auto err = "Failed to execve: " + std::string(argv[0]);
-      perror(err.c_str());
-      return -1;
-    }
-  }
-  else if (pid > 0)
-  {
-    close(wait_for_tracing_pipe[0]);
-    child_start_pipe_ = wait_for_tracing_pipe[1];
-    child_pid_ = pid;
-    pid_ = pid;
-    return pid;
-  }
-  else
-  {
-    perror("Failed to fork");
-    return -1;
-  }
-
-  return -1;  // silence end of control compiler warning
 }
 
 template <typename T>
@@ -1986,12 +1847,6 @@ bool BPFtrace::is_pid_alive(int pid)
   {
     throw std::runtime_error("failed to snprintf");
   }
-
-  // Do a nonblocking wait on the pid just in case it's our child and it
-  // has exited. We don't really care about any errors, we're just trying
-  // to make a best effort.
-  int status;
-  waitpid(pid, &status, WNOHANG);
 
   int fd = open(buf, 0, O_RDONLY);
   if (fd < 0 && errno == ENOENT)

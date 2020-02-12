@@ -18,8 +18,21 @@ public:
   explicit SemanticAnalyser(Node *root,
                             BPFtrace &bpftrace,
                             BPFfeature &feature,
-                            std::ostream &out = std::cerr)
-      : root_(root), bpftrace_(bpftrace), feature_(feature), out_(out)
+                            std::ostream &out = std::cerr,
+                            bool has_child = true)
+      : root_(root),
+        bpftrace_(bpftrace),
+        feature_(feature),
+        out_(out),
+        has_child_(has_child)
+  {
+  }
+
+  explicit SemanticAnalyser(Node *root,
+                            BPFtrace &bpftrace,
+                            BPFfeature &feature,
+                            bool has_child)
+      : SemanticAnalyser(root, bpftrace, feature, std::cerr, has_child)
   {
   }
 
@@ -89,6 +102,7 @@ private:
   bool needs_elapsed_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
+  bool has_child_ = false;
 };
 
 } // namespace ast

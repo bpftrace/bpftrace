@@ -334,7 +334,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::username, 8);
   }
   else if (builtin.ident == "cpid") {
-    if (! bpftrace_.has_child_cmd()) {
+    if (!has_child_)
+    {
       error("cpid cannot be used without child command", builtin.loc);
     }
     builtin.type = SizedType(Type::integer, 4);

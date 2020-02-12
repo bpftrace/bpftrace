@@ -11,6 +11,7 @@
 #include "ast.h"
 #include "attached_probe.h"
 #include "btf.h"
+#include "child.h"
 #include "imap.h"
 #include "output.h"
 #include "printf.h"
@@ -122,10 +123,6 @@ public:
   void error(std::ostream &out, const location &l, const std::string &m);
   void warning(std::ostream &out, const location &l, const std::string &m);
   void log_with_location(std::string, std::ostream &, const location &, const std::string &);
-  bool has_child_cmd() { return cmd_.size() != 0; }
-  virtual pid_t child_pid() { return child_pid_; };
-  int spawn_child();
-  void kill_child();
   bool is_aslr_enabled(int pid);
 
   std::string cmd_;
@@ -189,6 +186,7 @@ public:
   BTF btf_;
   std::unordered_set<std::string> btf_set_;
   std::map<std::string, std::map<std::string, SizedType>> btf_ap_args_;
+  std::unique_ptr<ChildProcBase> child_;
 
 protected:
   std::vector<Probe> probes_;
@@ -205,11 +203,6 @@ private:
   int online_cpus_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
-
-  pid_t child_pid_ = 0;
-  bool child_running_ = false; // true when `CHILD_GO` has been sent (child
-                               // execve)
-  int child_start_pipe_ = -1;
 
   std::string src_;
   std::string filename_;

@@ -248,7 +248,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "cpid")
   {
-    pid_t cpid = bpftrace_.child_pid();
+    pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
       std::cerr << "BUG: Invalid cpid: " << cpid << std::endl;
       abort();
