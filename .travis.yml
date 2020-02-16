@@ -69,5 +69,6 @@ notifications:
       #     travis encrypt -r "iovisor/bpftrace" "irc.oftc.net#bpftrace"
       #
       - secure: "wIAz2oF8z8Kirt0pjAdOT2z9GOm3KtlPfZzdMUHvnDkehT0dIVLcbMvmPOdje/0MJVQXpl3/XguT31wqJ+qhR0el/ZWAxc53ZT7lQRP6v/yKS9AJWO2RYYFMjHldTkdYe5TyKcX3IEY7ixSblkO0eDGyKDC2eYqghSFnclbC83oQVe0qDNewxo4W5gjQjW9Bmly6c7QYxHp/qTYkwP58zOvjMXKupPgk6xjqhI1sShpT5V/1tx6ATq5BPOUWJtIz7VvdrFar1F5r+RuBLz7z4kNhu9ofXfbxOpyuuNIaTPgGBRLa98oHm6xCNNCPouVM+zNXiJLcb5aDcL1DkhueMOYrbOXHp5DAvq58t29zLiksDWY89mo/gp555ZrVibnhj47mIxQ6QFv77I0nJWsk5F11tsVI0zDcBye6nlHJfLqZIPzGdrp4JPpAghLZq2Fgnhqq1gcdax1pHIp4f90XsuPZsf7My24/2oDXnrKMofNIaA4ubzreTDGxhL+xgQK15Tz2XVcjn5MRAup0z6WN+nEWbDF52iQxyKBhU62zXCuvFG62lho3E8lU0e7dQXlFJnG/KY/bW1fhjeC8BLYdejqE/iZkZp2jxqTiAAoTcrTws/AhaXHFNVVTiiVpekvbTbGWEbd8Hffl/+LNmCrjEDrQyCe//QLyy9bjcG+I+Jk="
+    if: branch = master
     on_success: change
     on_failure: always
