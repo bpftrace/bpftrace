@@ -12,6 +12,7 @@ namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
+
 namespace bpftrace {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -23,6 +24,14 @@ namespace bpftrace {
       has_##name##_ = std::make_unique<bool>(                                  \
           detect_helper(libbpf::BPF_FUNC_##name, (progtype)));                 \
     return *(has_##name##_).get();                                             \
+  }
+
+#define EMIT_MAP_TEST(var, maptype)                                            \
+  bool BPFfeature::has_map_##var(void)                                         \
+  {                                                                            \
+    if (!map_##var##_)                                                         \
+      map_##var##_ = std::make_unique<bool>(detect_map((maptype)));            \
+    return *(map_##var##_).get();                                              \
   }
 
 static bool try_load(const char* name,
@@ -46,7 +55,7 @@ static bool try_load(const char* name,
       insns,
       insns_cnt * sizeof(struct bpf_insn),
       "GPL",
-      0,
+      0, /* version */
       loglevel,
       logbuf,
       logbuf_size);
@@ -83,6 +92,36 @@ static bool detect_helper(enum libbpf::bpf_func_id func_id,
          (strstr(logbuf, "unknown func ") == nullptr);
 }
 
+static bool detect_map(enum bpf_map_type map_type)
+{
+  int key_size = 4;
+  int value_size = 4;
+  int max_entries = 1;
+  int flags = 0;
+  int map_fd = 0;
+
+  switch (map_type)
+  {
+    case BPF_MAP_TYPE_STACK_TRACE:
+      value_size = 8;
+      break;
+    default:
+      break;
+  }
+
+#ifdef HAVE_BCC_CREATE_MAP
+  map_fd = bcc_create_map(
+#else
+  map_fd = bpf_create_map(
+#endif
+      map_type, nullptr, key_size, value_size, max_entries, flags);
+
+  if (map_fd >= 0)
+    close(map_fd);
+
+  return map_fd >= 0;
+}
+
 bool BPFfeature::has_loop(void)
 {
   if (has_loop_)
@@ -104,6 +143,12 @@ bool BPFfeature::has_loop(void)
 EMIT_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
 EMIT_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
 EMIT_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
+EMIT_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
+EMIT_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
+EMIT_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
+EMIT_MAP_TEST(percpu_hash, BPF_MAP_TYPE_ARRAY);
+EMIT_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
+EMIT_MAP_TEST(perf_event_array, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
 
 int BPFfeature::instruction_limit(void)
 {
@@ -162,7 +207,17 @@ std::string BPFfeature::report(void)
       << "  Instruction limit: " << std::to_string(instruction_limit())
       << std::endl
       << "  Loop support: " << to_str(has_loop()) << std::endl
+      << std::endl
+      << "Map types" << std::endl
+      << "  hash: " << to_str(has_map_hash()) << std::endl
+      << "  percpu hash: " << to_str(has_map_percpu_hash()) << std::endl
+      << "  array: " << to_str(has_map_array()) << std::endl
+      << "  percpu array: " << to_str(has_map_percpu_array()) << std::endl
+      << "  stack_trace: " << to_str(has_map_stack_trace()) << std::endl
+      << "  perf_event_array: " << to_str(has_map_perf_event_array())
+      << std::endl
       << std::endl;
+
   return buf.str();
 }
 
