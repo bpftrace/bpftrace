@@ -789,6 +789,9 @@ TEST(semantic_analyser, system)
   test("kprobe:f { system(1234) }", 1, false /* safe_mode */);
   test("kprobe:f { system() }", 1, false /* safe_mode */);
   test("kprobe:f { $fmt = \"mystring\"; system($fmt) }", 1, false /* safe_mode */);
+
+  // Blocked in safe mode
+  test("kprobe:f { system(\"ls\") }", 1, true);
 }
 
 TEST(semantic_analyser, printf_format_int)
@@ -1374,6 +1377,9 @@ TEST(semantic_analyser, signal)
   MockBPFfeature feature(false);
   test(feature, "k:f { signal(1) }", 1, false);
   test(feature, "k:f { signal(\"KILL\"); }", 1, false);
+
+  // Blocked in safe mode
+  test("k:f { signal(1); }", 1, true);
 }
 
 TEST(semantic_analyser, strncmp)
@@ -1402,6 +1408,13 @@ TEST(semantic_analyser, override)
   test("t:syscalls:sys_enter_openat { override(-1); }", 1, false);
   test("i:s:1 { override(-1); }", 1, false);
   test("p:hz:1 { override(-1); }", 1, false);
+
+  // Missing kernel support
+  MockBPFfeature feature(false);
+  test(feature, "k:f { override(-1); }", 1, false);
+
+  // Blocked in safe mode
+  test("k:f { override(-1); }", 1, true);
 }
 
 TEST(semantic_analyser, struct_member_keywords)
@@ -1427,6 +1440,37 @@ TEST(semantic_analyser, builtin_args)
                   "t:sched:sched_two { args->common_field }", 0);
   test(*bpftrace, "t:sched:sched_* { args->common_field }", 0);
   test(*bpftrace, "t:sched:sched_one { args->not_a_field }", 1);
+}
+
+TEST(semantic_analyser, uwrite)
+{
+  test("k:f { uwrite(0, 0, 4); }", 0, false);
+  test("k:f { uwrite(0, 0, 8); }", 0, false);
+  test("k:f { uwrite(0, 0, 1); }", 0, false);
+  test("k:f { uwrite(arg0, arg1, 4); }", 0, false);
+
+  // Invalid sizes
+  test("k:f { uwrite(0, 0, 0); }", 10, false);
+  test("k:f { uwrite(0, 0, -1); }", 10, false);
+  test("k:f { uwrite(0, 0, 9); }", 10, false);
+
+  // Wrong argument types
+  test("k:f { uwrite(\"str\", 0, 4); }", 10, false);
+  test("k:f { uwrite(0, \"str\", 4); }", 10, false);
+  test("k:f { uwrite(0, 0, \"str\"); }", 10, false);
+
+  // Wrong number of args
+  test("k:f { uwrite(); }", 1, false);
+  test("k:f { uwrite(0); }", 1, false);
+  test("k:f { uwrite(0,0); }", 1, false);
+  test("k:f { uwrite(0,0,0,0); }", 1, false);
+
+  // Missing kernel support
+  MockBPFfeature feature(false);
+  test(feature, "k:f { uwrite(0, 0, 4); }", 1, false);
+
+  // Blocked in safe mode
+  test("k:f { uwrite(0, 0, 4); }", 1, true);
 }
 
 } // namespace semantic_analyser

@@ -65,6 +65,7 @@ public:
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *sig);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
+  void        CreateWriteUser(Value *dst, Value *src, Value *size);
 
 private:
   Module &module_;

@@ -5,13 +5,14 @@ int GLOBAL_B = 0x88888888;
 int GLOBAL_C = 0x33333333;
 char GLOBAL_D = 8;
 
-int function1()
+int function1(int *arg0)
 {
-  return 0;
+  return *arg0;
 }
 
 int main(int argc __attribute__((unused)), char **argv __attribute__((unused))) {
   usleep(1000000);
-  function1();
+  int arg0 = 13;
+  function1(&arg0);
   return 0;
 }

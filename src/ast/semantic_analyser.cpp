@@ -311,6 +311,9 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
 
+  // Default to no return value if not overridden below
+  call.type = SizedType(Type::none, 0);
+
   if (call.func == "hist") {
     if (!check_assignment(call, true, false, false)) return;
     check_nargs(call, 1);
@@ -420,8 +423,6 @@ void SemanticAnalyser::visit(Call &call)
       if (!arg.is_map)
         error("delete() expects a map to be provided", call.loc);
     }
-
-    call.type = SizedType(Type::none, 0);
   }
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
@@ -486,7 +487,6 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_assignment(call, false, false, false)) return;
     check_varargs(call, 1, 2);
     check_arg(call, Type::integer, 0);
-    call.type = SizedType(Type::none, 0);
     needs_join_map_ = true;
 
     if (is_final_pass()) {
@@ -637,8 +637,6 @@ void SemanticAnalyser::visit(Call &call)
           bpftrace_.cat_args_.emplace_back(fmt.str, args);
       }
     }
-
-    call.type = SizedType(Type::none, 0);
   }
   else if (call.func == "exit") {
     check_nargs(call, 0);
@@ -808,9 +806,38 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
+  else if (call.func == "uwrite")
+  {
+    if (!feature_.has_helper_write_user())
+    {
+      error("BPF_FUNC_probe_write_user not available for your kernel version",
+            call.loc);
+    }
+
+    check_assignment(call, false, false, false);
+    if (check_nargs(call, 3))
+    {
+      check_arg(call, Type::integer, 0, false);
+      if (check_arg(call, Type::integer, 1, false) &&
+          check_arg(call, Type::integer, 2, true))
+      {
+        auto &src_arg = *call.vargs->at(1);
+        auto &size_arg = *call.vargs->at(2);
+
+        Integer &size = static_cast<Integer &>(size_arg);
+        if (size.n <= 0)
+        {
+          error("uwrite requires a positive size", call.loc);
+        }
+        else if (static_cast<unsigned int>(size.n) > src_arg.type.size)
+        {
+          error("uwrite size must not be larger than src data", call.loc);
+        }
+      }
+    }
+  }
   else {
     error("Unknown function: '" + call.func + "'", call.loc);
-    call.type = SizedType(Type::none, 0);
   }
 }
 
@@ -1935,8 +1962,11 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
     return false;
 
   auto &arg = *call.vargs->at(arg_num);
-  if (want_literal && (!arg.is_literal || arg.type.type != type))
+  if (want_literal)
   {
+    if (arg.is_literal && arg.type.type == type)
+      return true;
+
     ERR(call.func << "() expects a " << type
                   << " literal"
                      " ("
@@ -1944,13 +1974,20 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
         call.loc);
     return false;
   }
-  else if (is_final_pass() && arg.type.type != type) {
+
+  if (is_final_pass())
+  {
+    if (arg.type.type == type)
+      return true;
+
     ERR(call.func << "() only supports " << type << " arguments"
                   << " (" << arg.type.type << " provided)",
         call.loc);
     return false;
   }
-  return true;
+
+  // Undetermined on this pass
+  return false;
 }
 
 bool SemanticAnalyser::check_symbol(const Call &call, int arg_num __attribute__((unused)))

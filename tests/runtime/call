@@ -113,3 +113,9 @@ NAME uaddr
 RUN bpftrace -v -e 'uprobe:testprogs/uprobe_test:function1 { printf("0x%lx -- 0x%lx\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
 EXPECT 0x55555555 -- 0x33333333
 TIMEOUT 5
+
+NAME uwrite
+RUN bpftrace --unsafe -e 'uprobe:testprogs/uprobe_test:function1 { uwrite(arg0, 42, 4) } uretprobe:testprogs/uprobe_test:function1 { printf("%d\n", retval) }' -c ./testprogs/uprobe_test
+EXPECT 42
+TIMEOUT 5
+

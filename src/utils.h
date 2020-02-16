@@ -97,6 +97,7 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
   "signal",
   "override",
+  "uwrite",
 };
 
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);

@@ -84,6 +84,25 @@ static bool detect_override_return(void)
       "test_override_return", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
 }
 
+static bool detect_write_user(void)
+{
+  struct bpf_insn insns[] = {
+    // probe_write_user requires src to be on the stack, store something there
+    BPF_ST_MEM(4, BPF_REG_10, -4, 0xcc),
+
+    BPF_LD_IMM64(BPF_REG_1, 0),
+    BPF_MOV64_REG(BPF_REG_2, BPF_REG_10),
+    BPF_ALU64_IMM(BPF_ADD, BPF_REG_2, -4),
+    BPF_LD_IMM64(BPF_REG_3, 4),
+    BPF_RAW_INSN(
+        BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_probe_write_user),
+    BPF_EXIT_INSN(),
+  };
+
+  return try_load(
+      "test_write_user", BPF_PROG_TYPE_KPROBE, insns, sizeof(insns));
+}
+
 static int detect_instruction_limit(void)
 {
   struct bpf_insn insns[] = {
@@ -143,6 +162,7 @@ BPFfeature::BPFfeature(void)
   has_signal_ = detect_signal();
   has_get_current_cgroup_id_ = detect_get_current_cgroup_id();
   has_override_return_ = detect_override_return();
+  has_write_user_ = detect_write_user();
   insns_limit_ = detect_instruction_limit();
 }
 
@@ -156,6 +176,7 @@ std::string BPFfeature::report(void)
       << "  send_signal: " << to_str(has_helper_send_signal()) << std::endl
       << "  override_return: " << to_str(has_helper_override_return())
       << std::endl
+      << "  write_user: " << to_str(has_helper_write_user()) << std::endl
       << std::endl
       << "Kernel features" << std::endl
       << "  Instruction limit: "

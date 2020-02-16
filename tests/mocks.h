@@ -59,7 +59,7 @@ public:
   MockBPFfeature(bool has_features = true)
   {
     has_loop_ = has_signal_ = has_get_current_cgroup_id_ =
-        has_override_return_ = has_features;
+        has_override_return_ = has_write_user_ = has_features;
   };
 };
 

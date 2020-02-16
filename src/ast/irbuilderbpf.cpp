@@ -696,5 +696,20 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
   CreateCall(override_func, { ctx, rc }, "override");
 }
 
+void IRBuilderBPF::CreateWriteUser(Value *dst, Value *src, Value *size)
+{
+  // int bpf_probe_write_user(void *dst, const void *src, u32 len)
+  // Return: 0 on success, or a negative error in case of failure.
+  FunctionType *write_user_func_type = FunctionType::get(
+      getInt64Ty(), { getInt8PtrTy(), getInt8PtrTy(), getInt32Ty() }, false);
+  PointerType *write_user_func_ptr_type = PointerType::get(write_user_func_type,
+                                                           0);
+  Constant *write_user_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_probe_write_user),
+      write_user_func_ptr_type);
+  CreateCall(write_user_func, { dst, src, size }, "uwrite");
+}
+
 } // namespace ast
 } // namespace bpftrace

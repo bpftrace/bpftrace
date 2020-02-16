@@ -24,6 +24,10 @@ public:
   {
     return has_override_return_;
   };
+  bool has_helper_write_user(void)
+  {
+    return has_write_user_;
+  };
   bool instruction_limit(void)
   {
     return insns_limit_;
@@ -38,6 +42,7 @@ protected:
   bool has_signal_;
   bool has_get_current_cgroup_id_;
   bool has_override_return_;
+  bool has_write_user_;
 };
 
 } // namespace bpftrace

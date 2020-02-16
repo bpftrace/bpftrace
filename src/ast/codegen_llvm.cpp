@@ -559,7 +559,6 @@ void CodegenLLVM::visit(Call &call)
     //     char[16] inet6;
     //   }
     // }
-    //}
     std::vector<llvm::Type *> elements = {
       b_.getInt64Ty(), // printf ID
       ArrayType::get(b_.getInt8Ty(), 16)
@@ -811,6 +810,28 @@ void CodegenLLVM::visit(Call &call)
     arg.accept(*this);
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.is_signed);
     b_.CreateOverrideReturn(ctx_, expr_);
+  }
+  else if (call.func == "uwrite")
+  {
+    auto &dst_arg = *call.vargs->at(0);
+    auto &src_arg = *call.vargs->at(1);
+    auto &size_arg = *call.vargs->at(2);
+
+    dst_arg.accept(*this);
+    Value *dst_ptr = expr_;
+
+    src_arg.accept(*this);
+    Value *src_val = expr_;
+
+    size_arg.accept(*this);
+    Value *size = expr_;
+
+    // src has to be put onto the BPF stack
+    AllocaInst *src_ptr = b_.CreateAllocaBPF(src_arg.type, "uwrite_src");
+    b_.CreateStore(src_val, src_ptr);
+
+    b_.CreateWriteUser(dst_ptr, src_ptr, size);
+    expr_ = nullptr;
   }
   else
   {
