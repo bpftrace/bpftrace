@@ -312,14 +312,14 @@ void SemanticAnalyser::visit(Call &call)
   }
 
   if (call.func == "hist") {
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
     call.type = SizedType(Type::hist, 8);
   }
   else if (call.func == "lhist") {
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     if (check_nargs(call, 4)) {
       check_arg(call, Type::integer, 0, false);
       check_arg(call, Type::integer, 1, true);
@@ -374,14 +374,14 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::lhist, 8);
   }
   else if (call.func == "count") {
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     check_nargs(call, 0);
 
     call.type = SizedType(Type::count, 8);
   }
   else if (call.func == "sum") {
     bool sign = false;
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       sign = call.vargs->at(0)->type.is_signed;
     }
@@ -389,7 +389,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "min") {
     bool sign = false;
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       sign = call.vargs->at(0)->type.is_signed;
     }
@@ -397,24 +397,24 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "max") {
     bool sign = false;
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       sign = call.vargs->at(0)->type.is_signed;
     }
     call.type = SizedType(Type::max, 8, sign);
   }
   else if (call.func == "avg") {
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     check_nargs(call, 1);
     call.type = SizedType(Type::avg, 8, true);
   }
   else if (call.func == "stats") {
-    if (!check_assignment(call, true, false, false)) return;
+    check_assignment(call, true, false, false);
     check_nargs(call, 1);
     call.type = SizedType(Type::stats, 8, true);
   }
   else if (call.func == "delete") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -483,7 +483,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type.is_internal = true;
   }
   else if (call.func == "join") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     check_varargs(call, 1, 2);
     check_arg(call, Type::integer, 0);
     call.type = SizedType(Type::none, 0);
@@ -600,7 +600,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::integer, 8);
   }
   else if (call.func == "printf" || call.func == "system" || call.func == "cat") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 7)) {
       check_arg(call, Type::string, 0, true);
       if (is_final_pass()) {
@@ -644,7 +644,7 @@ void SemanticAnalyser::visit(Call &call)
     check_nargs(call, 0);
   }
   else if (call.func == "print") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 3)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -667,7 +667,7 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "clear") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -684,7 +684,7 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "zero") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
       if (!arg.is_map)
@@ -701,7 +701,7 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "time") {
-    if (!check_assignment(call, false, false, false)) return;
+    check_assignment(call, false, false, false);
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
         if (call.vargs && call.vargs->size() > 0) {
@@ -730,9 +730,7 @@ void SemanticAnalyser::visit(Call &call)
             call.loc);
     }
 
-    if (!check_assignment(call, false, false, false)) {
-      return;
-    }
+    check_assignment(call, false, false, false);
 
     if (!check_varargs(call, 1, 1)) {
       return;
