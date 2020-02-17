@@ -34,6 +34,14 @@ namespace bpftrace {
     return *(map_##var##_).get();                                              \
   }
 
+#define EMIT_PROG_TEST(var, progtype)                                          \
+  bool BPFfeature::has_prog_##var(void)                                        \
+  {                                                                            \
+    if (!prog_##var##_)                                                        \
+      prog_##var##_ = std::make_unique<bool>(detect_prog_type((progtype)));    \
+    return *(prog_##var##_).get();                                             \
+  }
+
 static bool try_load(const char* name,
                      bpf_prog_type prog_type,
                      struct bpf_insn* insns,
@@ -90,6 +98,12 @@ static bool detect_helper(enum libbpf::bpf_func_id func_id,
 
   return (strstr(logbuf, "invalid func ") == nullptr) &&
          (strstr(logbuf, "unknown func ") == nullptr);
+}
+
+static bool detect_prog_type(enum bpf_prog_type prog_type)
+{
+  struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
+  return try_load(prog_type, insns, ARRAY_SIZE(insns));
 }
 
 static bool detect_map(enum bpf_map_type map_type)
@@ -149,6 +163,9 @@ EMIT_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
 EMIT_MAP_TEST(percpu_hash, BPF_MAP_TYPE_ARRAY);
 EMIT_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
 EMIT_MAP_TEST(perf_event_array, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+EMIT_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
+EMIT_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
+EMIT_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
 
 int BPFfeature::instruction_limit(void)
 {
@@ -215,6 +232,12 @@ std::string BPFfeature::report(void)
       << "  percpu array: " << to_str(has_map_percpu_array()) << std::endl
       << "  stack_trace: " << to_str(has_map_stack_trace()) << std::endl
       << "  perf_event_array: " << to_str(has_map_perf_event_array())
+      << std::endl
+      << std::endl
+      << "Probe types" << std::endl
+      << "  kprobe: " << to_str(has_prog_kprobe()) << std::endl
+      << "  tracepoint: " << to_str(has_prog_tracepoint()) << std::endl
+      << "  perf_event: " << to_str(has_prog_perf_event()) << std::endl
       << std::endl
       << std::endl;
 
