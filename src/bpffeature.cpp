@@ -212,34 +212,32 @@ int BPFfeature::instruction_limit(void)
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
-  auto to_str = [](bool f) -> std::string { return f ? "yes" : "no"; };
+  auto to_str = [](bool f) -> std::string { return f ? "yes\n" : "no\n"; };
+
   buf << "Kernel helpers" << std::endl
       << "  get_current_cgroup_id: "
-      << to_str(has_helper_get_current_cgroup_id()) << std::endl
-      << "  send_signal: " << to_str(has_helper_send_signal()) << std::endl
+      << to_str(has_helper_get_current_cgroup_id())
+      << "  send_signal: " << to_str(has_helper_send_signal())
       << "  override_return: " << to_str(has_helper_override_return())
-      << std::endl
-      << std::endl
-      << "Kernel features" << std::endl
-      << "  Instruction limit: " << std::to_string(instruction_limit())
-      << std::endl
-      << "  Loop support: " << to_str(has_loop()) << std::endl
-      << std::endl
-      << "Map types" << std::endl
-      << "  hash: " << to_str(has_map_hash()) << std::endl
-      << "  percpu hash: " << to_str(has_map_percpu_hash()) << std::endl
-      << "  array: " << to_str(has_map_array()) << std::endl
-      << "  percpu array: " << to_str(has_map_percpu_array()) << std::endl
-      << "  stack_trace: " << to_str(has_map_stack_trace()) << std::endl
-      << "  perf_event_array: " << to_str(has_map_perf_event_array())
-      << std::endl
-      << std::endl
-      << "Probe types" << std::endl
-      << "  kprobe: " << to_str(has_prog_kprobe()) << std::endl
-      << "  tracepoint: " << to_str(has_prog_tracepoint()) << std::endl
-      << "  perf_event: " << to_str(has_prog_perf_event()) << std::endl
-      << std::endl
       << std::endl;
+
+  buf << "Kernel features" << std::endl
+      << "  Instruction limit: " << instruction_limit() << std::endl
+      << "  Loop support: " << to_str(has_loop()) << std::endl;
+
+  buf << "Map types" << std::endl
+      << "  hash: " << to_str(has_map_hash())
+      << "  percpu hash: " << to_str(has_map_percpu_hash())
+      << "  array: " << to_str(has_map_array())
+      << "  percpu array: " << to_str(has_map_percpu_array())
+      << "  stack_trace: " << to_str(has_map_stack_trace())
+      << "  perf_event_array: " << to_str(has_map_perf_event_array())
+      << std::endl;
+
+  buf << "Probe types" << std::endl
+      << "  kprobe: " << to_str(has_prog_kprobe())
+      << "  tracepoint: " << to_str(has_prog_tracepoint())
+      << "  perf_event: " << to_str(has_prog_perf_event()) << std::endl;
 
   return buf.str();
 }
