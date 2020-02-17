@@ -24,6 +24,10 @@ public:
   bool has_map_stack_trace();
   bool has_map_perf_event_array();
 
+  bool has_prog_kprobe();
+  bool has_prog_tracepoint();
+  bool has_prog_perf_event();
+
   std::string report(void);
 
 protected:
@@ -37,6 +41,11 @@ protected:
   std::unique_ptr<bool> map_percpu_array_;
   std::unique_ptr<bool> map_stack_trace_;
   std::unique_ptr<bool> map_perf_event_array_;
+
+  /* Prog type */
+  std::unique_ptr<bool> prog_kprobe_;
+  std::unique_ptr<bool> prog_tracepoint_;
+  std::unique_ptr<bool> prog_perf_event_;
 
   /* Helpers */
   std::unique_ptr<bool> has_send_signal_;
