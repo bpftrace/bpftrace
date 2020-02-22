@@ -626,19 +626,23 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "printf" || call.func == "system" || call.func == "cat") {
+  else if (call.func == "printf" || call.func == "system" || call.func == "cat")
+  {
     check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 7)) {
+    if (check_varargs(call, 1, 7))
+    {
       check_arg(call, Type::string, 0, true);
-      if (is_final_pass()) {
+      if (is_final_pass())
+      {
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
-        for (auto iter = call.vargs->begin()+1; iter != call.vargs->end(); iter++) {
+
+        for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
+             iter++)
+        {
           auto ty = (*iter)->type;
-          // Promote to 64-bit if it's not an array type
-          if (!ty.IsArray())
-            ty.size = 8;
+
           args.push_back(Field{
             .type =  ty,
             .offset = 0,
@@ -650,6 +654,7 @@ void SemanticAnalyser::visit(Call &call)
             },
           });
         }
+
         std::string msg = verify_format_string(fmt.str, args);
         if (msg != "")
         {
