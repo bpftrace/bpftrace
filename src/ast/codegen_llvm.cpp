@@ -1979,10 +1979,6 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
 std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out)
 {
-  createLog2Function();
-  createLinearFunction();
-  root_->accept(*this);
-
   LLVMInitializeBPFTargetInfo();
   LLVMInitializeBPFTarget();
   LLVMInitializeBPFTargetMC();
@@ -2000,6 +1996,11 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   auto RM = Reloc::Model();
   TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
   module_->setDataLayout(targetMachine->createDataLayout());
+  layout_ = DataLayout(module_.get());
+
+  createLog2Function();
+  createLinearFunction();
+  root_->accept(*this);
 
   legacy::PassManager PM;
   PassManagerBuilder PMB;

@@ -8,6 +8,11 @@ RUN bpftrace -v -e 'i:ms:1 { printf("value: %d100\n", 100); exit();}'
 EXPECT value: 100
 TIMEOUT 5
 
+NAME printf_argument_alignment
+RUN bpftrace -v -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo->a, $foo->b, $foo2->a, $foo2->b) }' -c ./testprogs/uprobe_test
+EXPECT 123 hello 456 world
+TIMEOUT 5
+
 NAME time
 RUN bpftrace -v -e 'i:ms:1 { time("%H:%M:%S\n"); exit();}'
 EXPECT [0-9]*:[0-9]*:[0-9]*
