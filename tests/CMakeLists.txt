@@ -2,21 +2,18 @@ add_compile_options("-Wno-undef")
 add_compile_options("-Wno-switch-default")
 add_compile_options("-Wno-switch-enum")
 
-# Combine all codegen tests into a single compilation unit to improve build
-# performance. https://github.com/iovisor/bpftrace/issues/229
-function(generate_codegen_includes output)
-  file(GLOB tests codegen/*.cpp)
-  file(WRITE ${output} "")
-  foreach(test ${tests})
-    file(APPEND ${output} "#include \"${test}\"\n")
-  endforeach()
-endfunction()
-
 if(HAVE_BFD_DISASM)
   set(BFD_DISASM_SRC ${CMAKE_SOURCE_DIR}/src/bfd-disasm.cpp)
 endif()
 
-generate_codegen_includes(${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
+# Regenerate codegen_includes.cpp whenever anything in the tests/codegen
+# directory changes
+add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
+  COMMAND
+    ${CMAKE_COMMAND}
+    -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/tests/codegen"
+    -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
+  DEPENDS codegen/*)
 
 add_executable(bpftrace_test
   ast.cpp
