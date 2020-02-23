@@ -983,11 +983,14 @@ void CodegenLLVM::visit(Unop &unop)
   SizedType &type = unop.expr->type;
   if (type.type == Type::integer)
   {
-    switch (unop.op) {
-      case bpftrace::Parser::token::LNOT: {
-	  Value* zero_value = Constant::getNullValue(expr_->getType());
-	  expr_ = b_.CreateICmpEQ(expr_, zero_value);
-      } break;
+    switch (unop.op)
+    {
+      case bpftrace::Parser::token::LNOT:
+      {
+        Value *zero_value = Constant::getNullValue(expr_->getType());
+        expr_ = b_.CreateICmpEQ(expr_, zero_value);
+        break;
+      }
       case bpftrace::Parser::token::BNOT: expr_ = b_.CreateNot(expr_); break;
       case bpftrace::Parser::token::MINUS: expr_ = b_.CreateNeg(expr_); break;
       case bpftrace::Parser::token::INCREMENT:
