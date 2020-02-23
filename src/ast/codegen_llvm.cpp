@@ -654,8 +654,7 @@ void CodegenLLVM::visit(Call &call)
      * The asyncaction_id informs user-space that this is not a printf(), but is a
      * special asynchronous action. The ID maps to exit().
      */
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t));
-    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
+    AllocaInst *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t));
     b_.CreateLifetimeEnd(perfdata);
