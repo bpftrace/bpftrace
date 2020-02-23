@@ -181,13 +181,13 @@ void CodegenLLVM::visit(Builtin &builtin)
       offset = arch::arg_offset(arg_num);
     }
 
+    Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
     // LLVM optimization is possible to transform `(uint64*)ctx` into
     // `(uint8*)ctx`, but sometimes this causes invalid context access.
     // Mark every context acess to supporess any LLVM optimization.
-    expr_ = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
-        builtin.ident);
+    expr_ = b_.CreateLoad(b_.getInt64Ty(),
+                          b_.CreateGEP(ctx, b_.getInt64(offset)),
+                          builtin.ident);
     // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
     // so call setVolatile() manually
     dyn_cast<LoadInst>(expr_)->setVolatile(true);

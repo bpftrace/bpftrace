@@ -31,11 +31,12 @@ lookup_merge:                                     ; preds = %entry, %lookup_succ
   %3 = bitcast i64* %"@_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   %4 = getelementptr i8, i8* %0, i64 80
-  %retval = load volatile i64, i8* %4, align 8
+  %5 = bitcast i8* %4 to i64*
+  %retval = load volatile i64, i64* %5, align 8
   %sext = shl i64 %retval, 32
-  %5 = ashr exact i64 %sext, 32
-  %6 = add i64 %5, %lookup_elem_val.0
-  store i64 %6, i64* %"@_val", align 8
+  %6 = ashr exact i64 %sext, 32
+  %7 = add i64 %6, %lookup_elem_val.0
+  store i64 %7, i64* %"@_val", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* nonnull %"@_key", i64* nonnull %"@_val", i64 0)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
