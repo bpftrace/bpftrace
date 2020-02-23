@@ -545,11 +545,19 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "usym")
   {
     // store uint64_t[2] with: [0]: (uint64_t)addr, [1]: (uint64_t)pid
-    AllocaInst *buf = b_.CreateAllocaBPF(call.type, "usym");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), call.type.size, 1);
+    std::vector<llvm::Type *> elements = {
+      b_.getInt64Ty(), // addr
+      b_.getInt64Ty(), // pid
+    };
+    StructType *usym_t = b_.GetStructType("usym_t", elements, false);
+    AllocaInst *buf = b_.CreateAllocaBPF(usym_t, "usym");
+
     Value *pid = b_.CreateLShr(b_.CreateGetPidTgid(), 32);
-    Value *addr_offset = b_.CreateGEP(buf, b_.getInt64(0));
-    Value *pid_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
+
+    // The extra 0 here ensures the type of addr_offset will be int64
+    Value *addr_offset = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) });
+    Value *pid_offset = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
+
     call.vargs->front()->accept(*this);
     b_.CreateStore(expr_, addr_offset);
     b_.CreateStore(pid, pid_offset);
