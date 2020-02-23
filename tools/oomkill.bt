@@ -29,7 +29,7 @@ BEGIN
 
 kprobe:oom_kill_process
 {
-	$oc = (struct oom_control *)arg1;
+	$oc = (struct oom_control *)arg0;
 	time("%H:%M:%S ");
 	printf("Triggered by PID %d (\"%s\"), ", pid, comm);
 	printf("OOM kill of PID %d (\"%s\"), %d pages, loadavg: ",
