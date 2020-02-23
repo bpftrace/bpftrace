@@ -650,18 +650,21 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stac
 
 void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
 {
+  assert(buf->getType()->getElementType()->isArrayTy() &&
+         buf->getType()->getElementType()->getArrayNumElements() >= size &&
+         buf->getType()->getElementType()->getArrayElementType() ==
+             getInt8Ty());
+
   // int bpf_get_current_comm(char *buf, int size_of_buf)
   // Return: 0 on success or negative error
   FunctionType *getcomm_func_type = FunctionType::get(
-      getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty()},
-      false);
+      getInt64Ty(), { buf->getType(), getInt64Ty() }, false);
   PointerType *getcomm_func_ptr_type = PointerType::get(getcomm_func_type, 0);
   Constant *getcomm_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_get_current_comm),
       getcomm_func_ptr_type);
-  CreateCall(getcomm_func, {buf, getInt64(size)}, "get_comm");
+  CreateCall(getcomm_func, { buf, getInt64(size) }, "get_comm");
 }
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)

@@ -21,7 +21,7 @@ entry:
   %2 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %2, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
+  %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* nonnull %comm, i64 16)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %1, i8* nonnull align 1 %2, i64 16, i1 false)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
