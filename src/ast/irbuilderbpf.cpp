@@ -15,6 +15,20 @@ namespace libbpf {
 namespace bpftrace {
 namespace ast {
 
+StructType *IRBuilderBPF::GetStructType(
+    std::string name,
+    const std::vector<llvm::Type *> &elements,
+    bool packed)
+{
+  auto search = structs_.find(name);
+  if (search != structs_.end())
+    return search->second;
+
+  StructType *s = StructType::create(elements, name, packed);
+  structs_.insert({ name, s });
+  return s;
+}
+
 IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
                            Module &module,
                            BPFtrace &bpftrace)
