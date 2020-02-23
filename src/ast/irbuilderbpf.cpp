@@ -664,22 +664,24 @@ void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 {
+  assert(ctx && ctx->getType() == getInt8PtrTy());
+  assert(data && data->getType()->isPointerTy());
+
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
 
   Value *flags_val = CreateGetCpuId();
   Value *size_val = getInt64(size);
 
-  // int bpf_perf_event_output(ctx, map, flags, data, size)
-  FunctionType *perfoutput_func_type = FunctionType::get(
-      getInt64Ty(),
-      {
-        getInt8PtrTy(),
-        getInt64Ty(),
-        getInt64Ty(),
-        cast<PointerType>(data->getType()),
-        getInt64Ty()
-      },
-      false);
+  // int bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,
+  //                           u64 flags, void *data, u64 size)
+  FunctionType *perfoutput_func_type = FunctionType::get(getInt64Ty(),
+                                                         { getInt8PtrTy(),
+                                                           getInt64Ty(),
+                                                           getInt64Ty(),
+                                                           data->getType(),
+                                                           getInt64Ty() },
+                                                         false);
+
   PointerType *perfoutput_func_ptr_type = PointerType::get(perfoutput_func_type, 0);
   Constant *perfoutput_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
