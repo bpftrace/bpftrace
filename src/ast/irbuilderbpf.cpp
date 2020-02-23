@@ -624,26 +624,28 @@ CallInst *IRBuilderBPF::CreateGetRandom()
 
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx, bool ustack, StackType stack_type)
 {
+  assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(bpftrace_.stackid_maps_.count(stack_type) == 1);
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.stackid_maps_[stack_type]->mapfd_);
+
+  Value *mapfd = CreateBpfPseudoCall(
+      bpftrace_.stackid_maps_[stack_type]->mapfd_);
+  assert(mapfd->getType()->isIntegerTy());
 
   int flags = 0;
   if (ustack)
     flags |= (1<<8);
   Value *flags_val = getInt64(flags);
 
-  // int bpf_get_stackid(ctx, map, flags)
+  // int bpf_get_stackid(struct pt_regs *ctx, struct bpf_map *map, u64 flags)
   // Return: >= 0 stackid on success or negative error
   FunctionType *getstackid_func_type = FunctionType::get(
-      getInt64Ty(),
-      {getInt8PtrTy(), getInt8PtrTy(), getInt64Ty()},
-      false);
+      getInt64Ty(), { getInt8PtrTy(), getInt64Ty(), getInt64Ty() }, false);
   PointerType *getstackid_func_ptr_type = PointerType::get(getstackid_func_type, 0);
   Constant *getstackid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_get_stackid),
       getstackid_func_ptr_type);
-  return CreateCall(getstackid_func, {ctx, map_ptr, flags_val}, "get_stackid");
+  return CreateCall(getstackid_func, { ctx, mapfd, flags_val }, "get_stackid");
 }
 
 void IRBuilderBPF::CreateGetCurrentComm(AllocaInst *buf, size_t size)
