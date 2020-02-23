@@ -77,6 +77,7 @@ public:
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *sig);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
+  StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
 
 private:
   Module &module_;
@@ -84,6 +85,8 @@ private:
 
   Value      *CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin);
   CallInst   *createMapLookup(int mapfd, AllocaInst *key);
+
+  std::map<std::string, StructType *> structs_;
   // clang-format on
 };
 
