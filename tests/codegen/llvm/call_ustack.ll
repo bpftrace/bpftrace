@@ -16,7 +16,7 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 4)
-  %get_stackid = tail call i64 inttoptr (i64 27 to i64 (i8*, i8*, i64)*)(i8* %0, i64 %pseudo, i64 256)
+  %get_stackid = tail call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo, i64 256)
   %get_pid_tgid = tail call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = shl i64 %get_pid_tgid, 32
   %2 = or i64 %1, %get_stackid
@@ -31,7 +31,7 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
-  %get_stackid3 = call i64 inttoptr (i64 27 to i64 (i8*, i8*, i64)*)(i8* %0, i64 %pseudo2, i64 256)
+  %get_stackid3 = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo2, i64 256)
   %get_pid_tgid4 = call i64 inttoptr (i64 14 to i64 ()*)()
   %5 = shl i64 %get_pid_tgid4, 32
   %6 = or i64 %5, %get_stackid3
