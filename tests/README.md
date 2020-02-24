@@ -46,6 +46,19 @@ Runtime tests will call the bpftrace executable.
 * Run: `sudo make runtime-tests` inside your build folder
 * By default, runtime-tests will look for the executable in the build folder. You can set a value to the environment variable `BPFTRACE_RUNTIME_TEST_EXECUTABLE` to customize it
 
+If you need to run a test program to probe (eg, uprobe/USDT), you can use the
+`BEFORE` clause. The test scripts will wait for the test program to have a pid.
+
+The BEFORE clause will block up to the TIMEOUT waiting for a PID matching the
+basename of the last space-separated token. For instance, if the BEFORE clause
+is `./testprogs/usdt_test`, it will wait for a processed called `usdt_test`.
+If it is `./testprogs/mountns_wrapper usdt_test` it will also wait for a
+process called `usdt_test`. This approach is invalidated if a test program
+requires arguments in the future, but so far test programs are simple and
+separate minimal programs to test tracing functionality, and argument passing
+hasn't been required. If test programs need arguments, a more sophisticated
+approach will be necessary.
+
 ### Test programs
 
 You can add test programs for your runtime tests by placing a `.c` file corresponding to your test program in `tests/testprogs`.

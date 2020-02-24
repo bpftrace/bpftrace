@@ -3,6 +3,7 @@
 import subprocess
 import signal
 import os
+import time
 from os import environ, uname, devnull
 from distutils.version import LooseVersion
 import re
@@ -99,6 +100,17 @@ class Utils(object):
 
             if test.before:
                 before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)
+                waited=0
+                with open(devnull, 'w') as dn:
+                    # This might not work for complicated cases, such as if
+                    # a test program needs to accept arguments. It covers the
+                    # current simple calls with no arguments
+                    child_name = os.path.basename(test.before.split()[-1])
+                    while subprocess.call(["pidof", child_name], stdout=dn, stderr=dn) != 0:
+                        time.sleep(0.1)
+                        waited+=0.1
+                        if waited > test.timeout:
+                            raise TimeoutError('Timed out waiting for BEFORE %s ', test.before)
 
             bpf_call = Utils.prepare_bpf_call(test)
             env = {'test': test.name}
