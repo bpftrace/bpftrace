@@ -18,6 +18,7 @@
   - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
   - [Generic build](#generic-build-process)
+- [Disable Lockdown](#disable-lockdown)
 
 # Linux Kernel Requirements
 
@@ -363,3 +364,41 @@ To test that the build works, you can try running the test suite, and a one-line
 ./tests/bpftrace_test
 ./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
 ```
+
+# Disable Lockdown
+
+From the original patch set description:
+
+> This patchset introduces an optional kernel lockdown feature, intended
+> to strengthen the boundary between UID 0 and the kernel. When enabled,
+> various pieces of kernel functionality are restricted. Applications that
+> rely on low-level access to either hardware or the kernel may cease
+> working as a result - therefore this should not be enabled without
+> appropriate evaluation beforehand.
+>
+> The majority of mainstream distributions have been carrying variants of
+> this patchset for many years now, so there's value in providing a
+> doesn't meet every distribution requirement, but gets us much closer to
+> not requiring external patches.
+>
+>   - https://patchwork.kernel.org/patch/11140085/
+
+When lockdown is enabled and set to 'confidentiality' all methods that can
+extract confidential data from the kernel are blocked. This means that:
+
+- kprobes are blocked
+- tracefs access is blocked
+- probe_read and probe_read_str are blocked
+
+which makes it impossible for bpftrace to function.
+
+There are a few ways to disable lockdown.
+
+1. Disable secure boot in UEFI.
+2. Disable validation using mokutil, run the following command, reboot and
+   follow the prompt.
+```
+$ sudo mokutil --disable-validation
+```
+3. Use the `SysRQ+x` key combination to temporarily lift lockdown (until next
+   boot)

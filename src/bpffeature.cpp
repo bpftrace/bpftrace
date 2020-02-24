@@ -12,7 +12,6 @@ namespace libbpf {
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
-
 namespace bpftrace {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -157,6 +156,8 @@ bool BPFfeature::has_loop(void)
 EMIT_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
 EMIT_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
 EMIT_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
+EMIT_HELPER_TEST(probe_read, BPF_PROG_TYPE_KPROBE);
+EMIT_HELPER_TEST(probe_read_str, BPF_PROG_TYPE_KPROBE);
 EMIT_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
 EMIT_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
 EMIT_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
@@ -215,6 +216,7 @@ std::string BPFfeature::report(void)
   auto to_str = [](bool f) -> std::string { return f ? "yes\n" : "no\n"; };
 
   buf << "Kernel helpers" << std::endl
+      << "  probe_read: " << to_str(has_helper_probe_read())
       << "  get_current_cgroup_id: "
       << to_str(has_helper_get_current_cgroup_id())
       << "  send_signal: " << to_str(has_helper_send_signal())
