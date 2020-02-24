@@ -16,6 +16,7 @@
 #include "driver.h"
 #include "field_analyser.h"
 #include "list.h"
+#include "lockdown.h"
 #include "output.h"
 #include "printer.h"
 #include "semantic_analyser.h"
@@ -182,6 +183,7 @@ int main(int argc, char *argv[])
   std::string script, search, file_name, output_file, output_format;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
+  BPFfeature features;
 
   const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:";
   option long_options[] = {
@@ -403,6 +405,13 @@ int main(int argc, char *argv[])
   if (!is_root())
     return 1;
 
+  auto lockdown_state = lockdown::detect(features);
+  if (lockdown_state == lockdown::LockdownState::Confidentiality)
+  {
+    lockdown::emit_warning(std::cerr);
+    return 1;
+  }
+
   ast::FieldAnalyser fields(driver.root_, bpftrace);
   err = fields.analyse();
   if (err)
@@ -563,7 +572,6 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  BPFfeature features;
 
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, features);
   err = semantics.analyse();

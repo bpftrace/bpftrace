@@ -12,6 +12,7 @@ add_executable(bpftrace
   driver.cpp
   fake_map.cpp
   list.cpp
+  lockdown.cpp
   main.cpp
   map.cpp
   mapkey.cpp

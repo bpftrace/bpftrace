@@ -16,6 +16,8 @@ public:
   bool has_helper_override_return();
   bool has_helper_get_current_cgroup_id();
   bool has_helper_send_signal();
+  bool has_helper_probe_read();
+  bool has_helper_probe_read_str();
 
   bool has_map_array();
   bool has_map_hash();
@@ -48,6 +50,8 @@ protected:
   std::unique_ptr<bool> prog_perf_event_;
 
   /* Helpers */
+  std::unique_ptr<bool> has_probe_read_;
+  std::unique_ptr<bool> has_probe_read_str_;
   std::unique_ptr<bool> has_send_signal_;
   std::unique_ptr<bool> has_get_current_cgroup_id_;
   std::unique_ptr<bool> has_override_return_;
