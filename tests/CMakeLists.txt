@@ -13,7 +13,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
     ${CMAKE_COMMAND}
     -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/tests/codegen"
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
-  DEPENDS codegen/*)
+  DEPENDS codegen/*.cpp codegen/*.h)
 
 add_executable(bpftrace_test
   ast.cpp
