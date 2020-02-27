@@ -76,7 +76,7 @@ void test(BPFtrace &bpftrace,
     bool safe_mode = true)
 {
   Driver driver(bpftrace);
-  MockBPFfeature feature = MockBPFfeature();
+  MockBPFfeature feature;
   test(bpftrace, feature, driver, input, expected_result, safe_mode);
 }
 
@@ -86,7 +86,7 @@ void test(Driver &driver,
     bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  MockBPFfeature feature = MockBPFfeature();
+  MockBPFfeature feature;
   test(*bpftrace, feature, driver, input, expected_result, safe_mode);
 }
 
@@ -104,7 +104,7 @@ void test(const std::string &input,
     int expected_result=0,
     bool safe_mode = true)
 {
-  MockBPFfeature feature = MockBPFfeature();
+  MockBPFfeature feature;
   test(feature, input, expected_result, safe_mode);
 }
 

@@ -8,7 +8,18 @@ namespace bpftrace {
 class BPFfeature
 {
 public:
-  BPFfeature(){};
+  BPFfeature() = default;
+  virtual ~BPFfeature() = default;
+
+  // Due to the unique_ptr usage the generated copy constructor & assignment
+  // don't work. Move works but doesn't make sense as the `has_*` functions
+  // will just reassign the unique_ptr.
+  // A single bpffeature should be constructed in main() and passed around,
+  // making these as deleted to avoid accidentally copying/moving it.
+  BPFfeature(const BPFfeature&) = delete;
+  BPFfeature& operator=(const BPFfeature&) = delete;
+  BPFfeature(BPFfeature&&) = delete;
+  BPFfeature& operator=(BPFfeature&&) = delete;
 
   int instruction_limit();
   bool has_loop();
