@@ -50,6 +50,22 @@ jobs:
           RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
           DISTRO: bionic
         - TYPE: Release
+          NAME: vanilla_llvm+clang+glibc2.27_edge
+          EDGE: ON
+          BCC_REF: master
+          LLVM_VERSION: 9
+          STATIC_LINKING: ON
+          STATIC_LIBC: OFF
+          EMBED_LLVM: ON
+          EMBED_CLANG: ON
+          EMBED_LIBCLANG_ONLY: OFF
+          EMBED_BCC: OFF
+          EMBED_LIBELF: OFF
+          EMBED_BINUTILS: OFF
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          DISTRO: bionic
+        - TYPE: Release
           NAME: vanilla_llvm+clang+glibc2.23
           LLVM_VERSION: 8
           STATIC_LINKING: ON
@@ -100,4 +116,4 @@ jobs:
 
     - name: Package docker image and push to quay.io
       if: matrix.env['TYPE'] == 'Release'
-      run: ./docker/scripts/push.sh ${{ github.repository }} ${{ github.ref }} ${{ github.sha }} $(echo ${{ matrix.env['NAME'] }} | sed 's/+/_/g')
+      run: ./docker/scripts/push.sh ${{ github.repository }} ${{ github.ref }} ${{ github.sha }} ${{ matrix.env['NAME'] }} ${{ matrix.env['EDGE'] }}
