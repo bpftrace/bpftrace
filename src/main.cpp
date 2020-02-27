@@ -126,6 +126,51 @@ bool is_root()
     return true;
 }
 
+static int info()
+{
+  struct utsname utsname;
+  uname(&utsname);
+
+  std::cerr << "System" << std::endl
+            << "  OS: " << utsname.sysname << " " << utsname.release << " "
+            << utsname.version << std::endl
+            << "  Arch: " << utsname.machine << std::endl;
+
+  std::cerr << std::endl
+            << "Build" << std::endl
+            << "  version: " << BPFTRACE_VERSION << std::endl
+            << "  LLVM: " << LLVM_VERSION_MAJOR << std::endl
+            << "  foreach_sym: "
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+            << "yes" << std::endl
+#else
+            << "no" << std::endl
+#endif
+            << "  unsafe uprobe: "
+#ifdef HAVE_UNSAFE_UPROBE
+            << "yes" << std::endl
+#else
+            << "no" << std::endl
+#endif
+            << "  btf: "
+#ifdef HAVE_LIBBPF_BTF_DUMP
+            << "yes" << std::endl
+#else
+            << "no" << std::endl
+#endif
+            << "  bfd: "
+#ifdef HAVE_BFD_DISASM
+            << "yes" << std::endl
+#else
+            << "no" << std::endl
+#endif
+
+  std::cerr << std::endl;
+  std::cerr << BPFfeature().report();
+
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   int err;
@@ -155,13 +200,11 @@ int main(int argc, char *argv[])
   {
     switch (c)
     {
-      case 2000:
+      case 2000: // --info
         if (is_root())
-        {
-          std::cerr << BPFfeature().report();
-          return 0;
-        }
+          return info();
         return 1;
+        break;
       case 'o':
         output_file = optarg;
         break;
