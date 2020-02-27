@@ -28,7 +28,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ClangParser clang;
   clang.parse(driver.root_, *bpftrace);
 
-  MockBPFfeature feature = MockBPFfeature();
+  MockBPFfeature feature;
   ast::SemanticAnalyser semantics(driver.root_, *bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
