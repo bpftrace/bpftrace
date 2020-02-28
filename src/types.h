@@ -91,7 +91,9 @@ struct SizedType
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
+  bool is_kfarg = false;
   size_t pointee_size = 0;
+  int kfarg_idx = -1;
 
   bool IsArray() const;
   bool IsStack() const;
