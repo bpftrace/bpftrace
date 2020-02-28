@@ -6,6 +6,7 @@
 #  LIBBFD_LIBRARIES - Link these to use libbfd
 #  LIBBFD_DEFINITIONS - Compiler switches required for using libbfd
 #  LIBIBERTY_LIBRARIES - libiberty static library (for static compilation)
+#  LIBZ_LIBRARIES - libz static library (for static compilation)
 
 #if (LIBBFD_LIBRARIES AND LIBBFD_INCLUDE_DIRS)
 #  set (LibBpf_FIND_QUIETLY TRUE)
@@ -50,6 +51,22 @@ find_library (LIBIBERTY_LIBRARIES
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
+# libbfd.so is statically linked with libz.a but libbfd.a
+# is not. So if we do a static bpftrace build, we must link in
+# libz.a.
+find_library (LIBZ_LIBRARIES
+  NAMES
+    libz.a
+  PATHS
+    /lib
+    /usr/lib
+    /usr/local/lib
+    /opt/local/lib
+    /usr/lib/x86_64-linux-gnu/
+    /sw/lib
+    ENV LIBRARY_PATH
+    ENV LD_LIBRARY_PATH)
+
 include (FindPackageHandleStandardArgs)
 
 
@@ -61,7 +78,18 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBfd "Please install the libbfd development 
 mark_as_advanced(LIBBFD_INCLUDE_DIRS LIBBFD_LIBRARIES)
 
 if(${LIBBFD_FOUND})
-SET(CMAKE_REQUIRED_LIBRARIES bfd opcodes)
+find_package(LibOpcodes)
+SET(CMAKE_REQUIRED_LIBRARIES ${LIBBFD_LIBRARIES} ${LIBOPCODES_LIBRARIES})
+# libbfd.a is not statically linked with libiberty.a or libz.a so we must manually
+# do it. Furthermore, libbfd uses some libc symbols that we must manually
+# link against if we're not using static libc (which includes such symbols).
+if(STATIC_LINKING)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBIBERTY_LIBRARIES} ${LIBZ_LIBRARIES})
+  if(NOT STATIC_LIBC)
+    set(CMAKE_REQUIRED_FLAGS
+      "-Wl,--start-group -Wl,-Bdynamic -Wl,-Bdynamic -lpthread -Wl,-Bdynamic -ldl")
+  endif()
+endif()
 INCLUDE(CheckCXXSourceCompiles)
 CHECK_CXX_SOURCE_COMPILES("
 #include <string.h>
