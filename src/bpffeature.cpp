@@ -7,39 +7,9 @@
 
 #include "utils.h"
 
-namespace libbpf {
-#undef __BPF_FUNC_MAPPER
-#include "libbpf/bpf.h"
-} // namespace libbpf
-
 namespace bpftrace {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-
-#define EMIT_HELPER_TEST(name, progtype)                                       \
-  bool BPFfeature::has_helper_##name(void)                                     \
-  {                                                                            \
-    if (!has_##name##_)                                                        \
-      has_##name##_ = std::make_unique<bool>(                                  \
-          detect_helper(libbpf::BPF_FUNC_##name, (progtype)));                 \
-    return *(has_##name##_).get();                                             \
-  }
-
-#define EMIT_MAP_TEST(var, maptype)                                            \
-  bool BPFfeature::has_map_##var(void)                                         \
-  {                                                                            \
-    if (!map_##var##_)                                                         \
-      map_##var##_ = std::make_unique<bool>(detect_map((maptype)));            \
-    return *(map_##var##_).get();                                              \
-  }
-
-#define EMIT_PROG_TEST(var, progtype)                                          \
-  bool BPFfeature::has_prog_##var(void)                                        \
-  {                                                                            \
-    if (!prog_##var##_)                                                        \
-      prog_##var##_ = std::make_unique<bool>(detect_prog_type((progtype)));    \
-    return *(prog_##var##_).get();                                             \
-  }
 
 static bool try_load(const char* name,
                      bpf_prog_type prog_type,
@@ -81,8 +51,8 @@ static bool try_load(bpf_prog_type prog_type,
   return try_load(nullptr, prog_type, insns, len, 0, logbuf, log_size);
 }
 
-static bool detect_helper(enum libbpf::bpf_func_id func_id,
-                          enum bpf_prog_type prog_type)
+bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
+                               enum bpf_prog_type prog_type)
 {
   // Stolen from libbpf's  bpf_probe_helper
   char logbuf[4096] = {};
@@ -99,13 +69,13 @@ static bool detect_helper(enum libbpf::bpf_func_id func_id,
          (strstr(logbuf, "unknown func ") == nullptr);
 }
 
-static bool detect_prog_type(enum bpf_prog_type prog_type)
+bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type)
 {
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
   return try_load(prog_type, insns, ARRAY_SIZE(insns));
 }
 
-static bool detect_map(enum bpf_map_type map_type)
+bool BPFfeature::detect_map(enum bpf_map_type map_type)
 {
   int key_size = 4;
   int value_size = 4;
@@ -153,21 +123,6 @@ bool BPFfeature::has_loop(void)
   return has_loop();
 }
 
-EMIT_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
-EMIT_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
-EMIT_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
-EMIT_HELPER_TEST(probe_read, BPF_PROG_TYPE_KPROBE);
-EMIT_HELPER_TEST(probe_read_str, BPF_PROG_TYPE_KPROBE);
-EMIT_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
-EMIT_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
-EMIT_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
-EMIT_MAP_TEST(percpu_hash, BPF_MAP_TYPE_ARRAY);
-EMIT_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
-EMIT_MAP_TEST(perf_event_array, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-EMIT_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
-EMIT_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
-EMIT_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
-
 int BPFfeature::instruction_limit(void)
 {
   if (!insns_limit_)
@@ -213,7 +168,10 @@ int BPFfeature::instruction_limit(void)
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
-  auto to_str = [](bool f) -> std::string { return f ? "yes\n" : "no\n"; };
+  auto to_str = [](bool f) -> auto
+  {
+    return f ? "yes\n" : "no\n";
+  };
 
   buf << "Kernel helpers" << std::endl
       << "  probe_read: " << to_str(has_helper_probe_read())
