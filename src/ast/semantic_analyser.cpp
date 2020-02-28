@@ -637,12 +637,13 @@ void SemanticAnalyser::visit(Call &call)
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
-
         for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
              iter++)
         {
           auto ty = (*iter)->type;
-
+          // Promote to 64-bit if it's not an array type
+          if (!ty.IsArray())
+            ty.size = 8;
           args.push_back(Field{
             .type =  ty,
             .offset = 0,
@@ -654,7 +655,6 @@ void SemanticAnalyser::visit(Call &call)
             },
           });
         }
-
         std::string msg = verify_format_string(fmt.str, args);
         if (msg != "")
         {
