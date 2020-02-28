@@ -1,9 +1,52 @@
 #pragma once
 
+#include <bcc/libbpf.h>
 #include <memory>
 #include <string>
 
+namespace libbpf {
+#undef __BPF_FUNC_MAPPER
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
+
+#define DEFINE_MAP_TEST(var, maptype)                                          \
+protected:                                                                     \
+  std::unique_ptr<bool> map_##var##_;                                          \
+                                                                               \
+public:                                                                        \
+  bool has_map_##var(void)                                                     \
+  {                                                                            \
+    if (!map_##var##_)                                                         \
+      map_##var##_ = std::make_unique<bool>(detect_map((maptype)));            \
+    return *(map_##var##_).get();                                              \
+  }
+
+#define DEFINE_HELPER_TEST(name, progtype)                                     \
+protected:                                                                     \
+  std::unique_ptr<bool> has_##name##_;                                         \
+                                                                               \
+public:                                                                        \
+  bool has_helper_##name(void)                                                 \
+  {                                                                            \
+    if (!has_##name##_)                                                        \
+      has_##name##_ = std::make_unique<bool>(                                  \
+          detect_helper(libbpf::BPF_FUNC_##name, (progtype)));                 \
+    return *(has_##name##_).get();                                             \
+  }
+
+#define DEFINE_PROG_TEST(var, progtype)                                        \
+protected:                                                                     \
+  std::unique_ptr<bool> prog_##var##_;                                         \
+                                                                               \
+public:                                                                        \
+  bool has_prog_##var(void)                                                    \
+  {                                                                            \
+    if (!prog_##var##_)                                                        \
+      prog_##var##_ = std::make_unique<bool>(detect_prog_type((progtype)));    \
+    return *(prog_##var##_).get();                                             \
+  }
 
 class BPFfeature
 {
@@ -24,48 +67,35 @@ public:
   int instruction_limit();
   bool has_loop();
 
-  bool has_helper_override_return();
-  bool has_helper_get_current_cgroup_id();
-  bool has_helper_send_signal();
-  bool has_helper_probe_read();
-  bool has_helper_probe_read_str();
-
-  bool has_map_array();
-  bool has_map_hash();
-  bool has_map_percpu_array();
-  bool has_map_percpu_hash();
-  bool has_map_stack_trace();
-  bool has_map_perf_event_array();
-
-  bool has_prog_kprobe();
-  bool has_prog_tracepoint();
-  bool has_prog_perf_event();
-
   std::string report(void);
+
+  DEFINE_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
+  DEFINE_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
+  DEFINE_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
+  DEFINE_MAP_TEST(percpu_hash, BPF_MAP_TYPE_ARRAY);
+  DEFINE_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
+  DEFINE_MAP_TEST(perf_event_array, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  DEFINE_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read, BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_str, BPF_PROG_TYPE_KPROBE);
+  DEFINE_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
+  DEFINE_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
+  DEFINE_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
 
 protected:
   std::unique_ptr<bool> has_loop_;
   std::unique_ptr<int> insns_limit_;
 
-  /* Map types */
-  std::unique_ptr<bool> map_hash_;
-  std::unique_ptr<bool> map_percpu_hash_;
-  std::unique_ptr<bool> map_array_;
-  std::unique_ptr<bool> map_percpu_array_;
-  std::unique_ptr<bool> map_stack_trace_;
-  std::unique_ptr<bool> map_perf_event_array_;
-
-  /* Prog type */
-  std::unique_ptr<bool> prog_kprobe_;
-  std::unique_ptr<bool> prog_tracepoint_;
-  std::unique_ptr<bool> prog_perf_event_;
-
-  /* Helpers */
-  std::unique_ptr<bool> has_probe_read_;
-  std::unique_ptr<bool> has_probe_read_str_;
-  std::unique_ptr<bool> has_send_signal_;
-  std::unique_ptr<bool> has_get_current_cgroup_id_;
-  std::unique_ptr<bool> has_override_return_;
+private:
+  bool detect_map(enum bpf_map_type map_type);
+  bool detect_helper(enum libbpf::bpf_func_id func_id,
+                     enum bpf_prog_type prog_type);
+  bool detect_prog_type(enum bpf_prog_type prog_type);
 };
 
+#undef DEFINE_PROG_TEST
+#undef DEFINE_MAP_TEST
+#undef DEFINE_HELPER_TEST
 } // namespace bpftrace
