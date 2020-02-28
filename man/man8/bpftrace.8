@@ -8,7 +8,7 @@
 bpftrace [\fIOPTIONS\fR] \fIFILE\fR
 .
 .br
-bpftrace [\fIOPTIONS\fR] \-e \'program code\'
+bpftrace [\fIOPTIONS\fR] \-e 'program code'
 .
 .SH "DESCRIPTION"
 bpftrace is a high\-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4\.x)\.
@@ -55,7 +55,7 @@ See \fBPROBE TYPES\fR and \fBBUILTINS (variables/functions)\fR for the bpftrace 
 List probes.
 .
 .TP
-\fB\-e \'PROGRAM\'\fR
+\fB\-e 'PROGRAM'\fR
 Execute PROGRAM.
 .
 .TP
@@ -91,26 +91,26 @@ Verbose debug info on dry run.
 .SH "EXAMPLES"
 .
 .TP
-\fBbpftrace \-l \'*sleep*\'\fR
+\fBbpftrace \-l '*sleep*'\fR
 List probes containing "sleep".
 .
 .TP
-\fBbpftrace \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
+\fBbpftrace \-e 'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }'\fR
 Trace processes calling sleep.
 .
 .TP
-\fBbpftrace \-c \'sleep 5\' \-e \'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }\'\fR
+\fBbpftrace \-c 'sleep 5' \-e 'kprobe:do_nanosleep { printf("PID %d sleeping\en", pid); }'\fR
 run "sleep 5" in a new process and then trace processes calling sleep.
 .
 .TP
-\fBbpftrace \-e \'tracepoint:raw_syscalls:sys_enter { @[comm]=count(); }\'\fR
+\fBbpftrace \-e 'tracepoint:raw_syscalls:sys_enter { @[comm]=count(); }'\fR
 Count syscalls by process name.
 .
 .SH "ONELINERS"
 For brevity, just the the actual BPF code is shown below\.
 .
 .br
-Usage: \fBbpftrace \-e \'bpf\-code\'\fR
+Usage: \fBbpftrace \-e 'bpf\-code'\fR
 .
 .TP
 New processes with arguments:
