@@ -164,8 +164,8 @@ static int info()
 #else
             << "no" << std::endl
 #endif
+            << std::endl;
 
-  std::cerr << std::endl;
   std::cerr << BPFfeature().report();
 
   return 0;
