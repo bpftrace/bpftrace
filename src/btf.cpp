@@ -303,8 +303,138 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
   return std::string("");
 }
 
-} // namespace bpftrace
+static bool btf_type_is_modifier(const struct btf_type *t)
+{
+  // Some of them is not strictly a C modifier
+  // but they are grouped into the same bucket
+  // for BTF concern:
+  // A type (t) that refers to another
+  // type through t->type AND its size cannot
+  // be determined without following the t->type.
+  // ptr does not fall into this bucket
+  // because its size is always sizeof(void *).
 
+  switch (BTF_INFO_KIND(t->info))
+  {
+    case BTF_KIND_TYPEDEF:
+    case BTF_KIND_VOLATILE:
+    case BTF_KIND_CONST:
+    case BTF_KIND_RESTRICT:
+      return true;
+    default:
+      return false;
+  }
+}
+
+const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t)
+{
+  while (btf_type_is_modifier(t))
+  {
+    t = btf__type_by_id(btf, t->type);
+  }
+
+  return t;
+}
+
+SizedType BTF::get_stype(__u32 id)
+{
+  SizedType stype = SizedType(Type::none, 8);
+
+  const struct btf_type *t = btf__type_by_id(btf, id);
+
+  if (!t)
+    return stype;
+
+  t = btf_type_skip_modifiers(t);
+
+  stype.is_kfarg = true;
+
+  if (btf_is_int(t) || btf_is_enum(t))
+  {
+    stype.type = Type::integer;
+  }
+  else if (btf_is_ptr(t))
+  {
+    stype.is_pointer = true;
+
+    // get the pointer type..
+    t = btf__type_by_id(btf, t->type);
+    // .. and skip the trash.
+    t = btf_type_skip_modifiers(t);
+
+    if (btf_is_composite(t))
+    {
+      const char *cast = btf_str(btf, t->name_off);
+
+      if (cast)
+      {
+        std::string comp = btf_is_struct(t) ? "struct" : "union";
+
+        stype.type = Type::cast;
+        stype.cast_type = comp + " " + cast;
+      }
+    }
+    else
+    {
+      stype.type = Type::integer;
+    }
+  }
+
+  return stype;
+}
+
+int BTF::resolve_args(const std::string &func,
+                      std::map<std::string, SizedType> &args,
+                      bool ret)
+{
+  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  std::string name = func;
+
+  for (id = 1; id <= max; id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+
+    if (!btf_is_func(t))
+      continue;
+
+    const char *str = btf_str(btf, t->name_off);
+
+    if (name != str)
+      continue;
+
+    t = btf__type_by_id(btf, t->type);
+    if (!btf_is_func_proto(t))
+      return -1;
+
+    const struct btf_param *p = btf_params(t);
+    __u16 vlen = btf_vlen(t);
+    int j = 0;
+
+    for (; j < vlen; j++, p++)
+    {
+      str = btf_str(btf, p->name_off);
+      if (!str)
+        return -1;
+
+      SizedType stype = get_stype(p->type);
+      stype.kfarg_idx = j;
+      args.insert({ str, stype });
+    }
+
+    if (ret)
+    {
+      SizedType stype = get_stype(t->type);
+      stype.kfarg_idx = j;
+      args.insert({ "$retval", stype });
+    }
+
+    return 0;
+  }
+
+  return -1;
+}
+
+} // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
 namespace bpftrace {
@@ -318,6 +448,14 @@ std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unu
 std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
                          const std::string& field __attribute__((__unused__))) {
   return std::string("");
+}
+
+int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
+                      std::map<std::string, SizedType>& args
+                      __attribute__((__unused__)),
+                      bool ret __attribute__((__unused__)))
+{
+  return -1;
 }
 
 } // namespace bpftrace
