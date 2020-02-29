@@ -8,6 +8,9 @@
   - [Debian](#debian-package)
   - [openSUSE](#openSUSE-package)
   - [CentOS](#CentOS-package)
+- [Docker images](#docker-images)
+  - [Copying bpftrace binary docker](#copying-bpftrace-binary-from-docker)
+  - [Kernel headers install](#kernel-headers-install)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -88,6 +91,116 @@ Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
 
 A build maintained by @fbs can be found
 [here](https://github.com/fbs/el7-bpf-specs/blob/master/README.md#repository).
+
+# Docker images
+
+Each push to master will result in a docker image being built and pushed to
+the quay.io container hosting service. This publishes the docker embedded build
+linked to glibc, packaged in a minimal ubuntu container.
+
+This allows for such an invocation of bpftrace:
+
+```
+$ docker run -ti -v /usr/src/linux:/usr/src/linux:ro \
+       -v /lib/modules/:/lib/modules:ro \
+       -v /sys/kernel/debug/:/sys/kernel/debug:rw \
+       --net=host --pid=host --privileged \
+       quay.io/iovisor/bpftrace:latest \
+       tcplife.bt
+Attaching 3 probes...
+PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
+```
+
+The following tags are published for all builds:
+
+- `quay.io/iovisor/bpftrace:${GIT_SHA}-${TYPE_TAG}`- eg `69149e94952db2eea579ad40e15fbc67c7b810d5-vanilla_llvm_clang_glibc2.27`
+- `quay.io/iovisor/bpftrace:${GIT_REF}-${TYPE_TAG}`- eg `master-vanilla_llvm_clang_glibc2.23` or `v0.9.5-vanilla_llvm_clang_glibc2.23`
+
+If the build is on the master branch, it also publishes these additional tags:
+
+- `quay.io/iovisor/bpftrace:${GIT_REF}`- eg `master` or `v0.9.5`
+- `quay.io/iovisor/bpftrace:${GIT_SHA}`- eg `69149e94952db2eea579ad40e15fbc67c7b810d5`
+- `quay.io/iovisor/bpftrace:latest`
+
+If the build type name ends with `_edge`, and `EDGE=ON` is set, and the build
+is on master, these tags are not pushed, and instead the `edge` tag is pushed:
+
+- `quay.io/iovisor/bpftrace:edge`
+
+This `:edge` build is likely less stable than `:latest` or tagged revisions,
+but builds against bcc master and the latest LLVM supported by bpftrace. The
+principal goal of the `:edge` build is to help detect integration issues early,
+and make all latest features available, but that may also make it less stable
+for day-to-day or production use.
+
+If using floating tagged images, such as branch tags, `:latest`, or `:edge` or
+`:master`, it may be necessary to run `docker pull` explicitly, to ensure that
+the tag is updated.
+
+The [full list of tags](https://quay.io/repository/iovisor/bpftrace?tab=tags) can
+be used to search for tags, and the history of all tags is recorded on
+[quay.io](https://quay.io/repository/iovisor/bpftrace?tab=history), and the
+distributed images are regularly scanned by a vulnerability scanner.
+
+## Copying bpftrace binary from docker
+
+As docker builds produce a bpftrace binary on every push to master, they also
+allow for a convenient way to distribute bpftrace binaries. The only software
+requirement to run bpftrace  is a version of glibc that is the same or newer as
+what it was built at.
+
+For this reason, an older glibc - 2.23 is provided for all builds, it can be
+pulled with:
+
+```
+docker pull quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23
+```
+
+To copy the binary out of bpftrace in the current directory:
+
+```
+$ docker run -v $(pwd):/output quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23 /bin/bash -c "cp /usr/bin/bpftrace /output"
+$ ./bpftrace -V
+v0.9.4
+```
+
+bpftrace currently links to glibc 2.27 from Ubuntu Bionic by default, though
+this should be portably to any glibc-based OS, such as Fedora, Chromium OS, etc.
+
+## Kernel headers install
+
+Usually kernels headers can be installed from a system package manager. In some
+cases though, this may not be an option, and headers aren't easily available.
+For instance, the default `docker desktop` (as of writing ships with kernel
+4.19 which supports bpf), benefits from this, as does Chromium OS and other
+lightweight Linux distributions.
+
+Newer kernels may have the IKHEADERS option, or support btf - in which case
+there is no need to build these headers as the kernel provides this.
+For older kernels, and on distributions where headers may not be available,
+this script provides a generic means to get bpftrace kernel headers:
+
+```bash
+#!/bin/bash
+
+set -e
+
+KERNEL_VERSION="${KERNEL_VERSION:-$(uname -r)}"
+kernel_version="$(echo "${KERNEL_VERSION}" | awk -vFS=- '{ print $1 }')"
+major_version="$(echo "${KERNEL_VERSION}" | awk -vFS=. '{ print $1 }')"
+
+apt-get install -y build-essential bc curl flex bison libelf-dev
+
+mkdir -p /usr/src/linux
+curl -sL "https://www.kernel.org/pub/linux/kernel/v${major_version}.x/linux-$kernel_version.tar.gz"     | tar --strip-components=1 -xzf - -C /usr/src/linux
+cd /usr/src/linux
+zcat /proc/config.gz > .config
+make ARCH=x86 oldconfig
+make ARCH=x86 prepare
+mkdir -p /lib/modules/$(uname -r)
+ln -sf /usr/src/linux /lib/modules/$(uname -r)/source
+ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
+```
 
 # Building bpftrace
 
