@@ -288,8 +288,12 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
     if (!f)
       break;
 
-    // Get rid of all the pointers on the way to the actual type.
-    while (BTF_INFO_KIND(f->info) == BTF_KIND_PTR) {
+    // Get rid of all the pointers and qualifiers on the way to the actual type.
+    while (BTF_INFO_KIND(f->info) == BTF_KIND_PTR ||
+           BTF_INFO_KIND(f->info) == BTF_KIND_CONST ||
+           BTF_INFO_KIND(f->info) == BTF_KIND_VOLATILE ||
+           BTF_INFO_KIND(f->info) == BTF_KIND_RESTRICT)
+    {
       f = btf__type_by_id(btf, f->type);
     }
 
