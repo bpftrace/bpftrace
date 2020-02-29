@@ -709,6 +709,22 @@ TEST(clang_parser, struct_typedef)
   EXPECT_EQ(structs["max_align_t"].fields["__clang_max_align_nonce2"].offset, 16);
 }
 
+TEST(clang_parser, struct_qualifiers)
+{
+  BPFtrace bpftrace;
+  parse("struct a {int a} struct b { volatile const struct a* restrict a; "
+        "const struct a a2; };",
+        bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+  EXPECT_EQ(structs["struct b"].size, 16);
+  EXPECT_EQ(structs["struct b"].fields.size(), 2U);
+  EXPECT_EQ(structs["struct b"].fields["a"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct b"].fields["a"].type.cast_type, "struct a");
+  EXPECT_EQ(structs["struct b"].fields["a2"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct b"].fields["a2"].type.cast_type, "struct a");
+}
+
 } // namespace clang_parser
 } // namespace test
 } // namespace bpftrace

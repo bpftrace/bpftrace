@@ -1,5 +1,6 @@
 #include <cstring>
 #include <iostream>
+#include <regex>
 
 #include "llvm/Config/llvm-config.h"
 
@@ -201,10 +202,25 @@ static bool translateMacro(CXCursor cursor, std::string &name, std::string &valu
   return value.length() != 0;
 }
 
+static std::string remove_qualifiers(std::string &&typestr)
+{
+  // libclang prints "const" keyword first
+  // https://github.com/llvm-mirror/clang/blob/65acf43270ea2894dffa0d0b292b92402f80c8cb/lib/AST/TypePrinter.cpp#L137-L157
+  return std::regex_replace(typestr,
+                            std::regex("^(const volatile\\s+)|^(const\\s+)|"
+                                       "^(volatile\\s+)|\\*(\\s*restrict)$"),
+                            "");
+}
+
+static std::string get_unqualified_type_name(CXType clang_type)
+{
+  return remove_qualifiers(get_clang_string(clang_getTypeSpelling(clang_type)));
+}
+
 static SizedType get_sized_type(CXType clang_type)
 {
   auto size = clang_Type_getSizeOf(clang_type);
-  auto typestr = get_clang_string(clang_getTypeSpelling(clang_type));
+  auto typestr = get_unqualified_type_name(clang_type);
 
   switch (clang_type.kind)
   {
@@ -233,7 +249,7 @@ static SizedType get_sized_type(CXType clang_type)
       SizedType type;
       if (pointee_type.kind == CXType_Record)
       {
-        auto pointee_typestr = get_clang_string(clang_getTypeSpelling(pointee_type));
+        auto pointee_typestr = get_unqualified_type_name(pointee_type);
         type = SizedType(Type::cast, sizeof(uintptr_t), pointee_typestr);
       }
       else
@@ -357,7 +373,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
           auto named_parent = get_named_parent(c);
           auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
-          auto ptypestr = get_clang_string(clang_getTypeSpelling(ptype));
+          auto ptypestr = get_unqualified_type_name(ptype);
           auto ptypesize = clang_Type_getSizeOf(ptype);
 
           auto ident = get_clang_string(clang_getCursorSpelling(c));
