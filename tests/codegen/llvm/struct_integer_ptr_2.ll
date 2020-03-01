@@ -17,12 +17,12 @@ entry:
   %"struct Foo.x" = alloca i64, align 8
   %1 = bitcast i64* %"struct Foo.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct Foo.x", i64 8, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i32, i64)*)(i64* nonnull %"struct Foo.x", i32 8, i64 0)
   %2 = load i64, i64* %"struct Foo.x", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = bitcast i32* %deref to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %deref, i64 4, i64 %2)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* nonnull %deref, i32 4, i64 %2)
   %4 = load i32, i32* %deref, align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i64* %"@x_key" to i8*

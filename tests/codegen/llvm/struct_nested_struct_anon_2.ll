@@ -16,7 +16,7 @@ entry:
   %"struct Foo::(anonymous at definitions.h:1:14).x" = alloca i32, align 4
   %1 = bitcast i32* %"struct Foo::(anonymous at definitions.h:1:14).x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i32* nonnull %"struct Foo::(anonymous at definitions.h:1:14).x", i64 4, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* nonnull %"struct Foo::(anonymous at definitions.h:1:14).x", i32 4, i64 0)
   %2 = load i32, i32* %"struct Foo::(anonymous at definitions.h:1:14).x", align 4
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   %3 = bitcast i64* %"@x_key" to i8*

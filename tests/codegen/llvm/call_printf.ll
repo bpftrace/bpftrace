@@ -21,14 +21,14 @@ entry:
   %2 = bitcast %printf_t* %printf_args to i8*
   call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %2, i8 0, i64 16, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %"struct Foo.c")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %"struct Foo.c", i64 1, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* nonnull %"struct Foo.c", i32 1, i64 0)
   %3 = load i8, i8* %"struct Foo.c", align 1
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %"struct Foo.c")
   %4 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1
   store i8 %3, i64* %4, align 8
   %5 = bitcast i64* %"struct Foo.l" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i64* nonnull %"struct Foo.l", i64 8, i64 8)
+  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i64*, i32, i64)*)(i64* nonnull %"struct Foo.l", i32 8, i64 8)
   %6 = load i64, i64* %"struct Foo.l", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   %7 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 2
