@@ -215,10 +215,10 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *sp = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(sp_offset * sizeof(uintptr_t))),
-        "reg_sp");
+    Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
+    Value *sp = b_.CreateLoad(b_.getInt64Ty(),
+                              b_.CreateGEP(ctx, b_.getInt64(sp_offset)),
+                              "reg_sp");
     dyn_cast<LoadInst>(sp)->setVolatile(true);
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     Value *src = b_.CreateAdd(sp, b_.getInt64((arg_num + 1) * sizeof(uintptr_t)));
