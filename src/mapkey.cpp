@@ -100,6 +100,11 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       auto p = static_cast<const char *>(data);
       return std::string(p, strnlen(p, arg.size));
     }
+    case Type::buffer:
+    {
+      auto p = static_cast<const char *>(data) + 1;
+      return hex_format_buffer(p, arg.size - 1);
+    }
     case Type::cast:
       if (arg.is_pointer) {
         // use case: show me these pointer values

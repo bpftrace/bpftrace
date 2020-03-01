@@ -826,4 +826,21 @@ pid_t parse_pid(const std::string &str)
   }
 }
 
+std::string hex_format_buffer(const char *buf, size_t size)
+{
+  // Allow enough space for every byte to be sanitized in the form "\x00"
+  char s[size * 4 + 1];
+
+  size_t offset = 0;
+  for (size_t i = 0; i < size; i++)
+    if (buf[i] >= 32 && buf[i] <= 126)
+      offset += sprintf(s + offset, "%c", ((const uint8_t *)buf)[i]);
+    else
+      offset += sprintf(s + offset, "\\x%02x", ((const uint8_t *)buf)[i]);
+
+  s[offset] = '\0';
+
+  return std::string(s);
+}
+
 } // namespace bpftrace

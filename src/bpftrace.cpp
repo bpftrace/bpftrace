@@ -643,6 +643,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
             std::string(p, strnlen(p, arg.type.size))));
         break;
       }
+      case Type::buffer:
+        arg_values.push_back(std::make_unique<PrintableString>(resolve_buf(
+            reinterpret_cast<char *>(arg_data + arg.offset + sizeof(uint8_t)),
+            reinterpret_cast<uint8_t>(*(arg_data + arg.offset)))));
+        break;
       case Type::ksym:
         arg_values.push_back(
           std::make_unique<PrintableString>(
@@ -1095,6 +1100,9 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
                         (uint8_t *)(value.data() + 8));
   else if (map.type_.type == Type::username)
     return resolve_uid(read_data<uint64_t>(value.data()));
+  else if (map.type_.type == Type::buffer)
+    return resolve_buf(reinterpret_cast<char *>(value.data() + 1),
+                       *reinterpret_cast<uint8_t *>(value.data()));
   else if (map.type_.type == Type::string)
   {
     auto p = reinterpret_cast<const char *>(value.data());
@@ -1602,6 +1610,11 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
   file.close();
 
   return username;
+}
+
+std::string BPFtrace::resolve_buf(char *buf, size_t size)
+{
+  return hex_format_buffer(buf, size);
 }
 
 std::string BPFtrace::resolve_ksym(uintptr_t addr, bool show_offset)

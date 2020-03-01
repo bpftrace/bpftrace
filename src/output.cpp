@@ -375,10 +375,14 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
       out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
-    if (map.type_.type == Type::kstack || map.type_.type == Type::ustack || map.type_.type == Type::ksym ||
-        map.type_.type == Type::usym || map.type_.type == Type::inet || map.type_.type == Type::username ||
-        map.type_.type == Type::string || map.type_.type == Type::probe) {
-        out_ << "\"" << json_escape(bpftrace.map_value_to_str(map, value, div)) << "\"";
+    if (map.type_.type == Type::kstack || map.type_.type == Type::ustack ||
+        map.type_.type == Type::ksym || map.type_.type == Type::usym ||
+        map.type_.type == Type::inet || map.type_.type == Type::username ||
+        map.type_.type == Type::string || map.type_.type == Type::buffer ||
+        map.type_.type == Type::probe)
+    {
+      out_ << "\"" << json_escape(bpftrace.map_value_to_str(map, value, div))
+           << "\"";
     }
     else {
       out_ << bpftrace.map_value_to_str(map, value, div);

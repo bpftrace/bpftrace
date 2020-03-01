@@ -1569,6 +1569,26 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       }
     }
   }
+  else if (type == Type::buffer)
+  {
+    auto map_size = map_val_[map_ident].size;
+    auto expr_size = assignment.expr->type.size;
+    if (map_size != expr_size)
+    {
+      std::stringstream buf;
+      buf << "Buffer size mismatch: " << map_size << " != " << expr_size << ".";
+      if (map_size < expr_size)
+      {
+        buf << " The value may be truncated.";
+        bpftrace_.warning(out_, assignment.loc, buf.str());
+      }
+      else
+      {
+        // bpf_map_update_elem() expects map_size-length value
+        error(buf.str(), assignment.loc);
+      }
+    }
+  }
   else if (type == Type::ctx)
   {
     // bpf_map_update_elem() only accepts a pointer to a element in the stack
@@ -1632,6 +1652,21 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     {
       std::stringstream buf;
       buf << "String size mismatch: " << var_size << " != " << expr_size << ".";
+      if (var_size < expr_size)
+        buf << " The value may be truncated.";
+      else
+        buf << " The value may contain garbage.";
+      bpftrace_.warning(out_, assignment.loc, buf.str());
+    }
+  }
+  else if (assignment.expr->type.type == Type::buffer)
+  {
+    auto var_size = variable_val_[var_ident].size;
+    auto expr_size = assignment.expr->type.size;
+    if (var_size != expr_size)
+    {
+      std::stringstream buf;
+      buf << "Buffer size mismatch: " << var_size << " != " << expr_size << ".";
       if (var_size < expr_size)
         buf << " The value may be truncated.";
       else
