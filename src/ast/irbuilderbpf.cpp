@@ -243,7 +243,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &
       "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
-  bool is_array = (type.type == Type::string ||
+  bool is_array = (type.type == Type::string || type.type == Type::buffer ||
                    (type.type == Type::cast && !type.is_pointer) ||
                    type.type == Type::inet || type.type == Type::usym);
 
