@@ -25,13 +25,14 @@ entry:
   %6 = getelementptr i8, i8* %0, i64 112
   %7 = bitcast i8* %6 to i64*
   %arg0 = load volatile i64, i64* %7, align 8
-  %probe_read_str = call i64 inttoptr (i64 45 to i64 (i8*, i64, i8*)*)([64 x i8]* nonnull %str, i64 %str.min.select, i64 %arg0)
-  %8 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
+  %8 = trunc i64 %str.min.select to i32
+  %probe_read_str = call i64 inttoptr (i64 45 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* nonnull %str, i32 %8, i64 %arg0)
+  %9 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %9)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [64 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [64 x i8]* nonnull %str, i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %5)
   ret i64 0
 }

@@ -85,6 +85,7 @@ private:
 
   Value      *CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin);
   CallInst   *createMapLookup(int mapfd, AllocaInst *key);
+  Constant   *createProbeReadStrFn(llvm::Type * dst, llvm::Type * src);
 
   std::map<std::string, StructType *> structs_;
   // clang-format on
