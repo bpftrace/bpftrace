@@ -22,7 +22,7 @@ entry:
   %3 = getelementptr inbounds %inet_t, %inet_t* %inet, i64 0, i32 1
   %4 = getelementptr inbounds [16 x i8], [16 x i8]* %3, i64 0, i64 0
   call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %4, i8 0, i64 16, i1 false)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)([16 x i8]* nonnull %3, i64 4, i64 0)
+  %probe_read = call i64 inttoptr (i64 4 to i64 ([16 x i8]*, i32, i64)*)([16 x i8]* nonnull %3, i32 4, i64 0)
   %5 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %5)
   store i64 0, i64* %"@x_key", align 8

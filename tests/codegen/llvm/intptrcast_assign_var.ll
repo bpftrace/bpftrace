@@ -19,7 +19,7 @@ entry:
   %reg_bp = load volatile i64, i64* %2, align 8
   %3 = add i64 %reg_bp, -1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %deref)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i64, i8*)*)(i8* nonnull %deref, i64 1, i64 %3)
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* nonnull %deref, i32 1, i64 %3)
   %4 = load i8, i8* %deref, align 1
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %deref)
   %5 = bitcast i64* %"@_key" to i8*
