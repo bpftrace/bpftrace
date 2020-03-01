@@ -473,6 +473,58 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
   }
+  else if (call.func == "buf")
+  {
+    Value *max_length = b_.getInt64(bpftrace_.strlen_);
+    size_t fixed_buffer_length = bpftrace_.strlen_;
+    Value *length;
+
+    if (call.vargs->size() > 1)
+    {
+      auto &arg = *call.vargs->at(1);
+      arg.accept(*this);
+
+      Value *proposed_length = expr_;
+      Value *cmp = b_.CreateICmp(
+          CmpInst::ICMP_ULE, proposed_length, max_length, "length.cmp");
+      length = b_.CreateSelect(
+          cmp, proposed_length, max_length, "length.select");
+
+      if (arg.is_literal)
+        fixed_buffer_length = static_cast<Integer &>(arg).n;
+    }
+    else
+    {
+      auto &arg = *call.vargs->at(0);
+      fixed_buffer_length = arg.type.pointee_size * arg.type.size;
+      length = b_.getInt8(fixed_buffer_length);
+    }
+
+    auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
+    char dynamic_sized_struct_name[30];
+    sprintf(dynamic_sized_struct_name, "buffer_%ld_t", fixed_buffer_length);
+    StructType *buf_struct = b_.GetStructType(dynamic_sized_struct_name,
+                                              elements,
+                                              false);
+    AllocaInst *buf = b_.CreateAllocaBPF(buf_struct, "buffer");
+
+    b_.CreateStore(length,
+                   b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(0) }));
+    Value *buf_data_offset = b_.CreateGEP(buf,
+                                          { b_.getInt32(0), b_.getInt32(1) });
+    b_.CREATE_MEMSET(buf_data_offset,
+                     b_.GetIntSameSize(0, elements.at(0)),
+                     fixed_buffer_length,
+                     1);
+
+    call.vargs->front()->accept(*this);
+    b_.CreateProbeRead(static_cast<AllocaInst *>(buf_data_offset),
+                       length,
+                       expr_);
+
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  }
   else if (call.func == "kaddr")
   {
     uint64_t addr;
@@ -896,7 +948,7 @@ void CodegenLLVM::visit(Binop &binop)
       abort();
     }
 
-    std::string string_literal("");
+    std::string string_literal;
 
     // strcmp returns 0 when strings are equal
     bool inverse = binop.op == bpftrace::Parser::token::EQ;
@@ -926,6 +978,30 @@ void CodegenLLVM::visit(Binop &binop)
       size_t len = std::min(binop.left->type.size, binop.right->type.size);
       expr_ = b_.CreateStrncmp(left_string, right_string, len + 1, inverse);
     }
+  }
+  else if (type == Type::buffer)
+  {
+    if (binop.op != bpftrace::Parser::token::EQ &&
+        binop.op != bpftrace::Parser::token::NE)
+    {
+      std::cerr << "missing codegen to buffer operator \"" << opstr(binop)
+                << "\"" << std::endl;
+      abort();
+    }
+
+    std::string string_literal("");
+
+    // strcmp returns 0 when strings are equal
+    bool inverse = binop.op == bpftrace::Parser::token::EQ;
+
+    binop.right->accept(*this);
+    Value *right_string = expr_;
+
+    binop.left->accept(*this);
+    Value *left_string = expr_;
+
+    size_t len = std::min(binop.left->type.size, binop.right->type.size);
+    expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
   }
   else
   {
@@ -1208,7 +1284,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
       expr_ = dst;
       // TODO clean up dst memory?
     }
-    else if (field.type.type == Type::string)
+    else if (field.type.type == Type::string || field.type.type == Type::buffer)
     {
       expr_ = src;
     }
@@ -1246,7 +1322,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
       // operation
       expr_ = src;
     }
-    else if (field.type.type == Type::string)
+    else if (field.type.type == Type::string || field.type.type == Type::buffer)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
       if (type.type == Type::ctx)
@@ -1354,7 +1430,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string ||
+  if (map.type.type == Type::string || map.type.type == Type::buffer ||
       assignment.expr->type.type == Type::inet ||
       assignment.expr->type.type == Type::usym)
   {
@@ -1658,8 +1734,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     {
       Expression *expr = map.vargs->at(0);
       expr->accept(*this);
-      if (expr->type.type == Type::string || expr->type.type == Type::usym ||
-        expr->type.type == Type::inet)
+      if (expr->type.type == Type::string || expr->type.type == Type::buffer ||
+          expr->type.type == Type::usym || expr->type.type == Type::inet)
       {
         // The value is already in the stack; Skip copy
         key = dyn_cast<AllocaInst>(expr_);
@@ -1690,7 +1766,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
-        if (expr->type.type == Type::string || expr->type.type == Type::usym ||
+        if (expr->type.type == Type::string ||
+            expr->type.type == Type::buffer || expr->type.type == Type::usym ||
             expr->type.type == Type::inet)
         {
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
@@ -1733,8 +1810,8 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string || expr->type.type == Type::usym ||
-        expr->type.type == Type::inet)
+      if (expr->type.type == Type::string || expr->type.type == Type::buffer ||
+          expr->type.type == Type::usym || expr->type.type == Type::inet)
       {
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
         if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
