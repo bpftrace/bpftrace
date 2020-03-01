@@ -41,6 +41,7 @@ enum class Type
   array,
   // BPF program context; needing a different access method to satisfy the verifier
   ctx,
+  buffer,
   // clang-format on
 };
 

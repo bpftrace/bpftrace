@@ -101,6 +101,7 @@ public:
     return *maps_[map_ids_[id]].get();
   };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
+  std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
   std::string resolve_inet(int af, const uint8_t* inet) const;
