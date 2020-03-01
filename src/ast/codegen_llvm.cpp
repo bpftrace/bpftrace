@@ -629,10 +629,10 @@ void CodegenLLVM::visit(Call &call)
       abort();
     }
 
-    expr_ = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(ctx_, b_.getInt64(offset * sizeof(uintptr_t))),
-        call.func+"_"+reg_name);
+    Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
+    expr_ = b_.CreateLoad(b_.getInt64Ty(),
+                          b_.CreateGEP(ctx, b_.getInt64(offset)),
+                          call.func + "_" + reg_name);
     dyn_cast<LoadInst>(expr_)->setVolatile(true);
   }
   else if (call.func == "printf")
