@@ -303,39 +303,44 @@ void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
   CreateCall(proberead_func, {dst, getInt64(size), src}, "probe_read");
 }
 
-CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src)
+Constant *IRBuilderBPF::createProbeReadStrFn(llvm::Type *dst, llvm::Type *src)
 {
-  return CreateProbeReadStr(dst, getInt64(size), src);
-}
-
-CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src)
-{
+  assert(src && (src->isIntegerTy() || src->isPointerTy()));
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
   FunctionType *probereadstr_func_type = FunctionType::get(
-      getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
-      false);
-  PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
-  Constant *probereadstr_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_probe_read_str),
-      probereadstr_func_ptr_type);
-  return CreateCall(probereadstr_func, {dst, size, src}, "probe_read_str");
+      getInt64Ty(), { dst, getInt32Ty(), src }, false);
+  PointerType *probereadstr_func_ptr_type = PointerType::get(
+      probereadstr_func_type, 0);
+  return ConstantExpr::getCast(Instruction::IntToPtr,
+                               getInt64(libbpf::BPF_FUNC_probe_read_str),
+                               probereadstr_func_ptr_type);
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
+                                           size_t size,
+                                           Value *src)
+{
+  return CreateProbeReadStr(dst, getInt32(size), src);
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
 {
-  // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
-  FunctionType *probereadstr_func_type = FunctionType::get(
-      getInt64Ty(),
-      {getInt8PtrTy(), getInt64Ty(), getInt8PtrTy()},
-      false);
-  PointerType *probereadstr_func_ptr_type = PointerType::get(probereadstr_func_type, 0);
-  Constant *probereadstr_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_probe_read_str),
-      probereadstr_func_ptr_type);
-  return CreateCall(probereadstr_func, {dst, getInt64(size), src}, "map_read_str");
+  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
+  return CreateCall(fn, { dst, getInt32(size), src }, "probe_read_str");
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
+                                           llvm::Value *size,
+                                           Value *src)
+{
+  assert(dst && dst->getAllocatedType()->isArrayTy() &&
+         dst->getAllocatedType()->getArrayElementType() == getInt8Ty());
+  assert(size && size->getType()->isIntegerTy());
+
+  auto *size_i32 = CreateIntCast(size, getInt32Ty(), false);
+
+  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
+  return CreateCall(fn, { dst, size_i32, src }, "probe_read_str");
 }
 
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin) {
