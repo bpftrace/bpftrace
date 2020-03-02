@@ -348,6 +348,13 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
   if (argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME) {
     int offset = 0;
     offset = arch::offset(argument->base_register_name);
+    if (offset < 0)
+    {
+      std::cerr << "offset for register " << argument->base_register_name
+                << " not known" << std::endl;
+      abort();
+    }
+
     Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
     CreateProbeRead(dst, builtin.type.size, reg);
