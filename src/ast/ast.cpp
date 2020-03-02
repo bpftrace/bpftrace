@@ -184,7 +184,7 @@ Unop::Unop(int op, Expression *expr, location loc)
 {
 }
 
-Unop::Unop(int op, Expression *expr, bool is_post_op, location)
+Unop::Unop(int op, Expression *expr, bool is_post_op, location loc)
     : Expression(loc), expr(expr), op(op), is_post_op(is_post_op)
 {
 }
