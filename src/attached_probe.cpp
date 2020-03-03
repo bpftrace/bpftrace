@@ -470,7 +470,7 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
 #ifdef HAVE_UNSAFE_PROBE
       buf << " Use --unsafe to skip the userspace check.";
 #else
-      buf << " Compile bpftrace with ALLOW_UNAFE_PROBE option to force skip "
+      buf << " Compile bpftrace with ALLOW_UNSAFE_PROBE option to force skip "
              "the check.";
 #endif
       throw std::runtime_error(buf.str());
