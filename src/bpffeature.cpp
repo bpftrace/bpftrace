@@ -66,14 +66,15 @@ static bool try_load(const char* name,
 
 static bool try_load(enum libbpf::bpf_prog_type prog_type,
                      struct bpf_insn* insns,
-                     size_t len)
+                     size_t len,
+                     const char* name = nullptr)
 {
   constexpr int log_size = 4096;
   char logbuf[log_size] = {};
 
   // kfunc / kretfunc only for now. We can refactor if more attach types
   // get added to BPF_PROG_TYPE_TRACING
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
+  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && !name)
   {
     // List of available functions must be readable
     std::ifstream traceable_funcs(kprobe_path);
@@ -88,7 +89,7 @@ static bool try_load(enum libbpf::bpf_prog_type prog_type,
                "kretfunc__strlen", prog_type, insns, len, 0, logbuf, log_size);
   }
 
-  return try_load(nullptr, prog_type, insns, len, 0, logbuf, log_size);
+  return try_load(name, prog_type, insns, len, 0, logbuf, log_size);
 }
 
 bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
@@ -278,6 +279,31 @@ bool BPFfeature::has_map_batch()
 #endif
 }
 
+bool BPFfeature::has_d_path(void)
+{
+  if (has_d_path_.has_value())
+    return *has_d_path_;
+
+  struct bpf_insn insns[] = {
+    BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_1, 0),
+    BPF_MOV64_REG(BPF_REG_2, BPF_REG_10),
+    BPF_ALU64_IMM(BPF_ADD, BPF_REG_2, -8),
+    BPF_MOV64_IMM(BPF_REG_6, 0),
+    BPF_STX_MEM(BPF_DW, BPF_REG_2, BPF_REG_6, 0),
+    BPF_LD_IMM64(BPF_REG_3, 8),
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_d_path),
+    BPF_MOV64_IMM(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  has_d_path_ = std::make_optional<bool>(try_load(libbpf::BPF_PROG_TYPE_TRACING,
+                                                  insns,
+                                                  ARRAY_SIZE(insns),
+                                                  "kfunc__dentry_open"));
+
+  return *has_d_path_;
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -299,6 +325,7 @@ std::string BPFfeature::report(void)
       << "  send_signal: " << to_str(has_helper_send_signal())
       << "  override_return: " << to_str(has_helper_override_return())
       << "  get_boot_ns: " << to_str(has_helper_ktime_get_boot_ns())
+      << "  dpath: " << to_str(has_d_path())
       << std::endl;
 
   buf << "Kernel features" << std::endl
