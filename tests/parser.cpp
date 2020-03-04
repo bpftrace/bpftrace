@@ -782,6 +782,11 @@ TEST(Parser, uprobe)
        "Program\n"
        " uprobe:/my/program:1234abc\n"
        "  int: 1\n");
+  // Test `:`s in quoted string
+  test("uprobe:/my/program:\"A::f\" { 1; }",
+       "Program\n"
+       " uprobe:/my/program:A::f\n"
+       "  int: 1\n");
 
   test_parse_failure("uprobe:f { 1 }");
   test_parse_failure("uprobe { 1 }");

@@ -171,7 +171,7 @@ attach_point : attach_point_def                { $$ = new ast::AttachPoint($1, @
              ;
 
 attach_point_def : attach_point_def ident    { $$ = $1 + $2; }
-                 | attach_point_def STRING   { $$ = $1 + $2; }
+                 | attach_point_def STRING   { $$ = $1 + "\"" + $2 + "\""; }
                  | attach_point_def PATH     { $$ = $1 + $2; }
                  | attach_point_def INT      { $$ = $1 + std::to_string($2); }
                  | attach_point_def COLON    { $$ = $1 + ":"; }

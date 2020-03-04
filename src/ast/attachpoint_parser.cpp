@@ -5,8 +5,54 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "types.h"
+
+namespace {
+
+/*
+ * This function splits an attach point definition into arguments,
+ * where arguments are separated by `:`. The exception is `:`s inside
+ * of quoted strings, which we must treat as a literal.
+ *
+ * Note that this function assumes the raw string is generally well
+ * formed. More specifically, that there is no unescaped whitespace
+ * and no unmatched quotes.
+ */
+std::vector<std::string> split_attachpoint(const std::string &raw,
+                                           bool remove_empty = false)
+{
+  std::vector<std::string> ret;
+  bool in_quotes = false;
+  std::string argument;
+
+  for (char c : raw)
+  {
+    if (c == ':' && !in_quotes)
+    {
+      if (argument.empty() && remove_empty)
+        continue;
+
+      ret.emplace_back(std::move(argument));
+      // The standard says an std::string in moved-from state is in
+      // valid but unspecified state, so clear() to be safe
+      argument.clear();
+    }
+    else if (c == '"')
+      in_quotes = !in_quotes;
+    else
+      argument += c;
+  }
+
+  // Always drop final element if it's empty
+  if (argument.size())
+    ret.emplace_back(std::move(argument));
+
+  return ret;
+}
+
+} // namespace
 
 namespace bpftrace {
 namespace ast {
@@ -44,7 +90,7 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
 {
   ap_ = &ap;
 
-  parts_ = split_string(ap_->raw_input, ':', true);
+  parts_ = split_attachpoint(ap_->raw_input, true);
   if (parts_.empty())
   {
     errs_ << "Invalid attachpoint definition" << std::endl;
@@ -264,7 +310,7 @@ int AttachPointParser::uretprobe_parser()
 int AttachPointParser::usdt_parser()
 {
   // Allow empty fields
-  parts_ = split_string(ap_->raw_input, ':', false);
+  parts_ = split_attachpoint(ap_->raw_input, false);
 
   if (parts_.size() != 3 && parts_.size() != 4)
   {
@@ -446,7 +492,7 @@ int AttachPointParser::hardware_parser()
 int AttachPointParser::watchpoint_parser()
 {
   // Allow empty fields
-  parts_ = split_string(ap_->raw_input, ':', false);
+  parts_ = split_attachpoint(ap_->raw_input, false);
 
   if (parts_.size() != 5)
   {
