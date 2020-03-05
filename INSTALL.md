@@ -101,7 +101,7 @@ linked to glibc, packaged in a minimal ubuntu container.
 This allows for such an invocation of bpftrace:
 
 ```
-$ docker run -ti -v /usr/src/linux:/usr/src/linux:ro \
+$ docker run -ti -v /usr/src:/usr/src:ro \
        -v /lib/modules/:/lib/modules:ro \
        -v /sys/kernel/debug/:/sys/kernel/debug:rw \
        --net=host --pid=host --privileged \
