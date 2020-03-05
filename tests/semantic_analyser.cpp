@@ -3,6 +3,7 @@
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "driver.h"
+#include "field_analyser.h"
 #include "mocks.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -58,6 +59,9 @@ void test(BPFtrace &bpftrace,
 {
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
@@ -1509,6 +1513,31 @@ TEST(semantic_analyser, type_ctx)
   test(driver, "k:f, i:s:1 { @ = (uint64)ctx; }", 1);
   test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
+
+#ifdef HAVE_LIBBPF_BTF_DUMP
+
+#include "btf_common.h"
+
+class semantic_analyser_btf : public test_btf
+{
+};
+
+TEST_F(semantic_analyser_btf, kfunc)
+{
+  test("kfunc:func_1 { 1 }", 0);
+  test("kretfunc:func_1 { 1 }", 0);
+  test("kfunc:func_1 { $x = args->a; $y = args->foo1; }", 0);
+  test("kretfunc:func_1 { $x = retval; }", 0);
+  test("kretfunc:func_1 { $x = args->foo; }", 1);
+}
+
+TEST_F(semantic_analyser_btf, short_name)
+{
+  test("f:func_1 { 1 }", 0);
+  test("fr:func_1 { 1 }", 0);
+}
+
+#endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace semantic_analyser
 } // namespace test
