@@ -878,6 +878,45 @@ TEST(bpftrace, sort_by_key_int_str)
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
 
+#ifdef HAVE_LIBBPF_BTF_DUMP
+
+#include "btf_common.h"
+
+class bpftrace_btf : public test_btf
+{
+};
+
+void check_kfunc(Probe &p, ProbeType type, const std::string &name)
+{
+  EXPECT_EQ(type, p.type);
+  EXPECT_EQ(name, p.name);
+}
+
+TEST_F(bpftrace_btf, add_probes_kfunc)
+{
+  ast::AttachPoint a("");
+  a.provider = "kfunc";
+  a.target = "func_1";
+  ast::AttachPoint b("");
+  b.provider = "kretfunc";
+  b.target = "func_1";
+  ast::AttachPointList attach_points = { &a, &b };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(2U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  check_kfunc(bpftrace.get_probes().at(0), ProbeType::kfunc, "kfunc:func_1");
+  check_kfunc(bpftrace.get_probes().at(1),
+              ProbeType::kretfunc,
+              "kretfunc:func_1");
+}
+
+#endif // HAVE_LIBBPF_BTF_DUMP
+
 } // namespace bpftrace
 } // namespace test
 } // namespace bpftrace
