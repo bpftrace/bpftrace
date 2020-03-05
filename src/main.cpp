@@ -131,6 +131,7 @@ static int info()
 {
   struct utsname utsname;
   uname(&utsname);
+  BTF btf;
 
   std::cerr << "System" << std::endl
             << "  OS: " << utsname.sysname << " " << utsname.release << " "
@@ -149,17 +150,17 @@ static int info()
 #endif
             << "  unsafe uprobe: "
 #ifdef HAVE_UNSAFE_UPROBE
-            << "yes" << std::endl
+            << "yes" << std::endl;
 #else
-            << "no" << std::endl
+            << "no" << std::endl;
 #endif
-            << "  btf: "
-#ifdef HAVE_LIBBPF_BTF_DUMP
-            << "yes" << std::endl
-#else
-            << "no" << std::endl
-#endif
-            << "  bfd: "
+  std::cerr << "  btf: ";
+  if (btf.has_data())
+    std::cerr << "yes" << std::endl;
+  else
+    std::cerr << "no" << std::endl;
+
+  std::cerr << "  bfd: "
 #ifdef HAVE_BFD_DISASM
             << "yes" << std::endl
 #else
