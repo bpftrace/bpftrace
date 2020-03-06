@@ -16,7 +16,7 @@ entry:
   %"$foo" = alloca [32 x i8], align 1
   %1 = getelementptr inbounds [32 x i8], [32 x i8]* %"$foo", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i64 0, i64 32, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i8 0, i64 32, i1 false)
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memcpy.p0i8.p64i8.i64(i8* nonnull align 1 %1, i8 addrspace(64)* align 536870912 null, i64 32, i1 false)
   %2 = getelementptr inbounds [32 x i8], [32 x i8]* %"struct Foo.str", i64 0, i64 0
