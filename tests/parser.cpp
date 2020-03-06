@@ -798,6 +798,13 @@ TEST(Parser, usdt)
       "Program\n"
       " usdt:/my/program:probe\n"
       "  int: 1\n");
+  // Without the escapes needed for C++ to compile:
+  //    usdt:/my/program:"\"probe\"" { 1; }
+  //
+  test("usdt:/my/program:\"\\\"probe\\\"\" { 1; }",
+       "Program\n"
+       " usdt:/my/program:\"probe\"\n"
+       "  int: 1\n");
 
   test_parse_failure("usdt { 1 }");
 }
