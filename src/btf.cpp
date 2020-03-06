@@ -207,6 +207,9 @@ static std::string btf_type_str(const std::string& type)
 
 std::string BTF::c_def(std::unordered_set<std::string>& set)
 {
+  if (!has_data())
+    return std::string("");
+
   std::string ret = std::string("");
   struct btf_dump_opts opts = { .ctx = &ret, };
   struct btf_dump *dump;
@@ -244,6 +247,9 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
 
 std::string BTF::type_of(const std::string& name, const std::string& field)
 {
+  if (!has_data())
+    return std::string("");
+
   __s32 type_id = btf__find_by_name(btf, btf_type_str(name).c_str());
 
   if (type_id < 0)
@@ -255,6 +261,9 @@ std::string BTF::type_of(const std::string& name, const std::string& field)
 
 std::string BTF::type_of(const btf_type *type, const std::string &field)
 {
+  if (!has_data())
+    return std::string("");
+
   if (!type ||
       (BTF_INFO_KIND(type->info) != BTF_KIND_STRUCT &&
        BTF_INFO_KIND(type->info) != BTF_KIND_UNION))
@@ -387,6 +396,9 @@ int BTF::resolve_args(const std::string &func,
                       std::map<std::string, SizedType> &args,
                       bool ret)
 {
+  if (!has_data())
+    return -1;
+
   __s32 id, max = (__s32)btf__get_nr_types(btf);
   std::string name = func;
 
@@ -451,6 +463,9 @@ static bool match_re(const std::string &probe, const std::regex &re)
 
 void BTF::display_funcs(std::regex *re) const
 {
+  if (!has_data())
+    return;
+
   __s32 id, max = (__s32)btf__get_nr_types(btf);
   std::string type = std::string("");
   struct btf_dump_opts opts = {

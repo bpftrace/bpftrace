@@ -25,7 +25,7 @@ public:
   BTF();
   ~BTF();
 
-  bool has_data(void);
+  bool has_data(void) const;
   std::string c_def(std::unordered_set<std::string>& set);
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const btf_type* type, const std::string& field);
@@ -43,7 +43,7 @@ private:
   enum state state = NODATA;
 };
 
-inline bool BTF::has_data(void)
+inline bool BTF::has_data(void) const
 {
   return state == OK;
 }
