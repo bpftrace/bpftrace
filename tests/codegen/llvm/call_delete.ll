@@ -28,7 +28,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   store i64 0, i64* %"@x_key1", align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %delete_elem = call i64 inttoptr (i64 3 to i64 (i64, i8*)*)(i64 %pseudo2, i64* nonnull %"@x_key1")
+  %delete_elem = call i64 inttoptr (i64 3 to i64 (i64, i64*)*)(i64 %pseudo2, i64* nonnull %"@x_key1")
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   ret i64 0
 }
