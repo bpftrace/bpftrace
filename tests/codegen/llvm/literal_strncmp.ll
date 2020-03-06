@@ -18,7 +18,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i8 0, i64 16, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* nonnull %comm, i64 16)
-  %2 = load i8, [16 x i8]* %comm, align 1
+  %2 = load i8, i8* %1, align 1
   %strcmp.cmp = icmp eq i8 %2, 115
   br i1 %strcmp.cmp, label %strcmp.loop, label %pred_true.critedge
 
@@ -40,8 +40,8 @@ pred_true:                                        ; preds = %strcmp.loop, %pred_
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 strcmp.loop:                                      ; preds = %entry
-  %4 = add [16 x i8]* %comm, i64 1
-  %5 = load i8, [16 x i8]* %4, align 1
+  %4 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 1
+  %5 = load i8, i8* %4, align 1
   %strcmp.cmp2 = icmp eq i8 %5, 115
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   br i1 %strcmp.cmp2, label %pred_false, label %pred_true

@@ -421,6 +421,13 @@ Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
 }
 
 Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse) {
+#ifndef NDEBUG
+  PointerType *valp = cast<PointerType>(val->getType());
+  assert(valp->getElementType()->isArrayTy() &&
+         valp->getElementType()->getArrayNumElements() >= n &&
+         valp->getElementType()->getArrayElementType() == getInt8Ty());
+#endif
+
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
@@ -431,9 +438,8 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
   for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
-    Value *ptr = CreateAdd(
-        val,
-        getInt64(i));
+
+    auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
     Value *l = CreateLoad(getInt8Ty(), ptr);
     Value *r = getInt8(c_str[i]);
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
@@ -476,10 +482,26 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
         return true;
      }
   */
+
+#ifndef NDEBUG
+  PointerType *val1p = cast<PointerType>(val1->getType());
+  PointerType *val2p = cast<PointerType>(val2->getType());
+
+  assert(val1p->getElementType()->isArrayTy() &&
+         val1p->getElementType()->getArrayElementType() == getInt8Ty());
+
+  assert(val2p->getElementType()->isArrayTy() &&
+         val2p->getElementType()->getArrayElementType() == getInt8Ty());
+#endif
+
   Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
-  BasicBlock *done = BasicBlock::Create(module_.getContext(), "strcmp.done", parent);
+  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
+                                          "strcmp.false",
+                                          parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "strcmp.done",
+                                        parent);
 
   CreateStore(getInt1(!inverse), store);
 
@@ -489,14 +511,18 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
   AllocaInst *val_r = CreateAllocaBPF(getInt8Ty(), "strcmp.char_r");
   for (size_t i = 0; i < n; i++)
   {
-    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
-    BasicBlock *loop_null_check = BasicBlock::Create(module_.getContext(), "strcmp.loop_null_cmp", parent);
+    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
+                                             "strcmp.loop",
+                                             parent);
+    BasicBlock *loop_null_check = BasicBlock::Create(module_.getContext(),
+                                                     "strcmp.loop_null_cmp",
+                                                     parent);
 
-    Value *ptr1 = CreateAdd(val1, getInt64(i));
+    auto *ptr1 = CreateGEP(val1, { getInt32(0), getInt32(i) });
     CreateProbeRead(val_l, 1, ptr1);
     Value *l = CreateLoad(getInt8Ty(), val_l);
 
-    Value *ptr2 = CreateAdd(val2, getInt64(i));
+    auto *ptr2 = CreateGEP(val2, { getInt32(0), getInt32(i) });
     CreateProbeRead(val_r, 1, ptr2);
     Value *r = CreateLoad(getInt8Ty(), val_r);
 
