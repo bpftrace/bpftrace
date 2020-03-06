@@ -1655,7 +1655,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         key = b_.CreateAllocaBPF(expr->type.size, map.ident + "_key");
         b_.CreateStore(
             b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed),
-            key);
+            b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
       }
     }
     else
@@ -1673,8 +1673,9 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       for (Expression *expr : *map.vargs)
       {
         expr->accept(*this);
-        Value *offset_val =
-            b_.CreateGEP(key, { b_.getInt64(0), b_.getInt64(offset) });
+        Value *offset_val = b_.CreateGEP(
+            key, { b_.getInt64(0), b_.getInt64(offset) });
+
         if (expr->type.type == Type::string || expr->type.type == Type::usym ||
             expr->type.type == Type::inet)
         {
@@ -1687,7 +1688,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
           // promote map key to 64-bit:
           b_.CreateStore(
               b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.is_signed),
-              offset_val);
+              b_.CreatePointerCast(offset_val,
+                                   expr_->getType()->getPointerTo()));
         }
         offset += expr->type.size;
       }
