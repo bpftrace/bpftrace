@@ -22,6 +22,14 @@
 #error Unsupported LLVM version
 #endif
 
+#if LLVM_VERSION_MAJOR >= 10
+#define CREATE_MEMSET(ptr, val, size, align)                                   \
+  CreateMemSet((ptr), (val), (size), MaybeAlign((align)))
+#else
+#define CREATE_MEMSET(ptr, val, size, align)                                   \
+  CreateMemSet((ptr), (val), (size), (align))
+#endif
+
 namespace bpftrace {
 namespace ast {
 

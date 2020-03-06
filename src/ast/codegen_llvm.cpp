@@ -41,7 +41,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
         {
           Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
           AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-          b_.CreateMemSet(buf, b_.getInt8(0), pstr.length() + 1, 1);
+          b_.CREATE_MEMSET(buf, b_.getInt8(0), pstr.length() + 1, 1);
           b_.CreateStore(const_str, buf);
           expr_ = buf;
         }
@@ -156,7 +156,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
     // initializing memory needed for older kernels:
-    b_.CreateMemSet(buf, b_.getInt8(0), builtin.type.size, 1);
+    b_.CREATE_MEMSET(buf, b_.getInt8(0), builtin.type.size, 1);
     b_.CreateGetCurrentComm(buf, builtin.type.size);
     expr_ = buf;
   }
@@ -195,7 +195,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     if (builtin.type.type == Type::usym)
     {
       AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "func");
-      b_.CreateMemSet(buf, b_.getInt8(0), builtin.type.size, 1);
+      b_.CREATE_MEMSET(buf, b_.getInt8(0), builtin.type.size, 1);
       Value *pid = b_.CreateLShr(b_.CreateGetPidTgid(), 32);
       Value *addr_offset = b_.CreateGEP(buf, b_.getInt64(0));
       Value *pid_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
@@ -449,7 +449,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CreateMemSet(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+    b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
       call.vargs->at(1)->accept(*this);
       Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
@@ -467,7 +467,7 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
     }
     AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
-    b_.CreateMemSet(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     call.vargs->front()->accept(*this);
     b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
     b_.CreateLifetimeEnd(strlen);
@@ -546,7 +546,7 @@ void CodegenLLVM::visit(Call &call)
   {
     // store uint64_t[2] with: [0]: (uint64_t)addr, [1]: (uint64_t)pid
     AllocaInst *buf = b_.CreateAllocaBPF(call.type, "usym");
-    b_.CreateMemSet(buf, b_.getInt8(0), call.type.size, 1);
+    b_.CREATE_MEMSET(buf, b_.getInt8(0), call.type.size, 1);
     Value *pid = b_.CreateLShr(b_.CreateGetPidTgid(), 32);
     Value *addr_offset = b_.CreateGEP(buf, b_.getInt64(0));
     Value *pid_offset = b_.CreateGEP(buf, {b_.getInt64(0), b_.getInt64(8)});
@@ -597,7 +597,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(af_type, af_offset);
 
     Value *inet_offset = b_.CreateGEP(buf, {b_.getInt32(0), b_.getInt32(1)});
-    b_.CreateMemSet(inet_offset, b_.getInt8(0), 16, 1);
+    b_.CREATE_MEMSET(inet_offset, b_.getInt8(0), 16, 1);
 
     inet->accept(*this);
     if (inet->type.type == Type::array)
@@ -669,7 +669,7 @@ void CodegenLLVM::visit(Call &call)
     auto &map = static_cast<Map&>(arg);
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
     AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
-    b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
+    b_.CREATE_MEMSET(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
     b_.CreateStore(const_str, str_buf);
     ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
@@ -713,7 +713,7 @@ void CodegenLLVM::visit(Call &call)
     auto &map = static_cast<Map&>(arg);
     Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
     AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
-    b_.CreateMemSet(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
+    b_.CREATE_MEMSET(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
     b_.CreateStore(const_str, str_buf);
     ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + map.ident.length() + 1);
     AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
@@ -1232,7 +1232,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
         AllocaInst *dst = b_.CreateAllocaBPF(field.type,
                                              type.cast_type + "." + acc.field);
         // memset so verifier doesn't complain about reading uninitialized stack
-        b_.CreateMemSet(dst, b_.getInt8(0), field.type.size, 1);
+        b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.size, 1);
         b_.CreateProbeRead(dst, field.bitfield.read_bytes, src);
         raw = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
@@ -1951,7 +1951,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   }
 
   AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
-  b_.CreateMemSet(fmt_args, b_.getInt8(0), struct_size, 1);
+  b_.CREATE_MEMSET(fmt_args, b_.getInt8(0), struct_size, 1);
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);

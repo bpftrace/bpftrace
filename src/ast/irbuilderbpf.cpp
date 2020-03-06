@@ -82,7 +82,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   }
   else
   {
-    CreateMemSet(alloca, getInt64(0), stype.size, 1);
+    CREATE_MEMSET(alloca, getInt64(0), stype.size, 1);
   }
 
   restoreIP(ip);
@@ -226,7 +226,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &
 
   SetInsertPoint(lookup_failure_block);
   if (is_array)
-    CreateMemSet(value, getInt8(0), type.size, 1);
+    CREATE_MEMSET(value, getInt8(0), type.size, 1);
   else
     CreateStore(getInt64(0), value);
   CreateBr(lookup_merge_block);
