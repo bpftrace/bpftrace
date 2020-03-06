@@ -775,13 +775,8 @@ void CodegenLLVM::visit(Call &call)
       return;
     }
     arg.accept(*this);
-    if (arg.is_literal) {
-      b_.CreateSignal(b_.getInt32(static_cast<Integer&>(arg).n));
-    }
-    else {
-      expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
-      b_.CreateSignal(expr_);
-    }
+    expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
+    b_.CreateSignal(expr_);
   }
   else if (call.func == "strncmp") {
     uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
