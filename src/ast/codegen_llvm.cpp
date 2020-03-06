@@ -503,13 +503,27 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "join")
   {
     call.vargs->front()->accept(*this);
-    AllocaInst *first = b_.CreateAllocaBPF(SizedType(Type::integer, 8), call.func + "_first");
-    AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_second");
+    AllocaInst *first = b_.CreateAllocaBPF(b_.getInt64Ty(),
+                                           call.func + "_first");
+    AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
+                                            call.func + "_second");
     Value *perfdata = b_.CreateGetJoinMap(ctx_);
     Function *parent = b_.GetInsertBlock()->getParent();
-    BasicBlock *zero = BasicBlock::Create(module_->getContext(), "joinzero", parent);
-    BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "joinnotzero", parent);
-    b_.CreateCondBr(b_.CreateICmpNE(perfdata, ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()), "joinzerocond"), notzero, zero);
+
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(),
+                                          "joinzero",
+                                          parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(),
+                                             "joinnotzero",
+                                             parent);
+
+    b_.CreateCondBr(b_.CreateICmpNE(perfdata,
+                                    ConstantExpr::getCast(Instruction::IntToPtr,
+                                                          b_.getInt64(0),
+                                                          b_.getInt8PtrTy()),
+                                    "joinzerocond"),
+                    notzero,
+                    zero);
 
     // arg0
     b_.SetInsertPoint(notzero);
@@ -517,19 +531,29 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(join_id_),
                    b_.CreateGEP(perfdata, b_.getInt64(8)));
     join_id_++;
-    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func+"_r0");
+    AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
     b_.CreateProbeRead(arr, 8, expr_);
-    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8+8)), bpftrace_.join_argsize_, b_.CreateLoad(arr));
+    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
+                          bpftrace_.join_argsize_,
+                          b_.CreateLoad(arr));
 
-    for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++) {
+    for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
+    {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
       b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
-      b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)), bpftrace_.join_argsize_, b_.CreateLoad(second));
+      b_.CreateProbeReadStr(
+          b_.CreateAdd(perfdata,
+                       b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
+          bpftrace_.join_argsize_,
+          b_.CreateLoad(second));
     }
 
     // emit
-    b_.CreatePerfEventOutput(ctx_, perfdata, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+    b_.CreatePerfEventOutput(
+        ctx_,
+        perfdata,
+        8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
 
     b_.CreateBr(zero);
 
