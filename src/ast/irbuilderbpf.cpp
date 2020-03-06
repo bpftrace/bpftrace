@@ -273,12 +273,13 @@ void IRBuilderBPF::CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val)
 
 void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
 {
+  assert(key->getType()->isPointerTy());
   Value *map_ptr = CreateBpfPseudoCall(map);
 
   // int map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
   FunctionType *delete_func_type = FunctionType::get(
-      getInt64Ty(), { map_ptr->getType(), getInt8PtrTy() }, false);
+      getInt64Ty(), { map_ptr->getType(), key->getType() }, false);
   PointerType *delete_func_ptr_type = PointerType::get(delete_func_type, 0);
   Constant *delete_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
