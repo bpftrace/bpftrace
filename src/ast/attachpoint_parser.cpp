@@ -27,9 +27,9 @@ std::vector<std::string> split_attachpoint(const std::string &raw,
   bool in_quotes = false;
   std::string argument;
 
-  for (char c : raw)
+  for (size_t idx = 0; idx < raw.size(); ++idx)
   {
-    if (c == ':' && !in_quotes)
+    if (raw[idx] == ':' && !in_quotes)
     {
       if (argument.empty() && remove_empty)
         continue;
@@ -39,10 +39,16 @@ std::vector<std::string> split_attachpoint(const std::string &raw,
       // valid but unspecified state, so clear() to be safe
       argument.clear();
     }
-    else if (c == '"')
+    else if (raw[idx] == '"')
       in_quotes = !in_quotes;
+    // Handle escaped characters in a string
+    else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size()))
+    {
+      argument += raw[idx + 1];
+      ++idx;
+    }
     else
-      argument += c;
+      argument += raw[idx];
   }
 
   // Always drop final element if it's empty

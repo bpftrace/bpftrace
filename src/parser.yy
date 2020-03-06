@@ -17,6 +17,8 @@
 // Forward declarations of classes referenced in the parser
 %code requires
 {
+#include <regex>
+
 namespace bpftrace {
 class Driver;
 namespace ast {
@@ -171,7 +173,10 @@ attach_point : attach_point_def                { $$ = new ast::AttachPoint($1, @
              ;
 
 attach_point_def : attach_point_def ident    { $$ = $1 + $2; }
-                 | attach_point_def STRING   { $$ = $1 + "\"" + $2 + "\""; }
+                 // Since we're double quoting the STRING for the benefit of the
+                 // AttachPointParser, we have to make sure we re-escape any double
+                 // quotes.
+                 | attach_point_def STRING   { $$ = $1 + "\"" + std::regex_replace($2, std::regex("\""), "\\\"") + "\""; }
                  | attach_point_def PATH     { $$ = $1 + $2; }
                  | attach_point_def INT      { $$ = $1 + std::to_string($2); }
                  | attach_point_def COLON    { $$ = $1 + ":"; }
