@@ -17,7 +17,7 @@ entry:
   %"$foo" = alloca [1 x i8], align 1
   %1 = getelementptr inbounds [1 x i8], [1 x i8]* %"$foo", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i64 0, i64 1, i1 false)
+  store i8 0, i8* %1, align 1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = load i8, i8 addrspace(64)* null, align 536870912
   store i8 %2, i8* %1, align 1
@@ -38,9 +38,6 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0
 }
-
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

@@ -19,7 +19,7 @@ entry:
   %tmpcast = bitcast i64* %"$foo" to [8 x i8]*
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %1, i64 0, i64 8, i1 false)
+  store i64 0, i64* %"$foo", align 8
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   %2 = load i64, i64 addrspace(64)* null, align 536870912
   store i64 %2, i64* %"$foo", align 8
@@ -46,9 +46,6 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %9)
   ret i64 0
 }
-
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
