@@ -3,6 +3,8 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "bpf-pc-linux"
 
+%usym_t = type { i64, i64 }
+
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
@@ -13,27 +15,28 @@ define i64 @"uprobe:/bin/sh:f"(i8*) local_unnamed_addr section "s_uprobe:/bin/sh
 entry:
   %"@x_val" = alloca [16 x i8], align 8
   %"@x_key" = alloca i64, align 8
-  %func1 = alloca [16 x i8], align 8
+  %usym = alloca %usym_t, align 8
   %1 = getelementptr i8, i8* %0, i64 128
   %2 = bitcast i8* %1 to i64*
   %func = load volatile i64, i64* %2, align 8
-  %3 = getelementptr inbounds [16 x i8], [16 x i8]* %func1, i64 0, i64 0
+  %3 = bitcast %usym_t* %usym to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   %get_pid_tgid = tail call i64 inttoptr (i64 14 to i64 ()*)()
   %4 = lshr i64 %get_pid_tgid, 32
-  %5 = getelementptr inbounds [16 x i8], [16 x i8]* %func1, i64 0, i64 8
-  store i64 %func, [16 x i8]* %func1, align 8
-  store i64 %4, i8* %5, align 8
-  %6 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %6)
-  store i64 0, i64* %"@x_key", align 8
-  %7 = getelementptr inbounds [16 x i8], [16 x i8]* %"@x_val", i64 0, i64 0
+  %5 = getelementptr inbounds %usym_t, %usym_t* %usym, i64 0, i32 0
+  %6 = getelementptr inbounds %usym_t, %usym_t* %usym, i64 0, i32 1
+  store i64 %func, i64* %5, align 8
+  store i64 %4, i64* %6, align 8
+  %7 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
-  store [16 x i8]* %func1, [16 x i8]* %"@x_val", align 8
+  store i64 0, i64* %"@x_key", align 8
+  %8 = getelementptr inbounds [16 x i8], [16 x i8]* %"@x_val", i64 0, i64 0
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
+  store %usym_t* %usym, [16 x i8]* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [16 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [16 x i8]* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   ret i64 0
 }
 
