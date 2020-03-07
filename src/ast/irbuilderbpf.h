@@ -78,6 +78,7 @@ public:
   void        CreateSignal(Value *sig);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
+  AllocaInst *CreateUSym(llvm::Value *val);
 
 private:
   Module &module_;

@@ -15,6 +15,26 @@ namespace libbpf {
 namespace bpftrace {
 namespace ast {
 
+AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
+{
+  std::vector<llvm::Type *> elements = {
+    getInt64Ty(), // addr
+    getInt64Ty(), // pid
+  };
+  StructType *usym_t = GetStructType("usym_t", elements, false);
+  AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
+
+  Value *pid = CreateLShr(CreateGetPidTgid(), 32);
+
+  // The extra 0 here ensures the type of addr_offset will be int64
+  Value *addr_offset = CreateGEP(buf, { getInt64(0), getInt32(0) });
+  Value *pid_offset = CreateGEP(buf, { getInt64(0), getInt32(1) });
+
+  CreateStore(val, addr_offset);
+  CreateStore(pid, pid_offset);
+  return buf;
+}
+
 StructType *IRBuilderBPF::GetStructType(
     std::string name,
     const std::vector<llvm::Type *> &elements,
