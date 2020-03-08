@@ -3,6 +3,8 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "bpf-pc-linux"
 
+%print_t = type <{ i64, i32, i32, i32 }>
+
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
@@ -31,27 +33,23 @@ declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
 
 define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
-  %perfdata = alloca [27 x i8], align 8
-  %1 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 0
+  %"print_@x" = alloca %print_t, align 8
+  %1 = bitcast %print_t* %"print_@x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 30001, [27 x i8]* %perfdata, align 8
-  %2 = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 8
-  %str.sroa.0.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 24
-  call void @llvm.memset.p0i8.i64(i8* %2, i8 0, i64 16, i32 8, i1 false)
-  store i8 64, i8* %str.sroa.0.0..sroa_idx, align 8
-  %str.sroa.4.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 25
-  store i8 120, i8* %str.sroa.4.0..sroa_idx, align 1
-  %str.sroa.5.0..sroa_idx = getelementptr inbounds [27 x i8], [27 x i8]* %perfdata, i64 0, i64 26
-  store i8 0, i8* %str.sroa.5.0..sroa_idx, align 2
+  %2 = getelementptr inbounds %print_t, %print_t* %"print_@x", i64 0, i32 0
+  store i64 30001, i64* %2, align 8
+  %3 = getelementptr inbounds %print_t, %print_t* %"print_@x", i64 0, i32 1
+  store i32 0, i32* %3, align 8
+  %4 = getelementptr inbounds %print_t, %print_t* %"print_@x", i64 0, i32 2
+  store i32 0, i32* %4, align 4
+  %5 = getelementptr inbounds %print_t, %print_t* %"print_@x", i64 0, i32 3
+  store i32 0, i32* %5, align 8
   %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, [27 x i8]*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, [27 x i8]* nonnull %perfdata, i64 27)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %print_t* nonnull %"print_@x", i64 20)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
-
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

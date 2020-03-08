@@ -26,12 +26,13 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
 
+#include "ast/async_event_types.h"
+#include "attached_probe.h"
 #include "bpforc.h"
 #include "bpftrace.h"
-#include "attached_probe.h"
 #include "printf.h"
-#include "triggers.h"
 #include "resolve_cgroupid.h"
+#include "triggers.h"
 #include "utils.h"
 
 extern char** environ;
@@ -463,28 +464,34 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
   else if (printf_id == asyncactionint(AsyncAction::print))
   {
-    std::string arg = (const char *)(static_cast<uint8_t*>(data) + sizeof(uint64_t) + 2 * sizeof(uint64_t));
-    uint64_t top = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
-    uint64_t div = (uint64_t) * (static_cast<uint64_t *>(data) + 2);
-    err = bpftrace->print_map_ident(arg, top, div);
+    auto print = static_cast<AsyncEvent::Print *>(data);
+    IMap &map = bpftrace->get_map_by_id(print->mapid);
+
+    err = bpftrace->print_map(map, print->top, print->div);
+
     if (err)
-      throw std::runtime_error("Could not print map with ident \"" + arg + "\", err=" + std::to_string(err));
+      throw std::runtime_error("Could not print map with ident \"" + map.name_ +
+                               "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::clear))
   {
-    std::string arg = (const char *)(arg_data+sizeof(uint64_t));
-    err = bpftrace->clear_map_ident(arg);
+    auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+    IMap &map = bpftrace->get_map_by_id(mapevent->mapid);
+    err = bpftrace->clear_map(map);
     if (err)
-      throw std::runtime_error("Could not clear map with ident \"" + arg + "\", err=" + std::to_string(err));
+      throw std::runtime_error("Could not clear map with ident \"" + map.name_ +
+                               "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::zero))
   {
-    std::string arg = (const char *)(arg_data+sizeof(uint64_t));
-    err = bpftrace->zero_map_ident(arg);
+    auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);
+    IMap &map = bpftrace->get_map_by_id(mapevent->mapid);
+    err = bpftrace->zero_map(map);
     if (err)
-      throw std::runtime_error("Could not zero map with ident \"" + arg + "\", err=" + std::to_string(err));
+      throw std::runtime_error("Could not zero map with ident \"" + map.name_ +
+                               "\", err=" + std::to_string(err));
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::time))
@@ -498,8 +505,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "localtime: " << strerror(errno) << std::endl;
       return;
     }
-    uint64_t time_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
-    auto fmt = bpftrace->time_args_[time_id].c_str();
+    auto time = static_cast<AsyncEvent::Time *>(data);
+    auto fmt = bpftrace->time_args_[time->time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
       std::cerr << "strftime returned 0" << std::endl;
       return;
@@ -979,59 +986,6 @@ int BPFtrace::print_maps()
   return 0;
 }
 
-// print a map given an ident string
-int BPFtrace::print_map_ident(const std::string &ident, uint32_t top, uint32_t div)
-{
-  int err = 0;
-  for(auto &mapmap : maps_)
-  {
-    IMap &map = *mapmap.second.get();
-    if (map.name_ == ident) {
-      if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
-        err = print_map_hist(map, top, div);
-      else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
-          err = print_map_stats(map);
-      else
-        err = print_map(map, top, div);
-      return err;
-    }
-  }
-
-  return -2;
-}
-
-// clear a map (delete all keys) given an ident string
-int BPFtrace::clear_map_ident(const std::string &ident)
-{
-  int err = 0;
-  for(auto &mapmap : maps_)
-  {
-    IMap &map = *mapmap.second.get();
-    if (map.name_ == ident) {
-        err = clear_map(map);
-      return err;
-    }
-  }
-
-  return -2;
-}
-
-// zero a map (set all keys to zero) given an ident string
-int BPFtrace::zero_map_ident(const std::string &ident)
-{
-  int err = 0;
-  for(auto &mapmap : maps_)
-  {
-    IMap &map = *mapmap.second.get();
-    if (map.name_ == ident) {
-        err = zero_map(map);
-      return err;
-    }
-  }
-
-  return -2;
-}
-
 // clear a map
 int BPFtrace::clear_map(IMap &map)
 {
@@ -1164,6 +1118,11 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
 
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
+  if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
+    return print_map_hist(map, top, div);
+  else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
+    return print_map_stats(map);
+
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
   try

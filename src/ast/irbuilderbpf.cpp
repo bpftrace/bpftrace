@@ -136,6 +136,13 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(int bytes, const std::string &name)
   return CreateAllocaBPF(ty, name);
 }
 
+llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Type *ty)
+{
+  assert(ty->isIntegerTy());
+  unsigned size = ty->getIntegerBitWidth();
+  return getIntN(size, C);
+}
+
 llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 {
   unsigned size = expr->getType()->getIntegerBitWidth();

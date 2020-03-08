@@ -85,9 +85,9 @@ public:
   int num_probes() const;
   int run(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
-  int print_map_ident(const std::string &ident, uint32_t top, uint32_t div);
-  int clear_map_ident(const std::string &ident);
-  int zero_map_ident(const std::string &ident);
+  int clear_map(IMap &map);
+  int zero_map(IMap &map);
+  int print_map(IMap &map, uint32_t top, uint32_t div);
   inline int next_probe_id() {
     return next_probe_id_++;
   };
@@ -96,6 +96,10 @@ public:
     filename_ = filename;
   }
   inline const std::string &source() { return src_; }
+  inline IMap &get_map_by_id(uint32_t id)
+  {
+    return *maps_[map_ids_[id]].get();
+  };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
   std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
@@ -130,6 +134,10 @@ public:
   static volatile sig_atomic_t exitsig_recv;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
+
+  // Maps a map id back to the map identifier. See get_map_by_id()
+  std::vector<std::string> map_ids_;
+
   std::map<std::string, Struct> structs_;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
@@ -208,9 +216,6 @@ private:
                                               const BpfOrc &bpforc);
   int setup_perf_events();
   void poll_perf_events(int epollfd, bool drain = false);
-  int clear_map(IMap &map);
-  int zero_map(IMap &map);
-  int print_map(IMap &map, uint32_t top, uint32_t div);
   int print_map_hist(IMap &map, uint32_t top, uint32_t div);
   int print_map_stats(IMap &map);
   template <typename T>

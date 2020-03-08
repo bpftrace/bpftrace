@@ -28,6 +28,9 @@ public:
            map_type_ == BPF_MAP_TYPE_PERCPU_ARRAY;
   }
 
+  // unique id of this map. Used by (bpf) runtime to reference
+  // this map
+  uint32_t id;
   // used by lhist(). TODO: move to separate Map object.
   int lqmin;
   int lqmax;
