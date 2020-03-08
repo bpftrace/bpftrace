@@ -1,5 +1,7 @@
 #pragma once
 
+#include <regex>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -51,12 +53,28 @@ static std::string rewrite_memset_call(const std::string &line)
   }
 
   return buf.str();
+#elif LLVM_VERSION_MAJOR >= 10
+  // clang-format off
+  // FROM: call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i64 0, i64 16, i1 false)
+  // TO:   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 dereferenceable(16) %1, i64 0, i64 16, i1 false)
+  // clang-format on
+  static std::regex re("\\((i8\\* nonnull align \\d+) %([^,]+), "
+                       "([^,]+), i64 (\\d+), ([^\\)]+)\\)");
+  return std::regex_replace(line,
+                            re,
+                            "($1 dereferenceable($4) %$2, $3, i64 $4, $5)");
 #else
   return line;
 #endif
 }
 
-#if LLVM_VERSION_MAJOR == 9
+#if LLVM_VERSION_MAJOR >= 10
+static std::string rewrite_memset_decl(const std::string &line
+                                       __attribute__((unused)))
+{
+  return std::string("declare void @llvm.memset.p0i8.i64(i8* nocapture "
+                     "writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1");
+#elif LLVM_VERSION_MAJOR == 9
 static std::string rewrite_memset_decl(const std::string &line
                                        __attribute__((unused)))
 {
@@ -105,6 +123,29 @@ static std::string rewrite_memcpy_call(const std::string &line)
     buf << " " << parts.at(i);
   }
   return buf.str();
+#elif LLVM_VERSION_MAJOR >= 10
+  // clang-format off
+  // FROM: call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %1, i8* nonnull align 1 %2, i64 16, i1 false)
+  // TO:   call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 dereferenceable(16) %1, i8* nonnull align 1 dereferenceable(16) %2, i64 16, i1 false)
+  // clang-format on
+  if (line.find("addrspace") != std::string::npos)
+  {
+    static std::regex re(
+        "\\((i8\\* nonnull align [^,]+) %(\\d+), (i8 "
+        "addrspace\\(\\d+\\)\\* align \\d+) (null), i64 (\\d+), "
+        "([^\\)]+)\\)");
+    return std::regex_replace(
+        line,
+        re,
+        "($1 dereferenceable($5) %$2, $3 dereferenceable($5) $4, i64 $5, $6)");
+  }
+  static std::regex re(
+      "\\((i8\\* nonnull align \\d+) %([^,]+), (i8\\* nonnull align "
+      "\\d+) %([^,]+), i64 (\\d+), (i1 false)\\)");
+  return std::regex_replace(
+      line,
+      re,
+      "($1 dereferenceable($5) %$2, $3 dereferenceable($5) %$4, i64 $5, $6)");
 #else
   return line;
 #endif
@@ -112,8 +153,17 @@ static std::string rewrite_memcpy_call(const std::string &line)
 
 static std::string rewrite_memcpy_decl(const std::string &line)
 {
-#if LLVM_VERSION_MAJOR == 9
-  (void)line;
+#if LLVM_VERSION_MAJOR >= 10
+  if (line.find("addrspace") != std::string::npos)
+    return std::string("declare void @llvm.memcpy.p0i8.p64i8.i64(i8* noalias "
+                       "nocapture writeonly %0, i8 "
+                       "addrspace(64)* noalias nocapture readonly %1, i64 %2, "
+                       "i1 immarg %3) #1");
+  return std::string(
+      "declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture "
+      "writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) "
+      "#1");
+#elif LLVM_VERSION_MAJOR == 9
   if (line.find("addrspace") != std::string::npos)
     return std::string(
         "declare void @llvm.memcpy.p0i8.p64i8.i64(i8* nocapture writeonly, i8 "
@@ -134,8 +184,11 @@ static std::string rewrite_memcpy_decl(const std::string &line)
 
 static std::string rewrite_lifetime_end_decl(const std::string &line)
 {
-#if LLVM_VERSION_MAJOR == 9
   (void)line;
+#if LLVM_VERSION_MAJOR >= 10
+  return std::string("declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* "
+                     "nocapture %1) #1");
+#elif LLVM_VERSION_MAJOR == 9
   return std::string(
       "declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1");
 #else
@@ -145,14 +198,80 @@ static std::string rewrite_lifetime_end_decl(const std::string &line)
 
 static std::string rewrite_lifetime_start_decl(const std::string &line)
 {
-#if LLVM_VERSION_MAJOR == 9
   (void)line;
+#if LLVM_VERSION_MAJOR >= 10
+  return std::string("declare void @llvm.lifetime.start.p0i8(i64 immarg %0, "
+                     "i8* nocapture %1) #1");
+#elif LLVM_VERSION_MAJOR == 9
   return std::string(
       "declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1");
 #else
   return line;
 #endif
 }
+
+static std::string rewrite_bpf_pseudo(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR >= 10
+  // FROM: declare i64 @llvm.bpf.pseudo(i64, i64) #0
+  // TO:   declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
+  (void)line;
+  return std::string("declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0");
+#else
+  return line;
+#endif
+}
+
+static std::string rewrite_function_attrs(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR >= 10
+  // FROM: ;Function Attrs: argmemonly nounwind
+  // TO:   ;Function Attrs: argmemonly nounwind willreturn
+  (void)line;
+  return std::string("; Function Attrs: argmemonly nounwind willreturn");
+#else
+  return line;
+#endif
+}
+
+static std::string rewrite_attrs(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR >= 10
+  // FROM: attributes #1 = { argmemonly nounwind }
+  // TO:   attributes #1 = { argmemonly nounwind willreturn }
+  (void)line;
+  return std::string("attributes #1 = { argmemonly nounwind willreturn }");
+#else
+  return line;
+#endif
+}
+
+static std::string rewrite_local_unnamed_addr(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR >= 10
+  // FROM: define i64 @BEGIN(i8*) local_unnamed_addr section \"s_BEGIN_1\" {
+  // TO:   define i64 @BEGIN(i8* %0) local_unnamed_addr section \"s_BEGIN_1\" {
+  static std::regex re("(@[^\\(]+)\\(([^\\)]+)\\)");
+  return std::regex_replace(line, re, "$1($2 %0)");
+#else
+  return line;
+#endif
+}
+
+static std::string rewrite_gep(const std::string &line)
+{
+#if LLVM_VERSION_MAJOR >= 10
+  // FROM: %28 = getelementptr inbounds [4 x i8], [4 x i8]* %27, i64 0, i64 0
+  // TO:   %28 = getelementptr [4 x i8], [4 x i8]* %27, i64 0, i64 0
+  static std::regex re(
+      "(getelementptr) inbounds (\\[\\d+ x i\\d+\\], \\[\\d+ x "
+      "i\\d+\\]\\* %\\d+, i\\d+ 0, i\\d+ 0)");
+  return std::regex_replace(line, re, "$1 $2");
+#else
+  return line;
+#endif
+}
+
 static std::string rewrite(const std::string &ir)
 {
   std::stringstream buf;
@@ -171,6 +290,18 @@ static std::string rewrite(const std::string &ir)
       buf << rewrite_lifetime_start_decl(line);
     else if (line.find("declare void @llvm.lifetime.end") != std::string::npos)
       buf << rewrite_lifetime_end_decl(line);
+    else if (line.find("declare i64 @llvm.bpf.pseudo") != std::string::npos)
+      buf << rewrite_bpf_pseudo(line);
+    else if (line.find("; Function Attrs: argmemonly nounwind") !=
+             std::string::npos)
+      buf << rewrite_function_attrs(line);
+    else if (line.find("attributes #1 = { argmemonly nounwind }") !=
+             std::string::npos)
+      buf << rewrite_attrs(line);
+    else if (line.find("local_unnamed_addr") != std::string::npos)
+      buf << rewrite_local_unnamed_addr(line);
+    else if (line.find("getelementptr inbounds") != std::string::npos)
+      buf << rewrite_gep(line);
     else
       buf << line;
     buf << std::endl;
