@@ -8,12 +8,13 @@ endif()
 
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
+file(GLOB_RECURSE CODEGEN_SOURCES codegen/*.cpp codegen/*.h)
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
   COMMAND
     ${CMAKE_COMMAND}
     -DTEST_SRC_DIR="${CMAKE_SOURCE_DIR}/tests/codegen"
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
-  DEPENDS codegen/*.cpp codegen/*.h)
+  DEPENDS ${CODEGEN_SOURCES})
 
 add_executable(bpftrace_test
   ast.cpp
