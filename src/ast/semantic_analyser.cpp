@@ -1790,7 +1790,11 @@ int SemanticAnalyser::create_maps(bool debug)
     auto &key = search_args->second;
 
     if (debug)
+    {
       bpftrace_.maps_[map_name] = std::make_unique<bpftrace::FakeMap>(map_name, type, key);
+      bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
+      bpftrace_.map_ids_.push_back(map_name);
+    }
     else
     {
       if (type.type == Type::lhist)
@@ -1809,11 +1813,20 @@ int SemanticAnalyser::create_maps(bool debug)
         Integer &min = static_cast<Integer&>(min_arg);
         Integer &max = static_cast<Integer&>(max_arg);
         Integer &step = static_cast<Integer&>(step_arg);
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
+            map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
+        bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
+        bpftrace_.map_ids_.push_back(map_name);
         failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
       }
       else
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(map_name, type, key, bpftrace_.mapmax_);
+      {
+        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
+            map_name, type, key, bpftrace_.mapmax_);
+        bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
+        bpftrace_.map_ids_.push_back(map_name);
+        failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
+      }
     }
   }
 

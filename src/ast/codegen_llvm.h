@@ -91,6 +91,11 @@ private:
   int cat_id_ = 0;
   uint64_t join_id_ = 0;
   int system_id_ = 0;
+
+  size_t getStructSize(StructType *s)
+  {
+    return layout_.getTypeAllocSize(s);
+  }
 };
 
 } // namespace ast

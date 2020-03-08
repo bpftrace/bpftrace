@@ -1,6 +1,7 @@
 #include "codegen_llvm.h"
 #include "arch/arch.h"
 #include "ast.h"
+#include "ast/async_event_types.h"
 #include "bpforc.h"
 #include "parser.tab.hh"
 #include "tracepoint_format_parser.h"
@@ -670,87 +671,99 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "print")
   {
-    /*
-     * perf event output has: uint64_t asyncaction_id, uint64_t top, uint64_t div, string map_ident
-     * The asyncaction_id informs user-space that this is not a printf(), but is a
-     * special asynchronous action. The ID maps to print(). The top argument is either
-     * a value for truncation, or 0 for everything. The div argument divides the output values
-     * by this (eg: for use in nanosecond -> millisecond conversions).
-     * TODO: consider stashing top & div in a printf_args_ like struct, so we don't need to pass
-     * them here via the perfdata output (which is a little more wasteful than need be: I'm using
-     * uint64_t's to avoid "misaligned stack access off" errors when juggling uint32_t's).
-     */
+    auto elements = AsyncEvent::Print().asLLVMType(b_);
+    StructType *print_struct = b_.GetStructType(call.func + "_t",
+                                                elements,
+                                                true);
+
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
-    Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
-    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
-    b_.CREATE_MEMSET(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
-    b_.CreateStore(const_str, str_buf);
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
-    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
+
+    AllocaInst *buf = b_.CreateAllocaBPF(print_struct,
+                                         call.func + "_" + map.ident);
 
     // store asyncactionid:
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print)), perfdata);
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print)),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
 
-    // store top:
-    if (call.vargs->size() > 1)
+    auto id = bpftrace_.maps_[map.ident]->id;
+    auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
+    b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
+
+    // top, div
+    // first loops sets the arguments as passed by user. The second one zeros
+    // the rest
+    size_t arg_idx = 1;
+    for (; arg_idx < call.vargs->size(); arg_idx++)
     {
-      Integer &top_arg = static_cast<Integer&>(*call.vargs->at(1));
-      Value *top;
-      top_arg.accept(*this);
-      top = expr_;
-      b_.CreateStore(top, b_.CreateGEP(perfdata, {b_.getInt32(0), b_.getInt32(sizeof(uint64_t))}));
-    }
-    else
-      b_.CreateStore(b_.getInt64(0), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
+      call.vargs->at(arg_idx)->accept(*this);
 
-    // store top:
-    if (call.vargs->size() > 2)
+      b_.CreateStore(
+          b_.CreateIntCast(expr_, elements.at(arg_idx), false),
+          b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
+    }
+
+    for (; arg_idx < 3; arg_idx++)
     {
-      Integer &div_arg = static_cast<Integer&>(*call.vargs->at(2));
-      Value *div;
-      div_arg.accept(*this);
-      div = expr_;
-      b_.CreateStore(div, b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + sizeof(uint64_t))}));
+      b_.CreateStore(
+          b_.GetIntSameSize(0, elements.at(arg_idx)),
+          b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
     }
-    else
-      b_.CreateStore(b_.getInt64(0), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + sizeof(uint64_t))}));
 
-    // store map ident:
-    b_.CREATE_MEMCPY(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t) + 2 * sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + 2 * sizeof(uint64_t) + map.ident.length() + 1);
-    b_.CreateLifetimeEnd(perfdata);
+    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct));
+    b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
   else if (call.func == "clear" || call.func == "zero")
   {
+    auto elements = AsyncEvent::MapEvent().asLLVMType(b_);
+    StructType *event_struct = b_.GetStructType(call.func + "_t",
+                                                elements,
+                                                true);
+
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
-    Constant *const_str = ConstantDataArray::getString(module_->getContext(), map.ident, true);
-    AllocaInst *str_buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), map.ident.length() + 1), "str");
-    b_.CREATE_MEMSET(str_buf, b_.getInt8(0), map.ident.length() + 1, 1);
-    b_.CreateStore(const_str, str_buf);
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) + map.ident.length() + 1);
-    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
+
+    AllocaInst *buf = b_.CreateAllocaBPF(event_struct,
+                                         call.func + "_" + map.ident);
+
+    auto aa_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) });
     if (call.func == "clear")
-      b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::clear)), perfdata);
+      b_.CreateStore(b_.GetIntSameSize(asyncactionint(AsyncAction::clear),
+                                       elements.at(0)),
+                     aa_ptr);
     else
-      b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::zero)), perfdata);
-    b_.CREATE_MEMCPY(b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}), str_buf, map.ident.length() + 1, 1);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) + map.ident.length() + 1);
-    b_.CreateLifetimeEnd(perfdata);
+      b_.CreateStore(b_.GetIntSameSize(asyncactionint(AsyncAction::zero),
+                                       elements.at(0)),
+                     aa_ptr);
+
+    auto id = bpftrace_.maps_[map.ident]->id;
+    auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
+    b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
+
+    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(event_struct));
+    b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
   else if (call.func == "time")
   {
-    ArrayType *perfdata_type = ArrayType::get(b_.getInt8Ty(), sizeof(uint64_t) * 2);
-    AllocaInst *perfdata = b_.CreateAllocaBPF(perfdata_type, "perfdata");
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::time)), perfdata);
-    b_.CreateStore(b_.getInt64(time_id_), b_.CreateGEP(perfdata, {b_.getInt64(0), b_.getInt64(sizeof(uint64_t))}));
+    auto elements = AsyncEvent::Time().asLLVMType(b_);
+    StructType *time_struct = b_.GetStructType(call.func + "_t",
+                                               elements,
+                                               true);
+
+    AllocaInst *buf = b_.CreateAllocaBPF(time_struct, call.func + "_t");
+
+    b_.CreateStore(b_.GetIntSameSize(asyncactionint(AsyncAction::time),
+                                     elements.at(0)),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+
+    b_.CreateStore(b_.GetIntSameSize(time_id_, elements.at(1)),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
 
     time_id_++;
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t) * 2);
-    b_.CreateLifetimeEnd(perfdata);
+    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(time_struct));
+    b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
   else if (call.func == "kstack" || call.func == "ustack")
