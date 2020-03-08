@@ -206,10 +206,9 @@ static std::string remove_qualifiers(std::string &&typestr)
 {
   // libclang prints "const" keyword first
   // https://github.com/llvm-mirror/clang/blob/65acf43270ea2894dffa0d0b292b92402f80c8cb/lib/AST/TypePrinter.cpp#L137-L157
-  return std::regex_replace(typestr,
-                            std::regex("^(const volatile\\s+)|^(const\\s+)|"
-                                       "^(volatile\\s+)|\\*(\\s*restrict)$"),
-                            "");
+  static std::regex re("^(const volatile\\s+)|^(const\\s+)|"
+                       "^(volatile\\s+)|\\*(\\s*restrict)$");
+  return std::regex_replace(typestr, re, "");
 }
 
 static std::string get_unqualified_type_name(CXType clang_type)
