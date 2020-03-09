@@ -116,8 +116,11 @@ std::string TracepointFormatParser::get_struct_name(const std::string &category,
   return "struct _tracepoint_" + category + "_" + event_name;
 }
 
-std::string TracepointFormatParser::parse_field(const std::string &line)
+std::string TracepointFormatParser::parse_field(const std::string &line,
+                                                int *last_offset)
 {
+  std::string extra = "";
+
   auto field_pos = line.find("field:");
   if (field_pos == std::string::npos)
     return "";
@@ -143,6 +146,23 @@ std::string TracepointFormatParser::parse_field(const std::string &line)
     return "";
 
   int size = std::stoi(line.substr(size_pos + 5, size_semi_pos - size_pos - 5));
+  int offset = std::stoi(
+      line.substr(offset_pos + 7, offset_semi_pos - offset_pos - 7));
+
+  // If there'a gap between last field and this one,
+  // generate padding fields
+  if (offset && *last_offset)
+  {
+    int i, gap = offset - *last_offset;
+
+    for (i = 0; i < gap; i++)
+    {
+      extra += "  char __pad_" + std::to_string(offset - gap + i) + ";\n";
+    }
+  }
+
+  *last_offset = offset + size;
+
   std::string field = line.substr(field_pos + 6, field_semi_pos - field_pos - 6);
   auto field_type_end_pos = field.find_last_of("\t ");
   if (field_type_end_pos == std::string::npos)
@@ -160,7 +180,7 @@ std::string TracepointFormatParser::parse_field(const std::string &line)
   if (field_name.find("[") == std::string::npos)
     field_type = adjust_integer_types(field_type, size);
 
-  return "  " + field_type + " " + field_name + ";\n";
+  return extra + "  " + field_type + " " + field_name + ";\n";
 }
 
 std::string TracepointFormatParser::adjust_integer_types(const std::string &field_type, int size)
@@ -183,10 +203,11 @@ std::string TracepointFormatParser::adjust_integer_types(const std::string &fiel
 std::string TracepointFormatParser::get_tracepoint_struct(std::istream &format_file, const std::string &category, const std::string &event_name)
 {
   std::string format_struct = get_struct_name(category, event_name) + "\n{\n";
+  int last_offset = 0;
 
   for (std::string line; getline(format_file, line); )
   {
-    format_struct += parse_field(line);
+    format_struct += parse_field(line, &last_offset);
   }
 
   format_struct += "};\n";

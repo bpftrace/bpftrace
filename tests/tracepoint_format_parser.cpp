@@ -32,18 +32,21 @@ TEST(tracepoint_format_parser, tracepoint_struct)
     "\n"
     "print fmt: \"fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx\", ((unsigned long)(REC->fd)), ((unsigned long)(REC->buf)), ((unsigned long)(REC->count))\n";
 
-  std::string expected =
-    "struct _tracepoint_syscalls_sys_enter_read\n"
-    "{\n"
-    "  unsigned short common_type;\n"
-    "  unsigned char common_flags;\n"
-    "  unsigned char common_preempt_count;\n"
-    "  int common_pid;\n"
-    "  int __syscall_nr;\n"
-    "  u64 fd;\n"
-    "  char * buf;\n"
-    "  size_t count;\n"
-    "};\n";
+  std::string expected = "struct _tracepoint_syscalls_sys_enter_read\n"
+                         "{\n"
+                         "  unsigned short common_type;\n"
+                         "  unsigned char common_flags;\n"
+                         "  unsigned char common_preempt_count;\n"
+                         "  int common_pid;\n"
+                         "  int __syscall_nr;\n"
+                         "  char __pad_12;\n"
+                         "  char __pad_13;\n"
+                         "  char __pad_14;\n"
+                         "  char __pad_15;\n"
+                         "  u64 fd;\n"
+                         "  char * buf;\n"
+                         "  size_t count;\n"
+                         "};\n";
 
   std::istringstream format_file(input);
 
@@ -145,6 +148,52 @@ TEST(tracepoint_format_parser, adjust_integer_types)
   std::istringstream format_file(input);
 
   std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(format_file, "syscalls", "sys_enter_read");
+
+  EXPECT_EQ(expected, result);
+}
+
+TEST(tracepoint_format_parser, padding)
+{
+  std::string input =
+      " field:unsigned short common_type;       offset:0;       size:2; "
+      "signed:0;\n"
+      " field:unsigned char common_flags;       offset:2;       size:1; "
+      "signed:0;\n"
+      " field:unsigned char common_preempt_count;       offset:3;       "
+      "size:1; signed:0;\n"
+      " field:int common_pid;   offset:4;       size:4; signed:1;\n"
+      " field:unsigned char common_migrate_disable;     offset:8;       "
+      "size:1; signed:0;\n"
+      " field:unsigned char common_preempt_lazy_count;  offset:9;       "
+      "size:1; signed:0;\n"
+
+      " field:char comm[16];    offset:12;      size:16;        signed:1;\n"
+      " field:pid_t pid;        offset:28;      size:4; signed:1;\n"
+      " field:int prio; offset:32;      size:4; signed:1;\n"
+      " field:int success;      offset:36;      size:4; signed:1;\n"
+      " field:int target_cpu;   offset:40;      size:4; signed:1;\n";
+
+  std::string expected = "struct _tracepoint_sched_sched_wakeup\n"
+                         "{\n"
+                         "  unsigned short common_type;\n"
+                         "  unsigned char common_flags;\n"
+                         "  unsigned char common_preempt_count;\n"
+                         "  int common_pid;\n"
+                         "  unsigned char common_migrate_disable;\n"
+                         "  unsigned char common_preempt_lazy_count;\n"
+                         "  char __pad_10;\n"
+                         "  char __pad_11;\n"
+                         "  char comm[16];\n"
+                         "  pid_t pid;\n"
+                         "  int prio;\n"
+                         "  int success;\n"
+                         "  int target_cpu;\n"
+                         "};\n";
+
+  std::istringstream format_file(input);
+
+  std::string result = MockTracepointFormatParser::get_tracepoint_struct_public(
+      format_file, "sched", "sched_wakeup");
 
   EXPECT_EQ(expected, result);
 }

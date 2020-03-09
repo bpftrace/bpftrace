@@ -124,7 +124,7 @@ public:
                                      const std::string &event_name);
 
 private:
-  static std::string parse_field(const std::string &line);
+  static std::string parse_field(const std::string &line, int *last_offset);
   static std::string adjust_integer_types(const std::string &field_type,
                                           int size);
   static std::set<std::string> struct_list;
