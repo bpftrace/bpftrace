@@ -727,7 +727,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   //                           u64 flags, void *data, u64 size)
   FunctionType *perfoutput_func_type = FunctionType::get(getInt64Ty(),
                                                          { getInt8PtrTy(),
-                                                           getInt64Ty(),
+                                                           map_ptr->getType(),
                                                            getInt64Ty(),
                                                            data->getType(),
                                                            getInt64Ty() },
