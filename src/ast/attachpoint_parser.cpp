@@ -356,6 +356,10 @@ int AttachPointParser::tracepoint_parser()
   ap_->target = parts_[1];
   ap_->func = parts_[2];
 
+  if (ap_->target.find('*') != std::string::npos ||
+      ap_->func.find('*') != std::string::npos)
+    ap_->need_expansion = true;
+
   return 0;
 }
 
