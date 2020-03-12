@@ -114,6 +114,11 @@ EXPECT first second
 TIMEOUT 5
 AFTER sleep 0.1; sleep 0.1
 
+NAME tracepoint_expansion
+RUN bpftrace -v -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit "); }' -c "/bin/sleep 0.1"
+EXPECT hit hit
+TIMEOUT 5
+
 NAME profile
 RUN bpftrace -v -e 'profile:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
