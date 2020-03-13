@@ -1282,7 +1282,13 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   if (type.is_tparg) {
     for (AttachPoint *attach_point : *probe_->attach_points) {
-      assert(probetype(attach_point->provider) == ProbeType::tracepoint);
+      if (probetype(attach_point->provider) != ProbeType::tracepoint)
+      {
+        // The args builtin can only be used with tracepoint
+        // an error message is already generated in visit(Builtin)
+        // just continue semantic analysis
+        continue;
+      }
 
       auto symbol_stream = bpftrace_.get_symbols_from_file(
           "/sys/kernel/debug/tracing/available_events");
