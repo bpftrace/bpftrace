@@ -1,0 +1,122 @@
+#
+# To build:
+#
+# Using multipass, one should enable a large multipass VM using:
+#
+#   SNAPCRAFT_BUILD_ENVIRONMENT_MEMORY=8G snapcraft
+#
+# Alternatively, one can build in a lxd container using:
+#
+#   snapcraft --use-lxd
+#
+# Install using something like:
+#
+#   sudo snap install --devmode bpftrace_0.9.4-20200312-1403-11814f2_amd64.snap
+#
+name: bpftrace
+summary: high-level tracing language for Linux eBPF
+description: BPFtrace is a high-level tracing language for
+  Linux enhanced Berkeley Packet Filter available in recent
+  Linux kernels. BPFtrace uses LLVM as a backend to compile scripts
+  to BPF-bytecode and makes use of BCC for interacting with the Linux
+  BPF system, as well as existing Linux tracing capabilities like
+  kernel dynamic tracing, user-level dynamic tracing and tracepoints.
+
+confinement: strict
+grade: stable
+base: core18
+architectures: [amd64]
+assumes: [snapd2.37]
+adopt-info: bpftrace
+
+parts:
+    bcclibs3:
+        source: https://github.com/iovisor/bcc.git
+        source-tag: v0.8.0
+        plugin: cmake
+        configflags:
+            - -DLLVM_DEFINITIONS="-D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
+            - -DREVISION_LAST=v0.8.0
+            - -DBCC_KERNEL_HAS_SOURCE_DIR=1
+            - -DPYTHON_CMD='python2;python3'
+            - -DCMAKE_BUILD_PARALLEL_LEVEL=1
+            - -DCMAKE_INSTALL_PREFIX=/usr
+        override-pull: |
+          snapcraftctl pull
+          sed -i "s;if os.environ.get('DESTDIR'):;if \"sdist\" not in sys.argv and os.environ.get('DESTDIR'):;" src/python/setup.py.in
+        build-packages:
+            - git
+            - libc6
+            - iperf
+            - bison
+            - cmake
+            - flex
+            - g++
+            - binutils-dev
+            - libstdc++-dev
+            - libelf-dev
+            - zlib1g-dev
+            - libfl-dev
+            - clang-7
+            - libclang-7-dev
+            - libclang-common-7-dev
+            - libclang1-7
+            - libllvm7
+            - llvm-7
+            - llvm-7-dev
+            - llvm-7-runtime
+            - systemtap-sdt-dev
+            - netperf
+            - python3
+            - arping
+            - clang-format
+            - ethtool
+            - inetutils-ping
+            - libedit-dev
+            - libzip-dev
+            - libluajit-5.1-dev
+            - luajit
+            - python3-netaddr
+            - python3-pyroute2
+            - python3-distutils
+    bpftrace:
+        after:
+            - bcclibs3
+        source: https://github.com/iovisor/bpftrace.git
+        plugin: cmake
+        configflags:
+            - -DCMAKE_BUILD_TYPE=Release
+            - -DLIBBCC_INCLUDE_DIRS=$SNAPCRAFT_STAGE/usr/include/bcc
+        override-pull: |
+            snapcraftctl pull
+            description=$(git describe HEAD --tags)
+            sha=$(echo $description | tr '-' ' ' | awk '{print $NF}')
+            version=${description%$sha}
+            commits=$(git log --oneline | wc -l)
+            date=$(date +'%Y%m%d')
+            snapcraftctl set-version "$version$date-$commits-$sha"
+        build-packages:
+          - bison
+          - cmake
+          - flex
+          - g++
+          - git
+          - libelf-dev
+          - zlib1g-dev
+          - libfl-dev
+          - systemtap-sdt-dev
+          - binutils-dev
+          - llvm-7-dev
+          - llvm-7-runtime
+          - libclang-7-dev
+          - clang-7
+        stage-packages:
+          - libbinutils
+          - libclang1-7
+          - libllvm7
+
+apps:
+    bpftrace:
+        command: bpftrace
+        plugs: [ home, system-trace ]
+
