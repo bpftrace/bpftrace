@@ -1536,6 +1536,13 @@ TEST(Parser, long_param_overflow)
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST(Parser, empty_arguments)
+{
+  test_parse_failure("::k::vfs_open:: { 1 }");
+  test_parse_failure("k:vfs_open: { 1 }");
+  test_parse_failure(":w:0x10000000:8:rw { 1 }");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace
