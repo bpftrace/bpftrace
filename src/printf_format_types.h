@@ -4,6 +4,8 @@
 
 namespace bpftrace {
 
+// clang-format off
+
 // valid printf length + specifier combinations
 // it's done like this because as of this writing, C++ doesn't have a builtin way to do
 // compile time string concatenation. here is the Python 3 code that generates this map:
@@ -12,9 +14,11 @@ namespace bpftrace {
 // specifiers = ("d", "u", "x", "X", "p")
 //
 // print("{\"s\", Type::string},")
+// print("{\"r\", Type::buffer},")
 // print(",\n".join([f"{{\"{l+s}\", Type::integer}}" for l in lengths for s in specifiers]))
 const std::unordered_map<std::string, Type> printf_format_types = {
   {"s", Type::string},
+  {"r", Type::buffer},
   {"c", Type::integer},
   {"d", Type::integer},
   {"u", Type::integer},
@@ -57,5 +61,7 @@ const std::unordered_map<std::string, Type> printf_format_types = {
   {"tX", Type::integer},
   {"tp", Type::integer}
 };
+
+// clang-format on
 
 } // namespace bpftrace

@@ -46,6 +46,17 @@ constexpr char CHILD_EXIT_QUIETLY = '\0';
 constexpr char CHILD_GO = 'g';
 
 int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
+  // Args have been made safe for printing by now, so replace nonstandard format
+  // specifiers with %s
+  std::string str = std::string(fmt);
+  size_t start_pos = 0;
+  while ((start_pos = str.find("%r", start_pos)) != std::string::npos)
+  {
+    str.replace(start_pos, 2, "%s");
+    start_pos += 2;
+  }
+  fmt = str.c_str();
+
   int ret = -1;
   switch(args.size()) {
     case 0:
