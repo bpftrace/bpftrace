@@ -174,6 +174,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { time() }", 0);
   test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
+  test("kprobe:f { buf(0xffff, 1) }", 0);
   test("kprobe:f { printf(\"hello\\n\") }", 0);
   test("kprobe:f { system(\"ls\\n\") }", 0, false /* safe_node */);
   test("kprobe:f { join(0) }", 0);
@@ -235,7 +236,7 @@ TEST(semantic_analyser, predicate_expressions)
   test("kprobe:f / @mymap / { @mymap = \"str\" }", 10);
 }
 
-TEST(semantic_analyser, ternary_experssions)
+TEST(semantic_analyser, ternary_expressions)
 {
   test("kprobe:f { @x = pid < 10000 ? 1 : 2 }", 0);
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"high\" }", 0);
@@ -495,6 +496,30 @@ TEST(semantic_analyser, call_str_2_expr)
 {
   test("kprobe:f { str(arg0, arg1); }", 0);
   test("kprobe:f { @x = str(arg0, arg1); }", 0);
+}
+
+TEST(semantic_analyser, call_buf)
+{
+  test("kprobe:f { buf(arg0, 1); }", 0);
+  test("kprobe:f { @x = buf(arg0, 1); }", 0);
+  test("kprobe:f { $x = buf(arg0, 1); }", 0);
+  test("kprobe:f { buf(); }", 1);
+  test("kprobe:f { buf(\"hello\"); }", 1);
+  test("struct x { int c[4] }; kprobe:f { $foo = (struct x*)0; @x = "
+       "buf($foo->c); }",
+       0);
+}
+
+TEST(semantic_analyser, call_buf_lit)
+{
+  test("kprobe:f { @x = buf(arg0, 3); }", 0);
+  test("kprobe:f { buf(arg0, \"hello\"); }", 10);
+}
+
+TEST(semantic_analyser, call_buf_expr)
+{
+  test("kprobe:f { buf(arg0, arg1); }", 0);
+  test("kprobe:f { @x = buf(arg0, arg1); }", 0);
 }
 
 TEST(semantic_analyser, call_ksym)
@@ -893,6 +918,17 @@ TEST(semantic_analyser, printf_bad_format_string)
 
   test("kprobe:f { printf(\"%s\", 1234) }", 10);
   test("kprobe:f { printf(\"%s\", arg0) }", 10);
+}
+
+TEST(semantic_analyser, printf_format_buf)
+{
+  test("kprobe:f { printf(\"%r\", buf(\"mystr\", 5)) }", 0);
+}
+
+TEST(semantic_analyser, printf_bad_format_buf)
+{
+  test("kprobe:f { printf(\"%r\", \"mystr\") }", 10);
+  test("kprobe:f { printf(\"%r\", arg0) }", 10);
 }
 
 TEST(semantic_analyser, printf_format_multi)

@@ -4,7 +4,12 @@ EXPECT \@a: 10
 TIMEOUT 5
 
 NAME global_string
-RUN bpftrace -v -e 'i:ms:1 {@a = "hi"; printf("%s\\n", @a); exit();}'
+RUN bpftrace -v -e 'i:ms:1 {@a = "hi"; printf("%s\n", @a); exit();}'
+EXPECT @a: hi
+TIMEOUT 5
+
+NAME global_buf
+RUN bpftrace -v -e 'i:ms:1 {@a = buf("hi", 2); printf("%r\n", @a); exit();}'
 EXPECT @a: hi
 TIMEOUT 5
 
@@ -16,6 +21,16 @@ TIMEOUT 5
 NAME local_string
 RUN bpftrace -v -e 'i:ms:1  {$a = "hi"; printf("a=%s\n", $a); exit();}'
 EXPECT a=hi
+TIMEOUT 5
+
+NAME local_buf
+RUN bpftrace -v -e 'i:ms:1 {$a = buf("hi", 2); printf("a=%r\n", $a); exit();}'
+EXPECT a=hi
+TIMEOUT 5
+
+NAME buf_equality
+RUN bpftrace -v -e 'i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d\n", $a == $a, $a != $b); exit();}'
+EXPECT equal=1, unequal=1
 TIMEOUT 5
 
 NAME global_associative_arrays
