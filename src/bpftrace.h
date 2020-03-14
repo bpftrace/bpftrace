@@ -187,6 +187,7 @@ public:
 
   BTF btf_;
   std::unordered_set<std::string> btf_set_;
+  std::map<std::string, std::map<std::string, SizedType>> btf_ap_args_;
 
 protected:
   std::vector<Probe> probes_;

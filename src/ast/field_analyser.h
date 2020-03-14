@@ -48,7 +48,10 @@ private:
   std::string    type_;
   Node          *root_;
   BPFtrace      &bpftrace_;
-  bpf_prog_type prog_type_;
+  bpf_prog_type  prog_type_;
+  bool           builtin_args_;
+
+  std::map<std::string, SizedType> ap_args_;
 };
 
 } // namespace ast
