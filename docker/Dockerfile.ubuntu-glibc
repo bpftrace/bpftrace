@@ -13,7 +13,7 @@ ENV CMAKE_VER=${CMAKE_VER}
 ENV CMAKE_BUILD="${CMAKE_BUILD}"
 ENV DISTRO=${DISTRO}
 
-RUN apt-get update && apt-get install -y curl gnupg &&\
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg &&\
     llvmRepository="\n\
 deb http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO} main\n\
 deb-src http://apt.llvm.org/${DISTRO}/ llvm-toolchain-${DISTRO} main\n\
