@@ -46,6 +46,19 @@ void FieldAnalyser::visit(Builtin &builtin)
     type_ = "struct task_struct";
     bpftrace_.btf_set_.insert(type_);
   }
+  else if (builtin.ident == "args")
+  {
+    builtin_args_ = true;
+  }
+  else if (builtin.ident == "retval")
+  {
+    auto it = ap_args_.find("$retval");
+
+    if (it != ap_args_.end() && it->second.type == Type::cast)
+      type_ = it->second.cast_type;
+    else
+      type_ = "";
+  }
 }
 
 void FieldAnalyser::visit(Call &call)
@@ -121,8 +134,23 @@ void FieldAnalyser::visit(Unroll &unroll)
 
 void FieldAnalyser::visit(FieldAccess &acc)
 {
+  builtin_args_ = false;
+
   acc.expr->accept(*this);
-  if (!type_.empty()) {
+
+  if (builtin_args_)
+  {
+    auto it = ap_args_.find(acc.field);
+
+    if (it != ap_args_.end() && it->second.type == Type::cast)
+      type_ = it->second.cast_type;
+    else
+      type_ = "";
+
+    builtin_args_ = false;
+  }
+  else if (!type_.empty())
+  {
     type_ = bpftrace_.btf_.type_of(type_, acc.field);
     bpftrace_.btf_set_.insert(type_);
   }
@@ -159,6 +187,31 @@ void FieldAnalyser::visit(Predicate &pred)
 
 void FieldAnalyser::visit(AttachPoint &ap __attribute__((unused)))
 {
+  if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  {
+    // starting new attach point, clear and load new
+    // variables/arguments for kfunc if detected
+
+    ap_args_.clear();
+
+    if (!bpftrace_.btf_.resolve_args(ap.func,
+                                     ap_args_,
+                                     ap.provider == "kretfunc"))
+    {
+      // store/save args for each kfunc ap for later processing
+      bpftrace_.btf_ap_args_.insert({ ap.provider + ap.func, ap_args_ });
+
+      // pick up cast arguments immediately and let the
+      // FieldAnalyser to resolve args builtin
+      for (const auto& arg : ap_args_)
+      {
+        auto stype = arg.second;
+
+        if (stype.type == Type::cast)
+          bpftrace_.btf_set_.insert(stype.cast_type);
+      }
+    }
+  }
 }
 
 void FieldAnalyser::visit(Probe &probe)
