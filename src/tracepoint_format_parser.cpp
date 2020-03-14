@@ -41,6 +41,14 @@ bool TracepointFormatParser::parse(ast::Program *program)
         std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
         glob_t glob_result;
 
+        if (has_wildcard(category))
+        {
+          std::cerr
+              << "ERROR: wildcards in tracepoint category is not supported: "
+              << category << std::endl;
+          return false;
+        }
+
         if (has_wildcard(event_name))
         {
           // tracepoint wildcard expansion, part 1 of 3. struct definitions.
