@@ -332,6 +332,26 @@ void SemanticAnalyser::visit(Call &call)
           call.loc);
   }
 
+  struct func_setter
+  {
+    func_setter(SemanticAnalyser &analyser, const std::string &s)
+        : analyser_(analyser), old_func_(analyser_.func_)
+    {
+      analyser_.func_ = s;
+    }
+
+    ~func_setter()
+    {
+      analyser_.func_ = old_func_;
+    }
+
+  private:
+    SemanticAnalyser &analyser_;
+    std::string old_func_;
+  };
+
+  func_setter scope_bound_func_setter{ *this, call.func };
+
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
