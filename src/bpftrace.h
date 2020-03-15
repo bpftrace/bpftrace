@@ -201,7 +201,6 @@ private:
 
   std::string src_;
   std::string filename_;
-  std::vector<std::string> srclines_;
 
   std::unique_ptr<AttachedProbe> attach_probe(Probe &probe,
                                               const BpfOrc &bpforc);
