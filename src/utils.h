@@ -99,6 +99,8 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
   "override",
 };
 
+static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
+
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
 std::string get_pid_exe(pid_t pid);
 bool has_wildcard(const std::string &str);
@@ -119,6 +121,7 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &kobj);
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
+bool is_compile_time_func(const std::string &func_name);
 std::string exec_system(const char *cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);

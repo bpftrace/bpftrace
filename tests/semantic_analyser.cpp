@@ -183,6 +183,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { ustack(1) }", 0);
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
   test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\") }", 0);
+  test("kprobe:f { cgroupid(\"/sys/fs/cgroup/unified/mycg\"); }", 0);
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -572,6 +573,16 @@ TEST(semantic_analyser, call_uaddr)
     EXPECT_EQ(true, v->var->type.is_pointer);
     EXPECT_EQ((unsigned long int)sizes.at(i), v->var->type.pointee_size);
   }
+}
+
+TEST(semantic_analyser, call_cgroupid)
+{
+  // Handle args above STRING_SIZE
+  test("kprobe:f { cgroupid("
+       //          1         2         3         4         5         6
+       "\"123456789/123456789/123456789/123456789/123456789/123456789/12345\""
+       "); }",
+       0);
 }
 
 TEST(semantic_analyser, call_reg)
