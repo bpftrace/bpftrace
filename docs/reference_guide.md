@@ -83,6 +83,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
     - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
     - [20. `override()`: Override return value](#20-override-override-return-value)
+    - [21. `buf()`: Buffers](#21-buf-buffers)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -1815,6 +1816,7 @@ Tracing block I/O sizes > 0 bytes
 - `time(char *fmt)` - Print formatted time
 - `join(char *arr[] [, char *delim])` - Print the array
 - `str(char *s [, int length])` - Returns the string pointed to by s
+- `buf(void *d [, int length])` - Returns a hex-formatted string of the data pointed to by d
 - `ksym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
@@ -2506,6 +2508,34 @@ function, instead if will fail to load the program into the kernel:
 ```
 ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
 Error attaching probe: 'kprobe:vfs_read'
+```
+
+## 21. `buf()`: Buffers
+
+Syntax: `buf(void *d [, int length])`
+
+Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
+length of the buffer cannot always be inferred, the `length` parameter may be provided to
+limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
+be tuned using the [`BPFTRACE_STRLEN`](#7-env-bpftrace_strlen) environment variable.
+
+For example, we can take the `buff` parameter (`void *`) of `sys_enter_sendto`, read the
+number of bytes specified by `len` (`size_t`), and format the bytes in hexadecimal so that
+they don't corrupt the terminal display. The resulting string can be provided as an argument to
+printf() using the `%r` format specifier:
+
+```
+# bpftrace -e 'tracepoint:syscalls:sys_enter_sendto 
+    { printf("Datagram bytes: %r\n", buf(args->buff, args->len)); }' -c 'ping 8.8.8.8 -c1'
+Attaching 1 probe...
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+Datagram bytes: \x08\x00+\xb9\x06b\x00\x01Aen^\x00\x00\x00\x00KM\x0c\x00\x00\x00\x00\x00\x10\x11
+\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f !"#$%&'()*+,-./01234567
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=52 time=19.4 ms
+
+--- 8.8.8.8 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 19.426/19.426/19.426/0.000 ms
 ```
 
 # Map Functions

@@ -293,6 +293,7 @@ Functions:
 - `stats(int n)` - Return the count, average, and total for this value
 - `delete(@x)` - Delete the map element passed in as an argument
 - `str(char *s [, int length])` - Returns the string pointed to by `s`
+- `buf(void *d, int length)` - Returns a hex-formatted string of the data pointed to by `d`
 - `printf(char *fmt, ...)` - Print formatted to stdout
 - `print(@x[, int top [, int div]])` - Print a map, with optional top entry count and divisor
 - `clear(@x)` - Delete all key/values from a map
