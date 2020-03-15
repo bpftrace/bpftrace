@@ -541,6 +541,13 @@ bool is_unsafe_func(const std::string &func_name)
       });
 }
 
+bool is_compile_time_func(const std::string &func_name)
+{
+  return std::any_of(COMPILE_TIME_FUNCS.begin(),
+                     COMPILE_TIME_FUNCS.end(),
+                     [&](const auto &cand) { return func_name == cand; });
+}
+
 std::string exec_system(const char* cmd)
 {
   std::array<char, 128> buffer;

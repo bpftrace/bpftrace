@@ -96,7 +96,8 @@ void SemanticAnalyser::visit(PositionalParameter &param)
 
 void SemanticAnalyser::visit(String &string)
 {
-  if (string.str.size() > STRING_SIZE-1) {
+  if (!is_compile_time_func(func_) && string.str.size() > STRING_SIZE - 1)
+  {
     ERR("String is too long (over " << STRING_SIZE << " bytes): " << string.str,
         string.loc);
   }
