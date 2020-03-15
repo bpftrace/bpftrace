@@ -211,7 +211,6 @@ private:
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
   int print_map_hist(IMap &map, uint32_t top, uint32_t div);
-  int print_map_lhist(IMap &map);
   int print_map_stats(IMap &map);
   template <typename T>
   static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
