@@ -128,6 +128,34 @@ void SemanticAnalyser::visit(Identifier &identifier)
   }
 }
 
+void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
+                                               Builtin &builtin)
+{
+  /*
+   * tracepoint wildcard expansion, part 2 of 3. This:
+   * 1. expands the wildcard, then sets args to be the first matched probe.
+   *    This is so that enough of the type information is available to
+   *    survive the later semantic analyser checks.
+   * 2. sets is_tparg so that codegen does the real type setting after
+   *    expansion.
+   */
+  auto symbol_stream = bpftrace_.get_symbols_from_file(
+      "/sys/kernel/debug/tracing/available_events");
+  auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
+                                                 attach_point->func,
+                                                 *symbol_stream);
+  if (!matches.empty())
+  {
+    auto &match = *matches.begin();
+    std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+        attach_point->target, match);
+    Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
+    builtin.type = SizedType(Type::ctx, cstruct.size, tracepoint_struct);
+    builtin.type.is_pointer = true;
+    builtin.type.is_tparg = true;
+  }
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -282,39 +310,20 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::integer, 4);
   }
   else if (builtin.ident == "args") {
-    probe_->need_expansion = true;
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::tracepoint) {
+
+      if (type == ProbeType::tracepoint)
+      {
+        probe_->need_expansion = true;
+        builtin_args_tracepoint(attach_point, builtin);
+      }
+      else
+      {
         error("The args builtin can only be used with tracepoint probes (" +
                   attach_point->provider + " used here)",
               builtin.loc);
-        continue;
-      }
-
-      /*
-       * tracepoint wildcard expansion, part 2 of 3. This:
-       * 1. expands the wildcard, then sets args to be the first matched probe.
-       *    This is so that enough of the type information is available to
-       *    survive the later semantic analyser checks.
-       * 2. sets is_tparg so that codegen does the real type setting after
-       *    expansion.
-       */
-      auto symbol_stream = bpftrace_.get_symbols_from_file(
-          "/sys/kernel/debug/tracing/available_events");
-      auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                     attach_point->func,
-                                                     *symbol_stream);
-      if (!matches.empty())
-      {
-        auto &match = *matches.begin();
-        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-            attach_point->target, match);
-        Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-        builtin.type = SizedType(Type::ctx, cstruct.size, tracepoint_struct);
-        builtin.type.is_pointer = true;
-        builtin.type.is_tparg = true;
       }
     }
   }
