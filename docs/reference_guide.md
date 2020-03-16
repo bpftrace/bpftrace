@@ -50,6 +50,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
     - [13. `BEGIN`/`END`: Built-in events](#13-beginend-built-in-events)
     - [14. `watchpoint`: Memory watchpoints](#14-watchpoint-memory-watchpoints)
+    - [15. `kfunc`/`kretfunc`: Kernel Functions Tracing](#15-kfunckretfunc-kernel-functions-tracing)
+    - [16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#16-kfunckretfunc-kernel-functions-tracing-arguments)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -1373,6 +1375,88 @@ Examples:
 ```
 bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
 ```
+
+## 15. `kfunc`/`kretfunc`: Kernel Functions Tracing
+
+**WARNING**: this feature is experimental and may be subject to interface changes.
+
+Syntax:
+
+```
+kfunc:function
+kretfunc:function
+```
+
+These are kernel function probes implemented via eBPF trampolines which allows
+kernel code to call into BPF programs with practically zero overhead.
+
+Examples:
+
+```
+# bpftrace -e 'kfunc:x86_pmu_stop { printf("pmu %s stop\n", str(args->event->pmu->name)); }'
+# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));  }'
+```
+
+You can get list of available functions via list option:
+
+```
+# bpftrace -l
+...
+kfunc:ksys_ioperm
+kfunc:ksys_unshare
+kfunc:ksys_setsid
+kfunc:ksys_sync_helper
+kfunc:ksys_fadvise64_64
+kfunc:ksys_readahead
+kfunc:ksys_mmap_pgoff
+...
+```
+
+## 16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments
+
+Syntax:
+
+```
+kfunc:function      args->NAME  ...
+kretfunc:function   args->NAME ... retval
+```
+
+Arguments can be accessed via args being dereferenced to argument's `NAME`.
+Return value can be referenced by `retval` builtin, see the [1. Builtins](#1-builtins).
+
+It's possible to get available argument names for function via verbose list option:
+
+```
+# bpftrace -lv
+...
+kfunc:fget
+    unsigned int fd;
+    struct file * retval;
+...
+```
+
+The `fget` function takes one argument as file descriptor and
+you can access it via `args->fd` in `kfunc:fget` probe:
+
+```
+# bpftrace -e 'kfunc:fget { printf("fd %d\n", args->fd);  }'
+Attaching 1 probe...
+fd 3
+fd 3
+...
+```
+
+The return value of `fget` function probe is accessible via `retval`:
+
+```
+# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));  }'
+Attaching 1 probe...
+fd 3 name ld.so.cache
+fd 3 name libselinux.so.1
+fd 3 name libselinux.so.1
+...
+```
+And as you can see in above example it's also possible to access function arguments on `kretfunc` probes.
 
 # Variables
 
