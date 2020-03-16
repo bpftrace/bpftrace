@@ -1427,6 +1427,22 @@ TEST(Parser, invalid_increment_decrement)
   test_parse_failure("i:s:1 { @=\"a\"++}");
 }
 
+TEST(Parser, long_param_overflow)
+{
+  BPFtrace bpftrace;
+  std::stringstream out;
+  Driver driver(bpftrace, out);
+  EXPECT_NO_THROW(
+      driver.parse_str("i:s:100 { @=$111111111111111111111111111 }"));
+  std::string expected = "stdin:1:11-41: ERROR: param "
+                         "$111111111111111111111111111 is out of "
+                         "integer range [1, " +
+                         std::to_string(std::numeric_limits<long>::max()) +
+                         "]\n" +
+                         "i:s:100 { @=$111111111111111111111111111 }\n" +
+                         "          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n";
+  EXPECT_EQ(out.str(), expected);
+}
 
 } // namespace parser
 } // namespace test
