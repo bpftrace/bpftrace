@@ -114,8 +114,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Probe *> probe
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
-%type <ast::StatementList *> block stmts
-%type <ast::Statement *> block_stmt stmt semicolon_ended_stmt compound_assignment
+%type <ast::StatementList *> block stmts block_or_if
+%type <ast::Statement *> if_stmt block_stmt stmt semicolon_ended_stmt compound_assignment
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
@@ -219,10 +219,17 @@ stmts : semicolon_ended_stmt stmts { $$ = $2; $2->insert($2->begin(), $1); }
       |                            { $$ = new ast::StatementList; }
       ;
 
-block_stmt : IF "(" expr ")" block  { $$ = new ast::If($3, $5); }
-           | IF "(" expr ")" block ELSE block { $$ = new ast::If($3, $5, $7); }
+block_stmt : if_stmt                  { $$ = $1; }
            | UNROLL "(" INT ")" block { $$ = new ast::Unroll($3, $5); }
            ;
+
+if_stmt : IF "(" expr ")" block                  { $$ = new ast::If($3, $5); }
+        | IF "(" expr ")" block ELSE block_or_if { $$ = new ast::If($3, $5, $7); }
+        ;
+
+block_or_if : block        { $$ = $1; }
+            | if_stmt      { $$ = new ast::StatementList; $$->emplace_back($1); }
+            ;
 
 stmt : expr                { $$ = new ast::ExprStatement($1); }
      | compound_assignment { $$ = $1; }

@@ -647,6 +647,98 @@ TEST(Parser, if_else)
        "   variable: $s\n");
 }
 
+TEST(Parser, if_elseif)
+{
+  test("kprobe:f { if (pid > 10000) { $s = 10; } else if (pid < 10) { $s = 2; "
+       "} }",
+       "Program\n"
+       " kprobe:f\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     int: 10\n"
+       "   else\n"
+       "    if\n"
+       "     <\n"
+       "      builtin: pid\n"
+       "      int: 10\n"
+       "     then\n"
+       "      =\n"
+       "       variable: $s\n"
+       "       int: 2\n");
+}
+
+TEST(Parser, if_elseif_else)
+{
+  test("kprobe:f { if (pid > 10000) { $s = 10; } else if (pid < 10) { $s = 2; "
+       "} else { $s = 1 } }",
+       "Program\n"
+       " kprobe:f\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     int: 10\n"
+       "   else\n"
+       "    if\n"
+       "     <\n"
+       "      builtin: pid\n"
+       "      int: 10\n"
+       "     then\n"
+       "      =\n"
+       "       variable: $s\n"
+       "       int: 2\n"
+       "     else\n"
+       "      =\n"
+       "       variable: $s\n"
+       "       int: 1\n");
+}
+
+TEST(Parser, if_elseif_elseif_else)
+{
+  test("kprobe:f { if (pid > 10000) { $s = 10; } else if (pid < 10) { $s = 2; "
+       "} else if (pid > 999999) { $s = 0 } else { $s = 1 } }",
+       "Program\n"
+       " kprobe:f\n"
+       "  if\n"
+       "   >\n"
+       "    builtin: pid\n"
+       "    int: 10000\n"
+       "   then\n"
+       "    =\n"
+       "     variable: $s\n"
+       "     int: 10\n"
+       "   else\n"
+       "    if\n"
+       "     <\n"
+       "      builtin: pid\n"
+       "      int: 10\n"
+       "     then\n"
+       "      =\n"
+       "       variable: $s\n"
+       "       int: 2\n"
+       "     else\n"
+       "      if\n"
+       "       >\n"
+       "        builtin: pid\n"
+       "        int: 999999\n"
+       "       then\n"
+       "        =\n"
+       "         variable: $s\n"
+       "         int: 0\n"
+       "       else\n"
+       "        =\n"
+       "         variable: $s\n"
+       "         int: 1\n");
+}
+
 TEST(Parser, unroll)
 {
   test("kprobe:sys_open { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }",

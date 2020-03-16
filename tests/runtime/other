@@ -18,6 +18,16 @@ RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello
 EXPECT a=hi
 TIMEOUT 5
 
+NAME ifelseif_go_elseif
+RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}'
+EXPECT a=hello
+TIMEOUT 5
+
+NAME ifelseifelse_go_else
+RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}'
+EXPECT a=asdf
+TIMEOUT 5
+
 NAME unroll
 RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11
