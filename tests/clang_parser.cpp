@@ -540,44 +540,10 @@ TEST(clang_parser, parse_fail)
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
-#include "data/btf_data.h"
+#include "btf_common.h"
 
-class clang_parser_btf : public ::testing::Test {
- protected:
-  void SetUp() override
-  {
-    char *path = strdup("/tmp/XXXXXX");
-    if (!path)
-      return;
-
-    int fd = mkstemp(path);
-    if (fd < 0)
-    {
-      std::remove(path);
-      return;
-    }
-
-    if (write(fd, btf_data, btf_data_len) != btf_data_len)
-    {
-      close(fd);
-      std::remove(path);
-      return;
-    }
-
-    close(fd);
-    setenv("BPFTRACE_BTF", path, true);
-    path_ = path;
-  }
-
-  void TearDown() override
-  {
-    // clear the environment and remove the temp file
-    unsetenv("BPFTRACE_BTF");
-    if (path_)
-      std::remove(path_);
-  }
-
-  char *path_ = nullptr;
+class clang_parser_btf : public test_btf
+{
 };
 
 TEST_F(clang_parser_btf, btf)
