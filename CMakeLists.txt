@@ -16,6 +16,7 @@ set(EMBED_CLANG OFF CACHE BOOL "Build Clang static libs as an ExternalProject an
 set(EMBED_LIBCLANG_ONLY OFF CACHE BOOL "Build only libclang.a, and link to system libraries statically")
 set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
+set(ENABLE_MAN ON CACHE BOOL "Build man pages")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -155,4 +156,6 @@ if (BUILD_TESTING)
 endif()
 add_subdirectory(resources)
 add_subdirectory(tools)
+if (ENABLE_MAN)
 add_subdirectory(man)
+endif(ENABLE_MAN)
