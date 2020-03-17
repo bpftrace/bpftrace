@@ -25,7 +25,7 @@ description: BPFtrace is a high-level tracing language for
 confinement: strict
 grade: stable
 base: core18
-architectures: [amd64]
+architectures: [amd64, arm64]
 assumes: [snapd2.37]
 adopt-info: bpftrace
 
