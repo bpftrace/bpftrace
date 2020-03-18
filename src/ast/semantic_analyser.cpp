@@ -1675,13 +1675,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       error("watchpoint must be attached to a non-zero address", ap.loc);
     if (ap.len != 1 && ap.len != 2 && ap.len != 4 && ap.len != 8)
       error("watchpoint length must be one of (1,2,4,8)", ap.loc);
+    if (ap.mode.empty())
+      error("watchpoint mode must be combination of (r,w,x)", ap.loc);
     std::sort(ap.mode.begin(), ap.mode.end());
     for (const char c : ap.mode) {
       if (c != 'r' && c != 'w' && c != 'x')
         error("watchpoint mode must be combination of (r,w,x)", ap.loc);
     }
-    for (size_t i = 0; i < ap.mode.size() - 1; ++i) {
-      if (ap.mode[i] == ap.mode[i+1])
+    for (size_t i = 1; i < ap.mode.size(); ++i)
+    {
+      if (ap.mode[i - 1] == ap.mode[i])
         error("watchpoint modes may not be duplicated", ap.loc);
     }
     if (ap.mode == "rx" || ap.mode == "wx" || ap.mode == "rwx")
