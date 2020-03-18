@@ -47,7 +47,7 @@ mark_as_advanced(LIBBPF_INCLUDE_DIRS LIBBPF_LIBRARIES)
 if (LIBBPF_FOUND)
   include(CheckSymbolExists)
   # adding also elf for static build check
-  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf)
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
   # libbpf quirk, needs upstream fix
   SET(CMAKE_REQUIRED_DEFINITIONS -include stdbool.h)
   check_symbol_exists(btf_dump__new "${LIBBPF_INCLUDE_DIRS}/bpf/btf.h" HAVE_BTF_DUMP)
