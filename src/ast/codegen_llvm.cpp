@@ -1105,8 +1105,10 @@ void CodegenLLVM::visit(Ternary &ternary)
   Value *cond;
   ternary.cond->accept(*this);
   cond = expr_;
-  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"),
-                  left_block, right_block);
+  Value *zero_value = Constant::getNullValue(cond->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(cond, zero_value, "true_cond"),
+                  left_block,
+                  right_block);
 
   if (ternary.type.type == Type::integer) {
     // fetch selected integer via CreateStore
