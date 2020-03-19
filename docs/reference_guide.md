@@ -1878,7 +1878,7 @@ Supported Probe Types:
 - u(ret)probes
 - USDT
 
-**Does not work with ASLR, see issue [#75](https://github.com/iovisor/bpftrace/75)**
+**Does not work with ASLR, see issue [#75](https://github.com/iovisor/bpftrace/issues/75)**
 
 The `uaddr` function returns the address of the specified symbol. This lookup
 happens during program compilation and cannot be used dynamically.
