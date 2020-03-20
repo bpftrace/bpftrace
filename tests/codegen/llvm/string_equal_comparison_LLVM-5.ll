@@ -18,7 +18,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
   call void @llvm.memset.p0i8.i64(i8* nonnull %1, i8 0, i64 16, i32 1, i1 false)
   %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* nonnull %comm, i64 16)
-  %2 = load i8, [16 x i8]* %comm, align 1
+  %2 = load i8, i8* %1, align 1
   %strcmp.cmp = icmp eq i8 %2, 115
   br i1 %strcmp.cmp, label %strcmp.loop, label %pred_false
 
@@ -36,26 +36,26 @@ pred_true:                                        ; preds = %strcmp.loop5
   br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
 
 strcmp.loop:                                      ; preds = %entry
-  %4 = add [16 x i8]* %comm, i64 1
-  %5 = load i8, [16 x i8]* %4, align 1
+  %4 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 1
+  %5 = load i8, i8* %4, align 1
   %strcmp.cmp2 = icmp eq i8 %5, 115
   br i1 %strcmp.cmp2, label %strcmp.loop1, label %pred_false
 
 strcmp.loop1:                                     ; preds = %strcmp.loop
-  %6 = add [16 x i8]* %comm, i64 2
-  %7 = load i8, [16 x i8]* %6, align 1
+  %6 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 2
+  %7 = load i8, i8* %6, align 1
   %strcmp.cmp4 = icmp eq i8 %7, 104
   br i1 %strcmp.cmp4, label %strcmp.loop3, label %pred_false
 
 strcmp.loop3:                                     ; preds = %strcmp.loop1
-  %8 = add [16 x i8]* %comm, i64 3
-  %9 = load i8, [16 x i8]* %8, align 1
+  %8 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 3
+  %9 = load i8, i8* %8, align 1
   %strcmp.cmp6 = icmp eq i8 %9, 100
   br i1 %strcmp.cmp6, label %strcmp.loop5, label %pred_false
 
 strcmp.loop5:                                     ; preds = %strcmp.loop3
-  %10 = add [16 x i8]* %comm, i64 4
-  %11 = load i8, [16 x i8]* %10, align 1
+  %10 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 4
+  %11 = load i8, i8* %10, align 1
   %strcmp.cmp8 = icmp eq i8 %11, 0
   br i1 %strcmp.cmp8, label %pred_true, label %pred_false
 
