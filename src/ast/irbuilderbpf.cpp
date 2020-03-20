@@ -386,15 +386,29 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
       abort();
     }
 
+    // Argument size must be 1, 2, 4, or 8. See
+    // https://sourceware.org/systemtap/wiki/UserSpaceProbeImplementation
+    int abs_size = std::abs(argument->size);
+    assert(abs_size == 1 || abs_size == 2 || abs_size == 4 || abs_size == 8);
+
+    // bpftrace's args are internally represented as 64 bit integers. However,
+    // the underlying argument (of the target program) may be less than 64
+    // bits. So we must be careful to zero out unused bits.
     Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
-    CreateProbeRead(dst, builtin.type.size, reg);
-    result = CreateLoad(dst);
     if (argument->valid & BCC_USDT_ARGUMENT_DEREF_OFFSET) {
-      Value *ptr = CreateAdd(
-          result,
-          getInt64(argument->deref_offset));
-      CreateProbeRead(dst, builtin.type.size, ptr);
+      Value *ptr = CreateAdd(CreateLoad(getInt64Ty(), reg),
+                             getInt64(argument->deref_offset));
+      // Zero out `dst` here in case we read less than 64 bits
+      CreateStore(getInt64(0), dst);
+      CreateProbeRead(dst, abs_size, ptr);
+      result = CreateLoad(dst);
+    }
+    else
+    {
+      // Zero out `dst` in case we read less than 64 bits
+      CreateStore(getInt64(0), dst);
+      CreateProbeRead(dst, abs_size, reg);
       result = CreateLoad(dst);
     }
     CreateLifetimeEnd(dst);
