@@ -31,24 +31,31 @@ void check_kprobe(Probe &p,
   EXPECT_EQ(func_offset, p.func_offset);
 }
 
-static const std::string uprobe_name(const std::string &path, const std::string &attach_point,
-                                     uint64_t address, uint64_t func_offset)
+static const std::string uprobe_name(const std::string &path,
+                                     const std::string &attach_point,
+                                     uint64_t address,
+                                     uint64_t func_offset,
+                                     bool retprobe = false)
 {
+  auto provider = retprobe ? "uretprobe:" : "uprobe:";
   if (attach_point.empty()) {
-    return "uprobe:" + path + ":" + std::to_string(address);
+    return provider + path + ":" + std::to_string(address);
   } else {
     auto str = func_offset ? "+" + std::to_string(func_offset) : "";
-    return "uprobe:" + path + ":" + attach_point + str;
+    return provider + path + ":" + attach_point + str;
   }
 }
 
 void check_uprobe(Probe &p, const std::string &path, const std::string &attach_point, const std::string &orig_name,
                   uint64_t address = 0, uint64_t func_offset = 0)
 {
-  EXPECT_EQ(ProbeType::uprobe, p.type);
+  bool retprobe = orig_name.find("uretprobe:") == 0 ||
+                  orig_name.find("ur:") == 0;
+  EXPECT_EQ(retprobe ? ProbeType::uretprobe : ProbeType::uprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(uprobe_name(path, attach_point, address, func_offset), p.name);
+  EXPECT_EQ(uprobe_name(path, attach_point, address, func_offset, retprobe),
+            p.name);
   EXPECT_EQ(address, p.address);
   EXPECT_EQ(func_offset, p.func_offset);
 }
@@ -369,28 +376,28 @@ TEST(bpftrace, add_probes_uprobe_string_offset)
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol)
 {
-  ast::AttachPoint a("");
-  a.provider = "uprobe";
-  a.target = "/bin/sh";
-  a.func = "cpp_mangled";
-  a.need_expansion = true;
-  ast::AttachPointList attach_points = { &a };
-  ast::Probe probe(&attach_points, nullptr, nullptr);
+  for (auto &provider : { "uprobe", "uretprobe" })
+  {
+    ast::AttachPoint a("");
+    a.provider = provider;
+    a.target = "/bin/sh";
+    a.func = "cpp_mangled";
+    a.need_expansion = true;
+    ast::AttachPointList attach_points = { &a };
+    ast::Probe probe(&attach_points, nullptr, nullptr);
 
-  auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace, extract_func_symbols_from_path("/bin/sh")).Times(1);
+    auto bpftrace = get_strict_mock_bpftrace();
+    EXPECT_CALL(*bpftrace, extract_func_symbols_from_path("/bin/sh")).Times(1);
 
-  ASSERT_EQ(0, bpftrace->add_probe(probe));
-  ASSERT_EQ(2U, bpftrace->get_probes().size());
-  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
-  check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
-               "_Z11cpp_mangledi",
-               "uprobe:/bin/sh:cpp_mangled");
-  check_uprobe(bpftrace->get_probes().at(1),
-               "/bin/sh",
-               "_Z11cpp_mangledv",
-               "uprobe:/bin/sh:cpp_mangled");
+    ASSERT_EQ(0, bpftrace->add_probe(probe));
+    ASSERT_EQ(2U, bpftrace->get_probes().size());
+    ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+    auto orig_name = std::string(provider) + ":/bin/sh:cpp_mangled";
+    check_uprobe(
+        bpftrace->get_probes().at(0), "/bin/sh", "_Z11cpp_mangledi", orig_name);
+    check_uprobe(
+        bpftrace->get_probes().at(1), "/bin/sh", "_Z11cpp_mangledv", orig_name);
+  }
 }
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)

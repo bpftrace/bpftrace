@@ -140,7 +140,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
-    else if (probetype(attach_point->provider) == ProbeType::uprobe &&
+    else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
+              probetype(attach_point->provider) == ProbeType::uretprobe) &&
              !attach_point->func.empty())
     {
       std::set<std::string> matches;
