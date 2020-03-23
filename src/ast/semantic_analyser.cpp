@@ -1047,8 +1047,37 @@ void SemanticAnalyser::visit(Binop &binop)
       auto get_int_literal = [](const auto expr) -> long {
         return static_cast<ast::Integer*>(expr)->n;
       };
-      auto left = binop.left;
-      auto right = binop.right;
+      auto &left = binop.left;
+      auto &right = binop.right;
+
+      bool lhs_literal = left->is_literal;
+      bool rhs_literal = right->is_literal;
+
+      if (lhs_literal ^ rhs_literal)
+      {
+        auto constant = lhs_literal ? left : right;
+        auto other = lhs_literal ? right : left;
+        auto value = get_int_literal(constant);
+        bool oversized = other->type.size != 8 && (value >> (8 *other->type.size)) != 0;
+        if (oversized)
+          switch (binop.op)
+          {
+            case bpftrace::Parser::token::LE:
+            case bpftrace::Parser::token::LT:
+            case bpftrace::Parser::token::EQ:
+              warning("Result of comparison with constant is always true",
+                      binop.loc);
+              break;
+            case bpftrace::Parser::token::NE:
+            case bpftrace::Parser::token::GE:
+            case bpftrace::Parser::token::GT:
+              warning("Result of comparison with constant is always false",
+                      binop.loc);
+              break;
+            default:
+              break;
+          }
+      }
 
       // First check if operand signedness is the same
       if (lsign != rsign) {
