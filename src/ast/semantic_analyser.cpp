@@ -1352,6 +1352,13 @@ void SemanticAnalyser::visit(If &if_block)
 {
   if_block.cond->accept(*this);
 
+  if (is_final_pass())
+  {
+    Type &cond = if_block.cond->type.type;
+    if (cond != Type::integer)
+      ERR("Invalid condition in if(): " << cond, if_block.loc);
+  }
+
   for (Statement *stmt : *if_block.stmts) {
     stmt->accept(*this);
   }
