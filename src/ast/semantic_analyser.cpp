@@ -68,8 +68,8 @@ void SemanticAnalyser::visit(PositionalParameter &param)
         std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
         if (!is_numeric(pstr) && !param.is_in_str)
         {
-          ERR(param.loc << "$" << param.n << " used numerically << but given \""
-                        << pstr << "\". Try using str($" << param.n << ").",
+          ERR("$" << param.n << " used numerically but given \"" << pstr
+                  << "\". Try using str($" << param.n << ").",
               param.loc);
         }
         if (is_numeric(pstr) && param.is_in_str)
