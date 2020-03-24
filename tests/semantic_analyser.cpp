@@ -1147,6 +1147,14 @@ TEST(semantic_analyser, positional_parameters)
 
   test(bpftrace, "kprobe:f { printf(\"%d\", $#); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 10);
+
+  Driver driver(bpftrace);
+  test(driver, "k:f { $1 }", 0);
+  auto stmt = static_cast<ast::ExprStatement *>(
+      driver.root_->probes->at(0)->stmts->at(0));
+  auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
+  EXPECT_EQ(SizedType(Type::integer, 8, true), pp->type);
+  EXPECT_TRUE(pp->is_literal);
 }
 
 TEST(semantic_analyser, macros)
