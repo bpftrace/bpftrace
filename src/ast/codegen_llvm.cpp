@@ -24,7 +24,7 @@ namespace ast {
 
 void CodegenLLVM::visit(Integer &integer)
 {
-  expr_ = b_.getInt64(integer.n);
+  expr_ = b_.getIntN(8 * integer.type.size, integer.n);
 }
 
 void CodegenLLVM::visit(PositionalParameter &param)
@@ -637,15 +637,24 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "printf")
   {
-    createFormatStringCall(call, printf_id_, bpftrace_.printf_args_, "printf", AsyncAction::printf);
+    createFormatStringCall(call,
+                           printf_id_,
+                           bpftrace_.printf_args_,
+                           "printf",
+                           AsyncAction::printf);
   }
   else if (call.func == "system")
   {
-    createFormatStringCall(call, system_id_, bpftrace_.system_args_, "system", AsyncAction::syscall);
+    createFormatStringCall(call,
+                           system_id_,
+                           bpftrace_.system_args_,
+                           "system",
+                           AsyncAction::syscall);
   }
   else if (call.func == "cat")
   {
-    createFormatStringCall(call, cat_id_, bpftrace_.cat_args_, "cat", AsyncAction::cat);
+    createFormatStringCall(
+        call, cat_id_, bpftrace_.cat_args_, "cat", AsyncAction::cat);
   }
   else if (call.func == "exit")
   {
@@ -932,9 +941,14 @@ void CodegenLLVM::visit(Binop &binop)
     bool lsign = binop.left->type.is_signed;
     bool rsign = binop.right->type.is_signed;
     bool do_signed = lsign && rsign;
-    // promote int to 64-bit
-    lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
-    rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
+
+    auto lsize = binop.left->type.size;
+    auto rsize = binop.right->type.size;
+
+    if (lsize < rsize)
+      lhs =  b_.CreateIntCast(lhs, rhs->getType(), lsign);
+    else if (rsize < lsize)
+      rhs =  b_.CreateIntCast(rhs, lhs->getType(), rsign);
 
     switch (binop.op) {
       case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
@@ -981,9 +995,9 @@ void CodegenLLVM::visit(Binop &binop)
                   << opstr(binop) << "\"" << std::endl;
         abort();
     }
+    // Using signed extension will result in -1 which will likely confuse users
+    expr_ = b_.CreateIntCast(expr_, b_.getIntNTy(8 * binop.type.size), false);
   }
-  // Using signed extension will result in -1 which will likely confuse users
-  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
 static bool unop_skip_accept(Unop &unop)
@@ -1414,8 +1428,12 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 void CodegenLLVM::visit(If &if_block)
 {
   Function *parent = b_.GetInsertBlock()->getParent();
-  BasicBlock *if_true = BasicBlock::Create(module_->getContext(), "if_stmt", parent);
-  BasicBlock *if_false = BasicBlock::Create(module_->getContext(), "else_stmt", parent);
+  BasicBlock *if_true = BasicBlock::Create(module_->getContext(),
+                                           "if_stmt",
+                                           parent);
+  BasicBlock *if_false = BasicBlock::Create(module_->getContext(),
+                                            "else_stmt",
+                                            parent);
 
   if_block.cond->accept(*this);
   Value *cond = expr_;
@@ -1433,7 +1451,9 @@ void CodegenLLVM::visit(If &if_block)
 
   if (if_block.else_stmts)
   {
-    BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
+    BasicBlock *done = BasicBlock::Create(module_->getContext(),
+                                          "done",
+                                          parent);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(if_false);
@@ -1447,8 +1467,8 @@ void CodegenLLVM::visit(If &if_block)
   }
   else
   {
-      b_.CreateBr(if_false);
-      b_.SetInsertPoint(if_false);
+    b_.CreateBr(if_false);
+    b_.SetInsertPoint(if_false);
   }
 }
 
@@ -1754,7 +1774,7 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   BasicBlock *false_block = BasicBlock::Create(module_->getContext(), "&&_false", parent);
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "&&_merge", parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "&&_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt1Ty(), "&&_result");
   Value *lhs;
   binop.left->accept(*this);
   lhs = expr_;
@@ -1771,11 +1791,11 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt1(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt1(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);
@@ -1793,7 +1813,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   BasicBlock *true_block = BasicBlock::Create(module_->getContext(), "||_true", parent);
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "||_merge", parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "||_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt1Ty(), "||_result");
   Value *lhs;
   binop.left->accept(*this);
   lhs = expr_;
@@ -1810,11 +1830,11 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt1(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt1(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);

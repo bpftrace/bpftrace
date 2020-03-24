@@ -1276,24 +1276,54 @@ TEST(semantic_analyser, binop_sign)
     "kprobe:f { "
     "  $t = ((struct t *)0xFF); ";
 
-  std::string operators[] = { "==", "!=", "<", "<=", ">", ">=", "+", "-", "/", "*"};
-  for(std::string op : operators)
   {
-    BPFtrace bpftrace;
-    Driver driver(bpftrace);
-    std::string prog = prog_pre +
-      "$varA = $t->l "  + op + " $t->l; "
-      "$varB = $t->ul " + op + " $t->l; "
-      "$varC = $t->ul " + op + " $t->ul;"
-      "}";
+    std::string operators[] = { "==", "!=", "<", "<=", ">", ">=" };
+    for(std::string op : operators)
+    {
+      BPFtrace bpftrace;
+      Driver driver(bpftrace);
+      std::string prog = prog_pre +
+        "$varA = $t->l "  + op + " $t->l; "
+        "$varB = $t->ul " + op + " $t->l; "
+        "$varC = $t->ul " + op + " $t->ul;"
+        "}";
 
-    test(driver, prog, 0);
-    auto varA = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
-    EXPECT_EQ(SizedType(Type::integer, 8, true), varA->var->type);
-    auto varB = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(2));
-    EXPECT_EQ(SizedType(Type::integer, 8, false), varB->var->type);
-    auto varC = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(3));
-    EXPECT_EQ(SizedType(Type::integer, 8, false), varC->var->type);
+      test(driver, prog, 0);
+      auto varA = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(1));
+      EXPECT_EQ(SizedType(Type::integer, 1, false), varA->var->type);
+      auto varB = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(2));
+      EXPECT_EQ(SizedType(Type::integer, 1, false), varB->var->type);
+      auto varC = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(3));
+      EXPECT_EQ(SizedType(Type::integer, 1, false), varC->var->type);
+    }
+  }
+
+  {
+    std::string operators[] = { "+", "-", "/", "*"};
+    for(std::string op : operators)
+    {
+      BPFtrace bpftrace;
+      Driver driver(bpftrace);
+      std::string prog = prog_pre +
+        "$varA = $t->l "  + op + " $t->l; "
+        "$varB = $t->ul " + op + " $t->l; "
+        "$varC = $t->ul " + op + " $t->ul;"
+        "}";
+
+      test(driver, prog, 0);
+      auto varA = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(1));
+      EXPECT_EQ(SizedType(Type::integer, 8, true), varA->var->type);
+      auto varB = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(2));
+      EXPECT_EQ(SizedType(Type::integer, 8, false), varB->var->type);
+      auto varC = static_cast<ast::AssignVarStatement *>(
+          driver.root_->probes->at(0)->stmts->at(3));
+      EXPECT_EQ(SizedType(Type::integer, 8, false), varC->var->type);
+    }
   }
 }
 

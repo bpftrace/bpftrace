@@ -662,9 +662,6 @@ void SemanticAnalyser::visit(Call &call)
              iter++)
         {
           auto ty = (*iter)->type;
-          // Promote to 64-bit if it's not an array type
-          if (!ty.IsArray())
-            ty.size = 8;
           args.push_back(Field{
             .type =  ty,
             .offset = 0,
@@ -1077,6 +1074,8 @@ void SemanticAnalyser::visit(Binop &binop)
             default:
               break;
           }
+        else
+          constant->type.size = other->type.size;
       }
 
       // First check if operand signedness is the same
@@ -1161,8 +1160,25 @@ void SemanticAnalyser::visit(Binop &binop)
     }
   }
 
-  bool is_signed = lsign && rsign;
   switch (binop.op) {
+    default:
+      break;
+  }
+
+  size_t size = std::max(binop.left->type.size, binop.right->type.size);
+  bool is_signed = lsign && rsign;
+
+  switch (binop.op)
+  {
+    case bpftrace::Parser::token::EQ:
+    case bpftrace::Parser::token::NE:
+    case bpftrace::Parser::token::LE:
+    case bpftrace::Parser::token::GE:
+    case bpftrace::Parser::token::LT:
+    case bpftrace::Parser::token::GT:
+      size = 1;
+      is_signed = false;
+      break;
     case bpftrace::Parser::token::LEFT:
     case bpftrace::Parser::token::RIGHT:
       is_signed = lsign;
@@ -1171,7 +1187,7 @@ void SemanticAnalyser::visit(Binop &binop)
       break;
   }
 
-  binop.type = SizedType(Type::integer, 8, is_signed);
+  binop.type = SizedType(Type::integer, size, is_signed);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
