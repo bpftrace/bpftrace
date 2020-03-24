@@ -93,6 +93,7 @@ void Identifier::accept(Visitor &v) {
 PositionalParameter::PositionalParameter(PositionalParameterType ptype, long n)
     : ptype(ptype), n(n)
 {
+  is_literal = true;
 }
 
 PositionalParameter::PositionalParameter(PositionalParameterType ptype,
@@ -100,6 +101,7 @@ PositionalParameter::PositionalParameter(PositionalParameterType ptype,
                                          location loc)
     : Expression(loc), ptype(ptype), n(n)
 {
+  is_literal = true;
 }
 
 void PositionalParameter::accept(Visitor &v) {
