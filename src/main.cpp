@@ -175,7 +175,7 @@ static int info()
 int main(int argc, char *argv[])
 {
   int err;
-  char *pid_str = nullptr;
+  std::string pid_str;
   char *cmd_str = nullptr;
   bool listing = false;
   bool safe_mode = true;
@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (cmd_str && pid_str)
+  if (cmd_str && !pid_str.empty())
   {
     std::cerr << "USAGE: Cannot use both -c and -p." << std::endl;
     usage();
@@ -341,14 +341,17 @@ int main(int argc, char *argv[])
   // - make PID a filter for all probe types: pass to perf_event_open(), etc.
   // - provide PID in USDT probe specification as a way to override -p.
   bpftrace.pid_ = 0;
-  if (pid_str)
+  if (!pid_str.empty())
   {
-    if (!is_numeric(pid_str))
+    try
     {
-      std::cerr << "ERROR: pid '" << pid_str << "' is not a valid number." << std::endl;
+      bpftrace.pid_ = parse_pid(pid_str);
+    }
+    catch (const InvalidPIDException& e)
+    {
+      std::cerr << "ERROR: " << e.what() << std::endl;
       return 1;
     }
-    bpftrace.pid_ = strtol(pid_str, NULL, 10);
   }
 
   // Listing probes

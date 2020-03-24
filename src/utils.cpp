@@ -800,4 +800,30 @@ bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
     return false;
 }
 
+pid_t parse_pid(const std::string &str)
+{
+  try
+  {
+    constexpr ssize_t pid_max = 4 * 1024 * 1024;
+    std::size_t idx = 0;
+    auto pid = std::stol(str, &idx, 10);
+    // Detect cases like `13ABC`
+    if (idx < str.size())
+      throw InvalidPIDException(str, "is not a valid decimal number");
+    if (pid < 1 || pid > pid_max)
+      throw InvalidPIDException(str,
+                                "out of valid pid range [1," +
+                                    std::to_string(pid_max) + "]");
+    return pid;
+  }
+  catch (const std::out_of_range &e)
+  {
+    throw InvalidPIDException(str, "outside of integer range");
+  }
+  catch (const std::invalid_argument &e)
+  {
+    throw InvalidPIDException(str, "is not a valid decimal number");
+  }
+}
+
 } // namespace bpftrace
