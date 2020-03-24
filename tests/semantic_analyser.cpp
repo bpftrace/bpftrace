@@ -1131,6 +1131,7 @@ TEST(semantic_analyser, positional_parameters)
   BPFtrace bpftrace;
   bpftrace.add_param("123");
   bpftrace.add_param("hello");
+  bpftrace.add_param("0x123");
 
   test(bpftrace, "kprobe:f { printf(\"%d\", $0); }", 1);
   test(bpftrace, "kprobe:f { printf(\"%s\", str($0)); }", 1);
@@ -1141,9 +1142,11 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%s\", str($2)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $2); }", 10);
 
-  // Parameters are not required to exist to be used:
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($3)); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%d\", $3); }", 0);
+
+  // Parameters are not required to exist to be used:
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($4)); }", 0);
+  test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 0);
 
   test(bpftrace, "kprobe:f { printf(\"%d\", $#); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 10);
@@ -1155,6 +1158,9 @@ TEST(semantic_analyser, positional_parameters)
   auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
   EXPECT_EQ(SizedType(Type::integer, 8, true), pp->type);
   EXPECT_TRUE(pp->is_literal);
+
+  bpftrace.add_param("0999");
+  test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 10);
 }
 
 TEST(semantic_analyser, macros)

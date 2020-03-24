@@ -118,6 +118,11 @@ RUN bpftrace -v -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exi
 EXPECT got 2 args: one 2
 TIMEOUT 5
 
+NAME positional multiple bases
+RUN bpftrace -e 'BEGIN { printf("got: %d %d 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
+EXPECT got: 123 509 0x123
+TIMEOUT 5
+
 NAME lhist can be cleared
 RUN bpftrace -e 'BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }'
 EXPECT .*
