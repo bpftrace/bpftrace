@@ -780,7 +780,16 @@ std::string str_join(const std::vector<std::string> &list, const std::string &de
 
 bool is_numeric(const std::string &s)
 {
-  return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
+  std::size_t idx;
+  try
+  {
+    std::stoll(s, &idx, 0);
+  }
+  catch (...)
+  {
+    return false;
+  }
+  return idx == s.size();
 }
 
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name)
