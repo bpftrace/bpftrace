@@ -778,17 +778,27 @@ bool attach_reverse(const Probe &p)
   }
 }
 
-int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
+int BPFtrace::run_special_probe(std::string name,
+                                const BpfOrc &bpforc,
+                                void (*trigger)(void))
 {
-  auto r_special_probes = special_probes_.rbegin();
-  for (; r_special_probes != special_probes_.rend(); ++r_special_probes)
+  for (auto probe = special_probes_.rbegin(); probe != special_probes_.rend();
+       ++probe)
   {
-    auto attached_probe = attach_probe(*r_special_probes, *bpforc.get());
-    if (attached_probe == nullptr)
-      return -1;
-    special_attached_probes_.push_back(std::move(attached_probe));
+    if ((*probe).attach_point == name)
+    {
+      std::unique_ptr<AttachedProbe> ap = attach_probe(*probe, bpforc);
+
+      trigger();
+      return ap != nullptr ? 0 : -1;
+    }
   }
 
+  return 0;
+}
+
+int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
+{
   int epollfd = setup_perf_events();
   if (epollfd < 0)
     return epollfd;
@@ -807,7 +817,8 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     }
   }
 
-  BEGIN_trigger();
+  if (run_special_probe("BEGIN_trigger", *bpforc.get(), BEGIN_trigger))
+    return -1;
 
   // The kernel appears to fire some probes in the order that they were
   // attached and others in reverse order. In order to make sure that blocks
@@ -865,9 +876,10 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   finalize_ = false;
   exitsig_recv = false;
 
-  END_trigger();
+  if (run_special_probe("END_trigger", *bpforc.get(), END_trigger))
+    return -1;
+
   poll_perf_events(epollfd, true);
-  special_attached_probes_.clear();
 
   return 0;
 }
