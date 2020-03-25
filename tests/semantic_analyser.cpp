@@ -215,6 +215,14 @@ TEST(semantic_analyser, consistent_map_keys)
   test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 10);
 }
 
+TEST(semantic_analyser, if_statements)
+{
+  test("kprobe:f { if(1) { 123 } }", 0);
+  test("kprobe:f { if(1) { 123 } else { 456 } }", 0);
+  test("kprobe:f { if(0) { 123 } else if(1) { 456 } else { 789 } }", 0);
+  test("kprobe:f { if((int32)pid) { 123 } }", 0);
+}
+
 TEST(semantic_analyser, predicate_expressions)
 {
   test("kprobe:f / 999 / { 123 }", 0);

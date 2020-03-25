@@ -1420,7 +1420,10 @@ void CodegenLLVM::visit(If &if_block)
   if_block.cond->accept(*this);
   Value *cond = expr_;
 
-  b_.CreateCondBr(b_.CreateICmpNE(cond, b_.getInt64(0), "true_cond"), if_true, if_false);
+  Value *zero_value = Constant::getNullValue(cond->getType());
+  b_.CreateCondBr(b_.CreateICmpNE(cond, zero_value, "true_cond"),
+                  if_true,
+                  if_false);
 
   b_.SetInsertPoint(if_true);
   for (Statement *stmt : *if_block.stmts)
