@@ -798,6 +798,7 @@ void SemanticAnalyser::visit(Call &call)
     call.type = SizedType(Type::none, 0);
   }
   else if (call.func == "exit") {
+    check_assignment(call, false, false, false);
     check_nargs(call, 0);
   }
   else if (call.func == "print") {
