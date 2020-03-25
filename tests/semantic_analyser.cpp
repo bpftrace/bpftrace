@@ -436,6 +436,7 @@ TEST(semantic_analyser, call_exit)
 {
   test("kprobe:f { exit(); }", 0);
   test("kprobe:f { exit(1); }", 1);
+  test("kprobe:f { @a = exit(); }", 1);
   test("kprobe:f { @a = exit(1); }", 1);
   test("kprobe:f { $a = exit(1); }", 1);
   test("kprobe:f { @[exit(1)] = 1; }", 1);
