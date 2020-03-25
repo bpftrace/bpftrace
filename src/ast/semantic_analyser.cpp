@@ -1043,6 +1043,12 @@ void SemanticAnalyser::visit(Map &map)
       }
 
       if (is_final_pass()) {
+        if (expr->type.type == Type::none)
+          ERR("Invalid expression for assignment: " << expr->type.type,
+              expr->loc);
+        if (expr->type.type == Type::array)
+          error("Using array as a map key is not supported (#1052)", expr->loc);
+
         // Skip is_signed when comparing keys to not break existing scripts
         // which use maps as a lookup table
         // TODO (fbs): This needs a better solution
@@ -1610,6 +1616,14 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     // bpf_map_update_elem() only accepts a pointer to a element in the stack
     error("context cannot be assigned to a map", assignment.loc);
   }
+
+  if (is_final_pass())
+  {
+    if (type == Type::none)
+      ERR("Invalid expression for assignment: " << type, assignment.expr->loc);
+    if (type == Type::array)
+      error("Assigning array is not supported (#1057)", assignment.expr->loc);
+  }
 }
 
 void SemanticAnalyser::visit(AssignVarStatement &assignment)
@@ -1689,6 +1703,15 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         buf << " The value may contain garbage.";
       bpftrace_.warning(out_, assignment.loc, buf.str());
     }
+  }
+
+  if (is_final_pass())
+  {
+    auto &ty = assignment.expr->type.type;
+    if (ty == Type::none)
+      ERR("Invalid expression for assignment: " << ty, assignment.expr->loc);
+    if (ty == Type::array)
+      error("Assigning array is not supported (#1057)", assignment.expr->loc);
   }
 }
 
