@@ -185,8 +185,10 @@ protected:
   std::vector<Probe> special_probes_;
 
 private:
+  int run_special_probe(std::string name,
+                        const BpfOrc &bpforc,
+                        void (*trigger)(void));
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
-  std::vector<std::unique_ptr<AttachedProbe>> special_attached_probes_;
   void* ksyms_{nullptr};
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
   int ncpus_;
