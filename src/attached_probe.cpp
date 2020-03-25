@@ -15,14 +15,12 @@
 
 #include "attached_probe.h"
 #include "bpftrace.h"
-#include "utils.h"
-#include "bcc_syms.h"
-#include "bcc_usdt.h"
-#include "bcc_elf.h"
-#include "libbpf.h"
-#include "utils.h"
-#include "list.h"
 #include "disasm.h"
+#include "list.h"
+#include "utils.h"
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_syms.h>
+#include <bcc/bcc_usdt.h>
 #include <linux/perf_event.h>
 #include <linux/version.h>
 

@@ -1,7 +1,6 @@
 #include <iostream>
 
 #include "irbuilderbpf.h"
-#include "bcc_usdt.h"
 #include "arch/arch.h"
 #include "utils.h"
 

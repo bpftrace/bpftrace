@@ -6,7 +6,7 @@
 
 #include "types.h"
 
-#include "libbpf.h"
+#include <bcc/libbpf.h>
 
 namespace bpftrace {
 

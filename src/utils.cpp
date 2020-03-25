@@ -13,9 +13,9 @@
 #include <tuple>
 #include <unistd.h>
 
-#include "bcc_elf.h"
-#include "bcc_usdt.h"
 #include "utils.h"
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_usdt.h>
 
 namespace {
 

@@ -14,7 +14,7 @@ endif (LIBBCC_LIBRARIES AND LIBBCC_INCLUDE_DIRS)
 
 find_path (LIBBCC_INCLUDE_DIRS
   NAMES
-    libbpf.h
+    bcc/libbpf.h
   PATHS
     /usr/include
     /usr/include/bcc

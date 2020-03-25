@@ -20,11 +20,11 @@
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <linux/elf.h>
 
-#include "bcc_elf.h"
+#include <bcc/bcc_elf.h>
 #endif
 
-#include "bcc_syms.h"
-#include "perf_reader.h"
+#include <bcc/bcc_syms.h>
+#include <bcc/perf_reader.h>
 
 #include "bpforc.h"
 #include "bpftrace.h"
