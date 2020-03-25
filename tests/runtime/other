@@ -28,6 +28,11 @@ RUN bpftrace -v -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { 
 EXPECT a=asdf
 TIMEOUT 5
 
+NAME if_cast
+RUN bpftrace -v -e 'i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}'
+EXPECT done
+TIMEOUT 5
+
 NAME unroll
 RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11
