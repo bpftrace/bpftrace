@@ -13,7 +13,7 @@
 #include <string>
 #include <sys/stat.h>
 
-#include "libbpf.h"
+#include <bcc/libbpf.h>
 
 namespace bpftrace {
 namespace ast {

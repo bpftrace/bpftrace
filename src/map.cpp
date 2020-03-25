@@ -3,9 +3,9 @@
 #include <unistd.h>
 #include <linux/version.h>
 
-#include "libbpf.h"
-#include "utils.h"
 #include "bpftrace.h"
+#include "utils.h"
+#include <bcc/libbpf.h>
 
 #include "map.h"
 

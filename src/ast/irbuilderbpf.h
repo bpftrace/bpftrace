@@ -1,9 +1,9 @@
 #pragma once
 
 #include "ast.h"
-#include "bcc_usdt.h"
 #include "bpftrace.h"
 #include "types.h"
+#include <bcc/bcc_usdt.h>
 
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/IRBuilder.h>

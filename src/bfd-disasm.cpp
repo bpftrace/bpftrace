@@ -8,11 +8,11 @@
 // bfd.h assumes everyone is using autotools and will error out unless
 // PACKAGE is defined. Some distros patch this check out.
 #define PACKAGE "bpftrace"
+#include "bfd-disasm.h"
+#include <bcc/bcc_elf.h>
+#include <bcc/bcc_syms.h>
 #include <bfd.h>
 #include <dis-asm.h>
-#include "bcc_syms.h"
-#include "bcc_elf.h"
-#include "bfd-disasm.h"
 
 namespace bpftrace {
 
