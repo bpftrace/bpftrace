@@ -637,10 +637,11 @@ void AttachedProbe::load_prog()
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
-  char log_buf[probe_.log_size];
+
+  uint64_t log_buf_size = probe_.log_size;
+  auto log_buf = std::make_unique<char[]>(log_buf_size);
   char name[STRING_SIZE];
   const char *namep;
-  unsigned log_buf_size = sizeof (log_buf);
   std::string tracing_type, tracing_name;
 
   {
@@ -696,7 +697,7 @@ void AttachedProbe::load_prog()
                               license,
                               version,
                               log_level,
-                              log_buf,
+                              log_buf.get(),
                               log_buf_size);
       if (progfd_ >= 0)
         break;
@@ -705,7 +706,9 @@ void AttachedProbe::load_prog()
 
   if (progfd_ < 0) {
     if (bt_verbose) {
-      std::cerr << std::endl << "Error log: " << std::endl << log_buf << std::endl;
+      std::cerr << std::endl
+                << "Error log: " << std::endl
+                << log_buf.get() << std::endl;
       if (errno == ENOSPC) {
         std::stringstream errmsg;
         errmsg << "Error: Failed to load program, verification log buffer "
@@ -728,7 +731,9 @@ void AttachedProbe::load_prog()
     if (ret == 0) {
       std::cout << std::endl << "Program ID: " << info.id << std::endl;
     }
-    std::cout << std::endl << "Bytecode: " << std::endl << log_buf << std::endl;
+    std::cout << std::endl
+              << "Bytecode: " << std::endl
+              << log_buf.get() << std::endl;
   }
 }
 
