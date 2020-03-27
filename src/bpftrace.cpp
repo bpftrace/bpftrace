@@ -822,6 +822,19 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (run_special_probe("BEGIN_trigger", *bpforc.get(), BEGIN_trigger))
     return -1;
 
+  if (child_ && has_usdt_)
+  {
+    try
+    {
+      child_->run(true);
+    }
+    catch (std::runtime_error &e)
+    {
+      std::cerr << "Failed to setup child: " << e.what() << std::endl;
+      return -1;
+    }
+  }
+
   // The kernel appears to fire some probes in the order that they were
   // attached and others in reverse order. In order to make sure that blocks
   // are executed in the same order they were declared, iterate over the probes
@@ -855,7 +868,18 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   // Kick the child to execute the command.
   if (child_)
   {
-    child_->run();
+    try
+    {
+      if (has_usdt_)
+        child_->resume();
+      else
+        child_->run();
+    }
+    catch (std::runtime_error &e)
+    {
+      std::cerr << "Failed to run child: " << e.what() << std::endl;
+      return -1;
+    }
   }
 
   if (bt_verbose)

@@ -46,16 +46,21 @@ REQUIRES ./testprogs/usdt_test should_not_skip
 NAME "usdt probes - attach to fully specified probe by file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }'
 EXPECT here
-TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+TIMEOUT 5
+
+NAME "usdt probes - attach to fully specified probe of child"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
+EXPECT here
+TIMEOUT 5
 
 NAME "usdt probes - attach to fully specified probe by pid"
 RUN bpftrace -e 'usdt::tracetest:testprobe { printf("here\n" ); exit(); }' -p $(pidof usdt_test)
 EXPECT here
-TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+TIMEOUT 5
 
 NAME "usdt probes - all probes by wildcard and file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }'
@@ -63,6 +68,11 @@ EXPECT Attaching 3 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - all probes by wildcard and file with child"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
+EXPECT Attaching 3 probes...
+TIMEOUT 5
 
 # TODO(mmarchini): re-enable this test
 # This test has two problems: it relies on the latest version of bcc and it
@@ -87,12 +97,22 @@ TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 
+NAME "usdt probes - attach to probe by wildcard and file with child"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
+EXPECT Attaching 2 probes...
+TIMEOUT 5
+
 NAME "usdt probes - attach to probes by wildcard file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }'
 EXPECT Attaching 3 probes...
-TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+TIMEOUT 5
+
+NAME "usdt probes - attach to probes by wildcard file with child"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
+EXPECT Attaching 3 probes...
+TIMEOUT 5
 
 NAME "usdt probes - attach to probe with ambiguous wildcard file fails"
 RUN bpftrace -e 'usdt:./testprogs/u*::* { printf("here\n" ); exit(); }'
@@ -136,6 +156,11 @@ EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to probe with probe builtin and args by file with child"
+RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }' -c ./testprogs/usdt_test
+EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
+TIMEOUT 5
 
 NAME "usdt probes - attach to probe with probe builtin and args by pid"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }' -p $(pidof usdt_test)

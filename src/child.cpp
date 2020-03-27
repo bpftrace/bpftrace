@@ -1,10 +1,11 @@
+#include <cassert>
 #include <cerrno>
 #include <fcntl.h>
-#include <cassert>
 
 #include <stdexcept>
 #include <string>
 #include <sys/prctl.h>
+#include <sys/ptrace.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <system_error>
@@ -19,11 +20,29 @@ namespace bpftrace {
 
 constexpr unsigned int maxargs = 256;
 constexpr char CHILD_GO = 'g';
+constexpr char CHILD_PTRACE = 'p';
 constexpr unsigned int STACK_SIZE = (64 * 1024UL);
 
 std::system_error SYS_ERROR(std::string msg)
 {
   return std::system_error(errno, std::generic_category(), msg);
+}
+
+static void report_status(int wstatus)
+{
+  std::stringstream msg;
+  if (WIFSTOPPED(wstatus))
+    msg << "Child stopped unexpectedly, signal: " << WSTOPSIG(wstatus);
+  else if (WIFEXITED(wstatus))
+    msg << "Child exited unexpectedly";
+  else if (WIFSIGNALED(wstatus))
+  {
+    if (WCOREDUMP(wstatus))
+      msg << "Child core dumped";
+    else
+      msg << "Child aborted by signal: " << WTERMSIG(wstatus);
+  }
+  throw std::runtime_error(msg.str());
 }
 
 static int childfn(void* arg)
@@ -55,6 +74,13 @@ static int childfn(void* arg)
   }
 
   close(args->pipe_fd);
+  if (bf == CHILD_PTRACE)
+  {
+    if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0)
+      perror("child: ptrace(traceme) failed");
+    if (kill(getpid(), SIGSTOP))
+      perror("child: failed to stop");
+  }
 
   execve(argv[0], argv, environ);
 
@@ -150,10 +176,20 @@ void ChildProc::terminate(bool force)
   int sig = force ? SIGKILL : SIGTERM;
 
   kill(child_pid_, sig);
+
+  if (state_ == State::PTRACE_PAUSE)
+    ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);
+
   check_child(force);
 }
 
-void ChildProc::run(bool pause __attribute__((unused)))
+void ChildProc::resume(void)
+{
+  assert(state_ == State::PTRACE_PAUSE);
+  ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);
+}
+
+void ChildProc::run(bool pause)
 {
   if (!is_alive())
   {
@@ -162,14 +198,61 @@ void ChildProc::run(bool pause __attribute__((unused)))
 
   assert(state_ == State::FORKED);
 
-  int ret = write(child_pipe_, &CHILD_GO, 1);
-  if (ret < 0)
+  auto* data = pause ? &CHILD_PTRACE : &CHILD_GO;
+  if (write(child_pipe_, data, 1) < 0)
   {
+    close(child_pipe_);
     terminate(true);
     throw SYS_ERROR("Failed to write 'go' pipe");
   }
-  state_ = State::RUNNING;
+
   close(child_pipe_);
+
+  if (!pause)
+  {
+    state_ = State::RUNNING;
+    return;
+  }
+
+  state_ = State::PTRACE_PAUSE;
+
+  // After receiving the ptrace message the child will setup
+  // ptrace and SIGSTOP itself.
+  // we can then setup ptrace to stop the child right after execve
+  // and let the child run until that point
+  int wstatus;
+  if (waitpid(child_pid_, &wstatus, 0) < 0)
+  {
+    if (errno == ECHILD)
+      throw std::runtime_error("Child died unexpectedly");
+  }
+
+  if (!WIFSTOPPED(wstatus) || WSTOPSIG(wstatus) != SIGSTOP)
+    report_status(wstatus);
+
+  try
+  {
+    if (ptrace(PTRACE_SETOPTIONS, child_pid_, nullptr, PTRACE_O_TRACEEXEC) < 0)
+      throw SYS_ERROR("Failed to PTRACE_SETOPTIONS child");
+
+    if (ptrace(PTRACE_CONT, child_pid_, nullptr, 0) < 0)
+      throw SYS_ERROR("Failed to PTRACE_CONT child");
+
+    if (waitpid(child_pid_, &wstatus, 0) < 0)
+      throw SYS_ERROR("Error while waiting for child");
+
+    if (WIFSTOPPED(wstatus) &&
+        wstatus >> 8 == (SIGTRAP | (PTRACE_EVENT_EXEC << 8)))
+      return;
+
+    report_status(wstatus);
+  }
+  catch (const std::runtime_error& e)
+  {
+    ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);
+    terminate(true);
+    throw SYS_ERROR("Failed to write 'go' pipe");
+  }
 }
 
 // private
