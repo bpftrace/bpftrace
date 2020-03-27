@@ -134,3 +134,8 @@ RUN bpftrace -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe
 EXPECT 1 2 5 0 65535
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test
+
+NAME exit exits immediately
+RUN bpftrace -e 'i:ms:100 { @++; exit(); @++ }'
+EXPECT @: 1
+TIMEOUT 1
