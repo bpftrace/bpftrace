@@ -1652,6 +1652,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
   }
   else if (ap.provider == "usdt") {
+    bpftrace_.has_usdt_ = true;
     if (ap.func == "")
       error("usdt probe must have a target function or wildcard", ap.loc);
 

@@ -115,7 +115,7 @@ public:
   void run(bool pause = false) override;
   void terminate(bool force = false) override;
   bool is_alive() override;
-  void resume(void) override {};
+  void resume(void) override;
 
 private:
   enum class State
@@ -124,6 +124,7 @@ private:
     FORKED,
     RUNNING,
     DIED,
+    PTRACE_PAUSE,
   };
 
   State state_ = State::INIT;
@@ -136,6 +137,8 @@ private:
   };
 
   int child_pipe_ = -1;
+  bool with_ptrace_ = false;
+  bool did_run_ = false;
 };
 
 } // namespace bpftrace
