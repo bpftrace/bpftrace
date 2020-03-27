@@ -34,6 +34,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [8. `unroll () {...}`: unroll](#8-unroll---unroll)
     - [9. `++ and --`: increment operators](#9--and----increment-operators)
     - [10. `[]`: Array access](#10--array-access)
+    - [11. Integer casts](#11-integer-casts)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -716,6 +717,31 @@ Example:
 Attaching 1 probe...
 
 @x: 1
+```
+
+## 11. Integer casts
+
+Integers are internally represented as 64 bit signed. If you need another
+representation, you may cast to the following built in types:
+
+| Type     | Explanation              |
+|----------|--------------------------|
+| `uint8`  | unsigned 8 bit integer   |
+| `int8`   | signed 8 bit integer     |
+| `uint16` | unsigned 16 bit integer  |
+| `int16`  | signed 16 bit integer    |
+| `uint32` | unsigned 32 bit integer  |
+| `int32`  | signed 32 bit integer    |
+| `uint64` | unsigned 64 bit integer  |
+| `int64`  | signed 64 bit integer    |
+
+Example:
+
+```
+# bpftrace -e 'BEGIN { $x = 1<<16; printf("%d %d\n", (uint16)$x, $x); }'
+Attaching 1 probe...
+0 65536
+^C
 ```
 
 # Probes
