@@ -658,6 +658,15 @@ void CodegenLLVM::visit(Call &call)
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t));
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
+    b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+
+    // create an unreachable basic block for all the "dead instructions" that
+    // may come after exit(). If we don't, LLVM will emit the instructions
+    // leading to a `unreachable insn` warning from the verifier
+    BasicBlock *deadcode = BasicBlock::Create(module_->getContext(),
+                                              "deadcode",
+                                              b_.GetInsertBlock()->getParent());
+    b_.SetInsertPoint(deadcode);
   }
   else if (call.func == "print")
   {

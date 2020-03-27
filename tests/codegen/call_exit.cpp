@@ -6,9 +6,7 @@ namespace codegen {
 
 TEST(codegen, call_exit)
 {
-  test("kprobe:f { exit() }",
-
-       NAME);
+  test("kprobe:f { exit(); @=10 }", NAME);
 }
 
 } // namespace codegen
