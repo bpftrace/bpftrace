@@ -102,23 +102,25 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
   usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
 }
 
-void StderrSilencer::silence()
+void StdioSilencer::silence()
 {
-  fflush(stderr);
-  old_stderr_ = dup(STDERR_FILENO);
-  int new_stderr_ = open("/dev/null", O_WRONLY);
-  dup2(new_stderr_, STDERR_FILENO);
-  close(new_stderr_);
+  fflush(ofile);
+  int fd = fileno(ofile);
+  old_stdio_ = dup(fd);
+  int new_stdio_ = open("/dev/null", O_WRONLY);
+  dup2(new_stdio_, fd);
+  close(new_stdio_);
 }
 
-StderrSilencer::~StderrSilencer()
+StdioSilencer::~StdioSilencer()
 {
-  if (old_stderr_ != -1)
+  if (old_stdio_ != -1)
   {
-    fflush(stderr);
-    dup2(old_stderr_, STDERR_FILENO);
-    close(old_stderr_);
-    old_stderr_ = -1;
+    fflush(ofile);
+    int fd = fileno(ofile);
+    dup2(old_stdio_, fd);
+    close(old_stdio_);
+    old_stdio_ = -1;
   }
 }
 
