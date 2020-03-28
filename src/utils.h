@@ -61,15 +61,36 @@ private:
   std::string msg_;
 };
 
-class StderrSilencer
+class StdioSilencer
 {
 public:
-  StderrSilencer() = default;
-  ~StderrSilencer();
+  StdioSilencer() = default;
+  ~StdioSilencer();
   void silence();
 
+protected:
+  FILE *ofile;
+
 private:
-  int old_stderr_ = -1;
+  int old_stdio_ = -1;
+};
+
+class StderrSilencer : public StdioSilencer
+{
+public:
+  StderrSilencer()
+  {
+    ofile = stderr;
+  }
+};
+
+class StdoutSilencer : public StdioSilencer
+{
+public:
+  StdoutSilencer()
+  {
+    ofile = stdout;
+  }
 };
 
 class USDTHelper
