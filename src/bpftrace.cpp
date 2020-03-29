@@ -243,7 +243,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     }
     case ProbeType::usdt:
     {
-      symbol_stream = get_symbols_from_usdt(pid_, attach_point.target);
+      symbol_stream = get_symbols_from_usdt(pid(), attach_point.target);
       prefix = "";
       if (attach_point.ns == "")
         func = "*:" + attach_point.func;
@@ -746,7 +746,7 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
   {
     if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
     {
-      pid_t pid = child_ ? child_->pid() : pid_;
+      pid_t pid = child_ ? child_->pid() : this->pid();
       return std::make_unique<AttachedProbe>(probe, func->second, pid);
     }
     else
@@ -966,11 +966,7 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
 
     // If we are tracing a specific pid and it has exited, we should exit
     // as well b/c otherwise we'd be tracing nothing.
-    //
-    // Note that there technically is a race with a new process using the
-    // same pid, but we're polling at 100ms and it would be unlikely that
-    // the pids wrap around that fast.
-    if ((pid_ > 0 && !is_pid_alive(pid_)) || (child_ && !child_->is_alive()))
+    if ((procmon_ && !procmon_->is_alive()) || (child_ && !child_->is_alive()))
     {
       return;
     }
@@ -1864,25 +1860,6 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
 
     // Other types don't get sorted
   }
-}
-
-bool BPFtrace::is_pid_alive(int pid)
-{
-  char buf[256];
-  int ret = snprintf(buf, sizeof(buf), "/proc/%d/status", pid);
-  if (ret < 0)
-  {
-    throw std::runtime_error("failed to snprintf");
-  }
-
-  int fd = open(buf, 0, O_RDONLY);
-  if (fd < 0 && errno == ENOENT)
-  {
-    return false;
-  }
-  close(fd);
-
-  return true;
 }
 
 const std::string BPFtrace::get_source_line(unsigned int n)

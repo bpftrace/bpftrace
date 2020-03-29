@@ -150,10 +150,10 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
     std::string absolute_exe;
     bool show_all = false;
 
-    if (bpftrace.pid_ > 0)
+    if (bpftrace.pid() > 0)
     {
-      executable = get_pid_exe(bpftrace.pid_);
-      absolute_exe = path_for_pid_mountns(bpftrace.pid_, executable);
+      executable = get_pid_exe(bpftrace.pid());
+      absolute_exe = path_for_pid_mountns(bpftrace.pid(), executable);
     } else if (probe_name == "uprobe")
     {
       executable = search.substr(search.find(":") + 1, search.size());
@@ -193,16 +193,16 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
   // usdt
   usdt_probe_list usdt_probes;
   bool usdt_path_list = false;
-  if (bpftrace.pid_ > 0)
+  if (bpftrace.pid() > 0)
   {
     // PID takes precedence over path, so path from search expression will be ignored if pid specified
-    usdt_probes = USDTHelper::probes_for_pid(bpftrace.pid_);
+    usdt_probes = USDTHelper::probes_for_pid(bpftrace.pid());
   } else if (probe_name == "usdt") {
     // If the *full* path is provided as part of the search expression parse it out and use it
     std::string usdt_path = search.substr(search.find(":")+1, search.size());
     usdt_path_list = usdt_path.find(":") == std::string::npos;
     usdt_path = usdt_path.substr(0, usdt_path.find(":"));
-    auto paths = resolve_binary_path(usdt_path, bpftrace.pid_);
+    auto paths = resolve_binary_path(usdt_path, bpftrace.pid());
     switch (paths.size())
     {
     case 0:

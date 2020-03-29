@@ -429,7 +429,11 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
   return result;
 }
 
-Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_num, Builtin &builtin, int pid)
+Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
+                                            AttachPoint *attach_point,
+                                            int arg_num,
+                                            Builtin &builtin,
+                                            pid_t pid)
 {
   struct bcc_usdt_argument argument;
 

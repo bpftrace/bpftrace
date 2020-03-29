@@ -191,8 +191,8 @@ void CodegenLLVM::visit(Builtin &builtin)
     {
       int arg_num = atoi(builtin.ident.substr(3).c_str());
       if (probetype(current_attach_point_->provider) == ProbeType::usdt) {
-        expr_ = b_.CreateUSDTReadArgument(ctx_, current_attach_point_,
-                                          arg_num, builtin, bpftrace_.pid_);
+        expr_ = b_.CreateUSDTReadArgument(
+            ctx_, current_attach_point_, arg_num, builtin, bpftrace_.pid());
         return;
       }
       offset = arch::arg_offset(arg_num);
@@ -1785,7 +1785,8 @@ void CodegenLLVM::visit(Probe &probe)
           attach_point->ns = orig_ns;
 
           // Set the probe identifier so that we can read arguments later
-          attach_point->usdt = USDTHelper::find(bpftrace_.pid_, attach_point->target, ns, func_id);
+          attach_point->usdt = USDTHelper::find(
+              bpftrace_.pid(), attach_point->target, ns, func_id);
         } else if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
           probefull_ = attach_point->provider;
         } else {
