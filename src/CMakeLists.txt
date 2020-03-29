@@ -18,6 +18,7 @@ add_executable(bpftrace
   map.cpp
   mapkey.cpp
   output.cpp
+  procmon.cpp
   printf.cpp
   resolve_cgroupid.cpp
   signal.cpp

@@ -20,6 +20,7 @@
 #include "lockdown.h"
 #include "output.h"
 #include "printer.h"
+#include "procmon.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
@@ -345,17 +346,13 @@ int main(int argc, char *argv[])
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.force_btf_ = force_btf;
 
-  // PID is currently only used for USDT probes that need enabling. Future work:
-  // - make PID a filter for all probe types: pass to perf_event_open(), etc.
-  // - provide PID in USDT probe specification as a way to override -p.
-  bpftrace.pid_ = 0;
   if (!pid_str.empty())
   {
     try
     {
-      bpftrace.pid_ = parse_pid(pid_str);
+      bpftrace.procmon_ = std::make_unique<ProcMon>(pid_str);
     }
-    catch (const InvalidPIDException& e)
+    catch (const std::exception& e)
     {
       std::cerr << "ERROR: " << e.what() << std::endl;
       return 1;

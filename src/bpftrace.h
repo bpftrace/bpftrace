@@ -16,6 +16,7 @@
 #include "imap.h"
 #include "output.h"
 #include "printf.h"
+#include "procmon.h"
 #include "struct.h"
 #include "types.h"
 #include "utils.h"
@@ -127,7 +128,6 @@ public:
   bool is_aslr_enabled(int pid);
 
   std::string cmd_;
-  int pid_{0};
   bool finalize_ = false;
   // Global variable checking if an exit signal was received
   static volatile sig_atomic_t exitsig_recv;
@@ -190,6 +190,11 @@ public:
   std::unordered_set<std::string> btf_set_;
   std::map<std::string, std::map<std::string, SizedType>> btf_ap_args_;
   std::unique_ptr<ChildProcBase> child_;
+  std::unique_ptr<ProcMonBase> procmon_;
+  pid_t pid(void) const
+  {
+    return procmon_ ? procmon_->pid() : 0;
+  }
 
 protected:
   std::vector<Probe> probes_;
@@ -222,7 +227,6 @@ private:
   static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
-  static bool is_pid_alive(int pid);
 };
 
 } // namespace bpftrace

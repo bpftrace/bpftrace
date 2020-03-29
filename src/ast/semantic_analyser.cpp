@@ -1771,7 +1771,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
       error("uretprobes can not be attached to a function offset", ap.loc);
 
-    auto paths = resolve_binary_path(ap.target, bpftrace_.pid_);
+    auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
     switch (paths.size())
     {
     case 0:
@@ -1806,7 +1806,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       error("usdt probe must have a target function or wildcard", ap.loc);
 
     if (ap.target != "") {
-      auto paths = resolve_binary_path(ap.target, bpftrace_.pid_);
+      auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
       switch (paths.size())
       {
       case 0:
@@ -1836,11 +1836,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
 
-    if (bpftrace_.pid_ > 0) {
-       USDTHelper::probes_for_pid(bpftrace_.pid_);
-    } else if (ap.target != "") {
-       USDTHelper::probes_for_path(ap.target);
-    } else {
+    if (bpftrace_.pid() > 0)
+    {
+      USDTHelper::probes_for_pid(bpftrace_.pid());
+    }
+    else if (ap.target != "")
+    {
+      USDTHelper::probes_for_path(ap.target);
+    }
+    else
+    {
       error("usdt probe must specify at least path or pid to probe", ap.loc);
     }
   }
