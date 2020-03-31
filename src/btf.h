@@ -3,6 +3,7 @@
 #include "types.h"
 #include <linux/types.h>
 #include <map>
+#include <regex>
 #include <string>
 #include <unistd.h>
 #include <unordered_set>
@@ -28,7 +29,7 @@ public:
   std::string c_def(std::unordered_set<std::string>& set);
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const btf_type* type, const std::string& field);
-  void display_funcs(void) const;
+  void display_funcs(std::regex* re) const;
 
   int resolve_args(const std::string &func,
                    std::map<std::string, SizedType>& args,

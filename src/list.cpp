@@ -288,7 +288,7 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
   }
 
   // kfuncs
-  bpftrace.btf_.display_funcs();
+  bpftrace.btf_.display_funcs(search.empty() ? NULL : &re);
 }
 
 } // namespace bpftrace
