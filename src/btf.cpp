@@ -434,7 +434,22 @@ int BTF::resolve_args(const std::string &func,
   return -1;
 }
 
-void BTF::display_funcs(void) const
+static bool match_re(const std::string &probe, const std::regex &re)
+{
+  try
+  {
+    if (std::regex_search(probe, re))
+      return true;
+    else
+      return false;
+  }
+  catch (std::regex_error &e)
+  {
+    return false;
+  }
+}
+
+void BTF::display_funcs(std::regex *re) const
 {
   __s32 id, max = (__s32)btf__get_nr_types(btf);
   std::string type = std::string("");
@@ -473,6 +488,9 @@ void BTF::display_funcs(void) const
                   << " function does not have FUNC_PROTO record" << std::endl;
       break;
     }
+
+    if (re && !match_re(std::string("kfunc:") + func_name, *re))
+      continue;
 
     std::cout << "kfunc:" << func_name << std::endl;
 
@@ -554,7 +572,7 @@ int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
   return -1;
 }
 
-void BTF::display_funcs(void) const
+void BTF::display_funcs(std::regex* re __attribute__((__unused__))) const
 {
 }
 
