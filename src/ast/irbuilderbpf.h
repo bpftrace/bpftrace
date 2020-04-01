@@ -85,6 +85,7 @@ public:
   void        CreateOverrideReturn(Value *ctx, Value *rc);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
+  Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
 
 private:
   Module &module_;
