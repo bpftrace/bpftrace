@@ -244,10 +244,19 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       builtin.type = SizedType(Type::integer, 8);
     }
+    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
+    {
+      auto it = ap_args_.find("$retval");
+
+      if (it != ap_args_.end())
+        builtin.type = it->second;
+      else
+        ERR("Can't find a field $retval", builtin.loc);
+    }
     else
     {
       ERR("The retval builtin can only be used with 'kretprobe' and "
-              << "'uretprobe' probes"
+              << "'uretprobe' and 'kfunc' probes"
               << (type == ProbeType::tracepoint
                       ? " (try to use args->ret instead)"
                       : ""),
@@ -340,12 +349,24 @@ void SemanticAnalyser::visit(Builtin &builtin)
         probe_->need_expansion = true;
         builtin_args_tracepoint(attach_point, builtin);
       }
-      else
-      {
-        error("The args builtin can only be used with tracepoint probes (" +
-                  attach_point->provider + " used here)",
-              builtin.loc);
-      }
+    }
+
+    ProbeType type = single_provider_type();
+
+    if (type == ProbeType::tracepoint)
+    {
+      // no special action in here
+    }
+    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
+    {
+      builtin.type = SizedType(Type::ctx, 0);
+      builtin.type.is_kfarg = true;
+    }
+    else
+    {
+      error("The args builtin can only be used with tracepoint/kfunc probes (" +
+                probetypeName(type) + " used here)",
+            builtin.loc);
     }
   }
   else {
@@ -1225,6 +1246,12 @@ void SemanticAnalyser::visit(Unop &unop)
         }
         unop.type.is_tparg = type.is_tparg;
       }
+      else if (type.is_kfarg)
+      {
+        // args->arg access, we need to push the args builtin
+        // type further through the expression ladder
+        unop.type = type;
+      }
       else {
         ERR("Can not dereference struct/union of type '"
                 << type.cast_type << "'. "
@@ -1314,6 +1341,17 @@ void SemanticAnalyser::visit(FieldAccess &acc)
                                    << type << "'",
           acc.loc);
     }
+    return;
+  }
+
+  if (type.is_kfarg)
+  {
+    auto it = ap_args_.find(acc.field);
+
+    if (it != ap_args_.end())
+      acc.type = it->second;
+    else
+      error("Can't find a field", acc.loc);
     return;
   }
 
@@ -1753,6 +1791,34 @@ void SemanticAnalyser::visit(AttachPoint &ap)
           error("More than one END probe defined", ap.loc);
         has_end_probe_ = true;
       }
+    }
+  }
+  else if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  {
+#ifdef HAVE_KFUNC
+    bool supported = bpftrace_.btf_.has_data();
+#else
+    bool supported = false;
+#endif
+
+    if (!supported)
+    {
+      error("kfunc/kretfunc not available for your kernel version.", ap.loc);
+      return;
+    }
+
+    const auto& ap_map = bpftrace_.btf_ap_args_;
+    auto it = ap_map.find(ap.provider + ap.func);
+
+    if (it != ap_map.end())
+    {
+      auto args = it->second;
+      ap_args_.clear();
+      ap_args_.insert(args.begin(), args.end());
+    }
+    else
+    {
+      error("Failed to resolve kfunc args.", ap.loc);
     }
   }
   else {
