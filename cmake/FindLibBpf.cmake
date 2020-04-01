@@ -27,6 +27,7 @@ find_library (LIBBPF_LIBRARIES
     bpf
   PATHS
     /usr/lib
+    /usr/lib64
     /usr/local/lib
     /opt/local/lib
     /sw/lib
