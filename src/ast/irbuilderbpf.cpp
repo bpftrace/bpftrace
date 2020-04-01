@@ -790,5 +790,20 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
   CreateCall(override_func, { ctx, rc }, "override");
 }
 
+Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
+                                   SizedType &type,
+                                   std::string &name)
+{
+  ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
+  Value *expr = CreateLoad(getInt64Ty(),
+                           CreateGEP(ctx, getInt64(type.kfarg_idx)),
+                           name);
+
+  // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
+  // so call setVolatile() manually
+  dyn_cast<LoadInst>(expr)->setVolatile(true);
+  return expr;
+}
+
 } // namespace ast
 } // namespace bpftrace

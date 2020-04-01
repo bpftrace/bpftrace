@@ -13,6 +13,10 @@ target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})
 target_link_libraries(ast arch)
 
+if (HAVE_KFUNC)
+  target_compile_definitions(ast PRIVATE HAVE_KFUNC)
+endif(HAVE_KFUNC)
+
 add_dependencies(ast parser)
 
 if (STATIC_LINKING)
