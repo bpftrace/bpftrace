@@ -83,6 +83,7 @@ private:
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   std::map<std::string, ExpressionList> map_args_;
+  std::map<std::string, SizedType> ap_args_;
   std::unordered_set<StackType> needs_stackid_maps_;
   bool needs_join_map_ = false;
   bool needs_elapsed_map_ = false;
