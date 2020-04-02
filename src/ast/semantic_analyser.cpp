@@ -156,6 +156,24 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
   }
 }
 
+ProbeType SemanticAnalyser::single_provider_type(void)
+{
+  ProbeType type = ProbeType::invalid;
+
+  for (auto &attach_point : *probe_->attach_points)
+  {
+    ProbeType ap = probetype(attach_point->provider);
+
+    if (type == ProbeType::invalid)
+      type = ap;
+
+    if (type != ap)
+      return ProbeType::invalid;
+  }
+
+  return type;
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -218,20 +236,23 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.type.is_pointer = true;
     }
   }
-  else if (builtin.ident == "retval") {
-    for (auto &attach_point : *probe_->attach_points)
+  else if (builtin.ident == "retval")
+  {
+    ProbeType type = single_provider_type();
+
+    if (type == ProbeType::kretprobe || type == ProbeType::uretprobe)
     {
-      ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kretprobe && type != ProbeType::uretprobe) {
-        ERR("The retval builtin can only be used with 'kretprobe' and "
-                << "'uretprobe' probes"
-                << (type == ProbeType::tracepoint
-                        ? " (try to use args->ret instead)"
-                        : ""),
-            builtin.loc);
-      }
+      builtin.type = SizedType(Type::integer, 8);
     }
-    builtin.type = SizedType(Type::integer, 8);
+    else
+    {
+      ERR("The retval builtin can only be used with 'kretprobe' and "
+              << "'uretprobe' probes"
+              << (type == ProbeType::tracepoint
+                      ? " (try to use args->ret instead)"
+                      : ""),
+          builtin.loc);
+    }
   }
   else if (builtin.ident == "kstack") {
     builtin.type = SizedType(Type::kstack, StackType());
