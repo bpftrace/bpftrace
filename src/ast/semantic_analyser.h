@@ -75,6 +75,7 @@ private:
   void assign_map_type(const Map &map, const SizedType &type);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
+  ProbeType single_provider_type(void);
 
   Probe *probe_;
   std::string func_;
