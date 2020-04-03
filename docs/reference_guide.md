@@ -999,6 +999,10 @@ Attaching 1 probe...
 Unsafe uprobe in the middle of the instruction: /bin/bash:main+1
 ```
 
+Examples in situ:
+[(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
+[(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
+
 ## 4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments
 
 Syntax:
@@ -1052,6 +1056,10 @@ readline: "uname -r"
 
 Back to the bash `readline()` example: after checking the source code, I saw that the return value was
 the string read. So I can use a `uretprobe` and the `retval` variable to see the read string.
+
+Examples in situ:
+[(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
+[(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
 
 ## 5. `tracepoint`: Static Tracing, Kernel-Level
 
