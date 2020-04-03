@@ -1079,6 +1079,9 @@ block I/O created by 28941
 [...]
 ```
 
+Examples in situ:
+[search /tools](https://github.com/iovisor/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
+
 ## 6. `tracepoint`: Static Tracing, Kernel-Level Arguments
 
 Example:
@@ -1118,6 +1121,9 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((u
 
 Apart from the `filename` member, we can also print `flags`, `mode`, and more. After the "common" members
 listed first, the members are specific to the tracepoint.
+
+Examples in situ:
+[search /tools](https://github.com/iovisor/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
 
 ## 7. `usdt`: Static Tracing, User-Level
 
