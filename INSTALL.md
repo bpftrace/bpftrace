@@ -241,7 +241,7 @@ git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
-make install
+sudo make install
 ```
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools
@@ -258,7 +258,7 @@ git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
-make install
+sudo make install
 ```
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
