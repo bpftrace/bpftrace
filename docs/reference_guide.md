@@ -815,6 +815,10 @@ In this case, linux kernel still checks instruction alignment.
 
 The default vmlinux path can be overridden using the environment variable `BPFTRACE_VMLINUX`.
 
+Examples in situ:
+[(kprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
+[(kretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
+
 ## 2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments
 
 Syntax:
@@ -904,6 +908,10 @@ Requirements for using BTF:
 - bpftrace v0.9.3+ with BTF support (built with libbpf v0.0.4+)
 
 See [kernel documentation](https://www.kernel.org/doc/html/latest/bpf/btf.html) for more information on BTF.
+
+Examples in situ:
+[(kprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
+[(kretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 
