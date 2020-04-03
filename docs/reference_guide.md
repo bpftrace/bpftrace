@@ -1247,6 +1247,9 @@ Attaching 2 probes...
 
 This prints the rate of syscalls per second.
 
+Examples in situ:
+[search /tools](https://github.com/search?q=interval%3A+path%3Atools+extension%3Abt&type=Code)
+
 ## 11. `software`: Pre-defined Software Events
 
 Syntax:
@@ -1347,6 +1350,10 @@ END
 
 These are special built-in events provided by the bpftrace runtime. `BEGIN` is triggered before all other
 probes are attached. `END` is triggered after all other probes are detached.
+
+Examples in situ:
+[(BEGIN) search /tools](https://github.com/search?q=BEGIN+path%3A%2Ftools+extension%3Abt&type=Code)
+[(END) search /tools](https://github.com/search?q=END+path%3A%2Ftools+extension%3Abt&type=Code)
 
 ## 14. `watchpoint`: Memory watchpoints
 
