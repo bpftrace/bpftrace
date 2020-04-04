@@ -105,6 +105,9 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           std::ifstream format_file(format_file_path.c_str());
           if (format_file.fail())
           {
+            // Errno might get clobbered by bpftrace.error and bpftrace.warning.
+            int saved_errno = errno;
+
             bpftrace.error(std::cerr,
                            ap->loc,
                            "tracepoint not found: " + category + ":" +
@@ -114,6 +117,9 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
               bpftrace.warning(std::cerr,
                                ap->loc,
                                "Did you mean syscalls:" + event_name + "?");
+
+            errno = saved_errno;
+
             if (bt_verbose) {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
