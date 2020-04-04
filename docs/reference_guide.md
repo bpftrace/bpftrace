@@ -1215,8 +1215,6 @@ Attaching 1 probe...
 @[32586]: 98
 @[0]: 579
 ```
-Examples in situ:
-[tool: profile_order.bt](https://github.com/iovisor/bpftrace/blob/master/tests/runtime/scripts/profile_order.bt)
 
 ## 10. `interval`: Timed Output
 
