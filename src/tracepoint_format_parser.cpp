@@ -12,7 +12,7 @@ namespace bpftrace {
 
 std::set<std::string> TracepointFormatParser::struct_list;
 
-bool TracepointFormatParser::parse(ast::Program *program)
+bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   std::vector<ast::Probe*> probes_with_tracepoint;
   for (ast::Probe *probe : *program->probes)

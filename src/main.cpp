@@ -521,7 +521,7 @@ int main(int argc, char *argv[])
   if (cmd_str)
     bpftrace.cmd_ = cmd_str;
 
-  if (TracepointFormatParser::parse(driver.root_) == false)
+  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
     return 1;
 
   if (bt_debug != DebugLevel::kNone)
