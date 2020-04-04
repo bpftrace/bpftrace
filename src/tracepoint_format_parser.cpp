@@ -43,9 +43,8 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 
         if (has_wildcard(category))
         {
-          std::cerr
-              << "ERROR: wildcards in tracepoint category is not supported: "
-              << category << std::endl;
+            bpftrace.error(std::cerr, ap->loc,
+              "wildcards in tracepoint category is not supported: " + category);
           return false;
         }
 
@@ -58,10 +57,11 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           {
             if (ret == GLOB_NOMATCH)
             {
-              std::cerr << "ERROR: tracepoints not found: " << category << ":" << event_name << std::endl;
+              bpftrace.error(std::cerr, ap->loc, "tracepoints not found: " + category + ":" + event_name);
+
               // helper message:
               if (category == "syscall")
-                std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
+                bpftrace.error(std::cerr, ap->loc, "Did you mean syscalls:" + event_name + "?");
               if (bt_verbose) {
                   std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
               }
@@ -70,7 +70,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             else
             {
               // unexpected error
-              std::cerr << strerror(errno) << std::endl;
+              bpftrace.error(std::cerr, ap->loc, std::string(strerror(errno)));
               return false;
             }
           }
@@ -98,11 +98,14 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           std::ifstream format_file(format_file_path.c_str());
           if (format_file.fail())
           {
-            std::cerr << "ERROR: tracepoint not found: " << category << ":" << event_name << std::endl;
+            bpftrace.error(std::cerr, ap->loc,
+              "tracepoint not found: " + category + ":" + event_name);
             // helper message:
             if (category == "syscall")
-              std::cerr << "Did you mean syscalls:" << event_name << "?" << std::endl;
+              bpftrace.warning(std::cerr, ap->loc,
+                "Did you mean syscalls:" + event_name + "?");
             if (bt_verbose) {
+                // Having the location info isn't really useful here, so no bpftrace.error
                 std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
             }
             return false;
