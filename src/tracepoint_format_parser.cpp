@@ -30,8 +30,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
   for (ast::Probe *probe : probes_with_tracepoint)
   {
     n.analyse(probe);
-    if (!probe->need_tp_args_structs)
-      continue;
+
     for (ast::AttachPoint *ap : *probe->attach_points)
     {
       if (ap->provider == "tracepoint")
@@ -82,6 +81,9 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             }
           }
 
+          if (!probe->need_tp_args_structs)
+            continue;
+
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
             std::ifstream format_file(filename);
@@ -125,6 +127,9 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             }
             return false;
           }
+
+          if (!probe->need_tp_args_structs)
+            continue;
 
           // Check to avoid adding the same struct more than once to definitions
           std::string struct_name = get_struct_name(category, event_name);
