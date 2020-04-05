@@ -33,6 +33,16 @@ RUN bpftrace -v -e 'i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}'
 EXPECT done
 TIMEOUT 5
 
+NAME ternary
+RUN bpftrace -v -e 'i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}'
+EXPECT yes
+TIMEOUT 5
+
+NAME ternary_lnot
+RUN bpftrace -v -e 'i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit();}'
+EXPECT 0
+TIMEOUT 5
+
 NAME unroll
 RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11
