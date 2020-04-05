@@ -4,6 +4,7 @@
 #include <set>
 
 #include "ast/ast.h"
+#include "bpftrace.h"
 
 namespace bpftrace {
 
@@ -119,7 +120,7 @@ private:
 class TracepointFormatParser
 {
 public:
-  static bool parse(ast::Program *program);
+  static bool parse(ast::Program *program, BPFtrace &bpftrace);
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
 
