@@ -159,3 +159,8 @@ NAME exit exits immediately
 RUN bpftrace -e 'i:ms:100 { @++; exit(); @++ }'
 EXPECT @: 1
 TIMEOUT 1
+
+NAME map_assign_map_ptr
+RUN bpftrace -e 'i:ms:100 { @ = curtask; @a = @; printf("%d\n", @a); exit(); }'
+EXPECT -?[0-9]+
+TIMEOUT 1

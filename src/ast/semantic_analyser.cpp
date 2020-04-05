@@ -1547,7 +1547,11 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     }
     else {
       map_val_[map_ident].cast_type = cast_type;
-      map_val_[map_ident].is_internal = true;
+      if (!assignment.expr->type.is_pointer)
+      {
+        // A pointer value is loaded to a register, not in the stack
+        map_val_[map_ident].is_internal = true;
+      }
     }
   }
   else if (type == Type::string)
