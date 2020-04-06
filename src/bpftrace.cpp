@@ -1230,7 +1230,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     auto key_prefix = std::vector<uint8_t>(map.key_.size());
-    int bucket = key.at(map.key_.size());
+    uint64_t bucket = read_data<uint64_t>(key.data() + map.key_.size());
 
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
@@ -1267,7 +1267,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key)
   {
-    int sum = 0;
+    int64_t sum = 0;
     for (size_t i=0; i<map_elem.second.size(); i++)
     {
       sum += map_elem.second.at(i);
@@ -1309,7 +1309,7 @@ int BPFtrace::print_map_stats(IMap &map)
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     auto key_prefix = std::vector<uint8_t>(map.key_.size());
-    int bucket = key.at(map.key_.size());
+    uint64_t bucket = read_data<uint64_t>(key.data() + map.key_.size());
 
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
