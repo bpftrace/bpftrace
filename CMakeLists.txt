@@ -115,6 +115,7 @@ set(CMAKE_REQUIRED_DEFINITIONS)
 find_package(LibBpf)
 find_package(LibBfd)
 find_package(LibOpcodes)
+find_package(LibPcap)
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
