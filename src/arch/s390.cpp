@@ -5,6 +5,9 @@
 
 #define REQ_REGISTERS 19
 #define ARG_REGISTERS 5
+// For s390x, r2-r6 registers are used as function arguments, then the extra
+// arguments can be found starting at sp+160
+#define ARG0_STACK 160
 
 namespace bpftrace {
 namespace arch {
@@ -74,6 +77,11 @@ int pc_offset()
 int sp_offset()
 {
   return offset("r15");
+}
+
+int arg_stack_offset()
+{
+  return ARG0_STACK / 8;
 }
 
 std::string name()
