@@ -11,6 +11,7 @@ int arg_offset(int arg_num);
 int ret_offset();
 int pc_offset();
 int sp_offset();
+int arg_stack_offset();
 std::string name();
 
 } // namespace arch

@@ -3,6 +3,11 @@
 #include <algorithm>
 #include <array>
 
+// For little endian 64 bit, sp + 32 + 8 regs save area + argX
+#define ARG0_STACK_LE 96
+// For big endian 64 bit, sp + 48 + 8 regs save area + argX
+#define ARG0_STACK_BE 112
+
 namespace bpftrace {
 namespace arch {
 
@@ -97,6 +102,15 @@ int pc_offset()
 int sp_offset()
 {
   return offset("r1");
+}
+
+int arg_stack_offset()
+{
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  return ARG0_STACK_LE / 8;
+#else
+  return ARG0_STACK_BE / 8;
+#endif
 }
 
 std::string name()

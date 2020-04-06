@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <array>
 
+// SP points to the first argument that is passed on the stack
+#define ARG0_STACK 0
+
 namespace bpftrace {
 namespace arch {
 
@@ -132,6 +135,11 @@ int pc_offset()
 int sp_offset()
 {
   return offset("sp");
+}
+
+int arg_stack_offset()
+{
+  return ARG0_STACK / 8;
 }
 
 std::string name()

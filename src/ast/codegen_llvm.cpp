@@ -219,7 +219,9 @@ void CodegenLLVM::visit(Builtin &builtin)
                               "reg_sp");
     dyn_cast<LoadInst>(sp)->setVolatile(true);
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    Value *src = b_.CreateAdd(sp, b_.getInt64((arg_num + 1) * sizeof(uintptr_t)));
+    Value *src = b_.CreateAdd(sp,
+                              b_.getInt64((arg_num + arch::arg_stack_offset()) *
+                                          sizeof(uintptr_t)));
     b_.CreateProbeRead(dst, 8, src);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
