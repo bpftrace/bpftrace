@@ -17,7 +17,8 @@ RUN dnf install -y \
     make \
     zlib-devel \
     bcc-devel \
-    systemtap-sdt-devel
+    systemtap-sdt-devel \
+    libpcap-devel
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh

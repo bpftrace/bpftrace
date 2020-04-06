@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y \
       libbpfcc-dev \
       libcereal-dev \
       libdw-dev \
+      libpcap-dev \
       clang-${LLVM_VERSION} \
       libclang-${LLVM_VERSION}-dev \
       libclang-common-${LLVM_VERSION}-dev \

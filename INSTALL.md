@@ -284,6 +284,7 @@ sudo apt-get install -y \
   llvm-12-runtime \
   libclang-12-dev \
   clang-12 \
+  libpcap-dev \
   libgtest-dev \
   libgmock-dev \
   asciidoctor
@@ -317,6 +318,7 @@ sudo dnf install -y bison \
   systemtap-sdt-devel \
   binutils-devel \
   libbpf-devel \
+  libpcap-devel \
   gtest-devel \
   gmock-devel \
   cereal-devel \
@@ -411,6 +413,7 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - Binutils development package
 - Libcereal
 - Kernel requirements described earlier
+- Libpcap
 
 ### Compilation
 

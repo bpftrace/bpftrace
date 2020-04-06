@@ -11,6 +11,7 @@ RUN apk add --update \
   bcc-dev \
   bcc-static \
   libbpf-dev \
+  libpcap-dev \
   build-base \
   clang-dev \
   clang-static \
