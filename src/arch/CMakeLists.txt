@@ -3,6 +3,9 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR
        CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
     add_library(arch ppc64.cpp)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "s390" OR
+       CMAKE_SYSTEM_PROCESSOR STREQUAL "s390x")
+    add_library(arch s390.cpp)
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     add_library(arch x86_64.cpp)
 else()
