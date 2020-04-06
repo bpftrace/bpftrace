@@ -43,6 +43,28 @@ NAME ksym
 RUN bpftrace -v -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}'
 EXPECT do_nanosleep
 TIMEOUT 5
+ARCH x86_64
+AFTER sleep 0.1
+
+NAME ksym
+RUN bpftrace -v -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("pswaddr"))); exit();}'
+EXPECT do_nanosleep
+TIMEOUT 5
+ARCH s390x
+AFTER sleep 0.1
+
+NAME ksym
+RUN bpftrace -v -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("pc"))); exit();}'
+EXPECT do_nanosleep
+TIMEOUT 5
+ARCH aarch64
+AFTER sleep 0.1
+
+NAME ksym
+RUN bpftrace -v -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("nip"))); exit();}'
+EXPECT do_nanosleep
+TIMEOUT 5
+ARCH ppc64|ppc64le
 AFTER sleep 0.1
 
 NAME system

@@ -61,6 +61,21 @@ TIMEOUT 5
 NAME sarg
 RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
 EXPECT SUCCESS sarg 32 64
+ARCH x86_64
+TIMEOUT 5
+AFTER ./testprogs/stack_args
+
+NAME sarg
+RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+EXPECT SUCCESS sarg 128 256
+ARCH aarch64|ppc64|ppc64le
+TIMEOUT 5
+AFTER ./testprogs/stack_args
+
+NAME sarg
+RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+EXPECT SUCCESS sarg 16 32
+ARCH s390x
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
