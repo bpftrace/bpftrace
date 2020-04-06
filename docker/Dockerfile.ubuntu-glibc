@@ -28,6 +28,7 @@ RUN apt-get update \
         libbfd-dev \
         libcereal-dev \
         libedit-dev \
+        libpcap-dev \
         systemtap-sdt-dev \
         python3 \
         python3-setuptools \
