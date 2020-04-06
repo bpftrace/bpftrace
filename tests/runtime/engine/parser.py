@@ -3,6 +3,7 @@
 from fnmatch import fnmatch
 from collections import namedtuple
 import os
+import platform
 
 from utils import ERROR_COLOR, NO_COLOR
 
@@ -15,7 +16,7 @@ class UnknownFieldError(Exception):
     pass
 
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env')
+TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch')
 
 
 class TestParser(object):
@@ -52,7 +53,8 @@ class TestParser(object):
                 if line == '\n' or line_num == len(lines):
                     if test_lines:
                         test_struct = TestParser.__read_test_struct(test_lines, test_suite)
-                        if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter):
+                        if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter) and \
+                           (not test_struct.arch or (platform.machine().lower() in test_struct.arch)):
                             tests.append(test_struct)
                         test_lines = []
 
@@ -69,6 +71,7 @@ class TestParser(object):
         kernel = ''
         requirement = ''
         env = {}
+        arch = []
 
         for item in test:
             item_split = item.split()
@@ -95,6 +98,8 @@ class TestParser(object):
                 for e in line.split():
                     k, v = e.split('=')
                     env[k]=v
+            elif item_name == 'ARCH':
+                arch = [x.strip() for x in line.split("|")]
             else:
                 raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
@@ -107,4 +112,4 @@ class TestParser(object):
         elif timeout == '':
             raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
 
-        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement, env)
+        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement, env, arch)
