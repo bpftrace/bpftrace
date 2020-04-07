@@ -175,6 +175,12 @@ std::string BPFfeature::report(void)
 
   buf << "Kernel helpers" << std::endl
       << "  probe_read: " << to_str(has_helper_probe_read())
+      << "  probe_read_str: " << to_str(has_helper_probe_read_str())
+      << "  probe_read_user: " << to_str(has_helper_probe_read_user())
+      << "  probe_read_user_str: " << to_str(has_helper_probe_read_user_str())
+      << "  probe_read_kernel: " << to_str(has_helper_probe_read_kernel())
+      << "  probe_read_kernel_str: "
+      << to_str(has_helper_probe_read_kernel_str())
       << "  get_current_cgroup_id: "
       << to_str(has_helper_get_current_cgroup_id())
       << "  send_signal: " << to_str(has_helper_send_signal())
