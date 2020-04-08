@@ -73,7 +73,9 @@ target_link_libraries(bpftrace arch ast parser resources)
 
 if(STATIC_LINKING)
   target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
+if (LIBBPF_BTF_DUMP_FOUND)
   target_link_libraries(bpftrace ${LIBBPF_LIBRARY_STATIC})
+endif(LIBBPF_BTF_DUMP_FOUND)
   target_link_libraries(bpftrace ${LIBBCC_LOADER_LIBRARY_STATIC})
 
   add_library(LIBELF STATIC IMPORTED)
