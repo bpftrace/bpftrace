@@ -71,8 +71,9 @@ endif(ALLOW_UNSAFE_PROBE)
 
 target_link_libraries(bpftrace arch ast parser resources)
 
+target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
 if(STATIC_LINKING)
-  target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
+  # These two are not part of the static libbcc so have to be added separate
   target_link_libraries(bpftrace ${LIBBPF_LIBRARY_STATIC})
   target_link_libraries(bpftrace ${LIBBCC_LOADER_LIBRARY_STATIC})
 
@@ -84,7 +85,6 @@ if(STATIC_LINKING)
     set_target_properties(bpftrace PROPERTIES LINK_FLAGS "${EMBEDDED_LINK_FLAGS}")
   endif()
 else()
-  target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
   target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
 
