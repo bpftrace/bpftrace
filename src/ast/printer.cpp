@@ -14,7 +14,10 @@ std::string Printer::type(const SizedType &ty)
   std::stringstream buf;
   if (print_types)
   {
-    buf << " :: type[" << ty << "]";
+    buf << " :: type[" << ty;
+    if (ty.addrspace != AddrSpace::none)
+      buf << " AS(" << ty.addrspace << ")";
+    buf << "]";
   }
   return buf.str();
 }

@@ -45,7 +45,15 @@ enum class Type
   // clang-format on
 };
 
+enum class AddrSpace
+{
+  none,
+  kernel,
+  user,
+};
+
 std::ostream &operator<<(std::ostream &os, Type type);
+std::ostream &operator<<(std::ostream &os, AddrSpace as);
 
 enum class StackMode
 {
@@ -93,6 +101,7 @@ struct SizedType
   bool is_pointer = false;
   bool is_tparg = false;
   bool is_kfarg = false;
+  AddrSpace addrspace = AddrSpace::none;
   size_t pointee_size = 0;
   int kfarg_idx = -1;
 
@@ -152,8 +161,9 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "kretfunc", "fr", ProbeType::kretfunc },
 };
 
-std::string typestr(Type t);
 ProbeType probetype(const std::string &type);
+std::string addrspacestr(AddrSpace as);
+std::string typestr(Type t);
 std::string probetypeName(const std::string &type);
 std::string probetypeName(ProbeType t);
 

@@ -11,6 +11,12 @@ std::ostream &operator<<(std::ostream &os, Type type)
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, AddrSpace as)
+{
+  os << addrspacestr(as);
+  return os;
+}
+
 std::ostream &operator<<(std::ostream &os, ProbeType type)
 {
   os << probetypeName(type);
@@ -76,6 +82,25 @@ bool SizedType::IsArray() const
 bool SizedType::IsStack() const
 {
   return type == Type::ustack || type == Type::kstack;
+}
+
+std::string addrspacestr(AddrSpace as)
+{
+  switch (as)
+  {
+    case AddrSpace::kernel:
+      return "kernel";
+      break;
+    case AddrSpace::user:
+      return "user";
+      break;
+    case AddrSpace::none:
+      return "none";
+      break;
+    default:
+      std::cerr << "Unknown addrspace" << std::endl;
+      abort();
+  }
 }
 
 std::string typestr(Type t)
