@@ -48,7 +48,15 @@ enum class Type
   // clang-format on
 };
 
+enum class AddrSpace
+{
+  none,
+  kernel,
+  user,
+};
+
 std::ostream &operator<<(std::ostream &os, Type type);
+std::ostream &operator<<(std::ostream &os, AddrSpace as);
 
 enum class StackMode
 {
@@ -95,8 +103,19 @@ private:
   size_t num_elements_;               // for array like types
   std::string name_; // name of this type, for named types like struct
   bool ctx_ = false; // Is bpf program context
+  AddrSpace as_ = AddrSpace::none;
 
 public:
+  AddrSpace GetAS() const
+  {
+    return as_;
+  }
+
+  void SetAS(AddrSpace as)
+  {
+    as_ = as;
+  }
+
   bool IsCtxAccess() const
   {
     return ctx_;
@@ -367,8 +386,9 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "kretfunc", "fr", ProbeType::kretfunc },
 };
 
-std::string typestr(Type t);
 ProbeType probetype(const std::string &type);
+std::string addrspacestr(AddrSpace as);
+std::string typestr(Type t);
 std::string probetypeName(const std::string &type);
 std::string probetypeName(ProbeType t);
 
