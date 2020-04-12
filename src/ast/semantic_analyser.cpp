@@ -330,6 +330,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
+    auto probe_type = single_provider_type();
+    if (probe_type == ProbeType::invalid)
+    {
+      error("The " + builtin.ident +
+                " builtin can not be used with mixed probe types",
+            builtin.loc);
+      return;
+    }
+
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
@@ -348,8 +357,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
         bpftrace_.warning(out_, builtin.loc, msg);
       }
     }
+
     builtin.type = SizedType(Type::integer, 8);
-    builtin.type.addrspace = addrspace_for(first_ap_type);
+    builtin.type.addrspace = addrspace_for(probe_type);
   }
   else if (builtin.ident == "probe") {
     builtin.type = SizedType(Type::probe, 8);
@@ -695,15 +705,19 @@ void SemanticAnalyser::visit(Call &call)
   {
     if (check_nargs(call, 1))
     {
-      for (auto &attach_point : *probe_->attach_points)
+      auto probe_type = single_provider_type();
+      if (probe_type == ProbeType::invalid)
       {
-        ProbeType type = probetype(attach_point->provider);
-        if (type == ProbeType::tracepoint)
-        {
-          error("The reg function cannot be used with 'tracepoint' probes",
-                call.loc);
-          continue;
-        }
+        error("The " + call.func +
+              " builtin can not be used with mixed probe types",
+              call.loc);
+        return;
+      }
+
+      if (probe_type == ProbeType::tracepoint)
+      {
+        error("The reg function cannot be used with 'tracepoint' probes",
+              call.loc);
       }
 
       if (check_arg(call, Type::string, 0, true))
@@ -719,9 +733,7 @@ void SemanticAnalyser::visit(Call &call)
         }
       }
       call.type = SizedType(Type::integer, 8);
-      call.type.addrspace = (first_ap_type == ProbeType::kprobe)
-                                ? AddrSpace::kernel
-                                : AddrSpace::user;
+      call.type.addrspace = addrspace_for(probe_type);
     }
   }
   else if (call.func == "kaddr") {
@@ -1025,6 +1037,20 @@ void SemanticAnalyser::visit(Call &call)
         error(call.func + " can only be used with kprobes.", call.loc);
       }
     }
+  }
+  else if (call.func == "kptr" || call.func == "uptr")
+  {
+    if (!check_nargs(call, 1))
+      return;
+    if (!check_arg(call, Type::integer, 0))
+      return;
+
+    auto &arg_type = call.vargs->at(0)->type;
+    call.type = SizedType(Type::integer, 8, false);
+    call.type.is_pointer = true;
+    call.type.pointee_size = arg_type.size;
+    call.type.addrspace = (call.func == "kptr" ? AddrSpace::kernel
+                                                    : AddrSpace::user);
   }
   else {
     error("Unknown function: '" + call.func + "'", call.loc);

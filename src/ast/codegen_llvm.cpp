@@ -929,6 +929,11 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.is_signed);
     b_.CreateOverrideReturn(ctx_, expr_);
   }
+  else if (call.func == "kptr" || call.func == "uptr")
+  {
+    auto &arg = *call.vargs->at(0);
+    arg.accept(*this);
+  }
   else
   {
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
