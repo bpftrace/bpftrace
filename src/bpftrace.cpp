@@ -661,8 +661,9 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
       }
       case Type::buffer:
         arg_values.push_back(std::make_unique<PrintableString>(resolve_buf(
-            reinterpret_cast<char *>(arg_data + arg.offset + sizeof(uint8_t)),
-            reinterpret_cast<uint8_t>(*(arg_data + arg.offset)))));
+            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)->content,
+            reinterpret_cast<AsyncEvent::Buf *>(arg_data + arg.offset)
+                ->length)));
         break;
       case Type::ksym:
         arg_values.push_back(

@@ -62,7 +62,7 @@ struct Time
 struct Buf
 {
   uint8_t length;
-  uint8_t* content;
+  char content[];
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t length)
   {
@@ -71,7 +71,7 @@ struct Buf
       llvm::ArrayType::get(b.getInt8Ty(), length), // buffer content
     };
   }
-};
+} __attribute__((packed));
 
 } // namespace AsyncEvent
 } // namespace bpftrace
