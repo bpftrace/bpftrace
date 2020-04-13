@@ -300,16 +300,24 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
-      builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+           builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9')
+  {
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe &&
-          type != ProbeType::uprobe &&
+      if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
           type != ProbeType::usdt)
         ERR("The " << builtin.ident << " builtin can only be used with "
                    << "'kprobes', 'uprobes' and 'usdt' probes",
             builtin.loc);
+
+      if (attach_point->provider == "BEGIN" || attach_point->provider == "END")
+      {
+        error(builtin.ident + " cannot be used with '" +
+                  attach_point->provider + "' probes",
+              builtin.loc);
+        continue;
+      }
     }
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
@@ -317,10 +325,18 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::integer, 8);
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
-      builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
+           builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9')
+  {
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
+      if (attach_point->provider == "BEGIN" || attach_point->provider == "END")
+      {
+        error(builtin.ident + " cannot be used with '" +
+                  attach_point->provider + "' probes",
+              builtin.loc);
+        continue;
+      }
       if (type != ProbeType::kprobe && type != ProbeType::uprobe)
         error("The " + builtin.ident + " builtin can only be used with " +
                   "'kprobes' and 'uprobes' probes",
@@ -669,22 +685,37 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
-  else if (call.func == "reg") {
-    if (check_nargs(call, 1)) {
-      for (auto &attach_point : *probe_->attach_points) {
+  else if (call.func == "reg")
+  {
+    if (check_nargs(call, 1))
+    {
+      for (auto &attach_point : *probe_->attach_points)
+      {
         ProbeType type = probetype(attach_point->provider);
-        if (type == ProbeType::tracepoint) {
+        if (type == ProbeType::tracepoint)
+        {
           error("The reg function cannot be used with 'tracepoint' probes",
+                call.loc);
+          continue;
+        }
+        if (attach_point->provider == "BEGIN" ||
+            attach_point->provider == "END")
+        {
+          error("The " + call.func + " function cannot be used with '" +
+                    attach_point->provider + "' probes",
                 call.loc);
           continue;
         }
       }
 
-      if (check_arg(call, Type::string, 0, true)) {
+      if (check_arg(call, Type::string, 0, true))
+      {
         auto &arg = *call.vargs->at(0);
-        auto &reg_name = static_cast<String&>(arg).str;
-        int offset = arch::offset(reg_name);;
-        if (offset == -1) {
+        auto &reg_name = static_cast<String &>(arg).str;
+        int offset = arch::offset(reg_name);
+
+        if (offset == -1)
+        {
           ERR("'" << reg_name
                   << "' is not a valid register on this architecture"
                   << " (" << arch::name() << ")",
@@ -695,7 +726,8 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = SizedType(Type::integer, 8);
   }
-  else if (call.func == "kaddr") {
+  else if (call.func == "kaddr")
+  {
     if (check_nargs(call, 1)) {
       check_arg(call, Type::string, 0, true);
     }

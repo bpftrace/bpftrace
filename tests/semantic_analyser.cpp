@@ -1037,6 +1037,14 @@ TEST(semantic_analyser, begin_end_probes)
 
   test("END { 1 }", 0);
   test("END { 1 } END { 2 }", 10);
+
+  test("BEGIN { @=arg0; }", 1);
+  test("BEGIN { @=sarg0; }", 1);
+  test("BEGIN { @=reg(\"sp\"); }", 1);
+
+  test("END { @=arg0; }", 1);
+  test("END { @=sarg0; }", 1);
+  test("END { @=reg(\"sp\"); }", 1);
 }
 
 TEST(semantic_analyser, tracepoint)
