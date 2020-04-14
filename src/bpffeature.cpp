@@ -82,8 +82,10 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
     BPF_EXIT_INSN(),
   };
 
-  try_load(nullptr, prog_type, insns, ARRAY_SIZE(insns), 1, logbuf, 4096);
-  if (errno == EPERM)
+  if (try_load(nullptr, prog_type, insns, ARRAY_SIZE(insns), 1, logbuf, 4096))
+    return true;
+
+  if (errno == EPERM || logbuf[0] == 0)
     return false;
 
   return (strstr(logbuf, "invalid func ") == nullptr) &&
