@@ -88,6 +88,7 @@ public:
   DEFINE_PROG_TEST(kprobe, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
+  DEFINE_PROG_TEST(kfunc, libbpf::BPF_PROG_TYPE_TRACING);
 
 protected:
   std::optional<bool> has_loop_;
