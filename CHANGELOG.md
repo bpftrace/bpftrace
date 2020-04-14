@@ -8,6 +8,48 @@ and this project adheres to
 
 ## Unreleased
 
+### All Changes
+
+#### Added
+
+- Support for s390x
+  - [#1241](https://github.com/iovisor/bpftrace/pull/1241)
+- `buf` a new function that makes it possible to safely print arbitrary binary data
+  - [#1107](https://github.com/iovisor/bpftrace/pull/1107)
+- A new function, `sizeof`, which returns the size of an expression, similar to  `sizeof` in C
+  - [#1269](https://github.com/iovisor/bpftrace/pull/1269)
+- C style while loop support, `while ($a < 100) { $a++ }`
+  - [#1066](https://github.com/iovisor/bpftrace/pull/1066)
+
+#### Changed
+
+- Require C++17 and CMake 3.8 for building bpftrace
+  - [#1200](https://github.com/iovisor/bpftrace/pull/1200)
+  - [#1259](https://github.com/iovisor/bpftrace/pull/1259)
+
+#### Deprecated
+
+#### Removed
+
+- Drop LLVM 5 support
+  - [#1215](https://github.com/iovisor/bpftrace/issues/1215)
+
+#### Fixed
+
+- Various big endian related fixes
+  - [#1241](https://github.com/iovisor/bpftrace/pull/1241)
+- Type check the `cond` of if and ternary statements
+  - [#1229](https://github.com/iovisor/bpftrace/pull/1229)
+
+#### Tools
+
+#### Documentation
+
+- Clean up README
+  - [#1273](https://github.com/iovisor/bpftrace/pull/1273)
+- Add missing `struct` keyword to examples in the one liner tutorial
+  - [#1275](https://github.com/iovisor/bpftrace/pull/1275)
+
 ## [0.10.0] 2020-04-12
 
 ### Highlights
