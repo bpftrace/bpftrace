@@ -182,5 +182,5 @@ T read_data(const void *src)
 }
 
 uint64_t parse_exponent(const char *str);
-
+unsigned kernel_version(int attempt);
 } // namespace bpftrace

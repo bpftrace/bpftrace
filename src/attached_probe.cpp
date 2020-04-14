@@ -3,12 +3,10 @@
 #include <fcntl.h>
 #include <fstream>
 #include <iostream>
-#include <link.h>
 #include <linux/hw_breakpoint.h>
 #include <linux/limits.h>
 #include <linux/perf_event.h>
 #include <regex>
-#include <sys/auxv.h>
 #include <sys/utsname.h>
 #include <tuple>
 #include <unistd.h>
@@ -23,7 +21,6 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>
 #include <linux/perf_event.h>
-#include <linux/version.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER
@@ -556,96 +553,6 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
 
   check_alignment(
       path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
-}
-
-/**
- * Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
- */
-static unsigned _find_version_note(unsigned long base)
-{
-  auto ehdr = reinterpret_cast<const ElfW(Ehdr) *>(base);
-
-  for (int i = 0; i < ehdr->e_shnum; i++)
-  {
-    auto shdr = reinterpret_cast<const ElfW(Shdr) *>(
-      base + ehdr->e_shoff + (i * ehdr->e_shentsize)
-    );
-
-    if (shdr->sh_type == SHT_NOTE)
-    {
-      auto ptr = reinterpret_cast<const char *>(base + shdr->sh_offset);
-      auto end = ptr + shdr->sh_size;
-
-      while (ptr < end)
-      {
-        auto nhdr = reinterpret_cast<const ElfW(Nhdr) *>(ptr);
-        ptr += sizeof *nhdr;
-
-        auto name = ptr;
-        ptr += (nhdr->n_namesz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
-
-        auto desc = ptr;
-        ptr += (nhdr->n_descsz + sizeof(ElfW(Word)) - 1) & -sizeof(ElfW(Word));
-
-        if ((nhdr->n_namesz > 5 && !memcmp(name, "Linux", 5)) &&
-            nhdr->n_descsz == 4 && !nhdr->n_type)
-          return *reinterpret_cast<const uint32_t *>(desc);
-      }
-    }
-  }
-
-  return 0;
-}
-
-/**
- * Find a LINUX_VERSION_CODE matching the host kernel. The build-time constant
- * may not match if bpftrace is compiled on a different Linux version than it's
- * used on, e.g. if built with Docker.
- */
-static unsigned kernel_version(int attempt)
-{
-  switch (attempt)
-  {
-    case 0:
-    {
-      // Fetch LINUX_VERSION_CODE from the vDSO .note section, falling back on
-      // the build-time constant if unavailable. This always matches the
-      // running kernel, but is not supported on arm32.
-      unsigned code = 0;
-      unsigned long base = getauxval(AT_SYSINFO_EHDR);
-      if (base && !memcmp(reinterpret_cast<void *>(base), ELFMAG, 4))
-        code = _find_version_note(base);
-      if (! code)
-        code = LINUX_VERSION_CODE;
-      return code;
-    }
-    case 1:
-      struct utsname utsname;
-      if (uname(&utsname) < 0)
-        return 0;
-      unsigned x, y, z;
-      if (sscanf(utsname.release, "%u.%u.%u", &x, &y, &z) != 3)
-        return 0;
-      return KERNEL_VERSION(x, y, z);
-    case 2:
-    {
-      // Try to get the definition of LINUX_VERSION_CODE at runtime.
-      std::ifstream linux_version_header{"/usr/include/linux/version.h"};
-      const std::string content{std::istreambuf_iterator<char>(linux_version_header),
-                                std::istreambuf_iterator<char>()};
-      const std::regex regex{"#define\\s+LINUX_VERSION_CODE\\s+(\\d+)"};
-      std::smatch match;
-
-      if (std::regex_search(content.begin(), content.end(), match, regex))
-        return static_cast<unsigned>(std::stoi(match[1]));
-
-      return 0;
-    }
-    default:
-      break;
-  }
-  LOG(FATAL) << "invalid kernel version";
-  // lgtm[cpp/missing-return]
 }
 
 void AttachedProbe::load_prog()
