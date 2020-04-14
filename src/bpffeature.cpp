@@ -25,24 +25,34 @@ static bool try_load(const char* name,
   int ret = 0;
   StderrSilencer silencer;
   silencer.silence();
-#ifdef HAVE_BCC_PROG_LOAD
-  ret = bcc_prog_load(
-#else
-  ret = bpf_prog_load(
-#endif
-      static_cast<enum ::bpf_prog_type>(prog_type),
-      name,
-      insns,
-      insns_cnt * sizeof(struct bpf_insn),
-      "GPL",
-      0, /* version */
-      loglevel,
-      logbuf,
-      logbuf_size);
-  if (ret >= 0)
-    close(ret);
+  for (int attempt = 0; attempt < 3; attempt++)
+  {
+    auto version = kernel_version(attempt);
+    if (version == 0 && attempt > 0)
+      continue;
 
-  return ret >= 0;
+#ifdef HAVE_BCC_PROG_LOAD
+    ret = bcc_prog_load(
+#else
+    ret = bpf_prog_load(
+#endif
+        static_cast<enum ::bpf_prog_type>(prog_type),
+        name,
+        insns,
+        insns_cnt * sizeof(struct bpf_insn),
+        "GPL",
+        version,
+        loglevel,
+        logbuf,
+        logbuf_size);
+    if (ret >= 0)
+    {
+      close(ret);
+      return true;
+    }
+  }
+
+  return false;
 }
 
 static bool try_load(enum libbpf::bpf_prog_type prog_type,
