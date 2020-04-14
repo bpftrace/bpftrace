@@ -36,6 +36,8 @@ and this project adheres to
   - [#1329](https://github.com/iovisor/bpftrace/pull/1329)
 - Add --usdt-file-activation to activate usdt semaphores by file name
   - [#1317](https://github.com/iovisor/bpftrace/pull/1317)
+- Introduce `-k` and `-kk` options. Emit a warning when a bpf helper returns an error
+  - [#1276](https://github.com/iovisor/bpftrace/pull/1276)
 
 #### Changed
 

@@ -174,3 +174,13 @@ NAME map_assign_map_ptr
 RUN bpftrace -e 'i:ms:100 { @ = curtask; @a = @; printf("%d\n", @a); exit(); }'
 EXPECT -?[0-9]+
 TIMEOUT 1
+
+NAME runtime_error_check_delete
+RUN bpftrace -k -e 'i:ms:100 { @[1] = 1; delete(@[2]); exit(); }'
+EXPECT WARNING: Failed to map_delete_elem: No such file or directory \(-2\)
+TIMEOUT 1
+
+NAME runtime_error_check_lookup
+RUN bpftrace -kk -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
+EXPECT WARNING: Failed to map_lookup_elem: 0
+TIMEOUT 1
