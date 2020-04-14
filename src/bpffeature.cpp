@@ -48,6 +48,21 @@ static bool try_load(enum libbpf::bpf_prog_type prog_type,
 {
   constexpr int log_size = 4096;
   char logbuf[log_size] = {};
+
+  // kfunc / kretfunc only for now. We can refactor if more attach types
+  // get added to BPF_PROG_TYPE_TRACING
+  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
+  {
+    // bcc checks the name (first arg) for the magic strings. If the bcc we
+    // build against doesn't support kfunc then we will fail here. That's fine
+    // because it still means kfunc doesn't work, only from a library side, not
+    // a kernel side.
+    return try_load(
+               "kfunc__strlen", prog_type, insns, len, 0, logbuf, log_size) &&
+           try_load(
+               "kretfunc__strlen", prog_type, insns, len, 0, logbuf, log_size);
+  }
+
   return try_load(nullptr, prog_type, insns, len, 0, logbuf, log_size);
 }
 
@@ -208,7 +223,8 @@ std::string BPFfeature::report(void)
   buf << "Probe types" << std::endl
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
-      << "  perf_event: " << to_str(has_prog_perf_event()) << std::endl;
+      << "  perf_event: " << to_str(has_prog_perf_event())
+      << "  kfunc: " << to_str(has_prog_kfunc()) << std::endl;
 
   return buf.str();
 }
