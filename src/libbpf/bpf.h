@@ -1,3 +1,5 @@
+#pragma once
+
 // clang-format off
 enum bpf_map_type {
 	BPF_MAP_TYPE_UNSPEC,
