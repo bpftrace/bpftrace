@@ -112,3 +112,8 @@ NAME spawn child
 RUN bpftrace -e 'i:ms:500 { printf("%d\n", cpid); }' -c '/bin/sleep 1'
 EXPECT [0-9]+
 TIMEOUT 1
+
+NAME info flag
+RUN bpftrace --info
+EXPECT perf_event_array: yes
+TIMEOUT 1

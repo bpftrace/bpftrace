@@ -107,8 +107,8 @@ bool BPFfeature::detect_map(enum bpf_map_type map_type)
 
 bool BPFfeature::has_loop(void)
 {
-  if (has_loop_)
-    return *has_loop_.get();
+  if (has_loop_.has_value())
+    return *has_loop_;
 
   struct bpf_insn insns[] = {
     BPF_MOV64_IMM(BPF_REG_0, 0),
@@ -117,7 +117,7 @@ bool BPFfeature::has_loop(void)
     BPF_EXIT_INSN(),
   };
 
-  has_loop_ = std::make_unique<bool>(
+  has_loop_ = std::make_optional<bool>(
       try_load(BPF_PROG_TYPE_TRACEPOINT, insns, ARRAY_SIZE(insns)));
 
   return has_loop();
@@ -125,44 +125,44 @@ bool BPFfeature::has_loop(void)
 
 int BPFfeature::instruction_limit(void)
 {
-  if (!insns_limit_)
+  if (insns_limit_.has_value())
+    return *insns_limit_;
+
+  struct bpf_insn insns[] = {
+    BPF_LD_IMM64(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  constexpr int logsize = 4096;
+
+  char logbuf[logsize] = {};
+  bool res = try_load(nullptr,
+                      BPF_PROG_TYPE_KPROBE,
+                      insns,
+                      ARRAY_SIZE(insns),
+                      1,
+                      logbuf,
+                      logsize);
+  if (!res)
+    insns_limit_ = std::make_optional<int>(-1);
+
+  // Extract limit from the verifier log:
+  // processed 2 insns (limit 131072), stack depth 0
+  std::string log(logbuf, logsize);
+  std::size_t line_start = log.find("processed 2 insns");
+  if (line_start != std::string::npos)
   {
-    struct bpf_insn insns[] = {
-      BPF_LD_IMM64(BPF_REG_0, 0),
-      BPF_EXIT_INSN(),
-    };
-
-    constexpr int logsize = 4096;
-
-    char logbuf[logsize] = {};
-    bool res = try_load(nullptr,
-                        BPF_PROG_TYPE_KPROBE,
-                        insns,
-                        ARRAY_SIZE(insns),
-                        1,
-                        logbuf,
-                        logsize);
-    if (!res)
-      insns_limit_ = std::make_unique<int>(-1);
-
-    // Extract limit from the verifier log:
-    // processed 2 insns (limit 131072), stack depth 0
-    std::string log(logbuf, logsize);
-    std::size_t line_start = log.find("processed 2 insns");
-    if (line_start != std::string::npos)
-    {
-      std::size_t begin = log.find("limit", line_start) + /* "limit " = 6*/ 6;
-      std::size_t end = log.find(")", begin);
-      std::string cnt = log.substr(begin, end - begin);
-      insns_limit_ = std::make_unique<int>(std::stoi(cnt));
+    std::size_t begin = log.find("limit", line_start) + /* "limit " = 6*/ 6;
+    std::size_t end = log.find(")", begin);
+    std::string cnt = log.substr(begin, end - begin);
+    insns_limit_ = std::make_optional<int>(std::stoi(cnt));
     }
     else
     {
-      insns_limit_ = std::make_unique<int>(-1);
+      insns_limit_ = std::make_optional<int>(-1);
     }
-  }
 
-  return *insns_limit_.get();
+    return *insns_limit_;
 }
 
 std::string BPFfeature::report(void)

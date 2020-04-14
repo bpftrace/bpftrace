@@ -2,6 +2,7 @@
 
 #include <bcc/libbpf.h>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace libbpf {
@@ -13,39 +14,39 @@ namespace bpftrace {
 
 #define DEFINE_MAP_TEST(var, maptype)                                          \
 protected:                                                                     \
-  std::unique_ptr<bool> map_##var##_;                                          \
+  std::optional<bool> map_##var##_;                                            \
                                                                                \
 public:                                                                        \
   bool has_map_##var(void)                                                     \
   {                                                                            \
-    if (!map_##var##_)                                                         \
-      map_##var##_ = std::make_unique<bool>(detect_map((maptype)));            \
-    return *(map_##var##_).get();                                              \
+    if (!map_##var##_.has_value())                                             \
+      map_##var##_ = std::make_optional<bool>(detect_map((maptype)));          \
+    return *(map_##var##_);                                                    \
   }
 
 #define DEFINE_HELPER_TEST(name, progtype)                                     \
 protected:                                                                     \
-  std::unique_ptr<bool> has_##name##_;                                         \
+  std::optional<bool> has_##name##_;                                           \
                                                                                \
 public:                                                                        \
   bool has_helper_##name(void)                                                 \
   {                                                                            \
-    if (!has_##name##_)                                                        \
-      has_##name##_ = std::make_unique<bool>(                                  \
+    if (!has_##name##_.has_value())                                            \
+      has_##name##_ = std::make_optional<bool>(                                \
           detect_helper(libbpf::BPF_FUNC_##name, (progtype)));                 \
-    return *(has_##name##_).get();                                             \
+    return *(has_##name##_);                                                   \
   }
 
 #define DEFINE_PROG_TEST(var, progtype)                                        \
 protected:                                                                     \
-  std::unique_ptr<bool> prog_##var##_;                                         \
+  std::optional<bool> prog_##var##_;                                           \
                                                                                \
 public:                                                                        \
   bool has_prog_##var(void)                                                    \
   {                                                                            \
-    if (!prog_##var##_)                                                        \
-      prog_##var##_ = std::make_unique<bool>(detect_prog_type((progtype)));    \
-    return *(prog_##var##_).get();                                             \
+    if (!prog_##var##_.has_value())                                            \
+      prog_##var##_ = std::make_optional<bool>(detect_prog_type((progtype)));  \
+    return *(prog_##var##_);                                                   \
   }
 
 class BPFfeature
@@ -89,8 +90,8 @@ public:
   DEFINE_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
 
 protected:
-  std::unique_ptr<bool> has_loop_;
-  std::unique_ptr<int> insns_limit_;
+  std::optional<bool> has_loop_;
+  std::optional<int> insns_limit_;
 
 private:
   bool detect_map(enum bpf_map_type map_type);
