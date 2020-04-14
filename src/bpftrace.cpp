@@ -37,6 +37,12 @@
 #include "triggers.h"
 #include "utils.h"
 
+namespace libbpf {
+#define __BPF_NAME_FN(x) #x
+const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
+#undef __BPF_NAME_FN
+} // namespace libbpf
+
 namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
@@ -510,6 +516,21 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       joined << arg;
     }
     bpftrace->out_->message(MessageType::join, joined.str());
+    return;
+  }
+  else if (printf_id == asyncactionint(AsyncAction::helper_error))
+  {
+    auto helpererror = static_cast<AsyncEvent::HelperError *>(data);
+    auto error_id = helpererror->error_id;
+    auto return_value = helpererror->return_value;
+    auto &info = bpftrace->helper_error_info_[error_id];
+    std::stringstream msg;
+    msg << "Failed to " << libbpf::bpf_func_name[info.func_id] << ": ";
+    if (return_value < 0)
+      msg << strerror(-return_value) << " (" << return_value << ")";
+    else
+      msg << return_value;
+    bpftrace->warning(std::cerr, info.loc, msg.str());
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&

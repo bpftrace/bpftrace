@@ -77,5 +77,21 @@ struct Buf
   }
 } __attribute__((packed));
 
+struct HelperError
+{
+  uint64_t action_id;
+  uint64_t error_id;
+  int32_t return_value;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b)
+  {
+    return {
+      b.getInt64Ty(), // asyncid
+      b.getInt64Ty(), // error_id
+      b.getInt32Ty(), // return value
+    };
+  }
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace

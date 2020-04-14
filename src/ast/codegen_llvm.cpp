@@ -103,14 +103,16 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     auto &map = bpftrace_.elapsed_map_;
     auto type = CreateUInt64();
-    auto start = b_.CreateMapLookupElem(map->mapfd_, key, type);
+    auto start = b_.CreateMapLookupElem(
+        ctx_, map->mapfd_, key, type, builtin.loc);
     expr_ = b_.CreateSub(b_.CreateGetNs(), start);
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
   }
   else if (builtin.ident == "kstack" || builtin.ident == "ustack")
   {
-    Value *stackid = b_.CreateGetStackId(ctx_, builtin.ident == "ustack", builtin.type.stack_type);
+    Value *stackid = b_.CreateGetStackId(
+        ctx_, builtin.ident == "ustack", builtin.type.stack_type, builtin.loc);
     // Kernel stacks should not be differentiated by tid, since the kernel
     // address space is the same between pids (and when aggregating you *want*
     // to be able to correlate between pids in most cases). User-space stacks
@@ -168,7 +170,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *buf = b_.CreateAllocaBPF(builtin.type, "comm");
     // initializing memory needed for older kernels:
     b_.CREATE_MEMSET(buf, b_.getInt8(0), builtin.type.size, 1);
-    b_.CreateGetCurrentComm(buf, builtin.type.size);
+    b_.CreateGetCurrentComm(ctx_, buf, builtin.type.size, builtin.loc);
     expr_ = buf;
   }
   else if ((!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
@@ -191,8 +193,12 @@ void CodegenLLVM::visit(Builtin &builtin)
     {
       int arg_num = atoi(builtin.ident.substr(3).c_str());
       if (probetype(current_attach_point_->provider) == ProbeType::usdt) {
-        expr_ = b_.CreateUSDTReadArgument(
-            ctx_, current_attach_point_, arg_num, builtin, bpftrace_.pid());
+        expr_ = b_.CreateUSDTReadArgument(ctx_,
+                                          current_attach_point_,
+                                          arg_num,
+                                          builtin,
+                                          bpftrace_.pid(),
+                                          builtin.loc);
         return;
       }
       offset = arch::arg_offset(arg_num);
@@ -232,7 +238,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateAdd(sp,
                               b_.getInt64((arg_num + arch::arg_stack_offset()) *
                                           sizeof(uintptr_t)));
-    b_.CreateProbeRead(dst, 8, src);
+    b_.CreateProbeRead(ctx_, dst, 8, src, builtin.loc);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -278,10 +284,10 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
     b_.CreateLifetimeEnd(key);
@@ -292,14 +298,14 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     b_.CreateStore(b_.CreateAdd(expr_, oldval), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
     b_.CreateLifetimeEnd(key);
@@ -310,7 +316,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
@@ -326,7 +332,7 @@ void CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(ge);
     b_.CreateStore(inverted, newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
     b_.CreateBr(lt);
 
     b_.SetInsertPoint(lt);
@@ -338,7 +344,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     AllocaInst *key = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
     Function *parent = b_.GetInsertBlock()->getParent();
@@ -351,7 +357,7 @@ void CodegenLLVM::visit(Call &call)
 
     b_.SetInsertPoint(ge);
     b_.CreateStore(expr_, newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
     b_.CreateBr(lt);
 
     b_.SetInsertPoint(lt);
@@ -366,21 +372,21 @@ void CodegenLLVM::visit(Call &call)
     Map &map = *call.map;
 
     AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-    Value *count_old = b_.CreateMapLookupElem(map, count_key);
+    Value *count_old = b_.CreateMapLookupElem(ctx_, map, count_key, call.loc);
     AllocaInst *count_new = b_.CreateAllocaBPF(map.type, map.ident + "_num");
     b_.CreateStore(b_.CreateAdd(count_old, b_.getInt64(1)), count_new);
-    b_.CreateMapUpdateElem(map, count_key, count_new);
+    b_.CreateMapUpdateElem(ctx_, map, count_key, count_new, call.loc);
     b_.CreateLifetimeEnd(count_key);
     b_.CreateLifetimeEnd(count_new);
 
     AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
-    Value *total_old = b_.CreateMapLookupElem(map, total_key);
+    Value *total_old = b_.CreateMapLookupElem(ctx_, map, total_key, call.loc);
     AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), call.vargs->front()->type.is_signed);
     b_.CreateStore(b_.CreateAdd(expr_, total_old), total_new);
-    b_.CreateMapUpdateElem(map, total_key, total_new);
+    b_.CreateMapUpdateElem(ctx_, map, total_key, total_new, call.loc);
     b_.CreateLifetimeEnd(total_key);
     b_.CreateLifetimeEnd(total_new);
 
@@ -396,10 +402,10 @@ void CodegenLLVM::visit(Call &call)
     Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
 
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
     b_.CreateLifetimeEnd(key);
@@ -437,10 +443,10 @@ void CodegenLLVM::visit(Call &call)
 
     AllocaInst *key = getHistMapKey(map, linear);
 
-    Value *oldval = b_.CreateMapLookupElem(map, key);
+    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(map, key, newval);
+    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
     b_.CreateLifetimeEnd(key);
@@ -452,7 +458,7 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
     AllocaInst *key = getMapKey(map);
-    b_.CreateMapDeleteElem(map, key);
+    b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   }
@@ -479,7 +485,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
     b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+    b_.CreateProbeReadStr(ctx_, buf, b_.CreateLoad(strlen), expr_, call.loc);
     b_.CreateLifetimeEnd(strlen);
 
     expr_ = buf;
@@ -530,9 +536,11 @@ void CodegenLLVM::visit(Call &call)
                      1);
 
     call.vargs->front()->accept(*this);
-    b_.CreateProbeRead(static_cast<AllocaInst *>(buf_data_offset),
+    b_.CreateProbeRead(ctx_,
+                       static_cast<AllocaInst *>(buf_data_offset),
                        length,
-                       expr_);
+                       expr_,
+                       call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -569,7 +577,7 @@ void CodegenLLVM::visit(Call &call)
                                            call.func + "_first");
     AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
                                             call.func + "_second");
-    Value *perfdata = b_.CreateGetJoinMap(ctx_);
+    Value *perfdata = b_.CreateGetJoinMap(ctx_, call.loc);
     Function *parent = b_.GetInsertBlock()->getParent();
 
     BasicBlock *zero = BasicBlock::Create(module_->getContext(),
@@ -594,21 +602,25 @@ void CodegenLLVM::visit(Call &call)
                    b_.CreateGEP(perfdata, b_.getInt64(8)));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
-    b_.CreateProbeRead(arr, 8, expr_);
-    b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
+    b_.CreateProbeRead(ctx_, arr, 8, expr_, call.loc);
+    b_.CreateProbeReadStr(ctx_,
+                          b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
                           bpftrace_.join_argsize_,
-                          b_.CreateLoad(arr));
+                          b_.CreateLoad(arr),
+                          call.loc);
 
     for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
     {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
-      b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
+      b_.CreateProbeRead(ctx_, second, 8, b_.CreateLoad(first), call.loc);
       b_.CreateProbeReadStr(
+          ctx_,
           b_.CreateAdd(perfdata,
                        b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
           bpftrace_.join_argsize_,
-          b_.CreateLoad(second));
+          b_.CreateLoad(second),
+          call.loc);
     }
 
     // emit
@@ -678,7 +690,11 @@ void CodegenLLVM::visit(Call &call)
     inet->accept(*this);
     if (inet->type.type == Type::array)
     {
-      b_.CreateProbeRead(static_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
+      b_.CreateProbeRead(ctx_,
+                         static_cast<AllocaInst *>(inet_offset),
+                         inet->type.size,
+                         expr_,
+                         call.loc);
     }
     else
     {
@@ -838,7 +854,8 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "kstack" || call.func == "ustack")
   {
-    Value *stackid = b_.CreateGetStackId(ctx_, call.func == "ustack", call.type.stack_type);
+    Value *stackid = b_.CreateGetStackId(
+        ctx_, call.func == "ustack", call.type.stack_type, call.loc);
     // Kernel stacks should not be differentiated by tid, since the kernel
     // address space is the same between pids (and when aggregating you *want*
     // to be able to correlate between pids in most cases). User-space stacks
@@ -862,12 +879,12 @@ void CodegenLLVM::visit(Call &call)
         std::cerr << "BUG: Invalid signal ID for \"" << signame << "\"";
         abort();
       }
-      b_.CreateSignal(b_.getInt32(sigid));
+      b_.CreateSignal(ctx_, b_.getInt32(sigid), call.loc);
       return;
     }
     arg.accept(*this);
     expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
-    b_.CreateSignal(expr_);
+    b_.CreateSignal(ctx_, expr_, call.loc);
   }
   else if (call.func == "sizeof")
   {
@@ -884,14 +901,16 @@ void CodegenLLVM::visit(Call &call)
       left_arg->accept(*this);
       Value *left_string = expr_;
       const auto& string_literal = static_cast<String *>(right_arg)->str;
-      expr_ = b_.CreateStrncmp(left_string, string_literal, size, false);
+      expr_ = b_.CreateStrncmp(
+          ctx_, left_string, string_literal, size, call.loc, false);
       if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
         b_.CreateLifetimeEnd(left_string);
     } else if (left_arg->is_literal) {
       right_arg->accept(*this);
       Value *right_string = expr_;
       const auto& string_literal = static_cast<String *>(left_arg)->str;
-      expr_ = b_.CreateStrncmp(right_string, string_literal, size, false);
+      expr_ = b_.CreateStrncmp(
+          ctx_, right_string, string_literal, size, call.loc, false);
       if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
         b_.CreateLifetimeEnd(right_string);
     } else {
@@ -899,7 +918,8 @@ void CodegenLLVM::visit(Call &call)
       Value *right_string = expr_;
       left_arg->accept(*this);
       Value *left_string = expr_;
-      expr_ = b_.CreateStrncmp(left_string, right_string, size, false);
+      expr_ = b_.CreateStrncmp(
+          ctx_, left_string, right_string, size, call.loc, false);
       if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
         b_.CreateLifetimeEnd(left_string);
       if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
@@ -925,7 +945,7 @@ void CodegenLLVM::visit(Call &call)
 void CodegenLLVM::visit(Map &map)
 {
   AllocaInst *key = getMapKey(map);
-  expr_ = b_.CreateMapLookupElem(map, key);
+  expr_ = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
   b_.CreateLifetimeEnd(key);
 }
 
@@ -975,13 +995,13 @@ void CodegenLLVM::visit(Binop &binop)
     {
       binop.left->accept(*this);
       string_literal = static_cast<String *>(binop.right)->str;
-      expr_ = b_.CreateStrcmp(expr_, string_literal, inverse);
+      expr_ = b_.CreateStrcmp(ctx_, expr_, string_literal, binop.loc, inverse);
     }
     else if (binop.left->is_literal)
     {
       binop.right->accept(*this);
       string_literal = static_cast<String *>(binop.left)->str;
-      expr_ = b_.CreateStrcmp(expr_, string_literal, inverse);
+      expr_ = b_.CreateStrcmp(ctx_, expr_, string_literal, binop.loc, inverse);
     }
     else
     {
@@ -992,7 +1012,8 @@ void CodegenLLVM::visit(Binop &binop)
       Value * left_string = expr_;
 
       size_t len = std::min(binop.left->type.size, binop.right->type.size);
-      expr_ = b_.CreateStrncmp(left_string, right_string, len + 1, inverse);
+      expr_ = b_.CreateStrncmp(
+          ctx_, left_string, right_string, len + 1, binop.loc, inverse);
     }
   }
   else if (type == Type::buffer)
@@ -1017,7 +1038,8 @@ void CodegenLLVM::visit(Binop &binop)
     Value *left_string = expr_;
 
     size_t len = std::min(binop.left->type.size, binop.right->type.size);
-    expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
+    expr_ = b_.CreateStrncmp(
+        ctx_, left_string, right_string, len, binop.loc, inverse);
   }
   else
   {
@@ -1128,13 +1150,13 @@ void CodegenLLVM::visit(Unop &unop)
         {
           Map &map = static_cast<Map&>(*unop.expr);
           AllocaInst *key = getMapKey(map);
-          Value *oldval = b_.CreateMapLookupElem(map, key);
+          Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, unop.loc);
           AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
           if (is_increment)
             b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
           else
             b_.CreateStore(b_.CreateSub(oldval, b_.getInt64(1)), newval);
-          b_.CreateMapUpdateElem(map, key, newval);
+          b_.CreateMapUpdateElem(ctx_, map, key, newval, unop.loc);
           b_.CreateLifetimeEnd(key);
 
           if (unop.is_post_op)
@@ -1175,7 +1197,7 @@ void CodegenLLVM::visit(Unop &unop)
           size = type.pointee_size;
         }
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
-        b_.CreateProbeRead(dst, size, expr_);
+        b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
         expr_ = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
         break;
@@ -1194,7 +1216,7 @@ void CodegenLLVM::visit(Unop &unop)
         {
           int size = unop.type.size;
           AllocaInst *dst = b_.CreateAllocaBPF(unop.type, "deref");
-          b_.CreateProbeRead(dst, size, expr_);
+          b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
           expr_ = b_.CreateLoad(dst);
           b_.CreateLifetimeEnd(dst);
         }
@@ -1358,7 +1380,9 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                   1);
       }
       else
-        b_.CreateProbeRead(dst, field.type.size, src);
+      {
+        b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
+      }
       expr_ = dst;
     }
     else if (field.type.type == Type::integer && field.is_bitfield)
@@ -1373,7 +1397,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                              type.cast_type + "." + acc.field);
         // memset so verifier doesn't complain about reading uninitialized stack
         b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.size, 1);
-        b_.CreateProbeRead(dst, field.bitfield.read_bytes, src);
+        b_.CreateProbeRead(ctx_, dst, field.bitfield.read_bytes, src, acc.loc);
         raw = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
       }
@@ -1391,7 +1415,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
-      b_.CreateProbeRead(dst, field.type.size, src);
+      b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
       expr_ = b_.CreateLoad(dst);
       b_.CreateLifetimeEnd(dst);
     }
@@ -1421,7 +1445,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-    b_.CreateProbeRead(dst, type.pointee_size, src);
+    b_.CreateProbeRead(ctx_, dst, type.pointee_size, src, arr.loc);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -1475,7 +1499,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
       // expr currently contains a pointer to the struct
       // We now want to read the entire struct in so we can save it
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CreateProbeRead(dst, map.type.size, expr);
+      b_.CreateProbeRead(ctx_, dst, map.type.size, expr, assignment.loc);
       val = dst;
     }
   }
@@ -1489,7 +1513,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(expr, val);
   }
-  b_.CreateMapUpdateElem(map, key, val);
+  b_.CreateMapUpdateElem(ctx_, map, key, val, assignment.loc);
   b_.CreateLifetimeEnd(key);
   if (!assignment.expr->is_variable)
     b_.CreateLifetimeEnd(val);
@@ -1747,6 +1771,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_system_id = system_id_;
     int starting_time_id = time_id_;
     int starting_join_id = join_id_;
+    int starting_helper_error_id = b_.helper_error_id_;
 
     for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
@@ -1765,6 +1790,7 @@ void CodegenLLVM::visit(Probe &probe)
         system_id_ = starting_system_id;
         time_id_ = starting_time_id;
         join_id_ = starting_join_id;
+        b_.helper_error_id_ = starting_helper_error_id;
 
         std::string full_func_id = match_;
 

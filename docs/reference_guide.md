@@ -144,6 +144,8 @@ OPTIONS:
     -p PID         enable USDT probes on PID
     -c 'CMD'       run CMD and enable USDT probes on resulting process
     -v             verbose messages
+    -k             emit a warning when a bpf helper returns an error (except read functions)
+    -kk            check all bpf helper functions
     --version      bpftrace version
 
 ENVIRONMENT:

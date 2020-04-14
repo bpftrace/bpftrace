@@ -220,6 +220,7 @@ const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 
 enum class AsyncAction
 {
+  // clang-format off
   printf  = 0,     // printf reserves 0-9999 for printf_ids
   syscall = 10000, // system reserves 10000-19999 for printf_ids
   cat     = 20000, // cat reserves 20000-29999 for printf_ids
@@ -229,6 +230,8 @@ enum class AsyncAction
   zero,
   time,
   join,
+  helper_error,
+  // clang-format on
 };
 
 uint64_t asyncactionint(AsyncAction a);
