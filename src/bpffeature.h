@@ -70,34 +70,34 @@ public:
 
   std::string report(void);
 
-  DEFINE_MAP_TEST(array, BPF_MAP_TYPE_ARRAY);
-  DEFINE_MAP_TEST(hash, BPF_MAP_TYPE_HASH);
-  DEFINE_MAP_TEST(percpu_array, BPF_MAP_TYPE_PERCPU_ARRAY);
-  DEFINE_MAP_TEST(percpu_hash, BPF_MAP_TYPE_ARRAY);
-  DEFINE_MAP_TEST(stack_trace, BPF_MAP_TYPE_STACK_TRACE);
-  DEFINE_MAP_TEST(perf_event_array, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  DEFINE_HELPER_TEST(send_signal, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(override_return, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(get_current_cgroup_id, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_user, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_kernel, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_user_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_HELPER_TEST(probe_read_kernel_str, BPF_PROG_TYPE_KPROBE);
-  DEFINE_PROG_TEST(kprobe, BPF_PROG_TYPE_KPROBE);
-  DEFINE_PROG_TEST(tracepoint, BPF_PROG_TYPE_TRACEPOINT);
-  DEFINE_PROG_TEST(perf_event, BPF_PROG_TYPE_PERF_EVENT);
+  DEFINE_MAP_TEST(array, libbpf::BPF_MAP_TYPE_ARRAY);
+  DEFINE_MAP_TEST(hash, libbpf::BPF_MAP_TYPE_HASH);
+  DEFINE_MAP_TEST(percpu_array, libbpf::BPF_MAP_TYPE_PERCPU_ARRAY);
+  DEFINE_MAP_TEST(percpu_hash, libbpf::BPF_MAP_TYPE_ARRAY);
+  DEFINE_MAP_TEST(stack_trace, libbpf::BPF_MAP_TYPE_STACK_TRACE);
+  DEFINE_MAP_TEST(perf_event_array, libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  DEFINE_HELPER_TEST(send_signal, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(override_return, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(get_current_cgroup_id, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_str, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_user, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_kernel, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_user_str, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_HELPER_TEST(probe_read_kernel_str, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_PROG_TEST(kprobe, libbpf::BPF_PROG_TYPE_KPROBE);
+  DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
+  DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
 
 protected:
   std::optional<bool> has_loop_;
   std::optional<int> insns_limit_;
 
 private:
-  bool detect_map(enum bpf_map_type map_type);
+  bool detect_map(enum libbpf::bpf_map_type map_type);
   bool detect_helper(enum libbpf::bpf_func_id func_id,
-                     enum bpf_prog_type prog_type);
-  bool detect_prog_type(enum bpf_prog_type prog_type);
+                     enum libbpf::bpf_prog_type prog_type);
+  bool detect_prog_type(enum libbpf::bpf_prog_type prog_type);
 };
 
 #undef DEFINE_PROG_TEST

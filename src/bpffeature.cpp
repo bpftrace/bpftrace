@@ -12,7 +12,7 @@ namespace bpftrace {
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
 static bool try_load(const char* name,
-                     bpf_prog_type prog_type,
+                     enum libbpf::bpf_prog_type prog_type,
                      struct bpf_insn* insns,
                      size_t insns_cnt,
                      int loglevel,
@@ -27,7 +27,7 @@ static bool try_load(const char* name,
 #else
   ret = bpf_prog_load(
 #endif
-      prog_type,
+      static_cast<enum ::bpf_prog_type>(prog_type),
       name,
       insns,
       insns_cnt * sizeof(struct bpf_insn),
@@ -42,7 +42,7 @@ static bool try_load(const char* name,
   return ret >= 0;
 }
 
-static bool try_load(bpf_prog_type prog_type,
+static bool try_load(enum libbpf::bpf_prog_type prog_type,
                      struct bpf_insn* insns,
                      size_t len)
 {
@@ -52,7 +52,7 @@ static bool try_load(bpf_prog_type prog_type,
 }
 
 bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
-                               enum bpf_prog_type prog_type)
+                               enum libbpf::bpf_prog_type prog_type)
 {
   // Stolen from libbpf's  bpf_probe_helper
   char logbuf[4096] = {};
@@ -69,13 +69,13 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
          (strstr(logbuf, "unknown func ") == nullptr);
 }
 
-bool BPFfeature::detect_prog_type(enum bpf_prog_type prog_type)
+bool BPFfeature::detect_prog_type(enum libbpf::bpf_prog_type prog_type)
 {
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
   return try_load(prog_type, insns, ARRAY_SIZE(insns));
 }
 
-bool BPFfeature::detect_map(enum bpf_map_type map_type)
+bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
 {
   int key_size = 4;
   int value_size = 4;
@@ -85,7 +85,7 @@ bool BPFfeature::detect_map(enum bpf_map_type map_type)
 
   switch (map_type)
   {
-    case BPF_MAP_TYPE_STACK_TRACE:
+    case libbpf::BPF_MAP_TYPE_STACK_TRACE:
       value_size = 8;
       break;
     default:
@@ -97,7 +97,12 @@ bool BPFfeature::detect_map(enum bpf_map_type map_type)
 #else
   map_fd = bpf_create_map(
 #endif
-      map_type, nullptr, key_size, value_size, max_entries, flags);
+      static_cast<enum ::bpf_map_type>(map_type),
+      nullptr,
+      key_size,
+      value_size,
+      max_entries,
+      flags);
 
   if (map_fd >= 0)
     close(map_fd);
@@ -118,7 +123,7 @@ bool BPFfeature::has_loop(void)
   };
 
   has_loop_ = std::make_optional<bool>(
-      try_load(BPF_PROG_TYPE_TRACEPOINT, insns, ARRAY_SIZE(insns)));
+      try_load(libbpf::BPF_PROG_TYPE_TRACEPOINT, insns, ARRAY_SIZE(insns)));
 
   return has_loop();
 }
@@ -137,7 +142,7 @@ int BPFfeature::instruction_limit(void)
 
   char logbuf[logsize] = {};
   bool res = try_load(nullptr,
-                      BPF_PROG_TYPE_KPROBE,
+                      libbpf::BPF_PROG_TYPE_KPROBE,
                       insns,
                       ARRAY_SIZE(insns),
                       1,
@@ -156,13 +161,13 @@ int BPFfeature::instruction_limit(void)
     std::size_t end = log.find(")", begin);
     std::string cnt = log.substr(begin, end - begin);
     insns_limit_ = std::make_optional<int>(std::stoi(cnt));
-    }
-    else
-    {
-      insns_limit_ = std::make_optional<int>(-1);
-    }
+  }
+  else
+  {
+    insns_limit_ = std::make_optional<int>(-1);
+  }
 
-    return *insns_limit_;
+  return *insns_limit_;
 }
 
 std::string BPFfeature::report(void)
