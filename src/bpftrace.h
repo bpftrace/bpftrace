@@ -10,6 +10,7 @@
 
 #include "ast.h"
 #include "attached_probe.h"
+#include "bpffeature.h"
 #include "btf.h"
 #include "child.h"
 #include "imap.h"
@@ -152,6 +153,7 @@ public:
   unsigned int join_argnum_;
   unsigned int join_argsize_;
   std::unique_ptr<Output> out_;
+  BPFfeature feature_;
 
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;

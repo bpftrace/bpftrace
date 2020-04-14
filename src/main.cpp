@@ -163,11 +163,18 @@ static int info()
 
   std::cerr << "  bfd: "
 #ifdef HAVE_BFD_DISASM
-            << "yes" << std::endl
+            << "yes" << std::endl;
 #else
-            << "no" << std::endl
+            << "no" << std::endl;
 #endif
-            << std::endl;
+  std::cerr << "  bpf_attach_kfunc: "
+#ifdef HAVE_BCC_KFUNC
+            << "yes" << std::endl;
+#else
+            << "no" << std::endl;
+#endif
+
+  std::cerr << std::endl;
 
   std::cerr << BPFfeature().report();
 
@@ -185,7 +192,6 @@ int main(int argc, char *argv[])
   std::string script, search, file_name, output_file, output_format;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
-  BPFfeature features;
 
   const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:";
   option long_options[] = {
@@ -410,7 +416,7 @@ int main(int argc, char *argv[])
   if (!is_root())
     return 1;
 
-  auto lockdown_state = lockdown::detect(features);
+  auto lockdown_state = lockdown::detect(bpftrace.feature_);
   if (lockdown_state == lockdown::LockdownState::Confidentiality)
   {
     lockdown::emit_warning(std::cerr);
@@ -579,7 +585,7 @@ int main(int argc, char *argv[])
     return err;
 
   ast::SemanticAnalyser semantics(
-      driver.root_, bpftrace, features, !cmd_str.empty());
+      driver.root_, bpftrace, bpftrace.feature_, !cmd_str.empty());
   err = semantics.analyse();
   if (err)
     return err;

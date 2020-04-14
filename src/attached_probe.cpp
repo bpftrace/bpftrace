@@ -24,6 +24,11 @@
 #include <linux/perf_event.h>
 #include <linux/version.h>
 
+namespace libbpf {
+#undef __BPF_FUNC_MAPPER
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 /*
@@ -66,16 +71,12 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
-#ifdef HAVE_KFUNC
-    case ProbeType::kfunc:      return BPF_PROG_TYPE_TRACING; break;
-    case ProbeType::kretfunc:   return BPF_PROG_TYPE_TRACING; break;
-#else
     case ProbeType::kfunc:
+      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
+      break;
     case ProbeType::kretfunc:
-      std::cerr << "ERROR: kfunc not available for your kernel version"
-                << std::endl;
-      return BPF_PROG_TYPE_UNSPEC;
-#endif
+      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
+      break;
     default:
       std::cerr << "program type not found" << std::endl;
       abort();
@@ -104,7 +105,7 @@ void check_banned_kretprobes(std::string const& kprobe_name) {
   }
 }
 
-#ifdef HAVE_KFUNC
+#ifdef HAVE_BCC_KFUNC
 void AttachedProbe::attach_kfunc(void)
 {
   tracing_fd_ = bpf_attach_kfunc(progfd_);
@@ -120,16 +121,18 @@ int AttachedProbe::detach_kfunc(void)
 #else
 void AttachedProbe::attach_kfunc(void)
 {
-  throw std::runtime_error("Error attaching probe: " + probe_.name +
-                           ", kfunc not available for your kernel version");
+  throw std::runtime_error(
+      "Error attaching probe: " + probe_.name +
+      ", kfunc not available for your linked against bcc version");
 }
 
 int AttachedProbe::detach_kfunc(void)
 {
-  std::cerr << "kfunc not available for your kernel version" << std::endl;
+  std::cerr << "kfunc not available for linked against bcc version"
+            << std::endl;
   return -1;
 }
-#endif // HAVE_KFUNC
+#endif // HAVE_BCC_KFUNC
 
 AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
   : probe_(probe), func_(func)
