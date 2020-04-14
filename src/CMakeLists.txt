@@ -27,6 +27,16 @@ add_executable(bpftrace
   ${BFD_DISASM_SRC}
 )
 
+
+if(ENABLE_LTO)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT HAVE_LTO)
+  if(HAVE_LTO)
+    message(STATUS "LTO enabled")
+    set_property(TARGET bpftrace PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  endif(HAVE_LTO)
+endif(ENABLE_LTO)
+
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9)
 project(bpftrace)
 
 # bpftrace version number components.
@@ -17,6 +17,7 @@ set(EMBED_LIBCLANG_ONLY OFF CACHE BOOL "Build only libclang.a, and link to syste
 set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
+set(ENABLE_LTO ON CACHE BOOL "Enable LTO if supported by the compiler")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -102,6 +103,9 @@ set(CMAKE_REQUIRED_DEFINITIONS)
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
 endif()
+
+cmake_policy(SET CMP0069 NEW)
+
 set(CMAKE_REQUIRED_LIBRARIES bcc)
 get_filename_component(LIBBCC_LIBDIR ${LIBBCC_LIBRARIES} DIRECTORY)
 set(CMAKE_REQUIRED_LINK_OPTIONS -L${LIBBCC_LIBDIR})
