@@ -1,6 +1,7 @@
 #include <cstring>
 #include <iostream>
 #include <regex>
+#include <vector>
 
 #include "llvm/Config/llvm-config.h"
 
@@ -319,12 +320,16 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
       &translation_unit);
 }
 
-bool ClangParser::ClangParserHandler::check_diagnostics(const std::string& input)
+bool ClangParser::ClangParserHandler::check_diagnostics(
+    const std::string &input,
+    bool bail_on_error)
 {
   for (unsigned int i=0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
     CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
     CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
-    if (severity == CXDiagnostic_Error || severity == CXDiagnostic_Fatal) {
+    if ((bail_on_error && severity == CXDiagnostic_Error) ||
+        severity == CXDiagnostic_Fatal)
+    {
       if (bt_debug >= DebugLevel::kDebug)
         std::cerr << "Input (" << input.size() << "): " << input << std::endl;
       return false;
@@ -412,6 +417,90 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
   return err == 0;
 }
 
+std::unordered_set<std::string> ClangParser::get_incomplete_types(
+    const std::string &input,
+    std::vector<CXUnsavedFile> &unsaved_files,
+    const std::vector<const char *> &args)
+{
+  ClangParserHandler handler;
+  CXErrorCode error;
+  {
+    // No need to print warnings/errors twice. We will parse the input again
+    // later.
+    StderrSilencer silencer;
+    silencer.silence();
+
+    error = handler.parse_translation_unit(
+        "definitions.h",
+        args.data(),
+        args.size(),
+        unsaved_files.data(),
+        unsaved_files.size(),
+        CXTranslationUnit_DetailedPreprocessingRecord);
+  }
+
+  if (error)
+  {
+    if (bt_debug == DebugLevel::kFullDebug)
+      std::cerr
+          << "Clang error while parsing BTF dependencies in C definitions: "
+          << error << std::endl;
+
+    // We don't need to worry about properly reporting an error here because
+    // clang should fail again when we run the parser the second time.
+    return {};
+  }
+
+  // Don't bail on errors (ie incomplete structs) because our goal
+  // is to enumerate all such errors
+  if (!handler.check_diagnostics(input, /* bail_on_error= */ false))
+    return {};
+
+  struct TypeData
+  {
+    std::unordered_set<std::string> complete_types;
+    std::unordered_set<std::string> incomplete_types;
+  } type_data;
+
+  CXCursor cursor = handler.get_translation_unit_cursor();
+  clang_visitChildren(
+      cursor,
+      [](CXCursor c, CXCursor parent, CXClientData client_data) {
+        auto &data = *static_cast<TypeData *>(client_data);
+
+        // We look for field declarations and store the parent
+        // as a fully defined type because we know we're looking at a
+        // type definition.
+        //
+        // Then look at the field declaration itself. If it's a record
+        // type (ie struct or union), check if we think it's a fully
+        // defined type. If not, add it to incomplete types set.
+        if (clang_getCursorKind(parent) == CXCursor_EnumDecl ||
+            (clang_getCursorKind(c) == CXCursor_FieldDecl &&
+             (clang_getCursorKind(parent) == CXCursor_UnionDecl ||
+              clang_getCursorKind(parent) == CXCursor_StructDecl)))
+        {
+          auto parent_type = clang_getCanonicalType(
+              clang_getCursorType(parent));
+          data.complete_types.emplace(get_unqualified_type_name(parent_type));
+
+          auto cursor_type = clang_getCanonicalType(clang_getCursorType(c));
+          if (cursor_type.kind == CXType_Record)
+          {
+            auto type_name = get_unqualified_type_name(cursor_type);
+            if (data.complete_types.find(type_name) ==
+                data.complete_types.end())
+              data.incomplete_types.emplace(std::move(type_name));
+          }
+        }
+
+        return CXChildVisit_Recurse;
+      },
+      &type_data);
+
+  return type_data.incomplete_types;
+}
+
 bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
 {
   if (!bpftrace.btf_set_.size())
@@ -464,7 +553,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   if (input.size() == 0)
     return true; // We occasionally get crashes in libclang otherwise
 
-  CXUnsavedFile unsaved_files[] = {
+  std::vector<CXUnsavedFile> unsaved_files = {
     {
         .Filename = "definitions.h",
         .Contents = input.c_str(),
@@ -518,11 +607,33 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
+  auto incomplete_types = get_incomplete_types(input, unsaved_files, args);
+  if (incomplete_types.size() && bpftrace.force_btf_ &&
+      bpftrace.btf_.has_data())
+  {
+    auto from_btf = bpftrace.btf_.c_def(incomplete_types);
+    unsaved_files.emplace_back(CXUnsavedFile{
+        .Filename = "/bpftrace/include/__btf_dependent_decls.h",
+        .Contents = from_btf.c_str(),
+        .Length = from_btf.size(),
+    });
+
+    input = "#include <__btf_dependent_decls.h>\n" + input;
+    unsaved_files[0].Contents = input.c_str();
+    unsaved_files[0].Length = input.size();
+
+    // Prevent BTF generated header from redefining stuff found
+    // in <linux/types.h>
+    args.push_back("-D_LINUX_TYPES_H");
+  }
+
   ClangParserHandler handler;
   CXErrorCode error = handler.parse_translation_unit(
       "definitions.h",
-      &args[0], args.size(),
-      unsaved_files, sizeof(unsaved_files)/sizeof(CXUnsavedFile),
+      args.data(),
+      args.size(),
+      unsaved_files.data(),
+      unsaved_files.size(),
       CXTranslationUnit_DetailedPreprocessingRecord);
   if (error)
   {
