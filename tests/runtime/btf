@@ -1,0 +1,5 @@
+NAME user_supplied_c_def_using_btf
+RUN bpftrace -v --btf -e 'struct foo { struct task_struct t; } BEGIN { exit(); }'
+EXPECT Attaching 1 probe...
+TIMEOUT 5
+REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
