@@ -192,7 +192,8 @@ static std::string rewrite_lifetime_end_decl(const std::string &line)
   return std::string(
       "declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1");
 #else
-  return line;
+  return std::string(
+      "declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1");
 #endif
 }
 
@@ -206,7 +207,8 @@ static std::string rewrite_lifetime_start_decl(const std::string &line)
   return std::string(
       "declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1");
 #else
-  return line;
+  return std::string(
+      "declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1");
 #endif
 }
 
