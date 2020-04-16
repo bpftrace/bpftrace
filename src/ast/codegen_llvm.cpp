@@ -1219,11 +1219,17 @@ void CodegenLLVM::visit(Ternary &ternary)
     // fetch selected integer via CreateStore
     b_.SetInsertPoint(left_block);
     ternary.left->accept(*this);
+    expr_ = b_.CreateIntCast(expr_,
+                             b_.GetType(ternary.type),
+                             ternary.type.is_signed);
     b_.CreateStore(expr_, result);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
     ternary.right->accept(*this);
+    expr_ = b_.CreateIntCast(expr_,
+                             b_.GetType(ternary.type),
+                             ternary.type.is_signed);
     b_.CreateStore(expr_, result);
     b_.CreateBr(done);
 
