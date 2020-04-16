@@ -122,6 +122,16 @@ void SemanticAnalyser::visit(Identifier &identifier)
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
     identifier.type = SizedType(Type::integer, 8);
   }
+  else if (bpftrace_.structs_.count(identifier.ident) != 0)
+  {
+    identifier.type = SizedType(Type::cast,
+                                bpftrace_.structs_[identifier.ident].size);
+  }
+  else if (getIntcasts().count(identifier.ident) != 0)
+  {
+    identifier.type = SizedType(
+        Type::integer, std::get<0>(getIntcasts().at(identifier.ident)));
+  }
   else {
     identifier.type = SizedType(Type::none, 0);
     error("Unknown identifier: '" + identifier.ident + "'", identifier.loc);
@@ -934,6 +944,15 @@ void SemanticAnalyser::visit(Call &call)
               call.loc);
       }
     }
+  }
+  else if (call.func == "sizeof")
+  {
+    // sizeof() is a interesting builtin because the arguments can be either
+    // an expression or a type. As a result, the only thing we'll check here
+    // is that we have a single argument.
+    check_nargs(call, 1);
+
+    call.type = SizedType(Type::integer, 8);
   }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
