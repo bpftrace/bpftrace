@@ -9,6 +9,7 @@ from distutils.version import LooseVersion
 import re
 
 BPF_PATH = environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
+ENV_PATH = environ["PATH"]
 ATTACH_TIMEOUT = 5
 DEFAULT_TIMEOUT = 5
 
@@ -94,7 +95,13 @@ class Utils(object):
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
                 with open(devnull, 'w') as dn:
-                    if subprocess.call(test.requirement, shell=True, stdout=dn, stderr=dn) != 0:
+                    if subprocess.call(
+                        test.requirement,
+                        shell=True,
+                        stdout=dn,
+                        stderr=dn,
+                        env={'PATH': f"{BPF_PATH}:{ENV_PATH}"},
+                    ) != 0:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
 

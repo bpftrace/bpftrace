@@ -21,8 +21,9 @@ void FieldAnalyser::visit(StackMode &mode __attribute__((unused)))
 {
 }
 
-void FieldAnalyser::visit(Identifier &identifier __attribute__((unused)))
+void FieldAnalyser::visit(Identifier &identifier)
 {
+  bpftrace_.btf_set_.insert(identifier.ident);
 }
 
 void FieldAnalyser::visit(Builtin &builtin)
