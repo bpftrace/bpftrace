@@ -137,8 +137,6 @@ private:
   };
 
   int child_pipe_ = -1;
-  bool with_ptrace_ = false;
-  bool did_run_ = false;
 };
 
 } // namespace bpftrace
