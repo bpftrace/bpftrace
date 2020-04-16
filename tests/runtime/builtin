@@ -169,3 +169,19 @@ NAME cat "no such file"
 RUN bpftrace -e 'i:ms:1 { cat("/does/not/exist/file"); exit(); }'
 EXPECT ^Error opening file '/does/not/exist/file': No such file or directory$
 TIMEOUT 5
+
+NAME sizeof
+RUN bpftrace -e 'struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof(((struct Foo)0).x), sizeof(((struct Foo)0).c), sizeof(1 == 1), sizeof($x)); exit(); }'
+EXPECT ^8 4 1 8 8$
+TIMEOUT 5
+
+NAME sizeof_ints
+RUN bpftrace -e 'BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32)); exit(); }'
+EXPECT ^1 1 2 2 4 4$
+TIMEOUT 5
+
+# printf only takes 7 args
+NAME sizeof_ints_pt2
+RUN bpftrace -e 'BEGIN { printf("%d %d\n", sizeof(uint64), sizeof(int64)); exit(); }'
+EXPECT ^8 8$
+TIMEOUT 5
