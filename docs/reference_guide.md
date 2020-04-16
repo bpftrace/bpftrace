@@ -84,6 +84,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
     - [20. `override()`: Override return value](#20-override-override-return-value)
     - [21. `buf()`: Buffers](#21-buf-buffers)
+    - [22. `sizeof()`: Size of type or expression](#22-sizeof-size-of-type-or-expression)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2536,6 +2537,39 @@ Datagram bytes: \x08\x00+\xb9\x06b\x00\x01Aen^\x00\x00\x00\x00KM\x0c\x00\x00\x00
 --- 8.8.8.8 ping statistics ---
 1 packets transmitted, 1 received, 0% packet loss, time 0ms
 rtt min/avg/max/mdev = 19.426/19.426/19.426/0.000 ms
+```
+
+## 22. `sizeof()`: Size of type or expression
+
+Syntax:
+- `sizeof(TYPE)`
+- `sizeof(EXPRESSION)`
+
+Returns size of the argument in bytes. Similar to C/C++ `sizeof` operator. Note
+that the expression does not get evaluated.
+
+Examples:
+
+```
+# bpftrace -e 'struct Foo { int x; char c; } BEGIN { printf("%d\n", sizeof(struct Foo)); }'
+Attaching 1 probe...
+8
+
+# bpftrace -e 'struct Foo { int x; char c; } BEGIN { printf("%d\n", sizeof(((struct Foo)0).c)); }'
+Attaching 1 probe...
+1
+
+# bpftrace -e 'BEGIN { printf("%d\n", sizeof(1 == 1)); }'
+Attaching 1 probe...
+8
+
+# bpftrace --btf -e 'BEGIN { printf("%d\n", sizeof(struct task_struct)); }'
+Attaching 1 probe...
+13120
+
+# bpftrace -e 'BEGIN { $x = 3; printf("%d\n", sizeof($x)); }'
+Attaching 1 probe...
+8
 ```
 
 # Map Functions
