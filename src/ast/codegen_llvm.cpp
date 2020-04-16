@@ -67,6 +67,8 @@ void CodegenLLVM::visit(String &string)
   expr_ = buf;
 }
 
+// NB: we do not resolve identifiers that are structs. That is because in
+// bpftrace you cannot really instantiate a struct.
 void CodegenLLVM::visit(Identifier &identifier)
 {
   if (bpftrace_.enums_.count(identifier.ident) != 0)
@@ -858,6 +860,10 @@ void CodegenLLVM::visit(Call &call)
     arg.accept(*this);
     expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.is_signed);
     b_.CreateSignal(expr_);
+  }
+  else if (call.func == "sizeof")
+  {
+    expr_ = b_.getInt64(call.vargs->at(0)->type.size);
   }
   else if (call.func == "strncmp") {
     uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
