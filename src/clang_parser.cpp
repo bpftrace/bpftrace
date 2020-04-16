@@ -14,6 +14,63 @@
 #include "field_analyser.h"
 
 namespace bpftrace {
+namespace {
+const std::vector<CXUnsavedFile> &getDefaultHeaders()
+{
+  static std::vector<CXUnsavedFile> unsaved_files = {
+    {
+        .Filename = "/bpftrace/include/__stddef_max_align_t.h",
+        .Contents = __stddef_max_align_t_h,
+        .Length = __stddef_max_align_t_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/float.h",
+        .Contents = float_h,
+        .Length = float_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/limits.h",
+        .Contents = limits_h,
+        .Length = limits_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/stdarg.h",
+        .Contents = stdarg_h,
+        .Length = stdarg_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/stddef.h",
+        .Contents = stddef_h,
+        .Length = stddef_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/stdint.h",
+        .Contents = stdint_h,
+        .Length = stdint_h_len,
+    },
+    {
+        .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
+        .Contents = clang_workarounds_h,
+        .Length = clang_workarounds_h_len,
+    },
+  };
+
+  return unsaved_files;
+}
+
+std::vector<CXUnsavedFile> getTranslationUnitFiles(
+    const CXUnsavedFile &main_file)
+{
+  std::vector<CXUnsavedFile> files;
+  files.reserve(1 + files.size());
+
+  files.emplace_back(main_file);
+  const auto &dfl = getDefaultHeaders();
+  files.insert(files.end(), dfl.cbegin(), dfl.cend());
+
+  return files;
+}
+} // namespace
 
 static std::string get_clang_string(CXString string)
 {
@@ -422,6 +479,9 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
     std::vector<CXUnsavedFile> &unsaved_files,
     const std::vector<const char *> &args)
 {
+  if (input.empty())
+    return {};
+
   ClangParserHandler handler;
   CXErrorCode error;
   {
@@ -501,100 +561,15 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
   return type_data.incomplete_types;
 }
 
-bool ClangParser::parse_btf_definitions(BPFtrace &bpftrace)
-{
-  if (!bpftrace.btf_set_.size())
-    return true;
-
-  BTF &btf = bpftrace.btf_;
-
-  if (!btf.has_data())
-    return true;
-
-  std::string input = btf.c_def(bpftrace.btf_set_);
-
-  CXUnsavedFile unsaved_files =
-  {
-    .Filename = "btf.h",
-    .Contents = input.c_str(),
-    .Length   = input.size(),
-  };
-
-  ClangParserHandler handler;
-  CXErrorCode error = handler.parse_translation_unit(
-    "btf.h", NULL, 0, &unsaved_files, 1,
-    CXTranslationUnit_DetailedPreprocessingRecord);
-  if (error)
-  {
-    if (bt_debug == DebugLevel::kFullDebug) {
-      std::cerr << "Clang error while parsing BTF C definitions: " << error << std::endl;
-      std::cerr << "Input (" << input.size() << "): " << input << std::endl;
-    }
-    return false;
-  }
-
-  if (!handler.check_diagnostics(input))
-    return false;
-
-  CXCursor cursor = handler.get_translation_unit_cursor();
-  return visit_children(cursor, bpftrace);
-}
-
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
   auto input = program->c_definitions;
 
-  // Add BTF definitions, but do not bail out
-  // in case of error, just notify
-  if ((input.size() == 0 || bpftrace.force_btf_) &&
-      !parse_btf_definitions(bpftrace))
-    std::cerr << "Failed to parse BTF data." << std::endl;
-
-  if (input.size() == 0)
-    return true; // We occasionally get crashes in libclang otherwise
-
-  std::vector<CXUnsavedFile> unsaved_files = {
-    {
-        .Filename = "definitions.h",
-        .Contents = input.c_str(),
-        .Length = input.size(),
-    },
-    {
-        .Filename = "/bpftrace/include/__stddef_max_align_t.h",
-        .Contents = __stddef_max_align_t_h,
-        .Length = __stddef_max_align_t_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/float.h",
-        .Contents = float_h,
-        .Length = float_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/limits.h",
-        .Contents = limits_h,
-        .Length = limits_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/stdarg.h",
-        .Contents = stdarg_h,
-        .Length = stdarg_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/stddef.h",
-        .Contents = stddef_h,
-        .Length = stddef_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/stdint.h",
-        .Contents = stdint_h,
-        .Length = stdint_h_len,
-    },
-    {
-        .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
-        .Contents = clang_workarounds_h,
-        .Length = clang_workarounds_h_len,
-    },
-  };
+  auto input_files = getTranslationUnitFiles(CXUnsavedFile{
+      .Filename = "definitions.h",
+      .Contents = input.c_str(),
+      .Length = input.size(),
+  });
 
   std::vector<const char *> args =
   {
@@ -607,34 +582,52 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
-  auto incomplete_types = get_incomplete_types(input, unsaved_files, args);
-  if (incomplete_types.size() && bpftrace.force_btf_ &&
-      bpftrace.btf_.has_data())
-  {
-    auto from_btf = bpftrace.btf_.c_def(incomplete_types);
-    unsaved_files.emplace_back(CXUnsavedFile{
-        .Filename = "/bpftrace/include/__btf_dependent_decls.h",
-        .Contents = from_btf.c_str(),
-        .Length = from_btf.size(),
-    });
+  auto incomplete_types = get_incomplete_types(input, input_files, args);
+  bpftrace.btf_set_.insert(incomplete_types.cbegin(), incomplete_types.cend());
 
-    input = "#include <__btf_dependent_decls.h>\n" + input;
-    unsaved_files[0].Contents = input.c_str();
-    unsaved_files[0].Length = input.size();
+  ClangParserHandler handler;
+  CXErrorCode error;
+
+  bool process_btf = input.empty() ||
+                     (bpftrace.force_btf_ && bpftrace.btf_.has_data());
+  if (process_btf)
+  {
+    auto btf_and_input = "#include <__btf_generated_header.h>\n" + input;
+    auto btf_and_input_files = getTranslationUnitFiles(
+        CXUnsavedFile{ .Filename = "definitions.h",
+                       .Contents = btf_and_input.c_str(),
+                       .Length = btf_and_input.size() });
+
+    auto btf_cdef = bpftrace.btf_.c_def(bpftrace.btf_set_);
+    btf_and_input_files.emplace_back(CXUnsavedFile{
+        .Filename = "/bpftrace/include/__btf_generated_header.h",
+        .Contents = btf_cdef.c_str(),
+        .Length = btf_cdef.size(),
+    });
 
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>
     args.push_back("-D_LINUX_TYPES_H");
+
+    error = handler.parse_translation_unit(
+        "definitions.h",
+        args.data(),
+        args.size(),
+        btf_and_input_files.data(),
+        btf_and_input_files.size(),
+        CXTranslationUnit_DetailedPreprocessingRecord);
+  }
+  else
+  {
+    error = handler.parse_translation_unit(
+        "definitions.h",
+        args.data(),
+        args.size(),
+        input_files.data(),
+        input_files.size(),
+        CXTranslationUnit_DetailedPreprocessingRecord);
   }
 
-  ClangParserHandler handler;
-  CXErrorCode error = handler.parse_translation_unit(
-      "definitions.h",
-      args.data(),
-      args.size(),
-      unsaved_files.data(),
-      unsaved_files.size(),
-      CXTranslationUnit_DetailedPreprocessingRecord);
   if (error)
   {
     if (bt_debug == DebugLevel::kFullDebug) {
