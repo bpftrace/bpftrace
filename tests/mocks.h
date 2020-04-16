@@ -66,6 +66,7 @@ public:
     has_send_signal_ = std::make_optional<bool>(has_features);
     has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);
     has_override_return_ = std::make_optional<bool>(has_features);
+    prog_kfunc_ = std::make_optional<bool>(has_features);
   };
 };
 
