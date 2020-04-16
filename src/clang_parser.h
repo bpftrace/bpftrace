@@ -22,7 +22,6 @@ public:
 
 private:
   bool visit_children(CXCursor &cursor, BPFtrace &bpftrace);
-  bool parse_btf_definitions(BPFtrace &bpftrace);
   /*
    * The user might have written some struct definitions that rely on types
    * supplied by BTF data. This method will pull out any forward-declared /
