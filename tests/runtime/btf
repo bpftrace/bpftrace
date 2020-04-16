@@ -9,3 +9,9 @@ RUN bpftrace -v --btf -e 'tracepoint:syscalls:sys_enter_nanosleep { args->rqtp->
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
+
+NAME enum_value_reference
+RUN bpftrace -v --btf -e 'BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }'
+EXPECT ^8$
+TIMEOUT 5
+REQUIRES bpftrace --info 2>&1 | grep "btf: yes"

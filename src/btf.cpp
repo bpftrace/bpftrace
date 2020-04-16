@@ -231,13 +231,33 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
   for (id = 1; id <= max && myset.size(); id++)
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
-    std::string str = full_type_str(btf, t);
-
-    auto it = myset.find(str);
-    if (it != myset.end())
+    // Allow users to reference enum values by name to pull in entire enum defs
+    if (btf_is_enum(t))
     {
-      btf_dump__dump_type(dump, id);
-      myset.erase(it);
+      const struct btf_enum *p = btf_enum(t);
+      uint16_t vlen = btf_vlen(t);
+      for (int e = 0; e < vlen; ++e, ++p)
+      {
+        std::string str = btf_str(btf, p->name_off);
+        auto it = myset.find(str);
+        if (it != myset.end())
+        {
+          btf_dump__dump_type(dump, id);
+          myset.erase(it);
+          break;
+        }
+      }
+    }
+    else
+    {
+      std::string str = full_type_str(btf, t);
+
+      auto it = myset.find(str);
+      if (it != myset.end())
+      {
+        btf_dump__dump_type(dump, id);
+        myset.erase(it);
+      }
     }
   }
 
