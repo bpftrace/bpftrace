@@ -296,7 +296,7 @@ Attaching 1 probe...
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
@@ -312,7 +312,7 @@ open path: retrans_time_ms
 
 - kprobe: 如前面所述，这是内核动态跟踪kprobe探针类型，跟踪内核函数的调用(kretprobe探针类型跟踪内核函数返回值)。
 - `arg0` 是一个内建变量，表示探针的第一个参数，其含义由探针类型决定。对于`kprobe`类型探针，它表示函数的第一个参数。其它参数使用arg1,...,argN访问。
-- `((path *)arg0)->dentry->d_name.name`: 这里`arg0`作为`path *`并引用dentry。
+- `((struct path *)arg0)->dentry->d_name.name`: 这里`arg0`作为`struct path *`并引用dentry。
 - #include: 包含必要的path和dentry类型声明的头文件。
 
 bfptrace对内核结构跟踪的支持和bcc是一样的，允许使用头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidate的声明。在将来，bpftrace会使用新的linux BTF支持，到时候所有结构都将可用。
