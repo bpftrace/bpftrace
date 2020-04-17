@@ -302,7 +302,7 @@ Attaching 1 probe...
 
 kprobe:vfs_open
 {
-	printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name));
+	printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name));
 }
 
 # bpftrace path.bt
@@ -317,7 +317,7 @@ open path: retrans_time_ms
 
 - kprobe: 以前説明したように，これはカーネルの動的トレーシングをおこなうプローブタイプで，カーネル関数の開始をトレースします（関数からの戻りのトレースには kretprobe を利用します）．
 - `arg0` はビルトイン変数で，プローブの最初の引数を意味します．これはプローブタイプごとに意味が異なり，`kprobe` の場合は関数の最初の引数を意味します．他の引数には arg1, ..., argN でアクセスできます．
-- `((path *)arg0)->dentry->d_name.name`: `arg0` を `path *` にキャストしてから dentry や後続のメンバ変数を参照します．
+- `((struct path *)arg0)->dentry->d_name.name`: `arg0` を `struct path *` にキャストしてから dentry や後続のメンバ変数を参照します．
 - #include: path と dentry の構造体定義のために必要なファイルをインクルードします．
 
 カーネル構造体のサポートは bcc と同様にカーネルヘッダを利用します．したがって多くの構造体が利用可能ですが，全てではありません．場合によっては手動で構造体を定義する必要があります．例えば [dcsnoop tool](../tools/dcsnoop.bt) では nameidata 構造体の一部を手動で定義しています．これはこの構造体がヘッダ内で定義されていないためです．LinuxカーネルのBTFデータがある場合，全ての構造体が利用可能です．
