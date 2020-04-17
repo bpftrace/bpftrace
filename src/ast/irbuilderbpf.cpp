@@ -221,6 +221,54 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   return call;
 }
 
+Value *IRBuilderBPF::CreateMapCount(Map &map, AllocaInst *key)
+{
+  int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
+  CallInst *call = createMapLookup(mapfd, key);
+  SizedType &type = map.type;
+
+  assert(type.type == Type::count);
+
+  // Check if result == 0
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(), "lookup_success", parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(), "lookup_failure", parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(), "lookup_merge", parent);
+
+  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, getInt8PtrTy(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+
+  assert(value->getType()->isPointerTy() &&
+         (value->getType()->getElementType() == getInt64Ty()));
+  // createMapLookup  returns an u8*
+  auto *cast = CreatePointerCast(call, value->getType(), "cast");
+
+  // map item is found, increment the value directly
+  CreateAtomicRMW(AtomicRMWInst::Add, cast,
+                  ConstantInt::get(module_.getContext(), APInt(64, 1)),
+                  AtomicOrdering::Monotonic);
+
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+
+  // map item is not found, create one with value 1
+  CreateStore(getInt64(0), value);
+  AllocaInst *one = CreateAllocaBPF(getInt64Ty(), "strcmp.result");
+  CreateStore(getInt64(1), one);
+  CreateMapUpdateElem(map, key, one);
+
+  CreateBr(lookup_merge_block);
+  SetInsertPoint(lookup_merge_block);
+  return CreateLoad(value);
+}
+
 Value *IRBuilderBPF::CreateMapLookupElem(Map &map, AllocaInst *key) {
   int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
   return CreateMapLookupElem(mapfd, key, map.type);

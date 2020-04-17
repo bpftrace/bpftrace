@@ -59,6 +59,7 @@ public:
   CallInst   *CreateBpfPseudoCall(Map &map);
   Value      *CreateMapLookupElem(Map &map, AllocaInst *key);
   Value      *CreateMapLookupElem(int mapfd, AllocaInst *key, SizedType &type);
+  Value      *CreateMapCount(Map &map, AllocaInst *key);
   void        CreateMapUpdateElem(Map &map, AllocaInst *key, Value *val);
   void        CreateMapDeleteElem(Map &map, AllocaInst *key);
   void        CreateProbeRead(AllocaInst *dst, size_t size, Value *src);
