@@ -1,0 +1,130 @@
+name: CI
+
+on: [push, pull_request]
+jobs:
+  clang-format:
+    # Only run clang-format on pull requests. We want to allow people to
+    # ignore clang-format if they think it's not helpful.
+    if: "github.event_name == 'pull_request'"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install clang-format
+      run: sudo apt-get install clang-format
+    - name: Download git-clang-format
+      run: wget https://raw.githubusercontent.com/llvm-mirror/clang/master/tools/clang-format/git-clang-format
+    - name: Install git-clang-format
+      run: sudo install -t /bin git-clang-format
+    - name: Fetch origin master
+      run: git fetch --no-tags --prune --depth=1 origin master
+    - name: clang-format
+      run: git clang-format origin/master
+    - name: diff
+      run: git diff --exit-code
+
+  build_test:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        env:
+        - NAME: LLVM 6 Debug
+          TYPE: Debug
+          LLVM_VERSION: "6.0"
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 6 Release
+          TYPE: Release
+          LLVM_VERSION: "6.0"
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 7 Debug
+          TYPE: Debug
+          LLVM_VERSION: 7
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 7 Release
+          TYPE: Release
+          LLVM_VERSION: 7
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 8 Debug
+          TYPE: Debug
+          LLVM_VERSION: 8
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 8 Release
+          TYPE: Release
+          LLVM_VERSION: 8
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 9 Debug
+          TYPE: Debug
+          LLVM_VERSION: 9
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 9 Release
+          TYPE: Release
+          LLVM_VERSION: 9
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 10 Debug
+          TYPE: Debug
+          LLVM_VERSION: 10
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 10 Release
+          TYPE: Release
+          LLVM_VERSION: 10
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build docker container
+      env: ${{matrix.env}}
+      run: >
+        docker build
+        --build-arg LLVM_VERSION=$LLVM_VERSION
+        -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION
+        -f docker/Dockerfile.$BASE
+        docker/
+    - name: Build and test
+      env: ${{matrix.env}}
+      run: >
+        docker run --privileged
+        -v $(pwd):$(pwd)
+        -w $(pwd)
+        -v /sys/kernel/debug:/sys/kernel/debug:rw
+        -v /lib/modules:/lib/modules:ro
+        -v /usr/src:/usr/src:ro
+        -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
+        -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
+        -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
+        bpftrace-builder-$BASE-llvm-$LLVM_VERSION
+        ${PWD}/build-$TYPE-$BASE
+        $TYPE
+        -j$(nproc)
+
+  irc:
+    # Notify IRC of build failures on pushes only if we are running from
+    # the main repo. We don't want this rule to trigger from forked repos.
+    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Message channel
+      uses: rectalogic/notify-irc@v1
+      with:
+        nickname: bpftrace-ci-bot
+        server: irc.oftc.net
+        channel: "#bpftrace"
+        message: |
+          master is BROKEN at https://github.com/iovisor/bpftrace/commit/${{github.sha}}
