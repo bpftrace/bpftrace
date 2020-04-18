@@ -63,6 +63,16 @@ RUN if [ "${DISTRO}" = "xenial" ]; then \
     apt install -y cmake \
     ; fi
 
+# Install C++17 compatible compiler if running on xenial
+RUN if [ "${DISTRO}" = "xenial" ]; then \
+    apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+    && apt update \
+    && apt install -y g++-7 \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 \
+                           --slave /usr/bin/g++ g++ /usr/bin/g++-7 \
+    ; fi
+
 # Build BCC and install static libs
 RUN mkdir -p /src && git clone https://github.com/$bcc_org/bcc /src/bcc
 
