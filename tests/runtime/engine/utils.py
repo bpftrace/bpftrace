@@ -100,7 +100,7 @@ class Utils(object):
                         shell=True,
                         stdout=dn,
                         stderr=dn,
-                        env={'PATH': f"{BPF_PATH}:{ENV_PATH}"},
+                        env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
                     ) != 0:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
