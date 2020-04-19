@@ -803,15 +803,19 @@ TEST(semantic_analyser, variable_type)
 TEST(semantic_analyser, unroll)
 {
   test("kprobe:f { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 0);
-  test("kprobe:f { $i = 0; unroll(21) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 1);
+  test("kprobe:f { $i = 0; unroll(101) { printf(\"i: %d\\n\", $i); $i = $i + "
+       "1; } }",
+       1);
   test("kprobe:f { $i = 0; unroll(0) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 1);
 
   BPFtrace bpftrace;
   bpftrace.add_param("10");
   bpftrace.add_param("hello");
+  bpftrace.add_param("101");
   test(bpftrace, "kprobe:f { unroll($#) { printf(\"hi\\n\"); } }", 0);
   test(bpftrace, "kprobe:f { unroll($1) { printf(\"hi\\n\"); } }", 0);
   test(bpftrace, "kprobe:f { unroll($2) { printf(\"hi\\n\"); } }", 1);
+  test(bpftrace, "kprobe:f { unroll($3) { printf(\"hi\\n\"); } }", 1);
 }
 
 TEST(semantic_analyser, map_integer_sizes)
