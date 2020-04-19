@@ -109,10 +109,18 @@ See the [Reference Guide](docs/reference_guide.md) for more detail.
 For development and testing a [Vagrantfile](Vagrantfile) is available.
 
 Make sure you have the `vbguest` plugin installed, it is required to correctly
-install the shared file system driver on the ubuntu boxes.
+install the shared file system driver on the ubuntu boxes:
 
 ```
 $ vagrant plugin install vagrant-vbguest
+```
+
+Start VM:
+
+```
+$ vagrant status
+$ vagrant up $YOUR_CHOICE
+$ vagrant ssh $YOUR_CHOICE
 ```
 
 ## License

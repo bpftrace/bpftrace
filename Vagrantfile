@@ -5,11 +5,11 @@
 #
 # SKIP_BCC_BUILD: Set to skip the building bcc from source
 
-$ubuntu_18_deps = <<EOF
+$ubuntu_deps = <<EOF
 apt-get -qq update
 apt-get -qq install linux-headers-$(uname -r) binutils-dev
 apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
-apt-get -qq install llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
+apt-get -qq install llvm-8-dev llvm-8-runtime libclang-8-dev clang-8
 EOF
 
 $fedora_deps = <<EOF
@@ -30,13 +30,17 @@ EOF
 
 Vagrant.configure("2") do |config|
   boxes = {
+    'ubuntu-16.04'     => {
+      'image'          => 'ubuntu/xenial64',
+      'scripts'        => [ $ubuntu_deps, ],
+    },
     'ubuntu-18.04'     => {
       'image'          => 'ubuntu/bionic64',
-      'scripts'        => [ $ubuntu_18_deps, ],
+      'scripts'        => [ $ubuntu_deps, ],
     },
     'ubuntu-19.10'     => {
       'image'          => 'ubuntu/eoan64',
-      'scripts'        => [ $ubuntu_18_deps, ],
+      'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 1
     },
     'fedora-31'        => {
