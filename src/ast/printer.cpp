@@ -265,13 +265,17 @@ void Printer::visit(If &if_block)
 void Printer::visit(Unroll &unroll)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "unroll " << unroll.var << std::endl;
-  ++depth_;
+  out_ << indent << "unroll" << std::endl;
 
+  ++depth_;
+  unroll.expr->accept(*this);
+  out_ << indent << " block" << std::endl;
+
+  ++depth_;
   for (Statement *stmt : *unroll.stmts) {
     stmt->accept(*this);
   }
-  --depth_;
+  depth_ -= 2;
 }
 
 void Printer::visit(While &while_block)

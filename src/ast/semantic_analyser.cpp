@@ -1408,10 +1408,43 @@ void SemanticAnalyser::visit(If &if_block)
 
 void SemanticAnalyser::visit(Unroll &unroll)
 {
+  unroll.expr->accept(*this);
+
+  unroll.var = 0;
+
+  if (auto *integer = dynamic_cast<Integer *>(unroll.expr))
+  {
+    unroll.var = integer->n;
+  }
+  else if (auto *param = dynamic_cast<PositionalParameter *>(unroll.expr))
+  {
+    if (param->ptype == PositionalParameterType::count)
+    {
+      unroll.var = bpftrace_.num_params();
+    }
+    else
+    {
+      std::string pstr = bpftrace_.get_param(param->n, param->is_in_str);
+      if (is_numeric(pstr))
+        unroll.var = std::stoll(pstr, nullptr, 0);
+      else
+        error("Invalid positonal params: " + pstr, unroll.loc);
+    }
+  }
+  else
+  {
+    out_ << "Unsupported expression" << std::endl;
+    abort();
+  }
+
   if (unroll.var > 20)
-    error("unroll maximum value is 20", location(0));
+  {
+    error("unroll maximum value is 20", unroll.loc);
+  }
   else if (unroll.var < 1)
-    error("unroll minimum value is 1", location(0));
+  {
+    error("unroll minimum value is 1", unroll.loc);
+  }
 
   for (int i = 0; i < unroll.var; i++)
     accept_statements(unroll.stmts);

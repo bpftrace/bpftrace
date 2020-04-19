@@ -235,8 +235,9 @@ public:
 
 class Unroll : public Statement {
 public:
-  Unroll(long int var, StatementList *stmts);
+  Unroll(Expression *expr, StatementList *stmts, location loc);
   long int var = 0;
+  Expression *expr;
   StatementList *stmts;
 
   void accept(Visitor &v) override;

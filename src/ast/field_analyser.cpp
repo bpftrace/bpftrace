@@ -140,10 +140,10 @@ void FieldAnalyser::visit(If &if_block)
 
 void FieldAnalyser::visit(Unroll &unroll)
 {
-  for (int i=0; i < unroll.var; i++) {
-    for (Statement *stmt : *unroll.stmts) {
-      stmt->accept(*this);
-    }
+  // visit statements in unroll once
+  for (Statement *stmt : *unroll.stmts)
+  {
+    stmt->accept(*this);
   }
 }
 

@@ -234,7 +234,8 @@ jump_stmt  : BREAK    { $$ = new ast::Jump(token::BREAK, @$); }
            | RETURN   { $$ = new ast::Jump(token::RETURN, @$); }
            ;
 
-loop_stmt  : UNROLL "(" INT ")" block             { $$ = new ast::Unroll($3, $5); }
+loop_stmt  : UNROLL "(" int ")" block             { $$ = new ast::Unroll($3, $5, @1 + @4); }
+           | UNROLL "(" param ")" block           { $$ = new ast::Unroll($3, $5, @1 + @4); }
            | WHILE  "(" expr ")" block            { $$ = new ast::While($3, $5, @1); }
            ;
 
