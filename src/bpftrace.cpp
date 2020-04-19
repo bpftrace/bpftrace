@@ -477,16 +477,17 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   {
     char timestr[STRING_SIZE];
     time_t t;
-    struct tm *tmp;
+    struct tm tmp;
     t = time(NULL);
-    tmp = localtime(&t);
-    if (tmp == NULL) {
-      std::cerr << "localtime: " << strerror(errno) << std::endl;
+    if (!localtime_r(&t, &tmp))
+    {
+      std::cerr << "localtime_r: " << strerror(errno) << std::endl;
       return;
     }
     auto time = static_cast<AsyncEvent::Time *>(data);
     auto fmt = bpftrace->time_args_[time->time_id].c_str();
-    if (strftime(timestr, sizeof(timestr), fmt, tmp) == 0) {
+    if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0)
+    {
       std::cerr << "strftime returned 0" << std::endl;
       return;
     }
@@ -525,10 +526,11 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
-    int size = format(buffer, BUFSIZE, fmt, arg_values);
+    int sz = format(buffer, BUFSIZE, fmt, arg_values);
     // Return value is required size EXCLUDING null byte
-    if (size >= BUFSIZE) {
-      std::cerr << "syscall() command to long (" << size << " bytes): ";
+    if (sz >= BUFSIZE)
+    {
+      std::cerr << "syscall() command to long (" << sz << " bytes): ";
       std::cerr << buffer << std::endl;
       return;
     }
@@ -544,10 +546,11 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
-    int size = format(buffer, BUFSIZE, fmt, arg_values);
+    int sz = format(buffer, BUFSIZE, fmt, arg_values);
     // Return value is required size EXCLUDING null byte
-    if (size >= BUFSIZE) {
-      std::cerr << "cat() command to long (" << size << " bytes): ";
+    if (sz >= BUFSIZE)
+    {
+      std::cerr << "cat() command to long (" << sz << " bytes): ";
       std::cerr << buffer << std::endl;
       return;
     }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <sstream>
 
 #include <linux/perf_event.h>
