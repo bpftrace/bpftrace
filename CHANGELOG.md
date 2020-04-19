@@ -22,7 +22,7 @@ and this project adheres to
   - [#1066](https://github.com/iovisor/bpftrace/pull/1066)
 - Using a BTF enum value will pull in the entire enum definition
   - [#1274](https://github.com/iovisor/bpftrace/pull/1274)
-- Add support of using positional params in unroll
+- Add support of using positional params in unroll and increase the unroll limit to 100
   - [#1286](https://github.com/iovisor/bpftrace/pull/1286)
 
 #### Changed

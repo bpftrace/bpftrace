@@ -54,8 +54,8 @@ EXPECT a=11
 TIMEOUT 5
 
 NAME unroll_max_value
-RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (30) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
-EXPECT unroll maximum value is 20
+RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+EXPECT unroll maximum value is 100
 TIMEOUT 5
 
 NAME unroll_min_value

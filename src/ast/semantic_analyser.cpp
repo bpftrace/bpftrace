@@ -1437,9 +1437,9 @@ void SemanticAnalyser::visit(Unroll &unroll)
     abort();
   }
 
-  if (unroll.var > 20)
+  if (unroll.var > 100)
   {
-    error("unroll maximum value is 20", unroll.loc);
+    error("unroll maximum value is 100", unroll.loc);
   }
   else if (unroll.var < 1)
   {
