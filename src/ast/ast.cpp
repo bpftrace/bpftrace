@@ -338,7 +338,8 @@ void If::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Unroll::Unroll(long int var, StatementList *stmts) : var(var), stmts(stmts)
+Unroll::Unroll(Expression *expr, StatementList *stmts, location loc)
+    : Statement(loc), expr(expr), stmts(stmts)
 {
 }
 
