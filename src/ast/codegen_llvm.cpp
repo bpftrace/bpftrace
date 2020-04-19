@@ -2133,7 +2133,7 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   std::string error;
   const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
   if (!target)
-    throw new std::runtime_error("Could not create LLVM target " + error);
+    throw std::runtime_error("Could not create LLVM target " + error);
 
   TargetOptions opt;
   auto RM = Reloc::Model();

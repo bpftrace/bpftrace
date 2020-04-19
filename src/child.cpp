@@ -59,9 +59,9 @@ static int childfn(void* arg)
   // Convert vector of strings into raw array of C-strings for execve(2)
   char* argv[maxargs];
   int idx = 0;
-  for (const auto& arg : args->cmd)
+  for (const auto& a : args->cmd)
   {
-    argv[idx++] = const_cast<char*>(arg.c_str());
+    argv[idx++] = const_cast<char*>(a.c_str());
   }
   argv[idx] = nullptr; // must be null terminated
 

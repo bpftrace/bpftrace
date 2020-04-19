@@ -792,7 +792,7 @@ void AttachedProbe::attach_usdt(int pid)
 
   if (pid)
   {
-    //FIXME when iovisor/bcc#2604 is merged, optionally pass probe_.path
+    // FIXME when iovisor/bcc#2064 is merged, optionally pass probe_.path
     ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (!ctx)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name + ", for PID: " + std::to_string(pid));
