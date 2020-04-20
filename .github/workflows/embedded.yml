@@ -109,11 +109,11 @@ jobs:
         path: build-embedded/tests/bpftrace_test
 
     - name: Authenticate with docker registry
-      if: matrix.env['TYPE'] == 'Release'
+      if: matrix.env['TYPE'] == 'Release' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'
       env:
         QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
       run: ./docker/scripts/auth.sh ${{ github.repository }}
 
     - name: Package docker image and push to quay.io
-      if: matrix.env['TYPE'] == 'Release'
+      if: matrix.env['TYPE'] == 'Release' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'
       run: ./docker/scripts/push.sh ${{ github.repository }} ${{ github.ref }} ${{ github.sha }} ${{ matrix.env['NAME'] }} ${{ matrix.env['EDGE'] }}
