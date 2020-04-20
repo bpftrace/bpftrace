@@ -144,11 +144,6 @@ RUN bpftrace -v -e 't:raw_syscalls:sys_enter { @syscalls = count(); } i:ms:1{ pr
 EXPECT @syscalls\:\s[0-9]*
 TIMEOUT 5
 
-NAME interval_order
-RUN bpftrace -v runtime/scripts/interval_order.bt
-EXPECT first second
-TIMEOUT 5
-
 NAME software
 RUN bpftrace -v -e 'software:faults:1 { @[comm] = count(); exit();}'
 EXPECT @\[.*\]\:\s[0-9]*
