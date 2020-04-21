@@ -545,6 +545,9 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
           data.complete_types.emplace(get_unqualified_type_name(parent_type));
 
           auto cursor_type = clang_getCanonicalType(clang_getCursorType(c));
+          // We need layouts of pointee types because users could dereference
+          if (cursor_type.kind == CXType_Pointer)
+            cursor_type = clang_getPointeeType(cursor_type);
           if (cursor_type.kind == CXType_Record)
           {
             auto type_name = get_unqualified_type_name(cursor_type);
