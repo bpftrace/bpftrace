@@ -200,4 +200,17 @@ uint64_t asyncactionint(AsyncAction a)
   return (uint64_t)a;
 }
 
+AddrSpace addrspace_for(ProbeType ty)
+{
+  switch (ty)
+  {
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+      return AddrSpace::user;
+    default:
+      return AddrSpace::kernel;
+  }
+}
+
 } // namespace bpftrace

@@ -22,7 +22,7 @@ entry:
   %2 = load i8, i8 addrspace(64)* null, align 536870912
   store i8 %2, i8* %1, align 1
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %"struct Foo.x")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, [1 x i8]*)*)(i8* nonnull %"struct Foo.x", i32 1, [1 x i8]* nonnull %"$foo")
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, [1 x i8]*)*)(i8* nonnull %"struct Foo.x", i32 1, [1 x i8]* nonnull %"$foo")
   %3 = load i8, i8* %"struct Foo.x", align 1
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %"struct Foo.x")
   %4 = bitcast i64* %"@x_key" to i8*

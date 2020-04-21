@@ -33,7 +33,7 @@ TEST(codegen, call_ustack_mapids)
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
@@ -64,7 +64,7 @@ TEST(codegen, call_ustack_modes_mapids)
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);

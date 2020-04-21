@@ -53,6 +53,7 @@ void SemanticAnalyser::warning(const std::string &msg, const location &loc)
 void SemanticAnalyser::visit(Integer &integer)
 {
   integer.type = SizedType(Type::integer, 8, true);
+  integer.type.addrspace = AddrSpace::kernel;
 }
 
 void SemanticAnalyser::visit(PositionalParameter &param)
@@ -163,6 +164,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     builtin.type = SizedType(Type::ctx, cstruct.size, tracepoint_struct);
     builtin.type.is_pointer = true;
     builtin.type.is_tparg = true;
+    builtin.type.addrspace = AddrSpace::kernel;
   }
 }
 
@@ -188,11 +190,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
   {
-    builtin.type = SizedType(Type::ctx, sizeof(uintptr_t), false);
-    builtin.type.is_pointer = true;
-
     ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
     bpf_prog_type bt = progtype(pt);
+
+    builtin.type = SizedType(Type::ctx, sizeof(uintptr_t), false);
+    builtin.type.is_pointer = true;
+    builtin.type.addrspace = addrspace_for(pt);
+
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType pt = probetype(attach_point->provider);
@@ -239,11 +243,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
     else if (builtin.ident == "curtask")
     {
       /*
-      * Retype curtask to its original type: struct task_truct.
-      */
+       * Retype curtask to its original type: struct task_struct.
+       */
       builtin.type.type = Type::cast;
       builtin.type.cast_type = "struct task_struct";
       builtin.type.is_pointer = true;
+      builtin.type.addrspace = AddrSpace::kernel;
     }
   }
   else if (builtin.ident == "retval")
@@ -276,13 +281,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
   else if (builtin.ident == "kstack") {
     builtin.type = SizedType(Type::kstack, StackType());
     needs_stackid_maps_.insert(builtin.type.stack_type);
+    builtin.type.addrspace = AddrSpace::kernel;
   }
   else if (builtin.ident == "ustack") {
     builtin.type = SizedType(Type::ustack, StackType());
     needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "comm") {
-    builtin.type = SizedType(Type::string, COMM_SIZE);
+    // TODO: comm should not be probe_read, doesn't need addrspace
+    builtin.type = SizedType(Type::string, COMM_SIZE, AddrSpace::kernel);
   }
   else if (builtin.ident == "func") {
     for (auto &attach_point : *probe_->attach_points)
@@ -301,6 +308,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+    AddrSpace as = addrspace_for(
+        probetype(probe_->attach_points->at(0)->provider));
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
@@ -310,11 +319,14 @@ void SemanticAnalyser::visit(Builtin &builtin)
         ERR("The " << builtin.ident << " builtin can only be used with "
                    << "'kprobes', 'uprobes' and 'usdt' probes",
             builtin.loc);
+
+      if (as != addrspace_for(type))
+        ERR("" << builtin.ident << 0, builtin.loc);
     }
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
       error(arch::name() + " doesn't support " + builtin.ident, builtin.loc);
-    builtin.type = SizedType(Type::integer, 8);
+    builtin.type = SizedType(Type::integer, 8, as);
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
@@ -326,15 +338,18 @@ void SemanticAnalyser::visit(Builtin &builtin)
                   "'kprobes' and 'uprobes' probes",
               builtin.loc);
       if (is_final_pass() &&
-          (attach_point->address != 0 || attach_point->func_offset != 0)) {
-        // If sargX values are needed when using an offset, they can be stored in a map
-        // when entering the function and then referenced from an offset-based probe
+          (attach_point->address != 0 || attach_point->func_offset != 0))
+      {
+        // If sargX values are needed when using an offset, they can be stored
+        // in a map when entering the function and then referenced from an
+        // offset-based probe
         std::string msg = "Using an address offset with the sargX built-in can"
                           "lead to unexpected behavior ";
         bpftrace_.warning(out_, builtin.loc, msg);
       }
     }
     builtin.type = SizedType(Type::integer, 8);
+    builtin.type.addrspace = addrspace_for(first_ap_type);
   }
   else if (builtin.ident == "probe") {
     builtin.type = SizedType(Type::probe, 8);
@@ -351,6 +366,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type = SizedType(Type::integer, 4);
   }
   else if (builtin.ident == "args") {
+    builtin.type.addrspace = AddrSpace::kernel;
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
@@ -372,6 +388,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       builtin.type = SizedType(Type::ctx, 0);
       builtin.type.is_kfarg = true;
+      builtin.type.addrspace = AddrSpace::kernel;
     }
     else
     {
@@ -542,11 +559,13 @@ void SemanticAnalyser::visit(Call &call)
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
       call.type = SizedType(Type::string, bpftrace_.strlen_);
+      call.type.addrspace = AddrSpace::kernel;
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
       }
       if (auto *param = dynamic_cast<PositionalParameter*>(call.vargs->at(0))) {
         param->is_in_str = true;
+        param->type.addrspace = AddrSpace::kernel;
       }
     }
   }
@@ -596,6 +615,7 @@ void SemanticAnalyser::visit(Call &call)
 
     buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = SizedType(Type::buffer, buffer_size);
+    call.type.addrspace = arg.type.addrspace;
 
     if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
     {
@@ -612,7 +632,9 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     if (call.func == "ksym")
+    {
       call.type = SizedType(Type::ksym, 8);
+    }
     else if (call.func == "usym")
       call.type = SizedType(Type::usym, 16);
   }
@@ -669,18 +691,23 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
-  else if (call.func == "reg") {
-    if (check_nargs(call, 1)) {
-      for (auto &attach_point : *probe_->attach_points) {
+  else if (call.func == "reg")
+  {
+    if (check_nargs(call, 1))
+    {
+      for (auto &attach_point : *probe_->attach_points)
+      {
         ProbeType type = probetype(attach_point->provider);
-        if (type == ProbeType::tracepoint) {
+        if (type == ProbeType::tracepoint)
+        {
           error("The reg function cannot be used with 'tracepoint' probes",
                 call.loc);
           continue;
         }
       }
 
-      if (check_arg(call, Type::string, 0, true)) {
+      if (check_arg(call, Type::string, 0, true))
+      {
         auto &arg = *call.vargs->at(0);
         auto &reg_name = static_cast<String&>(arg).str;
         int offset = arch::offset(reg_name);;
@@ -691,15 +718,18 @@ void SemanticAnalyser::visit(Call &call)
               call.loc);
         }
       }
+      call.type = SizedType(Type::integer, 8);
+      call.type.addrspace = (first_ap_type == ProbeType::kprobe)
+                                ? AddrSpace::kernel
+                                : AddrSpace::user;
     }
-
-    call.type = SizedType(Type::integer, 8);
   }
   else if (call.func == "kaddr") {
     if (check_nargs(call, 1)) {
       check_arg(call, Type::string, 0, true);
     }
     call.type = SizedType(Type::integer, 8);
+    call.type.addrspace = AddrSpace::kernel;
   }
   else if (call.func == "uaddr")
   {
@@ -748,6 +778,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = SizedType(Type::integer, 8);
+    call.type.addrspace = AddrSpace::user;
     call.type.is_pointer = true;
     switch (sizes.at(0))
     {
@@ -1161,6 +1192,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   }
 
   arr.type = SizedType(type.elem_type, type.pointee_size, type.is_signed);
+  arr.type.addrspace = type.addrspace;
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -1285,6 +1317,20 @@ void SemanticAnalyser::visit(Binop &binop)
   }
 
   binop.type = SizedType(Type::integer, 8, is_signed);
+
+  auto laddr = binop.left->type.addrspace;
+  auto raddr = binop.right->type.addrspace;
+  if (laddr == raddr)
+    binop.type.addrspace = laddr;
+  else if (laddr == AddrSpace::none && raddr != AddrSpace::none)
+    binop.type.addrspace = raddr;
+  else if (laddr != AddrSpace::none && raddr == AddrSpace::none)
+    binop.type.addrspace = laddr;
+  else
+  {
+    warning("Address space mismatch", binop.loc);
+    binop.type.addrspace = AddrSpace::user;
+  }
 }
 
 void SemanticAnalyser::visit(Unop &unop)
@@ -1335,6 +1381,7 @@ void SemanticAnalyser::visit(Unop &unop)
           cast_size = bpftrace_.structs_[type.cast_type].size;
           unop.type = SizedType(type.type, cast_size, type.cast_type);
         }
+        unop.type.addrspace = type.addrspace;
         unop.type.is_tparg = type.is_tparg;
       }
       else if (type.is_kfarg)
@@ -1535,6 +1582,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         acc.type.type = Type::ctx;
       }
       acc.type.is_internal = type.is_internal;
+      acc.type.addrspace = acc.expr->type.addrspace;
     }
   }
 }
@@ -1561,6 +1609,17 @@ void SemanticAnalyser::visit(Cast &cast)
                           cast_size,
                           cast.cast_type);
     cast.type.is_pointer = cast.is_pointer;
+    cast.type.addrspace = cast.expr->type.addrspace;
+    if (cast.type.addrspace == AddrSpace::none && k_v != intcasts.end())
+    {
+      ProbeType pt = single_provider_type();
+      if (pt == ProbeType::invalid)
+        error("Cannot mix program types", cast.loc);
+      if (pt == ProbeType::uprobe || pt == ProbeType::usdt)
+        cast.type.addrspace = AddrSpace::user;
+      else
+        cast.type.addrspace = AddrSpace::kernel;
+    }
     return;
   }
 
@@ -1577,6 +1636,15 @@ void SemanticAnalyser::visit(Cast &cast)
       ERR("Casts are not supported for type: \"" << rhs << "\"", cast.loc);
     }
 
+    ProbeType pt = single_provider_type();
+    if (pt == ProbeType::invalid)
+      error("Cannot mix program types", cast.loc);
+
+    if (cast.expr->type.addrspace != AddrSpace::none)
+      cast.type.addrspace = cast.expr->type.addrspace;
+    else
+      cast.type.addrspace = addrspace_for(pt);
+
     return;
   }
 
@@ -1585,6 +1653,7 @@ void SemanticAnalyser::visit(Cast &cast)
                         cast_size,
                         cast.cast_type);
   cast.type.is_pointer = cast.is_pointer;
+  cast.type.addrspace = cast.expr->type.addrspace;
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -1684,21 +1753,33 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_.find(var_ident);
   assignment.var->type = assignment.expr->type;
-  if (search != variable_val_.end()) {
-    if (search->second.type == Type::none) {
-      if (is_final_pass()) {
+  if (search != variable_val_.end())
+  {
+    SizedType &st = search->second;
+    if (st.type == Type::none)
+    {
+      if (is_final_pass())
+      {
         error("Undefined variable: " + var_ident, assignment.loc);
       }
-      else {
-        search->second = assignment.expr->type;
+      else
+      {
+        st = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type) {
+    else if (st.type != assignment.expr->type.type)
+    {
       ERR("Type mismatch for "
               << var_ident << ": "
               << "trying to assign value of type '" << assignment.expr->type
-              << "' when variable already contains a value of type '"
-              << search->second,
+              << "' when variable already contains a value of type '" << st,
+          assignment.loc);
+    }
+    else if (st.addrspace != assignment.expr->type.addrspace)
+    {
+      ERR("Addresses space mismatch for " << var_ident << ": " << st.addrspace
+                                          << " to "
+                                          << assignment.expr->type.addrspace,
           assignment.loc);
     }
   }

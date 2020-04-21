@@ -224,7 +224,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateAdd(sp,
                               b_.getInt64((arg_num + arch::arg_stack_offset()) *
                                           sizeof(uintptr_t)));
-    b_.CreateProbeRead(dst, 8, src);
+    b_.CreateProbeRead(dst, 8, src, builtin.type.addrspace);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -471,7 +471,8 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
     b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+    b_.CreateProbeReadStr(
+        buf, b_.CreateLoad(strlen), expr_, call.vargs->front()->type.addrspace);
     b_.CreateLifetimeEnd(strlen);
 
     expr_ = buf;
@@ -524,7 +525,8 @@ void CodegenLLVM::visit(Call &call)
     call.vargs->front()->accept(*this);
     b_.CreateProbeRead(static_cast<AllocaInst *>(buf_data_offset),
                        length,
-                       expr_);
+                       expr_,
+                       call.vargs->at(0)->type.addrspace);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -557,6 +559,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "join")
   {
     call.vargs->front()->accept(*this);
+    AddrSpace as = call.vargs->front()->type.addrspace;
     AllocaInst *first = b_.CreateAllocaBPF(b_.getInt64Ty(),
                                            call.func + "_first");
     AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
@@ -586,21 +589,23 @@ void CodegenLLVM::visit(Call &call)
                    b_.CreateGEP(perfdata, b_.getInt64(8)));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
-    b_.CreateProbeRead(arr, 8, expr_);
+    b_.CreateProbeRead(arr, 8, expr_, as);
     b_.CreateProbeReadStr(b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
                           bpftrace_.join_argsize_,
-                          b_.CreateLoad(arr));
+                          b_.CreateLoad(arr),
+                          as);
 
     for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
     {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
-      b_.CreateProbeRead(second, 8, b_.CreateLoad(first));
+      b_.CreateProbeRead(second, 8, b_.CreateLoad(first), as);
       b_.CreateProbeReadStr(
           b_.CreateAdd(perfdata,
                        b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
           bpftrace_.join_argsize_,
-          b_.CreateLoad(second));
+          b_.CreateLoad(second),
+          as);
     }
 
     // emit
@@ -670,7 +675,10 @@ void CodegenLLVM::visit(Call &call)
     inet->accept(*this);
     if (inet->type.type == Type::array)
     {
-      b_.CreateProbeRead(static_cast<AllocaInst *>(inet_offset), inet->type.size, expr_);
+      b_.CreateProbeRead(static_cast<AllocaInst *>(inet_offset),
+                         inet->type.size,
+                         expr_,
+                         inet->type.addrspace);
     }
     else
     {
@@ -872,26 +880,40 @@ void CodegenLLVM::visit(Call &call)
 
     // If one of the strings is fixed, we can avoid storing the
     // literal in memory by calling a different function.
-    if (right_arg->is_literal) {
+    if (right_arg->is_literal)
+    {
       left_arg->accept(*this);
       Value *left_string = expr_;
-      const auto& string_literal = static_cast<String *>(right_arg)->str;
-      expr_ = b_.CreateStrncmp(left_string, string_literal, size, false);
+      const auto &string_literal = static_cast<String *>(right_arg)->str;
+      expr_ = b_.CreateStrncmp(left_string,
+                               string_literal,
+                               size,
+                               false,
+                               left_arg->type.addrspace);
       if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
         b_.CreateLifetimeEnd(left_string);
-    } else if (left_arg->is_literal) {
+    }
+    else if (left_arg->is_literal)
+    {
       right_arg->accept(*this);
       Value *right_string = expr_;
-      const auto& string_literal = static_cast<String *>(left_arg)->str;
-      expr_ = b_.CreateStrncmp(right_string, string_literal, size, false);
+      const auto &string_literal = static_cast<String *>(left_arg)->str;
+      expr_ = b_.CreateStrncmp(right_string,
+                               string_literal,
+                               size,
+                               false,
+                               right_arg->type.addrspace);
       if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
         b_.CreateLifetimeEnd(right_string);
-    } else {
+    }
+    else
+    {
       right_arg->accept(*this);
       Value *right_string = expr_;
       left_arg->accept(*this);
       Value *left_string = expr_;
-      expr_ = b_.CreateStrncmp(left_string, right_string, size, false);
+      expr_ = b_.CreateStrncmp(
+          left_string, right_string, size, false, left_arg->type.addrspace);
       if (!left_arg->is_variable && dyn_cast<AllocaInst>(left_string))
         b_.CreateLifetimeEnd(left_string);
       if (!right_arg->is_variable && dyn_cast<AllocaInst>(right_string))
@@ -967,13 +989,21 @@ void CodegenLLVM::visit(Binop &binop)
     {
       binop.left->accept(*this);
       string_literal = static_cast<String *>(binop.right)->str;
-      expr_ = b_.CreateStrcmp(expr_, string_literal, inverse);
+      expr_ = b_.CreateStrncmp(expr_,
+                               string_literal,
+                               string_literal.size(),
+                               inverse,
+                               binop.left->type.addrspace);
     }
     else if (binop.left->is_literal)
     {
       binop.right->accept(*this);
       string_literal = static_cast<String *>(binop.left)->str;
-      expr_ = b_.CreateStrcmp(expr_, string_literal, inverse);
+      expr_ = b_.CreateStrncmp(expr_,
+                               string_literal,
+                               string_literal.size(),
+                               inverse,
+                               binop.right->type.addrspace);
     }
     else
     {
@@ -984,7 +1014,11 @@ void CodegenLLVM::visit(Binop &binop)
       Value * left_string = expr_;
 
       size_t len = std::min(binop.left->type.size, binop.right->type.size);
-      expr_ = b_.CreateStrncmp(left_string, right_string, len + 1, inverse);
+      expr_ = b_.CreateStrncmp(left_string,
+                               right_string,
+                               len + 1,
+                               inverse,
+                               binop.left->type.addrspace);
     }
   }
   else if (type == Type::buffer)
@@ -1009,7 +1043,8 @@ void CodegenLLVM::visit(Binop &binop)
     Value *left_string = expr_;
 
     size_t len = std::min(binop.left->type.size, binop.right->type.size);
-    expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
+    expr_ = b_.CreateStrncmp(
+        left_string, right_string, len, inverse, binop.left->type.addrspace);
   }
   else
   {
@@ -1167,7 +1202,7 @@ void CodegenLLVM::visit(Unop &unop)
           size = type.pointee_size;
         }
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
-        b_.CreateProbeRead(dst, size, expr_);
+        b_.CreateProbeRead(dst, size, expr_, type.addrspace);
         expr_ = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
         break;
@@ -1186,7 +1221,7 @@ void CodegenLLVM::visit(Unop &unop)
         {
           int size = unop.type.size;
           AllocaInst *dst = b_.CreateAllocaBPF(unop.type, "deref");
-          b_.CreateProbeRead(dst, size, expr_);
+          b_.CreateProbeRead(dst, size, expr_, type.addrspace);
           expr_ = b_.CreateLoad(dst);
           b_.CreateLifetimeEnd(dst);
         }
@@ -1266,6 +1301,15 @@ void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
   assert(type.type == Type::cast || type.type == Type::ctx);
+
+  AddrSpace as = acc.type.addrspace;
+
+  // TODO: verify that there are no tracepoints with user space args that are
+  // structs
+  if (type.is_tparg && current_attach_point_->target == "syscalls")
+    as = AddrSpace::user;
+  acc.type.addrspace = as;
+
   acc.expr->accept(*this);
 
   if (type.is_kfarg)
@@ -1280,6 +1324,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   type = SizedType(type);
   type.size = cstruct.size;
   type.cast_type = cast_type;
+  type.addrspace = as;
 
   auto &field = cstruct.fields[acc.field];
 
@@ -1350,7 +1395,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                   1);
       }
       else
-        b_.CreateProbeRead(dst, field.type.size, src);
+        b_.CreateProbeRead(dst, field.type.size, src, acc.type.addrspace);
       expr_ = dst;
     }
     else if (field.type.type == Type::integer && field.is_bitfield)
@@ -1365,7 +1410,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                              type.cast_type + "." + acc.field);
         // memset so verifier doesn't complain about reading uninitialized stack
         b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.size, 1);
-        b_.CreateProbeRead(dst, field.bitfield.read_bytes, src);
+        b_.CreateProbeRead(
+            dst, field.bitfield.read_bytes, src, acc.type.addrspace);
         raw = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
       }
@@ -1383,7 +1429,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
-      b_.CreateProbeRead(dst, field.type.size, src);
+      b_.CreateProbeRead(dst, field.type.size, src, acc.type.addrspace);
       expr_ = b_.CreateLoad(dst);
       b_.CreateLifetimeEnd(dst);
     }
@@ -1413,7 +1459,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-    b_.CreateProbeRead(dst, type.pointee_size, src);
+    b_.CreateProbeRead(dst, type.pointee_size, src, arr.type.addrspace);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -1469,7 +1515,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
       // expr currently contains a pointer to the struct
       // We now want to read the entire struct in so we can save it
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CreateProbeRead(dst, map.type.size, expr);
+      b_.CreateProbeRead(
+          dst, map.type.size, expr, assignment.expr->type.addrspace);
       val = dst;
     }
   }

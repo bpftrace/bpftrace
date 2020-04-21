@@ -23,7 +23,7 @@ entry:
   %3 = bitcast i64* %sarg0 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
   %4 = add i64 %reg_sp, 8
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i32, i64)*)(i64* nonnull %sarg0, i32 8, i64 %4)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* nonnull %sarg0, i32 8, i64 %4)
   %5 = load i64, i64* %sarg0, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %6 = bitcast i64* %"@x_key" to i8*
@@ -40,7 +40,7 @@ entry:
   %8 = bitcast i64* %sarg2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %8)
   %9 = add i64 %reg_sp1, 24
-  %probe_read2 = call i64 inttoptr (i64 4 to i64 (i64*, i32, i64)*)(i64* nonnull %sarg2, i32 8, i64 %9)
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* nonnull %sarg2, i32 8, i64 %9)
   %10 = load i64, i64* %sarg2, align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %8)
   %11 = bitcast i64* %"@y_key" to i8*

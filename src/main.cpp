@@ -605,20 +605,8 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  if (!cmd_str.empty())
-  {
-    try
-    {
-      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
-    }
-    catch (const std::runtime_error& e)
-    {
-      std::cerr << "Failed to fork child: " << e.what() << std::endl;
-      return -1;
-    }
-  }
+  ast::CodegenLLVM llvm(driver.root_, bpftrace, bpftrace.feature_);
 
-  ast::CodegenLLVM llvm(driver.root_, bpftrace);
   auto bpforc = llvm.compile(bt_debug);
 
   if (bt_debug != DebugLevel::kNone)

@@ -37,7 +37,7 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace, feature);
   codegen.compile(DebugLevel::kDebug, out);
 }
 

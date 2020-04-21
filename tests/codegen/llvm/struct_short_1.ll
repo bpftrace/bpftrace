@@ -24,7 +24,7 @@ entry:
   store i16 %2, i16* %"$foo", align 2
   %3 = bitcast i16* %"struct Foo.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i16*, i32, [2 x i8]*)*)(i16* nonnull %"struct Foo.x", i32 2, [2 x i8]* nonnull %tmpcast)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i16*, i32, [2 x i8]*)*)(i16* nonnull %"struct Foo.x", i32 2, [2 x i8]* nonnull %tmpcast)
   %4 = load i16, i16* %"struct Foo.x", align 2
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
   %5 = bitcast i64* %"@x_key" to i8*

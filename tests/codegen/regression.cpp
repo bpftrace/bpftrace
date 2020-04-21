@@ -26,7 +26,7 @@ TEST(codegen, regression_957)
   ast::SemanticAnalyser semantics(driver.root_, *bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
-  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace, feature);
   codegen.compile();
 }
 

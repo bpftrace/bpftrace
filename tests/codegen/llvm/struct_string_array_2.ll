@@ -15,7 +15,7 @@ entry:
   %"struct Foo.str" = alloca [32 x i8], align 1
   %1 = getelementptr inbounds [32 x i8], [32 x i8]* %"struct Foo.str", i64 0, i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %probe_read = call i64 inttoptr (i64 4 to i64 ([32 x i8]*, i32, i64)*)([32 x i8]* nonnull %"struct Foo.str", i32 32, i64 0)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([32 x i8]*, i32, i64)*)([32 x i8]* nonnull %"struct Foo.str", i32 32, i64 0)
   %2 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
   store i64 0, i64* %"@mystr_key", align 8

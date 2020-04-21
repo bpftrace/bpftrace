@@ -67,7 +67,7 @@ entry:
   %19 = inttoptr i64 %18 to i64*
   %20 = load volatile i64, i64* %19, align 8
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %"struct c.c")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* nonnull %"struct c.c", i32 1, i64 %20)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* nonnull %"struct c.c", i32 1, i64 %20)
   %21 = load i8, i8* %"struct c.c", align 1
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %"struct c.c")
   %22 = bitcast i64* %"@d_key" to i8*

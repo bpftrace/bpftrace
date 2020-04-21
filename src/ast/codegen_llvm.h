@@ -4,6 +4,7 @@
 #include <ostream>
 
 #include "ast.h"
+#include "bpffeature.h"
 #include "bpftrace.h"
 #include "irbuilderbpf.h"
 #include "map.h"
@@ -22,13 +23,14 @@ using CallArgs = std::vector<std::tuple<std::string, std::vector<Field>>>;
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace) :
-    root_(root),
-    module_(std::make_unique<Module>("bpftrace", context_)),
-    b_(context_, *module_.get(), bpftrace),
-    layout_(module_.get()),
-    bpftrace_(bpftrace)
-    { }
+  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace, BPFfeature &feature)
+      : root_(root),
+        module_(std::make_unique<Module>("bpftrace", context_)),
+        b_(context_, *module_.get(), bpftrace, feature),
+        layout_(module_.get()),
+        bpftrace_(bpftrace)
+  {
+  }
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;

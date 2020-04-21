@@ -14,6 +14,36 @@ namespace libbpf {
 namespace bpftrace {
 namespace ast {
 
+Constant *IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
+{
+  int fn;
+  // Assume that if a kernel has probe_read_kernel it has the other 3 too
+  if (feature_.has_helper_probe_read_kernel())
+  {
+    if (as == AddrSpace::kernel)
+    {
+      fn = str ? libbpf::BPF_FUNC_probe_read_kernel_str
+               : libbpf::BPF_FUNC_probe_read_kernel;
+    }
+    else if (as == AddrSpace::user)
+    {
+      fn = str ? libbpf::BPF_FUNC_probe_read_user_str
+               : libbpf::BPF_FUNC_probe_read_user;
+    }
+    else
+    {
+      assert(as != AddrSpace::none);
+      fn = str ? libbpf::BPF_FUNC_probe_read_str : libbpf::BPF_FUNC_probe_read;
+    }
+  }
+  else
+  {
+    fn = str ? libbpf::BPF_FUNC_probe_read_str : libbpf::BPF_FUNC_probe_read;
+  }
+
+  return getInt64(fn);
+}
+
 AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
 {
   std::vector<llvm::Type *> elements = {
@@ -50,10 +80,12 @@ StructType *IRBuilderBPF::GetStructType(
 
 IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
                            Module &module,
-                           BPFtrace &bpftrace)
-  : IRBuilder<>(context),
-    module_(module),
-    bpftrace_(bpftrace)
+                           BPFtrace &bpftrace,
+                           BPFfeature &feature)
+    : IRBuilder<>(context),
+      module_(module),
+      bpftrace_(bpftrace),
+      feature_(feature)
 {
   // Declare external LLVM function
   FunctionType *pseudo_func_type = FunctionType::get(
@@ -314,28 +346,40 @@ void IRBuilderBPF::CreateMapDeleteElem(Map &map, AllocaInst *key)
   CreateCall(delete_func, {map_ptr, key}, "delete_elem");
 }
 
-void IRBuilderBPF::CreateProbeRead(AllocaInst *dst, size_t size, Value *src)
+void IRBuilderBPF::CreateProbeRead(AllocaInst *dst,
+                                   size_t size,
+                                   Value *src,
+                                   AddrSpace as)
 {
-  return CreateProbeRead(dst, getInt32(size), src);
+  return CreateProbeRead(dst, getInt32(size), src, as);
 }
 
 void IRBuilderBPF::CreateProbeRead(AllocaInst *dst,
                                    llvm::Value *size,
-                                   Value *src)
+                                   Value *src,
+                                   AddrSpace as)
 {
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
+
+  // Improve IR readability by showing helper name
+  std::string varname = "probe_read";
+  if (as != AddrSpace::none)
+    varname += "_" + addrspacestr(as);
+
   FunctionType *proberead_func_type = FunctionType::get(
       getInt64Ty(), { dst->getType(), getInt32Ty(), src->getType() }, false);
   PointerType *proberead_func_ptr_type = PointerType::get(proberead_func_type, 0);
-  Constant *proberead_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_probe_read),
-      proberead_func_ptr_type);
-  CreateCall(proberead_func, { dst, size, src }, "probe_read");
+  Constant *proberead_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                   selectProbeReadHelper(as,
+                                                                         false),
+                                                   proberead_func_ptr_type);
+  CreateCall(proberead_func, { dst, size, src }, varname);
 }
 
-Constant *IRBuilderBPF::createProbeReadStrFn(llvm::Type *dst, llvm::Type *src)
+Constant *IRBuilderBPF::createProbeReadStrFn(llvm::Type *dst,
+                                             llvm::Type *src,
+                                             AddrSpace as)
 {
   assert(src && (src->isIntegerTy() || src->isPointerTy()));
   // int bpf_probe_read_str(void *dst, int size, const void *unsafe_ptr)
@@ -344,26 +388,37 @@ Constant *IRBuilderBPF::createProbeReadStrFn(llvm::Type *dst, llvm::Type *src)
   PointerType *probereadstr_func_ptr_type = PointerType::get(
       probereadstr_func_type, 0);
   return ConstantExpr::getCast(Instruction::IntToPtr,
-                               getInt64(libbpf::BPF_FUNC_probe_read_str),
+                               selectProbeReadHelper(as, true),
                                probereadstr_func_ptr_type);
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
                                            size_t size,
-                                           Value *src)
+                                           Value *src,
+                                           AddrSpace as)
 {
-  return CreateProbeReadStr(dst, getInt32(size), src);
+  return CreateProbeReadStr(dst, getInt32(size), src, as);
 }
 
-CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
+CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst,
+                                           size_t size,
+                                           Value *src,
+                                           AddrSpace as)
 {
-  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
-  return CreateCall(fn, { dst, getInt32(size), src }, "probe_read_str");
+  // Improve IR readability by showing helper name
+  std::string varname = "probe_read";
+  if (as != AddrSpace::none)
+    varname += "_" + addrspacestr(as);
+  varname += "_str";
+
+  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType(), as);
+  return CreateCall(fn, { dst, getInt32(size), src }, varname);
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
                                            llvm::Value *size,
-                                           Value *src)
+                                           Value *src,
+                                           AddrSpace as)
 {
   assert(dst && dst->getAllocatedType()->isArrayTy() &&
          dst->getAllocatedType()->getArrayElementType() == getInt8Ty());
@@ -371,8 +426,14 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
 
   auto *size_i32 = CreateIntCast(size, getInt32Ty(), false);
 
-  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
-  return CreateCall(fn, { dst, size_i32, src }, "probe_read_str");
+  // Improve IR readability by showing helper name
+  std::string varname = "probe_read";
+  if (as != AddrSpace::none)
+    varname += "_" + addrspacestr(as);
+  varname += "_str";
+
+  Constant *fn = createProbeReadStrFn(dst->getType(), src->getType(), as);
+  return CreateCall(fn, { dst, size_i32, src }, varname);
 }
 
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument *argument, Builtin &builtin) {
@@ -414,14 +475,14 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, struct bcc_usdt_argument
                              getInt64(argument->deref_offset));
       // Zero out `dst` here in case we read less than 64 bits
       CreateStore(getInt64(0), dst);
-      CreateProbeRead(dst, abs_size, ptr);
+      CreateProbeRead(dst, abs_size, ptr, AddrSpace::user);
       result = CreateLoad(dst);
     }
     else
     {
       // Zero out `dst` in case we read less than 64 bits
       CreateStore(getInt64(0), dst);
-      CreateProbeRead(dst, abs_size, reg);
+      CreateProbeRead(dst, abs_size, reg, AddrSpace::user);
       result = CreateLoad(dst);
     }
     CreateLifetimeEnd(dst);
@@ -462,12 +523,12 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_poin
   return result;
 }
 
-Value *IRBuilderBPF::CreateStrcmp(Value* val, std::string str, bool inverse) {
-  auto cmpAmount = strlen(str.c_str()) + 1;
-  return CreateStrncmp(val, str, cmpAmount, inverse);
-}
-
-Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool inverse) {
+Value *IRBuilderBPF::CreateStrncmp(Value *val,
+                                   std::string str,
+                                   uint64_t n,
+                                   bool inverse,
+                                   AddrSpace as)
+{
 #ifndef NDEBUG
   PointerType *valp = cast<PointerType>(val->getType());
   assert(valp->getElementType()->isArrayTy() &&
@@ -503,11 +564,12 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val, std::string str, uint64_t n, bool
   return result;
 }
 
-Value *IRBuilderBPF::CreateStrcmp(Value* val1, Value* val2, bool inverse) {
-  return CreateStrncmp(val1, val2, bpftrace_.strlen_, inverse);
-}
-
-Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool inverse) {
+Value *IRBuilderBPF::CreateStrncmp(Value *val1,
+                                   Value *val2,
+                                   uint64_t n,
+                                   bool inverse,
+                                   AddrSpace as)
+{
   /*
   // This function compares each character of the two string.
   // It returns true if all are equal and false if any are different
@@ -566,11 +628,11 @@ Value *IRBuilderBPF::CreateStrncmp(Value* val1, Value* val2, uint64_t n, bool in
                                                      parent);
 
     auto *ptr1 = CreateGEP(val1, { getInt32(0), getInt32(i) });
-    CreateProbeRead(val_l, 1, ptr1);
+    CreateProbeRead(val_l, 1, ptr1, as);
     Value *l = CreateLoad(getInt8Ty(), val_l);
 
     auto *ptr2 = CreateGEP(val2, { getInt32(0), getInt32(i) });
-    CreateProbeRead(val_r, 1, ptr2);
+    CreateProbeRead(val_r, 1, ptr2, as);
     Value *r = CreateLoad(getInt8Ty(), val_r);
 
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");

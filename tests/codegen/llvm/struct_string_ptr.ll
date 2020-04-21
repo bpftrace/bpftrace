@@ -19,10 +19,10 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i8 0, i64 64, i1 false)
   %2 = bitcast i64* %"struct Foo.str" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i32, i64)*)(i64* nonnull %"struct Foo.str", i32 8, i64 0)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* nonnull %"struct Foo.str", i32 8, i64 0)
   %3 = load i64, i64* %"struct Foo.str", align 8
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
-  %probe_read_str = call i64 inttoptr (i64 45 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* nonnull %str, i32 64, i64 %3)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* nonnull %str, i32 64, i64 %3)
   %4 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
   store i64 0, i64* %"@mystr_key", align 8

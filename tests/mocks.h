@@ -67,8 +67,11 @@ public:
     has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);
     has_override_return_ = std::make_optional<bool>(has_features);
     prog_kfunc_ = std::make_optional<bool>(has_features);
-    has_loop_ = std::make_optional<bool>(has_features);
-  };
+    has_probe_read_kernel_ = std::make_optional<bool>(has_features);
+    has_probe_read_kernel_str_ = std::make_optional<bool>(has_features);
+    has_probe_read_user_ = std::make_optional<bool>(has_features);
+    has_probe_read_user_str_ = std::make_optional<bool>(has_features);
+  }
 };
 
 class MockChildProc : public ChildProcBase

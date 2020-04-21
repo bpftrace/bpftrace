@@ -16,6 +16,8 @@
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
+#include "printer.h"
+
 namespace bpftrace {
 namespace test {
 namespace codegen {
@@ -349,11 +351,16 @@ static void test(BPFtrace &bpftrace,
 
   MockBPFfeature feature;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
+  ast::Printer p(std::cout, true);
+  driver.root_->accept(p);
+  std::cout << std::endl;
+
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   codegen.compile(DebugLevel::kDebug, out);
 
   uint64_t update_tests = 0;

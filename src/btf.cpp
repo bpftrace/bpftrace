@@ -367,7 +367,7 @@ const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t)
 
 SizedType BTF::get_stype(__u32 id)
 {
-  SizedType stype = SizedType(Type::none, 8);
+  SizedType stype = SizedType(Type::none, 8, AddrSpace::kernel);
 
   const struct btf_type *t = btf__type_by_id(btf, id);
 

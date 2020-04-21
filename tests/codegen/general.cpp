@@ -48,7 +48,7 @@ TEST(codegen, populate_sections)
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   auto bpforc = codegen.compile();
 
   // Check sections are populated
@@ -77,7 +77,7 @@ TEST(codegen, printf_offsets)
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   auto bpforc = codegen.compile();
 
   EXPECT_EQ(bpftrace.printf_args_.size(), 1U);
@@ -118,7 +118,7 @@ TEST(codegen, probe_count)
   MockBPFfeature feature;
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, bpftrace, feature);
   codegen.compile();
 }
 } // namespace codegen

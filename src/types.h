@@ -81,8 +81,29 @@ struct SizedType
       : type(type), size(size_), is_signed(is_signed), cast_type(cast_type)
   {
   }
+  SizedType(Type type,
+            size_t size_,
+            bool is_signed,
+            AddrSpace as,
+            const std::string &cast_type = "")
+      : type(type),
+        size(size_),
+        is_signed(is_signed),
+        addrspace(as),
+        cast_type(cast_type)
+  {
+  }
+
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
       : type(type), size(size_), cast_type(cast_type)
+  {
+  }
+
+  SizedType(Type type,
+            size_t size_,
+            AddrSpace as,
+            const std::string &cast_type = "")
+      : type(type), size(size_), addrspace(as), cast_type(cast_type)
   {
   }
 
@@ -90,18 +111,19 @@ struct SizedType
   {
     stack_type = stack_type_;
   }
+
   Type type;
   Type elem_type = Type::none; // Array element type if accessing elements of an
                                // array
   size_t size;
   StackType stack_type;
   bool is_signed = false;
+  AddrSpace addrspace = AddrSpace::none;
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
   bool is_kfarg = false;
-  AddrSpace addrspace = AddrSpace::none;
   size_t pointee_size = 0;
   int kfarg_idx = -1;
 
@@ -209,6 +231,8 @@ enum class PositionalParameterType
   positional,
   count
 };
+
+AddrSpace addrspace_for(ProbeType ty);
 
 } // namespace bpftrace
 
