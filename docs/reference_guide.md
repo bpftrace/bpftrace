@@ -2364,7 +2364,7 @@ Attaching 1 probe...
 ]: 18
 ```
 
-Sampling only three frames from the stack (limit = 6):
+Sampling only six frames from the stack (limit = 6):
 
 ```
 # bpftrace -e 'kprobe:do_sys_open /comm == "bash"/ { @[ustack(6)] = count(); }'
