@@ -1,6 +1,7 @@
 #include <cctype>
 #include <iomanip>
 #include <regex>
+#include <sstream>
 
 #include "printer.h"
 #include "ast.h"
@@ -8,10 +9,20 @@
 namespace bpftrace {
 namespace ast {
 
+std::string Printer::type(const SizedType &ty)
+{
+  std::stringstream buf;
+  if (print_types)
+  {
+    buf << " :: type[" << ty << "]";
+  }
+  return buf.str();
+}
+
 void Printer::visit(Integer &integer)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "int: " << integer.n << std::endl;
+  out_ << indent << "int: " << integer.n << type(integer.type) << std::endl;
 }
 
 void Printer::visit(PositionalParameter &param)
@@ -20,10 +31,10 @@ void Printer::visit(PositionalParameter &param)
 
   switch (param.ptype) {
     case PositionalParameterType::positional:
-      out_ << indent << "param: $" << param.n << std::endl;
+      out_ << indent << "param: $" << param.n << type(param.type) << std::endl;
       break;
     case PositionalParameterType::count:
-      out_ << indent << "param: $#" << std::endl;
+      out_ << indent << "param: $#" << type(param.type) << std::endl;
       break;
     default:
       break;
@@ -62,31 +73,33 @@ void Printer::visit(String &string)
     }
   }
 
-  out_ << indent << "string: " << ss.str() << std::endl;
+  out_ << indent << "string: " << ss.str() << type(string.type) << std::endl;
 }
 
 void Printer::visit(StackMode &mode)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "stack_mode: " << mode.mode << std::endl;
+  out_ << indent << "stack_mode: " << mode.mode << type(mode.type) << std::endl;
 }
 
 void Printer::visit(Builtin &builtin)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "builtin: " << builtin.ident << std::endl;
+  out_ << indent << "builtin: " << builtin.ident << type(builtin.type)
+       << std::endl;
 }
 
 void Printer::visit(Identifier &identifier)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "identifier: " << identifier.ident << std::endl;
+  out_ << indent << "identifier: " << identifier.ident << type(identifier.type)
+       << std::endl;
 }
 
 void Printer::visit(Call &call)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "call: " << call.func << std::endl;
+  out_ << indent << "call: " << call.func << type(call.type) << std::endl;
 
   ++depth_;
   if (call.vargs) {
@@ -100,7 +113,7 @@ void Printer::visit(Call &call)
 void Printer::visit(Map &map)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "map: " << map.ident << std::endl;
+  out_ << indent << "map: " << map.ident << type(map.type) << std::endl;
 
   ++depth_;
   if (map.vargs) {
@@ -114,13 +127,13 @@ void Printer::visit(Map &map)
 void Printer::visit(Variable &var)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << "variable: " << var.ident << std::endl;
+  out_ << indent << "variable: " << var.ident << type(var.type) << std::endl;
 }
 
 void Printer::visit(Binop &binop)
 {
   std::string indent(depth_, ' ');
-  out_ << indent << opstr(binop) << std::endl;
+  out_ << indent << opstr(binop) << type(binop.type) << std::endl;
 
   ++depth_;
   binop.left->accept(*this);
@@ -130,7 +143,14 @@ void Printer::visit(Binop &binop)
 
 void Printer::visit(Unop &unop)
 {
-  if (!unop.is_post_op)
+  if (unop.is_post_op)
+  {
+    std::string indent(depth_ + 1, ' ');
+
+    unop.expr->accept(*this);
+    out_ << indent << opstr(unop) << std::endl;
+  }
+  else
   {
     std::string indent(depth_, ' ');
     out_ << indent << opstr(unop) << std::endl;
@@ -140,13 +160,6 @@ void Printer::visit(Unop &unop)
     --depth_;
   }
 
-  if (unop.is_post_op)
-  {
-    std::string indent(depth_+1, ' ');
-
-    unop.expr->accept(*this);
-    out_ << indent << opstr(unop) << std::endl;
-  }
 }
 
 void Printer::visit(Ternary &ternary)
