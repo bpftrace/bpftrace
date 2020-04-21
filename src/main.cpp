@@ -538,6 +538,8 @@ int main(int argc, char *argv[])
 
   if (bt_debug != DebugLevel::kNone)
   {
+    std::cout << "\nAST\n";
+    std::cout << "-------------------\n";
     ast::Printer p(std::cout);
     driver.root_->accept(p);
     std::cout << std::endl;
@@ -589,6 +591,15 @@ int main(int argc, char *argv[])
   err = semantics.analyse();
   if (err)
     return err;
+
+  if (bt_debug != DebugLevel::kNone)
+  {
+    std::cout << "\nAST after semantic analysis\n";
+    std::cout << "-------------------\n";
+    ast::Printer p(std::cout, true);
+    driver.root_->accept(p);
+    std::cout << std::endl;
+  }
 
   err = semantics.create_maps(bt_debug != DebugLevel::kNone);
   if (err)

@@ -8,7 +8,10 @@ namespace ast {
 
 class Printer : public Visitor {
 public:
-  explicit Printer(std::ostream &out) : out_(out) { }
+  explicit Printer(std::ostream &out, bool print_types = false)
+      : out_(out), print_types(print_types)
+  {
+  }
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -41,6 +44,8 @@ public:
 
 private:
   std::ostream &out_;
+  bool print_types = false;
+  std::string type(const SizedType &ty);
 };
 
 } // namespace ast
