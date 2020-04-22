@@ -2,6 +2,11 @@
 
 set +e;
 
+if [[ $EUID -ne 0 ]]; then
+    >&2 echo "Must be run as root"
+    exit 1
+fi
+
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 BPFTRACE_EXECUTABLE=${BPFTRACE_EXECUTABLE:-$DIR/../src/bpftrace};
