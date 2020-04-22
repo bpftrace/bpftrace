@@ -36,7 +36,12 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   if (key_size == 0)
     key_size = 8;
 
-  if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
+  if (type.type == Type::count && !key.args_.size())
+  {
+    map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
+    max_entries = 1;
+    key_size = 4;
+  } else if ((type.type == Type::hist || type.type == Type::lhist || type.type == Type::count ||
       type.type == Type::sum || type.type == Type::min || type.type == Type::max ||
       type.type == Type::avg || type.type == Type::stats) &&
       (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
