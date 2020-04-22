@@ -1,0 +1,19 @@
+name: Changelog reminder
+
+# Configure to skip this workflow if CHANGELOG.md was modified
+on:
+  pull_request:
+    paths-ignore:
+    - "CHANGELOG.md"
+
+jobs:
+  comment-on-pr:
+    if: "github.repository == 'iovisor/bpftrace'"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: harupy/comment-on-pr@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        filename: changelog_template.md
