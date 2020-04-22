@@ -34,13 +34,8 @@ See https://semver.org/ .
 
 You must do 3 things to formally release a version:
 
-1. Update `CHANGELOG.md`. Use the following git command to generate the appropriate
-   data format:
-   ```
-   git log --oneline ${PREVIOUS_VER}..upstream/master --no-merges --format=" - %s (%h) by %aN &lt;%aE&gt;"
-   ```
-   where `${PREVIOUS_VER}` is the last release tag, eg `v0.9.3`. Please see previous
-   releases for the final formatting.
+1. Mark the release in the CHANGELOG by replacing the `## Unreleased` header
+   with `## [VERSION] date`.
 1. Update `bpftrace_VERSION_MAJOR`, `bpftrace_VERSION_MINOR`, and
    `bpftrace_VERSION_PATCH` in `CMakeLists.txt` to the target version.
 1. Tag a release. We do this in the github UI by clicking "releases" (on same line
