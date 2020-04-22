@@ -5,7 +5,7 @@ labels: bug
 
 ---
 
-<!-->
+<!--
 Note: bpftrace is under active development and not all distros ship the most
 recent version yet. Please make sure the bug reproduces on the latest release
 or master.
