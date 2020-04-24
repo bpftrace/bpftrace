@@ -20,6 +20,8 @@ and this project adheres to
   - [#1269](https://github.com/iovisor/bpftrace/pull/1269)
 - C style while loop support, `while ($a < 100) { $a++ }`
   - [#1066](https://github.com/iovisor/bpftrace/pull/1066)
+- Using a BTF enum value will pull in the entire enum definition
+  - [#1274](https://github.com/iovisor/bpftrace/pull/1274)
 
 #### Changed
 
