@@ -22,6 +22,14 @@
 namespace bpftrace {
 namespace ast {
 
+namespace {
+bool shouldBeOnStackAlready(Type type)
+{
+  return type == Type::string || type == Type::buffer || type == Type::inet ||
+         type == Type::usym;
+}
+} // namespace
+
 void CodegenLLVM::visit(Integer &integer)
 {
   expr_ = b_.getInt64(integer.n);
@@ -1444,9 +1452,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   Value *val, *expr;
   expr = expr_;
   AllocaInst *key = getMapKey(map);
-  if (map.type.type == Type::string || map.type.type == Type::buffer ||
-      assignment.expr->type.type == Type::inet ||
-      assignment.expr->type.type == Type::usym)
+  if (shouldBeOnStackAlready(assignment.expr->type.type))
   {
     val = expr;
   }
@@ -1840,10 +1846,8 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     {
       Expression *expr = map.vargs->at(0);
       expr->accept(*this);
-      if (expr->type.type == Type::string || expr->type.type == Type::buffer ||
-          expr->type.type == Type::usym || expr->type.type == Type::inet)
+      if (shouldBeOnStackAlready(expr->type.type))
       {
-        // The value is already in the stack; Skip copy
         key = dyn_cast<AllocaInst>(expr_);
       }
       else
@@ -1872,9 +1876,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
-        if (expr->type.type == Type::string ||
-            expr->type.type == Type::buffer || expr->type.type == Type::usym ||
-            expr->type.type == Type::inet)
+        if (shouldBeOnStackAlready(expr->type.type))
         {
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
           if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
@@ -1916,8 +1918,7 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
     for (Expression *expr : *map.vargs) {
       expr->accept(*this);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (expr->type.type == Type::string || expr->type.type == Type::buffer ||
-          expr->type.type == Type::usym || expr->type.type == Type::inet)
+      if (shouldBeOnStackAlready(expr->type.type))
       {
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
         if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
