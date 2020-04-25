@@ -331,6 +331,12 @@ expr : int                                      { $$ = $1; }
      | expr "[" expr "]"                        { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
      | "(" IDENT ")" expr %prec CAST            { $$ = new ast::Cast($2, false, $4, @1 + @3); }
      | "(" IDENT MUL ")" expr %prec CAST        { $$ = new ast::Cast($2, true, $5, @1 + @4); }
+     | "(" expr "," vargs ")"                   {
+                                                  auto args = new ast::ExpressionList;
+                                                  args->emplace_back($2);
+                                                  args->insert(args->end(), $4->begin(), $4->end());
+                                                  $$ = new ast::Tuple(args, @$);
+                                                }
      | pre_post_op                              { $$ = $1; }
      ;
 

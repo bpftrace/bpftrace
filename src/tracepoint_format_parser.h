@@ -60,6 +60,11 @@ public:
   void visit(Cast &cast) override {
     cast.expr->accept(*this);
   };
+  void visit(Tuple &tuple) override
+  {
+    for (Expression *expr : *tuple.elems)
+      expr->accept(*this);
+  };
   void visit(ExprStatement &expr) override {
     expr.expr->accept(*this);
   };

@@ -179,6 +179,12 @@ void FieldAnalyser::visit(Cast &cast)
   bpftrace_.btf_set_.insert(type_);
 }
 
+void FieldAnalyser::visit(Tuple &tuple)
+{
+  for (Expression *expr : *tuple.elems)
+    expr->accept(*this);
+}
+
 void FieldAnalyser::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);

@@ -1478,6 +1478,11 @@ void CodegenLLVM::visit(Cast &cast)
   }
 }
 
+void CodegenLLVM::visit(Tuple &tuple __attribute__((unused)))
+{
+  // XXX implement
+}
+
 void CodegenLLVM::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);

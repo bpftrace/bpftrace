@@ -187,6 +187,15 @@ public:
   void accept(Visitor &v) override;
 };
 
+class Tuple : public Expression
+{
+public:
+  Tuple(ExpressionList *elems, location loc);
+  ExpressionList *elems;
+
+  void accept(Visitor &v) override;
+};
+
 class Statement : public Node {
 public:
   Statement() = default;
@@ -364,6 +373,7 @@ public:
   virtual void visit(FieldAccess &acc) = 0;
   virtual void visit(ArrayAccess &arr) = 0;
   virtual void visit(Cast &cast) = 0;
+  virtual void visit(Tuple &tuple) = 0;
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;

@@ -259,6 +259,16 @@ void Cast::accept(Visitor &v) {
   v.visit(*this);
 }
 
+Tuple::Tuple(ExpressionList *elems, location loc)
+    : Expression(loc), elems(elems)
+{
+}
+
+void Tuple::accept(Visitor &v)
+{
+  v.visit(*this);
+}
+
 Statement::Statement(location loc) : Node(loc)
 {
 }

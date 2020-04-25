@@ -210,6 +210,17 @@ void Printer::visit(Cast &cast)
   --depth_;
 }
 
+void Printer::visit(Tuple &tuple)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "tuple:" << std::endl;
+
+  ++depth_;
+  for (Expression *expr : *tuple.elems)
+    expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);

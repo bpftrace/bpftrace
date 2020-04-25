@@ -53,6 +53,7 @@ public:
   void visit(FieldAccess &acc) override;
   void visit(ArrayAccess &arr) override;
   void visit(Cast &cast) override;
+  void visit(Tuple &tuple) override;
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;

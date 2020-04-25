@@ -1625,6 +1625,11 @@ void SemanticAnalyser::visit(Cast &cast)
   cast.type.is_pointer = cast.is_pointer;
 }
 
+void SemanticAnalyser::visit(Tuple &tuple __attribute__((unused)))
+{
+  // XXX implement
+}
+
 void SemanticAnalyser::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);
