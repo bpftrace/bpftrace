@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include "btf.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -143,6 +144,12 @@ bool BPFfeature::has_loop(void)
   return has_loop();
 }
 
+bool BPFfeature::has_btf(void)
+{
+  BTF btf;
+  return btf.has_data();
+}
+
 int BPFfeature::instruction_limit(void)
 {
   if (insns_limit_.has_value())
@@ -209,7 +216,8 @@ std::string BPFfeature::report(void)
 
   buf << "Kernel features" << std::endl
       << "  Instruction limit: " << instruction_limit() << std::endl
-      << "  Loop support: " << to_str(has_loop()) << std::endl;
+      << "  Loop support: " << to_str(has_loop())
+      << "  btf: " << to_str(has_btf()) << std::endl;
 
   buf << "Map types" << std::endl
       << "  hash: " << to_str(has_map_hash())

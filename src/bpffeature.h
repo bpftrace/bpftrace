@@ -67,6 +67,7 @@ public:
 
   int instruction_limit();
   bool has_loop();
+  bool has_btf();
 
   std::string report(void);
 
