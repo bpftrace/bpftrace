@@ -1624,6 +1624,12 @@ TEST(semantic_analyser, type_ctx)
   test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
 
+TEST(semantic_analyser, address_space)
+{
+  test("k:f { $a = uptr(pid); $a = kptr($a); }", 10);
+  test_for_warning("k:f { $a = uptr(arg0) + kptr(arg0); }", "Adress space mismatch");
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"

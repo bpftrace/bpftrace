@@ -1354,8 +1354,11 @@ void SemanticAnalyser::visit(Binop &binop)
     binop.type.addrspace = laddr;
   else
   {
-    warning("Address space mismatch", binop.loc);
-    binop.type.addrspace = AddrSpace::user;
+    if (is_final_pass())
+    {
+      warning("Address space mismatch", binop.loc);
+      binop.type.addrspace = AddrSpace::user;
+    }
   }
 }
 
