@@ -94,7 +94,8 @@ parts:
             version=${description%$sha}
             commits=$(git log --oneline | wc -l)
             date=$(date +'%Y%m%d')
-            snapcraftctl set-version "$version$date-$commits-$sha"
+            version=$(echo $version$date-$commits-$sha | cut -c1-32)
+            snapcraftctl set-version "$version"
         build-packages:
           - bison
           - cmake
