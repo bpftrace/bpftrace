@@ -1,0 +1,5 @@
+BEGIN
+{
+    printf("hello world!\n");
+    exit();
+}

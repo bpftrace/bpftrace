@@ -18,6 +18,11 @@ RUN bpftrace non_existent_file.bt
 EXPECT Error opening file 'non_existent_file.bt': No such file or directory
 TIMEOUT 1
 
+NAME piped script
+RUN bpftrace - < runtime/scripts/hello_world.bt
+EXPECT hello world!
+TIMEOUT 1
+
 NAME it lists kprobes
 RUN bpftrace -l | grep kprobes
 EXPECT kprobe
