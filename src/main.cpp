@@ -39,7 +39,9 @@ void usage()
   // clang-format off
   std::cerr << "USAGE:" << std::endl;
   std::cerr << "    bpftrace [options] filename" << std::endl;
-  std::cerr << "    bpftrace [options] -e 'program'" << std::endl << std::endl;
+  std::cerr << "    bpftrace [options] - <stdin input>" << std::endl;
+  std::cerr << "    bpftrace [options] -e 'program'" << std::endl;
+  std::cerr << std::endl;
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
@@ -387,17 +389,35 @@ int main(int argc, char *argv[])
       return 1;
     }
     std::string filename(argv[optind]);
-    std::ifstream file(filename);
-    if (file.fail())
+    std::stringstream buf;
+
+    if (filename == "-")
     {
-      std::cerr << "Error opening file '" << filename << "': ";
-      std::cerr << std::strerror(errno) << std::endl;
-      return -1;
+      std::string line;
+      while (std::getline(std::cin, line))
+      {
+        // Note we may add an extra newline if the input doesn't end in a new
+        // line. This should not matter because bpftrace (the language) is not
+        // whitespace sensitive.
+        buf << line << std::endl;
+      }
+
+      driver.source("stdin", buf.str());
+    }
+    else
+    {
+      std::ifstream file(filename);
+      if (file.fail())
+      {
+        std::cerr << "Error opening file '" << filename << "': ";
+        std::cerr << std::strerror(errno) << std::endl;
+        return -1;
+      }
+
+      buf << file.rdbuf();
+      driver.source(filename, buf.str());
     }
 
-    std::stringstream buf;
-    buf << file.rdbuf();
-    driver.source(filename, buf.str());
     err = driver.parse();
     if (err)
       return err;
