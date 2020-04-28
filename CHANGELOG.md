@@ -24,6 +24,8 @@ and this project adheres to
   - [#1274](https://github.com/iovisor/bpftrace/pull/1274)
 - Add support of using positional params in unroll and increase the unroll limit to 100
   - [#1286](https://github.com/iovisor/bpftrace/pull/1286)
+- Support for piping scripts in via stdin
+  - [#1310](https://github.com/iovisor/bpftrace/pull/1310)
 
 #### Changed
 
