@@ -201,7 +201,8 @@ private:
                         void (*trigger)(void));
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   void* ksyms_{nullptr};
-  std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
+  std::map<int, std::pair<struct timespec, void *>> pid_sym_; // pid -> (ctime,
+                                                              // cache)
   int ncpus_;
   int online_cpus_;
   std::vector<std::string> params_;
@@ -223,6 +224,8 @@ private:
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   static bool is_pid_alive(int pid);
+
+  static int get_pid_create_time(int pid, struct timespec *ts);
 };
 
 } // namespace bpftrace
