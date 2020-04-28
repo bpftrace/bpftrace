@@ -1762,15 +1762,21 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
     if (cache_user_symbols_)
     {
       std::string pid_exe = get_pid_exe(pid);
-      if (exe_sym_.find(pid_exe) == exe_sym_.end())
-      {
+      auto itr = exe_sym_.find(pid_exe);
+
+      if (itr != exe_sym_.end() && itr->second.first == pid) {
+        // FIXME check if that's the same process, e.g. ctime on /proc/pid/exe link
+        psyms = exe_sym_[pid_exe].second;
+      }
+
+      if (!psyms) {
+        if (itr != exe_sym_.end()) {
+          bcc_free_symcache(itr->second.second, itr->second.first);
+          exe_sym_.erase(itr);
+        }
         // not cached, create new ProcSyms cache
         psyms = bcc_symcache_new(pid, &symopts);
         exe_sym_[pid_exe] = std::make_pair(pid, psyms);
-      }
-      else
-      {
-        psyms = exe_sym_[pid_exe].second;
       }
     }
     else
