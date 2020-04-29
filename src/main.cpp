@@ -550,6 +550,21 @@ int main(int argc, char *argv[])
                                    !bpftrace.is_aslr_enabled(-1);
   }
 
+  if (const char* env_p = std::getenv("BPFTRACE_SHOW_USER_MODULE"))
+  {
+    if (std::string(env_p) == "1")
+      bpftrace.show_user_module_ = true;
+    else if (std::string(env_p) == "0")
+      bpftrace.show_user_module_ = false;
+    else
+    {
+      std::cerr << "Env var 'BPFTRACE_SHOW_USER_MODULE' did not contain a "
+                   "valid value (0 or 1)."
+                << std::endl;
+      return 1;
+    }
+  }
+
   if (!cmd_str.empty())
     bpftrace.cmd_ = cmd_str;
 

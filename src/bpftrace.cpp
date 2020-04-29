@@ -1787,13 +1787,13 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
       symbol << usym.name;
     if (show_offset)
       symbol << "+" << usym.offset;
-    if (show_module)
+    if (show_module || show_user_module_)
       symbol << " (" << usym.module << ")";
   }
   else
   {
     symbol << (void*)addr;
-    if (show_module)
+    if (show_module || show_user_module_)
       symbol << " ([unknown])";
   }
 

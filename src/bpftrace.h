@@ -166,6 +166,7 @@ public:
   bool safe_mode_ = true;
   bool force_btf_ = false;
   bool has_usdt_ = false;
+  bool show_user_module_ = false;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,

@@ -154,6 +154,7 @@ ENVIRONMENT:
     BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache
     BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution
     BPFTRACE_BTF                [default: none] BTF file
+    BPFTRACE_SHOW_USER_MODULE [default:0] enables module for userspace symbols
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -495,6 +496,12 @@ Default: None
 
 The path to a BTF file. By default, bpftrace searches several locations to find a BTF file.
 See src/btf.cpp for the details.
+
+### 9.8 `BPFTRACE_SHOW_USER_MODULE`
+
+Default: 0
+
+This controls whether each printed user-space symbol will contain the module it is from.
 
 ## 10. Clang Environment Variables
 

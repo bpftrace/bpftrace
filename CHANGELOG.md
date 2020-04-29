@@ -26,6 +26,8 @@ and this project adheres to
   - [#1286](https://github.com/iovisor/bpftrace/pull/1286)
 - Support for piping scripts in via stdin
   - [#1310](https://github.com/iovisor/bpftrace/pull/1310)
+- Add new environment variable `BPFTRACE_SHOW_USER_MODULE`
+  - [#1313] (https://github.com/iovisor/bpftrace/pull/1313)
 
 #### Changed
 
