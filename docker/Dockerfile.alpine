@@ -16,6 +16,7 @@ RUN apk add --update \
   elfutils-dev \
   flex-dev \
   git \
+  libc6-compat \
   linux-headers \
   llvm${LLVM_VERSION}-dev \
   llvm${LLVM_VERSION}-static \
@@ -25,7 +26,9 @@ RUN apk add --update \
 
 WORKDIR /
 
-RUN mv /usr/lib/libbccbpf.a /usr/lib/libbcc_bpf.a
+RUN mv /usr/lib/libbccbpf.a /usr/lib/libbcc_bpf.a && \
+    ln -s $(which python3) /usr/bin/python && \
+    ln -s /lib /lib/x86_64-linux-gnu
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh

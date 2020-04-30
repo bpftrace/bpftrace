@@ -73,7 +73,7 @@ TEST(childproc, child_exit_err)
   child->run();
   wait_for(child.get(), 1000);
   EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), 2);
+  EXPECT_TRUE(child->exit_code() > 0);
   EXPECT_EQ(child->term_signal(), -1);
 }
 
@@ -175,7 +175,7 @@ TEST(childproc, ptrace_child_exit_error)
   child->resume();
   wait_for(child.get(), 1000);
   EXPECT_FALSE(child->is_alive());
-  EXPECT_EQ(child->exit_code(), 2);
+  EXPECT_TRUE(child->exit_code() > 0);
   EXPECT_EQ(child->term_signal(), -1);
 }
 
