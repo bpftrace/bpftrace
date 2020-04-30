@@ -28,6 +28,8 @@ and this project adheres to
   - [#1310](https://github.com/iovisor/bpftrace/pull/1310)
 - Don't require <linux/types.h> if --btf is specified
   - [#1315](https://github.com/iovisor/bpftrace/pull/1315)
+- Silence errors about `modprobe` not being found
+  - [#1314](https://github.com/iovisor/bpftrace/pull/1314)
 
 #### Changed
 
