@@ -585,14 +585,27 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
+  bool process_btf = input.empty() ||
+                     (bpftrace.force_btf_ && bpftrace.btf_.has_data());
+
+  // We set these args early because some systems may not have <linux/types.h>
+  // (containers) and fully rely on BTF.
+  if (process_btf)
+  {
+    // Prevent BTF generated header from redefining stuff found
+    // in <linux/types.h>
+    args.push_back("-D_LINUX_TYPES_H");
+    // Since we're omitting <linux/types.h> there's no reason to
+    // add the wokarounds for it
+    args.push_back("-D__CLANG_WORKAROUNDS_H");
+  }
+
   auto incomplete_types = get_incomplete_types(input, input_files, args);
   bpftrace.btf_set_.insert(incomplete_types.cbegin(), incomplete_types.cend());
 
   ClangParserHandler handler;
   CXErrorCode error;
 
-  bool process_btf = input.empty() ||
-                     (bpftrace.force_btf_ && bpftrace.btf_.has_data());
   if (process_btf)
   {
     auto btf_and_input = "#include <__btf_generated_header.h>\n" + input;
@@ -607,10 +620,6 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
         .Contents = btf_cdef.c_str(),
         .Length = btf_cdef.size(),
     });
-
-    // Prevent BTF generated header from redefining stuff found
-    // in <linux/types.h>
-    args.push_back("-D_LINUX_TYPES_H");
 
     error = handler.parse_translation_unit(
         "definitions.h",
