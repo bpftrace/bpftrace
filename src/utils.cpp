@@ -429,6 +429,9 @@ namespace {
     }
 
     if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+      StderrSilencer silencer;
+      silencer.silence();
+
       FILE* modprobe = ::popen("modprobe kheaders", "w");
       if (modprobe == nullptr || pclose(modprobe) != 0) {
         return "";
