@@ -97,7 +97,8 @@ jobs:
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",uprobe."uprobes - list probes by pid, uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace"
+          TEST_GROUPS_DISABLE: "tools-parsing-test"
+          RUNTIME_TEST_DISABLE: json-output.join_delim,other.string compare map lookup,probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",uprobe."uprobes - list probes by pid; uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace"
           BASE: alpine
           DISTRO: alpine
           ALPINE_VERSION: 3.11
@@ -113,7 +114,7 @@ jobs:
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",uprobe."uprobes - list probes by pid, uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace"
+          RUNTIME_TEST_DISABLE: other.string compare map lookup,probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",uprobe."uprobes - list probes by pid; uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace"
           BASE: alpine
           DISTRO: alpine
           ALPINE_VERSION: 3.11

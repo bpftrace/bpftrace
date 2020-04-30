@@ -29,7 +29,7 @@ EXPECT uprobe:.*/testprogs/uprobe_test:function1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
-NAME "uprobes - list probes by pid, uprobes only"
+NAME "uprobes - list probes by pid; uprobes only"
 RUN bpftrace -l 'uprobe:*' -p $(pidof uprobe_test)
 EXPECT uprobe:.*/testprogs/uprobe_test:function1
 TIMEOUT 5
