@@ -83,7 +83,7 @@ private:
   bool check_arg(const Call &call, Type type, int arg_num, bool want_literal=false);
   bool check_symbol(const Call &call, int arg_num);
 
-  void check_stack_call(Call &call, Type type);
+  void check_stack_call(Call &call, bool kernel);
   void error(const std::string &msg, const location &loc);
   void warning(const std::string &msg, const location &loc);
 

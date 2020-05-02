@@ -276,7 +276,7 @@ static std::string get_unqualified_type_name(CXType clang_type)
 
 static SizedType get_sized_type(CXType clang_type)
 {
-  auto size = clang_Type_getSizeOf(clang_type);
+  auto size = 8 * clang_Type_getSizeOf(clang_type);
   auto typestr = get_unqualified_type_name(clang_type);
 
   switch (clang_type.kind)
@@ -288,18 +288,18 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_UInt:
     case CXType_ULong:
     case CXType_ULongLong:
-      return SizedType(Type::integer, size);
+      return CreateUInt(size);
     case CXType_Record:
-      return SizedType(Type::cast, size, typestr);
+      return CreateCast(size, typestr);
     case CXType_Char_S:
     case CXType_SChar:
     case CXType_Short:
     case CXType_Long:
     case CXType_LongLong:
     case CXType_Int:
-      return SizedType(Type::integer, size, true);
+      return CreateInt(size);
     case CXType_Enum:
-      return SizedType(Type::integer, size);
+      return CreateUInt(size);
     case CXType_Pointer:
     {
       auto pointee_type = clang_getPointeeType(clang_type);
@@ -307,11 +307,11 @@ static SizedType get_sized_type(CXType clang_type)
       if (pointee_type.kind == CXType_Record)
       {
         auto pointee_typestr = get_unqualified_type_name(pointee_type);
-        type = SizedType(Type::cast, sizeof(uintptr_t), pointee_typestr);
+        type = CreateCast(8 * sizeof(uintptr_t), pointee_typestr);
       }
       else
       {
-        type = SizedType(Type::integer, sizeof(uintptr_t));
+        type = CreateUInt(8 * sizeof(uintptr_t));
       }
       auto pointee_size = clang_Type_getSizeOf(pointee_type);
       type.is_pointer = true;
@@ -324,24 +324,20 @@ static SizedType get_sized_type(CXType clang_type)
       auto size = clang_getArraySize(clang_type);
       if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U)
       {
-        return SizedType(Type::string, size);
+        return CreateString(size);
       }
 
       // Only support one-dimensional arrays for now
       if (elem_type.kind != CXType_ConstantArray)
       {
         auto type = get_sized_type(elem_type);
-        auto sized_type = SizedType(Type::array, size);
-        sized_type.pointee_size = type.size;
-        sized_type.elem_type = type.type;
-        sized_type.is_signed = type.is_signed;
-        return sized_type;
+        return CreateArray(size, type.type, type.size, type.is_signed);
       } else {
-        return SizedType(Type::none, 0);
+        return CreateNone();
       }
     }
     default:
-      return SizedType(Type::none, 0);
+      return CreateNone();
   }
 }
 

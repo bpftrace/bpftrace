@@ -52,12 +52,12 @@ void SemanticAnalyser::warning(const std::string &msg, const location &loc)
 
 void SemanticAnalyser::visit(Integer &integer)
 {
-  integer.type = SizedType(Type::integer, 8, true);
+  integer.type = CreateInt64();
 }
 
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
-  param.type = SizedType(Type::integer, 8, true);
+  param.type = CreateInt64();
   switch (param.ptype)
   {
     case PositionalParameterType::positional:
@@ -89,7 +89,7 @@ void SemanticAnalyser::visit(PositionalParameter &param)
       break;
     default:
       error("unknown parameter type", param.loc);
-      param.type = SizedType(Type::none, 0);
+      param.type = CreateNone();
       break;
   }
 }
@@ -101,18 +101,18 @@ void SemanticAnalyser::visit(String &string)
     ERR("String is too long (over " << STRING_SIZE << " bytes): " << string.str,
         string.loc);
   }
-  string.type = SizedType(Type::string, STRING_SIZE);
+  string.type = CreateString(STRING_SIZE);
 }
 
 void SemanticAnalyser::visit(StackMode &mode)
 {
-  mode.type = SizedType(Type::stack_mode, 0);
+  mode.type = CreateStackMode();
   if (mode.mode == "bpftrace") {
     mode.type.stack_type.mode = bpftrace::StackMode::bpftrace;
   } else if (mode.mode == "perf") {
     mode.type.stack_type.mode = bpftrace::StackMode::perf;
   } else {
-    mode.type = SizedType(Type::none, 0);
+    mode.type = CreateNone();
     error("Unknown stack mode: '" + mode.mode + "'", mode.loc);
   }
 }
@@ -120,20 +120,19 @@ void SemanticAnalyser::visit(StackMode &mode)
 void SemanticAnalyser::visit(Identifier &identifier)
 {
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
-    identifier.type = SizedType(Type::integer, 8);
+    identifier.type = CreateUInt64();
   }
   else if (bpftrace_.structs_.count(identifier.ident) != 0)
   {
-    identifier.type = SizedType(Type::cast,
-                                bpftrace_.structs_[identifier.ident].size);
+    identifier.type = CreateCast(8 * bpftrace_.structs_[identifier.ident].size);
   }
   else if (getIntcasts().count(identifier.ident) != 0)
   {
-    identifier.type = SizedType(
-        Type::integer, std::get<0>(getIntcasts().at(identifier.ident)));
+    identifier.type = CreateInt(
+        8 * std::get<0>(getIntcasts().at(identifier.ident)));
   }
   else {
-    identifier.type = SizedType(Type::none, 0);
+    identifier.type = CreateNone();
     error("Unknown identifier: '" + identifier.ident + "'", identifier.loc);
   }
 }
@@ -160,7 +159,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         attach_point->target, match);
     Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-    builtin.type = SizedType(Type::ctx, cstruct.size, tracepoint_struct);
+    builtin.type = CreateCTX(cstruct.size, tracepoint_struct);
     builtin.type.is_pointer = true;
     builtin.type.is_tparg = true;
   }
@@ -224,7 +223,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
            builtin.ident == "gid" || builtin.ident == "cpu" ||
            builtin.ident == "curtask" || builtin.ident == "rand")
   {
-    builtin.type = SizedType(Type::integer, 8, false);
+    builtin.type = CreateUInt64();
     if (builtin.ident == "cgroup" &&
         !feature_.has_helper_get_current_cgroup_id())
     {
@@ -252,7 +251,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
     if (type == ProbeType::kretprobe || type == ProbeType::uretprobe)
     {
-      builtin.type = SizedType(Type::integer, 8);
+      builtin.type = CreateUInt64();
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
@@ -274,15 +273,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   }
   else if (builtin.ident == "kstack") {
-    builtin.type = SizedType(Type::kstack, StackType());
+    builtin.type = CreateStack(true, StackType());
     needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "ustack") {
-    builtin.type = SizedType(Type::ustack, StackType());
+    builtin.type = CreateStack(false, StackType());
     needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "comm") {
-    builtin.type = SizedType(Type::string, COMM_SIZE);
+    builtin.type = CreateString(COMM_SIZE);
   }
   else if (builtin.ident == "func") {
     for (auto &attach_point : *probe_->attach_points)
@@ -290,9 +289,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
       ProbeType type = probetype(attach_point->provider);
       if (type == ProbeType::kprobe ||
           type == ProbeType::kretprobe)
-        builtin.type = SizedType(Type::ksym, 8);
+        builtin.type = CreateKSym();
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
-        builtin.type = SizedType(Type::usym, 16);
+        builtin.type = CreateUSym();
       else
         ERR("The func builtin can not be used with '" << attach_point->provider
                                                       << "' probes",
@@ -314,7 +313,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     int arg_num = atoi(builtin.ident.substr(3).c_str());
     if (arg_num > arch::max_arg())
       error(arch::name() + " doesn't support " + builtin.ident, builtin.loc);
-    builtin.type = SizedType(Type::integer, 8);
+    builtin.type = CreateUInt64();
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
@@ -334,21 +333,21 @@ void SemanticAnalyser::visit(Builtin &builtin)
         bpftrace_.warning(out_, builtin.loc, msg);
       }
     }
-    builtin.type = SizedType(Type::integer, 8);
+    builtin.type = CreateUInt64();
   }
   else if (builtin.ident == "probe") {
-    builtin.type = SizedType(Type::probe, 8);
+    builtin.type = CreateProbe();
     probe_->need_expansion = true;
   }
   else if (builtin.ident == "username") {
-    builtin.type = SizedType(Type::username, 8);
+    builtin.type = CreateUsername();
   }
   else if (builtin.ident == "cpid") {
     if (!has_child_)
     {
       error("cpid cannot be used without child command", builtin.loc);
     }
-    builtin.type = SizedType(Type::integer, 4);
+    builtin.type = CreateUInt32();
   }
   else if (builtin.ident == "args") {
     for (auto &attach_point : *probe_->attach_points)
@@ -381,7 +380,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
   }
   else {
-    builtin.type = SizedType(Type::none, 0);
+    builtin.type = CreateNone();
     error("Unknown builtin variable: '" + builtin.ident + "'", builtin.loc);
   }
 }
@@ -426,7 +425,7 @@ void SemanticAnalyser::visit(Call &call)
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
 
-    call.type = SizedType(Type::hist, 8);
+    call.type = CreateHist();
   }
   else if (call.func == "lhist") {
     check_assignment(call, true, false, false);
@@ -481,13 +480,13 @@ void SemanticAnalyser::visit(Call &call)
       if (search == map_args_.end())
         map_args_.insert({call.map->ident, *call.vargs});
     }
-    call.type = SizedType(Type::lhist, 8);
+    call.type = CreateLhist();
   }
   else if (call.func == "count") {
     check_assignment(call, true, false, false);
     check_nargs(call, 0);
 
-    call.type = SizedType(Type::count, 8);
+    call.type = CreateCount(true);
   }
   else if (call.func == "sum") {
     bool sign = false;
@@ -496,7 +495,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
       sign = call.vargs->at(0)->type.is_signed;
     }
-    call.type = SizedType(Type::sum, 8, sign);
+    call.type = CreateSum(sign);
   }
   else if (call.func == "min") {
     bool sign = false;
@@ -505,7 +504,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
       sign = call.vargs->at(0)->type.is_signed;
     }
-    call.type = SizedType(Type::min, 8, sign);
+    call.type = CreateMin(sign);
   }
   else if (call.func == "max") {
     bool sign = false;
@@ -514,19 +513,19 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
       sign = call.vargs->at(0)->type.is_signed;
     }
-    call.type = SizedType(Type::max, 8, sign);
+    call.type = CreateMax(sign);
   }
   else if (call.func == "avg") {
     check_assignment(call, true, false, false);
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
-    call.type = SizedType(Type::avg, 8, true);
+    call.type = CreateAvg(true);
   }
   else if (call.func == "stats") {
     check_assignment(call, true, false, false);
     check_nargs(call, 1);
     check_arg(call, Type::integer, 0);
-    call.type = SizedType(Type::stats, 8, true);
+    call.type = CreateStats(true);
   }
   else if (call.func == "delete") {
     check_assignment(call, false, false, false);
@@ -536,12 +535,12 @@ void SemanticAnalyser::visit(Call &call)
         error("delete() expects a map to be provided", call.loc);
     }
 
-    call.type = SizedType(Type::none, 0);
+    call.type = CreateNone();
   }
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
-      call.type = SizedType(Type::string, bpftrace_.strlen_);
+      call.type = CreateString(bpftrace_.strlen_);
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
       }
@@ -595,7 +594,7 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     buffer_size++; // extra byte is used to embed the length of the buffer
-    call.type = SizedType(Type::buffer, buffer_size);
+    call.type = CreateBuffer(buffer_size);
 
     if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
     {
@@ -612,9 +611,9 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     if (call.func == "ksym")
-      call.type = SizedType(Type::ksym, 8);
+      call.type = CreateKSym();
     else if (call.func == "usym")
-      call.type = SizedType(Type::usym, 16);
+      call.type = CreateUSym();
   }
   else if (call.func == "ntop") {
     if (!check_varargs(call, 1, 2))
@@ -646,14 +645,13 @@ void SemanticAnalyser::visit(Call &call)
         error(call.func + "() invalid array", call.loc);
       }
     }
-    call.type = SizedType(Type::inet, buffer_size);
-    call.type.is_internal = true;
+    call.type = CreateInet(buffer_size);
   }
   else if (call.func == "join") {
     check_assignment(call, false, false, false);
     check_varargs(call, 1, 2);
     check_arg(call, Type::integer, 0);
-    call.type = SizedType(Type::none, 0);
+    call.type = CreateNone();
     needs_join_map_ = true;
 
     if (is_final_pass()) {
@@ -693,13 +691,13 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
   }
   else if (call.func == "kaddr") {
     if (check_nargs(call, 1)) {
       check_arg(call, Type::string, 0, true);
     }
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
   }
   else if (call.func == "uaddr")
   {
@@ -747,7 +745,7 @@ void SemanticAnalyser::visit(Call &call)
         bpftrace_.error(err_, call.loc, msg.str());
       }
     }
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
     call.type.is_pointer = true;
     switch (sizes.at(0))
     {
@@ -764,7 +762,7 @@ void SemanticAnalyser::visit(Call &call)
     if (check_nargs(call, 1)) {
       check_arg(call, Type::string, 0, true);
     }
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
   }
   else if (call.func == "printf" || call.func == "system" || call.func == "cat")
   {
@@ -810,7 +808,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
 
-    call.type = SizedType(Type::none, 0);
+    call.type = CreateNone();
   }
   else if (call.func == "exit") {
     check_assignment(call, false, false, false);
@@ -898,10 +896,10 @@ void SemanticAnalyser::visit(Call &call)
     }
   }
   else if (call.func == "kstack") {
-    check_stack_call(call, Type::kstack);
+    check_stack_call(call, true);
   }
   else if (call.func == "ustack") {
-    check_stack_call(call, Type::ustack);
+    check_stack_call(call, false);
   }
   else if (call.func == "signal") {
     if (!feature_.has_helper_send_signal())
@@ -959,7 +957,7 @@ void SemanticAnalyser::visit(Call &call)
     // is that we have a single argument.
     check_nargs(call, 1);
 
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
   }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
@@ -971,7 +969,7 @@ void SemanticAnalyser::visit(Call &call)
           error("Builtin strncmp requires a non-negative size", call.loc);
       }
     }
-    call.type = SizedType(Type::integer, 8);
+    call.type = CreateUInt64();
   }
   else if (call.func == "override")
   {
@@ -997,12 +995,13 @@ void SemanticAnalyser::visit(Call &call)
   }
   else {
     error("Unknown function: '" + call.func + "'", call.loc);
-    call.type = SizedType(Type::none, 0);
+    call.type = CreateNone();
   }
 }
 
-void SemanticAnalyser::check_stack_call(Call &call, Type type) {
-  call.type = SizedType(type, StackType());
+void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
+{
+  call.type = CreateStack(kernel);
   if (check_varargs(call, 0, 2) && is_final_pass()) {
     StackType stack_type;
     if (call.vargs) {
@@ -1044,7 +1043,7 @@ void SemanticAnalyser::check_stack_call(Call &call, Type type) {
                     << MAX_STACK_SIZE << ", " << stack_type.limit << " given",
           call.loc);
     }
-    call.type = SizedType(type, stack_type);
+    call.type = CreateStack(kernel, stack_type);
     needs_stackid_maps_.insert(stack_type);
   }
 }
@@ -1117,7 +1116,7 @@ void SemanticAnalyser::visit(Map &map)
     if (is_final_pass()) {
       error("Undefined map: " + map.ident, map.loc);
     }
-    map.type = SizedType(Type::none, 0);
+    map.type = CreateNone();
   }
 }
 
@@ -1129,7 +1128,7 @@ void SemanticAnalyser::visit(Variable &var)
   }
   else {
     error("Undefined or undeclared variable: " + var.ident, var.loc);
-    var.type = SizedType(Type::none, 0);
+    var.type = CreateNone();
   }
 }
 
@@ -1284,7 +1283,7 @@ void SemanticAnalyser::visit(Binop &binop)
       break;
   }
 
-  binop.type = SizedType(Type::integer, 8, is_signed);
+  binop.type = CreateInteger(64, is_signed);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
@@ -1300,7 +1299,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     if (unop.expr->is_map) {
       Map &map = static_cast<Map&>(*unop.expr);
-      assign_map_type(map, SizedType(Type::integer, 8, true));
+      assign_map_type(map, CreateInt64());
     }
   }
 
@@ -1351,14 +1350,14 @@ void SemanticAnalyser::visit(Unop &unop)
       }
     }
     else if (type.type == Type::integer) {
-      unop.type = SizedType(Type::integer, type.size, type.is_signed);
+      unop.type = CreateInteger(8 * type.size, type.is_signed);
     }
   }
   else if (unop.op == Parser::token::LNOT) {
-    unop.type = SizedType(Type::integer, type.size, false);
+    unop.type = CreateUInt(type.size);
   }
   else {
-    unop.type = SizedType(Type::integer, 8, type.is_signed);
+    unop.type = CreateInteger(64, type.is_signed);
   }
 }
 
@@ -1381,9 +1380,9 @@ void SemanticAnalyser::visit(Ternary &ternary)
       ERR("Invalid condition in ternary: " << cond, ternary.loc);
   }
   if (lhs == Type::string)
-    ternary.type = SizedType(lhs, STRING_SIZE);
+    ternary.type = CreateString(STRING_SIZE);
   else if (lhs == Type::integer)
-    ternary.type = SizedType(lhs, 8, ternary.left->type.is_signed);
+    ternary.type = CreateInteger(64, ternary.left->type.is_signed);
   else {
     ERR("Ternary return type unsupported " << lhs, ternary.loc);
   }
@@ -2143,11 +2142,13 @@ int SemanticAnalyser::create_maps(bool debug)
     // to set stack_size.
     if (debug)
     {
-      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::FakeMap>(SizedType(Type::kstack, stack_type));
+      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::FakeMap>(
+          CreateStack(true, stack_type));
     }
     else
     {
-      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::Map>(SizedType(Type::kstack, stack_type));
+      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::Map>(
+          CreateStack(true, stack_type));
       failed_maps += is_invalid_map(bpftrace_.stackid_maps_[stack_type]->mapfd_);
     }
   }
@@ -2158,14 +2159,15 @@ int SemanticAnalyser::create_maps(bool debug)
     {
       // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
       std::string map_ident = "join";
-      SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      SizedType type = CreateJoin(bpftrace_.join_argnum_,
+                                  bpftrace_.join_argsize_);
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     }
     if (needs_elapsed_map_)
     {
       std::string map_ident = "elapsed";
-      SizedType type = SizedType(Type::integer, 8);
+      SizedType type = CreateUInt64();
       MapKey key;
       bpftrace_.elapsed_map_ =
           std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
@@ -2179,7 +2181,8 @@ int SemanticAnalyser::create_maps(bool debug)
     {
       // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
       std::string map_ident = "join";
-      SizedType type = SizedType(Type::join, 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+      SizedType type = CreateJoin(bpftrace_.join_argnum_,
+                                  bpftrace_.join_argsize_);
       MapKey key;
       bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
       failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
@@ -2187,7 +2190,7 @@ int SemanticAnalyser::create_maps(bool debug)
     if (needs_elapsed_map_)
     {
       std::string map_ident = "elapsed";
-      SizedType type = SizedType(Type::integer, 8);
+      SizedType type = CreateUInt64();
       MapKey key;
       bpftrace_.elapsed_map_ =
           std::make_unique<bpftrace::Map>(map_ident, type, key, 1);

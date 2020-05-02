@@ -734,7 +734,7 @@ TEST(bpftrace, sort_by_key_int)
 {
   StrictMock<MockBPFtrace> bpftrace;
 
-  std::vector<SizedType> key_args = { SizedType(Type::integer, 8) };
+  std::vector<SizedType> key_args = { CreateUInt64() };
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
   {
     key_value_pair_int({2}, 12),
@@ -758,9 +758,9 @@ TEST(bpftrace, sort_by_key_int_int)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    SizedType(Type::integer, 8),
-    SizedType(Type::integer, 8),
-    SizedType(Type::integer, 8),
+    CreateUInt64(),
+    CreateUInt64(),
+    CreateUInt64(),
   };
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
   {
@@ -791,7 +791,7 @@ TEST(bpftrace, sort_by_key_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    SizedType(Type::string, STRING_SIZE),
+    CreateString(STRING_SIZE),
   };
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
   {
@@ -818,9 +818,9 @@ TEST(bpftrace, sort_by_key_str_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    SizedType(Type::string, STRING_SIZE),
-    SizedType(Type::string, STRING_SIZE),
-    SizedType(Type::string, STRING_SIZE),
+    CreateString(STRING_SIZE),
+    CreateString(STRING_SIZE),
+    CreateString(STRING_SIZE),
   };
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
   {
@@ -851,8 +851,8 @@ TEST(bpftrace, sort_by_key_int_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    SizedType(Type::integer, 8),
-    SizedType(Type::string, STRING_SIZE),
+    CreateUInt64(),
+    CreateString(STRING_SIZE),
   };
   std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
   {

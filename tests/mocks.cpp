@@ -55,30 +55,29 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
       });
 
   // Fill in some default tracepoint struct definitions
-  bpftrace.structs_["struct _tracepoint_sched_sched_one"] = Struct
-  {
+  bpftrace.structs_["struct _tracepoint_sched_sched_one"] = Struct{
     .size = 8,
-    .fields = {{"common_field", Field
-      {
-        .type = SizedType(Type::integer, 8, false),
-        .offset = 8,
-        .is_bitfield = false,
-        .bitfield = {},
-      }}},
+    .fields = { { "common_field",
+                  Field{
+                      .type = CreateUInt64(),
+                      .offset = 8,
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
   };
-  bpftrace.structs_["struct _tracepoint_sched_sched_two"] = Struct
-  {
+  bpftrace.structs_["struct _tracepoint_sched_sched_two"] = Struct{
     .size = 8,
-    .fields = {{"common_field", Field
-      {
-        .type = SizedType(Type::integer, 8, false),
-        .offset = 16, // different offset than sched_one.common_field
-        .is_bitfield = false,
-        .bitfield = {},
-      }}},
+    .fields = { { "common_field",
+                  Field{
+                      .type = CreateUInt64(),
+                      .offset = 16, // different offset than
+                                    // sched_one.common_field
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
   };
 
-  auto ptr_type = SizedType(Type::integer, 8, false);
+  auto ptr_type = CreateUInt64();
   ptr_type.is_pointer = true;
   ptr_type.pointee_size = 1;
   bpftrace.structs_["struct _tracepoint_file_filename"] = Struct{
