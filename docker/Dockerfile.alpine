@@ -1,4 +1,7 @@
-FROM alpine:3.11
+ARG ALPINE_VERSION=3.11
+ARG LLVM_VERSION="9"
+
+FROM alpine:${ALPINE_VERSION}
 
 RUN apk add --update \
   bash \
@@ -14,8 +17,8 @@ RUN apk add --update \
   flex-dev \
   git \
   linux-headers \
-  llvm9-dev \
-  llvm9-static \
+  llvm${LLVM_VERSION}-dev \
+  llvm${LLVM_VERSION}-static \
   python3 \
   zlib-dev \
   zlib-static

@@ -1,5 +1,5 @@
-ARG DISTRO=focal
-FROM ubuntu:$DISTRO
+ARG BASE=focal
+FROM ubuntu:$BASE
 
 ARG build_dir=build-embedded
 
