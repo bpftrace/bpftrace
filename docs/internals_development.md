@@ -307,9 +307,9 @@ You can imagine now mapping this back, line by line, to IR. Eg:
 Becomes:
 
 ```C++
-  AllocaInst *arg_a_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "arg_a");
-  AllocaInst *arg_b_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "arg_b");
-  AllocaInst *sum_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 4), "sum");
+  AllocaInst *arg_a_alloc = b_.CreateAllocaBPF(CreateUInt32(), "arg_a");
+  AllocaInst *arg_b_alloc = b_.CreateAllocaBPF(CreateUInt32(), "arg_b");
+  AllocaInst *sum_alloc = b_.CreateAllocaBPF(CreateUInt32(), "sum");
 ```
 
 And then:
@@ -449,7 +449,7 @@ index 8eb5744..64c9411 100644
        builtin.ident == "cpu" ||
 +      builtin.ident == "curtask" ||
        builtin.ident == "retval") {
-     builtin.type = SizedType(Type::integer, 8);
+     builtin.type = CreateUInt64();
    }
 diff --git a/src/lexer.l b/src/lexer.l
 index c5996b6..3bec616 100644

@@ -102,7 +102,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CreateStore(b_.getInt64(0), key);
 
     auto &map = bpftrace_.elapsed_map_;
-    auto type = SizedType(Type::integer, 8);
+    auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(map->mapfd_, key, type);
     expr_ = b_.CreateSub(b_.CreateGetNs(), start);
     // start won't be on stack, no need to LifeTimeEnd it
@@ -1897,7 +1897,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
   else
   {
     // No map key (e.g., @ = 1;). Use 0 as a key.
-    key = b_.CreateAllocaBPF(SizedType(Type::integer, 8), map.ident + "_key");
+    key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
     b_.CreateStore(b_.getInt64(0), key);
   }
   return key;
@@ -1933,7 +1933,7 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
   }
   else
   {
-    key = b_.CreateAllocaBPF(SizedType(Type::integer, 8), map.ident + "_key");
+    key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
     b_.CreateStore(log2, key);
   }
   return key;
@@ -2049,9 +2049,9 @@ void CodegenLLVM::createLog2Function()
 
   // setup n and result registers
   Value *arg = log2_func->arg_begin();
-  Value *n_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *n_alloc = b_.CreateAllocaBPF(CreateUInt64());
   b_.CreateStore(arg, n_alloc);
-  Value *result = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *result = b_.CreateAllocaBPF(CreateUInt64());
   b_.CreateStore(b_.getInt64(0), result);
 
   // test for less than zero
@@ -2116,11 +2116,11 @@ void CodegenLLVM::createLinearFunction()
   b_.SetInsertPoint(entry);
 
   // pull in arguments
-  Value *value_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
-  Value *min_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
-  Value *max_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
-  Value *step_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
-  Value *result_alloc = b_.CreateAllocaBPF(SizedType(Type::integer, 8));
+  Value *value_alloc = b_.CreateAllocaBPF(CreateUInt64());
+  Value *min_alloc = b_.CreateAllocaBPF(CreateUInt64());
+  Value *max_alloc = b_.CreateAllocaBPF(CreateUInt64());
+  Value *step_alloc = b_.CreateAllocaBPF(CreateUInt64());
+  Value *result_alloc = b_.CreateAllocaBPF(CreateUInt64());
   Value *value = linear_func->arg_begin()+0;
   Value *min = linear_func->arg_begin()+1;
   Value *max = linear_func->arg_begin()+2;

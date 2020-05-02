@@ -640,7 +640,7 @@ TEST(semantic_analyser, call_uaddr)
   {
     auto v = static_cast<ast::AssignVarStatement *>(
         driver.root_->probes->at(0)->stmts->at(i));
-    EXPECT_EQ(SizedType(Type::integer, 8, false), v->var->type);
+    EXPECT_EQ(CreateUInt64(), v->var->type);
     EXPECT_EQ(true, v->var->type.is_pointer);
     EXPECT_EQ((unsigned long int)sizes.at(i), v->var->type.pointee_size);
   }
@@ -787,7 +787,7 @@ TEST(semantic_analyser, array_access) {
        0);
   auto assignment = static_cast<ast::AssignMapStatement *>(
       driver.root_->probes->at(0)->stmts->at(1));
-  EXPECT_EQ(SizedType(Type::integer, 8, true), assignment->map->type);
+  EXPECT_EQ(CreateInt64(), assignment->map->type);
 }
 
 TEST(semantic_analyser, variable_type)
@@ -795,7 +795,7 @@ TEST(semantic_analyser, variable_type)
   BPFtrace bpftrace;
   Driver driver(bpftrace);
   test(driver, "kprobe:f { $x = 1 }", 0);
-  SizedType st(Type::integer, 8, true);
+  auto st = CreateInt64();
   auto assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   EXPECT_EQ(st, assignment->var->type);
 }
@@ -827,8 +827,8 @@ TEST(semantic_analyser, map_integer_sizes)
 
   auto var_assignment = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
   auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(1));
-  EXPECT_EQ(SizedType(Type::integer, 4, true), var_assignment->var->type);
-  EXPECT_EQ(SizedType(Type::integer, 8, true), map_assignment->map->type);
+  EXPECT_EQ(CreateInt32(), var_assignment->var->type);
+  EXPECT_EQ(CreateInt64(), map_assignment->map->type);
 }
 
 TEST(semantic_analyser, unop_dereference)
@@ -1243,7 +1243,7 @@ TEST(semantic_analyser, positional_parameters)
   auto stmt = static_cast<ast::ExprStatement *>(
       driver.root_->probes->at(0)->stmts->at(0));
   auto pp = static_cast<ast::PositionalParameter *>(stmt->expr);
-  EXPECT_EQ(SizedType(Type::integer, 8, true), pp->type);
+  EXPECT_EQ(CreateInt64(), pp->type);
   EXPECT_TRUE(pp->is_literal);
 
   bpftrace.add_param("0999");
@@ -1349,10 +1349,10 @@ TEST(semantic_analyser, cast_sign)
   auto us = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(2));
   auto l  = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(3));
   auto ul = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(4));
-  EXPECT_EQ(SizedType(Type::integer, 4, true),  s->var->type);
-  EXPECT_EQ(SizedType(Type::integer, 4, false), us->var->type);
-  EXPECT_EQ(SizedType(Type::integer, 8, true),  l->var->type);
-  EXPECT_EQ(SizedType(Type::integer, 8, false), ul->var->type);
+  EXPECT_EQ(CreateInt32(), s->var->type);
+  EXPECT_EQ(CreateUInt32(), us->var->type);
+  EXPECT_EQ(CreateInt64(), l->var->type);
+  EXPECT_EQ(CreateUInt64(), ul->var->type);
 }
 
 TEST(semantic_analyser, binop_sign)
@@ -1376,11 +1376,11 @@ TEST(semantic_analyser, binop_sign)
 
     test(driver, prog, 0);
     auto varA = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
-    EXPECT_EQ(SizedType(Type::integer, 8, true), varA->var->type);
+    EXPECT_EQ(CreateInt64(), varA->var->type);
     auto varB = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(2));
-    EXPECT_EQ(SizedType(Type::integer, 8, false), varB->var->type);
+    EXPECT_EQ(CreateUInt64(), varB->var->type);
     auto varC = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(3));
-    EXPECT_EQ(SizedType(Type::integer, 8, false), varC->var->type);
+    EXPECT_EQ(CreateUInt64(), varC->var->type);
   }
 }
 
@@ -1584,9 +1584,9 @@ TEST(semantic_analyser, type_ctx)
 
   // $a = $x->a;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
-  EXPECT_EQ(SizedType(Type::integer, 8, true), assignment->var->type);
+  EXPECT_EQ(CreateInt64(), assignment->var->type);
   auto fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
-  EXPECT_EQ(SizedType(Type::integer, 8, true), fieldaccess->type);
+  EXPECT_EQ(CreateInt64(), fieldaccess->type);
   auto unop = static_cast<ast::Unop *>(fieldaccess->expr);
   EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
   auto var = static_cast<ast::Variable *>(unop->expr);
@@ -1594,9 +1594,9 @@ TEST(semantic_analyser, type_ctx)
 
   // $b = $x->b[0];
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(2));
-  EXPECT_EQ(SizedType(Type::integer, 2, true), assignment->var->type);
+  EXPECT_EQ(CreateInt16(), assignment->var->type);
   auto arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
-  EXPECT_EQ(SizedType(Type::integer, 2, true), arrayaccess->type);
+  EXPECT_EQ(CreateInt16(), arrayaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(arrayaccess->expr);
   EXPECT_EQ(SizedType(Type::ctx, 4, true), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
@@ -1606,9 +1606,9 @@ TEST(semantic_analyser, type_ctx)
 
   // $c = $x->c.c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(3));
-  EXPECT_EQ(SizedType(Type::integer, 1, true), assignment->var->type);
+  EXPECT_EQ(CreateInt8(), assignment->var->type);
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
-  EXPECT_EQ(SizedType(Type::integer, 1, true), fieldaccess->type);
+  EXPECT_EQ(CreateInt8(), fieldaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(fieldaccess->expr);
   EXPECT_EQ(SizedType(Type::ctx, 1, false), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
@@ -1618,13 +1618,13 @@ TEST(semantic_analyser, type_ctx)
 
   // $d = $x->d->c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(4));
-  EXPECT_EQ(SizedType(Type::integer, 1, true), assignment->var->type);
+  EXPECT_EQ(CreateInt8(), assignment->var->type);
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
-  EXPECT_EQ(SizedType(Type::integer, 1, true), fieldaccess->type);
+  EXPECT_EQ(CreateInt8(), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::cast, 1, false), unop->type);
+  EXPECT_EQ(CreateCast(8), unop->type);
   fieldaccess = static_cast<ast::FieldAccess *>(unop->expr);
-  EXPECT_EQ(SizedType(Type::cast, 8, false), fieldaccess->type);
+  EXPECT_EQ(CreateCast(64), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
   EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
   var = static_cast<ast::Variable *>(unop->expr);

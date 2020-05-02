@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -41,6 +42,7 @@ enum class Type
   array,
   // BPF program context; needing a different access method to satisfy the verifier
   ctx,
+  record, // struct or union
   buffer,
   // clang-format on
 };
@@ -78,14 +80,10 @@ struct SizedType
   {
   }
 
-  SizedType(Type type, StackType stack_type_) : SizedType(type, 8)
-  {
-    stack_type = stack_type_;
-  }
   Type type;
   Type elem_type = Type::none; // Array element type if accessing elements of an
                                // array
-  size_t size;
+  size_t size;                 // in bytes
   StackType stack_type;
   bool is_signed = false;
   std::string cast_type;
@@ -103,6 +101,49 @@ struct SizedType
   bool operator==(const SizedType &t) const;
   bool operator!=(const SizedType &t) const;
 };
+// Type helpers
+
+SizedType CreateNone();
+SizedType CreateInteger(size_t bits, bool is_signed);
+SizedType CreateInt(size_t bits);
+SizedType CreateUInt(size_t bits);
+SizedType CreateInt8();
+SizedType CreateInt16();
+SizedType CreateInt32();
+SizedType CreateInt64();
+SizedType CreateUInt8();
+SizedType CreateUInt16();
+SizedType CreateUInt32();
+SizedType CreateUInt64();
+
+SizedType CreateString(size_t size);
+SizedType CreateArray(size_t num_elem,
+                      Type elem_type,
+                      size_t elem_size,
+                      bool elem_is_signed);
+
+SizedType CreateStackMode();
+SizedType CreateStack(bool kernel, StackType st = StackType());
+
+// Size in bits
+SizedType CreateCast(size_t size, std::string name = "");
+SizedType CreateCTX(size_t size, std::string name);
+
+SizedType CreateMin(bool is_signed);
+SizedType CreateMax(bool is_signed);
+SizedType CreateSum(bool is_signed);
+SizedType CreateCount(bool is_signed);
+SizedType CreateAvg(bool is_signed);
+SizedType CreateStats(bool is_signed);
+SizedType CreateProbe();
+SizedType CreateUsername();
+SizedType CreateInet(size_t size);
+SizedType CreateLhist();
+SizedType CreateHist();
+SizedType CreateUSym();
+SizedType CreateKSym();
+SizedType CreateJoin(size_t argnum, size_t argsize);
+SizedType CreateBuffer(size_t size);
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
@@ -218,4 +259,5 @@ struct hash<bpftrace::StackType>
     }
   }
 };
+
 } // namespace std
