@@ -64,7 +64,7 @@ make "$@"
 
 if [ $RUN_TESTS = 1 ]; then
   if [ "$RUN_ALL_TESTS" = "1" ]; then
-    ctest -V
+    ctest -V --exclude-regex "$TEST_GROUPS_DISABLE"
   else
     ./tests/bpftrace_test $TEST_ARGS;
   fi
