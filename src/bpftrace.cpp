@@ -1,9 +1,11 @@
 #include <arpa/inet.h>
 #include <cassert>
+#include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <cxxabi.h>
 #include <fstream>
+#include <glob.h>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -724,6 +726,83 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
   bpftrace->out_->lost_events(lost);
 }
 
+std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
+    Probe &probe,
+    std::tuple<uint8_t *, uintptr_t> func,
+    int pid,
+    bool file_activation)
+{
+  std::vector<std::unique_ptr<AttachedProbe>> ret;
+
+  if (!(file_activation && probe.path.size()))
+  {
+    ret.emplace_back(std::make_unique<AttachedProbe>(probe, func, pid));
+    return ret;
+  }
+
+  // File activation works by scanning through /proc/*/maps and seeing
+  // which processes have the target executable in their address space
+  // with execute permission. If found, we will try to attach to each
+  // process we find.
+  glob_t globbuf;
+  if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
+    throw std::runtime_error("failed to glob");
+
+  const char *p;
+  if (!(p = realpath(probe.path.c_str(), nullptr)))
+  {
+    std::cerr << "Failed to resolve " << probe.path << std::endl;
+    return ret;
+  }
+  std::string resolved(p);
+
+  for (size_t i = 0; i < globbuf.gl_pathc; ++i)
+  {
+    std::string path(globbuf.gl_pathv[i]);
+    std::ifstream file(path);
+    if (file.fail())
+    {
+      // The process could have exited between the glob and now. We have
+      // to silently ignore that.
+      continue;
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+      if (line.find(resolved) == std::string::npos)
+        continue;
+
+      auto parts = split_string(line, ' ');
+      if (parts.at(1).find('x') == std::string::npos)
+        continue;
+
+      // Remove `/proc/` prefix
+      std::string pid_str(globbuf.gl_pathv[i] + 6);
+      // No need to remove `/maps` suffix b/c stoi() will ignore trailing !ints
+
+      int pid_parsed;
+      try
+      {
+        pid_parsed = std::stoi(pid_str);
+      }
+      catch (const std::exception &ex)
+      {
+        throw std::runtime_error("failed to parse pid=" + pid_str);
+      }
+
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, func, pid_parsed));
+      break;
+    }
+  }
+
+  if (ret.empty())
+    std::cerr << "Failed to find processes running " << probe.path << std::endl;
+
+  return ret;
+}
+
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
     const BpfOrc &bpforc)
@@ -748,9 +827,19 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
   }
   try
   {
-    if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
+    pid_t pid = child_ ? child_->pid() : this->pid();
+
+    if (probe.type == ProbeType::usdt)
     {
-      pid_t pid = child_ ? child_->pid() : this->pid();
+      auto aps = attach_usdt_probe(
+          probe, func->second, pid, usdt_file_activation_);
+      for (auto &ap : aps)
+        ret.emplace_back(std::move(ap));
+
+      return ret;
+    }
+    else if (probe.type == ProbeType::watchpoint)
+    {
       ret.emplace_back(
           std::make_unique<AttachedProbe>(probe, func->second, pid));
       return ret;

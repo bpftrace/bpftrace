@@ -217,6 +217,11 @@ private:
   std::string src_;
   std::string filename_;
 
+  std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
+      Probe &probe,
+      std::tuple<uint8_t *, uintptr_t> func,
+      int pid,
+      bool file_activation);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
       const BpfOrc &bpforc);
