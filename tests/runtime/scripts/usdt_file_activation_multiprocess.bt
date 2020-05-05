@@ -1,0 +1,28 @@
+BEGIN
+{
+    @count = 0;
+}
+
+usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe
+{
+    // Ensure each process only increments @count once
+    if (@pids[pid] == 0)
+    {
+        @count++;
+        @pids[pid] = 1;
+    }
+
+    // Hacky, but easiest way to get script to exit quickly for tests
+    if (@count == 2)
+    {
+        exit();
+    }
+}
+
+END
+{
+    printf("found %d processes\n", @count);
+
+    clear(@pids);
+    clear(@count);
+}
