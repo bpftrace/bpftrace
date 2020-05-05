@@ -1204,6 +1204,16 @@ the probe to be found, regardless of the name of the binary:
 bpftrace -e 'usdt:/root/tock:tick:loop { printf("hi\n"); }'
 ```
 
+bpftrace also supports USDT semaphores. You may activate semaphores by passing in `-p $PID` or
+`--usdt-file-activation`. `--usdt-file-activation` looks through `/proc` to find processes that
+have your probe's binary mapped with executable permissions into their address space and then tries
+to attach your probe. Note that file activation occurs only once (during attach time). In other
+words, if later during your tracing session a new process with your executable is spawned, your
+current tracing session will not activate the new process. Also note that `--usdt-file-activation`
+matches based on file path. This means that if bpftrace runs from the root host, things may not work
+as expected if there are processes `execve`d from private mount namespaces or bind mounted directories.
+One workaround is to run bpftrace inside the appropriate namespaces (ie the container).
+
 ## 8. `usdt`: Static Tracing, User-Level Arguments
 
 Examples:
