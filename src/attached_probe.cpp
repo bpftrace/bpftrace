@@ -822,7 +822,13 @@ void AttachedProbe::attach_usdt(int pid)
 #endif
 
   if (err)
-    throw std::runtime_error("Error finding or enabling probe: " + probe_.name);
+  {
+    std::string err;
+    err += "Error finding or enabling probe: " + probe_.name;
+    err += '\n';
+    err += "Try using -p or --usdt-file-activation if there's USDT semaphores";
+    throw std::runtime_error(err);
+  }
 
   auto u = USDTHelper::find(pid, probe_.path, probe_.ns, probe_.attach_point);
   probe_.path = std::get<USDT_PATH_INDEX>(u);
