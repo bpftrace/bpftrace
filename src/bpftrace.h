@@ -217,8 +217,9 @@ private:
   std::string src_;
   std::string filename_;
 
-  std::unique_ptr<AttachedProbe> attach_probe(Probe &probe,
-                                              const BpfOrc &bpforc);
+  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
+      Probe &probe,
+      const BpfOrc &bpforc);
   int setup_perf_events();
   void poll_perf_events(int epollfd, bool drain = false);
   int print_map_hist(IMap &map, uint32_t top, uint32_t div);

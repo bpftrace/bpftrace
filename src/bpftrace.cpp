@@ -724,8 +724,12 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
   bpftrace->out_->lost_events(lost);
 }
 
-std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc &bpforc)
+std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
+    Probe &probe,
+    const BpfOrc &bpforc)
 {
+  std::vector<std::unique_ptr<AttachedProbe>> ret;
+
   // use the single-probe program if it exists (as is the case with wildcards
   // and the name builtin, which must be expanded into separate programs per
   // probe), else try to find a the program based on the original probe name
@@ -740,23 +744,30 @@ std::unique_ptr<AttachedProbe> BPFtrace::attach_probe(Probe &probe, const BpfOrc
       std::cerr << "Code not generated for probe: " << probe.name << " from: " << probe.orig_name << std::endl;
     else
       std::cerr << "Code not generated for probe: " << probe.name << std::endl;
-    return nullptr;
+    return ret;
   }
   try
   {
     if (probe.type == ProbeType::usdt || probe.type == ProbeType::watchpoint)
     {
       pid_t pid = child_ ? child_->pid() : this->pid();
-      return std::make_unique<AttachedProbe>(probe, func->second, pid);
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, func->second, pid));
+      return ret;
     }
     else
-      return std::make_unique<AttachedProbe>(probe, func->second, safe_mode_);
+    {
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, func->second, safe_mode_));
+      return ret;
+    }
   }
   catch (std::runtime_error &e)
   {
     std::cerr << e.what() << std::endl;
+    ret.clear();
   }
-  return nullptr;
+  return ret;
 }
 
 bool attach_reverse(const Probe &p)
@@ -792,10 +803,10 @@ int BPFtrace::run_special_probe(std::string name,
   {
     if ((*probe).attach_point == name)
     {
-      std::unique_ptr<AttachedProbe> ap = attach_probe(*probe, bpforc);
+      auto aps = attach_probe(*probe, bpforc);
 
       trigger();
-      return ap != nullptr ? 0 : -1;
+      return aps.size() ? 0 : -1;
     }
   }
 
@@ -847,24 +858,26 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   for (auto probes = probes_.begin(); probes != probes_.end(); ++probes)
   {
     if (!attach_reverse(*probes)) {
-      auto attached_probe = attach_probe(*probes, *bpforc.get());
-      if (attached_probe == nullptr)
-      {
+      auto aps = attach_probe(*probes, *bpforc.get());
+
+      if (aps.empty())
         return -1;
-      }
-      attached_probes_.push_back(std::move(attached_probe));
+
+      for (auto &ap : aps)
+        attached_probes_.emplace_back(std::move(ap));
     }
   }
 
   for (auto r_probes = probes_.rbegin(); r_probes != probes_.rend(); ++r_probes)
   {
     if (attach_reverse(*r_probes)) {
-      auto attached_probe = attach_probe(*r_probes, *bpforc.get());
-      if (attached_probe == nullptr)
-      {
+      auto aps = attach_probe(*r_probes, *bpforc.get());
+
+      if (aps.empty())
         return -1;
-      }
-      attached_probes_.push_back(std::move(attached_probe));
+
+      for (auto &ap : aps)
+        attached_probes_.emplace_back(std::move(ap));
     }
   }
 
