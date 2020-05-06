@@ -30,6 +30,8 @@ and this project adheres to
   - [#1315](https://github.com/iovisor/bpftrace/pull/1315)
 - Silence errors about `modprobe` not being found
   - [#1314](https://github.com/iovisor/bpftrace/pull/1314)
+- With --btf, do not use <linux/types.h> for resolving tracepoint defs
+  - [#1318](https://github.com/iovisor/bpftrace/pull/1318)
 
 #### Changed
 
