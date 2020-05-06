@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <set>
+#include <vector>
 
+#define ARG_REGISTERS 8
 // For little endian 64 bit, sp + 32 + 8 regs save area + argX
 #define ARG0_STACK_LE 96
 // For big endian 64 bit, sp + 48 + 8 regs save area + argX
@@ -12,54 +15,54 @@ namespace bpftrace {
 namespace arch {
 
 // clang-format off
-static std::array<std::string, 44> registers = {
-  "r0",
-  "r1",
-  "r2",
-  "r3",
-  "r4",
-  "r5",
-  "r6",
-  "r7",
-  "r8",
-  "r9",
-  "r10",
-  "r11",
-  "r12",
-  "r13",
-  "r14",
-  "r15",
-  "r16",
-  "r17",
-  "r18",
-  "r19",
-  "r20",
-  "r21",
-  "r22",
-  "r23",
-  "r24",
-  "r25",
-  "r26",
-  "r27",
-  "r28",
-  "r29",
-  "r30",
-  "r31",
-  "nip",
-  "msr",
-  "orig_gpr3",
-  "ctr",
-  "link",
-  "xer",
-  "ccr",
-  "softe",
-  "trap",
-  "dar",
-  "dsisr",
-  "result",
+static std::vector<std::set<std::string>> registers = {
+  { "r0", "gpr[0]" },
+  { "r1", "gpr[1]" },
+  { "r2", "gpr[2]" },
+  { "r3", "gpr[3]" },
+  { "r4", "gpr[4]" },
+  { "r5", "gpr[5]" },
+  { "r6", "gpr[6]" },
+  { "r7", "gpr[7]" },
+  { "r8", "gpr[8]" },
+  { "r9", "gpr[9]" },
+  { "r10", "gpr[10]" },
+  { "r11", "gpr[11]" },
+  { "r12", "gpr[12]" },
+  { "r13", "gpr[13]" },
+  { "r14", "gpr[14]" },
+  { "r15", "gpr[15]" },
+  { "r16", "gpr[16]" },
+  { "r17", "gpr[17]" },
+  { "r18", "gpr[18]" },
+  { "r19", "gpr[19]" },
+  { "r20", "gpr[20]" },
+  { "r21", "gpr[21]" },
+  { "r22", "gpr[22]" },
+  { "r23", "gpr[23]" },
+  { "r24", "gpr[24]" },
+  { "r25", "gpr[25]" },
+  { "r26", "gpr[26]" },
+  { "r27", "gpr[27]" },
+  { "r28", "gpr[28]" },
+  { "r29", "gpr[29]" },
+  { "r30", "gpr[30]" },
+  { "r31", "gpr[31]" },
+  { "nip" },
+  { "msr" },
+  { "orig_gpr3" },
+  { "ctr" },
+  { "link" },
+  { "xer" },
+  { "ccr" },
+  { "softe" },
+  { "trap" },
+  { "dar" },
+  { "dsisr" },
+  { "result" },
 };
 
-static std::array<std::string, 8> arg_registers = {
+static std::array<std::string, ARG_REGISTERS> arg_registers = {
   "r3",
   "r4",
   "r5",
@@ -73,10 +76,12 @@ static std::array<std::string, 8> arg_registers = {
 
 int offset(std::string reg_name)
 {
-  auto it = find(registers.begin(), registers.end(), reg_name);
-  if (it == registers.end())
-    return -1;
-  return distance(registers.begin(), it);
+  for (unsigned int i = 0; i < registers.size(); i++)
+  {
+    if (registers[i].count(reg_name))
+      return i;
+  }
+  return -1;
 }
 
 int max_arg()

@@ -52,6 +52,8 @@ and this project adheres to
   - [#1241](https://github.com/iovisor/bpftrace/pull/1241)
 - Type check the `cond` of if and ternary statements
   - [#1229](https://github.com/iovisor/bpftrace/pull/1229)
+- Fix usdt reads in various architecture
+  - [#1325](https://github.com/iovisor/bpftrace/pull/1325)
 
 #### Tools
 
