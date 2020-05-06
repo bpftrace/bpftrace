@@ -26,7 +26,8 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
     return true;
 
   ast::TracepointArgsVisitor n{};
-  program->c_definitions += "#include <linux/types.h>\n";
+  if (!bpftrace.force_btf_)
+    program->c_definitions += "#include <linux/types.h>\n";
   for (ast::Probe *probe : probes_with_tracepoint)
   {
     n.analyse(probe);
@@ -95,7 +96,8 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             std::string struct_name = get_struct_name(category, real_event);
             if (!TracepointFormatParser::struct_list.count(struct_name))
             {
-              program->c_definitions += get_tracepoint_struct(format_file, category, real_event);
+              program->c_definitions += get_tracepoint_struct(
+                  format_file, category, real_event, bpftrace);
               TracepointFormatParser::struct_list.insert(struct_name);
             }
           }
@@ -134,7 +136,8 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           // Check to avoid adding the same struct more than once to definitions
           std::string struct_name = get_struct_name(category, event_name);
           if (TracepointFormatParser::struct_list.insert(struct_name).second)
-            program->c_definitions += get_tracepoint_struct(format_file, category, event_name);
+            program->c_definitions += get_tracepoint_struct(
+                format_file, category, event_name, bpftrace);
         }
       }
     }
@@ -148,7 +151,8 @@ std::string TracepointFormatParser::get_struct_name(const std::string &category,
 }
 
 std::string TracepointFormatParser::parse_field(const std::string &line,
-                                                int *last_offset)
+                                                int *last_offset,
+                                                BPFtrace &bpftrace)
 {
   std::string extra = "";
 
@@ -211,6 +215,13 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
   if (field_name.find("[") == std::string::npos)
     field_type = adjust_integer_types(field_type, size);
 
+  // With --btf on, we try not to use any header files, including
+  // <linux/types.h>. That means we must request all the types we need
+  // from BTF. Note we don't need to gate this on --btf because the
+  // expensive type reslution is already gated on --btf (adding to a set
+  // is cheap).
+  bpftrace.btf_set_.emplace(field_type);
+
   return extra + "  " + field_type + " " + field_name + ";\n";
 }
 
@@ -231,14 +242,18 @@ std::string TracepointFormatParser::adjust_integer_types(const std::string &fiel
   return new_type;
 }
 
-std::string TracepointFormatParser::get_tracepoint_struct(std::istream &format_file, const std::string &category, const std::string &event_name)
+std::string TracepointFormatParser::get_tracepoint_struct(
+    std::istream &format_file,
+    const std::string &category,
+    const std::string &event_name,
+    BPFtrace &bpftrace)
 {
   std::string format_struct = get_struct_name(category, event_name) + "\n{\n";
   int last_offset = 0;
 
   for (std::string line; getline(format_file, line); )
   {
-    format_struct += parse_field(line, &last_offset);
+    format_struct += parse_field(line, &last_offset, bpftrace);
   }
 
   format_struct += "};\n";
