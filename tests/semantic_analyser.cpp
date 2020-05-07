@@ -1635,6 +1635,16 @@ TEST(semantic_analyser, type_ctx)
   test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
 
+TEST(semantic_analyser, multi_pass_type_inference_zero_size_int)
+{
+  auto bpftrace = get_mock_bpftrace();
+  // The first pass on processing the Unop does not have enough information
+  // to figure out size of `@i` yet. The analyzer figures out the size
+  // after seeing the `@i++`. On the second pass the correct size is
+  // determined.
+  test(*bpftrace, "BEGIN { if (!@i) { @i++; } }", 0);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"
