@@ -35,6 +35,18 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   {
     os << type.type << "[" << type.size << "]";
   }
+  else if (type.type == Type::tuple)
+  {
+    os << "(";
+    size_t n = type.tuple_elems.size();
+    for (size_t i = 0; i < n; ++i)
+    {
+      os << type.tuple_elems[i];
+      if (i != n - 1)
+        os << ",";
+    }
+    os << ")";
+  }
   else
   {
     os << type.type;
@@ -102,6 +114,7 @@ std::string typestr(Type t)
     case Type::array:    return "array";    break;
     case Type::ctx:      return "ctx";      break;
     case Type::buffer:   return "buffer";   break;
+    case Type::tuple:    return "tuple";    break;
     // clang-format on
     default:
       std::cerr << "call or probe type not found" << std::endl;

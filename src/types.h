@@ -45,6 +45,7 @@ enum class Type
   ctx,
   record, // struct or union
   buffer,
+  tuple,
   // clang-format on
 };
 
@@ -94,6 +95,8 @@ public:
   bool is_kfarg = false;
   size_t pointee_size = 0;
   int kfarg_idx = -1;
+  // Only valid if `type == Type::tuple`
+  std::vector<SizedType> tuple_elems;
 
 private:
   bool is_signed = false;
@@ -212,6 +215,10 @@ public:
   bool IsBufferTy(void) const
   {
     return type == Type::buffer;
+  };
+  bool IsTupleTy(void) const
+  {
+    return type == Type::tuple;
   };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
