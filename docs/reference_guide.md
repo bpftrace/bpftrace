@@ -1578,7 +1578,11 @@ slept for 1000 ms
 
 ## 3. `@[]`: Associative Arrays
 
-Syntax: `@associative_array_name[key_name] = value`
+Syntax:
+```
+@associative_array_name[key_name] = value
+@associative_array_name[key_name, key_name2, ...] = value
+```
 
 These are implemented using BPF maps.
 
@@ -1593,6 +1597,13 @@ slept for 1000 ms
 slept for 1000 ms
 slept for 1000 ms
 [...]
+```
+
+```
+# bpftrace -e 'BEGIN { @[1,2] = 3; printf("%d\n", @[1,2]); clear(@); }'
+Attaching 1 probe...
+3
+^C
 ```
 
 ## 4. `count()`: Frequency Counting
