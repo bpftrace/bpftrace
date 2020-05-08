@@ -1077,6 +1077,12 @@ void SemanticAnalyser::visit(Map &map)
         // map functions only accepts a pointer to a element in the stack
         error("context cannot be used as a map key", map.loc);
       }
+      else if (expr->type.type == Type::tuple)
+      {
+        error("tuple cannot be used as a map key. Try a multi-key associative"
+              " array instead (eg `@map[$1, $2] = ...)`.",
+              map.loc);
+      }
 
       if (is_final_pass()) {
         if (expr->type.IsNoneTy())
@@ -1625,9 +1631,24 @@ void SemanticAnalyser::visit(Cast &cast)
   cast.type.is_pointer = cast.is_pointer;
 }
 
-void SemanticAnalyser::visit(Tuple &tuple __attribute__((unused)))
+void SemanticAnalyser::visit(Tuple &tuple)
 {
-  // XXX implement
+  auto &type = tuple.type;
+  size_t total_size = 0;
+
+  type.tuple_elems.clear();
+
+  for (size_t i = 0; i < tuple.elems->size(); ++i)
+  {
+    Expression *elem = tuple.elems->at(i);
+    elem->accept(*this);
+
+    type.tuple_elems.emplace_back(elem->type);
+    total_size += elem->type.size;
+  }
+
+  type.type = Type::tuple;
+  type.size = total_size;
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
@@ -1653,7 +1674,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
               << map_ident << ": "
               << "trying to assign value of type '" << cast_type
               << "' when map already contains a value of type '"
-              << curr_cast_type,
+              << curr_cast_type << "''",
           assignment.loc);
     }
     else {
@@ -1709,6 +1730,23 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   {
     // bpf_map_update_elem() only accepts a pointer to a element in the stack
     error("context cannot be assigned to a map", assignment.loc);
+  }
+  else if (type == Type::tuple)
+  {
+    // Early passes may not have been able to deduce the full types of tuple
+    // elements yet. So wait until final pass.
+    if (is_final_pass())
+    {
+      const auto &map_type = map_val_[map_ident];
+      const auto &expr_type = assignment.expr->type;
+      if (map_type != expr_type)
+      {
+        std::stringstream buf;
+        buf << "Tuple type mismatch: " << map_type << " != " << expr_type
+            << ".";
+        error(buf.str(), assignment.loc);
+      }
+    }
   }
 
   if (is_final_pass())
@@ -1796,6 +1834,23 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
       else
         buf << " The value may contain garbage.";
       bpftrace_.warning(out_, assignment.loc, buf.str());
+    }
+  }
+  else if (assignment.expr->type.type == Type::tuple)
+  {
+    // Early passes may not have been able to deduce the full types of tuple
+    // elements yet. So wait until final pass.
+    if (is_final_pass())
+    {
+      auto var_type = variable_val_[var_ident];
+      auto expr_type = assignment.expr->type;
+      if (var_type != expr_type)
+      {
+        std::stringstream buf;
+        buf << "Tuple type mismatch: " << var_type << " != " << expr_type
+            << ".";
+        error(buf.str(), assignment.loc);
+      }
     }
   }
 

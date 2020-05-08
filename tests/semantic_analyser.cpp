@@ -1635,6 +1635,104 @@ TEST(semantic_analyser, type_ctx)
   test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
 
+// Basic functionality test
+TEST(semantic_analyser, tuple)
+{
+  test(R"_(BEGIN { $t = (1)})_", 0);
+  test(R"_(BEGIN { $t = (1, 2); $v = $t;})_", 0);
+  test(R"_(BEGIN { $t = (1, 2, "string")})_", 0);
+  test(R"_(BEGIN { $t = (1, 2, "string"); $t = (3, 4, "other"); })_", 0);
+  test(R"_(BEGIN { $t = (1, kstack()) })_", 0);
+  test(R"_(BEGIN { $t = (1, (2,3)) })_", 0);
+
+  test(R"_(BEGIN { @t = (1)})_", 0);
+  test(R"_(BEGIN { @t = (1, 2); @v = @t;})_", 0);
+  test(R"_(BEGIN { @t = (1, 2, "string")})_", 0);
+  test(R"_(BEGIN { @t = (1, 2, "string"); @t = (3, 4, "other"); })_", 0);
+  test(R"_(BEGIN { @t = (1, kstack()) })_", 0);
+  test(R"_(BEGIN { @t = (1, (2,3)) })_", 0);
+
+  test(R"_(BEGIN { $t = (1, 2); $t = (4, "other"); })_", 10);
+  test(R"_(BEGIN { $t = (1, 2); $t = 5; })_", 1);
+  test(R"_(BEGIN { $t = (1, count()) })_", 1);
+
+  test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 10);
+  test(R"_(BEGIN { @t = (1, 2); @t = 5; })_", 1);
+  test(R"_(BEGIN { @t = (1, count()) })_", 1);
+}
+
+// More in depth inspection of AST
+TEST(semantic_analyser, tuple_assign_var)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_", 0);
+
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $t = (1, "str");
+  auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+  auto ty = SizedType(Type::tuple, 8 + 64, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::string, 64, false);
+  EXPECT_EQ(ty, assignment->var->type);
+
+  // $t = (4, "other");
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
+  ty = SizedType(Type::tuple, 8 + 64, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::string, 64, false);
+  EXPECT_EQ(ty, assignment->var->type);
+}
+
+// More in depth inspection of AST
+TEST(semantic_analyser, tuple_assign_map)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, R"_(BEGIN { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })_", 0);
+
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $t = (1, 3, 3, 7);
+  auto assignment = static_cast<ast::AssignMapStatement *>(stmts->at(0));
+  auto ty = SizedType(Type::tuple, 4 * 8, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::integer, 8, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, false);
+  EXPECT_EQ(ty, assignment->map->type);
+
+  // $t = (0, 0, 0, 0);
+  assignment = static_cast<ast::AssignMapStatement *>(stmts->at(1));
+  ty = SizedType(Type::tuple, 4 * 8, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  EXPECT_EQ(ty, assignment->map->type);
+}
+
+// More in depth inspection of AST
+TEST(semantic_analyser, tuple_nested)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
+
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $t = (1, "str");
+  auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+  auto ty = SizedType(Type::tuple, 3 * 8, false);
+  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty.tuple_elems.emplace_back(Type::tuple, 2 * 8, false);
+  auto ty_inner = SizedType(Type::tuple, 2 * 8, false);
+  ty_inner.tuple_elems.emplace_back(Type::tuple, 2 * 8, false);
+  ty.tuple_elems.emplace_back(std::move(ty_inner));
+  EXPECT_EQ(ty, assignment->var->type);
+}
+
 TEST(semantic_analyser, multi_pass_type_inference_zero_size_int)
 {
   auto bpftrace = get_mock_bpftrace();
