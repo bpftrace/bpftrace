@@ -37,6 +37,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [11. Integer casts](#11-integer-casts)
     - [12. Looping constructs](#12-looping-constructs)
     - [13. `return`: Terminate Early](#13-return-terminate-early)
+    - [14. `( , )`: Tuples](#14----tuples)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -780,6 +781,21 @@ Loops can be short circuited by using the `continue` and `break` keywords.
 
 The `return` keyword is used to exit the current probe. This differs from
 `exit()` in that it doesn't exit bpftrace.
+
+## 14. `( , )`: Tuples
+
+N-tuples are supported, where N is any integer greater than 1.
+
+Indexing is supported using the `.` operator.
+
+Example:
+
+```
+# bpftrace -e 'BEGIN { $t = (1, 2, "string"); printf("%d %s\n", $t.1, $t.2); }'
+Attaching 1 probe...
+2 string
+^C
+```
 
 # Probes
 
