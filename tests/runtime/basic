@@ -128,3 +128,13 @@ RUN bpftrace -e 'BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) } exit(); }'
 EXPECT @: 50
 TIMEOUT 5
 REQUIRES bpftrace --info 2>&1 | grep "Loop support: yes"
+
+NAME basic tuple
+RUN bpftrace -e 'BEGIN { $v = 99; $t = (0, 1, "str", (5, 6), $v); printf("%d %d %s %d %d %d\n", $t.0, $t.1, $t.2, $t.3.0, $t.3.1, $t.4); exit(); }'
+EXPECT 0 1 str 5 6 99
+TIMEOUT 5
+
+NAME basic tuple map
+RUN bpftrace -e 'BEGIN { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2); exit(); }'
+EXPECT 0 1 str
+TIMEOUT 5
