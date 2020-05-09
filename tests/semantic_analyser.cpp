@@ -1661,6 +1661,18 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, count()) })_", 1);
 }
 
+TEST(semantic_analyser, tuple_indexing)
+{
+  test(R"_(BEGIN { (1,2).0 })_", 0);
+  test(R"_(BEGIN { (1,2).1 })_", 0);
+  test(R"_(BEGIN { (1,2,3).2 })_", 0);
+  test(R"_(BEGIN { $t = (1,2,3).0 })_", 0);
+  test(R"_(BEGIN { $t = (1,2,3); $v = $t.0; })_", 0);
+
+  test(R"_(BEGIN { (1,2,3).3 })_", 10);
+  test(R"_(BEGIN { (1,2,3).9999999999999 })_", 10);
+}
+
 // More in depth inspection of AST
 TEST(semantic_analyser, tuple_assign_var)
 {

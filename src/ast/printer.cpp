@@ -183,7 +183,10 @@ void Printer::visit(FieldAccess &acc)
   acc.expr->accept(*this);
   --depth_;
 
-  out_ << indent << " " << acc.field << std::endl;
+  if (acc.field.size())
+    out_ << indent << " " << acc.field << std::endl;
+  else
+    out_ << indent << " " << acc.index << std::endl;
 }
 
 void Printer::visit(ArrayAccess &arr)

@@ -157,8 +157,10 @@ class FieldAccess : public Expression {
 public:
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
+  FieldAccess(Expression *expr, ssize_t index, location loc);
   Expression *expr;
   std::string field;
+  ssize_t index = -1;
 
   void accept(Visitor &v) override;
 };

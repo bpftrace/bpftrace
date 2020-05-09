@@ -1496,10 +1496,14 @@ void SemanticAnalyser::visit(While &while_block)
 
 void SemanticAnalyser::visit(FieldAccess &acc)
 {
+  // A field access must have a field XOR index
+  assert((acc.field.size() > 0) != (acc.index >= 0));
+
   acc.expr->accept(*this);
 
   SizedType &type = acc.expr->type;
-  if (type.type != Type::cast && type.type != Type::ctx)
+  if (type.type != Type::cast && type.type != Type::ctx &&
+      type.type != Type::tuple)
   {
     if (is_final_pass()) {
       ERR("Can not access field '" << acc.field << "' on expression of type '"
@@ -1517,6 +1521,31 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       acc.type = it->second;
     else
       error("Can't find a field", acc.loc);
+    return;
+  }
+
+  if (type.type == Type::tuple)
+  {
+    if (acc.index < 0)
+    {
+      error("Tuples must be indexed with a constant and non-negative integer",
+            acc.loc);
+      return;
+    }
+
+    bool valid_idx = static_cast<size_t>(acc.index) < type.tuple_elems.size();
+
+    // We may not have inferred the full type of the tuple yet in early passes
+    // so wait until the final pass.
+    if (!valid_idx && is_final_pass())
+      ERR("Invalid tuple index: " << acc.index << ". Found "
+                                  << type.tuple_elems.size()
+                                  << " elements in tuple.",
+          acc.loc);
+
+    if (valid_idx)
+      acc.type = type.tuple_elems[acc.index];
+
     return;
   }
 
