@@ -224,6 +224,11 @@ FieldAccess::FieldAccess(Expression *expr,
 {
 }
 
+FieldAccess::FieldAccess(Expression *expr, ssize_t index, location loc)
+    : Expression(loc), expr(expr), index(index)
+{
+}
+
 void FieldAccess::accept(Visitor &v) {
   v.visit(*this);
 }

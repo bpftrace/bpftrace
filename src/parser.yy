@@ -327,6 +327,7 @@ expr : int                                      { $$ = $1; }
      | MINUS expr                               { $$ = new ast::Unop(token::MINUS, $2, @1); }
      | MUL  expr %prec DEREF                    { $$ = new ast::Unop(token::MUL,  $2, @1); }
      | expr DOT ident                           { $$ = new ast::FieldAccess($1, $3, @2); }
+     | expr DOT INT                             { $$ = new ast::FieldAccess($1, $3, @3); }
      | expr PTR ident                           { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1, @2), $3, @$); }
      | expr "[" expr "]"                        { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
      | "(" IDENT ")" expr %prec CAST            { $$ = new ast::Cast($2, false, $4, @1 + @3); }
