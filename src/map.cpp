@@ -50,7 +50,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   {
       map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
   }
-  else if (type.type == Type::join)
+  else if (type.type == Type::join || type.type == Type::fmtstr)
   {
     map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
     max_entries = 1;

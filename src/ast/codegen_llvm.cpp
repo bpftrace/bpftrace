@@ -2183,11 +2183,26 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     arg.offset = struct_layout->getElementOffset(i+1); // +1 for the id field
   }
 
-  AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
-  b_.CREATE_MEMSET(fmt_args, b_.getInt8(0), struct_size, 1);
+  int asyncId = id + asyncactionint(async_action);
+  Value *fmt_args = b_.CreateGetFmtStrMap(fmt_struct, asyncId);
+
+  Function *parent = b_.GetInsertBlock()->getParent();
+  BasicBlock *zero = BasicBlock::Create(module_->getContext(), "fmtstrzero", parent);
+  BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "fmtstrnotzero", parent);
+
+  auto fmt_struct_ptr_ty = PointerType::get(fmt_struct, 0);
+  auto null_ptr = ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), fmt_struct_ptr_ty);
+  b_.CreateCondBr(b_.CreateICmpNE(fmt_args, null_ptr, "fmtstrcond"), notzero, zero);
+
+  b_.SetInsertPoint(notzero);
+
+  auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(bpftrace_.fmtstr_map_zero_));
+
+  b_.CreateProbeRead(fmt_args, struct_size,
+                     ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, fmt_struct_ptr_ty));
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
-  b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
+  b_.CreateStore(b_.getInt64(asyncId), id_offset);
   for (size_t i=1; i<call.vargs->size(); i++)
   {
     Expression &arg = *call.vargs->at(i);
@@ -2210,6 +2225,11 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   id++;
   b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
   b_.CreateLifetimeEnd(fmt_args);
+
+  b_.CreateBr(zero);
+
+  // done
+  b_.SetInsertPoint(zero);
   expr_ = nullptr;
 }
 
