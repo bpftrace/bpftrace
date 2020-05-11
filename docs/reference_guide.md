@@ -1,7 +1,7 @@
 # bpftrace Reference Guide
 
 For a reference summary, see the [README.md](../README.md) for the sections on
-[Probe types](../README.md#probe-types) as well as the [probes](#probes), [variable builtins](#1-builtins), and [function builtins](#1-builtins-1) sections in this guide.
+[Probe types](../README.md#probe-types) as well as the [Probes](#probes), [Variable builtins](#1-builtins), and [Function builtins](#1-builtins-1) sections in this guide.
 
 This is a work in progress. If something is missing, check the bpftrace source to see if these docs are
 just out of date. And if you find something, please file an issue or pull request to update these docs.
