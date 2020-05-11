@@ -135,7 +135,9 @@ public:
                                      const std::string &event_name);
 
 private:
-  static std::string parse_field(const std::string &line, int *last_offset);
+  static std::string parse_field(const std::string &line,
+                                 int *last_offset,
+                                 BPFtrace &bpftrace);
   static std::string adjust_integer_types(const std::string &field_type,
                                           int size);
   static std::set<std::string> struct_list;
@@ -143,7 +145,8 @@ private:
 protected:
   static std::string get_tracepoint_struct(std::istream &format_file,
                                            const std::string &category,
-                                           const std::string &event_name);
+                                           const std::string &event_name,
+                                           BPFtrace &bpftrace);
 };
 
 } // namespace bpftrace
