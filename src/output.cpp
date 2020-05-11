@@ -152,7 +152,8 @@ void TextOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
     }
 
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": ";
-    out_ << bpftrace.map_value_to_str(map, value, div);
+    out_ << bpftrace.map_value_to_str(
+        map.type_, value, map.is_per_cpu_type(), div);
 
     if (map.type_.type != Type::kstack && map.type_.type != Type::ustack &&
         map.type_.type != Type::ksym && map.type_.type != Type::usym &&
@@ -380,11 +381,14 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
         map.type_.IsUsernameTy() || map.type_.IsStringTy() ||
         map.type_.IsBufferTy() || map.type_.IsProbeTy())
     {
-      out_ << "\"" << json_escape(bpftrace.map_value_to_str(map, value, div))
+      out_ << "\""
+           << json_escape(bpftrace.map_value_to_str(
+                  map.type_, value, map.is_per_cpu_type(), div))
            << "\"";
     }
     else {
-      out_ << bpftrace.map_value_to_str(map, value, div);
+      out_ << bpftrace.map_value_to_str(
+          map.type_, value, map.is_per_cpu_type(), div);
     }
 
     i++;

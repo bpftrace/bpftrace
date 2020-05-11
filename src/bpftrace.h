@@ -119,7 +119,10 @@ public:
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
                             const std::string &path) const;
-  std::string map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div);
+  std::string map_value_to_str(const SizedType &stype,
+                               std::vector<uint8_t> value,
+                               bool is_per_cpu,
+                               uint32_t div);
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;

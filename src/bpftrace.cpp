@@ -1225,47 +1225,50 @@ int BPFtrace::zero_map(IMap &map)
   return 0;
 }
 
-std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div)
+std::string BPFtrace::map_value_to_str(const SizedType &stype,
+                                       std::vector<uint8_t> value,
+                                       bool is_per_cpu,
+                                       uint32_t div)
 {
-  uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  if (map.type_.IsKstackTy())
+  uint32_t nvalues = is_per_cpu ? ncpus_ : 1;
+  if (stype.IsKstackTy())
     return get_stack(
-        read_data<uint64_t>(value.data()), false, map.type_.stack_type, 8);
-  else if (map.type_.IsUstackTy())
+        read_data<uint64_t>(value.data()), false, stype.stack_type, 8);
+  else if (stype.IsUstackTy())
     return get_stack(
-        read_data<uint64_t>(value.data()), true, map.type_.stack_type, 8);
-  else if (map.type_.IsKsymTy())
+        read_data<uint64_t>(value.data()), true, stype.stack_type, 8);
+  else if (stype.IsKsymTy())
     return resolve_ksym(read_data<uintptr_t>(value.data()));
-  else if (map.type_.IsUsymTy())
+  else if (stype.IsUsymTy())
     return resolve_usym(read_data<uintptr_t>(value.data()),
                         read_data<uintptr_t>(value.data() + 8));
-  else if (map.type_.IsInetTy())
+  else if (stype.IsInetTy())
     return resolve_inet(read_data<uint32_t>(value.data()),
                         (uint8_t *)(value.data() + 8));
-  else if (map.type_.IsUsernameTy())
+  else if (stype.IsUsernameTy())
     return resolve_uid(read_data<uint64_t>(value.data()));
-  else if (map.type_.IsBufferTy())
+  else if (stype.IsBufferTy())
     return resolve_buf(reinterpret_cast<char *>(value.data() + 1),
                        *reinterpret_cast<uint8_t *>(value.data()));
-  else if (map.type_.IsStringTy())
+  else if (stype.IsStringTy())
   {
     auto p = reinterpret_cast<const char *>(value.data());
-    return std::string(p, strnlen(p, map.type_.size));
+    return std::string(p, strnlen(p, stype.size));
   }
-  else if (map.type_.IsCountTy())
+  else if (stype.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  else if (map.type_.IsSumTy() || map.type_.IsIntTy())
+  else if (stype.IsSumTy() || stype.IsIntTy())
   {
-    if (map.type_.IsSigned())
+    if (stype.IsSigned())
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   }
-  else if (map.type_.IsMinTy())
+  else if (stype.IsMinTy())
     return std::to_string(min_value(value, nvalues) / div);
-  else if (map.type_.IsMaxTy())
+  else if (stype.IsMaxTy())
     return std::to_string(max_value(value, nvalues) / div);
-  else if (map.type_.IsProbeTy())
+  else if (stype.IsProbeTy())
     return resolve_probe(read_data<uint64_t>(value.data()));
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
