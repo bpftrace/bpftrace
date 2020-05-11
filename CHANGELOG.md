@@ -38,6 +38,8 @@ and this project adheres to
   - [#1317](https://github.com/iovisor/bpftrace/pull/1317)
 - Introduce `-k` and `-kk` options. Emit a warning when a bpf helper returns an error
   - [#1276](https://github.com/iovisor/bpftrace/pull/1276)
+- Add tuples to language
+  - [#1326](https://github.com/iovisor/bpftrace/pull/1326)
 
 #### Changed
 
