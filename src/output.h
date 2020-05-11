@@ -78,6 +78,9 @@ private:
   static std::string lhist_index_label(int number);
   void hist(const std::vector<uint64_t> &values, uint32_t div) const;
   void lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
+  std::string tuple_to_str(BPFtrace &bpftrace,
+                           const SizedType &ty,
+                           const std::vector<uint8_t> &value) const;
 };
 
 class JsonOutput : public Output {
@@ -106,6 +109,9 @@ private:
              int min,
              int max,
              int step) const;
+  std::string tuple_to_str(BPFtrace &bpftrace,
+                           const SizedType &ty,
+                           const std::vector<uint8_t> &value) const;
 };
 
 } // namespace bpftrace

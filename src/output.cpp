@@ -4,6 +4,15 @@
 
 namespace bpftrace {
 
+namespace {
+bool is_quoted_type(const SizedType &ty)
+{
+  return ty.IsKstackTy() || ty.IsUstackTy() || ty.IsKsymTy() || ty.IsUsymTy() ||
+         ty.IsInetTy() || ty.IsUsernameTy() || ty.IsStringTy() ||
+         ty.IsBufferTy() || ty.IsProbeTy();
+}
+} // namespace
+
 std::ostream& operator<<(std::ostream& out, MessageType type) {
   switch (type) {
     case MessageType::map: out << "map"; break;
@@ -152,8 +161,11 @@ void TextOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
     }
 
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": ";
-    out_ << bpftrace.map_value_to_str(
-        map.type_, value, map.is_per_cpu_type(), div);
+    if (map.type_.type == Type::tuple)
+      out_ << tuple_to_str(bpftrace, map.type_, value);
+    else
+      out_ << bpftrace.map_value_to_str(
+          map.type_, value, map.is_per_cpu_type(), div);
 
     if (map.type_.type != Type::kstack && map.type_.type != Type::ustack &&
         map.type_.type != Type::ksym && map.type_.type != Type::usym &&
@@ -306,6 +318,39 @@ void TextOutput::attached_probes(uint64_t num_probes) const
     out_ << "Attaching " << num_probes << " probes..." << std::endl;
 }
 
+std::string TextOutput::tuple_to_str(BPFtrace &bpftrace,
+                                     const SizedType &ty,
+                                     const std::vector<uint8_t> &value) const
+{
+  bool first = true;
+  size_t offset = 0;
+  std::string ret;
+
+  ret += '(';
+
+  for (const SizedType &elemtype : ty.tuple_elems)
+  {
+    if (first)
+      first = false;
+    else
+      ret += ", ";
+
+    std::vector<uint8_t> elem_value(value.begin() + offset,
+                                    value.begin() + offset + elemtype.size);
+
+    if (elemtype.type == Type::tuple)
+      ret += tuple_to_str(bpftrace, elemtype, elem_value);
+    else
+      ret += bpftrace.map_value_to_str(elemtype, elem_value, false, 1);
+
+    offset += elemtype.size;
+  }
+
+  ret += ')';
+
+  return ret;
+}
+
 std::string JsonOutput::json_escape(const std::string &str) const
 {
   std::ostringstream escaped;
@@ -376,15 +421,16 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
       out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
-    if (map.type_.IsKstackTy() || map.type_.IsUstackTy() ||
-        map.type_.IsKsymTy() || map.type_.IsUsymTy() || map.type_.IsInetTy() ||
-        map.type_.IsUsernameTy() || map.type_.IsStringTy() ||
-        map.type_.IsBufferTy() || map.type_.IsProbeTy())
+    if (is_quoted_type(map.type_))
     {
       out_ << "\""
            << json_escape(bpftrace.map_value_to_str(
                   map.type_, value, map.is_per_cpu_type(), div))
            << "\"";
+    }
+    else if (map.type_.type == Type::tuple)
+    {
+      out_ << tuple_to_str(bpftrace, map.type_, value);
     }
     else {
       out_ << bpftrace.map_value_to_str(
@@ -576,6 +622,48 @@ void JsonOutput::lost_events(uint64_t lost) const
 void JsonOutput::attached_probes(uint64_t num_probes) const
 {
   message(MessageType::attached_probes, "probes", num_probes);
+}
+
+std::string JsonOutput::tuple_to_str(BPFtrace &bpftrace,
+                                     const SizedType &ty,
+                                     const std::vector<uint8_t> &value) const
+{
+  bool first = true;
+  size_t offset = 0;
+  std::string ret;
+
+  ret += '[';
+
+  for (const SizedType &elemtype : ty.tuple_elems)
+  {
+    if (first)
+      first = false;
+    else
+      ret += ',';
+
+    std::vector<uint8_t> elem_value(value.begin() + offset,
+                                    value.begin() + offset + ty.size);
+
+    if (elemtype.type == Type::tuple)
+      ret += tuple_to_str(bpftrace, elemtype, elem_value);
+    else
+    {
+      if (is_quoted_type(elemtype))
+        ret += '"';
+
+      ret += json_escape(
+          bpftrace.map_value_to_str(elemtype, elem_value, false, 1));
+
+      if (is_quoted_type(elemtype))
+        ret += '"';
+    }
+
+    offset += elemtype.size;
+  }
+
+  ret += ']';
+
+  return ret;
 }
 
 } // namespace bpftrace
