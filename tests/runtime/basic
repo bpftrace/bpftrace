@@ -138,3 +138,10 @@ NAME basic tuple map
 RUN bpftrace -e 'BEGIN { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2); exit(); }'
 EXPECT 0 1 str
 TIMEOUT 5
+
+# Careful with '(' and ')', they are read by the test engine as a regex group,
+# so make sure to escape them.
+NAME tuple print
+RUN bpftrace -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
+EXPECT ^@: \(1, 2, string, \(4, 5\)\)$
+TIMEOUT 5

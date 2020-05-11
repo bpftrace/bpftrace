@@ -82,3 +82,10 @@ NAME cat
 RUN bpftrace -v -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
 EXPECT ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 TIMEOUT 5
+
+# Careful with '[' and ']', they are read by the test engine as a regex
+# character class, so make sure to escape them.
+NAME tuple
+RUN bpftrace -f json -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
+EXPECT ^{"type": "map", "data": {"@": \[1,2,"string",\[4,5\]\]}}$
+TIMEOUT 5
