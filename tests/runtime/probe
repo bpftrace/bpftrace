@@ -159,13 +159,6 @@ REQUIRES ls /sys/devices/cpu/events/cache-misses
 RUN bpftrace -v -e 'hardware:cache-misses:10 { @[pid] = count(); exit(); }'
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
-
-NAME hardware_order
-REQUIRES ls /sys/devices/cpu/events/cache-misses
-RUN bpftrace -v runtime/scripts/hardware_order.bt
-EXPECT first second
-TIMEOUT 5
-
 NAME BEGIN
 RUN bpftrace -v -e 'BEGIN { printf("Hello\n"); exit();}'
 EXPECT Hello
