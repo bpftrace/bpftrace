@@ -1796,7 +1796,8 @@ Syntax: `$1`, `$2`, ..., `$N`, `$#`
 These are the positional parameters to the bpftrace program, also referred to as command line arguments.
 If the parameter is numeric (entirely digits), it can be used as a number. If it is non-numeric, it must
 be used as a string in the `str()` call. If a parameter is used that was not provided, it will default to
-zero for numeric context, and "" for string context.
+zero for numeric context, and "" for string context. Positional parameters may also be used in probe
+argument and will be treated as a string parameter.
 
 `$#` returns the number of positional arguments supplied.
 
