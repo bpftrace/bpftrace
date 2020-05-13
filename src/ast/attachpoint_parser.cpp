@@ -9,55 +9,6 @@
 
 #include "types.h"
 
-namespace {
-
-/*
- * This function splits an attach point definition into arguments,
- * where arguments are separated by `:`. The exception is `:`s inside
- * of quoted strings, which we must treat as a literal.
- *
- * Note that this function assumes the raw string is generally well
- * formed. More specifically, that there is no unescaped whitespace
- * and no unmatched quotes.
- */
-std::vector<std::string> split_attachpoint(const std::string &raw)
-{
-  std::vector<std::string> ret;
-  bool in_quotes = false;
-  std::string argument;
-
-  for (size_t idx = 0; idx < raw.size(); ++idx)
-  {
-    if (raw[idx] == ':' && !in_quotes)
-    {
-      ret.emplace_back(std::move(argument));
-      // The standard says an std::string in moved-from state is in
-      // valid but unspecified state, so clear() to be safe
-      argument.clear();
-    }
-    else if (raw[idx] == '"')
-      in_quotes = !in_quotes;
-    // Handle escaped characters in a string
-    else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size()))
-    {
-      argument += raw[idx + 1];
-      ++idx;
-    }
-    else
-      argument += raw[idx];
-  }
-
-  // Add final argument
-  //
-  // There will always be text in `argument` unless the AP definition
-  // ended in a ':' which we will treat as an empty argument.
-  ret.emplace_back(std::move(argument));
-
-  return ret;
-}
-
-} // namespace
-
 namespace bpftrace {
 namespace ast {
 
@@ -94,7 +45,10 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
 {
   ap_ = &ap;
 
-  parts_ = split_attachpoint(ap_->raw_input);
+  parts_.clear();
+  if (lex_attachpoint(ap_->raw_input))
+    return 1;
+
   if (parts_.empty())
   {
     errs_ << "Invalid attachpoint definition" << std::endl;
@@ -134,6 +88,42 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       errs_ << "Unrecognized probe type: " << ap_->provider << std::endl;
       return 1;
   }
+
+  return 0;
+}
+
+int AttachPointParser::lex_attachpoint(const std::string &raw)
+{
+  std::vector<std::string> ret;
+  bool in_quotes = false;
+  std::string argument;
+
+  for (size_t idx = 0; idx < raw.size(); ++idx)
+  {
+    if (raw[idx] == ':' && !in_quotes)
+    {
+      parts_.emplace_back(std::move(argument));
+      // The standard says an std::string in moved-from state is in
+      // valid but unspecified state, so clear() to be safe
+      argument.clear();
+    }
+    else if (raw[idx] == '"')
+      in_quotes = !in_quotes;
+    // Handle escaped characters in a string
+    else if (in_quotes && raw[idx] == '\\' && (idx + 1 < raw.size()))
+    {
+      argument += raw[idx + 1];
+      ++idx;
+    }
+    else
+      argument += raw[idx];
+  }
+
+  // Add final argument
+  //
+  // There will always be text in `argument` unless the AP definition
+  // ended in a ':' which we will treat as an empty argument.
+  parts_.emplace_back(std::move(argument));
 
   return 0;
 }
