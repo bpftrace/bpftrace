@@ -24,11 +24,14 @@ private:
    * where arguments are separated by `:`. The exception is `:`s inside
    * of quoted strings, which we must treat as a literal.
    *
+   * This method also resolves positional parameters. Positional params
+   * may be escaped with double quotes.
+   *
    * Note that this function assumes the raw string is generally well
    * formed. More specifically, that there is no unescaped whitespace
    * and no unmatched quotes.
    */
-  int lex_attachpoint(const std::string &raw);
+  int lex_attachpoint(const AttachPoint &ap);
 
   int kprobe_parser(bool allow_offset = true);
   int kretprobe_parser();
