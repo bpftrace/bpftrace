@@ -916,8 +916,8 @@ int BPFtrace::setup_perf_events()
   online_cpus_ = cpus.size();
   for (int cpu : cpus)
   {
-    int page_cnt = 64;
-    void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, this, -1, cpu, page_cnt);
+    void *reader = bpf_open_perf_buffer(
+        &perf_event_printer, &perf_event_lost, this, -1, cpu, perf_rb_pages_);
     if (reader == nullptr)
     {
       std::cerr << "Failed to open perf buffer" << std::endl;
