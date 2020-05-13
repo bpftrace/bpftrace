@@ -19,6 +19,16 @@ public:
 
 private:
   int parse_attachpoint(AttachPoint &ap);
+  /*
+   * This method splits an attach point definition into arguments,
+   * where arguments are separated by `:`. The exception is `:`s inside
+   * of quoted strings, which we must treat as a literal.
+   *
+   * Note that this function assumes the raw string is generally well
+   * formed. More specifically, that there is no unescaped whitespace
+   * and no unmatched quotes.
+   */
+  int lex_attachpoint(const std::string &raw);
 
   int kprobe_parser(bool allow_offset = true);
   int kretprobe_parser();
