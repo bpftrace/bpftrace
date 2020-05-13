@@ -46,7 +46,7 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
   ap_ = &ap;
 
   parts_.clear();
-  if (lex_attachpoint(ap_->raw_input))
+  if (lex_attachpoint(*ap_))
     return 1;
 
   if (parts_.empty())
@@ -92,8 +92,9 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
   return 0;
 }
 
-int AttachPointParser::lex_attachpoint(const std::string &raw)
+int AttachPointParser::lex_attachpoint(const AttachPoint &ap)
 {
+  const auto &raw = ap.raw_input;
   std::vector<std::string> ret;
   bool in_quotes = false;
   std::string argument;
@@ -114,6 +115,37 @@ int AttachPointParser::lex_attachpoint(const std::string &raw)
     {
       argument += raw[idx + 1];
       ++idx;
+    }
+    else if (!in_quotes && raw[idx] == '$')
+    {
+      // There's an assumption that the positional paramter is well
+      // formed. ie we are not expecting a bare `$` or `$nonint`. The
+      // bison parser should have guaranteed this.
+      size_t i = idx + 1;
+      size_t len = 0;
+      while (i < raw.size() && (raw[i] != '"' && raw[i] != ':'))
+      {
+        len++;
+        i++;
+      }
+
+      std::string param_idx_str = raw.substr(idx + 1, len);
+      size_t pos, param_idx;
+      param_idx = std::stoll(param_idx_str, &pos, 0);
+
+      if (pos != param_idx_str.size())
+      {
+        errs_
+            << "Found trailing text '" << param_idx_str.substr(pos)
+            << "' in positional parameter index. Try quoting the trailing text."
+            << std::endl;
+        return 1;
+      }
+
+      argument += bpftrace_.get_param(param_idx, true);
+      // NB the for loop will then do idx++ so while we consumed
+      // (len + 1) characters, we only increment by (len).
+      idx += len;
     }
     else
       argument += raw[idx];
