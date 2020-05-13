@@ -68,6 +68,7 @@ void usage()
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES         [default: 512] max number of probes" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE           [default: 409600] log size in bytes" << std::endl;
+  std::cerr << "    BPFTRACE_PERF_RB_PAGES      [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
   std::cerr << "    BPFTRACE_NO_USER_SYMBOLS    [default: 0] disable user symbol resolution" << std::endl;
   std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache" << std::endl;
   std::cerr << "    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
@@ -490,6 +491,9 @@ int main(int argc, char *argv[])
     return 1;
 
   if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
+    return 1;
+
+  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", bpftrace.perf_rb_pages_))
     return 1;
 
   if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
