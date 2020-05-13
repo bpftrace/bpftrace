@@ -10,17 +10,23 @@ namespace parser {
 
 using Printer = ast::Printer;
 
-void test_parse_failure(const std::string &input)
+void test_parse_failure(BPFtrace &bpftrace, const std::string &input)
 {
-  BPFtrace bpftrace;
   std::stringstream out;
   Driver driver(bpftrace, out);
   ASSERT_EQ(driver.parse_str(input), 1);
 }
 
-void test(const std::string &input, const std::string &output)
+void test_parse_failure(const std::string &input)
 {
   BPFtrace bpftrace;
+  test_parse_failure(bpftrace, input);
+}
+
+void test(BPFtrace &bpftrace,
+          const std::string &input,
+          const std::string &output)
+{
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
 
@@ -28,6 +34,12 @@ void test(const std::string &input, const std::string &output)
   Printer printer(out);
   driver.root_->accept(printer);
   EXPECT_EQ(output, out.str());
+}
+
+void test(const std::string &input, const std::string &output)
+{
+  BPFtrace bpftrace;
+  test(bpftrace, input, output);
 }
 
 TEST(Parser, builtin_variables)
@@ -63,6 +75,83 @@ TEST(Parser, positional_param)
 TEST(Parser, positional_param_count)
 {
   test("kprobe:f { $# }", "Program\n kprobe:f\n  param: $#\n");
+}
+
+TEST(Parser, positional_param_attachpoint)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("foo");
+  bpftrace.add_param("bar");
+  bpftrace.add_param("baz");
+
+  test(bpftrace,
+       "kprobe:$1 { 1 }",
+       R"PROG(Program
+ kprobe:foo
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(kprobe:$1"here" { 1 })PROG",
+       R"PROG(Program
+ kprobe:foohere
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:zzzzzzz:$2 { 1 })PROG",
+       R"PROG(Program
+ uprobe:zzzzzzz:bar
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:$1:$2 { 1 })PROG",
+       R"PROG(Program
+ uprobe:foo:bar
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:$2:$1 { 1 })PROG",
+       R"PROG(Program
+ uprobe:bar:foo
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:"zz"$2"zz":"aa"$1 { 1 })PROG",
+       R"PROG(Program
+ uprobe:zzbarzz:aafoo
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:$2:"aa"$1"aa" { 1 })PROG",
+       R"PROG(Program
+ uprobe:bar:aafooaa
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:"$1":$2 { 1 })PROG",
+       R"PROG(Program
+ uprobe:$1:bar
+  int: 1
+)PROG");
+
+  test(bpftrace,
+       R"PROG(uprobe:aa$1:$2 { 1 })PROG",
+       R"PROG(Program
+ uprobe:aafoo:bar
+  int: 1
+)PROG");
+
+  test_parse_failure(bpftrace, R"PROG(uprobe:$1a" { 1 })PROG");
+  test_parse_failure(bpftrace, R"PROG(uprobe:$a" { 1 })PROG");
+  test_parse_failure(bpftrace, R"PROG(uprobe:$-1" { 1 })PROG");
+  test_parse_failure(bpftrace,
+                     R"PROG(uprobe:$999999999999999999999999" { 1 })PROG");
 }
 
 TEST(Parser, comment)
