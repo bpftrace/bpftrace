@@ -195,6 +195,15 @@ TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test & ./testprogs/usdt_semaphore_test
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
 
+# Test that bpftrace will activate usdt semaphores with processes running in a separate
+# mount and pid namespace
+NAME "usdt probes - file based semaphore activation in namespace"
+RUN bpftrace -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' --usdt-file-activation
+EXPECT tracetest_testprobe_semaphore: 1
+TIMEOUT 5
+BEFORE unshare --fork --pid --mount ./testprogs/usdt_semaphore_test
+REQUIRES ./testprogs/usdt_semaphore_test should_not_skip && command -v unshare
+
 NAME "usdt probes - list probes by pid in separate mountns"
 RUN bpftrace -l 'usdt:*' -p $(pidof usdt_test)
 EXPECT usdt:.*/tmp/bpftrace-unshare-mountns-test/usdt_test:tracetest:testprobe
