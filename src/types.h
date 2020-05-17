@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -102,6 +103,111 @@ public:
   bool operator!=(const SizedType &t) const;
 
   bool IsSigned(void) const;
+  bool IsIntTy() const
+  {
+    return type == Type::integer;
+  };
+
+  bool IsNoneTy(void) const
+  {
+    return type == Type::none;
+  };
+  bool IsIntegerTy(void) const
+  {
+    return type == Type::integer;
+  };
+  bool IsHistTy(void) const
+  {
+    return type == Type::hist;
+  };
+  bool IsLhistTy(void) const
+  {
+    return type == Type::lhist;
+  };
+  bool IsCountTy(void) const
+  {
+    return type == Type::count;
+  };
+  bool IsSumTy(void) const
+  {
+    return type == Type::sum;
+  };
+  bool IsMinTy(void) const
+  {
+    return type == Type::min;
+  };
+  bool IsMaxTy(void) const
+  {
+    return type == Type::max;
+  };
+  bool IsAvgTy(void) const
+  {
+    return type == Type::avg;
+  };
+  bool IsStatsTy(void) const
+  {
+    return type == Type::stats;
+  };
+  bool IsKstackTy(void) const
+  {
+    return type == Type::kstack;
+  };
+  bool IsUstackTy(void) const
+  {
+    return type == Type::ustack;
+  };
+  bool IsStringTy(void) const
+  {
+    return type == Type::string;
+  };
+  bool IsKsymTy(void) const
+  {
+    return type == Type::ksym;
+  };
+  bool IsUsymTy(void) const
+  {
+    return type == Type::usym;
+  };
+  bool IsCastTy(void) const
+  {
+    return type == Type::cast;
+  };
+  bool IsJoinTy(void) const
+  {
+    return type == Type::join;
+  };
+  bool IsProbeTy(void) const
+  {
+    return type == Type::probe;
+  };
+  bool IsUsernameTy(void) const
+  {
+    return type == Type::username;
+  };
+  bool IsInetTy(void) const
+  {
+    return type == Type::inet;
+  };
+  bool IsStack_modeTy(void) const
+  {
+    return type == Type::stack_mode;
+  };
+  bool IsArrayTy(void) const
+  {
+    return type == Type::array;
+  };
+  bool IsCtxTy(void) const
+  {
+    return type == Type::ctx;
+  };
+  bool IsRecordTy(void) const
+  {
+    return type == Type::record;
+  };
+  bool IsBufferTy(void) const
+  {
+    return type == Type::buffer;
+  };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
