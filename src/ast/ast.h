@@ -99,10 +99,7 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(const std::string &func);
-  explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs);
-  Call(const std::string &func, ExpressionList *vargs, location loc);
+  Call(const std::string &func, location loc, ExpressionList *vargs = nullptr);
   std::string func;
   ExpressionList *vargs;
 
@@ -111,10 +108,7 @@ public:
 
 class CallFactory {
   public:
-  static Call* createCall(const std::string &func);
-  static Call* createCall(const std::string &func, location loc);
-  static Call* createCall(const std::string &func, ExpressionList *vargs);
-  static Call* createCall(const std::string &func, ExpressionList *vargs, location loc);
+  static Call* createCall(const std::string &func, location loc, ExpressionList *vargs = nullptr);
 };
 
 class Map : public Expression {

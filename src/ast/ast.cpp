@@ -108,21 +108,7 @@ void PositionalParameter::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Call::Call(const std::string &func) : func(is_deprecated(func)), vargs(nullptr)
-{
-}
-
-Call::Call(const std::string &func, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
-{
-}
-
-Call::Call(const std::string &func, ExpressionList *vargs)
-    : func(is_deprecated(func)), vargs(vargs)
-{
-}
-
-Call::Call(const std::string &func, ExpressionList *vargs, location loc)
+Call::Call(const std::string &func, location loc, ExpressionList *vargs)
     : Expression(loc), func(is_deprecated(func)), vargs(vargs)
 {
 }
@@ -131,17 +117,8 @@ void Call::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Call* CallFactory::createCall(const std::string &func) {
-  return new Call(func);
-}
-Call* CallFactory::createCall(const std::string &func, location loc) {
-  return new Call(func, std::move(loc));
-}
-Call* CallFactory::createCall(const std::string &func, ExpressionList *vargs) {
-  return new Call(func, vargs);
-}
-Call* CallFactory::createCall(const std::string &func, ExpressionList *vargs, location loc) {
-  return new Call(func, vargs, std::move(loc));
+Call* CallFactory::createCall(const std::string &func, location loc, ExpressionList *vargs) {
+  return new Call(func, std::move(loc), vargs);
 }
 
 Map::Map(const std::string &ident, location loc)

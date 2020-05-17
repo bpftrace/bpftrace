@@ -339,9 +339,9 @@ ident : IDENT         { $$ = $1; }
       ;
 
 call : CALL "(" ")"                 { $$ = ast::CallFactory::createCall($1, @$); }
-     | CALL "(" vargs ")"           { $$ = ast::CallFactory::createCall($1, $3, @$); }
+     | CALL "(" vargs ")"           { $$ = ast::CallFactory::createCall($1, @$, $3); }
      | CALL_BUILTIN  "(" ")"        { $$ = ast::CallFactory::createCall($1, @$); }
-     | CALL_BUILTIN "(" vargs ")"   { $$ = ast::CallFactory::createCall($1, $3, @$); }
+     | CALL_BUILTIN "(" vargs ")"   { $$ = ast::CallFactory::createCall($1, @$, $3); }
      | IDENT "(" ")"                { error(@1, "Unknown function: " + $1); YYERROR;  }
      | IDENT "(" vargs ")"          { error(@1, "Unknown function: " + $1); YYERROR;  }
      | BUILTIN "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
