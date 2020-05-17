@@ -1235,7 +1235,7 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
   else if (map.type_.type == Type::count)
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
-    if (map.type_.is_signed)
+    if (map.type_.IsSigned())
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
@@ -1298,7 +1298,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 
   if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
   {
-    bool is_signed = map.type_.is_signed;
+    bool is_signed = map.type_.IsSigned();
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
       if (is_signed)

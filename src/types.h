@@ -68,13 +68,12 @@ struct StackType
 class SizedType
 {
 public:
-
   SizedType() : type(Type::none), size(0) { }
   SizedType(Type type,
             size_t size_,
             bool is_signed,
             const std::string &cast_type = "")
-      : type(type), size(size_), is_signed(is_signed), cast_type(cast_type)
+      : type(type), size(size_), cast_type(cast_type), is_signed(is_signed)
   {
   }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
@@ -87,7 +86,6 @@ public:
                                // array
   size_t size;                 // in bytes
   StackType stack_type;
-  bool is_signed = false;
   std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
@@ -102,6 +100,14 @@ public:
   bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
   bool operator!=(const SizedType &t) const;
+
+  bool IsSigned(void) const;
+
+  friend std::ostream &operator<<(std::ostream &, const SizedType &);
+  friend std::ostream &operator<<(std::ostream &, Type);
+
+private:
+  bool is_signed = false;
 };
 // Type helpers
 
