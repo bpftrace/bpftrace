@@ -7,6 +7,8 @@
 #include <vector>
 
 #include "types.h"
+#include "imap.h"
+#include "ring_indexer.h"
 
 namespace bpftrace {
 namespace ast {
@@ -109,8 +111,11 @@ public:
 class StrCall : public Call {
 public:
   StrCall(const std::string &func, location loc, ExpressionList *vargs = nullptr);
+  void initialise(std::unique_ptr<IMap> map, std::unique_ptr<RingIndexer> ringIndexer);
 private:
-  std::unique_ptr<Map> map;
+  bool initialised = false;
+  std::unique_ptr<IMap> map;
+  std::unique_ptr<RingIndexer> ringIndexer;
 };
 
 class CallFactory {

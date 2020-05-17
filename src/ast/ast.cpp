@@ -122,6 +122,12 @@ StrCall::StrCall(const std::string &func, location loc, ExpressionList *vargs)
 {
 }
 
+void StrCall::initialise(std::unique_ptr<IMap> map, std::unique_ptr<RingIndexer> ringIndexer) {
+  this->map.swap(map);
+  this->ringIndexer.swap(ringIndexer);
+  this->initialised = true;
+}
+
 Call* CallFactory::createCall(const std::string &func, location loc, ExpressionList *vargs) {
   if (func == "str") {
     return new StrCall(func, std::move(loc), vargs);

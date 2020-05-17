@@ -25,6 +25,7 @@ add_executable(bpftrace
   tracepoint_format_parser.cpp
   types.cpp
   utils.cpp
+  ring_indexer.cpp
   ${BFD_DISASM_SRC}
 )
 

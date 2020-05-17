@@ -62,6 +62,7 @@ void usage()
   std::cerr << "    -V, --version  bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()" << std::endl;
+  std::cerr << "    BPFTRACE_EVENTS_BUFFER_SIZE [default: 4] map keys for receiving pending str,join,printf calls" << std::endl;
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin" << std::endl;
@@ -472,6 +473,9 @@ int main(int argc, char *argv[])
     << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
     return 1;
   }
+
+  if (!get_uint64_env_var("BPFTRACE_EVENTS_BUFFER_SIZE", bpftrace.events_buffer_size_))
+    return 1;
 
   if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
   {

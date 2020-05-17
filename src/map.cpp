@@ -50,10 +50,9 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   {
       map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
   }
-  else if (type.type == Type::join || type.type == Type::fmtstr)
+  else if (type.type == Type::join || type.type == Type::fmtstr || type.type == Type::str)
   {
     map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
-    max_entries = 1;
     key_size = 4;
   }
   else
@@ -61,6 +60,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
 
   int value_size = type.size;
   int flags = 0;
+  max_entries_ = max_entries;
   mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
