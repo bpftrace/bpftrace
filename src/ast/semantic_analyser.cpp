@@ -540,9 +540,14 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
       check_arg(call, Type::integer, 0);
+      // this is a bit pessimistic; we can make smaller strings
+      // if somebody provides a literal length
       call.type = CreateString(bpftrace_.strlen_);
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
+        // consider adding another optional param
+        // that lets you specify the max str size of a dynamic string
+        // (otherwise we fallback to global limit)
       }
       if (auto *param = dynamic_cast<PositionalParameter*>(call.vargs->at(0))) {
         param->is_in_str = true;

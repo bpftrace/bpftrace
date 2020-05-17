@@ -2221,6 +2221,17 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     if (expr_deleter_)
       expr_deleter_();
   }
+  // we cannot create a dynamically-sized array inside the struct
+  // so our options are:
+  // - don't send the string, send a map key (this opens us to races)
+  // - allocate max_strlen space for each string
+  //   - we can actually add a third arg to str() to tune this per-string
+  // - don't use a struct; use an AllocaInst (and do alignment ourselves)
+  // - allocate a char at the end of the struct, increase "struct_size" by how much string we want
+  //   - each individual string would need to store an offset into this string buffer
+  // the easiest is to allocate max_strlen for each string.
+  // sending map key instead of actual string may be performant, but race isn't well-understood
+  // including a string buffer at the end of the struct is easy and space-efficient
 
   id++;
   b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);

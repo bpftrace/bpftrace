@@ -109,6 +109,14 @@ public:
   void accept(Visitor &v) override;
 };
 
+class CallFactory {
+  public:
+  static Call* createCall(const std::string &func);
+  static Call* createCall(const std::string &func, location loc);
+  static Call* createCall(const std::string &func, ExpressionList *vargs);
+  static Call* createCall(const std::string &func, ExpressionList *vargs, location loc);
+};
+
 class Map : public Expression {
 public:
   explicit Map(const std::string &ident, location loc);

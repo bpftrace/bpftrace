@@ -131,6 +131,19 @@ void Call::accept(Visitor &v) {
   v.visit(*this);
 }
 
+Call* CallFactory::createCall(const std::string &func) {
+  return new Call(func);
+}
+Call* CallFactory::createCall(const std::string &func, location loc) {
+  return new Call(func, std::move(loc));
+}
+Call* CallFactory::createCall(const std::string &func, ExpressionList *vargs) {
+  return new Call(func, vargs);
+}
+Call* CallFactory::createCall(const std::string &func, ExpressionList *vargs, location loc) {
+  return new Call(func, vargs, std::move(loc));
+}
+
 Map::Map(const std::string &ident, location loc)
     : Expression(loc), ident(ident), vargs(nullptr)
 {
