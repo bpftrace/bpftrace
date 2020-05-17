@@ -65,8 +65,10 @@ struct StackType
   }
 };
 
-struct SizedType
+class SizedType
 {
+public:
+
   SizedType() : type(Type::none), size(0) { }
   SizedType(Type type,
             size_t size_,
