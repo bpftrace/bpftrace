@@ -458,32 +458,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
-    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
-    if (call.vargs->size() > 1) {
-      call.vargs->at(1)->accept(*this);
-      Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
-
-      // largest read we'll allow = our global string buffer size
-      Value *max = b_.getInt64(bpftrace_.strlen_);
-      // integer comparison: unsigned less-than-or-equal-to
-      CmpInst::Predicate P = CmpInst::ICMP_ULE;
-      // check whether proposed_strlen is less-than-or-equal-to maximum
-      Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
-      // select proposed_strlen if it's sufficiently low, otherwise choose maximum
-      Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
-      b_.CreateStore(Select, strlen);
-    } else {
-      b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
-    }
-    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
-    call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
-    b_.CreateLifetimeEnd(strlen);
-
-    expr_ = buf;
-    expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
+    CodegenLLVM::visit(static_cast<StrCall&>(call));
   }
   else if (call.func == "buf")
   {
@@ -920,6 +895,36 @@ void CodegenLLVM::visit(Call &call)
     std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
     abort();
   }
+}
+
+void CodegenLLVM::visit(StrCall &call)
+{
+  AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+  b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+  if (call.vargs->size() > 1) {
+    call.vargs->at(1)->accept(*this);
+    Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+
+    // largest read we'll allow = our global string buffer size
+    Value *max = b_.getInt64(bpftrace_.strlen_);
+    // integer comparison: unsigned less-than-or-equal-to
+    CmpInst::Predicate P = CmpInst::ICMP_ULE;
+    // check whether proposed_strlen is less-than-or-equal-to maximum
+    Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+    // select proposed_strlen if it's sufficiently low, otherwise choose maximum
+    Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
+    b_.CreateStore(Select, strlen);
+  } else {
+    b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+  }
+  AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
+  b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+  call.vargs->front()->accept(*this);
+  b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+  b_.CreateLifetimeEnd(strlen);
+
+  expr_ = buf;
+  expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
 }
 
 void CodegenLLVM::visit(Map &map)

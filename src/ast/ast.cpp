@@ -117,7 +117,15 @@ void Call::accept(Visitor &v) {
   v.visit(*this);
 }
 
+StrCall::StrCall(const std::string &func, location loc, ExpressionList *vargs)
+    : Call(func, std::move(loc), vargs)
+{
+}
+
 Call* CallFactory::createCall(const std::string &func, location loc, ExpressionList *vargs) {
+  if (func == "str") {
+    return new StrCall(func, std::move(loc), vargs);
+  }
   return new Call(func, std::move(loc), vargs);
 }
 

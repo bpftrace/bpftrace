@@ -106,6 +106,13 @@ public:
   void accept(Visitor &v) override;
 };
 
+class StrCall : public Call {
+public:
+  StrCall(const std::string &func, location loc, ExpressionList *vargs = nullptr);
+private:
+  std::unique_ptr<Map> map;
+};
+
 class CallFactory {
   public:
   static Call* createCall(const std::string &func, location loc, ExpressionList *vargs = nullptr);
