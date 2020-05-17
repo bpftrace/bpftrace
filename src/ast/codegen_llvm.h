@@ -37,7 +37,6 @@ public:
   void visit(Builtin &builtin) override;
   void visit(StackMode &) override { };
   void visit(Call &call) override;
-  void visit(StrCall &call);
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
