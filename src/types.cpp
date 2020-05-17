@@ -351,4 +351,10 @@ SizedType CreateBuffer(size_t size)
 {
   return SizedType(Type::buffer, size);
 }
+
+bool SizedType::IsSigned(void) const
+{
+  return is_signed;
+}
+
 } // namespace bpftrace

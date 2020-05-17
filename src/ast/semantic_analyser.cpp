@@ -493,7 +493,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.is_signed;
+      sign = call.vargs->at(0)->type.IsSigned();
     }
     call.type = CreateSum(sign);
   }
@@ -502,7 +502,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.is_signed;
+      sign = call.vargs->at(0)->type.IsSigned();
     }
     call.type = CreateMin(sign);
   }
@@ -511,7 +511,7 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, true, false, false);
     if (check_nargs(call, 1)) {
       check_arg(call, Type::integer, 0);
-      sign = call.vargs->at(0)->type.is_signed;
+      sign = call.vargs->at(0)->type.IsSigned();
     }
     call.type = CreateMax(sign);
   }
@@ -1060,7 +1060,7 @@ void SemanticAnalyser::visit(Map &map)
       // Insert a cast to 64 bits if needed by injecting
       // a cast into the ast.
       if (expr->type.type == Type::integer && expr->type.size < 8) {
-        std::string type = expr->type.is_signed ? "int64" : "uint64";
+        std::string type = expr->type.IsSigned() ? "int64" : "uint64";
         Expression * cast = new ast::Cast(type, false, expr);
         cast->accept(*this);
         map.vargs->at(i) = cast;
@@ -1079,11 +1079,12 @@ void SemanticAnalyser::visit(Map &map)
         if (expr->type.type == Type::array)
           error("Using array as a map key is not supported (#1052)", expr->loc);
 
-        // Skip is_signed when comparing keys to not break existing scripts
+        SizedType keytype = expr->type;
+        // Skip.IsSigned() when comparing keys to not break existing scripts
         // which use maps as a lookup table
         // TODO (fbs): This needs a better solution
-        SizedType keytype = expr->type;
-        keytype.is_signed = false;
+        if (expr->type.type == Type::integer)
+          keytype = CreateUInt(keytype.size * 8);
         key.args_.push_back(keytype);
       }
     }
@@ -1159,7 +1160,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
   }
 
-  arr.type = SizedType(type.elem_type, type.pointee_size, type.is_signed);
+  arr.type = SizedType(type.elem_type, type.pointee_size, type.IsSigned());
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -1168,8 +1169,8 @@ void SemanticAnalyser::visit(Binop &binop)
   binop.right->accept(*this);
   Type &lhs = binop.left->type.type;
   Type &rhs = binop.right->type.type;
-  bool lsign = binop.left->type.is_signed;
-  bool rsign = binop.right->type.is_signed;
+  bool lsign = binop.left->type.IsSigned();
+  bool rsign = binop.right->type.IsSigned();
 
   std::stringstream buf;
   if (is_final_pass()) {
@@ -1203,11 +1204,11 @@ void SemanticAnalyser::visit(Binop &binop)
         // No warning should be emitted as we know that 10 can be
         // represented as unsigned int
         if (lsign && !rsign && left->is_literal && get_int_literal(left) >= 0) {
-          left->type.is_signed = lsign = false;
+          lsign = false;
         }
         // The reverse (10 < a) should also hold
         else if (!lsign && rsign && right->is_literal && get_int_literal(right) >= 0) {
-          right->type.is_signed = rsign = false;
+          rsign = false;
         }
         else {
           switch (binop.op) {
@@ -1217,9 +1218,8 @@ void SemanticAnalyser::visit(Binop &binop)
           case bpftrace::Parser::token::GE:
           case bpftrace::Parser::token::LT:
           case bpftrace::Parser::token::GT:
-            buf << "comparison of integers of different signs: '"
-                << binop.left->type << "' and '"
-                << binop.right->type << "'"
+            buf << "comparison of integers of different signs: '" << left->type
+                << "' and '" << right->type << "'"
                 << " can lead to undefined behavior";
             warning(buf.str(), binop.loc);
             buf.str({});
@@ -1229,8 +1229,8 @@ void SemanticAnalyser::visit(Binop &binop)
           case bpftrace::Parser::token::MUL:
           case bpftrace::Parser::token::DIV:
           case bpftrace::Parser::token::MOD:
-            buf << "arithmetic on integers of different signs: '"
-                << left->type << "' and '" << right->type << "'"
+            buf << "arithmetic on integers of different signs: '" << left->type
+                << "' and '" << right->type << "'"
                 << " can lead to undefined behavior";
             warning(buf.str(), binop.loc);
             buf.str({});
@@ -1249,9 +1249,9 @@ void SemanticAnalyser::visit(Binop &binop)
           binop.op == bpftrace::Parser::token::MOD) {
         // Convert operands to unsigned if possible
         if (lsign && left->is_literal && get_int_literal(left) >= 0)
-          left->type.is_signed = lsign = false;
+          lsign = false;
         if (rsign && right->is_literal && get_int_literal(right) >= 0)
-          right->type.is_signed = rsign = false;
+          rsign = false;
 
         // If they're still signed, we have to warn
         if (lsign || rsign) {
@@ -1350,14 +1350,14 @@ void SemanticAnalyser::visit(Unop &unop)
       }
     }
     else if (type.type == Type::integer) {
-      unop.type = CreateInteger(8 * type.size, type.is_signed);
+      unop.type = CreateInteger(8 * type.size, type.IsSigned());
     }
   }
   else if (unop.op == Parser::token::LNOT) {
     unop.type = CreateUInt(type.size);
   }
   else {
-    unop.type = CreateInteger(64, type.is_signed);
+    unop.type = CreateInteger(64, type.IsSigned());
   }
 }
 
@@ -1382,7 +1382,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
   if (lhs == Type::string)
     ternary.type = CreateString(STRING_SIZE);
   else if (lhs == Type::integer)
-    ternary.type = CreateInteger(64, ternary.left->type.is_signed);
+    ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else {
     ERR("Ternary return type unsupported " << lhs, ternary.loc);
   }

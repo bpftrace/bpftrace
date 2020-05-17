@@ -331,7 +331,7 @@ static SizedType get_sized_type(CXType clang_type)
       if (elem_type.kind != CXType_ConstantArray)
       {
         auto type = get_sized_type(elem_type);
-        return CreateArray(size, type.type, type.size, type.is_signed);
+        return CreateArray(size, type.type, type.size, type.IsSigned());
       } else {
         return CreateNone();
       }
