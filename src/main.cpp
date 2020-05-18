@@ -429,20 +429,25 @@ int main(int argc, char *argv[])
       driver.source(filename, buf.str());
     }
 
-    err = driver.parse();
-    if (err)
-      return err;
-
     optind++;
   }
   else
   {
     // Script is provided as a command line argument
     driver.source("stdin", script);
-    err = driver.parse();
-    if (err)
-      return err;
   }
+
+  // Load positional parameters before driver runs so positional
+  // parameters used inside attach point definitions can be resolved.
+  while (optind < argc)
+  {
+    bpftrace.add_param(argv[optind]);
+    optind++;
+  }
+
+  err = driver.parse();
+  if (err)
+    return err;
 
   if (!is_root())
     return 1;
@@ -464,12 +469,6 @@ int main(int argc, char *argv[])
   enforce_infinite_rlimit();
 
   cap_memory_limits();
-
-  // positional parameters
-  while (optind < argc) {
-    bpftrace.add_param(argv[optind]);
-    optind++;
-  }
 
   // defaults
   bpftrace.join_argnum_ = 16;
