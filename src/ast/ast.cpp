@@ -117,8 +117,8 @@ void Call::accept(Visitor &v) {
   v.visit(*this);
 }
 
-StrCall::StrCall(const std::string &func, location loc, ExpressionList *vargs)
-    : Call(func, std::move(loc), vargs)
+StrCall::StrCall(location loc, ExpressionList *vargs)
+    : Call("str", std::move(loc), vargs)
 {
 }
 
@@ -130,7 +130,7 @@ void StrCall::initialise(std::unique_ptr<IMap> map, std::unique_ptr<RingIndexer>
 
 Call* CallFactory::createCall(const std::string &func, location loc, ExpressionList *vargs) {
   if (func == "str") {
-    return new StrCall(func, std::move(loc), vargs);
+    return new StrCall(std::move(loc), vargs);
   }
   return new Call(func, std::move(loc), vargs);
 }

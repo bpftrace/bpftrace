@@ -1,6 +1,8 @@
 #include "semantic_analyser.h"
 #include "arch/arch.h"
 #include "ast.h"
+#include "ring_indexer.h"
+#include "imap.h"
 #include "fake_map.h"
 #include "list.h"
 #include "parser.tab.hh"
@@ -553,6 +555,8 @@ void SemanticAnalyser::visit(Call &call)
         param->is_in_str = true;
       }
     }
+    auto &strcall = static_cast<StrCall&>(call);
+    str_calls_.emplace_back(&strcall);
   }
   else if (call.func == "buf")
   {
@@ -2222,6 +2226,24 @@ int SemanticAnalyser::create_maps(bool debug)
       bpftrace_.fmtstr_map_zero_ = calloc(1, max_fmtstr_args_size_ + sizeof(size_t));
     }
     failed_maps += is_invalid_map(bpftrace_.fmtstr_map_->mapfd_);
+  }
+
+  int strCallIx = 0;
+  for (auto *strCall: str_calls_) {
+    const std::string map_ident = "str_" + std::to_string(strCallIx);
+    SizedType& type = strCall->type;
+    const int bufferSize = bpftrace_.events_buffer_size_;
+    MapKey key;
+    auto ringIndexer = std::make_unique<bpftrace::RingIndexer>(bufferSize);
+    std::unique_ptr<bpftrace::IMap> map;
+    if (debug) {
+      map = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
+    } else {
+      map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize);
+    }
+    failed_maps += is_invalid_map(map->mapfd_);
+    strCall->initialise(std::move(map), std::move(ringIndexer));
+    strCallIx++;
   }
 
   if (failed_maps > 0)
