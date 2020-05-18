@@ -95,6 +95,10 @@ public:
   size_t pointee_size = 0;
   int kfarg_idx = -1;
 
+private:
+  bool is_signed = false;
+
+public:
   bool IsArray() const;
   bool IsStack() const;
 
@@ -103,6 +107,7 @@ public:
   bool operator!=(const SizedType &t) const;
 
   bool IsSigned(void) const;
+
   bool IsIntTy() const
   {
     return type == Type::integer;
@@ -188,7 +193,7 @@ public:
   {
     return type == Type::inet;
   };
-  bool IsStack_modeTy(void) const
+  bool IsStackModeTy(void) const
   {
     return type == Type::stack_mode;
   };
@@ -211,9 +216,6 @@ public:
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
-
-private:
-  bool is_signed = false;
 };
 // Type helpers
 

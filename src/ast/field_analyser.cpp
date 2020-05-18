@@ -59,7 +59,7 @@ void FieldAnalyser::visit(Builtin &builtin)
   {
     auto it = ap_args_.find("$retval");
 
-    if (it != ap_args_.end() && it->second.type == Type::cast)
+    if (it != ap_args_.end() && it->second.IsCastTy())
       type_ = it->second.cast_type;
     else
       type_ = "";
@@ -157,7 +157,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
   {
     auto it = ap_args_.find(acc.field);
 
-    if (it != ap_args_.end() && it->second.type == Type::cast)
+    if (it != ap_args_.end() && it->second.IsCastTy())
       type_ = it->second.cast_type;
     else
       type_ = "";
@@ -222,7 +222,7 @@ void FieldAnalyser::visit(AttachPoint &ap __attribute__((unused)))
       {
         auto stype = arg.second;
 
-        if (stype.type == Type::cast)
+        if (stype.IsCastTy())
           bpftrace_.btf_set_.insert(stype.cast_type);
       }
     }
