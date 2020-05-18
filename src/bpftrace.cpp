@@ -1103,9 +1103,9 @@ int BPFtrace::print_maps()
   {
     IMap &map = *mapmap.second.get();
     int err;
-    if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
+    if (map.type_.IsHistTy() || map.type_.IsLhistTy())
       err = print_map_hist(map, 0, 0);
-    else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
+    else if (map.type_.IsAvgTy() || map.type_.IsStatsTy())
       err = print_map_stats(map);
     else
       err = print_map(map, 0, 0);
@@ -1123,8 +1123,8 @@ int BPFtrace::clear_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::hist || map.type_.type == Type::lhist ||
-        map.type_.type == Type::stats || map.type_.type == Type::avg)
+    if (map.type_.IsHistTy() || map.type_.IsLhistTy() ||
+        map.type_.IsStatsTy() || map.type_.IsAvgTy())
       // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
@@ -1166,8 +1166,8 @@ int BPFtrace::zero_map(IMap &map)
   std::vector<uint8_t> old_key;
   try
   {
-    if (map.type_.type == Type::hist || map.type_.type == Type::lhist ||
-        map.type_.type == Type::stats || map.type_.type == Type::avg)
+    if (map.type_.IsHistTy() || map.type_.IsLhistTy() ||
+        map.type_.IsStatsTy() || map.type_.IsAvgTy())
       // hist maps have 8 extra bytes for the bucket number
       old_key = find_empty_key(map, map.key_.size() + 8);
     else
@@ -1208,43 +1208,44 @@ int BPFtrace::zero_map(IMap &map)
 std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, uint32_t div)
 {
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
-  if (map.type_.type == Type::kstack)
+  if (map.type_.IsKstackTy())
     return get_stack(
         read_data<uint64_t>(value.data()), false, map.type_.stack_type, 8);
-  else if (map.type_.type == Type::ustack)
+  else if (map.type_.IsUstackTy())
     return get_stack(
         read_data<uint64_t>(value.data()), true, map.type_.stack_type, 8);
-  else if (map.type_.type == Type::ksym)
+  else if (map.type_.IsKsymTy())
     return resolve_ksym(read_data<uintptr_t>(value.data()));
-  else if (map.type_.type == Type::usym)
+  else if (map.type_.IsUsymTy())
     return resolve_usym(read_data<uintptr_t>(value.data()),
                         read_data<uintptr_t>(value.data() + 8));
-  else if (map.type_.type == Type::inet)
+  else if (map.type_.IsInetTy())
     return resolve_inet(read_data<uint32_t>(value.data()),
                         (uint8_t *)(value.data() + 8));
-  else if (map.type_.type == Type::username)
+  else if (map.type_.IsUsernameTy())
     return resolve_uid(read_data<uint64_t>(value.data()));
-  else if (map.type_.type == Type::buffer)
+  else if (map.type_.IsBufferTy())
     return resolve_buf(reinterpret_cast<char *>(value.data() + 1),
                        *reinterpret_cast<uint8_t *>(value.data()));
-  else if (map.type_.type == Type::string)
+  else if (map.type_.IsStringTy())
   {
     auto p = reinterpret_cast<const char *>(value.data());
     return std::string(p, strnlen(p, map.type_.size));
   }
-  else if (map.type_.type == Type::count)
+  else if (map.type_.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  else if (map.type_.type == Type::sum || map.type_.type == Type::integer) {
+  else if (map.type_.IsSumTy() || map.type_.IsIntTy())
+  {
     if (map.type_.IsSigned())
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   }
-  else if (map.type_.type == Type::min)
+  else if (map.type_.IsMinTy())
     return std::to_string(min_value(value, nvalues) / div);
-  else if (map.type_.type == Type::max)
+  else if (map.type_.IsMaxTy())
     return std::to_string(max_value(value, nvalues) / div);
-  else if (map.type_.type == Type::probe)
+  else if (map.type_.IsProbeTy())
     return resolve_probe(read_data<uint64_t>(value.data()));
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
@@ -1252,9 +1253,9 @@ std::string BPFtrace::map_value_to_str(IMap &map, std::vector<uint8_t> value, ui
 
 int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
 {
-  if (map.type_.type == Type::hist || map.type_.type == Type::lhist)
+  if (map.type_.IsHistTy() || map.type_.IsLhistTy())
     return print_map_hist(map, top, div);
-  else if (map.type_.type == Type::avg || map.type_.type == Type::stats)
+  else if (map.type_.IsAvgTy() || map.type_.IsStatsTy())
     return print_map_stats(map);
 
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
@@ -1296,7 +1297,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     old_key = key;
   }
 
-  if (map.type_.type == Type::count || map.type_.type == Type::sum || map.type_.type == Type::integer)
+  if (map.type_.IsCountTy() || map.type_.IsSumTy() || map.type_.IsIntTy())
   {
     bool is_signed = map.type_.IsSigned();
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
@@ -1306,14 +1307,14 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
       return reduce_value<uint64_t>(a.second, nvalues) < reduce_value<uint64_t>(b.second, nvalues);
     });
   }
-  else if (map.type_.type == Type::min)
+  else if (map.type_.IsMinTy())
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
       return min_value(a.second, nvalues) < min_value(b.second, nvalues);
     });
   }
-  else if (map.type_.type == Type::max)
+  else if (map.type_.IsMaxTy())
   {
     std::sort(values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b)
     {
@@ -1380,7 +1381,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     if (values_by_key.find(key_prefix) == values_by_key.end())
     {
       // New key - create a list of buckets for it
-      if (map.type_.type == Type::hist)
+      if (map.type_.IsHistTy())
         values_by_key[key_prefix] = std::vector<uint64_t>(65);
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
@@ -1944,7 +1945,7 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
     auto arg = key_args.at(i);
     arg_offset -= arg.size;
 
-    if (arg.type == Type::integer)
+    if (arg.IsIntTy())
     {
       if (arg.size == 8)
       {
@@ -1971,7 +1972,7 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
       }
 
     }
-    else if (arg.type == Type::string)
+    else if (arg.IsStringTy())
     {
       std::stable_sort(
           values_by_key.begin(), values_by_key.end(), [&](auto &a, auto &b) {

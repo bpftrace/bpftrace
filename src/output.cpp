@@ -250,7 +250,7 @@ void TextOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
 
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": " << std::endl;
 
-    if (map.type_.type == Type::hist)
+    if (map.type_.IsHistTy())
       hist(value, div);
     else
       lhist(value, map.lqmin, map.lqmax, map.lqstep);
@@ -276,7 +276,7 @@ void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     if (count != 0)
       average = total / count;
 
-    if (map.type_.type == Type::stats)
+    if (map.type_.IsStatsTy())
       out_ << "count " << count << ", average " <<  average << ", total " << total << std::endl;
     else
       out_ << average << std::endl;
@@ -375,11 +375,10 @@ void JsonOutput::map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
       out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
-    if (map.type_.type == Type::kstack || map.type_.type == Type::ustack ||
-        map.type_.type == Type::ksym || map.type_.type == Type::usym ||
-        map.type_.type == Type::inet || map.type_.type == Type::username ||
-        map.type_.type == Type::string || map.type_.type == Type::buffer ||
-        map.type_.type == Type::probe)
+    if (map.type_.IsKstackTy() || map.type_.IsUstackTy() ||
+        map.type_.IsKsymTy() || map.type_.IsUsymTy() || map.type_.IsInetTy() ||
+        map.type_.IsUsernameTy() || map.type_.IsStringTy() ||
+        map.type_.IsBufferTy() || map.type_.IsProbeTy())
     {
       out_ << "\"" << json_escape(bpftrace.map_value_to_str(map, value, div))
            << "\"";
@@ -496,7 +495,7 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
       out_ << "\"" << json_escape(str_join(args, ",")) << "\": ";
     }
 
-    if (map.type_.type == Type::hist)
+    if (map.type_.IsHistTy())
       hist(value, div);
     else
       lhist(value, map.lqmin, map.lqmax, map.lqstep);
@@ -541,7 +540,7 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     if (count != 0)
       average = total / count;
 
-    if (map.type_.type == Type::stats)
+    if (map.type_.IsStatsTy())
       out_ << "{\"count\": " << count << ", \"average\": " <<  average << ", \"total\": " << total << "}";
     else
       out_ << average;

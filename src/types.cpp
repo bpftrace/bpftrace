@@ -14,24 +14,24 @@ std::ostream &operator<<(std::ostream &os, Type type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  if (type.type == Type::cast)
+  if (type.IsCastTy())
   {
     os << type.cast_type;
   }
-  else if (type.type == Type::ctx)
+  else if (type.IsCtxTy())
   {
     os << "(ctx) " << type.cast_type;
   }
-  else if (type.type == Type::integer)
+  else if (type.IsIntTy())
   {
     os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
   }
-  else if (type.type == Type::array)
+  else if (type.IsArrayTy())
   {
     os << (type.is_signed ? "" : "unsigned ") << "int" << 8 * type.pointee_size;
     os << "[" << type.size << "]";
   }
-  else if (type.type == Type::string || type.type == Type::buffer)
+  else if (type.IsStringTy() || type.IsBufferTy())
   {
     os << type.type << "[" << type.size << "]";
   }

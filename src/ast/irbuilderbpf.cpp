@@ -257,9 +257,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
       "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
-  bool is_array = (type.type == Type::string || type.type == Type::buffer ||
-                   (type.type == Type::cast && !type.is_pointer) ||
-                   type.type == Type::inet || type.type == Type::usym);
+  bool is_array = (type.IsStringTy() || type.IsBufferTy() ||
+                   (type.IsCastTy() && !type.is_pointer) || type.IsInetTy() ||
+                   type.IsUsymTy());
 
   SetInsertPoint(lookup_success_block);
   if (is_array)
