@@ -44,6 +44,8 @@ and this project adheres to
 - Require C++17 and CMake 3.8 for building bpftrace
   - [#1200](https://github.com/iovisor/bpftrace/pull/1200)
   - [#1259](https://github.com/iovisor/bpftrace/pull/1259)
+- Allow positional parameters in probe attachpoint definitions
+  - [#1328](https://github.com/iovisor/bpftrace/pull/1328)
 
 #### Deprecated
 
