@@ -40,6 +40,8 @@ and this project adheres to
   - [#1276](https://github.com/iovisor/bpftrace/pull/1276)
 - Add tuples to language
   - [#1326](https://github.com/iovisor/bpftrace/pull/1326)
+- Add support for listing struct/union/enum definitions using BTF
+  - [#1340](https://github.com/iovisor/bpftrace/pull/1340)
 
 #### Changed
 
