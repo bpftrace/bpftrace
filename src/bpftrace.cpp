@@ -403,9 +403,8 @@ std::unique_ptr<std::istream> BPFtrace::get_symbols_from_usdt(
 
   for (auto const& usdt_probe : usdt_probes)
   {
-    std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
-    std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
-    std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
+    std::string provider = usdt_probe.provider;
+    std::string fname = usdt_probe.name;
     probes += provider + ":" + fname + "\n";
   }
 

@@ -99,7 +99,11 @@ resolve_binary_path(const std::string &cmd, const char *env_paths, int pid);
 
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
-  usdt_provider_cache[usdt_probe->provider].push_back(std::make_tuple(usdt_probe->bin_path, usdt_probe->provider, usdt_probe->name));
+  usdt_provider_cache[usdt_probe->provider].emplace_back(usdt_probe_entry{
+      .path = usdt_probe->bin_path,
+      .provider = usdt_probe->provider,
+      .name = usdt_probe->name,
+  });
 }
 
 void StdioSilencer::silence()
@@ -138,11 +142,15 @@ usdt_probe_entry USDTHelper::find(
 
   usdt_probe_list probes = usdt_provider_cache[provider];
 
-  auto it = std::find_if(probes.begin(), probes.end(), [&name](const usdt_probe_entry& e) {return std::get<USDT_FNAME_INDEX>(e) == name;});
+  auto it = std::find_if(probes.begin(),
+                         probes.end(),
+                         [&name](const usdt_probe_entry &e) {
+                           return e.name == name;
+                         });
   if (it != probes.end()) {
     return *it;
   } else {
-    return std::make_tuple("", "", "");
+    return {};
   }
 }
 
