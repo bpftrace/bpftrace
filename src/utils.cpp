@@ -103,6 +103,7 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
       .path = usdt_probe->bin_path,
       .provider = usdt_probe->provider,
       .name = usdt_probe->name,
+      .num_locations = usdt_probe->num_locations,
   });
 }
 

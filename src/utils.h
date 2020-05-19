@@ -24,6 +24,7 @@ struct usdt_probe_entry
   std::string path;
   std::string provider;
   std::string name;
+  int num_locations;
 };
 typedef std::vector<usdt_probe_entry> usdt_probe_list;
 
