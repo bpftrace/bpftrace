@@ -222,3 +222,11 @@ RUN bpftrace -e 'usdt:./testprogs/usdt_sized_args:test:probe2 { printf("%ld\n", 
 EXPECT ^1$
 TIMEOUT 5
 BEFORE ./testprogs/usdt_sized_args
+
+# USDT probes can be inlined which creates duplicate identical probes. We must
+# attach to all of them
+NAME "usdt duplicated markers"
+RUN bpftrace -e 'usdt:./testprogs/usdt_inlined:tracetest:testprobe { exit(); }' -c ./testprogs/usdt_inlined
+EXPECT Attaching 2 probes
+TIMEOUT 1
+BEFORE ./testprogs/usdt_sized_args
