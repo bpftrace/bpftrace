@@ -56,13 +56,14 @@ void test(BPFtrace &bpftrace,
           const std::string &input,
           int expected_result = 0,
           bool safe_mode = true,
-          bool has_child = false)
+          bool has_child = false,
+          int expected_field_analyser = 0)
 {
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ast::FieldAnalyser fields(driver.root_, bpftrace);
-  EXPECT_EQ(fields.analyse(), 0);
+  EXPECT_EQ(fields.analyse(), expected_field_analyser);
 
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
@@ -109,13 +110,20 @@ void test(BPFfeature &feature,
 void test(const std::string &input,
           int expected_result = 0,
           bool safe_mode = true,
-          bool has_child = false)
+          bool has_child = false,
+          int expected_field_analyser = 0)
 {
   MockBPFfeature feature;
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
-  test(
-      *bpftrace, feature, driver, input, expected_result, safe_mode, has_child);
+  test(*bpftrace,
+       feature,
+       driver,
+       input,
+       expected_result,
+       safe_mode,
+       has_child,
+       expected_field_analyser);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -1782,6 +1790,11 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_1 { $x = args->a; $y = args->foo1; }", 0);
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kretfunc:func_1 { $x = args->foo; }", 1);
+  test("kfunc:func_1, kfunc:func_2 { }", 0);
+  test("kfunc:func_1, kfunc:func_2 { $x = args->foo; }", 1, true, false, 1);
+  test("kfunc:func_2, kfunc:func_3 { }", 0);
+  test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
+  test("kfunc:func_2, kfunc:aaa { $x = args->foo1; }", 0, true, false, 1);
 }
 
 TEST_F(semantic_analyser_btf, short_name)
