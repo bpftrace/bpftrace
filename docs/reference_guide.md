@@ -293,6 +293,17 @@ tracepoint:syscalls:sys_enter_open
     umode_t mode;
 ```
 
+If BTF is available, it is also possible to list struct/union/emum definitions. For example:
+
+```
+# bpftrace -lv "struct path"
+BTF: using data from /sys/kernel/btf/vmlinux
+struct path {
+        struct vfsmount *mnt;
+        struct dentry *dentry;
+};
+```
+
 ## 5. `-d`: Debug Output
 
 The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging

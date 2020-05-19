@@ -208,7 +208,7 @@ static std::string btf_type_str(const std::string& type)
   return std::regex_replace(type, std::regex("^(struct )|(union )"), "");
 }
 
-std::string BTF::c_def(std::unordered_set<std::string>& set)
+std::string BTF::c_def(const std::unordered_set<std::string> &set) const
 {
   if (!has_data())
     return std::string("");
@@ -584,6 +584,83 @@ void BTF::display_funcs(std::regex *re) const
   btf_dump__free(dump);
 }
 
+void BTF::display_structs(std::regex *re) const
+{
+  if (!has_data())
+    return;
+
+  std::unordered_set<std::string> struct_set;
+  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  std::string type = std::string("");
+  struct btf_dump_opts opts = {
+    .ctx = &type,
+  };
+  struct btf_dump *dump;
+  char err_buf[256];
+  int err;
+
+  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  err = libbpf_get_error(dump);
+  if (err)
+  {
+    libbpf_strerror(err, err_buf, sizeof(err_buf));
+    std::cerr << "BTF: failed to initialize dump (" << err_buf << ")"
+              << std::endl;
+    return;
+  }
+
+  for (id = 1; id <= max; id++)
+  {
+    const struct btf_type *t = btf__type_by_id(btf, id);
+
+    if (!(btf_is_struct(t) || btf_is_union(t) || btf_is_enum(t)))
+      continue;
+
+    const std::string name = full_type_str(btf, t);
+
+    if (name.find("(anon)") != std::string::npos)
+      continue;
+
+    if (re && !match_re(name, *re))
+      continue;
+
+    struct_set.insert(name);
+  }
+
+  if (id != (max + 1))
+    std::cerr << "ERROR: BTF data inconsistency " << id << "," << max
+              << std::endl;
+
+  btf_dump__free(dump);
+
+  if (struct_set.empty())
+    return;
+
+  std::vector vec(struct_set.begin(), struct_set.end());
+  std::sort(vec.begin(), vec.end());
+  if (bt_verbose)
+  {
+    std::string def = c_def(struct_set);
+    // c_def() contains all the necessary dependent types needed for
+    // compilation. Print definition of given structs (or union/enum) only
+    for (const auto &name : vec)
+    {
+      auto start = def.find(name + " {");
+      auto end = std::min(def.find("\n};", start) + 3, def.size());
+      if (start == std::string::npos)
+        continue;
+      for (auto i = start; i < end; i++)
+        std::cout << def[i];
+      std::cout << std::endl;
+    }
+  }
+  else
+  {
+    for (const auto &name : vec)
+      std::cout << name << std::endl;
+  }
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -593,7 +670,11 @@ BTF::BTF() { }
 
 BTF::~BTF() { }
 
-std::string BTF::c_def(std::unordered_set<std::string>& set __attribute__((__unused__))) { return std::string(""); }
+std::string BTF::c_def(const std::unordered_set<std::string>& set
+                       __attribute__((__unused__))) const
+{
+  return std::string("");
+}
 
 std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
                          const std::string& field __attribute__((__unused__))) {
@@ -609,6 +690,10 @@ int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
 }
 
 void BTF::display_funcs(std::regex* re __attribute__((__unused__))) const
+{
+}
+
+void BTF::display_structs(std::regex* re __attribute__((__unused__))) const
 {
 }
 
