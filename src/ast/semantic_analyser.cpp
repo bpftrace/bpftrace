@@ -2130,7 +2130,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
 
     const auto& ap_map = bpftrace_.btf_ap_args_;
-    auto it = ap_map.find(ap.provider + ap.func);
+    auto it = ap_map.find(probe_->name());
 
     if (it != ap_map.end())
     {
