@@ -72,6 +72,11 @@ public:
   std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
 
 private:
+  void generateProbe(Probe &probe,
+                     const std::string &full_func_id,
+                     FunctionType *func_type,
+                     bool expansion);
+
   Node *root_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;

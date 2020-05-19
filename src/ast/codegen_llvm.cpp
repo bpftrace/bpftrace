@@ -1735,6 +1735,41 @@ void CodegenLLVM::visit(AttachPoint &)
   // Empty
 }
 
+void CodegenLLVM::generateProbe(Probe &probe,
+                                const std::string &full_func_id,
+                                FunctionType *func_type,
+                                bool expansion)
+{
+  // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
+  // by args builtin.
+  if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
+    tracepoint_struct_ = TracepointFormatParser::get_struct_name(
+        current_attach_point_->target, full_func_id);
+  int index = getNextIndexForProbe(probe.name());
+  if (expansion)
+    current_attach_point_->set_index(full_func_id, index);
+  else
+    probe.set_index(index);
+  Function *func = Function::Create(
+      func_type, Function::ExternalLinkage, probefull_, module_.get());
+  func->setSection(getSectionNameForProbe(probefull_, index));
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+  b_.SetInsertPoint(entry);
+
+  // check: do the following 8 lines need to be in the wildcard loop?
+  ctx_ = func->arg_begin();
+  if (probe.pred)
+  {
+    probe.pred->accept(*this);
+  }
+  variables_.clear();
+  for (Statement *stmt : *probe.stmts)
+  {
+    stmt->accept(*this);
+  }
+  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+}
+
 void CodegenLLVM::visit(Probe &probe)
 {
   FunctionType *func_type = FunctionType::get(
@@ -1760,24 +1795,8 @@ void CodegenLLVM::visit(Probe &probe)
    */
   if (probe.need_expansion == false) {
     // build a single BPF program pre-wildcards
-    Function *func = Function::Create(func_type, Function::ExternalLinkage, probe.name(), module_.get());
-    probe.set_index(getNextIndexForProbe(probe.name()));
-    func->setSection(getSectionNameForProbe(probe.name(), probe.index()));
-    BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
-    b_.SetInsertPoint(entry);
-
-    ctx_ = func->arg_begin();
-
-    if (probe.pred) {
-      probe.pred->accept(*this);
-    }
-    variables_.clear();
-    for (Statement *stmt : *probe.stmts) {
-      stmt->accept(*this);
-    }
-
-    b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
-
+    probefull_ = probe.name();
+    generateProbe(probe, probefull_, func_type, false);
   } else {
     /*
      * Build a separate BPF program for each wildcard match.
@@ -1837,26 +1856,7 @@ void CodegenLLVM::visit(Probe &probe)
           probefull_ = attach_point->name(full_func_id);
         }
 
-        // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use by args builtin.
-        if (probetype(attach_point->provider) == ProbeType::tracepoint)
-          tracepoint_struct_ = TracepointFormatParser::get_struct_name(attach_point->target, full_func_id);
-        int index = getNextIndexForProbe(probe.name());
-        attach_point->set_index(full_func_id, index);
-        Function *func = Function::Create(func_type, Function::ExternalLinkage, probefull_, module_.get());
-        func->setSection(getSectionNameForProbe(probefull_, index));
-        BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
-        b_.SetInsertPoint(entry);
-
-        // check: do the following 8 lines need to be in the wildcard loop?
-        ctx_ = func->arg_begin();
-        if (probe.pred) {
-          probe.pred->accept(*this);
-        }
-        variables_.clear();
-        for (Statement *stmt : *probe.stmts) {
-          stmt->accept(*this);
-        }
-        b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+        generateProbe(probe, full_func_id, func_type, true);
       }
     }
   }
