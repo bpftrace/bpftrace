@@ -333,6 +333,11 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
   // kfuncs
   if (list_all || probe_name == "kfunc")
     bpftrace.btf_.display_funcs(search.empty() ? nullptr : &re);
+
+  // struct / union / enum
+  if (probe_name.empty() &&
+      std::regex_search(search, std::regex("^(struct|union|enum) ")))
+    bpftrace.btf_.display_structs(search.empty() ? nullptr : &re);
 }
 
 } // namespace bpftrace

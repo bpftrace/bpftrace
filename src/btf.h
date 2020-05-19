@@ -26,10 +26,11 @@ public:
   ~BTF();
 
   bool has_data(void) const;
-  std::string c_def(std::unordered_set<std::string>& set);
+  std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const btf_type* type, const std::string& field);
   void display_funcs(std::regex* re) const;
+  void display_structs(std::regex* re) const;
 
   int resolve_args(const std::string &func,
                    std::map<std::string, SizedType>& args,
