@@ -197,6 +197,9 @@ static std::string full_type_str(const struct btf *btf, const struct btf_type *t
   if (BTF_INFO_KIND(type->info) == BTF_KIND_UNION)
     return std::string("union ") + str;
 
+  if (BTF_INFO_KIND(type->info) == BTF_KIND_ENUM)
+    return std::string("enum ") + str;
+
   return str;
 }
 
@@ -248,16 +251,14 @@ std::string BTF::c_def(std::unordered_set<std::string>& set)
         }
       }
     }
-    else
-    {
-      std::string str = full_type_str(btf, t);
 
-      auto it = myset.find(str);
-      if (it != myset.end())
-      {
-        btf_dump__dump_type(dump, id);
-        myset.erase(it);
-      }
+    std::string str = full_type_str(btf, t);
+
+    auto it = myset.find(str);
+    if (it != myset.end())
+    {
+      btf_dump__dump_type(dump, id);
+      myset.erase(it);
     }
   }
 
