@@ -195,6 +195,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       if (probetype(current_attach_point_->provider) == ProbeType::usdt) {
         expr_ = b_.CreateUSDTReadArgument(ctx_,
                                           current_attach_point_,
+                                          current_usdt_location_index_,
                                           arg_num,
                                           builtin,
                                           bpftrace_.pid(),
@@ -1719,6 +1720,7 @@ void CodegenLLVM::visit(AttachPoint &)
 
 void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &full_func_id,
+                                const std::string &section_name,
                                 FunctionType *func_type,
                                 bool expansion)
 {
@@ -1733,8 +1735,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
   else
     probe.set_index(index);
   Function *func = Function::Create(
-      func_type, Function::ExternalLinkage, probefull_, module_.get());
-  func->setSection(getSectionNameForProbe(probefull_, index));
+      func_type, Function::ExternalLinkage, section_name, module_.get());
+  func->setSection(getSectionNameForProbe(section_name, index));
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -1778,7 +1780,7 @@ void CodegenLLVM::visit(Probe &probe)
   if (probe.need_expansion == false) {
     // build a single BPF program pre-wildcards
     probefull_ = probe.name();
-    generateProbe(probe, probefull_, func_type, false);
+    generateProbe(probe, probefull_, probefull_, func_type, false);
   } else {
     /*
      * Build a separate BPF program for each wildcard match.
@@ -1791,6 +1793,15 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_time_id = time_id_;
     int starting_join_id = join_id_;
     int starting_helper_error_id = b_.helper_error_id_;
+
+    auto reset_ids = [&]() {
+      printf_id_ = starting_printf_id;
+      cat_id_ = starting_cat_id;
+      system_id_ = starting_system_id;
+      time_id_ = starting_time_id;
+      join_id_ = starting_join_id;
+      b_.helper_error_id_ = starting_helper_error_id;
+    };
 
     for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
@@ -1805,12 +1816,7 @@ void CodegenLLVM::visit(Probe &probe)
       tracepoint_struct_ = "";
       for (const auto &match : matches)
       {
-        printf_id_ = starting_printf_id;
-        cat_id_ = starting_cat_id;
-        system_id_ = starting_system_id;
-        time_id_ = starting_time_id;
-        join_id_ = starting_join_id;
-        b_.helper_error_id_ = starting_helper_error_id;
+        reset_ids();
 
         // USDT probes must specify both a provider and a function name
         // So we will extract out the provider namespace to get just the function name
@@ -1831,13 +1837,36 @@ void CodegenLLVM::visit(Probe &probe)
           // Set the probe identifier so that we can read arguments later
           attach_point->usdt = USDTHelper::find(
               bpftrace_.pid(), attach_point->target, ns, func_id);
-        } else if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
-          probefull_ = attach_point->provider;
-        } else {
-          probefull_ = attach_point->name(match);
-        }
 
-        generateProbe(probe, match, func_type, true);
+          // A "unique" USDT probe can be present in a binary in multiple
+          // locations. One case where this happens is if a function containing
+          // a USDT probe is inlined into a caller. So we must generate a new
+          // program for each instance. We _must_ regenerate because argument
+          // locations may differ between instance locations (eg arg0. may not
+          // be found in the same offset from the same register in each
+          // location)
+          current_usdt_location_index_ = 0;
+          for (int i = 0; i < attach_point->usdt.num_locations; ++i)
+          {
+            reset_ids();
+
+            std::string loc_suffix = "_loc" + std::to_string(i);
+            std::string full_func_id = match + loc_suffix;
+            std::string section_name = probefull_ + loc_suffix;
+            generateProbe(probe, full_func_id, section_name, func_type, true);
+            current_usdt_location_index_++;
+          }
+        }
+        else
+        {
+          if (attach_point->provider == "BEGIN" ||
+              attach_point->provider == "END")
+            probefull_ = attach_point->provider;
+          else
+            probefull_ = attach_point->name(match);
+
+          generateProbe(probe, match, probefull_, func_type, true);
+        }
       }
     }
   }

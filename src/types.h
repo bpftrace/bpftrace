@@ -206,6 +206,7 @@ struct Probe
   std::string name;             // full probe name
   std::string ns;               // for USDT probes, if provider namespace not from path
   uint64_t loc;                 // for USDT probes
+  int usdt_location_idx = 0;    // to disambiguate duplicate USDT markers
   uint64_t log_size;
   int index = 0;
   int freq;

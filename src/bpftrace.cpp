@@ -207,7 +207,26 @@ int BPFtrace::add_probe(ast::Probe &p)
                                                   : p.index();
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
-      probes_.push_back(probe);
+
+      if (probetype(attach_point->provider) == ProbeType::usdt)
+      {
+        // We must attach to all locations of a USDT marker if duplicates exist
+        // in a target binary. See comment in codegen_llvm.cpp probe generation
+        // code for more details.
+        for (int i = 0; i < attach_point->usdt.num_locations; ++i)
+        {
+          Probe probe_copy = probe;
+          probe_copy.usdt_location_idx = i;
+          probe_copy.index = attach_point->index(func + "_loc" +
+                                                 std::to_string(i));
+
+          probes_.emplace_back(std::move(probe_copy));
+        }
+      }
+      else
+      {
+        probes_.push_back(probe);
+      }
     }
   }
 
@@ -828,11 +847,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
+  std::string index_str = "_" + std::to_string(probe.index);
+  if (probe.type == ProbeType::usdt)
+    index_str = "_loc" + std::to_string(probe.usdt_location_idx) + index_str;
+
   // use the single-probe program if it exists (as is the case with wildcards
   // and the name builtin, which must be expanded into separate programs per
   // probe), else try to find a the program based on the original probe name
   // that includes wildcards.
-  std::string index_str = "_" + std::to_string(probe.index);
   auto func = bpforc.sections_.find("s_" + probe.name + index_str);
   if (func == bpforc.sections_.end())
     func = bpforc.sections_.find("s_" + probe.orig_name + index_str);

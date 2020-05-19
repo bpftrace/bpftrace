@@ -489,6 +489,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
 
 Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                                             AttachPoint *attach_point,
+                                            int usdt_location_index,
                                             int arg_num,
                                             Builtin &builtin,
                                             pid_t pid,
@@ -514,7 +515,13 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   std::string ns = attach_point->usdt.provider;
   std::string func = attach_point->usdt.name;
 
-  if (bcc_usdt_get_argument(usdt, ns.c_str(), func.c_str(), 0, arg_num, &argument) != 0) {
+  if (bcc_usdt_get_argument(usdt,
+                            ns.c_str(),
+                            func.c_str(),
+                            usdt_location_index,
+                            arg_num,
+                            &argument) != 0)
+  {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
               << attach_point->ns << ":" << attach_point->func << std::endl;
     exit(-2);

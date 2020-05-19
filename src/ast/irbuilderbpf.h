@@ -66,7 +66,7 @@ public:
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, llvm::Value *size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, size_t size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, Value *dst, size_t size, Value *src, const location& loc);
-  Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin, pid_t pid, const location& loc);
+  Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int usdt_location_index, int arg_name, Builtin &builtin, pid_t pid, const location& loc);
   Value      *CreateStrcmp(Value* ctx, Value* val, std::string str, const location& loc, bool inverse=false);
   Value      *CreateStrcmp(Value* ctx, Value* val1, Value* val2, const location& loc, bool inverse=false);
   Value      *CreateStrncmp(Value* ctx, Value* val, std::string str, uint64_t n, const location& loc, bool inverse=false);
