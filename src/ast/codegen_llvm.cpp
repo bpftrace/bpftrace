@@ -1803,7 +1803,8 @@ void CodegenLLVM::visit(Probe &probe)
       }
 
       tracepoint_struct_ = "";
-      for (auto &match_ : matches) {
+      for (const auto &match : matches)
+      {
         printf_id_ = starting_printf_id;
         cat_id_ = starting_cat_id;
         system_id_ = starting_system_id;
@@ -1811,12 +1812,10 @@ void CodegenLLVM::visit(Probe &probe)
         join_id_ = starting_join_id;
         b_.helper_error_id_ = starting_helper_error_id;
 
-        std::string full_func_id = match_;
-
         // USDT probes must specify both a provider and a function name
         // So we will extract out the provider namespace to get just the function name
         if (probetype(attach_point->provider) == ProbeType::usdt) {
-          std::string func_id = match_;
+          std::string func_id = match;
           std::string orig_ns = attach_point->ns;
           std::string ns = func_id.substr(0, func_id.find(":"));
 
@@ -1835,10 +1834,10 @@ void CodegenLLVM::visit(Probe &probe)
         } else if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
           probefull_ = attach_point->provider;
         } else {
-          probefull_ = attach_point->name(full_func_id);
+          probefull_ = attach_point->name(match);
         }
 
-        generateProbe(probe, full_func_id, func_type, true);
+        generateProbe(probe, match, func_type, true);
       }
     }
   }
