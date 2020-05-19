@@ -40,6 +40,15 @@ void FieldAnalyser::visit(Jump &jump __attribute__((unused)))
 {
 }
 
+void FieldAnalyser::check_kfunc_args(void)
+{
+  if (has_kfunc_probe_ && has_mixed_args_)
+  {
+    error("Probe has attach points with mixed arguments",
+          mixed_args_loc_);
+  }
+}
+
 void FieldAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -67,6 +76,8 @@ void FieldAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "retval")
   {
+    check_kfunc_args();
+
     auto it = ap_args_.find("$retval");
 
     if (it != ap_args_.end() && it->second.IsCastTy())
@@ -165,6 +176,8 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
   if (has_builtin_args_)
   {
+    check_kfunc_args();
+
     auto it = ap_args_.find(acc.field);
 
     if (it != ap_args_.end() && it->second.IsCastTy())
@@ -216,22 +229,59 @@ void FieldAnalyser::visit(Predicate &pred)
   pred.expr->accept(*this);
 }
 
-void FieldAnalyser::visit(AttachPoint &ap __attribute__((unused)))
+bool FieldAnalyser::compare_args(const std::map<std::string, SizedType>& args1,
+                                 const std::map<std::string, SizedType>& args2)
+{
+  auto pred = [](auto a, auto b) { return a.first == b.first; };
+
+  return args1.size() == args2.size() &&
+         std::equal(args1.begin(), args1.end(), args2.begin(), pred);
+}
+
+bool FieldAnalyser::resolve_args(AttachPoint &ap)
+{
+  bool kretfunc = ap.provider == "kretfunc";
+
+  // load AP arguments into ap_args_
+  ap_args_.clear();
+
+  if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
+  {
+    error("Failed to resolve probe arguments", ap.loc);
+    return false;
+  }
+
+  // check if we already stored arguments for this probe
+  auto it = bpftrace_.btf_ap_args_.find(probe_->name());
+
+  if (it != bpftrace_.btf_ap_args_.end())
+  {
+    // we did, and it's different.. save the state and
+    // triger the error if there's args->xxx detected
+    if (!compare_args(it->second, ap_args_))
+    {
+      has_mixed_args_ = true;
+      mixed_args_loc_ = ap.loc;
+    }
+  }
+  else
+  {
+    // store/save args for each kfunc ap for later processing
+    bpftrace_.btf_ap_args_.insert({ probe_->name(), ap_args_ });
+  }
+  return true;
+}
+
+void FieldAnalyser::visit(AttachPoint &ap)
 {
   if (ap.provider == "kfunc" || ap.provider == "kretfunc")
   {
+    has_kfunc_probe_ = true;
+
     // starting new attach point, clear and load new
     // variables/arguments for kfunc if detected
-
-    ap_args_.clear();
-
-    if (!bpftrace_.btf_.resolve_args(ap.func,
-                                     ap_args_,
-                                     ap.provider == "kretfunc"))
+    if (resolve_args(ap))
     {
-      // store/save args for each kfunc ap for later processing
-      bpftrace_.btf_ap_args_.insert({ ap.provider + ap.func, ap_args_ });
-
       // pick up cast arguments immediately and let the
       // FieldAnalyser to resolve args builtin
       for (const auto& arg : ap_args_)
@@ -247,6 +297,10 @@ void FieldAnalyser::visit(AttachPoint &ap __attribute__((unused)))
 
 void FieldAnalyser::visit(Probe &probe)
 {
+  has_kfunc_probe_ = false;
+  has_mixed_args_ = false;
+  probe_ = &probe;
+
   for (AttachPoint *ap : *probe.attach_points) {
     ap->accept(*this);
     ProbeType pt = probetype(ap->provider);

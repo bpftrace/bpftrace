@@ -54,12 +54,20 @@ public:
 private:
   void warning(const std::string &msg, const location &loc);
   void error(const std::string &msg, const location &loc);
+  void check_kfunc_args(void);
+  bool resolve_args(AttachPoint &ap);
+  bool compare_args(const std::map<std::string, SizedType>& args1,
+                    const std::map<std::string, SizedType>& args2);
 
   std::string    type_;
   Node          *root_;
   BPFtrace      &bpftrace_;
   bpf_prog_type  prog_type_;
   bool           has_builtin_args_;
+  bool           has_mixed_args_;
+  bool           has_kfunc_probe_;
+  Probe         *probe_;
+  location       mixed_args_loc_;
 
   std::ostream       &out_;
   std::ostringstream  err_;
