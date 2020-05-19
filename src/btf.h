@@ -39,6 +39,9 @@ public:
 private:
   SizedType get_stype(__u32 id);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t);
+  std::unique_ptr<std::istream> get_funcs(std::regex* re,
+                                          bool params,
+                                          std::string prefix) const;
 
   struct btf* btf;
   enum state state = NODATA;
