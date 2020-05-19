@@ -482,17 +482,17 @@ static bool match_re(const std::string &probe, const std::regex &re)
   }
 }
 
-void BTF::display_funcs(std::regex *re) const
+std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
+                                             bool params,
+                                             std::string prefix) const
 {
-  if (!has_data())
-    return;
-
   __s32 id, max = (__s32)btf__get_nr_types(btf);
   std::string type = std::string("");
   struct btf_dump_opts opts = {
     .ctx = &type,
   };
   struct btf_dump *dump;
+  std::string funcs;
   char err_buf[256];
   int err;
 
@@ -503,7 +503,7 @@ void BTF::display_funcs(std::regex *re) const
     libbpf_strerror(err, err_buf, sizeof(err_buf));
     std::cerr << "BTF: failed to initialize dump (" << err_buf << ")"
               << std::endl;
-    return;
+    return nullptr;
   }
 
   for (id = 1; id <= max; id++)
@@ -528,11 +528,11 @@ void BTF::display_funcs(std::regex *re) const
     if (re && !match_re(std::string("kfunc:") + func_name, *re))
       continue;
 
-    std::cout << "kfunc:" << func_name << std::endl;
+    funcs += prefix + std::string(func_name) + "\n";
 
 #ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
 
-    if (!bt_verbose)
+    if (!params)
       continue;
 
     DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
@@ -557,7 +557,7 @@ void BTF::display_funcs(std::regex *re) const
         break;
       }
 
-      std::cout << "    " << type << " " << arg_name << ";" << std::endl;
+      funcs += "    " + type + " " + arg_name + ";\n";
     }
 
     if (!t->type)
@@ -573,7 +573,7 @@ void BTF::display_funcs(std::regex *re) const
       break;
     }
 
-    std::cout << "    " << type << " retval;" << std::endl;
+    funcs += "    " + type + " retval;\n";
 #endif
   }
 
@@ -582,6 +582,24 @@ void BTF::display_funcs(std::regex *re) const
               << std::endl;
 
   btf_dump__free(dump);
+
+  return std::make_unique<std::istringstream>(funcs);
+}
+
+void BTF::display_funcs(std::regex *re) const
+{
+  if (!has_data())
+    return;
+
+  auto funcs = get_funcs(re, bt_verbose, "kfunc:");
+  if (!funcs)
+    return;
+
+  std::string func_name;
+  while (std::getline(*funcs, func_name))
+  {
+    std::cout << func_name << std::endl;
+  }
 }
 
 void BTF::display_structs(std::regex *re) const
