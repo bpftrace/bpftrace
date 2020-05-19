@@ -175,10 +175,9 @@ int BPFtrace::add_probe(ast::Probe &p)
         attach_funcs.push_back(attach_point->func);
     }
 
-    for (auto func_ : attach_funcs)
+    for (const auto &func : attach_funcs)
     {
-      std::string full_func_id = func_;
-      std::string func_id = func_;
+      std::string func_id = func;
 
       // USDT probes must specify both a provider and a function name for full id
       // So we will extract out the provider namespace to get just the function name
@@ -204,8 +203,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.address = attach_point->address;
       probe.func_offset = attach_point->func_offset;
       probe.loc = 0;
-      probe.index = attach_point->index(full_func_id) > 0 ?
-          attach_point->index(full_func_id) : p.index();
+      probe.index = attach_point->index(func) > 0 ? attach_point->index(func)
+                                                  : p.index();
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
       probes_.push_back(probe);
