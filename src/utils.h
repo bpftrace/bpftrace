@@ -19,13 +19,12 @@ struct vmlinux_location
 };
 extern const struct vmlinux_location vmlinux_locs[];
 
-typedef enum _USDT_TUPLE_ORDER_
+struct usdt_probe_entry
 {
-  USDT_PATH_INDEX,
-  USDT_PROVIDER_INDEX,
-  USDT_FNAME_INDEX
-} usdt_probe_entry_enum;
-typedef std::tuple<std::string, std::string, std::string> usdt_probe_entry;
+  std::string path;
+  std::string provider;
+  std::string name;
+};
 typedef std::vector<usdt_probe_entry> usdt_probe_list;
 
 class MountNSException : public std::exception

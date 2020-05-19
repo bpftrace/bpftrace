@@ -219,9 +219,9 @@ void list_probes(const BPFtrace &bpftrace, const std::string &search_input)
 
   for (auto const& usdt_probe : usdt_probes)
   {
-    std::string path     = std::get<USDT_PATH_INDEX>(usdt_probe);
-    std::string provider = std::get<USDT_PROVIDER_INDEX>(usdt_probe);
-    std::string fname    = std::get<USDT_FNAME_INDEX>(usdt_probe);
+    std::string path = usdt_probe.path;
+    std::string provider = usdt_probe.provider;
+    std::string fname = usdt_probe.name;
     std::string probe    = "usdt:" + path + ":" + provider + ":" + fname;
     if (usdt_path_list || search.empty() || !search_probe(probe, re))
       std::cout << probe << std::endl;

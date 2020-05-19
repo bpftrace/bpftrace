@@ -511,8 +511,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     exit(-1);
   }
 
-  std::string ns = std::get<USDT_PROVIDER_INDEX>(attach_point->usdt);
-  std::string func = std::get<USDT_FNAME_INDEX>(attach_point->usdt);
+  std::string ns = attach_point->usdt.provider;
+  std::string func = attach_point->usdt.name;
 
   if (bcc_usdt_get_argument(usdt, ns.c_str(), func.c_str(), 0, arg_num, &argument) != 0) {
     std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
