@@ -2241,8 +2241,19 @@ int SemanticAnalyser::create_maps(bool debug)
     } else {
       map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize);
     }
-    failed_maps += is_invalid_map(map->mapfd_);
-    strCall->initialise(std::move(map), std::move(ringIndexer));
+    const int isInvalidMap = is_invalid_map(map->mapfd_);
+    if (isInvalidMap) {
+      failed_maps += isInvalidMap;
+    } else {
+      std::unique_ptr<std::byte, std::function<void(std::byte*)>> zeroesForClearingMap(
+        (std::byte*)(std::calloc(type.size, sizeof(std::byte))),
+        [](std::byte* x) { free(x); });
+      strCall->initialise(
+      std::move(map),
+      std::move(ringIndexer),
+      std::move(zeroesForClearingMap)
+      );
+    }
     strCallIx++;
   }
 

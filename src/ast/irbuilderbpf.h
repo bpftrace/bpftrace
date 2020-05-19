@@ -65,6 +65,7 @@ public:
   void        CreateProbeRead(Value *dst, llvm::Value *size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, llvm::Value *size, Value *src);
   CallInst   *CreateProbeReadStr(AllocaInst *dst, size_t size, Value *src);
+  CallInst   *CreateProbeReadStr(Value *dst, llvm::Value *size, Value *src);
   CallInst   *CreateProbeReadStr(Value *dst, size_t size, Value *src);
   Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int arg_name, Builtin &builtin, int pid);
   Value      *CreateStrcmp(Value* val, std::string str, bool inverse=false);
@@ -80,6 +81,7 @@ public:
   CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type);
   CallInst   *CreateGetJoinMap(Value *ctx);
+  CallInst   *CreateGetStrMap(int mapfd, int n);
   CallInst   *CreateGetFmtStrMap(StructType *printf_struct, int asyncId);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);

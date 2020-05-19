@@ -459,32 +459,63 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     auto &strcall = static_cast<StrCall&>(call);
-    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-    b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
-    if (call.vargs->size() > 1) {
-      call.vargs->at(1)->accept(*this);
-      Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+    auto [isMapKeyAvailable, mapKey] = strcall.ringIndexer->getFreeIndex();
+    if (isMapKeyAvailable) {
+      CallInst *str_map = b_.CreateGetStrMap(strcall.map->mapfd_, mapKey);
+      Function *parent = b_.GetInsertBlock()->getParent();
+      BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
+      BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
+      
+      b_.CreateCondBr(
+        b_.CreateICmpNE(
+          str_map,
+          ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()),
+          "strzerocond"),
+        notzero, zero);
 
-      // largest read we'll allow = our global string buffer size
-      Value *max = b_.getInt64(bpftrace_.strlen_);
-      // integer comparison: unsigned less-than-or-equal-to
-      CmpInst::Predicate P = CmpInst::ICMP_ULE;
-      // check whether proposed_strlen is less-than-or-equal-to maximum
-      Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
-      // select proposed_strlen if it's sufficiently low, otherwise choose maximum
-      Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
-      b_.CreateStore(Select, strlen);
+      b_.SetInsertPoint(notzero);
+
+      auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.zeroesForClearingMap.get()));
+
+      AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+      b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+      if (call.vargs->size() > 1) {
+        call.vargs->at(1)->accept(*this);
+        Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+
+        // largest read we'll allow = our global string buffer size
+        Value *max = b_.getInt64(bpftrace_.strlen_);
+        // integer comparison: unsigned less-than-or-equal-to
+        CmpInst::Predicate P = CmpInst::ICMP_ULE;
+        // check whether proposed_strlen is less-than-or-equal-to maximum
+        Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+        // select proposed_strlen if it's sufficiently low, otherwise choose maximum
+        Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
+        b_.CreateStore(Select, strlen);
+      } else {
+        b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+      }
+      // AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
+      // b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+      call.vargs->front()->accept(*this);
+      // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
+
+      // zero it out first
+      b_.CreateProbeRead(str_map, strcall.map->value_size_,
+                     ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
+      b_.CreateProbeReadStr(str_map, b_.CreateLoad(strlen), expr_);
+
+      b_.CreateLifetimeEnd(strlen);
+
+      expr_ = str_map;
+      // expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
+      b_.CreateBr(zero);
+
+      // done
+      b_.SetInsertPoint(zero);
     } else {
-      b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+      std::cerr << "events buffer is full; increase BPFTRACE_EVENTS_BUFFER_SIZE" << std::endl;
     }
-    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
-    call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
-    b_.CreateLifetimeEnd(strlen);
-
-    expr_ = buf;
-    expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
   }
   else if (call.func == "buf")
   {

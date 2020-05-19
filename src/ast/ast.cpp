@@ -122,9 +122,13 @@ StrCall::StrCall(location loc, ExpressionList *vargs)
 {
 }
 
-void StrCall::initialise(std::unique_ptr<IMap> map, std::unique_ptr<RingIndexer> ringIndexer) {
+void StrCall::initialise(
+  std::unique_ptr<IMap> map,
+  std::unique_ptr<RingIndexer> ringIndexer,
+  std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap) {
   this->map.swap(map);
   this->ringIndexer.swap(ringIndexer);
+  this->zeroesForClearingMap.swap(zeroesForClearingMap);
   this->initialised = true;
 }
 

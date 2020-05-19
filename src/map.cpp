@@ -61,6 +61,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   int value_size = type.size;
   int flags = 0;
   max_entries_ = max_entries;
+  value_size_ = value_size;
   mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {

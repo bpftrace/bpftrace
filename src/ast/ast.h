@@ -5,6 +5,10 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstddef>
+#include <cstdlib>
+#include <memory>
+#include <functional>
 
 #include "types.h"
 #include "imap.h"
@@ -111,11 +115,15 @@ public:
 class StrCall : public Call {
 public:
   StrCall(location loc, ExpressionList *vargs = nullptr);
-  void initialise(std::unique_ptr<IMap> map, std::unique_ptr<RingIndexer> ringIndexer);
-private:
-  bool initialised = false;
+  void initialise(
+    std::unique_ptr<IMap> map,
+    std::unique_ptr<RingIndexer> ringIndexer,
+    std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap);
   std::unique_ptr<IMap> map;
   std::unique_ptr<RingIndexer> ringIndexer;
+  std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap;
+private:
+  bool initialised = false;
 };
 
 class CallFactory {

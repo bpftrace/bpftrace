@@ -221,6 +221,17 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   return call;
 }
 
+CallInst *IRBuilderBPF::CreateGetStrMap(int mapfd, int n)
+{
+  Value *map_ptr = CreateBpfPseudoCall(mapfd);
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  Value *keyv = getInt32(n);
+  CreateStore(keyv, key);
+
+  CallInst *call = createMapLookup(mapfd, key);
+  return call;
+}
+
 CallInst *IRBuilderBPF::CreateGetFmtStrMap(StructType *printf_struct, int asyncId)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.fmtstr_map_->mapfd_);
@@ -377,8 +388,15 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst, size_t size, Value *src)
 {
+  return CreateProbeReadStr(dst, getInt32(size), src);
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(Value *dst,
+                                           llvm::Value *size,
+                                           Value *src)
+{
   Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
-  return CreateCall(fn, { dst, getInt32(size), src }, "probe_read_str");
+  return CreateCall(fn, { dst, size, src }, "probe_read_str");
 }
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(AllocaInst *dst,
