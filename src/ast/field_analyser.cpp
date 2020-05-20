@@ -53,7 +53,7 @@ void FieldAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "args")
   {
-    builtin_args_ = true;
+    has_builtin_args_ = true;
   }
   else if (builtin.ident == "retval")
   {
@@ -149,11 +149,11 @@ void FieldAnalyser::visit(Unroll &unroll)
 
 void FieldAnalyser::visit(FieldAccess &acc)
 {
-  builtin_args_ = false;
+  has_builtin_args_ = false;
 
   acc.expr->accept(*this);
 
-  if (builtin_args_)
+  if (has_builtin_args_)
   {
     auto it = ap_args_.find(acc.field);
 
@@ -162,7 +162,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
     else
       type_ = "";
 
-    builtin_args_ = false;
+    has_builtin_args_ = false;
   }
   else if (!type_.empty())
   {
