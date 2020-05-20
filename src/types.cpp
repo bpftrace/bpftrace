@@ -24,11 +24,11 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
   else if (type.IsIntTy())
   {
-    os << (type.is_signed ? "" : "unsigned ") << "int" << 8*type.size;
+    os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8*type.size;
   }
   else if (type.IsArrayTy())
   {
-    os << (type.is_signed ? "" : "unsigned ") << "int" << 8 * type.pointee_size;
+    os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.pointee_size;
     os << "[" << type.size << "]";
   }
   else if (type.IsStringTy() || type.IsBufferTy())
@@ -60,7 +60,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
 
 bool SizedType::IsEqual(const SizedType &t) const
 {
-  return type == t.type && size == t.size && is_signed == t.is_signed;
+  return type == t.type && size == t.size && is_signed_ == t.is_signed_;
 }
 
 bool SizedType::operator!=(const SizedType &t) const
@@ -372,7 +372,7 @@ SizedType CreateBuffer(size_t size)
 
 bool SizedType::IsSigned(void) const
 {
-  return is_signed;
+  return is_signed_;
 }
 
 } // namespace bpftrace
