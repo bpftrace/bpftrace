@@ -52,7 +52,7 @@ private:
   Node          *root_;
   BPFtrace      &bpftrace_;
   bpf_prog_type  prog_type_;
-  bool           builtin_args_;
+  bool           has_builtin_args_;
 
   std::map<std::string, SizedType> ap_args_;
 };
