@@ -62,6 +62,8 @@ and this project adheres to
   - [#1229](https://github.com/iovisor/bpftrace/pull/1229)
 - Fix usdt reads in various architecture
   - [#1325](https://github.com/iovisor/bpftrace/pull/1325)
+- Attach to duplicated USDT markers
+  - [#1341](https://github.com/iovisor/bpftrace/pull/1341)
 
 #### Tools
 
