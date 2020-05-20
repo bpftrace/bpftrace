@@ -455,6 +455,7 @@ TEST(bpftrace, add_probes_usdt)
   a.target = "/bin/sh";
   a.ns = "prov1";
   a.func = "mytp";
+  a.usdt.num_locations = 1;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
 
@@ -475,6 +476,7 @@ TEST(bpftrace, add_probes_usdt_wildcard)
   a.target = "/bin/sh";
   a.ns = "prov*";
   a.func = "tp*";
+  a.usdt.num_locations = 1;
   a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
@@ -503,6 +505,7 @@ TEST(bpftrace, add_probes_usdt_empty_namespace)
   a.target = "/bin/sh";
   a.ns = "";
   a.func = "tp";
+  a.usdt.num_locations = 1;
   a.need_expansion = true;
   ast::AttachPointList attach_points = { &a };
   ast::Probe probe(&attach_points, nullptr, nullptr);
@@ -519,6 +522,39 @@ TEST(bpftrace, add_probes_usdt_empty_namespace)
   check_usdt(bpftrace->get_probes().at(1),
              "/bin/sh", "prov2", "tp",
              "usdt:/bin/sh:prov2:tp");
+}
+
+TEST(bpftrace, add_probes_usdt_duplicate_markers)
+{
+  ast::AttachPoint a("");
+  a.provider = "usdt";
+  a.target = "/bin/sh";
+  a.ns = "prov1";
+  a.func = "mytp";
+  a.usdt.num_locations = 3;
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(probe));
+  ASSERT_EQ(3U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+  check_usdt(bpftrace.get_probes().at(0),
+             "/bin/sh",
+             "prov1",
+             "mytp",
+             "usdt:/bin/sh:prov1:mytp");
+  check_usdt(bpftrace.get_probes().at(1),
+             "/bin/sh",
+             "prov1",
+             "mytp",
+             "usdt:/bin/sh:prov1:mytp");
+  check_usdt(bpftrace.get_probes().at(2),
+             "/bin/sh",
+             "prov1",
+             "mytp",
+             "usdt:/bin/sh:prov1:mytp");
 }
 
 TEST(bpftrace, add_probes_tracepoint)
