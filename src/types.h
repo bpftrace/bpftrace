@@ -74,7 +74,7 @@ public:
             size_t size_,
             bool is_signed,
             const std::string &cast_type = "")
-      : type(type), size(size_), cast_type(cast_type), is_signed(is_signed)
+      : type(type), size(size_), cast_type(cast_type), is_signed_(is_signed)
   {
   }
   SizedType(Type type, size_t size_, const std::string &cast_type = "")
@@ -96,7 +96,7 @@ public:
   int kfarg_idx = -1;
 
 private:
-  bool is_signed = false;
+  bool is_signed_ = false;
 
 public:
   bool IsArray() const;
