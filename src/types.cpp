@@ -239,9 +239,9 @@ SizedType CreateString(size_t size)
 
 SizedType CreateMapString()
 {
-  // TODO: size this to be a struct (mapfd, array key)
+  // TODO: size this to be a struct (mapfd, array key, strlen)
   // TODO: consider whether we can go down to 32-bit ints
-  return SizedType(Type::mapstr, 16);
+  return SizedType(Type::mapstr, 24);
 }
 
 SizedType CreateNone()

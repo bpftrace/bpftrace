@@ -495,12 +495,14 @@ void CodegenLLVM::visit(Call &call)
       } else {
         b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
       }
-      // (for now) 64-bit "mapfd", 64-bit "array key"
-      AllocaInst *buf = b_.CreateAllocaBPF(16, "str");
+      // (for now) 64-bit "mapfd", 64-bit "array key", 64-bit "strlen"
+      AllocaInst *buf = b_.CreateAllocaBPF(24, "str");
       b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(0) }));
       b_.CreateStore(b_.getInt64(mapKey),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(8) }));
+      b_.CreateStore(b_.CreateLoad(strlen),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(16) }));
       // AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
       // b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
       call.vargs->front()->accept(*this);
