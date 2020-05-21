@@ -1598,7 +1598,7 @@ TEST(semantic_analyser, type_ctx)
   auto arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt16(), arrayaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(arrayaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 4, true), fieldaccess->type);
+  EXPECT_EQ(SizedType(Type::ctx, 4, false), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
   EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
   var = static_cast<ast::Variable *>(unop->expr);

@@ -566,7 +566,7 @@ void SemanticAnalyser::visit(Call &call)
 
     if (call.vargs->size() == 1)
       if (arg.type.IsArrayTy())
-        buffer_size = arg.type.pointee_size * arg.type.size;
+        buffer_size = arg.type.GetNumElements() * arg.type.GetElementTy()->size;
       else
         error(call.func + "() expects a length argument for non-array type " +
                   typestr(arg.type.type),
@@ -624,7 +624,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
     }
 
-    if (arg->type.type != Type::integer && arg->type.type != Type::array)
+    if (!arg->type.IsIntTy() & !arg->type.IsArrayTy())
       ERR(call.func << "() expects an integer or array argument, got "
                     << arg->type.type,
           call.loc);
@@ -639,9 +639,15 @@ void SemanticAnalyser::visit(Call &call)
     //   }
     // }
     int buffer_size = 24;
-    if (arg->type.IsArrayTy())
+    auto type = arg->type;
+
+    // Ensure u8 array of either 4 or 16 elements
+    if (type.IsArrayTy())
     {
-      if (arg->type.elem_type != Type::integer || arg->type.pointee_size != 1 || !(arg->type.size == 4 || arg->type.size == 16)) {
+      if (!(type.GetElementTy()->IsIntTy() &&
+            type.GetElementTy()->GetIntBitWidth() == 8 &&
+            (type.GetNumElements() == 4 || type.GetNumElements() == 16)))
+      {
         error(call.func + "() invalid array", call.loc);
       }
     }
@@ -1148,8 +1154,12 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &indextype = arr.indexpr->type;
 
   if (is_final_pass()) {
-    if (!((type.IsArrayTy() || type.IsCtxTy()) && type.elem_type != Type::none))
+    if (!((type.IsCtxTy() || type.IsArrayTy()) &&
+          !type.GetElementTy()->IsNoneTy()))
+    {
       error("The array index operator [] can only be used on arrays.", arr.loc);
+      return;
+    }
 
     if (indextype.IsIntTy() && arr.indexpr->is_literal)
     {
@@ -1166,7 +1176,8 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
   }
 
-  arr.type = SizedType(type.elem_type, type.pointee_size, type.IsSigned());
+  arr.type = (type.IsCtxTy() | type.IsArrayTy()) ? *type.GetElementTy()
+                                                 : CreateNone();
 }
 
 void SemanticAnalyser::visit(Binop &binop)

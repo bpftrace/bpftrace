@@ -527,7 +527,8 @@ void CodegenLLVM::visit(Call &call)
     else
     {
       auto &arg = *call.vargs->at(0);
-      fixed_buffer_length = arg.type.pointee_size * arg.type.size;
+      fixed_buffer_length = arg.type.GetNumElements() *
+                            arg.type.GetElementTy()->size;
       length = b_.getInt8(fixed_buffer_length);
     }
 
@@ -1443,17 +1444,20 @@ void CodegenLLVM::visit(ArrayAccess &arr)
 {
   Value *array, *index, *offset;
   SizedType &type = arr.expr->type;
+  size_t element_size = type.GetElementTy()->size;
 
   arr.expr->accept(*this);
   array = expr_;
 
   arr.indexpr->accept(*this);
-  // promote int to 64-bit
+
   index = b_.CreateIntCast(expr_, b_.getInt64Ty(), arr.expr->type.IsSigned());
   offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
 
   Value *src = b_.CreateAdd(array, offset);
-  auto stype = SizedType(Type::integer, type.pointee_size);
+
+  // TODO: Use the real type instead of an int
+  auto stype = SizedType(Type::integer, element_size);
   if (arr.expr->type.IsCtxTy())
   {
     auto ty = b_.GetType(stype);
@@ -1462,7 +1466,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-    b_.CreateProbeRead(ctx_, dst, type.pointee_size, src, arr.loc);
+    b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }

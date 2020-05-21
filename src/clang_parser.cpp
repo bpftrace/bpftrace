@@ -321,7 +321,7 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_ConstantArray:
     {
       auto elem_type = clang_getArrayElementType(clang_type);
-      auto size = clang_getArraySize(clang_type);
+      auto size = clang_getNumElements(clang_type);
       if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U)
       {
         return CreateString(size);
@@ -330,8 +330,8 @@ static SizedType get_sized_type(CXType clang_type)
       // Only support one-dimensional arrays for now
       if (elem_type.kind != CXType_ConstantArray)
       {
-        auto type = get_sized_type(elem_type);
-        return CreateArray(size, type.type, type.size, type.IsSigned());
+        auto elem_stype = get_sized_type(elem_type);
+        return CreateArray(size, elem_stype);
       } else {
         return CreateNone();
       }

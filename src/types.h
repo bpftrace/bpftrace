@@ -85,6 +85,7 @@ public:
   Type type;
   Type elem_type = Type::none; // Array element type if accessing elements of an
                                // array
+
   size_t size;                 // in bytes
   StackType stack_type;
   std::string cast_type;
@@ -97,6 +98,9 @@ public:
 
 private:
   bool is_signed_ = false;
+  SizedType *element_type_ = nullptr; // for "container" and pointer
+                                      // (like) types
+  size_t num_elements_;               // for array like types
 
 public:
   bool IsArray() const;
@@ -107,6 +111,29 @@ public:
   bool operator!=(const SizedType &t) const;
 
   bool IsSigned(void) const;
+
+  size_t GetIntBitWidth() const
+  {
+    assert(IsIntTy());
+    return 8 * size;
+  };
+
+  size_t GetNumElements() const
+  {
+    assert(IsArrayTy() || IsStringTy());
+    return size;
+  };
+
+  const SizedType *GetElementTy() const
+  {
+    assert(IsArrayTy() || IsCtxTy());
+    return element_type_;
+  }
+
+  bool IsPtrTy() const
+  {
+    return IsIntTy() && is_pointer;
+  };
 
   bool IsIntTy() const
   {
@@ -216,6 +243,11 @@ public:
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
+
+  // Factories
+
+  friend SizedType CreateArray(size_t num_elements,
+                               const SizedType &element_type);
 };
 // Type helpers
 
@@ -233,10 +265,7 @@ SizedType CreateUInt32();
 SizedType CreateUInt64();
 
 SizedType CreateString(size_t size);
-SizedType CreateArray(size_t num_elem,
-                      Type elem_type,
-                      size_t elem_size,
-                      bool elem_is_signed);
+SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());
