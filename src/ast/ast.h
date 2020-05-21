@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
+#include <optional>
 #include <functional>
 
 #include "types.h"
@@ -114,16 +115,23 @@ public:
 
 class StrCall : public Call {
 public:
+  class StrMapState {
+    public:
+    struct ZeroesDeleter {
+      void operator()(std::byte* bytes);
+    };
+    StrMapState(
+      std::unique_ptr<IMap> map,
+      RingIndexer ringIndexer,
+      std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap
+      );
+    std::unique_ptr<IMap> map;
+    RingIndexer ringIndexer;
+    std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap;
+  };
   StrCall(location loc, ExpressionList *vargs = nullptr);
-  void initialise(
-    std::unique_ptr<IMap> map,
-    std::unique_ptr<RingIndexer> ringIndexer,
-    std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap);
-  std::unique_ptr<IMap> map;
-  std::unique_ptr<RingIndexer> ringIndexer;
-  std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap;
-private:
-  bool initialised = false;
+  std::optional<StrMapState> state;
+  std::optional<int> maxStrSize;
 };
 
 class CallFactory {

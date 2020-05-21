@@ -459,9 +459,9 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     auto &strcall = static_cast<StrCall&>(call);
-    auto [isMapKeyAvailable, mapKey] = strcall.ringIndexer->getFreeIndex();
+    auto [isMapKeyAvailable, mapKey] = strcall.state.value().ringIndexer.getFreeIndex();
     if (isMapKeyAvailable) {
-      CallInst *str_map = b_.CreateGetStrMap(strcall.map->mapfd_);
+      CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, mapKey);
       Function *parent = b_.GetInsertBlock()->getParent();
       BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
       BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
@@ -475,7 +475,7 @@ void CodegenLLVM::visit(Call &call)
 
       b_.SetInsertPoint(notzero);
 
-      auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.zeroesForClearingMap.get()));
+      auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.state.value().zeroesForClearingMap.get()));
 
       AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
       b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
@@ -497,17 +497,17 @@ void CodegenLLVM::visit(Call &call)
       }
       // (for now) 64-bit "mapfd", 64-bit "array key"
       AllocaInst *buf = b_.CreateAllocaBPF(16, "str");
-      b_.CreateStore(b_.getInt64(strcall.map->mapfd_),
+      b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(0) }));
       b_.CreateStore(b_.getInt64(mapKey),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(1) }));
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(8) }));
       // AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
       // b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
       call.vargs->front()->accept(*this);
       // b_.CreateProbeReadStr(buf, b_.CreateLoad(strlen), expr_);
 
       // zero it out first
-      b_.CreateProbeRead(str_map, strcall.map->value_size_,
+      b_.CreateProbeRead(str_map, strcall.maxStrSize.value(),
                         ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
       b_.CreateProbeReadStr(str_map, b_.CreateLoad(strlen), expr_);
 

@@ -10,15 +10,17 @@ public:
   Map(const std::string &name,
       const SizedType &type,
       const MapKey &key,
-      int max_entries)
-      : Map(name, type, key, 0, 0, 0, max_entries){};
+      int max_entries,
+      int value_size)
+      : Map(name, type, key, 0, 0, 0, max_entries, value_size){};
   Map(const std::string &name,
       const SizedType &type,
       const MapKey &key,
       int min,
       int max,
       int step,
-      int max_entries);
+      int max_entries,
+      int value_size);
   Map(const SizedType &type);
   Map(enum bpf_map_type map_type);
   virtual ~Map() override;

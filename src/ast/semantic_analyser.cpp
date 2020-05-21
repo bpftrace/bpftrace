@@ -546,6 +546,7 @@ void SemanticAnalyser::visit(Call &call)
       // if somebody provides a literal length
       // call.type = CreateString(bpftrace_.strlen_);
       call.type = CreateMapString();
+
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
         // consider adding another optional param
@@ -557,6 +558,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     auto &strcall = static_cast<StrCall&>(call);
+    strcall.maxStrSize.emplace(bpftrace_.strlen_);
     str_calls_.emplace_back(&strcall);
   }
   else if (call.func == "buf")
@@ -2135,7 +2137,7 @@ int SemanticAnalyser::create_maps(bool debug)
         Integer &max = static_cast<Integer&>(max_arg);
         Integer &step = static_cast<Integer&>(step_arg);
         bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
-            map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
+            map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_, type.size);
         bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
         bpftrace_.map_ids_.push_back(map_name);
         failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
@@ -2143,7 +2145,7 @@ int SemanticAnalyser::create_maps(bool debug)
       else
       {
         bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
-            map_name, type, key, bpftrace_.mapmax_);
+            map_name, type, key, bpftrace_.mapmax_, type.size);
         bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
         bpftrace_.map_ids_.push_back(map_name);
         failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
@@ -2198,7 +2200,7 @@ int SemanticAnalyser::create_maps(bool debug)
       SizedType type = CreateJoin(bpftrace_.join_argnum_,
                                   bpftrace_.join_argsize_);
       MapKey key;
-      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1, type.size);
       failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
     }
     if (needs_elapsed_map_)
@@ -2207,7 +2209,7 @@ int SemanticAnalyser::create_maps(bool debug)
       SizedType type = CreateUInt64();
       MapKey key;
       bpftrace_.elapsed_map_ =
-          std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+          std::make_unique<bpftrace::Map>(map_ident, type, key, 1, type.size);
       failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
     }
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -2223,7 +2225,7 @@ int SemanticAnalyser::create_maps(bool debug)
     if (debug)
       bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     else {
-      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1, type.size);
       bpftrace_.fmtstr_map_zero_ = calloc(1, max_fmtstr_args_size_ + sizeof(size_t));
     }
     failed_maps += is_invalid_map(bpftrace_.fmtstr_map_->mapfd_);
@@ -2235,24 +2237,23 @@ int SemanticAnalyser::create_maps(bool debug)
     SizedType& type = strCall->type;
     const int bufferSize = bpftrace_.events_buffer_size_;
     MapKey key;
-    auto ringIndexer = std::make_unique<bpftrace::RingIndexer>(bufferSize);
+    bpftrace::RingIndexer ringIndexer(bufferSize);
     std::unique_ptr<bpftrace::IMap> map;
     if (debug) {
       map = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     } else {
-      map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize);
+      map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize, strCall->maxStrSize.value());
     }
     const int isInvalidMap = is_invalid_map(map->mapfd_);
     if (isInvalidMap) {
       failed_maps += isInvalidMap;
     } else {
-      std::unique_ptr<std::byte, std::function<void(std::byte*)>> zeroesForClearingMap(
-        (std::byte*)(std::calloc(type.size, sizeof(std::byte))),
-        [](std::byte* x) { free(x); });
-      strCall->initialise(
-      std::move(map),
-      std::move(ringIndexer),
-      std::move(zeroesForClearingMap)
+      std::unique_ptr<std::byte, StrCall::StrMapState::ZeroesDeleter> zeroesForClearingMap(
+        (std::byte*)(std::calloc(type.size, sizeof(std::byte))));
+      strCall->state.emplace(
+        std::move(map),
+        std::move(ringIndexer),
+        std::move(zeroesForClearingMap)
       );
     }
     strCallIx++;

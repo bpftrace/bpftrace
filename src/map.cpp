@@ -19,7 +19,7 @@ int Map::create_map(enum bpf_map_type map_type, const char *name, int key_size, 
 #endif
 }
 
-Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries)
+Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries, int value_size)
 {
   name_ = name;
   type_ = type;
@@ -58,7 +58,6 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   else
     map_type_ = BPF_MAP_TYPE_HASH;
 
-  int value_size = type.size;
   int flags = 0;
   max_entries_ = max_entries;
   value_size_ = value_size;

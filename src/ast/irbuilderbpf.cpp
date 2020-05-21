@@ -221,11 +221,10 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
   return call;
 }
 
-CallInst *IRBuilderBPF::CreateGetStrMap(int mapfd)
+CallInst *IRBuilderBPF::CreateGetStrMap(int mapfd, int elem)
 {
-  Value *map_ptr = CreateBpfPseudoCall(mapfd);
   AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "key");
-  CreateStore(getInt64(0), key);
+  CreateStore(getInt64(elem), key);
 
   CallInst *call = createMapLookup(mapfd, key);
   return call;

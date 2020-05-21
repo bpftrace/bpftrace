@@ -91,6 +91,7 @@ std::string typestr(Type t)
     case Type::kstack:   return "kstack";   break;
     case Type::ustack:   return "ustack";   break;
     case Type::string:   return "string";   break;
+    case Type::mapstr:   return "mapstr";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
     case Type::cast:     return "cast";     break;
