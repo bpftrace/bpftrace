@@ -1505,9 +1505,16 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   if (type.type != Type::cast && type.type != Type::ctx &&
       type.type != Type::tuple)
   {
-    if (is_final_pass()) {
-      ERR("Can not access field '" << acc.field << "' on expression of type '"
-                                   << type << "'",
+    if (is_final_pass())
+    {
+      std::string field;
+      if (acc.field.size())
+        field += "field '" + acc.field + "'";
+      else
+        field += "index " + std::to_string(acc.index);
+
+      ERR("Can not access " << field << " on expression of type '" << type
+                            << "'",
           acc.loc);
     }
     return;
