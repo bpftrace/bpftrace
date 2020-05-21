@@ -113,7 +113,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   llvm::Type *ty = GetType(stype);
   AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
 
-  if (!stype.IsArray())
+  if (!stype.IsAggregate())
   {
     CreateStore(getInt64(0), alloca);
   }
@@ -272,12 +272,8 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
       "map_lookup_cond");
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
-  bool is_array = (type.IsStringTy() || type.IsBufferTy() ||
-                   (type.IsCastTy() && !type.is_pointer) || type.IsInetTy() ||
-                   type.IsUsymTy());
-
   SetInsertPoint(lookup_success_block);
-  if (is_array)
+  if (type.IsAggregate())
     CREATE_MEMCPY(value, call, type.size, 1);
   else
   {
@@ -290,7 +286,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (is_array)
+  if (type.IsAggregate())
     CREATE_MEMSET(value, getInt8(0), type.size, 1);
   else
     CreateStore(getInt64(0), value);
@@ -298,7 +294,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_merge_block);
-  if (is_array)
+  if (type.IsAggregate())
     return value;
 
   return CreateLoad(value);

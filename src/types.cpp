@@ -80,6 +80,11 @@ bool SizedType::IsArray() const
          ((type == Type::cast || type == Type::ctx) && !is_pointer);
 }
 
+bool SizedType::IsAggregate() const
+{
+  return IsArray() || IsTupleTy();
+}
+
 bool SizedType::IsStack() const
 {
   return type == Type::ustack || type == Type::kstack;
