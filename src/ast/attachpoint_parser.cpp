@@ -83,6 +83,7 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return watchpoint_parser();
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
+    case ProbeType::lsm:
       return kfunc_parser();
     default:
       errs_ << "Unrecognized probe type: " << ap_->provider << std::endl;

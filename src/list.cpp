@@ -335,6 +335,10 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
   if (list_all || probe_name == "kfunc")
     bpftrace.btf_.display_kfunc(search.empty() ? nullptr : &re);
 
+  // lsm
+  if (list_all || probe_name == "lsm")
+    bpftrace.btf_.display_lsm(search.empty() ? NULL : &re);
+
   // struct / union / enum
   if (probe_name.empty() &&
       std::regex_search(search, std::regex("^(struct|union|enum) ")))

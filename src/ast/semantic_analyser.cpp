@@ -253,7 +253,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       builtin.type = CreateUInt64();
     }
-    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
+    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
+             type == ProbeType::lsm)
     {
       auto it = ap_args_.find("$retval");
 
@@ -367,7 +368,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       // no special action in here
     }
-    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
+    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
+             type == ProbeType::lsm)
     {
       builtin.type = SizedType(Type::ctx, 0);
       builtin.type.is_kfarg = true;
@@ -2114,18 +2116,21 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
   }
-  else if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  else if (ap.provider == "kfunc" || ap.provider == "kretfunc" ||
+           ap.provider == "lsm")
   {
 #ifndef HAVE_BCC_KFUNC
-    error("kfunc/kretfunc not available for your linked against bcc version.",
-          ap.loc);
+    ERR(ap.provider << " not available for your bcc version.", ap.loc);
     return;
 #endif
+    bool is_lsm = ap.provider == "lsm";
 
-    bool supported = feature_.has_prog_kfunc() && bpftrace_.btf_.has_data();
+    bool supported = (is_lsm ? feature_.has_prog_lsm()
+                             : feature_.has_prog_kfunc()) &&
+                     bpftrace_.btf_.has_data();
     if (!supported)
     {
-      error("kfunc/kretfunc not available for your kernel version.", ap.loc);
+      ERR(ap.provider << " not available for your kernel version.", ap.loc);
       return;
     }
 

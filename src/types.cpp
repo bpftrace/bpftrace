@@ -176,6 +176,7 @@ std::string probetypeName(ProbeType t)
     case ProbeType::watchpoint:  return "watchpoint";  break;
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
+    case ProbeType::lsm:         return "lsm";         break;
     default:
       std::cerr << "probe type not found" << std::endl;
       abort();

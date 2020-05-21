@@ -64,6 +64,10 @@ static bool try_load(enum libbpf::bpf_prog_type prog_type,
                "kretfunc__strlen", prog_type, insns, len, 0, logbuf, log_size);
   }
 
+  if (prog_type == libbpf::BPF_PROG_TYPE_LSM)
+    return try_load(
+        "lsm__perf_event_open", prog_type, insns, len, 0, logbuf, log_size);
+
   return try_load(nullptr, prog_type, insns, len, 0, logbuf, log_size);
 }
 
@@ -232,7 +236,8 @@ std::string BPFfeature::report(void)
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
-      << "  kfunc: " << to_str(has_prog_kfunc()) << std::endl;
+      << "  kfunc: " << to_str(has_prog_kfunc())
+      << "  lsm: " << to_str(has_prog_lsm()) << std::endl;
 
   return buf.str();
 }

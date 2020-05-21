@@ -454,7 +454,8 @@ int BTF::resolve_args(const std::string &func,
       args.insert({ str, stype });
     }
 
-    if (ret)
+    // add return argument only if it's != void type
+    if (ret && t->type)
     {
       SizedType stype = get_stype(t->type);
       stype.kfarg_idx = j;
@@ -484,9 +485,11 @@ static bool match_re(const std::string &probe, const std::regex &re)
 
 std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
                                              bool params,
+                                             bool lsm,
                                              std::string prefix) const
 {
   __s32 id, max = (__s32)btf__get_nr_types(btf);
+  std::string lsm_prefix = "bpf_lsm_";
   std::string type = std::string("");
   struct btf_dump_opts opts = {
     .ctx = &type,
@@ -494,6 +497,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
   struct btf_dump *dump;
   std::string funcs;
   char err_buf[256];
+  bool is_lsm;
   int err;
 
   dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
@@ -525,6 +529,17 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
                   << " function does not have FUNC_PROTO record" << std::endl;
       break;
     }
+
+    // LSM hooks shows as standard functions with 'bpf_lsm_' prefix,
+    // therefore we:
+    //   - check if we are dealing with lsm hook via prefix check
+    //   - continue only if we are in lsm mode 'lsm bool'
+    is_lsm = func_name.find(lsm_prefix) != std::string::npos;
+    if (is_lsm)
+      func_name = func_name.substr(lsm_prefix.length());
+
+    if ((lsm && !is_lsm) || (!lsm && is_lsm))
+      continue;
 
     if (re && !match_re(prefix + func_name, *re))
       continue;
@@ -592,7 +607,23 @@ void BTF::display_kfunc(std::regex *re) const
   if (!has_data())
     return;
 
-  auto funcs = get_funcs(re, bt_verbose, "kfunc:");
+  auto funcs = get_funcs(re, bt_verbose, false, "kfunc:");
+  if (!funcs)
+    return;
+
+  std::string func_name;
+  while (std::getline(*funcs, func_name))
+  {
+    std::cout << func_name << std::endl;
+  }
+}
+
+void BTF::display_lsm(std::regex *re) const
+{
+  if (!has_data())
+    return;
+
+  auto funcs = get_funcs(re, bt_verbose, true, "lsm:");
   if (!funcs)
     return;
 
@@ -682,9 +713,13 @@ void BTF::display_structs(std::regex *re) const
 
 std::unique_ptr<std::istream> BTF::kfunc(void) const
 {
-  return get_funcs(NULL, false, "");
+  return get_funcs(NULL, false, false, "");
 }
 
+std::unique_ptr<std::istream> BTF::lsm(void) const
+{
+  return get_funcs(NULL, false, true, "");
+}
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -717,7 +752,16 @@ void BTF::display_kfunc(std::regex* re __attribute__((__unused__))) const
 {
 }
 
+void BTF::display_lsm(std::regex* re __attribute__((__unused__))) const
+{
+}
+
 std::unique_ptr<std::istream> BTF::kfunc(void) const
+{
+  return nullptr;
+}
+
+std::unique_ptr<std::istream> BTF::lsm(void) const
 {
   return nullptr;
 }

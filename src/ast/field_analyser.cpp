@@ -241,7 +241,11 @@ bool FieldAnalyser::compare_args(std::map<std::string, SizedType> args1,
 bool FieldAnalyser::resolve_args(AttachPoint &ap)
 {
   bool kretfunc = ap.provider == "kretfunc";
+  bool lsm = ap.provider == "lsm";
   std::string func = ap.func;
+
+  if (lsm)
+    func = "bpf_lsm_" + func;
 
   // load AP arguments into ap_args_
   ap_args_.clear();
@@ -266,7 +270,9 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
     {
       std::map<std::string, SizedType> args;
 
-      if (!bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc))
+      if (!bpftrace_.btf_.resolve_args(func,
+                                       first ? ap_args_ : args,
+                                       kretfunc || lsm))
       {
         if (!first && !compare_args(args, ap_args_))
         {
@@ -278,7 +284,7 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
       first = false;
     }
   }
-  else if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
+  else if (bpftrace_.btf_.resolve_args(func, ap_args_, kretfunc || lsm))
   {
     error("Failed to resolve probe arguments", ap.loc);
     return false;
@@ -307,7 +313,8 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
 
 void FieldAnalyser::visit(AttachPoint &ap)
 {
-  if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  if (ap.provider == "kfunc" || ap.provider == "kretfunc" ||
+      ap.provider == "lsm")
   {
     has_kfunc_probe_ = true;
 

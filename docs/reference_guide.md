@@ -55,6 +55,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [14. `watchpoint`: Memory watchpoints](#14-watchpoint-memory-watchpoints)
     - [15. `kfunc`/`kretfunc`: Kernel Functions Tracing](#15-kfunckretfunc-kernel-functions-tracing)
     - [16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#16-kfunckretfunc-kernel-functions-tracing-arguments)
+    - [17. `lsm`: LSM Hooks Tracing](#17-lsm-lsm-hooks-tracing)
+    - [18. `lsm`: LSM Hooks Tracing Arguments](#18-lsm-lsm-hooks-tracing-arguments)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -1531,6 +1533,55 @@ fd 3 name libselinux.so.1
 ...
 ```
 And as you can see in above example it's also possible to access function arguments on `kretfunc` probes.
+
+
+## 17. `lsm`: LSM Hooks Tracing
+
+**WARNING**: this feature is experimental and may be subject to interface changes.
+
+Syntax:
+
+```
+lsm:function
+```
+
+These are LSM (Linux Security Module) hooks probes implemented via eBPF trampolines.
+It's possible to inspect hooks argument and change the return value of the hook if it has one.
+
+Examples:
+
+```
+# bpftrace -e 'lsm:* { @[comm,probe] = kstack; }'
+# bpftrace -e 'lsm:perf_event_open { return -1234; }'
+```
+
+You can get list of available functions via list option:
+
+```
+# bpftrace -l lsm:* | head -10
+lsm:verify_prog
+lsm:perf_event_write
+lsm:perf_event_read
+lsm:perf_event_free
+lsm:perf_event_alloc
+lsm:perf_event_open
+lsm:locked_down
+lsm:bpf_prog_free_security
+lsm:bpf_prog_alloc_security
+lsm:bpf_map_free_security
+
+```
+
+
+## 18. `lsm`: LSM Hooks Tracing Arguments
+
+Syntax:
+
+```
+lsm:function      args->NAME  ... retval
+```
+
+Arguments can be accessed the same way as for kfunc probes (described in Chapter 16)
 
 # Variables
 

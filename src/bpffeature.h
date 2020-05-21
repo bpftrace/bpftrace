@@ -90,6 +90,7 @@ public:
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
   DEFINE_PROG_TEST(kfunc, libbpf::BPF_PROG_TYPE_TRACING);
+  DEFINE_PROG_TEST(lsm, libbpf::BPF_PROG_TYPE_LSM);
 
 protected:
   std::optional<bool> has_loop_;

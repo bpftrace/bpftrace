@@ -77,6 +77,9 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretfunc:
       return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
       break;
+    case ProbeType::lsm:
+      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_LSM);
+      break;
     default:
       std::cerr << "program type not found" << std::endl;
       abort();
@@ -170,6 +173,7 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       break;
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
+    case ProbeType::lsm:
       attach_kfunc();
       break;
     default:
@@ -215,6 +219,7 @@ AttachedProbe::~AttachedProbe()
       break;
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
+    case ProbeType::lsm:
       err = detach_kfunc();
       break;
     case ProbeType::uprobe:
