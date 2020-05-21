@@ -544,7 +544,8 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
       // this is a bit pessimistic; we can make smaller strings
       // if somebody provides a literal length
-      call.type = CreateString(bpftrace_.strlen_);
+      // call.type = CreateString(bpftrace_.strlen_);
+      call.type = CreateMapString();
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
         // consider adding another optional param

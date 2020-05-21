@@ -81,7 +81,7 @@ public:
   CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type);
   CallInst   *CreateGetJoinMap(Value *ctx);
-  CallInst   *CreateGetStrMap(int mapfd, int n);
+  CallInst   *CreateGetStrMap(int mapfd);
   CallInst   *CreateGetFmtStrMap(StructType *printf_struct, int asyncId);
   void        CreateGetCurrentComm(AllocaInst *buf, size_t size);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);

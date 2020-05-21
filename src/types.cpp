@@ -236,6 +236,13 @@ SizedType CreateString(size_t size)
   return SizedType(Type::string, size);
 }
 
+SizedType CreateMapString()
+{
+  // TODO: size this to be a struct (mapfd, array key)
+  // TODO: consider whether we can go down to 32-bit ints
+  return SizedType(Type::mapstr, 16);
+}
+
 SizedType CreateNone()
 {
   return SizedType(Type::none, 0);

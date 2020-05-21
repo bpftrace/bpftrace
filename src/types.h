@@ -37,6 +37,7 @@ enum class Type
   join,
   fmtstr,
   str,
+  mapstr,
   probe,
   username,
   inet,
@@ -119,6 +120,7 @@ SizedType CreateUInt32();
 SizedType CreateUInt64();
 
 SizedType CreateString(size_t size);
+SizedType CreateMapString();
 SizedType CreateArray(size_t num_elem,
                       Type elem_type,
                       size_t elem_size,

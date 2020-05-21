@@ -461,7 +461,7 @@ void CodegenLLVM::visit(Call &call)
     auto &strcall = static_cast<StrCall&>(call);
     auto [isMapKeyAvailable, mapKey] = strcall.ringIndexer->getFreeIndex();
     if (isMapKeyAvailable) {
-      CallInst *str_map = b_.CreateGetStrMap(strcall.map->mapfd_, mapKey);
+      CallInst *str_map = b_.CreateGetStrMap(strcall.map->mapfd_);
       Function *parent = b_.GetInsertBlock()->getParent();
       BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
       BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
@@ -495,6 +495,12 @@ void CodegenLLVM::visit(Call &call)
       } else {
         b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
       }
+      // (for now) 64-bit "mapfd", 64-bit "array key"
+      AllocaInst *buf = b_.CreateAllocaBPF(16, "str");
+      b_.CreateStore(b_.getInt64(strcall.map->mapfd_),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(0) }));
+      b_.CreateStore(b_.getInt64(mapKey),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(1) }));
       // AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
       // b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
       call.vargs->front()->accept(*this);
@@ -502,19 +508,21 @@ void CodegenLLVM::visit(Call &call)
 
       // zero it out first
       b_.CreateProbeRead(str_map, strcall.map->value_size_,
-                     ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
+                        ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
       b_.CreateProbeReadStr(str_map, b_.CreateLoad(strlen), expr_);
 
       b_.CreateLifetimeEnd(strlen);
 
-      expr_ = str_map;
-      // expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
+      expr_ = buf;
+      expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
       b_.CreateBr(zero);
 
       // done
       b_.SetInsertPoint(zero);
     } else {
       std::cerr << "events buffer is full; increase BPFTRACE_EVENTS_BUFFER_SIZE" << std::endl;
+      expr_ = nullptr;
+      expr_deleter_ = nullptr;
     }
   }
   else if (call.func == "buf")
@@ -2235,11 +2243,16 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(asyncId), id_offset);
+  bool encounteredMissingOperand = false;
   for (size_t i=1; i<call.vargs->size(); i++)
   {
     Expression &arg = *call.vargs->at(i);
     expr_deleter_ = nullptr;
     arg.accept(*this);
+    if (expr_ == nullptr) {
+      encounteredMissingOperand = true;
+      break;
+    }
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
     {
@@ -2265,8 +2278,12 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   // sending map key instead of actual string may be performant, but race isn't well-understood
   // including a string buffer at the end of the struct is easy and space-efficient
 
+  if (encounteredMissingOperand) {
+    std::cerr << "aborting printf " << id << " due to missing operand" << std::endl;
+  } else {
+    b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
+  }
   id++;
-  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
   b_.CreateLifetimeEnd(fmt_args);
 
   b_.CreateBr(zero);
