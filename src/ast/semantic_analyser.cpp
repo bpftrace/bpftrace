@@ -2369,7 +2369,7 @@ bool SemanticAnalyser::check_assignment(const Call &call, bool want_map, bool wa
   {
     if (!call.map)
     {
-      error(call.func + "() should be assigned to a map", call.loc);
+      error(call.func + "() should be directly assigned to a map", call.loc);
       return false;
     }
   }
