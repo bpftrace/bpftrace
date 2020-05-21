@@ -461,6 +461,7 @@ void CodegenLLVM::visit(Call &call)
     auto &strcall = static_cast<StrCall&>(call);
     auto [isMapKeyAvailable, mapKey] = strcall.state.value().ringIndexer.getFreeIndex();
     if (isMapKeyAvailable) {
+      std::cerr << "mapKey: " << mapKey << std::endl;
       CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, mapKey);
       Function *parent = b_.GetInsertBlock()->getParent();
       BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
@@ -495,14 +496,17 @@ void CodegenLLVM::visit(Call &call)
       } else {
         b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
       }
+      StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
+      int struct_size = layout_.getTypeAllocSize(structType);
       // (for now) 64-bit "mapfd", 64-bit "array key", 64-bit "strlen"
-      AllocaInst *buf = b_.CreateAllocaBPF(24, "str");
+      AllocaInst *buf = b_.CreateAllocaBPF(structType, "str");
+      // b_.CREATE_MEMSET(buf, b_.getInt8(0), struct_size, 1);
       b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(0) }));
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
       b_.CreateStore(b_.getInt64(mapKey),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(8) }));
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
       b_.CreateStore(b_.CreateLoad(strlen),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt64(16) }));
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
       // AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
       // b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
       call.vargs->front()->accept(*this);
@@ -2213,10 +2217,18 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (Field &arg : args)
   {
     llvm::Type *ty = b_.GetType(arg.type);
+    // if (arg.type.type == Type::mapstr) {
+    //   StructType *structType(static_cast<StructType*>(arg.type.type));
+    // }
+    std::cerr << "type size: " << layout_.getTypeAllocSize(ty) << std::endl;
+    if (auto *valCast = dyn_cast<StructType>(ty)) {
+      std::cerr << "struct type size: " << layout_.getTypeAllocSize(valCast) << std::endl;
+    }
     elements.push_back(ty);
   }
   StructType *fmt_struct = StructType::create(elements, call_name + "_t", false);
   int struct_size = layout_.getTypeAllocSize(fmt_struct);
+  std::cerr << "fmt_struct_size: " << struct_size << std::endl;
 
   auto *struct_layout = layout_.getStructLayout(fmt_struct);
   for (size_t i=0; i<args.size(); i++)
@@ -2258,6 +2270,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
     {
+      std::cerr << "memcpy size: " << arg.type.size << std::endl;
+      std::cerr << "memcpy offset: " << offset << std::endl;
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))
         b_.CreateLifetimeEnd(expr_);

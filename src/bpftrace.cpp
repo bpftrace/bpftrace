@@ -625,11 +625,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         break;
       case Type::mapstr:
       {
-        auto p = reinterpret_cast<int*>(arg_data + arg.offset);
+        // auto p = reinterpret_cast<uint64_t*>(arg_data + arg.offset);
         // IMap &map = bpftrace->get_map_by_id();
-        int mapfd(*p);
-        int32_t arrayIx(*(p+1));
-        int strLen(*(p+2));
+        uint64_t mapfd(*reinterpret_cast<uint64_t*>(arg_data+arg.offset));
+        uint64_t arrayIx(*reinterpret_cast<uint64_t*>(arg_data+arg.offset+8));
+        uint64_t strLen(*reinterpret_cast<uint64_t*>(arg_data+arg.offset+16));
         std::string str_buff;
         str_buff.reserve(strLen);
         int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());

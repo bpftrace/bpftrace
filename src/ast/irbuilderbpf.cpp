@@ -152,8 +152,9 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.IsArray())
-  {
+  if  (stype.type == Type::mapstr) {
+    ty = StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "strcall_t", false);
+  } else if (stype.IsArray()) {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
   else

@@ -64,7 +64,7 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsArray() const
 {
   return type == Type::array || type == Type::string || type == Type::usym ||
-         type == Type::inet || type == Type::buffer ||
+         type == Type::inet || type == Type::buffer || type == Type::mapstr ||
          ((type == Type::cast || type == Type::ctx) && !is_pointer);
 }
 
@@ -239,7 +239,7 @@ SizedType CreateString(size_t size)
 
 SizedType CreateMapString()
 {
-  // TODO: size this to be a struct (mapfd, array key, strlen)
+  // struct (int mapfd, int array_key, int strlen)
   // TODO: consider whether we can go down to 32-bit ints
   return SizedType(Type::mapstr, 24);
 }
