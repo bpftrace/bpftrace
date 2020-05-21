@@ -103,6 +103,7 @@ private:
 
 public:
   bool IsArray() const;
+  bool IsAggregate() const;
   bool IsStack() const;
 
   bool IsEqual(const SizedType &t) const;

@@ -965,7 +965,7 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  if (!var.type.IsArray())
+  if (!var.type.IsAggregate())
   {
     expr_ = b_.CreateLoad(variables_[var.ident]);
   }
@@ -1555,7 +1555,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     variables_[var.ident] = val;
   }
 
-  if (!var.type.IsArray())
+  if (!var.type.IsAggregate())
   {
     b_.CreateStore(expr_, variables_[var.ident]);
   }
@@ -2272,7 +2272,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     expr_deleter_ = nullptr;
     arg.accept(*this);
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
-    if (arg.type.IsArray())
+    if (arg.type.IsAggregate())
     {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))

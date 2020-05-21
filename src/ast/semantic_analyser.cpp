@@ -779,8 +779,8 @@ void SemanticAnalyser::visit(Call &call)
              iter++)
         {
           auto ty = (*iter)->type;
-          // Promote to 64-bit if it's not an array type
-          if (!ty.IsArray())
+          // Promote to 64-bit if it's not an aggregate type
+          if (!ty.IsAggregate())
             ty.size = 8;
           args.push_back(Field{
             .type =  ty,
