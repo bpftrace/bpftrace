@@ -56,7 +56,7 @@ RUN if [ "${BASE}" = "xenial" ]; then \
     && curl -OL https://cmake.org/files/v${version}/cmake-${version}.${build}.tar.gz \
     && tar -xzvf cmake-${CMAKE_VER}.$build.tar.gz \
     && cd cmake-${CMAKE_VER}.$build/ \
-    && ./bootstrap \
+    && ./bootstrap --parallel=$(nproc) \
     && make -j$(nproc) \
     && make install \
     ; else \
