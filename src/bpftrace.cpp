@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <cassert>
+#include <cstddef>
 #include <cstring>
 #include <ctime>
 #include <cxxabi.h>
@@ -417,8 +418,30 @@ void BPFtrace::request_finalize()
     child_->terminate();
 }
 
-void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
+void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((unused))*/)
 {
+  std::cerr << std::hex << std::setfill('0');
+  auto *ptr = reinterpret_cast<std::byte *>(data);
+  for (size_t i = 0; i < static_cast<size_t>(size); i++, ptr++) {
+    if (i % (sizeof(uint64_t) << 1) == 0) {
+      std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
+    }
+    std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
+    if (i % 2 == 1) {
+      std::cerr << ' ';
+    }
+  }
+  std::cerr << std::dec << std::endl;
+  // for (int i = 0; i < size; i++) {
+  //   if (i % (sizeof(uint64_t) << 1) == 0) {
+  //     printf("\n");
+  //   }
+  //   printf("%02hhX", static_cast<char*>(data)[i]);
+  //   if (i % 2 == 1) {
+  //     printf(" ");
+  //   }
+  // }
+  // printf("\n");
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
@@ -585,9 +608,11 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
+  // std::cerr << "args.size():" << args.size() << std::endl;
 
   for (auto arg : args)
   {
+    // std::cerr << "arg.offset:" << arg.offset << std::endl;
     switch (arg.type.type)
     {
       case Type::integer:
@@ -627,18 +652,27 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
       {
         // auto p = reinterpret_cast<uint64_t*>(arg_data + arg.offset);
         // IMap &map = bpftrace->get_map_by_id();
-        uint64_t mapfd(*reinterpret_cast<uint64_t*>(arg_data+arg.offset));
-        uint64_t arrayIx(*reinterpret_cast<uint64_t*>(arg_data+arg.offset+8));
-        uint64_t strLen(*reinterpret_cast<uint64_t*>(arg_data+arg.offset+16));
-        std::string str_buff;
-        str_buff.reserve(strLen);
-        int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
+        AsyncEvent::StrMap * strMap(reinterpret_cast<AsyncEvent::StrMap *>(arg_data+arg.offset));
+        uint64_t mapfd(strMap->mapfd);
+        uint32_t arrayIx(static_cast<uint64_t>(strMap->arrayIx));
+        uint64_t strLen(strMap->strLen);
         std::cerr << "mapfd:" << mapfd << std::endl;
         std::cerr << "arrayIx:" << arrayIx << std::endl;
         std::cerr << "strLen:" << strLen << std::endl;
+        // std::string str_buff;
+        // str_buff.reserve(strLen);
+        // int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
+        // char* str_buff = new char[strLen];
+        auto str_buff = std::vector<int8_t>(200);
+        int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         std::cerr << "bpf_lookup_elem err:" << err << std::endl;
-        std::cerr << "str_buff:" << str_buff << std::endl;
-        arg_values.push_back(std::make_unique<PrintableString>(std::move(str_buff)));
+        // std::cerr << "str_buff:" << str_buff << std::endl;
+        // std::copy(str_buff.begin(), str_buff.end(), std::ostream_iterator<int8_t>(std::cerr, "_"));
+        for (auto i: str_buff)
+          printf("%hhX", static_cast<char>(i));
+        fflush(stdout);
+        arg_values.push_back(std::make_unique<PrintableString>(std::string("ignore")));
+        // free(str_buff);
         break;
       }
       case Type::string:

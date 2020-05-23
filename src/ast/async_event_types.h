@@ -77,5 +77,17 @@ struct Buf
   }
 } __attribute__((packed));
 
+struct StrMap
+{
+  uint64_t mapfd;
+  uint64_t arrayIx;
+  uint64_t strLen;
+
+  llvm::StructType *asLLVMType(ast::IRBuilderBPF& b)
+  {
+    return b.GetMapStrTy();
+  }
+}; // deliberately not packed; IRBuilder specifies isPacked=false
+
 } // namespace AsyncEvent
 } // namespace bpftrace

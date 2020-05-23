@@ -149,11 +149,16 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
   return getIntN(size, C);
 }
 
+StructType *IRBuilderBPF::GetMapStrTy() {
+
+  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
+}
+
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
   if  (stype.type == Type::mapstr) {
-    ty = StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "strcall_t", false);
+    ty = GetMapStrTy();
   } else if (stype.IsArray()) {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
@@ -224,14 +229,14 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx __attribute__((unused)))
 
 CallInst *IRBuilderBPF::CreateGetStrMap(int mapfd, int elem)
 {
-  AllocaInst *key = CreateAllocaBPF(getInt64Ty(), "key");
-  CreateStore(getInt64(elem), key);
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  CreateStore(getInt32(elem), key);
 
   CallInst *call = createMapLookup(mapfd, key);
   return call;
 }
 
-CallInst *IRBuilderBPF::CreateGetFmtStrMap(StructType *printf_struct, int asyncId)
+CallInst *IRBuilderBPF::CreateGetFmtStrMap(StructType *printf_struct, [[maybe_unused]] int asyncId)
 {
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.fmtstr_map_->mapfd_);
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");

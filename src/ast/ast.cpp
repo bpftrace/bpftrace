@@ -136,16 +136,6 @@ StrCall::StrMapState::StrMapState(
 , zeroesForClearingMap(std::move(zeroesForClearingMap))
 {}
 
-// void StrCall::initialise(
-//   std::unique_ptr<IMap> map,
-//   std::unique_ptr<RingIndexer> ringIndexer,
-//   std::unique_ptr<std::byte, std::function<void(std::byte* x)>> zeroesForClearingMap) {
-//   this->map.swap(map);
-//   this->ringIndexer.swap(ringIndexer);
-//   this->zeroesForClearingMap.swap(zeroesForClearingMap);
-//   this->initialised = true;
-// }
-
 Call* CallFactory::createCall(const std::string &func, location loc, ExpressionList *vargs) {
   if (func == "str") {
     return new StrCall(std::move(loc), vargs);
