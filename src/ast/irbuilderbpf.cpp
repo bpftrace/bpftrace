@@ -151,7 +151,7 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 
 StructType *IRBuilderBPF::GetMapStrTy() {
 
-  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
+  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
 }
 
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)

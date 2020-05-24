@@ -420,18 +420,18 @@ void BPFtrace::request_finalize()
 
 void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((unused))*/)
 {
-  std::cerr << std::hex << std::setfill('0');
-  auto *ptr = reinterpret_cast<std::byte *>(data);
-  for (size_t i = 0; i < static_cast<size_t>(size); i++, ptr++) {
-    if (i % (sizeof(uint64_t) << 1) == 0) {
-      std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
-    }
-    std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
-    if (i % 2 == 1) {
-      std::cerr << ' ';
-    }
-  }
-  std::cerr << std::dec << std::endl;
+  // std::cerr << std::hex << std::setfill('0');
+  // auto *ptr = reinterpret_cast<std::byte *>(data);
+  // for (size_t i = 0; i < static_cast<size_t>(size); i++, ptr++) {
+  //   if (i % (sizeof(uint64_t) << 1) == 0) {
+  //     std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
+  //   }
+  //   std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
+  //   if (i % 2 == 1) {
+  //     std::cerr << ' ';
+  //   }
+  // }
+  // std::cerr << std::dec << std::endl;
   // for (int i = 0; i < size; i++) {
   //   if (i % (sizeof(uint64_t) << 1) == 0) {
   //     printf("\n");
@@ -654,23 +654,43 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         // IMap &map = bpftrace->get_map_by_id();
         AsyncEvent::StrMap * strMap(reinterpret_cast<AsyncEvent::StrMap *>(arg_data+arg.offset));
         uint64_t mapfd(strMap->mapfd);
-        uint32_t arrayIx(static_cast<uint64_t>(strMap->arrayIx));
+        int32_t arrayIx(static_cast<int32_t>(strMap->arrayIx & 0xffffffff));
         uint64_t strLen(strMap->strLen);
+        uint64_t cpuId(strMap->cpuId);
         std::cerr << "mapfd:" << mapfd << std::endl;
         std::cerr << "arrayIx:" << arrayIx << std::endl;
         std::cerr << "strLen:" << strLen << std::endl;
+        std::cerr << "cpuId:" << cpuId << std::endl;
         // std::string str_buff;
         // str_buff.reserve(strLen);
         // int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         // char* str_buff = new char[strLen];
-        auto str_buff = std::vector<int8_t>(200);
+
+        int mapValueSize(200 * ncpus_);
+        // TODO: change to strLen
+        auto str_buff = std::vector<uint8_t>(mapValueSize);
         int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         std::cerr << "bpf_lookup_elem err:" << err << std::endl;
         // std::cerr << "str_buff:" << str_buff << std::endl;
         // std::copy(str_buff.begin(), str_buff.end(), std::ostream_iterator<int8_t>(std::cerr, "_"));
-        for (auto i: str_buff)
-          printf("%hhX", static_cast<char>(i));
-        fflush(stdout);
+        // for (auto i: str_buff)
+          // printf("%hhX", static_cast<char>(i));
+          // printf("%c", static_cast<char>(i));
+        // printf("\n");
+
+        std::cerr << std::hex << std::setfill('0');
+        auto *ptr = reinterpret_cast<std::byte *>(str_buff.data());
+        for (size_t i = 0; i < static_cast<size_t>(mapValueSize); i++, ptr++) {
+          if (i % (sizeof(uint64_t) << 1) == 0) {
+            std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
+          }
+          std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
+          if (i % 2 == 1) {
+            std::cerr << ' ';
+          }
+        }
+        std::cerr << std::dec << std::endl;
+
         arg_values.push_back(std::make_unique<PrintableString>(std::string("ignore")));
         // free(str_buff);
         break;

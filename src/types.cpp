@@ -239,9 +239,9 @@ SizedType CreateString(size_t size)
 
 SizedType CreateMapString()
 {
-  // struct (int mapfd, int array_key, int strlen)
+  // struct (int mapfd, int array_key, int strlen, int cpuid)
   // TODO: consider whether we can go down to 32-bit ints
-  return SizedType(Type::mapstr, 24);
+  return SizedType(Type::mapstr, 32);
 }
 
 SizedType CreateNone()

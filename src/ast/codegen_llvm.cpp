@@ -92,8 +92,6 @@ void CodegenLLVM::visit(Identifier &identifier)
 
 void CodegenLLVM::visit(Builtin &builtin)
 {
-  // std::cerr << "builtin" << std::endl;
-  // std::cerr << "builtin.ident: " << builtin.ident << std::endl;
   if (builtin.ident == "nsecs")
   {
     expr_ = b_.CreateGetNs();
@@ -498,16 +496,24 @@ void CodegenLLVM::visit(Call &call)
       } else {
         b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
       }
+      // AllocaInst *cpuBuf = b_.CreateAllocaBPF(b_.getInt64Ty(), "cpu_buff");
+      // b_.CREATE_MEMSET(cpuBuf, b_.getInt8(0), sizeof(uint64_t), 1);
+      // CallInst* cpuId = b_.CreateGetCpuId();
+      // b_.CreateStore(cpuId, cpuBuf);
+
       StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
-      // int struct_size = layout_.getTypeAllocSize(structType);
       AllocaInst *buf = b_.CreateAllocaBPF(structType, "str");
-      // b_.CREATE_MEMSET(buf, b_.getInt8(0), struct_size, 1);
       b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
       b_.CreateStore(b_.getInt64(0),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
       b_.CreateStore(b_.CreateLoad(strlen),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
+      // b_.CreateStore(b_.CreateLoad(cpuBuf),
+      // b_.CreateStore(b_.CreateGetCpuId(),
+      b_.CreateStore(b_.getInt64(1),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(3) }));
+      // b_.CreateLifetimeEnd(cpuBuf);
                    
       call.vargs->front()->accept(*this);
       // zero it out first
@@ -1319,10 +1325,6 @@ void CodegenLLVM::visit(FieldAccess &acc)
   SizedType &type = acc.expr->type;
   assert(type.type == Type::cast || type.type == Type::ctx);
 
-  std::cerr << "=====" << std::endl;
-  // std::cerr << "field access" << std::endl;
-  // std::cerr << "type.type: " << type.type << std::endl; // ctx
-  // std::cerr << "acc.expr->type: " << acc.expr->type << std::endl;
   acc.expr->accept(*this);
 
   if (type.is_kfarg)
@@ -1339,10 +1341,6 @@ void CodegenLLVM::visit(FieldAccess &acc)
   type.cast_type = cast_type;
 
   auto &field = cstruct.fields[acc.field];
-
-  // std::cerr << "cast_type: " << cast_type << std::endl;
-  // std::cerr << "cstruct.size: " << cstruct.size << std::endl;
-  // std::cerr << "type.is_internal: " << type.is_internal << std::endl;
 
   if (type.is_internal)
   {
@@ -1375,41 +1373,6 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
     Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
     llvm::Type *field_ty = b_.GetType(field.type);
-
-    // #include <linux/types.h>
-    // struct _tracepoint_syscalls_sys_enter_write
-    // {
-    //   unsigned short common_type;
-    //   unsigned char common_flags;
-    //   unsigned char common_preempt_count;
-    //   int common_pid;
-    //   int __syscall_nr;
-    //   char __pad_12;
-    //   char __pad_13;
-    //   char __pad_14;
-    //   char __pad_15;
-    //   u64 fd;
-    //   const char * buf;
-    //   size_t count;
-    // };
-    std::cerr << "field.type: " << field.type << std::endl;
-    std::cerr << "field.offset: " << field.offset << std::endl;
-    // std::cerr << "field.type.type: " << field.type.type << std::endl;
-    // std::cerr << "field.type.is_pointer: " << field.type.is_pointer << std::endl;
-    // std::cerr << "field.is_bitfield: " << field.is_bitfield << std::endl;
-
-    // =====
-    // type.type: ctx
-    // field.type: unsigned int64
-    // field.type.type: integer
-    // field.type.is_pointer: 0
-    // field.offset: 32
-    // =====
-    // type.type: ctx
-    // field.type: unsigned int64*
-    // field.type.type: integer
-    // field.type.is_pointer: 1
-    // field.offset: 24
 
     if (field.type.type == Type::cast && !field.type.is_pointer)
     {
@@ -1473,13 +1436,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
              (field.type.type == Type::integer ||
               (field.type.type == Type::cast && field.type.is_pointer)))
     {
-      // field_ty->print(outs());
       expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
                             true);
-      expr_->getType()->print(outs());
-      std::cerr << std::endl;
-      expr_->print(outs());
-      std::cerr << std::endl;
     }
     else
     {
@@ -2264,18 +2222,10 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (Field &arg : args)
   {
     llvm::Type *ty = b_.GetType(arg.type);
-    // if (arg.type.type == Type::mapstr) {
-    //   StructType *structType(static_cast<StructType*>(arg.type.type));
-    // }
-    // std::cerr << "type size: " << layout_.getTypeAllocSize(ty) << std::endl;
-    // if (auto *valCast = dyn_cast<StructType>(ty)) {
-    //   std::cerr << "struct type size: " << layout_.getTypeAllocSize(valCast) << std::endl;
-    // }
     elements.push_back(ty);
   }
   StructType *fmt_struct = StructType::create(elements, call_name + "_t", false);
   int struct_size = layout_.getTypeAllocSize(fmt_struct);
-  // std::cerr << "fmt_struct_size: " << struct_size << std::endl;
 
   auto *struct_layout = layout_.getStructLayout(fmt_struct);
   for (size_t i=0; i<args.size(); i++)
@@ -2317,8 +2267,6 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
     {
-      // std::cerr << "memcpy size: " << arg.type.size << std::endl;
-      // std::cerr << "memcpy offset: " << offset << std::endl;
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))
         b_.CreateLifetimeEnd(expr_);
@@ -2329,17 +2277,6 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     if (expr_deleter_)
       expr_deleter_();
   }
-  // we cannot create a dynamically-sized array inside the struct
-  // so our options are:
-  // - don't send the string, send a map key (this opens us to races)
-  // - allocate max_strlen space for each string
-  //   - we can actually add a third arg to str() to tune this per-string
-  // - don't use a struct; use an AllocaInst (and do alignment ourselves)
-  // - allocate a char at the end of the struct, increase "struct_size" by how much string we want
-  //   - each individual string would need to store an offset into this string buffer
-  // the easiest is to allocate max_strlen for each string.
-  // sending map key instead of actual string may be performant, but race isn't well-understood
-  // including a string buffer at the end of the struct is easy and space-efficient
 
   if (encounteredMissingOperand) {
     std::cerr << "aborting printf " << id << " due to missing operand" << std::endl;
