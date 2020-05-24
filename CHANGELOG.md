@@ -50,6 +50,8 @@ and this project adheres to
   - [#1259](https://github.com/iovisor/bpftrace/pull/1259)
 - Allow positional parameters in probe attachpoint definitions
   - [#1328](https://github.com/iovisor/bpftrace/pull/1328)
+- Only list uprobe and usdt probes when `-p` is given
+  - [#1340](https://github.com/iovisor/bpftrace/pull/1340)
 
 #### Deprecated
 
