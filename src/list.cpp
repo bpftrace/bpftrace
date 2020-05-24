@@ -304,7 +304,8 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
     return;
   }
 
-  bool list_all = has_wildcard_in_probe || probe_name.empty();
+  bool list_all = (bpftrace.pid() == 0) &&
+                  (has_wildcard_in_probe || probe_name.empty());
 
   // software
   if (list_all || probe_name == "software")
@@ -315,11 +316,11 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
     list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
   // uprobe
-  if (list_all || probe_name == "uprobe")
+  if (bpftrace.pid() > 0 || probe_name == "uprobe")
     list_uprobes(bpftrace, probe_name, search, re);
 
   // usdt
-  if (list_all || probe_name == "usdt")
+  if (bpftrace.pid() > 0 || probe_name == "usdt")
     list_usdt(bpftrace, probe_name, search, re);
 
   // tracepoints
