@@ -242,9 +242,10 @@ block_stmt : if_stmt                  { $$ = $1; }
            | loop_stmt                { $$ = $1; }
            ;
 
-jump_stmt  : BREAK    { $$ = new ast::Jump(token::BREAK, @$); }
-           | CONTINUE { $$ = new ast::Jump(token::CONTINUE, @$); }
-           | RETURN   { $$ = new ast::Jump(token::RETURN, @$); }
+jump_stmt  : BREAK    { $$ = new ast::Jump(token::BREAK, NULL, @$); }
+           | CONTINUE { $$ = new ast::Jump(token::CONTINUE, NULL, @$); }
+           | RETURN   { $$ = new ast::Jump(token::RETURN, NULL, @$); }
+           | RETURN expr { $$ = new ast::Jump(token::RETURN, $2, @$); }
            ;
 
 loop_stmt  : UNROLL "(" int ")" block             { $$ = new ast::Unroll($3, $5, @1 + @4); }

@@ -1678,7 +1678,8 @@ void CodegenLLVM::visit(Jump &jump)
   {
     case bpftrace::Parser::token::RETURN:
       // return can be used outside of loops
-      b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+      jump.expr->accept(*this);
+      b_.CreateRet(expr_);
       break;
     case bpftrace::Parser::token::BREAK:
       b_.CreateBr(std::get<1>(loops_.back()));

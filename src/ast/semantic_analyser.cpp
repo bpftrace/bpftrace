@@ -1471,9 +1471,17 @@ void SemanticAnalyser::visit(Jump &jump)
 {
   switch (jump.ident)
   {
-    case bpftrace::Parser::token::RETURN:
+    case bpftrace::Parser::token::RETURN: {
+      ProbeType type = single_provider_type();
+
+      if ((jump.expr != &jump.zero) && (type != ProbeType::lsm))
+        error("Cannot specify return value in probes other than lsm.",
+              jump.loc);
+
+      jump.expr->accept(*this);
       // return can be used outside of loops
       break;
+    }
     case bpftrace::Parser::token::BREAK:
     case bpftrace::Parser::token::CONTINUE:
       if (!in_loop())

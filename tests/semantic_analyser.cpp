@@ -1540,6 +1540,7 @@ TEST(semantic_analyser, struct_member_keywords)
 TEST(semantic_analyser, jumps)
 {
   test("i:s:1 { return; }", 0);
+  test("i:s:1 { return -1; }", 1, true, false, 0);
   // must be used in loops
   test("i:s:1 { break; }", 1);
   test("i:s:1 { continue; }", 1);

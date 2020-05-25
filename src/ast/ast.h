@@ -258,12 +258,17 @@ public:
 class Jump : public Statement
 {
 public:
-  Jump(int ident, location loc = location()) : loc(loc), ident(ident)
+  Jump(int ident, Expression *e, location loc = location())
+      : loc(loc), ident(ident), expr(e), zero(0)
   {
+    if (!expr)
+      expr = &zero;
   }
 
   location loc;
   int ident;
+  Expression *expr;
+  Integer zero;
 
   void accept(Visitor &v) override;
 };

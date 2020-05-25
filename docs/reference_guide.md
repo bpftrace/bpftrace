@@ -795,6 +795,9 @@ Loops can be short circuited by using the `continue` and `break` keywords.
 The `return` keyword is used to exit the current probe. This differs from
 `exit()` in that it doesn't exit bpftrace.
 
+By default zero value is returned, but user can specify expression to be returned,
+which is supported only in lsm probes.
+
 ## 14. `( , )`: Tuples
 
 N-tuples are supported, where N is any integer greater than 1.
@@ -1582,6 +1585,13 @@ lsm:function      args->NAME  ... retval
 ```
 
 Arguments can be accessed the same way as for kfunc probes (described in Chapter 16)
+
+It's possible to change the return value of the hook, by returning the new value, like:
+
+```
+# bpftrace -e 'lsm:perf_event_open { return -1234; }'
+```
+
 
 # Variables
 
