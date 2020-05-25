@@ -13,7 +13,6 @@
 
 #include "types.h"
 #include "imap.h"
-#include "ring_indexer.h"
 
 namespace bpftrace {
 namespace ast {
@@ -121,12 +120,10 @@ public:
       void operator()(std::byte* bytes);
     };
     StrMapState(
-      std::unique_ptr<IMap> map,
-      RingIndexer ringIndexer,
+      std::shared_ptr<IMap> map,
       std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap
       );
-    std::unique_ptr<IMap> map;
-    RingIndexer ringIndexer;
+    std::shared_ptr<IMap> map;
     std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap;
   };
   StrCall(location loc, ExpressionList *vargs = nullptr);

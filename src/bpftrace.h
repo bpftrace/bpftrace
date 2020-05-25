@@ -112,6 +112,10 @@ public:
   {
     return *maps_[map_ids_[id]].get();
   };
+  inline std::shared_ptr<IMap> get_mapstr_map_by_fd(int fd)
+  {
+    return mapstrs_[fd];
+  };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
@@ -158,6 +162,7 @@ public:
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> fmtstr_map_;
+  std::map<int, std::shared_ptr<IMap>> mapstrs_;
   void *fmtstr_map_zero_ = nullptr;
   std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;

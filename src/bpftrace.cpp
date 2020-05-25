@@ -418,36 +418,11 @@ void BPFtrace::request_finalize()
     child_->terminate();
 }
 
-void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((unused))*/)
+void perf_event_printer(void *cb_cookie, void *data, [[maybe_unused]] int size)
 {
-  // std::cerr << std::hex << std::setfill('0');
-  // auto *ptr = reinterpret_cast<std::byte *>(data);
-  // for (size_t i = 0; i < static_cast<size_t>(size); i++, ptr++) {
-  //   if (i % (sizeof(uint64_t) << 1) == 0) {
-  //     std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
-  //   }
-  //   std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
-  //   if (i % 2 == 1) {
-  //     std::cerr << ' ';
-  //   }
-  // }
-  // std::cerr << std::dec << std::endl;
-  // for (int i = 0; i < size; i++) {
-  //   if (i % (sizeof(uint64_t) << 1) == 0) {
-  //     printf("\n");
-  //   }
-  //   printf("%02hhX", static_cast<char*>(data)[i]);
-  //   if (i % 2 == 1) {
-  //     printf(" ");
-  //   }
-  // }
-  // printf("\n");
   auto cookie = static_cast<PerfEventCallbackCookie*>(cb_cookie);
   auto bpftrace = cookie->bpftrace;
   auto printf_id = *static_cast<uint64_t*>(data);
-  auto cpu_id = *(static_cast<uint64_t*>(data)+1);
-  std::cerr << "cpu_id: " << cpu_id << std::endl;
-  std::cerr << "ctx_cpu_id: " << cookie->cpu << std::endl;
   auto arg_data = static_cast<uint8_t*>(data);
   int err;
 
@@ -549,7 +524,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
     auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->system_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -569,7 +544,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
     auto id = printf_id - asyncactionint(AsyncAction::cat);
     auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->cat_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -591,7 +566,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
-  auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
   // First try with a stack buffer, if that fails use a heap buffer
   const int BUFSIZE=512;
@@ -612,11 +587,9 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data, int cpu_id)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
-  // std::cerr << "args.size():" << args.size() << std::endl;
 
   for (auto arg : args)
   {
-    // std::cerr << "arg.offset:" << arg.offset << std::endl;
     switch (arg.type.type)
     {
       case Type::integer:
@@ -654,57 +627,26 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         break;
       case Type::mapstr:
       {
-        // auto p = reinterpret_cast<uint64_t*>(arg_data + arg.offset);
-        // IMap &map = bpftrace->get_map_by_id();
         AsyncEvent::StrMap * strMap(reinterpret_cast<AsyncEvent::StrMap *>(arg_data+arg.offset));
         uint64_t mapfd(strMap->mapfd);
         int32_t arrayIx(static_cast<int32_t>(strMap->arrayIx & 0xffffffff));
         uint64_t strLen(strMap->strLen);
-        // uint64_t cpuId(strMap->cpuId);
-        std::cerr << "mapfd:" << mapfd << std::endl;
-        std::cerr << "arrayIx:" << arrayIx << std::endl;
-        std::cerr << "strLen:" << strLen << std::endl;
-        // std::cerr << "cpuId:" << cpuId << std::endl;
-        // std::string str_buff;
-        // str_buff.reserve(strLen);
-        // int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
-        // char* str_buff = new char[strLen];
 
-        int mapValueSize(200);
-        int strBuffSize(mapValueSize * ncpus_);
-        // TODO: change to strLen
+        std::shared_ptr<IMap> map = get_mapstr_map_by_fd(static_cast<int32_t>(mapfd & 0xffffffff));
+        int strBuffSize(map->value_size_ * ncpus_);
         auto str_buff = std::vector<std::byte>(strBuffSize);
         int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
-        std::cerr << "bpf_lookup_elem err:" << err << std::endl;
+        if (err) {
+          // TODO: abort print?
+          std::cerr << "bpf_lookup_elem err:" << err << std::endl;
+        }
 
         std::string_view ourString(
-          &reinterpret_cast<char&>(str_buff.at(mapValueSize * cpu_id)),
+          &reinterpret_cast<char&>(str_buff.at(map->value_size_ * cpu_id)),
           strLen
           );
 
-        // std::cerr << "str_buff: " << str_buff << std::endl;
-        // std::copy(str_buff.begin(), str_buff.end(), std::ostream_iterator<int8_t>(std::cerr, "_"));
-        // for (auto i: str_buff)
-          // printf("%hhX", static_cast<char>(i));
-          // printf("%c", static_cast<char>(i));
-        // printf("\n");
-
-        // std::cerr << std::hex << std::setfill('0');
-        // auto *ptr = reinterpret_cast<std::byte *>(str_buff.data());
-        // for (size_t i = 0; i < static_cast<size_t>(mapValueSize); i++, ptr++) {
-        //   if (i % (sizeof(uint64_t) << 1) == 0) {
-        //     std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
-        //   }
-        //   std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
-        //   if (i % 2 == 1) {
-        //     std::cerr << ' ';
-        //   }
-        // }
-        // std::cerr << std::dec << std::endl;
-
-        // arg_values.push_back(std::make_unique<PrintableString>(std::move(str_buff)));
         arg_values.push_back(std::make_unique<PrintableString>(std::string(ourString)));
-        // free(str_buff);
         break;
       }
       case Type::string:

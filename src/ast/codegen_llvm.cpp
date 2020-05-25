@@ -458,86 +458,67 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
-    // AllocaInst *cpuBuff = b_.CreateAllocaBPF(b_.getInt64Ty(), "cpu_buff");
-    // b_.CREATE_MEMSET(cpuBuff, b_.getInt8(0), sizeof(uint64_t), 1);
-    // CallInst *cpu = b_.CreateGetCpuId();
-    // b_.CreateStore(b_.CreateIntCast(cpu, b_.getInt64Ty(), false), cpuBuff);
-
     auto &strcall = static_cast<StrCall&>(call);
-    // auto [isMapKeyAvailable, mapKey] = strcall.state.value().ringIndexer.getFreeIndex();
-    // if (isMapKeyAvailable) {
-      // std::cerr << "mapKey: " << mapKey << std::endl;
-      CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, 0);
-      Function *parent = b_.GetInsertBlock()->getParent();
-      BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
-      BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
-      
-      b_.CreateCondBr(
-        b_.CreateICmpNE(
-          str_map,
-          ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()),
-          "strzerocond"),
-        notzero, zero);
+    CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, 0);
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
+    
+    b_.CreateCondBr(
+      b_.CreateICmpNE(
+        str_map,
+        ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()),
+        "strzerocond"),
+      notzero, zero);
 
-      b_.SetInsertPoint(notzero);
+    b_.SetInsertPoint(notzero);
 
-      auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.state.value().zeroesForClearingMap.get()));
+    auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.state.value().zeroesForClearingMap.get()));
 
-      AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
-      b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
-      if (call.vargs->size() > 1) {
-        call.vargs->at(1)->accept(*this);
-        Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
+    AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
+    b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
+    if (call.vargs->size() > 1) {
+      call.vargs->at(1)->accept(*this);
+      Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
 
-        // largest read we'll allow = our global string buffer size
-        Value *max = b_.getInt64(bpftrace_.strlen_);
-        // integer comparison: unsigned less-than-or-equal-to
-        CmpInst::Predicate P = CmpInst::ICMP_ULE;
-        // check whether proposed_strlen is less-than-or-equal-to maximum
-        Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
-        // select proposed_strlen if it's sufficiently low, otherwise choose maximum
-        Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
-        b_.CreateStore(Select, strlen);
-      } else {
-        b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
-      }
+      // largest read we'll allow = our global string buffer size
+      Value *max = b_.getInt64(bpftrace_.strlen_);
+      // integer comparison: unsigned less-than-or-equal-to
+      CmpInst::Predicate P = CmpInst::ICMP_ULE;
+      // check whether proposed_strlen is less-than-or-equal-to maximum
+      Value *Cmp = b_.CreateICmp(P, proposed_strlen, max, "str.min.cmp");
+      // select proposed_strlen if it's sufficiently low, otherwise choose maximum
+      Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
+      b_.CreateStore(Select, strlen);
+    } else {
+      b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+    }
 
-      StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
-      
-      AllocaInst *buf = b_.CreateAllocaBPF(structType, "str_struct");
-      // int struct_size = layout_.getTypeAllocSize(structType);
-      // b_.CREATE_MEMSET(buf, b_.getInt8(0), struct_size, 1);
-      b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
-      b_.CreateStore(b_.getInt64(0),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
-      b_.CreateStore(b_.CreateLoad(strlen),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
-      // b_.CreateStore(b_.getInt64(0),
-      // b_.CreateStore(b_.getInt64(3),
-      // b_.CreateStore(b_.CreateLoad(cpuBuff),
-                  //  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(3) }));
-                   
-      call.vargs->front()->accept(*this);
-      // zero it out first
-      b_.CreateProbeRead(str_map, strcall.maxStrSize.value(),
-                        ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
-      b_.CreateProbeReadStr(str_map, b_.CreateLoad(strlen), expr_);
+    StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
+    
+    AllocaInst *buf = b_.CreateAllocaBPF(structType, "str_struct");
+    b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+    // TODO: round-robin through array indices, in case we enqueue perf output events faster than we process them
+    b_.CreateStore(b_.getInt64(0),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
+    b_.CreateStore(b_.CreateLoad(strlen),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
+                  
+    call.vargs->front()->accept(*this);
+    // zero it out first
+    b_.CreateProbeRead(str_map, strcall.maxStrSize.value(),
+                      ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()));
+    b_.CreateProbeReadStr(str_map, b_.CreateLoad(strlen), expr_);
 
-      b_.CreateLifetimeEnd(strlen);
+    b_.CreateLifetimeEnd(strlen);
 
-      expr_ = buf;
-      expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
-      b_.CreateBr(zero);
+    expr_ = buf;
+    expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
+    b_.CreateBr(zero);
 
-      // done
-      b_.SetInsertPoint(zero);
-      // b_.CreateLifetimeEnd(cpuBuff);
-    // } else {
-    //   std::cerr << "events buffer is full; increase BPFTRACE_EVENTS_BUFFER_SIZE" << std::endl;
-    //   expr_ = nullptr;
-    //   expr_deleter_ = nullptr;
-    // }
+    // done
+    b_.SetInsertPoint(zero);
   }
   else if (call.func == "buf")
   {
@@ -2220,10 +2201,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
    * types and offsets of each of the arguments, and share that between BPF and
    * user-space for printing.
    */
-  std::vector<llvm::Type *> elements = {
-    b_.getInt64Ty(), // async action ID
-    b_.getInt64Ty()  // CPU ID
-    };
+  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // async action ID
 
   auto &args = std::get<1>(call_args.at(id));
   for (Field &arg : args)
@@ -2238,9 +2216,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (size_t i=0; i<args.size(); i++)
   {
     Field &arg = args[i];
-    // +1 for async ID
-    // +1 for CPUID
-    arg.offset = struct_layout->getElementOffset(i+2);
+    arg.offset = struct_layout->getElementOffset(i+1); // +1 for async action ID
   }
 
   int asyncId = id + asyncactionint(async_action);
@@ -2263,8 +2239,6 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(asyncId), id_offset);
-  Value *cpu_id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(1)});
-  b_.CreateStore(b_.CreateIntCast(b_.CreateGetCpuId(), b_.getInt64Ty(), false), cpu_id_offset);
   bool encounteredMissingOperand = false;
   for (size_t i=1; i<call.vargs->size(); i++)
   {
@@ -2275,9 +2249,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
       encounteredMissingOperand = true;
       break;
     }
-    // +1 for async ID (we get this for free because loop starts at i=1)
-    // +1 for printf ID
-    Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i+1)});
+    Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
     {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);

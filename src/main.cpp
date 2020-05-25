@@ -61,8 +61,8 @@ void usage()
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -V, --version  bpftrace version" << std::endl << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
-  std::cerr << "    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()" << std::endl;
-  std::cerr << "    BPFTRACE_EVENTS_BUFFER_SIZE [default: 4] map keys for receiving pending str,join,printf calls" << std::endl;
+  std::cerr << "    BPFTRACE_STRLEN             [default: 64] max str() size" << std::endl;
+  std::cerr << "    BPFTRACE_EVENTS_BUFFER_SIZE [default: 4] max str()s waiting to be printed" << std::endl;
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin" << std::endl;
@@ -460,19 +460,6 @@ int main(int argc, char *argv[])
 
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return 1;
-
-  // in practice, the largest buffer I've seen fit into the BPF stack was 240 bytes.
-  // I've set the bar lower, in case your program has a deeper stack than the one from my tests,
-  // in the hope that you'll get this instructive error instead of getting the BPF verifier's error.
-  if (bpftrace.strlen_ > 200) {
-    // the verifier errors you would encounter when attempting larger allocations would be:
-    // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
-    // ~1024= <A call to built-in function 'memset' is not supported.>
-    std::cerr << "'BPFTRACE_STRLEN' " << bpftrace.strlen_ << " exceeds the current maximum of 200 bytes." << std::endl
-    << "This limitation is because strings are currently stored on the 512 byte BPF stack." << std::endl
-    << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
-    return 1;
-  }
 
   if (!get_uint64_env_var("BPFTRACE_EVENTS_BUFFER_SIZE", bpftrace.events_buffer_size_))
     return 1;

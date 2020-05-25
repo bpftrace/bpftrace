@@ -127,12 +127,10 @@ void StrCall::StrMapState::ZeroesDeleter::operator()(std::byte* bytes) {
 }
 
 StrCall::StrMapState::StrMapState(
-  std::unique_ptr<IMap> map,
-  RingIndexer ringIndexer,
+  std::shared_ptr<IMap> map,
   std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap
   )
 : map(std::move(map))
-, ringIndexer(std::move(ringIndexer))
 , zeroesForClearingMap(std::move(zeroesForClearingMap))
 {}
 
