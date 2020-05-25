@@ -82,7 +82,7 @@ struct StrMap
   uint64_t mapfd;
   uint64_t arrayIx;
   uint64_t strLen;
-  uint64_t cpuId;
+  // uint64_t cpuId;
 
   llvm::StructType *asLLVMType(ast::IRBuilderBPF& b)
   {

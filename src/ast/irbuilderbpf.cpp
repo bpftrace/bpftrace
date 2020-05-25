@@ -151,7 +151,7 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
 
 StructType *IRBuilderBPF::GetMapStrTy() {
 
-  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
+  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
 }
 
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
@@ -699,7 +699,7 @@ CallInst *IRBuilderBPF::CreateGetCpuId()
 {
   // u32 bpf_raw_smp_processor_id(void)
   // Return: SMP processor ID
-  FunctionType *getcpuid_func_type = FunctionType::get(getInt64Ty(), false);
+  FunctionType *getcpuid_func_type = FunctionType::get(getInt32Ty(), false);
   PointerType *getcpuid_func_ptr_type = PointerType::get(getcpuid_func_type, 0);
   Constant *getcpuid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -789,7 +789,8 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
 
-  Value *flags_val = CreateGetCpuId();
+  // Value *flags_val = CreateGetCpuId();
+  Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
 
   // int bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,

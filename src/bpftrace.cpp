@@ -444,6 +444,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
   // printf("\n");
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
   auto printf_id = *static_cast<uint64_t*>(data);
+  auto cpu_id = *(static_cast<uint64_t*>(data)+1);
+  std::cerr << "cpu_id: " << cpu_id << std::endl;
   auto arg_data = static_cast<uint8_t*>(data);
   int err;
 
@@ -656,11 +658,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         uint64_t mapfd(strMap->mapfd);
         int32_t arrayIx(static_cast<int32_t>(strMap->arrayIx & 0xffffffff));
         uint64_t strLen(strMap->strLen);
-        uint64_t cpuId(strMap->cpuId);
+        // uint64_t cpuId(strMap->cpuId);
         std::cerr << "mapfd:" << mapfd << std::endl;
         std::cerr << "arrayIx:" << arrayIx << std::endl;
         std::cerr << "strLen:" << strLen << std::endl;
-        std::cerr << "cpuId:" << cpuId << std::endl;
+        // std::cerr << "cpuId:" << cpuId << std::endl;
         // std::string str_buff;
         // str_buff.reserve(strLen);
         // int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
@@ -671,26 +673,27 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         auto str_buff = std::vector<uint8_t>(mapValueSize);
         int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         std::cerr << "bpf_lookup_elem err:" << err << std::endl;
-        // std::cerr << "str_buff:" << str_buff << std::endl;
+        // std::cerr << "str_buff: " << str_buff << std::endl;
         // std::copy(str_buff.begin(), str_buff.end(), std::ostream_iterator<int8_t>(std::cerr, "_"));
-        // for (auto i: str_buff)
+        for (auto i: str_buff)
           // printf("%hhX", static_cast<char>(i));
-          // printf("%c", static_cast<char>(i));
-        // printf("\n");
+          printf("%c", static_cast<char>(i));
+        printf("\n");
 
-        std::cerr << std::hex << std::setfill('0');
-        auto *ptr = reinterpret_cast<std::byte *>(str_buff.data());
-        for (size_t i = 0; i < static_cast<size_t>(mapValueSize); i++, ptr++) {
-          if (i % (sizeof(uint64_t) << 1) == 0) {
-            std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
-          }
-          std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
-          if (i % 2 == 1) {
-            std::cerr << ' ';
-          }
-        }
-        std::cerr << std::dec << std::endl;
+        // std::cerr << std::hex << std::setfill('0');
+        // auto *ptr = reinterpret_cast<std::byte *>(str_buff.data());
+        // for (size_t i = 0; i < static_cast<size_t>(mapValueSize); i++, ptr++) {
+        //   if (i % (sizeof(uint64_t) << 1) == 0) {
+        //     std::cerr << std::endl << std::setw(8) << std::setfill('0') << i << ": ";
+        //   }
+        //   std::cerr << std::setw(2) << std::to_integer<int>(*ptr);
+        //   if (i % 2 == 1) {
+        //     std::cerr << ' ';
+        //   }
+        // }
+        // std::cerr << std::dec << std::endl;
 
+        // arg_values.push_back(std::make_unique<PrintableString>(std::move(str_buff)));
         arg_values.push_back(std::make_unique<PrintableString>(std::string("ignore")));
         // free(str_buff);
         break;

@@ -458,6 +458,11 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
+    // AllocaInst *cpuBuff = b_.CreateAllocaBPF(b_.getInt64Ty(), "cpu_buff");
+    // b_.CREATE_MEMSET(cpuBuff, b_.getInt8(0), sizeof(uint64_t), 1);
+    // CallInst *cpu = b_.CreateGetCpuId();
+    // b_.CreateStore(b_.CreateIntCast(cpu, b_.getInt64Ty(), false), cpuBuff);
+
     auto &strcall = static_cast<StrCall&>(call);
     // auto [isMapKeyAvailable, mapKey] = strcall.state.value().ringIndexer.getFreeIndex();
     // if (isMapKeyAvailable) {
@@ -496,24 +501,22 @@ void CodegenLLVM::visit(Call &call)
       } else {
         b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
       }
-      // AllocaInst *cpuBuf = b_.CreateAllocaBPF(b_.getInt64Ty(), "cpu_buff");
-      // b_.CREATE_MEMSET(cpuBuf, b_.getInt8(0), sizeof(uint64_t), 1);
-      // CallInst* cpuId = b_.CreateGetCpuId();
-      // b_.CreateStore(cpuId, cpuBuf);
 
       StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
-      AllocaInst *buf = b_.CreateAllocaBPF(structType, "str");
+      
+      AllocaInst *buf = b_.CreateAllocaBPF(structType, "str_struct");
+      // int struct_size = layout_.getTypeAllocSize(structType);
+      // b_.CREATE_MEMSET(buf, b_.getInt8(0), struct_size, 1);
       b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
       b_.CreateStore(b_.getInt64(0),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
       b_.CreateStore(b_.CreateLoad(strlen),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
-      // b_.CreateStore(b_.CreateLoad(cpuBuf),
-      // b_.CreateStore(b_.CreateGetCpuId(),
-      b_.CreateStore(b_.getInt64(1),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(3) }));
-      // b_.CreateLifetimeEnd(cpuBuf);
+      // b_.CreateStore(b_.getInt64(0),
+      // b_.CreateStore(b_.getInt64(3),
+      // b_.CreateStore(b_.CreateLoad(cpuBuff),
+                  //  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(3) }));
                    
       call.vargs->front()->accept(*this);
       // zero it out first
@@ -529,6 +532,7 @@ void CodegenLLVM::visit(Call &call)
 
       // done
       b_.SetInsertPoint(zero);
+      // b_.CreateLifetimeEnd(cpuBuff);
     // } else {
     //   std::cerr << "events buffer is full; increase BPFTRACE_EVENTS_BUFFER_SIZE" << std::endl;
     //   expr_ = nullptr;
@@ -2216,7 +2220,10 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
    * types and offsets of each of the arguments, and share that between BPF and
    * user-space for printing.
    */
-  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
+  std::vector<llvm::Type *> elements = {
+    b_.getInt64Ty(), // async action ID
+    b_.getInt64Ty()  // CPU ID
+    };
 
   auto &args = std::get<1>(call_args.at(id));
   for (Field &arg : args)
@@ -2231,7 +2238,9 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (size_t i=0; i<args.size(); i++)
   {
     Field &arg = args[i];
-    arg.offset = struct_layout->getElementOffset(i+1); // +1 for the id field
+    // +1 for async ID
+    // +1 for CPUID
+    arg.offset = struct_layout->getElementOffset(i+2);
   }
 
   int asyncId = id + asyncactionint(async_action);
@@ -2254,6 +2263,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(asyncId), id_offset);
+  Value *cpu_id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(1)});
+  b_.CreateStore(b_.CreateIntCast(b_.CreateGetCpuId(), b_.getInt64Ty(), false), cpu_id_offset);
   bool encounteredMissingOperand = false;
   for (size_t i=1; i<call.vargs->size(); i++)
   {
@@ -2264,7 +2275,9 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
       encounteredMissingOperand = true;
       break;
     }
-    Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
+    // +1 for async ID (we get this for free because loop starts at i=1)
+    // +1 for printf ID
+    Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i+1)});
     if (arg.type.IsArray())
     {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);

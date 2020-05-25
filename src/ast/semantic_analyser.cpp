@@ -2220,7 +2220,9 @@ int SemanticAnalyser::create_maps(bool debug)
   {
     std::string map_ident = "fmtstr";
 
-    SizedType type = SizedType(Type::fmtstr, sizeof(size_t) + max_fmtstr_args_size_);
+    // + 8bytes for async ID
+    // + 8bytes for CPU ID
+    SizedType type = SizedType(Type::fmtstr, 2*sizeof(size_t) + max_fmtstr_args_size_);
     MapKey key;
     if (debug)
       bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
@@ -2235,21 +2237,24 @@ int SemanticAnalyser::create_maps(bool debug)
   for (auto *strCall: str_calls_) {
     const std::string map_ident = "str_" + std::to_string(strCallIx);
     SizedType& type = strCall->type;
-    const int bufferSize = bpftrace_.events_buffer_size_;
+    // keep it to size-1 until I've figured out how multi-CPU affects map contents
+    // const int bufferSize = bpftrace_.events_buffer_size_;
+    const int bufferSize = 1;
+    int value_size(strCall->maxStrSize.value());
     MapKey key;
     bpftrace::RingIndexer ringIndexer(bufferSize);
     std::unique_ptr<bpftrace::IMap> map;
     if (debug) {
       map = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     } else {
-      map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize, strCall->maxStrSize.value());
+      map = std::make_unique<bpftrace::Map>(map_ident, type, key, bufferSize, value_size);
     }
     const int isInvalidMap = is_invalid_map(map->mapfd_);
     if (isInvalidMap) {
       failed_maps += isInvalidMap;
     } else {
       std::unique_ptr<std::byte, StrCall::StrMapState::ZeroesDeleter> zeroesForClearingMap(
-        (std::byte*)(std::calloc(type.size, sizeof(std::byte))));
+        (std::byte*)(std::calloc(value_size, sizeof(std::byte))));
       strCall->state.emplace(
         std::move(map),
         std::move(ringIndexer),
