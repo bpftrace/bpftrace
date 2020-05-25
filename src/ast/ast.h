@@ -6,10 +6,8 @@
 #include <string>
 #include <vector>
 #include <cstddef>
-#include <cstdlib>
 #include <memory>
 #include <optional>
-#include <functional>
 
 #include "types.h"
 #include "imap.h"

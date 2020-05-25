@@ -3,7 +3,6 @@
 #include "ast.h"
 #include "bpftrace.h"
 #include "types.h"
-#include <memory>
 #include <bcc/bcc_usdt.h>
 
 #include <llvm/Config/llvm-config.h>

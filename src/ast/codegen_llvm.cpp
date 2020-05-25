@@ -459,7 +459,11 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "str")
   {
     auto &strcall = static_cast<StrCall&>(call);
-    CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, 0);
+
+    int arrayIx = 0;
+    // TODO: round-robin through array indices, to ensure we don't write faster than we read
+    // TODO: detect when no free array index is available, log it, and fail any printf that consumes our string
+    CallInst *str_map = b_.CreateGetStrMap(strcall.state.value().map->mapfd_, arrayIx);
     Function *parent = b_.GetInsertBlock()->getParent();
     BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
     BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
@@ -499,8 +503,7 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(structType, "str_struct");
     b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
-    // TODO: round-robin through array indices, in case we enqueue perf output events faster than we process them
-    b_.CreateStore(b_.getInt64(0),
+    b_.CreateStore(b_.getInt64(arrayIx),
                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
     b_.CreateStore(b_.CreateLoad(strlen),
                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
@@ -2239,16 +2242,13 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(asyncId), id_offset);
-  bool encounteredMissingOperand = false;
   for (size_t i=1; i<call.vargs->size(); i++)
   {
     Expression &arg = *call.vargs->at(i);
     expr_deleter_ = nullptr;
     arg.accept(*this);
-    if (expr_ == nullptr) {
-      encounteredMissingOperand = true;
-      break;
-    }
+    // TODO: eventually operands such as "string backed by map" will have a failure-mode "failed to acquire free map index"
+    // in that situation: we will want to abort the print (and log why)
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsArray())
     {
@@ -2263,12 +2263,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
       expr_deleter_();
   }
 
-  if (encounteredMissingOperand) {
-    std::cerr << "aborting printf " << id << " due to missing operand" << std::endl;
-  } else {
-    b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
-  }
   id++;
+  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
   b_.CreateLifetimeEnd(fmt_args);
 
   b_.CreateBr(zero);

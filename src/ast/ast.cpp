@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "parser.tab.hh"
 #include <iostream>
+#include <cstdlib>
 
 namespace bpftrace {
 namespace ast {

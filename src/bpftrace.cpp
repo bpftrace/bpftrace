@@ -941,14 +941,10 @@ int BPFtrace::setup_perf_events()
   std::vector<int> cpus = get_online_cpus();
   online_cpus_ = cpus.size();
   cb_cookies.reserve(online_cpus_);
-  // std::vector<std::function<void(void *cb_cookie, void *data, int size)>> perCpuCallbacks;
   for (int cpu : cpus)
   {
     int page_cnt = 64;
     PerfEventCallbackCookie& cookie = cb_cookies.emplace_back( this, cpu );
-    // std::function<void(void *cb_cookie, void *data, int size)>& lam = perCpuCallbacks.emplace_back([cpu](void *cb_cookie, void *data, int size) {
-    //   BPFtrace::perf_event_printer(cpu, cb_cookie, data, size);
-    // });
     void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, &cookie, -1, cpu, page_cnt);
     if (reader == nullptr)
     {

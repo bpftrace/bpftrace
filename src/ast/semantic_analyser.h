@@ -4,7 +4,6 @@
 #include <sstream>
 #include <unordered_set>
 #include <vector>
-#include <memory>
 
 #include "ast.h"
 #include "bpffeature.h"
@@ -108,7 +107,6 @@ private:
   std::map<std::string, ExpressionList> map_args_;
   std::map<std::string, SizedType> ap_args_;
   std::unordered_set<StackType> needs_stackid_maps_;
-  // TODO: generalize to "anything that needs a ring of maps"
   std::vector<StrCall*> str_calls_;
   uint32_t loop_depth_ = 0;
   bool needs_join_map_ = false;

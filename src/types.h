@@ -36,7 +36,6 @@ enum class Type
   cast,
   join,
   fmtstr,
-  str,
   mapstr,
   probe,
   username,
