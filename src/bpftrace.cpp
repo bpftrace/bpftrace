@@ -549,7 +549,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
     auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->system_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -569,7 +569,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
     auto id = printf_id - asyncactionint(AsyncAction::cat);
     auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->cat_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -591,7 +591,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
-  auto arg_values = bpftrace->get_arg_values(args, arg_data);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data, cpu_id);
 
   // First try with a stack buffer, if that fails use a heap buffer
   const int BUFSIZE=512;
@@ -609,7 +609,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
   }
 }
 
-std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
+std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data, int cpu_id)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
   // std::cerr << "args.size():" << args.size() << std::endl;
@@ -670,17 +670,24 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         // int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         // char* str_buff = new char[strLen];
 
-        int mapValueSize(200 * ncpus_);
+        int mapValueSize(200);
+        int strBuffSize(mapValueSize * ncpus_);
         // TODO: change to strLen
-        auto str_buff = std::vector<uint8_t>(mapValueSize);
+        auto str_buff = std::vector<std::byte>(strBuffSize);
         int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
         std::cerr << "bpf_lookup_elem err:" << err << std::endl;
+
+        std::string_view ourString(
+          &reinterpret_cast<char&>(str_buff.at(mapValueSize * cpu_id)),
+          strLen
+          );
+
         // std::cerr << "str_buff: " << str_buff << std::endl;
         // std::copy(str_buff.begin(), str_buff.end(), std::ostream_iterator<int8_t>(std::cerr, "_"));
-        for (auto i: str_buff)
+        // for (auto i: str_buff)
           // printf("%hhX", static_cast<char>(i));
-          printf("%c", static_cast<char>(i));
-        printf("\n");
+          // printf("%c", static_cast<char>(i));
+        // printf("\n");
 
         // std::cerr << std::hex << std::setfill('0');
         // auto *ptr = reinterpret_cast<std::byte *>(str_buff.data());
@@ -696,7 +703,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         // std::cerr << std::dec << std::endl;
 
         // arg_values.push_back(std::make_unique<PrintableString>(std::move(str_buff)));
-        arg_values.push_back(std::make_unique<PrintableString>(std::string("ignore")));
+        arg_values.push_back(std::make_unique<PrintableString>(std::string(ourString)));
         // free(str_buff);
         break;
       }
