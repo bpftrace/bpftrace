@@ -442,10 +442,12 @@ void perf_event_printer(void *cb_cookie, void *data, int size /*__attribute__((u
   //   }
   // }
   // printf("\n");
-  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  auto cookie = static_cast<PerfEventCallbackCookie*>(cb_cookie);
+  auto bpftrace = cookie->bpftrace;
   auto printf_id = *static_cast<uint64_t*>(data);
   auto cpu_id = *(static_cast<uint64_t*>(data)+1);
   std::cerr << "cpu_id: " << cpu_id << std::endl;
+  std::cerr << "ctx_cpu_id: " << cookie->cpu << std::endl;
   auto arg_data = static_cast<uint8_t*>(data);
   int err;
 
@@ -795,7 +797,7 @@ size_t BPFtrace::num_params() const
 
 void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
-  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  auto bpftrace = static_cast<PerfEventCallbackCookie*>(cb_cookie)->bpftrace;
   bpftrace->out_->lost_events(lost);
 }
 
@@ -989,10 +991,16 @@ int BPFtrace::setup_perf_events()
 
   std::vector<int> cpus = get_online_cpus();
   online_cpus_ = cpus.size();
+  cb_cookies.reserve(online_cpus_);
+  // std::vector<std::function<void(void *cb_cookie, void *data, int size)>> perCpuCallbacks;
   for (int cpu : cpus)
   {
     int page_cnt = 64;
-    void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, this, -1, cpu, page_cnt);
+    PerfEventCallbackCookie& cookie = cb_cookies.emplace_back( this, cpu );
+    // std::function<void(void *cb_cookie, void *data, int size)>& lam = perCpuCallbacks.emplace_back([cpu](void *cb_cookie, void *data, int size) {
+    //   BPFtrace::perf_event_printer(cpu, cb_cookie, data, size);
+    // });
+    void *reader = bpf_open_perf_buffer(&perf_event_printer, &perf_event_lost, &cookie, -1, cpu, page_cnt);
     if (reader == nullptr)
     {
       std::cerr << "Failed to open perf buffer" << std::endl;

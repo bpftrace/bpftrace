@@ -78,6 +78,15 @@ private:
   std::string msg_;
 };
 
+struct PerfEventCallbackCookie {
+  PerfEventCallbackCookie(BPFtrace* bpftrace, int cpu)
+  : bpftrace(bpftrace)
+  , cpu(cpu)
+  {}
+  BPFtrace* bpftrace;
+  int cpu;
+};
+
 class BPFtrace
 {
 public:
@@ -209,6 +218,7 @@ private:
   int online_cpus_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+  std::vector<PerfEventCallbackCookie> cb_cookies;
 
   std::string src_;
   std::string filename_;
