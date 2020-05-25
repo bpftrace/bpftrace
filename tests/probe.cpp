@@ -76,6 +76,7 @@ TEST_F(probe_btf, short_name)
 {
   compare_bytecode("kfunc:func_1 { 1 }", "f:func_1 { 1 }");
   compare_bytecode("kretfunc:func_1 { 1 }", "fr:func_1 { 1 }");
+  compare_bytecode("lsm:read { 1 }", "l:read { 1 }");
 }
 
 #endif // HAVE_LIBBPF_BTF_DUMP

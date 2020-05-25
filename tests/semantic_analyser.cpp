@@ -1800,10 +1800,27 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_* { $x = args->foo1; }", 0, true, false, 1);
 }
 
+TEST_F(semantic_analyser_btf, lsm)
+{
+  test("lsm:read { 1 }", 0);
+  test("lsm:commit { 1 }", 0);
+  test("lsm:read { $x = args->a; }", 0);
+  test("lsm:commit { $x = args->a; }", 0);
+  test("lsm:read { $x = retval; }", 0);
+  test("lsm:commit { $x = retval; }", 1);
+  test("lsm:read, lsm:commit { }", 0);
+  test("lsm:read, lsm:commit { $x = args->a; }", 0, true, false, 1);
+  test("lsm:* { }", 0);
+  test("lsm:* { $x = args->a; }", 1, true, false, 0);
+  test("lsm:read { return -1; }", 0);
+}
+
 TEST_F(semantic_analyser_btf, short_name)
 {
   test("f:func_1 { 1 }", 0);
   test("fr:func_1 { 1 }", 0);
+  test("l:read { 1 }", 0);
+  test("l:commit { 1 }", 0);
 }
 
 #endif // HAVE_LIBBPF_BTF_DUMP
