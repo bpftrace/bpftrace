@@ -374,7 +374,7 @@ std::vector<std::string> get_kernel_cflags(
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP16__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP32__");
   cflags.push_back("-D__HAVE_BUILTIN_BSWAP64__");
-  cflags.push_back("-DKBUILD_MODNAME='\"bpftrace\"'");
+  cflags.push_back("-DKBUILD_MODNAME=\"bpftrace\"");
 
   // If ARCH env variable is set, pass this along.
   if (archenv)

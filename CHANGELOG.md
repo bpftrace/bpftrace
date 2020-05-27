@@ -66,6 +66,8 @@ and this project adheres to
   - [#1325](https://github.com/iovisor/bpftrace/pull/1325)
 - Attach to duplicated USDT markers
   - [#1341](https://github.com/iovisor/bpftrace/pull/1341)
+- Fix `KBUILD_MODNAME`
+  - [#1352](https://github.com/iovisor/bpftrace/pull/1352)
 
 #### Tools
 
