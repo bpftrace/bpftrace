@@ -642,7 +642,7 @@ std::string JsonOutput::tuple_to_str(BPFtrace &bpftrace,
       ret += ',';
 
     std::vector<uint8_t> elem_value(value.begin() + offset,
-                                    value.begin() + offset + ty.size);
+                                    value.begin() + offset + elemtype.size);
 
     if (elemtype.type == Type::tuple)
       ret += tuple_to_str(bpftrace, elemtype, elem_value);
