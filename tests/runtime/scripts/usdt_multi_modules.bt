@@ -1,0 +1,9 @@
+usdt:./testprogs/usdt_test:tracetest:testprobe
+{
+    exit();
+}
+
+usdt:./testprogs/usdt_sized_args:test:probe1
+{
+    exit();
+}

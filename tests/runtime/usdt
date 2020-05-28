@@ -232,3 +232,9 @@ RUN bpftrace -e 'usdt:./testprogs/usdt_inlined:tracetest:testprobe { exit(); }' 
 EXPECT Attaching 2 probes
 TIMEOUT 1
 REQUIRES ./testprogs/usdt_inlined should_not_skip
+
+NAME "usdt probes in multiple modules"
+RUN bpftrace runtime/scripts/usdt_multi_modules.bt -c ./testprogs/usdt_test
+EXPECT Attaching 2 probes
+TIMEOUT 1
+REQUIRES ./testprogs/usdt_test should_not_skip
