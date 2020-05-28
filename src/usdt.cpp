@@ -4,15 +4,17 @@
 
 #include <algorithm>
 #include <iostream>
-#include <map>
+#include <unordered_map>
+#include <unordered_set>
 
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_usdt.h>
 
-static bool provider_cache_loaded = false;
+static std::unordered_set<std::string> path_cache;
+static std::unordered_set<int> pid_cache;
 
 // Maps all providers of pid to vector of tracepoints on that provider
-static std::map<std::string, usdt_probe_list> usdt_provider_cache;
+static std::unordered_map<std::string, usdt_probe_list> usdt_provider_cache;
 
 static void usdt_probe_each(struct bcc_usdt *usdt_probe)
 {
@@ -81,7 +83,7 @@ usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
 
 void USDTHelper::read_probes_for_pid(int pid)
 {
-  if (provider_cache_loaded)
+  if (pid_cache.count(pid))
     return;
 
   if (pid > 0)
@@ -100,7 +102,7 @@ void USDTHelper::read_probes_for_pid(int pid)
     bcc_usdt_foreach(ctx, usdt_probe_each);
     bcc_usdt_close(ctx);
 
-    provider_cache_loaded = true;
+    pid_cache.emplace(pid);
   }
   else
   {
@@ -111,7 +113,7 @@ void USDTHelper::read_probes_for_pid(int pid)
 
 void USDTHelper::read_probes_for_path(const std::string &path)
 {
-  if (provider_cache_loaded)
+  if (path_cache.count(path))
     return;
 
   void *ctx = bcc_usdt_new_frompath(path.c_str());
@@ -124,5 +126,5 @@ void USDTHelper::read_probes_for_path(const std::string &path)
   bcc_usdt_foreach(ctx, usdt_probe_each);
   bcc_usdt_close(ctx);
 
-  provider_cache_loaded = true;
+  path_cache.emplace(path);
 }
