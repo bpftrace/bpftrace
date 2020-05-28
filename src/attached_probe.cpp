@@ -17,7 +17,7 @@
 #include "bpftrace.h"
 #include "disasm.h"
 #include "list.h"
-#include "utils.h"
+#include "usdt.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>

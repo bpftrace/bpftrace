@@ -51,6 +51,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/struct.cpp
   ${CMAKE_SOURCE_DIR}/src/tracepoint_format_parser.cpp
   ${CMAKE_SOURCE_DIR}/src/types.cpp
+  ${CMAKE_SOURCE_DIR}/src/usdt.cpp
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
   ${BFD_DISASM_SRC}
 )

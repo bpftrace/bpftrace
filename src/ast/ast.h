@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "types.h"
+#include "usdt.h"
 
 namespace bpftrace {
 namespace ast {

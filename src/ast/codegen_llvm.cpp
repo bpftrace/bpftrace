@@ -6,7 +6,7 @@
 #include "parser.tab.hh"
 #include "tracepoint_format_parser.h"
 #include "types.h"
-#include "utils.h"
+#include "usdt.h"
 #include <algorithm>
 #include <arpa/inet.h>
 #include <csignal>

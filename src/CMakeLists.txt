@@ -25,6 +25,7 @@ add_executable(bpftrace
   struct.cpp
   tracepoint_format_parser.cpp
   types.cpp
+  usdt.cpp
   utils.cpp
   ${BFD_DISASM_SRC}
 )
