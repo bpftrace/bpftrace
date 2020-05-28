@@ -36,6 +36,7 @@ enum class Type
   usym,
   cast,
   join,
+  fmtstr,
   probe,
   username,
   inet,
@@ -211,6 +212,10 @@ public:
   bool IsJoinTy(void) const
   {
     return type == Type::join;
+  };
+  bool IsFmtStrTy(void) const
+  {
+    return type == Type::fmtstr;
   };
   bool IsProbeTy(void) const
   {

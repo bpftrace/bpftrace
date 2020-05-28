@@ -48,7 +48,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   {
       map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
   }
-  else if (type.IsJoinTy())
+  else if (type.IsJoinTy() || type.IsFmtStrTy())
   {
     map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
     max_entries = 1;

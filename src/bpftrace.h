@@ -157,6 +157,8 @@ public:
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
+  std::unique_ptr<IMap> fmtstr_map_;
+  void *fmtstr_map_zero_ = nullptr;
   std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;
   std::vector<std::string> probe_ids_;

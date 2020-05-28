@@ -61,8 +61,8 @@ public:
   Value      *CreateMapLookupElem(Value* ctx, int mapfd, AllocaInst *key, SizedType &type, const location& loc);
   void        CreateMapUpdateElem(Value* ctx, Map &map, AllocaInst *key, Value *val, const location& loc);
   void        CreateMapDeleteElem(Value* ctx, Map &map, AllocaInst *key, const location& loc);
-  void        CreateProbeRead(Value *ctx, AllocaInst *dst, size_t size, Value *src, const location& loc);
-  void        CreateProbeRead(Value *ctx, AllocaInst *dst, llvm::Value *size, Value *src, const location& loc);
+  void        CreateProbeRead(Value *ctx, Value *dst, size_t size, Value *src, const location& loc);
+  void        CreateProbeRead(Value *ctx, Value *dst, llvm::Value *size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, llvm::Value *size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, size_t size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, Value *dst, size_t size, Value *src, const location& loc);
@@ -80,6 +80,7 @@ public:
   CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
   CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
+  CallInst   *CreateGetFmtStrMap(Value *ctx, StructType *printf_struct, const location& loc);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *ctx, Value *sig, const location &loc);
