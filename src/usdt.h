@@ -22,9 +22,10 @@ public:
                                const std::string &target,
                                const std::string &provider,
                                const std::string &name);
-  static usdt_probe_list probes_for_provider(const std::string &provider);
   static usdt_probe_list probes_for_pid(int pid);
   static usdt_probe_list probes_for_path(const std::string &path);
+
+private:
   static void read_probes_for_pid(int pid);
   static void read_probes_for_path(const std::string &path);
 };

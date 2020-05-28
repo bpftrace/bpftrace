@@ -51,22 +51,6 @@ usdt_probe_entry USDTHelper::find(int pid,
   }
 }
 
-usdt_probe_list USDTHelper::probes_for_provider(const std::string &provider)
-{
-  usdt_probe_list probes;
-
-  if (!provider_cache_loaded)
-  {
-    std::cerr << "cannot read probes by provider before providers have been "
-                 "loaded by pid or path."
-              << std::endl;
-    return probes;
-  }
-
-  read_probes_for_pid(0);
-  return usdt_provider_cache[provider];
-}
-
 usdt_probe_list USDTHelper::probes_for_pid(int pid)
 {
   read_probes_for_pid(pid);
