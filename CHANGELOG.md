@@ -78,6 +78,8 @@ and this project adheres to
   - [#1352](https://github.com/iovisor/bpftrace/pull/1352)
 - Fix `ntop()` not accepting tracepoint arguments
   - [#1365](https://github.com/iovisor/bpftrace/pull/1365)
+- Fix attaching to usdt probes in multiple binaries
+  - [#1356](https://github.com/iovisor/bpftrace/pull/1356)
 
 #### Tools
 
