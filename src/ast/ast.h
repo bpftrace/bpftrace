@@ -5,8 +5,12 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstddef>
+#include <memory>
+#include <optional>
 
 #include "types.h"
+#include "imap.h"
 
 namespace bpftrace {
 namespace ast {
@@ -99,14 +103,35 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(const std::string &func);
-  explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs);
-  Call(const std::string &func, ExpressionList *vargs, location loc);
+  Call(const std::string &func, location loc, ExpressionList *vargs = nullptr);
   std::string func;
   ExpressionList *vargs;
 
   void accept(Visitor &v) override;
+};
+
+class StrCall : public Call {
+public:
+  class StrMapState {
+    public:
+    struct ZeroesDeleter {
+      void operator()(std::byte* bytes);
+    };
+    StrMapState(
+      std::shared_ptr<IMap> map,
+      std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap
+      );
+    std::shared_ptr<IMap> map;
+    std::unique_ptr<std::byte, ZeroesDeleter> zeroesForClearingMap;
+  };
+  StrCall(location loc, ExpressionList *vargs = nullptr);
+  std::optional<StrMapState> state;
+  std::optional<int> maxStrSize;
+};
+
+class CallFactory {
+  public:
+  static Call* createCall(const std::string &func, location loc, ExpressionList *vargs = nullptr);
 };
 
 class Map : public Expression {

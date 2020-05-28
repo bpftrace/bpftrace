@@ -153,11 +153,17 @@ llvm::ConstantInt *IRBuilderBPF::GetIntSameSize(uint64_t C, llvm::Value *expr)
   return getIntN(size, C);
 }
 
+StructType *IRBuilderBPF::GetMapStrTy() {
+
+  return StructType::create({ getInt64Ty(), getInt64Ty(), getInt64Ty() }, "mapstr_t", false);
+}
+
 llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 {
   llvm::Type *ty;
-  if (stype.IsArray())
-  {
+  if  (stype.type == Type::mapstr) {
+    ty = GetMapStrTy();
+  } else if (stype.IsArray()) {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
   else if (stype.IsTupleTy())
@@ -236,6 +242,16 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx, const location &loc)
   CreateStore(getInt32(0), key);
 
   CallInst *call = createMapLookup(bpftrace_.join_map_->mapfd_, key);
+  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_lookup_elem, loc, true);
+  return call;
+}
+
+CallInst *IRBuilderBPF::CreateGetStrMap(Value *ctx, int mapfd, int elem, const location &loc)
+{
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  CreateStore(getInt32(elem), key);
+
+  CallInst *call = createMapLookup(mapfd, key);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_lookup_elem, loc, true);
   return call;
 }
@@ -432,10 +448,19 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
                                            Value *src,
                                            const location &loc)
 {
+  return CreateProbeReadStr(ctx, dst, getInt32(size), src, loc);
+}
+
+CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
+                                           Value *dst,
+                                           Value *size,
+                                           Value *src,
+                                           const location &loc)
+{
   assert(ctx && ctx->getType() == getInt8PtrTy());
   Constant *fn = createProbeReadStrFn(dst->getType(), src->getType());
   CallInst *call = CreateCall(fn,
-                              { dst, getInt32(size), src },
+                              { dst, size, src },
                               "probe_read_str");
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_probe_read_str, loc);
   return call;
@@ -443,7 +468,7 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
 
 CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
                                            AllocaInst *dst,
-                                           llvm::Value *size,
+                                           Value *size,
                                            Value *src,
                                            const location &loc)
 {
@@ -785,7 +810,7 @@ CallInst *IRBuilderBPF::CreateGetCpuId()
 {
   // u32 bpf_raw_smp_processor_id(void)
   // Return: SMP processor ID
-  FunctionType *getcpuid_func_type = FunctionType::get(getInt64Ty(), false);
+  FunctionType *getcpuid_func_type = FunctionType::get(getInt32Ty(), false);
   PointerType *getcpuid_func_ptr_type = PointerType::get(getcpuid_func_type, 0);
   Constant *getcpuid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -886,7 +911,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 
   Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
 
-  Value *flags_val = CreateGetCpuId();
+  Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
 
   // int bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,

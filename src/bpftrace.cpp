@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <cassert>
 #include <cstdio>
+#include <cstddef>
 #include <cstring>
 #include <ctime>
 #include <cxxabi.h>
@@ -442,9 +443,10 @@ void BPFtrace::request_finalize()
     child_->terminate();
 }
 
-void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
+void perf_event_printer(void *cb_cookie, void *data, [[maybe_unused]] int size)
 {
-  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  auto cookie = static_cast<PerfEventCallbackCookie*>(cb_cookie);
+  auto bpftrace = cookie->bpftrace;
   auto printf_id = *static_cast<uint64_t*>(data);
   auto arg_data = static_cast<uint8_t*>(data);
   int err;
@@ -562,7 +564,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
     auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->system_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -582,7 +584,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     auto id = printf_id - asyncactionint(AsyncAction::cat);
     auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
     auto args = std::get<1>(bpftrace->cat_args_[id]);
-    auto arg_values = bpftrace->get_arg_values(args, arg_data);
+    auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
     const int BUFSIZE = 512;
     char buffer[BUFSIZE];
@@ -604,7 +606,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   // printf
   auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
-  auto arg_values = bpftrace->get_arg_values(args, arg_data);
+  auto arg_values = bpftrace->get_arg_values(args, arg_data, cookie->cpu);
 
   // First try with a stack buffer, if that fails use a heap buffer
   const int BUFSIZE=512;
@@ -622,7 +624,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   }
 }
 
-std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
+std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data, int cpu_id)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
 
@@ -663,6 +665,30 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
           abort();
         }
         break;
+      case Type::mapstr:
+      {
+        AsyncEvent::StrMap * strMap(reinterpret_cast<AsyncEvent::StrMap *>(arg_data+arg.offset));
+        uint64_t mapfd(strMap->mapfd);
+        int32_t arrayIx(static_cast<int32_t>(strMap->arrayIx & 0xffffffff));
+        uint64_t strLen(strMap->strLen);
+
+        std::shared_ptr<IMap> map = get_mapstr_map_by_fd(static_cast<int32_t>(mapfd & 0xffffffff));
+        int strBuffSize(map->value_size_ * ncpus_);
+        auto str_buff = std::vector<std::byte>(strBuffSize);
+        int err = bpf_lookup_elem(mapfd, &arrayIx, str_buff.data());
+        if (err) {
+          // TODO: abort print?
+          std::cerr << "bpf_lookup_elem err:" << err << std::endl;
+        }
+
+        std::string_view ourString(
+          &reinterpret_cast<char&>(str_buff.at(map->value_size_ * cpu_id)),
+          strLen
+          );
+
+        arg_values.push_back(std::make_unique<PrintableString>(std::string(ourString)));
+        break;
+      }
       case Type::string:
       {
         auto p = reinterpret_cast<char *>(arg_data + arg.offset);
@@ -760,7 +786,7 @@ size_t BPFtrace::num_params() const
 
 void perf_event_lost(void *cb_cookie, uint64_t lost)
 {
-  auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
+  auto bpftrace = static_cast<PerfEventCallbackCookie*>(cb_cookie)->bpftrace;
   bpftrace->out_->lost_events(lost);
 }
 
@@ -1057,10 +1083,12 @@ int BPFtrace::setup_perf_events()
 
   std::vector<int> cpus = get_online_cpus();
   online_cpus_ = cpus.size();
+  cb_cookies.reserve(online_cpus_);
   for (int cpu : cpus)
   {
+    PerfEventCallbackCookie& cookie = cb_cookies.emplace_back( this, cpu );
     void *reader = bpf_open_perf_buffer(
-        &perf_event_printer, &perf_event_lost, this, -1, cpu, perf_rb_pages_);
+        &perf_event_printer, &perf_event_lost, &cookie, -1, cpu, perf_rb_pages_);
     if (reader == nullptr)
     {
       std::cerr << "Failed to open perf buffer" << std::endl;

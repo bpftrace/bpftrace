@@ -37,6 +37,7 @@ enum class Type
   cast,
   join,
   fmtstr,
+  mapstr,
   probe,
   username,
   inet,
@@ -217,6 +218,10 @@ public:
   {
     return type == Type::fmtstr;
   };
+  bool IsMapStrTy(void) const
+  {
+    return type == Type::mapstr;
+  };
   bool IsProbeTy(void) const
   {
     return type == Type::probe;
@@ -278,6 +283,7 @@ SizedType CreateUInt32();
 SizedType CreateUInt64();
 
 SizedType CreateString(size_t size);
+SizedType CreateMapString();
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 
 SizedType CreateStackMode();

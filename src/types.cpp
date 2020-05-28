@@ -75,7 +75,7 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsArray() const
 {
   return type == Type::array || type == Type::string || type == Type::usym ||
-         type == Type::inet || type == Type::buffer ||
+         type == Type::inet || type == Type::buffer || type == Type::mapstr ||
          ((type == Type::cast || type == Type::ctx) && !is_pointer);
 }
 
@@ -107,6 +107,7 @@ std::string typestr(Type t)
     case Type::kstack:   return "kstack";   break;
     case Type::ustack:   return "ustack";   break;
     case Type::string:   return "string";   break;
+    case Type::mapstr:   return "mapstr";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
     case Type::cast:     return "cast";     break;
@@ -251,6 +252,13 @@ SizedType CreateUInt64()
 SizedType CreateString(size_t size)
 {
   return SizedType(Type::string, size);
+}
+
+SizedType CreateMapString()
+{
+  // struct (int mapfd, int array_key, int strlen)
+  // TODO: consider whether we can go down to 32-bit ints
+  return SizedType(Type::mapstr, 24);
 }
 
 SizedType CreateNone()

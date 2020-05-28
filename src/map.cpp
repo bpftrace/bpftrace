@@ -19,7 +19,7 @@ int Map::create_map(enum bpf_map_type map_type, const char *name, int key_size, 
 #endif
 }
 
-Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries)
+Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int min, int max, int step, int max_entries, int value_size)
 {
   name_ = name;
   type_ = type;
@@ -48,17 +48,17 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   {
       map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
   }
-  else if (type.IsJoinTy() || type.IsFmtStrTy())
+  else if (type.IsJoinTy() || type.IsFmtStrTy() || type.IsMapStrTy())
   {
     map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
-    max_entries = 1;
     key_size = 4;
   }
   else
     map_type_ = BPF_MAP_TYPE_HASH;
 
-  int value_size = type.size;
   int flags = 0;
+  max_entries_ = max_entries;
+  value_size_ = value_size;
   mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {

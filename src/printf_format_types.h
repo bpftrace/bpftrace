@@ -17,7 +17,7 @@ namespace bpftrace {
 // print("{\"r\", Type::buffer},")
 // print(",\n".join([f"{{\"{l+s}\", Type::integer}}" for l in lengths for s in specifiers]))
 const std::unordered_map<std::string, Type> printf_format_types = {
-  {"s", Type::string},
+  {"s", Type::mapstr},
   {"r", Type::buffer},
   {"c", Type::integer},
   {"d", Type::integer},

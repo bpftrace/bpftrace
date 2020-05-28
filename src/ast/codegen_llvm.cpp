@@ -477,6 +477,27 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "str")
   {
+    auto &strcall = static_cast<StrCall&>(call);
+
+    int arrayIx = 0;
+    // TODO: round-robin through array indices, to ensure we don't write faster than we read
+    // TODO: detect when no free array index is available, log it, and fail any printf that consumes our string
+    CallInst *str_map = b_.CreateGetStrMap(ctx_, strcall.state.value().map->mapfd_, arrayIx, call.loc);
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(), "strzero", parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(), "strnotzero", parent);
+    
+    b_.CreateCondBr(
+      b_.CreateICmpNE(
+        str_map,
+        ConstantExpr::getCast(Instruction::IntToPtr, b_.getInt64(0), b_.getInt8PtrTy()),
+        "strzerocond"),
+      notzero, zero);
+
+    b_.SetInsertPoint(notzero);
+
+    auto zeroed_area_ptr = b_.getInt64(reinterpret_cast<uintptr_t>(strcall.state.value().zeroesForClearingMap.get()));
+
     AllocaInst *strlen = b_.CreateAllocaBPF(b_.getInt64Ty(), "strlen");
     b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
@@ -495,14 +516,31 @@ void CodegenLLVM::visit(Call &call)
     } else {
       b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
     }
-    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+
+    StructType* structType = static_cast<StructType*>(b_.GetType(strcall.type));
+    
+    AllocaInst *buf = b_.CreateAllocaBPF(structType, "str_struct");
+    b_.CreateStore(b_.getInt64(strcall.state.value().map->mapfd_),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+    b_.CreateStore(b_.getInt64(arrayIx),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
+    b_.CreateStore(b_.CreateLoad(strlen),
+                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(2) }));
+                  
     call.vargs->front()->accept(*this);
-    b_.CreateProbeReadStr(ctx_, buf, b_.CreateLoad(strlen), expr_, call.loc);
+    // zero it out first
+    b_.CreateProbeRead(ctx_, str_map, strcall.maxStrSize.value(),
+                      ConstantExpr::getCast(Instruction::IntToPtr, zeroed_area_ptr, b_.getInt8PtrTy()), call.loc);
+    b_.CreateProbeReadStr(ctx_, str_map, b_.CreateLoad(strlen), expr_, call.loc);
+
     b_.CreateLifetimeEnd(strlen);
 
     expr_ = buf;
     expr_deleter_ = [this,buf]() { b_.CreateLifetimeEnd(buf); };
+    b_.CreateBr(zero);
+
+    // done
+    b_.SetInsertPoint(zero);
   }
   else if (call.func == "buf")
   {
@@ -2282,7 +2320,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
    * types and offsets of each of the arguments, and share that between BPF and
    * user-space for printing.
    */
-  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // ID
+  std::vector<llvm::Type *> elements = { b_.getInt64Ty() }; // async action ID
 
   auto &args = std::get<1>(call_args.at(id));
   for (Field &arg : args)
@@ -2297,7 +2335,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (size_t i=0; i<args.size(); i++)
   {
     Field &arg = args[i];
-    arg.offset = struct_layout->getElementOffset(i+1); // +1 for the id field
+    arg.offset = struct_layout->getElementOffset(i+1); // +1 for async action ID
   }
 
   int asyncId = id + asyncactionint(async_action);
@@ -2325,6 +2363,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     Expression &arg = *call.vargs->at(i);
     expr_deleter_ = nullptr;
     arg.accept(*this);
+    // TODO: eventually operands such as "string backed by map" will have a failure-mode "failed to acquire free map index"
+    // in that situation: we will want to abort the print (and log why)
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (arg.type.IsAggregate())
     {

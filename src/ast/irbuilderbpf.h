@@ -66,6 +66,7 @@ public:
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, llvm::Value *size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, AllocaInst *dst, size_t size, Value *src, const location& loc);
   CallInst   *CreateProbeReadStr(Value* ctx, Value *dst, size_t size, Value *src, const location& loc);
+  CallInst   *CreateProbeReadStr(Value* ctx, Value *dst, Value *size, Value *src, const location& loc);
   Value      *CreateUSDTReadArgument(Value *ctx, AttachPoint *attach_point, int usdt_location_index, int arg_name, Builtin &builtin, pid_t pid, const location& loc);
   Value      *CreateStrcmp(Value* ctx, Value* val, std::string str, const location& loc, bool inverse=false);
   Value      *CreateStrcmp(Value* ctx, Value* val1, Value* val2, const location& loc, bool inverse=false);
@@ -80,6 +81,7 @@ public:
   CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
   CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
+  CallInst   *CreateGetStrMap(Value *ctx, int mapfd, int elem, const location& loc);
   CallInst   *CreateGetFmtStrMap(Value *ctx, StructType *printf_struct, const location& loc);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
@@ -90,6 +92,7 @@ public:
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  StructType *GetMapStrTy();
   int helper_error_id_ = 0;
 
 private:

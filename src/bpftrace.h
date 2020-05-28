@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <string_view>
 
 #include "ast.h"
 #include "attached_probe.h"
@@ -85,6 +86,15 @@ struct HelperErrorInfo
   location loc;
 };
 
+struct PerfEventCallbackCookie {
+  PerfEventCallbackCookie(BPFtrace* bpftrace, int cpu)
+  : bpftrace(bpftrace)
+  , cpu(cpu)
+  {}
+  BPFtrace* bpftrace;
+  int cpu;
+};
+
 class BPFtrace
 {
 public:
@@ -109,6 +119,10 @@ public:
   {
     return *maps_[map_ids_[id]].get();
   };
+  inline std::shared_ptr<IMap> get_mapstr_map_by_fd(int fd)
+  {
+    return mapstrs_[fd];
+  };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
@@ -126,7 +140,7 @@ public:
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;
-  std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data);
+  std::vector<std::unique_ptr<IPrintable>> get_arg_values(const std::vector<Field> &args, uint8_t* arg_data, int cpu_id);
   void add_param(const std::string &param);
   std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
@@ -158,6 +172,7 @@ public:
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;
   std::unique_ptr<IMap> fmtstr_map_;
+  std::map<int, std::shared_ptr<IMap>> mapstrs_;
   void *fmtstr_map_zero_ = nullptr;
   std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;
@@ -168,6 +183,7 @@ public:
   BPFfeature feature_;
 
   uint64_t strlen_ = 64;
+  uint64_t events_buffer_size_ = 4;
   uint64_t mapmax_ = 4096;
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;
@@ -226,6 +242,7 @@ private:
   int online_cpus_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
+  std::vector<PerfEventCallbackCookie> cb_cookies;
 
   std::string src_;
   std::string filename_;
