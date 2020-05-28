@@ -26,10 +26,10 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
   });
 }
 
-usdt_probe_entry USDTHelper::find(int pid,
-                                  const std::string &target,
-                                  const std::string &provider,
-                                  const std::string &name)
+std::optional<usdt_probe_entry> USDTHelper::find(int pid,
+                                                 const std::string &target,
+                                                 const std::string &provider,
+                                                 const std::string &name)
 {
   if (pid > 0)
     read_probes_for_pid(pid);
@@ -49,7 +49,7 @@ usdt_probe_entry USDTHelper::find(int pid,
   }
   else
   {
-    return {};
+    return std::nullopt;
   }
 }
 

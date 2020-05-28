@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -18,10 +19,10 @@ typedef std::vector<usdt_probe_entry> usdt_probe_list;
 class USDTHelper
 {
 public:
-  static usdt_probe_entry find(int pid,
-                               const std::string &target,
-                               const std::string &provider,
-                               const std::string &name);
+  static std::optional<usdt_probe_entry> find(int pid,
+                                              const std::string &target,
+                                              const std::string &provider,
+                                              const std::string &name);
   static usdt_probe_list probes_for_pid(int pid);
   static usdt_probe_list probes_for_path(const std::string &path);
 
