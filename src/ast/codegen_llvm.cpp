@@ -1897,8 +1897,12 @@ void CodegenLLVM::visit(Probe &probe)
           attach_point->ns = orig_ns;
 
           // Set the probe identifier so that we can read arguments later
-          attach_point->usdt = USDTHelper::find(
+          auto usdt = USDTHelper::find(
               bpftrace_.pid(), attach_point->target, ns, func_id);
+          if (!usdt.has_value())
+            throw std::runtime_error("Failed to find usdt probe: " +
+                                     probefull_);
+          attach_point->usdt = *usdt;
 
           // A "unique" USDT probe can be present in a binary in multiple
           // locations. One case where this happens is if a function containing

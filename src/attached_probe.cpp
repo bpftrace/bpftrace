@@ -831,7 +831,9 @@ void AttachedProbe::attach_usdt(int pid)
   }
 
   auto u = USDTHelper::find(pid, probe_.path, probe_.ns, probe_.attach_point);
-  probe_.path = u.path;
+  if (!u.has_value())
+    throw std::runtime_error("Failed to find usdt probe: " + eventname());
+  probe_.path = u->path;
 
   err = bcc_usdt_get_location(ctx, probe_.ns.c_str(), probe_.attach_point.c_str(), 0, &loc);
   if (err)
