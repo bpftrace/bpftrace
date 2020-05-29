@@ -52,6 +52,8 @@ and this project adheres to
   - [#1328](https://github.com/iovisor/bpftrace/pull/1328)
 - Only list uprobe and usdt probes when `-p` is given
   - [#1340](https://github.com/iovisor/bpftrace/pull/1340)
+- Remove address space memory limit
+  - [#1358](https://github.com/iovisor/bpftrace/pull/1358)
 
 #### Deprecated
 
