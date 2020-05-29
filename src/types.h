@@ -107,8 +107,19 @@ private:
                                       // (like) types
   size_t num_elements_;               // for array like types
   std::string name_; // name of this type, for named types like struct
+  bool ctx_ = false; // Is bpf program context
 
 public:
+  bool IsCtxAccess() const
+  {
+    return ctx_;
+  };
+
+  void MarkCtxAccess()
+  {
+    ctx_ = true;
+  };
+
   bool IsArray() const;
   bool IsAggregate() const;
   bool IsStack() const;
