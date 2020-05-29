@@ -371,12 +371,10 @@ const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t)
 
 SizedType BTF::get_stype(__u32 id)
 {
-  SizedType stype = SizedType(Type::none, 8);
-
   const struct btf_type *t = btf__type_by_id(btf, id);
 
   if (!t)
-    return stype;
+    return CreateNone();
 
   t = btf_type_skip_modifiers(t);
 
@@ -384,10 +382,11 @@ SizedType BTF::get_stype(__u32 id)
 
   if (btf_is_int(t) || btf_is_enum(t))
   {
-    stype.type = Type::integer;
+    return CreateInteger(btf_int_bits(t), btf_int_encoding(t) & BTF_INT_SIGNED);
   }
   else if (btf_is_ptr(t))
   {
+    SizedType stype;
     stype.is_pointer = true;
 
     // get the pointer type..
@@ -413,7 +412,7 @@ SizedType BTF::get_stype(__u32 id)
     }
   }
 
-  return stype;
+  return CreateNone();
 }
 
 int BTF::resolve_args(const std::string &func,
