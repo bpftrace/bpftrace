@@ -102,7 +102,6 @@ if (BUILD_ASAN)
     # target_link_options is supported in CMake 3.13 and newer
     message("Please use CMake 3.13 or newer to enable ASAN")
   endif()
-  target_compile_definitions(bpftrace PRIVATE BUILD_ASAN)
   target_compile_options(bpftrace PUBLIC "-fsanitize=address")
   target_link_options(bpftrace PUBLIC "-fsanitize=address")
 endif()
