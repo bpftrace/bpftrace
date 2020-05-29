@@ -96,6 +96,8 @@ std::string typestr(Type t)
     // clang-format off
     case Type::none:     return "none";     break;
     case Type::integer:  return "integer";  break;
+    case Type::pointer:  return "pointer";  break;
+    case Type::record:   return "record";   break;
     case Type::hist:     return "hist";     break;
     case Type::lhist:    return "lhist";    break;
     case Type::count:    return "count";    break;
@@ -281,6 +283,21 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type)
   ty.num_elements_ = num_elements;
   ty.element_type_ = new SizedType(element_type);
   ty.pointee_size = element_type.size;
+  return ty;
+}
+
+SizedType CreatePointer(const SizedType &pointee_type)
+{
+  // Pointer itself is always an uint64
+  auto ty = SizedType(Type::pointer, 8);
+  ty.element_type_ = new SizedType(pointee_type);
+  return ty;
+}
+
+SizedType CreateRecord(size_t size, const std::string &name)
+{
+  auto ty = SizedType(Type::record, size);
+  ty.name_ = name;
   return ty;
 }
 

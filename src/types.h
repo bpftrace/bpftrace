@@ -21,6 +21,8 @@ enum class Type
   // clang-format off
   none,
   integer,
+  pointer,
+  record, // struct/union, as struct is a protected keyword
   hist,
   lhist,
   count,
@@ -43,7 +45,6 @@ enum class Type
   array,
   // BPF program context; needing a different access method to satisfy the verifier
   ctx,
-  record, // struct or union
   buffer,
   tuple,
   timestamp
@@ -105,6 +106,7 @@ private:
   SizedType *element_type_ = nullptr; // for "container" and pointer
                                       // (like) types
   size_t num_elements_;               // for array like types
+  std::string name_; // name of this type, for named types like struct
 
 public:
   bool IsArray() const;
@@ -136,22 +138,32 @@ public:
     return size;
   };
 
+  const std::string &GetName() const
+  {
+    assert(IsRecordTy());
+    return name_;
+  }
+
   const SizedType *GetElementTy() const
   {
     assert(IsArrayTy() || IsCtxTy());
     return element_type_;
   }
 
+  const SizedType *GetPointeeTy() const
+  {
+    assert(IsPtrTy());
+    return element_type_;
+  }
+
   bool IsPtrTy() const
   {
-    return IsIntTy() && is_pointer;
+    return ((type == Type::pointer) || (IsIntTy() && is_pointer));
   };
-
   bool IsIntTy() const
   {
     return type == Type::integer;
   };
-
   bool IsNoneTy(void) const
   {
     return type == Type::none;
@@ -268,6 +280,9 @@ public:
 
   friend SizedType CreateArray(size_t num_elements,
                                const SizedType &element_type);
+
+  friend SizedType CreatePointer(const SizedType &pointee_type);
+  friend SizedType CreateRecord(size_t size, const std::string &name);
 };
 // Type helpers
 
@@ -286,6 +301,8 @@ SizedType CreateUInt64();
 
 SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
+SizedType CreatePointer(const SizedType &pointee_type);
+SizedType CreateRecord(size_t size, const std::string &name);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());
