@@ -1827,7 +1827,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
               << var_ident << ": "
               << "trying to assign value of type '" << assignment.expr->type
               << "' when variable already contains a value of type '"
-              << search->second,
+              << search->second << "'",
           assignment.loc);
     }
   }
