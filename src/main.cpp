@@ -644,7 +644,16 @@ int main(int argc, char *argv[])
   }
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
-  auto bpforc = llvm.compile(bt_debug);
+  std::unique_ptr<BpfOrc> bpforc;
+  try
+  {
+    bpforc = llvm.compile(bt_debug);
+  }
+  catch (const std::exception& ex)
+  {
+    std::cerr << "Failed to compile: " << ex.what() << std::endl;
+    return 1;
+  }
 
   if (bt_debug != DebugLevel::kNone)
     return 0;
