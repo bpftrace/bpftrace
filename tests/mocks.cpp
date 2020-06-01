@@ -76,6 +76,16 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                       .bitfield = {},
                   } } },
   };
+  bpftrace.structs_["struct _tracepoint_tcp_some_tcp_tp"] = Struct{
+    .size = 16,
+    .fields = { { "saddr_v6",
+                  Field{
+                      .type = CreateArray(16, CreateUInt(8)),
+                      .offset = 0,
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
+  };
 
   auto ptr_type = CreateUInt64();
   ptr_type.is_pointer = true;

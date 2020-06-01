@@ -22,3 +22,9 @@ NAME modulo_operator
 RUN bpftrace -v -e 'BEGIN { @x = 4; printf("%d\n", @x % 2) }'
 EXPECT 0
 TIMEOUT 5
+
+NAME ntop_tracepoint_args
+RUN bpftrace -v -e 'tracepoint:tcp:tcp_destroy_sock { printf("%s\n", ntop(args->daddr)); exit(); }'
+EXPECT [0-9]+.[0-9]+.[0-9]+.[0-9]+
+AFTER curl www.google.com &> /dev/null
+TIMEOUT 5

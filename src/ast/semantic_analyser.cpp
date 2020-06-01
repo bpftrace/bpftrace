@@ -624,7 +624,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
     }
 
-    if (!arg->type.IsIntTy() && !arg->type.IsArrayTy())
+    if (!arg->type.IsIntTy() && !arg->type.IsArray())
       ERR(call.func << "() expects an integer or array argument, got "
                     << arg->type.type,
           call.loc);
@@ -641,16 +641,9 @@ void SemanticAnalyser::visit(Call &call)
     int buffer_size = 24;
     auto type = arg->type;
 
-    // Ensure u8 array of either 4 or 16 elements
-    if (type.IsArrayTy())
-    {
-      if (!(type.GetElementTy()->IsIntTy() &&
-            type.GetElementTy()->GetIntBitWidth() == 8 &&
-            (type.GetNumElements() == 4 || type.GetNumElements() == 16)))
-      {
-        error(call.func + "() invalid array", call.loc);
-      }
-    }
+    if (arg->type.IsArray() && type.size != 4 && type.size != 16)
+      error(call.func + "() argument must be 4 or 16 bytes in size", call.loc);
+
     call.type = CreateInet(buffer_size);
   }
   else if (call.func == "join") {

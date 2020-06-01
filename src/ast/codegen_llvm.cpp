@@ -702,7 +702,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CREATE_MEMSET(inet_offset, b_.getInt8(0), 16, 1);
 
     inet->accept(*this);
-    if (inet->type.IsArrayTy())
+    if (inet->type.IsArray())
     {
       b_.CreateProbeRead(ctx_,
                          static_cast<AllocaInst *>(inet_offset),

@@ -590,6 +590,9 @@ TEST(semantic_analyser, call_ntop)
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv4); }", 0);
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv6); }", 0);
 
+  // Regression test that ntop can use arguments from the prog context
+  test("tracepoint:tcp:some_tcp_tp { ntop(args->saddr_v6); }", 0);
+
   test("kprobe:f { ntop(); }", 1);
   test("kprobe:f { ntop(2, \"hello\"); }", 1);
   test("kprobe:f { ntop(\"hello\"); }", 1);
