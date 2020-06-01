@@ -76,6 +76,8 @@ and this project adheres to
   - [#1341](https://github.com/iovisor/bpftrace/pull/1341)
 - Fix `KBUILD_MODNAME`
   - [#1352](https://github.com/iovisor/bpftrace/pull/1352)
+- Fix `ntop()` not accepting tracepoint arguments
+  - [#1365](https://github.com/iovisor/bpftrace/pull/1365)
 
 #### Tools
 
