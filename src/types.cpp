@@ -28,7 +28,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
   else if (type.IsArrayTy())
   {
-    os << type.GetElementTy() << "[" << type.GetNumElements() << "]";
+    os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
   }
   else if (type.IsStringTy() || type.IsBufferTy())
   {
