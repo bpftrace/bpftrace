@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add wildcard support for kfunc probe types
+  - [#1410](https://github.com/iovisor/bpftrace/pull/1410)
 - Add builtin function: `strftime`
   - [#1387](https://github.com/iovisor/bpftrace/pull/1387)
 - Fix `printf` not allowing format specifiers to be directly followed by

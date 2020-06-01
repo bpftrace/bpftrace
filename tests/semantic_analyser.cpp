@@ -1848,6 +1848,12 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
   // aaa does not exist -> PASS semantic analyser, FAIL field analyser
   test("kfunc:func_2, kfunc:aaa { $x = args->foo1; }", 0, true, false, 1);
+  // func_* have different args, but none of them
+  // is used in probe code, so we're good -> PASS
+  test("kfunc:func_* { }", 0);
+  // func_* have different args, one of them
+  // is used in probe code, we can't continue -> FAIL
+  test("kfunc:func_* { $x = args->foo1; }", 0, true, false, 1);
 }
 
 TEST_F(semantic_analyser_btf, short_name)
