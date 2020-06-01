@@ -241,11 +241,44 @@ bool FieldAnalyser::compare_args(std::map<std::string, SizedType> args1,
 bool FieldAnalyser::resolve_args(AttachPoint &ap)
 {
   bool kretfunc = ap.provider == "kretfunc";
+  std::string func = ap.func;
 
   // load AP arguments into ap_args_
   ap_args_.clear();
 
-  if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
+  if (ap.need_expansion)
+  {
+    std::set<std::string> matches;
+
+    try
+    {
+      matches = bpftrace_.find_wildcard_matches(ap);
+    }
+    catch (const WildcardException &e)
+    {
+      std::cerr << e.what() << std::endl;
+      return false;
+    }
+
+    bool first = true;
+
+    for (auto func : matches)
+    {
+      std::map<std::string, SizedType> args;
+
+      if (!bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc))
+      {
+        if (!first && !compare_args(args, ap_args_))
+        {
+          has_mixed_args_ = true;
+          break;
+        }
+      }
+
+      first = false;
+    }
+  }
+  else if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
   {
     error("Failed to resolve probe arguments", ap.loc);
     return false;

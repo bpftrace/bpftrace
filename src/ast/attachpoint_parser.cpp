@@ -579,10 +579,7 @@ int AttachPointParser::kfunc_parser()
   }
 
   if (parts_[1].find('*') != std::string::npos)
-  {
-    errs_ << "wildcard expansion is not supported for kfunc/kretfunc probes" << std::endl;
-    return 1;
-  }
+    ap_->need_expansion = true;
 
   ap_->func = parts_[1];
   return 0;

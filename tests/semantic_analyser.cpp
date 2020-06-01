@@ -1795,6 +1795,8 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_2, kfunc:func_3 { }", 0);
   test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
   test("kfunc:func_2, kfunc:aaa { $x = args->foo1; }", 0, true, false, 1);
+  test("kfunc:func_* { }", 0);
+  test("kfunc:func_* { $x = args->foo1; }", 0, true, false, 1);
 }
 
 TEST_F(semantic_analyser_btf, short_name)
