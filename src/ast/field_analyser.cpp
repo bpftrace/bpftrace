@@ -241,11 +241,52 @@ bool FieldAnalyser::compare_args(const std::map<std::string, SizedType>& args1,
 bool FieldAnalyser::resolve_args(AttachPoint &ap)
 {
   bool kretfunc = ap.provider == "kretfunc";
+  std::string func = ap.func;
 
   // load AP arguments into ap_args_
   ap_args_.clear();
 
-  if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
+  if (ap.need_expansion)
+  {
+    std::set<std::string> matches;
+
+    // Find all the matches for the wildcard..
+    try
+    {
+      matches = bpftrace_.find_wildcard_matches(ap);
+    }
+    catch (const WildcardException &e)
+    {
+      std::cerr << e.what() << std::endl;
+      return false;
+    }
+
+    // ... and check if they share same arguments.
+    //
+    // If they have different arguments, we have a potential
+    // problem, but only if the 'args->arg' is actually used.
+    // So far we just set has_mixed_args_ bool and continue.
+
+    bool first = true;
+
+    for (auto func : matches)
+    {
+      std::map<std::string, SizedType> args;
+
+      if (!bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc))
+      {
+        if (!first && !compare_args(args, ap_args_))
+        {
+          has_mixed_args_ = true;
+          mixed_args_loc_ = ap.loc;
+          break;
+        }
+      }
+
+      first = false;
+    }
+  }
+  else if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
   {
     error("Failed to resolve probe arguments", ap.loc);
     return false;

@@ -513,7 +513,8 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
     if (!btf_is_func(t))
       continue;
 
-    const char *func_name = btf__name_by_offset(btf, t->name_off);
+    const char *str = btf__name_by_offset(btf, t->name_off);
+    std::string func_name = str;
 
     t = btf__type_by_id(btf, t->type);
     if (!btf_is_func_proto(t))
@@ -525,7 +526,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
       break;
     }
 
-    if (re && !match_re(std::string("kfunc:") + func_name, *re))
+    if (re && !match_re(prefix + func_name, *re))
       continue;
 
     funcs += prefix + std::string(func_name) + "\n";
@@ -586,7 +587,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
   return std::make_unique<std::istringstream>(funcs);
 }
 
-void BTF::display_funcs(std::regex *re) const
+void BTF::display_kfunc(std::regex *re) const
 {
   if (!has_data())
     return;
@@ -679,6 +680,11 @@ void BTF::display_structs(std::regex *re) const
   }
 }
 
+std::unique_ptr<std::istream> BTF::kfunc(void) const
+{
+  return get_funcs(NULL, false, "");
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
@@ -707,14 +713,18 @@ int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
   return -1;
 }
 
-void BTF::display_funcs(std::regex* re __attribute__((__unused__))) const
+void BTF::display_kfunc(std::regex* re __attribute__((__unused__))) const
 {
+}
+
+std::unique_ptr<std::istream> BTF::kfunc(void) const
+{
+  return nullptr;
 }
 
 void BTF::display_structs(std::regex* re __attribute__((__unused__))) const
 {
 }
-
 } // namespace bpftrace
 
 #endif // HAVE_LIBBPF_BTF_DUMP
