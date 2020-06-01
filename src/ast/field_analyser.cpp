@@ -5,6 +5,16 @@
 namespace bpftrace {
 namespace ast {
 
+void FieldAnalyser::error(const std::string &msg, const location &loc)
+{
+  bpftrace_.error(err_, loc, msg);
+}
+
+void FieldAnalyser::warning(const std::string &msg, const location &loc)
+{
+  bpftrace_.warning(out_, loc, msg);
+}
+
 void FieldAnalyser::visit(Integer &integer __attribute__((unused)))
 {
 }
@@ -260,6 +270,14 @@ int FieldAnalyser::analyse()
 {
   if (bpftrace_.btf_.has_data())
     root_->accept(*this);
+
+  std::string errors = err_.str();
+  if (!errors.empty())
+  {
+    std::cerr << errors;
+    return 1;
+  }
+
   return 0;
 }
 
