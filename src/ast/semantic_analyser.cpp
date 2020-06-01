@@ -624,7 +624,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
     }
 
-    if (!arg->type.IsIntTy() & !arg->type.IsArrayTy())
+    if (!arg->type.IsIntTy() && !arg->type.IsArrayTy())
       ERR(call.func << "() expects an integer or array argument, got "
                     << arg->type.type,
           call.loc);
