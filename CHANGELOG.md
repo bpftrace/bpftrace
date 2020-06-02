@@ -42,6 +42,8 @@ and this project adheres to
   - [#1326](https://github.com/iovisor/bpftrace/pull/1326)
 - Add support for listing struct/union/enum definitions using BTF
   - [#1340](https://github.com/iovisor/bpftrace/pull/1340)
+- Add libbpf build into in --info
+  - [#1367](https://github.com/iovisor/bpftrace/pull/1367)
 
 #### Changed
 
