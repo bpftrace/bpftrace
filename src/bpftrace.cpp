@@ -651,36 +651,29 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
     switch (arg.type.type)
     {
       case Type::integer:
-        // If no casting is performed, we have already promoted the ty.size to 8
-        if (arg.type.cast_type == "" || arg.type.cast_type == "uint64" ||
-            arg.type.cast_type == "int64")
+        switch (arg.type.size)
         {
-          arg_values.push_back(std::make_unique<PrintableInt>(
-              *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
-        }
-        else if (arg.type.cast_type == "uint32" ||
-                 arg.type.cast_type == "int32")
-        {
-          arg_values.push_back(std::make_unique<PrintableInt>(
-              *reinterpret_cast<uint32_t *>(arg_data + arg.offset)));
-        }
-        else if (arg.type.cast_type == "uint16" ||
-                 arg.type.cast_type == "int16")
-        {
-          arg_values.push_back(std::make_unique<PrintableInt>(
-              *reinterpret_cast<uint16_t *>(arg_data + arg.offset)));
-        }
-        else if (arg.type.cast_type == "uint8" || arg.type.cast_type == "int8")
-        {
-          arg_values.push_back(std::make_unique<PrintableInt>(
-              *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
-        }
-        else
-        {
-          std::cerr << "get_arg_values: invalid integer size. 8, 4, 2 and byte "
-                       "supported. "
-                    << arg.type.size << "provided" << std::endl;
-          abort();
+          case 8:
+            arg_values.push_back(std::make_unique<PrintableInt>(
+                *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
+            break;
+          case 4:
+            arg_values.push_back(std::make_unique<PrintableInt>(
+                *reinterpret_cast<uint32_t *>(arg_data + arg.offset)));
+            break;
+          case 2:
+            arg_values.push_back(std::make_unique<PrintableInt>(
+                *reinterpret_cast<uint16_t *>(arg_data + arg.offset)));
+            break;
+          case 1:
+            arg_values.push_back(std::make_unique<PrintableInt>(
+                *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
+            break;
+          default:
+            std::cerr << "get_arg_values: invalid integer size. 8, 4, 2 and "
+                         "byte supported. "
+                      << arg.type.size << "provided" << std::endl;
+            abort();
         }
         break;
       case Type::string:
