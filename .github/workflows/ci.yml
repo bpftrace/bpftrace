@@ -127,6 +127,8 @@ jobs:
       with:
         nickname: bpftrace-ci-bot
         server: irc.oftc.net
+        port: 6667
+        tls: false
         channel: "#bpftrace"
         message: |
           master is BROKEN at https://github.com/iovisor/bpftrace/commit/${{github.sha}}
