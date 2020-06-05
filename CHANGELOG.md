@@ -80,6 +80,8 @@ and this project adheres to
   - [#1365](https://github.com/iovisor/bpftrace/pull/1365)
 - Fix attaching to usdt probes in multiple binaries
   - [#1356](https://github.com/iovisor/bpftrace/pull/1356)
+- Decrement usdt semaphore count after bpftrace execution
+  - [#1370](https://github.com/iovisor/bpftrace/pull/1370)
 
 #### Tools
 
