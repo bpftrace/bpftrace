@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -52,6 +53,7 @@ private:
 #ifdef HAVE_BCC_KFUNC
   int tracing_fd_ = -1;
 #endif
+  std::function<void()> usdt_destructor_;
 };
 
 } // namespace bpftrace

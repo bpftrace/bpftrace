@@ -220,6 +220,8 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
+      if (usdt_destructor_)
+        usdt_destructor_();
       err = bpf_detach_uprobe(eventname().c_str());
       break;
     case ProbeType::tracepoint:
@@ -808,6 +810,10 @@ void AttachedProbe::attach_usdt(int pid)
     if (!ctx)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name);
   }
+
+  // Defer context destruction until probes are detached b/c context
+  // destruction will decrement usdt semaphore count.
+  usdt_destructor_ = [ctx]() { bcc_usdt_close(ctx); };
 
   // TODO: fn_name may need a unique suffix for each attachment on the same probe:
   std::string fn_name = "probe_" + probe_.attach_point + "_1";
