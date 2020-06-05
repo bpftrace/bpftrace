@@ -117,6 +117,8 @@ jobs:
   irc:
     # Notify IRC of build failures on pushes only if we are running from
     # the main repo. We don't want this rule to trigger from forked repos.
+    needs:
+      - build_test
     if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'"
     runs-on: ubuntu-latest
     steps:
