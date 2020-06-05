@@ -796,6 +796,26 @@ void AttachedProbe::attach_usdt(int pid)
   struct bcc_usdt_location loc = {};
   int err;
   void *ctx;
+  // TODO: fn_name may need a unique suffix for each attachment on the same
+  // probe:
+  std::string fn_name = "probe_" + probe_.attach_point + "_1";
+
+#ifdef HAVE_BCC_USDT_ADDSEM
+  // NB: we are careful to capture by value here everything that will not
+  // be available in AttachedProbe destructor.
+  auto addsem = [this, fn_name](void *c, int16_t val) -> int {
+    if (this->probe_.ns == "")
+      return bcc_usdt_addsem_probe(
+          c, this->probe_.attach_point.c_str(), fn_name.c_str(), val);
+    else
+      return bcc_usdt_addsem_fully_specified_probe(
+          c,
+          this->probe_.ns.c_str(),
+          this->probe_.attach_point.c_str(),
+          fn_name.c_str(),
+          val);
+  };
+#endif // HAVE_BCC_USDT_ADDSEM
 
   if (pid)
   {
@@ -803,6 +823,17 @@ void AttachedProbe::attach_usdt(int pid)
     ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (!ctx)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name + ", for PID: " + std::to_string(pid));
+
+#ifdef HAVE_BCC_USDT_ADDSEM
+    usdt_destructor_ = [pid, addsem]() {
+      void *c = bcc_usdt_new_frompid(pid, nullptr);
+      if (!c)
+        return;
+
+      addsem(c, -1);
+      bcc_usdt_close(c);
+    };
+#endif // HAVE_BCC_USDT_ADDSEM
   }
   else
   {
@@ -811,14 +842,21 @@ void AttachedProbe::attach_usdt(int pid)
       throw std::runtime_error("Error initializing context for probe: " + probe_.name);
   }
 
+#ifndef HAVE_BCC_USDT_ADDSEM
   // Defer context destruction until probes are detached b/c context
   // destruction will decrement usdt semaphore count.
   usdt_destructor_ = [ctx]() { bcc_usdt_close(ctx); };
+#endif // HAVE_BCC_USDT_ADDSEM
 
-  // TODO: fn_name may need a unique suffix for each attachment on the same probe:
-  std::string fn_name = "probe_" + probe_.attach_point + "_1";
-// see https://github.com/iovisor/bcc/pull/2294 for BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
-#ifdef BCC_USDT_HAS_FULLY_SPECIFIED_PROBE
+#ifdef HAVE_BCC_USDT_ADDSEM
+  // Use semaphore increment API to avoid having to hold onto the usdt context
+  // for the entire tracing session. Reason we do it this way instead of
+  // holding onto usdt context is b/c each usdt context can take lots of memory
+  // (~10MB). This, coupled with --usdt-file-activation and tracees that have a
+  // forking model can cause bpftrace to use huge amounts of memory if we hold
+  // onto the contexts.
+  err = addsem(ctx, +1);
+#elif defined(BCC_USDT_HAS_FULLY_SPECIFIED_PROBE)
   if (probe_.ns == "")
     err = bcc_usdt_enable_probe(ctx, probe_.attach_point.c_str(), fn_name.c_str());
   else
@@ -845,6 +883,12 @@ void AttachedProbe::attach_usdt(int pid)
   if (err)
     throw std::runtime_error("Error finding location for probe: " + probe_.name);
   probe_.loc = loc.address;
+
+#ifdef HAVE_BCC_USDT_ADDSEM
+  // If we use the bcc_usdt_addsem*() API, bcc won't decrement semaphore count
+  // in bcc_usdt_close(). So we are free to close context here.
+  bcc_usdt_close(ctx);
+#endif // HAVE_BCC_USDT_ADDSEM
 
   offset_ = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
 

@@ -114,6 +114,7 @@ check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC
 check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_CREATE_MAP)
 check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
 check_symbol_exists(bpf_attach_kfunc "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_KFUNC)
+check_symbol_exists(bcc_usdt_addsem_probe "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h" HAVE_BCC_USDT_ADDSEM)
 set(CMAKE_REQUIRED_LIBRARIES)
 set(CMAKE_REQUIRED_LINK_OPTIONS)
 
