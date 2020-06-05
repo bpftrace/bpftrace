@@ -636,7 +636,7 @@ void BTF::display_structs(std::regex *re) const
   if (struct_set.empty())
     return;
 
-  std::vector vec(struct_set.begin(), struct_set.end());
+  std::vector<std::string> vec(struct_set.begin(), struct_set.end());
   std::sort(vec.begin(), vec.end());
   if (bt_verbose)
   {
