@@ -84,6 +84,8 @@ and this project adheres to
   - [#1356](https://github.com/iovisor/bpftrace/pull/1356)
 - Decrement usdt semaphore count after bpftrace execution
   - [#1370](https://github.com/iovisor/bpftrace/pull/1370)
+- Reduce high memory consumption when using usdt semaphore
+  - [#1374](https://github.com/iovisor/bpftrace/pull/1374)
 
 #### Tools
 

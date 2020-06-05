@@ -150,6 +150,12 @@ static int info()
 #else
             << "no" << std::endl;
 #endif
+  std::cerr << "  bcc_usdt_addsem: "
+#ifdef HAVE_BCC_USDT_ADDSEM
+            << "yes" << std::endl;
+#else
+            << "no" << std::endl;
+#endif
   std::cerr << "  libbpf: "
 #ifdef HAVE_LIBBPF
             << "yes" << std::endl;
