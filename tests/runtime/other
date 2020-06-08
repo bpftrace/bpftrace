@@ -99,8 +99,8 @@ EXPECT hello world
 TIMEOUT 1
 
 NAME string compare map lookup
-RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "cat"/ { @[comm] = 1; }' -c "/bin/cat /dev/null"
-EXPECT @\[cat\]: 1
+RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
+EXPECT @\[syscall\]: 1
 TIMEOUT 5
 
 NAME struct partial string compare - pass
