@@ -96,43 +96,43 @@ NAME sum
 RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = sum(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME avg
 RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME min
 RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME max
 RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}'
 EXPECT @.*\[.*\]\:\s[0-9]*
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 TIMEOUT 5
 
 NAME stats
 RUN bpftrace -v -e 'kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}'
 EXPECT @.*\[.*\]\:\scount\s[0-9]*\,\saverage\s[0-9]*\,\stotal\s[0-9]*
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME hist
 RUN bpftrace -v -e 'kretprobe:vfs_read { @bytes = hist(retval); exit();}'
 EXPECT @bytes: *\n[\[(].*
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 TIMEOUT 5
 
 NAME lhist
 RUN bpftrace -v -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}'
 EXPECT @bytes: *\n[\[(].*
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME kstack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }'

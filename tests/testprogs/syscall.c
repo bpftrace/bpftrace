@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 
-#define MAX_NAME_LENGTH 50
+#define FILE_NAME_LENGTH 50
 #define TEMP_FILE_NAME "RUNTIME_TEST_SYSCALL_GEN_TEMP"
 
 void usage() {
@@ -17,6 +17,7 @@ void usage() {
     printf("\t nanosleep [$N] (default args: 100ns)\n");
     printf("\t open\n");
     printf("\t openat\n");
+    printf("\t read\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
             printf("Error in syscall %s: %d\n", syscall_name, errno);
     }
 
-    else if (strcmp("open", syscall_name) || strcmp("openat", syscall_name)){
+    else if (strcmp("open", syscall_name) == 0 || strcmp("openat", syscall_name) == 0) {
         //char *file_name = tempnam("./", TEMP_FILE_NAME);
         const char *file_name = TEMP_FILE_NAME;
         if (file_name == NULL) {
@@ -64,6 +65,20 @@ int main(int argc, char *argv[]) {
             printf("Error in syscall %s: %d\n", syscall_name, errno);
             exit(0);
         }
+        close(fd);
+        remove(file_name);
+    }
+
+    else if (strcmp("read", syscall_name) == 0) {
+        char file_name[FILE_NAME_LENGTH];
+        strncpy(file_name, "TEMP_FILE_SYS_READ_XXXXXX", FILE_NAME_LENGTH - 1);
+        int fd = mkstemp(file_name);
+        if (fd < 0) {
+            printf("Error in syscall %s when creating temp file: %d\n", syscall_name, errno);
+            exit(0);
+        }
+        char buf[10];
+        int r = syscall(SYS_read, fd, (void *)buf, 0);
         close(fd);
         remove(file_name);
     }
