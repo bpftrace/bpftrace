@@ -17,7 +17,7 @@ NAME kprobe_order
 RUN bpftrace -v runtime/scripts/kprobe_order.bt
 EXPECT first second
 TIMEOUT 5
-AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
+AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME kprobe_offset
 RUN bpftrace -v -e 'kprobe:vfs_read+0 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
@@ -48,7 +48,7 @@ NAME kretprobe_order
 RUN bpftrace -v runtime/scripts/kretprobe_order.bt
 EXPECT first second
 TIMEOUT 5
-AFTER /bin/bash -c "sleep 1e-6"; /bin/bash -c "sleep 1e-6"
+AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME uprobe
 RUN bpftrace -v -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}'
@@ -99,23 +99,23 @@ AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 NAME tracepoint
 RUN bpftrace -v -e 'tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }'
 EXPECT SUCCESS tracepoint [0-9][0-9]*
-AFTER sleep 0.1
+AFTER ./testprogs/syscall nanosleep 100000000
 TIMEOUT 5
 
 NAME tracepoint_short_name
 RUN bpftrace -v -e 't:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }'
 EXPECT SUCCESS tracepoint_short_name [0-9][0-9]*
-AFTER sleep 0.1
+AFTER ./testprogs/syscall nanosleep 100000000
 TIMEOUT 5
 
 NAME tracepoint_order
 RUN bpftrace -v runtime/scripts/tracepoint_order.bt
 EXPECT first second
 TIMEOUT 5
-AFTER sleep 0.1; sleep 0.1
+AFTER ./testprogs/syscall nanosleep 100000000; ./testprogs/syscall nanosleep 100000000
 
 NAME tracepoint_expansion
-RUN bpftrace -v -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit "); }' -c "/bin/sleep 0.1"
+RUN bpftrace -v -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit "); }' -c "./testprogs/syscall nanosleep 100000000"
 EXPECT hit hit
 TIMEOUT 5
 
