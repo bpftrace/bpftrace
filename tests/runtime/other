@@ -167,7 +167,7 @@ NAME sigint under heavy load
 RUN bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
 EXPECT end
 TIMEOUT 5
-AFTER  ./testprogs/syscall nanosleep 2000000000; pkill -SIGINT bpftrace
+AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
 NAME bitfield access
 RUN bpftrace -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'

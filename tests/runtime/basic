@@ -114,7 +114,7 @@ EXPECT 10 12 12 10
 TIMEOUT 1
 
 NAME spawn child
-RUN bpftrace -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1000000000'
+RUN bpftrace -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
 EXPECT [0-9]+
 TIMEOUT 1
 

@@ -104,13 +104,13 @@ NAME probe
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", probe); exit(); }'
 EXPECT SUCCESS probe kprobe:do_nanosleep
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep 100000000
+AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME begin probe
 RUN bpftrace -e 'BEGIN { printf("%s", probe);exit(); } END{printf("-%s\n", probe); }'
 EXPECT ^BEGIN-END$
 TIMEOUT 5
-AFTER ./testprogs/syscall nanosleep 100000000
+AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
 RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
