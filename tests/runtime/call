@@ -35,7 +35,7 @@ TIMEOUT 5
 
 NAME str
 RUN bpftrace -v -e 't:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}'
-AFTER ls
+AFTER ./testprogs/syscall execve /bin/ls
 EXPECT P: /*.
 TIMEOUT 5
 

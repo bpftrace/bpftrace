@@ -74,7 +74,7 @@ EXPECT ^{"type": "syscall", "data": "a b c\\n"}$
 TIMEOUT 5
 
 NAME join_delim
-RUN bpftrace --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); exit(); }' -c "/bin/echo 'A'"
+RUN bpftrace --unsafe -f json -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); }' -c "./testprogs/syscall execve /bin/echo 'A'"
 EXPECT ^{"type": "join", "data": "/bin/echo,'A'"}
 TIMEOUT 5
 

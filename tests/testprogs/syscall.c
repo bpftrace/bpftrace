@@ -21,6 +21,7 @@ void usage()
   printf("\t open\n");
   printf("\t openat\n");
   printf("\t read\n");
+  printf("\t execve <path> [<argument>] (allows at most 1 argument for now)\n");
 }
 
 void gen_nanosleep(int argc, char *argv[])
@@ -36,20 +37,20 @@ void gen_nanosleep(int argc, char *argv[])
       printf("Invalid argument: %s; the argument should be a non-negative "
              "number with no sign\n",
              arg);
-      return;
+      exit(1);
     }
     double time;
     char tail = '\0';
     sscanf(arg, "%le%c", &time, &tail);
     if (tail != '\0')
     {
-      printf("Argument '%s' should only contain numerial charactors.\n", arg);
-      return;
+      printf("Argument '%s' should only contain numerial charactors\n", arg);
+      exit(1);
     }
     if (time < 0)
     {
-      printf("Invalid argument '%s', the argument should not be negative", arg);
-      return;
+      printf("Invalid argument '%s', the argument should be non negative", arg);
+      exit(1);
     }
     // if time is less than 1 nsec, round up to 1 nsec, as with sleep command
     if (time > 0 && time < 1)
@@ -61,7 +62,10 @@ void gen_nanosleep(int argc, char *argv[])
   }
   int r = syscall(SYS_nanosleep, &req, NULL);
   if (r)
+  {
     perror("Error in syscall nanosleep");
+    exit(1);
+  }
 }
 
 void gen_open_openat(bool is_sys_open)
@@ -72,7 +76,7 @@ void gen_open_openat(bool is_sys_open)
   if (fd < 0)
   {
     perror("Error in syscall open/openat");
-    return;
+    exit(1);
   }
   close(fd);
   remove(file_path);
@@ -85,16 +89,36 @@ void gen_read()
   if (fd < 0)
   {
     perror("Error in syscall read when creating temp file");
-    return;
+    exit(1);
   }
   char buf[10];
   int r = syscall(SYS_read, fd, (void *)buf, 0);
+  close(fd);
+  remove(file_path);
   if (r < 0)
   {
     perror("Error in syscall read");
+    exit(1);
   }
-  close(fd);
-  remove(file_path);
+}
+
+void gen_execve(int argc, char *argv[])
+{
+  if (argc < 3)
+  {
+    printf("Indicate which process to execute.\n");
+    exit(1);
+  }
+  char *newargv[] = { argv[2], NULL, NULL };
+  char *newenv[] = { NULL };
+  if (argc > 3)
+  {
+    newargv[1] = argv[3];
+  }
+  syscall(SYS_execve, argv[2], newargv, newenv);
+  // execve returns on error
+  perror("Error in syscall execve");
+  exit(1);
 }
 
 int main(int argc, char *argv[])
@@ -102,7 +126,7 @@ int main(int argc, char *argv[])
   if (argc < 2)
   {
     usage();
-    return 0;
+    exit(1);
   }
   const char *syscall_name = argv[1];
   bool is_sys_open = false;
@@ -124,9 +148,9 @@ int main(int argc, char *argv[])
   {
     gen_read();
   }
-  else if (strcmp("nop", syscall_name) == 0)
+  else if (strcmp("execve", syscall_name) == 0)
   {
-    // do nothing
+    gen_execve(argc, argv);
   }
   else
   {
