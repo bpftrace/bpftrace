@@ -9,9 +9,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#define FILE_NAME_LENGTH 50
-#define MAX_ARG_LENGTH 20
-
 void usage()
 {
   printf("Usage:\n");
@@ -45,11 +42,6 @@ void gen_nanosleep(int argc, char *argv[])
     if (tail != '\0')
     {
       printf("Argument '%s' should only contain numerial charactors\n", arg);
-      exit(1);
-    }
-    if (time < 0)
-    {
-      printf("Invalid argument '%s', the argument should be non negative", arg);
       exit(1);
     }
     // if time is less than 1 nsec, round up to 1 nsec, as with sleep command
