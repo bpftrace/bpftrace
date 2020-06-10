@@ -943,8 +943,14 @@ void AttachedProbe::attach_interval()
     abort();
   }
 
-  int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
-      PERF_COUNT_SW_CPU_CLOCK, period, freq, pid, cpu, group_fd);
+  int perf_event_fd = bpf_attach_perf_event(progfd_,
+                                            PERF_TYPE_SOFTWARE,
+                                            PERF_COUNT_SW_CPU_CLOCK,
+                                            period,
+                                            freq,
+                                            pid,
+                                            cpu,
+                                            group_fd);
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);

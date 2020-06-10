@@ -2034,9 +2034,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "interval") {
     if (ap.target == "")
       error("interval probe must have unit of time", ap.loc);
-    else if (ap.target != "ms" &&
-             ap.target != "s" &&
-             ap.target != "us" &&
+    else if (ap.target != "ms" && ap.target != "s" && ap.target != "us" &&
              ap.target != "hz")
       error(ap.target + " is not an accepted unit of time", ap.loc);
     if (ap.func != "")
