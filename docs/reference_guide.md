@@ -1297,6 +1297,8 @@ Syntax:
 ```
 interval:ms:rate
 interval:s:rate
+interval:us:rate
+interval:hz:rate
 ```
 
 This fires on one CPU only, and can be used for generating per-interval output.
