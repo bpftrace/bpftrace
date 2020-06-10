@@ -18,7 +18,7 @@ void usage()
   printf("\t open\n");
   printf("\t openat\n");
   printf("\t read\n");
-  printf("\t execve <path> [<argument>] (allows at most 1 argument for now)\n");
+  printf("\t execve <path> [<arguments>] (at most 128 arguments)\n");
 }
 
 int gen_nanosleep(int argc, char *argv[])
@@ -127,11 +127,18 @@ int gen_execve(int argc, char *argv[])
     printf("Indicate which process to execute.\n");
     return 1;
   }
-  char *newargv[] = { argv[2], NULL, NULL };
+  char *newargv[129] = { NULL };
   char *newenv[] = { NULL };
-  if (argc > 3)
+  newargv[0] = argv[2];
+  int arg_nm = argc - 3;
+  if (arg_nm > 128)
   {
-    newargv[1] = argv[3];
+    printf("Too many arguments: at most 128 arguments, %d given\n", arg_nm);
+    return 1;
+  }
+  for (int i = 0; i < argc; ++i)
+  {
+    newargv[1 + i] = argv[3 + i];
   }
   syscall(SYS_execve, argv[2], newargv, newenv);
   // execve returns on error
