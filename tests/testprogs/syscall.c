@@ -60,33 +60,56 @@ void gen_nanosleep(int argc, char *argv[])
   }
 }
 
+// the returned string was created with malloc()
+// @ path_suffix should start with '/'
+char *get_tmp_file_path(const char *path_suffix)
+{
+  const char *tmpdir = getenv("TMPDIR");
+  if (tmpdir == NULL)
+  {
+    tmpdir = "/tmp";
+  }
+  int path_len = strlen(tmpdir) + strlen(path_suffix);
+  char *path = (char *)malloc((path_len + 1) * sizeof(char));
+  memset(path, '\0', path_len + 1);
+  strncat(path, tmpdir, strlen(tmpdir));
+  strncat(path, path_suffix, strlen(path_suffix));
+  return path;
+}
+
 void gen_open_openat(bool is_sys_open)
 {
-  const char *file_path = "/tmp/bpftrace_runtime_test_syscall_gen_open_temp";
+  char *file_path = get_tmp_file_path(
+      "/bpftrace_runtime_test_syscall_gen_open_temp");
   int fd = is_sys_open ? syscall(SYS_open, file_path, O_CREAT)
                        : syscall(SYS_openat, AT_FDCWD, file_path, O_CREAT);
   if (fd < 0)
   {
     perror("Error in syscall open/openat");
+    free(file_path);
     exit(1);
   }
   close(fd);
   remove(file_path);
+  free(file_path);
 }
 
 void gen_read()
 {
-  const char *file_path = "/tmp/bpftrace_runtime_test_syscall_gen_read_temp";
+  char *file_path = get_tmp_file_path(
+      "/bpftrace_runtime_test_syscall_gen_read_temp");
   int fd = open(file_path, O_CREAT);
   if (fd < 0)
   {
     perror("Error in syscall read when creating temp file");
+    free(file_path);
     exit(1);
   }
   char buf[10];
   int r = syscall(SYS_read, fd, (void *)buf, 0);
   close(fd);
   remove(file_path);
+  free(file_path);
   if (r < 0)
   {
     perror("Error in syscall read");
