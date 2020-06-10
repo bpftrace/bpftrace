@@ -916,25 +916,21 @@ void AttachedProbe::attach_interval()
   int group_fd = -1;
   int cpu = 0;
 
-  uint64_t period, freq;
+  uint64_t period = 0, freq = 0;
   if (probe_.path == "s")
   {
     period = probe_.freq * 1e9;
-    freq = 0;
   }
   else if (probe_.path == "ms")
   {
     period = probe_.freq * 1e6;
-    freq = 0;
   }
   else if (probe_.path == "us")
   {
     period = probe_.freq * 1e3;
-    freq = 0;
   }
   else if (probe_.path == "hz")
   {
-    period = 0;
     freq = probe_.freq;
   }
   else
