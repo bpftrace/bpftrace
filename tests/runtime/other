@@ -99,8 +99,8 @@ EXPECT hello world
 TIMEOUT 1
 
 NAME string compare map lookup
-RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "cat"/ { @[comm] = 1; }' -c "/bin/cat /dev/null"
-EXPECT @\[cat\]: 1
+RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
+EXPECT @\[syscall\]: 1
 TIMEOUT 5
 
 NAME struct partial string compare - pass
@@ -167,7 +167,7 @@ NAME sigint under heavy load
 RUN bpftrace --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
 EXPECT end
 TIMEOUT 5
-AFTER  sleep 2; pkill -SIGINT bpftrace
+AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
 NAME bitfield access
 RUN bpftrace -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'

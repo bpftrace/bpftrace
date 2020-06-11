@@ -37,13 +37,13 @@ NAME global_associative_arrays
 RUN bpftrace -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}'
 EXPECT slept for [0-9]+ ms
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME scratch
 RUN bpftrace -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }'
 EXPECT slept for [0-9]* ms
 TIMEOUT 5
-AFTER cat /dev/null
+AFTER ./testprogs/syscall read
 
 NAME 32-bit tracepoint arg
 RUN bpftrace -v -e 'tracepoint:random:urandom_read { $i = args->got_bits; printf("bits: %d\n", $i); if ($i == 24) { exit() } }'
