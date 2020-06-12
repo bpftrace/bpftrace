@@ -771,48 +771,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "print")
   {
-    auto elements = AsyncEvent::Print().asLLVMType(b_);
-    StructType *print_struct = b_.GetStructType(call.func + "_t",
-                                                elements,
-                                                true);
-
-    auto &arg = *call.vargs->at(0);
-    auto &map = static_cast<Map&>(arg);
-
-    AllocaInst *buf = b_.CreateAllocaBPF(print_struct,
-                                         call.func + "_" + map.ident);
-
-    // store asyncactionid:
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print)),
-                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
-
-    auto id = bpftrace_.maps_[map.ident]->id;
-    auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
-    b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
-
-    // top, div
-    // first loops sets the arguments as passed by user. The second one zeros
-    // the rest
-    size_t arg_idx = 1;
-    for (; arg_idx < call.vargs->size(); arg_idx++)
-    {
-      call.vargs->at(arg_idx)->accept(*this);
-
-      b_.CreateStore(
-          b_.CreateIntCast(expr_, elements.at(arg_idx), false),
-          b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
-    }
-
-    for (; arg_idx < 3; arg_idx++)
-    {
-      b_.CreateStore(
-          b_.GetIntSameSize(0, elements.at(arg_idx)),
-          b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
-    }
-
-    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct));
-    b_.CreateLifetimeEnd(buf);
-    expr_ = nullptr;
+    createPrintMapCall(call);
   }
   else if (call.func == "clear" || call.func == "zero")
   {
@@ -2331,6 +2290,50 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   id++;
   b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
   b_.CreateLifetimeEnd(fmt_args);
+  expr_ = nullptr;
+}
+
+void CodegenLLVM::createPrintMapCall(Call &call)
+{
+  auto elements = AsyncEvent::Print().asLLVMType(b_);
+  StructType *print_struct = b_.GetStructType(call.func + "_t", elements, true);
+
+  auto &arg = *call.vargs->at(0);
+  auto &map = static_cast<Map &>(arg);
+
+  AllocaInst *buf = b_.CreateAllocaBPF(print_struct,
+                                       call.func + "_" + map.ident);
+
+  // store asyncactionid:
+  b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print)),
+                 b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+
+  auto id = bpftrace_.maps_[map.ident]->id;
+  auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
+  b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
+
+  // top, div
+  // first loops sets the arguments as passed by user. The second one zeros
+  // the rest
+  size_t arg_idx = 1;
+  for (; arg_idx < call.vargs->size(); arg_idx++)
+  {
+    call.vargs->at(arg_idx)->accept(*this);
+
+    b_.CreateStore(b_.CreateIntCast(expr_, elements.at(arg_idx), false),
+                   b_.CreateGEP(buf,
+                                { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
+  }
+
+  for (; arg_idx < 3; arg_idx++)
+  {
+    b_.CreateStore(b_.GetIntSameSize(0, elements.at(arg_idx)),
+                   b_.CreateGEP(buf,
+                                { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
+  }
+
+  b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct));
+  b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
 

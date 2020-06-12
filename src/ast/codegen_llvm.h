@@ -70,6 +70,7 @@ public:
   void createLinearFunction();
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
                               const std::string &call_name, AsyncAction async_action);
+  void createPrintMapCall(Call &call);
   std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
 
 private:
