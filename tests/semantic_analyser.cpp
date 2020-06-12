@@ -666,6 +666,7 @@ TEST(semantic_analyser, call_reg)
   test("kprobe:f { reg(\"blah\"); }", 1);
   test("kprobe:f { reg(); }", 1);
   test("kprobe:f { reg(123); }", 1);
+  test("tracepoint:category:event { reg(\"ip\") }", 1);
 }
 
 TEST(semantic_analyser, call_func)
@@ -1773,6 +1774,8 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_1 { $x = args->a; $y = args->foo1; }", 0);
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kretfunc:func_1 { $x = args->foo; }", 1);
+  test("kfunc:func_1 { reg(\"ip\") }", 1);
+  test("kretfunc:func_1 { reg(\"ip\") }", 1);
 }
 
 TEST_F(semantic_analyser_btf, short_name)

@@ -670,8 +670,11 @@ void SemanticAnalyser::visit(Call &call)
     if (check_nargs(call, 1)) {
       for (auto &attach_point : *probe_->attach_points) {
         ProbeType type = probetype(attach_point->provider);
-        if (type == ProbeType::tracepoint) {
-          error("The reg function cannot be used with 'tracepoint' probes",
+        if (type == ProbeType::tracepoint || type == ProbeType::kfunc ||
+            type == ProbeType::kretfunc)
+        {
+          error("The reg function cannot be used with '" +
+                    attach_point->provider + "' probes",
                 call.loc);
           continue;
         }
