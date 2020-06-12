@@ -114,6 +114,13 @@ public:
   bool operator==(const SizedType &t) const;
   bool operator!=(const SizedType &t) const;
 
+  bool IsPrintableTy()
+  {
+    return type != Type::none && type != Type::cast && type != Type::ctx &&
+           type != Type::stack_mode && type != Type::array &&
+           type != Type::record;
+  }
+
   bool IsSigned(void) const;
 
   size_t GetIntBitWidth() const
