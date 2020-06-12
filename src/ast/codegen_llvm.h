@@ -71,6 +71,7 @@ public:
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
                               const std::string &call_name, AsyncAction async_action);
   void createPrintMapCall(Call &call);
+  void createPrintNonMapCall(Call &call, int &id);
   std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
 
 private:
@@ -103,6 +104,7 @@ private:
   int cat_id_ = 0;
   uint64_t join_id_ = 0;
   int system_id_ = 0;
+  int non_map_print_id_ = 0;
 
   size_t getStructSize(StructType *s)
   {

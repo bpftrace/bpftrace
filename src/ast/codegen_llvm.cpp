@@ -771,7 +771,10 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "print")
   {
-    createPrintMapCall(call);
+    if (call.vargs->at(0)->is_map)
+      createPrintMapCall(call);
+    else
+      createPrintNonMapCall(call, non_map_print_id_);
   }
   else if (call.func == "clear" || call.func == "zero")
   {
@@ -1814,6 +1817,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_time_id = time_id_;
     int starting_join_id = join_id_;
     int starting_helper_error_id = b_.helper_error_id_;
+    int starting_non_map_print_id = non_map_print_id_;
 
     auto reset_ids = [&]() {
       printf_id_ = starting_printf_id;
@@ -1822,6 +1826,7 @@ void CodegenLLVM::visit(Probe &probe)
       time_id_ = starting_time_id;
       join_id_ = starting_join_id;
       b_.helper_error_id_ = starting_helper_error_id;
+      non_map_print_id_ = starting_non_map_print_id;
     };
 
     for (auto attach_point : *probe.attach_points) {
@@ -2333,6 +2338,47 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   }
 
   b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct));
+  b_.CreateLifetimeEnd(buf);
+  expr_ = nullptr;
+}
+
+void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
+{
+  auto &arg = *call.vargs->at(0);
+  expr_deleter_ = nullptr;
+  arg.accept(*this);
+
+  auto elements = AsyncEvent::PrintNonMap().asLLVMType(b_, arg.type.size);
+  std::ostringstream struct_name;
+  struct_name << call.func << "_" << arg.type.type << "_" << arg.type.size
+              << "_t";
+  StructType *print_struct = b_.GetStructType(struct_name.str(),
+                                              elements,
+                                              true);
+  AllocaInst *buf = b_.CreateAllocaBPF(print_struct, struct_name.str());
+  size_t struct_size = layout_.getTypeAllocSize(print_struct);
+
+  // Store asyncactionid:
+  b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print_non_map)),
+                 b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+
+  // Store print id
+  b_.CreateStore(b_.getInt64(id),
+                 b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
+
+  // Store content
+  Value *content_offset = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(2) });
+  b_.CREATE_MEMSET(content_offset, b_.getInt8(0), arg.type.size, 1);
+  if (arg.type.IsAggregate())
+    b_.CREATE_MEMCPY(content_offset, expr_, arg.type.size, 1);
+  else
+    b_.CreateStore(expr_, content_offset);
+
+  if (expr_deleter_)
+    expr_deleter_();
+
+  id++;
+  b_.CreatePerfEventOutput(ctx_, buf, struct_size);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
