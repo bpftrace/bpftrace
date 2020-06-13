@@ -26,5 +26,5 @@ TIMEOUT 5
 NAME ntop_tracepoint_args
 RUN bpftrace -v -e 'tracepoint:tcp:tcp_destroy_sock { printf("%s\n", ntop(args->daddr)); exit(); }'
 EXPECT [0-9]+.[0-9]+.[0-9]+.[0-9]+
-AFTER curl www.google.com &> /dev/null
+AFTER curl -s www.google.com > /dev/null
 TIMEOUT 5
