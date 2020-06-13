@@ -32,12 +32,6 @@ static std::array<std::string, 27> registers = {
   "flags",
   "sp",
   "ss",
-  "fs_base",
-  "gs_base",
-  "ds",
-  "es",
-  "fs",
-  "gs",
 };
 
 static std::array<std::string, 6> arg_registers = {
