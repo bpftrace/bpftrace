@@ -86,6 +86,8 @@ and this project adheres to
   - [#1370](https://github.com/iovisor/bpftrace/pull/1370)
 - Reduce high memory consumption when using usdt semaphore
   - [#1374](https://github.com/iovisor/bpftrace/pull/1374)
+- Remove registers that are not in struct pt_regs (x86-64)
+  - [#1383](https://github.com/iovisor/bpftrace/issues/1383)
 
 #### Tools
 
