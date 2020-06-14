@@ -21,14 +21,14 @@ namespace ast {
 
 static const std::map<std::string, std::tuple<size_t, bool>>& getIntcasts() {
   static const std::map<std::string, std::tuple<size_t, bool>> intcasts = {
-    {"uint8", std::tuple<size_t, bool>{1, false}},
-    {"int8", std::tuple<size_t, bool>{1, true}},
-    {"uint16", std::tuple<size_t, bool>{2, false}},
-    {"int16", std::tuple<size_t, bool>{2, true}},
-    {"uint32", std::tuple<size_t, bool>{4, false}},
-    {"int32", std::tuple<size_t, bool>{4, true}},
-    {"uint64", std::tuple<size_t, bool>{8, false}},
-    {"int64", std::tuple<size_t, bool>{8, true}},
+    { "uint8", std::tuple<size_t, bool>{ 8, false } },
+    { "int8", std::tuple<size_t, bool>{ 8, true } },
+    { "uint16", std::tuple<size_t, bool>{ 16, false } },
+    { "int16", std::tuple<size_t, bool>{ 16, true } },
+    { "uint32", std::tuple<size_t, bool>{ 32, false } },
+    { "int32", std::tuple<size_t, bool>{ 32, true } },
+    { "uint64", std::tuple<size_t, bool>{ 64, false } },
+    { "int64", std::tuple<size_t, bool>{ 64, true } },
   };
   return intcasts;
 }
@@ -107,12 +107,13 @@ void SemanticAnalyser::visit(Identifier &identifier)
   }
   else if (bpftrace_.structs_.count(identifier.ident) != 0)
   {
-    identifier.type = CreateCast(8 * bpftrace_.structs_[identifier.ident].size);
+    identifier.type = CreateRecord(
+        8 * bpftrace_.structs_[identifier.ident].size, identifier.ident);
   }
   else if (getIntcasts().count(identifier.ident) != 0)
   {
     identifier.type = CreateInt(
-        8 * std::get<0>(getIntcasts().at(identifier.ident)));
+        std::get<0>(getIntcasts().at(identifier.ident)));
   }
   else {
     identifier.type = CreateNone();
@@ -139,8 +140,10 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         match);
     Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-    builtin.type = CreateCTX(cstruct.size, tracepoint_struct);
-    builtin.type.is_pointer = true;
+
+    builtin.type = CreatePointer(
+        CreateRecord(8 * cstruct.size, tracepoint_struct));
+    builtin.type.MarkCtxAccess();
     builtin.type.is_tparg = true;
   }
 }
@@ -167,9 +170,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
   {
-    builtin.type = SizedType(Type::ctx, sizeof(uintptr_t), false);
-    builtin.type.is_pointer = true;
-
     ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
     bpf_prog_type bt = progtype(pt);
     for (auto &attach_point : *probe_->attach_points)
@@ -184,14 +184,20 @@ void SemanticAnalyser::visit(Builtin &builtin)
     switch (bt)
     {
       case BPF_PROG_TYPE_KPROBE:
-        builtin.type.cast_type = "struct pt_regs";
+        builtin.type = CreatePointer(
+            CreateRecord(bpftrace_.structs_["pt_regs"].size * 8,
+                         "struct pt_regs"));
+        builtin.type.MarkCtxAccess();
         break;
       case BPF_PROG_TYPE_TRACEPOINT:
         LOG(ERROR, builtin.loc, err_)
             << "Use args instead of ctx in tracepoint";
         break;
       case BPF_PROG_TYPE_PERF_EVENT:
-        builtin.type.cast_type = "struct bpf_perf_event_data";
+        builtin.type = CreatePointer(
+            CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size * 8,
+                         "struct bpf_perf_event_data"));
+        builtin.type.MarkCtxAccess();
         break;
       default:
         LOG(ERROR, builtin.loc, err_) << "invalid program type";
@@ -202,7 +208,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
            builtin.ident == "pid" || builtin.ident == "tid" ||
            builtin.ident == "cgroup" || builtin.ident == "uid" ||
            builtin.ident == "gid" || builtin.ident == "cpu" ||
-           builtin.ident == "curtask" || builtin.ident == "rand")
+           builtin.ident == "rand")
   {
     builtin.type = CreateUInt64();
     if (builtin.ident == "cgroup" &&
@@ -216,15 +222,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       needs_elapsed_map_ = true;
     }
-    else if (builtin.ident == "curtask")
-    {
-      /*
-      * Retype curtask to its original type: struct task_truct.
-      */
-      builtin.type.type = Type::cast;
-      builtin.type.cast_type = "struct task_struct";
-      builtin.type.is_pointer = true;
-    }
+  }
+  else if (builtin.ident == "curtask")
+  {
+    /*
+     * Retype curtask to its original type: struct task_truct.
+     */
+    builtin.type = CreatePointer(CreateRecord(0, "struct task_struct"));
   }
   else if (builtin.ident == "retval")
   {
@@ -351,7 +355,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
-      builtin.type = SizedType(Type::ctx, 0);
+      builtin.type = CreatePointer(CreateRecord(0, "struct kfunc"));
+      builtin.type.MarkCtxAccess();
       builtin.type.is_kfarg = true;
     }
     else
@@ -524,7 +529,13 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
-      check_arg(call, Type::integer, 0);
+      auto &t = call.vargs->at(0)->type;
+      if (!t.IsIntegerTy() && !t.IsPtrTy())
+      {
+        LOG(ERROR, call.loc, err_)
+            << "() expects an integer or a pointer type as first "
+            << "argument ( " << t << " provided)";
+      }
       call.type = CreateString(bpftrace_.strlen_);
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
@@ -540,11 +551,14 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     auto &arg = *call.vargs->at(0);
-    if (!(arg.type.IsIntTy() || arg.type.IsStringTy() || arg.type.IsArrayTy()))
+    if (!(arg.type.IsIntTy() || arg.type.IsStringTy() || arg.type.IsPtrTy() ||
+          arg.type.IsArrayTy()))
+    {
       LOG(ERROR, call.loc, err_)
           << call.func
           << "() expects an integer, string, or array argument but saw "
           << typestr(arg.type.type);
+    }
 
     size_t max_buffer_size = bpftrace_.strlen_;
     size_t buffer_size = max_buffer_size;
@@ -589,7 +603,8 @@ void SemanticAnalyser::visit(Call &call)
     if (check_nargs(call, 1)) {
       // allow symbol lookups on casts (eg, function pointers)
       auto &arg = *call.vargs->at(0);
-      if (arg.type.type != Type::integer && arg.type.type != Type::cast)
+      auto &type = arg.type;
+      if (!type.IsIntegerTy() && !type.IsPtrTy())
         LOG(ERROR, call.loc, err_)
             << call.func << "() expects an integer or pointer argument";
     }
@@ -634,22 +649,35 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "join") {
     check_assignment(call, false, false, false);
-    check_varargs(call, 1, 2);
-    check_arg(call, Type::integer, 0);
     call.type = CreateNone();
     needs_join_map_ = true;
 
-    if (is_final_pass()) {
-      if (call.vargs && call.vargs->size() > 1) {
-        if (check_arg(call, Type::string, 1, true)) {
-          auto &join_delim_arg = *call.vargs->at(1);
-          String &join_delim_str = static_cast<String&>(join_delim_arg);
-          bpftrace_.join_args_.push_back(join_delim_str.str);
-        }
-      } else {
-        std::string join_delim_default = " ";
-        bpftrace_.join_args_.push_back(join_delim_default);
+    if (!check_varargs(call, 1, 2))
+      return;
+
+    if (!is_final_pass())
+      return;
+
+    auto &arg = *call.vargs->at(0);
+    if (!(arg.type.IsIntTy() || arg.type.IsPtrTy()))
+    {
+      LOG(ERROR, call.loc, err_) << "() only supports int or pointer arguments"
+                                 << " (" << arg.type.type << " provided)";
+    }
+
+    if (call.vargs && call.vargs->size() > 1)
+    {
+      if (check_arg(call, Type::string, 1, true))
+      {
+        auto &join_delim_arg = *call.vargs->at(1);
+        String &join_delim_str = static_cast<String &>(join_delim_arg);
+        bpftrace_.join_args_.push_back(join_delim_str.str);
       }
+    }
+    else
+    {
+      std::string join_delim_default = " ";
+      bpftrace_.join_args_.push_back(join_delim_default);
     }
   }
   else if (call.func == "reg") {
@@ -726,18 +754,18 @@ void SemanticAnalyser::visit(Call &call)
             << probe_->attach_points->at(i)->name("") << "\"";
       }
     }
-    call.type = CreateUInt64();
-    call.type.is_pointer = true;
+    size_t pointee_size = 0;
     switch (sizes.at(0))
     {
       case 1:
       case 2:
       case 4:
-        call.type.pointee_size = sizes.at(0);
+        pointee_size = sizes.at(0) * 8;
         break;
       default:
-        call.type.pointee_size = 8;
+        pointee_size = 64;
     }
+    call.type = CreatePointer(CreateInt(pointee_size));
   }
   else if (call.func == "cgroupid") {
     if (check_nargs(call, 1)) {
@@ -1096,7 +1124,7 @@ void SemanticAnalyser::visit(Map &map)
         map.vargs->at(i) = cast;
         expr = cast;
       }
-      else if (expr->type.IsCtxTy())
+      else if (expr->type.IsCtxAccess())
       {
         // map functions only accepts a pointer to a element in the stack
         LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
@@ -1178,8 +1206,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &indextype = arr.indexpr->type;
 
   if (is_final_pass()) {
-    if (!((type.IsCtxTy() || type.IsArrayTy()) &&
-          !type.GetElementTy()->IsNoneTy()))
+    if (!type.IsArrayTy())
     {
       LOG(ERROR, arr.loc, err_)
           << "The array index operator [] can only be used on arrays, found "
@@ -1202,8 +1229,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
   }
 
-  arr.type = (type.IsCtxTy() | type.IsArrayTy()) ? *type.GetElementTy()
-                                                 : CreateNone();
+  arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -1212,14 +1238,15 @@ void SemanticAnalyser::visit(Binop &binop)
   binop.right->accept(*this);
   Type &lhs = binop.left->type.type;
   Type &rhs = binop.right->type.type;
+  auto &lht = binop.left->type;
+  auto &rht = binop.right->type;
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
 
   if (is_final_pass()) {
-    if ((lhs != rhs) &&
-      // allow integer to cast pointer comparisons (eg, ptr != 0):
-      !(lhs == Type::cast && rhs == Type::integer) &&
-      !(lhs == Type::integer && rhs == Type::cast)) {
+    if ((lhs != rhs) && !(lht.IsPtrTy() && rht.IsIntegerTy()) &&
+        !(lht.IsIntegerTy() && rht.IsPtrTy()))
+    {
       LOG(ERROR, binop.left->loc + binop.right->loc, err_)
           << "Type mismatch for '" << opstr(binop) << "': comparing '" << lhs
           << "' with '" << rhs << "'";
@@ -1343,36 +1370,32 @@ void SemanticAnalyser::visit(Unop &unop)
   unop.expr->accept(*this);
 
   SizedType &type = unop.expr->type;
-  if (is_final_pass() && !(type.IsIntTy()) &&
-      !((type.IsCastTy() || type.IsCtxTy()) && unop.op == Parser::token::MUL))
+  if (is_final_pass())
   {
-    LOG(ERROR, unop.loc, err_)
-        << "The " << opstr(unop)
-        << " operator can not be used on expressions of type '" << type << "'";
+    // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
+    if (!type.IsIntegerTy() &&
+        !(unop.op == Parser::token::MUL && type.IsPtrTy()))
+    {
+      LOG(ERROR, unop.loc, err_)
+          << "The " << opstr(unop)
+          << " operator can not be used on expressions of type '" << type
+          << "'";
+    }
   }
 
-  if (unop.op == Parser::token::MUL) {
-    if (type.IsCastTy() || type.IsCtxTy())
+  if (unop.op == Parser::token::MUL)
+  {
+    if (type.IsPtrTy())
     {
-      if (type.is_pointer) {
-        int cast_size;
-        auto &intcasts = getIntcasts();
-        auto k_v = intcasts.find(type.cast_type);
-        if (k_v == intcasts.end() && bpftrace_.structs_.count(type.cast_type) == 0) {
-          LOG(ERROR, unop.loc, err_)
-              << "Unknown struct/union: '" << type.cast_type << "'";
-          return;
-        }
-        if (k_v != intcasts.end()) {
-          auto &v = k_v->second;
-          unop.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
-        } else {
-          cast_size = bpftrace_.structs_[type.cast_type].size;
-          unop.type = SizedType(type.type, cast_size, type.cast_type);
-        }
-        unop.type.is_tparg = type.is_tparg;
-      }
-      else if (type.is_kfarg)
+      unop.type = SizedType(*type.GetPointeeTy());
+      if (type.IsCtxAccess())
+        unop.type.MarkCtxAccess();
+      unop.type.is_kfarg = type.is_kfarg;
+      unop.type.is_tparg = type.is_tparg;
+    }
+    else if (type.IsRecordTy())
+    {
+      if (type.is_kfarg)
       {
         // args->arg access, we need to push the args builtin
         // type further through the expression ladder
@@ -1380,7 +1403,7 @@ void SemanticAnalyser::visit(Unop &unop)
       }
       else {
         LOG(ERROR, unop.loc, err_)
-            << "Can not dereference struct/union of type '" << type.cast_type
+            << "Can not dereference struct/union of type '" << type.GetName()
             << "'. It is not a pointer.";
       }
     }
@@ -1527,8 +1550,16 @@ void SemanticAnalyser::visit(FieldAccess &acc)
   acc.expr->accept(*this);
 
   SizedType &type = acc.expr->type;
-  if (type.type != Type::cast && type.type != Type::ctx &&
-      type.type != Type::tuple)
+
+  if (type.IsPtrTy())
+  {
+    LOG(ERROR, acc.loc, err_)
+        << "Can not access field '" << acc.field << "' on type '" << type
+        << "'. Try dereferencing it first, or using '->'";
+    return;
+  }
+
+  if (!type.IsRecordTy() && !type.IsTupleTy())
   {
     if (is_final_pass())
     {
@@ -1555,7 +1586,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (type.type == Type::tuple)
+  if (type.IsTupleTy())
   {
     if (acc.index < 0)
     {
@@ -1579,22 +1610,19 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (type.is_pointer) {
+  if (bpftrace_.structs_.count(type.GetName()) == 0)
+  {
     LOG(ERROR, acc.loc, err_)
-        << "Can not access field '" << acc.field << "' on type '"
-        << type.cast_type << "'. Try dereferencing it first, or using '->'";
-    return;
-  }
-  if (bpftrace_.structs_.count(type.cast_type) == 0) {
-    LOG(ERROR, acc.loc, err_)
-        << "Unknown struct/union: '" << type.cast_type << "'";
+        << "Unknown struct/union: '" << type.GetName() << "'";
     return;
   }
 
   std::map<std::string, FieldsMap> structs;
 
-  if (type.is_tparg) {
-    for (AttachPoint *attach_point : *probe_->attach_points) {
+  if (type.is_tparg)
+  {
+    for (AttachPoint *attach_point : *probe_->attach_points)
+    {
       if (probetype(attach_point->provider) != ProbeType::tracepoint)
       {
         // The args builtin can only be used with tracepoint
@@ -1610,8 +1638,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         structs[tracepoint_struct] = bpftrace_.structs_[tracepoint_struct].fields;
       }
     }
-  } else {
-    structs[type.cast_type] = bpftrace_.structs_[type.cast_type].fields;
+  }
+  else
+  {
+    structs[type.GetName()] = bpftrace_.structs_[type.GetName()].fields;
   }
 
   for (auto it : structs) {
@@ -1624,13 +1654,11 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     }
     else {
       acc.type = fields[acc.field].type;
-      if (acc.expr->type.IsCtxTy() &&
-          ((acc.type.IsCastTy() && !acc.type.is_pointer) ||
-           acc.type.IsArrayTy()))
+      if (acc.expr->type.IsCtxAccess() &&
+          (acc.type.IsArrayTy() || acc.type.IsRecordTy()))
       {
         // e.g., ((struct bpf_perf_event_data*)ctx)->regs.ax
-        // in this case, the type of FieldAccess to "regs" is Type::ctx
-        acc.type.type = Type::ctx;
+        acc.type.MarkCtxAccess();
       }
       acc.type.is_internal = type.is_internal;
     }
@@ -1641,51 +1669,57 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
-  bool is_ctx = cast.expr->type.IsCtxTy();
+  bool is_ctx = cast.expr->type.IsCtxAccess();
   auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
   int cast_size;
 
-  if (k_v == intcasts.end() && bpftrace_.structs_.count(cast.cast_type) == 0) {
+  // Built-in int types
+  if (k_v != intcasts.end())
+  {
+    auto &v = k_v->second;
+    if (cast.is_pointer)
+    {
+      cast.type = CreatePointer(CreateInteger(std::get<0>(v), std::get<1>(v)));
+      if (is_ctx)
+      {
+        LOG(ERROR, cast.loc, err_)
+            << "Integer pointer casts are not supported for type: ctx";
+      }
+    }
+    else
+    {
+      cast.type = CreateInteger(std::get<0>(v), std::get<1>(v));
+
+      auto rhs = cast.expr->type;
+      // Casting Type::ctx to Type::integer is supported to access a
+      // tracepoint's __data_loc field. See #990 and #770
+      // In this case, the context information will be lost
+      if (!rhs.IsIntTy() && !rhs.IsRecordTy() && !rhs.IsPtrTy() &&
+          !rhs.IsCtxAccess())
+      {
+        LOG(ERROR, cast.loc, err_)
+            << "Casts are not supported for type: \"" << rhs << "\"";
+      }
+    }
+    return;
+  }
+
+  if (bpftrace_.structs_.count(cast.cast_type) == 0)
+  {
     LOG(ERROR, cast.loc, err_)
         << "Unknown struct/union: '" << cast.cast_type << "'";
     return;
   }
 
-  if (cast.is_pointer) {
-    if (k_v != intcasts.end() && is_ctx)
-      LOG(ERROR, cast.loc, err_)
-          << "Integer pointer casts are not supported for type: ctx";
-    cast_size = sizeof(uintptr_t);
-    cast.type = SizedType(is_ctx ? Type::ctx : Type::cast,
-                          cast_size,
-                          cast.cast_type);
-    cast.type.is_pointer = cast.is_pointer;
-    return;
-  }
+  cast_size = bpftrace_.structs_[cast.cast_type].size * 8;
+  if (cast.is_pointer)
+    cast.type = CreatePointer(CreateRecord(cast_size, cast.cast_type));
+  else
+    cast.type = CreateRecord(cast_size, cast.cast_type);
 
-  if (k_v != intcasts.end()) {
-    auto &v = k_v->second;
-    cast.type = SizedType(Type::integer, std::get<0>(v), std::get<1>(v), k_v->first);
-
-    auto rhs = cast.expr->type.type;
-    // Casting Type::ctx to Type::integer is supported to access a
-    // tracepoint's __data_loc field. See #990 and #770
-    // In this case, the context information will be lost
-    if (!(rhs == Type::integer || rhs == Type::cast || rhs == Type::ctx))
-    {
-      LOG(ERROR, cast.loc, err_)
-          << "Casts are not supported for type: \"" << rhs << "\"";
-    }
-
-    return;
-  }
-
-  cast_size = bpftrace_.structs_[cast.cast_type].size;
-  cast.type = SizedType(is_ctx ? Type::ctx : Type::cast,
-                        cast_size,
-                        cast.cast_type);
-  cast.type.is_pointer = cast.is_pointer;
+  if (is_ctx)
+    cast.type.MarkCtxAccess();
 }
 
 void SemanticAnalyser::visit(Tuple &tuple)
@@ -1721,28 +1755,27 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assign_map_type(*assignment.map, assignment.expr->type);
 
   const std::string &map_ident = assignment.map->ident;
-  auto type = assignment.expr->type.type;
-  if (type == Type::cast)
+  auto type = assignment.expr->type;
+
+  if (type.IsRecordTy())
   {
-    std::string cast_type = assignment.expr->type.cast_type;
-    std::string curr_cast_type = map_val_[map_ident].cast_type;
-    if (curr_cast_type != "" && curr_cast_type != cast_type) {
+    std::string ty = assignment.expr->type.GetName();
+    std::string stored_ty = map_val_[map_ident].GetName();
+    if (!stored_ty.empty() && stored_ty != ty)
+    {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << map_ident << ": "
-          << "trying to assign value of type '" << cast_type
-          << "' when map already contains a value of type '" << curr_cast_type
+          << "trying to assign value of type '" << ty
+          << "' when map already contains a value of type '" << stored_ty
           << "''";
     }
-    else {
-      map_val_[map_ident].cast_type = cast_type;
-      if (!assignment.expr->type.is_pointer)
-      {
-        // A pointer value is loaded to a register, not in the stack
-        map_val_[map_ident].is_internal = true;
-      }
+    else
+    {
+      map_val_[map_ident] = assignment.expr->type;
+      map_val_[map_ident].is_internal = true;
     }
   }
-  else if (type == Type::string)
+  else if (type.IsStringTy())
   {
     auto map_size = map_val_[map_ident].size;
     auto expr_size = assignment.expr->type.size;
@@ -1762,7 +1795,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       }
     }
   }
-  else if (type == Type::buffer)
+  else if (type.IsBufferTy())
   {
     auto map_size = map_val_[map_ident].size;
     auto expr_size = assignment.expr->type.size;
@@ -1782,12 +1815,12 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       }
     }
   }
-  else if (type == Type::ctx)
+  else if (type.IsCtxAccess())
   {
     // bpf_map_update_elem() only accepts a pointer to a element in the stack
     LOG(ERROR, assignment.loc, err_) << "context cannot be assigned to a map";
   }
-  else if (type == Type::tuple)
+  else if (type.IsTupleTy())
   {
     // Early passes may not have been able to deduce the full types of tuple
     // elements yet. So wait until final pass.
@@ -1805,10 +1838,10 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
   if (is_final_pass())
   {
-    if (type == Type::none)
+    if (type.IsNoneTy())
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << type;
-    if (type == Type::array)
+    if (type.IsArrayTy())
       LOG(ERROR, assignment.expr->loc, err_)
           << "Assigning array is not supported (#1057)";
   }
@@ -1821,6 +1854,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   std::string var_ident = assignment.var->ident;
   auto search = variable_val_.find(var_ident);
   assignment.var->type = assignment.expr->type;
+
   if (search != variable_val_.end()) {
     if (search->second.IsNoneTy())
     {
@@ -1831,7 +1865,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         search->second = assignment.expr->type;
       }
     }
-    else if (search->second.type != assignment.expr->type.type) {
+    else if (!search->second.IsSameType(assignment.expr->type))
+    {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignment.expr->type
@@ -1841,29 +1876,27 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
   else {
     // This variable hasn't been seen before
-    variable_val_.insert({var_ident, assignment.expr->type});
+    variable_val_[var_ident] = assignment.expr->type;
     assignment.var->type = assignment.expr->type;
   }
 
-  if (assignment.expr->type.IsCastTy() || assignment.expr->type.IsCtxTy())
+  auto &storedTy = variable_val_[var_ident];
+  auto &assignTy = assignment.expr->type;
+
+  if (assignTy.IsRecordTy())
   {
-    std::string cast_type = assignment.expr->type.cast_type;
-    std::string curr_cast_type = variable_val_[var_ident].cast_type;
-    if (curr_cast_type != "" && curr_cast_type != cast_type) {
+    if (assignTy.GetName() != storedTy.GetName())
+    {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << cast_type
-          << "' when variable already contains a value of type '"
-          << curr_cast_type;
-    }
-    else {
-      variable_val_[var_ident].cast_type = cast_type;
+          << "trying to assign value of type '" << assignTy.GetName()
+          << "' when variable already contains a value of type '" << storedTy;
     }
   }
-  else if (assignment.expr->type.IsStringTy())
+  else if (assignTy.IsStringTy())
   {
-    auto var_size = variable_val_[var_ident].size;
-    auto expr_size = assignment.expr->type.size;
+    auto var_size = storedTy.size;
+    auto expr_size = assignTy.size;
     if (var_size != expr_size)
     {
       LOG(WARNING, assignment.loc, out_)
@@ -1872,10 +1905,10 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                    : ". The value may contain garbage.");
     }
   }
-  else if (assignment.expr->type.IsBufferTy())
+  else if (assignTy.IsBufferTy())
   {
-    auto var_size = variable_val_[var_ident].size;
-    auto expr_size = assignment.expr->type.size;
+    auto var_size = storedTy.size;
+    auto expr_size = assignTy.size;
     if (var_size != expr_size)
     {
       LOG(WARNING, assignment.loc, out_)
@@ -1884,14 +1917,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                    : ". The value may contain garbage.");
     }
   }
-  else if (assignment.expr->type.type == Type::tuple)
+  else if (assignTy.IsTupleTy())
   {
     // Early passes may not have been able to deduce the full types of tuple
     // elements yet. So wait until final pass.
     if (is_final_pass())
     {
-      auto var_type = variable_val_[var_ident];
-      auto expr_type = assignment.expr->type;
+      auto var_type = storedTy;
+      auto expr_type = assignTy;
       if (var_type != expr_type)
       {
         LOG(ERROR, assignment.loc, err_) << "Tuple type mismatch: " << var_type
@@ -1902,7 +1935,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   if (is_final_pass())
   {
-    auto &ty = assignment.expr->type.type;
+    auto &ty = assignTy.type;
     if (ty == Type::none)
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << ty;
@@ -1915,13 +1948,14 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
-  if (is_final_pass() &&
-      ((pred.expr->type.type != Type::integer) &&
-       (!(pred.expr->type.is_pointer &&
-          (pred.expr->type.IsCastTy() || pred.expr->type.IsCtxTy())))))
+  if (is_final_pass())
   {
-    LOG(ERROR, pred.loc, err_)
-        << "Invalid type for predicate: " << pred.expr->type.type;
+    SizedType &ty = pred.expr->type;
+    if (!ty.IsIntTy() && !ty.IsPtrTy())
+    {
+      LOG(ERROR, pred.loc, err_)
+          << "Invalid type for predicate: " << pred.expr->type.type;
+    }
   }
 }
 

@@ -91,7 +91,6 @@ public:
 
   size_t size;                 // in bytes
   StackType stack_type;
-  std::string cast_type;
   bool is_internal = false;
   bool is_pointer = false;
   bool is_tparg = false;
@@ -102,6 +101,7 @@ public:
   std::vector<SizedType> tuple_elems;
 
 private:
+  std::string cast_type;
   bool is_signed_ = false;
   SizedType *element_type_ = nullptr; // for "container" and pointer
                                       // (like) types
@@ -127,12 +127,13 @@ public:
   bool IsEqual(const SizedType &t) const;
   bool operator==(const SizedType &t) const;
   bool operator!=(const SizedType &t) const;
+  bool IsSameType(const SizedType &t) const;
 
   bool IsPrintableTy()
   {
-    return type != Type::none && type != Type::cast && type != Type::ctx &&
-           type != Type::stack_mode && type != Type::array &&
-           type != Type::record;
+    return type != Type::none && type != Type::record &&
+           type != Type::pointer && type != Type::stack_mode &&
+           type != Type::array && type != Type::record && !IsCtxAccess();
   }
 
   bool IsSigned(void) const;
@@ -149,7 +150,7 @@ public:
     return size;
   };
 
-  const std::string &GetName() const
+  const std::string GetName() const
   {
     assert(IsRecordTy());
     return name_;
@@ -313,6 +314,11 @@ SizedType CreateUInt64();
 SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type);
+/**
+   Create a record type
+
+   \param size size in bits
+*/
 SizedType CreateRecord(size_t size, const std::string &name);
 
 SizedType CreateStackMode();

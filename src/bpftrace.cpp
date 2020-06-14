@@ -751,6 +751,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
               *reinterpret_cast<uint64_t*>(arg_data+arg.offset)));
           break;
         }
+      case Type::pointer:
+        arg_values.push_back(std::make_unique<PrintableInt>(
+            *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
+        break;
         // fall through
       default:
         std::cerr << "invalid argument type" << std::endl;

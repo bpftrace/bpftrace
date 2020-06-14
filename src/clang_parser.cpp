@@ -290,7 +290,7 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_ULongLong:
       return CreateUInt(size);
     case CXType_Record:
-      return CreateCast(size, typestr);
+      return CreateRecord(size, typestr);
     case CXType_Char_S:
     case CXType_SChar:
     case CXType_Short:
@@ -303,20 +303,7 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_Pointer:
     {
       auto pointee_type = clang_getPointeeType(clang_type);
-      SizedType type;
-      if (pointee_type.kind == CXType_Record)
-      {
-        auto pointee_typestr = get_unqualified_type_name(pointee_type);
-        type = CreateCast(8 * sizeof(uintptr_t), pointee_typestr);
-      }
-      else
-      {
-        type = CreateUInt(8 * sizeof(uintptr_t));
-      }
-      auto pointee_size = clang_Type_getSizeOf(pointee_type);
-      type.is_pointer = true;
-      type.pointee_size = pointee_size;
-      return type;
+      return CreatePointer(get_sized_type(pointee_type));
     }
     case CXType_ConstantArray:
     {

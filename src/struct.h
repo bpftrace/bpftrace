@@ -31,7 +31,7 @@ using FieldsMap = std::map<std::string, Field>;
 
 struct Struct
 {
-  int size;
+  int size; // in bytes
   FieldsMap fields;
 };
 
