@@ -175,6 +175,14 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
 
     ty = GetStructType(ty_name.str(), llvm_elems, true);
   }
+  else if (stype.IsPtrTy())
+  {
+    ty = getInt64Ty();
+  }
+  else if (stype.IsRecordTy())
+  {
+    ty = ArrayType::get(getInt8Ty(), stype.size);
+  }
   else
   {
     switch (stype.size)

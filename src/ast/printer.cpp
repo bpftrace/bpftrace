@@ -14,7 +14,7 @@ std::string Printer::type(const SizedType &ty)
   std::stringstream buf;
   if (print_types)
   {
-    buf << " :: type[" << ty << "]";
+    buf << " :: type[" << ty << " ctx: " << ty.IsCtxAccess() << "]";
   }
   return buf.str();
 }

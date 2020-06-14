@@ -111,13 +111,12 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       auto p = static_cast<const char *>(data) + 1;
       return hex_format_buffer(p, arg.size - 1);
     }
-    case Type::cast:
-      if (arg.is_pointer) {
-        // use case: show me these pointer values
-        ptr << "0x" << std::hex << read_data<int64_t>(data);
-        return ptr.str();
-      }
-      // fall through
+    case Type::pointer:
+    {
+      // use case: show me these pointer values
+      ptr << "0x" << std::hex << read_data<int64_t>(data);
+      return ptr.str();
+    }
     default:
       std::cerr << "invalid mapkey argument type" << std::endl;
   }

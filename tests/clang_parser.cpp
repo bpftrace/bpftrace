@@ -122,10 +122,10 @@ TEST(clang_parser, integer_ptr)
   ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
   ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
 
-  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
-  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["struct Foo"].fields["x"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo"].fields["x"].type.pointee_size, sizeof(int));
+  EXPECT_TRUE(structs["struct Foo"].fields["x"].type.IsPtrTy());
+  EXPECT_EQ(
+      structs["struct Foo"].fields["x"].type.GetPointeeTy()->GetIntBitWidth(),
+      8 * sizeof(int));
   EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 }
 
@@ -143,10 +143,10 @@ TEST(clang_parser, string_ptr)
   ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
   ASSERT_EQ(structs["struct Foo"].fields.count("str"), 1U);
 
-  EXPECT_EQ(structs["struct Foo"].fields["str"].type.type, Type::integer);
-  EXPECT_EQ(structs["struct Foo"].fields["str"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["struct Foo"].fields["str"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo"].fields["str"].type.pointee_size, 1U);
+  auto &ty = structs["struct Foo"].fields["str"].type;
+  auto *pointee = ty.GetPointeeTy();
+  EXPECT_TRUE(pointee->IsIntTy());
+  EXPECT_EQ(pointee->GetIntBitWidth(), 8 * sizeof(char));
   EXPECT_EQ(structs["struct Foo"].fields["str"].offset, 0);
 }
 
@@ -184,10 +184,11 @@ TEST(clang_parser, nested_struct_named)
   ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
   ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
 
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, "struct Bar");
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, 4U);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
+  auto &bar = structs["struct Foo"].fields["bar"];
+  EXPECT_TRUE(bar.type.IsRecordTy());
+  EXPECT_EQ(bar.type.GetName(), "struct Bar");
+  EXPECT_EQ(bar.type.size, 4U);
+  EXPECT_EQ(bar.offset, 0);
 }
 
 TEST(clang_parser, nested_struct_ptr_named)
@@ -205,12 +206,12 @@ TEST(clang_parser, nested_struct_ptr_named)
   ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
   ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
 
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, "struct Bar");
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, sizeof(uintptr_t));
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.pointee_size, 4U);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
+  auto &bar = structs["struct Foo"].fields["bar"];
+  EXPECT_TRUE(bar.type.IsPtrTy());
+  EXPECT_TRUE(bar.type.GetPointeeTy()->IsRecordTy());
+  EXPECT_EQ(bar.type.GetPointeeTy()->GetName(), "struct Bar");
+  EXPECT_EQ(bar.type.GetPointeeTy()->size, sizeof(int));
+  EXPECT_EQ(bar.offset, 0);
 }
 
 TEST(clang_parser, nested_struct_no_type)
@@ -222,7 +223,6 @@ TEST(clang_parser, nested_struct_no_type)
 
   std::string bar = "struct Foo::(anonymous at definitions.h:1:14)";
   std::string baz = "union Foo::(anonymous at definitions.h:1:37)";
-
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 3U);
@@ -234,16 +234,6 @@ TEST(clang_parser, nested_struct_no_type)
   ASSERT_EQ(structs["struct Foo"].fields.size(), 2U);
   ASSERT_EQ(structs["struct Foo"].fields.count("bar"), 1U);
   ASSERT_EQ(structs["struct Foo"].fields.count("baz"), 1U);
-
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.cast_type, bar);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].type.size, 4U);
-  EXPECT_EQ(structs["struct Foo"].fields["bar"].offset, 0);
-
-  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.cast_type, baz);
-  EXPECT_EQ(structs["struct Foo"].fields["baz"].type.size, 4U);
-  EXPECT_EQ(structs["struct Foo"].fields["baz"].offset, 4);
 
   EXPECT_EQ(structs[bar].size, 4);
   ASSERT_EQ(structs[bar].fields.size(), 1U);
@@ -260,6 +250,18 @@ TEST(clang_parser, nested_struct_no_type)
   EXPECT_EQ(structs[baz].fields["y"].type.type, Type::integer);
   EXPECT_EQ(structs[baz].fields["y"].type.size, 4U);
   EXPECT_EQ(structs[baz].fields["y"].offset, 0);
+
+  {
+    auto &bar = structs["struct Foo"].fields["bar"];
+    EXPECT_TRUE(bar.type.IsRecordTy());
+    EXPECT_EQ(bar.type.size, sizeof(int));
+    EXPECT_EQ(bar.offset, 0);
+
+    auto &baz = structs["struct Foo"].fields["baz"];
+    EXPECT_TRUE(baz.type.IsRecordTy());
+    EXPECT_EQ(baz.type.size, sizeof(int));
+    EXPECT_EQ(baz.offset, 4);
+  }
 }
 
 TEST(clang_parser, nested_struct_unnamed_fields)
@@ -591,7 +593,7 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(structs["struct Foo2"].fields["a"].type.size, 4U);
   EXPECT_EQ(structs["struct Foo2"].fields["a"].offset, 0);
 
-  EXPECT_EQ(structs["struct Foo2"].fields["f"].type.type, Type::cast);
+  EXPECT_EQ(structs["struct Foo2"].fields["f"].type.type, Type::record);
   EXPECT_EQ(structs["struct Foo2"].fields["f"].type.size, 16U);
   EXPECT_EQ(structs["struct Foo2"].fields["f"].offset, 8);
 
@@ -604,17 +606,15 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_EQ(structs["struct Foo3"].fields.count("foo1"), 1U);
   ASSERT_EQ(structs["struct Foo3"].fields.count("foo2"), 1U);
 
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.size, 8U);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].type.cast_type, "struct Foo1");
-  EXPECT_EQ(structs["struct Foo3"].fields["foo1"].offset, 0);
+  auto foo1 = structs["struct Foo3"].fields["foo1"];
+  auto foo2 = structs["struct Foo3"].fields["foo2"];
+  EXPECT_TRUE(foo1.type.IsPtrTy());
+  EXPECT_EQ(foo1.type.GetPointeeTy()->GetName(), "struct Foo1");
+  EXPECT_EQ(foo1.offset, 0);
 
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.size, 8U);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.is_pointer, true);
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].type.cast_type, "struct Foo2");
-  EXPECT_EQ(structs["struct Foo3"].fields["foo2"].offset, 8);
+  EXPECT_TRUE(foo2.type.IsPtrTy());
+  EXPECT_EQ(foo2.type.GetPointeeTy()->GetName(), "struct Foo2");
+  EXPECT_EQ(foo2.offset, 8);
 }
 
 TEST_F(clang_parser_btf, btf_field_struct)
@@ -683,12 +683,16 @@ TEST(clang_parser, struct_qualifiers)
         bpftrace);
 
   StructMap &structs = bpftrace.structs_;
-  EXPECT_EQ(structs["struct b"].size, 16);
-  EXPECT_EQ(structs["struct b"].fields.size(), 2U);
-  EXPECT_EQ(structs["struct b"].fields["a"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct b"].fields["a"].type.cast_type, "struct a");
-  EXPECT_EQ(structs["struct b"].fields["a2"].type.type, Type::cast);
-  EXPECT_EQ(structs["struct b"].fields["a2"].type.cast_type, "struct a");
+  auto &SB = structs["struct b"];
+  EXPECT_EQ(SB.size, 16);
+  EXPECT_EQ(SB.fields.size(), 2U);
+
+  EXPECT_TRUE(SB.fields["a"].type.IsPtrTy());
+  EXPECT_TRUE(SB.fields["a"].type.GetPointeeTy()->IsRecordTy());
+  EXPECT_EQ(SB.fields["a"].type.GetPointeeTy()->GetName(), "struct a");
+
+  EXPECT_TRUE(SB.fields["a2"].type.IsRecordTy());
+  EXPECT_EQ(SB.fields["a2"].type.GetName(), "struct a");
 }
 
 } // namespace clang_parser

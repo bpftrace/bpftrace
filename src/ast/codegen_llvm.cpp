@@ -1222,10 +1222,10 @@ void CodegenLLVM::visit(Unop &unop)
       case bpftrace::Parser::token::MUL:
       {
         int size = type.size;
-        if (type.is_pointer)
+        if (type.IsPtrTy())
         {
           // When dereferencing a 32-bit integer, only read in 32-bits, etc.
-          size = type.pointee_size;
+          size = type.GetPointeeTy()->size;
         }
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
         b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
@@ -1240,15 +1240,17 @@ void CodegenLLVM::visit(Unop &unop)
         abort();
     }
   }
-  else if (type.IsCastTy() || type.IsCtxTy())
+  else if (type.IsPtrTy())
   {
-    switch (unop.op) {
+    switch (unop.op)
+    {
       case bpftrace::Parser::token::MUL:
       {
-        if (type.is_pointer && unop.type.IsIntTy())
+        if (unop.type.IsIntegerTy())
         {
-          int size = unop.type.size;
-          AllocaInst *dst = b_.CreateAllocaBPF(unop.type, "deref");
+          auto *et = type.GetPointeeTy();
+          int size = et->GetIntBitWidth() / 8;
+          AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
           b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
           expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                    b_.getInt64Ty(),
@@ -1257,8 +1259,7 @@ void CodegenLLVM::visit(Unop &unop)
         }
         break;
       }
-      default:
-        ; // Do nothing
+      default:; // Do nothing
     }
   }
   else
@@ -1349,8 +1350,14 @@ void CodegenLLVM::visit(Ternary &ternary)
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
-  assert(type.IsCastTy() || type.IsCtxTy() || type.IsTupleTy());
+  assert(type.IsRecordTy() || type.IsCastTy() || type.IsCtxTy() || type.IsTupleTy());
   auto scoped_del = accept(acc.expr);
+
+  bool is_ctx = type.IsCtxAccess();
+  bool is_tparg = type.is_tparg;
+  bool is_internal = type.is_internal;
+  bool is_kfarg = type.is_kfarg;
+  assert(type.IsRecordTy() || type.IsTupleTy());
 
   if (type.is_kfarg)
   {
@@ -1375,26 +1382,32 @@ void CodegenLLVM::visit(FieldAccess &acc)
     return;
   }
 
-  std::string cast_type = type.is_tparg ? tracepoint_struct_ : type.cast_type;
+  std::string cast_type = is_tparg ? tracepoint_struct_ : type.GetName();
   Struct &cstruct = bpftrace_.structs_[cast_type];
 
-  type = SizedType(type);
-  type.size = cstruct.size;
-  type.cast_type = cast_type;
+  // This overwrites the stored type!
+  type = CreateRecord(cstruct.size, cast_type);
+  if (is_ctx)
+    type.MarkCtxAccess();
+  type.is_tparg = is_tparg;
+  type.is_internal = is_internal;
+  type.is_kfarg = is_kfarg;
 
   auto &field = cstruct.fields[acc.field];
 
-  if (type.is_internal)
+  if (is_internal)
   {
     // The struct we are reading from has already been pulled into
     // BPF-memory, e.g. by being stored in a map.
     // Just read from the correct offset of expr_
     Value *src = b_.CreateGEP(expr_, {b_.getInt64(0), b_.getInt64(field.offset)});
 
-    if (field.type.IsCastTy())
+    if (field.type.IsRecordTy())
     {
       // TODO This should be do-able without allocating more memory here
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type, "internal_" + type.cast_type + "." + acc.field);
+      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                           "internal_" + type.GetName() + "." +
+                                               acc.field);
       b_.CREATE_MEMCPY(dst, src, field.type.size, 1);
       expr_ = dst;
       expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
@@ -1416,9 +1429,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // so expr_ will contain an external pointer to the start of the struct
 
     Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
-    llvm::Type *field_ty = b_.GetType(field.type);
 
-    if (field.type.IsCastTy() && !field.type.is_pointer)
+    if (field.type.IsRecordTy())
     {
       // struct X
       // {
@@ -1432,8 +1444,11 @@ void CodegenLLVM::visit(FieldAccess &acc)
       expr_ = src;
       // Extend lifetime of source buffer
       expr_deleter_ = scoped_del.disarm();
+      return;
     }
-    else if (field.type.IsArrayTy())
+
+    llvm::Type *field_ty = b_.GetType(field.type);
+    if (field.type.IsArrayTy())
     {
       // For array types, we want to just pass pointer along,
       // since the offset of the field should be the start of the array.
@@ -1445,8 +1460,9 @@ void CodegenLLVM::visit(FieldAccess &acc)
     }
     else if (field.type.IsStringTy() || field.type.IsBufferTy())
     {
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
-      if (type.IsCtxTy())
+      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                           type.GetName() + "." + acc.field);
+      if (type.IsCtxAccess())
       {
         // Map functions only accept a pointer to a element in the stack
         // Copy data to avoid the above issue
@@ -1466,13 +1482,13 @@ void CodegenLLVM::visit(FieldAccess &acc)
     else if (field.type.IsIntTy() && field.is_bitfield)
     {
       Value *raw;
-      if (type.IsCtxTy())
+      if (type.IsCtxAccess())
         raw = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
                             true);
       else
       {
         AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                             type.cast_type + "." + acc.field);
+                                             type.GetName() + "." + acc.field);
         // memset so verifier doesn't complain about reading uninitialized stack
         b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.size, 1);
         b_.CreateProbeRead(ctx_, dst, field.bitfield.read_bytes, src, acc.loc);
@@ -1483,9 +1499,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
       Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
       expr_ = masked;
     }
-    else if (type.IsCtxTy() &&
-             (field.type.IsIntTy() ||
-              (field.type.IsCastTy() && field.type.is_pointer)))
+    else if ((field.type.IsIntTy() || field.type.IsPtrTy()) &&
+             type.IsCtxAccess())
     {
       expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
                             true);
@@ -1493,7 +1508,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
     }
     else
     {
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
+      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                           type.GetName() + "." + acc.field);
       b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                b_.getInt64Ty(),
@@ -1515,13 +1531,13 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   auto scoped_del_index = accept(arr.indexpr);
 
   index = b_.CreateIntCast(expr_, b_.getInt64Ty(), arr.expr->type.IsSigned());
-  offset = b_.CreateMul(index, b_.getInt64(type.pointee_size));
+  offset = b_.CreateMul(index, b_.getInt64(type.GetElementTy()->size));
 
   Value *src = b_.CreateAdd(array, offset);
 
   // TODO: Use the real type instead of an int
   auto stype = SizedType(Type::integer, element_size);
-  if (arr.expr->type.IsCtxTy())
+  if (arr.expr->type.IsCtxAccess())
   {
     auto ty = b_.GetType(stype);
     expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
@@ -1590,7 +1606,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   {
     val = expr;
   }
-  else if (map.type.IsCastTy())
+  else if (map.type.IsRecordTy())
   {
     if (assignment.expr->type.is_internal)
     {
@@ -1614,6 +1630,15 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
       val = dst;
       self_alloca = true;
     }
+  }
+  else if (map.type.IsPtrTy())
+  {
+    // expr currently contains a pointer to the struct
+    // and that's what we are saving
+    AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
+    b_.CreateStore(expr, dst);
+    val = dst;
+    self_alloca = true;
   }
   else
   {

@@ -378,41 +378,32 @@ SizedType BTF::get_stype(__u32 id)
 
   t = btf_type_skip_modifiers(t);
 
-  stype.is_kfarg = true;
+  auto stype = CreateNone();
 
   if (btf_is_int(t) || btf_is_enum(t))
   {
-    return CreateInteger(btf_int_bits(t), btf_int_encoding(t) & BTF_INT_SIGNED);
+    stype = CreateInteger(btf_int_bits(t),
+                          btf_int_encoding(t) & BTF_INT_SIGNED);
+  }
+  else if (btf_is_composite(t))
+  {
+    const char *cast = btf_str(btf, t->name_off);
+    assert(cast);
+    std::string comp = btf_is_struct(t) ? "struct" : "union";
+    stype = CreateRecord(0, comp + " " + cast);
   }
   else if (btf_is_ptr(t))
   {
-    SizedType stype;
-    stype.is_pointer = true;
-
     // get the pointer type..
     t = btf__type_by_id(btf, t->type);
     // .. and skip the trash.
     t = btf_type_skip_modifiers(t);
 
-    if (btf_is_composite(t))
-    {
-      const char *cast = btf_str(btf, t->name_off);
-
-      if (cast)
-      {
-        std::string comp = btf_is_struct(t) ? "struct" : "union";
-
-        stype.type = Type::cast;
-        stype.cast_type = comp + " " + cast;
-      }
-    }
-    else
-    {
-      stype.type = Type::integer;
-    }
+    stype = CreatePointer(get_stype(t->type));
   }
 
-  return CreateNone();
+  stype.is_kfarg = true;
+  return stype;
 }
 
 int BTF::resolve_args(const std::string &func,

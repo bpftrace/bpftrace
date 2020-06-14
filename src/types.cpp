@@ -14,13 +14,15 @@ std::ostream &operator<<(std::ostream &os, Type type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  if (type.IsCastTy())
+  if (type.IsRecordTy())
   {
-    os << type.cast_type;
+    os << type.GetName();
   }
-  else if (type.IsCtxTy())
+  else if (type.IsPtrTy())
   {
-    os << "(ctx) " << type.cast_type;
+    if (type.IsCtxAccess())
+      os << "(ctx) ";
+    os << *type.GetPointeeTy() << " *";
   }
   else if (type.IsIntTy())
   {
@@ -34,7 +36,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   {
     os << type.type << "[" << type.size << "]";
   }
-  else if (type.type == Type::tuple)
+  else if (type.IsTupleTy())
   {
     os << "(";
     size_t n = type.tuple_elems.size();
@@ -57,8 +59,31 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   return os;
 }
 
+bool SizedType::IsSameType(const SizedType &t) const
+{
+  if (t.type != type)
+    return false;
+
+  if (IsRecordTy())
+    return t.GetName() == GetName();
+
+  if (IsPtrTy() && t.IsPtrTy())
+    return GetPointeeTy()->IsSameType(*t.GetPointeeTy());
+
+  return type == t.type;
+}
+
 bool SizedType::IsEqual(const SizedType &t) const
 {
+  if (t.type != type)
+    return false;
+
+  if (IsRecordTy())
+    return t.GetName() == GetName() && t.size == size;
+
+  if (IsPtrTy())
+    return *t.GetPointeeTy() == *GetPointeeTy();
+
   return type == t.type && size == t.size && is_signed_ == t.is_signed_;
 }
 
@@ -75,13 +100,12 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsArray() const
 {
   return type == Type::array || type == Type::string || type == Type::usym ||
-         type == Type::inet || type == Type::buffer ||
-         ((type == Type::cast || type == Type::ctx) && !is_pointer);
+         type == Type::inet || type == Type::buffer || type == Type::record;
 }
 
 bool SizedType::IsAggregate() const
 {
-  return IsArray() || IsTupleTy();
+  return IsArray() || IsTupleTy() || IsRecordTy();
 }
 
 bool SizedType::IsStack() const
@@ -296,7 +320,7 @@ SizedType CreatePointer(const SizedType &pointee_type)
 
 SizedType CreateRecord(size_t size, const std::string &name)
 {
-  auto ty = SizedType(Type::record, size);
+  auto ty = SizedType(Type::record, size / 8);
   ty.name_ = name;
   return ty;
 }

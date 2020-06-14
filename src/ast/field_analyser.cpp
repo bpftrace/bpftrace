@@ -71,10 +71,15 @@ void FieldAnalyser::visit(Builtin &builtin)
 
     auto it = ap_args_.find("$retval");
 
-    if (it != ap_args_.end() && it->second.IsCastTy())
-      type_ = it->second.cast_type;
-    else
-      type_ = "";
+    if (it != ap_args_.end())
+    {
+      if (it->second.IsRecordTy())
+        type_ = it->second.GetName();
+      else if (it->second.IsPtrTy() && it->second.GetPointeeTy()->IsRecordTy())
+        type_ = it->second.GetPointeeTy()->GetName();
+      else
+        type_ = "";
+    }
   }
 }
 
@@ -171,10 +176,15 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
     auto it = ap_args_.find(acc.field);
 
-    if (it != ap_args_.end() && it->second.IsCastTy())
-      type_ = it->second.cast_type;
-    else
-      type_ = "";
+    if (it != ap_args_.end())
+    {
+      if (it->second.IsRecordTy())
+        type_ = it->second.GetName();
+      else if (it->second.IsPtrTy() && it->second.GetPointeeTy()->IsRecordTy())
+        type_ = it->second.GetPointeeTy()->GetName();
+      else
+        type_ = "";
+    }
 
     has_builtin_args_ = false;
   }
@@ -338,8 +348,8 @@ void FieldAnalyser::visit(AttachPoint &ap)
       {
         auto stype = arg.second;
 
-        if (stype.IsCastTy())
-          bpftrace_.btf_set_.insert(stype.cast_type);
+        if (stype.IsRecordTy())
+          bpftrace_.btf_set_.insert(stype.GetName());
       }
     }
   }

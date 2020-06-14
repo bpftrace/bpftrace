@@ -573,7 +573,7 @@ TEST(semantic_analyser, call_str)
   test("kprobe:f { str(arg0); }", 0);
   test("kprobe:f { @x = str(arg0); }", 0);
   test("kprobe:f { str(); }", 1);
-  test("kprobe:f { str(\"hello\"); }", 10);
+  test("kprobe:f { str(\"hello\"); }", 1);
 }
 
 TEST(semantic_analyser, call_str_2_lit)
@@ -694,15 +694,16 @@ TEST(semantic_analyser, call_uaddr)
 
   test(driver, prog, 0);
 
-  std::vector<int> sizes = { 1, 2, 4, 8, 8, 8 };
+  std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
 
   for (size_t i = 0; i < sizes.size(); i++)
   {
     auto v = static_cast<ast::AssignVarStatement *>(
         driver.root_->probes->at(0)->stmts->at(i));
-    EXPECT_EQ(CreateUInt64(), v->var->type);
-    EXPECT_EQ(true, v->var->type.is_pointer);
-    EXPECT_EQ((unsigned long int)sizes.at(i), v->var->type.pointee_size);
+    EXPECT_TRUE(v->var->type.IsPtrTy());
+    EXPECT_TRUE(v->var->type.GetPointeeTy()->IsIntTy());
+    EXPECT_EQ((unsigned long int)sizes.at(i),
+              v->var->type.GetPointeeTy()->GetIntBitWidth());
   }
 }
 
@@ -1262,15 +1263,23 @@ TEST(semantic_analyser, field_access_is_internal)
   Driver driver(bpftrace);
   std::string structs = "struct type1 { int x; }";
 
-  test(driver, structs + "kprobe:f { $x = ((struct type1)0).x }", 0);
-  auto var_assignment1 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(0));
-  EXPECT_EQ(false, var_assignment1->var->type.is_internal);
+  {
+    test(driver, structs + "kprobe:f { $x = ((struct type1)0).x }", 0);
+    auto stmts = driver.root_->probes->at(0)->stmts;
+    auto var_assignment1 = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+    EXPECT_FALSE(var_assignment1->var->type.is_internal);
+  }
 
-  test(driver, structs + "kprobe:f { @type1 = (struct type1)0; $x = @type1.x }", 0);
-  auto map_assignment = static_cast<ast::AssignMapStatement*>(driver.root_->probes->at(0)->stmts->at(0));
-  auto var_assignment2 = static_cast<ast::AssignVarStatement*>(driver.root_->probes->at(0)->stmts->at(1));
-  EXPECT_EQ(true, map_assignment->map->type.is_internal);
-  EXPECT_EQ(true, var_assignment2->var->type.is_internal);
+  {
+    test(driver,
+         structs + "kprobe:f { @type1 = (struct type1)0; $x = @type1.x }",
+         0);
+    auto stmts = driver.root_->probes->at(0)->stmts;
+    auto map_assignment = static_cast<ast::AssignMapStatement *>(stmts->at(0));
+    auto var_assignment2 = static_cast<ast::AssignVarStatement *>(stmts->at(1));
+    EXPECT_TRUE(map_assignment->map->type.is_internal);
+    EXPECT_TRUE(var_assignment2->var->type.is_internal);
+  }
 }
 
 TEST(semantic_analyser, probe_short_name)
@@ -1653,7 +1662,7 @@ TEST(semantic_analyser, type_ctx)
 
   // $x = (struct x*)ctx;
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
-  EXPECT_EQ(SizedType(Type::ctx, 8, false), assignment->var->type);
+  EXPECT_TRUE(assignment->var->type.IsPtrTy());
 
   // $a = $x->a;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
@@ -1661,9 +1670,9 @@ TEST(semantic_analyser, type_ctx)
   auto fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt64(), fieldaccess->type);
   auto unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  EXPECT_TRUE(unop->type.IsCtxAccess());
   auto var = static_cast<ast::Variable *>(unop->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+  EXPECT_TRUE(var->type.IsPtrTy());
 
   // $b = $x->b[0];
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(2));
@@ -1671,11 +1680,11 @@ TEST(semantic_analyser, type_ctx)
   auto arrayaccess = static_cast<ast::ArrayAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt16(), arrayaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(arrayaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 4, false), fieldaccess->type);
+  EXPECT_TRUE(fieldaccess->type.IsCtxAccess());
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  EXPECT_TRUE(unop->type.IsCtxAccess());
   var = static_cast<ast::Variable *>(unop->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+  EXPECT_TRUE(var->type.IsPtrTy());
 
   // $c = $x->c.c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(3));
@@ -1683,11 +1692,11 @@ TEST(semantic_analyser, type_ctx)
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt8(), fieldaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 1, false), fieldaccess->type);
+  EXPECT_TRUE(fieldaccess->type.IsCtxAccess());
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  EXPECT_TRUE(unop->type.IsCtxAccess());
   var = static_cast<ast::Variable *>(unop->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+  EXPECT_TRUE(var->type.IsPtrTy());
 
   // $d = $x->d->c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(4));
@@ -1695,13 +1704,13 @@ TEST(semantic_analyser, type_ctx)
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
   EXPECT_EQ(CreateInt8(), fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(CreateCast(8), unop->type);
+  EXPECT_TRUE(unop->type.IsRecordTy());
   fieldaccess = static_cast<ast::FieldAccess *>(unop->expr);
-  EXPECT_EQ(CreateCast(64), fieldaccess->type);
+  EXPECT_TRUE(fieldaccess->type.IsPtrTy());
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 32, false), unop->type);
+  EXPECT_TRUE(unop->type.IsCtxAccess());
   var = static_cast<ast::Variable *>(unop->expr);
-  EXPECT_EQ(SizedType(Type::ctx, 8, false), var->type);
+  EXPECT_TRUE(var->type.IsPtrTy());
 
   test(driver, "k:f, kr:f { @ = (uint64)ctx; }", 0);
   test(driver, "k:f, i:s:1 { @ = (uint64)ctx; }", 1);
