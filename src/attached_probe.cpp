@@ -918,7 +918,7 @@ void AttachedProbe::attach_interval()
   int group_fd = -1;
   int cpu = 0;
 
-  uint64_t period;
+  uint64_t period = 0, freq = 0;
   if (probe_.path == "s")
   {
     period = probe_.freq * 1e9;
@@ -927,14 +927,28 @@ void AttachedProbe::attach_interval()
   {
     period = probe_.freq * 1e6;
   }
+  else if (probe_.path == "us")
+  {
+    period = probe_.freq * 1e3;
+  }
+  else if (probe_.path == "hz")
+  {
+    freq = probe_.freq;
+  }
   else
   {
     std::cerr << "invalid interval path \"" << probe_.path << "\"" << std::endl;
     abort();
   }
 
-  int perf_event_fd = bpf_attach_perf_event(progfd_, PERF_TYPE_SOFTWARE,
-      PERF_COUNT_SW_CPU_CLOCK, period, 0, pid, cpu, group_fd);
+  int perf_event_fd = bpf_attach_perf_event(progfd_,
+                                            PERF_TYPE_SOFTWARE,
+                                            PERF_COUNT_SW_CPU_CLOCK,
+                                            period,
+                                            freq,
+                                            pid,
+                                            cpu,
+                                            group_fd);
 
   if (perf_event_fd < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);

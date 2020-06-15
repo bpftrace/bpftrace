@@ -1096,6 +1096,15 @@ TEST(semantic_analyser, profile)
   test("profile:unit:100 { 1 }", 1);
 }
 
+TEST(semantic_analyser, interval)
+{
+  test("interval:hz:997 { 1 }", 0);
+  test("interval:s:10 { 1 }", 0);
+  test("interval:ms:100 { 1 }", 0);
+  test("interval:us:100 { 1 }", 0);
+  test("interval:unit:100 { 1 }", 1);
+}
+
 TEST(semantic_analyser, variable_cast_types)
 {
   std::string structs = "struct type1 { int field; } struct type2 { int field; }";
