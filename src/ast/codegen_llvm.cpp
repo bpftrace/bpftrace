@@ -1310,17 +1310,13 @@ void CodegenLLVM::visit(Ternary &ternary)
   {
     // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
-    ternary.left->accept(*this);
+    auto scoped_del_left = accept(ternary.left);
     b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
-    if (!ternary.left->is_variable && dyn_cast<AllocaInst>(expr_))
-      b_.CreateLifetimeEnd(expr_);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(right_block);
-    ternary.right->accept(*this);
+    auto scoped_del_right = accept(ternary.right);
     b_.CREATE_MEMCPY(buf, expr_, ternary.type.size, 1);
-    if (!ternary.right->is_variable && dyn_cast<AllocaInst>(expr_))
-      b_.CreateLifetimeEnd(expr_);
     b_.CreateBr(done);
 
     b_.SetInsertPoint(done);
@@ -1538,20 +1534,14 @@ void CodegenLLVM::visit(Tuple &tuple)
   for (size_t i = 0; i < tuple.elems->size(); ++i)
   {
     Expression *elem = tuple.elems->at(i);
-    elem->accept(*this);
+    auto scoped_del = accept(elem);
 
     Value *dst = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(i) });
 
     if (shouldBeOnStackAlready(elem->type))
-    {
       b_.CREATE_MEMCPY(dst, expr_, elem->type.size, 1);
-      if (!elem->is_variable && dyn_cast<AllocaInst>(expr_))
-        b_.CreateLifetimeEnd(expr_);
-    }
     else
-    {
       b_.CreateStore(expr_, dst);
-    }
   }
 
   expr_ = buf;
@@ -1621,7 +1611,7 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 {
   Variable &var = *assignment.var;
 
-  assignment.expr->accept(*this);
+  auto scoped_del = accept(assignment.expr);
 
   if (variables_.find(var.ident) == variables_.end())
   {
@@ -1632,8 +1622,6 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   if (needMemcpy(var.type))
   {
     b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.size, 1);
-    if (!assignment.expr->is_variable && dyn_cast<AllocaInst>(expr_))
-      b_.CreateLifetimeEnd(expr_);
   }
   else
   {
@@ -2032,16 +2020,12 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       // Construct a map key in the stack
       for (Expression *expr : *map.vargs)
       {
-        expr->accept(*this);
+        auto scoped_del = accept(expr);
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
         if (shouldBeOnStackAlready(expr->type))
-        {
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
-          if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
-            b_.CreateLifetimeEnd(expr_);
-        }
         else
         {
           // promote map key to 64-bit:
@@ -2076,14 +2060,10 @@ AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 
     int offset = 0;
     for (Expression *expr : *map.vargs) {
-      expr->accept(*this);
+      auto scoped_del = accept(expr);
       Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
       if (shouldBeOnStackAlready(expr->type))
-      {
         b_.CREATE_MEMCPY(offset_val, expr_, expr->type.size, 1);
-        if (!expr->is_variable && dyn_cast<AllocaInst>(expr_))
-          b_.CreateLifetimeEnd(expr_);
-      }
       else
         b_.CreateStore(expr_, offset_val);
       offset += expr->type.size;
@@ -2375,20 +2355,12 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   for (size_t i=1; i<call.vargs->size(); i++)
   {
     Expression &arg = *call.vargs->at(i);
-    expr_deleter_ = nullptr;
-    arg.accept(*this);
+    auto scoped_del = accept(&arg);
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (needMemcpy(arg.type))
-    {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
-      if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))
-        b_.CreateLifetimeEnd(expr_);
-    }
     else
       b_.CreateStore(expr_, offset);
-
-    if (expr_deleter_)
-      expr_deleter_();
   }
 
   id++;
