@@ -2531,5 +2531,14 @@ void CodegenLLVM::DumpIR(std::ostream &out)
   module_->print(os, nullptr, false, true);
 }
 
+CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
+{
+  expr_deleter_ = nullptr;
+  node->accept(*this);
+  auto deleter = std::move(expr_deleter_);
+  expr_deleter_ = nullptr;
+  return ScopedExprDeleter(deleter);
+}
+
 } // namespace ast
 } // namespace bpftrace
