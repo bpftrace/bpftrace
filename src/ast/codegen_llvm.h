@@ -74,11 +74,37 @@ public:
   std::unique_ptr<BpfOrc> compile(void);
 
 private:
+  class ScopedExprDeleter
+  {
+  public:
+    explicit ScopedExprDeleter(std::function<void()> deleter)
+    {
+      deleter_ = std::move(deleter);
+    }
+
+    ~ScopedExprDeleter()
+    {
+      if (deleter_)
+        deleter_();
+    }
+
+    std::function<void()> disarm()
+    {
+      auto ret = deleter_;
+      deleter_ = nullptr;
+      return ret;
+    }
+
+  private:
+    std::function<void()> deleter_;
+  };
+
   void generateProbe(Probe &probe,
                      const std::string &full_func_id,
                      const std::string &section_name,
                      FunctionType *func_type,
                      bool expansion);
+  [[nodiscard]] ScopedExprDeleter accept(Node *node);
 
   Function *createLog2Function();
   Function *createLinearFunction();
