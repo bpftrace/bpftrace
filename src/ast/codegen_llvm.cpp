@@ -74,6 +74,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
           b_.CREATE_MEMSET(buf, b_.getInt8(0), pstr.length() + 1, 1);
           b_.CreateStore(const_str, buf);
           expr_ = buf;
+          expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
         }
       }
       break;
@@ -94,6 +95,7 @@ void CodegenLLVM::visit(String &string)
   AllocaInst *buf = b_.CreateAllocaBPF(string.type, "str");
   b_.CreateStore(const_str, buf);
   expr_ = buf;
+  expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
 }
 
 // NB: we do not resolve identifiers that are structs. That is because in
@@ -193,6 +195,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     b_.CREATE_MEMSET(buf, b_.getInt8(0), builtin.type.size, 1);
     b_.CreateGetCurrentComm(ctx_, buf, builtin.type.size, builtin.loc);
     expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
   else if ((!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') ||
@@ -748,6 +751,7 @@ void CodegenLLVM::visit(Call &call)
     }
 
     expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
   else if (call.func == "reg")
   {
@@ -1321,6 +1325,7 @@ void CodegenLLVM::visit(Ternary &ternary)
 
     b_.SetInsertPoint(done);
     expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
   else
   {
@@ -1383,7 +1388,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, "internal_" + type.cast_type + "." + acc.field);
       b_.CREATE_MEMCPY(dst, src, field.type.size, 1);
       expr_ = dst;
-      // TODO clean up dst memory?
+      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
     }
     else if (field.type.IsStringTy() || field.type.IsBufferTy())
     {
@@ -1441,6 +1446,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
         b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
       }
       expr_ = dst;
+      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
     }
     else if (field.type.IsIntTy() && field.is_bitfield)
     {
@@ -1545,6 +1551,7 @@ void CodegenLLVM::visit(Tuple &tuple)
   }
 
   expr_ = buf;
+  expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
 }
 
 void CodegenLLVM::visit(ExprStatement &expr)
