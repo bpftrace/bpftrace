@@ -298,7 +298,9 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   if (needMemcpy(type))
     return value;
 
-  return CreateLoad(value);
+  Value *ret = CreateLoad(value);
+  CreateLifetimeEnd(value);
+  return ret;
 }
 
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
