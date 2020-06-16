@@ -366,6 +366,14 @@ const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t)
   return t;
 }
 
+/* type is struct and its size is within 8 bytes
+ * and it can be value of function argument
+ */
+static bool btf_is_struct_arg(const struct btf_type *t)
+{
+  return btf_is_struct(t) && (t->size <= sizeof(__u64));
+}
+
 SizedType BTF::get_stype(__u32 id)
 {
   SizedType stype = SizedType(Type::none, 8);
@@ -379,7 +387,7 @@ SizedType BTF::get_stype(__u32 id)
 
   stype.is_kfarg = true;
 
-  if (btf_is_int(t) || btf_is_enum(t))
+  if (btf_is_int(t) || btf_is_enum(t) || btf_is_struct_arg(t))
   {
     stype.type = Type::integer;
   }
