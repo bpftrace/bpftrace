@@ -915,6 +915,18 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
+  else if (call.func == "strftime")
+  {
+    call.type = CreateTimestamp();
+    if (check_varargs(call, 2, 2) && is_final_pass() &&
+        check_arg(call, Type::string, 0, true) &&
+        check_arg(call, Type::integer, 1, false))
+    {
+      auto &fmt_arg = *call.vargs->at(0);
+      String &fmt = static_cast<String &>(fmt_arg);
+      bpftrace_.strftime_args_.push_back(fmt.str);
+    }
+  }
   else if (call.func == "kstack") {
     check_stack_call(call, true);
   }

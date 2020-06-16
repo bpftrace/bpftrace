@@ -46,6 +46,7 @@ enum class Type
   record, // struct or union
   buffer,
   tuple,
+  timestamp
   // clang-format on
 };
 
@@ -304,6 +305,7 @@ SizedType CreateUSym();
 SizedType CreateKSym();
 SizedType CreateJoin(size_t argnum, size_t argsize);
 SizedType CreateBuffer(size_t size);
+SizedType CreateTimestamp();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
@@ -393,6 +395,7 @@ enum class AsyncAction
   join,
   helper_error,
   print_non_map,
+  strftime
   // clang-format on
 };
 

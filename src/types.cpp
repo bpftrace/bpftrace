@@ -119,6 +119,7 @@ std::string typestr(Type t)
     case Type::ctx:      return "ctx";      break;
     case Type::buffer:   return "buffer";   break;
     case Type::tuple:    return "tuple";    break;
+    case Type::timestamp:return "timestamp";break;
     // clang-format on
     default:
       std::cerr << "call or probe type not found" << std::endl;
@@ -364,6 +365,11 @@ SizedType CreateJoin(size_t argnum, size_t argsize)
 SizedType CreateBuffer(size_t size)
 {
   return SizedType(Type::buffer, size);
+}
+
+SizedType CreateTimestamp()
+{
+  return SizedType(Type::timestamp, 16);
 }
 
 bool SizedType::IsSigned(void) const

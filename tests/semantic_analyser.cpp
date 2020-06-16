@@ -534,6 +534,25 @@ TEST(semantic_analyser, call_time)
   test("kprobe:f { time() ? 0 : 1; }", 10);
 }
 
+TEST(semantic_analyser, call_strftime)
+{
+  test("kprobe:f { strftime(\"%M:%S\", 1); }", 0);
+  test("kprobe:f { strftime(\"%M:%S\", nsecs); }", 0);
+  test("kprobe:f { strftime(\"%M:%S\", \"\"); }", 10);
+  test("kprobe:f { strftime(1, nsecs); }", 10);
+  test("kprobe:f { $var = \"str\"; strftime($var, nsecs); }", 10);
+  test("kprobe:f { strftime(); }", 1);
+  test("kprobe:f { strftime(\"%M:%S\"); }", 1);
+  test("kprobe:f { strftime(\"%M:%S\", 1, 1); }", 1);
+  test("kprobe:f { strftime(1, 1, 1); }", 1);
+  test("kprobe:f { strftime(\"%M:%S\", \"\", 1); }", 1);
+  test("kprobe:f { $ts = strftime(\"%M:%S\", 1); }", 0);
+  test("kprobe:f { @ts = strftime(\"%M:%S\", nsecs); }", 0);
+  test("kprobe:f { @[strftime(\"%M:%S\", nsecs)] = 1; }", 0);
+  test("kprobe:f { printf(\"%s\", strftime(\"%M:%S\", nsecs)); }", 0);
+  test("kprobe:f { strncmp(\"str\", strftime(\"%M:%S\", nsecs), 10); }", 10);
+}
+
 TEST(semantic_analyser, call_str)
 {
   test("kprobe:f { str(arg0); }", 0);
