@@ -406,14 +406,29 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
     sym.address = probe_.address;
     bcc_elf_foreach_sym(probe_.path.c_str(), sym_address_cb, &option, &sym);
 
+    if (!sym.start)
+    {
+      if (safe_mode)
+      {
+        std::stringstream ss;
+        ss << "0x" << std::hex << probe_.address;
+        throw std::runtime_error("Could not resolve address: " + probe_.path +
+                                 ":" + ss.str());
+      }
+      else
+      {
+        std::cerr << "WARNING: could not determine instruction boundary for "
+                  << probe_.name
+                  << " (binary appears stripped). Misaligned probes "
+                     "can lead to tracee crashes!"
+                  << std::endl;
+        offset_ = probe_.address;
+        return;
+      }
+    }
+
     symbol = sym.name;
     func_offset = probe_.address - sym.start;
-
-    if (!sym.start) {
-      std::stringstream ss;
-      ss << "0x" << std::hex << probe_.address;
-      throw std::runtime_error("Could not resolve address: " + probe_.path + ":" + ss.str());
-    }
   }
   else
   {
