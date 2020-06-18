@@ -12,6 +12,8 @@ and this project adheres to
 
 #### Added
 
+- Allow uprobe placement on arbitrary addresses when --unsafe is used
+  - [#1388](https://github.com/iovisor/bpftrace/pull/1388)
 - Support for s390x
   - [#1241](https://github.com/iovisor/bpftrace/pull/1241)
 - `buf` a new function that makes it possible to safely print arbitrary binary data

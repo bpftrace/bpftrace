@@ -1070,6 +1070,20 @@ Attaching 1 probe...
 Unsafe uprobe in the middle of the instruction: /bin/bash:main+1
 ```
 
+Using --unsafe option you can also place uprobes on arbitrary addresses.
+This might come in handy when the binary is stripped.
+```
+$ echo 'int main(){return 0;}' | gcc -xc -o bin -
+$ nm bin | grep main
+...
+0000000000001119 T main
+...
+$ strip bin
+# bpftrace --unsafe -e 'uprobe:bin:0x1119 { printf("main called\n"); }'
+Attaching 1 probe...
+WARNING: could not determine instruction boundary for uprobe:bin:4377 (binary appears stripped). Misaligned probes can lead to tracee crashes!
+```
+
 Examples in situ:
 [(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
 [(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
