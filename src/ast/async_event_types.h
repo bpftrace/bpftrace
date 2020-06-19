@@ -76,6 +76,20 @@ struct Time
   }
 } __attribute__((packed));
 
+struct Strftime
+{
+  uint64_t strftime_id;
+  uint64_t nsecs_since_boot;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b)
+  {
+    return {
+      b.getInt64Ty(), // strftime id
+      b.getInt64Ty(), // strftime arg, time elapsed since boot
+    };
+  }
+} __attribute__((packed));
+
 struct Buf
 {
   uint8_t length;

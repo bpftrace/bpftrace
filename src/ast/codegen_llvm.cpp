@@ -3,6 +3,7 @@
 #include "ast.h"
 #include "ast/async_event_types.h"
 #include "bpforc.h"
+#include "codegen_helper.h"
 #include "parser.tab.hh"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -21,14 +22,6 @@
 
 namespace bpftrace {
 namespace ast {
-
-namespace {
-bool shouldBeOnStackAlready(SizedType &type)
-{
-  return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
-         type.IsUsymTy() || type.IsTupleTy();
-}
-} // namespace
 
 void CodegenLLVM::visit(Integer &integer)
 {
@@ -834,6 +827,25 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
+  else if (call.func == "strftime")
+  {
+    auto elements = AsyncEvent::Strftime().asLLVMType(b_);
+    StructType *strftime_struct = b_.GetStructType(call.func + "_t",
+                                                   elements,
+                                                   true);
+
+    AllocaInst *buf = b_.CreateAllocaBPF(strftime_struct, call.func + "_args");
+    b_.CreateStore(b_.GetIntSameSize(strftime_id_, elements.at(0)),
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
+    strftime_id_++;
+    Expression &arg = *call.vargs->at(1);
+    arg.accept(*this);
+    b_.CreateStore(expr_,
+                   b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) }));
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+    // b_.CreateLifetimeEnd(buf);
+  }
   else if (call.func == "kstack" || call.func == "ustack")
   {
     Value *stackid = b_.CreateGetStackId(
@@ -934,13 +946,13 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  if (!var.type.IsAggregate())
+  if (needMemcpy(var.type))
   {
-    expr_ = b_.CreateLoad(variables_[var.ident]);
+    expr_ = variables_[var.ident];
   }
   else
   {
-    expr_ = variables_[var.ident];
+    expr_ = b_.CreateLoad(variables_[var.ident]);
   }
 }
 
@@ -1586,15 +1598,15 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
     variables_[var.ident] = val;
   }
 
-  if (!var.type.IsAggregate())
-  {
-    b_.CreateStore(expr_, variables_[var.ident]);
-  }
-  else
+  if (needMemcpy(var.type))
   {
     b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.size, 1);
     if (!assignment.expr->is_variable && dyn_cast<AllocaInst>(expr_))
       b_.CreateLifetimeEnd(expr_);
+  }
+  else
+  {
+    b_.CreateStore(expr_, variables_[var.ident]);
   }
 }
 
@@ -1845,6 +1857,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_cat_id = cat_id_;
     int starting_system_id = system_id_;
     int starting_time_id = time_id_;
+    int starting_strftime_id = strftime_id_;
     int starting_join_id = join_id_;
     int starting_helper_error_id = b_.helper_error_id_;
     int starting_non_map_print_id = non_map_print_id_;
@@ -1854,6 +1867,7 @@ void CodegenLLVM::visit(Probe &probe)
       cat_id_ = starting_cat_id;
       system_id_ = starting_system_id;
       time_id_ = starting_time_id;
+      strftime_id_ = starting_strftime_id;
       join_id_ = starting_join_id;
       b_.helper_error_id_ = starting_helper_error_id;
       non_map_print_id_ = starting_non_map_print_id;
@@ -2316,7 +2330,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     expr_deleter_ = nullptr;
     arg.accept(*this);
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
-    if (arg.type.IsAggregate())
+    if (needMemcpy(arg.type))
     {
       b_.CREATE_MEMCPY(offset, expr_, arg.type.size, 1);
       if (!arg.is_variable && dyn_cast<AllocaInst>(expr_))
@@ -2406,7 +2420,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   // Store content
   Value *content_offset = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(2) });
   b_.CREATE_MEMSET(content_offset, b_.getInt8(0), arg.type.size, 1);
-  if (arg.type.IsAggregate())
+  if (needMemcpy(arg.type))
     b_.CREATE_MEMCPY(content_offset, expr_, arg.type.size, 1);
   else
     b_.CreateStore(expr_, content_offset);

@@ -256,6 +256,10 @@ public:
   {
     return type == Type::tuple;
   };
+  bool IsTimestampTy(void) const
+  {
+    return type == Type::timestamp;
+  };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);

@@ -4,6 +4,7 @@
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
+#include "codegen_helper.h"
 #include "irbuilderbpf.h"
 #include "utils.h"
 
@@ -113,13 +114,13 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
   llvm::Type *ty = GetType(stype);
   AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
 
-  if (!stype.IsAggregate())
+  if (needMemcpy(stype))
   {
-    CreateStore(getInt64(0), alloca);
+    CREATE_MEMSET(alloca, getInt8(0), stype.size, 1);
   }
   else
   {
-    CREATE_MEMSET(alloca, getInt8(0), stype.size, 1);
+    CreateStore(getInt64(0), alloca);
   }
 
   restoreIP(ip);
@@ -273,7 +274,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CreateCondBr(condition, lookup_success_block, lookup_failure_block);
 
   SetInsertPoint(lookup_success_block);
-  if (type.IsAggregate())
+  if (needMemcpy(type))
     CREATE_MEMCPY(value, call, type.size, 1);
   else
   {
@@ -286,7 +287,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (type.IsAggregate())
+  if (needMemcpy(type))
     CREATE_MEMSET(value, getInt8(0), type.size, 1);
   else
     CreateStore(getInt64(0), value);
@@ -294,7 +295,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_merge_block);
-  if (type.IsAggregate())
+  if (needMemcpy(type))
     return value;
 
   return CreateLoad(value);

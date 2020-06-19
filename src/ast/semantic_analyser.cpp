@@ -775,7 +775,7 @@ void SemanticAnalyser::visit(Call &call)
         {
           auto ty = (*iter)->type;
           // Promote to 64-bit if it's not an aggregate type
-          if (!ty.IsAggregate())
+          if (!ty.IsAggregate() && !ty.IsTimestampTy())
             ty.size = 8;
           args.push_back(Field{
             .type =  ty,
