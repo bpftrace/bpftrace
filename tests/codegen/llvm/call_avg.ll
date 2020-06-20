@@ -6,9 +6,6 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-
 define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
@@ -65,6 +62,9 @@ lookup_merge7:                                    ; preds = %lookup_merge, %look
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %6)
   ret i64 0
 }
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

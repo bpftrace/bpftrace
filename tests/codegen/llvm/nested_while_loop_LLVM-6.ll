@@ -6,9 +6,6 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-
 define i64 @"interval:s:1"(i8* nocapture readnone) local_unnamed_addr section "s_interval:s:1_1" {
 entry:
   %"@_newval" = alloca i64, align 8
@@ -56,6 +53,9 @@ lookup_merge:                                     ; preds = %while_body2, %looku
   %exitcond = icmp eq i64 %6, 101
   br i1 %exitcond, label %while_end3, label %while_body2
 }
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

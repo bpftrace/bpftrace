@@ -6,9 +6,6 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
-
 define i64 @"tracepoint:file:filename"(i8*) local_unnamed_addr section "s_tracepoint:file:filename_1" {
 entry:
   %"@_val" = alloca i64, align 8
@@ -282,6 +279,9 @@ strcmp.loop_null_cmp87:                           ; preds = %strcmp.loop80
   %strcmp.cmp_null91 = icmp eq i8 %68, 0
   br i1 %strcmp.cmp_null91, label %pred_true.critedge, label %strcmp.loop86
 }
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
