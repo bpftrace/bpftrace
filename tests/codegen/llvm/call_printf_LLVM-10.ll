@@ -8,9 +8,6 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
-
 define i64 @"kprobe:f"(i8* %0) local_unnamed_addr section "s_kprobe:f_1" {
 entry:
   %"struct Foo.l" = alloca i64, align 8
@@ -39,6 +36,9 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
   ret i64 0
 }
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 ; Function Attrs: argmemonly nounwind willreturn
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
