@@ -403,14 +403,16 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "hist")
   {
+    if (!log2_func_)
+      log2_func_ = createLog2Function();
+
     Map &map = *call.map;
     call.vargs->front()->accept(*this);
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    Function *log2_func = module_->getFunction("log2");
-    Value *log2 = b_.CreateCall(log2_func, expr_, "log2");
+    Value *log2 = b_.CreateCall(log2_func_, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
 
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
@@ -425,9 +427,11 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "lhist")
   {
+    if (!linear_func_)
+      linear_func_ = createLinearFunction();
+
     Map &map = *call.map;
     call.vargs->front()->accept(*this);
-    Function *linear_func = module_->getFunction("linear");
 
     // prepare arguments
     Integer &value_arg = static_cast<Integer&>(*call.vargs->at(0));
@@ -452,7 +456,9 @@ void CodegenLLVM::visit(Call &call)
     max = b_.CreateIntCast(max, b_.getInt64Ty(), false);
     step = b_.CreateIntCast(step, b_.getInt64Ty(), false);
 
-    Value *linear = b_.CreateCall(linear_func, {value, min, max, step} , "linear");
+    Value *linear = b_.CreateCall(linear_func_,
+                                  { value, min, max, step },
+                                  "linear");
 
     AllocaInst *key = getHistMapKey(map, linear);
 
@@ -2138,8 +2144,9 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   return b_.CreateLoad(result);
 }
 
-void CodegenLLVM::createLog2Function()
+Function *CodegenLLVM::createLog2Function()
 {
+  auto ip = b_.saveIP();
   // log2() returns a bucket index for the given value. Index 0 is for
   // values less than 0, index 1 is for 0, and indexes 2 onwards is the
   // power-of-2 histogram index.
@@ -2206,10 +2213,13 @@ void CodegenLLVM::createLog2Function()
     b_.CreateStore(b_.CreateAdd(b_.CreateLoad(result), shift), result);
   }
   b_.CreateRet(b_.CreateLoad(result));
+  b_.restoreIP(ip);
+  return module_->getFunction("log2");
 }
 
-void CodegenLLVM::createLinearFunction()
+Function *CodegenLLVM::createLinearFunction()
 {
+  auto ip = b_.saveIP();
   // lhist() returns a bucket index for the given value. The first and last
   //   bucket indexes are special: they are 0 for the less-than-range
   //   bucket, and index max_bucket+2 for the greater-than-range bucket.
@@ -2275,6 +2285,9 @@ void CodegenLLVM::createLinearFunction()
   Value *div3 = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
   b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
   b_.CreateRet(b_.CreateLoad(result_alloc));
+
+  b_.restoreIP(ip);
+  return module_->getFunction("linear");
 }
 
 void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_args,
@@ -2355,8 +2368,6 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
   module_->setDataLayout(targetMachine->createDataLayout());
   layout_ = DataLayout(module_.get());
 
-  createLog2Function();
-  createLinearFunction();
   root_->accept(*this);
 
   legacy::PassManager PM;

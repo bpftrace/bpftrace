@@ -66,8 +66,6 @@ public:
 
   void DumpIR();
   void DumpIR(llvm::raw_os_ostream &out);
-  void createLog2Function();
-  void createLinearFunction();
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
                               const std::string &call_name, AsyncAction async_action);
   std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
@@ -79,6 +77,8 @@ private:
                      FunctionType *func_type,
                      bool expansion);
 
+  Function *createLog2Function();
+  Function *createLinearFunction();
   Node *root_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;
@@ -102,6 +102,9 @@ private:
   int cat_id_ = 0;
   uint64_t join_id_ = 0;
   int system_id_ = 0;
+
+  Function *linear_func_ = nullptr;
+  Function *log2_func_ = nullptr;
 
   size_t getStructSize(StructType *s)
   {
