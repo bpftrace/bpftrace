@@ -270,7 +270,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       std::cerr << "BUG: Invalid cpid: " << cpid << std::endl;
       abort();
     }
-    expr_ = b_.getInt32(cpid);
+    expr_ = b_.getInt64(cpid);
   }
   else
   {
