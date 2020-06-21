@@ -7,9 +7,9 @@ target triple = "bpf-pc-linux"
 %printf_t = type { i64, i128 }
 
 ; Function Attrs: nounwind
-declare i64 @llvm.bpf.pseudo(i64, i64) #0
+declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %strftime_args = alloca %strftime_t
   %printf_args = alloca %printf_t
@@ -42,17 +42,17 @@ entry:
   ret i64 0
 }
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nounwind }
+attributes #1 = { argmemonly nounwind willreturn }

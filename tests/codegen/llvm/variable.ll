@@ -6,34 +6,42 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
 entry:
-  %"@y_key" = alloca i64, align 8
-  %"@x_key" = alloca i64, align 8
-  %"$var" = alloca [16 x i8], align 1
-  %1 = getelementptr inbounds [16 x i8], [16 x i8]* %"$var", i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %1, i8 0, i64 16, i1 false)
-  %comm = alloca [16 x i8], align 1
-  %2 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 1 %2, i8 0, i64 16, i1 false)
-  %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* nonnull %comm, i64 16)
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 1 %1, i8* nonnull align 1 %2, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
-  %3 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %3)
-  store i64 0, i64* %"@x_key", align 8
+  %"@y_key" = alloca i64
+  %"@x_key" = alloca i64
+  %"$var" = alloca [16 x i8]
+  %1 = bitcast [16 x i8]* %"$var" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
+  %2 = bitcast [16 x i8]* %"$var" to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 16, i1 false)
+  %comm = alloca [16 x i8]
+  %3 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  %4 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 16, i1 false)
+  %get_comm = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm, i64 16)
+  %5 = bitcast [16 x i8]* %"$var" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
+  %6 = bitcast [16 x i8]* %"$var" to i8*
+  %7 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %6, i8* align 1 %7, i64 16, i1 false)
+  %8 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %9 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
+  store i64 0, i64* %"@x_key"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [16 x i8]*, i64)*)(i64 %pseudo, i64* nonnull %"@x_key", [16 x i8]* nonnull %"$var", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %3)
-  %4 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  store i64 0, i64* %"@y_key", align 8
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [16 x i8]*, i64)*)(i64 %pseudo, i64* %"@x_key", [16 x i8]* %"$var", i64 0)
+  %10 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %11 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store i64 0, i64* %"@y_key"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %update_elem2 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [16 x i8]*, i64)*)(i64 %pseudo1, i64* nonnull %"@y_key", [16 x i8]* nonnull %"$var", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  %update_elem2 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [16 x i8]*, i64)*)(i64 %pseudo1, i64* %"@y_key", [16 x i8]* %"$var", i64 0)
+  %12 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   ret i64 0
 }
 

@@ -186,14 +186,20 @@ static std::string rewrite_lifetime_end_decl(const std::string &line)
 {
   (void)line;
 #if LLVM_VERSION_MAJOR >= 10
-  return std::string("declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* "
-                     "nocapture %1) #1");
+  // copy the "id" from the end
+  char id = line[line.length() - 1];
+  std::string newline("declare void @llvm.lifetime.end.p0i8(i64 immarg %0, "
+                      "i8* nocapture %1) #");
+  newline += id;
+  return newline;
 #elif LLVM_VERSION_MAJOR == 9
-  return std::string(
-      "declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1");
+  char id = line[line.length() - 1];
+  std::string newline(
+      "declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #");
+  newline += id;
+  return newline;
 #else
-  return std::string(
-      "declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1");
+  return line;
 #endif
 }
 
@@ -201,14 +207,20 @@ static std::string rewrite_lifetime_start_decl(const std::string &line)
 {
   (void)line;
 #if LLVM_VERSION_MAJOR >= 10
-  return std::string("declare void @llvm.lifetime.start.p0i8(i64 immarg %0, "
-                     "i8* nocapture %1) #1");
+  // copy the "id" from the end
+  char id = line[line.length() - 1];
+  std::string newline("declare void @llvm.lifetime.start.p0i8(i64 immarg %0, "
+                      "i8* nocapture %1) #");
+  newline += id;
+  return newline;
 #elif LLVM_VERSION_MAJOR == 9
-  return std::string(
-      "declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1");
+  char id = line[line.length() - 1];
+  std::string newline(
+      "declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #");
+  newline += id;
+  return newline;
 #else
-  return std::string(
-      "declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1");
+  return line;
 #endif
 }
 
@@ -248,13 +260,30 @@ static std::string rewrite_attrs(const std::string &line)
 #endif
 }
 
-static std::string rewrite_local_unnamed_addr(const std::string &line)
+static std::string rewrite_function_hdr(const std::string &line)
 {
 #if LLVM_VERSION_MAJOR >= 10
-  // FROM: define i64 @BEGIN(i8*) local_unnamed_addr section \"s_BEGIN_1\" {
-  // TO:   define i64 @BEGIN(i8* %0) local_unnamed_addr section \"s_BEGIN_1\" {
-  static std::regex re("(@[^\\(]+)\\(([^\\)]+)\\)");
-  return std::regex_replace(line, re, "$1($2 %0)");
+  // FROM: define internal i64 @linear(i64, i64, i64, i64) #1 section
+  // \"helpers\" { TO:   define internal i64 @linear(i64 %0, i64 %1, i64 %2, i64
+  // %3) #1 section \"helpers\" {
+
+  std::stringstream newline;
+  auto start = line.find('(');
+  auto end = line.find(')', start);
+  auto fnargs = line.substr(start, end - start);
+
+  newline << line.substr(0, start);
+
+  auto args = split_string(fnargs, ',');
+  size_t i = 0;
+  for (; i < args.size() - 1; i++)
+  {
+    newline << args[i] << " %" << i << ",";
+  }
+  newline << args.back() << " %" << i;
+  newline << line.substr(end);
+
+  return newline.str();
 #else
   return line;
 #endif
@@ -300,10 +329,10 @@ static std::string rewrite(const std::string &ir)
     else if (line.find("attributes #1 = { argmemonly nounwind }") !=
              std::string::npos)
       buf << rewrite_attrs(line);
-    else if (line.find("local_unnamed_addr") != std::string::npos)
-      buf << rewrite_local_unnamed_addr(line);
     else if (line.find("getelementptr inbounds") != std::string::npos)
       buf << rewrite_gep(line);
+    else if (line.find("define i64") == 0)
+      buf << rewrite_function_hdr(line);
     else
       buf << line;
     buf << std::endl;
@@ -355,8 +384,9 @@ static void test(BPFtrace &bpftrace,
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   codegen.generate_ir();
-  codegen.optimize();
   codegen.DumpIR(out);
+  // Test that generated code compiles cleanly
+  codegen.optimize();
   codegen.emit();
 
   uint64_t update_tests = 0;

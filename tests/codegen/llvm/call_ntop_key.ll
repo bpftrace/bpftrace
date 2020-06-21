@@ -8,39 +8,49 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-define i64 @"kprobe:f"(i8* nocapture readnone) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
 entry:
-  %"@x_val" = alloca i64, align 8
-  %inet = alloca %inet_t, align 8
+  %"@x_val" = alloca i64
+  %lookup_elem_val = alloca i64
+  %inet = alloca %inet_t
   %1 = bitcast %inet_t* %inet to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  %2 = getelementptr inbounds %inet_t, %inet_t* %inet, i64 0, i32 0
-  store i64 2, i64* %2, align 8
-  %3 = getelementptr inbounds %inet_t, %inet_t* %inet, i64 0, i32 1
-  %4 = getelementptr inbounds [16 x i8], [16 x i8]* %3, i64 0, i64 0
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 8 %4, i8 0, i64 16, i1 false)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
+  %2 = getelementptr %inet_t, %inet_t* %inet, i64 0, i32 0
+  store i64 2, i64* %2
+  %3 = getelementptr %inet_t, %inet_t* %inet, i32 0, i32 1
+  %4 = bitcast [16 x i8]* %3 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 16, i1 false)
   %5 = bitcast [16 x i8]* %3 to i32*
-  store i32 -1, i32* %5, align 8
-  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* nonnull %inet)
-  %map_lookup_cond = icmp eq i8* %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
+  store i32 -1, i32* %5
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* %inet)
+  %6 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
+  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
 lookup_success:                                   ; preds = %entry
   %cast = bitcast i8* %lookup_elem to i64*
-  %6 = load i64, i64* %cast, align 8
-  %phitmp = add i64 %6, 1
+  %7 = load i64, i64* %cast
+  store i64 %7, i64* %lookup_elem_val
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %entry, %lookup_success
-  %lookup_elem_val.0 = phi i64 [ %phitmp, %lookup_success ], [ 1, %entry ]
-  %7 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %7)
-  store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
+lookup_failure:                                   ; preds = %entry
+  store i64 0, i64* %lookup_elem_val
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %8 = load i64, i64* %lookup_elem_val
+  %9 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
+  %10 = add i64 %8, 1
+  store i64 %10, i64* %"@x_val"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, %inet_t*, i64*, i64)*)(i64 %pseudo1, %inet_t* nonnull %inet, i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %7)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, %inet_t*, i64*, i64)*)(i64 %pseudo1, %inet_t* %inet, i64* %"@x_val", i64 0)
+  %11 = bitcast %inet_t* %inet to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   ret i64 0
 }
 
