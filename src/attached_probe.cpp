@@ -116,6 +116,7 @@ void AttachedProbe::attach_kfunc(void)
 int AttachedProbe::detach_kfunc(void)
 {
   close(tracing_fd_);
+  return 0;
 }
 #else
 void AttachedProbe::attach_kfunc(void)
