@@ -116,7 +116,6 @@ void AttachedProbe::attach_kfunc(void)
 int AttachedProbe::detach_kfunc(void)
 {
   close(tracing_fd_);
-  return bpf_detach_kfunc(progfd_, NULL);
 }
 #else
 void AttachedProbe::attach_kfunc(void)
