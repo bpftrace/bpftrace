@@ -546,7 +546,7 @@ void CodegenLLVM::visit(Call &call)
                                               false);
     AllocaInst *buf = b_.CreateAllocaBPF(buf_struct, "buffer");
 
-    b_.CreateStore(length,
+    b_.CreateStore(b_.CreateIntCast(length, b_.getInt8Ty(), false),
                    b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(0) }));
     Value *buf_data_offset = b_.CreateGEP(buf,
                                           { b_.getInt32(0), b_.getInt32(1) });
