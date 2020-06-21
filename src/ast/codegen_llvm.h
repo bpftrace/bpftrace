@@ -22,13 +22,7 @@ using CallArgs = std::vector<std::tuple<std::string, std::vector<Field>>>;
 
 class CodegenLLVM : public Visitor {
 public:
-  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace) :
-    root_(root),
-    module_(std::make_unique<Module>("bpftrace", context_)),
-    b_(context_, *module_.get(), bpftrace),
-    layout_(module_.get()),
-    bpftrace_(bpftrace)
-    { }
+  explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -64,13 +58,20 @@ public:
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
-  void DumpIR();
-  void DumpIR(llvm::raw_os_ostream &out);
+  // Exists to make calling from a debugger easier
+  void DumpIR(void);
+  void DumpIR(std::ostream &out);
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
                               const std::string &call_name, AsyncAction async_action);
+
   void createPrintMapCall(Call &call);
   void createPrintNonMapCall(Call &call, int &id);
-  std::unique_ptr<BpfOrc> compile(DebugLevel debug=DebugLevel::kNone, std::ostream &out=std::cout);
+
+  void generate_ir(void);
+  void optimize(void);
+  std::unique_ptr<BpfOrc> emit(void);
+  // Combine generate_ir, optimize and emit into one call
+  std::unique_ptr<BpfOrc> compile(void);
 
 private:
   void generateProbe(Probe &probe,
@@ -109,6 +110,7 @@ private:
 
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;
+  std::unique_ptr<BpfOrc> orc_;
 
   size_t getStructSize(StructType *s)
   {

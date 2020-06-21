@@ -78,7 +78,7 @@ TEST(codegen, printf_offsets)
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  auto bpforc = codegen.compile();
+  codegen.generate_ir();
 
   EXPECT_EQ(bpftrace.printf_args_.size(), 1U);
   auto &fmt = std::get<0>(bpftrace.printf_args_[0]);
@@ -119,7 +119,7 @@ TEST(codegen, probe_count)
   ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  codegen.compile();
+  codegen.generate_ir();
 }
 } // namespace codegen
 } // namespace test

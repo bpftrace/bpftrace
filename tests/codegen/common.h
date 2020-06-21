@@ -354,7 +354,10 @@ static void test(BPFtrace &bpftrace,
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
-  codegen.compile(DebugLevel::kDebug, out);
+  codegen.generate_ir();
+  codegen.optimize();
+  codegen.DumpIR(out);
+  codegen.emit();
 
   uint64_t update_tests = 0;
   if (get_uint64_env_var("BPFTRACE_UPDATE_TESTS", update_tests) &&

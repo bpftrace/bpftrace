@@ -38,7 +38,8 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
   ASSERT_EQ(semantics.create_maps(true), 0);
 
   ast::CodegenLLVM codegen(driver.root_, *bpftrace);
-  codegen.compile(DebugLevel::kDebug, out);
+  codegen.generate_ir();
+  codegen.DumpIR(out);
 }
 
 void compare_bytecode(const std::string &input1, const std::string &input2)

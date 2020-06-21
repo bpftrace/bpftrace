@@ -23,6 +23,34 @@
 namespace bpftrace {
 namespace ast {
 
+CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
+    : root_(root),
+      module_(std::make_unique<Module>("bpftrace", context_)),
+      b_(context_, *module_.get(), bpftrace),
+      layout_(module_.get()),
+      bpftrace_(bpftrace)
+{
+  LLVMInitializeBPFTargetInfo();
+  LLVMInitializeBPFTarget();
+  LLVMInitializeBPFTargetMC();
+  LLVMInitializeBPFAsmPrinter();
+
+  std::string targetTriple = "bpf-pc-linux";
+  module_->setTargetTriple(targetTriple);
+
+  std::string error;
+  const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
+  if (!target)
+    throw std::runtime_error("Could not create LLVM target " + error);
+
+  TargetOptions opt;
+  auto RM = Reloc::Model();
+  auto *TM = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
+  module_->setDataLayout(TM->createDataLayout());
+  layout_ = DataLayout(module_.get());
+  orc_ = std::make_unique<BpfOrc>(TM);
+}
+
 void CodegenLLVM::visit(Integer &integer)
 {
   expr_ = b_.getInt64(integer.n);
@@ -2434,32 +2462,16 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   expr_ = nullptr;
 }
 
-std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out)
+void CodegenLLVM::generate_ir()
 {
-  LLVMInitializeBPFTargetInfo();
-  LLVMInitializeBPFTarget();
-  LLVMInitializeBPFTargetMC();
-  LLVMInitializeBPFAsmPrinter();
-
-  std::string targetTriple = "bpf-pc-linux";
-  module_->setTargetTriple(targetTriple);
-
-  std::string error;
-  const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
-  if (!target)
-    throw std::runtime_error("Could not create LLVM target " + error);
-
-  TargetOptions opt;
-  auto RM = Reloc::Model();
-  TargetMachine *targetMachine = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
-  module_->setDataLayout(targetMachine->createDataLayout());
-  layout_ = DataLayout(module_.get());
-
   root_->accept(*this);
+}
 
-  legacy::PassManager PM;
+void CodegenLLVM::optimize()
+{
   PassManagerBuilder PMB;
   PMB.OptLevel = 3;
+  legacy::PassManager PM;
   PM.add(createFunctionInliningPass());
   /*
    * llvm < 4.0 needs
@@ -2470,39 +2482,33 @@ std::unique_ptr<BpfOrc> CodegenLLVM::compile(DebugLevel debug, std::ostream &out
    */
   LLVMAddAlwaysInlinerPass(reinterpret_cast<LLVMPassManagerRef>(&PM));
   PMB.populateModulePassManager(PM);
-  if (debug == DebugLevel::kFullDebug)
-  {
-    raw_os_ostream llvm_ostream(out);
-    llvm_ostream << "Before optimization\n";
-    llvm_ostream << "-------------------\n\n";
-    DumpIR(llvm_ostream);
-  }
 
   PM.run(*module_.get());
-
-  if (debug != DebugLevel::kNone)
-  {
-    raw_os_ostream llvm_ostream(out);
-    if (debug == DebugLevel::kFullDebug) {
-      llvm_ostream << "\nAfter optimization\n";
-      llvm_ostream << "------------------\n\n";
-    }
-    DumpIR(llvm_ostream);
-  }
-
-  auto bpforc = std::make_unique<BpfOrc>(targetMachine);
-  bpforc->compileModule(move(module_));
-
-  return bpforc;
 }
 
-void CodegenLLVM::DumpIR() {
-  raw_os_ostream llvm_ostream(std::cout);
-  DumpIR(llvm_ostream);
+std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
+{
+  orc_->compileModule(move(module_));
+  return std::move(orc_);
 }
 
-void CodegenLLVM::DumpIR(raw_os_ostream &out) {
-  module_->print(out, nullptr, false, true);
+std::unique_ptr<BpfOrc> CodegenLLVM::compile(void)
+{
+  generate_ir();
+  optimize();
+  return emit();
+}
+
+void CodegenLLVM::DumpIR(void)
+{
+  DumpIR(std::cout);
+}
+
+void CodegenLLVM::DumpIR(std::ostream &out)
+{
+  assert(module_.get() != nullptr);
+  raw_os_ostream os(out);
+  module_->print(os, nullptr, false, true);
 }
 
 } // namespace ast
