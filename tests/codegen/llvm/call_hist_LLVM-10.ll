@@ -6,70 +6,135 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8* nocapture readnone %0) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
-  %"@x_val" = alloca i64, align 8
-  %"@x_key" = alloca i64, align 8
-  %get_pid_tgid = tail call i64 inttoptr (i64 14 to i64 ()*)()
+  %"@x_val" = alloca i64
+  %lookup_elem_val = alloca i64
+  %"@x_key" = alloca i64
+  %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = lshr i64 %get_pid_tgid, 32
-  %2 = icmp eq i64 %1, 0
-  br i1 %2, label %log2.exit, label %hist.is_not_zero.i
+  %log2 = call i64 @log2(i64 %1)
+  %2 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
+  store i64 %log2, i64* %"@x_key"
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* %"@x_key")
+  %3 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-hist.is_not_zero.i:                               ; preds = %entry
-  %3 = icmp ugt i64 %get_pid_tgid, 281474976710655
-  %4 = select i1 %3, i64 16, i64 0
-  %5 = lshr i64 %1, %4
-  %6 = icmp sgt i64 %5, 255
-  %7 = select i1 %6, i64 8, i64 0
-  %8 = lshr i64 %5, %7
-  %9 = icmp sgt i64 %8, 15
-  %10 = select i1 %9, i64 4, i64 0
-  %11 = lshr i64 %8, %10
-  %12 = or i64 %4, %7
-  %13 = or i64 %12, %10
-  %14 = or i64 %13, 2
-  %15 = icmp sgt i64 %11, 3
-  %16 = select i1 %15, i64 2, i64 0
-  %17 = lshr i64 %11, %16
-  %18 = add nuw nsw i64 %16, %14
-  %19 = icmp sgt i64 %17, 1
-  %20 = zext i1 %19 to i64
-  %21 = or i64 %18, %20
-  br label %log2.exit
-
-log2.exit:                                        ; preds = %entry, %hist.is_not_zero.i
-  %log22 = phi i64 [ %21, %hist.is_not_zero.i ], [ 1, %entry ]
-  %22 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %22)
-  store i64 %log22, i64* %"@x_key", align 8
-  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* nonnull %"@x_key")
-  %map_lookup_cond = icmp eq i8* %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
-
-lookup_success:                                   ; preds = %log2.exit
+lookup_success:                                   ; preds = %entry
   %cast = bitcast i8* %lookup_elem to i64*
-  %23 = load i64, i64* %cast, align 8
-  %phitmp = add i64 %23, 1
+  %4 = load i64, i64* %cast
+  store i64 %4, i64* %lookup_elem_val
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %log2.exit, %lookup_success
-  %lookup_elem_val.0 = phi i64 [ %phitmp, %lookup_success ], [ 1, %log2.exit ]
-  %24 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %24)
-  store i64 %lookup_elem_val.0, i64* %"@x_val", align 8
+lookup_failure:                                   ; preds = %entry
+  store i64 0, i64* %lookup_elem_val
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %5 = load i64, i64* %lookup_elem_val
+  %6 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
+  %7 = add i64 %5, 1
+  store i64 %7, i64* %"@x_val"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* nonnull %"@x_key", i64* nonnull %"@x_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %22)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %24)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@x_key", i64* %"@x_val", i64 0)
+  %8 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %9 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   ret i64 0
 }
 
-; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
+; Function Attrs: alwaysinline
+define internal i64 @log2(i64 %0) #1 section "helpers" {
+entry:
+  %1 = alloca i64
+  %2 = alloca i64
+  %3 = bitcast i64* %2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  store i64 %0, i64* %2
+  %4 = bitcast i64* %1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
+  store i64 0, i64* %1
+  %5 = load i64, i64* %2
+  %6 = icmp slt i64 %5, 0
+  br i1 %6, label %hist.is_less_than_zero, label %hist.is_not_less_than_zero
+
+hist.is_less_than_zero:                           ; preds = %entry
+  %7 = load i64, i64* %1
+  ret i64 %7
+
+hist.is_not_less_than_zero:                       ; preds = %entry
+  %8 = load i64, i64* %2
+  %9 = icmp eq i64 %8, 0
+  br i1 %9, label %hist.is_zero, label %hist.is_not_zero
+
+hist.is_zero:                                     ; preds = %hist.is_not_less_than_zero
+  store i64 1, i64* %1
+  %10 = load i64, i64* %1
+  ret i64 %10
+
+hist.is_not_zero:                                 ; preds = %hist.is_not_less_than_zero
+  store i64 2, i64* %1
+  %11 = load i64, i64* %2
+  %12 = icmp sge i64 %11, 65536
+  %13 = zext i1 %12 to i64
+  %14 = shl i64 %13, 4
+  %15 = lshr i64 %11, %14
+  store i64 %15, i64* %2
+  %16 = load i64, i64* %1
+  %17 = add i64 %16, %14
+  store i64 %17, i64* %1
+  %18 = load i64, i64* %2
+  %19 = icmp sge i64 %18, 256
+  %20 = zext i1 %19 to i64
+  %21 = shl i64 %20, 3
+  %22 = lshr i64 %18, %21
+  store i64 %22, i64* %2
+  %23 = load i64, i64* %1
+  %24 = add i64 %23, %21
+  store i64 %24, i64* %1
+  %25 = load i64, i64* %2
+  %26 = icmp sge i64 %25, 16
+  %27 = zext i1 %26 to i64
+  %28 = shl i64 %27, 2
+  %29 = lshr i64 %25, %28
+  store i64 %29, i64* %2
+  %30 = load i64, i64* %1
+  %31 = add i64 %30, %28
+  store i64 %31, i64* %1
+  %32 = load i64, i64* %2
+  %33 = icmp sge i64 %32, 4
+  %34 = zext i1 %33 to i64
+  %35 = shl i64 %34, 1
+  %36 = lshr i64 %32, %35
+  store i64 %36, i64* %2
+  %37 = load i64, i64* %1
+  %38 = add i64 %37, %35
+  store i64 %38, i64* %1
+  %39 = load i64, i64* %2
+  %40 = icmp sge i64 %39, 2
+  %41 = zext i1 %40 to i64
+  %42 = shl i64 %41, 0
+  %43 = lshr i64 %39, %42
+  store i64 %43, i64* %2
+  %44 = load i64, i64* %1
+  %45 = add i64 %44, %42
+  store i64 %45, i64* %1
+  %46 = load i64, i64* %1
+  ret i64 %46
+}
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
+declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #2
+
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #2
 
 attributes #0 = { nounwind }
-attributes #1 = { argmemonly nounwind willreturn }
+attributes #1 = { alwaysinline }
+attributes #2 = { argmemonly nounwind willreturn }

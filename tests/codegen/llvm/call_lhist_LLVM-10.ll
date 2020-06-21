@@ -4,9 +4,9 @@ target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "bpf-pc-linux"
 
 ; Function Attrs: nounwind
-declare i64 @llvm.bpf.pseudo(i64, i64) #0
+declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_val" = alloca i64
   %lookup_elem_val = alloca i64
@@ -52,7 +52,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 }
 
 ; Function Attrs: alwaysinline
-define internal i64 @linear(i64, i64, i64, i64) #1 section "helpers" {
+define internal i64 @linear(i64 %0, i64 %1, i64 %2, i64 %3) #1 section "helpers" {
 entry:
   %4 = alloca i64
   %5 = alloca i64
@@ -110,12 +110,12 @@ lhist.gt_max:                                     ; preds = %lhist.ge_min
   ret i64 %33
 }
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #2
 
-; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+; Function Attrs: argmemonly nounwind willreturn
+declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline }
-attributes #2 = { argmemonly nounwind }
+attributes #2 = { argmemonly nounwind willreturn }

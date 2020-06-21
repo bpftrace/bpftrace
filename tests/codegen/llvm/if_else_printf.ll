@@ -9,42 +9,54 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-define i64 @"kprobe:f"(i8*) local_unnamed_addr section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
 entry:
-  %printf_args1 = alloca %printf_t.0, align 8
-  %printf_args = alloca %printf_t, align 8
-  %get_pid_tgid = tail call i64 inttoptr (i64 14 to i64 ()*)()
-  %1 = icmp ugt i64 %get_pid_tgid, 47244640255
-  br i1 %1, label %if_body, label %else_body
+  %printf_args1 = alloca %printf_t.0
+  %printf_args = alloca %printf_t
+  %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
+  %1 = lshr i64 %get_pid_tgid, 32
+  %2 = icmp ugt i64 %1, 10
+  %3 = zext i1 %2 to i64
+  %true_cond = icmp ne i64 %3, 0
+  br i1 %true_cond, label %if_body, label %else_body
 
 if_body:                                          ; preds = %entry
-  %2 = bitcast %printf_t* %printf_args to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
-  %3 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 0
-  store i64 0, i64* %3, align 8
-  %pseudo = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id = tail call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 8)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
+  %4 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
+  %5 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %5, i8 0, i64 8, i1 false)
+  %6 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 0
+  store i64 0, i64* %6
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* %printf_args, i64 8)
+  %7 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
   br label %if_end
 
 if_end:                                           ; preds = %else_body, %if_body
   ret i64 0
 
 else_body:                                        ; preds = %entry
-  %4 = bitcast %printf_t.0* %printf_args1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %4)
-  %5 = getelementptr inbounds %printf_t.0, %printf_t.0* %printf_args1, i64 0, i32 0
-  store i64 1, i64* %5, align 8
-  %pseudo2 = tail call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id3 = tail call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output4 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.0*, i64)*)(i8* %0, i64 %pseudo2, i64 %get_cpu_id3, %printf_t.0* nonnull %printf_args1, i64 8)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %4)
+  %8 = bitcast %printf_t.0* %printf_args1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  %9 = bitcast %printf_t.0* %printf_args1 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %9, i8 0, i64 8, i1 false)
+  %10 = getelementptr %printf_t.0, %printf_t.0* %printf_args1, i32 0, i32 0
+  store i64 1, i64* %10
+  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %get_cpu_id3 = call i64 inttoptr (i64 8 to i64 ()*)()
+  %perf_event_output4 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.0*, i64)*)(i8* %0, i64 %pseudo2, i64 %get_cpu_id3, %printf_t.0* %printf_args1, i64 8)
+  %11 = bitcast %printf_t.0* %printf_args1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   br label %if_end
 }
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+
+; Function Attrs: argmemonly nounwind
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1

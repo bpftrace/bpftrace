@@ -6,52 +6,90 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
-define i64 @"interval:s:1"(i8* nocapture readnone) local_unnamed_addr section "s_interval:s:1_1" {
+define i64 @"interval:s:1"(i8*) section "s_interval:s:1_1" {
 entry:
-  %"@_newval" = alloca i64, align 8
-  %"@_key" = alloca i64, align 8
-  %1 = bitcast i64* %"@_key" to i8*
-  %2 = bitcast i64* %"@_newval" to i8*
-  br label %while_body
+  %"@_newval" = alloca i64
+  %lookup_elem_val = alloca i64
+  %"@_key" = alloca i64
+  %"$j" = alloca i64
+  %1 = bitcast i64* %"$j" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
+  store i64 0, i64* %"$j"
+  %"$i" = alloca i64
+  %2 = bitcast i64* %"$i" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
+  store i64 0, i64* %"$i"
+  %3 = bitcast i64* %"$i" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
+  store i64 1, i64* %"$i"
+  br label %while_cond
 
-while_cond.loopexit:                              ; preds = %lookup_merge
-  %3 = add nuw nsw i64 %"$i.07", 1
-  %exitcond8 = icmp eq i64 %3, 101
-  br i1 %exitcond8, label %while_end, label %while_body
+while_cond:                                       ; preds = %while_end3, %entry
+  %4 = load i64, i64* %"$i"
+  %5 = icmp sle i64 %4, 100
+  %6 = zext i1 %5 to i64
+  %true_cond = icmp ne i64 %6, 0
+  br i1 %true_cond, label %while_body, label %while_end
 
-while_body:                                       ; preds = %while_cond.loopexit, %entry
-  %"$i.07" = phi i64 [ 1, %entry ], [ %3, %while_cond.loopexit ]
-  br label %while_body2
+while_body:                                       ; preds = %while_cond
+  %7 = bitcast i64* %"$j" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store i64 0, i64* %"$j"
+  %8 = load i64, i64* %"$i"
+  %9 = add i64 %8, 1
+  store i64 %9, i64* %"$i"
+  br label %while_cond1
 
-while_end:                                        ; preds = %while_cond.loopexit
+while_end:                                        ; preds = %while_cond
   ret i64 0
 
-while_body2:                                      ; preds = %lookup_merge, %while_body
-  %"$j.06" = phi i64 [ 0, %while_body ], [ %6, %lookup_merge ]
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
-  store i64 0, i64* %"@_key", align 8
+while_cond1:                                      ; preds = %lookup_merge, %while_body
+  %10 = load i64, i64* %"$j"
+  %11 = icmp sle i64 %10, 100
+  %12 = zext i1 %11 to i64
+  %true_cond4 = icmp ne i64 %12, 0
+  br i1 %true_cond4, label %while_body2, label %while_end3
+
+while_body2:                                      ; preds = %while_cond1
+  %13 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
+  store i64 0, i64* %"@_key"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* nonnull %"@_key")
-  %map_lookup_cond = icmp eq i8* %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_merge, label %lookup_success
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* %"@_key")
+  %14 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
+  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
+
+while_end3:                                       ; preds = %while_cond1
+  br label %while_cond
 
 lookup_success:                                   ; preds = %while_body2
   %cast = bitcast i8* %lookup_elem to i64*
-  %4 = load i64, i64* %cast, align 8
+  %15 = load i64, i64* %cast
+  store i64 %15, i64* %lookup_elem_val
   br label %lookup_merge
 
-lookup_merge:                                     ; preds = %while_body2, %lookup_success
-  %lookup_elem_val.0 = phi i64 [ %4, %lookup_success ], [ 0, %while_body2 ]
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
-  %5 = add i64 %lookup_elem_val.0, 1
-  store i64 %5, i64* %"@_newval", align 8
+lookup_failure:                                   ; preds = %while_body2
+  store i64 0, i64* %lookup_elem_val
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %16 = load i64, i64* %lookup_elem_val
+  %17 = bitcast i64* %"@_newval" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
+  %18 = add i64 %16, 1
+  store i64 %18, i64* %"@_newval"
   %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* nonnull %"@_key", i64* nonnull %"@_newval", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %2)
-  %6 = add nuw nsw i64 %"$j.06", 1
-  %exitcond = icmp eq i64 %6, 101
-  br i1 %exitcond, label %while_cond.loopexit, label %while_body2
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* %"@_key", i64* %"@_newval", i64 0)
+  %19 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
+  %20 = bitcast i64* %"@_newval" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
+  %21 = load i64, i64* %"$j"
+  %22 = add i64 %21, 1
+  store i64 %22, i64* %"$j"
+  br label %while_cond1
 }
 
 ; Function Attrs: argmemonly nounwind
