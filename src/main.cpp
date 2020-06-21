@@ -687,7 +687,25 @@ int main(int argc, char *argv[])
   std::unique_ptr<BpfOrc> bpforc;
   try
   {
-    bpforc = llvm.compile(bt_debug);
+    llvm.generate_ir();
+    if (bt_debug == DebugLevel::kFullDebug)
+    {
+      std::cout << "Before optimization\n";
+      std::cout << "-------------------\n\n";
+      llvm.DumpIR();
+    }
+
+    llvm.optimize();
+    if (bt_debug != DebugLevel::kNone)
+    {
+      if (bt_debug == DebugLevel::kFullDebug)
+      {
+        std::cout << "\nAfter optimization\n";
+        std::cout << "------------------\n\n";
+      }
+      llvm.DumpIR();
+    }
+    bpforc = llvm.emit();
   }
   catch (const std::exception& ex)
   {
