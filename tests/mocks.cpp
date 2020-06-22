@@ -100,9 +100,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                   } } },
   };
 
-  auto ptr_type = CreateUInt64();
-  ptr_type.is_pointer = true;
-  ptr_type.pointee_size = 1;
+  auto ptr_type = CreatePointer(CreateInt8());
   bpftrace.structs_["struct _tracepoint_file_filename"] = Struct{
     .size = 8,
     .fields = { { "filename",

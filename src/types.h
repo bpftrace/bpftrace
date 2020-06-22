@@ -36,7 +36,6 @@ enum class Type
   string,
   ksym,
   usym,
-  cast,
   join,
   probe,
   username,
@@ -44,7 +43,6 @@ enum class Type
   stack_mode,
   array,
   // BPF program context; needing a different access method to satisfy the verifier
-  ctx,
   buffer,
   tuple,
   timestamp
@@ -73,15 +71,11 @@ class SizedType
 {
 public:
   SizedType() : type(Type::none), size(0) { }
-  SizedType(Type type,
-            size_t size_,
-            bool is_signed,
-            const std::string &cast_type = "")
-      : type(type), size(size_), cast_type(cast_type), is_signed_(is_signed)
+  SizedType(Type type, size_t size_, bool is_signed)
+      : type(type), size(size_), is_signed_(is_signed)
   {
   }
-  SizedType(Type type, size_t size_, const std::string &cast_type = "")
-      : type(type), size(size_), cast_type(cast_type)
+  SizedType(Type type, size_t size_) : type(type), size(size_)
   {
   }
 
@@ -92,7 +86,6 @@ public:
   size_t size;                 // in bytes
   StackType stack_type;
   bool is_internal = false;
-  bool is_pointer = false;
   bool is_tparg = false;
   bool is_kfarg = false;
   size_t pointee_size = 0;
@@ -101,7 +94,6 @@ public:
   std::vector<SizedType> tuple_elems;
 
 private:
-  std::string cast_type;
   bool is_signed_ = false;
   SizedType *element_type_ = nullptr; // for "container" and pointer
                                       // (like) types
@@ -158,7 +150,7 @@ public:
 
   const SizedType *GetElementTy() const
   {
-    assert(IsArrayTy() || IsCtxTy());
+    assert(IsArrayTy());
     return element_type_;
   }
 
@@ -170,7 +162,7 @@ public:
 
   bool IsPtrTy() const
   {
-    return ((type == Type::pointer) || (IsIntTy() && is_pointer));
+    return type == Type::pointer;
   };
   bool IsIntTy() const
   {
@@ -236,10 +228,7 @@ public:
   {
     return type == Type::usym;
   };
-  bool IsCastTy(void) const
-  {
-    return type == Type::cast;
-  };
+
   bool IsJoinTy(void) const
   {
     return type == Type::join;
@@ -263,10 +252,6 @@ public:
   bool IsArrayTy(void) const
   {
     return type == Type::array;
-  };
-  bool IsCtxTy(void) const
-  {
-    return type == Type::ctx;
   };
   bool IsRecordTy(void) const
   {
@@ -323,10 +308,6 @@ SizedType CreateRecord(size_t size, const std::string &name);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());
-
-// Size in bits
-SizedType CreateCast(size_t size, std::string name = "");
-SizedType CreateCTX(size_t size, std::string name);
 
 SizedType CreateMin(bool is_signed);
 SizedType CreateMax(bool is_signed);
