@@ -14,6 +14,7 @@ EOF
 
 $fedora_deps = <<EOF
 dnf builddep -q -y bpftrace
+dnf install -q -y git
 EOF
 
 $build_bcc = <<EOF
@@ -45,6 +46,11 @@ Vagrant.configure("2") do |config|
     },
     'fedora-31'        => {
       'image'          => 'fedora/31-cloud-base',
+      'scripts'        => [ $fedora_deps, ],
+      'skip_bcc_build' => 1
+    },
+    'fedora-32'        => {
+      'image'          => 'fedora/32-cloud-base',
       'scripts'        => [ $fedora_deps, ],
       'skip_bcc_build' => 1
     }
