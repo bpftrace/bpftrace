@@ -33,7 +33,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   %probe_read1 = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* %deref, i32 4, i64 %8)
   %11 = load i32, i32* %deref
-  %12 = zext i32 %11 to i64
+  %12 = sext i32 %11 to i64
   %13 = bitcast i32* %deref to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   %14 = bitcast i64* %"@x_key" to i8*
