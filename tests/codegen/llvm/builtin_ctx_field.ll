@@ -49,16 +49,16 @@ entry:
   %12 = add i64 %1, 16
   %13 = inttoptr i64 %12 to i8*
   %14 = load volatile i8, i8* %13, align 1
-  %15 = bitcast i64* %"@c_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %15)
+  %15 = sext i8 %14 to i64
+  %16 = bitcast i64* %"@c_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %16)
   store i64 0, i64* %"@c_key", align 8
-  %16 = sext i8 %14 to i64
   %17 = bitcast i64* %"@c_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %17)
-  store i64 %16, i64* %"@c_val", align 8
+  store i64 %15, i64* %"@c_val", align 8
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo3, i64* nonnull %"@c_key", i64* nonnull %"@c_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %15)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %16)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %17)
   %18 = add i64 %1, 24
   %19 = inttoptr i64 %18 to i64*
@@ -66,17 +66,17 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %"struct c.c")
   %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* nonnull %"struct c.c", i32 1, i64 %20)
   %21 = load i8, i8* %"struct c.c", align 1
+  %22 = sext i8 %21 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %"struct c.c")
-  %22 = bitcast i64* %"@d_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %22)
+  %23 = bitcast i64* %"@d_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %23)
   store i64 0, i64* %"@d_key", align 8
-  %23 = sext i8 %21 to i64
   %24 = bitcast i64* %"@d_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %24)
-  store i64 %23, i64* %"@d_val", align 8
+  store i64 %22, i64* %"@d_val", align 8
   %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
   %update_elem6 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* nonnull %"@d_key", i64* nonnull %"@d_val", i64 0)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %22)
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %23)
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %24)
   %25 = add i64 %1, 32
   %26 = getelementptr inbounds [4 x i8], [4 x i8]* %"struct x.e", i64 0, i64 0

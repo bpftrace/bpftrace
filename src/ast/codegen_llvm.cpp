@@ -1414,12 +1414,15 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
                             true);
+      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), field.type.IsSigned());
     }
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type, type.cast_type + "." + acc.field);
       b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
-      expr_ = b_.CreateLoad(dst);
+      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                               b_.getInt64Ty(),
+                               field.type.IsSigned());
       b_.CreateLifetimeEnd(dst);
     }
   }
