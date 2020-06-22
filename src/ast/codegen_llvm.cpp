@@ -1350,7 +1350,7 @@ void CodegenLLVM::visit(Ternary &ternary)
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
-  assert(type.IsRecordTy() || type.IsCastTy() || type.IsCtxTy() || type.IsTupleTy());
+  assert(type.IsRecordTy() || type.IsTupleTy());
   auto scoped_del = accept(acc.expr);
 
   bool is_ctx = type.IsCtxAccess();
@@ -1611,15 +1611,6 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     if (assignment.expr->type.is_internal)
     {
       val = expr;
-    }
-    else if (assignment.expr->type.is_pointer)
-    {
-      // expr currently contains a pointer to the struct
-      // and that's what we are saving
-      AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_ptr");
-      b_.CreateStore(expr, dst);
-      val = dst;
-      self_alloca = true;
     }
     else
     {

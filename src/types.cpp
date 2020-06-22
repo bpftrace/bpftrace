@@ -53,9 +53,6 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
     os << type.type;
   }
 
-  if (type.is_pointer)
-    os << "*";
-
   return os;
 }
 
@@ -135,14 +132,12 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
-    case Type::cast:     return "cast";     break;
     case Type::join:     return "join";     break;
     case Type::probe:    return "probe";    break;
     case Type::username: return "username"; break;
     case Type::inet:     return "inet";     break;
     case Type::stack_mode:return "stack mode";break;
     case Type::array:    return "array";    break;
-    case Type::ctx:      return "ctx";      break;
     case Type::buffer:   return "buffer";   break;
     case Type::tuple:    return "tuple";    break;
     case Type::timestamp:return "timestamp";break;
@@ -288,17 +283,6 @@ SizedType CreateNone()
 SizedType CreateStackMode()
 {
   return SizedType(Type::stack_mode, 0);
-}
-
-SizedType CreateCast(size_t size, std::string name)
-{
-  assert(size % 8 == 0);
-  return SizedType(Type::cast, size / 8, name);
-}
-
-SizedType CreateCTX(size_t size, std::string name)
-{
-  return SizedType(Type::ctx, size, name);
 }
 
 SizedType CreateArray(size_t num_elements, const SizedType &element_type)
