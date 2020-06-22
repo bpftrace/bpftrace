@@ -1256,7 +1256,7 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
     return resolve_usym(read_data<uintptr_t>(value.data()),
                         read_data<uintptr_t>(value.data() + 8));
   else if (stype.IsInetTy())
-    return resolve_inet(read_data<uint32_t>(value.data()),
+    return resolve_inet(read_data<uint64_t>(value.data()),
                         (uint8_t *)(value.data() + 8));
   else if (stype.IsUsernameTy())
     return resolve_uid(read_data<uint64_t>(value.data()));
