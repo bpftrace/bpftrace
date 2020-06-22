@@ -1493,7 +1493,9 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
     b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
-    expr_ = b_.CreateLoad(dst);
+    expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                             b_.getInt64Ty(),
+                             arr.expr->type.IsSigned());
     b_.CreateLifetimeEnd(dst);
   }
 }
