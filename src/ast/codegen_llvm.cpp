@@ -1219,7 +1219,9 @@ void CodegenLLVM::visit(Unop &unop)
         }
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
         b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
-        expr_ = b_.CreateLoad(dst);
+        expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                                 b_.getInt64Ty(),
+                                 type.IsSigned());
         b_.CreateLifetimeEnd(dst);
         break;
       }
@@ -1238,7 +1240,9 @@ void CodegenLLVM::visit(Unop &unop)
           int size = unop.type.size;
           AllocaInst *dst = b_.CreateAllocaBPF(unop.type, "deref");
           b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
-          expr_ = b_.CreateLoad(dst);
+          expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                                   b_.getInt64Ty(),
+                                   unop.type.IsSigned());
           b_.CreateLifetimeEnd(dst);
         }
         break;
