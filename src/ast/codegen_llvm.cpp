@@ -223,6 +223,7 @@ void CodegenLLVM::visit(Builtin &builtin)
                                           arg_num,
                                           builtin,
                                           bpftrace_.pid(),
+                                          AddrSpace::none,
                                           builtin.loc);
         return;
       }
@@ -266,7 +267,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     Value *src = b_.CreateAdd(sp,
                               b_.getInt64((arg_num + arch::arg_stack_offset()) *
                                           sizeof(uintptr_t)));
-    b_.CreateProbeRead(ctx_, dst, 8, src, builtin.loc);
+    b_.CreateProbeRead(ctx_, dst, 8, src, builtin.type.GetAS(), builtin.loc);
     expr_ = b_.CreateLoad(dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -528,8 +529,10 @@ void CodegenLLVM::visit(Call &call)
     }
     AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
     b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+    auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
-    b_.CreateProbeReadStr(ctx_, buf, b_.CreateLoad(strlen), expr_, call.loc);
+    b_.CreateProbeReadStr(
+        ctx_, buf, b_.CreateLoad(strlen), expr_, arg0->type.GetAS(), call.loc);
     b_.CreateLifetimeEnd(strlen);
 
     expr_ = buf;
@@ -584,10 +587,12 @@ void CodegenLLVM::visit(Call &call)
                      1);
 
     auto scoped_del = accept(call.vargs->front());
+    auto arg0 = call.vargs->front();
     b_.CreateProbeRead(ctx_,
                        static_cast<AllocaInst *>(buf_data_offset),
                        length,
                        expr_,
+                       arg0->type.GetAS(),
                        call.loc);
 
     expr_ = buf;
@@ -620,7 +625,9 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "join")
   {
-    auto scoped_del = accept(call.vargs->front());
+    auto arg0 = call.vargs->front();
+    auto scoped_del = accept(arg0);
+    auto addrspace = arg0->type.GetAS();
     AllocaInst *first = b_.CreateAllocaBPF(b_.getInt64Ty(),
                                            call.func + "_first");
     AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
@@ -650,24 +657,27 @@ void CodegenLLVM::visit(Call &call)
                    b_.CreateGEP(perfdata, b_.getInt64(8)));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
-    b_.CreateProbeRead(ctx_, arr, 8, expr_, call.loc);
+    b_.CreateProbeRead(ctx_, arr, 8, expr_, addrspace, call.loc);
     b_.CreateProbeReadStr(ctx_,
                           b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
                           bpftrace_.join_argsize_,
                           b_.CreateLoad(arr),
+                          addrspace,
                           call.loc);
 
     for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
     {
       // argi
       b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
-      b_.CreateProbeRead(ctx_, second, 8, b_.CreateLoad(first), call.loc);
+      b_.CreateProbeRead(
+          ctx_, second, 8, b_.CreateLoad(first), addrspace, call.loc);
       b_.CreateProbeReadStr(
           ctx_,
           b_.CreateAdd(perfdata,
                        b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
           bpftrace_.join_argsize_,
           b_.CreateLoad(second),
+          addrspace,
           call.loc);
     }
 
@@ -742,6 +752,7 @@ void CodegenLLVM::visit(Call &call)
                          static_cast<AllocaInst *>(inet_offset),
                          inet->type.size,
                          expr_,
+                         inet->type.GetAS(),
                          call.loc);
     }
     else
@@ -921,28 +932,41 @@ void CodegenLLVM::visit(Call &call)
     uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
     const auto& left_arg = call.vargs->at(0);
     const auto& right_arg = call.vargs->at(1);
+    auto left_as = left_arg->type.GetAS();
+    auto right_as = right_arg->type.GetAS();
 
     // If one of the strings is fixed, we can avoid storing the
     // literal in memory by calling a different function.
-    if (right_arg->is_literal) {
+    if (right_arg->is_literal)
+    {
       auto scoped_del = accept(left_arg);
       Value *left_string = expr_;
       const auto& string_literal = static_cast<String *>(right_arg)->str;
       expr_ = b_.CreateStrncmp(
-          ctx_, left_string, string_literal, size, call.loc, false);
-    } else if (left_arg->is_literal) {
+          ctx_, left_string, left_as, string_literal, size, call.loc, false);
+    }
+    else if (left_arg->is_literal)
+    {
       auto scoped_del = accept(right_arg);
       Value *right_string = expr_;
       const auto& string_literal = static_cast<String *>(left_arg)->str;
       expr_ = b_.CreateStrncmp(
-          ctx_, right_string, string_literal, size, call.loc, false);
-    } else {
+          ctx_, right_string, right_as, string_literal, size, call.loc, false);
+    }
+    else
+    {
       auto scoped_del_right = accept(right_arg);
       Value *right_string = expr_;
       auto scoped_del_left = accept(left_arg);
       Value *left_string = expr_;
-      expr_ = b_.CreateStrncmp(
-          ctx_, left_string, right_string, size, call.loc, false);
+      expr_ = b_.CreateStrncmp(ctx_,
+                               left_string,
+                               left_as,
+                               right_string,
+                               right_as,
+                               size,
+                               call.loc,
+                               false);
     }
   }
   else if (call.func == "override")
@@ -1011,19 +1035,24 @@ void CodegenLLVM::visit(Binop &binop)
     // strcmp returns 0 when strings are equal
     bool inverse = binop.op == bpftrace::Parser::token::EQ;
 
+    auto left_as = binop.left->type.GetAS();
+    auto right_as = binop.right->type.GetAS();
+
     // If one of the strings is fixed, we can avoid storing the
     // literal in memory by calling a different function.
     if (binop.right->is_literal)
     {
       auto scoped_del = accept(binop.left);
       string_literal = static_cast<String *>(binop.right)->str;
-      expr_ = b_.CreateStrcmp(ctx_, expr_, string_literal, binop.loc, inverse);
+      expr_ = b_.CreateStrcmp(
+          ctx_, expr_, left_as, string_literal, binop.loc, inverse);
     }
     else if (binop.left->is_literal)
     {
       auto scoped_del = accept(binop.right);
       string_literal = static_cast<String *>(binop.left)->str;
-      expr_ = b_.CreateStrcmp(ctx_, expr_, string_literal, binop.loc, inverse);
+      expr_ = b_.CreateStrcmp(
+          ctx_, expr_, right_as, string_literal, binop.loc, inverse);
     }
     else
     {
@@ -1034,8 +1063,14 @@ void CodegenLLVM::visit(Binop &binop)
       Value * left_string = expr_;
 
       size_t len = std::min(binop.left->type.size, binop.right->type.size);
-      expr_ = b_.CreateStrncmp(
-          ctx_, left_string, right_string, len + 1, binop.loc, inverse);
+      expr_ = b_.CreateStrncmp(ctx_,
+                               left_string,
+                               left_as,
+                               right_string,
+                               right_as,
+                               len + 1,
+                               binop.loc,
+                               inverse);
     }
   }
   else if (type.IsBufferTy())
@@ -1054,13 +1089,21 @@ void CodegenLLVM::visit(Binop &binop)
 
     auto scoped_del_right = accept(binop.right);
     Value *right_string = expr_;
+    auto right_as = binop.right->type.GetAS();
 
     auto scoped_del_left = accept(binop.left);
     Value *left_string = expr_;
+    auto left_as = binop.left->type.GetAS();
 
     size_t len = std::min(binop.left->type.size, binop.right->type.size);
-    expr_ = b_.CreateStrncmp(
-        ctx_, left_string, right_string, len, binop.loc, inverse);
+    expr_ = b_.CreateStrncmp(ctx_,
+                             left_string,
+                             left_as,
+                             right_string,
+                             right_as,
+                             len,
+                             binop.loc,
+                             inverse);
   }
   else
   {
@@ -1216,7 +1259,7 @@ void CodegenLLVM::visit(Unop &unop)
           size = type.GetPointeeTy()->size;
         }
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
-        b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
+        b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
         expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                  b_.getInt64Ty(),
                                  type.IsSigned());
@@ -1238,7 +1281,7 @@ void CodegenLLVM::visit(Unop &unop)
           auto *et = type.GetPointeeTy();
           int size = et->GetIntBitWidth() / 8;
           AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
-          b_.CreateProbeRead(ctx_, dst, size, expr_, unop.loc);
+          b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
           expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                    b_.getInt64Ty(),
                                    unop.type.IsSigned());
@@ -1461,7 +1504,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
       }
       else
       {
-        b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
+        b_.CreateProbeRead(
+            ctx_, dst, field.type.size, src, type.GetAS(), acc.loc);
       }
       expr_ = dst;
       expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
@@ -1478,7 +1522,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                              type.GetName() + "." + acc.field);
         // memset so verifier doesn't complain about reading uninitialized stack
         b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.size, 1);
-        b_.CreateProbeRead(ctx_, dst, field.bitfield.read_bytes, src, acc.loc);
+        b_.CreateProbeRead(
+            ctx_, dst, field.bitfield.read_bytes, src, type.GetAS(), acc.loc);
         raw = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
       }
@@ -1497,7 +1542,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(field.type,
                                            type.GetName() + "." + acc.field);
-      b_.CreateProbeRead(ctx_, dst, field.type.size, src, acc.loc);
+      b_.CreateProbeRead(
+          ctx_, dst, field.type.size, src, type.GetAS(), acc.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                b_.getInt64Ty(),
                                field.type.IsSigned());
@@ -1534,7 +1580,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-      b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
+      b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                b_.getInt64Ty(),
                                arr.expr->type.IsSigned());
@@ -1544,7 +1590,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-    b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
+    b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
     expr_ = dst;
     expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
   }
@@ -1614,7 +1660,12 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
       // expr currently contains a pointer to the struct
       // We now want to read the entire struct in so we can save it
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-      b_.CreateProbeRead(ctx_, dst, map.type.size, expr, assignment.loc);
+      b_.CreateProbeRead(ctx_,
+                         dst,
+                         map.type.size,
+                         expr,
+                         assignment.expr->type.GetAS(),
+                         assignment.loc);
       val = dst;
       self_alloca = true;
     }
