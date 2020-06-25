@@ -87,6 +87,14 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
           BASE: bionic
+        - NAME: LLVM 10 Clang Debug
+          TYPE: Debug
+          LLVM_VERSION: 10
+          CC: clang-10
+          CXX: clang++-10
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
     steps:
     - uses: actions/checkout@v2
     - name: Build docker container
@@ -109,6 +117,8 @@ jobs:
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
+        -e CC="${CC}"
+        -e CXX="${CXX}"
         bpftrace-builder-$BASE-llvm-$LLVM_VERSION
         ${PWD}/build-$TYPE-$BASE
         $TYPE
