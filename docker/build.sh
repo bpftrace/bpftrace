@@ -12,6 +12,8 @@ EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY:-OFF}
 DEPS_ONLY=${DEPS_ONLY:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
+CC=${CC:cc}
+CXX=${CXX:c++}
 
 # If running on Travis, we may need several builds incrementally building up
 # the cache in order to cold-start the build cache within the 50 minute travis
