@@ -824,9 +824,8 @@ void SemanticAnalyser::visit(Call &call)
     }
     if (check_varargs(call, 1, 3)) {
       auto &arg = *call.vargs->at(0);
-      if (!arg.is_map)
-        error("print() expects a map to be provided", call.loc);
-      else {
+      if (arg.is_map)
+      {
         Map &map = static_cast<Map&>(arg);
         map.skip_key_validation = true;
         if (map.vargs != nullptr) {
@@ -834,12 +833,38 @@ void SemanticAnalyser::visit(Call &call)
                                    << "indexed by a key",
               call.loc);
         }
+
+        if (is_final_pass())
+        {
+          if (call.vargs->size() > 1)
+            check_arg(call, Type::integer, 1, true);
+          if (call.vargs->size() > 2)
+            check_arg(call, Type::integer, 2, true);
+        }
       }
-      if (is_final_pass()) {
-        if (call.vargs->size() > 1)
-          check_arg(call, Type::integer, 1, true);
-        if (call.vargs->size() > 2)
-          check_arg(call, Type::integer, 2, true);
+      // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
+      // non-map value requires being able to serialize the entire value, so
+      // map-backed types like count(), min(), max(), etc. cannot be printed
+      // through the non-map printing mechanism.
+      //
+      // We rely on the fact that semantic analysis enforces types like count(),
+      // min(), max(), etc. to be assigned directly to a map. This ensures that
+      // the previous `arg.is_map` arm is hit first.
+      else if (arg.type.IsPrintableTy())
+      {
+        if (call.vargs->size() != 1)
+          ERR("Non-map print() only takes 1 argument, " << call.vargs->size()
+                                                        << " found",
+              call.loc);
+
+        bpftrace_.non_map_print_args_.emplace_back(arg.type);
+      }
+      else
+      {
+        if (is_final_pass())
+          ERR(arg.type << " type passed to " << call.func
+                       << "() is not printable",
+              call.loc);
       }
     }
   }

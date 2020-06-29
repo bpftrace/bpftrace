@@ -11,8 +11,10 @@ namespace bpftrace {
 
 enum class MessageType
 {
-  // don't forget to update std::ostream& operator<<(std::ostream& out, MessageType type) in output.cpp
+  // don't forget to update std::ostream& operator<<(std::ostream& out,
+  // MessageType type) in output.cpp
   map,
+  value,
   hist,
   stats,
   printf,
@@ -44,6 +46,9 @@ public:
   virtual void map_stats(BPFtrace &bpftrace, IMap &map,
                          const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
                          const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const = 0;
+  virtual void value(BPFtrace &bpftrace,
+                     const SizedType &ty,
+                     const std::vector<uint8_t> &value) const = 0;
 
   virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
@@ -68,6 +73,9 @@ public:
   void map_stats(BPFtrace &bpftrace, IMap &map,
                  const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const override;
+  virtual void value(BPFtrace &bpftrace,
+                     const SizedType &ty,
+                     const std::vector<uint8_t> &value) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
@@ -95,6 +103,9 @@ public:
   void map_stats(BPFtrace &bpftrace, IMap &map,
                  const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
                  const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const override;
+  virtual void value(BPFtrace &bpftrace,
+                     const SizedType &ty,
+                     const std::vector<uint8_t> &value) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void message(MessageType type, const std::string& field, uint64_t value) const;

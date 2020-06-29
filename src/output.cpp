@@ -16,6 +16,9 @@ bool is_quoted_type(const SizedType &ty)
 std::ostream& operator<<(std::ostream& out, MessageType type) {
   switch (type) {
     case MessageType::map: out << "map"; break;
+    case MessageType::value:
+      out << "value";
+      break;
     case MessageType::hist: out << "hist"; break;
     case MessageType::stats: out << "stats"; break;
     case MessageType::printf: out << "printf"; break;
@@ -294,6 +297,18 @@ void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     else
       out_ << average << std::endl;
   }
+
+  out_ << std::endl;
+}
+
+void TextOutput::value(BPFtrace &bpftrace,
+                       const SizedType &ty,
+                       const std::vector<uint8_t> &value) const
+{
+  if (ty.type == Type::tuple)
+    out_ << tuple_to_str(bpftrace, ty, value);
+  else
+    out_ << bpftrace.map_value_to_str(ty, value, false, 1);
 
   out_ << std::endl;
 }
@@ -601,6 +616,29 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
   if (map.key_.size() > 0)
     out_ << "}";
   out_ << "}}" << std::endl;
+}
+
+void JsonOutput::value(BPFtrace &bpftrace,
+                       const SizedType &ty,
+                       const std::vector<uint8_t> &value) const
+{
+  out_ << "{\"type\": \"" << MessageType::value << "\", \"data\": ";
+
+  if (is_quoted_type(ty))
+  {
+    out_ << "\"" << json_escape(bpftrace.map_value_to_str(ty, value, false, 1))
+         << "\"";
+  }
+  else if (ty.type == Type::tuple)
+  {
+    out_ << tuple_to_str(bpftrace, ty, value);
+  }
+  else
+  {
+    out_ << bpftrace.map_value_to_str(ty, value, false, 1);
+  }
+
+  out_ << "}" << std::endl;
 }
 
 void JsonOutput::message(MessageType type, const std::string& msg, bool nl __attribute__((unused))) const

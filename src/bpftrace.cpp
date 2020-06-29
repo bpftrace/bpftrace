@@ -478,6 +478,19 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
                                "\", err=" + std::to_string(err));
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::print_non_map))
+  {
+    auto print = static_cast<AsyncEvent::PrintNonMap *>(data);
+    const SizedType &ty = bpftrace->non_map_print_args_.at(print->print_id);
+
+    std::vector<uint8_t> bytes;
+    for (size_t i = 0; i < ty.size; ++i)
+      bytes.emplace_back(reinterpret_cast<uint8_t>(print->content[i]));
+
+    bpftrace->out_->value(*bpftrace, ty, bytes);
+
+    return;
+  }
   else if (printf_id == asyncactionint(AsyncAction::clear))
   {
     auto mapevent = static_cast<AsyncEvent::MapEvent *>(data);

@@ -88,6 +88,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [20. `override()`: Override return value](#20-override-override-return-value)
     - [21. `buf()`: Buffers](#21-buf-buffers)
     - [22. `sizeof()`: Size of type or expression](#22-sizeof-size-of-type-or-expression)
+    - [23. `print()`: Print Value](#23-print-print-value)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2656,6 +2657,31 @@ Attaching 1 probe...
 8
 ```
 
+## 23. `print()`: Print Value
+
+Syntax: ```print(value)```
+
+The `print()` function can print a non-map value with default formatting.
+
+For example, local variables and most builtins can be printed:
+
+```
+# bpftrace -e 'BEGIN { $t = (1, "string"); print(123); print($t); print(comm) }'
+Attaching 1 probe...
+123
+(1, string)
+bpftrace
+^C
+```
+
+It is important to note that printing values is different than printing maps.
+Both printing maps and printing values are asynchronous: the kernel queues the
+event but some time later it is processed in userspace. For values, the event
+contains the memcopy'd value so the value at `print()` invocation time will be
+printed.  However for maps, only the handle to the map is queued up, so the
+printed map may be different than the map at `print()` invocation.
+
+
 # Map Functions
 
 Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are
@@ -2700,11 +2726,12 @@ END
 - `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of n
 - `delete(@x[key])` - Delete the map element passed in as an argument
 - `print(@x[, top [, div]])` - Print the map, optionally the top entries only and with a divisor
+- `print(value)` - Print a value
 - `clear(@x)` - Delete all keys from the map
 - `zero(@x)` - Set all map values to zero
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
-processed in user-space. The asynchronous actions are: `print()`, `clear()`, and `zero()`.
+processed in user-space. The asynchronous actions are: `print()` on maps, `clear()`, and `zero()`.
 
 ## 2. `count()`: Count
 
@@ -3000,6 +3027,9 @@ This one-liner sums the vfs_read() durations as nanoseconds, and then does the d
 when printing. Without this capability, should one try to divide to milliseconds when summing (eg,
 `sum((nsecs - @start[tid]) / 1000000)`), the value would often be rounded to zero, and not accumulate as
 it should.
+
+Note that printing maps is different than printing values. See the explanation
+in [`print()`: Print Value](#23-print-print-value).
 
 # Output
 

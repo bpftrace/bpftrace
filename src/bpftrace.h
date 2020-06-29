@@ -154,6 +154,7 @@ public:
   std::vector<std::string> join_args_;
   std::vector<std::string> time_args_;
   std::vector<std::tuple<std::string, std::vector<Field>>> cat_args_;
+  std::vector<SizedType> non_map_print_args_;
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
   std::unique_ptr<IMap> join_map_;

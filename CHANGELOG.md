@@ -46,6 +46,8 @@ and this project adheres to
   - [#1367](https://github.com/iovisor/bpftrace/pull/1367)
 - Add support for time units `us` and `hz` for probe `interval`
   - [#1377](https://github.com/iovisor/bpftrace/pull/1377)
+- Add support for non-map print()
+  - [#1381](https://github.com/iovisor/bpftrace/pull/1381)
 
 #### Changed
 

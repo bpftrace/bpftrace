@@ -165,3 +165,18 @@ NAME usym
 RUN bpftrace -e 'i:ms:100 { @=usym(1); @a=@; exit(); }'
 EXPECT ^@a: 0x1$
 TIMEOUT 5
+
+NAME print_non_map
+RUN bpftrace -e 'BEGIN { $x = 5; print($x); exit() }'
+EXPECT 5
+TIMEOUT 1
+
+NAME print_non_map_builtin
+RUN bpftrace -e 'BEGIN { print(comm); exit() }'
+EXPECT bpftrace
+TIMEOUT 1
+
+NAME print_non_map_tuple
+RUN bpftrace -e 'BEGIN { $t = (1, 2, "string"); print($t); exit() }'
+EXPECT (1, 2, string)
+TIMEOUT 1

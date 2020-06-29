@@ -31,6 +31,23 @@ struct Print
   }
 } __attribute__((packed));
 
+struct PrintNonMap
+{
+  uint64_t action_id;
+  uint64_t print_id;
+  // See below why we don't use a flexible length array
+  uint8_t content[0];
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t size)
+  {
+    return {
+      b.getInt64Ty(),                            // asyncid
+      b.getInt64Ty(),                            // print id
+      llvm::ArrayType::get(b.getInt8Ty(), size), // content
+    };
+  }
+} __attribute__((packed));
+
 struct MapEvent
 {
   uint64_t action_id;
