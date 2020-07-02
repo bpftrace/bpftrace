@@ -17,6 +17,7 @@ set(EMBED_LIBCLANG_ONLY OFF CACHE BOOL "Build only libclang.a, and link to syste
 set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
+set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
