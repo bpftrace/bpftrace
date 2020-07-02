@@ -1424,6 +1424,8 @@ void SemanticAnalyser::visit(Ternary &ternary)
     ternary.type = CreateString(STRING_SIZE);
   else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
+  else if (lhs == Type::none)
+    ternary.type = CreateNone();
   else {
     ERR("Ternary return type unsupported " << lhs, ternary.loc);
   }

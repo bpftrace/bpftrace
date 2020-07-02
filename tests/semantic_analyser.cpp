@@ -245,6 +245,10 @@ TEST(semantic_analyser, ternary_expressions)
 {
   test("kprobe:f { @x = pid < 10000 ? 1 : 2 }", 0);
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : \"high\" }", 0);
+  test("kprobe:f { pid < 10000 ? printf(\"lo\") : exit() }", 0);
+  test("kprobe:f { @x = pid < 10000 ? printf(\"lo\") : cat(\"/proc/uptime\") }",
+       10);
+  test("kprobe:f { pid < 10000 ? 3 : cat(\"/proc/uptime\") }", 10);
   test("kprobe:f { @x = pid < 10000 ? 1 : \"high\" }", 10);
   test("kprobe:f { @x = pid < 10000 ? \"lo\" : 2 }", 10);
 }
