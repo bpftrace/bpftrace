@@ -1226,10 +1226,13 @@ void CodegenLLVM::visit(Ternary &ternary)
   BasicBlock *left_block = BasicBlock::Create(module_->getContext(), "left", parent);
   BasicBlock *right_block = BasicBlock::Create(module_->getContext(), "right", parent);
   BasicBlock *done = BasicBlock::Create(module_->getContext(), "done", parent);
-
   // ordering of all the following statements is important
-  Value *result = b_.CreateAllocaBPF(ternary.type, "result");
-  AllocaInst *buf = b_.CreateAllocaBPF(ternary.type, "buf");
+  Value *result = ternary.type.IsNoneTy()
+                      ? nullptr
+                      : b_.CreateAllocaBPF(ternary.type, "result");
+  AllocaInst *buf = ternary.type.IsNoneTy()
+                        ? nullptr
+                        : b_.CreateAllocaBPF(ternary.type, "buf");
   Value *cond;
   ternary.cond->accept(*this);
   cond = expr_;
@@ -1260,7 +1263,7 @@ void CodegenLLVM::visit(Ternary &ternary)
     b_.SetInsertPoint(done);
     expr_ = b_.CreateLoad(result);
   }
-  else
+  else if (ternary.type.IsStringTy())
   {
     // copy selected string via CreateMemCpy
     b_.SetInsertPoint(left_block);
@@ -1279,6 +1282,18 @@ void CodegenLLVM::visit(Ternary &ternary)
 
     b_.SetInsertPoint(done);
     expr_ = buf;
+  }
+  else
+  {
+    // Type::none
+    b_.SetInsertPoint(left_block);
+    ternary.left->accept(*this);
+    b_.CreateBr(done);
+    b_.SetInsertPoint(right_block);
+    ternary.right->accept(*this);
+    b_.CreateBr(done);
+    b_.SetInsertPoint(done);
+    expr_ = nullptr;
   }
 }
 

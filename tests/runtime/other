@@ -48,6 +48,11 @@ RUN bpftrace -v -e 'i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}'
 EXPECT 1
 TIMEOUT 5
 
+NAME ternary_none_type
+RUN bpftrace -v -e 'i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }'
+EXPECT  yes
+TIMEOUT 5
+
 NAME unroll
 RUN bpftrace -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11

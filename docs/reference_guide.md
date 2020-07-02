@@ -658,7 +658,7 @@ member to dereference).
 
 ## 6. `? :`: ternary operators
 
-Example:
+Examples:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_exit_read { @error[args->ret < 0 ? - args->ret : 0] = count(); }'
@@ -667,6 +667,12 @@ Attaching 1 probe...
 
 @error[11]: 24
 @error[0]: 78
+```
+
+```
+# bpftrace -e 'BEGIN { pid & 1 ? printf("Odd\n") : printf("Even\n"); exit(); }'
+Attaching 1 probe...
+Odd
 ```
 
 ## 7. `if () {...} else {...}`: if-else statements
