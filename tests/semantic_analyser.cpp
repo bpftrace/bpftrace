@@ -1837,6 +1837,21 @@ TEST(semantic_analyser, multi_pass_type_inference_zero_size_int)
   test(*bpftrace, "BEGIN { if (!@i) { @i++; } }", 0);
 }
 
+TEST(semantic_analyser, call_kptr_uptr)
+{
+  test("k:f { @  = kptr((int8*) arg0); }", 0);
+  test("k:f { $a = kptr((int8*) arg0); }", 0);
+
+  test("k:f { @ = kptr(arg0); }", 10);
+  test("k:f { $a = kptr(arg0); }", 10);
+
+  test("k:f { @  = uptr((int8*) arg0); }", 0);
+  test("k:f { $a = uptr((int8*) arg0); }", 0);
+
+  test("k:f { @ = uptr(arg0); }", 10);
+  test("k:f { $a = uptr(arg0); }", 10);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"

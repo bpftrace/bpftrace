@@ -1045,7 +1045,19 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
-  else {
+  else if (call.func == "kptr" || call.func == "uptr")
+  {
+    if (!check_nargs(call, 1))
+      return;
+    if (!check_arg(call, Type::pointer, 0))
+      return;
+
+    auto as = (call.func == "kptr" ? AddrSpace::kernel : AddrSpace::user);
+    call.type = call.vargs->front()->type;
+    call.type.SetAS(as);
+  }
+  else
+  {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";
     call.type = CreateNone();
   }
