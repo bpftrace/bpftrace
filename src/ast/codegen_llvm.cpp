@@ -978,6 +978,11 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.IsSigned());
     b_.CreateOverrideReturn(ctx_, expr_);
   }
+  else if (call.func == "kptr" || call.func == "uptr")
+  {
+    auto arg = call.vargs->at(0);
+    auto scoped_del = accept(arg);
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";

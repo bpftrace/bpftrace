@@ -30,7 +30,7 @@ vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#\*])*:
 builtin  arg[0-9]|args|cgroup|comm|cpid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
-call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|ksym|lhist|max|min|ntop|override|print|printf|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|usym|zero
+call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|max|min|ntop|override|print|printf|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|uptr|usym|zero
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack

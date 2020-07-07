@@ -292,7 +292,7 @@ public:
   friend SizedType CreateArray(size_t num_elements,
                                const SizedType &element_type);
 
-  friend SizedType CreatePointer(const SizedType &pointee_type);
+  friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
   friend SizedType CreateRecord(size_t size, const std::string &name);
 };
 // Type helpers
@@ -312,7 +312,8 @@ SizedType CreateUInt64();
 
 SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
-SizedType CreatePointer(const SizedType &pointee_type);
+SizedType CreatePointer(const SizedType &pointee_type,
+                        AddrSpace as = AddrSpace::none);
 /**
    size in bytes
  */

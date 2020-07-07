@@ -325,11 +325,12 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type)
   return ty;
 }
 
-SizedType CreatePointer(const SizedType &pointee_type)
+SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
 {
   // Pointer itself is always an uint64
   auto ty = SizedType(Type::pointer, 8);
   ty.element_type_ = new SizedType(pointee_type);
+  ty.SetAS(as);
   return ty;
 }
 
