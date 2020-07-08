@@ -51,10 +51,15 @@ namespace {
  * If an optional prefix is provided, lines must start with it to count as a
  * match, but the prefix is stripped from entries in the result set.
  * Wildcard tokens ("*") are accepted in func.
+ *
+ * If `ignore_trailing_module` is true, will ignore trailing kernel module.
+ * For example, `[ehci_hcd]` will be ignored in:
+ *     ehci_disable_ASE [ehci_hcd]
  */
 std::set<std::string> find_wildcard_matches_internal(
     const std::string &prefix,
     const std::string &func,
+    bool ignore_trailing_module,
     std::istream &symbol_stream)
 {
   if (!bpftrace::has_wildcard(func))
@@ -70,6 +75,12 @@ std::set<std::string> find_wildcard_matches_internal(
   std::string full_prefix = prefix.empty() ? "" : (prefix + ":");
   while (std::getline(symbol_stream, line))
   {
+    if (ignore_trailing_module && line.size() && line[line.size() - 1] == ']')
+    {
+      if (size_t idx = line.rfind(" ["); idx != std::string::npos)
+        line = line.substr(0, idx);
+    }
+
     if (!full_prefix.empty())
     {
       if (line.find(full_prefix, 0) != 0)
@@ -301,6 +312,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     const ast::AttachPoint &attach_point) const
 {
   std::unique_ptr<std::istream> symbol_stream;
+  bool ignore_trailing_module = false;
   std::string prefix, func;
 
   switch (probetype(attach_point.provider))
@@ -312,6 +324,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
           "/sys/kernel/debug/tracing/available_filter_functions");
       prefix = "";
       func = attach_point.func;
+      ignore_trailing_module = true;
       break;
     }
     case ProbeType::uprobe:
@@ -348,7 +361,8 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     }
   }
 
-  return find_wildcard_matches_internal(prefix, func, *symbol_stream);
+  return find_wildcard_matches_internal(
+      prefix, func, ignore_trailing_module, *symbol_stream);
 }
 
 std::set<std::string> BPFtrace::find_symbol_matches(
