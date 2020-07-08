@@ -148,11 +148,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
    * 2. sets is_tparg so that codegen does the real type setting after
    *    expansion.
    */
-  auto symbol_stream = bpftrace_.get_symbols_from_file(
-      "/sys/kernel/debug/tracing/available_events");
-  auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                 attach_point->func,
-                                                 *symbol_stream);
+  auto matches = bpftrace_.find_wildcard_matches(*attach_point);
   if (!matches.empty())
   {
     auto &match = *matches.begin();
@@ -1611,11 +1607,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         continue;
       }
 
-      auto symbol_stream = bpftrace_.get_symbols_from_file(
-          "/sys/kernel/debug/tracing/available_events");
-      auto matches = bpftrace_.find_wildcard_matches(attach_point->target,
-                                                     attach_point->func,
-                                                     *symbol_stream);
+      auto matches = bpftrace_.find_wildcard_matches(*attach_point);
       for (auto &match : matches) {
         std::string tracepoint_struct =
             TracepointFormatParser::get_struct_name(attach_point->target,
