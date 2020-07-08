@@ -44,6 +44,70 @@ const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
 } // namespace libbpf
 
 namespace bpftrace {
+namespace {
+/*
+ * Finds all matches of func in the provided input stream.
+ *
+ * If an optional prefix is provided, lines must start with it to count as a
+ * match, but the prefix is stripped from entries in the result set.
+ * Wildcard tokens ("*") are accepted in func.
+ */
+std::set<std::string> find_wildcard_matches_internal(
+    const std::string &prefix,
+    const std::string &func,
+    std::istream &symbol_stream)
+{
+  if (!bpftrace::has_wildcard(func))
+    return std::set<std::string>({ func });
+  bool start_wildcard = func[0] == '*';
+  bool end_wildcard = func[func.length() - 1] == '*';
+
+  std::vector<std::string> tokens = split_string(func, '*');
+  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
+
+  std::string line;
+  std::set<std::string> matches;
+  std::string full_prefix = prefix.empty() ? "" : (prefix + ":");
+  while (std::getline(symbol_stream, line))
+  {
+    if (!full_prefix.empty())
+    {
+      if (line.find(full_prefix, 0) != 0)
+        continue;
+      line = line.substr(full_prefix.length());
+    }
+
+    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
+    {
+      if (symbol_has_cpp_mangled_signature(line))
+      {
+        char *demangled_name = abi::__cxa_demangle(
+            line.c_str(), nullptr, nullptr, nullptr);
+        if (demangled_name)
+        {
+          if (!wildcard_match(demangled_name, tokens, true, true))
+          {
+            free(demangled_name);
+          }
+          else
+          {
+            free(demangled_name);
+            goto out;
+          }
+        }
+      }
+      continue;
+    }
+  out:
+    // skip the ".part.N" kprobe variants, as they can't be traced:
+    if (line.find(".part.") != std::string::npos)
+      continue;
+
+    matches.insert(line);
+  }
+  return matches;
+}
+} // namespace
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
@@ -284,69 +348,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     }
   }
 
-  return find_wildcard_matches(prefix, func, *symbol_stream);
-}
-
-/*
- * Finds all matches of func in the provided input stream.
- *
- * If an optional prefix is provided, lines must start with it to count as a
- * match, but the prefix is stripped from entries in the result set.
- * Wildcard tokens ("*") are accepted in func.
- */
-std::set<std::string> BPFtrace::find_wildcard_matches(
-    const std::string &prefix,
-    const std::string &func,
-    std::istream &symbol_stream) const
-{
-  if (!has_wildcard(func))
-    return std::set<std::string>({func});
-  bool start_wildcard = func[0] == '*';
-  bool end_wildcard = func[func.length() - 1] == '*';
-
-  std::vector<std::string> tokens = split_string(func, '*');
-  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
-
-  std::string line;
-  std::set<std::string> matches;
-  std::string full_prefix = prefix.empty() ? "" : (prefix + ":");
-  while (std::getline(symbol_stream, line))
-  {
-    if (!full_prefix.empty()) {
-      if (line.find(full_prefix, 0) != 0)
-        continue;
-      line = line.substr(full_prefix.length());
-    }
-
-    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
-    {
-      if (symbol_has_cpp_mangled_signature(line))
-      {
-        char *demangled_name = abi::__cxa_demangle(
-            line.c_str(), nullptr, nullptr, nullptr);
-        if (demangled_name)
-        {
-          if (!wildcard_match(demangled_name, tokens, true, true))
-          {
-            free(demangled_name);
-          }
-          else
-          {
-            free(demangled_name);
-            goto out;
-          }
-        }
-      }
-      continue;
-    }
-  out:
-    // skip the ".part.N" kprobe variants, as they can't be traced:
-    if (line.find(".part.") != std::string::npos)
-      continue;
-
-    matches.insert(line);
-  }
-  return matches;
+  return find_wildcard_matches_internal(prefix, func, *symbol_stream);
 }
 
 std::set<std::string> BPFtrace::find_symbol_matches(
