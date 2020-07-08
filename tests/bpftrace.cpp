@@ -245,6 +245,46 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
   check_kprobe(bpftrace->get_probes().at(1), "sys_write", probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_kernel_module)
+{
+  ast::AttachPoint a1("");
+  a1.provider = "kprobe";
+  a1.func = "func_in_mod";
+  ast::AttachPointList attach_points = { &a1 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:func_in_mod";
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
+}
+
+TEST(bpftrace, add_probes_kernel_module_wildcard)
+{
+  ast::AttachPoint a1("");
+  a1.provider = "kprobe";
+  a1.func = "func_in_mo*";
+  a1.need_expansion = true;
+  ast::AttachPointList attach_points = { &a1 };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace,
+              get_symbols_from_file(
+                  "/sys/kernel/debug/tracing/available_filter_functions"))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:func_in_mo*";
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
+}
+
 TEST(bpftrace, add_probes_offset)
 {
   uint64_t offset = 10;

@@ -11,14 +11,15 @@ using ::testing::StrictMock;
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)
 {
   ON_CALL(bpftrace,
-          get_symbols_from_file("/sys/kernel/debug/tracing/available_filter_functions"))
-      .WillByDefault([](const std::string &)
-      {
+          get_symbols_from_file(
+              "/sys/kernel/debug/tracing/available_filter_functions"))
+      .WillByDefault([](const std::string &) {
         std::string ksyms = "SyS_read\n"
                             "sys_read\n"
                             "sys_write\n"
                             "my_one\n"
-                            "my_two\n";
+                            "my_two\n"
+                            "func_in_mod [kernel_mod]\n";
         auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
         return myval;
       });
