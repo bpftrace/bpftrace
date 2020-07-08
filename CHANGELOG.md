@@ -50,6 +50,8 @@ and this project adheres to
   - [#1377](https://github.com/iovisor/bpftrace/pull/1377)
 - Add support for non-map print()
   - [#1381](https://github.com/iovisor/bpftrace/pull/1381)
+- Enable `printf`, `cat` and `system` to have more than 7 arguments
+  - [#1404](https://github.com/iovisor/bpftrace/pull/1404)
 - Enable the `ternary` operator to evaluate builtin calls
   - [#1405](https://github.com/iovisor/bpftrace/pull/1405)
 

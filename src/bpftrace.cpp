@@ -123,53 +123,69 @@ std::set<std::string> find_wildcard_matches_internal(
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
+const int FMT_BUF_SZ = 512;
 
-int format(char * s, size_t n, const char * fmt, std::vector<std::unique_ptr<IPrintable>> &args) {
+std::string format(std::string fmt,
+                   std::vector<std::unique_ptr<IPrintable>> &args)
+{
+  std::string retstr;
+  auto buffer = std::vector<char>(FMT_BUF_SZ);
+  auto check_snprintf_ret = [](int r) {
+    if (r < 0)
+    {
+      std::cerr << "format() error occurred: " << std::strerror(errno)
+                << std::endl;
+      abort();
+    }
+  };
   // Args have been made safe for printing by now, so replace nonstandard format
   // specifiers with %s
-  std::string str = std::string(fmt);
   size_t start_pos = 0;
-  while ((start_pos = str.find("%r", start_pos)) != std::string::npos)
+  while ((start_pos = fmt.find("%r", start_pos)) != std::string::npos)
   {
-    str.replace(start_pos, 2, "%s");
+    fmt.replace(start_pos, 2, "%s");
     start_pos += 2;
   }
-  fmt = str.c_str();
 
-  int ret = -1;
-  switch(args.size()) {
-    case 0:
-      ret = snprintf(s, n, "%s", fmt);
-      break;
-    case 1:
-      ret = snprintf(s, n, fmt, args.at(0)->value());
-      break;
-    case 2:
-      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value());
-      break;
-    case 3:
-      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value());
-      break;
-    case 4:
-      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(), args.at(3)->value());
-      break;
-    case 5:
-      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(),
-        args.at(3)->value(), args.at(4)->value());
-      break;
-    case 6:
-      ret = snprintf(s, n, fmt, args.at(0)->value(), args.at(1)->value(), args.at(2)->value(),
-        args.at(3)->value(), args.at(4)->value(), args.at(5)->value());
-      break;
-    default:
-      std::cerr << "format() can only take up to 7 arguments (" << args.size() << ") provided" << std::endl;
-      abort();
+  auto tokens_begin = std::sregex_iterator(fmt.begin(),
+                                           fmt.end(),
+                                           format_specifier_re);
+  auto tokens_end = std::sregex_iterator();
+
+  // replace format string tokens with args one by one
+  int literal_text_pos = 0; // starting pos of literal text (text that is not
+                            // format specifier)
+  int i = 0;                // args index
+  while (tokens_begin != tokens_end)
+  {
+    // take out the literal text
+    retstr += fmt.substr(literal_text_pos,
+                         tokens_begin->position() - literal_text_pos);
+    // replace current specifier with an arg
+    int r = snprintf(buffer.data(),
+                     buffer.capacity(),
+                     tokens_begin->str().c_str(),
+                     args.at(i)->value());
+    check_snprintf_ret(r);
+    if (static_cast<size_t>(r) >= buffer.capacity())
+    {
+      // the buffer is not big enough to hold the string, resize it
+      buffer.resize(r + 1);
+      r = snprintf(buffer.data(),
+                   buffer.capacity(),
+                   tokens_begin->str().c_str(),
+                   args.at(i)->value());
+      check_snprintf_ret(r);
+    }
+    retstr += std::string(buffer.data());
+    // move to the next literal text
+    literal_text_pos = tokens_begin->position() + tokens_begin->length();
+    ++tokens_begin;
+    ++i;
   }
-  if (ret < 0 && errno != 0) {
-    std::cerr << "format() error occurred: " << std::strerror(errno) << std::endl;
-    abort();
-  }
-  return ret;
+  // append whatever is left
+  retstr += fmt.substr(literal_text_pos);
+  return retstr;
 }
 
 BPFtrace::~BPFtrace()
@@ -589,66 +605,35 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
     }
 
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
-    auto fmt = std::get<0>(bpftrace->system_args_[id]).c_str();
+    auto fmt = std::get<0>(bpftrace->system_args_[id]);
     auto args = std::get<1>(bpftrace->system_args_[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-    const int BUFSIZE = 512;
-    char buffer[BUFSIZE];
-    int sz = format(buffer, BUFSIZE, fmt, arg_values);
-    // Return value is required size EXCLUDING null byte
-    if (sz >= BUFSIZE)
-    {
-      std::cerr << "syscall() command to long (" << sz << " bytes): ";
-      std::cerr << buffer << std::endl;
-      return;
-    }
-    bpftrace->out_->message(MessageType::syscall, exec_system(buffer), false);
+    bpftrace->out_->message(MessageType::syscall,
+                            exec_system(format(fmt, arg_values).c_str()),
+                            false);
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::cat))
   {
     auto id = printf_id - asyncactionint(AsyncAction::cat);
-    auto fmt = std::get<0>(bpftrace->cat_args_[id]).c_str();
+    auto fmt = std::get<0>(bpftrace->cat_args_[id]);
     auto args = std::get<1>(bpftrace->cat_args_[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-    const int BUFSIZE = 512;
-    char buffer[BUFSIZE];
-    int sz = format(buffer, BUFSIZE, fmt, arg_values);
-    // Return value is required size EXCLUDING null byte
-    if (sz >= BUFSIZE)
-    {
-      std::cerr << "cat() command to long (" << sz << " bytes): ";
-      std::cerr << buffer << std::endl;
-      return;
-    }
     std::stringstream buf;
-    cat_file(buffer, bpftrace->cat_bytes_max_, buf);
+    cat_file(format(fmt, arg_values).c_str(), bpftrace->cat_bytes_max_, buf);
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
     return;
   }
 
   // printf
-  auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]).c_str();
+  auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]);
   auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
   auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-  // First try with a stack buffer, if that fails use a heap buffer
-  const int BUFSIZE=512;
-  char buffer[BUFSIZE];
-  int required_size = format(buffer, BUFSIZE, fmt, arg_values);
-  // Return value is required size EXCLUDING null byte
-  if (required_size < BUFSIZE) {
-    bpftrace->out_->message(MessageType::printf, std::string(buffer), false);
-  } else {
-    auto buf = std::make_unique<char[]>(required_size+1);
-    // if for some reason the size is still wrong the string
-    // will just be silently truncated
-    format(buf.get(), required_size, fmt, arg_values);
-    bpftrace->out_->message(MessageType::printf, std::string(buf.get()), false);
-  }
+  bpftrace->out_->message(MessageType::printf, format(fmt, arg_values), false);
 }
 
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)

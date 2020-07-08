@@ -902,6 +902,9 @@ TEST(semantic_analyser, printf)
   test("kprobe:f { printf(\"%A\", comm) }", 10);
   test("kprobe:f { @x = printf(\"hi\") }", 1);
   test("kprobe:f { $x = printf(\"hi\") }", 1);
+  test("kprobe:f { printf(\"%d %d %d %d %d %d %d %d %d\", 1, 2, 3, 4, 5, 6, 7, "
+       "8, 9); }",
+       0);
 }
 
 TEST(semantic_analyser, system)
