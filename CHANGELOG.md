@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add builtin function: `strftime`
+  - [#1387](https://github.com/iovisor/bpftrace/pull/1387)
 - Fix `printf` not allowing format specifiers to be directly followed by
   alphabetic characters
   - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
@@ -72,6 +74,7 @@ and this project adheres to
   - [#1404](https://github.com/iovisor/bpftrace/pull/1404)
 - Enable the `ternary` operator to evaluate builtin calls
   - [#1405](https://github.com/iovisor/bpftrace/pull/1405)
+
 
 #### Changed
 

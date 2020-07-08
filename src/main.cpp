@@ -182,6 +182,39 @@ static int info()
   return 0;
 }
 
+static uint64_t get_btime(void)
+{
+  std::ifstream file("/proc/stat");
+  if (!file)
+  {
+    std::cerr << "Fail to open file /proc/stat: " << std::strerror(errno)
+              << std::endl
+              << "Builtin function strftime won't work properly." << std::endl;
+    return 0;
+  }
+  std::string line, field;
+  uint64_t btime = 0;
+  while (std::getline(file, line))
+  {
+    std::stringstream ss(line);
+    ss >> field;
+    if (field == "btime")
+    {
+      ss >> btime;
+      if (ss.fail())
+        btime = 0;
+      break;
+    }
+  }
+  if (btime == 0)
+  {
+    std::cerr << "Fail to read btime from /proc/stat. Builtin function "
+                 "strftime won't work properly."
+              << std::endl;
+  }
+  return btime;
+}
+
 int main(int argc, char *argv[])
 {
   int err;
@@ -361,6 +394,7 @@ int main(int argc, char *argv[])
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.force_btf_ = force_btf;
   bpftrace.helper_check_level_ = helper_check_level;
+  bpftrace.btime = get_btime();
 
   if (!pid_str.empty())
   {
