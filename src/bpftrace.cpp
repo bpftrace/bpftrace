@@ -737,6 +737,14 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
               true,
               arg.type.stack_type, 8)));
         break;
+      case Type::timestamp:
+        arg_values.push_back(
+            std::make_unique<PrintableString>(resolve_timestamp(
+                reinterpret_cast<AsyncEvent::Strftime *>(arg_data + arg.offset)
+                    ->strftime_id,
+                reinterpret_cast<AsyncEvent::Strftime *>(arg_data + arg.offset)
+                    ->nsecs_since_boot)));
+        break;
       case Type::cast:
         if (arg.type.is_pointer) {
           arg_values.push_back(
@@ -1276,6 +1284,11 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
     return std::to_string(max_value(value, nvalues) / div);
   else if (stype.IsProbeTy())
     return resolve_probe(read_data<uint64_t>(value.data()));
+  else if (stype.IsTimestampTy())
+    return resolve_timestamp(
+        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->strftime_id,
+        reinterpret_cast<AsyncEvent::Strftime *>(value.data())
+            ->nsecs_since_boot);
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
 }
@@ -1664,6 +1677,33 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
   file.close();
 
   return username;
+}
+
+std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
+                                        uint64_t nsecs_since_boot)
+{
+  if (btime == 0)
+  {
+    std::cerr << "Cannot resolve the timestamp returned by strftime due to the "
+                 "previous failure to get btime from /proc/stat."
+              << std::endl;
+    return "(?)";
+  }
+  auto fmt = strftime_args_[strftime_id].c_str();
+  char timestr[STRING_SIZE];
+  struct tm tmp;
+  time_t time = btime + nsecs_since_boot / 1e9;
+  if (!localtime_r(&time, &tmp))
+  {
+    std::cerr << "localtime_r: " << strerror(errno) << std::endl;
+    return "(?)";
+  }
+  if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0)
+  {
+    std::cerr << "strftime returned 0" << std::endl;
+    return "(?)";
+  }
+  return timestr;
 }
 
 std::string BPFtrace::resolve_buf(char *buf, size_t size)
