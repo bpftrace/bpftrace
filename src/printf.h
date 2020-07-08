@@ -7,6 +7,8 @@
 
 namespace bpftrace {
 
+const std::regex format_specifier_re("%-?[0-9]*(\\.[0-9]+)?[a-zA-Z]+");
+
 struct Field;
 
 std::string verify_format_string(const std::string& fmt,

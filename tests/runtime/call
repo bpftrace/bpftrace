@@ -13,6 +13,11 @@ RUN bpftrace -v -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_te
 EXPECT 123 hello 456 world
 TIMEOUT 5
 
+NAME printf_more_arguments
+RUN bpftrace -v -e 'BEGIN { printf("%d: %s; %d: %s;; %d: %s;;; %d: %s;;;;\\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd"); exit(); }'
+EXPECT 1: a; 2: ab;; 3: abc;;; 4: abcd;;;;
+TIMEOUT 5
+
 NAME time
 RUN bpftrace -v -e 'i:ms:1 { time("%H:%M:%S\n"); exit();}'
 EXPECT [0-9]*:[0-9]*:[0-9]*
@@ -87,6 +92,11 @@ RUN bpftrace --unsafe -v -e 'i:ms:100 { system("echo 'ok_system'"); exit();}'
 EXPECT ok_system
 TIMEOUT 5
 
+NAME system_more_args
+RUN bpftrace --unsafe -v -e 'i:ms:100 { system("echo %d %d %d %d %d %d %d", 1, 2, 3, 4, 5, 6, 7); exit();}'
+EXPECT 1 2 3 4 5 6 7
+TIMEOUT 5
+
 NAME count
 RUN bpftrace -v -e 'i:ms:100 { @ = count(); exit();}'
 EXPECT @:\s[0-9]+
@@ -148,6 +158,11 @@ AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME cat
 RUN bpftrace -v -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
+EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
+TIMEOUT 5
+
+NAME cat_more_args
+RUN bpftrace -v -e 'i:ms:1 { cat("/%s%s%s%s/%s%s%s", "p", "r", "o", "c", "u", "p", "time"); exit();}'
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
 TIMEOUT 5
 

@@ -766,7 +766,7 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "printf" || call.func == "system" || call.func == "cat")
   {
     check_assignment(call, false, false, false);
-    if (check_varargs(call, 1, 7))
+    if (check_varargs(call, 1, 128))
     {
       check_arg(call, Type::string, 0, true);
       if (is_final_pass())
