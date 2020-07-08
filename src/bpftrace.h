@@ -187,10 +187,6 @@ public:
           &values_by_key);
   std::set<std::string> find_wildcard_matches(
       const ast::AttachPoint &attach_point) const;
-  std::set<std::string> find_wildcard_matches(
-      const std::string &prefix,
-      const std::string &func,
-      std::istream &symbol_stream) const;
   std::set<std::string> find_symbol_matches(
       const ast::AttachPoint &attach_point) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
