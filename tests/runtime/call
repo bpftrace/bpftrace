@@ -4,8 +4,13 @@ EXPECT hi!
 TIMEOUT 5
 
 NAME printf_argument
-RUN bpftrace -v -e 'i:ms:1 { printf("value: %d100\n", 100); exit();}'
-EXPECT value: 100
+RUN bpftrace -v -e 'i:ms:1 { printf("value: %dms100\n", 100); exit();}'
+EXPECT value: 100ms100
+TIMEOUT 5
+
+NAME printf_llu
+RUN bpftrace -e 'BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); exit();}'  
+EXPECT Elapsed time: 1s
 TIMEOUT 5
 
 NAME printf_argument_alignment
@@ -14,8 +19,8 @@ EXPECT 123 hello 456 world
 TIMEOUT 5
 
 NAME printf_more_arguments
-RUN bpftrace -v -e 'BEGIN { printf("%d: %s; %d: %s;; %d: %s;;; %d: %s;;;;\\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd"); exit(); }'
-EXPECT 1: a; 2: ab;; 3: abc;;; 4: abcd;;;;
+RUN bpftrace -v -e 'BEGIN { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd"); exit(); }'
+EXPECT 1st: aa; 2nd: abb;; 3rd: abcc;;; 4th: abcdd;;;;
 TIMEOUT 5
 
 NAME time

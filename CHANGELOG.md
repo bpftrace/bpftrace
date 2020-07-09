@@ -98,6 +98,9 @@ and this project adheres to
   - [#1383](https://github.com/iovisor/bpftrace/issues/1383)
 - Ignore trailing kernel module annotation for k[ret]probe's
   - [#1413](https://github.com/iovisor/bpftrace/pull/1413)
+- Fix `printf` not allowing format specifiers to be directly followed by
+  alphabetic characters
+  - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
 
 #### Tools
 

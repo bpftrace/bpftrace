@@ -905,6 +905,7 @@ TEST(semantic_analyser, printf)
   test("kprobe:f { printf(\"%d %d %d %d %d %d %d %d %d\", 1, 2, 3, 4, 5, 6, 7, "
        "8, 9); }",
        0);
+  test("kprobe:f { printf(\"%dns\", nsecs) }", 0);
 }
 
 TEST(semantic_analyser, system)

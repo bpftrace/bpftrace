@@ -3,11 +3,24 @@
 #include <sstream>
 
 #include "ast.h"
+#include "printf_format_types.h"
 #include "types.h"
 
 namespace bpftrace {
 
-const std::regex format_specifier_re("%-?[0-9]*(\\.[0-9]+)?[a-zA-Z]+");
+static const std::string generate_pattern_string()
+{
+  std::string pattern = "%-?[0-9]*(\\.[0-9]+)?(";
+  for (const auto& e : printf_format_types)
+  {
+    pattern += e.first + "|";
+  }
+  pattern.pop_back(); // for the last "|"
+  pattern += ")";
+  return pattern;
+}
+
+const std::regex format_specifier_re(generate_pattern_string());
 
 struct Field;
 
