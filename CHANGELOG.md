@@ -16,6 +16,8 @@ and this project adheres to
 - Fix `printf` not allowing format specifiers to be directly followed by
   alphabetic characters
   - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
+- Fix `top` and `div` arguments of `print()` not working for Type::avg maps
+  - [#1416](https://github.com/iovisor/bpftrace/pull/1416)
 
 #### Changed
 

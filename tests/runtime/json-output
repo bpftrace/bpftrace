@@ -104,3 +104,8 @@ NAME print_non_map_tuple
 RUN bpftrace -f json -e 'BEGIN { $t = (1, 2, "string"); print($t); exit() }'
 EXPECT ^{"type": "value", "data": \[1,2,"string"\]}$
 TIMEOUT 1
+
+NAME print_avg_map_args
+RUN bpftrace -f json -e 'i:ms:1 { @[nsecs/100000] = avg(10) } i:ms:10 { print(@, 1, 10); exit(); } END {clear(@)}'
+EXPECT ^{"type": "stats", "data": {"@": { *"[0-9]*": 1}}}$
+TIMEOUT 1

@@ -1304,7 +1304,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
   if (map.type_.IsHistTy() || map.type_.IsLhistTy())
     return print_map_hist(map, top, div);
   else if (map.type_.IsAvgTy() || map.type_.IsStatsTy())
-    return print_map_stats(map);
+    return print_map_stats(map, top, div);
 
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   std::vector<uint8_t> old_key;
@@ -1461,7 +1461,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   return 0;
 }
 
-int BPFtrace::print_map_stats(IMap &map)
+int BPFtrace::print_map_stats(IMap &map, uint32_t top, uint32_t div)
 {
   uint32_t nvalues = map.is_per_cpu_type() ? ncpus_ : 1;
   // stats() and avg() maps add an extra 8 bytes onto the end of their key for
@@ -1534,7 +1534,9 @@ int BPFtrace::print_map_stats(IMap &map)
     return a.second < b.second;
   });
 
-  out_->map_stats(*this, map, values_by_key, total_counts_by_key);
+  if (div == 0)
+    div = 1;
+  out_->map_stats(*this, map, top, div, values_by_key, total_counts_by_key);
   return 0;
 }
 
