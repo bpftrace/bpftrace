@@ -1135,15 +1135,7 @@ int BPFtrace::print_maps()
 {
   for(auto &mapmap : maps_)
   {
-    IMap &map = *mapmap.second.get();
-    int err;
-    if (map.type_.IsHistTy() || map.type_.IsLhistTy())
-      err = print_map_hist(map, 0, 0);
-    else if (map.type_.IsAvgTy() || map.type_.IsStatsTy())
-      err = print_map_stats(map);
-    else
-      err = print_map(map, 0, 0);
-
+    int err = print_map(*mapmap.second.get(), 0, 0);
     if (err)
       return err;
   }
