@@ -275,14 +275,27 @@ void TextOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
   }
 }
 
-void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
-                           const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-                           const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const
+void TextOutput::map_stats(
+    BPFtrace &bpftrace,
+    IMap &map,
+    uint32_t top,
+    uint32_t div,
+    const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
+    const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+        &total_counts_by_key) const
 {
+  uint32_t i = 0;
   for (auto &key_count : total_counts_by_key)
   {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
+
+    if (map.type_.IsAvgTy() && top)
+    {
+      if (i++ < (values_by_key.size() - top))
+        continue;
+    }
+
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": ";
 
     int64_t count = (int64_t)value.at(0);
@@ -295,7 +308,7 @@ void TextOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     if (map.type_.IsStatsTy())
       out_ << "count " << count << ", average " <<  average << ", total " << total << std::endl;
     else
-      out_ << average << std::endl;
+      out_ << average / div << std::endl;
   }
 
   out_ << std::endl;
@@ -573,9 +586,14 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
   out_ << "}}" << std::endl;
 }
 
-void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
-                           const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
-                           const std::vector<std::pair<std::vector<uint8_t>, int64_t>> &total_counts_by_key) const
+void JsonOutput::map_stats(
+    BPFtrace &bpftrace,
+    IMap &map,
+    uint32_t top,
+    uint32_t div,
+    const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
+    const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
+        &total_counts_by_key) const
 {
   if (total_counts_by_key.empty())
     return;
@@ -586,10 +604,17 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     out_ << "{";
 
   uint32_t i = 0;
+  uint32_t j = 0;
   for (auto &key_count : total_counts_by_key)
   {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
+
+    if (map.type_.IsAvgTy() && top)
+    {
+      if (j++ < (values_by_key.size() - top))
+        continue;
+    }
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
@@ -608,7 +633,7 @@ void JsonOutput::map_stats(BPFtrace &bpftrace, IMap &map,
     if (map.type_.IsStatsTy())
       out_ << "{\"count\": " << count << ", \"average\": " <<  average << ", \"total\": " << total << "}";
     else
-      out_ << average;
+      out_ << average / div;
 
     i++;
   }
