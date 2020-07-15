@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+#### Added
+- Fix `printf` not allowing format specifiers to be directly followed by
+  alphabetic characters
+  - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
+
+#### Changed
+
+#### Deprecated
+
+#### Removed
+
+#### Tools
+
+#### Documentation
+
+
 ## [0.11.0] 2020-07-15
 
 ### All Changes
@@ -98,9 +116,6 @@ and this project adheres to
   - [#1383](https://github.com/iovisor/bpftrace/issues/1383)
 - Ignore trailing kernel module annotation for k[ret]probe's
   - [#1413](https://github.com/iovisor/bpftrace/pull/1413)
-- Fix `printf` not allowing format specifiers to be directly followed by
-  alphabetic characters
-  - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
 
 #### Tools
 
