@@ -2,11 +2,13 @@ NAME kprobe
 RUN bpftrace -v -e 'kprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kprobe [0-9][0-9]*
 TIMEOUT 5
+AFTER ./testprogs/syscall read
 
 NAME kprobe_short_name
 RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kprobe_short_name [0-9][0-9]*
 TIMEOUT 5
+AFTER ./testprogs/syscall read
 
 NAME kprobe_target
 RUN bpftrace -v -e 'kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
@@ -23,6 +25,7 @@ NAME kprobe_offset
 RUN bpftrace -v -e 'kprobe:vfs_read+0 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kprobe_offset [0-9][0-9]*
 TIMEOUT 5
+AFTER ./testprogs/syscall read
 
 NAME kprobe_offset_fail_size
 RUN bpftrace -v -e 'kprobe:vfs_read+1000000 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
@@ -33,11 +36,13 @@ NAME kretprobe
 RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe [0-9][0-9]*
 TIMEOUT 5
+AFTER ./testprogs/syscall read
 
 NAME kretprobe_short_name
 RUN bpftrace -v -e 'kr:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS kretprobe_short_name [0-9][0-9]*
 TIMEOUT 5
+AFTER ./testprogs/syscall read
 
 NAME kretprobe_target
 RUN bpftrace -v -e 'kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }'
