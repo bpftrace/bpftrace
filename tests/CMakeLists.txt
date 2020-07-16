@@ -30,7 +30,6 @@ add_executable(bpftrace_test
   tracepoint_format_parser.cpp
   utils.cpp
 
-  ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
 
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
@@ -55,6 +54,23 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/utils.cpp
   ${BFD_DISASM_SRC}
 )
+
+# Only do codegen tests for LLVM7
+if((${LLVM_VERSION} VERSION_GREATER 6.99.0) AND (${LLVM_VERSION} VERSION_LESS 8.0.0))
+  target_sources(bpftrace_test PRIVATE ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
+  message(STATUS "Adding codegen test")
+  if(ENABLE_TEST_VALIDATE_CODEGEN)
+    message(STATUS "Adding codegen-validator test")
+    configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
+    add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
+    add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
+  else()
+    message(STATUS "codegen-validator test disabled")
+  endif()
+else()
+  message(STATUS "Not building with LLVM 7, skipping codegen test")
+  message(STATUS "Not building with LLVM 7, skipping codegen-validator test")
+endif()
 
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
@@ -228,16 +244,3 @@ add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
 add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
-
-if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if((${LLVM_VERSION} VERSION_GREATER 6.99.0) AND (${LLVM_VERSION} VERSION_LESS 8.0.0))
-    message(STATUS "Adding codegen-validator test")
-    configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
-    add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
-    add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
-  else()
-    message(STATUS "Not building with LLVM 7, skipping codegen-validator test")
-  endif()
-else()
-  message(STATUS "codegen-validator test disabled")
-endif()
