@@ -567,8 +567,11 @@ void CodegenLLVM::visit(Call &call)
                                               false);
     AllocaInst *buf = b_.CreateAllocaBPF(buf_struct, "buffer");
 
+    Value *buf_len_offset = b_.CreateGEP(buf,
+                                         { b_.getInt32(0), b_.getInt32(0) });
     b_.CreateStore(b_.CreateIntCast(length, b_.getInt8Ty(), false),
-                   b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(0) }));
+                   buf_len_offset);
+
     Value *buf_data_offset = b_.CreateGEP(buf,
                                           { b_.getInt32(0), b_.getInt32(1) });
     b_.CREATE_MEMSET(buf_data_offset,
@@ -2282,17 +2285,20 @@ Function *CodegenLLVM::createLinearFunction()
   Value *max_alloc = b_.CreateAllocaBPF(CreateUInt64());
   Value *step_alloc = b_.CreateAllocaBPF(CreateUInt64());
   Value *result_alloc = b_.CreateAllocaBPF(CreateUInt64());
-  Value *value = linear_func->arg_begin()+0;
-  Value *min = linear_func->arg_begin()+1;
-  Value *max = linear_func->arg_begin()+2;
-  Value *step = linear_func->arg_begin()+3;
-  b_.CreateStore(value, value_alloc);
-  b_.CreateStore(min, min_alloc);
-  b_.CreateStore(max, max_alloc);
-  b_.CreateStore(step, step_alloc);
+
+  b_.CreateStore(linear_func->arg_begin() + 0, value_alloc);
+  b_.CreateStore(linear_func->arg_begin() + 1, min_alloc);
+  b_.CreateStore(linear_func->arg_begin() + 2, max_alloc);
+  b_.CreateStore(linear_func->arg_begin() + 3, step_alloc);
+
+  Value *cmp = nullptr;
 
   // algorithm
-  Value *cmp = b_.CreateICmpSLT(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc));
+  {
+    Value *min = b_.CreateLoad(min_alloc);
+    Value *val = b_.CreateLoad(value_alloc);
+    cmp = b_.CreateICmpSLT(val, min);
+  }
   BasicBlock *lt_min = BasicBlock::Create(module_->getContext(), "lhist.lt_min", linear_func);
   BasicBlock *ge_min = BasicBlock::Create(module_->getContext(), "lhist.ge_min", linear_func);
   b_.CreateCondBr(cmp, lt_min, ge_min);
@@ -2301,20 +2307,34 @@ Function *CodegenLLVM::createLinearFunction()
   b_.CreateRet(b_.getInt64(0));
 
   b_.SetInsertPoint(ge_min);
-  Value *cmp1 = b_.CreateICmpSGT(b_.CreateLoad(value_alloc), b_.CreateLoad(max_alloc));
+  {
+    Value *max = b_.CreateLoad(max_alloc);
+    Value *val = b_.CreateLoad(value_alloc);
+    cmp = b_.CreateICmpSGT(val, max);
+  }
   BasicBlock *le_max = BasicBlock::Create(module_->getContext(), "lhist.le_max", linear_func);
   BasicBlock *gt_max = BasicBlock::Create(module_->getContext(), "lhist.gt_max", linear_func);
-  b_.CreateCondBr(cmp1, gt_max, le_max);
+  b_.CreateCondBr(cmp, gt_max, le_max);
 
   b_.SetInsertPoint(gt_max);
-  Value *div = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(max_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
-  b_.CreateStore(b_.CreateAdd(div, b_.getInt64(1)), result_alloc);
-  b_.CreateRet(b_.CreateLoad(result_alloc));
+  {
+    Value *step = b_.CreateLoad(step_alloc);
+    Value *min = b_.CreateLoad(min_alloc);
+    Value *max = b_.CreateLoad(max_alloc);
+    Value *div = b_.CreateUDiv(b_.CreateSub(max, min), step);
+    b_.CreateStore(b_.CreateAdd(div, b_.getInt64(1)), result_alloc);
+    b_.CreateRet(b_.CreateLoad(result_alloc));
+  }
 
   b_.SetInsertPoint(le_max);
-  Value *div3 = b_.CreateUDiv(b_.CreateSub(b_.CreateLoad(value_alloc), b_.CreateLoad(min_alloc)), b_.CreateLoad(step_alloc));
-  b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
-  b_.CreateRet(b_.CreateLoad(result_alloc));
+  {
+    Value *step = b_.CreateLoad(step_alloc);
+    Value *min = b_.CreateLoad(min_alloc);
+    Value *val = b_.CreateLoad(value_alloc);
+    Value *div3 = b_.CreateUDiv(b_.CreateSub(val, min), step);
+    b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
+    b_.CreateRet(b_.CreateLoad(result_alloc));
+  }
 
   b_.restoreIP(ip);
   return module_->getFunction("linear");
