@@ -217,7 +217,7 @@ std::string BPFfeature::report(void)
   buf << "Kernel features" << std::endl
       << "  Instruction limit: " << instruction_limit() << std::endl
       << "  Loop support: " << to_str(has_loop())
-      << "  btf: " << to_str(has_btf()) << std::endl;
+      << "  btf (depends on Build:libbpf): " << to_str(has_btf()) << std::endl;
 
   buf << "Map types" << std::endl
       << "  hash: " << to_str(has_map_hash())
