@@ -7,6 +7,7 @@ import time
 from os import environ, uname, devnull
 from distutils.version import LooseVersion
 import re
+from functools import lru_cache
 
 BPF_PATH = environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 ENV_PATH = environ["PATH"]
@@ -42,6 +43,7 @@ class Utils(object):
     TIMEOUT = 3
     SKIP_REQUIREMENT_UNSATISFIED = 4
     SKIP_ENVIRONMENT_DISABLED = 5
+    SKIP_FEATURE_REQUIREMENT_UNSATISFIED = 6
 
     @staticmethod
     def failed(status):
@@ -53,6 +55,7 @@ class Utils(object):
             Utils.SKIP_KERNEL_VERSION,
             Utils.SKIP_REQUIREMENT_UNSATISFIED,
             Utils.SKIP_ENVIRONMENT_DISABLED,
+            Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
         ]
 
     @staticmethod
@@ -61,6 +64,8 @@ class Utils(object):
             return "min Kernel: %s" % test.kernel
         elif status == Utils.SKIP_REQUIREMENT_UNSATISFIED:
             return "unmet condition: '%s'" % test.requirement
+        elif status == Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
+            return "missed feature: '%s'" % ','.join(test.feature_requirement)
         elif status == Utils.SKIP_ENVIRONMENT_DISABLED:
             return "disabled by environment variable"
         else:
@@ -73,6 +78,26 @@ class Utils(object):
     @staticmethod
     def __handler(signum, frame):
         raise TimeoutError('TIMEOUT')
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def __get_bpffeature():
+        cmd = "bpftrace --info"
+        p = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
+            preexec_fn=os.setsid,
+            universal_newlines=True,
+            bufsize=1
+        )
+        output = p.communicate()[0]
+        bpffeature = {}
+        bpffeature["loop"] = output.find("Loop support: yes") != -1
+        bpffeature["btf"] = output.find("btf (depends on Build:libbpf): yes") != -1
+        return bpffeature
 
     @staticmethod
     def run_test(test):
@@ -104,6 +129,14 @@ class Utils(object):
                     ) != 0:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
+
+            if test.feature_requirement:
+                bpffeature = Utils.__get_bpffeature()
+                for feature in test.feature_requirement:
+                    if feature not in bpffeature:
+                        raise ValueError("Invalid feature requirement: %s" % feature)
+                    elif not bpffeature[feature]:
+                        return Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
 
             if test.before:
                 before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)

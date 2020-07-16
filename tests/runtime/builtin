@@ -197,4 +197,4 @@ NAME sizeof_btf
 RUN bpftrace --btf -e 'BEGIN { printf("size=%d\n", sizeof(struct task_struct)); exit(); }'
 EXPECT ^size=
 TIMEOUT 5
-REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
+REQUIRES_FEATURE btf

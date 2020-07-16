@@ -2,16 +2,16 @@ NAME user_supplied_c_def_using_btf
 RUN bpftrace -v --btf -e 'struct foo { struct task_struct t; } BEGIN { exit(); }'
 EXPECT Attaching 1 probe...
 TIMEOUT 5
-REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
+REQUIRES_FEATURE btf
 
 NAME tracepoint_pointer_type_resolution
 RUN bpftrace -v --btf -e 'tracepoint:syscalls:sys_enter_nanosleep { args->rqtp->tv_sec; exit(); }'
 EXPECT Attaching 1 probe...
 TIMEOUT 5
-REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
+REQUIRES_FEATURE btf
 
 NAME enum_value_reference
 RUN bpftrace -v --btf -e 'BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }'
 EXPECT ^8$
 TIMEOUT 5
-REQUIRES bpftrace --info 2>&1 | grep "btf: yes"
+REQUIRES_FEATURE btf
