@@ -16,7 +16,7 @@ class UnknownFieldError(Exception):
     pass
 
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch')
+TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch, feature_requirement')
 
 
 class TestParser(object):
@@ -72,6 +72,7 @@ class TestParser(object):
         requirement = ''
         env = {}
         arch = []
+        feature_requirement = []
 
         for item in test:
             item_split = item.split()
@@ -100,6 +101,11 @@ class TestParser(object):
                     env[k]=v
             elif item_name == 'ARCH':
                 arch = [x.strip() for x in line.split("|")]
+            elif item_name == 'REQUIRES_FEATURE':
+                feature_requirement = {x.strip() for x in line.split(" ")}
+                unknown = feature_requirement - {"loop", "btf"}
+                if len(unknown) > 0:
+                    raise UnknownFieldError('%s is invalid for REQUIRES_FEATURE. Suite: %s' % (','.join(unknown), test_suite))
             else:
                 raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
@@ -112,4 +118,4 @@ class TestParser(object):
         elif timeout == '':
             raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
 
-        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement, env, arch)
+        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement, env, arch, feature_requirement)
