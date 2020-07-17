@@ -41,6 +41,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/disasm.cpp
   ${CMAKE_SOURCE_DIR}/src/driver.cpp
   ${CMAKE_SOURCE_DIR}/src/fake_map.cpp
+  ${CMAKE_SOURCE_DIR}/src/log.cpp
   ${CMAKE_SOURCE_DIR}/src/map.cpp
   ${CMAKE_SOURCE_DIR}/src/mapkey.cpp
   ${CMAKE_SOURCE_DIR}/src/output.cpp
