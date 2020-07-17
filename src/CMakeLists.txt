@@ -14,6 +14,7 @@ add_executable(bpftrace
   fake_map.cpp
   list.cpp
   lockdown.cpp
+  log.cpp
   main.cpp
   map.cpp
   mapkey.cpp
