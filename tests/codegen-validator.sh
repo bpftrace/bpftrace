@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Don't add to this
-IGNORE="(_LLVM|printf|(builtin_func_1|builtin_func_uprobe_2|call_buf_implicit_size|call_buf_size_literal|call_buf_size_nonliteral|call_print_non_map|literal_strncmp|logical_and_or_different_type|string_equal_comparison|string_not_equal_comparison|strncmp|struct_char_1|struct_integer_ptr_1|struct_integers_1|struct_long_1|struct_nested_struct_anon_1|struct_nested_struct_named_1|struct_nested_struct_ptr_named_1|struct_save_nested|struct_short_1|struct_string_array_1).ll)"
+IGNORE="(_LLVM|printf|(call_buf_implicit_size|call_buf_size_literal|call_buf_size_nonliteral|call_print_non_map|literal_strncmp|logical_and_or_different_type|string_equal_comparison|string_not_equal_comparison|strncmp|struct_char_1|struct_integer_ptr_1|struct_integers_1|struct_long_1|struct_nested_struct_anon_1|struct_nested_struct_named_1|struct_nested_struct_ptr_named_1|struct_save_nested|struct_short_1|struct_string_array_1).ll)"
 EXIT=0
 
 LLVM=$(command -v llvm-as-7)
