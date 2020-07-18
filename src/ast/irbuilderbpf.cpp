@@ -372,6 +372,9 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
                                    const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
+  assert(size && size->getType()->getIntegerBitWidth() <= 32);
+  size = CreateIntCast(size, getInt32Ty(), false);
+
   // int bpf_probe_read(void *dst, int size, void *src)
   // Return: 0 on success or negative error
   FunctionType *proberead_func_type = FunctionType::get(

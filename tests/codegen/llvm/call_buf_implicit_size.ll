@@ -28,7 +28,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 1 %6, i8 0, i64 16, i1 false)
   %7 = load i64, i64* %"$foo"
   %8 = add i64 %7, 0
-  %probe_read = call i64 inttoptr (i64 4 to i64 ([16 x i8]*, i32, i64)*)([16 x i8]* %5, i8 16, i64 %8)
+  %probe_read = call i64 inttoptr (i64 4 to i64 ([16 x i8]*, i32, i64)*)([16 x i8]* %5, i32 16, i64 %8)
   %9 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i64 0, i64* %"@x_key"
