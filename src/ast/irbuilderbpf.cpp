@@ -578,7 +578,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
 
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
-  AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
+  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
 
   CreateStore(getInt1(!inverse), store);
 
@@ -655,7 +655,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
 #endif
 
   Function *parent = GetInsertBlock()->getParent();
-  AllocaInst *store = CreateAllocaBPF(getInt8Ty(), "strcmp.result");
+  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(),
                                           "strcmp.false",
                                           parent);
