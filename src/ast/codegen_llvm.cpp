@@ -576,8 +576,8 @@ void CodegenLLVM::visit(Call &call)
 
     Value *buf_len_offset = b_.CreateGEP(buf,
                                          { b_.getInt32(0), b_.getInt32(0) });
-    b_.CreateStore(b_.CreateIntCast(length, b_.getInt8Ty(), false),
-                   buf_len_offset);
+    length = b_.CreateIntCast(length, buf_struct->getElementType(0), false);
+    b_.CreateStore(length, buf_len_offset);
 
     Value *buf_data_offset = b_.CreateGEP(buf,
                                           { b_.getInt32(0), b_.getInt32(1) });
