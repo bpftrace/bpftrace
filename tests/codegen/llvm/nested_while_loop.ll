@@ -76,19 +76,21 @@ lookup_failure:                                   ; preds = %while_body2
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %16 = load i64, i64* %lookup_elem_val
-  %17 = bitcast i64* %"@_newval" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
-  %18 = add i64 %16, 1
-  store i64 %18, i64* %"@_newval"
+  %17 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
+  %18 = bitcast i64* %"@_newval" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
+  %19 = add i64 %16, 1
+  store i64 %19, i64* %"@_newval"
   %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* %"@_key", i64* %"@_newval", i64 0)
-  %19 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
-  %20 = bitcast i64* %"@_newval" to i8*
+  %20 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  %21 = load i64, i64* %"$j"
-  %22 = add i64 %21, 1
-  store i64 %22, i64* %"$j"
+  %21 = bitcast i64* %"@_newval" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
+  %22 = load i64, i64* %"$j"
+  %23 = add i64 %22, 1
+  store i64 %23, i64* %"$j"
   br label %while_cond1
 }
 

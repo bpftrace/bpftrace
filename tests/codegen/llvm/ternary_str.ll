@@ -31,22 +31,22 @@ left:                                             ; preds = %entry
   %7 = bitcast [64 x i8]* %buf to i8*
   %8 = bitcast [64 x i8]* %str to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %7, i8* align 1 %8, i64 64, i1 false)
-  %9 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   br label %done
 
 right:                                            ; preds = %entry
-  %10 = bitcast [64 x i8]* %str1 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
+  %9 = bitcast [64 x i8]* %str1 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store [64 x i8] c"hi\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", [64 x i8]* %str1
-  %11 = bitcast [64 x i8]* %buf to i8*
-  %12 = bitcast [64 x i8]* %str1 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %11, i8* align 1 %12, i64 64, i1 false)
-  %13 = bitcast [64 x i8]* %str1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
+  %10 = bitcast [64 x i8]* %buf to i8*
+  %11 = bitcast [64 x i8]* %str1 to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %10, i8* align 1 %11, i64 64, i1 false)
   br label %done
 
 done:                                             ; preds = %right, %left
+  %12 = bitcast [64 x i8]* %str1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %13 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   %14 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
   store i64 0, i64* %"@x_key"

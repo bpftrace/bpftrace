@@ -30,15 +30,11 @@ entry:
   %8 = bitcast i128* %7 to i8*
   %9 = bitcast %strftime_t* %strftime_args to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %8, i8* align 1 %9, i64 16, i1 false)
-  %10 = bitcast %strftime_t* %strftime_args to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = bitcast %strftime_t* %strftime_args to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* %printf_args, i64 24)
-  %12 = bitcast %printf_t* %printf_args to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %10 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   ret i64 0
 }
 
