@@ -10,8 +10,10 @@
 #include "usdt.h"
 #include <algorithm>
 #include <arpa/inet.h>
+#include <cerrno>
 #include <csignal>
 #include <ctime>
+#include <fstream>
 
 #include <llvm/Support/TargetRegistry.h>
 #include <llvm/IR/Constants.h>
@@ -45,10 +47,10 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
 
   TargetOptions opt;
   auto RM = Reloc::Model();
-  auto *TM = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
-  module_->setDataLayout(TM->createDataLayout());
+  TM_ = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
+  module_->setDataLayout(TM_->createDataLayout());
   layout_ = DataLayout(module_.get());
-  orc_ = std::make_unique<BpfOrc>(TM);
+  orc_ = std::make_unique<BpfOrc>(TM_);
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -2477,11 +2479,55 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
 
 void CodegenLLVM::generate_ir()
 {
+  assert(state_ == State::INIT);
   auto scoped_del = accept(root_);
+  state_ = State::IR;
+}
+
+void CodegenLLVM::emit_elf(const std::string &filename)
+{
+  assert(state_ == State::OPT);
+  legacy::PassManager PM;
+
+#if LLVM_VERSION_MAJOR >= 10
+  auto type = llvm::CGFT_ObjectFile;
+#else
+  auto type = llvm::TargetMachine::CGFT_ObjectFile;
+#endif
+
+#if LLVM_VERSION_MAJOR >= 7
+  std::error_code err;
+  raw_fd_ostream out(filename, err);
+
+  if (err)
+    throw std::system_error(err.value(),
+                            std::generic_category(),
+                            "Failed to open: " + filename);
+  if (TM_->addPassesToEmitFile(PM, out, nullptr, type))
+    throw std::runtime_error("Cannot emit a file of this type");
+  PM.run(*module_.get());
+
+  return;
+
+#else
+  std::ofstream file(filename);
+  if (!file.is_open())
+    throw std::system_error(errno,
+                            std::generic_category(),
+                            "Failed to open: " + filename);
+  std::unique_ptr<SmallVectorImpl<char>> buf(new SmallVector<char, 0>());
+  raw_svector_ostream out(*buf);
+
+  if (TM_->addPassesToEmitFile(PM, out, type, true, nullptr))
+    throw std::runtime_error("Cannot emit a file of this type");
+
+  file.write(buf->data(), buf->size_in_bytes());
+#endif
 }
 
 void CodegenLLVM::optimize()
 {
+  assert(state_ == State::IR);
   PassManagerBuilder PMB;
   PMB.OptLevel = 3;
   legacy::PassManager PM;
@@ -2497,11 +2543,14 @@ void CodegenLLVM::optimize()
   PMB.populateModulePassManager(PM);
 
   PM.run(*module_.get());
+  state_ = State::OPT;
 }
 
 std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
 {
+  assert(state_ == State::OPT);
   orc_->compileModule(move(module_));
+  state_ = State::DONE;
   return std::move(orc_);
 }
 

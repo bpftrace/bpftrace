@@ -225,7 +225,7 @@ int main(int argc, char *argv[])
   bool force_btf = false;
   bool usdt_file_activation = false;
   int helper_check_level = 0;
-  std::string script, search, file_name, output_file, output_format;
+  std::string script, search, file_name, output_file, output_format, output_elf;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
@@ -238,6 +238,7 @@ int main(int argc, char *argv[])
     option{ "btf", no_argument, nullptr, 'b' },
     option{ "include", required_argument, nullptr, '#' },
     option{ "info", no_argument, nullptr, 2000 },
+    option{ "emit-elf", required_argument, nullptr, 2001 },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
   std::vector<std::string> include_dirs;
@@ -251,6 +252,9 @@ int main(int argc, char *argv[])
         if (is_root())
           return info();
         return 1;
+        break;
+      case 2001: // --emit-elf
+        output_elf = optarg;
         break;
       case 'o':
         output_file = optarg;
@@ -705,7 +709,17 @@ int main(int argc, char *argv[])
       }
       llvm.DumpIR();
     }
+    if (!output_elf.empty())
+    {
+      llvm.emit_elf(output_elf);
+      return 0;
+    }
     bpforc = llvm.emit();
+  }
+  catch (const std::system_error& ex)
+  {
+    std::cerr << "failed to write elf: " << ex.what() << std::endl;
+    return 1;
   }
   catch (const std::exception& ex)
   {

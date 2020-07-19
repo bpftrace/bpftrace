@@ -70,6 +70,7 @@ public:
   void generate_ir(void);
   void optimize(void);
   std::unique_ptr<BpfOrc> emit(void);
+  void emit_elf(const std::string &filename);
   // Combine generate_ir, optimize and emit into one call
   std::unique_ptr<BpfOrc> compile(void);
 
@@ -112,6 +113,7 @@ private:
   LLVMContext context_;
   std::unique_ptr<Module> module_;
   std::unique_ptr<ExecutionEngine> ee_;
+  TargetMachine *TM_;
   IRBuilderBPF b_;
   DataLayout layout_;
   Value *expr_ = nullptr;
@@ -144,6 +146,15 @@ private:
   }
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
+
+  enum class State
+  {
+    INIT,
+    IR,
+    OPT,
+    DONE,
+  };
+  State state_ = State::INIT;
 };
 
 } // namespace ast
