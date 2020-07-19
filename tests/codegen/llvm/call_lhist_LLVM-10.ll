@@ -38,16 +38,18 @@ lookup_failure:                                   ; preds = %entry
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %6 = load i64, i64* %lookup_elem_val
-  %7 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %8 = add i64 %6, 1
-  store i64 %8, i64* %"@x_val"
+  %7 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
+  %8 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  %9 = add i64 %6, 1
+  store i64 %9, i64* %"@x_val"
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@x_key", i64* %"@x_val", i64 0)
-  %9 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  %10 = bitcast i64* %"@x_val" to i8*
+  %10 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %11 = bitcast i64* %"@x_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   ret i64 0
 }
 

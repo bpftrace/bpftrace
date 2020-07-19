@@ -56,7 +56,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i8*, i64)*)(i64 %pseudo3, i64* %"@str_key", i8* %10, i64 0)
   %12 = bitcast i64* %"@str_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  %13 = bitcast [32 x i8]* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0
 }
 
