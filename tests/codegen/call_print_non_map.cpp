@@ -4,13 +4,19 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-TEST(codegen, call_print_non_map)
+TEST(codegen, call_print_int)
 {
-  test(R"_(k:f { print(3) })_",
+  test("k:f { print(3) }",
 
        NAME);
 }
 
+TEST(codegen, call_print_composit)
+{
+  test("k:f { print((1,\"abc\")) }",
+
+       NAME);
+}
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

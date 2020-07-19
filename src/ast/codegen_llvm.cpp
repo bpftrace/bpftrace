@@ -2469,7 +2469,11 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   if (needMemcpy(arg.type))
     b_.CREATE_MEMCPY(content_offset, expr_, arg.type.size, 1);
   else
-    b_.CreateStore(expr_, content_offset);
+  {
+    auto ptr = b_.CreatePointerCast(content_offset,
+                                    expr_->getType()->getPointerTo());
+    b_.CreateStore(expr_, ptr);
+  }
 
   id++;
   b_.CreatePerfEventOutput(ctx_, buf, struct_size);
