@@ -28,6 +28,8 @@ and this project adheres to
 #### Deprecated
 
 #### Removed
+- Disable some kfunc probes whose tracing crashes
+  - [#1432](https://github.com/iovisor/bpftrace/pull/1432)
 
 #### Fixed
 - Fix negative overflow bug and unstable tests in PR #1416

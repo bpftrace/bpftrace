@@ -1,4 +1,5 @@
 #include "btf.h"
+#include "arch/arch.h"
 #include "bpftrace.h"
 #include "types.h"
 #include "utils.h"
@@ -445,6 +446,9 @@ int BTF::resolve_args(const std::string &func,
 
     const struct btf_param *p = btf_params(t);
     __u16 vlen = btf_vlen(t);
+    if (vlen > arch::max_arg() + 1)
+      return -1;
+
     int j = 0;
 
     for (; j < vlen; j++, p++)
@@ -531,6 +535,9 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
     }
 
     if (!is_traceable_func(func_name))
+      continue;
+
+    if (btf_vlen(t) > arch::max_arg() + 1)
       continue;
 
     if (re && !match_re(prefix + func_name, *re))
