@@ -3,9 +3,11 @@
 #include <cstddef>
 #include <cstdio>
 #include <fcntl.h>
+#include <fstream>
 #include <unistd.h>
 
 #include "btf.h"
+#include "list.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -54,11 +56,14 @@ static bool try_load(enum libbpf::bpf_prog_type prog_type,
   // get added to BPF_PROG_TYPE_TRACING
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
   {
+    // List of available functions must be readable
+    std::ifstream traceable_funcs(kprobe_path);
     // bcc checks the name (first arg) for the magic strings. If the bcc we
     // build against doesn't support kfunc then we will fail here. That's fine
     // because it still means kfunc doesn't work, only from a library side, not
     // a kernel side.
-    return try_load(
+    return traceable_funcs.good() &&
+           try_load(
                "kfunc__strlen", prog_type, insns, len, 0, logbuf, log_size) &&
            try_load(
                "kretfunc__strlen", prog_type, insns, len, 0, logbuf, log_size);

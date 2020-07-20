@@ -7,6 +7,7 @@
 #include <string>
 #include <sys/utsname.h>
 #include <tuple>
+#include <unordered_set>
 #include <vector>
 
 namespace bpftrace {
@@ -133,6 +134,7 @@ std::tuple<std::string, std::string> get_kernel_dirs(
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &ksrc,
                                            const std::string &kobj);
+std::unordered_set<std::string> get_traceable_funcs();
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);
