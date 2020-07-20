@@ -110,3 +110,10 @@ unsigned char btf_data[] = {
 };
 
 unsigned int btf_data_len = sizeof(btf_data) / sizeof(btf_data[0]);
+
+// List of functions from the above data
+unsigned char func_list[] = "func_1\n"
+                            "func_2\n"
+                            "func_3\n";
+
+unsigned int func_list_len = sizeof(func_list) / sizeof(func_list[0]);

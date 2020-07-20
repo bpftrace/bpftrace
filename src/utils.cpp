@@ -13,6 +13,7 @@
 #include <tuple>
 #include <unistd.h>
 
+#include "list.h"
 #include "utils.h"
 #include <bcc/bcc_elf.h>
 
@@ -737,6 +738,33 @@ std::string hex_format_buffer(const char *buf, size_t size)
   s[offset] = '\0';
 
   return std::string(s);
+}
+
+std::unordered_set<std::string> get_traceable_funcs()
+{
+  // Try to get the list of functions from BPFTRACE_AVAILABLE_FUNCTIONS_TEST env
+  const char *path = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
+
+  // Use kprobe list as default
+  if (!path)
+    path = kprobe_path.c_str();
+
+  std::ifstream available_funs(path);
+  if (available_funs.fail())
+  {
+    if (bt_debug != DebugLevel::kNone)
+    {
+      std::cerr << "Error while reading traceable functions from "
+                << kprobe_path << ": " << strerror(errno);
+    }
+    return {};
+  }
+
+  std::unordered_set<std::string> result;
+  std::string line;
+  while (std::getline(available_funs, line))
+    result.insert(line);
+  return result;
 }
 
 } // namespace bpftrace

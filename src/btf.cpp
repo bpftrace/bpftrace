@@ -154,6 +154,7 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
   if (btf)
   {
     libbpf_set_print(libbpf_print);
+    traceable_funcs_ = get_traceable_funcs();
     state = OK;
   }
   else if (bt_debug != DebugLevel::kNone)
@@ -439,6 +440,9 @@ int BTF::resolve_args(const std::string &func,
     if (!btf_is_func_proto(t))
       return -1;
 
+    if (!is_traceable_func(name))
+      return -1;
+
     const struct btf_param *p = btf_params(t);
     __u16 vlen = btf_vlen(t);
     int j = 0;
@@ -525,6 +529,9 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
                   << " function does not have FUNC_PROTO record" << std::endl;
       break;
     }
+
+    if (!is_traceable_func(func_name))
+      continue;
 
     if (re && !match_re(prefix + func_name, *re))
       continue;
@@ -683,6 +690,11 @@ void BTF::display_structs(std::regex *re) const
 std::unique_ptr<std::istream> BTF::kfunc(void) const
 {
   return get_funcs(NULL, false, "");
+}
+
+bool BTF::is_traceable_func(const std::string &func_name) const
+{
+  return traceable_funcs_.find(func_name) != traceable_funcs_.end();
 }
 
 } // namespace bpftrace

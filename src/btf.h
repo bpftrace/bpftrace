@@ -44,9 +44,11 @@ private:
   std::unique_ptr<std::istream> get_funcs(std::regex* re,
                                           bool params,
                                           std::string prefix) const;
+  bool is_traceable_func(const std::string& func_name) const;
 
   struct btf* btf;
   enum state state = NODATA;
+  std::unordered_set<std::string> traceable_funcs_;
 };
 
 inline bool BTF::has_data(void) const
