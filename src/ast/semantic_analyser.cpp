@@ -836,6 +836,12 @@ void SemanticAnalyser::visit(Call &call)
             check_arg(call, Type::integer, 1, true);
           if (call.vargs->size() > 2)
             check_arg(call, Type::integer, 2, true);
+          if (map.type.IsStatsTy() && call.vargs->size() > 1)
+          {
+            warning("print()'s top and div arguments are ignored when used on "
+                    "stats() maps.",
+                    call.loc);
+          }
         }
       }
       // Note that IsPrintableTy() is somewhat disingenuous here. Printing a
