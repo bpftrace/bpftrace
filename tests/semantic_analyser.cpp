@@ -473,6 +473,11 @@ TEST(semantic_analyser, call_print)
   test("kprobe:f { @x = count(); @[print(@x)] = 1; }", 1);
   test("kprobe:f { @x = count(); if(print(@x)) { 123 } }", 10);
   test("kprobe:f { @x = count(); print(@x) ? 0 : 1; }", 10);
+
+  test_for_warning("kprobe:f { @x = stats(10); print(@x, 2); }",
+                   "top and div arguments are ignored");
+  test_for_warning("kprobe:f { @x = stats(10); print(@x, 2, 3); }",
+                   "top and div arguments are ignored");
 }
 
 TEST(semantic_analyser, call_print_non_map)
