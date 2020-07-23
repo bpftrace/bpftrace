@@ -59,21 +59,23 @@ void test(BPFtrace &bpftrace,
           bool has_child = false,
           int expected_field_analyser = 0)
 {
+  std::stringstream out;
+  std::stringstream msg;
+  msg << "\nInput:\n" << input << "\n\nOutput:\n";
+
   bpftrace.safe_mode_ = safe_mode;
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
-  EXPECT_EQ(fields.analyse(), expected_field_analyser);
+  ast::FieldAnalyser fields(driver.root_, bpftrace, out);
+  EXPECT_EQ(fields.analyse(), expected_field_analyser) << msg.str() + out.str();
 
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  std::stringstream out;
+  out.str("");
   ast::SemanticAnalyser semantics(
       driver.root_, bpftrace, feature, out, has_child);
-  std::stringstream msg;
-  msg << "\nInput:\n" << input << "\n\nOutput:\n";
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
 }
 

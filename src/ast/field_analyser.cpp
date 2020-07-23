@@ -7,7 +7,7 @@ namespace ast {
 
 void FieldAnalyser::error(const std::string &msg, const location &loc)
 {
-  bpftrace_.error(out_, loc, msg);
+  bpftrace_.error(err_, loc, msg);
 }
 
 void FieldAnalyser::warning(const std::string &msg, const location &loc)
@@ -369,7 +369,7 @@ int FieldAnalyser::analyse()
   std::string errors = err_.str();
   if (!errors.empty())
   {
-    std::cerr << errors;
+    out_ << errors;
     return 1;
   }
 
