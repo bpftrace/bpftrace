@@ -225,3 +225,13 @@ NAME print_avg_map_div
 RUN bpftrace -e 'i:ms:1 { @[nsecs/1000000] = avg(10) } i:ms:10 { print(@, 1, 10) ;exit();} END {clear(@)}'
 EXPECT ^@\[[0-9]+\]: 1$
 TIMEOUT 1
+
+NAME print_hist_with_top_arg
+RUN bpftrace -e 'BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("END"); clear(@); exit(); } '
+EXPECT BEGIN\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
+TIMEOUT 1
+
+NAME print_hist_with_large_top_arg
+RUN bpftrace -e 'BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("END"); clear(@); exit(); } '
+EXPECT BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
+TIMEOUT 1

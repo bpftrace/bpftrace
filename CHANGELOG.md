@@ -28,6 +28,8 @@ and this project adheres to
 #### Removed
 
 #### Fixed
+- Fix `print` outputs nothing when used on hist() maps with large top args
+  - [#1437](https://github.com/iovisor/bpftrace/pull/1437)
 
 #### Tools
 
