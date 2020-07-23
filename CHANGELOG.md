@@ -30,6 +30,8 @@ and this project adheres to
 #### Removed
 
 #### Fixed
+- Fix negative overflow bug and unstable tests in PR #1416
+  - [#1436](https://github.com/iovisor/bpftrace/pull/1436)
 - Fix `print` outputs nothing when used on hist() maps with large top args
   - [#1437](https://github.com/iovisor/bpftrace/pull/1437)
 

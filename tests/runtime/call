@@ -216,14 +216,14 @@ RUN bpftrace -v -e 'BEGIN { @[nsecs] = strftime("%m/%d/%y", nsecs); exit();}'
 EXPECT @\[[0-9]*\]: [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 TIMEOUT 5
 
-NAME print_avg_map_top
-RUN bpftrace -e 'i:ms:1 { @[nsecs/100000] = avg(1) } i:ms:10 { print(@, 3, 0); exit(); } END {clear(@)}' | grep -c -v "^ *$"
-EXPECT ^4$
+NAME print_avg_map_args
+RUN bpftrace -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }'
+EXPECT Attaching 1 probe\.\.\.\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
-NAME print_avg_map_div
-RUN bpftrace -e 'i:ms:1 { @[nsecs/1000000] = avg(10) } i:ms:10 { print(@, 1, 10) ;exit();} END {clear(@)}'
-EXPECT ^@\[[0-9]+\]: 1$
+NAME print_avg_map_with_large_top
+RUN bpftrace -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }'
+EXPECT Attaching 1 probe\.\.\.\n@\[a\]: 1\n@\[b\]: 2\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
