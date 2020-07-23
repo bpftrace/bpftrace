@@ -287,11 +287,9 @@ void TextOutput::map_stats(
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
-    if (map.type_.IsAvgTy() && top)
-    {
-      if (i++ < (values_by_key.size() - top))
-        continue;
-    }
+    if (map.type_.IsAvgTy() && top && values_by_key.size() > top &&
+        i++ < (values_by_key.size() - top))
+      continue;
 
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": ";
 
@@ -604,11 +602,9 @@ void JsonOutput::map_stats(
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
-    if (map.type_.IsAvgTy() && top)
-    {
-      if (j++ < (values_by_key.size() - top))
-        continue;
-    }
+    if (map.type_.IsAvgTy() && top && values_by_key.size() > top &&
+        j++ < (values_by_key.size() - top))
+      continue;
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
