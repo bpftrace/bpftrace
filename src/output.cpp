@@ -258,11 +258,8 @@ void TextOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
-    if (top)
-    {
-      if (i++ < (values_by_key.size() - top))
-        continue;
-    }
+    if (top && values_by_key.size() > top && i++ < (values_by_key.size() - top))
+      continue;
 
     out_ << map.name_ << map.key_.argument_value_list_str(bpftrace, key) << ": " << std::endl;
 
@@ -560,11 +557,8 @@ void JsonOutput::map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t 
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
-    if (top)
-    {
-      if (j++ < (values_by_key.size() - top))
-        continue;
-    }
+    if (top && values_by_key.size() > top && j++ < (values_by_key.size() - top))
+      continue;
 
     std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
     if (i > 0)
