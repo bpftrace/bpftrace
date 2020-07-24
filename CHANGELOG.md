@@ -27,6 +27,8 @@ and this project adheres to
 
 #### Removed
 
+#### Fixed
+
 #### Tools
 
 #### Documentation
