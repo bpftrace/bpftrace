@@ -29,6 +29,7 @@ add_executable(bpftrace
   utils.cpp
   ${BFD_DISASM_SRC}
 )
+set_property(TARGET bpftrace PROPERTY ENABLE_EXPORTS 1)
 
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
