@@ -1,0 +1,4 @@
+NAME struct-array
+RUN bpftrace runtime/scripts/struct_array.bt -c ./testprogs/struct_array
+EXPECT 100 102 104 106 108 -- 0 2 4 6 8 -- 100 98 96 94 92
+TIMEOUT 5

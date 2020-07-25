@@ -1228,6 +1228,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   }
 
   arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
+  arr.type.is_internal = true;
 }
 
 void SemanticAnalyser::visit(Binop &binop)
