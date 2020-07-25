@@ -1518,25 +1518,35 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   auto scoped_del_index = accept(arr.indexpr);
 
   index = b_.CreateIntCast(expr_, b_.getInt64Ty(), arr.expr->type.IsSigned());
-  offset = b_.CreateMul(index, b_.getInt64(type.GetElementTy()->size));
+  offset = b_.CreateMul(index, b_.getInt64(element_size));
 
   Value *src = b_.CreateAdd(array, offset);
 
-  // TODO: Use the real type instead of an int
-  auto stype = SizedType(Type::integer, element_size);
-  if (arr.expr->type.IsCtxAccess())
+  auto stype = *type.GetElementTy();
+
+  if (stype.IsIntegerTy() || stype.IsPtrTy())
   {
-    auto ty = b_.GetType(stype);
-    expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
+    if (arr.expr->type.IsCtxAccess())
+    {
+      auto ty = b_.GetType(stype);
+      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
+    }
+    else
+    {
+      AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
+      b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
+      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                               b_.getInt64Ty(),
+                               arr.expr->type.IsSigned());
+      b_.CreateLifetimeEnd(dst);
+    }
   }
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
     b_.CreateProbeRead(ctx_, dst, element_size, src, arr.loc);
-    expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                             b_.getInt64Ty(),
-                             arr.expr->type.IsSigned());
-    b_.CreateLifetimeEnd(dst);
+    expr_ = dst;
+    expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
   }
 }
 
