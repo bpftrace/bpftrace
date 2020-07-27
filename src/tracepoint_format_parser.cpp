@@ -4,9 +4,10 @@
 #include <iostream>
 
 #include "ast.h"
+#include "bpftrace.h"
+#include "log.h"
 #include "struct.h"
 #include "tracepoint_format_parser.h"
-#include "bpftrace.h"
 
 namespace bpftrace {
 
@@ -43,10 +44,9 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 
         if (has_wildcard(category))
         {
-          bpftrace.error(std::cerr,
-                         ap->loc,
-                         "wildcards in tracepoint category is not supported: " +
-                             category);
+          LOG(ERROR, ap->loc, std::cerr)
+              << "wildcards in tracepoint category is not supported: "
+              << category;
           return false;
         }
 
@@ -59,16 +59,12 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           {
             if (ret == GLOB_NOMATCH)
             {
-              bpftrace.error(std::cerr,
-                             ap->loc,
-                             "tracepoints not found: " + category + ":" +
-                                 event_name);
-
+              LOG(ERROR, ap->loc, std::cerr)
+                  << "tracepoints not found: " << category << ":" << event_name;
               // helper message:
               if (category == "syscall")
-                bpftrace.error(std::cerr,
-                               ap->loc,
-                               "Did you mean syscalls:" + event_name + "?");
+                LOG(ERROR, ap->loc, std::cerr)
+                    << "Did you mean syscalls:" << event_name << "?";
               if (bt_verbose) {
                   std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
               }
@@ -77,7 +73,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             else
             {
               // unexpected error
-              bpftrace.error(std::cerr, ap->loc, std::string(strerror(errno)));
+              LOG(ERROR, ap->loc, std::cerr) << std::string(strerror(errno));
               return false;
             }
           }
@@ -109,18 +105,15 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           std::ifstream format_file(format_file_path.c_str());
           if (format_file.fail())
           {
-            // Errno might get clobbered by bpftrace.error and bpftrace.warning.
+            // Errno might get clobbered by LOG().
             int saved_errno = errno;
 
-            bpftrace.error(std::cerr,
-                           ap->loc,
-                           "tracepoint not found: " + category + ":" +
-                               event_name);
+            LOG(ERROR, ap->loc, std::cerr)
+                << "tracepoint not found: " << category << ":" << event_name;
             // helper message:
             if (category == "syscall")
-              bpftrace.warning(std::cerr,
-                               ap->loc,
-                               "Did you mean syscalls:" + event_name + "?");
+              LOG(WARNING, ap->loc, std::cerr)
+                  << "Did you mean syscalls:" << event_name << "?";
             if (bt_verbose) {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
