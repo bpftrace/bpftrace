@@ -1,19 +1,10 @@
-#include <iostream>
-#include <cassert>
 #include "field_analyser.h"
+#include "log.h"
+#include <cassert>
+#include <iostream>
 
 namespace bpftrace {
 namespace ast {
-
-void FieldAnalyser::error(const std::string &msg, const location &loc)
-{
-  bpftrace_.error(err_, loc, msg);
-}
-
-void FieldAnalyser::warning(const std::string &msg, const location &loc)
-{
-  bpftrace_.warning(out_, loc, msg);
-}
 
 void FieldAnalyser::visit(Integer &integer __attribute__((unused)))
 {
@@ -44,8 +35,8 @@ void FieldAnalyser::check_kfunc_args(void)
 {
   if (has_kfunc_probe_ && has_mixed_args_)
   {
-    error("Probe has attach points with mixed arguments",
-          mixed_args_loc_);
+    LOG(ERROR, mixed_args_loc_, err_)
+        << "Probe has attach points with mixed arguments";
   }
 }
 
@@ -288,7 +279,7 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
   }
   else if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
   {
-    error("Failed to resolve probe arguments", ap.loc);
+    LOG(ERROR, ap.loc, err_) << "Failed to resolve probe arguments";
     return false;
   }
 
