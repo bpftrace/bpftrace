@@ -2,6 +2,7 @@
 
 #include "ast/attachpoint_parser.h"
 #include "driver.h"
+#include "log.h"
 
 extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
@@ -24,6 +25,7 @@ Driver::~Driver()
 void Driver::source(std::string filename, std::string script)
 {
   bpftrace_.source(filename, script);
+  Log::get().set_source(filename, script);
 }
 
 // Kept for the test suite
