@@ -100,11 +100,6 @@ public:
   inline int next_probe_id() {
     return next_probe_id_++;
   };
-  inline void source(std::string filename, std::string source) {
-    src_ = source;
-    filename_ = filename;
-  }
-  inline const std::string &source() { return src_; }
   inline IMap &get_map_by_id(uint32_t id)
   {
     return *maps_[map_ids_[id]].get();
@@ -132,9 +127,6 @@ public:
   std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
   void request_finalize();
-  void error(std::ostream &out, const location &l, const std::string &m);
-  void warning(std::ostream &out, const location &l, const std::string &m);
-  void log_with_location(std::string, std::ostream &, const location &, const std::string &);
   bool is_aslr_enabled(int pid);
 
   std::string cmd_;
@@ -197,7 +189,6 @@ public:
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
       int pid,
       const std::string &target) const;
-  const std::string get_source_line(unsigned int);
 
   BTF btf_;
   std::unordered_set<std::string> btf_set_;
@@ -224,9 +215,6 @@ private:
   int online_cpus_;
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
-
-  std::string src_;
-  std::string filename_;
 
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
