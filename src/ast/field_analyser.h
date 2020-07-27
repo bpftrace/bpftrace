@@ -52,8 +52,6 @@ public:
   int analyse();
 
 private:
-  void warning(const std::string &msg, const location &loc);
-  void error(const std::string &msg, const location &loc);
   void check_kfunc_args(void);
   bool resolve_args(AttachPoint &ap);
   bool compare_args(const std::map<std::string, SizedType>& args1,
