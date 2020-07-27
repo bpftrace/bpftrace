@@ -32,6 +32,7 @@
 #include "attached_probe.h"
 #include "bpforc.h"
 #include "bpftrace.h"
+#include "log.h"
 #include "printf.h"
 #include "resolve_cgroupid.h"
 #include "triggers.h"
@@ -598,7 +599,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       msg << strerror(-return_value) << " (" << return_value << ")";
     else
       msg << return_value;
-    bpftrace->warning(std::cerr, info.loc, msg.str());
+    LOG(WARNING, info.loc, std::cerr) << msg.str();
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
@@ -2061,105 +2062,6 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
 
     // Other types don't get sorted
   }
-}
-
-const std::string BPFtrace::get_source_line(unsigned int n)
-{
-  // Get the Nth source line. Return an empty string if it doesn't exist
-  std::string buf;
-  std::stringstream ss(src_);
-  for (unsigned int idx = 0; idx <= n; idx++) {
-    std::getline(ss, buf);
-    if (ss.eof() && idx == n)
-      return buf;
-    if (!ss)
-      return "";
-  }
-  return buf;
-}
-
-void BPFtrace::warning(std::ostream &out, const location &l, const std::string &m) {
-  log_with_location("WARNING", out, l, m);
-}
-
-void BPFtrace::error(std::ostream &out, const location &l, const std::string &m) {
-  log_with_location("ERROR", out, l, m);
-}
-
-void BPFtrace::log_with_location(std::string level, std::ostream &out, const location &l, const std::string &m)
-{
-  if (filename_ != "") {
-    out << filename_ << ":";
-  }
-
-  std::string msg(m);
-
-  if (! msg.empty() && msg[msg.length() -1 ] == '\n') {
-    msg.erase(msg.length()-1);
-  }
-
-  // print only the message if location info wasn't set
-  if (l.begin.line == 0) {
-    out << level << ": " << msg << std::endl;
-    return;
-  }
-
-  if (l.begin.line > l.end.line) {
-    out << "BUG: begin > end: " << l.begin << ":" << l.end << std::endl;
-    out << level << ": " << msg << std::endl;
-    return;
-  }
-
-  /* For a multi line error only the line range is printed:
-     <filename>:<start_line>-<end_line>: ERROR: <message>
-  */
-  if (l.begin.line < l.end.line) {
-    out << l.begin.line << "-" << l.end.line << ": ERROR: " << msg << std::endl;
-    return;
-  }
-
-  /*
-    For a single line error the format is:
-
-    <filename>:<line>:<start_col>-<end_col>: ERROR: <message>
-    <source line>
-    <marker>
-
-    E.g.
-
-    file.bt:1:10-20: error: <message>
-    i:s:1   /1 < "str"/
-            ~~~~~~~~~~
-  */
-  out << l.begin.line << ":" << l.begin.column << "-" << l.end.column;
-  out << ": " << level << ": " << msg << std::endl;
-  std::string srcline = get_source_line(l.begin.line - 1);
-
-  if (srcline == "")
-    return;
-
-  // To get consistent printing all tabs will be replaced with 4 spaces
-  for (auto c : srcline) {
-    if (c == '\t')
-      out << "    ";
-    else
-      out << c;
-  }
-  out << std::endl;
-
-  for (unsigned int x = 0;
-       x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
-       x++)
-  {
-    char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
-                                                                        : '~';
-    if (srcline[x] == '\t') {
-      out << std::string(4, marker);
-    } else {
-      out << marker;
-    }
-  }
-  out << std::endl;
 }
 
 } // namespace bpftrace

@@ -24,7 +24,6 @@ Driver::~Driver()
 
 void Driver::source(std::string filename, std::string script)
 {
-  bpftrace_.source(filename, script);
   Log::get().set_source(filename, script);
 }
 
@@ -39,7 +38,7 @@ int Driver::parse()
 {
   // Reset source location info on every pass
   loc.initialize();
-  yy_scan_string(bpftrace_.source().c_str(), scanner_);
+  yy_scan_string(Log::get().get_source().c_str(), scanner_);
   parser_->parse();
 
   ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
