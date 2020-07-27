@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "log.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -32,7 +33,7 @@ int AttachPointParser::parse()
       if (parse_attachpoint(*ap))
       {
         ++failed;
-        bpftrace_.error(sink_, ap->loc, errs_.str());
+        LOG(ERROR, ap->loc, sink_) << errs_.str();
         errs_.str({}); // clear buffer
       }
     }

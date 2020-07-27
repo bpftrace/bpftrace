@@ -54,13 +54,13 @@ int Driver::parse()
 
 void Driver::error(const location &l, const std::string &m)
 {
-  bpftrace_.error(out_, l, m);
+  LOG(ERROR, l, out_) << m;
   failed_ = true;
 }
 
 void Driver::error(const std::string &m)
 {
-  out_ << m << std::endl;
+  LOG(ERROR, out_) << m;
   failed_ = true;
 }
 
