@@ -18,11 +18,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <linux/elf.h>
 
 #include <bcc/bcc_elf.h>
+#endif
+
+#ifdef USE_BPF_RINGBUF
+#include <bcc/libbpf.h>
 #endif
 
 #include <bcc/bcc_syms.h>
@@ -1075,8 +1078,41 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   return 0;
 }
 
+#ifdef USE_BPF_RINGBUF
+int ringbuf_cb(void *ctx, void *data, size_t size)
+{
+  perf_event_printer(ctx, data, size);
+  return 0;
+}
+
+void BPFtrace::set_event_loss_counter()
+{
+  uint32_t key = 0;
+  uint64_t value = 0;
+  if (bpf_update_elem(event_loss_counter_->mapfd_, &key, &value, 0))
+    LOG(ERROR) << "fail to initiate event loss counter";
+}
+
+void BPFtrace::get_event_loss_counter()
+{
+  uint32_t key = 0;
+  uint64_t value = 0;
+  int err = bpf_lookup_elem(event_loss_counter_->mapfd_, &key, &value);
+  std::cout << std::endl;
+  if (err)
+    LOG(ERROR) << "fail to get event loss counter";
+  else if (value)
+    std::cout << "Lost " << value << " events";
+}
+#endif
+
 int BPFtrace::setup_perf_events()
 {
+#ifdef USE_BPF_RINGBUF
+  ringbuf_ = static_cast<struct ring_buffer *>(
+      bpf_new_ringbuf(perf_event_map_->mapfd_, ringbuf_cb, this));
+  return 0;
+#else
   int epollfd = epoll_create1(EPOLL_CLOEXEC);
   if (epollfd == -1)
   {
@@ -1109,6 +1145,7 @@ int BPFtrace::setup_perf_events()
     }
   }
   return epollfd;
+#endif
 }
 
 void BPFtrace::poll_perf_events(int epollfd, bool drain)
@@ -1116,7 +1153,11 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
   auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
   {
+#ifdef USE_BPF_RINGBUF
+    int ready = bpf_poll_ringbuf(ringbuf_, 100);
+#else
     int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
+#endif
     if (ready < 0 && errno == EINTR && !BPFtrace::exitsig_recv) {
       // We received an interrupt not caused by SIGINT, skip and run again
       continue;
@@ -1130,12 +1171,12 @@ void BPFtrace::poll_perf_events(int epollfd, bool drain)
     {
       return;
     }
-
+#ifndef USE_BPF_RINGBUF
     for (int i=0; i<ready; i++)
     {
       perf_reader_event_read((perf_reader*)events[i].data.ptr);
     }
-
+#endif
     // If we are tracing a specific pid and it has exited, we should exit
     // as well b/c otherwise we'd be tracing nothing.
     if ((procmon_ && !procmon_->is_alive()) || (child_ && !child_->is_alive()))

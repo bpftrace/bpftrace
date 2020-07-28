@@ -2306,8 +2306,14 @@ int SemanticAnalyser::create_maps(bool debug)
       bpftrace_.elapsed_map_ =
           std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
     }
-
+#ifdef USE_BPF_RINGBUF
+    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(
+        BPF_MAP_TYPE_RINGBUF);
+    bpftrace_.event_loss_counter_ = std::make_unique<bpftrace::FakeMap>(
+        BPF_MAP_TYPE_ARRAY);
+#else
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+#endif
   }
   else
   {
@@ -2330,7 +2336,15 @@ int SemanticAnalyser::create_maps(bool debug)
           std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
       failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
     }
+#ifdef USE_BPF_RINGBUF
+    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(
+        BPF_MAP_TYPE_RINGBUF);
+    bpftrace_.event_loss_counter_ = std::make_unique<bpftrace::Map>(
+        BPF_MAP_TYPE_ARRAY);
+    failed_maps += is_invalid_map(bpftrace_.event_loss_counter_->mapfd_);
+#else
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+#endif
     failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
   }
 

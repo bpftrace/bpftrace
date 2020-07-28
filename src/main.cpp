@@ -475,6 +475,10 @@ int main(int argc, char *argv[])
     driver.source("stdin", script);
   }
 
+#ifdef USE_BPF_RINGBUF
+  std::cerr << "Using BPF ring buffer" << std::endl;
+#endif
+
   // Load positional parameters before driver runs so positional
   // parameters used inside attach point definitions can be resolved.
   while (optind < argc)
@@ -753,8 +757,13 @@ int main(int argc, char *argv[])
   }
   else
     bpftrace.out_->attached_probes(num_probes);
-
+#ifdef USE_BPF_RINGBUF
+  bpftrace.set_event_loss_counter();
+#endif
   err = bpftrace.run(move(bpforc));
+#ifdef USE_BPF_RINGBUF
+  bpftrace.get_event_loss_counter();
+#endif
   if (err)
     return err;
 

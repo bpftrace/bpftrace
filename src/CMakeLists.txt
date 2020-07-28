@@ -138,3 +138,7 @@ if(NOT "${retcode}" STREQUAL "0")
 endif()
 
 add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
+
+if(USE_BPF_RINGBUF)
+  target_compile_definitions(bpftrace PRIVATE USE_BPF_RINGBUF)
+endif(USE_BPF_RINGBUF)

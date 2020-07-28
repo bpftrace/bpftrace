@@ -243,3 +243,7 @@ if(ENABLE_TEST_VALIDATE_CODEGEN)
 else()
   message(STATUS "codegen-validator test disabled")
 endif()
+
+if(USE_BPF_RINGBUF)
+  target_compile_definitions(bpftrace_test PRIVATE USE_BPF_RINGBUF)
+endif(USE_BPF_RINGBUF)

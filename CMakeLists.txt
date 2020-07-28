@@ -169,3 +169,7 @@ add_subdirectory(tools)
 if (ENABLE_MAN)
 add_subdirectory(man)
 endif(ENABLE_MAN)
+
+if(USE_BPF_RINGBUF)
+unset(USE_BPF_RINGBUF CACHE)
+endif(USE_BPF_RINGBUF)

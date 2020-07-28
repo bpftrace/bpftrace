@@ -866,6 +866,9 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
 
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 {
+#ifdef USE_BPF_RINGBUF
+  CreateRingbufOutput(ctx, data, size);
+#else
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(data && data->getType()->isPointerTy());
 
@@ -890,7 +893,98 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
       getInt64(libbpf::BPF_FUNC_perf_event_output),
       perfoutput_func_ptr_type);
   CreateCall(perfoutput_func, {ctx, map_ptr, flags_val, data, size_val}, "perf_event_output");
+#endif
 }
+
+#ifdef USE_BPF_RINGBUF
+void IRBuilderBPF::CreateRingbufOutput(Value *ctx, Value *data, size_t size)
+{
+  assert(ctx && ctx->getType() == getInt8PtrTy());
+  assert(data && data->getType()->isPointerTy());
+
+  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
+
+  // void *bpf_ringbuf_output(void *ringbuf, void *data, u64 size, u64 flags)
+  FunctionType *ringbuf_output_func_type = FunctionType::get(
+      getInt64Ty(),
+      { map_ptr->getType(), data->getType(), getInt64Ty(), getInt64Ty() },
+      false);
+
+  PointerType *ringbuf_output_func_ptr_type = PointerType::get(
+      ringbuf_output_func_type, 0);
+  Constant *ringbuf_output_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_ringbuf_output),
+      ringbuf_output_func_ptr_type);
+
+  // long bpf_ringbuf_output(void *ringbuf, void *data, u64 size, u64 flags)
+  // bpf_ringbuf_output ret < 0 indicates event loss
+  Value *ret = CreateCall(ringbuf_output_func,
+                          { map_ptr, data, getInt64(size), getInt64(0) },
+                          "ringbuf_output");
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *event_loss_block = BasicBlock::Create(module_.getContext(),
+                                                    "event_loss_counter",
+                                                    parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "counter_merge",
+                                               parent);
+  Value *condition = CreateICmpSLT(ret, getInt64(0), "if_negative");
+  CreateCondBr(condition, event_loss_block, merge_block);
+  SetInsertPoint(event_loss_block);
+  CreateAtomicIncCounter(ctx, bpftrace_.event_loss_counter_->mapfd_, 0);
+  CreateBr(merge_block);
+
+  SetInsertPoint(merge_block);
+}
+
+void IRBuilderBPF::CreateAtomicIncCounter(Value *ctx, int mapfd, uint32_t idx)
+{
+  assert(ctx && ctx->getType() == getInt8PtrTy());
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  CreateStore(getInt32(idx), key);
+
+  // create bpf_lookup_elem
+  CallInst *call = createMapLookup(mapfd, key);
+  // Check if result == 0
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
+                                                      "lookup_merge",
+                                                      parent);
+
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, getInt8PtrTy(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  // success! do __sync_fetch_and_add
+  SetInsertPoint(lookup_success_block);
+  CreateAtomicRMW(AtomicRMWInst::BinOp::Add,
+                  call,
+                  getInt64(1),
+                  AtomicOrdering::SequentiallyConsistent);
+  CreateBr(lookup_merge_block);
+
+  // failure
+  SetInsertPoint(lookup_failure_block);
+  location loc;
+  // this will cause infinite recursion.
+  // CreateHelperError(ctx, getInt32(0), libbpf::BPF_FUNC_map_lookup_elem, loc);
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_merge_block);
+  CreateLifetimeEnd(key);
+}
+
+#endif
 
 void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
 {

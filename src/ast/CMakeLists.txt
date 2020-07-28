@@ -68,3 +68,7 @@ else()
   endif()
   target_link_libraries(ast libclang)
 endif()
+
+if(USE_BPF_RINGBUF)
+  target_compile_definitions(ast PRIVATE USE_BPF_RINGBUF)
+endif(USE_BPF_RINGBUF)

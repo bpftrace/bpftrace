@@ -118,6 +118,25 @@ Map::Map(enum bpf_map_type map_type)
     max_entries = cpus.size();
     flags = 0;
   }
+#ifdef USE_BPF_RINGBUF
+  if (map_type == BPF_MAP_TYPE_RINGBUF)
+  {
+    name = "printf_ringbuf";
+    key_size = 0;
+    value_size = 0;
+    max_entries = 4096 * 64; // page_size *
+                             // Bptrace_default_BPFTRACE_PERF_RB_PAGES
+    flags = 0;
+  }
+  else if (map_type == BPF_MAP_TYPE_ARRAY)
+  {
+    name = "event loss counter";
+    key_size = 4;
+    value_size = 8;
+    max_entries = 1;
+    flags = 0;
+  }
+#endif
   else
   {
     std::cerr << "invalid map type" << std::endl;

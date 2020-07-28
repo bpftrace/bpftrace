@@ -20,7 +20,6 @@
 #include "struct.h"
 #include "types.h"
 #include "utils.h"
-
 namespace bpftrace {
 
 struct symbol
@@ -175,7 +174,12 @@ public:
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
   uint64_t btime = 0;
-
+#ifdef USE_BPF_RINGBUF
+  struct ring_buffer *ringbuf_ = nullptr;
+  std::unique_ptr<IMap> event_loss_counter_;
+  void set_event_loss_counter();
+  void get_event_loss_counter();
+#endif
   static void sort_by_key(
       std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
