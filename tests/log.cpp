@@ -54,6 +54,26 @@ TEST(LogStream, with_location)
   EXPECT_EQ(ss.str(), expected);
 }
 
+TEST(Log, disable_log_type)
+{
+  std::ostringstream ss;
+  const std::string content = "This is the warning message";
+  LOG(WARNING, ss) << content;
+  EXPECT_EQ(ss.str(), "WARNING: " + content + "\n");
+  ss.str({});
+  Log::get().disable(LogType::WARNING);
+  LOG(WARNING, ss) << content;
+  EXPECT_EQ(ss.str(), "");
+  // make sure other log types are not affected
+  LOG(ERROR, ss) << content;
+  EXPECT_EQ(ss.str(), "ERROR: " + content + "\n");
+  ss.str({});
+  Log::get().enable(LogType::WARNING);
+  LOG(WARNING, ss) << content;
+  EXPECT_EQ(ss.str(), "WARNING: " + content + "\n");
+  ss.str({});
+}
+
 } // namespace log
 } // namespace test
 } // namespace bpftrace

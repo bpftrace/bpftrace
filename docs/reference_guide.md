@@ -442,12 +442,14 @@ open path: .com.google.Chrome.R1234s
 
 ## 8. Other Options
 
-The `--version` option prints the bpftrace version:
+- The `--version` option prints the bpftrace version:
 
 ```
 # bpftrace --version
 bpftrace v0.8-90-g585e-dirty
 ```
+
+- The `--no-warnings` option disables warnings.
 
 ## 9. Environment Variables
 

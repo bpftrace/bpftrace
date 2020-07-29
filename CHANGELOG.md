@@ -20,6 +20,8 @@ and this project adheres to
   - [#1414](https://github.com/iovisor/bpftrace/pull/1414)
 - Fix `top` and `div` arguments of `print()` not working for Type::avg maps
   - [#1416](https://github.com/iovisor/bpftrace/pull/1416)
+- Add an option to disable warning messages
+  - [#1444](https://github.com/iovisor/bpftrace/pull/1444)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
