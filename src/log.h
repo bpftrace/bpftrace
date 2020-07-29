@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <unordered_map>
 
 #include "bpftrace.h"
 
@@ -41,8 +42,21 @@ public:
   Log(const Log& other) = delete;
   Log& operator=(const Log& other) = delete;
 
+  inline void enable(LogType type)
+  {
+    enabled_map_[type] = true;
+  }
+  inline void disable(LogType type)
+  {
+    enabled_map_[type] = false;
+  }
+  inline bool is_enabled(LogType type)
+  {
+    return enabled_map_[type];
+  }
+
 private:
-  Log() = default;
+  Log();
   ~Log() = default;
   std::string src_;
   std::string filename_;
@@ -50,6 +64,7 @@ private:
                          const location&,
                          std::ostream&,
                          const std::string&);
+  std::unordered_map<LogType, bool> enabled_map_;
 };
 
 class LogStream
@@ -67,7 +82,8 @@ public:
   template <typename T>
   LogStream& operator<<(const T& v)
   {
-    buf_ << v;
+    if (sink_.is_enabled(type_))
+      buf_ << v;
     return *this;
   }
   ~LogStream();
@@ -89,4 +105,7 @@ private:
 // Note: LogType::DEBUG will prepend __FILE__ and __LINE__ to the debug message
 
 #define LOG(...) LogStream(__FILE__, __LINE__, LogType::__VA_ARGS__)
+
+#define DISABLE_LOG(type) bpftrace::Log::get().disable(LogType::type)
+
 }; // namespace bpftrace

@@ -18,6 +18,14 @@ std::string logtype_str(LogType t)
   }
 }
 
+Log::Log()
+{
+  enabled_map_[LogType::ERROR] = true;
+  enabled_map_[LogType::WARNING] = true;
+  enabled_map_[LogType::INFO] = true;
+  enabled_map_[LogType::DEBUG] = true;
+}
+
 Log& Log::get()
 {
   static Log log;
@@ -187,10 +195,13 @@ LogStream::LogStream(const std::string& file,
 
 LogStream::~LogStream()
 {
-  std::string prefix = "";
-  if (type_ == LogType::DEBUG)
-    prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "]\n";
-  sink_.take_input(type_, loc_, out_, prefix + buf_.str());
+  if (sink_.is_enabled(type_))
+  {
+    std::string prefix = "";
+    if (type_ == LogType::DEBUG)
+      prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "]\n";
+    sink_.take_input(type_, loc_, out_, prefix + buf_.str());
+  }
 }
 
 }; // namespace bpftrace

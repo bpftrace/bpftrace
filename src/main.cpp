@@ -18,6 +18,7 @@
 #include "field_analyser.h"
 #include "list.h"
 #include "lockdown.h"
+#include "log.h"
 #include "output.h"
 #include "printer.h"
 #include "procmon.h"
@@ -64,7 +65,9 @@ void usage()
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
   std::cerr << "    -kk            check all bpf helper functions" << std::endl;
-  std::cerr << "    -V, --version  bpftrace version" << std::endl << std::endl;
+  std::cerr << "    -V, --version  bpftrace version" << std::endl;
+  std::cerr << "    --no-warnings  disable all warning messages" << std::endl;
+  std::cerr << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling" << std::endl;
@@ -239,6 +242,7 @@ int main(int argc, char *argv[])
     option{ "include", required_argument, nullptr, '#' },
     option{ "info", no_argument, nullptr, 2000 },
     option{ "emit-elf", required_argument, nullptr, 2001 },
+    option{ "no-warnings", no_argument, nullptr, 2002 },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
   std::vector<std::string> include_dirs;
@@ -255,6 +259,9 @@ int main(int argc, char *argv[])
         break;
       case 2001: // --emit-elf
         output_elf = optarg;
+        break;
+      case 2002: // --no-warnings
+        DISABLE_LOG(WARNING);
         break;
       case 'o':
         output_file = optarg;

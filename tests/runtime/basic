@@ -145,3 +145,8 @@ NAME tuple print
 RUN bpftrace -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
 EXPECT ^@: \(1, 2, string, \(4, 5\)\)$
 TIMEOUT 5
+
+NAME disable warnings
+RUN bpftrace --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); exit();}' 2>&1| grep -c -E "WARNING|invalid option"
+EXPECT ^0$
+TIMEOUT 1
