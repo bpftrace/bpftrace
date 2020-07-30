@@ -1,4 +1,5 @@
 #include "usdt.h"
+#include "log.h"
 
 #include <signal.h>
 
@@ -91,8 +92,7 @@ void USDTHelper::read_probes_for_pid(int pid)
     void *ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (ctx == nullptr)
     {
-      std::cerr << "failed to initialize usdt context for pid: " << pid
-                << std::endl;
+      LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
       if (kill(pid, 0) == -1 && errno == ESRCH)
       {
         std::cerr << "hint: process not running" << std::endl;
@@ -106,8 +106,7 @@ void USDTHelper::read_probes_for_pid(int pid)
   }
   else
   {
-    std::cerr << "a pid must be specified to list USDT probes by PID"
-              << std::endl;
+    LOG(ERROR) << "a pid must be specified to list USDT probes by PID";
   }
 }
 
@@ -119,8 +118,7 @@ void USDTHelper::read_probes_for_path(const std::string &path)
   void *ctx = bcc_usdt_new_frompath(path.c_str());
   if (ctx == nullptr)
   {
-    std::cerr << "failed to initialize usdt context for path " << path
-              << std::endl;
+    LOG(ERROR) << "failed to initialize usdt context for path " << path;
     return;
   }
   bcc_usdt_foreach(ctx, usdt_probe_each);

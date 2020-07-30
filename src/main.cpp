@@ -99,16 +99,16 @@ static void enforce_infinite_rlimit() {
   rl.rlim_cur = rl.rlim_max;
   err = setrlimit(RLIMIT_MEMLOCK, &rl);
   if (err)
-    std::cerr << std::strerror(err)<<": couldn't set RLIMIT_MEMLOCK for " <<
-        "bpftrace. If your program is not loading, you can try " <<
-        "\"ulimit -l 8192\" to fix the problem" << std::endl;
+    LOG(ERROR) << std::strerror(err) << ": couldn't set RLIMIT_MEMLOCK for "
+               << "bpftrace. If your program is not loading, you can try "
+               << "\"ulimit -l 8192\" to fix the problem";
 }
 
 bool is_root()
 {
   if (geteuid() != 0)
   {
-    std::cerr << "ERROR: bpftrace currently only supports running as the root user." << std::endl;
+    LOG(ERROR) << "bpftrace currently only supports running as the root user.";
     return false;
   }
   else
@@ -190,9 +190,8 @@ static uint64_t get_btime(void)
   std::ifstream file("/proc/stat");
   if (!file)
   {
-    std::cerr << "Fail to open file /proc/stat: " << std::strerror(errno)
-              << std::endl
-              << "Builtin function strftime won't work properly." << std::endl;
+    LOG(ERROR) << "failed to open file /proc/stat: " << std::strerror(errno)
+               << "\nBuiltin function strftime won't work properly.";
     return 0;
   }
   std::string line, field;
@@ -211,9 +210,8 @@ static uint64_t get_btime(void)
   }
   if (btime == 0)
   {
-    std::cerr << "Fail to read btime from /proc/stat. Builtin function "
-                 "strftime won't work properly."
-              << std::endl;
+    LOG(ERROR) << "failed to read btime from /proc/stat. Builtin function "
+                  "strftime won't work properly.";
   }
   return btime;
 }
@@ -284,7 +282,7 @@ int main(int argc, char *argv[])
         } else if (std::strcmp(optarg, "none") == 0) {
           obc = OutputBufferConfig::NONE;
         } else {
-          std::cerr << "USAGE: -B must be either 'line', 'full', or 'none'." << std::endl;
+          LOG(ERROR) << "USAGE: -B must be either 'line', 'full', or 'none'.";
           return 1;
         }
         break;
@@ -346,13 +344,13 @@ int main(int argc, char *argv[])
   if (bt_verbose && (bt_debug != DebugLevel::kNone))
   {
     // TODO: allow both
-    std::cerr << "USAGE: Use either -v or -d." << std::endl;
+    LOG(ERROR) << "USAGE: Use either -v or -d.";
     return 1;
   }
 
   if (!cmd_str.empty() && !pid_str.empty())
   {
-    std::cerr << "USAGE: Cannot use both -c and -p." << std::endl;
+    LOG(ERROR) << "USAGE: Cannot use both -c and -p.";
     usage();
     return 1;
   }
@@ -362,8 +360,8 @@ int main(int argc, char *argv[])
   if (!output_file.empty()) {
     outputstream.open(output_file);
     if (outputstream.fail()) {
-      std::cerr << "Failed to open output file: \"" << output_file;
-      std::cerr << "\": " << strerror(errno) <<  std::endl;
+      LOG(ERROR) << "Failed to open output file: \"" << output_file
+                 << "\": " << strerror(errno);
       return 1;
     }
     os = &outputstream;
@@ -377,8 +375,8 @@ int main(int argc, char *argv[])
     output = std::make_unique<JsonOutput>(*os);
   }
   else {
-    std::cerr << "Invalid output format \"" << output_format << "\"" << std::endl;
-    std::cerr << "Valid formats: 'text', 'json'" << std::endl;
+    LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
+               << "Valid formats: 'text', 'json'";
     return 1;
   }
 
@@ -415,7 +413,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::exception& e)
     {
-      std::cerr << "ERROR: " << e.what() << std::endl;
+      LOG(ERROR) << e.what();
       return 1;
     }
   }
@@ -441,7 +439,7 @@ int main(int argc, char *argv[])
     // Script file
     if (argv[optind] == nullptr)
     {
-      std::cerr << "USAGE: filename or -e 'program' required." << std::endl;
+      LOG(ERROR) << "USAGE: filename or -e 'program' required.";
       return 1;
     }
     std::string filename(argv[optind]);
@@ -465,8 +463,8 @@ int main(int argc, char *argv[])
       std::ifstream file(filename);
       if (file.fail())
       {
-        std::cerr << "Error opening file '" << filename << "': ";
-        std::cerr << std::strerror(errno) << std::endl;
+        LOG(ERROR) << "failed to open file '" << filename
+                   << "': " << std::strerror(errno);
         return -1;
       }
 
@@ -527,9 +525,12 @@ int main(int argc, char *argv[])
     // the verifier errors you would encounter when attempting larger allocations would be:
     // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
     // ~1024= <A call to built-in function 'memset' is not supported.>
-    std::cerr << "'BPFTRACE_STRLEN' " << bpftrace.strlen_ << " exceeds the current maximum of 200 bytes." << std::endl
-    << "This limitation is because strings are currently stored on the 512 byte BPF stack." << std::endl
-    << "Long strings will be pursued in: https://github.com/iovisor/bpftrace/issues/305" << std::endl;
+    LOG(ERROR) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
+               << " exceeds the current maximum of 200 bytes.\n"
+               << "This limitation is because strings are currently stored on "
+                  "the 512 byte BPF stack.\n"
+               << "Long strings will be pursued in: "
+                  "https://github.com/iovisor/bpftrace/issues/305";
     return 1;
   }
 
@@ -541,7 +542,8 @@ int main(int argc, char *argv[])
       bpftrace.demangle_cpp_symbols_ = true;
     else
     {
-      std::cerr << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a valid value (0 or 1)." << std::endl;
+      LOG(ERROR) << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a "
+                    "valid value (0 or 1).";
       return 1;
     }
   }
@@ -563,7 +565,8 @@ int main(int argc, char *argv[])
     uint64_t proposed;
     std::istringstream stringstream(env_p);
     if (!(stringstream >> proposed)) {
-      std::cerr << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      LOG(ERROR) << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid "
+                    "uint64_t, or was zero-valued.";
       return 1;
     }
     bpftrace.cat_bytes_max_ = proposed;
@@ -578,7 +581,8 @@ int main(int argc, char *argv[])
       bpftrace.resolve_user_symbols_ = true;
     else
     {
-      std::cerr << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a valid value (0 or 1)." << std::endl;
+      LOG(ERROR) << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a "
+                    "valid value (0 or 1).";
       return 1;
     }
   }
@@ -592,9 +596,8 @@ int main(int argc, char *argv[])
       bpftrace.cache_user_symbols_ = false;
     else
     {
-      std::cerr << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
-                   "valid value (0 or 1)."
-                << std::endl;
+      LOG(ERROR) << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
+                    "valid value (0 or 1).";
       return 1;
     }
   }
@@ -689,7 +692,7 @@ int main(int argc, char *argv[])
     }
     catch (const std::runtime_error& e)
     {
-      std::cerr << "Failed to fork child: " << e.what() << std::endl;
+      LOG(ERROR) << "Failed to fork child: " << e.what();
       return -1;
     }
   }
@@ -725,12 +728,12 @@ int main(int argc, char *argv[])
   }
   catch (const std::system_error& ex)
   {
-    std::cerr << "failed to write elf: " << ex.what() << std::endl;
+    LOG(ERROR) << "failed to write elf: " << ex.what();
     return 1;
   }
   catch (const std::exception& ex)
   {
-    std::cerr << "Failed to compile: " << ex.what() << std::endl;
+    LOG(ERROR) << "Failed to compile: " << ex.what();
     return 1;
   }
 
@@ -751,11 +754,13 @@ int main(int argc, char *argv[])
   }
   else if (num_probes > bpftrace.max_probes_)
   {
-    std::cerr << "Can't attach to " << num_probes << " probes because it "
-      << "exceeds the current limit of " << bpftrace.max_probes_ << " probes."
-      << std::endl << "You can increase the limit through the BPFTRACE_MAX_PROBES "
-      << "environment variable, but BE CAREFUL since a high number of probes "
-      << "attached can cause your system to crash." << std::endl;
+    LOG(ERROR)
+        << "Can't attach to " << num_probes << " probes because it "
+        << "exceeds the current limit of " << bpftrace.max_probes_
+        << " probes.\n"
+        << "You can increase the limit through the BPFTRACE_MAX_PROBES "
+        << "environment variable, but BE CAREFUL since a high number of probes "
+        << "attached can cause your system to crash.";
     return 1;
   }
   else

@@ -2,6 +2,7 @@
 #include "arch/arch.h"
 #include "bpftrace.h"
 #include "list.h"
+#include "log.h"
 #include "types.h"
 #include "utils.h"
 #include <cstring>
@@ -74,7 +75,7 @@ static struct btf* btf_raw(char *file)
   data = get_data(file, &size);
   if (!data)
   {
-    std::cerr << "BTF: failed to read data from: " << file << std::endl;
+    LOG(ERROR) << "BTF: failed to read data from: " << file;
     return nullptr;
   }
 
@@ -119,7 +120,8 @@ static struct btf *btf_open(const struct vmlinux_location *locs)
         char err_buf[256];
 
         libbpf_strerror(libbpf_get_error(btf), err_buf, sizeof(err_buf));
-        std::cerr << "BTF: failed to read data (" << err_buf << ") from: " << path << std::endl;
+        LOG(ERROR) << "BTF: failed to read data (" << err_buf
+                   << ") from: " << path;
       }
       continue;
     }
@@ -161,7 +163,7 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
   }
   else if (bt_debug != DebugLevel::kNone)
   {
-    std::cerr << "BTF: failed to find BTF data " << std::endl;
+    LOG(ERROR) << "BTF: failed to find BTF data ";
   }
 }
 
@@ -227,7 +229,7 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   if (err)
   {
       libbpf_strerror(err, err_buf, sizeof(err_buf));
-      std::cerr << "BTF: failed to initialize dump (" << err_buf << ")" << std::endl;
+      LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
       return std::string("");
   }
 
@@ -511,8 +513,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
   if (err)
   {
     libbpf_strerror(err, err_buf, sizeof(err_buf));
-    std::cerr << "BTF: failed to initialize dump (" << err_buf << ")"
-              << std::endl;
+    LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return nullptr;
   }
 
@@ -531,8 +532,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
     {
       /* bad.. */
       if (!bt_verbose)
-        std::cerr << "ERROR: " << func_name
-                  << " function does not have FUNC_PROTO record" << std::endl;
+        LOG(ERROR) << func_name << " function does not have FUNC_PROTO record";
       break;
     }
 
@@ -569,8 +569,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
       err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
       if (err)
       {
-        std::cerr << "ERROR: failed to dump argument: " << arg_name
-                  << std::endl;
+        LOG(ERROR) << "failed to dump argument: " << arg_name;
         break;
       }
 
@@ -586,7 +585,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
     err = btf_dump__emit_type_decl(dump, t->type, &decl_opts);
     if (err)
     {
-      std::cerr << "ERROR: failed to dump type for: " << func_name << std::endl;
+      LOG(ERROR) << "failed to dump type for: " << func_name;
       break;
     }
 
@@ -595,8 +594,7 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
   }
 
   if (id != (max + 1))
-    std::cerr << "ERROR: BTF data inconsistency " << id << "," << max
-              << std::endl;
+    LOG(ERROR) << "BTF data inconsistency " << id << "," << max;
 
   btf_dump__free(dump);
 
@@ -639,8 +637,7 @@ void BTF::display_structs(std::regex *re) const
   if (err)
   {
     libbpf_strerror(err, err_buf, sizeof(err_buf));
-    std::cerr << "BTF: failed to initialize dump (" << err_buf << ")"
-              << std::endl;
+    LOG(ERROR) << "BTF: failed to initialize dump (" << err_buf << ")";
     return;
   }
 
@@ -663,8 +660,7 @@ void BTF::display_structs(std::regex *re) const
   }
 
   if (id != (max + 1))
-    std::cerr << "ERROR: BTF data inconsistency " << id << "," << max
-              << std::endl;
+    LOG(ERROR) << " BTF data inconsistency " << id << "," << max;
 
   btf_dump__free(dump);
 

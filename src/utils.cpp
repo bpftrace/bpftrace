@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "list.h"
+#include "log.h"
 #include "utils.h"
 #include <bcc/bcc_elf.h>
 
@@ -121,7 +122,8 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
     std::istringstream stringstream(env_p);
     if (!(stringstream >> dest))
     {
-      std::cerr << "Env var '" << str << "' did not contain a valid uint64_t, or was zero-valued." << std::endl;
+      LOG(ERROR) << "Env var '" << str
+                 << "' did not contain a valid uint64_t, or was zero-valued.";
       return false;
     }
   }
@@ -424,8 +426,9 @@ const std::string &is_deprecated(const std::string &str)
     {
       if (item->show_warning)
       {
-        std::cerr << "warning: " << item->old_name << " is deprecated and will be removed in the future. ";
-        std::cerr << "Use " << item->new_name << " instead." << std::endl;
+        LOG(WARNING) << item->old_name
+                     << " is deprecated and will be removed in the future. Use "
+                     << item->new_name << " instead.";
         item->show_warning = false;
       }
 
@@ -642,8 +645,8 @@ void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
   const size_t BUFSIZE = 4096;
 
   if (file.fail()){
-    std::cerr << "Error opening file '" << filename << "': ";
-    std::cerr << strerror(errno) << std::endl;
+    LOG(ERROR) << "failed to open file '" << filename
+               << "': " << strerror(errno);
     return;
   }
 
@@ -659,8 +662,8 @@ void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
       return;
     }
     if (file.fail()) {
-      std::cerr << "Error opening file '" << filename << "': ";
-      std::cerr << strerror(errno) << std::endl;
+      LOG(ERROR) << "failed to open file '" << filename
+                 << "': " << strerror(errno);
       return;
     }
     bytes_read += file.gcount();

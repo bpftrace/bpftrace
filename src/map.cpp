@@ -63,8 +63,8 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating map: '" << name_ << "': " << strerror(errno)
-              << std::endl;
+    LOG(ERROR) << "failed to create map: '" << name_
+               << "': " << strerror(errno);
   }
 }
 
@@ -87,12 +87,13 @@ Map::Map(const SizedType &type) {
   mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating stack id map" << std::endl;
-    // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
-    std::cerr << "This might have happened because kernel.perf_event_max_stack "
-      << "is smaller than " << type.stack_type.limit
-      << ". Try to tweak this value with "
-      << "sysctl kernel.perf_event_max_stack=<new value>" << std::endl;
+    LOG(ERROR)
+        << "failed to create stack id map\n"
+        // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
+        << "This might have happened because kernel.perf_event_max_stack "
+        << "is smaller than " << type.stack_type.limit
+        << ". Try to tweak this value with "
+        << "sysctl kernel.perf_event_max_stack=<new value>";
   }
 }
 
@@ -126,7 +127,7 @@ Map::Map(enum bpf_map_type map_type)
   mapfd_ = create_map(map_type, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    std::cerr << "Error creating " << name << " map: " << strerror(errno) << std::endl;
+    LOG(ERROR) << "failed to create " << name << " map: " << strerror(errno);
   }
 }
 

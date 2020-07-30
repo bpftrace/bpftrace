@@ -12,6 +12,7 @@
 #include "bpftrace.h"
 #include "btf.h"
 #include "list.h"
+#include "log.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -72,7 +73,7 @@ void print_tracepoint_args(const std::string &category, const std::string &event
 
   if (format_file.fail())
   {
-    std::cerr << "ERROR: tracepoint format file not found: " << format_file_path << std::endl;
+    LOG(ERROR) << "tracepoint format file not found: " << format_file_path;
     return;
   }
 
@@ -122,13 +123,16 @@ static void list_uprobes(const BPFtrace& bpftrace,
       switch (paths.size())
       {
       case 0:
-        std::cerr << "uprobe target '" << executable << "' does not exist or is not executable" << std::endl;
+        LOG(ERROR) << "uprobe target '" << executable
+                   << "' does not exist or is not executable";
         return;
       case 1:
         absolute_exe = paths.front();
         break;
       default:
-        std::cerr << "path '" << executable << "' must refer to a unique binary but matched " << paths.size() << std::endl;
+        LOG(ERROR) << "path '" << executable
+                   << "' must refer to a unique binary but matched "
+                   << paths.size();
         return;
       }
     }
@@ -172,16 +176,16 @@ static void list_usdt(const BPFtrace& bpftrace,
     switch (paths.size())
     {
       case 0:
-        std::cerr << "usdt target '" << usdt_path
-                  << "' does not exist or is not executable" << std::endl;
+        LOG(ERROR) << "usdt target '" << usdt_path
+                   << "' does not exist or is not executable";
         return;
       case 1:
         usdt_probes = USDTHelper::probes_for_path(paths.front());
         break;
       default:
-        std::cerr << "usdt target '" << usdt_path
-                  << "' must refer to a unique binary but matched "
-                  << paths.size() << std::endl;
+        LOG(ERROR) << "usdt target '" << usdt_path
+                   << "' must refer to a unique binary but matched "
+                   << paths.size();
         return;
     }
   }
@@ -233,7 +237,7 @@ static void list_kprobes(const std::string& search, const std::regex& re)
   std::ifstream file(kprobe_path);
   if (file.fail())
   {
-    std::cerr << strerror(errno) << ": " << kprobe_path << std::endl;
+    LOG(ERROR) << strerror(errno) << ": " << kprobe_path;
     return;
   }
 
@@ -297,7 +301,7 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
   }
   catch (std::regex_error& e)
   {
-    std::cerr << "ERROR: invalid character in search expression." << std::endl;
+    LOG(ERROR) << "invalid character in search expression.";
     return;
   }
 

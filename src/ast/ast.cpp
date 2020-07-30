@@ -432,6 +432,7 @@ std::string opstr(Binop &binop)
     default:
       LOG(FATAL) << "unknown binary operator";
   }
+  // lgtm[cpp/missing-return]
 }
 
 std::string opstr(Unop &unop)
@@ -446,6 +447,7 @@ std::string opstr(Unop &unop)
     default:
       LOG(FATAL) << "unknown unary operator";
   }
+  // lgtm[cpp/missing-return]
 }
 
 std::string AttachPoint::name(const std::string &attach_target,

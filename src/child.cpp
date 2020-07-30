@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "child.h"
+#include "log.h"
 #include "utils.h"
 
 extern char** environ;
@@ -287,9 +288,9 @@ void ChildProc::check_child(bool block)
       throw std::runtime_error("BUG: waitpid() EINVAL");
     else
     {
-      std::cerr << "waitpid(" << child_pid_
-                << ") returned unexpected error: " << errno
-                << ". Marking the child as dead" << std::endl;
+      LOG(ERROR) << "waitpid(" << child_pid_
+                 << ") returned unexpected error: " << errno
+                 << ". Marking the child as dead";
       state_ = State::DIED;
       return;
     }

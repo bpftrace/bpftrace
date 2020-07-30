@@ -6,12 +6,13 @@
 #include "llvm/Config/llvm-config.h"
 
 #include "ast.h"
+#include "btf.h"
 #include "clang_parser.h"
+#include "field_analyser.h"
+#include "headers.h"
+#include "log.h"
 #include "types.h"
 #include "utils.h"
-#include "headers.h"
-#include "btf.h"
-#include "field_analyser.h"
 
 namespace bpftrace {
 namespace {
@@ -371,7 +372,7 @@ bool ClangParser::ClangParserHandler::check_diagnostics(
         severity == CXDiagnostic_Fatal)
     {
       if (bt_debug >= DebugLevel::kDebug)
-        std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+        LOG(ERROR) << "Input (" << input.size() << "): " << input;
       return false;
     }
   }
@@ -436,7 +437,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
               structs[ptypestr].fields[ident].bitfield != bitfield &&
               structs[ptypestr].size                   != ptypesize)
           {
-            std::cerr << "type mismatch for " << ptypestr << "::" << ident << std::endl;
+            LOG(WARNING) << "type mismatch for " << ptypestr << "::" << ident;
           }
           else
           {
@@ -485,9 +486,9 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
   if (error)
   {
     if (bt_debug == DebugLevel::kFullDebug)
-      std::cerr
+      LOG(ERROR)
           << "Clang error while parsing BTF dependencies in C definitions: "
-          << error << std::endl;
+          << error;
 
     // We don't need to worry about properly reporting an error here because
     // clang should fail again when we run the parser the second time.
@@ -626,8 +627,8 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   if (error)
   {
     if (bt_debug == DebugLevel::kFullDebug) {
-      std::cerr << "Clang error while parsing C definitions: " << error << std::endl;
-      std::cerr << "Input (" << input.size() << "): " << input << std::endl;
+      LOG(ERROR) << "Clang error while parsing C definitions: " << error
+                 << "Input (" << input.size() << "): " << input;
     }
     return false;
   }
