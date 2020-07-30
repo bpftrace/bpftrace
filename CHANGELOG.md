@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Allow wildcards for tracepoint categories
+  - [#1445](https://github.com/iovisor/bpftrace/pull/1445)
 - Add wildcard support for kfunc probe types
   - [#1410](https://github.com/iovisor/bpftrace/pull/1410)
 - Add builtin function: `strftime`
