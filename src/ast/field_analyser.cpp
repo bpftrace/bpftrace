@@ -264,23 +264,41 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
     {
       std::map<std::string, SizedType> args;
 
-      if (!bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc))
+      // Trying to attach to multiple kfuncs. If some of them fails on argument
+      // resolution, do not fail hard, just print a warning and continue with
+      // other functions.
+      try
       {
-        if (!first && !compare_args(args, ap_args_))
-        {
-          has_mixed_args_ = true;
-          mixed_args_loc_ = ap.loc;
-          break;
-        }
+        bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc);
+      }
+      catch (const std::runtime_error &e)
+      {
+        LOG(WARNING) << "kfunc:" << ap.func << ": " << e.what();
+        continue;
+      }
+
+      if (!first && !compare_args(args, ap_args_))
+      {
+        has_mixed_args_ = true;
+        mixed_args_loc_ = ap.loc;
+        break;
       }
 
       first = false;
     }
   }
-  else if (bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc))
+  else
   {
-    LOG(ERROR, ap.loc, err_) << "Failed to resolve probe arguments";
-    return false;
+    // Resolving args for an explicit function failed, print an error and fail
+    try
+    {
+      bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc);
+    }
+    catch (const std::runtime_error &e)
+    {
+      LOG(ERROR, ap.loc, err_) << "kfunc:" << ap.func << ": " << e.what();
+      return false;
+    }
   }
 
   // check if we already stored arguments for this probe

@@ -1,6 +1,7 @@
 #include "btf.h"
 #include "arch/arch.h"
 #include "bpftrace.h"
+#include "list.h"
 #include "types.h"
 #include "utils.h"
 #include <cstring>
@@ -420,7 +421,7 @@ int BTF::resolve_args(const std::string &func,
                       bool ret)
 {
   if (!has_data())
-    return -1;
+    throw std::runtime_error("BTF data not available");
 
   __s32 id, max = (__s32)btf__get_nr_types(btf);
   std::string name = func;
@@ -439,15 +440,27 @@ int BTF::resolve_args(const std::string &func,
 
     t = btf__type_by_id(btf, t->type);
     if (!btf_is_func_proto(t))
-      return -1;
+    {
+      throw std::runtime_error("not a function");
+    }
 
     if (!is_traceable_func(name))
-      return -1;
+    {
+      if (traceable_funcs_.empty())
+        throw std::runtime_error("could not read traceable functions from " +
+                                 kprobe_path + " (is debugfs mounted?)");
+      else
+        throw std::runtime_error("function not traceable (probably it is "
+                                 "inlined or marked as \"notrace\")");
+    }
 
     const struct btf_param *p = btf_params(t);
     __u16 vlen = btf_vlen(t);
     if (vlen > arch::max_arg() + 1)
-      return -1;
+    {
+      throw std::runtime_error("functions with more than 6 parameters are "
+                               "not supported.");
+    }
 
     int j = 0;
 
@@ -455,7 +468,9 @@ int BTF::resolve_args(const std::string &func,
     {
       str = btf_str(btf, p->name_off);
       if (!str)
-        return -1;
+      {
+        throw std::runtime_error("failed to resolve arguments");
+      }
 
       SizedType stype = get_stype(p->type);
       stype.kfarg_idx = j;
@@ -472,7 +487,7 @@ int BTF::resolve_args(const std::string &func,
     return 0;
   }
 
-  return -1;
+  throw std::runtime_error("no BTF data for the function");
 }
 
 static bool match_re(const std::string &probe, const std::regex &re)
