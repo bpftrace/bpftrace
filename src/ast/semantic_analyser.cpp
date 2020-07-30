@@ -107,8 +107,8 @@ void SemanticAnalyser::visit(Identifier &identifier)
   }
   else if (bpftrace_.structs_.count(identifier.ident) != 0)
   {
-    identifier.type = CreateRecord(
-        8 * bpftrace_.structs_[identifier.ident].size, identifier.ident);
+    identifier.type = CreateRecord(bpftrace_.structs_[identifier.ident].size,
+                                   identifier.ident);
   }
   else if (getIntcasts().count(identifier.ident) != 0)
   {
@@ -141,8 +141,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
         match);
     Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
 
-    builtin.type = CreatePointer(
-        CreateRecord(8 * cstruct.size, tracepoint_struct));
+    builtin.type = CreatePointer(CreateRecord(cstruct.size, tracepoint_struct));
     builtin.type.MarkCtxAccess();
     builtin.type.is_tparg = true;
   }
@@ -185,8 +184,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       case BPF_PROG_TYPE_KPROBE:
         builtin.type = CreatePointer(
-            CreateRecord(bpftrace_.structs_["pt_regs"].size * 8,
-                         "struct pt_regs"));
+            CreateRecord(bpftrace_.structs_["pt_regs"].size, "struct pt_regs"));
         builtin.type.MarkCtxAccess();
         break;
       case BPF_PROG_TYPE_TRACEPOINT:
@@ -195,7 +193,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
         break;
       case BPF_PROG_TYPE_PERF_EVENT:
         builtin.type = CreatePointer(
-            CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size * 8,
+            CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size,
                          "struct bpf_perf_event_data"));
         builtin.type.MarkCtxAccess();
         break;
@@ -1712,7 +1710,7 @@ void SemanticAnalyser::visit(Cast &cast)
     return;
   }
 
-  cast_size = bpftrace_.structs_[cast.cast_type].size * 8;
+  cast_size = bpftrace_.structs_[cast.cast_type].size;
   if (cast.is_pointer)
     cast.type = CreatePointer(CreateRecord(cast_size, cast.cast_type));
   else

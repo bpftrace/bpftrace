@@ -304,7 +304,7 @@ SizedType CreatePointer(const SizedType &pointee_type)
 
 SizedType CreateRecord(size_t size, const std::string &name)
 {
-  auto ty = SizedType(Type::record, size / 8);
+  auto ty = SizedType(Type::record, size);
   ty.name_ = name;
   return ty;
 }

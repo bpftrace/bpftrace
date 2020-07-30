@@ -300,10 +300,8 @@ SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type);
 /**
-   Create a record type
-
-   \param size size in bits
-*/
+   size in bytes
+ */
 SizedType CreateRecord(size_t size, const std::string &name);
 
 SizedType CreateStackMode();
