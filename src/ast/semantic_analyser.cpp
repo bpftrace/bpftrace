@@ -137,7 +137,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
   {
     auto &match = *matches.begin();
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
-        attach_point->target, match);
+        match);
     Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
     builtin.type = CreateCTX(cstruct.size, tracepoint_struct);
     builtin.type.is_pointer = true;
@@ -1604,9 +1604,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
       auto matches = bpftrace_.find_wildcard_matches(*attach_point);
       for (auto &match : matches) {
-        std::string tracepoint_struct =
-            TracepointFormatParser::get_struct_name(attach_point->target,
-                                                    match);
+        std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
+            match);
         structs[tracepoint_struct] = bpftrace_.structs_[tracepoint_struct].fields;
       }
     }

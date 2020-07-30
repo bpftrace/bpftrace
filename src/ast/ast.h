@@ -321,6 +321,8 @@ public:
 
   void accept(Visitor &v) override;
   std::string name(const std::string &attach_point) const;
+  std::string name(const std::string &attach_target,
+                   const std::string &attach_point) const;
 
   int index(std::string name);
   void set_index(std::string name, int index);

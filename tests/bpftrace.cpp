@@ -641,6 +641,37 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
   check_tracepoint(bpftrace->get_probes().at(1), "sched", "sched_two", probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_tracepoint_category_wildcard)
+{
+  ast::AttachPoint a("");
+  a.provider = "tracepoint";
+  a.target = "sched*";
+  a.func = "sched_*";
+  a.need_expansion = true;
+  ast::AttachPointList attach_points = { &a };
+  ast::Probe probe(&attach_points, nullptr, nullptr);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace,
+              get_symbols_from_file(
+                  "/sys/kernel/debug/tracing/available_events"))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(probe));
+  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "tracepoint:sched*:sched_*";
+  check_tracepoint(
+      bpftrace->get_probes().at(0), "sched", "sched_one", probe_orig_name);
+  check_tracepoint(
+      bpftrace->get_probes().at(1), "sched", "sched_two", probe_orig_name);
+  check_tracepoint(bpftrace->get_probes().at(2),
+                   "sched_extra",
+                   "sched_extra",
+                   probe_orig_name);
+}
+
 TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
 {
   ast::AttachPoint a("");

@@ -168,6 +168,14 @@ std::vector<std::string> split_string(const std::string &str,
   return elems;
 }
 
+/// Erase prefix up to the first colon (:) from str and return the prefix
+std::string erase_prefix(std::string &str)
+{
+  std::string prefix = str.substr(0, str.find(':'));
+  str.erase(0, prefix.length() + 1);
+  return prefix;
+}
+
 bool wildcard_match(const std::string &str, std::vector<std::string> &tokens, bool start_wildcard, bool end_wildcard) {
   size_t next = 0;
 

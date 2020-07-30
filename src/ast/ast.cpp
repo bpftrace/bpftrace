@@ -449,11 +449,12 @@ std::string opstr(Unop &unop)
   }
 }
 
-std::string AttachPoint::name(const std::string &attach_point) const
+std::string AttachPoint::name(const std::string &attach_target,
+                              const std::string &attach_point) const
 {
   std::string n = provider;
-  if (target != "")
-    n += ":" + target;
+  if (attach_target != "")
+    n += ":" + attach_target;
   if (ns != "")
     n += ":" + ns;
   if (attach_point != "")
@@ -471,6 +472,11 @@ std::string AttachPoint::name(const std::string &attach_point) const
   if (mode.size())
     n += ":" + mode;
   return n;
+}
+
+std::string AttachPoint::name(const std::string &attach_point) const
+{
+  return name(target, attach_point);
 }
 
 int AttachPoint::index(std::string name) {

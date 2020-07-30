@@ -42,15 +42,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
         std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
         glob_t glob_result;
 
-        if (has_wildcard(category))
-        {
-          LOG(ERROR, ap->loc, std::cerr)
-              << "wildcards in tracepoint category is not supported: "
-              << category;
-          return false;
-        }
-
-        if (has_wildcard(event_name))
+        if (has_wildcard(category) || has_wildcard(event_name))
         {
           // tracepoint wildcard expansion, part 1 of 3. struct definitions.
           memset(&glob_result, 0, sizeof(glob_result));
@@ -84,16 +76,21 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
             std::ifstream format_file(filename);
-            std::string prefix("/sys/kernel/debug/tracing/events/" + category + "/");
-            std::string real_event = filename.substr(prefix.length(),
-                    filename.length() - std::string("/format").length() - prefix.length());
+            std::string prefix("/sys/kernel/debug/tracing/events/");
+            size_t pos = prefix.length();
+            std::string real_category = filename.substr(
+                pos, filename.find('/', pos) - pos);
+            pos = prefix.length() + real_category.length() + 1;
+            std::string real_event = filename.substr(
+                pos, filename.length() - std::string("/format").length() - pos);
 
             // Check to avoid adding the same struct more than once to definitions
-            std::string struct_name = get_struct_name(category, real_event);
+            std::string struct_name = get_struct_name(real_category,
+                                                      real_event);
             if (!TracepointFormatParser::struct_list.count(struct_name))
             {
               program->c_definitions += get_tracepoint_struct(
-                  format_file, category, real_event, bpftrace);
+                  format_file, real_category, real_event, bpftrace);
               TracepointFormatParser::struct_list.insert(struct_name);
             }
           }
@@ -141,6 +138,14 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 std::string TracepointFormatParser::get_struct_name(const std::string &category, const std::string &event_name)
 {
   return "struct _tracepoint_" + category + "_" + event_name;
+}
+
+std::string TracepointFormatParser::get_struct_name(const std::string &probe_id)
+{
+  // probe_id has format category:event
+  std::string event_name = probe_id;
+  std::string category = erase_prefix(event_name);
+  return get_struct_name(category, event_name);
 }
 
 std::string TracepointFormatParser::parse_field(const std::string &line,

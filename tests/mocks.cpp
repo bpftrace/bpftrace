@@ -30,6 +30,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
         std::string tracepoints = "sched:sched_one\n"
                                   "sched:sched_two\n"
                                   "sched:foo\n"
+                                  "sched_extra:sched_extra\n"
                                   "notsched:bar\n"
                                   "file:filename\n";
         return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
@@ -73,6 +74,17 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                       .type = CreateUInt64(),
                       .offset = 16, // different offset than
                                     // sched_one.common_field
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } } },
+  };
+  bpftrace.structs_["struct _tracepoint_sched_extra_sched_extra"] = Struct{
+    .size = 8,
+    .fields = { { "common_field",
+                  Field{
+                      .type = CreateUInt64(),
+                      .offset = 24, // different offset than
+                                    // sched_(one|two).common_field
                       .is_bitfield = false,
                       .bitfield = {},
                   } } },

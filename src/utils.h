@@ -122,6 +122,7 @@ bool has_wildcard(const std::string &str);
 std::vector<std::string> split_string(const std::string &str,
                                       char delimiter,
                                       bool remove_empty = false);
+std::string erase_prefix(std::string &str);
 bool wildcard_match(const std::string &str,
                     std::vector<std::string> &tokens,
                     bool start_wildcard,

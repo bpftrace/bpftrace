@@ -1837,8 +1837,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
   // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
   // by args builtin.
   if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
-    tracepoint_struct_ = TracepointFormatParser::get_struct_name(
-        current_attach_point_->target, full_func_id);
+    tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
   int index = getNextIndexForProbe(probe.name());
   if (expansion)
     current_attach_point_->set_index(full_func_id, index);
@@ -1937,9 +1936,7 @@ void CodegenLLVM::visit(Probe &probe)
         if (probetype(attach_point->provider) == ProbeType::usdt) {
           std::string func_id = match;
           std::string orig_ns = attach_point->ns;
-          std::string ns = func_id.substr(0, func_id.find(":"));
-
-          func_id.erase(0, func_id.find(":")+1);
+          std::string ns = erase_prefix(func_id);
 
           // Ensure that the full probe name used is the resolved one for this probe,
           attach_point->ns = ns;
@@ -1980,6 +1977,15 @@ void CodegenLLVM::visit(Probe &probe)
           if (attach_point->provider == "BEGIN" ||
               attach_point->provider == "END")
             probefull_ = attach_point->provider;
+          else if (probetype(attach_point->provider) == ProbeType::tracepoint)
+          {
+            // Tracepoint probes must specify both a category (target) and
+            // a function name
+            std::string func = match;
+            std::string category = erase_prefix(func);
+
+            probefull_ = attach_point->name(category, func);
+          }
           else
             probefull_ = attach_point->name(match);
 
