@@ -5,8 +5,6 @@ from collections import namedtuple
 import os
 import platform
 
-from utils import ERROR_COLOR, NO_COLOR
-
 
 class RequiredFieldError(Exception):
     pass
@@ -22,19 +20,16 @@ TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suit
 class TestParser(object):
     @staticmethod
     def read_all(test_filter):
-        try:
-            for root, subdirs, files in os.walk('./runtime'):
-                for ignore_dir in ["engine", "scripts", "outputs"]:
-                    if ignore_dir in subdirs:
-                        subdirs.remove(ignore_dir)
-                for filename in files:
-                    if filename.startswith("."):
-                        continue
-                    parser = TestParser.read(root + '/' + filename, test_filter)
-                    if parser[1]:
-                        yield parser
-        except RequiredFieldError as error:
-            print(ERROR_COLOR + str(error) + NO_COLOR)
+        for root, subdirs, files in os.walk('./runtime'):
+            for ignore_dir in ["engine", "scripts", "outputs"]:
+                if ignore_dir in subdirs:
+                    subdirs.remove(ignore_dir)
+            for filename in files:
+                if filename.startswith("."):
+                    continue
+                parser = TestParser.read(root + '/' + filename, test_filter)
+                if parser[1]:
+                    yield parser
 
     @staticmethod
     def read(file_name, test_filter):
