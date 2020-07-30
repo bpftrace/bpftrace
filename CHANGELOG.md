@@ -24,6 +24,8 @@ and this project adheres to
   - [#1433](https://github.com/iovisor/bpftrace/pull/1433)
 - Prefer BTF data if available to resolve tracepoint arguments
   - [#1439](https://github.com/iovisor/bpftrace/pull/1439)
+- Improve error messages for kfunc probe types
+  - [#1451](https://github.com/iovisor/bpftrace/pull/1451)
 
 #### Deprecated
 
