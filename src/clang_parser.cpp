@@ -290,7 +290,7 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_ULongLong:
       return CreateUInt(size);
     case CXType_Record:
-      return CreateRecord(size, typestr);
+      return CreateRecord(size / 8, typestr);
     case CXType_Char_S:
     case CXType_SChar:
     case CXType_Short:
