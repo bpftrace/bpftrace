@@ -2,6 +2,7 @@
 
 #include "async_event_types.h"
 #include "bpftrace.h"
+#include "log.h"
 #include "mapkey.h"
 #include "utils.h"
 
@@ -118,7 +119,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return ptr.str();
     }
     default:
-      std::cerr << "invalid mapkey argument type" << std::endl;
+      LOG(ERROR) << "invalid mapkey argument type";
   }
   abort();
 }

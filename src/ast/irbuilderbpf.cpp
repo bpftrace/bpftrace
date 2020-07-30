@@ -477,11 +477,13 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   // TODO (mmarchini): Handle base + index * scale addressing.
   // https://github.com/iovisor/bcc/pull/988
   if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME)
-    std::cerr << "index register is not handled yet [" << argument->index_register_name << "]" << std::endl;
+    LOG(ERROR) << "index register is not handled yet ["
+               << argument->index_register_name << "]";
   if (argument->valid & BCC_USDT_ARGUMENT_SCALE)
-    std::cerr << "scale is not handled yet [" << argument->scale << "]" << std::endl;
+    LOG(ERROR) << "scale is not handled yet [" << argument->scale << "]";
   if (argument->valid & BCC_USDT_ARGUMENT_DEREF_IDENT)
-    std::cerr << "defer ident is not handled yet [" << argument->deref_ident << "]" << std::endl;
+    LOG(ERROR) << "defer ident is not handled yet [" << argument->deref_ident
+               << "]";
 
   if (argument->valid & BCC_USDT_ARGUMENT_CONSTANT)
     return getInt64(argument->constant);
@@ -547,7 +549,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   }
 
   if (usdt == nullptr) {
-    std::cerr << "failed to initialize usdt context for probe " << attach_point->target << std::endl;
+    LOG(ERROR) << "failed to initialize usdt context for probe "
+               << attach_point->target;
     exit(-1);
   }
 
@@ -561,8 +564,9 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                             arg_num,
                             &argument) != 0)
   {
-    std::cerr << "couldn't get argument " << arg_num << " for " << attach_point->target << ":"
-              << attach_point->ns << ":" << attach_point->func << std::endl;
+    LOG(ERROR) << "couldn't get argument " << arg_num << " for "
+               << attach_point->target << ":" << attach_point->ns << ":"
+               << attach_point->func;
     exit(-2);
   }
 

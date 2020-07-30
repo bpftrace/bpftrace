@@ -1,6 +1,6 @@
 NAME invalid_format
 RUN bpftrace -f jsonx -e 'BEGIN { @scalar = 5; exit(); }'
-EXPECT ^Invalid output format "jsonx"$
+EXPECT ^ERROR: Invalid output format "jsonx"$
 TIMEOUT 5
 
 NAME scalar

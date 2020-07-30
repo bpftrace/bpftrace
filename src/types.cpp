@@ -146,6 +146,7 @@ std::string typestr(Type t)
     default:
       LOG(FATAL) << "call or probe type not found";
   }
+  // lgtm[cpp/missing-return]
 }
 
 ProbeType probetype(const std::string &probeName)
@@ -201,6 +202,7 @@ std::string probetypeName(ProbeType t)
     default:
       LOG(FATAL) << "probe type not found";
   }
+  // lgtm[cpp/missing-return]
 }
 
 uint64_t asyncactionint(AsyncAction a)

@@ -58,7 +58,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
                 LOG(ERROR, ap->loc, std::cerr)
                     << "Did you mean syscalls:" << event_name << "?";
               if (bt_verbose) {
-                  std::cerr << strerror(errno) << ": " << format_file_path << std::endl;
+                LOG(ERROR) << strerror(errno) << ": " << format_file_path;
               }
               return false;
             }
@@ -114,8 +114,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             if (bt_verbose) {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
-              std::cerr << strerror(saved_errno) << ": " << format_file_path
-                        << std::endl;
+              LOG(ERROR) << strerror(saved_errno) << ": " << format_file_path;
             }
             return false;
           }

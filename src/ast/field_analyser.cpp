@@ -268,7 +268,7 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
     }
     catch (const WildcardException &e)
     {
-      std::cerr << e.what() << std::endl;
+      LOG(ERROR) << e.what();
       return false;
     }
 
