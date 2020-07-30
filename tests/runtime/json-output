@@ -123,3 +123,4 @@ TIMEOUT 1
 NAME print_hist_with_large_top_arg
 RUN bpftrace -f json -e 'BEGIN { @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); clear(@); exit(); }'
 EXPECT {"type": "hist", "data": {"@": {"1": \[{"min": 8, "max": 15, "count": 1}\], "2": \[{"min": 16, "max": 31, "count": 1}\], "3": \[{"min": 16, "max": 31, "count": 1}\]}}}
+TIMEOUT 1
