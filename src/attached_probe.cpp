@@ -17,6 +17,7 @@
 #include "bpftrace.h"
 #include "disasm.h"
 #include "list.h"
+#include "log.h"
 #include "usdt.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -51,8 +52,7 @@ bpf_probe_attach_type attachtype(ProbeType t)
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::usdt:      return BPF_PROBE_ENTRY;  break;
     default:
-      std::cerr << "invalid probe attachtype \"" << probetypeName(t) << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid probe attachtype \"" << probetypeName(t) << "\"";
   }
 }
 
@@ -78,8 +78,7 @@ bpf_prog_type progtype(ProbeType t)
       return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
       break;
     default:
-      std::cerr << "program type not found" << std::endl;
-      abort();
+      LOG(FATAL) << "program type not found";
   }
 }
 
@@ -93,8 +92,7 @@ std::string progtypeName(bpf_prog_type t)
     case BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
     // clang-format on
     default:
-      std::cerr << "invalid program type: " << t << std::endl;
-      abort();
+      LOG(FATAL) << "invalid program type: " << t;
   }
 }
 
@@ -173,8 +171,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       attach_kfunc();
       break;
     default:
-      std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid attached probe type \""
+                 << probetypeName(probe_.type) << "\"";
   }
 }
 
@@ -191,8 +189,8 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
       attach_watchpoint(pid, probe.mode);
       break;
     default:
-      std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid attached probe type \""
+                 << probetypeName(probe_.type) << "\"";
   }
 }
 
@@ -234,8 +232,8 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::hardware:
       break;
     default:
-      std::cerr << "invalid attached probe type \"" << probetypeName(probe_.type) << "\" at destructor" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid attached probe type \""
+                 << probetypeName(probe_.type) << "\" at destructor";
   }
   if (err)
     std::cerr << "Error detaching probe: " << probe_.name << std::endl;
@@ -253,8 +251,7 @@ std::string AttachedProbe::eventprefix() const
     case BPF_PROBE_RETURN:
       return "r_";
     default:
-      std::cerr << "invalid eventprefix" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid eventprefix";
   }
 }
 
@@ -277,8 +274,8 @@ std::string AttachedProbe::eventname() const
     case ProbeType::tracepoint:
       return probe_.attach_point;
     default:
-      std::cerr << "invalid eventname probe \"" << probetypeName(probe_.type) << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "invalid eventname probe \"" << probetypeName(probe_.type)
+                 << "\"";
   }
 }
 
@@ -644,8 +641,7 @@ static unsigned kernel_version(int attempt)
     default:
       break;
   }
-  std::cerr << "invalid kernel version" << std::endl;
-  abort();
+  LOG(FATAL) << "invalid kernel version";
 }
 
 void AttachedProbe::load_prog()
@@ -957,8 +953,7 @@ void AttachedProbe::attach_profile()
   }
   else
   {
-    std::cerr << "invalid profile path \"" << probe_.path << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "invalid profile path \"" << probe_.path << "\"";
   }
 
   std::vector<int> cpus = get_online_cpus();
@@ -999,8 +994,7 @@ void AttachedProbe::attach_interval()
   }
   else
   {
-    std::cerr << "invalid interval path \"" << probe_.path << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "invalid interval path \"" << probe_.path << "\"";
   }
 
   int perf_event_fd = bpf_attach_perf_event(progfd_,

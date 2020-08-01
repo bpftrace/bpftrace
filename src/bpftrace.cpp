@@ -125,9 +125,7 @@ std::string format(std::string fmt,
   auto check_snprintf_ret = [](int r) {
     if (r < 0)
     {
-      std::cerr << "format() error occurred: " << std::strerror(errno)
-                << std::endl;
-      abort();
+      LOG(FATAL) << "format() error occurred: " << std::strerror(errno);
     }
   };
   // Args have been made safe for printing by now, so replace nonstandard format
@@ -606,8 +604,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
   {
     if (bpftrace->safe_mode_)
     {
-      std::cerr << "syscall() not allowed in safe mode" << std::endl;
-      abort();
+      LOG(FATAL) << "syscall() not allowed in safe mode";
     }
 
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
@@ -670,10 +667,9 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
                 *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
             break;
           default:
-            std::cerr << "get_arg_values: invalid integer size. 8, 4, 2 and "
-                         "byte supported. "
-                      << arg.type.size << "provided" << std::endl;
-            abort();
+            LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
+                          "byte supported. "
+                       << arg.type.size << "provided";
         }
         break;
       case Type::string:
@@ -750,8 +746,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         break;
         // fall through
       default:
-        std::cerr << "invalid argument type" << std::endl;
-        abort();
+        LOG(FATAL) << "invalid argument type";
     }
   }
 
@@ -2034,8 +2029,8 @@ void BPFtrace::sort_by_key(std::vector<SizedType> key_args,
       }
       else
       {
-        std::cerr << "invalid integer argument size. 4 or 8  expected, but " << arg.size << " provided" << std::endl;
-        abort();
+        LOG(FATAL) << "invalid integer argument size. 4 or 8  expected, but "
+                   << arg.size << " provided";
       }
 
     }

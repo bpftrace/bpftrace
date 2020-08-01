@@ -4,6 +4,7 @@
 #include "ast/async_event_types.h"
 #include "bpforc.h"
 #include "codegen_helper.h"
+#include "log.h"
 #include "parser.tab.hh"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -84,9 +85,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
       expr_ = b_.getInt64(bpftrace_.num_params());
       break;
     default:
-      std::cerr << "unknown parameter type" << std::endl;
-      abort();
-      break;
+      LOG(FATAL) << "unknown parameter type";
   }
 }
 
@@ -110,8 +109,7 @@ void CodegenLLVM::visit(Identifier &identifier)
   }
   else
   {
-    std::cerr << "unknown identifier \"" << identifier.ident << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "unknown identifier \"" << identifier.ident << "\"";
   }
 }
 
@@ -255,8 +253,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     int sp_offset = arch::sp_offset();
     if (sp_offset == -1)
     {
-      std::cerr << "negative offset for stack pointer" << std::endl;
-      abort();
+      LOG(FATAL) << "negative offset for stack pointer";
     }
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
@@ -297,15 +294,13 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
-      std::cerr << "BUG: Invalid cpid: " << cpid << std::endl;
-      abort();
+      LOG(FATAL) << "BUG: Invalid cpid: " << cpid;
     }
     expr_ = b_.getInt64(cpid);
   }
   else
   {
-    std::cerr << "unknown builtin \"" << builtin.ident << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "unknown builtin \"" << builtin.ident << "\"";
   }
 }
 
@@ -765,8 +760,7 @@ void CodegenLLVM::visit(Call &call)
     int offset = arch::offset(reg_name);
     if (offset == -1)
     {
-      std::cerr << "negative offset on reg() call" << std::endl;
-      abort();
+      LOG(FATAL) << "negative offset on reg() call";
     }
 
     Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
@@ -910,8 +904,7 @@ void CodegenLLVM::visit(Call &call)
       int sigid = signal_name_to_num(signame);
       // Should be caught in semantic analyser
       if (sigid < 1) {
-        std::cerr << "BUG: Invalid signal ID for \"" << signame << "\"";
-        abort();
+        LOG(FATAL) << "BUG: Invalid signal ID for \"" << signame << "\"";
       }
       b_.CreateSignal(ctx_, b_.getInt32(sigid), call.loc);
       return;
@@ -963,8 +956,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else
   {
-    std::cerr << "missing codegen for function \"" << call.func << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
   }
 }
 
@@ -1010,8 +1002,8 @@ void CodegenLLVM::visit(Binop &binop)
   {
 
     if (binop.op != bpftrace::Parser::token::EQ && binop.op != bpftrace::Parser::token::NE) {
-      std::cerr << "missing codegen to string operator \"" << opstr(binop) << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "missing codegen to string operator \"" << opstr(binop)
+                 << "\"";
     }
 
     std::string string_literal;
@@ -1051,9 +1043,8 @@ void CodegenLLVM::visit(Binop &binop)
     if (binop.op != bpftrace::Parser::token::EQ &&
         binop.op != bpftrace::Parser::token::NE)
     {
-      std::cerr << "missing codegen to buffer operator \"" << opstr(binop)
-                << "\"" << std::endl;
-      abort();
+      LOG(FATAL) << "missing codegen to buffer operator \"" << opstr(binop)
+                 << "\"";
     }
 
     std::string string_literal("");
@@ -1124,12 +1115,10 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
       case bpftrace::Parser::token::LAND:
       case bpftrace::Parser::token::LOR:
-        std::cerr << "\"" << opstr(binop) << "\" was handled earlier" << std::endl;
-        abort();
+        LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
       default:
-        std::cerr << "missing codegen (LLVM) to string operator \""
-                  << opstr(binop) << "\"" << std::endl;
-        abort();
+        LOG(FATAL) << "missing codegen (LLVM) to string operator \""
+                   << opstr(binop) << "\"";
     }
   }
   // Using signed extension will result in -1 which will likely confuse users
@@ -1214,8 +1203,7 @@ void CodegenLLVM::visit(Unop &unop)
         }
         else
         {
-          std::cerr << "invalid expression passed to " << opstr(unop) << std::endl;
-          abort();
+          LOG(FATAL) << "invalid expression passed to " << opstr(unop);
         }
         break;
       }
@@ -1236,8 +1224,7 @@ void CodegenLLVM::visit(Unop &unop)
         break;
       }
       default:
-        std::cerr << "missing codegen for unary operator " << opstr(unop) << std::endl;
-        abort();
+        LOG(FATAL) << "missing codegen for unary operator " << opstr(unop);
     }
   }
   else if (type.IsPtrTy())
@@ -1264,8 +1251,8 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else
   {
-    std::cerr << "invalid type (" << type << ") passed to unary operator \"" << opstr(unop) << "\"" << std::endl;
-    abort();
+    LOG(FATAL) << "invalid type (" << type << ") passed to unary operator \""
+               << opstr(unop) << "\"";
   }
 }
 
