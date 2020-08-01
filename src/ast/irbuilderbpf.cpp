@@ -6,6 +6,7 @@
 #include "bpftrace.h"
 #include "codegen_helper.h"
 #include "irbuilderbpf.h"
+#include "log.h"
 #include "utils.h"
 
 #include <llvm/IR/DataLayout.h>
@@ -203,8 +204,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
         ty = getInt8Ty();
         break;
       default:
-        std::cerr << stype.size << " is not a valid type size for GetType" << std::endl;
-        abort();
+        LOG(FATAL) << stype.size << " is not a valid type size for GetType";
     }
   }
   return ty;
@@ -492,9 +492,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     offset = arch::offset(argument->base_register_name);
     if (offset < 0)
     {
-      std::cerr << "offset for register " << argument->base_register_name
-                << " not known" << std::endl;
-      abort();
+      LOG(FATAL) << "offset for register " << argument->base_register_name
+                 << " not known";
     }
 
     // Argument size must be 1, 2, 4, or 8. See

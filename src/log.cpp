@@ -11,6 +11,7 @@ std::string logtype_str(LogType t)
     case LogType::INFO    : return "INFO";
     case LogType::WARNING : return "WARNING";
     case LogType::ERROR   : return "ERROR";
+    case LogType::FATAL   : return "FATAL";
     // clang-format on
     default:
       std::cerr << "Invalid log type." << std::endl;
@@ -24,6 +25,7 @@ Log::Log()
   enabled_map_[LogType::WARNING] = true;
   enabled_map_[LogType::INFO] = true;
   enabled_map_[LogType::DEBUG] = true;
+  enabled_map_[LogType::FATAL] = true;
 }
 
 Log& Log::get()
@@ -202,6 +204,12 @@ LogStream::~LogStream()
       prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "]\n";
     sink_.take_input(type_, loc_, out_, prefix + buf_.str());
   }
+}
+
+[[noreturn]] LogStreamFatal::~LogStreamFatal()
+{
+  sink_.take_input(type_, loc_, out_, buf_.str());
+  abort();
 }
 
 }; // namespace bpftrace

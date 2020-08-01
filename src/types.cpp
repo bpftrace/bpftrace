@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "log.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -143,8 +144,7 @@ std::string typestr(Type t)
     case Type::timestamp:return "timestamp";break;
     // clang-format on
     default:
-      std::cerr << "call or probe type not found" << std::endl;
-      abort();
+      LOG(FATAL) << "call or probe type not found";
   }
 }
 
@@ -199,8 +199,7 @@ std::string probetypeName(ProbeType t)
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
     default:
-      std::cerr << "probe type not found" << std::endl;
-      abort();
+      LOG(FATAL) << "probe type not found";
   }
 }
 

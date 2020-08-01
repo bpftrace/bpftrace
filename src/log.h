@@ -15,7 +15,8 @@ enum class LogType
   DEBUG,
   INFO,
   WARNING,
-  ERROR
+  ERROR,
+  FATAL
 };
 // clang-format on
 
@@ -48,6 +49,7 @@ public:
   }
   inline void disable(LogType type)
   {
+    assert(type != LogType::FATAL);
     enabled_map_[type] = false;
   }
   inline bool is_enabled(LogType type)
@@ -86,9 +88,9 @@ public:
       buf_ << v;
     return *this;
   }
-  ~LogStream();
+  virtual ~LogStream();
 
-private:
+protected:
   Log& sink_;
   LogType type_;
   const std::optional<location> loc_;
@@ -98,13 +100,39 @@ private:
   std::ostringstream buf_;
 };
 
+class LogStreamFatal : public LogStream
+{
+public:
+  LogStreamFatal(const std::string& file,
+                 int line,
+                 __attribute__((unused)) LogType,
+                 std::ostream& out = std::cerr)
+      : LogStream(file, line, LogType::FATAL, out){};
+  LogStreamFatal(const std::string& file,
+                 int line,
+                 __attribute__((unused)) LogType,
+                 const location& loc,
+                 std::ostream& out = std::cerr)
+      : LogStream(file, line, LogType::FATAL, loc, out){};
+  [[noreturn]] ~LogStreamFatal();
+};
+
 // Usage examples:
 // 1. LOG(WARNING) << "this is a " << "warning!"; (this goes to std::cerr)
 // 2. LOG(DEBUG, std::cout) << "this is a " << " message.";
 // 3. LOG(ERROR, call.loc, std::cerr) << "this is a semantic error";
 // Note: LogType::DEBUG will prepend __FILE__ and __LINE__ to the debug message
 
-#define LOG(...) LogStream(__FILE__, __LINE__, LogType::__VA_ARGS__)
+// clang-format off
+#define LOGSTREAM_COMMON(...) bpftrace::LogStream(__FILE__, __LINE__, __VA_ARGS__)
+#define LOGSTREAM_DEBUG(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_INFO(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_WARNING(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_ERROR(...) LOGSTREAM_COMMON(__VA_ARGS__)
+#define LOGSTREAM_FATAL(...) bpftrace::LogStreamFatal(__FILE__, __LINE__, __VA_ARGS__)
+// clang-format on
+
+#define LOG(type, ...) LOGSTREAM_##type(bpftrace::LogType::type, ##__VA_ARGS__)
 
 #define DISABLE_LOG(type) bpftrace::Log::get().disable(LogType::type)
 
