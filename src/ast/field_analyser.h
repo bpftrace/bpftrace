@@ -71,6 +71,7 @@ private:
   std::ostringstream  err_;
 
   std::map<std::string, SizedType> ap_args_;
+  std::map<std::string, std::string> var_types_;
 };
 
 } // namespace ast

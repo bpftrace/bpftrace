@@ -100,10 +100,17 @@ void FieldAnalyser::visit(Map &map)
       expr->accept(*this);
     }
   }
+
+  auto it = var_types_.find(map.ident);
+  if (it != var_types_.end())
+    type_ = it->second;
 }
 
 void FieldAnalyser::visit(Variable &var __attribute__((unused)))
 {
+  auto it = var_types_.find(var.ident);
+  if (it != var_types_.end())
+    type_ = it->second;
 }
 
 void FieldAnalyser::visit(ArrayAccess &arr)
@@ -218,11 +225,13 @@ void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
+  var_types_.emplace(assignment.map->ident, type_);
 }
 
 void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
   assignment.expr->accept(*this);
+  var_types_.emplace(assignment.var->ident, type_);
 }
 
 void FieldAnalyser::visit(Predicate &pred)

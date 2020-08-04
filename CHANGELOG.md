@@ -44,6 +44,8 @@ and this project adheres to
   - [#1437](https://github.com/iovisor/bpftrace/pull/1437)
 - Fix array indexing regression
   - [#1457](https://github.com/iovisor/bpftrace/pull/1457)
+- Fix type resolution for struct field access via variables
+  - [#1450](https://github.com/iovisor/bpftrace/pull/1450)
 
 #### Tools
 
