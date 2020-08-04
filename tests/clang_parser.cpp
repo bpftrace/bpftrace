@@ -634,6 +634,27 @@ TEST_F(clang_parser_btf, btf_field_struct)
   EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
   EXPECT_NE(bpftrace.btf_set_.find("char"), bpftrace.btf_set_.end());
 }
+
+TEST_F(clang_parser_btf, btf_variable_field_struct)
+{
+  BPFtrace bpftrace;
+  parse("",
+        bpftrace,
+        true,
+        "kprobe:sys_read {\n"
+        "  @x1 = ((struct Foo3 *) curtask);\n"
+        "  @x2 = ((struct Foo1 *) curtask);\n"
+        "  @x3 = @x1->foo2;\n"
+        "}");
+
+  EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
+  EXPECT_NE(bpftrace.btf_set_.find("struct task_struct"),
+            bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("struct Foo1"), bpftrace.btf_set_.end());
+  // struct Foo2 should be added by @x1->foo2
+  EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
+  EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
+}
 #endif // HAVE_LIBBPF_BTF_DUMP
 
 TEST(clang_parser, struct_typedef)
