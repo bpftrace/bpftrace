@@ -280,6 +280,7 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type)
   auto ty = SizedType(Type::array, num_elements);
   ty.num_elements_ = num_elements;
   ty.element_type_ = new SizedType(element_type);
+  ty.pointee_size = element_type.size;
   return ty;
 }
 

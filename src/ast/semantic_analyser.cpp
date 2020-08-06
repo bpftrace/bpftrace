@@ -1182,7 +1182,8 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
           !type.GetElementTy()->IsNoneTy()))
     {
       LOG(ERROR, arr.loc, err_)
-          << "The array index operator [] can only be used on arrays.";
+          << "The array index operator [] can only be used on arrays, found "
+          << type.type << ".";
       return;
     }
 
