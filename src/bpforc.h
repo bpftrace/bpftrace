@@ -96,9 +96,15 @@ public:
       : TM(TM_),
         Resolver(createLegacyLookupResolver(
             ES,
+#if LLVM_VERSION_MAJOR >= 11
+            [](llvm::StringRef Name __attribute__((unused))) -> JITSymbol {
+              return nullptr;
+            },
+#else
             [](const std::string &Name __attribute__((unused))) -> JITSymbol {
               return nullptr;
             },
+#endif
             [](Error Err) { cantFail(std::move(Err), "lookup failed"); })),
 #if LLVM_VERSION_MAJOR > 8
         ObjectLayer(AcknowledgeORCv1Deprecation,
