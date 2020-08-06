@@ -80,15 +80,11 @@ public:
   }
 
   Type type;
-  Type elem_type = Type::none; // Array element type if accessing elements of an
-                               // array
-
   size_t size;                 // in bytes
   StackType stack_type;
   bool is_internal = false;
   bool is_tparg = false;
   bool is_kfarg = false;
-  size_t pointee_size = 0;
   int kfarg_idx = -1;
   // Only valid if `type == Type::tuple`
   std::vector<SizedType> tuple_elems;
