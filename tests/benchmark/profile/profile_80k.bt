@@ -1,0 +1,4 @@
+profile:hz:80000 { printf("hello 1\n"); }
+
+i:s:10 {exit();} 
+

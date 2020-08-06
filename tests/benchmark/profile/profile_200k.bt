@@ -1,0 +1,5 @@
+profile:hz:100000 { printf("hello 1\n"); }
+profile:hz:100000 { printf("hello 1\n"); }
+
+i:s:10 {exit();} // bt i.bt > log && cat log | grep -c -E "^hello.*" 
+
