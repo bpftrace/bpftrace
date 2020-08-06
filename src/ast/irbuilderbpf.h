@@ -80,6 +80,7 @@ public:
   CallInst   *CreateGetRandom();
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
   CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
+  CallInst   *createCall(Value *callee, ArrayRef<Value *> args, const Twine &Name);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
   void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
   void        CreateSignal(Value *ctx, Value *sig, const location &loc);
