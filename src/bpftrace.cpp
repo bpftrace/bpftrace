@@ -1832,7 +1832,7 @@ std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) co
   std::set<std::string> syms;
   int err = bcc_elf_foreach_sym(path.c_str(), add_symbol, &symbol_option, &syms);
   if (err)
-    throw std::runtime_error("Could not list function symbols: " + path);
+    throw std::runtime_error("Could not list function symbols: " + path + ": " + strerror(errno));
 
   std::ostringstream oss;
   std::copy(syms.begin(),

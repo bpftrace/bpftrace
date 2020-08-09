@@ -7,6 +7,7 @@ add_executable(bpftrace
   bpffeature.cpp
   bpftrace.cpp
   btf.cpp
+  capabilities.cpp
   child.cpp
   clang_parser.cpp
   disasm.cpp
@@ -86,6 +87,7 @@ if (ALLOW_UNSAFE_PROBE)
 endif(ALLOW_UNSAFE_PROBE)
 
 target_link_libraries(bpftrace arch ast parser resources)
+target_link_libraries(bpftrace ${LIBCAP_LIBRARIES})
 
 target_link_libraries(bpftrace ${LIBBCC_LIBRARIES})
 if(STATIC_LINKING)

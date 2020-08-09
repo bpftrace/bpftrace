@@ -8,6 +8,7 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
+#include "capabilities.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -231,6 +232,7 @@ int main(int argc, char *argv[])
   std::string script, search, file_name, output_file, output_format, output_elf;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
+  Capabilities capabilities;
 
   const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:k";
   option long_options[] = {
@@ -350,13 +352,6 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  if (!cmd_str.empty() && !pid_str.empty())
-  {
-    std::cerr << "USAGE: Cannot use both -c and -p." << std::endl;
-    usage();
-    return 1;
-  }
-
   std::ostream * os = &std::cout;
   std::ofstream outputstream;
   if (!output_file.empty()) {
@@ -406,6 +401,49 @@ int main(int argc, char *argv[])
   bpftrace.force_btf_ = force_btf;
   bpftrace.helper_check_level_ = helper_check_level;
   bpftrace.btime = get_btime();
+
+  if (!cmd_str.empty() && !pid_str.empty())
+  {
+    std::cerr << "USAGE: Cannot use both -c and -p." << std::endl;
+    usage();
+    return 1;
+  }
+
+  if (!cmd_str.empty())
+  {
+    try
+    {
+      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
+    }
+    catch (const std::runtime_error& e)
+    {
+      std::cerr << "Failed to fork child: " << e.what() << std::endl;
+      return -1;
+    }
+  }
+
+  try
+  {
+    /** Capabilities:
+        SYS_ADMIN: to access bpf, perf_event_open
+        SYS_RESOURCE: to set rlimit, will be dropped later
+        SYS_PTRACE: to ptrace, access /proc/<pid>/maps
+    */
+    std::vector<cap_value_t> caps = {
+      CAP_SYS_ADMIN,
+      CAP_SYS_RESOURCE,
+      CAP_SYS_PTRACE,
+    };
+
+    capabilities.drop_to(caps);
+
+    if (bt_verbose)
+      std::cout << "Dropped capabilities to " << capabilities.to_string() << std::endl;
+  }
+  catch (const std::runtime_error& e)
+  {
+    std::cerr << "WARNING: Failed to drop capabilities: " << e.what() << std::endl;
+  }
 
   if (!pid_str.empty())
   {
@@ -512,6 +550,15 @@ int main(int argc, char *argv[])
   // FIXME (mmarchini): maybe we don't want to always enforce an infinite
   // rlimit?
   enforce_infinite_rlimit();
+
+  try
+  {
+    capabilities.drop(CAP_SYS_RESOURCE);
+  }
+  catch (const std::runtime_error& e)
+  {
+    std::cerr << "WARNING: Failed to drop capability: " << e.what() << std::endl;
+  }
 
   // defaults
   bpftrace.join_argnum_ = 16;
@@ -681,18 +728,6 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  if (!cmd_str.empty())
-  {
-    try
-    {
-      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
-    }
-    catch (const std::runtime_error& e)
-    {
-      std::cerr << "Failed to fork child: " << e.what() << std::endl;
-      return -1;
-    }
-  }
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
