@@ -86,6 +86,7 @@ include_directories(SYSTEM ${LIBBCC_INCLUDE_DIRS})
 find_package(LibElf REQUIRED)
 include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 
+find_package(LibCap REQUIRED)
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
 bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc VERBOSE)
