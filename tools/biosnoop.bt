@@ -3,36 +3,53 @@
  * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
  *               For Linux, uses bpftrace, eBPF.
  *
- * TODO: switch to block tracepoints. Add device, offset, and size columns.
+ * TODO: switch to block tracepoints.
  *
  * This is a bpftrace version of the bcc tool of the same name.
  *
  * 15-Nov-2017	Brendan Gregg	Created this.
+ * 31-Jul-2020	Trent Lloyd	Added support for disk name, offset and length.
+ *				Requires bpftrace >0.11 for >6 printf args.
  */
+
+#include <linux/blkdev.h>
 
 BEGIN
 {
-	printf("%-12s %-16s %-6s %7s\n", "TIME(ms)", "COMM", "PID", "LAT(ms)");
+	printf("%-12s %-16s %-7s %-8s %-13s %-6s %7s\n", "TIME(ms)", "COMM", "PID", "DISK", "OFFSET", "LEN", "LAT(ms)");
 }
 
 kprobe:blk_account_io_start
 {
+	$req = ((struct request *)arg0);
+
 	@start[arg0] = nsecs;
 	@iopid[arg0] = pid;
 	@iocomm[arg0] = comm;
+	@iolen[arg0] = ((struct request *)arg0)->__data_len;
+	@iostart[arg0] = $req->__sector * $req->q->limits.logical_block_size
 }
 
 kprobe:blk_account_io_done
 /@start[arg0] != 0 && @iopid[arg0] != 0 && @iocomm[arg0] != ""/
 {
 	$now = nsecs;
-	printf("%-12u %-16s %-6d %7d\n",
-	    elapsed / 1000000, @iocomm[arg0], @iopid[arg0],
+	$req = ((struct request *)arg0);
+
+	printf("%-12u %-16s %-7d %-8s %-13u %-6d %7d\n",
+	    elapsed / 1000000,
+	    @iocomm[arg0],
+	    @iopid[arg0],
+	    $req->rq_disk->disk_name,
+	    @iostart[arg0],
+	    @iolen[arg0],
 	    ($now - @start[arg0]) / 1000000);
 
 	delete(@start[arg0]);
 	delete(@iopid[arg0]);
 	delete(@iocomm[arg0]);
+	delete(@iolen[arg0]);
+	delete(@iostart[arg0]);
 }
 
 END
@@ -40,4 +57,6 @@ END
 	clear(@start);
 	clear(@iopid);
 	clear(@iocomm);
+	clear(@iolen);
+	clear(@iostart);
 }

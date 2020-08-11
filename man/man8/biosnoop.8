@@ -4,9 +4,10 @@ biosnoop.bt \- Block I/O tracing tool, showing per I/O latency. Uses bpftrace/eB
 .SH SYNOPSIS
 .B biosnoop.bt
 .SH DESCRIPTION
-This is a basic block I/O (disk I/O) tracing tool, showing each I/O event
-along with the issuing process ID, and the I/O latency. This can be used to
-investigate disk I/O performance issues.
+This is a basic block I/O (disk I/O) tracing tool, showing each I/O event along
+with the issuing process ID, name, I/O latency, disk, offset and length. This
+can be used to investigate disk I/O performance issues. It also outputs the
+system time at startup to reference against the TIME field of each output row.
 
 This tool currently works by dynamic tracing of the blk_account*() kernel
 functions, which will need updating to match any changes to these functions
@@ -17,7 +18,7 @@ Since this uses BPF, only the root user can use this tool.
 CONFIG_BPF and bpftrace.
 .SH EXAMPLES
 .TP
-Trace block I/O events, printing per-line summaries:
+Trace block I/O events, printing one line per operation:
 #
 .B biosnoop.bt
 .SH FIELDS
@@ -31,8 +32,19 @@ Issuing process name. This often identifies the issuing application process, but
 PID
 Issuing process ID. This often identifies the issuing application process, but I/O may be initiated from kernel threads only.
 .TP
-ARGS
-Process name and arguments (16 word maximum).
+DISK
+The name of the target disk, be aware that this will generally show the
+underlying disk receiving the operation if some kind of translation layer such
+as RAID or bcache is used.
+.TP
+OFFSET
+The offset of the I/O operation in bytes.
+.TP
+LEN
+The length of the I/O operation in bytes.
+.TP
+LAT(ms)
+The latency of the I/O operation in milliseconds (ms).
 .SH OVERHEAD
 Since block device I/O usually has a relatively low frequency (< 10,000/s),
 the overhead for this tool is expected to be negligible. For high IOPS storage
@@ -55,5 +67,6 @@ Linux
 Unstable - in development.
 .SH AUTHOR
 Brendan Gregg
+Trent Lloyd
 .SH SEE ALSO
 opensnoop(8)

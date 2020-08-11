@@ -46,6 +46,8 @@ and this project adheres to
   - [#1457](https://github.com/iovisor/bpftrace/pull/1457)
 
 #### Tools
+- biosnoop: Added output of disk name, offset and length
+  - [#1460](https://github.com/iovisor/bpftrace/pull/1460)
 
 #### Documentation
 
