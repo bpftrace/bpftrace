@@ -102,6 +102,9 @@ if(HAVE_BFD_DISASM)
     target_link_libraries(bpftrace_test ${LIBOPCODES_LIBRARIES})
   endif(STATIC_LINKING)
 endif(HAVE_BFD_DISASM)
+if(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+  target_compile_definitions(bpftrace_test PRIVATE LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+endif(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
 
 target_link_libraries(bpftrace_test arch ast parser resources)
 

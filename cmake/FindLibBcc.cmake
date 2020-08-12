@@ -70,3 +70,27 @@ include (FindPackageHandleStandardArgs)
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc "Please install the bcc library package, which is required. Depending on your distro, it may be called bpfcclib or bcclib (Ubuntu), bcc-devel (Fedora), or something else. If unavailable, install bcc from source (github.com/iovisor/bcc)."
   LIBBCC_LIBRARIES
   LIBBCC_INCLUDE_DIRS)
+
+# Check bpf_attach_kprobe signature
+if(${LIBBCC_FOUND})
+if(STATIC_LINKING)
+  # libbcc.a is not statically linked with libbpf.a, libelf.a, and libz.a.
+  # If we do a static bpftrace build, we must link them in.
+  find_package(LibBpf)
+  find_package(LibElf)
+  find_package(LibZ)
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARY_STATIC} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
+else()
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_LIBRARIES})
+endif()
+INCLUDE(CheckCXXSourceCompiles)
+CHECK_CXX_SOURCE_COMPILES("
+#include <bcc/libbpf.h>
+
+int main(void) {
+  bpf_attach_kprobe(0, BPF_PROBE_ENTRY, \"\", \"\", 0, 0);
+  return 0;
+}
+" LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+SET(CMAKE_REQUIRED_LIBRARIES)
+endif()
