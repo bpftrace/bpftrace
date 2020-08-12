@@ -754,26 +754,23 @@ void AttachedProbe::load_prog()
   }
 }
 
-// XXX(mmarchini): bcc changed the signature of bpf_attach_kprobe, adding a new
-// int parameter at the end. Since there's no reliable way to feature-detect
-// this, we create a function pointer with the long signature and cast
-// bpf_attach_kprobe to this function pointer. If we're on an older bcc
-// version, bpf_attach_kprobe call will be augmented with an extra register
-// being used for the last parameter, even though this register won't be used
-// inside the function. Since the register won't be used this is kinda safe,
-// although not ideal.
-typedef int (*attach_probe_wrapper_signature)(int, enum bpf_probe_attach_type, const char*, const char*, uint64_t, int);
-
 void AttachedProbe::attach_kprobe(bool safe_mode)
 {
   resolve_offset_kprobe(safe_mode);
-  int perf_event_fd = cast_signature<attach_probe_wrapper_signature>(
-      &bpf_attach_kprobe)(progfd_,
-                          attachtype(probe_.type),
-                          eventname().c_str(),
-                          probe_.attach_point.c_str(),
-                          offset_,
-                          0);
+#ifdef LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
+  int perf_event_fd = bpf_attach_kprobe(progfd_,
+                                        attachtype(probe_.type),
+                                        eventname().c_str(),
+                                        probe_.attach_point.c_str(),
+                                        offset_,
+                                        0);
+#else
+  int perf_event_fd = bpf_attach_kprobe(progfd_,
+                                        attachtype(probe_.type),
+                                        eventname().c_str(),
+                                        probe_.attach_point.c_str(),
+                                        offset_);
+#endif
 
   if (perf_event_fd < 0) {
     if (probe_.orig_name != probe_.name) {
