@@ -394,15 +394,10 @@ SizedType BTF::get_stype(__u32 id)
   }
   else if (btf_is_ptr(t))
   {
-    // get the pointer type..
-    t = btf__type_by_id(btf, t->type);
-    // .. and skip the trash.
-    t = btf_type_skip_modifiers(t);
-
+    // t->type is the pointee type
     stype = CreatePointer(get_stype(t->type));
   }
 
-  stype.is_kfarg = true;
   return stype;
 }
 
@@ -464,6 +459,7 @@ int BTF::resolve_args(const std::string &func,
 
       SizedType stype = get_stype(p->type);
       stype.kfarg_idx = j;
+      stype.is_kfarg = true;
       args.insert({ str, stype });
     }
 
@@ -471,6 +467,7 @@ int BTF::resolve_args(const std::string &func,
     {
       SizedType stype = get_stype(t->type);
       stype.kfarg_idx = j;
+      stype.is_kfarg = true;
       args.insert({ "$retval", stype });
     }
 

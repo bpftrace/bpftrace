@@ -193,6 +193,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
         type_ = "";
     }
 
+    bpftrace_.btf_set_.insert(type_);
     has_builtin_args_ = false;
   }
   else if (!type_.empty())
