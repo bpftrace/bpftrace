@@ -1395,17 +1395,8 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     else if (type.IsRecordTy())
     {
-      if (type.is_kfarg)
-      {
-        // args->arg access, we need to push the args builtin
-        // type further through the expression ladder
-        unop.type = type;
-      }
-      else {
-        LOG(ERROR, unop.loc, err_)
-            << "Can not dereference struct/union of type '" << type.GetName()
-            << "'. It is not a pointer.";
-      }
+      LOG(ERROR, unop.loc, err_) << "Can not dereference struct/union of type '"
+                                 << type.GetName() << "'. It is not a pointer.";
     }
     else if (type.IsIntTy())
     {
