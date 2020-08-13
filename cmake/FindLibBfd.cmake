@@ -51,22 +51,6 @@ find_library (LIBIBERTY_LIBRARIES
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
-# libbfd.so is statically linked with libz.a but libbfd.a
-# is not. So if we do a static bpftrace build, we must link in
-# libz.a.
-find_library (LIBZ_LIBRARIES
-  NAMES
-    libz.a
-  PATHS
-    /lib
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
 include (FindPackageHandleStandardArgs)
 
 
@@ -84,6 +68,7 @@ SET(CMAKE_REQUIRED_LIBRARIES ${LIBBFD_LIBRARIES} ${LIBOPCODES_LIBRARIES})
 # do it. Furthermore, libbfd uses some libc symbols that we must manually
 # link against if we're not using static libc (which includes such symbols).
 if(STATIC_LINKING)
+  find_package(LibZ)
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBIBERTY_LIBRARIES} ${LIBZ_LIBRARIES})
   if(NOT STATIC_LIBC)
     set(CMAKE_REQUIRED_FLAGS
