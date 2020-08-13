@@ -1387,9 +1387,11 @@ void SemanticAnalyser::visit(Unop &unop)
     {
       unop.type = SizedType(*type.GetPointeeTy());
       if (type.IsCtxAccess())
+      {
         unop.type.MarkCtxAccess();
-      unop.type.is_kfarg = type.is_kfarg;
-      unop.type.is_tparg = type.is_tparg;
+        unop.type.is_kfarg = type.is_kfarg;
+        unop.type.is_tparg = type.is_tparg;
+      }
     }
     else if (type.IsRecordTy())
     {
