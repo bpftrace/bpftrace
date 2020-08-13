@@ -531,8 +531,8 @@ void SemanticAnalyser::visit(Call &call)
       if (!t.IsIntegerTy() && !t.IsPtrTy())
       {
         LOG(ERROR, call.loc, err_)
-            << "() expects an integer or a pointer type as first "
-            << "argument ( " << t << " provided)";
+            << call.func << "() expects an integer or a pointer type as first "
+            << "argument (" << t << " provided)";
       }
       call.type = CreateString(bpftrace_.strlen_);
       if (is_final_pass() && call.vargs->size() > 1) {
@@ -1573,7 +1573,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     if (it != ap_args_.end())
       acc.type = it->second;
     else
-      LOG(ERROR, acc.loc, err_) << "Can't find a field";
+      LOG(ERROR, acc.loc, err_) << "Can't find a field " << acc.field;
     return;
   }
 
