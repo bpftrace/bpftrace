@@ -1853,6 +1853,7 @@ TEST_F(semantic_analyser_btf, kfunc)
        0);
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kretfunc:func_1 { $x = args->foo; }", 1);
+  test("kretfunc:func_1 { $x = args; }", 1);
   // func_1 and func_2 have different args, but none of them
   // is used in probe code, so we're good -> PASS
   test("kfunc:func_1, kfunc:func_2 { }", 0);
