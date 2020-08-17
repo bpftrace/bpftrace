@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <ostream>
+#include <tuple>
 
 #include "ast.h"
 #include "bpftrace.h"
@@ -51,7 +52,6 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
-  AllocaInst *getMapKey(Map &map);
   AllocaInst *getHistMapKey(Map &map, Value *log2);
   int         getNextIndexForProbe(const std::string &probe_name);
   std::string getSectionNameForProbe(const std::string &probe_name, int index);
@@ -83,6 +83,11 @@ private:
       deleter_ = std::move(deleter);
     }
 
+    ScopedExprDeleter(const ScopedExprDeleter &other) = delete;
+    ScopedExprDeleter &operator=(const ScopedExprDeleter &other) = delete;
+    ScopedExprDeleter(ScopedExprDeleter &&other) = default;
+    ScopedExprDeleter &operator=(ScopedExprDeleter &&other) = default;
+
     ~ScopedExprDeleter()
     {
       if (deleter_)
@@ -106,10 +111,12 @@ private:
                      FunctionType *func_type,
                      bool expansion);
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
+  [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
 
   Function *createLog2Function();
   Function *createLinearFunction();
   Node *root_;
+  Probe *probe_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;
   std::unique_ptr<ExecutionEngine> ee_;
@@ -127,7 +134,7 @@ private:
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
 
-  std::map<std::string, AllocaInst *> variables_;
+  std::map<std::string, Value *> variables_;
   int printf_id_ = 0;
   int time_id_ = 0;
   int cat_id_ = 0;

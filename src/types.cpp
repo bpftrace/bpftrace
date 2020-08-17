@@ -4,6 +4,7 @@
 
 #include "log.h"
 #include "types.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -164,7 +165,6 @@ std::string typestr(Type t)
     case Type::string:   return "string";   break;
     case Type::ksym:     return "ksym";     break;
     case Type::usym:     return "usym";     break;
-    case Type::join:     return "join";     break;
     case Type::probe:    return "probe";    break;
     case Type::username: return "username"; break;
     case Type::inet:     return "inet";     break;
@@ -417,12 +417,16 @@ SizedType CreateKSym()
 
 SizedType CreateJoin(size_t argnum, size_t argsize)
 {
-  return SizedType(Type::join, 8 + 8 + argnum * argsize);
+  return SizedType(Type::string, 8 + 8 + argnum * argsize);
 }
 
 SizedType CreateBuffer(size_t size)
 {
-  return SizedType(Type::buffer, size);
+  /*
+   * codegen allocates a non-packed struct, so we need to align to word size.
+   * TODO: get access to llvm::DataLayout and actually measure a AsyncEvent::Buf
+   */
+  return SizedType(Type::buffer, 4 + align_to(size, 4));
 }
 
 SizedType CreateTimestamp()

@@ -20,8 +20,12 @@ class AttachedProbe
 public:
   AttachedProbe(Probe &probe,
                 std::tuple<uint8_t *, uintptr_t> func,
+                size_t max_name_length,
                 bool safe_mode);
-  AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid);
+  AttachedProbe(Probe &probe,
+                std::tuple<uint8_t *, uintptr_t> func,
+                size_t max_name_length,
+                int pid);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
@@ -32,7 +36,7 @@ private:
   static std::string sanitise(const std::string &str);
   void resolve_offset_kprobe(bool safe_mode);
   void resolve_offset_uprobe(bool safe_mode);
-  void load_prog();
+  void load_prog(size_t max_name_length);
   void attach_kprobe(bool safe_mode);
   void attach_uprobe(bool safe_mode);
   void attach_usdt(int pid);

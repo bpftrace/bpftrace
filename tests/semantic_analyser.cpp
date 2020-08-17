@@ -709,7 +709,7 @@ TEST(semantic_analyser, call_uaddr)
 
 TEST(semantic_analyser, call_cgroupid)
 {
-  // Handle args above STRING_SIZE
+  // Handle args above strlen_
   test("kprobe:f { cgroupid("
        //          1         2         3         4         5         6
        "\"123456789/123456789/123456789/123456789/123456789/123456789/12345\""

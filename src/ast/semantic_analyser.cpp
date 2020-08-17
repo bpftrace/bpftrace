@@ -1,6 +1,7 @@
 #include "semantic_analyser.h"
 #include "arch/arch.h"
 #include "ast.h"
+#include "codegen_helper.h"
 #include "fake_map.h"
 #include "list.h"
 #include "log.h"
@@ -8,6 +9,7 @@
 #include "printf.h"
 #include "tracepoint_format_parser.h"
 #include "usdt.h"
+#include "utils.h"
 #include <algorithm>
 #include <cstring>
 #include <regex>
@@ -79,12 +81,16 @@ void SemanticAnalyser::visit(PositionalParameter &param)
 
 void SemanticAnalyser::visit(String &string)
 {
-  if (!is_compile_time_func(func_) && string.str.size() > STRING_SIZE - 1)
+  if (!is_compile_time_func(func_) && string.str.size() > bpftrace_.strlen_ - 1)
   {
-    LOG(ERROR, string.loc, err_) << "String is too long (over " << STRING_SIZE
-                                 << " bytes): " << string.str;
+    LOG(ERROR, string.loc, err_)
+        << "String is too long (over " << bpftrace_.strlen_
+        << " bytes): " << string.str;
   }
-  string.type = CreateString(STRING_SIZE);
+  string.type = CreateString(bpftrace_.strlen_);
+  if (is_final_pass())
+    bpftrace_.str_map_keys_.emplace(static_cast<Node *>(&string),
+                                    bpftrace_.str_map_keys_.size());
 }
 
 void SemanticAnalyser::visit(StackMode &mode)
@@ -542,6 +548,9 @@ void SemanticAnalyser::visit(Call &call)
         param->is_in_str = true;
       }
     }
+    if (is_final_pass())
+      bpftrace_.str_map_keys_.emplace(static_cast<Node *>(&call),
+                                      bpftrace_.str_map_keys_.size());
   }
   else if (call.func == "buf")
   {
@@ -589,13 +598,17 @@ void SemanticAnalyser::visit(Call &call)
       buffer_size = max_buffer_size;
     }
 
-    buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
+
+    max_buf_size_ = std::max(max_buf_size_, call.type.size);
 
     if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
     {
       param->is_in_str = true;
     }
+    if (is_final_pass())
+      bpftrace_.buf_map_keys_.emplace(static_cast<Node *>(&call),
+                                      bpftrace_.buf_map_keys_.size());
   }
   else if (call.func == "ksym" || call.func == "usym") {
     if (check_nargs(call, 1)) {
@@ -773,6 +786,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "printf" || call.func == "system" || call.func == "cat")
   {
+    needs_fmtstr_map_ = true;
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 128))
     {
@@ -782,6 +796,7 @@ void SemanticAnalyser::visit(Call &call)
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
+        size_t args_size = 0;
         for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
              iter++)
         {
@@ -799,7 +814,18 @@ void SemanticAnalyser::visit(Call &call)
               .mask = 0,
             },
           });
+          /*
+           * codegen allocates a non-packed struct, so we need to align struct
+           * members to word size. this may be an overshoot (i.e. if a more
+           * efficient pack is possible). that won't affect the IR emitted;
+           * we'll just end up allocating a slightly bigger map than necessary.
+           *
+           * TODO: get access to llvm::DataLayout and actually measure the
+           * formatString struct size
+           */
+          args_size += align_to(ty.size, 8);
         }
+        max_fmtstr_args_size_ = std::max(max_fmtstr_args_size_, args_size);
         std::string msg = verify_format_string(fmt.str, args);
         if (msg != "")
         {
@@ -1120,6 +1146,8 @@ void SemanticAnalyser::visit(Map &map)
   MapKey key;
 
   if (map.vargs) {
+    size_t args_size = 0;
+    bool needs_key_map = false;
     for (unsigned int i = 0; i < map.vargs->size(); i++){
       Expression * expr = map.vargs->at(i);
       expr->accept(*this);
@@ -1145,6 +1173,11 @@ void SemanticAnalyser::visit(Map &map)
             << "tuple cannot be used as a map key. Try a multi-key associative"
                " array instead (eg `@map[$1, $2] = ...)`.";
       }
+      else if (expr->type.IsStringTy())
+      {
+        needs_key_map = true;
+      }
+      args_size += expr->type.size;
 
       if (is_final_pass()) {
         if (expr->type.IsNoneTy())
@@ -1162,6 +1195,10 @@ void SemanticAnalyser::visit(Map &map)
         key.args_.push_back(keytype);
       }
     }
+    max_key_size_ = std::max(max_key_size_, args_size);
+    if (is_final_pass() && needs_key_map)
+      bpftrace_.key_map_keys_.emplace(static_cast<Node *>(&map),
+                                      bpftrace_.key_map_keys_.size());
   }
 
   if (is_final_pass()) {
@@ -1196,9 +1233,12 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_.find(var.ident);
-  if (search_val != variable_val_.end()) {
-    var.type = search_val->second;
+  auto &variable_val = variable_val_[probe_];
+  auto search_val = variable_val.find(var.ident);
+  if (search_val != variable_val.end())
+  {
+    [[maybe_unused]] auto &[var_name, var_semantic] = *search_val;
+    var.type = var_semantic.sized_type;
   }
   else {
     LOG(ERROR, var.loc, err_)
@@ -1440,9 +1480,14 @@ void SemanticAnalyser::visit(Ternary &ternary)
     }
     if (cond != Type::integer)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
+    if (lhs == Type::string)
+      bpftrace_.str_map_keys_.emplace(static_cast<Node *>(&ternary),
+                                      bpftrace_.str_map_keys_.size());
   }
   if (lhs == Type::string)
-    ternary.type = CreateString(STRING_SIZE);
+  {
+    ternary.type = CreateString(bpftrace_.strlen_);
+  }
   else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else if (lhs == Type::none)
@@ -1856,7 +1901,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string var_ident = assignment.var->ident;
-  auto search = variable_val_.find(var_ident);
+  auto &variable_val = variable_val_[probe_];
+  auto search = variable_val.find(var_ident);
   assignment.var->type = assignment.expr->type;
 
   auto *builtin = dynamic_cast<Builtin *>(assignment.expr);
@@ -1865,32 +1911,35 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     LOG(ERROR, assignment.loc, err_) << "args cannot be assigned to a variable";
   }
 
-  if (search != variable_val_.end()) {
-    if (search->second.IsNoneTy())
+  if (search != variable_val.end())
+  {
+    [[maybe_unused]] auto &[var_name, var_semantic] = *search;
+    if (var_semantic.sized_type.IsNoneTy())
     {
       if (is_final_pass()) {
         LOG(ERROR, assignment.loc, err_) << "Undefined variable: " + var_ident;
       }
       else {
-        search->second = assignment.expr->type;
+        var_semantic.sized_type = assignment.expr->type;
       }
     }
-    else if (!search->second.IsSameType(assignment.expr->type))
+    else if (!var_semantic.sized_type.IsSameType(assignment.expr->type))
     {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignment.expr->type
           << "' when variable already contains a value of type '"
-          << search->second << "'";
+          << var_semantic.sized_type << "'";
     }
   }
   else {
     // This variable hasn't been seen before
-    variable_val_[var_ident] = assignment.expr->type;
+    variable_val[var_ident] = { .sized_type = assignment.expr->type,
+                                .loc = assignment.loc };
     assignment.var->type = assignment.expr->type;
   }
 
-  auto &storedTy = variable_val_[var_ident];
+  auto &storedTy = variable_val[var_ident].sized_type;
   auto &assignTy = assignment.expr->type;
 
   if (assignTy.IsRecordTy())
@@ -2217,9 +2266,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
-  // Clear out map of variable names - variables should be probe-local
-  variable_val_.clear();
   probe_ = &probe;
+  variable_val_.try_emplace(probe_);
 
   for (AttachPoint *ap : *probe.attach_points) {
     ap->accept(*this);
@@ -2260,11 +2308,8 @@ int SemanticAnalyser::create_maps(bool debug)
 {
   uint32_t failed_maps = 0;
   auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
-  for (auto &map_val : map_val_)
+  for (const auto &[map_name, type] : map_val_)
   {
-    std::string map_name = map_val.first;
-    SizedType type = map_val.second;
-
     auto search_args = map_key_.find(map_name);
     if (search_args == map_key_.end())
     {
@@ -2315,6 +2360,37 @@ int SemanticAnalyser::create_maps(bool debug)
     }
   }
 
+  size_t max_zero_buffer_size_ = 0;
+
+  for (const auto &[probe, probe_vars] : variable_val_)
+  {
+    bpftrace_.vars_.try_emplace(probe);
+    for (const auto &[var_name, var_semantic] : probe_vars)
+    {
+      if (!needMemcpy(var_semantic.sized_type))
+        continue;
+
+      std::unique_ptr<IMap> map;
+      MapKey key;
+      if (debug)
+      {
+        map = std::make_unique<bpftrace::FakeMap>(var_name,
+                                                  var_semantic.sized_type,
+                                                  key);
+      }
+      else
+      {
+        map = std::make_unique<bpftrace::Map>(
+            var_name, var_semantic.sized_type, key, 1, true);
+      }
+      failed_maps += is_invalid_map(map->mapfd_);
+      max_zero_buffer_size_ = std::max(max_zero_buffer_size_,
+                                       var_semantic.sized_type.size);
+      bpftrace_.vars_[probe][var_name] = { .map = std::move(map),
+                                           .semantic = var_semantic };
+    }
+  }
+
   for (StackType stack_type : needs_stackid_maps_) {
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
@@ -2362,7 +2438,8 @@ int SemanticAnalyser::create_maps(bool debug)
       SizedType type = CreateJoin(bpftrace_.join_argnum_,
                                   bpftrace_.join_argsize_);
       MapKey key;
-      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
+      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(
+          map_ident, type, key, 1, true);
       failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
     }
     if (needs_elapsed_map_)
@@ -2377,6 +2454,86 @@ int SemanticAnalyser::create_maps(bool debug)
     bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
   }
+
+  if (needs_fmtstr_map_)
+  {
+    std::string map_ident = "fmtstr";
+
+    size_t printf_struct_size = sizeof(size_t) + max_fmtstr_args_size_;
+    SizedType type = CreateString(printf_struct_size);
+    MapKey key;
+    if (debug)
+      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::FakeMap>(map_ident,
+                                                                  type,
+                                                                  key);
+    else
+    {
+      bpftrace_.fmtstr_map_ = std::make_unique<bpftrace::Map>(
+          map_ident, type, key, 1, true);
+    }
+    failed_maps += is_invalid_map(bpftrace_.fmtstr_map_->mapfd_);
+    max_zero_buffer_size_ = std::max(max_zero_buffer_size_, printf_struct_size);
+  }
+
+  if (!bpftrace_.str_map_keys_.empty())
+  {
+    std::string map_ident = "str";
+
+    SizedType type = CreateString(bpftrace_.strlen_);
+    MapKey key;
+    if (debug)
+      bpftrace_.str_map_ = std::make_unique<bpftrace::FakeMap>(map_ident,
+                                                               type,
+                                                               key);
+    else
+    {
+      bpftrace_.str_map_ = std::make_unique<bpftrace::Map>(
+          map_ident, type, key, bpftrace_.str_map_keys_.size(), true);
+    }
+    failed_maps += is_invalid_map(bpftrace_.str_map_->mapfd_);
+    max_zero_buffer_size_ = std::max(max_zero_buffer_size_, bpftrace_.strlen_);
+  }
+
+  if (!bpftrace_.key_map_keys_.empty())
+  {
+    std::string map_ident = "key";
+
+    SizedType type = CreateString(max_key_size_);
+    MapKey key;
+    if (debug)
+      bpftrace_.key_map_ = std::make_unique<bpftrace::FakeMap>(map_ident,
+                                                               type,
+                                                               key);
+    else
+    {
+      bpftrace_.key_map_ = std::make_unique<bpftrace::Map>(
+          map_ident, type, key, bpftrace_.key_map_keys_.size(), true);
+    }
+    failed_maps += is_invalid_map(bpftrace_.key_map_->mapfd_);
+    max_zero_buffer_size_ = std::max(max_zero_buffer_size_, max_key_size_);
+  }
+
+  if (!bpftrace_.buf_map_keys_.empty())
+  {
+    std::string map_ident = "buf";
+
+    SizedType type = CreateString(max_buf_size_);
+    MapKey key;
+    if (debug)
+      bpftrace_.buf_map_ = std::make_unique<bpftrace::FakeMap>(map_ident,
+                                                               type,
+                                                               key);
+    else
+    {
+      bpftrace_.buf_map_ = std::make_unique<bpftrace::Map>(
+          map_ident, type, key, bpftrace_.buf_map_keys_.size(), true);
+    }
+    failed_maps += is_invalid_map(bpftrace_.buf_map_->mapfd_);
+    max_zero_buffer_size_ = std::max(max_zero_buffer_size_, max_buf_size_);
+  }
+
+  bpftrace_.zero_buffer_ = std::make_unique<std::vector<std::byte>>(
+      max_zero_buffer_size_, std::byte(0));
 
   if (failed_maps > 0)
   {

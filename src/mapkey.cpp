@@ -109,8 +109,8 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     }
     case Type::buffer:
     {
-      auto p = static_cast<const char *>(data) + 1;
-      return hex_format_buffer(p, arg.size - 1);
+      auto buf = reinterpret_cast<const AsyncEvent::Buf *>(data);
+      return hex_format_buffer(buf->content, buf->length);
     }
     case Type::pointer:
     {

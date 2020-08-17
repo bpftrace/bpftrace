@@ -1,6 +1,7 @@
 #pragma once
 
 #include "irbuilderbpf.h"
+#include <cstddef>
 #include <cstdint>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Type.h>
@@ -92,7 +93,7 @@ struct Strftime
 
 struct Buf
 {
-  uint8_t length;
+  uint32_t length;
   // Seems like GCC 7.4.x can't handle `char content[]`. Work around by using
   // 0 sized array (a GCC extension that clang also accepts:
   // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=70932). It also looks like
@@ -102,7 +103,7 @@ struct Buf
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t length)
   {
     return {
-      b.getInt8Ty(),                               // buffer length
+      b.getInt32Ty(),                              // buffer length
       llvm::ArrayType::get(b.getInt8Ty(), length), // buffer content
     };
   }
@@ -113,6 +114,7 @@ struct HelperError
   uint64_t action_id;
   uint64_t error_id;
   int32_t return_value;
+  int8_t is_fatal;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b)
   {
@@ -120,6 +122,7 @@ struct HelperError
       b.getInt64Ty(), // asyncid
       b.getInt64Ty(), // error_id
       b.getInt32Ty(), // return value
+      b.getInt8Ty(),  // is_fatal
     };
   }
 } __attribute__((packed));

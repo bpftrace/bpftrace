@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -86,6 +87,18 @@ struct HelperErrorInfo
   location loc;
 };
 
+struct MapBackedVariable
+{
+  struct Semantic
+  {
+    SizedType sized_type;
+    // location of first use in probe (declarations are hoisted)
+    location loc;
+  };
+  std::unique_ptr<IMap> map;
+  Semantic semantic;
+};
+
 class BPFtrace
 {
 public:
@@ -136,6 +149,12 @@ public:
   static volatile sig_atomic_t exitsig_recv;
 
   std::map<std::string, std::unique_ptr<IMap>> maps_;
+  // std::unordered_map<ast::Probe *,
+  //                    std::unordered_map<std::string, std::unique_ptr<IMap>>>
+  //     vars_;
+  std::unordered_map<ast::Probe *,
+                     std::unordered_map<std::string, struct MapBackedVariable>>
+      vars_;
 
   // Maps a map id back to the map identifier. See get_map_by_id()
   std::vector<std::string> map_ids_;
@@ -152,9 +171,17 @@ public:
   std::vector<SizedType> non_map_print_args_;
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
   std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
+  std::unordered_map<ast::Node *, int> str_map_keys_;
+  std::unordered_map<ast::Node *, int> key_map_keys_;
+  std::unordered_map<ast::Node *, int> buf_map_keys_;
   std::unique_ptr<IMap> join_map_;
+  std::unique_ptr<IMap> fmtstr_map_;
+  std::unique_ptr<IMap> str_map_;
+  std::unique_ptr<IMap> key_map_;
+  std::unique_ptr<IMap> buf_map_;
   std::unique_ptr<IMap> elapsed_map_;
   std::unique_ptr<IMap> perf_event_map_;
+  std::unique_ptr<std::vector<std::byte>> zero_buffer_;
   std::vector<std::string> probe_ids_;
   unsigned int join_argnum_;
   unsigned int join_argsize_;
@@ -162,6 +189,16 @@ public:
   BPFfeature feature_;
 
   uint64_t strlen_ = 64;
+  /*
+   * LLVM is prepared to do up to 128 stores per memset. See MaxStoresPerMemset:
+   * https://github.com/llvm-mirror/llvm/commit/4fe85c75482f9d11c5a1f92a1863ce30afad8d0d#diff-610120a7bf7f886681d540619f64ea23R169-R171
+   * A 1-byte aligned memset/memcpy will use up to 128 1-byte stores/loads, for
+   * a maximum of 128 bytes. An 8-byte aligned memset/memcpy will use 8, 4, 2,
+   * or 1 byte stores/loads. These can accommodate any size up to 1014 bytes
+   * (1024 is the maximum, but there are unsupported sizes in-between). These
+   * observations are from LLVM 6.
+   */
+  uint64_t memset_max_ = 128;
   uint64_t mapmax_ = 4096;
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;

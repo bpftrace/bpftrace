@@ -132,10 +132,13 @@ int AttachedProbe::detach_kfunc(void)
 }
 #endif // HAVE_BCC_KFUNC
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
-  : probe_(probe), func_(func)
+AttachedProbe::AttachedProbe(Probe &probe,
+                             std::tuple<uint8_t *, uintptr_t> func,
+                             size_t max_name_length,
+                             bool safe_mode)
+    : probe_(probe), func_(func)
 {
-  load_prog();
+  load_prog(max_name_length);
   if (bt_verbose)
     std::cerr << "Attaching " << probe_.name << std::endl;
   switch (probe_.type)
@@ -176,10 +179,13 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   }
 }
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid)
-  : probe_(probe), func_(func)
+AttachedProbe::AttachedProbe(Probe &probe,
+                             std::tuple<uint8_t *, uintptr_t> func,
+                             size_t max_name_length,
+                             int pid)
+    : probe_(probe), func_(func)
 {
-  load_prog();
+  load_prog(max_name_length);
   switch (probe_.type)
   {
     case ProbeType::usdt:
@@ -555,7 +561,7 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
       path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
-void AttachedProbe::load_prog()
+void AttachedProbe::load_prog(size_t max_name_length)
 {
   uint8_t *insns = std::get<0>(func_);
   int prog_len = std::get<1>(func_);
@@ -564,7 +570,7 @@ void AttachedProbe::load_prog()
 
   uint64_t log_buf_size = probe_.log_size;
   auto log_buf = std::make_unique<char[]>(log_buf_size);
-  char name[STRING_SIZE];
+  char name[max_name_length];
   const char *namep;
   std::string tracing_type, tracing_name;
 
@@ -581,7 +587,7 @@ void AttachedProbe::load_prog()
       log_level = 1;
 
     // bpf_prog_load rejects colons in the probe name
-    strncpy(name, probe_.name.c_str(), STRING_SIZE - 1);
+    strncpy(name, probe_.name.c_str(), max_name_length - 1);
     namep = name;
     if (strrchr(name, ':') != NULL)
       namep = strrchr(name, ':') + 1;

@@ -99,7 +99,10 @@ private:
 
   Probe *probe_;
   std::string func_;
-  std::map<std::string, SizedType> variable_val_;
+  std::unordered_map<
+      Probe *,
+      std::unordered_map<std::string, struct MapBackedVariable::Semantic>>
+      variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   std::map<std::string, ExpressionList> map_args_;
@@ -107,10 +110,14 @@ private:
   std::unordered_set<StackType> needs_stackid_maps_;
   uint32_t loop_depth_ = 0;
   bool needs_join_map_ = false;
+  bool needs_fmtstr_map_ = false;
   bool needs_elapsed_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
+  size_t max_fmtstr_args_size_ = 0;
+  size_t max_key_size_ = 0;
+  size_t max_buf_size_ = 0;
 };
 
 } // namespace ast

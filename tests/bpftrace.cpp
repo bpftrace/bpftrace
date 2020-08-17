@@ -801,10 +801,13 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::ve
   return pair;
 }
 
-std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::vector<std::string> key, int val)
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(
+    uint64_t strlen,
+    std::vector<std::string> key,
+    int val)
 {
   std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
-  pair.first  = std::vector<uint8_t>(STRING_SIZE*key.size());
+  pair.first = std::vector<uint8_t>(strlen * key.size());
   pair.second = std::vector<uint8_t>(sizeof(uint64_t));
 
   uint8_t *key_data = pair.first.data();
@@ -812,7 +815,7 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::ve
 
   for (size_t i=0; i<key.size(); i++)
   {
-    strncpy((char*)key_data + STRING_SIZE*i, key.at(i).c_str(), STRING_SIZE);
+    strncpy((char *)key_data + strlen * i, key.at(i).c_str(), strlen);
   }
   uint64_t v = val;
   std::memcpy(val_data, &v, sizeof(v));
@@ -820,10 +823,14 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_str(std::ve
   return pair;
 }
 
-std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(int myint, std::string mystr, int val)
+std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(
+    uint64_t strlen,
+    int myint,
+    std::string mystr,
+    int val)
 {
   std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
-  pair.first  = std::vector<uint8_t>(sizeof(uint64_t) + STRING_SIZE);
+  pair.first = std::vector<uint8_t>(sizeof(uint64_t) + strlen);
   pair.second = std::vector<uint8_t>(sizeof(uint64_t));
 
   uint8_t *key_data = pair.first.data();
@@ -831,7 +838,7 @@ std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int_str(int
 
   uint64_t k = myint, v = val;
   std::memcpy(key_data, &k, sizeof(k));
-  strncpy((char*)key_data + sizeof(uint64_t), mystr.c_str(), STRING_SIZE);
+  strncpy((char *)key_data + sizeof(uint64_t), mystr.c_str(), strlen);
   std::memcpy(val_data, &v, sizeof(v));
 
   return pair;
@@ -898,24 +905,27 @@ TEST(bpftrace, sort_by_key_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    CreateString(STRING_SIZE),
+    CreateString(bpftrace.strlen_),
   };
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
-  {
-    key_value_pair_str({"z"}, 1),
-    key_value_pair_str({"a"}, 2),
-    key_value_pair_str({"x"}, 3),
-    key_value_pair_str({"d"}, 4),
+  auto kvp_str = [&bpftrace](const std::vector<std::string> &key, int val) {
+    return key_value_pair_str(bpftrace.strlen_, key, val);
   };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      values_by_key = {
+        kvp_str({ "z" }, 1),
+        kvp_str({ "a" }, 2),
+        kvp_str({ "x" }, 3),
+        kvp_str({ "d" }, 4),
+      };
   bpftrace.sort_by_key(key_args, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
-  {
-    key_value_pair_str({"a"}, 2),
-    key_value_pair_str({"d"}, 4),
-    key_value_pair_str({"x"}, 3),
-    key_value_pair_str({"z"}, 1),
-  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      expected_values = {
+        kvp_str({ "a" }, 2),
+        kvp_str({ "d" }, 4),
+        kvp_str({ "x" }, 3),
+        kvp_str({ "z" }, 1),
+      };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -925,30 +935,27 @@ TEST(bpftrace, sort_by_key_str_str)
   StrictMock<MockBPFtrace> bpftrace;
 
   std::vector<SizedType> key_args = {
-    CreateString(STRING_SIZE),
-    CreateString(STRING_SIZE),
-    CreateString(STRING_SIZE),
+    CreateString(bpftrace.strlen_),
+    CreateString(bpftrace.strlen_),
+    CreateString(bpftrace.strlen_),
   };
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
-  {
-    key_value_pair_str({"z", "a", "l"}, 1),
-    key_value_pair_str({"a", "a", "m"}, 2),
-    key_value_pair_str({"z", "c", "n"}, 3),
-    key_value_pair_str({"a", "c", "o"}, 4),
-    key_value_pair_str({"z", "b", "p"}, 5),
-    key_value_pair_str({"a", "b", "q"}, 6),
+  auto kvp_str = [&bpftrace](const std::vector<std::string> &key, int val) {
+    return key_value_pair_str(bpftrace.strlen_, key, val);
   };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      values_by_key = {
+        kvp_str({ "z", "a", "l" }, 1), kvp_str({ "a", "a", "m" }, 2),
+        kvp_str({ "z", "c", "n" }, 3), kvp_str({ "a", "c", "o" }, 4),
+        kvp_str({ "z", "b", "p" }, 5), kvp_str({ "a", "b", "q" }, 6),
+      };
   bpftrace.sort_by_key(key_args, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
-  {
-    key_value_pair_str({"a", "a", "m"}, 2),
-    key_value_pair_str({"a", "b", "q"}, 6),
-    key_value_pair_str({"a", "c", "o"}, 4),
-    key_value_pair_str({"z", "a", "l"}, 1),
-    key_value_pair_str({"z", "b", "p"}, 5),
-    key_value_pair_str({"z", "c", "n"}, 3),
-  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      expected_values = {
+        kvp_str({ "a", "a", "m" }, 2), kvp_str({ "a", "b", "q" }, 6),
+        kvp_str({ "a", "c", "o" }, 4), kvp_str({ "z", "a", "l" }, 1),
+        kvp_str({ "z", "b", "p" }, 5), kvp_str({ "z", "c", "n" }, 3),
+      };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
@@ -959,28 +966,23 @@ TEST(bpftrace, sort_by_key_int_str)
 
   std::vector<SizedType> key_args = {
     CreateUInt64(),
-    CreateString(STRING_SIZE),
+    CreateString(bpftrace.strlen_),
   };
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> values_by_key =
-  {
-    key_value_pair_int_str(1, "b", 1),
-    key_value_pair_int_str(2, "b", 2),
-    key_value_pair_int_str(3, "b", 3),
-    key_value_pair_int_str(1, "a", 4),
-    key_value_pair_int_str(2, "a", 5),
-    key_value_pair_int_str(3, "a", 6),
+  auto kvp_int_str = [&bpftrace](int myint, const std::string &mystr, int val) {
+    return key_value_pair_int_str(bpftrace.strlen_, myint, mystr, val);
   };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      values_by_key = {
+        kvp_int_str(1, "b", 1), kvp_int_str(2, "b", 2), kvp_int_str(3, "b", 3),
+        kvp_int_str(1, "a", 4), kvp_int_str(2, "a", 5), kvp_int_str(3, "a", 6),
+      };
   bpftrace.sort_by_key(key_args, values_by_key);
 
-  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> expected_values =
-  {
-    key_value_pair_int_str(1, "a", 4),
-    key_value_pair_int_str(1, "b", 1),
-    key_value_pair_int_str(2, "a", 5),
-    key_value_pair_int_str(2, "b", 2),
-    key_value_pair_int_str(3, "a", 6),
-    key_value_pair_int_str(3, "b", 3),
-  };
+  std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+      expected_values = {
+        kvp_int_str(1, "a", 4), kvp_int_str(1, "b", 1), kvp_int_str(2, "a", 5),
+        kvp_int_str(2, "b", 2), kvp_int_str(3, "a", 6), kvp_int_str(3, "b", 3),
+      };
 
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
