@@ -1,4 +1,7 @@
 #include <bcc/libbpf.h>
+#ifdef HAVE_LIBBPF_MAP_BATCH
+#include <bpf/bpf.h>
+#endif
 #include <bpffeature.h>
 #include <cstddef>
 #include <cstdio>
@@ -232,6 +235,49 @@ int BPFfeature::instruction_limit(void)
   return *insns_limit_;
 }
 
+bool BPFfeature::has_map_batch()
+{
+#ifndef HAVE_LIBBPF_MAP_BATCH
+  return false;
+
+#else
+  int key_size = 4;
+  int value_size = 4;
+  int max_entries = 10;
+  int flags = 0;
+  int map_fd = 0;
+  int keys[10];
+  int values[10];
+  uint32_t count = 0;
+
+  if (has_map_batch_.has_value())
+    return *has_map_batch_;
+
+#ifdef HAVE_BCC_CREATE_MAP
+  map_fd = bcc_create_map(
+#else
+  map_fd = bpf_create_map(
+#endif
+      static_cast<enum ::bpf_map_type>(libbpf::BPF_MAP_TYPE_HASH),
+      nullptr,
+      key_size,
+      value_size,
+      max_entries,
+      flags);
+
+  if (map_fd < 0)
+    return false;
+
+  int err = bpf_map_lookup_batch(
+      map_fd, nullptr, nullptr, keys, values, &count, nullptr);
+  close(map_fd);
+
+  has_map_batch_ = std::make_optional<bool>(err >= 0);
+  return *has_map_batch_;
+
+#endif
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -258,7 +304,9 @@ std::string BPFfeature::report(void)
   buf << "Kernel features" << std::endl
       << "  Instruction limit: " << instruction_limit() << std::endl
       << "  Loop support: " << to_str(has_loop())
-      << "  btf (depends on Build:libbpf): " << to_str(has_btf()) << std::endl;
+      << "  btf (depends on Build:libbpf): " << to_str(has_btf())
+      << "  map batch (depends on Build:libbpf): " << to_str(has_map_batch())
+      << std::endl;
 
   buf << "Map types" << std::endl
       << "  hash: " << to_str(has_map_hash())
