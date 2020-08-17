@@ -176,6 +176,8 @@ public:
   int helper_check_level_ = 0;
   uint64_t btime = 0;
 
+  bool str_replace(std::string& str, const std::string& from, const std::string& to);
+
   static void sort_by_key(
       std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>

@@ -38,6 +38,10 @@
 #include "triggers.h"
 #include "utils.h"
 
+#include <string.h>
+#include <sys/timeb.h>
+#include <time.h>
+
 namespace libbpf {
 #define __BPF_NAME_FN(x) #x
 const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
@@ -480,6 +484,14 @@ void BPFtrace::request_finalize()
     child_->terminate();
 }
 
+bool BPFtrace::str_replace(std::string& str, const std::string& from, const std::string& to) {
+    size_t start_pos = str.find(from);
+    if(start_pos == std::string::npos)
+        return false;
+    str.replace(start_pos, from.length(), to);
+    return true;
+}
+
 void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
 {
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
@@ -567,6 +579,20 @@ void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unu
       std::cerr << "strftime returned 0" << std::endl;
       return;
     }
+
+    char *mi="%f";
+
+    if (strstr(timestr,mi)) {
+      std::string my_string(timestr);
+      struct timeb tp;
+      ftime(&tp);
+      bpftrace->str_replace(my_string,mi,std::to_string(tp.millitm));
+
+      bpftrace->out_->message(MessageType::time, my_string.c_str(), false);
+      return;
+    }
+
+
     bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   }
