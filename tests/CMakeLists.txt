@@ -58,6 +58,10 @@ add_executable(bpftrace_test
   ${BFD_DISASM_SRC}
 )
 
+if (HAVE_LIBBPF_MAP_BATCH)
+  target_compile_definitions(bpftrace_test PRIVATE HAVE_LIBBPF_MAP_BATCH)
+endif()
+
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(bpftrace_test PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)

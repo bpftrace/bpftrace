@@ -57,6 +57,11 @@ endif(LIBBPF_BTF_DUMP_FOUND)
 if (LIBBPF_FOUND)
   target_compile_definitions(bpftrace PRIVATE HAVE_LIBBPF)
 endif(LIBBPF_FOUND)
+
+if (HAVE_LIBBPF_MAP_BATCH)
+  target_compile_definitions(bpftrace PRIVATE HAVE_LIBBPF_MAP_BATCH)
+endif()
+
 if (HAVE_BCC_KFUNC)
   target_compile_definitions(bpftrace PRIVATE HAVE_BCC_KFUNC)
 endif(HAVE_BCC_KFUNC)
