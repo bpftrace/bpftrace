@@ -59,7 +59,7 @@ public:
   // don't work. Move works but doesn't make sense as the `has_*` functions
   // will just reassign the unique_ptr.
   // A single bpffeature should be constructed in main() and passed around,
-  // making these as deleted to avoid accidentally copying/moving it.
+  // marking these as deleted to avoid accidentally copying/moving it.
   BPFfeature(const BPFfeature&) = delete;
   BPFfeature& operator=(const BPFfeature&) = delete;
   BPFfeature(BPFfeature&&) = delete;
