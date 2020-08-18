@@ -1677,17 +1677,16 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
 std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
                                         uint64_t nsecs_since_boot)
 {
-  if (btime == 0)
+  if (!boottime_)
   {
-    LOG(ERROR)
-        << "Cannot resolve the timestamp returned by strftime due to the "
-           "previous failure to get btime from /proc/stat.";
+    LOG(ERROR) << "Cannot resolve timestamp due to failed boot time calcuation";
     return "(?)";
   }
   auto fmt = strftime_args_[strftime_id].c_str();
   char timestr[STRING_SIZE];
   struct tm tmp;
-  time_t time = btime + nsecs_since_boot / 1e9;
+  time_t time = boottime_->tv_sec +
+                ((boottime_->tv_nsec + nsecs_since_boot) / 1e9);
   if (!localtime_r(&time, &tmp))
   {
     LOG(ERROR) << "localtime_r: " << strerror(errno);

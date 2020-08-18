@@ -3,6 +3,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -174,7 +175,7 @@ public:
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
-  uint64_t btime = 0;
+  std::optional<struct timespec> boottime_;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,

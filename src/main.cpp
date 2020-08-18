@@ -1,11 +1,14 @@
+#include <array>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <optional>
 #include <sys/resource.h>
 #include <sys/utsname.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "bpffeature.h"
@@ -185,35 +188,68 @@ static int info()
   return 0;
 }
 
-static uint64_t get_btime(void)
+static std::optional<struct timespec> get_boottime()
 {
-  std::ifstream file("/proc/stat");
-  if (!file)
+  std::optional<struct timespec> ret = std::nullopt;
+  long lowest_delta = std::numeric_limits<long>::max();
+
+  // Run the "triple vdso sandwich" 5 times, taking the result from the
+  // iteration with the lowest delta between first and last clock_gettime()
+  // calls.
+  for (int i = 0; i < 5; ++i)
   {
-    LOG(ERROR) << "failed to open file /proc/stat: " << std::strerror(errno)
-               << "\nBuiltin function strftime won't work properly.";
-    return 0;
-  }
-  std::string line, field;
-  uint64_t btime = 0;
-  while (std::getline(file, line))
-  {
-    std::stringstream ss(line);
-    ss >> field;
-    if (field == "btime")
+    struct timespec before, after, boottime;
+    long delta;
+
+    if (::clock_gettime(CLOCK_REALTIME, &before))
+      continue;
+
+    if (::clock_gettime(CLOCK_BOOTTIME, &boottime))
+      continue;
+
+    if (::clock_gettime(CLOCK_REALTIME, &after))
+      continue;
+
+    // There's no way 3 VDSO calls should take more than 1s. We'll
+    // also ignore the case where we cross a 1s boundary b/c that
+    // can only happen once and we're running this loop 5 times.
+    // This helps keep the math simple.
+    if (before.tv_sec != after.tv_sec)
+      continue;
+
+    delta = after.tv_nsec - before.tv_nsec;
+
+    // Time went backwards
+    if (delta < 0)
+      continue;
+
+    // Lowest delta seen so far, compute boot realtime and store it
+    if (delta < lowest_delta)
     {
-      ss >> btime;
-      if (ss.fail())
-        btime = 0;
-      break;
+      struct timespec boottime_realtime;
+      long nsec_avg = (before.tv_nsec + after.tv_nsec) / 2;
+      if (nsec_avg - boottime.tv_nsec < 0)
+      {
+        boottime_realtime.tv_sec = after.tv_sec - boottime.tv_sec - 1;
+        boottime_realtime.tv_nsec = nsec_avg - boottime.tv_nsec + 1e9;
+      }
+      else
+      {
+        boottime_realtime.tv_sec = after.tv_sec - boottime.tv_sec;
+        boottime_realtime.tv_nsec = nsec_avg - boottime.tv_nsec;
+      }
+
+      lowest_delta = delta;
+      ret = boottime_realtime;
     }
   }
-  if (btime == 0)
-  {
-    LOG(ERROR) << "failed to read btime from /proc/stat. Builtin function "
-                  "strftime won't work properly.";
-  }
-  return btime;
+
+  if (ret && lowest_delta >= 1e5)
+    LOG(WARNING) << (lowest_delta / 1e3)
+                 << "us skew detected when calculating boot time. strftime() "
+                    "builtin may be inaccurate";
+
+  return ret;
 }
 
 int main(int argc, char *argv[])
@@ -403,7 +439,7 @@ int main(int argc, char *argv[])
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.force_btf_ = force_btf;
   bpftrace.helper_check_level_ = helper_check_level;
-  bpftrace.btime = get_btime();
+  bpftrace.boottime_ = get_boottime();
 
   if (!pid_str.empty())
   {
