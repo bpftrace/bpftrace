@@ -1,4 +1,5 @@
 #include "codegen_llvm.h"
+#include "allocation_helper.h"
 #include "arch/arch.h"
 #include "ast.h"
 #include "ast/async_event_types.h"
@@ -978,6 +979,9 @@ void CodegenLLVM::visit(Variable &var)
 {
   if (needMemcpy(var.type))
   {
+    // TODO: where needMapStorage(var.type) is true, we could use
+    // CreateMapLookupElem here instead. would there be any advantage
+    // to doing so?
     expr_ = variables_[var.ident];
   }
   else
@@ -1687,7 +1691,8 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   // any map-backed variable will have already had storage allocated in entry
   // block
-  if (variables_.find(var.ident) == variables_.end() && !needMemcpy(var.type))
+  if (variables_.find(var.ident) == variables_.end() &&
+      !needMapStorage(var.type))
   {
     // alloca is hoisted to start of program, so doesn't matter which block
     // we're in
@@ -1697,7 +1702,9 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   if (needMemcpy(var.type))
   {
-    // consider a CreateMapUpdateElem here
+    // TODO: where needMapStorage(var.type) is true, we could use
+    // CreateMapUpdateElem here instead. would there be any advantage
+    // to doing so?
     b_.CreateCopy(
         ctx_, variables_[var.ident], expr_, var.type.size, assignment.loc);
   }

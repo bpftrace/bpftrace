@@ -1,7 +1,7 @@
 #include "semantic_analyser.h"
+#include "allocation_helper.h"
 #include "arch/arch.h"
 #include "ast.h"
-#include "codegen_helper.h"
 #include "fake_map.h"
 #include "list.h"
 #include "log.h"
@@ -2367,7 +2367,7 @@ int SemanticAnalyser::create_maps(bool debug)
     bpftrace_.vars_.try_emplace(probe);
     for (const auto &[var_name, var_semantic] : probe_vars)
     {
-      if (!needMemcpy(var_semantic.sized_type))
+      if (!needMapStorage(var_semantic.sized_type))
         continue;
 
       std::unique_ptr<IMap> map;
