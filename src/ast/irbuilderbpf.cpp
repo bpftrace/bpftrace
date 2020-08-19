@@ -819,16 +819,19 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
   return result;
 }
 
-CallInst *IRBuilderBPF::CreateGetNs()
+CallInst *IRBuilderBPF::CreateGetNs(bool boot_time)
 {
   // u64 ktime_get_ns()
   // Return: current ktime
+
+  auto fn = boot_time ? libbpf::BPF_FUNC_ktime_get_boot_ns
+                      : libbpf::BPF_FUNC_ktime_get_ns;
+
   FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
   PointerType *gettime_func_ptr_type = PointerType::get(gettime_func_type, 0);
-  Constant *gettime_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_ktime_get_ns),
-      gettime_func_ptr_type);
+  Constant *gettime_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                 getInt64(fn),
+                                                 gettime_func_ptr_type);
   return createCall(gettime_func, {}, "get_ns");
 }
 
