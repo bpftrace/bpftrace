@@ -22,6 +22,8 @@ and this project adheres to
   - [#1416](https://github.com/iovisor/bpftrace/pull/1416)
 - Add an option to disable warning messages
   - [#1444](https://github.com/iovisor/bpftrace/pull/1444)
+- Support scientific notation for integer literals
+  - [#1476](https://github.com/iovisor/bpftrace/pull/1476)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments

@@ -18,18 +18,19 @@ static std::string buffer;
 using namespace bpftrace;
 %}
 
-ident   [_a-zA-Z][_a-zA-Z0-9]*
-map     @{ident}|@
-var     ${ident}
-int     [0-9]+|0[xX][0-9a-fA-F]+
-hex     (x|X)[0-9a-fA-F]{1,2}
-oct     [0-7]{1,3}
-hspace  [ \t]
-vspace  [\n\r]
-space   {hspace}|{vspace}
-path    :(\\.|[_\-\./a-zA-Z0-9#\*])*:
-builtin arg[0-9]|args|cgroup|comm|cpid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
-call    avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|ksym|lhist|max|min|ntop|override|print|printf|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|usym|zero
+ident    [_a-zA-Z][_a-zA-Z0-9]*
+map      @{ident}|@
+var      ${ident}
+int      [0-9]+|0[xX][0-9a-fA-F]+
+exponent [0-9]+e[0-9]+
+hex      (x|X)[0-9a-fA-F]{1,2}
+oct      [0-7]{1,3}
+hspace   [ \t]
+vspace   [\n\r]
+space    {hspace}|{vspace}
+path     :(\\.|[_\-\./a-zA-Z0-9#\*])*:
+builtin  arg[0-9]|args|cgroup|comm|cpid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
+call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|ksym|lhist|max|min|ntop|override|print|printf|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|usym|zero
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack
@@ -59,6 +60,7 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
+{exponent}              { return Parser::make_INT(parse_exponent(yytext), loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }
