@@ -2715,9 +2715,12 @@ Syntax:
 - `strftime(const char *format, int nsecs)`
 
 This returns a formatted timestamp that is printable with `printf`. The format
-string must be supported by `strftime(3)`. Use format specifier "%s" when
-printing the return value. Note that `strftime` does not actually return a
-string in bpf (kernel), the formatting happens in userspace.
+string must be supported by `strftime(3)`. `nsecs` is nanoseconds since boot,
+typically derived from [nsecs](#6-nsecs-timestamps-and-time-deltas).
+
+Use format specifier "%s" when printing the return value. Note that `strftime`
+does not actually return a string in bpf (kernel), the formatting happens in
+userspace.
 
 Examples:
 
