@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstring>
 
 #include <algorithm>
@@ -776,6 +777,19 @@ std::unordered_set<std::string> get_traceable_funcs()
   while (std::getline(available_funs, line))
     result.insert(line);
   return result;
+}
+
+uint64_t parse_exponent(const char *str)
+{
+  char *e_offset;
+  auto base = strtoll(str, &e_offset, 10);
+
+  if (*e_offset != 'e')
+    return base;
+
+  auto exp = strtoll(e_offset + 1, nullptr, 10);
+  auto num = base * std::pow(10, exp);
+  return num;
 }
 
 } // namespace bpftrace

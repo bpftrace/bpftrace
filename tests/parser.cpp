@@ -1635,6 +1635,16 @@ TEST(Parser, empty_arguments)
   test_parse_failure(":w:0x10000000:8:rw { 1 }");
 }
 
+TEST(Parser, scientific_notation)
+{
+  test("k:f { print(1e6); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000000\n");
+  test("k:f { print(5e9); }",
+       "Program\n kprobe:f\n  call: print\n   int: 5000000000\n");
+
+  test_parse_failure("k:f { print(5e-9); }");
+}
+
 TEST(Parser, while_loop)
 {
   test("i:ms:100 { $a = 0; while($a < 10) { $a++ }}",

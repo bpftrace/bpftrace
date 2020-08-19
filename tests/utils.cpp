@@ -118,6 +118,19 @@ TEST(utils, resolve_binary_path)
   exec_system(("rm -rf " + path).c_str());
 }
 
+TEST(utils, parse_exponent)
+{
+  EXPECT_EQ(parse_exponent((const char*)"1e0"), 1e0);
+  EXPECT_EQ(parse_exponent((const char*)"1e1"), 1e1);
+  EXPECT_EQ(parse_exponent((const char*)"1e9"), 1e9);
+  EXPECT_EQ(parse_exponent((const char*)"2e1"), 2e1);
+  EXPECT_EQ(parse_exponent((const char*)"2e9"), 2e9);
+  EXPECT_EQ(parse_exponent((const char*)"2e9"), 2e9);
+  EXPECT_EQ(parse_exponent((const char*)"010e010"), 1e11);
+
+  EXPECT_EQ(parse_exponent((const char*)"2a9"), 2ULL);
+}
+
 } // namespace utils
 } // namespace test
 } // namespace bpftrace
