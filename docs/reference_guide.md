@@ -1984,6 +1984,11 @@ This prints the current time using the format string supported by libc `strftime
 
 If a format string is not provided, it defaults to "%H:%M:%S\n".
 
+Note that this builtin is asynchronous. The printed timestamp is the time at
+which userspace has processed the queued up event, _not_ the time at which the
+bpf prog calls `time()`. For a more precise timestamp, see
+[strftime()](#24-strftime-formatted-timestamp).
+
 ## 4. `join()`: Join
 
 Syntax: `join(char *arr[] [, char *delim])`
