@@ -140,7 +140,7 @@ public:
                        uint64_t n,
                        const location &loc,
                        bool inverse = false);
-  CallInst *CreateGetNs();
+  CallInst *CreateGetNs(bool boot_time);
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetCurrentCgroupId();
   CallInst   *CreateGetUidGid();

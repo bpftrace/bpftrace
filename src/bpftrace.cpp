@@ -982,7 +982,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (elapsed_map_)
   {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    clock_gettime(CLOCK_BOOTTIME, &ts);
     auto nsec = 1000000000ULL * ts.tv_sec + ts.tv_nsec;
     uint64_t key = 0;
 

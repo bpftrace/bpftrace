@@ -252,6 +252,7 @@ std::string BPFfeature::report(void)
       << to_str(has_helper_get_current_cgroup_id())
       << "  send_signal: " << to_str(has_helper_send_signal())
       << "  override_return: " << to_str(has_helper_override_return())
+      << "  get_boot_ns: " << to_str(has_helper_ktime_get_boot_ns())
       << std::endl;
 
   buf << "Kernel features" << std::endl

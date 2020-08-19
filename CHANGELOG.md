@@ -36,6 +36,8 @@ and this project adheres to
   - [#1451](https://github.com/iovisor/bpftrace/pull/1451)
 - Better handling of empty usdt namespaces
   - [#1486](https://github.com/iovisor/bpftrace/pull/1486)
+- Switch `nsecs` to `ktime_get_boot_ns`
+  - [#1475](https://github.com/iovisor/bpftrace/pull/1475)
 
 #### Deprecated
 
