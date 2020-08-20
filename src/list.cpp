@@ -113,7 +113,8 @@ static void list_uprobes(const BPFtrace& bpftrace,
     {
       executable = get_pid_exe(bpftrace.pid());
       absolute_exe = path_for_pid_mountns(bpftrace.pid(), executable);
-    } else if (probe_name == "uprobe")
+    }
+    else if (probe_name == "uprobe" || probe_name == "uretprobe")
     {
       executable = search.substr(search.find(":") + 1, search.size());
       show_all = executable.find(":") == std::string::npos;
@@ -123,7 +124,7 @@ static void list_uprobes(const BPFtrace& bpftrace,
       switch (paths.size())
       {
       case 0:
-        LOG(ERROR) << "uprobe target '" << executable
+        LOG(ERROR) << probe_name << " target '" << executable
                    << "' does not exist or is not executable";
         return;
       case 1:
@@ -145,7 +146,8 @@ static void list_uprobes(const BPFtrace& bpftrace,
       std::string line;
       while (std::getline(*symbol_stream, line))
       {
-        std::string probe = "uprobe:" + absolute_exe + ":" + line;
+        std::string probe = (probe_name.empty() ? "uprobe" : probe_name) + ":" +
+                            absolute_exe + ":" + line;
         if (show_all || search.empty() || !search_probe(probe, re))
           std::cout << probe << std::endl;
       }
@@ -232,7 +234,9 @@ static void list_tracepoints(const std::string& search, const std::regex& re)
   }
 }
 
-static void list_kprobes(const std::string& search, const std::regex& re)
+static void list_kprobes(const std::string& search,
+                         const std::regex& re,
+                         const bool retprobe = false)
 {
   std::ifstream file(kprobe_path);
   if (file.fail())
@@ -246,10 +250,11 @@ static void list_kprobes(const std::string& search, const std::regex& re)
   while (std::getline(file, line))
   {
     loc = line.find_first_of(" ");
+    probe = retprobe ? "kretprobe:" : "kprobe:";
     if (loc == std::string::npos)
-      probe = "kprobe:" + line;
+      probe += line;
     else
-      probe = "kprobe:" + line.substr(0, loc);
+      probe += line.substr(0, loc);
 
     if (!search.empty())
     {
@@ -317,7 +322,7 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
     list_probes_from_list(HW_PROBE_LIST, "hardware", search, re);
 
   // uprobe
-  if (bpftrace.pid() > 0 || probe_name == "uprobe")
+  if (bpftrace.pid() > 0 || probe_name == "uprobe" || probe_name == "uretprobe")
     list_uprobes(bpftrace, probe_name, search, re);
 
   // usdt
@@ -329,12 +334,13 @@ void list_probes(const BPFtrace& bpftrace, const std::string& search_input)
     list_tracepoints(search, re);
 
   // kprobes
-  if (list_all || probe_name == "kprobe")
-    list_kprobes(search, re);
+  if (list_all || probe_name == "kprobe" || probe_name == "kretprobe")
+    list_kprobes(search, re, probe_name == "kretprobe");
 
   // kfuncs
-  if (list_all || probe_name == "kfunc")
-    bpftrace.btf_.display_kfunc(search.empty() ? nullptr : &re);
+  if (list_all || probe_name == "kfunc" || probe_name == "kretfunc")
+    bpftrace.btf_.display_kfunc(search.empty() ? nullptr : &re,
+                                probe_name == "kretfunc");
 
   // struct / union / enum
   if (probe_name.empty() &&

@@ -43,9 +43,30 @@ RUN bpftrace -l | grep hardware
 EXPECT hardware
 TIMEOUT 1
 
+NAME it lists kfuncs
+RUN bpftrace -l | grep kfunc
+EXPECT kfunc
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists kprobes with regex filter
 RUN bpftrace -l "kprobe:*"
 EXPECT kprobe:
+TIMEOUT 1
+
+NAME it lists kretprobes with regex filter
+RUN bpftrace -l "kretprobe:*"
+EXPECT kretprobe:
+TIMEOUT 1
+
+NAME it lists uprobes with regex filter
+RUN bpftrace -l "uprobe:./testprogs/syscall:*"
+EXPECT uprobe:
+TIMEOUT 1
+
+NAME it lists uretprobes with regex filter
+RUN bpftrace -l "uretprobe:./testprogs/syscall:*"
+EXPECT uretprobe:
 TIMEOUT 1
 
 NAME it lists tracepoints with regex filter
@@ -61,6 +82,18 @@ TIMEOUT 1
 NAME it lists hardware events with regex filter
 RUN bpftrace -l "hardware:*"
 EXPECT hardware
+TIMEOUT 1
+
+NAME it lists kfuncs events with regex filter
+RUN bpftrace -l "kfunc:*"
+EXPECT kfunc
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
+NAME it lists kretfuncs events with regex filter
+RUN bpftrace -l "kretfunc:*"
+EXPECT kretfunc
+REQUIRES_FEATURE btf
 TIMEOUT 1
 
 NAME errors on invalid character in search expression

@@ -601,12 +601,12 @@ std::unique_ptr<std::istream> BTF::get_funcs(std::regex *re,
   return std::make_unique<std::istringstream>(funcs);
 }
 
-void BTF::display_kfunc(std::regex *re) const
+void BTF::display_kfunc(std::regex *re, const bool retprobe = false) const
 {
   if (!has_data())
     return;
 
-  auto funcs = get_funcs(re, bt_verbose, "kfunc:");
+  auto funcs = get_funcs(re, bt_verbose, retprobe ? "kretfunc:" : "kfunc:");
   if (!funcs)
     return;
 
@@ -730,7 +730,8 @@ int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
   return -1;
 }
 
-void BTF::display_kfunc(std::regex* re __attribute__((__unused__))) const
+void BTF::display_kfunc(std::regex* re __attribute__((__unused__)),
+                        const bool retporbe __attribute__((__unused__))) const
 {
 }
 
