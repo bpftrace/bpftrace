@@ -26,6 +26,8 @@ and this project adheres to
   - [#1476](https://github.com/iovisor/bpftrace/pull/1476)
 - List retprobes
   - [#1484](https://github.com/iovisor/bpftrace/pull/1484)
+- Resolve unknown typedefs using BTF
+  - [#1485](https://github.com/iovisor/bpftrace/pull/1485)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
