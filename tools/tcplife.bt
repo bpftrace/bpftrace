@@ -55,7 +55,7 @@ kprobe:tcp_set_state
 
 	// session ended: calculate lifespan and print
 	if ($newstate == TCP_CLOSE && @birth[$sk]) {
-		$delta_ms = (nsecs - @birth[$sk]) / 1000000;
+		$delta_ms = (nsecs - @birth[$sk]) / 1e6;
 		$lport = $sk->__sk_common.skc_num;
 		$dport = $sk->__sk_common.skc_dport;
 		$dport = ($dport >> 8) | (($dport << 8) & 0xff00);

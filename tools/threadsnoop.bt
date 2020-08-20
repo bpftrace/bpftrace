@@ -20,6 +20,6 @@ BEGIN
 
 uprobe:/lib/x86_64-linux-gnu/libpthread.so.0:pthread_create
 {
-	printf("%-10u %-6d %-16s %s\n", elapsed / 1000000, pid, comm,
+	printf("%-10u %-6d %-16s %s\n", elapsed / 1e6, pid, comm,
 	    usym(arg2));
 }

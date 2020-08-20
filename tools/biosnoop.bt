@@ -27,8 +27,8 @@ kprobe:blk_account_io_done
 {
 	$now = nsecs;
 	printf("%-12u %-16s %-6d %7d\n",
-	    elapsed / 1000000, @iocomm[arg0], @iopid[arg0],
-	    ($now - @start[arg0]) / 1000000);
+	    elapsed / 1e6, @iocomm[arg0], @iopid[arg0],
+	    ($now - @start[arg0]) / 1e6);
 
 	delete(@start[arg0]);
 	delete(@iopid[arg0]);
