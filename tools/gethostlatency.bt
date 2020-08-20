@@ -39,7 +39,7 @@ uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname,
 uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname2
 /@start[tid]/
 {
-	$latms = (nsecs - @start[tid]) / 1000000;
+	$latms = (nsecs - @start[tid]) / 1e6;
 	time("%H:%M:%S  ");
 	printf("%-6d %-16s %6d %s\n", pid, comm, $latms, str(@name[tid]));
 	delete(@start[tid]);
