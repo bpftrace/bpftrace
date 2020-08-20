@@ -29,7 +29,7 @@ public:
   std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const btf_type* type, const std::string& field);
-  void display_kfunc(std::regex* re) const;
+  void display_kfunc(std::regex* re, const bool retfunc) const;
   void display_structs(std::regex* re) const;
 
   std::unique_ptr<std::istream> kfunc(void) const;
