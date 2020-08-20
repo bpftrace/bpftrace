@@ -10,7 +10,7 @@ define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
 entry:
   %"@x_val" = alloca i64
   %"@x_key" = alloca i64
-  %"struct Foo::(anonymous at definitions.h:1:14).x" = alloca i32
+  %"struct Foo::(anonymous at definitions.h:2:14).x" = alloca i32
   %"$foo" = alloca i64
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -21,12 +21,12 @@ entry:
   %3 = load i64, i64* %"$foo"
   %4 = add i64 %3, 0
   %5 = add i64 %4, 0
-  %6 = bitcast i32* %"struct Foo::(anonymous at definitions.h:1:14).x" to i8*
+  %6 = bitcast i32* %"struct Foo::(anonymous at definitions.h:2:14).x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* %"struct Foo::(anonymous at definitions.h:1:14).x", i32 4, i64 %5)
-  %7 = load i32, i32* %"struct Foo::(anonymous at definitions.h:1:14).x"
+  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* %"struct Foo::(anonymous at definitions.h:2:14).x", i32 4, i64 %5)
+  %7 = load i32, i32* %"struct Foo::(anonymous at definitions.h:2:14).x"
   %8 = sext i32 %7 to i64
-  %9 = bitcast i32* %"struct Foo::(anonymous at definitions.h:1:14).x" to i8*
+  %9 = bitcast i32* %"struct Foo::(anonymous at definitions.h:2:14).x" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   %10 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)

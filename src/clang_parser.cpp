@@ -363,20 +363,34 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
 
 bool ClangParser::ClangParserHandler::check_diagnostics(
     const std::string &input,
+    std::vector<std::string> &error_msgs,
     bool bail_on_error)
 {
   for (unsigned int i=0; i < clang_getNumDiagnostics(get_translation_unit()); i++) {
     CXDiagnostic diag = clang_getDiagnostic(get_translation_unit(), i);
     CXDiagnosticSeverity severity = clang_getDiagnosticSeverity(diag);
+    std::string msg = clang_getCString(clang_getDiagnosticSpelling(diag));
+    error_msgs.push_back(msg);
+
     if ((bail_on_error && severity == CXDiagnostic_Error) ||
         severity == CXDiagnostic_Fatal)
     {
+      // Do not fail on "too many errors"
+      if (!bail_on_error && msg == "too many errors emitted, stopping now")
+        return true;
       if (bt_debug >= DebugLevel::kDebug)
         LOG(ERROR) << "Input (" << input.size() << "): " << input;
       return false;
     }
   }
   return true;
+}
+
+bool ClangParser::ClangParserHandler::check_diagnostics(
+    const std::string &input)
+{
+  std::vector<std::string> msgs;
+  return check_diagnostics(input, msgs, true);
 }
 
 CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
@@ -461,7 +475,8 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 std::unordered_set<std::string> ClangParser::get_incomplete_types(
     const std::string &input,
     std::vector<CXUnsavedFile> &unsaved_files,
-    const std::vector<const char *> &args)
+    const std::vector<const char *> &args,
+    const std::unordered_set<std::string> &complete_types)
 {
   if (input.empty())
     return {};
@@ -495,9 +510,11 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
     return {};
   }
 
-  // Don't bail on errors (ie incomplete structs) because our goal
-  // is to enumerate all such errors
-  if (!handler.check_diagnostics(input, /* bail_on_error= */ false))
+  // Don't bail on errors (ie incomplete structs) because our goal is to
+  // enumerate all such errors. Instead, collect error messages for later
+  // analysis.
+  std::vector<std::string> diag_msgs;
+  if (!handler.check_diagnostics(input, diag_msgs, false))
     return {};
 
   struct TypeData
@@ -505,6 +522,23 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
     std::unordered_set<std::string> complete_types;
     std::unordered_set<std::string> incomplete_types;
   } type_data;
+  // Initialize to already defined types
+  type_data.complete_types = complete_types;
+
+  // Search for error messages of the form:
+  //   unknown type name 'type_t'
+  // that imply an unresolved typedef of type_t. This cannot be done below in
+  // clang_visitChildren since clang does not have the unknown type names.
+  const std::string unknown_type_msg = "unknown type name \'";
+  for (auto &msg : diag_msgs)
+  {
+    if (msg.find(unknown_type_msg) == 0)
+    {
+      type_data.incomplete_types.emplace(
+          msg.substr(unknown_type_msg.length(),
+                     msg.length() - unknown_type_msg.length() - 1));
+    }
+  }
 
   CXCursor cursor = handler.get_translation_unit_cursor();
   clang_visitChildren(
@@ -550,7 +584,7 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
 
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
-  auto input = program->c_definitions;
+  auto input = "#include <__btf_generated_header.h>\n" + program->c_definitions;
 
   auto input_files = getTranslationUnitFiles(CXUnsavedFile{
       .Filename = "definitions.h",
@@ -569,7 +603,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
-  bool process_btf = input.empty() ||
+  bool process_btf = program->c_definitions.empty() ||
                      (bpftrace.force_btf_ && bpftrace.btf_.has_data());
 
   // We set these args early because some systems may not have <linux/types.h>
@@ -584,45 +618,45 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back("-D__CLANG_WORKAROUNDS_H");
   }
 
-  auto incomplete_types = get_incomplete_types(input, input_files, args);
-  bpftrace.btf_set_.insert(incomplete_types.cbegin(), incomplete_types.cend());
+  // The generated BTF header is initially empty
+  std::string btf_cdef;
+  input_files.emplace_back(CXUnsavedFile{
+      .Filename = "/bpftrace/include/__btf_generated_header.h",
+      .Contents = btf_cdef.c_str(),
+      .Length = btf_cdef.size(),
+  });
 
   ClangParserHandler handler;
+  bool check_additional_types = true;
+  while (check_additional_types && process_btf)
+  {
+    auto incomplete_types = get_incomplete_types(
+        input, input_files, args, bpftrace.btf_set_);
+    size_t types_cnt = bpftrace.btf_set_.size();
+    bpftrace.btf_set_.insert(incomplete_types.cbegin(),
+                             incomplete_types.cend());
+
+    // Update generated header with current BTF types
+    btf_cdef = bpftrace.btf_.c_def(bpftrace.btf_set_);
+    input_files.back() = CXUnsavedFile{
+      .Filename = "/bpftrace/include/__btf_generated_header.h",
+      .Contents = btf_cdef.c_str(),
+      .Length = btf_cdef.size(),
+    };
+
+    // If additional BTF types were found, we need to repeat the process since
+    // that might have introduced some new unresolved typedefs.
+    check_additional_types = types_cnt != bpftrace.btf_set_.size();
+  }
+
   CXErrorCode error;
-
-  if (process_btf)
-  {
-    auto btf_and_input = "#include <__btf_generated_header.h>\n" + input;
-    auto btf_and_input_files = getTranslationUnitFiles(
-        CXUnsavedFile{ .Filename = "definitions.h",
-                       .Contents = btf_and_input.c_str(),
-                       .Length = btf_and_input.size() });
-
-    auto btf_cdef = bpftrace.btf_.c_def(bpftrace.btf_set_);
-    btf_and_input_files.emplace_back(CXUnsavedFile{
-        .Filename = "/bpftrace/include/__btf_generated_header.h",
-        .Contents = btf_cdef.c_str(),
-        .Length = btf_cdef.size(),
-    });
-
-    error = handler.parse_translation_unit(
-        "definitions.h",
-        args.data(),
-        args.size(),
-        btf_and_input_files.data(),
-        btf_and_input_files.size(),
-        CXTranslationUnit_DetailedPreprocessingRecord);
-  }
-  else
-  {
-    error = handler.parse_translation_unit(
-        "definitions.h",
-        args.data(),
-        args.size(),
-        input_files.data(),
-        input_files.size(),
-        CXTranslationUnit_DetailedPreprocessingRecord);
-  }
+  error = handler.parse_translation_unit(
+      "definitions.h",
+      args.data(),
+      args.size(),
+      input_files.data(),
+      input_files.size(),
+      CXTranslationUnit_DetailedPreprocessingRecord);
 
   if (error)
   {

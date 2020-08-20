@@ -221,8 +221,8 @@ TEST(clang_parser, nested_struct_no_type)
   // since they are called bar and baz
   parse("struct Foo { struct { int x; } bar; union { int y; } baz; }", bpftrace);
 
-  std::string bar = "struct Foo::(anonymous at definitions.h:1:14)";
-  std::string baz = "union Foo::(anonymous at definitions.h:1:37)";
+  std::string bar = "struct Foo::(anonymous at definitions.h:2:14)";
+  std::string baz = "union Foo::(anonymous at definitions.h:2:37)";
   StructMap &structs = bpftrace.structs_;
 
   ASSERT_EQ(structs.size(), 3U);
@@ -654,6 +654,27 @@ TEST_F(clang_parser_btf, btf_variable_field_struct)
   // struct Foo2 should be added by @x1->foo2
   EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
   EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
+}
+
+TEST(clang_parser, btf_unresolved_typedef)
+{
+  // size_t is defined in stddef.h, but if we have BTF, it should be possible to
+  // extract it from there
+  BPFtrace bpftrace;
+  bpftrace.force_btf_ = true;
+  parse("struct Foo { size_t x; };", bpftrace);
+
+  StructMap &structs = bpftrace.structs_;
+
+  ASSERT_EQ(structs.count("struct Foo"), 1U);
+
+  EXPECT_EQ(structs["struct Foo"].size, 8);
+  ASSERT_EQ(structs["struct Foo"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo"].fields.count("x"), 1U);
+
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 8U);
+  EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
 
