@@ -13,7 +13,8 @@ def main(test_filter = None):
         test_filter = "*"
 
     try:
-        test_suite = list(TestParser.read_all(test_filter))
+        test_suite = sorted(TestParser.read_all(test_filter))
+        test_suite = [ (n, sorted(t)) for n, t in test_suite ]
     except (UnknownFieldError, RequiredFieldError) as error:
         print(fail(str(error)))
         exit(1)
