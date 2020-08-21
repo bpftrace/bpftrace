@@ -93,6 +93,7 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
 {
   // Stolen from libbpf's  bpf_probe_helper
   char logbuf[4096] = {};
+  char* buf = logbuf;
   struct bpf_insn insns[] = {
     BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, func_id),
     BPF_EXIT_INSN(),
@@ -101,11 +102,21 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
   if (try_load(nullptr, prog_type, insns, ARRAY_SIZE(insns), 1, logbuf, 4096))
     return true;
 
-  if (errno == EPERM || logbuf[0] == 0)
+  if (errno == EPERM)
     return false;
 
-  return (strstr(logbuf, "invalid func ") == nullptr) &&
-         (strstr(logbuf, "unknown func ") == nullptr);
+  // On older kernels the first byte can be zero, skip leading 0 bytes
+  // $2 = "\000: (85) call 4\nR1 type=ctx expected=fp\n", '\000' <repeats 4056
+  // times>
+  //       ^^
+  for (int i = 0; i < 8 && *buf == 0; i++, buf++)
+    ;
+
+  if (*buf == 0)
+    return false;
+
+  return (strstr(buf, "invalid func ") == nullptr) &&
+         (strstr(buf, "unknown func ") == nullptr);
 }
 
 bool BPFfeature::detect_prog_type(enum libbpf::bpf_prog_type prog_type)
