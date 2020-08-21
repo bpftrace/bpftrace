@@ -29,7 +29,13 @@ static bool try_load(const char* name,
   {
     auto version = kernel_version(attempt);
     if (version == 0 && attempt > 0)
+    {
+      // Recent kernels don't check the version so we should try to call
+      // bcc_prog_load during first iteration even if we failed to determine
+      // the version. We should not do that in subsequent iterations to avoid
+      // zeroing of log_buf on systems with older kernels.
       continue;
+    }
 
 #ifdef HAVE_BCC_PROG_LOAD
     ret = bcc_prog_load(
