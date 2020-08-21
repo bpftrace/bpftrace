@@ -200,18 +200,24 @@ int BPFfeature::instruction_limit(void)
   // processed 2 insns (limit 131072), stack depth 0
   std::string log(logbuf, logsize);
   std::size_t line_start = log.find("processed 2 insns");
-  if (line_start != std::string::npos)
-  {
-    std::size_t begin = log.find("limit", line_start) + /* "limit " = 6*/ 6;
-    std::size_t end = log.find(")", begin);
-    std::string cnt = log.substr(begin, end - begin);
-    insns_limit_ = std::make_optional<int>(std::stoi(cnt));
-  }
-  else
+  if (line_start == std::string::npos)
   {
     insns_limit_ = std::make_optional<int>(-1);
+    return *insns_limit_;
   }
 
+  // Old kernels don't have the instruction limit in the verifier output
+  auto begin = log.find("limit", line_start);
+  if (begin == std::string::npos)
+  {
+    insns_limit_ = std::make_optional<int>(-1);
+    return *insns_limit_;
+  }
+
+  begin += 6; /* "limit " = 6*/
+  std::size_t end = log.find(")", begin);
+  std::string cnt = log.substr(begin, end - begin);
+  insns_limit_ = std::make_optional<int>(std::stoi(cnt));
   return *insns_limit_;
 }
 
