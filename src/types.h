@@ -42,7 +42,6 @@ enum class Type
   inet,
   stack_mode,
   array,
-  // BPF program context; needing a different access method to satisfy the verifier
   buffer,
   tuple,
   timestamp
