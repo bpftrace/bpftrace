@@ -386,13 +386,6 @@ bool ClangParser::ClangParserHandler::check_diagnostics(
   return true;
 }
 
-bool ClangParser::ClangParserHandler::check_diagnostics(
-    const std::string &input)
-{
-  std::vector<std::string> msgs;
-  return check_diagnostics(input, msgs, true);
-}
-
 CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
   return clang_getTranslationUnitCursor(translation_unit);
 }
@@ -529,15 +522,11 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
   //   unknown type name 'type_t'
   // that imply an unresolved typedef of type_t. This cannot be done below in
   // clang_visitChildren since clang does not have the unknown type names.
-  const std::string unknown_type_msg = "unknown type name \'";
-  for (auto &msg : diag_msgs)
+  for (const auto &msg : diag_msgs)
   {
-    if (msg.find(unknown_type_msg) == 0)
-    {
-      type_data.incomplete_types.emplace(
-          msg.substr(unknown_type_msg.length(),
-                     msg.length() - unknown_type_msg.length() - 1));
-    }
+    auto unknown_type = get_unknown_type(msg);
+    if (unknown_type)
+      type_data.incomplete_types.emplace(unknown_type.value());
   }
 
   CXCursor cursor = handler.get_translation_unit_cursor();
@@ -667,11 +656,40 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     return false;
   }
 
-  if (!handler.check_diagnostics(input))
+  std::vector<std::string> error_msgs;
+  if (!handler.check_diagnostics(input, error_msgs, true))
+  {
+    for (auto &msg : error_msgs)
+    {
+      if (get_unknown_type(msg) != "" && !bpftrace.force_btf_)
+      {
+        LOG(ERROR) << "Try running with --btf to force BTF processing or "
+                      "include headers with missing type definitions";
+      }
+    }
     return false;
+  }
 
   CXCursor cursor = handler.get_translation_unit_cursor();
   return visit_children(cursor, bpftrace);
+}
+
+/*
+ * Parse the given Clang diagnostics message and if it has the form:
+ *   unknown type name 'type_t'
+ * return type_t.
+ */
+std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
+    const std::string &diagnostic_msg)
+{
+  const std::string unknown_type_msg = "unknown type name \'";
+  if (diagnostic_msg.find(unknown_type_msg) == 0)
+  {
+    return diagnostic_msg.substr(unknown_type_msg.length(),
+                                 diagnostic_msg.length() -
+                                     unknown_type_msg.length() - 1);
+  }
+  return {};
 }
 
 } // namespace bpftrace

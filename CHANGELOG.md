@@ -26,7 +26,7 @@ and this project adheres to
   - [#1476](https://github.com/iovisor/bpftrace/pull/1476)
 - List retprobes
   - [#1484](https://github.com/iovisor/bpftrace/pull/1484)
-- Resolve unknown typedefs using BTF
+- Resolve unknown typedefs using BTF and give a hint when a type cannot be found
   - [#1485](https://github.com/iovisor/bpftrace/pull/1485)
 
 #### Changed

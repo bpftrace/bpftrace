@@ -41,6 +41,9 @@ private:
       const std::vector<const char *> &args,
       const std::unordered_set<std::string> &complete_types);
 
+  static std::optional<std::string> get_unknown_type(
+      const std::string &diagnostic_msg);
+
   class ClangParserHandler
   {
   public:
@@ -65,10 +68,6 @@ private:
     bool check_diagnostics(const std::string &input,
                            std::vector<std::string> &error_msgs,
                            bool bail_on_error);
-    /*
-     * Runs the above method with bail_on_error=false and throws away messages.
-     */
-    bool check_diagnostics(const std::string &input);
 
     CXCursor get_translation_unit_cursor();
 
