@@ -1227,7 +1227,7 @@ usdt:library_path:probe_name
 usdt:library_path:[probe_namespace]:probe_name
 ```
 
-Where the `probe_namespace` is optional, and will default to the basename of the binary or library path.
+Where `probe_namespace` is optional if `probe_name` is unique within the binary.
 
 Examples:
 
@@ -1242,22 +1242,29 @@ hi
 ^C
 ```
 
-The basename of a path will be used for the namespace of a probe. If it doesn't match, the probe won't be
-found. In this example, the function name `loop` is in the namespace `tick`. If we rename the binary to
-`tock`, it won't be found:
+The namespace of the probe is deduced automatically. If the binary `/root/tick` contained multiple probes 
+with the name `loop` (e.g. `tick:loop` and `tock:loop`), no probe would be attached. 
+This may be solved by manually specifying the namespace or by using a wildcard:
 
 ```
-mv /root/tick /root/tock
-bpftrace -e 'usdt:/root/tock:loop { printf("hi\n"); }'
+# bpftrace -e 'usdt:/root/tick:loop { printf("hi\n"); }'
+ERROR: namespace for usdt:/root/tick:loop not specified, matched 2 probes
+INFO: please specify a unique namespace or use '*' to attach to all matched probes
+No probes to attach
+
+# bpftrace -e 'usdt:/root/tick:tock:loop { printf("hi\n"); }'
 Attaching 1 probe...
-Error finding location for probe: usdt:/root/tock:loop
-```
+hi
+hi
+^C
 
-The probe namespace can be manually specified, between the path and probe function name. This allows for
-the probe to be found, regardless of the name of the binary:
-
-```
-bpftrace -e 'usdt:/root/tock:tick:loop { printf("hi\n"); }'
+# bpftrace -e 'usdt:/root/tick:*:loop { printf("hi\n"); }'
+Attaching 2 probes...
+hi
+hi
+hi
+hi
+^C
 ```
 
 bpftrace also supports USDT semaphores. You may activate semaphores by passing in `-p $PID` or
