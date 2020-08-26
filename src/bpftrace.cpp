@@ -212,10 +212,16 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
 
     std::vector<std::string> attach_funcs;
-    bool underspecified_usdt_probe = (probetype(attach_point->provider) == ProbeType::usdt  && attach_point->ns.empty());
+    // An underspecified usdt probe is a probe that has no wildcards and
+    // an empty namespace. We try to find a unique match for such a probe.
+    bool underspecified_usdt_probe = probetype(attach_point->provider) ==
+                                         ProbeType::usdt &&
+                                     attach_point->ns.empty() &&
+                                     !has_wildcard(attach_point->func);
     if (attach_point->need_expansion &&
         (has_wildcard(attach_point->func) ||
-         has_wildcard(attach_point->target) || underspecified_usdt_probe))
+         has_wildcard(attach_point->target) || has_wildcard(attach_point->ns) ||
+         underspecified_usdt_probe))
     {
       std::set<std::string> matches;
       try
@@ -227,6 +233,16 @@ int BPFtrace::add_probe(ast::Probe &p)
         LOG(ERROR) << e.what();
         return 1;
       }
+
+      if (underspecified_usdt_probe && matches.size() > 1)
+      {
+        LOG(ERROR) << "namespace for " << attach_point->name(attach_point->func)
+                   << " not specified, matched " << matches.size() << " probes";
+        LOG(INFO) << "please specify a unique namespace or use '*' to attach "
+                  << "to all matched probes";
+        return 1;
+      }
+
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
     }
     else if ((probetype(attach_point->provider) == ProbeType::uprobe ||

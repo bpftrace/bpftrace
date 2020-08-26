@@ -34,6 +34,8 @@ and this project adheres to
   - [#1439](https://github.com/iovisor/bpftrace/pull/1439)
 - Improve error messages for kfunc probe types
   - [#1451](https://github.com/iovisor/bpftrace/pull/1451)
+- Better handling of empty usdt namespaces
+  - [#1486](https://github.com/iovisor/bpftrace/pull/1486)
 
 #### Deprecated
 

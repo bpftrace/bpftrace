@@ -359,7 +359,7 @@ int AttachPointParser::usdt_parser()
   }
 
   if (ap_->target.find('*') != std::string::npos ||
-      ap_->ns.find('*') != std::string::npos ||
+      ap_->ns.find('*') != std::string::npos || ap_->ns.empty() ||
       ap_->func.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
