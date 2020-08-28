@@ -52,6 +52,8 @@ and this project adheres to
   - [#1450](https://github.com/iovisor/bpftrace/pull/1450)
 
 #### Tools
+- Hook up execsnoop.bt script onto `execveat` call
+  - [#1490](https://github.com/iovisor/bpftrace/pull/1490)
 
 #### Documentation
 
