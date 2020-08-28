@@ -358,6 +358,9 @@ void FieldAnalyser::visit(AttachPoint &ap)
       {
         auto stype = arg.second;
 
+        if (stype.IsPtrTy())
+          stype = *stype.GetPointeeTy();
+
         if (stype.IsRecordTy())
           bpftrace_.btf_set_.insert(stype.GetName());
       }
