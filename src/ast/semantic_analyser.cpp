@@ -2652,7 +2652,11 @@ bool SemanticAnalyser::check_varargs(const Call &call, size_t min_nargs, size_t 
   return true;
 }
 
-bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool want_literal)
+bool SemanticAnalyser::check_arg(const Call &call,
+                                 Type type,
+                                 int arg_num,
+                                 bool want_literal,
+                                 bool fail)
 {
   if (!call.vargs)
     return false;
@@ -2660,23 +2664,29 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
   auto &arg = *call.vargs->at(arg_num);
   if (want_literal && (!arg.is_literal || arg.type.type != type))
   {
-    LOG(ERROR, call.loc, err_) << call.func << "() expects a " << type
-                               << " literal (" << arg.type.type << " provided)";
-    if (type == Type::string)
+    if (fail)
     {
-      // If the call requires a string literal and a positional parameter is
-      // given, tell user to use str()
-      auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
-      if (pos_param)
-        LOG(ERROR) << "Use str($" << pos_param->n << ") to treat $"
-                   << pos_param->n << " as a string";
+      LOG(ERROR, call.loc, err_) << call.func << "() expects a " << type
+                                 << " literal (" << arg.type.type << " provided)";
+      if (type == Type::string)
+      {
+        // If the call requires a string literal and a positional parameter is
+        // given, tell user to use str()
+        auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
+        if (pos_param)
+          LOG(ERROR) << "Use str($" << pos_param->n << ") to treat $"
+                     << pos_param->n << " as a string";
+      }
     }
     return false;
   }
   else if (is_final_pass() && arg.type.type != type) {
-    LOG(ERROR, call.loc, err_)
-        << call.func << "() only supports " << type << " arguments ("
-        << arg.type.type << " provided)";
+    if (fail)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports " << type << " arguments ("
+          << arg.type.type << " provided)";
+    }
     return false;
   }
   return true;
