@@ -834,6 +834,9 @@ Attaching 1 probe...
 Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`. You may also specify
 multiple attach points for an action block using a comma separated list.
 
+Quoted strings (eg. `uprobe:"/usr/lib/c++lib.so":foo`) may be used to escape
+characters in attach point definitions.
+
 ## 1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level
 
 Syntax:
