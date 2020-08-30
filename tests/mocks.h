@@ -70,6 +70,7 @@ public:
     has_loop_ = std::make_optional<bool>(has_features);
     has_probe_read_kernel_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
+    has_d_path_ = std::make_optional<bool>(has_features);
   };
   bool has_features_;
 };

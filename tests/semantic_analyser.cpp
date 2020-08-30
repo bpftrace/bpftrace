@@ -1859,6 +1859,19 @@ TEST(semantic_analyser, call_kptr_uptr)
   test("k:f { $a = uptr(arg0); }", 0);
 }
 
+TEST(semantic_analyser, call_path)
+{
+  test("kprobe:f { $k = path( arg0 ) }", 1);
+  test("kretprobe:f { $k = path( arg0 ) }", 1);
+  test("tracepoint:category:event { $k = path( NULL ) }", 1);
+  test("kprobe:f { $k = path( arg0 ) }", 1);
+  test("kretprobe:f{ $k = path( \"abc\" ) }", 1);
+  test("tracepoint:category:event { $k = path( -100 ) }", 1);
+  test("uprobe:/bin/bash:f { $k = path( arg0 ) }", 1);
+  test("BEGIN { $k = path( 1 ) }", 1);
+  test("END { $k = path( 1 ) }", 1);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"
@@ -1900,6 +1913,12 @@ TEST_F(semantic_analyser_btf, short_name)
 {
   test("f:func_1 { 1 }", 0);
   test("fr:func_1 { 1 }", 0);
+}
+
+TEST_F(semantic_analyser_btf, call_path)
+{
+  test("kfunc:func_1 { $k = path( args->foo1 ) }", 0);
+  test("kretfunc:func_1 { $k = path( retval->foo1 ) }", 0);
 }
 
 #endif // HAVE_LIBBPF_BTF_DUMP
