@@ -8,8 +8,8 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 define i64 @"kprobe:f"(i8*) section "s_kprobe:f_1" {
 entry:
-  %"@x_val" = alloca i64
   %"@x_key" = alloca i64
+  %"@x_val" = alloca i64
   %"struct Foo.x" = alloca i64
   %"$foo" = alloca [8 x i8]
   %1 = bitcast [8 x i8]* %"$foo" to i8*
@@ -28,17 +28,17 @@ entry:
   %8 = load i64, i64* %"struct Foo.x"
   %9 = bitcast i64* %"struct Foo.x" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
-  %10 = bitcast i64* %"@x_key" to i8*
+  %10 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
-  store i64 0, i64* %"@x_key"
-  %11 = bitcast i64* %"@x_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
   store i64 %8, i64* %"@x_val"
+  %11 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
+  store i64 0, i64* %"@x_key"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_val", i64 0)
-  %12 = bitcast i64* %"@x_key" to i8*
+  %12 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast i64* %"@x_val" to i8*
+  %13 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0
 }

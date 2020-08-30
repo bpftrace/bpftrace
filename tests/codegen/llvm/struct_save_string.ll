@@ -11,19 +11,19 @@ entry:
   %"@str_key" = alloca i64
   %lookup_elem_val = alloca [32 x i8]
   %"@foo_key1" = alloca i64
-  %"@foo_val" = alloca [32 x i8]
   %"@foo_key" = alloca i64
-  %1 = bitcast i64* %"@foo_key" to i8*
+  %"@foo_val" = alloca [32 x i8]
+  %1 = bitcast [32 x i8]* %"@foo_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
-  store i64 0, i64* %"@foo_key"
-  %2 = bitcast [32 x i8]* %"@foo_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   %probe_read = call i64 inttoptr (i64 4 to i64 ([32 x i8]*, i32, i64)*)([32 x i8]* %"@foo_val", i32 32, i64 0)
+  %2 = bitcast i64* %"@foo_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
+  store i64 0, i64* %"@foo_key"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, [32 x i8]*, i64)*)(i64 %pseudo, i64* %"@foo_key", [32 x i8]* %"@foo_val", i64 0)
-  %3 = bitcast i64* %"@foo_key" to i8*
+  %3 = bitcast [32 x i8]* %"@foo_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast [32 x i8]* %"@foo_val" to i8*
+  %4 = bitcast i64* %"@foo_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
   %5 = bitcast i64* %"@foo_key1" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
