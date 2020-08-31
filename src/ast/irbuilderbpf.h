@@ -177,7 +177,6 @@ private:
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   std::map<std::string, StructType *> structs_;
-  // clang-format on
 };
 
 } // namespace ast
