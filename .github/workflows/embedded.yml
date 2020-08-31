@@ -120,7 +120,24 @@ jobs:
           ALPINE_VERSION: 3.11
     steps:
     - uses: actions/checkout@v2
+    - name: Get date
+      id: get-date
+      run: echo "::set-output name=date::$(/bin/date -u "+%Y.week%g")"
+      shell: bash
+    - name: Cache docker image
+      env: ${{matrix.env}}
+      id: docker-cache
+      uses: actions/cache@v2
+      with:
+        path: /tmp/docker-save
+        # Key the cache entry by:
+        #   * the operating system
+        #   * the week (so cache gets invalidated every week)
+        #   * the image configuration (ie config + build type)
+        #   * the hash of all the files in docker/
+        key: ${{ runner.os }}-docker-cache-${{ steps.get-date.outputs.date }}-${{ env.NAME }}-${{ env.TYPE }}-${{ hashFiles('docker/**') }}
     - name: Build docker container
+      if: steps.docker-cache.outputs.cache-hit != 'true'
       run: >
         docker build
         -t bpftrace-embedded-${{ matrix.env['BASE'] }}
@@ -128,7 +145,13 @@ jobs:
         --build-arg bcc_ref=${{ matrix.env['BCC_REF'] }}
         --build-arg BASE=${{ matrix.env['BASE'] }}
         --build-arg ALPINE_VERSION=${{ matrix.env['ALPINE_VERSION'] }}
-        docker/
+        docker/ &&
+        mkdir -p /tmp/docker-save &&
+        docker save bpftrace-embedded-${{ matrix.env['BASE'] }} -o /tmp/docker-save/i.tar
+    - name: Load the cached docker image (if available)
+      if: steps.docker-cache.outputs.cache-hit == 'true'
+      run: >
+        docker load --input /tmp/docker-save/i.tar
     - name: bpftrace embedded build
       env: ${{ matrix.env }}
       run: >
