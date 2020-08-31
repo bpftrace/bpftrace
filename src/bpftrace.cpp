@@ -82,13 +82,17 @@ std::set<std::string> find_wildcard_matches_internal(
 
     if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
     {
-      if (symbol_has_cpp_mangled_signature(line))
+      auto fun_line = line;
+      auto prefix = fun_line.find(':') != std::string::npos
+                        ? erase_prefix(fun_line) + ":"
+                        : "";
+      if (symbol_has_cpp_mangled_signature(fun_line))
       {
         char *demangled_name = abi::__cxa_demangle(
-            line.c_str(), nullptr, nullptr, nullptr);
+            fun_line.c_str(), nullptr, nullptr, nullptr);
         if (demangled_name)
         {
-          if (!wildcard_match(demangled_name, tokens, true, true))
+          if (!wildcard_match(prefix + demangled_name, tokens, true, true))
           {
             free(demangled_name);
           }
@@ -263,14 +267,16 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
       else
       {
-        attach_funcs.push_back(attach_point->func);
+        attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
       }
     }
     else
     {
       if (probetype(attach_point->provider) == ProbeType::usdt && !attach_point->ns.empty())
         attach_funcs.push_back(attach_point->ns + ":" + attach_point->func);
-      else if (probetype(attach_point->provider) == ProbeType::tracepoint)
+      else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
+               probetype(attach_point->provider) == ProbeType::uprobe ||
+               probetype(attach_point->provider) == ProbeType::uretprobe)
         attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
       else
         attach_funcs.push_back(attach_point->func);
@@ -291,9 +297,12 @@ int BPFtrace::add_probe(ast::Probe &p)
         // Set the function name to be a resolved function id in case of wildcard
         attach_point->func = func_id;
       }
-      else if (probetype(attach_point->provider) == ProbeType::tracepoint)
+      else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
+               probetype(attach_point->provider) == ProbeType::uprobe ||
+               probetype(attach_point->provider) == ProbeType::uretprobe)
       {
-        // tracepoint probes must specify both a target and a function name
+        // tracepoint and uprobe probes must specify both a target and
+        // a function name.
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.
         target = erase_prefix(func_id);
@@ -364,7 +373,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     {
       symbol_stream = std::make_unique<std::istringstream>(
           extract_func_symbols_from_path(attach_point.target));
-      func = attach_point.func;
+      func = attach_point.target + ":" + attach_point.func;
       break;
     }
     case ProbeType::tracepoint:
@@ -415,12 +424,14 @@ std::set<std::string> BPFtrace::find_symbol_matches(
   std::set<std::string> matches;
   while (std::getline(*symbol_stream, line))
   {
-    if (line != func)
+    auto line_func = line;
+    erase_prefix(line_func); // remove the "path:" prefix from line
+    if (line_func != func)
     {
-      if (symbol_has_cpp_mangled_signature(line))
+      if (symbol_has_cpp_mangled_signature(line_func))
       {
         char *demangled_name = abi::__cxa_demangle(
-            line.c_str(), nullptr, nullptr, nullptr);
+            line_func.c_str(), nullptr, nullptr, nullptr);
         if (demangled_name)
         {
           std::string symbol_name;
@@ -1830,34 +1841,47 @@ static int add_symbol(const char *symname, uint64_t /*start*/, uint64_t /*size*/
 
 std::string BPFtrace::extract_func_symbols_from_path(const std::string &path) const
 {
+  std::vector<std::string> real_paths;
+  if (path.find('*') != std::string::npos)
+    real_paths = resolve_binary_path(path);
+  else
+    real_paths.push_back(path);
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
   struct bcc_symbol_option symbol_option;
   memset(&symbol_option, 0, sizeof(symbol_option));
   symbol_option.use_debug_file = 1;
   symbol_option.check_debug_file_crc = 1;
   symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
-
-  // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
-  // it's also found in debug info (#1138), so a std::set is used here (and in
-  // the add_symbol callback) to ensure that each symbol will be unique in the
-  // returned string.
-  std::set<std::string> syms;
-  int err = bcc_elf_foreach_sym(path.c_str(), add_symbol, &symbol_option, &syms);
-  if (err)
-    throw std::runtime_error("Could not list function symbols: " + path);
-
-  std::ostringstream oss;
-  std::copy(syms.begin(),
-            syms.end(),
-            std::ostream_iterator<std::string>(oss, "\n"));
-
-  return oss.str();
-#else
-  std::string call_str = std::string("objdump -tT ") + path +
-    + " | " + "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
-  const char *call = call_str.c_str();
-  return exec_system(call);
 #endif
+
+  std::string result;
+  for (auto &real_path : real_paths)
+  {
+    std::set<std::string> syms;
+#ifdef HAVE_BCC_ELF_FOREACH_SYM
+    // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
+    // it's also found in debug info (#1138), so a std::set is used here (and in
+    // the add_symbol callback) to ensure that each symbol will be unique in the
+    // returned string.
+    int err = bcc_elf_foreach_sym(
+        real_path.c_str(), add_symbol, &symbol_option, &syms);
+    if (err)
+    {
+      LOG(WARNING) << "Could not list function symbols: " + real_path;
+    }
+#else
+    std::string call_str = std::string("objdump -tT ") + real_path + +" | " +
+                           "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
+    const char *call = call_str.c_str();
+    std::istringstream iss(exec_system(call));
+    std::copy(std::istream_iterator<std::string>(iss),
+              std::istream_iterator<std::string>(),
+              std::inserter(syms, syms.begin()));
+#endif
+    for (auto &sym : syms)
+      result += real_path + ":" + sym + "\n";
+  }
+  return result;
 }
 
 uint64_t BPFtrace::read_address_from_output(std::string output)
