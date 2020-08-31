@@ -8,9 +8,9 @@ RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:func*'
 EXPECT uprobe:./testprogs/uprobe_test:function1
 TIMEOUT 5
 
-NAME "uprobes - list probes with ambiguous wildcarded file fails"
-RUN bpftrace -l 'uprobe:./testprogs/u*:*'
-EXPECT must refer to a unique binary
+NAME "uprobes - list probes with wildcarded file matching multiple files"
+RUN bpftrace -l 'uprobe:./testprogs/uprobe*:*'
+EXPECT uprobe:./testprogs/uprobe_test:function1
 TIMEOUT 5
 
 NAME "uprobes - list probes by file with wildcarded file and filter"

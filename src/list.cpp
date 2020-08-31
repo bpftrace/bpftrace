@@ -105,49 +105,41 @@ static void list_uprobes(const BPFtrace& bpftrace,
                          const std::regex& re)
 {
     std::unique_ptr<std::istream> symbol_stream;
-    std::string executable;
-    std::string absolute_exe;
+    // Given path (containing a possible wildcard)
+    std::string path;
     bool show_all = false;
 
     if (bpftrace.pid() > 0)
     {
-      executable = get_pid_exe(bpftrace.pid());
-      absolute_exe = path_for_pid_mountns(bpftrace.pid(), executable);
+      path = get_pid_exe(bpftrace.pid());
+      path = path_for_pid_mountns(bpftrace.pid(), path);
     }
     else if (probe_name == "uprobe" || probe_name == "uretprobe")
     {
-      executable = search.substr(search.find(":") + 1, search.size());
-      show_all = executable.find(":") == std::string::npos;
-      executable = executable.substr(0, executable.find(":"));
+      path = search;
+      erase_prefix(path); // remove "u[ret]probe:" prefix
+      show_all = path.find(':') == std::string::npos;
+      path = erase_prefix(path); // extract "path" prefix from "path:fun"
 
-      auto paths = resolve_binary_path(executable);
-      switch (paths.size())
+      auto abs_paths = resolve_binary_path(path);
+      if (abs_paths.empty())
       {
-      case 0:
-        LOG(ERROR) << probe_name << " target '" << executable
+        LOG(ERROR) << probe_name << " target '" << path
                    << "' does not exist or is not executable";
-        return;
-      case 1:
-        absolute_exe = paths.front();
-        break;
-      default:
-        LOG(ERROR) << "path '" << executable
-                   << "' must refer to a unique binary but matched "
-                   << paths.size();
         return;
       }
     }
 
-    if (!executable.empty())
+    if (!path.empty())
     {
       symbol_stream = std::make_unique<std::istringstream>(
-          bpftrace.extract_func_symbols_from_path(absolute_exe));
+          bpftrace.extract_func_symbols_from_path(path));
 
       std::string line;
       while (std::getline(*symbol_stream, line))
       {
         std::string probe = (probe_name.empty() ? "uprobe" : probe_name) + ":" +
-                            absolute_exe + ":" + line;
+                            line;
         if (show_all || search.empty() || !search_probe(probe, re))
           std::cout << probe << std::endl;
       }

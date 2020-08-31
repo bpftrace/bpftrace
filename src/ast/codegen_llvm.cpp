@@ -2056,10 +2056,13 @@ void CodegenLLVM::visit(Probe &probe)
           if (attach_point->provider == "BEGIN" ||
               attach_point->provider == "END")
             probefull_ = attach_point->provider;
-          else if (probetype(attach_point->provider) == ProbeType::tracepoint)
+          else if ((probetype(attach_point->provider) ==
+                        ProbeType::tracepoint ||
+                    probetype(attach_point->provider) == ProbeType::uprobe ||
+                    probetype(attach_point->provider) == ProbeType::uretprobe))
           {
-            // Tracepoint probes must specify both a category (target) and
-            // a function name
+            // Tracepoint and uprobe probes must specify both a target
+            // (tracepoint category) and a function name
             std::string func = match;
             std::string category = erase_prefix(func);
 

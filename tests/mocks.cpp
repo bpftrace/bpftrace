@@ -36,14 +36,17 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
         return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
       });
 
-  std::string usyms = "first_open\n"
-                      "second_open\n"
-                      "open_as_well\n"
-                      "something_else\n"
-                      "_Z11cpp_mangledi\n"
-                      "_Z11cpp_mangledv\n";
-  ON_CALL(bpftrace, extract_func_symbols_from_path(_))
-      .WillByDefault(Return(usyms));
+  std::string sh_usyms = "/bin/sh:first_open\n"
+                         "/bin/sh:second_open\n"
+                         "/bin/sh:open_as_well\n"
+                         "/bin/sh:something_else\n"
+                         "/bin/sh:_Z11cpp_mangledi\n"
+                         "/bin/sh:_Z11cpp_mangledv\n";
+  std::string bash_usyms = "/bin/bash:first_open\n";
+  ON_CALL(bpftrace, extract_func_symbols_from_path("/bin/sh"))
+      .WillByDefault(Return(sh_usyms));
+  ON_CALL(bpftrace, extract_func_symbols_from_path("/bin/*sh"))
+      .WillByDefault(Return(sh_usyms + bash_usyms));
 
   ON_CALL(bpftrace, get_symbols_from_usdt(_, _))
       .WillByDefault([](int, const std::string &)
