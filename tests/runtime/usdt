@@ -114,9 +114,9 @@ RUN bpftrace -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }' 
 EXPECT Attaching 3 probes...
 TIMEOUT 5
 
-NAME "usdt probes - attach to probe with ambiguous wildcard file fails"
-RUN bpftrace -e 'usdt:./testprogs/u*::* { printf("here\n" ); exit(); }'
-EXPECT must refer to a unique binary
+NAME "usdt probes - attach to probe on multiple files by wildcard"
+RUN bpftrace -e 'usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }'
+EXPECT Attaching 9 probes...
 TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"

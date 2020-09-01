@@ -3,6 +3,7 @@
 #include <cmath>
 #include <cstring>
 #include <fcntl.h>
+#include <filesystem>
 #include <fstream>
 #include <glob.h>
 #include <link.h>
@@ -910,6 +911,12 @@ uint32_t kernel_version(int attempt)
       throw std::runtime_error("BUG: kernel_version(): Invalid attempt: " +
                                std::to_string(attempt));
   }
+}
+
+std::string abs_path(const std::string &rel_path)
+{
+  auto p = std::filesystem::path(rel_path);
+  return std::filesystem::canonical(std::filesystem::absolute(p)).string();
 }
 
 } // namespace bpftrace

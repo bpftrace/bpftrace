@@ -2033,6 +2033,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       default:
         // If we are doing a PATH lookup (ie not glob), we follow shell
         // behavior and take the first match.
+        // Otherwise we keep the target with glob, it will be expanded later
         if (ap.target.find("*") == std::string::npos)
         {
           LOG(WARNING, ap.loc, out_)
@@ -2041,11 +2042,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
               << " binaries";
           ap.target = paths.front();
         }
-        else
-          LOG(ERROR, ap.loc, err_)
-              << "usdt target file '" << ap.target
-              << "' must refer to a unique binary but matched "
-              << std::to_string(paths.size());
       }
     }
 
@@ -2055,7 +2051,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     }
     else if (ap.target != "")
     {
-      USDTHelper::probes_for_path(ap.target);
+      for (auto &path : resolve_binary_path(ap.target))
+        USDTHelper::probes_for_path(path);
     }
     else
     {

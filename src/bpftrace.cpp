@@ -217,11 +217,14 @@ int BPFtrace::add_probe(ast::Probe &p)
 
     std::vector<std::string> attach_funcs;
     // An underspecified usdt probe is a probe that has no wildcards and
-    // an empty namespace. We try to find a unique match for such a probe.
+    // either an empty namespace or a specified PID.
+    // We try to find a unique match for such a probe.
     bool underspecified_usdt_probe = probetype(attach_point->provider) ==
                                          ProbeType::usdt &&
-                                     attach_point->ns.empty() &&
-                                     !has_wildcard(attach_point->func);
+                                     !has_wildcard(attach_point->target) &&
+                                     !has_wildcard(attach_point->ns) &&
+                                     !has_wildcard(attach_point->func) &&
+                                     (attach_point->ns.empty() || pid() > 0);
     if (attach_point->need_expansion &&
         (has_wildcard(attach_point->func) ||
          has_wildcard(attach_point->target) || has_wildcard(attach_point->ns) ||
@@ -272,8 +275,10 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
     else
     {
-      if (probetype(attach_point->provider) == ProbeType::usdt && !attach_point->ns.empty())
-        attach_funcs.push_back(attach_point->ns + ":" + attach_point->func);
+      if (probetype(attach_point->provider) == ProbeType::usdt &&
+          !attach_point->ns.empty())
+        attach_funcs.push_back(attach_point->target + ":" + attach_point->ns +
+                               ":" + attach_point->func);
       else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
                probetype(attach_point->provider) == ProbeType::uprobe ||
                probetype(attach_point->provider) == ProbeType::uretprobe)
@@ -287,14 +292,18 @@ int BPFtrace::add_probe(ast::Probe &p)
       std::string func_id = func;
       std::string target = attach_point->target;
 
-      // USDT probes must specify both a provider and a function name for full id
-      // So we will extract out the provider namespace to get just the function name
+      // USDT probes must specify a target binary path, a provider, and
+      // a function name for full id.
+      // So we will extract out the path and the provider namespace to get just
+      // the function name
       if (probetype(attach_point->provider) == ProbeType::usdt )
       {
+        target = erase_prefix(func_id);
         std::string ns = erase_prefix(func_id);
-        // Set attach_point ns to be a resolved namespace in case of wildcard
+        // Set attach_point target, ns, and func to their resolved values in
+        // case of wildcards.
+        attach_point->target = target;
         attach_point->ns = ns;
-        // Set the function name to be a resolved function id in case of wildcard
         attach_point->func = func_id;
       }
       else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
@@ -386,10 +395,18 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
     case ProbeType::usdt:
     {
       symbol_stream = get_symbols_from_usdt(pid(), attach_point.target);
-      if (attach_point.ns == "")
-        func = "*:" + attach_point.func;
-      else
-        func = attach_point.ns + ":" + attach_point.func;
+      auto target = attach_point.target;
+      // If PID is specified, targets in symbol_stream will have the
+      // "/proc/<PID>/root" prefix followed by an absolute path, so we make the
+      // target absolute and add a leading wildcard.
+      if (pid() > 0)
+      {
+        if (target != "")
+          target = abs_path(target);
+        target = "*" + target;
+      }
+      auto ns = attach_point.ns == "" ? "*" : attach_point.ns;
+      func = target + ":" + ns + ":" + attach_point.func;
       break;
     }
     case ProbeType::kfunc:
@@ -480,13 +497,28 @@ std::unique_ptr<std::istream> BPFtrace::get_symbols_from_usdt(
   if (pid > 0)
     usdt_probes = USDTHelper::probes_for_pid(pid);
   else
-    usdt_probes = USDTHelper::probes_for_path(target);
+  {
+    std::vector<std::string> real_paths;
+    if (target.find('*') != std::string::npos)
+      real_paths = resolve_binary_path(target);
+    else
+      real_paths.push_back(target);
+
+    for (auto &real_path : real_paths)
+    {
+      auto target_usdt_probes = USDTHelper::probes_for_path(real_path);
+      usdt_probes.insert(usdt_probes.end(),
+                         target_usdt_probes.begin(),
+                         target_usdt_probes.end());
+    }
+  }
 
   for (auto const& usdt_probe : usdt_probes)
   {
+    std::string path = usdt_probe.path;
     std::string provider = usdt_probe.provider;
     std::string fname = usdt_probe.name;
-    probes += provider + ":" + fname + "\n";
+    probes += path + ":" + provider + ":" + fname + "\n";
   }
 
   return std::make_unique<std::istringstream>(probes);
