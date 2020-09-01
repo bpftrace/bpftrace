@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
       binutils-dev \
       cmake \
       flex \
-      g++ \
+      g++-8 \
       git \
       libelf-dev \
       zlib1g-dev \
@@ -34,6 +34,9 @@ RUN apt-get update && apt-get install -y \
       libllvm${LLVM_VERSION} \
       systemtap-sdt-dev \
       python3
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 \
+                        --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
