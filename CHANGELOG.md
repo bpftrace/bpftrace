@@ -58,6 +58,8 @@ and this project adheres to
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
   - [#1490](https://github.com/iovisor/bpftrace/pull/1490)
+- Support new capabilities for capable.bt
+  - [#1498](https://github.com/iovisor/bpftrace/pull/1498)
 
 #### Documentation
 

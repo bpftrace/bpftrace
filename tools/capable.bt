@@ -56,6 +56,9 @@ BEGIN
 	@cap[35] = "CAP_WAKE_ALARM";
 	@cap[36] = "CAP_BLOCK_SUSPEND";
 	@cap[37] = "CAP_AUDIT_READ";
+	@cap[38] = "CAP_PERFMON";
+	@cap[39] = "CAP_BPF";
+	@cap[40] = "CAP_CHECKPOINT_RESTORE";
 }
 
 kprobe:cap_capable
