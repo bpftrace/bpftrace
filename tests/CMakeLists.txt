@@ -126,6 +126,12 @@ else()
   target_link_libraries(bpftrace_test ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
 
+# Support for std::filesystem
+# GCC version <9 and Clang (all versions) require -lstdc++fs
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9")
+  target_link_libraries(bpftrace_test "stdc++fs")
+endif()
+
 find_package(Threads REQUIRED)
 
 # Ninja build system needs the byproducts set explicilty so it can
