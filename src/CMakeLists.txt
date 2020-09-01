@@ -108,6 +108,12 @@ else()
   target_link_libraries(bpftrace ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
 
+# Support for std::filesystem
+# GCC version <9 and Clang (all versions) require -lstdc++fs
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS "9")
+  target_link_libraries(bpftrace "stdc++fs")
+endif()
+
 if (BUILD_ASAN)
   if(${CMAKE_VERSION} VERSION_LESS "3.13.0")
     # target_link_options is supported in CMake 3.13 and newer
