@@ -2001,23 +2001,26 @@ void CodegenLLVM::visit(Probe &probe)
       {
         reset_ids();
 
-        // USDT probes must specify both a provider and a function name
-        // So we will extract out the provider namespace to get just the function name
+        // USDT probes must specify a target binary path, a provider,
+        // and a function name.
+        // So we will extract out the path and the provider namespace to get
+        // just the function name.
         if (probetype(attach_point->provider) == ProbeType::usdt) {
           std::string func_id = match;
-          std::string orig_ns = attach_point->ns;
+          std::string target = erase_prefix(func_id);
           std::string ns = erase_prefix(func_id);
 
-          // Ensure that the full probe name used is the resolved one for this probe,
+          std::string orig_target = attach_point->target;
+          std::string orig_ns = attach_point->ns;
+
+          // Ensure that the full probe name used is the resolved one for this
+          // probe.
+          attach_point->target = target;
           attach_point->ns = ns;
           probefull_ = attach_point->name(func_id);
 
-          // But propagate the originally specified namespace in case it has a wildcard,
-          attach_point->ns = orig_ns;
-
           // Set the probe identifier so that we can read arguments later
-          auto usdt = USDTHelper::find(
-              bpftrace_.pid(), attach_point->target, ns, func_id);
+          auto usdt = USDTHelper::find(bpftrace_.pid(), target, ns, func_id);
           if (!usdt.has_value())
             throw std::runtime_error("Failed to find usdt probe: " +
                                      probefull_);
@@ -2041,6 +2044,11 @@ void CodegenLLVM::visit(Probe &probe)
             generateProbe(probe, full_func_id, section_name, func_type, true);
             current_usdt_location_index_++;
           }
+
+          // Propagate the originally specified target and namespace in case
+          // they contain a wildcard.
+          attach_point->target = orig_target;
+          attach_point->ns = orig_ns;
         }
         else
         {

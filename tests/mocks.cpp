@@ -49,13 +49,13 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
       .WillByDefault(Return(sh_usyms + bash_usyms));
 
   ON_CALL(bpftrace, get_symbols_from_usdt(_, _))
-      .WillByDefault([](int, const std::string &)
-      {
-        std::string usdt_syms = "prov1:tp1\n"
-                                "prov1:tp2\n"
-                                "prov2:tp\n"
-                                "prov2:notatp\n"
-                                "nahprov:tp\n";
+      .WillByDefault([](int, const std::string &) {
+        std::string usdt_syms = "/bin/sh:prov1:tp1\n"
+                                "/bin/sh:prov1:tp2\n"
+                                "/bin/sh:prov2:tp\n"
+                                "/bin/sh:prov2:notatp\n"
+                                "/bin/sh:nahprov:tp\n"
+                                "/bin/bash:prov1:tp3";
         return std::unique_ptr<std::istream>(new std::istringstream(usdt_syms));
       });
 
