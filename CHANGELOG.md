@@ -28,6 +28,8 @@ and this project adheres to
   - [#1484](https://github.com/iovisor/bpftrace/pull/1484)
 - Resolve unknown typedefs using BTF and give a hint when a type cannot be found
   - [#1485](https://github.com/iovisor/bpftrace/pull/1485)
+- Support multi-matched globbed targets for uprobe and ustd probes
+  - [#1499](https://github.com/iovisor/bpftrace/pull/1499)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
