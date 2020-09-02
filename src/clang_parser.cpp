@@ -581,8 +581,11 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
-  bool process_btf = program->c_definitions.empty() ||
-                     (bpftrace.force_btf_ && bpftrace.btf_.has_data());
+  // Don't parse BTF for programs containing userspace probes if the user
+  // defined some custom data types, since those may conflict with BTF types.
+  bool process_btf = bpftrace.btf_.has_data() &&
+                     (!program->has_userspace_probes() ||
+                      program->c_definitions.empty());
 
   // We set these args early because some systems may not have <linux/types.h>
   // (containers) and fully rely on BTF.
@@ -650,10 +653,10 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   {
     for (auto &msg : error_msgs)
     {
-      if (get_unknown_type(msg) != "" && !bpftrace.force_btf_)
+      if (get_unknown_type(msg))
       {
-        LOG(ERROR) << "Try running with --btf to force BTF processing or "
-                      "include headers with missing type definitions";
+        LOG(ERROR) << "Include headers with missing type definitions or "
+                      "install BTF information to your system";
       }
     }
     return false;
