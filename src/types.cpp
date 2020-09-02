@@ -236,7 +236,7 @@ std::string probetypeName(ProbeType t)
   // lgtm[cpp/missing-return]
 }
 
-bool is_userspace_probe(std::string &probe_name)
+bool is_userspace_probe(const std::string &probe_name)
 {
   auto probe_type = probetype(probe_name);
   return (probe_type == ProbeType::uprobe && probe_name != "BEGIN" &&
