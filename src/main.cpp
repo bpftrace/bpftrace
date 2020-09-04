@@ -37,6 +37,12 @@ enum class OutputBufferConfig {
   FULL,
   NONE,
 };
+enum class TestMode
+{
+  UNSET = 0,
+  SEMANTIC,
+  CODEGEN,
+};
 } // namespace
 
 void usage()
@@ -269,6 +275,7 @@ int main(int argc, char *argv[])
   bool force_btf = false;
   bool usdt_file_activation = false;
   int helper_check_level = 0;
+  TestMode test_mode = TestMode::UNSET;
   std::string script, search, file_name, output_file, output_format, output_elf;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
@@ -284,6 +291,7 @@ int main(int argc, char *argv[])
     option{ "info", no_argument, nullptr, 2000 },
     option{ "emit-elf", required_argument, nullptr, 2001 },
     option{ "no-warnings", no_argument, nullptr, 2002 },
+    option{ "test", required_argument, nullptr, 2003 },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
   std::vector<std::string> include_dirs;
@@ -303,6 +311,17 @@ int main(int argc, char *argv[])
         break;
       case 2002: // --no-warnings
         DISABLE_LOG(WARNING);
+        break;
+      case 2003: // --test
+        if (std::strcmp(optarg, "semantic") == 0)
+          test_mode = TestMode::SEMANTIC;
+        else if (std::strcmp(optarg, "codegen") == 0)
+          test_mode = TestMode::CODEGEN;
+        else
+        {
+          LOG(ERROR) << "USAGE: --test must be either 'semantic' or 'codegen'.";
+          return 1;
+        }
         break;
       case 'o':
         output_file = optarg;
@@ -715,6 +734,9 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
   }
 
+  if (test_mode == TestMode::SEMANTIC)
+    return 0;
+
   err = semantics.create_maps(bt_debug != DebugLevel::kNone);
   if (err)
     return err;
@@ -773,6 +795,9 @@ int main(int argc, char *argv[])
   }
 
   if (bt_debug != DebugLevel::kNone)
+    return 0;
+
+  if (test_mode == TestMode::CODEGEN)
     return 0;
 
   // Signal handler that lets us know an exit signal was received.
