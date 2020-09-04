@@ -5,12 +5,14 @@
 #include <fstream>
 #include <getopt.h>
 #include <iostream>
+#include <limits>
 #include <optional>
 #include <sys/resource.h>
 #include <sys/utsname.h>
 #include <time.h>
 #include <unistd.h>
 
+#include "ast/callback_visitor.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -664,6 +666,10 @@ int main(int argc, char *argv[])
                                    !bpftrace.is_aslr_enabled(-1);
   }
 
+  uint64_t node_max = std::numeric_limits<uint64_t>::max();
+  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
+    return 1;
+
   if (!cmd_str.empty())
     bpftrace.cmd_ = cmd_str;
 
@@ -732,6 +738,22 @@ int main(int argc, char *argv[])
     ast::Printer p(std::cout, true);
     driver.root_->accept(p);
     std::cout << std::endl;
+  }
+
+  // Count AST nodes
+  uint64_t node_count = 0;
+  ast::CallbackVisitor counter(
+      [&](ast::Node* node __attribute__((unused))) { node_count += 1; });
+  driver.root_->accept(counter);
+  if (bt_verbose)
+  {
+    LOG(INFO) << "node count: " << node_count;
+  }
+  if (node_count >= node_max)
+  {
+    LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
+               << node_max << ")";
+    return 1;
   }
 
   if (test_mode == TestMode::SEMANTIC)
