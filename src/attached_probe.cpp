@@ -328,6 +328,11 @@ resolve_offset(const std::string &path, const std::string &symbol, uint64_t loc)
   if (bcc_resolve_symname(path.c_str(), symbol.c_str(), loc, 0, nullptr, &bcc_sym))
      throw std::runtime_error("Could not resolve symbol: " + path + ":" + symbol);
 
+  // Have to free sym.module, see:
+  // https://github.com/iovisor/bcc/blob/ba73657cb8c4dab83dfb89eed4a8b3866255569a/src/cc/bcc_syms.h#L98-L99
+  if (bcc_sym.module)
+    ::free(const_cast<char *>(bcc_sym.module));
+
   return bcc_sym.offset;
 }
 
