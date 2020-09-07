@@ -1848,14 +1848,14 @@ TEST(semantic_analyser, call_kptr_uptr)
   test("k:f { @  = kptr((int8*) arg0); }", 0);
   test("k:f { $a = kptr((int8*) arg0); }", 0);
 
-  test("k:f { @ = kptr(arg0); }", 10);
-  test("k:f { $a = kptr(arg0); }", 10);
+  test("k:f { @ = kptr(arg0); }", 0);
+  test("k:f { $a = kptr(arg0); }", 0);
 
   test("k:f { @  = uptr((int8*) arg0); }", 0);
   test("k:f { $a = uptr((int8*) arg0); }", 0);
 
-  test("k:f { @ = uptr(arg0); }", 10);
-  test("k:f { $a = uptr(arg0); }", 10);
+  test("k:f { @ = uptr(arg0); }", 0);
+  test("k:f { $a = uptr(arg0); }", 0);
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP

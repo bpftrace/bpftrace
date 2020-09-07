@@ -65,6 +65,12 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
       // if the kernel has the new helpers but AS is still none it is a bug
       // in bpftrace, assert catches it for debug builds.
       // assert(as != AddrSpace::none);
+      static bool warnonce = false;
+      if (!warnonce)
+      {
+        warnonce = true;
+        LOG(WARNING) << "Addrspace is not set";
+      }
       fn = str ? libbpf::BPF_FUNC_probe_read_str : libbpf::BPF_FUNC_probe_read;
     }
   }
@@ -594,7 +600,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     {
       // Zero out `dst` in case we read less than 64 bits
       CreateStore(getInt64(0), dst);
-      CreateProbeRead(ctx, dst, abs_size, reg, as, loc);
+      CreateProbeRead(ctx, dst, abs_size, reg, AddrSpace::kernel, loc);
       result = CreateLoad(dst);
     }
     CreateLifetimeEnd(dst);
