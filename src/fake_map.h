@@ -1,6 +1,6 @@
 #pragma once
 
-#include "imap.h"
+#include "map.h"
 
 namespace bpftrace {
 

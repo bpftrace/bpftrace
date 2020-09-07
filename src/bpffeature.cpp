@@ -272,7 +272,7 @@ bool BPFfeature::has_map_batch()
       map_fd, nullptr, nullptr, keys, values, &count, nullptr);
   close(map_fd);
 
-  has_map_batch_ = std::make_optional<bool>(err >= 0);
+  has_map_batch_ = err >= 0;
   return *has_map_batch_;
 
 #endif

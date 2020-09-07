@@ -9,6 +9,7 @@
 #include <bcc/libbpf.h>
 
 #include "map.h"
+#include "mapmanager.h"
 
 namespace bpftrace {
 
@@ -137,4 +138,92 @@ Map::~Map()
     close(mapfd_);
 }
 
+void MapManager::Add(std::unique_ptr<IMap> map)
+{
+  auto name = map->name_;
+  if (name.empty())
+    throw std::runtime_error("Map without name cannot be stored");
+
+  auto count = maps_by_name_.count(name);
+  if (count > 0)
+    throw std::runtime_error("Map with name: @" + name + " already exists");
+
+  auto id = maps_by_id_.size();
+  map->id = id;
+  maps_by_name_[name] = map.get();
+  maps_by_id_.emplace_back(std::move(map));
+}
+
+bool MapManager::Has(const std::string &name)
+{
+  return maps_by_name_.find(name) != maps_by_name_.end();
+}
+
+std::optional<IMap *> MapManager::Lookup(const std::string &name)
+{
+  auto search = maps_by_name_.find(name);
+  if (search == maps_by_name_.end())
+  {
+    return {};
+  }
+
+  return search->second;
+}
+
+std::optional<IMap *> MapManager::Lookup(ssize_t id)
+{
+  if (id >= (ssize_t)maps_by_id_.size())
+    return {};
+  return maps_by_id_[id].get();
+}
+
+void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
+{
+  maps_by_type_[t] = std::move(map);
+}
+
+std::optional<IMap *> MapManager::Lookup(Type t)
+{
+  auto search = maps_by_type_.find(t);
+  if (search == maps_by_type_.end())
+  {
+    return {};
+  }
+
+  return search->second.get();
+}
+
+bool MapManager::Has(Type t)
+{
+  return maps_by_type_.find(t) != maps_by_type_.end();
+}
+
+void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
+{
+  stackid_maps_[t] = std::move(map);
+}
+
+std::optional<IMap *> MapManager::Lookup(StackType t)
+{
+  return stackid_maps_[t].get();
+}
+
+bool MapManager::Has(StackType t)
+{
+  return stackid_maps_.find(t) != stackid_maps_.end();
+}
+
+std::string to_string(MapManager::Type t)
+{
+  switch (t)
+  {
+    case MapManager::Type::PerfEvent:
+      return "perf_event";
+    case MapManager::Type::Join:
+      return "join";
+    case MapManager::Type::Elapsed:
+      return "elapsed";
+  }
+  return {}; // unreached
+}
 } // namespace bpftrace
