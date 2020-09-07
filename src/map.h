@@ -30,5 +30,4 @@ public:
                  int max_entries,
                  int flags);
 };
-
 } // namespace bpftrace

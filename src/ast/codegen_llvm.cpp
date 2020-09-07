@@ -122,7 +122,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
     b_.CreateStore(b_.getInt64(0), key);
 
-    auto &map = bpftrace_.elapsed_map_;
+    auto *map = bpftrace_.maps[MapManager::Type::Elapsed].value();
     auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(
         ctx_, map->mapfd_, key, type, builtin.loc);
@@ -852,7 +852,7 @@ void CodegenLLVM::visit(Call &call)
                                        elements.at(0)),
                      aa_ptr);
 
-    auto id = bpftrace_.maps_[map.ident]->id;
+    auto id = bpftrace_.maps[map.ident].value()->id;
     auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
@@ -2500,7 +2500,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
   b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print)),
                  b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
 
-  auto id = bpftrace_.maps_[map.ident]->id;
+  auto id = bpftrace_.maps[map.ident].value()->id;
   auto *ident_ptr = b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(1) });
   b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 

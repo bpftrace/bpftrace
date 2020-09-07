@@ -289,7 +289,7 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
 
 CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
 {
-  int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
+  int mapfd = bpftrace_.maps[map.ident].value()->mapfd_;
   return CreateBpfPseudoCall(mapfd);
 }
 
@@ -315,7 +315,8 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx, const location &loc)
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
   CreateStore(getInt32(0), key);
 
-  CallInst *call = createMapLookup(bpftrace_.join_map_->mapfd_, key);
+  CallInst *call = createMapLookup(
+      bpftrace_.maps[MapManager::Type::Join].value()->mapfd_, key);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_lookup_elem, loc, true);
   return call;
 }
@@ -326,7 +327,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-  int mapfd = bpftrace_.maps_[map.ident]->mapfd_;
+  int mapfd = bpftrace_.maps[map.ident].value()->mapfd_;
   return CreateMapLookupElem(ctx, mapfd, key, map.type, loc);
 }
 
@@ -920,10 +921,9 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
                                          const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-  assert(bpftrace_.stackid_maps_.count(stack_type) == 1);
 
   Value *map_ptr = CreateBpfPseudoCall(
-      bpftrace_.stackid_maps_[stack_type]->mapfd_);
+      bpftrace_.maps[stack_type].value()->mapfd_);
 
   int flags = 0;
   if (ustack)
@@ -978,7 +978,8 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(data && data->getType()->isPointerTy());
 
-  Value *map_ptr = CreateBpfPseudoCall(bpftrace_.perf_event_map_->mapfd_);
+  Value *map_ptr = CreateBpfPseudoCall(
+      bpftrace_.maps[MapManager::Type::PerfEvent].value()->mapfd_);
 
   Value *flags_val = CreateGetCpuId();
   Value *size_val = getInt64(size);

@@ -37,13 +37,13 @@ TEST(codegen, call_ustack_mapids)
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
-  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2U);
+  ASSERT_EQ(bpftrace.maps.CountStackTypes(), 2U);
 
   StackType stack_type;
   stack_type.limit = 5;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
+  ASSERT_TRUE(bpftrace.maps.Has(stack_type));
   stack_type.limit = 6;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
+  ASSERT_TRUE(bpftrace.maps.Has(stack_type));
 }
 
 TEST(codegen, call_ustack_modes_mapids)
@@ -68,13 +68,13 @@ TEST(codegen, call_ustack_modes_mapids)
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
-  ASSERT_EQ(bpftrace.stackid_maps_.size(), 2U);
+  ASSERT_EQ(bpftrace.maps.CountStackTypes(), 2U);
 
   StackType stack_type;
   stack_type.mode = StackMode::perf;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
+  ASSERT_TRUE(bpftrace.maps.Has(stack_type));
   stack_type.mode = StackMode::bpftrace;
-  ASSERT_EQ(bpftrace.stackid_maps_.count(stack_type), 1U);
+  ASSERT_TRUE(bpftrace.maps.Has(stack_type));
 }
 
 } // namespace codegen

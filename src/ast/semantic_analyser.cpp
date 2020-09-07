@@ -2251,8 +2251,10 @@ int SemanticAnalyser::analyse()
 
 int SemanticAnalyser::create_maps(bool debug)
 {
-  // This exists to make sure both versions are defined
-  // when compiling this into a .o.
+  // Doing `semantic.create_maps<bpftrace::Map>` in main()
+  // wouldn't work as the template needs to be instantiated
+  // in the source file (or header). This exists to work
+  // around that
   if (debug)
     return create_maps_impl<bpftrace::FakeMap>();
   else
@@ -2293,28 +2295,26 @@ int SemanticAnalyser::create_maps_impl(void)
       Integer &min = static_cast<Integer &>(min_arg);
       Integer &max = static_cast<Integer &>(max_arg);
       Integer &step = static_cast<Integer &>(step_arg);
-      bpftrace_.maps_[map_name] = std::make_unique<T>(
+      auto map = std::make_unique<T>(
           map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
-      bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
-      bpftrace_.map_ids_.push_back(map_name);
-      failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
+      failed_maps += is_invalid_map(map->mapfd_);
+      bpftrace_.maps.Add(std::move(map));
     }
     else
     {
-      bpftrace_.maps_[map_name] = std::make_unique<T>(
-          map_name, type, key, bpftrace_.mapmax_);
-      bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
-      bpftrace_.map_ids_.push_back(map_name);
-      failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
+      auto map = std::make_unique<T>(map_name, type, key, bpftrace_.mapmax_);
+      failed_maps += is_invalid_map(map->mapfd_);
+      bpftrace_.maps.Add(std::move(map));
     }
   }
 
   for (StackType stack_type : needs_stackid_maps_) {
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
-    bpftrace_.stackid_maps_[stack_type] = std::make_unique<T>(
-        CreateStack(true, stack_type));
-    failed_maps += is_invalid_map(bpftrace_.stackid_maps_[stack_type]->mapfd_);
+
+    auto map = std::make_unique<T>(CreateStack(true, stack_type));
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(stack_type, std::move(map));
   }
 
   if (needs_join_map_)
@@ -2325,21 +2325,25 @@ int SemanticAnalyser::create_maps_impl(void)
     SizedType type = CreateJoin(bpftrace_.join_argnum_,
                                 bpftrace_.join_argsize_);
     MapKey key;
-    bpftrace_.join_map_ = std::make_unique<T>(map_ident, type, key, 1);
-    failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
+    auto map = std::make_unique<T>(map_ident, type, key, 1);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(MapManager::Type::Join, std::move(map));
   }
   if (needs_elapsed_map_)
   {
     std::string map_ident = "elapsed";
     SizedType type = CreateUInt64();
     MapKey key;
-    bpftrace_.elapsed_map_ = std::make_unique<T>(map_ident, type, key, 1);
-    failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
+    auto map = std::make_unique<T>(map_ident, type, key, 1);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(MapManager::Type::Elapsed, std::move(map));
   }
 
-  bpftrace_.perf_event_map_ = std::make_unique<T>(
-      BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
+  {
+    auto map = std::make_unique<T>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(MapManager::Type::PerfEvent, std::move(map));
+  }
 
   if (failed_maps > 0)
   {
