@@ -222,7 +222,7 @@ void CodegenLLVM::visit(Builtin &builtin)
                                           arg_num,
                                           builtin,
                                           bpftrace_.pid(),
-                                          AddrSpace::none,
+                                          AddrSpace::user,
                                           builtin.loc);
         return;
       }
@@ -587,11 +587,15 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(call.vargs->front());
     auto arg0 = call.vargs->front();
+    // arg0 is already on the bpf stack -> use probe kernel
+    // otherwise ->  addrspace of arg0->type
+    // case : struct MyStruct { char b[4]; };
+    // $s = (struct MyStruct *)arg0; buf($s->b, 4)
     b_.CreateProbeRead(ctx_,
                        static_cast<AllocaInst *>(buf_data_offset),
                        length,
                        expr_,
-                       arg0->type.GetAS(),
+                       find_addrspace_stack(arg0->type),
                        call.loc);
 
     expr_ = buf;
@@ -1388,6 +1392,7 @@ void CodegenLLVM::visit(Ternary &ternary)
 void CodegenLLVM::visit(FieldAccess &acc)
 {
   SizedType &type = acc.expr->type;
+  AddrSpace addrspace = acc.expr->type.GetAS();
   assert(type.IsRecordTy() || type.IsTupleTy());
   auto scoped_del = accept(acc.expr);
 
@@ -1430,6 +1435,9 @@ void CodegenLLVM::visit(FieldAccess &acc)
   type.is_tparg = is_tparg;
   type.is_internal = is_internal;
   type.is_kfarg = is_kfarg;
+  // Restore the addrspace info
+  // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
+  type.SetAS(addrspace);
 
   auto &field = cstruct.fields[acc.field];
 

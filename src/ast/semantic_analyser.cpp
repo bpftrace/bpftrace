@@ -60,6 +60,9 @@ void SemanticAnalyser::visit(PositionalParameter &param)
               << "$" << param.n << " used numerically but given \"" << pstr
               << "\". Try using str($" << param.n << ").";
         }
+        // string allocated in bpf stack. See codegen.
+        if (!is_numeric(pstr))
+          param.type.SetAS(AddrSpace::kernel);
       }
       break;
     case PositionalParameterType::count:
@@ -82,6 +85,8 @@ void SemanticAnalyser::visit(String &string)
                                  << " bytes): " << string.str;
   }
   string.type = CreateString(STRING_SIZE);
+  // @a = buf("hi", 2). String allocated on bpf stack. See codegen
+  string.type.SetAS(AddrSpace::kernel);
 }
 
 void SemanticAnalyser::visit(StackMode &mode)
@@ -137,8 +142,10 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         match);
     Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
-
-    builtin.type = CreatePointer(CreateRecord(cstruct.size, tracepoint_struct));
+    AddrSpace as = (attach_point->target == "syscalls") ? AddrSpace::user
+                                                        : AddrSpace::kernel;
+    builtin.type = CreatePointer(CreateRecord(cstruct.size, tracepoint_struct),
+                                 as);
     builtin.type.MarkCtxAccess();
     builtin.type.is_tparg = true;
   }
@@ -162,6 +169,35 @@ ProbeType SemanticAnalyser::single_provider_type(void)
   return type;
 }
 
+AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
+{
+  switch (pt)
+  {
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe:
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+    case ProbeType::tracepoint:
+      return AddrSpace::kernel;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+      return AddrSpace::user;
+    // case : i:ms:1 (struct x*)ctx)->x
+    // Cannot decide the addrspace. Provide backward compatibility,
+    // if addrspace cannot be detected.
+    case ProbeType::invalid:
+    case ProbeType::profile:
+    case ProbeType::interval:
+    case ProbeType::software:
+    case ProbeType::hardware:
+    case ProbeType::watchpoint:
+      // Will trigger a warning in selectProbeReadHelper.
+      return AddrSpace::none;
+  }
+  return {}; // unreached
+}
+
 void SemanticAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -181,7 +217,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       case BPF_PROG_TYPE_KPROBE:
         builtin.type = CreatePointer(
-            CreateRecord(bpftrace_.structs_["pt_regs"].size, "struct pt_regs"));
+            CreateRecord(bpftrace_.structs_["pt_regs"].size, "struct pt_regs"),
+            AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
       case BPF_PROG_TYPE_TRACEPOINT:
@@ -191,7 +228,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
       case BPF_PROG_TYPE_PERF_EVENT:
         builtin.type = CreatePointer(
             CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size,
-                         "struct bpf_perf_event_data"));
+                         "struct bpf_perf_event_data"),
+            AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
       default:
@@ -221,9 +259,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
   else if (builtin.ident == "curtask")
   {
     /*
-     * Retype curtask to its original type: struct task_truct.
+     * Retype curtask to its original type: struct task_struct.
      */
-    builtin.type = CreatePointer(CreateRecord(0, "struct task_struct"));
+    builtin.type = CreatePointer(CreateRecord(0, "struct task_struct"),
+                                 AddrSpace::kernel);
   }
   else if (builtin.ident == "retval")
   {
@@ -250,6 +289,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
           << (type == ProbeType::tracepoint ? " (try to use args->ret instead)"
                                             : "");
     }
+    // For kretprobe, kfunc, kretfunc -> AddrSpace::kernel
+    // For uretprobe -> AddrSpace::user
+    builtin.type.SetAS(find_addrspace(type));
   }
   else if (builtin.ident == "kstack") {
     builtin.type = CreateStack(true, StackType());
@@ -261,6 +303,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "comm") {
     builtin.type = CreateString(COMM_SIZE);
+    // comm allocated in the bpf stack. See codegen
+    // Case: @=comm and strncmp(@, "name")
+    builtin.type.SetAS(AddrSpace::kernel);
   }
   else if (builtin.ident == "func") {
     for (auto &attach_point : *probe_->attach_points)
@@ -279,6 +324,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (!builtin.ident.compare(0, 3, "arg") && builtin.ident.size() == 4 &&
       builtin.ident.at(3) >= '0' && builtin.ident.at(3) <= '9') {
+    ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
+    AddrSpace addrspace = find_addrspace(pt);
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
@@ -294,9 +341,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
       LOG(ERROR, builtin.loc, err_)
           << arch::name() << " doesn't support " << builtin.ident;
     builtin.type = CreateUInt64();
+    builtin.type.SetAS(addrspace);
   }
   else if (!builtin.ident.compare(0, 4, "sarg") && builtin.ident.size() == 5 &&
       builtin.ident.at(4) >= '0' && builtin.ident.at(4) <= '9') {
+    ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
+    AddrSpace addrspace = find_addrspace(pt);
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
@@ -314,6 +364,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       }
     }
     builtin.type = CreateUInt64();
+    builtin.type.SetAS(addrspace);
   }
   else if (builtin.ident == "probe") {
     builtin.type = CreateProbe();
@@ -350,7 +401,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
-      builtin.type = CreatePointer(CreateRecord(0, "struct kfunc"));
+      builtin.type = CreatePointer(CreateRecord(0, "struct kfunc"),
+                                   AddrSpace::kernel);
       builtin.type.MarkCtxAccess();
       builtin.type.is_kfarg = true;
     }
@@ -555,6 +607,8 @@ void SemanticAnalyser::visit(Call &call)
         }
       }
 
+      // Required for cases like strncmp(str($1), str(2), 4))
+      call.type.SetAS(t.GetAS());
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
       }
@@ -609,6 +663,9 @@ void SemanticAnalyser::visit(Call &call)
 
     buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
+    // Consider case : $a = buf("hi", 2); $b = buf("bye", 3);  $a == $b
+    // The result of buf is copied to bpf stack. Hence kernel probe read
+    call.type.SetAS(AddrSpace::kernel);
   }
   else if (call.func == "ksym" || call.func == "usym") {
     if (check_nargs(call, 1)) {
@@ -712,14 +769,17 @@ void SemanticAnalyser::visit(Call &call)
         }
       }
     }
-
     call.type = CreateUInt64();
+    ProbeType pt = single_provider_type();
+    // In case of different attach_points, Set the addrspace to none.
+    call.type.SetAS(find_addrspace(pt));
   }
   else if (call.func == "kaddr") {
     if (check_nargs(call, 1)) {
       check_arg(call, Type::string, 0, true);
     }
     call.type = CreateUInt64();
+    call.type.SetAS(AddrSpace::kernel);
   }
   else if (call.func == "uaddr")
   {
@@ -774,7 +834,7 @@ void SemanticAnalyser::visit(Call &call)
       default:
         pointee_size = 64;
     }
-    call.type = CreatePointer(CreateInt(pointee_size));
+    call.type = CreatePointer(CreateInt(pointee_size), AddrSpace::user);
   }
   else if (call.func == "cgroupid") {
     if (check_nargs(call, 1)) {
@@ -1060,8 +1120,16 @@ void SemanticAnalyser::visit(Call &call)
   {
     if (!check_nargs(call, 1))
       return;
-    if (!check_arg(call, Type::pointer, 0))
+
+    // kptr should accept both integer or pointer. Consider case: kptr($1)
+    auto &arg = *call.vargs->at(0);
+    if (arg.type.type != Type::integer && arg.type.type != Type::pointer)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports "
+          << "integer or pointer arguments (" << arg.type.type << " provided)";
       return;
+    }
 
     auto as = (call.func == "kptr" ? AddrSpace::kernel : AddrSpace::user);
     call.type = call.vargs->front()->type;
@@ -1264,6 +1332,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
 
   arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
   arr.type.is_internal = true;
+  arr.type.SetAS(type.GetAS());
 }
 
 void SemanticAnalyser::visit(Binop &binop)
@@ -1387,9 +1456,12 @@ void SemanticAnalyser::visit(Binop &binop)
         }
       }
     }
-    else if (!(lhs == Type::integer && rhs == Type::integer)
-             && binop.op != Parser::token::EQ
-             && binop.op != Parser::token::NE) {
+    // Also allow combination like reg("sp") + 8
+    else if (!(lhs == Type::integer && rhs == Type::integer) &&
+             binop.op != Parser::token::EQ && binop.op != Parser::token::NE &&
+             !(lht.IsPtrTy() && rht.IsIntegerTy()) &&
+             !(lht.IsIntegerTy() && rht.IsPtrTy()))
+    {
       LOG(ERROR, binop.loc, err_)
           << "The " << opstr(binop)
           << " operator can not be used on expressions of types " << lhs << ", "
@@ -1408,6 +1480,29 @@ void SemanticAnalyser::visit(Binop &binop)
   }
 
   binop.type = CreateInteger(64, is_signed);
+
+  auto addr_lhs = binop.left->type.GetAS();
+  auto addr_rhs = binop.right->type.GetAS();
+
+  // if lhs or rhs has different addrspace (not none), then set the
+  // addrspace to none. This preserves the behaviour for x86.
+  if (addr_lhs != addr_rhs && addr_lhs != AddrSpace::none &&
+      addr_rhs != AddrSpace::none)
+  {
+    if (is_final_pass())
+      LOG(WARNING) << "Addrspace mismatch";
+    binop.type.SetAS(AddrSpace::none);
+  }
+  // Associativity from left to right for binary operator
+  else if (addr_lhs != AddrSpace::none)
+  {
+    binop.type.SetAS(addr_lhs);
+  }
+  else
+  {
+    // In case rhs is none, then this triggers warning in selectProbeReadHelper.
+    binop.type.SetAS(addr_rhs);
+  }
 }
 
 void SemanticAnalyser::visit(Unop &unop)
@@ -1454,6 +1549,7 @@ void SemanticAnalyser::visit(Unop &unop)
         unop.type.is_kfarg = type.is_kfarg;
         unop.type.is_tparg = type.is_tparg;
       }
+      unop.type.SetAS(type.GetAS());
     }
     else if (type.IsRecordTy())
     {
@@ -1633,9 +1729,14 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     auto it = ap_args_.find(acc.field);
 
     if (it != ap_args_.end())
+    {
       acc.type = it->second;
+      acc.type.SetAS(acc.expr->type.GetAS());
+    }
     else
+    {
       LOG(ERROR, acc.loc, err_) << "Can't find a field " << acc.field;
+    }
     return;
   }
 
@@ -1714,6 +1815,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         acc.type.MarkCtxAccess();
       }
       acc.type.is_internal = type.is_internal;
+      acc.type.SetAS(acc.expr->type.GetAS());
     }
   }
 }
@@ -1755,6 +1857,8 @@ void SemanticAnalyser::visit(Cast &cast)
             << "Casts are not supported for type: \"" << rhs << "\"";
       }
     }
+    // Consider both case *(int8)(retval) and *(int8*)retval
+    cast.type.SetAS(cast.expr->type.GetAS());
     return;
   }
 
@@ -1770,7 +1874,14 @@ void SemanticAnalyser::visit(Cast &cast)
     cast.type = CreatePointer(CreateRecord(cast_size, cast.cast_type));
   else
     cast.type = CreateRecord(cast_size, cast.cast_type);
-
+  cast.type.SetAS(cast.expr->type.GetAS());
+  // case : BEGIN { @foo = (struct Foo)0; }
+  // case : profile:hz:99 $task = (struct task_struct *)curtask.
+  if (cast.type.GetAS() == AddrSpace::none)
+  {
+    ProbeType type = single_provider_type();
+    cast.type.SetAS(find_addrspace(type));
+  }
   if (is_ctx)
     cast.type.MarkCtxAccess();
 }

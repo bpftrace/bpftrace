@@ -14,6 +14,10 @@ inline bool shouldBeOnStackAlready(const SizedType &type)
   return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
          type.IsUsymTy() || type.IsTupleTy() || type.IsTimestampTy();
 }
+inline AddrSpace find_addrspace_stack(const SizedType &ty)
+{
+  return (shouldBeOnStackAlready(ty)) ? AddrSpace::kernel : ty.GetAS();
+}
 
 } // namespace ast
 } // namespace bpftrace

@@ -92,6 +92,7 @@ private:
   ProbeType single_provider_type(void);
   template <typename T>
   int create_maps_impl(void);
+  AddrSpace find_addrspace(ProbeType pt);
 
   bool in_loop(void)
   {
