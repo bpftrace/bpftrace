@@ -6,7 +6,19 @@ int FakeMap::next_mapfd_ = 1;
 
 FakeMap::FakeMap(const std::string &name __attribute__((unused)),
                  const SizedType &type __attribute__((unused)),
-                 const MapKey &key __attribute__((unused)))
+                 const MapKey &key __attribute__((unused)),
+                 int min __attribute__((unused)),
+                 int max __attribute__((unused)),
+                 int step __attribute__((unused)),
+                 int max_entries __attribute__((unused)))
+{
+  mapfd_ = next_mapfd_++;
+}
+
+FakeMap::FakeMap(const std::string &name __attribute__((unused)),
+                 const SizedType &type __attribute__((unused)),
+                 const MapKey &key __attribute__((unused)),
+                 int max_entries __attribute__((unused)))
 {
   mapfd_ = next_mapfd_++;
 }

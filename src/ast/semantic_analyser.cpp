@@ -2251,6 +2251,17 @@ int SemanticAnalyser::analyse()
 
 int SemanticAnalyser::create_maps(bool debug)
 {
+  // This exists to make sure both versions are defined
+  // when compiling this into a .o.
+  if (debug)
+    return create_maps_impl<bpftrace::FakeMap>();
+  else
+    return create_maps_impl<bpftrace::Map>();
+}
+
+template <typename T>
+int SemanticAnalyser::create_maps_impl(void)
+{
   uint32_t failed_maps = 0;
   auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
   for (auto &map_val : map_val_)
@@ -2267,109 +2278,68 @@ int SemanticAnalyser::create_maps(bool debug)
 
     auto &key = search_args->second;
 
-    if (debug)
+    if (type.IsLhistTy())
     {
-      bpftrace_.maps_[map_name] = std::make_unique<bpftrace::FakeMap>(map_name, type, key);
+      auto map_args = map_args_.find(map_name);
+      if (map_args == map_args_.end())
+      {
+        out_ << "map arg \"" << map_name << "\" not found" << std::endl;
+        abort();
+      }
+
+      Expression &min_arg = *map_args->second.at(1);
+      Expression &max_arg = *map_args->second.at(2);
+      Expression &step_arg = *map_args->second.at(3);
+      Integer &min = static_cast<Integer &>(min_arg);
+      Integer &max = static_cast<Integer &>(max_arg);
+      Integer &step = static_cast<Integer &>(step_arg);
+      bpftrace_.maps_[map_name] = std::make_unique<T>(
+          map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
       bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
       bpftrace_.map_ids_.push_back(map_name);
+      failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
     }
     else
     {
-      if (type.IsLhistTy())
-      {
-        // store lhist args to the bpftrace::Map
-        auto map_args = map_args_.find(map_name);
-        if (map_args == map_args_.end())
-        {
-          out_ << "map arg \"" << map_name << "\" not found" << std::endl;
-          abort();
-        }
-
-        Expression &min_arg = *map_args->second.at(1);
-        Expression &max_arg = *map_args->second.at(2);
-        Expression &step_arg = *map_args->second.at(3);
-        Integer &min = static_cast<Integer&>(min_arg);
-        Integer &max = static_cast<Integer&>(max_arg);
-        Integer &step = static_cast<Integer&>(step_arg);
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
-            map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
-        bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
-        bpftrace_.map_ids_.push_back(map_name);
-        failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
-      }
-      else
-      {
-        bpftrace_.maps_[map_name] = std::make_unique<bpftrace::Map>(
-            map_name, type, key, bpftrace_.mapmax_);
-        bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
-        bpftrace_.map_ids_.push_back(map_name);
-        failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
-      }
+      bpftrace_.maps_[map_name] = std::make_unique<T>(
+          map_name, type, key, bpftrace_.mapmax_);
+      bpftrace_.maps_[map_name]->id = bpftrace_.map_ids_.size();
+      bpftrace_.map_ids_.push_back(map_name);
+      failed_maps += is_invalid_map(bpftrace_.maps_[map_name]->mapfd_);
     }
   }
 
   for (StackType stack_type : needs_stackid_maps_) {
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
-    if (debug)
-    {
-      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::FakeMap>(
-          CreateStack(true, stack_type));
-    }
-    else
-    {
-      bpftrace_.stackid_maps_[stack_type] = std::make_unique<bpftrace::Map>(
-          CreateStack(true, stack_type));
-      failed_maps += is_invalid_map(bpftrace_.stackid_maps_[stack_type]->mapfd_);
-    }
+    bpftrace_.stackid_maps_[stack_type] = std::make_unique<T>(
+        CreateStack(true, stack_type));
+    failed_maps += is_invalid_map(bpftrace_.stackid_maps_[stack_type]->mapfd_);
   }
 
-  if (debug)
+  if (needs_join_map_)
   {
-    if (needs_join_map_)
-    {
-      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
-      std::string map_ident = "join";
-      SizedType type = CreateJoin(bpftrace_.join_argnum_,
-                                  bpftrace_.join_argsize_);
-      MapKey key;
-      bpftrace_.join_map_ = std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
-    }
-    if (needs_elapsed_map_)
-    {
-      std::string map_ident = "elapsed";
-      SizedType type = CreateUInt64();
-      MapKey key;
-      bpftrace_.elapsed_map_ =
-          std::make_unique<bpftrace::FakeMap>(map_ident, type, key);
-    }
+    // join uses map storage as we'd like to process data larger than can fit on
+    // the BPF stack.
+    std::string map_ident = "join";
+    SizedType type = CreateJoin(bpftrace_.join_argnum_,
+                                bpftrace_.join_argsize_);
+    MapKey key;
+    bpftrace_.join_map_ = std::make_unique<T>(map_ident, type, key, 1);
+    failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
+  }
+  if (needs_elapsed_map_)
+  {
+    std::string map_ident = "elapsed";
+    SizedType type = CreateUInt64();
+    MapKey key;
+    bpftrace_.elapsed_map_ = std::make_unique<T>(map_ident, type, key, 1);
+    failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
+  }
 
-    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::FakeMap>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-  }
-  else
-  {
-    if (needs_join_map_)
-    {
-      // join uses map storage as we'd like to process data larger than can fit on the BPF stack.
-      std::string map_ident = "join";
-      SizedType type = CreateJoin(bpftrace_.join_argnum_,
-                                  bpftrace_.join_argsize_);
-      MapKey key;
-      bpftrace_.join_map_ = std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
-      failed_maps += is_invalid_map(bpftrace_.join_map_->mapfd_);
-    }
-    if (needs_elapsed_map_)
-    {
-      std::string map_ident = "elapsed";
-      SizedType type = CreateUInt64();
-      MapKey key;
-      bpftrace_.elapsed_map_ =
-          std::make_unique<bpftrace::Map>(map_ident, type, key, 1);
-      failed_maps += is_invalid_map(bpftrace_.elapsed_map_->mapfd_);
-    }
-    bpftrace_.perf_event_map_ = std::make_unique<bpftrace::Map>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-    failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
-  }
+  bpftrace_.perf_event_map_ = std::make_unique<T>(
+      BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  failed_maps += is_invalid_map(bpftrace_.perf_event_map_->mapfd_);
 
   if (failed_maps > 0)
   {
