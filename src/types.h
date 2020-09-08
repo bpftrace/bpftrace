@@ -104,6 +104,7 @@ private:
   std::string name_; // name of this type, for named types like struct
   bool ctx_ = false; // Is bpf program context
   AddrSpace as_ = AddrSpace::none;
+  ssize_t size_bits; // size in bits for integer types
 
 public:
   AddrSpace GetAS() const
@@ -147,7 +148,7 @@ public:
   size_t GetIntBitWidth() const
   {
     assert(IsIntTy());
-    return 8 * size;
+    return size_bits;
   };
 
   size_t GetNumElements() const
@@ -174,6 +175,10 @@ public:
     return element_type_;
   }
 
+  bool IsBoolTy() const
+  {
+    return type == Type::integer && size_bits == 1;
+  };
   bool IsPtrTy() const
   {
     return type == Type::pointer;
@@ -294,10 +299,12 @@ public:
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
   friend SizedType CreateRecord(size_t size, const std::string &name);
+  friend SizedType CreateInteger(size_t bits, bool is_signed);
 };
 // Type helpers
 
 SizedType CreateNone();
+SizedType CreateBool();
 SizedType CreateInteger(size_t bits, bool is_signed);
 SizedType CreateInt(size_t bits);
 SizedType CreateUInt(size_t bits);

@@ -248,8 +248,16 @@ SizedType CreateInteger(size_t bits, bool is_signed)
   // analysis when we're inferring types, the first pass may not have
   // enough information to figure out the exact size of the integer. Later
   // passes infer the exact size.
-  assert(bits == 0 || bits == 8 || bits == 16 || bits == 32 || bits == 64);
-  return SizedType(Type::integer, bits / 8, is_signed);
+  assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
+         bits == 64);
+  auto t = SizedType(Type::integer, bits / 8, is_signed);
+  t.size_bits = bits;
+  return t;
+}
+
+SizedType CreateBool(void)
+{
+  return CreateInteger(1, false);
 }
 
 SizedType CreateInt(size_t bits)
