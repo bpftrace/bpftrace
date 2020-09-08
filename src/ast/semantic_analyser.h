@@ -63,9 +63,9 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
+  int create_maps(bool debug);
 
   int analyse();
-  int create_maps(bool debug=false);
 
 private:
   Node *root_;
@@ -90,6 +90,8 @@ private:
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);
+  template <typename T>
+  int create_maps_impl(void);
 
   bool in_loop(void)
   {
