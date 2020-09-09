@@ -223,14 +223,15 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     std::vector<llvm::Type *> llvm_elems;
     std::ostringstream ty_name;
 
-    for (const auto &elemtype : stype.tuple_elems)
+    for (const auto &elem : stype.GetFields())
     {
+      auto &elemtype = elem.type;
       llvm_elems.emplace_back(GetType(elemtype));
       ty_name << elemtype << "_";
     }
     ty_name << "_tuple_t";
 
-    ty = GetStructType(ty_name.str(), llvm_elems, true);
+    ty = GetStructType(ty_name.str(), llvm_elems, false);
   }
   else if (stype.IsPtrTy())
   {

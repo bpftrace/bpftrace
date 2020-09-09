@@ -107,8 +107,11 @@ private:
                      bool expansion);
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
 
+  void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
+
   Function *createLog2Function();
   Function *createLinearFunction();
+
   Node *root_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;

@@ -346,13 +346,15 @@ std::string TextOutput::tuple_to_str(BPFtrace &bpftrace,
                                      const std::vector<uint8_t> &value) const
 {
   bool first = true;
-  size_t offset = 0;
   std::string ret;
 
   ret += '(';
 
-  for (const SizedType &elemtype : ty.tuple_elems)
+  for (const auto &elem : ty.GetFields())
   {
+    auto &elemtype = elem.type;
+    auto offset = elem.offset;
+
     if (first)
       first = false;
     else
@@ -682,13 +684,15 @@ std::string JsonOutput::tuple_to_str(BPFtrace &bpftrace,
                                      const std::vector<uint8_t> &value) const
 {
   bool first = true;
-  size_t offset = 0;
   std::string ret;
 
   ret += '[';
 
-  for (const SizedType &elemtype : ty.tuple_elems)
+  for (const auto &elem : ty.GetFields())
   {
+    auto &elemtype = elem.type;
+    auto offset = elem.offset;
+
     if (first)
       first = false;
     else
@@ -710,8 +714,6 @@ std::string JsonOutput::tuple_to_str(BPFtrace &bpftrace,
       if (is_quoted_type(elemtype))
         ret += '"';
     }
-
-    offset += elemtype.size;
   }
 
   ret += ']';
