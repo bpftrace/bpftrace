@@ -1406,7 +1406,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   {
     Value *src = b_.CreateGEP(expr_,
                               { b_.getInt32(0), b_.getInt32(acc.index) });
-    SizedType &elem_type = type.tuple_elems[acc.index];
+    SizedType &elem_type = type.GetFields()[acc.index].type;
 
     if (shouldBeOnStackAlready(elem_type))
     {
@@ -1614,11 +1614,55 @@ void CodegenLLVM::visit(Cast &cast)
   }
 }
 
+void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
+{
+  // Validate that what we thought the struct looks like
+  // and LLVM made of it are equal to avoid issues.
+  //
+  // As the size is used throughout the semantic phase for
+  // sizing buffers and maps we have to abort if it doesn't
+  // match.
+  // But offset is only used for printing, so we can recover
+  // from that by storing the correct offset.
+  //
+  size_t our_size = our_type.size;
+  size_t llvm_size = layout_.getTypeAllocSize(llvm_type);
+
+  if (llvm_size != our_size)
+  {
+    LOG(FATAL) << "BUG: Struct size mismatch: expected: " << our_size
+               << ", real: " << llvm_size;
+  }
+
+  auto *tuple_layout = layout_.getStructLayout(
+      reinterpret_cast<llvm::StructType *>(llvm_type));
+
+  for (ssize_t i = 0; i < our_type.GetFieldCount(); i++)
+  {
+    ssize_t llvm_offset = tuple_layout->getElementOffset(i);
+    auto &field = our_type.GetField(i);
+    ssize_t our_offset = field.offset;
+    if (llvm_offset != our_offset)
+    {
+      LOG(DEBUG) << "Struct offset mismatch for: " << field.type << "(" << i
+                 << ")"
+                 << ": (llvm) " << llvm_offset << " != " << our_offset;
+
+      field.offset = llvm_offset;
+    }
+  }
+}
+
 void CodegenLLVM::visit(Tuple &tuple)
 {
   // Store elements on stack
   llvm::Type *tuple_ty = b_.GetType(tuple.type);
+
+  compareStructure(tuple.type, tuple_ty);
+
+  size_t tuple_size = layout_.getTypeAllocSize(tuple_ty);
   AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, "tuple");
+  b_.CREATE_MEMSET(buf, b_.getInt8(0), tuple_size, 1);
   for (size_t i = 0; i < tuple.elems->size(); ++i)
   {
     Expression *elem = tuple.elems->at(i);

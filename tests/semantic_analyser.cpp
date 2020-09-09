@@ -1772,22 +1772,17 @@ TEST(semantic_analyser, tuple_assign_var)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
+  SizedType ty = CreateTuple({ CreateInt64(), CreateString(64) });
   test(driver, R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_", 0);
 
   auto &stmts = driver.root_->probes->at(0)->stmts;
 
   // $t = (1, "str");
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
-  auto ty = SizedType(Type::tuple, 8 + 64, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::string, 64, false);
   EXPECT_EQ(ty, assignment->var->type);
 
   // $t = (4, "other");
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
-  ty = SizedType(Type::tuple, 8 + 64, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::string, 64, false);
   EXPECT_EQ(ty, assignment->var->type);
 }
 
@@ -1796,26 +1791,21 @@ TEST(semantic_analyser, tuple_assign_map)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
+  SizedType ty;
   test(driver, R"_(BEGIN { @ = (1, 3, 3, 7); @ = (0, 0, 0, 0); })_", 0);
 
   auto &stmts = driver.root_->probes->at(0)->stmts;
 
   // $t = (1, 3, 3, 7);
   auto assignment = static_cast<ast::AssignMapStatement *>(stmts->at(0));
-  auto ty = SizedType(Type::tuple, 4 * 8, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::integer, 8, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, false);
+  ty = CreateTuple(
+      { CreateInt64(), CreateUInt64(), CreateUInt64(), CreateUInt64() });
   EXPECT_EQ(ty, assignment->map->type);
 
   // $t = (0, 0, 0, 0);
   assignment = static_cast<ast::AssignMapStatement *>(stmts->at(1));
-  ty = SizedType(Type::tuple, 4 * 8, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
+  ty = CreateTuple(
+      { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() });
   EXPECT_EQ(ty, assignment->map->type);
 }
 
@@ -1824,18 +1814,14 @@ TEST(semantic_analyser, tuple_nested)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
+  SizedType ty_inner = CreateTuple({ CreateInt64(), CreateInt64() });
+  SizedType ty = CreateTuple({ CreateInt64(), ty_inner });
   test(driver, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
 
   auto &stmts = driver.root_->probes->at(0)->stmts;
 
   // $t = (1, "str");
   auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
-  auto ty = SizedType(Type::tuple, 3 * 8, false);
-  ty.tuple_elems.emplace_back(Type::integer, 8, true);
-  ty.tuple_elems.emplace_back(Type::tuple, 2 * 8, false);
-  auto ty_inner = SizedType(Type::tuple, 2 * 8, false);
-  ty_inner.tuple_elems.emplace_back(Type::tuple, 2 * 8, false);
-  ty.tuple_elems.emplace_back(std::move(ty_inner));
   EXPECT_EQ(ty, assignment->var->type);
 }
 

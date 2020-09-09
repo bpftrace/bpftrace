@@ -74,6 +74,9 @@ struct StackType
   }
 };
 
+struct Tuple;
+struct Field;
+
 class SizedType
 {
 public:
@@ -93,8 +96,6 @@ public:
   bool is_tparg = false;
   bool is_kfarg = false;
   int kfarg_idx = -1;
-  // Only valid if `type == Type::tuple`
-  std::vector<SizedType> tuple_elems;
 
 private:
   bool is_signed_ = false;
@@ -106,7 +107,26 @@ private:
   AddrSpace as_ = AddrSpace::none;
   ssize_t size_bits; // size in bits for integer types
 
+  std::shared_ptr<Tuple> tuple_fields; // tuple fields
+
 public:
+  /**
+     Tuple accessors
+  */
+  std::vector<Field> &GetFields() const;
+  Field &GetField(ssize_t n) const;
+  ssize_t GetFieldCount() const;
+
+  /**
+     Required alignment for this type
+   */
+  ssize_t GetAlignment() const;
+
+  /**
+     Dump the underlying structure for debug purposes
+  */
+  void DumpStructure(std::ostream &os);
+
   AddrSpace GetAS() const
   {
     return as_;
@@ -300,6 +320,7 @@ public:
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
   friend SizedType CreateRecord(size_t size, const std::string &name);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
+  friend SizedType CreateTuple(std::vector<SizedType> fields);
 };
 // Type helpers
 
@@ -325,6 +346,8 @@ SizedType CreatePointer(const SizedType &pointee_type,
    size in bytes
  */
 SizedType CreateRecord(size_t size, const std::string &name);
+
+SizedType CreateTuple(std::vector<SizedType> fields);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "log.h"
+#include "struct.h"
 #include "types.h"
 
 namespace bpftrace {
@@ -52,10 +53,10 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   else if (type.IsTupleTy())
   {
     os << "(";
-    size_t n = type.tuple_elems.size();
+    size_t n = type.GetFieldCount();
     for (size_t i = 0; i < n; ++i)
     {
-      os << type.tuple_elems[i];
+      os << type.GetField(i).type;
       if (i != n - 1)
         os << ",";
     }
@@ -435,9 +436,59 @@ SizedType CreateTimestamp()
   return SizedType(Type::timestamp, 16);
 }
 
+SizedType CreateTuple(std::vector<SizedType> fields)
+{
+  auto s = SizedType(Type::tuple, 0);
+  s.tuple_fields = Tuple::Create(fields);
+  s.size = s.tuple_fields->size;
+  return s;
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
+}
+
+std::vector<Field> &SizedType::GetFields() const
+{
+  assert(IsTupleTy());
+  return tuple_fields->fields;
+}
+
+Field &SizedType::GetField(ssize_t n) const
+{
+  assert(IsTupleTy());
+  if (n >= GetFieldCount())
+    throw std::runtime_error("Getfield(): out of bound");
+  return tuple_fields->fields[n];
+}
+
+ssize_t SizedType::GetFieldCount() const
+{
+  assert(IsTupleTy());
+  return tuple_fields->fields.size();
+}
+
+void SizedType::DumpStructure(std::ostream &os)
+{
+  assert(IsTupleTy());
+  return tuple_fields->Dump(os);
+}
+
+ssize_t SizedType::GetAlignment() const
+{
+  if (IsStringTy())
+    return 1;
+
+  if (IsTupleTy())
+    return tuple_fields->align;
+
+  if (size <= 2)
+    return size;
+  else if (size <= 4)
+    return 4;
+  else
+    return 8;
 }
 
 } // namespace bpftrace
