@@ -358,6 +358,8 @@ public:
   ProbeList *probes;
 
   void accept(Visitor &v) override;
+
+  bool has_userspace_probes() const;
 };
 
 class Visitor {
