@@ -2460,10 +2460,12 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   }
 
   AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
+  // as the struct is not packed we need to memset it.
   b_.CREATE_MEMSET(fmt_args, b_.getInt8(0), struct_size, 1);
 
   Value *id_offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(0)});
   b_.CreateStore(b_.getInt64(id + asyncactionint(async_action)), id_offset);
+
   for (size_t i=1; i<call.vargs->size(); i++)
   {
     Expression &arg = *call.vargs->at(i);
