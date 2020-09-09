@@ -1346,6 +1346,38 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
   }
   else if (stype.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+  else if (stype.IsIntTy())
+  {
+    auto sign = stype.IsSigned();
+    switch (stype.GetIntBitWidth())
+    {
+      // clang-format off
+      case 64:
+        if (sign)
+          return std::to_string(
+            reduce_value<int64_t>(value, nvalues) / (int64_t)div);
+        return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
+      case 32:
+        if (sign)
+          return std::to_string(
+            reduce_value<int32_t>(value, nvalues) / (int32_t)div);
+        return std::to_string(reduce_value<uint32_t>(value, nvalues) / div);
+      case 16:
+        if (sign)
+          return std::to_string(
+            reduce_value<int16_t>(value, nvalues) / (int16_t)div);
+        return std::to_string(reduce_value<uint16_t>(value, nvalues) / div);
+      case 8:
+        if (sign)
+          return std::to_string(
+            reduce_value<int8_t>(value, nvalues) / (int8_t)div);
+        return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
+        // clang-format on
+    }
+    LOG(FATAL) << "map_value_to_str: Invalid int bitwidth: "
+               << stype.GetIntBitWidth() << "provided";
+    // lgtm[cpp/missing-return]
+  }
   else if (stype.IsSumTy() || stype.IsIntTy())
   {
     if (stype.IsSigned())
