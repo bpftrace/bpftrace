@@ -21,13 +21,14 @@ struct Bitfield
 struct Field
 {
   SizedType type;
-  int offset;
+  ssize_t offset;
 
   bool is_bitfield;
   Bitfield bitfield;
 };
 
 using FieldsMap = std::map<std::string, Field>;
+using TupleFields = std::vector<Field>;
 
 struct Struct
 {
@@ -35,4 +36,16 @@ struct Struct
   FieldsMap fields;
 };
 
+struct Tuple
+{
+  size_t size; // in bytes
+  int align;   // in bytes
+  bool padded = false;
+  TupleFields fields;
+
+  static std::unique_ptr<Tuple> Create(std::vector<SizedType> fields);
+  void Dump(std::ostream &os);
+};
+
+std::ostream &operator<<(std::ostream &os, const TupleFields &t);
 } // namespace bpftrace

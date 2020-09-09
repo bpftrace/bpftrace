@@ -1648,17 +1648,17 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       return;
     }
 
-    bool valid_idx = static_cast<size_t>(acc.index) < type.tuple_elems.size();
+    bool valid_idx = static_cast<size_t>(acc.index) < type.GetFields().size();
 
     // We may not have inferred the full type of the tuple yet in early passes
     // so wait until the final pass.
     if (!valid_idx && is_final_pass())
       LOG(ERROR, acc.loc, err_)
           << "Invalid tuple index: " << acc.index << ". Found "
-          << type.tuple_elems.size() << " elements in tuple.";
+          << type.GetFields().size() << " elements in tuple.";
 
     if (valid_idx)
-      acc.type = type.tuple_elems[acc.index];
+      acc.type = type.GetField(acc.index).type;
 
     return;
   }
@@ -1777,22 +1777,16 @@ void SemanticAnalyser::visit(Cast &cast)
 
 void SemanticAnalyser::visit(Tuple &tuple)
 {
-  auto &type = tuple.type;
-  size_t total_size = 0;
-
-  type.tuple_elems.clear();
-
+  std::vector<SizedType> elements;
   for (size_t i = 0; i < tuple.elems->size(); ++i)
   {
     Expression *elem = tuple.elems->at(i);
     elem->accept(*this);
 
-    type.tuple_elems.emplace_back(elem->type);
-    total_size += elem->type.size;
+    elements.emplace_back(elem->type);
   }
 
-  type.type = Type::tuple;
-  type.size = total_size;
+  tuple.type = CreateTuple(elements);
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)

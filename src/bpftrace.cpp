@@ -1373,9 +1373,11 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
             reduce_value<int8_t>(value, nvalues) / (int8_t)div);
         return std::to_string(reduce_value<uint8_t>(value, nvalues) / div);
         // clang-format on
+      default:
+        LOG(FATAL) << "map_value_to_str: Invalid int bitwidth: "
+                   << stype.GetIntBitWidth() << "provided";
+        return {};
     }
-    LOG(FATAL) << "map_value_to_str: Invalid int bitwidth: "
-               << stype.GetIntBitWidth() << "provided";
     // lgtm[cpp/missing-return]
   }
   else if (stype.IsSumTy() || stype.IsIntTy())
