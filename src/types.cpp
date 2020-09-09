@@ -234,6 +234,14 @@ std::string probetypeName(ProbeType t)
   return {}; // unreached
 }
 
+bool is_userspace_probe(std::string &probe_name)
+{
+  auto probe_type = probetype(probe_name);
+  return (probe_type == ProbeType::uprobe && probe_name != "BEGIN" &&
+          probe_name != "END") ||
+         probe_type == ProbeType::uretprobe || probe_type == ProbeType::usdt;
+}
+
 uint64_t asyncactionint(AsyncAction a)
 {
   return (uint64_t)a;
