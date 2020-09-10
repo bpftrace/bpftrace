@@ -136,10 +136,9 @@ std::string addrspacestr(AddrSpace as)
     case AddrSpace::none:
       return "none";
       break;
-    default:
-      std::cerr << "Unknown addrspace" << std::endl;
-      abort();
   }
+
+  return {}; // unreached
 }
 
 std::string typestr(Type t)
@@ -174,10 +173,9 @@ std::string typestr(Type t)
     case Type::tuple:    return "tuple";    break;
     case Type::timestamp:return "timestamp";break;
     // clang-format on
-    default:
-      LOG(FATAL) << "call or probe type not found";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 ProbeType probetype(const std::string &probeName)
@@ -230,10 +228,9 @@ std::string probetypeName(ProbeType t)
     case ProbeType::watchpoint:  return "watchpoint";  break;
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
-    default:
-      LOG(FATAL) << "probe type not found";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 uint64_t asyncactionint(AsyncAction a)

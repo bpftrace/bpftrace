@@ -427,9 +427,6 @@ int main(int argc, char *argv[])
     case OutputBufferConfig::NONE:
       std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
       break;
-    default:
-      // Should never get here
-      std::abort();
   }
 
   BPFtrace bpftrace(std::move(output));

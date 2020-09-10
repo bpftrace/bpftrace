@@ -75,10 +75,11 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretfunc:
       return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
       break;
-    default:
-      LOG(FATAL) << "program type not found";
+    case ProbeType::invalid:
+      LOG(FATAL) << "program type invalid";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 std::string progtypeName(bpf_prog_type t)
@@ -231,7 +232,7 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::watchpoint:
     case ProbeType::hardware:
       break;
-    default:
+    case ProbeType::invalid:
       LOG(FATAL) << "invalid attached probe type \""
                  << probetypeName(probe_.type) << "\" at destructor";
   }
@@ -250,10 +251,9 @@ std::string AttachedProbe::eventprefix() const
       return "p_";
     case BPF_PROBE_RETURN:
       return "r_";
-    default:
-      LOG(FATAL) << "invalid eventprefix";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 std::string AttachedProbe::eventname() const
@@ -344,17 +344,16 @@ static void check_alignment(std::string &path,
 
   std::string tmp = path + ":" + symbol + "+" + std::to_string(func_offset);
 
-  if (AlignState::Ok == aligned)
-    return;
-
-    // If we did not allow unaligned uprobes in the
-    // compile time, force the safe mode now.
+  // If we did not allow unaligned uprobes in the
+  // compile time, force the safe mode now.
 #ifndef HAVE_UNSAFE_PROBE
   safe_mode = true;
 #endif
 
   switch (aligned)
   {
+    case AlignState::Ok:
+      return;
     case AlignState::NotAlign:
       if (safe_mode)
         throw std::runtime_error("Could not add " + probe_name +
@@ -382,9 +381,6 @@ static void check_alignment(std::string &path,
       else
         LOG(WARNING) << "Unchecked " + probe_name + " : " << tmp;
       break;
-
-    default:
-      throw std::runtime_error("Internal error: " + tmp);
   }
 }
 

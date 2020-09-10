@@ -13,10 +13,9 @@ std::string logtype_str(LogType t)
     case LogType::ERROR   : return "ERROR";
     case LogType::FATAL   : return "FATAL";
     // clang-format on
-    default:
-      std::cerr << "Invalid log type." << std::endl;
-      abort();
   }
+
+  return {}; // unreached
 }
 
 Log::Log()
