@@ -992,9 +992,11 @@ bool attach_reverse(const Probe &p)
     case ProbeType::watchpoint:
     case ProbeType::hardware:
       return false;
-    default:
-      abort();
+    case ProbeType::invalid:
+      LOG(FATAL) << "Unknown probe type";
   }
+
+  return {}; // unreached
 }
 
 int BPFtrace::run_special_probe(std::string name,
@@ -1692,9 +1694,6 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, StackType stac
       case StackMode::perf:
         stack << "\t" << std::hex << addr << std::dec << " " << sym << std::endl;
         break;
-      // TODO (mmarchini) enable -Wswitch-enum and disable -Wswitch-default
-      default:
-        abort();
     }
   }
 
@@ -1946,9 +1945,6 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
     case AF_INET6:
       addrstr = resolve_inetv6(inet);
       break;
-    default:
-      LOG(ERROR) << "ntop() got unsupported AF type: " << af;
-      addrstr = std::string("");
   }
 
   // TODO(mmarchini): handle inet_ntop errors

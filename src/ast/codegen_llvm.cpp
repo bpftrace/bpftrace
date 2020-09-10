@@ -84,8 +84,6 @@ void CodegenLLVM::visit(PositionalParameter &param)
     case PositionalParameterType::count:
       expr_ = b_.getInt64(bpftrace_.num_params());
       break;
-    default:
-      LOG(FATAL) << "unknown parameter type";
   }
 }
 
@@ -1174,9 +1172,6 @@ void CodegenLLVM::visit(Binop &binop)
       case bpftrace::Parser::token::LAND:
       case bpftrace::Parser::token::LOR:
         LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
-      default:
-        LOG(FATAL) << "missing codegen (LLVM) to string operator \""
-                   << opstr(binop) << "\"";
     }
   }
   // Using signed extension will result in -1 which will likely confuse users
@@ -1281,8 +1276,6 @@ void CodegenLLVM::visit(Unop &unop)
         b_.CreateLifetimeEnd(dst);
         break;
       }
-      default:
-        LOG(FATAL) << "missing codegen for unary operator " << opstr(unop);
     }
   }
   else if (type.IsPtrTy())
@@ -1813,8 +1806,6 @@ void CodegenLLVM::visit(Jump &jump)
     case bpftrace::Parser::token::CONTINUE:
       b_.CreateBr(std::get<0>(loops_.back()));
       break;
-    default:
-      throw std::runtime_error("Unknown jump: " + opstr(jump));
   }
 
   // LLVM doesn't like having instructions after an unconditional branch (segv)

@@ -403,9 +403,9 @@ std::string opstr(Jump &jump)
       return "break";
     case bpftrace::Parser::token::CONTINUE:
       return "continue";
-    default:
-      throw std::runtime_error("Unknown jump");
   }
+
+  return {}; // unreached
 }
 
 std::string opstr(Binop &binop)
@@ -429,10 +429,9 @@ std::string opstr(Binop &binop)
     case bpftrace::Parser::token::BAND:  return "&";
     case bpftrace::Parser::token::BOR:   return "|";
     case bpftrace::Parser::token::BXOR:  return "^";
-    default:
-      LOG(FATAL) << "unknown binary operator";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 std::string opstr(Unop &unop)
@@ -444,10 +443,9 @@ std::string opstr(Unop &unop)
     case bpftrace::Parser::token::MUL: return "dereference";
     case bpftrace::Parser::token::INCREMENT: return "++";
     case bpftrace::Parser::token::DECREMENT: return "--";
-    default:
-      LOG(FATAL) << "unknown unary operator";
   }
-  // lgtm[cpp/missing-return]
+
+  return {}; // unreached
 }
 
 std::string AttachPoint::name(const std::string &attach_target,

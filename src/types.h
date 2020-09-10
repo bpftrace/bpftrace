@@ -463,10 +463,9 @@ struct hash<bpftrace::StackType>
         return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
       case bpftrace::StackMode::perf:
         return std::hash<std::string>()("perf#" + to_string(obj.limit));
-      // TODO (mmarchini): enable -Wswitch-enum and disable -Wswitch-default
-      default:
-        abort();
     }
+
+    return {}; // unreached
   }
 };
 
