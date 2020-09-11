@@ -1605,7 +1605,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     else if (type.IsIntTy())
     {
-      unop.type = CreateInteger(8 * type.size, type.IsSigned());
+      unop.type = CreateUInt64();
     }
   }
   else if (unop.op == Parser::token::LNOT) {
