@@ -216,7 +216,7 @@ jobs:
         -e EMBED_BINUTILS=${EMBED_BINUTILS}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
-        -c "strip --keep-symbol BEGIN_trigger $(pwd)/build-embedded/src/bpftrace"
+        -c "strip --keep-symbol BEGIN_trigger --keep-symbol END_trigger $(pwd)/build-embedded/src/bpftrace"
 
     - uses: actions/upload-artifact@v1
       with:
