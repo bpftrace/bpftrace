@@ -1332,14 +1332,13 @@ void CodegenLLVM::visit(Unop &unop)
       }
       case bpftrace::Parser::token::MUL:
       {
-        int size = type.size;
-        if (type.IsPtrTy())
-        {
-          // When dereferencing a 32-bit integer, only read in 32-bits, etc.
-          size = type.GetPointeeTy()->size;
-        }
+        // When dereferencing a 32-bit integer, only read in 32-bits, etc.
+        int size = type.IsPtrTy() ? type.GetPointeeTy()->GetSize()
+                                  : type.GetSize();
+        auto as =  type.GetAS();
+
         AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
-        b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
+        b_.CreateProbeRead(ctx_, dst, size, expr_, as, unop.loc);
         expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
                                  b_.getInt64Ty(),
                                  type.IsSigned());
