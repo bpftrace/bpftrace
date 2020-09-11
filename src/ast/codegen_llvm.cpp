@@ -600,13 +600,13 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "kaddr")
   {
     uint64_t addr;
-    auto &name = static_cast<String&>(*call.vargs->at(0)).str;
+    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     addr = bpftrace_.resolve_kname(name);
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "uaddr")
   {
-    auto &name = static_cast<String&>(*call.vargs->at(0)).str;
+    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     struct symbol sym = {};
     int err =
         bpftrace_.resolve_uname(name, &sym, current_attach_point_->target);
@@ -618,7 +618,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "cgroupid")
   {
     uint64_t cgroupid;
-    auto &path = static_cast<String&>(*call.vargs->at(0)).str;
+    auto path = bpftrace_.get_string_literal(call.vargs->at(0));
     cgroupid = bpftrace_.resolve_cgroupid(path);
     expr_ = b_.getInt64(cgroupid);
   }
@@ -766,7 +766,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "reg")
   {
-    auto &reg_name = static_cast<String&>(*call.vargs->at(0)).str;
+    auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
     int offset = arch::offset(reg_name);
     if (offset == -1)
     {
@@ -919,7 +919,7 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     if (arg.type.IsStringTy())
     {
-      auto signame = static_cast<String&>(arg).str;
+      auto signame = bpftrace_.get_string_literal(&arg);
       int sigid = signal_name_to_num(signame);
       // Should be caught in semantic analyser
       if (sigid < 1) {
@@ -949,7 +949,7 @@ void CodegenLLVM::visit(Call &call)
     {
       auto scoped_del = accept(left_arg);
       Value *left_string = expr_;
-      const auto& string_literal = static_cast<String *>(right_arg)->str;
+      const auto string_literal = bpftrace_.get_string_literal(right_arg);
       expr_ = b_.CreateStrncmp(
           ctx_, left_string, left_as, string_literal, size, call.loc, false);
     }
@@ -957,7 +957,7 @@ void CodegenLLVM::visit(Call &call)
     {
       auto scoped_del = accept(right_arg);
       Value *right_string = expr_;
-      const auto& string_literal = static_cast<String *>(left_arg)->str;
+      const auto string_literal = bpftrace_.get_string_literal(left_arg);
       expr_ = b_.CreateStrncmp(
           ctx_, right_string, right_as, string_literal, size, call.loc, false);
     }
@@ -1056,14 +1056,14 @@ void CodegenLLVM::visit(Binop &binop)
     if (binop.right->is_literal)
     {
       auto scoped_del = accept(binop.left);
-      string_literal = static_cast<String *>(binop.right)->str;
+      string_literal = bpftrace_.get_string_literal(binop.right);
       expr_ = b_.CreateStrcmp(
           ctx_, expr_, left_as, string_literal, binop.loc, inverse);
     }
     else if (binop.left->is_literal)
     {
       auto scoped_del = accept(binop.right);
-      string_literal = static_cast<String *>(binop.left)->str;
+      string_literal = bpftrace_.get_string_literal(binop.left);
       expr_ = b_.CreateStrcmp(
           ctx_, expr_, right_as, string_literal, binop.loc, inverse);
     }

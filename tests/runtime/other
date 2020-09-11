@@ -143,6 +143,11 @@ RUN bpftrace -e 'BEGIN { printf("-%s-\n", str($1)); exit() }' 1
 EXPECT -1-
 TIMEOUT 1
 
+NAME positional as string literal
+RUN bpftrace -e 'BEGIN { @ = kaddr(str($1)); exit() }' vfs_read
+EXPECT Attaching 1 probe...
+TIMEOUT 5
+
 NAME positional arg count
 RUN bpftrace -v -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exit();}' "one" 2
 EXPECT got 2 args: one 2

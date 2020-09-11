@@ -538,17 +538,21 @@ void SemanticAnalyser::visit(Call &call)
       call.type = CreateString(bpftrace_.strlen_);
       if (has_pos_param)
       {
-        auto binop = dynamic_cast<Binop *>(arg);
-        if (!(dynamic_cast<PositionalParameter *>(arg) ||
-              (binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
-                         dynamic_cast<PositionalParameter *>(binop->right)))))
+        if (dynamic_cast<PositionalParameter *>(arg))
+          call.is_literal = true;
+        else
         {
-          // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
-          LOG(ERROR, call.loc, err_)
-              << call.func << "() only accepts positional parameters"
-              << " directly or with a single constant offset added";
+          auto binop = dynamic_cast<Binop *>(arg);
+          if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
+                          dynamic_cast<PositionalParameter *>(binop->right))))
+          {
+            // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
+            LOG(ERROR, call.loc, err_)
+                << call.func << "() only accepts positional parameters"
+                << " directly or with a single constant offset added";
+          }
+          has_pos_param = false;
         }
-        has_pos_param = false;
       }
 
       if (is_final_pass() && call.vargs->size() > 1) {
@@ -676,9 +680,8 @@ void SemanticAnalyser::visit(Call &call)
     {
       if (check_arg(call, Type::string, 1, true))
       {
-        auto &join_delim_arg = *call.vargs->at(1);
-        String &join_delim_str = static_cast<String &>(join_delim_arg);
-        bpftrace_.join_args_.push_back(join_delim_str.str);
+        auto join_delim_str = bpftrace_.get_string_literal(call.vargs->at(1));
+        bpftrace_.join_args_.push_back(join_delim_str);
       }
     }
     else
@@ -699,8 +702,7 @@ void SemanticAnalyser::visit(Call &call)
       }
 
       if (check_arg(call, Type::string, 0, true)) {
-        auto &arg = *call.vargs->at(0);
-        auto &reg_name = static_cast<String&>(arg).str;
+        auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
         int offset = arch::offset(reg_name);;
         if (offset == -1) {
           LOG(ERROR, call.loc, err_)
@@ -727,7 +729,7 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     std::vector<int> sizes;
-    auto &name = static_cast<String &>(*call.vargs->at(0)).str;
+    auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     for (auto &ap : *probe_->attach_points)
     {
       ProbeType type = probetype(ap->provider);
@@ -975,7 +977,7 @@ void SemanticAnalyser::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     if (arg.type.IsStringTy() && arg.is_literal)
     {
-      auto sig = static_cast<String&>(arg).str;
+      auto sig = bpftrace_.get_string_literal(&arg);
       if (signal_name_to_num(sig) < 1) {
         LOG(ERROR, call.loc, err_) << sig << " is not a valid signal";
       }
@@ -2546,6 +2548,15 @@ bool SemanticAnalyser::check_arg(const Call &call, Type type, int arg_num, bool 
   {
     LOG(ERROR, call.loc, err_) << call.func << "() expects a " << type
                                << " literal (" << arg.type.type << " provided)";
+    if (type == Type::string)
+    {
+      // If the call requires a string literal and a positional parameter is
+      // given, tell user to use str()
+      auto *pos_param = dynamic_cast<PositionalParameter *>(&arg);
+      if (pos_param)
+        LOG(ERROR) << "Use str($" << pos_param->n << ") to treat $"
+                   << pos_param->n << " as a string";
+    }
     return false;
   }
   else if (is_final_pass() && arg.type.type != type) {
@@ -2562,7 +2573,7 @@ bool SemanticAnalyser::check_symbol(const Call &call, int arg_num __attribute__(
   if (!call.vargs)
     return false;
 
-  auto &arg = static_cast<String&>(*call.vargs->at(0)).str;
+  auto arg = bpftrace_.get_string_literal(call.vargs->at(0));
 
   std::string re = "^[a-zA-Z0-9./_-]+$";
   bool is_valid = std::regex_match(arg, std::regex(re));
