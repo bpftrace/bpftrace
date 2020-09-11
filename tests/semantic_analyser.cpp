@@ -1329,6 +1329,9 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%d\", $#); }", 0);
   test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 10);
 
+  // Parameters can be used as string literals
+  test(bpftrace, "kprobe:f { printf(\"%d\", cgroupid(str($2))); }", 0);
+
   Driver driver(bpftrace);
   test(driver, "k:f { $1 }", 0);
   auto stmt = static_cast<ast::ExprStatement *>(
