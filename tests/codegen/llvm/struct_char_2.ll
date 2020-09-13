@@ -21,7 +21,7 @@ entry:
   %3 = load i64, i64* %"$foo"
   %4 = add i64 %3, 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %"struct Foo.x")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* %"struct Foo.x", i32 1, i64 %4)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* %"struct Foo.x", i32 1, i64 %4)
   %5 = load i8, i8* %"struct Foo.x"
   %6 = sext i8 %5 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %"struct Foo.x")

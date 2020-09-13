@@ -24,7 +24,7 @@ entry:
   %6 = add [2 x i8]* %"$foo", i64 0
   %7 = bitcast i16* %"struct Foo.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i16*, i32, [2 x i8]*)*)(i16* %"struct Foo.x", i32 2, [2 x i8]* %6)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i16*, i32, [2 x i8]*)*)(i16* %"struct Foo.x", i32 2, [2 x i8]* %6)
   %8 = load i16, i16* %"struct Foo.x"
   %9 = sext i16 %8 to i64
   %10 = bitcast i16* %"struct Foo.x" to i8*

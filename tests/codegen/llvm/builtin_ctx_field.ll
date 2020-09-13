@@ -85,7 +85,7 @@ entry:
   %35 = load volatile i64, i64* %34
   %36 = add i64 %35, 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %"struct c.c")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, i64)*)(i8* %"struct c.c", i32 1, i64 %36)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* %"struct c.c", i32 1, i64 %36)
   %37 = load i8, i8* %"struct c.c"
   %38 = sext i8 %37 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %"struct c.c")

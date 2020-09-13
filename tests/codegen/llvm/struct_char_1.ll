@@ -23,7 +23,7 @@ entry:
   call void @llvm.memcpy.p0i8.p64i8.i64(i8* align 1 %4, i8 addrspace(64)* align 1 %5, i64 1, i1 false)
   %6 = add [1 x i8]* %"$foo", i64 0
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %"struct Foo.x")
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i8*, i32, [1 x i8]*)*)(i8* %"struct Foo.x", i32 1, [1 x i8]* %6)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, [1 x i8]*)*)(i8* %"struct Foo.x", i32 1, [1 x i8]* %6)
   %7 = load i8, i8* %"struct Foo.x"
   %8 = sext i8 %7 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %"struct Foo.x")

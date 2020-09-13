@@ -40,7 +40,7 @@ entry:
   %10 = add [4 x i8]* %"$foo", i64 0
   %11 = bitcast i32* %"struct Foo.m" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m", i32 4, [4 x i8]* %10)
+  %probe_read_user = call i64 inttoptr (i64 112 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m", i32 4, [4 x i8]* %10)
   %12 = load i32, i32* %"struct Foo.m"
   %13 = sext i32 %12 to i64
   %14 = bitcast i32* %"struct Foo.m" to i8*
@@ -71,7 +71,7 @@ entry:
   %18 = add [4 x i8]* %"$foo", i64 0
   %19 = bitcast i32* %"struct Foo.m6" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
-  %probe_read7 = call i64 inttoptr (i64 4 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m6", i32 4, [4 x i8]* %18)
+  %probe_read_user7 = call i64 inttoptr (i64 112 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m6", i32 4, [4 x i8]* %18)
   %20 = load i32, i32* %"struct Foo.m6"
   %21 = sext i32 %20 to i64
   %22 = bitcast i32* %"struct Foo.m6" to i8*
@@ -96,7 +96,7 @@ entry:
   %26 = add [4 x i8]* %"$foo", i64 0
   %27 = bitcast i32* %"struct Foo.m8" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %27)
-  %probe_read9 = call i64 inttoptr (i64 4 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m8", i32 4, [4 x i8]* %26)
+  %probe_read_user9 = call i64 inttoptr (i64 112 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m8", i32 4, [4 x i8]* %26)
   %28 = load i32, i32* %"struct Foo.m8"
   %29 = sext i32 %28 to i64
   %30 = bitcast i32* %"struct Foo.m8" to i8*
@@ -127,7 +127,7 @@ entry:
   %34 = add [4 x i8]* %"$foo", i64 0
   %35 = bitcast i32* %"struct Foo.m16" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %35)
-  %probe_read17 = call i64 inttoptr (i64 4 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m16", i32 4, [4 x i8]* %34)
+  %probe_read_user17 = call i64 inttoptr (i64 112 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo.m16", i32 4, [4 x i8]* %34)
   %36 = load i32, i32* %"struct Foo.m16"
   %37 = sext i32 %36 to i64
   %38 = bitcast i32* %"struct Foo.m16" to i8*

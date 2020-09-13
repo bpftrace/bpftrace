@@ -25,14 +25,14 @@ entry:
   %6 = add [8 x i8]* %"$foo", i64 0
   %7 = bitcast i64* %"struct Foo.bar" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i64*, i32, [8 x i8]*)*)(i64* %"struct Foo.bar", i32 8, [8 x i8]* %6)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, [8 x i8]*)*)(i64* %"struct Foo.bar", i32 8, [8 x i8]* %6)
   %8 = load i64, i64* %"struct Foo.bar"
   %9 = bitcast i64* %"struct Foo.bar" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   %10 = add i64 %8, 0
   %11 = bitcast i32* %"struct Bar.x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
-  %probe_read1 = call i64 inttoptr (i64 4 to i64 (i32*, i32, i64)*)(i32* %"struct Bar.x", i32 4, i64 %10)
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to i64 (i32*, i32, i64)*)(i32* %"struct Bar.x", i32 4, i64 %10)
   %12 = load i32, i32* %"struct Bar.x"
   %13 = sext i32 %12 to i64
   %14 = bitcast i32* %"struct Bar.x" to i8*

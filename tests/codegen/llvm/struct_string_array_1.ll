@@ -23,7 +23,7 @@ entry:
   %6 = add [32 x i8]* %"$foo", i64 0
   %7 = bitcast [32 x i8]* %"struct Foo.str" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
-  %probe_read = call i64 inttoptr (i64 4 to i64 ([32 x i8]*, i32, [32 x i8]*)*)([32 x i8]* %"struct Foo.str", i32 32, [32 x i8]* %6)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([32 x i8]*, i32, [32 x i8]*)*)([32 x i8]* %"struct Foo.str", i32 32, [32 x i8]* %6)
   %8 = bitcast i64* %"@mystr_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i64 0, i64* %"@mystr_key"

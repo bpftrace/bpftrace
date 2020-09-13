@@ -16,7 +16,7 @@ entry:
   %arg0 = load volatile i64, i64* %2
   %3 = bitcast i16* %deref to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i16*, i32, i64)*)(i16* %deref, i32 2, i64 %arg0)
+  %probe_read_user = call i64 inttoptr (i64 112 to i64 (i16*, i32, i64)*)(i16* %deref, i32 2, i64 %arg0)
   %4 = load i16, i16* %deref
   %5 = sext i16 %4 to i64
   %6 = bitcast i16* %deref to i8*

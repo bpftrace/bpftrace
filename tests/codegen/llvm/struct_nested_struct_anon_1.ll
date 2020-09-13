@@ -25,7 +25,7 @@ entry:
   %7 = add [4 x i8]* %6, i64 0
   %8 = bitcast i32* %"struct Foo::(anonymous at definitions.h:2:14).x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %probe_read = call i64 inttoptr (i64 4 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo::(anonymous at definitions.h:2:14).x", i32 4, [4 x i8]* %7)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i32*, i32, [4 x i8]*)*)(i32* %"struct Foo::(anonymous at definitions.h:2:14).x", i32 4, [4 x i8]* %7)
   %9 = load i32, i32* %"struct Foo::(anonymous at definitions.h:2:14).x"
   %10 = sext i32 %9 to i64
   %11 = bitcast i32* %"struct Foo::(anonymous at definitions.h:2:14).x" to i8*
