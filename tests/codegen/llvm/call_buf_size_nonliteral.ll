@@ -29,7 +29,7 @@ entry:
   %9 = getelementptr i64, i64* %8, i64 14
   %arg0 = load volatile i64, i64* %9
   %10 = zext i8 %5 to i32
-  %probe_read = call i64 inttoptr (i64 4 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %6, i32 %10, i64 %arg0)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %6, i32 %10, i64 %arg0)
   %11 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
   store i64 0, i64* %"@x_key"

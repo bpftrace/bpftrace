@@ -25,7 +25,7 @@ entry:
   %arg0 = load volatile i64, i64* %6
   %7 = load i64, i64* %strlen
   %8 = trunc i64 %7 to i32
-  %probe_read_str = call i64 inttoptr (i64 45 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %8, i64 %arg0)
+  %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %8, i64 %arg0)
   %9 = bitcast i64* %strlen to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   %10 = bitcast i64* %"@x_key" to i8*
