@@ -30,6 +30,8 @@ and this project adheres to
   - [#1485](https://github.com/iovisor/bpftrace/pull/1485)
 - Support multi-matched globbed targets for uprobe and ustd probes
   - [#1499](https://github.com/iovisor/bpftrace/pull/1499)
+- Positional parameters: support numbers as strings and params as string literals
+  - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
@@ -60,6 +62,8 @@ and this project adheres to
   - [#1450](https://github.com/iovisor/bpftrace/pull/1450)
 - Fix wrong setting of vmlinux_location.raw when offset kprobe used
   - [#1530](https://github.com/iovisor/bpftrace/pull/1530)
+- Fix pointer arithmetic for positional parameters
+  - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
