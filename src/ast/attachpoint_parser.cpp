@@ -26,9 +26,9 @@ int AttachPointParser::parse()
     return 1;
 
   uint32_t failed = 0;
-  for (Probe *probe : *(root_->probes))
+  for (auto &probe : *(root_->probes))
   {
-    for (AttachPoint *ap : *(probe->attach_points))
+    for (auto &ap : *(probe->attach_points))
     {
       if (parse_attachpoint(*ap))
       {

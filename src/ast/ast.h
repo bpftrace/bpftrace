@@ -37,7 +37,7 @@ public:
   bool is_variable = false;
   bool is_map = false;
 };
-using ExpressionList = std::vector<Expression *>;
+using ExpressionList = std::vector<std::unique_ptr<Expression>>;
 
 class Integer : public Expression {
 public:
@@ -102,10 +102,12 @@ class Call : public Expression {
 public:
   explicit Call(const std::string &func);
   explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs);
-  Call(const std::string &func, ExpressionList *vargs, location loc);
+  Call(const std::string &func, std::unique_ptr<ExpressionList> vargs);
+  Call(const std::string &func,
+       std::unique_ptr<ExpressionList> vargs,
+       location loc);
   std::string func;
-  ExpressionList *vargs;
+  std::unique_ptr<ExpressionList> vargs;
 
   void accept(Visitor &v) override;
 };
@@ -113,10 +115,13 @@ public:
 class Map : public Expression {
 public:
   explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, ExpressionList *vargs);
-  Map(const std::string &ident, ExpressionList *vargs, location loc);
+  Map(const std::string &ident, std::unique_ptr<ExpressionList> vargs);
+  Map(const std::string &ident,
+      std::unique_ptr<ExpressionList> vargs,
+      location loc);
+  explicit Map(const Map &m);
   std::string ident;
-  ExpressionList *vargs;
+  std::unique_ptr<ExpressionList> vargs;
   bool skip_key_validation = false;
 
   void accept(Visitor &v) override;
@@ -126,6 +131,7 @@ class Variable : public Expression {
 public:
   explicit Variable(const std::string &ident);
   explicit Variable(const std::string &ident, location loc);
+  explicit Variable(const Variable &var);
   std::string ident;
 
   void accept(Visitor &v) override;
@@ -133,8 +139,11 @@ public:
 
 class Binop : public Expression {
 public:
-  Binop(Expression *left, int op, Expression *right, location loc);
-  Expression *left, *right;
+  Binop(std::unique_ptr<Expression> left,
+        int op,
+        std::unique_ptr<Expression> right,
+        location loc);
+  std::unique_ptr<Expression> left, right;
   int op;
 
   void accept(Visitor &v) override;
@@ -142,12 +151,12 @@ public:
 
 class Unop : public Expression {
 public:
-  Unop(int op, Expression *expr, location loc = location());
+  Unop(int op, std::unique_ptr<Expression> expr, location loc = location());
   Unop(int op,
-       Expression *expr,
+       std::unique_ptr<Expression> expr,
        bool is_post_op = false,
        location loc = location());
-  Expression *expr;
+  std::unique_ptr<Expression> expr;
   int op;
   bool is_post_op;
 
@@ -156,10 +165,12 @@ public:
 
 class FieldAccess : public Expression {
 public:
-  FieldAccess(Expression *expr, const std::string &field);
-  FieldAccess(Expression *expr, const std::string &field, location loc);
-  FieldAccess(Expression *expr, ssize_t index, location loc);
-  Expression *expr;
+  FieldAccess(std::unique_ptr<Expression> expr, const std::string &field);
+  FieldAccess(std::unique_ptr<Expression> expr,
+              const std::string &field,
+              location loc);
+  FieldAccess(std::unique_ptr<Expression> expr, ssize_t index, location loc);
+  std::unique_ptr<Expression> expr;
   std::string field;
   ssize_t index = -1;
 
@@ -168,24 +179,29 @@ public:
 
 class ArrayAccess : public Expression {
 public:
-  ArrayAccess(Expression *expr, Expression *indexpr);
-  ArrayAccess(Expression *expr, Expression *indexpr, location loc);
-  Expression *expr;
-  Expression *indexpr;
+  ArrayAccess(std::unique_ptr<Expression> expr,
+              std::unique_ptr<Expression> indexpr);
+  ArrayAccess(std::unique_ptr<Expression> expr,
+              std::unique_ptr<Expression> indexpr,
+              location loc);
+  std::unique_ptr<Expression> expr;
+  std::unique_ptr<Expression> indexpr;
 
   void accept(Visitor &v) override;
 };
 
 class Cast : public Expression {
 public:
-  Cast(const std::string &type, bool is_pointer, Expression *expr);
   Cast(const std::string &type,
        bool is_pointer,
-       Expression *expr,
+       std::unique_ptr<Expression> expr);
+  Cast(const std::string &type,
+       bool is_pointer,
+       std::unique_ptr<Expression> expr,
        location loc);
   std::string cast_type;
   bool is_pointer;
-  Expression *expr;
+  std::unique_ptr<Expression> expr;
 
   void accept(Visitor &v) override;
 };
@@ -193,8 +209,8 @@ public:
 class Tuple : public Expression
 {
 public:
-  Tuple(ExpressionList *elems, location loc);
-  ExpressionList *elems;
+  Tuple(std::unique_ptr<ExpressionList> elems, location loc);
+  std::unique_ptr<ExpressionList> elems;
 
   void accept(Visitor &v) override;
 };
@@ -204,53 +220,62 @@ public:
   Statement() = default;
   Statement(location loc);
 };
-using StatementList = std::vector<Statement *>;
+using StatementList = std::vector<std::unique_ptr<Statement>>;
 
 class ExprStatement : public Statement {
 public:
-  explicit ExprStatement(Expression *expr);
-  explicit ExprStatement(Expression *expr, location loc);
-  Expression *expr;
+  explicit ExprStatement(std::unique_ptr<Expression> expr);
+  explicit ExprStatement(std::unique_ptr<Expression> expr, location loc);
+  std::unique_ptr<Expression> expr;
 
   void accept(Visitor &v) override;
 };
 
 class AssignMapStatement : public Statement {
 public:
-  AssignMapStatement(Map *map, Expression *expr, location loc = location());
-  Map *map;
-  Expression *expr;
+  AssignMapStatement(std::unique_ptr<Map> map,
+                     std::unique_ptr<Expression> expr,
+                     location loc = location());
+  std::unique_ptr<Map> map;
+  std::unique_ptr<Expression> expr;
 
   void accept(Visitor &v) override;
 };
 
 class AssignVarStatement : public Statement {
 public:
-  AssignVarStatement(Variable *var, Expression *expr);
-  AssignVarStatement(Variable *var, Expression *expr, location loc);
-  Variable *var;
-  Expression *expr;
+  AssignVarStatement(std::unique_ptr<Variable> var,
+                     std::unique_ptr<Expression> expr);
+  AssignVarStatement(std::unique_ptr<Variable> var,
+                     std::unique_ptr<Expression> expr,
+                     location loc);
+  std::unique_ptr<Variable> var;
+  std::unique_ptr<Expression> expr;
 
   void accept(Visitor &v) override;
 };
 
 class If : public Statement {
 public:
-  If(Expression *cond, StatementList *stmts);
-  If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
-  Expression *cond;
-  StatementList *stmts = nullptr;
-  StatementList *else_stmts = nullptr;
+  If(std::unique_ptr<Expression> cond, std::unique_ptr<StatementList> stmts);
+  If(std::unique_ptr<Expression> cond,
+     std::unique_ptr<StatementList> stmts,
+     std::unique_ptr<StatementList> else_stmts);
+  std::unique_ptr<Expression> cond;
+  std::unique_ptr<StatementList> stmts = nullptr;
+  std::unique_ptr<StatementList> else_stmts = nullptr;
 
   void accept(Visitor &v) override;
 };
 
 class Unroll : public Statement {
 public:
-  Unroll(Expression *expr, StatementList *stmts, location loc);
+  Unroll(std::unique_ptr<Expression> expr,
+         std::unique_ptr<StatementList> stmts,
+         location loc);
   long int var = 0;
-  Expression *expr;
-  StatementList *stmts;
+  std::unique_ptr<Expression> expr;
+  std::unique_ptr<StatementList> stmts;
 
   void accept(Visitor &v) override;
 };
@@ -270,18 +295,23 @@ public:
 
 class Predicate : public Node {
 public:
-  explicit Predicate(Expression *expr);
-  explicit Predicate(Expression *expr, location loc);
-  Expression *expr;
+  explicit Predicate(std::unique_ptr<Expression> expr);
+  explicit Predicate(std::unique_ptr<Expression> expr, location loc);
+  std::unique_ptr<Expression> expr;
 
   void accept(Visitor &v) override;
 };
 
 class Ternary : public Expression {
 public:
-  Ternary(Expression *cond, Expression *left, Expression *right);
-  Ternary(Expression *cond, Expression *left, Expression *right, location loc);
-  Expression *cond, *left, *right;
+  Ternary(std::unique_ptr<Expression> cond,
+          std::unique_ptr<Expression> left,
+          std::unique_ptr<Expression> right);
+  Ternary(std::unique_ptr<Expression> cond,
+          std::unique_ptr<Expression> left,
+          std::unique_ptr<Expression> right,
+          location loc);
+  std::unique_ptr<Expression> cond, left, right;
 
   void accept(Visitor &v) override;
 };
@@ -289,12 +319,14 @@ public:
 class While : public Statement
 {
 public:
-  While(Expression *cond, StatementList *stmts, location loc)
-      : cond(cond), stmts(stmts), loc(loc)
+  While(std::unique_ptr<Expression> cond,
+        std::unique_ptr<StatementList> stmts,
+        location loc)
+      : cond(std::move(cond)), stmts(std::move(stmts)), loc(loc)
   {
   }
-  Expression *cond;
-  StatementList *stmts = nullptr;
+  std::unique_ptr<Expression> cond;
+  std::unique_ptr<StatementList> stmts = nullptr;
   location loc;
 
   void accept(Visitor &v) override;
@@ -329,15 +361,17 @@ public:
 private:
   std::map<std::string, int> index_;
 };
-using AttachPointList = std::vector<AttachPoint *>;
+using AttachPointList = std::vector<std::unique_ptr<AttachPoint>>;
 
 class Probe : public Node {
 public:
-  Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
+  Probe(std::unique_ptr<AttachPointList> attach_points,
+        std::unique_ptr<Predicate> pred,
+        std::unique_ptr<StatementList> stmts);
 
-  AttachPointList *attach_points;
-  Predicate *pred;
-  StatementList *stmts;
+  std::unique_ptr<AttachPointList> attach_points;
+  std::unique_ptr<Predicate> pred;
+  std::unique_ptr<StatementList> stmts;
 
   void accept(Visitor &v) override;
   std::string name() const;
@@ -349,13 +383,13 @@ public:
 private:
   int index_ = 0;
 };
-using ProbeList = std::vector<Probe *>;
+using ProbeList = std::vector<std::unique_ptr<Probe>>;
 
 class Program : public Node {
 public:
-  Program(const std::string &c_definitions, ProbeList *probes);
+  Program(const std::string &c_definitions, std::unique_ptr<ProbeList> probes);
   std::string c_definitions;
-  ProbeList *probes;
+  std::unique_ptr<ProbeList> probes;
 
   void accept(Visitor &v) override;
 };

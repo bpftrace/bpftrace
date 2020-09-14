@@ -372,17 +372,17 @@ static void test(BPFtrace &bpftrace,
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
   // Test that generated code compiles cleanly

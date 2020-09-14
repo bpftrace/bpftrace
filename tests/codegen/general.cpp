@@ -45,10 +45,10 @@ TEST(codegen, populate_sections)
 
   ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   auto bpforc = codegen.compile();
 
   // Check sections are populated
@@ -71,13 +71,13 @@ TEST(codegen, printf_offsets)
                 "}"),
             0);
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   codegen.generate_ir();
 
   EXPECT_EQ(bpftrace.printf_args_.size(), 1U);
@@ -116,9 +116,9 @@ TEST(codegen, probe_count)
 
   ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   codegen.generate_ir();
 }
 } // namespace codegen

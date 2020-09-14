@@ -106,7 +106,8 @@ void Printer::visit(Call &call)
 
   ++depth_;
   if (call.vargs) {
-    for (Expression *expr : *call.vargs) {
+    for (auto &expr : *call.vargs)
+    {
       expr->accept(*this);
     }
   }
@@ -120,7 +121,8 @@ void Printer::visit(Map &map)
 
   ++depth_;
   if (map.vargs) {
-    for (Expression *expr : *map.vargs) {
+    for (auto &expr : *map.vargs)
+    {
       expr->accept(*this);
     }
   }
@@ -222,7 +224,7 @@ void Printer::visit(Tuple &tuple)
   out_ << indent << "tuple:" << std::endl;
 
   ++depth_;
-  for (Expression *expr : *tuple.elems)
+  for (auto &expr : *tuple.elems)
     expr->accept(*this);
   --depth_;
 }
@@ -266,13 +268,15 @@ void Printer::visit(If &if_block)
   ++depth_;
   out_ << indent << " then" << std::endl;
 
-  for (Statement *stmt : *if_block.stmts) {
+  for (auto &stmt : *if_block.stmts)
+  {
     stmt->accept(*this);
   }
 
   if (if_block.else_stmts) {
     out_ << indent << " else" << std::endl;
-    for (Statement *stmt : *if_block.else_stmts) {
+    for (auto &stmt : *if_block.else_stmts)
+    {
       stmt->accept(*this);
     }
   }
@@ -289,7 +293,8 @@ void Printer::visit(Unroll &unroll)
   out_ << indent << " block" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : *unroll.stmts) {
+  for (auto &stmt : *unroll.stmts)
+  {
     stmt->accept(*this);
   }
   depth_ -= 2;
@@ -307,7 +312,7 @@ void Printer::visit(While &while_block)
   ++depth_;
   out_ << indent << " )" << std::endl;
 
-  for (Statement *stmt : *while_block.stmts)
+  for (auto &stmt : *while_block.stmts)
   {
     stmt->accept(*this);
   }
@@ -337,7 +342,8 @@ void Printer::visit(AttachPoint &ap)
 
 void Printer::visit(Probe &probe)
 {
-  for (AttachPoint *ap : *probe.attach_points) {
+  for (auto &ap : *probe.attach_points)
+  {
     ap->accept(*this);
   }
 
@@ -345,7 +351,8 @@ void Printer::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  for (Statement *stmt : *probe.stmts) {
+  for (auto &stmt : *probe.stmts)
+  {
     stmt->accept(*this);
   }
   --depth_;
@@ -360,7 +367,7 @@ void Printer::visit(Program &program)
   out_ << indent << "Program" << std::endl;
 
   ++depth_;
-  for (Probe *probe : *program.probes)
+  for (auto &probe : *program.probes)
     probe->accept(*this);
   --depth_;
 }

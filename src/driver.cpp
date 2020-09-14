@@ -41,7 +41,7 @@ int Driver::parse()
   yy_scan_string(Log::get().get_source().c_str(), scanner_);
   parser_->parse();
 
-  ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
+  ast::AttachPointParser ap_parser(root_.get(), bpftrace_, out_);
   if (ap_parser.parse())
     failed_ = true;
 

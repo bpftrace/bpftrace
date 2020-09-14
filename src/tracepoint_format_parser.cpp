@@ -16,10 +16,10 @@ std::set<std::string> TracepointFormatParser::struct_list;
 bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   std::vector<ast::Probe*> probes_with_tracepoint;
-  for (ast::Probe *probe : *program->probes)
-    for (ast::AttachPoint *ap : *probe->attach_points)
+  for (auto &probe : *program->probes)
+    for (auto &ap : *probe->attach_points)
       if (ap->provider == "tracepoint") {
-        probes_with_tracepoint.push_back(probe);
+        probes_with_tracepoint.push_back(probe.get());
         continue;
       }
 
@@ -33,7 +33,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
   {
     n.analyse(probe);
 
-    for (ast::AttachPoint *ap : *probe->attach_points)
+    for (auto &ap : *probe->attach_points)
     {
       if (ap->provider == "tracepoint")
       {

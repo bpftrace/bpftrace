@@ -196,7 +196,7 @@ BPFtrace::~BPFtrace()
 
 int BPFtrace::add_probe(ast::Probe &p)
 {
-  for (auto attach_point : *p.attach_points)
+  for (auto &attach_point : *p.attach_points)
   {
     if (attach_point->provider == "BEGIN" || attach_point->provider == "END")
     {

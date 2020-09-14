@@ -341,7 +341,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       if (type == ProbeType::tracepoint)
       {
         probe_->need_expansion = true;
-        builtin_args_tracepoint(attach_point, builtin);
+        builtin_args_tracepoint(attach_point.get(), builtin);
       }
     }
 
@@ -401,7 +401,8 @@ void SemanticAnalyser::visit(Call &call)
   func_setter scope_bound_func_setter{ *this, call.func };
 
   if (call.vargs) {
-    for (Expression *expr : *call.vargs) {
+    for (auto &expr : *call.vargs)
+    {
       expr->accept(*this);
     }
   }
@@ -466,7 +467,7 @@ void SemanticAnalyser::visit(Call &call)
       // store args for later passing to bpftrace::Map
       auto search = map_args_.find(call.map->ident);
       if (search == map_args_.end())
-        map_args_.insert({call.map->ident, *call.vargs});
+        map_args_.insert({ call.map->ident, call.vargs.get() });
     }
     call.type = CreateLhist();
   }
@@ -538,7 +539,9 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
       }
-      if (auto *param = dynamic_cast<PositionalParameter*>(call.vargs->at(0))) {
+      if (auto *param = dynamic_cast<PositionalParameter *>(
+              call.vargs->at(0).get()))
+      {
         param->is_in_str = true;
       }
     }
@@ -592,7 +595,8 @@ void SemanticAnalyser::visit(Call &call)
     buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
 
-    if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
+    if (auto *param = dynamic_cast<PositionalParameter *>(
+            call.vargs->at(0).get()))
     {
       param->is_in_str = true;
     }
@@ -616,9 +620,9 @@ void SemanticAnalyser::visit(Call &call)
     if (!check_varargs(call, 1, 2))
       return;
 
-    auto arg = call.vargs->at(0);
+    auto arg = call.vargs->at(0).get();
     if (call.vargs->size() == 2) {
-      arg = call.vargs->at(1);
+      arg = call.vargs->at(1).get();
       check_arg(call, Type::integer, 0);
     }
 
@@ -1121,7 +1125,7 @@ void SemanticAnalyser::visit(Map &map)
 
   if (map.vargs) {
     for (unsigned int i = 0; i < map.vargs->size(); i++){
-      Expression * expr = map.vargs->at(i);
+      Expression *expr = map.vargs->at(i).get();
       expr->accept(*this);
 
       // Insert a cast to 64 bits if needed by injecting
@@ -1129,10 +1133,11 @@ void SemanticAnalyser::visit(Map &map)
       if (expr->type.IsIntTy() && expr->type.size < 8)
       {
         std::string type = expr->type.IsSigned() ? "int64" : "uint64";
-        Expression * cast = new ast::Cast(type, false, expr);
+        auto cast = std::unique_ptr<Expression>(
+            new ast::Cast(type, false, std::move(map.vargs->at(i))));
         cast->accept(*this);
-        map.vargs->at(i) = cast;
-        expr = cast;
+        map.vargs->at(i) = std::move(cast);
+        expr = map.vargs->at(i).get();
       }
       else if (expr->type.IsCtxAccess())
       {
@@ -1226,7 +1231,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
 
     if (indextype.IsIntTy() && arr.indexpr->is_literal)
     {
-      Integer *index = static_cast<Integer *>(arr.indexpr);
+      Integer *index = static_cast<Integer *>(arr.indexpr.get());
 
       if ((size_t) index->n >= type.size)
         LOG(ERROR, arr.loc, err_)
@@ -1264,11 +1269,11 @@ void SemanticAnalyser::visit(Binop &binop)
     }
     // Follow what C does
     else if (lhs == Type::integer && rhs == Type::integer) {
-      auto get_int_literal = [](const auto expr) -> long {
-        return static_cast<ast::Integer*>(expr)->n;
+      auto get_int_literal = [](const auto &expr) -> long {
+        return static_cast<ast::Integer *>(expr.get())->n;
       };
-      auto left = binop.left;
-      auto right = binop.right;
+      auto &left = binop.left;
+      auto &right = binop.right;
 
       // First check if operand signedness is the same
       if (lsign != rsign) {
@@ -1463,10 +1468,10 @@ void SemanticAnalyser::visit(If &if_block)
       LOG(ERROR, if_block.loc, err_) << "Invalid condition in if(): " << cond;
   }
 
-  accept_statements(if_block.stmts);
+  accept_statements(if_block.stmts.get());
 
   if (if_block.else_stmts)
-    accept_statements(if_block.else_stmts);
+    accept_statements(if_block.else_stmts.get());
 }
 
 void SemanticAnalyser::visit(Unroll &unroll)
@@ -1475,11 +1480,11 @@ void SemanticAnalyser::visit(Unroll &unroll)
 
   unroll.var = 0;
 
-  if (auto *integer = dynamic_cast<Integer *>(unroll.expr))
+  if (auto *integer = dynamic_cast<Integer *>(unroll.expr.get()))
   {
     unroll.var = integer->n;
   }
-  else if (auto *param = dynamic_cast<PositionalParameter *>(unroll.expr))
+  else if (auto *param = dynamic_cast<PositionalParameter *>(unroll.expr.get()))
   {
     if (param->ptype == PositionalParameterType::count)
     {
@@ -1510,7 +1515,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
   }
 
   for (int i = 0; i < unroll.var; i++)
-    accept_statements(unroll.stmts);
+    accept_statements(unroll.stmts.get());
 }
 
 void SemanticAnalyser::visit(Jump &jump)
@@ -1542,7 +1547,7 @@ void SemanticAnalyser::visit(While &while_block)
   while_block.cond->accept(*this);
 
   loop_depth_++;
-  accept_statements(while_block.stmts);
+  accept_statements(while_block.stmts.get());
   loop_depth_--;
 }
 
@@ -1625,7 +1630,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   if (type.is_tparg)
   {
-    for (AttachPoint *attach_point : *probe_->attach_points)
+    for (auto &attach_point : *probe_->attach_points)
     {
       if (probetype(attach_point->provider) != ProbeType::tracepoint)
       {
@@ -1735,7 +1740,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
 
   for (size_t i = 0; i < tuple.elems->size(); ++i)
   {
-    Expression *elem = tuple.elems->at(i);
+    auto &elem = tuple.elems->at(i);
     elem->accept(*this);
 
     type.tuple_elems.emplace_back(elem->type);
@@ -1859,7 +1864,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   auto search = variable_val_.find(var_ident);
   assignment.var->type = assignment.expr->type;
 
-  auto *builtin = dynamic_cast<Builtin *>(assignment.expr);
+  auto *builtin = dynamic_cast<Builtin *>(assignment.expr.get());
   if (builtin && builtin->ident == "args" && builtin->type.is_kfarg)
   {
     LOG(ERROR, assignment.loc, err_) << "args cannot be assigned to a variable";
@@ -2214,21 +2219,22 @@ void SemanticAnalyser::visit(Probe &probe)
   variable_val_.clear();
   probe_ = &probe;
 
-  for (AttachPoint *ap : *probe.attach_points) {
+  for (auto &ap : *probe.attach_points)
+  {
     ap->accept(*this);
   }
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  for (Statement *stmt : *probe.stmts) {
+  for (auto &stmt : *probe.stmts.get())
+  {
     stmt->accept(*this);
   }
-
 }
 
 void SemanticAnalyser::visit(Program &program)
 {
-  for (Probe *probe : *program.probes)
+  for (auto &probe : *program.probes)
     probe->accept(*this);
 }
 
@@ -2289,9 +2295,9 @@ int SemanticAnalyser::create_maps_impl(void)
         abort();
       }
 
-      Expression &min_arg = *map_args->second.at(1);
-      Expression &max_arg = *map_args->second.at(2);
-      Expression &step_arg = *map_args->second.at(3);
+      Expression &min_arg = *map_args->second->at(1);
+      Expression &max_arg = *map_args->second->at(2);
+      Expression &step_arg = *map_args->second->at(3);
       Integer &min = static_cast<Integer &>(min_arg);
       Integer &max = static_cast<Integer &>(max_arg);
       Integer &step = static_cast<Integer &>(step_arg);
@@ -2446,7 +2452,7 @@ bool SemanticAnalyser::check_assignment(const Call &call, bool want_map, bool wa
 bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 {
   std::stringstream err;
-  std::vector<Expression*>::size_type nargs = 0;
+  ExpressionList::size_type nargs = 0;
   if (call.vargs)
     nargs = call.vargs->size();
 
@@ -2468,7 +2474,7 @@ bool SemanticAnalyser::check_nargs(const Call &call, size_t expected_nargs)
 
 bool SemanticAnalyser::check_varargs(const Call &call, size_t min_nargs, size_t max_nargs)
 {
-  std::vector<Expression*>::size_type nargs = 0;
+  ExpressionList::size_type nargs = 0;
   std::stringstream err;
   if (call.vargs)
     nargs = call.vargs->size();
@@ -2585,12 +2591,12 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
 {
   for (size_t i = 0; i < stmts->size(); i++)
   {
-    auto stmt = stmts->at(i);
+    auto &stmt = stmts->at(i);
     stmt->accept(*this);
 
     if (is_final_pass())
     {
-      auto *jump = dynamic_cast<Jump *>(stmt);
+      auto *jump = dynamic_cast<Jump *>(stmt.get());
       if (jump && i < (stmts->size() - 1))
       {
         LOG(WARNING, jump->loc, out_)

@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace);
   err = fields.analyse();
   if (err)
     return err;
@@ -645,7 +645,7 @@ int main(int argc, char *argv[])
   if (!cmd_str.empty())
     bpftrace.cmd_ = cmd_str;
 
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.root_.get(), bpftrace) == false)
     return 1;
 
   if (bt_debug != DebugLevel::kNone)
@@ -691,7 +691,7 @@ int main(int argc, char *argv[])
   if (!include_files.empty() && driver.root_->c_definitions.empty())
     driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  if (!clang.parse(driver.root_, bpftrace, extra_flags))
+  if (!clang.parse(driver.root_.get(), bpftrace, extra_flags))
     return 1;
 
   err = driver.parse();
@@ -699,7 +699,7 @@ int main(int argc, char *argv[])
     return err;
 
   ast::SemanticAnalyser semantics(
-      driver.root_, bpftrace, bpftrace.feature_, !cmd_str.empty());
+      driver.root_.get(), bpftrace, bpftrace.feature_, !cmd_str.empty());
   err = semantics.analyse();
   if (err)
     return err;
@@ -730,7 +730,7 @@ int main(int argc, char *argv[])
     }
   }
 
-  ast::CodegenLLVM llvm(driver.root_, bpftrace);
+  ast::CodegenLLVM llvm(driver.root_.get(), bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
   try
   {

@@ -26,14 +26,16 @@ public:
   };  // Leaf
   void visit(Call &call) override {
     if (call.vargs) {
-      for (Expression *expr : *call.vargs) {
+      for (auto &expr : *call.vargs)
+      {
         expr->accept(*this);
       }
     }
   };
   void visit(Map &map) override {
     if (map.vargs) {
-      for (Expression *expr : *map.vargs) {
+      for (auto &expr : *map.vargs)
+      {
         expr->accept(*this);
       }
     }
@@ -62,7 +64,7 @@ public:
   };
   void visit(Tuple &tuple) override
   {
-    for (Expression *expr : *tuple.elems)
+    for (auto &expr : *tuple.elems)
       expr->accept(*this);
   };
   void visit(ExprStatement &expr) override {
@@ -78,18 +80,21 @@ public:
   void visit(If &if_block) override {
     if_block.cond->accept(*this);
 
-    for (Statement *stmt : *if_block.stmts) {
+    for (auto &stmt : *if_block.stmts)
+    {
       stmt->accept(*this);
     }
 
     if (if_block.else_stmts) {
-      for (Statement *stmt : *if_block.else_stmts) {
+      for (auto &stmt : *if_block.else_stmts)
+      {
         stmt->accept(*this);
       }
     }
   };
   void visit(Unroll &unroll) override {
-    for (Statement *stmt : *unroll.stmts) {
+    for (auto &stmt : *unroll.stmts)
+    {
       stmt->accept(*this);
     }
   };
@@ -97,7 +102,7 @@ public:
   {
     while_block.cond->accept(*this);
 
-    for (Statement *stmt : *while_block.stmts)
+    for (auto &stmt : *while_block.stmts)
     {
       stmt->accept(*this);
     }
@@ -108,18 +113,20 @@ public:
   void visit(__attribute__((unused)) AttachPoint &ap) override { };  // Leaf
   void visit(Probe &probe) override {
     probe_ = &probe;
-    for (AttachPoint *ap : *probe.attach_points) {
+    for (auto &ap : *probe.attach_points)
+    {
       ap->accept(*this);
     }
     if (probe.pred) {
       probe.pred->accept(*this);
     }
-    for (Statement *stmt : *probe.stmts) {
+    for (auto &stmt : *probe.stmts)
+    {
       stmt->accept(*this);
     }
   };
   void visit(Program &program) override {
-    for (Probe *probe : *program.probes)
+    for (auto &probe : *program.probes)
       probe->accept(*this);
   };
 

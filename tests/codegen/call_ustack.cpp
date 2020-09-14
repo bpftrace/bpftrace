@@ -26,14 +26,14 @@ TEST(codegen, call_ustack_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
 
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
@@ -57,14 +57,14 @@ TEST(codegen, call_ustack_modes_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
 
   MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, feature);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
