@@ -41,6 +41,11 @@ void SemanticAnalyser::visit(Integer &integer)
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
   param.type = CreateInt64();
+  if (is_in_str)
+  {
+    param.is_in_str = true;
+    has_pos_param = true;
+  }
   switch (param.ptype)
   {
     case PositionalParameterType::positional:
@@ -54,14 +59,6 @@ void SemanticAnalyser::visit(PositionalParameter &param)
           LOG(ERROR, param.loc, err_)
               << "$" << param.n << " used numerically but given \"" << pstr
               << "\". Try using str($" << param.n << ").";
-        }
-        if (is_numeric(pstr) && param.is_in_str)
-        {
-          // This is blocked due to current limitations in our codegen
-          LOG(ERROR, param.loc, err_)
-              << "$" << param.n
-              << " used in str(), but given numeric value: " << pstr
-              << ". Try $" << param.n << " instead of str($" << param.n << ").";
         }
       }
       break;
@@ -400,6 +397,9 @@ void SemanticAnalyser::visit(Call &call)
 
   func_setter scope_bound_func_setter{ *this, call.func };
 
+  if (call.func == "str")
+    is_in_str = true;
+
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
@@ -527,7 +527,8 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "str") {
     if (check_varargs(call, 1, 2)) {
-      auto &t = call.vargs->at(0)->type;
+      auto *arg = call.vargs->at(0);
+      auto &t = arg->type;
       if (!t.IsIntegerTy() && !t.IsPtrTy())
       {
         LOG(ERROR, call.loc, err_)
@@ -535,13 +536,26 @@ void SemanticAnalyser::visit(Call &call)
             << "argument (" << t << " provided)";
       }
       call.type = CreateString(bpftrace_.strlen_);
+      if (has_pos_param)
+      {
+        auto binop = dynamic_cast<Binop *>(arg);
+        if (!(dynamic_cast<PositionalParameter *>(arg) ||
+              (binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
+                         dynamic_cast<PositionalParameter *>(binop->right)))))
+        {
+          // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
+          LOG(ERROR, call.loc, err_)
+              << call.func << "() only accepts positional parameters"
+              << " directly or with a single constant offset added";
+        }
+        has_pos_param = false;
+      }
+
       if (is_final_pass() && call.vargs->size() > 1) {
         check_arg(call, Type::integer, 1, false);
       }
-      if (auto *param = dynamic_cast<PositionalParameter*>(call.vargs->at(0))) {
-        param->is_in_str = true;
-      }
     }
+    is_in_str = false;
   }
   else if (call.func == "buf")
   {
@@ -591,11 +605,6 @@ void SemanticAnalyser::visit(Call &call)
 
     buffer_size++; // extra byte is used to embed the length of the buffer
     call.type = CreateBuffer(buffer_size);
-
-    if (auto *param = dynamic_cast<PositionalParameter *>(call.vargs->at(0)))
-    {
-      param->is_in_str = true;
-    }
   }
   else if (call.func == "ksym" || call.func == "usym") {
     if (check_nargs(call, 1)) {
@@ -1335,6 +1344,32 @@ void SemanticAnalyser::visit(Binop &binop)
               << "signed operands for '" << opstr(binop)
               << "' can lead to undefined behavior "
               << "(cast to unsigned to silence warning)";
+        }
+      }
+
+      if (is_in_str)
+      {
+        // Check if one of the operands is a positional parameter
+        // The other one should be a constant offset
+        auto pos_param = dynamic_cast<PositionalParameter *>(left);
+        auto offset = dynamic_cast<Integer *>(right);
+        if (!pos_param)
+        {
+          pos_param = dynamic_cast<PositionalParameter *>(right);
+          offset = dynamic_cast<Integer *>(left);
+        }
+
+        if (pos_param)
+        {
+          auto len = bpftrace_.get_param(pos_param->n, true).length();
+          if (!offset || binop.op != bpftrace::Parser::token::PLUS ||
+              offset->n < 0 || (size_t)offset->n > len)
+          {
+            LOG(ERROR, binop.loc + binop.right->loc, err_)
+                << "only addition of a single constant less or equal to the "
+                << "length of $" << pos_param->n << " (which is " << len << ")"
+                << " is allowed inside str()";
+          }
         }
       }
     }
