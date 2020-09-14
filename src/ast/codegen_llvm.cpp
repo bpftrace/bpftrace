@@ -66,7 +66,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
     case PositionalParameterType::positional:
       {
         std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        if (is_numeric(pstr))
+        if (!param.is_in_str)
         {
           expr_ = b_.getInt64(std::stoll(pstr, nullptr, 0));
         }
