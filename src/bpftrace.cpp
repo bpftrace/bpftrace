@@ -1121,6 +1121,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 
   poll_perf_events(epollfd, true);
 
+  // Calls perf_reader_free() on all open perf buffers.
+  open_perf_buffers_.clear();
+
   return 0;
 }
 
@@ -1144,6 +1147,10 @@ int BPFtrace::setup_perf_events()
       LOG(ERROR) << "Failed to open perf buffer";
       return -1;
     }
+    // Store the perf buffer pointers in a vector of unique_ptrs.
+    // When open_perf_buffers_ is cleared or destroyed,
+    // perf_reader_free is automatically called.
+    open_perf_buffers_.emplace_back(reader, perf_reader_free);
 
     struct epoll_event ev = {};
     ev.events = EPOLLIN;

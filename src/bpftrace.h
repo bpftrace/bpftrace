@@ -207,6 +207,8 @@ private:
   std::vector<std::string> params_;
   int next_probe_id_ = 0;
 
+  std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
+
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
       std::tuple<uint8_t *, uintptr_t> func,
