@@ -256,6 +256,7 @@ static bool translateMacro(CXCursor cursor, std::string &name, std::string &valu
           value += text;
       }
     }
+    clang_disposeString(tokenText);
   }
   clang_disposeTokens(transUnit, tokens, numTokens);
   return value.length() != 0;
