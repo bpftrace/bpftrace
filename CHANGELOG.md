@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add path builtin
+  - [#1492](https://github.com/iovisor/bpftrace/pull/1492)
 - Allow wildcards for tracepoint categories
   - [#1445](https://github.com/iovisor/bpftrace/pull/1445)
 - Add wildcard support for kfunc probe types
