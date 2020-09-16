@@ -537,11 +537,21 @@ void BPFtrace::request_finalize()
     child_->terminate();
 }
 
-void perf_event_printer(void *cb_cookie, void *data, int size __attribute__((unused)))
+void perf_event_printer(void *cb_cookie, void *data, int size)
 {
+  // The perf event data is not aligned, so we use memcpy to copy the data and
+  // avoid UBSAN errors. Using an std::vector guarantees that it will be aligned
+  // to the largest type. See:
+  // https://stackoverflow.com/questions/8456236/how-is-a-vectors-data-aligned.
+  std::vector<uint8_t> data_aligned;
+  data_aligned.resize(size);
+  memcpy(data_aligned.data(), data, size);
+
   auto bpftrace = static_cast<BPFtrace*>(cb_cookie);
-  auto printf_id = *static_cast<uint64_t*>(data);
-  auto arg_data = static_cast<uint8_t*>(data);
+  auto arg_data = data_aligned.data();
+
+  auto printf_id = *reinterpret_cast<uint64_t *>(arg_data);
+
   int err;
 
   // Ignore the remaining events if perf_event_printer is called during finalization
