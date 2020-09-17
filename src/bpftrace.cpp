@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
-#include <cxxabi.h>
 #include <fstream>
 #include <glob.h>
 #include <iomanip>
@@ -27,6 +26,8 @@
 
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
+
+#include <llvm/Demangle/Demangle.h>
 
 #include "ast/async_event_types.h"
 #include "attached_probe.h"
@@ -88,7 +89,7 @@ std::set<std::string> find_wildcard_matches_internal(
                         : "";
       if (symbol_has_cpp_mangled_signature(fun_line))
       {
-        char *demangled_name = abi::__cxa_demangle(
+        char *demangled_name = llvm::itaniumDemangle(
             fun_line.c_str(), nullptr, nullptr, nullptr);
         if (demangled_name)
         {
@@ -447,7 +448,7 @@ std::set<std::string> BPFtrace::find_symbol_matches(
     {
       if (symbol_has_cpp_mangled_signature(line_func))
       {
-        char *demangled_name = abi::__cxa_demangle(
+        char *demangled_name = llvm::itaniumDemangle(
             line_func.c_str(), nullptr, nullptr, nullptr);
         if (demangled_name)
         {
