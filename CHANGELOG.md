@@ -64,6 +64,8 @@ and this project adheres to
   - [#1530](https://github.com/iovisor/bpftrace/pull/1530)
 - Fix pointer arithmetic for positional parameters
   - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
+- SEGV when using perf format for stacks
+  - [#1524](https://github.com/iovisor/bpftrace/pull/1524)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call

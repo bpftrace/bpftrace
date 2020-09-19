@@ -1077,53 +1077,65 @@ void SemanticAnalyser::visit(Call &call)
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 {
   call.type = CreateStack(kernel);
-  if (check_varargs(call, 0, 2) && is_final_pass()) {
-    StackType stack_type;
-    if (call.vargs) {
-      switch (call.vargs->size()) {
-        case 0: break;
-        case 1: {
-          auto &arg = *call.vargs->at(0);
-          // If we have a single argument it can be either
-          // stack-mode or stack-size
-          if (arg.type.IsStackModeTy())
-          {
-            if (check_arg(call, Type::stack_mode, 0, true))
-              stack_type.mode = static_cast<StackMode&>(arg).type.stack_type.mode;
-          }
-          else
-          {
-            if (check_arg(call, Type::integer, 0, true))
-              stack_type.limit = static_cast<Integer&>(arg).n;
-          }
-          break;
-        }
-        case 2: {
-          if (check_arg(call, Type::stack_mode, 0, true)) {
-            auto &mode_arg = *call.vargs->at(0);
-            stack_type.mode = static_cast<StackMode&>(mode_arg).type.stack_type.mode;
-          }
-
-          if (check_arg(call, Type::integer, 1, true)) {
-            auto &limit_arg = *call.vargs->at(1);
-            stack_type.limit = static_cast<Integer&>(limit_arg).n;
-          }
-          break;
-        }
-        default:
-          LOG(ERROR, call.loc, err_) << "Invalid number of arguments";
-          break;
-      }
-    }
-    if (stack_type.limit > MAX_STACK_SIZE)
-    {
-      LOG(ERROR, call.loc, err_)
-          << call.func << "([int limit]): limit shouldn't exceed "
-          << MAX_STACK_SIZE << ", " << stack_type.limit << " given";
-    }
-    call.type = CreateStack(kernel, stack_type);
-    needs_stackid_maps_.insert(stack_type);
+  if (!check_varargs(call, 0, 2))
+  {
+    return;
   }
+
+  StackType stack_type;
+  if (call.vargs)
+  {
+    switch (call.vargs->size())
+    {
+      case 0:
+        break;
+      case 1:
+      {
+        auto &arg = *call.vargs->at(0);
+        // If we have a single argument it can be either
+        // stack-mode or stack-size
+        if (arg.type.IsStackModeTy())
+        {
+          if (check_arg(call, Type::stack_mode, 0, true))
+            stack_type.mode =
+                static_cast<StackMode &>(arg).type.stack_type.mode;
+        }
+        else
+        {
+          if (check_arg(call, Type::integer, 0, true))
+            stack_type.limit = static_cast<Integer &>(arg).n;
+        }
+        break;
+      }
+      case 2:
+      {
+        if (check_arg(call, Type::stack_mode, 0, true))
+        {
+          auto &mode_arg = *call.vargs->at(0);
+          stack_type.mode =
+              static_cast<StackMode &>(mode_arg).type.stack_type.mode;
+        }
+
+        if (check_arg(call, Type::integer, 1, true))
+        {
+          auto &limit_arg = *call.vargs->at(1);
+          stack_type.limit = static_cast<Integer &>(limit_arg).n;
+        }
+        break;
+      }
+      default:
+        LOG(ERROR, call.loc, err_) << "Invalid number of arguments";
+        break;
+    }
+  }
+  if (stack_type.limit > MAX_STACK_SIZE)
+  {
+    LOG(ERROR, call.loc, err_)
+        << call.func << "([int limit]): limit shouldn't exceed "
+        << MAX_STACK_SIZE << ", " << stack_type.limit << " given";
+  }
+  call.type = CreateStack(kernel, stack_type);
+  needs_stackid_maps_.insert(stack_type);
 }
 
 void SemanticAnalyser::visit(Map &map)

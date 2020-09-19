@@ -9,7 +9,7 @@ EXPECT value: 100ms100
 TIMEOUT 5
 
 NAME printf_llu
-RUN bpftrace -e 'BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); exit();}'  
+RUN bpftrace -e 'BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); exit();}'
 EXPECT Elapsed time: 1s
 TIMEOUT 5
 
@@ -154,6 +154,13 @@ RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack()
 EXPECT SUCCESS kstack
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME kstack perf mode
+RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", kstack(perf, 1)); exit(); }'
+EXPECT SUCCESS kstack
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
 
 NAME ustack
 RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }'
