@@ -767,28 +767,28 @@ TEST(semantic_analyser, call_stack)
   test("kprobe:f { ustack(perf, 3) }", 0);
 
   // Wrong arguments
-  test("kprobe:f { kstack(3, perf) }", 10);
-  test("kprobe:f { ustack(3, perf) }", 10);
+  test("kprobe:f { kstack(3, perf) }", 1);
+  test("kprobe:f { ustack(3, perf) }", 1);
   test("kprobe:f { kstack(perf, 3, 4) }", 1);
   test("kprobe:f { ustack(perf, 3, 4) }", 1);
   test("kprobe:f { kstack(bob) }", 1);
   test("kprobe:f { ustack(bob) }", 1);
-  test("kprobe:f { kstack(\"str\") }", 10);
-  test("kprobe:f { ustack(\"str\") }", 10);
-  test("kprobe:f { kstack(perf, \"str\") }", 10);
-  test("kprobe:f { ustack(perf, \"str\") }", 10);
-  test("kprobe:f { kstack(\"str\", 3) }", 10);
-  test("kprobe:f { ustack(\"str\", 3) }", 10);
+  test("kprobe:f { kstack(\"str\") }", 1);
+  test("kprobe:f { ustack(\"str\") }", 1);
+  test("kprobe:f { kstack(perf, \"str\") }", 1);
+  test("kprobe:f { ustack(perf, \"str\") }", 1);
+  test("kprobe:f { kstack(\"str\", 3) }", 1);
+  test("kprobe:f { ustack(\"str\", 3) }", 1);
 
   // Non-literals
-  test("kprobe:f { @x = perf; kstack(@x) }", 10);
-  test("kprobe:f { @x = perf; ustack(@x) }", 10);
-  test("kprobe:f { @x = perf; kstack(@x, 3) }", 10);
-  test("kprobe:f { @x = perf; ustack(@x, 3) }", 10);
-  test("kprobe:f { @x = 3; kstack(@x) }", 10);
-  test("kprobe:f { @x = 3; ustack(@x) }", 10);
-  test("kprobe:f { @x = 3; kstack(perf, @x) }", 10);
-  test("kprobe:f { @x = 3; ustack(perf, @x) }", 10);
+  test("kprobe:f { @x = perf; kstack(@x) }", 1);
+  test("kprobe:f { @x = perf; ustack(@x) }", 1);
+  test("kprobe:f { @x = perf; kstack(@x, 3) }", 1);
+  test("kprobe:f { @x = perf; ustack(@x, 3) }", 1);
+  test("kprobe:f { @x = 3; kstack(@x) }", 1);
+  test("kprobe:f { @x = 3; ustack(@x) }", 1);
+  test("kprobe:f { @x = 3; kstack(perf, @x) }", 1);
+  test("kprobe:f { @x = 3; ustack(perf, @x) }", 1);
 }
 
 TEST(semantic_analyser, map_reassignment)
