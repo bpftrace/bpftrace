@@ -230,7 +230,7 @@ jobs:
     - name: Authenticate with docker registry
       if: >
         matrix.env['TYPE'] == 'Release' &&
-        github.ref == 'refs/heads/master' &&
+        (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
         github.repository == 'iovisor/bpftrace'
       env:
         QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
@@ -239,7 +239,7 @@ jobs:
     - name: Package docker image and push to quay.io
       if: >
         matrix.env['TYPE'] == 'Release' &&
-        github.ref == 'refs/heads/master' &&
+        (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
         github.repository == 'iovisor/bpftrace'
       run: >
         ./docker/scripts/push.sh
