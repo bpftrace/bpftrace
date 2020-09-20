@@ -996,10 +996,6 @@ void AttachedProbe::attach_hardware()
 
 void AttachedProbe::attach_watchpoint(int pid, const std::string& mode)
 {
-  if (pid < 1) {
-    throw std::runtime_error("pid not provided for " + probe_.name);
-  }
-
   struct perf_event_attr attr = {};
   attr.type = PERF_TYPE_BREAKPOINT;
   attr.size = sizeof(struct perf_event_attr);
@@ -1020,11 +1016,26 @@ void AttachedProbe::attach_watchpoint(int pid, const std::string& mode)
   // Generate a notification every 1 event; we care about every event
   attr.sample_period = 1;
 
-  int perf_event_fd = bpf_attach_perf_event_raw(progfd_, &attr, pid, -1, -1, 0);
-  if (perf_event_fd < 0)
-    throw std::runtime_error("Error attaching probe: " + probe_.name);
+  std::vector<int> cpus;
+  if (pid >= 1)
+  {
+    cpus = { -1 };
+  }
+  else
+  {
+    cpus = get_online_cpus();
+    pid = -1;
+  }
 
-  perf_event_fds_.push_back(perf_event_fd);
+  for (int cpu : cpus)
+  {
+    int perf_event_fd = bpf_attach_perf_event_raw(
+        progfd_, &attr, pid, cpu, -1, 0);
+    if (perf_event_fd < 0)
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+
+    perf_event_fds_.push_back(perf_event_fd);
+  }
 }
 
 } // namespace bpftrace
