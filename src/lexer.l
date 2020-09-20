@@ -59,7 +59,7 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 {builtin}               { return Parser::make_BUILTIN(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
-{int}                   { return Parser::make_INT(strtoll(yytext, NULL, 0), loc); }
+{int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
 {exponent}              { return Parser::make_INT(parse_exponent(yytext), loc); }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
