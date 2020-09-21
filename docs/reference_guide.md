@@ -1862,18 +1862,26 @@ be used as a string in the `str()` call. If a parameter is used that was not pro
 zero for numeric context, and "" for string context. Positional parameters may also be used in probe
 argument and will be treated as a string parameter.
 
+If a positional parameter is used in `str()`, it is interpreted as a pointer to the actual given string 
+literal, which allows to do pointer arithmetic on it. Only addition of a single constant, less or equal to
+the length of the supplied string, is allowed.
+
 `$#` returns the number of positional arguments supplied.
 
 This allows scripts to be written that use basic arguments to change their behavior. If you develop a
 script that requires more complex argument processing, it may be better suited for bcc instead, which
 supports Python's argparse and completely custom argument processing.
 
-One-liner example:
+One-liner examples:
 
 ```
 # bpftrace -e 'BEGIN { printf("I got %d, %s (%d args)\n", $1, str($2), $#); }' 42 "hello"
 Attaching 1 probe...
 I got 42, hello (2 args)
+
+# bpftrace -e 'BEGIN { printf("%s\n", str($1 + 1)) }' "hello"
+Attaching 1 probe...
+ello
 ```
 
 Script example, bsize.d:
