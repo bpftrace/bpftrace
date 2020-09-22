@@ -67,6 +67,14 @@ and this project adheres to
 
 #### Documentation
 
+## [0.11.1] 2020-09-22
+
+Bug fix release for the [Docker build](https://quay.io/repository/iovisor/bpftrace)
+
+### Fixed
+
+- Don't strip END_trigger
+  - [#1513](https://github.com/iovisor/bpftrace/pull/1513)
 
 ## [0.11.0] 2020-07-15
 
