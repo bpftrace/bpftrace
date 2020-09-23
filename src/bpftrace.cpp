@@ -157,19 +157,18 @@ std::string format(std::string fmt,
     retstr += fmt.substr(literal_text_pos,
                          tokens_begin->position() - literal_text_pos);
     // replace current specifier with an arg
-    int r = snprintf(buffer.data(),
-                     buffer.capacity(),
-                     tokens_begin->str().c_str(),
-                     args.at(i)->value());
+    int r = args.at(i)->print(buffer.data(),
+                              buffer.capacity(),
+                              tokens_begin->str().c_str());
+
     check_snprintf_ret(r);
     if (static_cast<size_t>(r) >= buffer.capacity())
     {
       // the buffer is not big enough to hold the string, resize it
       buffer.resize(r + 1);
-      r = snprintf(buffer.data(),
-                   buffer.capacity(),
-                   tokens_begin->str().c_str(),
-                   args.at(i)->value());
+      int r = args.at(i)->print(buffer.data(),
+                                buffer.capacity(),
+                                tokens_begin->str().c_str());
       check_snprintf_ret(r);
     }
     retstr += std::string(buffer.data());
@@ -718,28 +717,59 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
     switch (arg.type.type)
     {
       case Type::integer:
-        switch (arg.type.GetSize())
+        if (arg.type.IsSigned())
         {
-          case 8:
-            arg_values.push_back(std::make_unique<PrintableInt>(
-                *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
-            break;
-          case 4:
-            arg_values.push_back(std::make_unique<PrintableInt>(
-                *reinterpret_cast<uint32_t *>(arg_data + arg.offset)));
-            break;
-          case 2:
-            arg_values.push_back(std::make_unique<PrintableInt>(
-                *reinterpret_cast<uint16_t *>(arg_data + arg.offset)));
-            break;
-          case 1:
-            arg_values.push_back(std::make_unique<PrintableInt>(
-                *reinterpret_cast<uint8_t *>(arg_data + arg.offset)));
-            break;
-          default:
-            LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
-                          "byte supported. "
-                       << arg.type.GetSize() << "provided";
+          int64_t val = 0;
+          switch (arg.type.GetIntBitWidth())
+          {
+            case 64:
+              val = *reinterpret_cast<int64_t *>(arg_data + arg.offset);
+              break;
+            case 32:
+              val = *reinterpret_cast<int32_t *>(arg_data + arg.offset);
+              break;
+            case 16:
+              val = *reinterpret_cast<int16_t *>(arg_data + arg.offset);
+              break;
+            case 8:
+              val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
+              break;
+            case 1:
+              val = *reinterpret_cast<int8_t *>(arg_data + arg.offset);
+              break;
+            default:
+              LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
+                            "byte supported. "
+                         << arg.type.GetSize() << "provided";
+          }
+          arg_values.push_back(std::make_unique<PrintableSInt>(val));
+        }
+        else
+        {
+          uint64_t val = 0;
+          switch (arg.type.GetIntBitWidth())
+          {
+            case 64:
+              val = *reinterpret_cast<uint64_t *>(arg_data + arg.offset);
+              break;
+            case 32:
+              val = *reinterpret_cast<uint32_t *>(arg_data + arg.offset);
+              break;
+            case 16:
+              val = *reinterpret_cast<uint16_t *>(arg_data + arg.offset);
+              break;
+            case 8:
+              val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
+              break;
+            case 1:
+              val = *reinterpret_cast<uint8_t *>(arg_data + arg.offset);
+              break;
+            default:
+              LOG(FATAL) << "get_arg_values: invalid integer size. 8, 4, 2 and "
+                            "byte supported. "
+                         << arg.type.GetSize() << "provided";
+          }
+          arg_values.push_back(std::make_unique<PrintableInt>(val));
         }
         break;
       case Type::string:
