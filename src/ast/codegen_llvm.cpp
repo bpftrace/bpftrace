@@ -56,7 +56,8 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
 
 void CodegenLLVM::visit(Integer &integer)
 {
-  expr_ = b_.getInt64(integer.n);
+  auto size = integer.type.GetIntBitWidth();
+  expr_ = b_.getIntN(size, integer.n);
 }
 
 void CodegenLLVM::visit(PositionalParameter &param)
@@ -1117,9 +1118,14 @@ void CodegenLLVM::binop_int(Binop &binop)
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
   bool do_signed = lsign && rsign;
-  // promote int to 64-bit
-  lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
-  rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
+
+  auto lsize = binop.left->type.size;
+  auto rsize = binop.right->type.size;
+
+  if (lsize < rsize)
+    lhs = b_.CreateIntCast(lhs, rhs->getType(), lsign);
+  else if (rsize < lsize)
+    rhs = b_.CreateIntCast(rhs, lhs->getType(), rsign);
 
   switch (binop.op)
   {
@@ -1188,9 +1194,10 @@ void CodegenLLVM::binop_int(Binop &binop)
     case bpftrace::Parser::token::LOR:
       LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
   }
-
   // Using signed extension will result in -1 which will likely confuse users
-  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+  expr_ = b_.CreateIntCast(expr_,
+                           b_.getIntNTy(binop.type.GetIntBitWidth()),
+                           false);
 }
 
 void CodegenLLVM::visit(Binop &binop)
@@ -1208,6 +1215,7 @@ void CodegenLLVM::visit(Binop &binop)
   }
 
   SizedType &type = binop.left->type;
+
   if (type.IsStringTy())
     binop_string(binop);
   else if (type.IsBufferTy())
@@ -1300,17 +1308,11 @@ void CodegenLLVM::visit(Unop &unop)
       }
       case bpftrace::Parser::token::MUL:
       {
-        int size = type.size;
-        if (type.IsPtrTy())
-        {
-          // When dereferencing a 32-bit integer, only read in 32-bits, etc.
-          size = type.GetPointeeTy()->size;
-        }
-        AllocaInst *dst = b_.CreateAllocaBPF(SizedType(type.type, size), "deref");
-        b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
-        expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                                 b_.getInt64Ty(),
-                                 type.IsSigned());
+        auto pointee_type = CreateUInt64();
+        AllocaInst *dst = b_.CreateAllocaBPF(pointee_type, "deref");
+        b_.CreateProbeRead(
+            ctx_, dst, pointee_type.size, expr_, type.GetAS(), unop.loc);
+        expr_ = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
         break;
       }
@@ -1318,24 +1320,14 @@ void CodegenLLVM::visit(Unop &unop)
   }
   else if (type.IsPtrTy())
   {
-    switch (unop.op)
+    if (unop.type.IsIntegerTy() && unop.op == bpftrace::Parser::token::MUL)
     {
-      case bpftrace::Parser::token::MUL:
-      {
-        if (unop.type.IsIntegerTy())
-        {
-          auto *et = type.GetPointeeTy();
-          int size = et->GetIntBitWidth() / 8;
-          AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
-          b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
-          expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                                   b_.getInt64Ty(),
-                                   unop.type.IsSigned());
-          b_.CreateLifetimeEnd(dst);
-        }
-        break;
-      }
-      default:; // Do nothing
+      auto *et = type.GetPointeeTy();
+      int size = et->GetIntBitWidth() / 8;
+      AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
+      b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
+      expr_ = b_.CreateLoad(dst);
+      b_.CreateLifetimeEnd(dst);
     }
   }
   else
@@ -1582,7 +1574,6 @@ void CodegenLLVM::visit(FieldAccess &acc)
     {
       expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
                             true);
-      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), field.type.IsSigned());
     }
     else
     {
@@ -1590,9 +1581,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
                                            type.GetName() + "." + acc.field);
       b_.CreateProbeRead(
           ctx_, dst, field.type.size, src, type.GetAS(), acc.loc);
-      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                               b_.getInt64Ty(),
-                               field.type.IsSigned());
+      expr_ = b_.CreateLoad(dst);
       b_.CreateLifetimeEnd(dst);
     }
   }
@@ -1627,9 +1616,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
     {
       AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
       b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
-      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                               b_.getInt64Ty(),
-                               arr.expr->type.IsSigned());
+      expr_ = b_.CreateLoad(dst);
       b_.CreateLifetimeEnd(dst);
     }
   }
@@ -2286,7 +2273,7 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
   BasicBlock *false_block = BasicBlock::Create(module_->getContext(), "&&_false", parent);
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "&&_merge", parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "&&_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt1Ty(), "&&_result");
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
@@ -2303,11 +2290,11 @@ Value *CodegenLLVM::createLogicalAnd(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt1(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt1(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);
@@ -2325,7 +2312,7 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
   BasicBlock *true_block = BasicBlock::Create(module_->getContext(), "||_true", parent);
   BasicBlock *merge_block = BasicBlock::Create(module_->getContext(), "||_merge", parent);
 
-  Value *result = b_.CreateAllocaBPF(b_.getInt64Ty(), "||_result");
+  Value *result = b_.CreateAllocaBPF(b_.getInt1Ty(), "||_result");
   Value *lhs;
   auto scoped_del_left = accept(binop.left);
   lhs = expr_;
@@ -2342,11 +2329,11 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
                   false_block);
 
   b_.SetInsertPoint(false_block);
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(b_.getInt1(0), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(true_block);
-  b_.CreateStore(b_.getInt64(1), result);
+  b_.CreateStore(b_.getInt1(1), result);
   b_.CreateBr(merge_block);
 
   b_.SetInsertPoint(merge_block);

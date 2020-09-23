@@ -797,9 +797,6 @@ void SemanticAnalyser::visit(Call &call)
              iter++)
         {
           auto ty = (*iter)->type;
-          // Promote to 64-bit if it's not an aggregate type
-          if (!ty.IsAggregate() && !ty.IsTimestampTy())
-            ty.size = 8;
           args.push_back(Field{
             .type =  ty,
             .offset = 0,
@@ -1137,7 +1134,7 @@ void SemanticAnalyser::visit(Map &map)
 
       // Insert a cast to 64 bits if needed by injecting
       // a cast into the ast.
-      if (expr->type.IsIntTy() && expr->type.size < 8)
+      if (expr->type.IsIntTy() && expr->type.GetIntBitWidth() != 64)
       {
         std::string type = expr->type.IsSigned() ? "int64" : "uint64";
         Expression * cast = new ast::Cast(type, false, expr);
@@ -1169,7 +1166,7 @@ void SemanticAnalyser::visit(Map &map)
         // which use maps as a lookup table
         // TODO (fbs): This needs a better solution
         if (expr->type.IsIntTy())
-          keytype = CreateUInt(keytype.size * 8);
+          keytype = CreateUInt(expr->type.GetIntBitWidth());
         key.args_.push_back(keytype);
       }
     }
@@ -1385,8 +1382,24 @@ void SemanticAnalyser::visit(Binop &binop)
     }
   }
 
-  bool is_signed = lsign && rsign;
   switch (binop.op) {
+    default:
+      break;
+  }
+
+  bool is_signed = lsign && rsign;
+  size_t size = 64;
+
+  switch (binop.op)
+  {
+    case bpftrace::Parser::token::EQ:
+    case bpftrace::Parser::token::NE:
+    case bpftrace::Parser::token::LE:
+    case bpftrace::Parser::token::GE:
+    case bpftrace::Parser::token::LT:
+    case bpftrace::Parser::token::GT:
+      is_signed = false;
+      break;
     case bpftrace::Parser::token::LEFT:
     case bpftrace::Parser::token::RIGHT:
       is_signed = lsign;
@@ -1395,7 +1408,7 @@ void SemanticAnalyser::visit(Binop &binop)
       break;
   }
 
-  binop.type = CreateInteger(64, is_signed);
+  binop.type = CreateInteger(size, is_signed);
 }
 
 void SemanticAnalyser::visit(Unop &unop)
@@ -1450,11 +1463,13 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     else if (type.IsIntTy())
     {
+      // Yes dereferencing a pointer doesn't make sense but we keep supporting
+      // it to avoid breaking exising scripts
       unop.type = CreateUInt64();
     }
   }
   else if (unop.op == Parser::token::LNOT) {
-    unop.type = CreateUInt(type.size);
+    unop.type = CreateBool();
   }
   else {
     unop.type = CreateInteger(64, type.IsSigned());
@@ -1787,6 +1802,17 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
 
+  // Insert a cast into the ast to ensure map values are always stored as 64
+  // bits avoids issues with mixed size types
+  if (assignment.expr->type.IsIntegerTy() &&
+      assignment.expr->type.GetIntBitWidth() < 64)
+  {
+    std::string type = assignment.expr->type.IsSigned() ? "int64" : "uint64";
+    Expression *cast = new ast::Cast(type, false, assignment.expr);
+    cast->accept(*this);
+    assignment.expr = cast;
+  }
+
   assign_map_type(*assignment.map, assignment.expr->type);
 
   const std::string &map_ident = assignment.map->ident;
@@ -1932,6 +1958,20 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignTy.GetName()
           << "' when variable already contains a value of type '" << storedTy;
+    }
+  }
+  else if (assignTy.IsIntegerTy() && storedTy.IsIntegerTy())
+  {
+    if (assignTy.GetIntBitWidth() != storedTy.GetIntBitWidth())
+    {
+      if (is_final_pass())
+      {
+        LOG(WARNING, assignment.loc, out_)
+            << "Implicit conversion of variable: " << var_ident
+            << " from: " << storedTy << " to " << assignTy;
+      }
+
+      storedTy = assignTy;
     }
   }
   else if (assignTy.IsStringTy())
@@ -2609,15 +2649,13 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
           << "' when map already contains a value of type '" << search->second;
     }
   }
-  else {
+  else
+  {
     // This map hasn't been seen before
+    if (type.IsIntegerTy())
+      assert(type.GetIntBitWidth() == 64);
+
     map_val_.insert({map_ident, type});
-    if (map_val_[map_ident].IsIntTy())
-    {
-      // Store all integer values as 64-bit in maps, so that there will
-      // be space for any integer to be assigned to the map later
-      map_val_[map_ident].size = 8;
-    }
   }
 }
 

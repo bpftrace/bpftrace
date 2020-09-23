@@ -241,6 +241,33 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   {
     ty = ArrayType::get(getInt8Ty(), stype.size);
   }
+  else if (stype.IsIntTy())
+  {
+    switch (stype.GetIntBitWidth())
+    {
+      case 128:
+        ty = getInt128Ty();
+        break;
+      case 64:
+        ty = getInt64Ty();
+        break;
+      case 32:
+        ty = getInt32Ty();
+        break;
+      case 16:
+        ty = getInt16Ty();
+        break;
+      case 8:
+        ty = getInt8Ty();
+        break;
+      case 1:
+        ty = getInt1Ty();
+        break;
+      default:
+        LOG(FATAL) << stype.GetIntBitWidth()
+                   << " is not a valid type size for GetType";
+    }
+  }
   else
   {
     switch (stype.size)

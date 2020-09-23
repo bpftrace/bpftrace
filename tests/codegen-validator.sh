@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## Don't add to this
-IGNORE="(_LLVM|printf|(logical_and_or_different_type|struct_char_1|struct_integer_ptr_1|struct_integers_1|struct_long_1|struct_nested_struct_anon_1|struct_nested_struct_named_1|struct_nested_struct_ptr_named_1|struct_save_nested|struct_short_1|struct_string_array_1).ll)"
+IGNORE="(LLVM)"
 EXIT=0
 
 LLVM=$(command -v llvm-as-7)
