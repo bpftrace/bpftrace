@@ -112,6 +112,10 @@ private:
   Function *createLog2Function();
   Function *createLinearFunction();
 
+  void binop_string(Binop &binop);
+  void binop_buf(Binop &binop);
+  void binop_int(Binop &binop);
+
   Node *root_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;
