@@ -96,6 +96,8 @@ and this project adheres to
   - [#1573](https://github.com/iovisor/bpftrace/pull/1573)
 - Fix a possible integer overflow
   - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
+- Printing of small integers with `printf`
+  - [#1532](https://github.com/iovisor/bpftrace/pull/1532)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call

@@ -69,19 +69,23 @@ std::string verify_format_string(const std::string &fmt, std::vector<Field> args
   return "";
 }
 
-uint64_t PrintableString::value()
+int PrintableString::print(char *buf, size_t size, const char *fmt)
 {
-  return (uint64_t)value_.c_str();
+  return snprintf(buf, size, fmt, value_.c_str());
 }
 
-uint64_t PrintableCString::value()
+int PrintableCString::print(char *buf, size_t size, const char *fmt)
 {
-  return (uint64_t)value_;
+  return snprintf(buf, size, fmt, value_);
 }
 
-uint64_t PrintableInt::value()
+int PrintableInt::print(char *buf, size_t size, const char *fmt)
 {
-  return value_;
+  return snprintf(buf, size, fmt, value_);
 }
 
+int PrintableSInt::print(char *buf, size_t size, const char *fmt)
+{
+  return snprintf(buf, size, fmt, value_);
+}
 } // namespace bpftrace

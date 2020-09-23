@@ -31,14 +31,14 @@ class IPrintable
 {
 public:
   virtual ~IPrintable() { };
-  virtual uint64_t value() = 0;
+  virtual int print(char* buf, size_t size, const char* fmt) = 0;
 };
 
 class PrintableString : public virtual IPrintable
 {
 public:
   PrintableString(std::string value) : value_(std::move(value)) { }
-  uint64_t value();
+  int print(char* buf, size_t size, const char* fmt) override;
 
 private:
   std::string value_;
@@ -48,7 +48,7 @@ class PrintableCString : public virtual IPrintable
 {
 public:
   PrintableCString(char* value) : value_(value) { }
-  uint64_t value();
+  int print(char* buf, size_t size, const char* fmt) override;
 
 private:
   char* value_;
@@ -58,10 +58,22 @@ class PrintableInt : public virtual IPrintable
 {
 public:
   PrintableInt(uint64_t value) : value_(value) { }
-  uint64_t value();
+  int print(char* buf, size_t size, const char* fmt) override;
 
 private:
   uint64_t value_;
+};
+
+class PrintableSInt : public virtual IPrintable
+{
+public:
+  PrintableSInt(int64_t value) : value_(value)
+  {
+  }
+  int print(char* buf, size_t size, const char* fmt) override;
+
+private:
+  int64_t value_;
 };
 
 } // namespace bpftrace
