@@ -1020,6 +1020,179 @@ void CodegenLLVM::visit(Variable &var)
   }
 }
 
+void CodegenLLVM::binop_string(Binop &binop)
+{
+  if (binop.op != bpftrace::Parser::token::EQ &&
+      binop.op != bpftrace::Parser::token::NE)
+  {
+    LOG(FATAL) << "missing codegen to string operator \"" << opstr(binop)
+               << "\"";
+  }
+
+  std::string string_literal;
+
+  // strcmp returns 0 when strings are equal
+  bool inverse = binop.op == bpftrace::Parser::token::EQ;
+
+  auto left_as = binop.left->type.GetAS();
+  auto right_as = binop.right->type.GetAS();
+
+  // If one of the strings is fixed, we can avoid storing the
+  // literal in memory by calling a different function.
+  if (binop.right->is_literal)
+  {
+    auto scoped_del = accept(binop.left);
+    string_literal = bpftrace_.get_string_literal(binop.right);
+    expr_ = b_.CreateStrcmp(
+        ctx_, expr_, left_as, string_literal, binop.loc, inverse);
+  }
+  else if (binop.left->is_literal)
+  {
+    auto scoped_del = accept(binop.right);
+    string_literal = bpftrace_.get_string_literal(binop.left);
+    expr_ = b_.CreateStrcmp(
+        ctx_, expr_, right_as, string_literal, binop.loc, inverse);
+  }
+  else
+  {
+    auto scoped_del_right = accept(binop.right);
+    Value *right_string = expr_;
+
+    auto scoped_del_left = accept(binop.left);
+    Value *left_string = expr_;
+
+    size_t len = std::min(binop.left->type.size, binop.right->type.size);
+    expr_ = b_.CreateStrncmp(ctx_,
+                             left_string,
+                             left_as,
+                             right_string,
+                             right_as,
+                             len + 1,
+                             binop.loc,
+                             inverse);
+  }
+}
+
+void CodegenLLVM::binop_buf(Binop &binop)
+{
+  if (binop.op != bpftrace::Parser::token::EQ &&
+      binop.op != bpftrace::Parser::token::NE)
+  {
+    LOG(FATAL) << "missing codegen to buffer operator \"" << opstr(binop)
+               << "\"";
+  }
+
+  std::string string_literal("");
+
+  // strcmp returns 0 when strings are equal
+  bool inverse = binop.op == bpftrace::Parser::token::EQ;
+
+  auto scoped_del_right = accept(binop.right);
+  Value *right_string = expr_;
+  auto right_as = binop.right->type.GetAS();
+
+  auto scoped_del_left = accept(binop.left);
+  Value *left_string = expr_;
+  auto left_as = binop.left->type.GetAS();
+
+  size_t len = std::min(binop.left->type.size, binop.right->type.size);
+  expr_ = b_.CreateStrncmp(ctx_,
+                           left_string,
+                           left_as,
+                           right_string,
+                           right_as,
+                           len,
+                           binop.loc,
+                           inverse);
+}
+
+void CodegenLLVM::binop_int(Binop &binop)
+{
+  Value *lhs, *rhs;
+  auto scoped_del_left = accept(binop.left);
+  lhs = expr_;
+  auto scoped_del_right = accept(binop.right);
+  rhs = expr_;
+
+  bool lsign = binop.left->type.IsSigned();
+  bool rsign = binop.right->type.IsSigned();
+  bool do_signed = lsign && rsign;
+  // promote int to 64-bit
+  lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
+  rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
+
+  switch (binop.op)
+  {
+    case bpftrace::Parser::token::EQ:
+      expr_ = b_.CreateICmpEQ(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::NE:
+      expr_ = b_.CreateICmpNE(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::LE: {
+      expr_ = do_signed ? b_.CreateICmpSLE(lhs, rhs)
+                        : b_.CreateICmpULE(lhs, rhs);
+      break;
+    }
+    case bpftrace::Parser::token::GE: {
+      expr_ = do_signed ? b_.CreateICmpSGE(lhs, rhs)
+                        : b_.CreateICmpUGE(lhs, rhs);
+      break;
+    }
+    case bpftrace::Parser::token::LT: {
+      expr_ = do_signed ? b_.CreateICmpSLT(lhs, rhs)
+                        : b_.CreateICmpULT(lhs, rhs);
+      break;
+    }
+    case bpftrace::Parser::token::GT: {
+      expr_ = do_signed ? b_.CreateICmpSGT(lhs, rhs)
+                        : b_.CreateICmpUGT(lhs, rhs);
+      break;
+    }
+    case bpftrace::Parser::token::LEFT:
+      expr_ = b_.CreateShl(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::RIGHT:
+      expr_ = b_.CreateLShr(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::PLUS:
+      expr_ = b_.CreateAdd(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::MINUS:
+      expr_ = b_.CreateSub(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::MUL:
+      expr_ = b_.CreateMul(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::DIV:
+      expr_ = b_.CreateUDiv(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::MOD: {
+      // Always do an unsigned modulo operation here even if `do_signed`
+      // is true. bpf instruction set does not support signed division.
+      // We already warn in the semantic analyser that signed modulo can
+      // lead to undefined behavior (because we will treat it as unsigned).
+      expr_ = b_.CreateURem(lhs, rhs);
+      break;
+    }
+    case bpftrace::Parser::token::BAND:
+      expr_ = b_.CreateAnd(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::BOR:
+      expr_ = b_.CreateOr(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::BXOR:
+      expr_ = b_.CreateXor(lhs, rhs);
+      break;
+    case bpftrace::Parser::token::LAND:
+    case bpftrace::Parser::token::LOR:
+      LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
+  }
+
+  // Using signed extension will result in -1 which will likely confuse users
+  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+}
+
 void CodegenLLVM::visit(Binop &binop)
 {
   // Handle && and || separately so short circuiting works
@@ -1036,146 +1209,11 @@ void CodegenLLVM::visit(Binop &binop)
 
   SizedType &type = binop.left->type;
   if (type.IsStringTy())
-  {
-
-    if (binop.op != bpftrace::Parser::token::EQ && binop.op != bpftrace::Parser::token::NE) {
-      LOG(FATAL) << "missing codegen to string operator \"" << opstr(binop)
-                 << "\"";
-    }
-
-    std::string string_literal;
-
-    // strcmp returns 0 when strings are equal
-    bool inverse = binop.op == bpftrace::Parser::token::EQ;
-
-    auto left_as = binop.left->type.GetAS();
-    auto right_as = binop.right->type.GetAS();
-
-    // If one of the strings is fixed, we can avoid storing the
-    // literal in memory by calling a different function.
-    if (binop.right->is_literal)
-    {
-      auto scoped_del = accept(binop.left);
-      string_literal = bpftrace_.get_string_literal(binop.right);
-      expr_ = b_.CreateStrcmp(
-          ctx_, expr_, left_as, string_literal, binop.loc, inverse);
-    }
-    else if (binop.left->is_literal)
-    {
-      auto scoped_del = accept(binop.right);
-      string_literal = bpftrace_.get_string_literal(binop.left);
-      expr_ = b_.CreateStrcmp(
-          ctx_, expr_, right_as, string_literal, binop.loc, inverse);
-    }
-    else
-    {
-      auto scoped_del_right = accept(binop.right);
-      Value * right_string = expr_;
-
-      auto scoped_del_left = accept(binop.left);
-      Value * left_string = expr_;
-
-      size_t len = std::min(binop.left->type.size, binop.right->type.size);
-      expr_ = b_.CreateStrncmp(ctx_,
-                               left_string,
-                               left_as,
-                               right_string,
-                               right_as,
-                               len + 1,
-                               binop.loc,
-                               inverse);
-    }
-  }
+    binop_string(binop);
   else if (type.IsBufferTy())
-  {
-    if (binop.op != bpftrace::Parser::token::EQ &&
-        binop.op != bpftrace::Parser::token::NE)
-    {
-      LOG(FATAL) << "missing codegen to buffer operator \"" << opstr(binop)
-                 << "\"";
-    }
-
-    std::string string_literal("");
-
-    // strcmp returns 0 when strings are equal
-    bool inverse = binop.op == bpftrace::Parser::token::EQ;
-
-    auto scoped_del_right = accept(binop.right);
-    Value *right_string = expr_;
-    auto right_as = binop.right->type.GetAS();
-
-    auto scoped_del_left = accept(binop.left);
-    Value *left_string = expr_;
-    auto left_as = binop.left->type.GetAS();
-
-    size_t len = std::min(binop.left->type.size, binop.right->type.size);
-    expr_ = b_.CreateStrncmp(ctx_,
-                             left_string,
-                             left_as,
-                             right_string,
-                             right_as,
-                             len,
-                             binop.loc,
-                             inverse);
-  }
+    binop_buf(binop);
   else
-  {
-    Value *lhs, *rhs;
-    auto scoped_del_left = accept(binop.left);
-    lhs = expr_;
-    auto scoped_del_right = accept(binop.right);
-    rhs = expr_;
-
-    bool lsign = binop.left->type.IsSigned();
-    bool rsign = binop.right->type.IsSigned();
-    bool do_signed = lsign && rsign;
-    // promote int to 64-bit
-    lhs = b_.CreateIntCast(lhs, b_.getInt64Ty(), lsign);
-    rhs = b_.CreateIntCast(rhs, b_.getInt64Ty(), rsign);
-
-    switch (binop.op) {
-      case bpftrace::Parser::token::EQ:    expr_ = b_.CreateICmpEQ (lhs, rhs); break;
-      case bpftrace::Parser::token::NE:    expr_ = b_.CreateICmpNE (lhs, rhs); break;
-      case bpftrace::Parser::token::LE: {
-        expr_ = do_signed ? b_.CreateICmpSLE(lhs, rhs) : b_.CreateICmpULE(lhs, rhs);
-        break;
-      }
-      case bpftrace::Parser::token::GE: {
-        expr_ = do_signed ? b_.CreateICmpSGE(lhs, rhs) : b_.CreateICmpUGE(lhs, rhs);
-        break;
-      }
-      case bpftrace::Parser::token::LT: {
-        expr_ = do_signed ? b_.CreateICmpSLT(lhs, rhs) : b_.CreateICmpULT(lhs, rhs);
-        break;
-      }
-      case bpftrace::Parser::token::GT: {
-        expr_ = do_signed ? b_.CreateICmpSGT(lhs, rhs) : b_.CreateICmpUGT(lhs, rhs);
-        break;
-      }
-      case bpftrace::Parser::token::LEFT:  expr_ = b_.CreateShl    (lhs, rhs); break;
-      case bpftrace::Parser::token::RIGHT: expr_ = b_.CreateLShr   (lhs, rhs); break;
-      case bpftrace::Parser::token::PLUS:  expr_ = b_.CreateAdd    (lhs, rhs); break;
-      case bpftrace::Parser::token::MINUS: expr_ = b_.CreateSub    (lhs, rhs); break;
-      case bpftrace::Parser::token::MUL:   expr_ = b_.CreateMul    (lhs, rhs); break;
-      case bpftrace::Parser::token::DIV:   expr_ = b_.CreateUDiv   (lhs, rhs); break;
-      case bpftrace::Parser::token::MOD: {
-        // Always do an unsigned modulo operation here even if `do_signed`
-        // is true. bpf instruction set does not support signed division.
-        // We already warn in the semantic analyser that signed modulo can
-        // lead to undefined behavior (because we will treat it as unsigned).
-        expr_ = b_.CreateURem(lhs, rhs);
-        break;
-      }
-      case bpftrace::Parser::token::BAND:  expr_ = b_.CreateAnd    (lhs, rhs); break;
-      case bpftrace::Parser::token::BOR:   expr_ = b_.CreateOr     (lhs, rhs); break;
-      case bpftrace::Parser::token::BXOR:  expr_ = b_.CreateXor    (lhs, rhs); break;
-      case bpftrace::Parser::token::LAND:
-      case bpftrace::Parser::token::LOR:
-        LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
-    }
-  }
-  // Using signed extension will result in -1 which will likely confuse users
-  expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+    binop_int(binop);
 }
 
 static bool unop_skip_accept(Unop &unop)
