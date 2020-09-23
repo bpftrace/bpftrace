@@ -695,8 +695,7 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  ast::SemanticAnalyser semantics(
-      driver.root_, bpftrace, bpftrace.feature_, !cmd_str.empty());
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, !cmd_str.empty());
   err = semantics.analyse();
   if (err)
     return err;

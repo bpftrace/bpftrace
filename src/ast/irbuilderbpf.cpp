@@ -48,7 +48,7 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
 {
   libbpf::bpf_func_id fn;
   // Assume that if a kernel has probe_read_kernel it has the other 3 too
-  if (bpftrace_.feature_.has_helper_probe_read_kernel())
+  if (bpftrace_.feature_->has_helper_probe_read_kernel())
   {
     if (as == AddrSpace::kernel)
     {

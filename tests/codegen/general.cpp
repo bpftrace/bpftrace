@@ -44,8 +44,9 @@ TEST(codegen, populate_sections)
   Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
-  MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
@@ -72,8 +73,10 @@ TEST(codegen, printf_offsets)
             0);
   ClangParser clang;
   clang.parse(driver.root_, bpftrace);
-  MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
@@ -115,8 +118,9 @@ TEST(codegen, probe_count)
   Driver driver(bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:f { 1; } kprobe:d { 1; }"), 0);
-  MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   codegen.generate_ir();

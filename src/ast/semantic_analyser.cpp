@@ -245,7 +245,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
   {
     builtin.type = CreateUInt64();
     if (builtin.ident == "cgroup" &&
-        !feature_.has_helper_get_current_cgroup_id())
+        !bpftrace_.feature_->has_helper_get_current_cgroup_id())
     {
       LOG(ERROR, builtin.loc, err_)
           << "BPF_FUNC_get_current_cgroup_id is not available for your kernel "
@@ -1022,7 +1022,7 @@ void SemanticAnalyser::visit(Call &call)
     check_stack_call(call, false);
   }
   else if (call.func == "signal") {
-    if (!feature_.has_helper_send_signal())
+    if (!bpftrace_.feature_->has_helper_send_signal())
     {
       LOG(ERROR, call.loc, err_)
           << "BPF_FUNC_send_signal not available for your kernel version";
@@ -1095,7 +1095,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "override")
   {
-    if (!feature_.has_helper_override_return())
+    if (!bpftrace_.feature_->has_helper_override_return())
     {
       LOG(ERROR, call.loc, err_)
           << "BPF_FUNC_override_return not available for your kernel version";
@@ -1677,7 +1677,7 @@ void SemanticAnalyser::visit(Jump &jump)
 
 void SemanticAnalyser::visit(While &while_block)
 {
-  if (is_final_pass() && !feature_.has_loop())
+  if (is_final_pass() && !bpftrace_.feature_->has_loop())
   {
     LOG(WARNING, while_block.loc, out_)
         << "Kernel does not support bounded loops. Depending"
@@ -2335,7 +2335,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     return;
 #endif
 
-    bool supported = feature_.has_prog_kfunc() && bpftrace_.btf_.has_data();
+    bool supported = bpftrace_.feature_->has_prog_kfunc() &&
+                     bpftrace_.btf_.has_data();
     if (!supported)
     {
       LOG(ERROR, ap.loc, err_)

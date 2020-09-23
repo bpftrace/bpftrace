@@ -376,8 +376,9 @@ static void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  MockBPFfeature feature;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
