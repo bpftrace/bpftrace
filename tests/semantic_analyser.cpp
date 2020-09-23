@@ -30,9 +30,10 @@ void test_for_warning(
   clang.parse(driver.root_, bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
-  MockBPFfeature feature;
   std::stringstream out;
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, feature, out);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
   semantics.analyse();
   if (invert)
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
@@ -51,7 +52,7 @@ void test_for_warning(
 }
 
 void test(BPFtrace &bpftrace,
-          BPFfeature &feature,
+          bool mock_has_features,
           Driver &driver,
           const std::string &input,
           int expected_result = 0,
@@ -74,8 +75,9 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
-  ast::SemanticAnalyser semantics(
-      driver.root_, bpftrace, feature, out, has_child);
+  // Override to mockbpffeature.
+  bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out, has_child);
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
 }
 
@@ -85,8 +87,7 @@ void test(BPFtrace &bpftrace,
     bool safe_mode = true)
 {
   Driver driver(bpftrace);
-  MockBPFfeature feature;
-  test(bpftrace, feature, driver, input, expected_result, safe_mode);
+  test(bpftrace, true, driver, input, expected_result, safe_mode);
 }
 
 void test(Driver &driver,
@@ -95,18 +96,18 @@ void test(Driver &driver,
     bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
-  MockBPFfeature feature;
-  test(*bpftrace, feature, driver, input, expected_result, safe_mode);
+  test(*bpftrace, true, driver, input, expected_result, safe_mode);
 }
 
-void test(BPFfeature &feature,
+void test(MockBPFfeature &feature,
           const std::string &input,
           int expected_result = 0,
           bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
-  test(*bpftrace, feature, driver, input, expected_result, safe_mode);
+  bool mock_has_features = feature.has_features_;
+  test(*bpftrace, mock_has_features, driver, input, expected_result, safe_mode);
 }
 
 void test(const std::string &input,
@@ -115,11 +116,10 @@ void test(const std::string &input,
           bool has_child = false,
           int expected_field_analyser = 0)
 {
-  MockBPFfeature feature;
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
   test(*bpftrace,
-       feature,
+       true,
        driver,
        input,
        expected_result,

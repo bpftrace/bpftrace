@@ -71,12 +71,12 @@ void emit_warning(std::ostream &out)
   // clang-format on
 }
 
-LockdownState detect(BPFfeature &feature)
+LockdownState detect(std::unique_ptr<BPFfeature> &feature)
 {
   // Ubuntu (19.10 at least) ships a lockdown version that fully blocks the bpf
   // syscall
-  if (is_ubuntu() && !feature.has_map_array() &&
-      !feature.has_helper_probe_read())
+  if (is_ubuntu() && !feature->has_map_array() &&
+      !feature->has_helper_probe_read())
   {
     return LockdownState::Confidentiality;
   }

@@ -90,7 +90,12 @@ struct HelperErrorInfo
 class BPFtrace
 {
 public:
-  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout)) : out_(std::move(o)),ncpus_(get_possible_cpus().size()) { }
+  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout))
+      : out_(std::move(o)),
+        feature_(std::make_unique<BPFfeature>()),
+        ncpus_(get_possible_cpus().size())
+  {
+  }
   virtual ~BPFtrace();
   virtual int add_probe(ast::Probe &p);
   int num_probes() const;
@@ -150,7 +155,7 @@ public:
   unsigned int join_argnum_;
   unsigned int join_argsize_;
   std::unique_ptr<Output> out_;
-  BPFfeature feature_;
+  std::unique_ptr<BPFfeature> feature_;
 
   uint64_t strlen_ = 64;
   uint64_t mapmax_ = 4096;

@@ -17,22 +17,17 @@ class SemanticAnalyser : public Visitor {
 public:
   explicit SemanticAnalyser(Node *root,
                             BPFtrace &bpftrace,
-                            BPFfeature &feature,
                             std::ostream &out = std::cerr,
                             bool has_child = true)
       : root_(root),
         bpftrace_(bpftrace),
-        feature_(feature),
         out_(out),
         has_child_(has_child)
   {
   }
 
-  explicit SemanticAnalyser(Node *root,
-                            BPFtrace &bpftrace,
-                            BPFfeature &feature,
-                            bool has_child)
-      : SemanticAnalyser(root, bpftrace, feature, std::cerr, has_child)
+  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, bool has_child)
+      : SemanticAnalyser(root, bpftrace, std::cerr, has_child)
   {
   }
 
@@ -70,7 +65,6 @@ public:
 private:
   Node *root_;
   BPFtrace &bpftrace_;
-  BPFfeature &feature_;
   std::ostream &out_;
   std::ostringstream err_;
   int pass_;

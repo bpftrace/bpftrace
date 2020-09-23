@@ -115,7 +115,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
   {
-    expr_ = b_.CreateGetNs(bpftrace_.feature_.has_helper_ktime_get_boot_ns());
+    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns());
   }
   else if (builtin.ident == "elapsed")
   {
@@ -126,7 +126,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(
         ctx_, map->mapfd_, key, type, builtin.loc);
-    expr_ = b_.CreateGetNs(bpftrace_.feature_.has_helper_ktime_get_boot_ns());
+    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns());
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
