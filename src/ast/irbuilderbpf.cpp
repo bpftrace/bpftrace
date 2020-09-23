@@ -598,10 +598,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     }
     else
     {
-      // Zero out `dst` in case we read less than 64 bits
-      CreateStore(getInt64(0), dst);
-      CreateProbeRead(ctx, dst, abs_size, reg, AddrSpace::kernel, loc);
-      result = CreateLoad(dst);
+      result = CreateLoad(GetType(CreateInt(abs_size * 8)), reg);
+      result = CreateIntCast(result, getInt64Ty(), argument->size < 0);
     }
     CreateLifetimeEnd(dst);
   }
