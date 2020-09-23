@@ -27,3 +27,8 @@ NAME sum with negative value
 RUN bpftrace -e 'BEGIN { @=sum(10); @=sum(-20); exit(); }'
 EXPECT ^@: -10$
 TIMEOUT 1
+
+NAME mixed values
+RUN bpftrace -e 'BEGIN { printf("%d %d %d %d\n", (int8) -10, -5555, (int16)-123, 100); exit(); }'
+EXPECT ^-10 -5555 -123 100$
+TIMEOUT 5

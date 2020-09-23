@@ -64,6 +64,8 @@ and this project adheres to
   - [#1530](https://github.com/iovisor/bpftrace/pull/1530)
 - Fix pointer arithmetic for positional parameters
   - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
+- Printing of small integers with `printf`
+  - [#1531](https://github.com/iovisor/bpftrace/pull/1531)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call

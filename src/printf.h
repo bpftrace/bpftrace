@@ -64,4 +64,16 @@ private:
   uint64_t value_;
 };
 
+class PrintableSInt : public virtual IPrintable
+{
+public:
+  PrintableSInt(int64_t value) : value_((uint64_t)(value))
+  {
+  }
+  uint64_t value();
+
+private:
+  int64_t value_;
+};
+
 } // namespace bpftrace

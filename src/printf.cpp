@@ -84,4 +84,9 @@ uint64_t PrintableInt::value()
   return value_;
 }
 
+uint64_t PrintableSInt::value()
+{
+  return value_;
+}
+
 } // namespace bpftrace
