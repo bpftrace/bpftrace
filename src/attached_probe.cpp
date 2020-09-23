@@ -505,7 +505,7 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
   sym.name = symbol;
   const struct vmlinux_location *locs = vmlinux_locs;
   struct vmlinux_location locs_env[] = {
-    { nullptr, true },
+    { nullptr, false },
     { nullptr, false },
   };
   char *env_path = std::getenv("BPFTRACE_VMLINUX");

@@ -58,6 +58,8 @@ and this project adheres to
   - [#1457](https://github.com/iovisor/bpftrace/pull/1457)
 - Fix type resolution for struct field access via variables
   - [#1450](https://github.com/iovisor/bpftrace/pull/1450)
+- Fix wrong setting of vmlinux_location.raw when offset kprobe used
+  - [#1530](https://github.com/iovisor/bpftrace/pull/1530)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
