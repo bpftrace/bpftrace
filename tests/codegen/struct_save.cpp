@@ -9,14 +9,14 @@ TEST(codegen, struct_save)
   test("struct Foo { int x, y, z; }"
        "kprobe:f"
        "{"
-       "  @foo = (struct Foo)0;"
+       "  @foo = *(struct Foo*)arg0;"
        "}",
        std::string(NAME) + "_1");
 
   test("struct Foo { int x, y, z; }"
        "kprobe:f"
        "{"
-       "  @foo = *(struct Foo*)0;"
+       "  @foo = *(struct Foo*)arg0;"
        "}",
        std::string(NAME) + "_2");
 }

@@ -1935,6 +1935,7 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   cast_size = bpftrace_.structs_[cast.cast_type].size;
+
   if (cast.is_pointer)
   {
     cast.type = CreatePointer(CreateRecord(cast_size, cast.cast_type));
@@ -1943,7 +1944,17 @@ void SemanticAnalyser::visit(Cast &cast)
       cast.type = CreatePointer(cast.type);
   }
   else
+  {
+    auto &etype = cast.expr->type;
+    if (etype.IsIntegerTy() || etype.IsPtrTy())
+    {
+      LOG(ERROR, cast.loc, err_) << "Cannot convert " << etype << " to struct";
+    }
     cast.type = CreateRecord(cast_size, cast.cast_type);
+  }
+  if (is_ctx)
+    cast.type.MarkCtxAccess();
+
   cast.type.SetAS(cast.expr->type.GetAS());
   // case : BEGIN { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
@@ -1952,8 +1963,6 @@ void SemanticAnalyser::visit(Cast &cast)
     ProbeType type = single_provider_type();
     cast.type.SetAS(find_addrspace(type));
   }
-  if (is_ctx)
-    cast.type.MarkCtxAccess();
 }
 
 void SemanticAnalyser::visit(Tuple &tuple)

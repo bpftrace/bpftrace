@@ -9,7 +9,7 @@ TEST(codegen, struct_string_ptr)
   test("struct Foo { char *str; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo*)0;"
+       "  $foo = (struct Foo*)arg0;"
        "  @mystr = str($foo->str);"
        "}",
        NAME);

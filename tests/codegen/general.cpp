@@ -67,7 +67,7 @@ TEST(codegen, printf_offsets)
                 "struct Foo { char c; int i; char str[10]; }\n"
                 "kprobe:f\n"
                 "{\n"
-                "  $foo = (struct Foo*)0;\n"
+                "  $foo = (struct Foo*)arg0;\n"
                 "  printf(\"%c %u %s %p\\n\", $foo->c, $foo->i, $foo->str, 0)\n"
                 "}"),
             0);

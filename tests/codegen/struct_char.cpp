@@ -9,7 +9,7 @@ TEST(codegen, struct_char)
   test("struct Foo { char x; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo)0;"
+       "  $foo = *(struct Foo*)arg0;"
        "  @x = $foo.x;"
        "}",
        std::string(NAME) + "_1");
@@ -17,7 +17,7 @@ TEST(codegen, struct_char)
   test("struct Foo { char x; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo*)0;"
+       "  $foo = (struct Foo*)arg0;"
        "  @x = $foo->x;"
        "}",
        std::string(NAME) + "_2");

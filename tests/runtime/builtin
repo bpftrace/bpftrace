@@ -178,7 +178,7 @@ EXPECT ^ERROR: failed to open file '/does/not/exist/file': No such file or direc
 TIMEOUT 5
 
 NAME sizeof
-RUN bpftrace -e 'struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof(((struct Foo)0).x), sizeof(((struct Foo)0).c), sizeof(1 == 1), sizeof($x)); exit(); }'
+RUN bpftrace -e 'struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x)); exit(); }'
 EXPECT ^8 4 1 8 8$
 TIMEOUT 5
 

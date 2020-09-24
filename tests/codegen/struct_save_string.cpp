@@ -9,7 +9,7 @@ TEST(codegen, struct_save_string)
   test("struct Foo { char str[32]; }"
        "kprobe:f"
        "{"
-       "  @foo = (struct Foo)0;"
+       "  @foo = *(struct Foo*)arg0;"
        "  @str = @foo.str;"
        "}",
        NAME);
