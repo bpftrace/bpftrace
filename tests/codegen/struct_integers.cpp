@@ -9,7 +9,7 @@ TEST(codegen, struct_integers)
   test("struct Foo { int x; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo)0;"
+       "  $foo = *(struct Foo*)arg0;"
        "  @x = $foo.x;"
        "}",
        std::string(NAME) + "_1");
@@ -17,7 +17,7 @@ TEST(codegen, struct_integers)
   test("struct Foo { int x; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo*)0;"
+       "  $foo = (struct Foo*)arg0;"
        "  @x = $foo->x;"
        "}",
        std::string(NAME) + "_2");

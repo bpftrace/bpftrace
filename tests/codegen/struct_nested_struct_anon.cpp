@@ -9,7 +9,7 @@ TEST(codegen, struct_nested_struct_anon)
   test("struct Foo { struct { int x; } bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo)0;"
+       "  $foo = *(struct Foo*)arg0;"
        "  @x = $foo.bar.x;"
        "}",
        std::string(NAME) + "_1");
@@ -17,7 +17,7 @@ TEST(codegen, struct_nested_struct_anon)
   test("struct Foo { struct { int x; } bar; }"
        "kprobe:f"
        "{"
-       "  $foo = (struct Foo*)0;"
+       "  $foo = (struct Foo*)arg0;"
        "  @x = $foo->bar.x;"
        "}",
        std::string(NAME) + "_2");
