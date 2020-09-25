@@ -98,6 +98,7 @@ class Utils(object):
         bpffeature["loop"] = output.find("Loop support: yes") != -1
         bpffeature["probe_read_kernel"] = output.find("probe_read_kernel: yes") != -1
         bpffeature["btf"] = output.find("btf (depends on Build:libbpf): yes") != -1
+        bpffeature["dpath"] = output.find("dpath: yes") != -1
         return bpffeature
 
     @staticmethod

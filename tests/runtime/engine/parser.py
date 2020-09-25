@@ -98,7 +98,7 @@ class TestParser(object):
                 arch = [x.strip() for x in line.split("|")]
             elif item_name == 'REQUIRES_FEATURE':
                 feature_requirement = {x.strip() for x in line.split(" ")}
-                unknown = feature_requirement - {"loop", "btf", "probe_read_kernel"}
+                unknown = feature_requirement - {"loop", "btf", "probe_read_kernel", "dpath"}
                 if len(unknown) > 0:
                     raise UnknownFieldError('%s is invalid for REQUIRES_FEATURE. Suite: %s' % (','.join(unknown), test_suite))
             else:

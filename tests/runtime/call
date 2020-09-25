@@ -242,3 +242,10 @@ NAME print_hist_with_large_top_arg
 RUN bpftrace -e 'BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("END"); clear(@); exit(); } '
 EXPECT BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
 TIMEOUT 1
+
+NAME path
+RUN bpftrace -ve 'kfunc:filp_close { $f = path(args->filp->f_path); if (!strncmp($f, "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
+EXPECT OK
+REQUIRES_FEATURE dpath
+TIMEOUT 5
+AFTER ./testprogs/syscall read
