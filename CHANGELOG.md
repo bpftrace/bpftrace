@@ -72,6 +72,8 @@ and this project adheres to
   - [#1616](https://github.com/iovisor/bpftrace/pull/1616)
 - Optimize unknown/incomplete types resolution
   - [#1571](https://github.com/iovisor/bpftrace/pull/1571)
+- Do not check size of the format string of `printf`
+  - [#1538](https://github.com/iovisor/bpftrace/pull/1538)
 
 #### Deprecated
 
