@@ -44,6 +44,8 @@ and this project adheres to
   - [#1486](https://github.com/iovisor/bpftrace/pull/1486)
 - Switch `nsecs` to `ktime_get_boot_ns`
   - [#1475](https://github.com/iovisor/bpftrace/pull/1475)
+- Do not check size of the format string of `printf`
+  - [#1538](https://github.com/iovisor/bpftrace/pull/1538)
 
 #### Deprecated
 
