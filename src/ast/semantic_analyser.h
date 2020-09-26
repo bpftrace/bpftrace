@@ -100,7 +100,13 @@ private:
   void accept_statements(StatementList *stmts);
 
   Probe *probe_;
+
+  // Temporarily record the function currently being visited by this SemanticAnalyser.
   std::string func_;
+  // Temporarily record the function argument index currently being visited by this
+  // SemanticAnalyser.
+  int func_arg_idx_ = -1;
+
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
