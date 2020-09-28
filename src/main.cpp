@@ -131,7 +131,8 @@ static int info()
   std::cerr << std::endl
             << "Build" << std::endl
             << "  version: " << BPFTRACE_VERSION << std::endl
-            << "  LLVM: " << LLVM_VERSION_MAJOR << std::endl
+            << "  LLVM: " << LLVM_VERSION_MAJOR << "." << LLVM_VERSION_MINOR
+            << "." << LLVM_VERSION_PATCH << std::endl
             << "  foreach_sym: "
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
             << "yes" << std::endl
