@@ -200,7 +200,7 @@ LogStream::~LogStream()
   {
     std::string prefix = "";
     if (type_ == LogType::DEBUG)
-      prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "]\n";
+      prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "] ";
     sink_.take_input(type_, loc_, out_, prefix + buf_.str());
   }
 }
