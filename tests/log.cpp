@@ -17,7 +17,7 @@ TEST(LogStream, basic)
   // clang-format off
   LOG(DEBUG, ss) << content_1; std::string file = __FILE__; int line = __LINE__;
   // clang-format on
-  std::string prefix = "[" + file + ":" + std::to_string(line) + "]\n";
+  std::string prefix = "[" + file + ":" + std::to_string(line) + "] ";
   EXPECT_EQ(ss.str(), "DEBUG: " + prefix + content_1 + "\n");
   ss.str({});
 
