@@ -205,7 +205,6 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
   if (field_type.find("__data_loc") != std::string::npos)
   {
     field_type = "int";
-    field_name = "data_loc_" + field_name;
   }
 
   // Only adjust field types for non-arrays
