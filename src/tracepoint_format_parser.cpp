@@ -204,7 +204,10 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
 
   if (field_type.find("__data_loc") != std::string::npos)
   {
-    field_type = "int";
+    // Note that the type here (ie `int`) does not matter. Later during parse
+    // time the parser will rewrite this field type to a u64 so that it can
+    // hold the pointer to the actual location of the data.
+    field_type = R"_(__attribute__((annotate("tp_data_loc"))) int)_";
   }
 
   // Only adjust field types for non-arrays

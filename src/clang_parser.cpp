@@ -391,6 +391,42 @@ CXCursor ClangParser::ClangParserHandler::get_translation_unit_cursor() {
   return clang_getTranslationUnitCursor(translation_unit);
 }
 
+namespace {
+// Get annotation associated with field declaration `c`
+std::optional<std::string> get_field_decl_annotation(CXCursor c)
+{
+  assert(clang_getCursorKind(c) == CXCursor_FieldDecl);
+
+  std::optional<std::string> annotation;
+  clang_visitChildren(c,
+                      [](CXCursor c,
+                         CXCursor __attribute__((unused)) parent,
+                         CXClientData data) {
+                        // The header generation code can annotate some struct
+                        // fields with additional information for us to parse
+                        // here. The annotation looks like:
+                        //
+                        //    struct Foo {
+                        //      __attribute__((annotate("tp_data_loc"))) int
+                        //      name;
+                        //    };
+                        //
+                        // Currently only the TracepointFormatParser does this.
+                        if (clang_getCursorKind(c) == CXCursor_AnnotateAttr)
+                        {
+                          auto &a = *static_cast<std::optional<std::string> *>(
+                              data);
+                          a = get_clang_string(clang_getCursorSpelling(c));
+                        }
+
+                        return CXChildVisit_Recurse;
+                      },
+                      &annotation);
+
+  return annotation;
+}
+} // namespace
+
 bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 {
   int err = clang_visitChildren(
@@ -432,16 +468,36 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
           auto type = clang_getCanonicalType(clang_getCursorType(c));
+          auto sized_type = get_sized_type(type);
           Bitfield bitfield;
           bool is_bitfield = getBitfield(c, bitfield);
+          bool is_data_loc = false;
+
+          // Process field annotations
+          auto annotation = get_field_decl_annotation(c);
+          if (annotation)
+          {
+            if (*annotation == "tp_data_loc")
+            {
+              // If the field is a tracepoint __data_loc, we need to rewrite the
+              // type as a u64. The reason is that the tracepoint infrastructure
+              // exports an encoded 32bit integer that tells us where to find
+              // the actual data and how wide it is. However, LLVM freaks out if
+              // you try to cast a pointer to a u32 (rightfully so) so we need
+              // this field to actually be 64 bits wide.
+              sized_type = CreateInt64();
+              is_data_loc = true;
+            }
+          }
 
           // No need to worry about redefined types b/c we should have already
           // checked clang diagnostics. The diagnostics will tell us if we have
           // duplicated types.
           structs[ptypestr].fields[ident].offset = offset;
-          structs[ptypestr].fields[ident].type = get_sized_type(type);
+          structs[ptypestr].fields[ident].type = sized_type;
           structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
           structs[ptypestr].fields[ident].bitfield = bitfield;
+          structs[ptypestr].fields[ident].is_data_loc = is_data_loc;
           structs[ptypestr].size = ptypesize;
         }
 

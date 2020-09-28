@@ -25,6 +25,14 @@ struct Field
 
   bool is_bitfield;
   Bitfield bitfield;
+
+  // Used for tracepoint __data_loc's
+  //
+  // If true, this field is a 32 bit integer whose value encodes information on
+  // where to find the actual data. The first 2 bytes is the size of the data.
+  // The last 2 bytes is the offset from the start of the tracepoint struct
+  // where the data begins.
+  bool is_data_loc = false;
 };
 
 using FieldsMap = std::map<std::string, Field>;
