@@ -101,11 +101,9 @@ private:
 
   Probe *probe_;
 
-  // Temporarily record the function currently being visited by this
-  // SemanticAnalyser.
+  // Holds the function currently being visited by this SemanticAnalyser.
   std::string func_;
-  // Temporarily record the function argument index currently being visited by
-  // this SemanticAnalyser.
+  // Holds the function argument index currently being visited by this SemanticAnalyser.
   int func_arg_idx_ = -1;
 
   std::map<std::string, SizedType> variable_val_;
