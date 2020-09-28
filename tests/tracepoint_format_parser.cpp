@@ -90,10 +90,10 @@ TEST(tracepoint_format_parser, data_loc)
   std::string input = "	field:__data_loc char[] msg;	offset:8;	size:4;	signed:1;";
 
   std::string expected =
-    "struct _tracepoint_syscalls_sys_enter_read\n"
-    "{\n"
-    "  int data_loc_msg;\n"
-    "};\n";
+      "struct _tracepoint_syscalls_sys_enter_read\n"
+      "{\n"
+      "  __attribute__((annotate(\"tp_data_loc\"))) int msg;\n"
+      "};\n";
 
   std::istringstream format_file(input);
 
