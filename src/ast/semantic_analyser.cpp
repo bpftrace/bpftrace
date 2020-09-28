@@ -76,8 +76,9 @@ void SemanticAnalyser::visit(PositionalParameter &param)
 
 void SemanticAnalyser::visit(String &string)
 {
-  // Skip check for printf()'s format string (1st argument) and create the string
-  // with the original size. This is because format string is not part of bpf byte code.
+  // Skip check for printf()'s format string (1st argument) and create the
+  // string with the original size. This is because format string is not part of
+  // bpf byte code.
   if (func_ == "printf" && func_arg_idx_ == 0)
   {
     string.type = CreateString(string.str.size());
