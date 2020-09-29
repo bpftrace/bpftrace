@@ -435,26 +435,14 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           Bitfield bitfield;
           bool is_bitfield = getBitfield(c, bitfield);
 
-          // Warn if we already have the struct member defined and is
-          // different type and keep the current definition in place.
-          if (structs.count(ptypestr) != 0 &&
-              structs[ptypestr].fields.count(ident)    != 0 &&
-              structs[ptypestr].fields[ident].offset   != offset &&
-              structs[ptypestr].fields[ident].type     != get_sized_type(type) &&
-              structs[ptypestr].fields[ident].is_bitfield && is_bitfield &&
-              structs[ptypestr].fields[ident].bitfield != bitfield &&
-              structs[ptypestr].size                   != ptypesize)
-          {
-            LOG(WARNING) << "type mismatch for " << ptypestr << "::" << ident;
-          }
-          else
-          {
-            structs[ptypestr].fields[ident].offset = offset;
-            structs[ptypestr].fields[ident].type = get_sized_type(type);
-            structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
-            structs[ptypestr].fields[ident].bitfield = bitfield;
-            structs[ptypestr].size = ptypesize;
-          }
+          // No need to worry about redefined types b/c we should have already
+          // checked clang diagnostics. The diagnostics will tell us if we have
+          // duplicated types.
+          structs[ptypestr].fields[ident].offset = offset;
+          structs[ptypestr].fields[ident].type = get_sized_type(type);
+          structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
+          structs[ptypestr].fields[ident].bitfield = bitfield;
+          structs[ptypestr].size = ptypesize;
         }
 
         return CXChildVisit_Recurse;
