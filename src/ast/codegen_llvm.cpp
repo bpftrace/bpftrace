@@ -1539,6 +1539,27 @@ void CodegenLLVM::visit(FieldAccess &acc)
       Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
       expr_ = masked;
     }
+    else if (field.type.IsIntTy() && field.is_data_loc)
+    {
+      // `is_data_loc` should only be set if field access is on `args` which
+      // has to be a ctx access
+      assert(type.IsCtxAccess());
+      assert(ctx_->getType() == b_.getInt8PtrTy());
+      // Parser needs to have rewritten field to be a u64
+      assert(field.type.IsIntTy());
+      assert(field.type.GetIntBitWidth() == 64);
+
+      // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
+      // offset which we add to the start of the tracepoint struct.
+      expr_ = b_.CreateLoad(
+          b_.getInt32Ty(),
+          b_.CreateGEP(b_.CreatePointerCast(ctx_,
+                                            b_.getInt32Ty()->getPointerTo()),
+                       b_.getInt64(field.offset / 4)));
+      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+      expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
+      expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
+    }
     else if ((field.type.IsIntTy() || field.type.IsPtrTy()) &&
              type.IsCtxAccess())
     {
