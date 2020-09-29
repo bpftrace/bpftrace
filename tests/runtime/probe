@@ -140,11 +140,6 @@ RUN bpftrace -v -e 'p:hz:599 { @[tid] = count(); exit();}'
 EXPECT \@\[[0-9]*\]\:\s[0-9]
 TIMEOUT 5
 
-NAME profile_order
-RUN bpftrace -v runtime/scripts/profile_order.bt
-EXPECT first second
-TIMEOUT 5
-
 NAME interval
 RUN bpftrace -v -e 't:raw_syscalls:sys_enter { @syscalls = count(); } interval:ms:1{ print(@syscalls); clear(@syscalls); exit();}'
 EXPECT @syscalls\:\s[0-9]*
