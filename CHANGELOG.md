@@ -32,6 +32,8 @@ and this project adheres to
   - [#1499](https://github.com/iovisor/bpftrace/pull/1499)
 - Positional parameters: support numbers as strings and params as string literals
   - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
+- Add --no-headers flag
+  - [#1545](https://github.com/iovisor/bpftrace/pull/1545)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments

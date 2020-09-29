@@ -595,10 +595,12 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 
   bool process_btf = program->c_definitions.empty() ||
                      (bpftrace.force_btf_ && bpftrace.btf_.has_data());
+  if (bpftrace.no_headers_)
+    process_btf = false;
 
   // We set these args early because some systems may not have <linux/types.h>
   // (containers) and fully rely on BTF.
-  if (process_btf)
+  if (process_btf || bpftrace.no_headers_)
   {
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>

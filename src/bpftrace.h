@@ -165,6 +165,7 @@ public:
   bool force_btf_ = false;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
+  bool no_headers_ = false;
   int helper_check_level_ = 0;
   std::optional<struct timespec> boottime_;
 

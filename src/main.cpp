@@ -58,6 +58,7 @@ void usage()
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
   std::cerr << "    --include FILE add an #include file before preprocessing" << std::endl;
+  std::cerr << "    --no-headers   do not include any BTF or system supplied headers" << std::endl;
   std::cerr << "    -l [search]    list probes" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
@@ -261,13 +262,14 @@ int main(int argc, char *argv[])
   bool listing = false;
   bool safe_mode = true;
   bool force_btf = false;
+  bool no_headers = false;
   bool usdt_file_activation = false;
   int helper_check_level = 0;
   std::string script, search, file_name, output_file, output_format, output_elf;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
-  const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:k";
+  const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:kn";
   option long_options[] = {
     option{ "help", no_argument, nullptr, 'h' },
     option{ "version", no_argument, nullptr, 'V' },
@@ -275,6 +277,7 @@ int main(int argc, char *argv[])
     option{ "unsafe", no_argument, nullptr, 'u' },
     option{ "btf", no_argument, nullptr, 'b' },
     option{ "include", required_argument, nullptr, '#' },
+    option{ "no-headers", no_argument, nullptr, 1999 },
     option{ "info", no_argument, nullptr, 2000 },
     option{ "emit-elf", required_argument, nullptr, 2001 },
     option{ "no-warnings", no_argument, nullptr, 2002 },
@@ -287,6 +290,9 @@ int main(int argc, char *argv[])
   {
     switch (c)
     {
+      case 1999: // --no-headers
+        no_headers = true;
+        break;
       case 2000: // --info
         if (is_root())
           return info();
@@ -433,6 +439,7 @@ int main(int argc, char *argv[])
   BPFtrace bpftrace(std::move(output));
   Driver driver(bpftrace);
 
+  bpftrace.no_headers_ = no_headers;
   bpftrace.usdt_file_activation_ = usdt_file_activation;
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.force_btf_ = force_btf;
