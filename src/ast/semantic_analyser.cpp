@@ -1486,7 +1486,7 @@ void SemanticAnalyser::visit(Binop &binop)
       addr_rhs != AddrSpace::none)
   {
     if (is_final_pass())
-      LOG(WARNING) << "Addrspace mismatch";
+      LOG(WARNING, binop.loc, out_) << "Addrspace mismatch";
     binop.type.SetAS(AddrSpace::none);
   }
   // Associativity from left to right for binary operator
