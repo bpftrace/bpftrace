@@ -32,6 +32,8 @@ and this project adheres to
   - [#1499](https://github.com/iovisor/bpftrace/pull/1499)
 - Positional parameters: support numbers as strings and params as string literals
   - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
+- Support for tracepoint __data_loc fields
+  - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
@@ -44,6 +46,8 @@ and this project adheres to
   - [#1486](https://github.com/iovisor/bpftrace/pull/1486)
 - Switch `nsecs` to `ktime_get_boot_ns`
   - [#1475](https://github.com/iovisor/bpftrace/pull/1475)
+- Tracepoint __data_loc fields are renamed from `args->data_loc_name` to `args->name`
+  - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
 
 #### Deprecated
 
