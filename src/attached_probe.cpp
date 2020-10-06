@@ -657,7 +657,7 @@ void AttachedProbe::load_prog()
       std::cout << std::endl << "Program ID: " << info.id << std::endl;
     }
     std::cout << std::endl
-              << "Bytecode: " << std::endl
+              << "The verifier log: " << std::endl
               << log_buf.get() << std::endl;
   }
 }

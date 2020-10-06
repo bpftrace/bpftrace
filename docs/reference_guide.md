@@ -365,7 +365,7 @@ The `-v` option prints more information about the program as it is run:
 # bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
 Attaching 1 probe...
 
-Bytecode:
+The verifier log:
 0: (bf) r6 = r1
 1: (b7) r1 = 0
 2: (7b) *(u64 *)(r10 -24) = r1
@@ -401,7 +401,7 @@ iscsid is sleeping.
 [...]
 ```
 
-This includes `Bytecode:` and then the eBPF bytecode after it was compiled from the llvm assembly.
+This includes `The verifier log:` and then the log message from the in-kernel vertifier.
 
 ## 7. Preprocessor Options
 

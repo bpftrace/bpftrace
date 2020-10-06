@@ -50,6 +50,8 @@ and this project adheres to
   - [#1475](https://github.com/iovisor/bpftrace/pull/1475)
 - Tracepoint __data_loc fields are renamed from `args->data_loc_name` to `args->name`
   - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
+- Change a part of the message of '-v' output
+  - [#1553](https://github.com/iovisor/bpftrace/pull/1553)
 
 #### Deprecated
 
