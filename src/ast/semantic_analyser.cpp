@@ -41,10 +41,10 @@ void SemanticAnalyser::visit(Integer &integer)
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
   param.type = CreateInt64();
-  if (is_in_str)
+  if (is_in_str_)
   {
     param.is_in_str = true;
-    has_pos_param = true;
+    has_pos_param_ = true;
   }
   switch (param.ptype)
   {
@@ -398,7 +398,7 @@ void SemanticAnalyser::visit(Call &call)
   func_setter scope_bound_func_setter{ *this, call.func };
 
   if (call.func == "str")
-    is_in_str = true;
+    is_in_str_ = true;
 
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
@@ -536,7 +536,7 @@ void SemanticAnalyser::visit(Call &call)
             << "argument (" << t << " provided)";
       }
       call.type = CreateString(bpftrace_.strlen_);
-      if (has_pos_param)
+      if (has_pos_param_)
       {
         if (dynamic_cast<PositionalParameter *>(arg))
           call.is_literal = true;
@@ -551,7 +551,7 @@ void SemanticAnalyser::visit(Call &call)
                 << call.func << "() only accepts positional parameters"
                 << " directly or with a single constant offset added";
           }
-          has_pos_param = false;
+          has_pos_param_ = false;
         }
       }
 
@@ -559,7 +559,7 @@ void SemanticAnalyser::visit(Call &call)
         check_arg(call, Type::integer, 1, false);
       }
     }
-    is_in_str = false;
+    is_in_str_ = false;
   }
   else if (call.func == "buf")
   {
@@ -1361,7 +1361,7 @@ void SemanticAnalyser::visit(Binop &binop)
         }
       }
 
-      if (is_in_str)
+      if (is_in_str_)
       {
         // Check if one of the operands is a positional parameter
         // The other one should be a constant offset
