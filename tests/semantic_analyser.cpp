@@ -589,6 +589,15 @@ TEST(semantic_analyser, call_str_2_expr)
   test("kprobe:f { @x = str(arg0, arg1); }", 0);
 }
 
+TEST(semantic_analyser, call_str_state_leak_regression_test)
+{
+  // Previously, the semantic analyser would leak state in the first str()
+  // call. This would make the semantic analyser think it's still processing
+  // a positional parameter in the second str() call causing confusing error
+  // messages.
+  test(R"PROG(kprobe:f { $x = str($1) == "asdf"; $y = str(arg0) })PROG", 0);
+}
+
 TEST(semantic_analyser, call_buf)
 {
   test("kprobe:f { buf(arg0, 1); }", 0);
