@@ -551,7 +551,6 @@ void SemanticAnalyser::visit(Call &call)
                 << call.func << "() only accepts positional parameters"
                 << " directly or with a single constant offset added";
           }
-          has_pos_param_ = false;
         }
       }
 
@@ -560,6 +559,7 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     is_in_str_ = false;
+    has_pos_param_ = false;
   }
   else if (call.func == "buf")
   {
