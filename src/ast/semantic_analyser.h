@@ -114,7 +114,6 @@ private:
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
-  bool is_in_str_ = false;
   bool has_pos_param_ = false;
 };
 
