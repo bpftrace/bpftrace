@@ -41,7 +41,7 @@ void SemanticAnalyser::visit(Integer &integer)
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
   param.type = CreateInt64();
-  if (is_in_str_)
+  if (func_ == "str")
   {
     param.is_in_str = true;
     has_pos_param_ = true;
@@ -397,9 +397,6 @@ void SemanticAnalyser::visit(Call &call)
 
   func_setter scope_bound_func_setter{ *this, call.func };
 
-  if (call.func == "str")
-    is_in_str_ = true;
-
   if (call.vargs) {
     for (Expression *expr : *call.vargs) {
       expr->accept(*this);
@@ -558,7 +555,6 @@ void SemanticAnalyser::visit(Call &call)
         check_arg(call, Type::integer, 1, false);
       }
     }
-    is_in_str_ = false;
     has_pos_param_ = false;
   }
   else if (call.func == "buf")
@@ -1361,7 +1357,7 @@ void SemanticAnalyser::visit(Binop &binop)
         }
       }
 
-      if (is_in_str_)
+      if (func_ == "str")
       {
         // Check if one of the operands is a positional parameter
         // The other one should be a constant offset
