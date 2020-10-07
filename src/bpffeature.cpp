@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include "btf.h"
-#include "list.h"
+#include "probe_matcher.h"
 #include "utils.h"
 
 namespace bpftrace {

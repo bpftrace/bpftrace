@@ -24,8 +24,8 @@
 #include "attached_probe.h"
 #include "bpftrace.h"
 #include "disasm.h"
-#include "list.h"
 #include "log.h"
+#include "probe_matcher.h"
 #include "usdt.h"
 
 namespace libbpf {

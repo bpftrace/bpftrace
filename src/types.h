@@ -443,6 +443,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
 };
 
 ProbeType probetype(const std::string &type);
+bool is_userspace_probe(const ProbeType &probe_type);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string probetypeName(const std::string &type);

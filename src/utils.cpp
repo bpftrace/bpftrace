@@ -17,8 +17,8 @@
 #include <tuple>
 #include <unistd.h>
 
-#include "list.h"
 #include "log.h"
+#include "probe_matcher.h"
 #include "utils.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -926,7 +926,7 @@ uint32_t kernel_version(int attempt)
   }
 }
 
-std::string abs_path(const std::string &rel_path)
+std::optional<std::string> abs_path(const std::string &rel_path)
 {
   // filesystem::canonical does not work very well with /proc/<pid>/root paths
   // of processes in a different mount namespace (than the one bpftrace is
@@ -934,8 +934,15 @@ std::string abs_path(const std::string &rel_path)
   static auto re = std::regex("^/proc/\\d+/root/.*");
   if (!std::regex_match(rel_path, re))
   {
-    auto p = std_filesystem::path(rel_path);
-    return std_filesystem::canonical(std_filesystem::absolute(p)).string();
+    try
+    {
+      auto p = std_filesystem::path(rel_path);
+      return std_filesystem::canonical(std_filesystem::absolute(p)).string();
+    }
+    catch (std_filesystem::filesystem_error &)
+    {
+      return {};
+    }
   }
   else
   {

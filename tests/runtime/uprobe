@@ -1,5 +1,5 @@
 NAME "uprobes - list probes by file"
-RUN bpftrace -l 'uprobe:./testprogs/uprobe_test'
+RUN bpftrace -l 'uprobe:./testprogs/uprobe_test:*'
 EXPECT uprobe:./testprogs/uprobe_test:function1
 TIMEOUT 5
 

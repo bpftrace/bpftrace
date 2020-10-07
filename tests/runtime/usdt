@@ -1,5 +1,5 @@
 NAME "usdt probes - list probes by file"
-RUN bpftrace -l 'usdt:./testprogs/usdt_test'
+RUN bpftrace -l 'usdt:./testprogs/usdt_test:*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 REQUIRES ./testprogs/usdt_test should_not_skip

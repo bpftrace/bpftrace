@@ -167,7 +167,22 @@ probes : probes probe { $$ = $1; $1->push_back($2); }
        | probe        { $$ = new ast::ProbeList; $$->push_back($1); }
        ;
 
-probe : attach_points pred block { $$ = new ast::Probe($1, $2, $3); }
+probe : attach_points pred block { if (!driver.listing_)
+                                     $$ = new ast::Probe($1, $2, $3);
+                                   else
+                                   {
+                                     error(@$, "unexpected listing query format");
+                                     YYERROR;
+                                   }
+                                 }
+      | attach_points END { if (driver.listing_)
+                              $$ = new ast::Probe($1, nullptr, nullptr);
+                            else
+                            {
+                              error(@$, "unexpected end of file, expected {");
+                              YYERROR;
+                            }
+                          }
       ;
 
 attach_points : attach_points "," attach_point { $$ = $1; $1->push_back($3); }

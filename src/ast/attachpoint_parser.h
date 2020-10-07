@@ -54,6 +54,7 @@ private:
   AttachPoint *ap_{ nullptr }; // Non-owning pointer
   std::stringstream errs_;
   std::vector<std::string> parts_;
+  AttachPointList new_attach_points;
 };
 
 } // namespace ast

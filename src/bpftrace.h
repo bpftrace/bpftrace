@@ -19,6 +19,7 @@
 #include "mapmanager.h"
 #include "output.h"
 #include "printf.h"
+#include "probe_matcher.h"
 #include "procmon.h"
 #include "struct.h"
 #include "types.h"
@@ -94,6 +95,7 @@ public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout))
       : out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>()),
+        probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size())
   {
   }
@@ -189,15 +191,8 @@ public:
       std::vector<SizedType> key_args,
       std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key);
-  std::set<std::string> find_wildcard_matches(
-      const ast::AttachPoint &attach_point) const;
-  std::set<std::string> find_symbol_matches(
-      const ast::AttachPoint &attach_point) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_file(
-      const std::string &path) const;
-  virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
-      int pid,
-      const std::string &target) const;
+
+  std::unique_ptr<ProbeMatcher> probe_matcher_;
 
   BTF btf_;
   std::unordered_set<std::string> btf_set_;
