@@ -28,8 +28,6 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
 
-#include <llvm/Demangle/Demangle.h>
-
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -45,76 +43,6 @@ const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
 } // namespace libbpf
 
 namespace bpftrace {
-namespace {
-/*
- * Finds all matches of func in the provided input stream.
- *
- * If an optional prefix is provided, lines must start with it to count as a
- * match, but the prefix is stripped from entries in the result set.
- * Wildcard tokens ("*") are accepted in func.
- *
- * If `ignore_trailing_module` is true, will ignore trailing kernel module.
- * For example, `[ehci_hcd]` will be ignored in:
- *     ehci_disable_ASE [ehci_hcd]
- */
-std::set<std::string> find_wildcard_matches_internal(
-    const std::string &func,
-    bool ignore_trailing_module,
-    std::istream &symbol_stream)
-{
-  if (!bpftrace::has_wildcard(func))
-    return std::set<std::string>({ func });
-  bool start_wildcard = func[0] == '*';
-  bool end_wildcard = func[func.length() - 1] == '*';
-
-  std::vector<std::string> tokens = split_string(func, '*');
-  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
-
-  std::string line;
-  std::set<std::string> matches;
-  while (std::getline(symbol_stream, line))
-  {
-    if (ignore_trailing_module && line.size() && line[line.size() - 1] == ']')
-    {
-      if (size_t idx = line.rfind(" ["); idx != std::string::npos)
-        line = line.substr(0, idx);
-    }
-
-    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
-    {
-      auto fun_line = line;
-      auto prefix = fun_line.find(':') != std::string::npos
-                        ? erase_prefix(fun_line) + ":"
-                        : "";
-      if (symbol_has_cpp_mangled_signature(fun_line))
-      {
-        char *demangled_name = llvm::itaniumDemangle(
-            fun_line.c_str(), nullptr, nullptr, nullptr);
-        if (demangled_name)
-        {
-          if (!wildcard_match(prefix + demangled_name, tokens, true, true))
-          {
-            free(demangled_name);
-          }
-          else
-          {
-            free(demangled_name);
-            goto out;
-          }
-        }
-      }
-      continue;
-    }
-  out:
-    // skip the ".part.N" kprobe variants, as they can't be traced:
-    if (line.find(".part.") != std::string::npos)
-      continue;
-
-    matches.insert(line);
-  }
-  return matches;
-}
-} // namespace
 
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_quiet = false;
@@ -248,7 +176,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       std::set<std::string> matches;
       try
       {
-        matches = find_wildcard_matches(*attach_point);
+        matches = probe_matcher_->get_matches_for_ap(*attach_point);
       }
       catch (const WildcardException &e)
       {
@@ -283,7 +211,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         // As the C++ language supports function overload, a given function name
         // (without parameters) could have multiple matches even when no
         // wildcards are used.
-        matches = find_symbol_matches(*attach_point);
+        matches = probe_matcher_->get_matches_for_ap(*attach_point);
         attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
       }
       else
@@ -393,179 +321,6 @@ int BPFtrace::add_probe(ast::Probe &p)
   }
 
   return 0;
-}
-
-std::set<std::string> BPFtrace::find_wildcard_matches(
-    const ast::AttachPoint &attach_point) const
-{
-  std::unique_ptr<std::istream> symbol_stream;
-  bool ignore_trailing_module = false;
-  std::string func;
-
-  switch (probetype(attach_point.provider))
-  {
-    case ProbeType::kprobe:
-    case ProbeType::kretprobe:
-    {
-      symbol_stream = get_symbols_from_file(
-          "/sys/kernel/debug/tracing/available_filter_functions");
-      func = attach_point.func;
-      ignore_trailing_module = true;
-      break;
-    }
-    case ProbeType::uprobe:
-    case ProbeType::uretprobe:
-    {
-      symbol_stream = std::make_unique<std::istringstream>(
-          extract_func_symbols_from_path(attach_point.target));
-      func = attach_point.target + ":" + attach_point.func;
-      break;
-    }
-    case ProbeType::asyncwatchpoint:
-    case ProbeType::watchpoint:
-    {
-      symbol_stream = std::make_unique<std::istringstream>(
-          extract_func_symbols_from_path(attach_point.target));
-      func = attach_point.target + ":" + attach_point.func;
-      break;
-    }
-    case ProbeType::tracepoint:
-    {
-      symbol_stream = get_symbols_from_file(
-          "/sys/kernel/debug/tracing/available_events");
-      func = attach_point.target + ":" + attach_point.func;
-      break;
-    }
-    case ProbeType::usdt:
-    {
-      symbol_stream = get_symbols_from_usdt(pid(), attach_point.target);
-      auto target = attach_point.target;
-      // If PID is specified, targets in symbol_stream will have the
-      // "/proc/<PID>/root" prefix followed by an absolute path, so we make the
-      // target absolute and add a leading wildcard.
-      if (pid() > 0)
-      {
-        if (target != "")
-          target = abs_path(target);
-        target = "*" + target;
-      }
-      auto ns = attach_point.ns == "" ? "*" : attach_point.ns;
-      func = target + ":" + ns + ":" + attach_point.func;
-      break;
-    }
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc: {
-      symbol_stream = btf_.kfunc();
-      func = attach_point.func;
-      break;
-    }
-    default:
-    {
-      throw WildcardException("Wildcard matches aren't available on probe type '"
-          + attach_point.provider + "'");
-    }
-  }
-
-  return find_wildcard_matches_internal(func,
-                                        ignore_trailing_module,
-                                        *symbol_stream);
-}
-
-std::set<std::string> BPFtrace::find_symbol_matches(
-    const ast::AttachPoint &attach_point) const
-{
-  std::unique_ptr<std::istream> symbol_stream;
-  std::string prefix, func;
-
-  symbol_stream = std::make_unique<std::istringstream>(
-      extract_func_symbols_from_path(attach_point.target));
-  func = attach_point.func;
-
-  std::string line;
-  std::set<std::string> matches;
-  while (std::getline(*symbol_stream, line))
-  {
-    auto line_func = line;
-    erase_prefix(line_func); // remove the "path:" prefix from line
-    if (line_func != func)
-    {
-      if (symbol_has_cpp_mangled_signature(line_func))
-      {
-        char *demangled_name = llvm::itaniumDemangle(
-            line_func.c_str(), nullptr, nullptr, nullptr);
-        if (demangled_name)
-        {
-          std::string symbol_name;
-          // If the specified function name has a '(', try to match it against
-          // the full demangled symbol (including parameters), otherwise just
-          // against the function name (without parameters)
-          if (func.find('(') != std::string::npos)
-            symbol_name = demangled_name;
-          else
-            symbol_name =
-                std::string(demangled_name)
-                    .substr(0, std::string(demangled_name).find_first_of("("));
-          free(demangled_name);
-          if (symbol_name == func)
-            matches.insert(line);
-        }
-      }
-    }
-    else
-    {
-      matches.insert(line);
-    }
-  }
-  return matches;
-}
-
-std::unique_ptr<std::istream> BPFtrace::get_symbols_from_file(const std::string &path) const
-{
-  auto file = std::make_unique<std::ifstream>(path);
-  if (file->fail())
-  {
-    throw std::runtime_error("Could not read symbols from " + path +
-                             ": " + strerror(errno));
-  }
-
-  return file;
-}
-
-std::unique_ptr<std::istream> BPFtrace::get_symbols_from_usdt(
-    int pid,
-    const std::string &target) const
-{
-  std::string probes;
-  usdt_probe_list usdt_probes;
-
-  if (pid > 0)
-    usdt_probes = USDTHelper::probes_for_pid(pid);
-  else
-  {
-    std::vector<std::string> real_paths;
-    if (target.find('*') != std::string::npos)
-      real_paths = resolve_binary_path(target);
-    else
-      real_paths.push_back(target);
-
-    for (auto &real_path : real_paths)
-    {
-      auto target_usdt_probes = USDTHelper::probes_for_path(real_path);
-      usdt_probes.insert(usdt_probes.end(),
-                         target_usdt_probes.begin(),
-                         target_usdt_probes.end());
-    }
-  }
-
-  for (auto const& usdt_probe : usdt_probes)
-  {
-    std::string path = usdt_probe.path;
-    std::string provider = usdt_probe.provider;
-    std::string fname = usdt_probe.name;
-    probes += path + ":" + provider + ":" + fname + "\n";
-  }
-
-  return std::make_unique<std::istringstream>(probes);
 }
 
 int BPFtrace::num_probes() const

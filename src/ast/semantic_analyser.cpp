@@ -2,10 +2,10 @@
 #include "arch/arch.h"
 #include "ast.h"
 #include "fake_map.h"
-#include "list.h"
 #include "log.h"
 #include "parser.tab.hh"
 #include "printf.h"
+#include "probe_matcher.h"
 #include "tracepoint_format_parser.h"
 #include "usdt.h"
 #include <algorithm>
@@ -145,7 +145,7 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
    * 2. sets is_tparg so that codegen does the real type setting after
    *    expansion.
    */
-  auto matches = bpftrace_.find_wildcard_matches(*attach_point);
+  auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
   if (!matches.empty())
   {
     auto &match = *matches.begin();
@@ -1890,7 +1890,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         continue;
       }
 
-      auto matches = bpftrace_.find_wildcard_matches(*attach_point);
+      auto matches = bpftrace_.probe_matcher_->get_matches_for_ap(
+          *attach_point);
       for (auto &match : matches) {
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);

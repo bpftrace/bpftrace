@@ -28,13 +28,24 @@ int AttachPointParser::parse()
   uint32_t failed = 0;
   for (Probe *probe : *(root_->probes))
   {
-    for (AttachPoint *ap : *(probe->attach_points))
+    for (size_t i = 0; i < probe->attach_points->size(); ++i)
     {
-      if (parse_attachpoint(*ap))
+      auto &ap = *(*probe->attach_points)[i];
+      new_attach_points.clear();
+      if (parse_attachpoint(ap))
       {
         ++failed;
-        LOG(ERROR, ap->loc, sink_) << errs_.str();
+        LOG(ERROR, ap.loc, sink_) << errs_.str();
         errs_.str({}); // clear buffer
+      }
+      else if (!new_attach_points.empty())
+      {
+        // Remove the current attach point and replace it by new ones
+        probe->attach_points->erase(probe->attach_points->begin() + i);
+        probe->attach_points->insert(probe->attach_points->end(),
+                                     new_attach_points.begin(),
+                                     new_attach_points.end());
+        i--;
       }
     }
   }
@@ -56,9 +67,45 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
     return 1;
   }
 
-  ap_->provider = probetypeName(parts_.front());
+  std::set<std::string> probe_types;
+  if (has_wildcard(parts_.front()))
+  {
+    // Probe type expansion
+    // If PID is specified or the second part of the attach point is a path
+    // (contains '/'), use userspace probe types.
+    // Otherwise, use kernel probe types.
+    if (bpftrace_.pid() > 0 ||
+        (parts_.size() >= 2 && parts_[1].find('/') != std::string::npos))
+    {
+      probe_types = bpftrace_.probe_matcher_->expand_probetype_userspace(
+          parts_.front());
+    }
+    else
+    {
+      probe_types = bpftrace_.probe_matcher_->expand_probetype_kernel(
+          parts_.front());
+    }
+  }
+  else
+    probe_types = { parts_.front() };
 
-  switch (probetype(parts_.front()))
+  if (probe_types.size() != 1)
+  {
+    // If the probe type string matches more than 1 probe, create a new set of
+    // attach points (one for every match) that will replace the original one.
+    for (const auto &probe_type : probe_types)
+    {
+      std::string raw_input = ap.raw_input;
+      erase_prefix(raw_input);
+      raw_input = probe_type + ":" + raw_input;
+      new_attach_points.push_back(new AttachPoint(raw_input));
+    }
+    return 0;
+  }
+
+  ap_->provider = probetypeName(*probe_types.begin());
+
+  switch (probetype(ap.provider))
   {
     case ProbeType::kprobe:
       return kprobe_parser();
@@ -237,6 +284,8 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
   // Handle special probes implemented as uprobes
   if (ap_->provider == "BEGIN" || ap_->provider == "END")
   {
+    if (parts_.size() == 2 && parts_[1] == "*")
+      parts_.pop_back();
     if (parts_.size() != 1)
     {
       errs_ << ap_->provider << " probe type requires 0 arguments" << std::endl;
@@ -247,13 +296,25 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
   }
 
   // Now handle regular uprobes
+  if (parts_.size() == 2 && bpftrace_.pid() > 0)
+  {
+    // For PID, the target may be skipped
+    parts_.push_back(parts_[1]);
+    parts_[1] = "";
+  }
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
     return 1;
   }
 
-  ap_->target = parts_[1];
+  if (bpftrace_.pid() > 0)
+  {
+    ap_->target = get_pid_exe(bpftrace_.pid());
+    ap_->target = path_for_pid_mountns(bpftrace_.pid(), ap_->target);
+  }
+  else
+    ap_->target = parts_[1];
 
   // Handle uprobe:/lib/asdf:func+0x100 case
   auto plus_count = std::count(parts_[2].cbegin(), parts_[2].cend(), '+');
@@ -341,6 +402,15 @@ int AttachPointParser::uretprobe_parser()
 
 int AttachPointParser::usdt_parser()
 {
+  if (bpftrace_.pid() > 0)
+  {
+    // For PID, the target can be skipped
+    if (parts_.size() == 2)
+    {
+      parts_.push_back(parts_[1]);
+      parts_[1] = "";
+    }
+  }
   if (parts_.size() != 3 && parts_.size() != 4)
   {
     errs_ << ap_->provider << " probe type requires 2 or 3 arguments"
@@ -370,6 +440,8 @@ int AttachPointParser::usdt_parser()
 
 int AttachPointParser::tracepoint_parser()
 {
+  if (parts_.size() == 2 && parts_.at(1) == "*")
+    parts_.push_back("*");
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;

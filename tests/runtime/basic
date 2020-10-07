@@ -98,7 +98,7 @@ TIMEOUT 1
 
 NAME errors on invalid character in search expression
 RUN bpftrace -l '\n'
-EXPECT ERROR: invalid character in search expression
+EXPECT ERROR: invalid character
 TIMEOUT 1
 
 NAME pid fails validation with leading non-number

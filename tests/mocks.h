@@ -5,24 +5,35 @@
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "child.h"
+#include "probe_matcher.h"
 #include "procmon.h"
 
 namespace bpftrace {
 namespace test {
 
-class MockBPFtrace : public BPFtrace {
+class MockProbeMatcher : public ProbeMatcher
+{
 public:
+  MockProbeMatcher(BPFtrace *bpftrace) : ProbeMatcher(bpftrace)
+  {
+  }
 #pragma GCC diagnostic push
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Winconsistent-missing-override"
 #endif
   MOCK_CONST_METHOD1(get_symbols_from_file,
-      std::unique_ptr<std::istream>(const std::string &path));
+                     std::unique_ptr<std::istream>(const std::string &path));
   MOCK_CONST_METHOD2(get_symbols_from_usdt,
-      std::unique_ptr<std::istream>(int pid, const std::string &target));
-  MOCK_CONST_METHOD1(extract_func_symbols_from_path,
-      std::string(const std::string &path));
+                     std::unique_ptr<std::istream>(int pid,
+                                                   const std::string &target));
+  MOCK_CONST_METHOD1(get_func_symbols_from_file,
+                     std::unique_ptr<std::istream>(const std::string &path));
 #pragma GCC diagnostic pop
+};
+
+class MockBPFtrace : public BPFtrace
+{
+public:
   std::vector<Probe> get_probes()
   {
     return probes_;
@@ -55,6 +66,14 @@ public:
     }
     return 0;
   }
+
+  void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
+  {
+    probe_matcher_ = std::move(probe_matcher);
+    mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
+  }
+
+  MockProbeMatcher *mock_probe_matcher;
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();

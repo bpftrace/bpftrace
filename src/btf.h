@@ -4,6 +4,7 @@
 #include <linux/types.h>
 #include <map>
 #include <regex>
+#include <set>
 #include <string>
 #include <unistd.h>
 #include <unordered_set>
@@ -29,10 +30,11 @@ public:
   std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const btf_type* type, const std::string& field);
-  void display_kfunc(std::regex* re, const bool retfunc) const;
-  void display_structs(std::regex* re) const;
 
-  std::unique_ptr<std::istream> kfunc(void) const;
+  std::set<std::string> get_all_structs() const;
+  std::unique_ptr<std::istream> get_all_funcs() const;
+  std::map<std::string, std::vector<std::string>> get_params(
+      const std::set<std::string>& funcs) const;
 
   int resolve_args(const std::string &func,
                    std::map<std::string, SizedType>& args,
@@ -41,9 +43,6 @@ public:
 private:
   SizedType get_stype(__u32 id);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t);
-  std::unique_ptr<std::istream> get_funcs(std::regex* re,
-                                          bool params,
-                                          std::string prefix) const;
   bool is_traceable_func(const std::string& func_name) const;
 
   struct btf* btf;

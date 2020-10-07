@@ -1,5 +1,6 @@
 #include "field_analyser.h"
 #include "log.h"
+#include "probe_matcher.h"
 #include <cassert>
 #include <iostream>
 
@@ -161,7 +162,7 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
     // Find all the matches for the wildcard..
     try
     {
-      matches = bpftrace_.find_wildcard_matches(ap);
+      matches = bpftrace_.probe_matcher_->get_matches_for_ap(ap);
     }
     catch (const WildcardException &e)
     {

@@ -21,11 +21,11 @@
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "field_analyser.h"
-#include "list.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
 #include "printer.h"
+#include "probe_matcher.h"
 #include "procmon.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
@@ -496,17 +496,26 @@ int main(int argc, char *argv[])
   // Listing probes
   if (listing)
   {
-    if (!is_root())
-      return 1;
-
-    if (optind == argc-1)
-      list_probes(bpftrace, argv[optind]);
-    else if (optind == argc)
-      list_probes(bpftrace, "");
+    if (optind == argc || std::string(argv[optind]) == "*")
+      script = "*:*";
+    else if (optind == argc - 1)
+      script = argv[optind];
     else
+    {
       usage();
+      return 1;
+    }
 
-    return 0;
+    if (script.find(':') == std::string::npos &&
+        (script.find("struct") == 0 || script.find("union") == 0 ||
+         script.find("enum") == 0))
+    {
+      // Print structure definitions
+      bpftrace.probe_matcher_->list_structs(script);
+      return 0;
+    }
+
+    driver.listing_ = true;
   }
 
   if (script.empty())
@@ -569,6 +578,16 @@ int main(int argc, char *argv[])
 
   if (!is_root())
     return 1;
+
+  // Listing probes
+  if (listing)
+  {
+    if (!is_root())
+      return 1;
+
+    bpftrace.probe_matcher_->list_probes(driver.root_);
+    return 0;
+  }
 
   auto lockdown_state = lockdown::detect(bpftrace.feature_);
   if (lockdown_state == lockdown::LockdownState::Confidentiality)

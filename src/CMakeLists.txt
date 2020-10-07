@@ -21,12 +21,12 @@ add_executable(${BPFTRACE}
   disasm.cpp
   driver.cpp
   fake_map.cpp
-  list.cpp
   lockdown.cpp
   log.cpp
   map.cpp
   mapkey.cpp
   output.cpp
+  probe_matcher.cpp
   procmon.cpp
   printf.cpp
   resolve_cgroupid.cpp

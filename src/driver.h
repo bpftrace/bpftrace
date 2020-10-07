@@ -29,6 +29,8 @@ public:
 
   BPFtrace &bpftrace_;
 
+  bool listing_ = false;
+
 private:
   std::ostream &out_;
   bool failed_ = false;

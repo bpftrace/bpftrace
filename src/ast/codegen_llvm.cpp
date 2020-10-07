@@ -16,12 +16,12 @@
 #include <ctime>
 #include <fstream>
 
-#include <llvm/Support/TargetRegistry.h>
+#include <llvm-c/Transforms/IPO.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Support/TargetRegistry.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
-#include <llvm-c/Transforms/IPO.h>
 
 namespace bpftrace {
 namespace ast {
@@ -2226,7 +2226,7 @@ void CodegenLLVM::visit(Probe &probe)
       if (attach_point->provider == "BEGIN" || attach_point->provider == "END") {
         matches.insert(attach_point->provider);
       } else {
-        matches = bpftrace_.find_wildcard_matches(*attach_point);
+        matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
       }
 
       tracepoint_struct_ = "";
