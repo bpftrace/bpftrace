@@ -61,7 +61,7 @@ void SemanticAnalyser::visit(PositionalParameter &param)
               << "\". Try using str($" << param.n << ").";
         }
         // string allocated in bpf stack. See codegen.
-        if (!is_numeric(pstr))
+        if (param.is_in_str)
           param.type.SetAS(AddrSpace::kernel);
       }
       break;
