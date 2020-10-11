@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <sstream>
 
 #include "gtest/gtest.h"
@@ -248,6 +249,20 @@ TEST(Parser, variable_assign)
       "  =\n"
       "   variable: $x\n"
       "   int: -1\n");
+
+  char in_cstr[128];
+  char out_cstr[128];
+
+  snprintf(in_cstr, sizeof(in_cstr), "kprobe:sys_open { $x = %ld; }", LONG_MIN);
+  snprintf(out_cstr,
+           sizeof(out_cstr),
+           "Program\n"
+           " kprobe:sys_open\n"
+           "  =\n"
+           "   variable: $x\n"
+           "   int: %ld\n",
+           LONG_MIN);
+  test(std::string(in_cstr), std::string(out_cstr));
 }
 
 TEST(semantic_analyser, compound_variable_assignments)
@@ -1685,6 +1700,21 @@ TEST(Parser, tuple_assignment_error)
   test_parse_failure("i:s:1 { (1, \"two\", (3, 4)).5 = \"six\"; }");
   test_parse_failure("i:s:1 { $a = 1; $a.2 = 3 }");
   test_parse_failure("i:s:1 { 0.1 = 1.0 }");
+}
+
+TEST(Parser, abs_knl_address)
+{
+  char in_cstr[64];
+  char out_cstr[64];
+
+  snprintf(in_cstr, sizeof(in_cstr), "watchpoint::0x%lx:4:w { 1; }", ULONG_MAX);
+  snprintf(out_cstr,
+           sizeof(out_cstr),
+           "Program\n"
+           " watchpoint:%lu:4:w\n"
+           "  int: 1\n",
+           ULONG_MAX);
+  test(std::string(in_cstr), std::string(out_cstr));
 }
 
 } // namespace parser
