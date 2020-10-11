@@ -1475,15 +1475,43 @@ watchpoint::hex_address:length:mode
 ```
 
 These are memory watchpoints provided by the kernel. Whenever a memory address is written to (`w`), read
-from (`r`), or executed (`x`), the kernel can generate an event. Note that a pid (`-p`) or a command
-(`-c`) must be provided to bpftrace. Also note you may not monitor for execution while monitoring read or
-write.
+from (`r`), or executed (`x`), the kernel can generate an event. If you want to add watchpoint for
+an userspace process, a pid (`-p`) or a command (`-c`) must be provided to bpftrace. If not, bpftrace
+will take the address as kernel space address. Also note you may not monitor for execution while
+monitoring read or write.
 
 Examples:
 
 ```
-bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); }' -c ~/binary
+bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); exit(); }' -c ./testprogs/watchpoint
 ```
+
+It will output "hit" and exit when the watchpoint process is trying to read or write 0x10000000.
+
+```
+# bpftrace -e "watchpoint::0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {@[kstack] = count();}"
+Attaching 1 probe...
+^C
+......
+@[
+    do_timer+12
+    tick_do_update_jiffies64.part.22+89
+    tick_sched_do_timer+103
+    tick_sched_timer+39
+    __hrtimer_run_queues+256
+    hrtimer_interrupt+256
+    smp_apic_timer_interrupt+106
+    apic_timer_interrupt+15
+    cpuidle_enter_state+188
+    cpuidle_enter+41
+    do_idle+536
+    cpu_startup_entry+25
+    start_secondary+355
+    secondary_startup_64+164
+]: 319
+```
+
+It shows the kernel stacks in which jiffies is updated.
 
 ## 15. `kfunc`/`kretfunc`: Kernel Functions Tracing
 
