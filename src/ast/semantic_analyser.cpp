@@ -2310,7 +2310,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "usdt probe must have a target function or wildcard";
 
-    if (ap.target != "") {
+    if (ap.target != "" && !(bpftrace_.pid() > 0 && has_wildcard(ap.target)))
+    {
       auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
       switch (paths.size())
       {
@@ -2387,15 +2388,27 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "software probe must have a software event name";
     else {
-      bool found = false;
-      for (auto &probeListItem : SW_PROBE_LIST) {
-        if (ap.target == probeListItem.path || (!probeListItem.alias.empty() && ap.target == probeListItem.alias)) {
-          found = true;
-          break;
+      if (!has_wildcard(ap.target))
+      {
+        bool found = false;
+        for (auto &probeListItem : SW_PROBE_LIST)
+        {
+          if (ap.target == probeListItem.path ||
+              (!probeListItem.alias.empty() &&
+               ap.target == probeListItem.alias))
+          {
+            found = true;
+            break;
+          }
         }
+        if (!found)
+          LOG(ERROR, ap.loc, err_) << ap.target << " is not a software probe";
       }
-      if (!found)
-        LOG(ERROR, ap.loc, err_) << ap.target << " is not a software probe";
+      else if (!listing_)
+      {
+        LOG(ERROR, ap.loc, err_)
+            << "wildcards are not allowed for hardware probe type";
+      }
     }
     if (ap.func != "")
       LOG(ERROR, ap.loc, err_)
@@ -2446,15 +2459,27 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "hardware probe must have a hardware event name";
     else {
-      bool found = false;
-      for (auto &probeListItem : HW_PROBE_LIST) {
-        if (ap.target == probeListItem.path || (!probeListItem.alias.empty() && ap.target == probeListItem.alias)) {
-          found = true;
-          break;
+      if (!has_wildcard(ap.target))
+      {
+        bool found = false;
+        for (auto &probeListItem : HW_PROBE_LIST)
+        {
+          if (ap.target == probeListItem.path ||
+              (!probeListItem.alias.empty() &&
+               ap.target == probeListItem.alias))
+          {
+            found = true;
+            break;
+          }
         }
+        if (!found)
+          LOG(ERROR, ap.loc, err_) << ap.target + " is not a hardware probe";
       }
-      if (!found)
-        LOG(ERROR, ap.loc, err_) << ap.target + " is not a hardware probe";
+      else if (!listing_)
+      {
+        LOG(ERROR, ap.loc, err_)
+            << "wildcards are not allowed for hardware probe type";
+      }
     }
     if (ap.func != "")
       LOG(ERROR, ap.loc, err_)
@@ -2496,18 +2521,24 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       return;
     }
 
-    const auto& ap_map = bpftrace_.btf_ap_args_;
-    auto it = ap_map.find(probe_->name());
+    if (ap.func == "")
+      LOG(ERROR, ap.loc, err_) << "kfunc should specify a function";
 
-    if (it != ap_map.end())
+    if (!listing_)
     {
-      auto args = it->second;
-      ap_args_.clear();
-      ap_args_.insert(args.begin(), args.end());
-    }
-    else
-    {
-      LOG(ERROR, ap.loc, err_) << "Failed to resolve kfunc args.";
+      const auto &ap_map = bpftrace_.btf_ap_args_;
+      auto it = ap_map.find(probe_->name());
+
+      if (it != ap_map.end())
+      {
+        auto args = it->second;
+        ap_args_.clear();
+        ap_args_.insert(args.begin(), args.end());
+      }
+      else
+      {
+        LOG(ERROR, ap.loc, err_) << "Failed to resolve kfunc args.";
+      }
     }
   }
   else {
@@ -2527,10 +2558,13 @@ void SemanticAnalyser::visit(Probe &probe)
   if (probe.pred) {
     probe.pred->accept(*this);
   }
-  for (Statement *stmt : *probe.stmts) {
-    stmt->accept(*this);
+  if (probe.stmts)
+  {
+    for (Statement *stmt : *probe.stmts)
+    {
+      stmt->accept(*this);
+    }
   }
-
 }
 
 void SemanticAnalyser::visit(Program &program)
@@ -2544,7 +2578,9 @@ int SemanticAnalyser::analyse()
   // Multiple passes to handle variables being used before they are defined
   std::string errors;
 
-  for (pass_ = 1; pass_ <= num_passes_; pass_++) {
+  int num_passes = listing_ ? 1 : num_passes_;
+  for (pass_ = 1; pass_ <= num_passes; pass_++)
+  {
     root_->accept(*this);
     errors = err_.str();
     if (!errors.empty()) {
