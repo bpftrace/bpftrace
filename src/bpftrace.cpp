@@ -869,13 +869,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
     throw std::runtime_error("failed to glob");
 
-  const char *p;
+  char *p;
   if (!(p = realpath(probe.path.c_str(), nullptr)))
   {
     LOG(ERROR) << "Failed to resolve " << probe.path;
     return ret;
   }
   std::string resolved(p);
+  free(p);
 
   for (size_t i = 0; i < globbuf.gl_pathc; ++i)
   {
