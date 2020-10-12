@@ -585,6 +585,11 @@ int main(int argc, char *argv[])
     if (!is_root())
       return 1;
 
+    ast::SemanticAnalyser semantics(driver.root_, bpftrace, false, true);
+    err = semantics.analyse();
+    if (err)
+      return err;
+
     bpftrace.probe_matcher_->list_probes(driver.root_);
     return 0;
   }
