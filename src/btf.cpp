@@ -115,7 +115,7 @@ static struct btf *btf_open(const struct vmlinux_location *locs)
 
     if (err)
     {
-      if (bt_verbose)
+      if (bt_debug != DebugLevel::kNone)
       {
         char err_buf[256];
 
@@ -126,7 +126,7 @@ static struct btf *btf_open(const struct vmlinux_location *locs)
       continue;
     }
 
-    if (bt_verbose)
+    if (bt_debug != DebugLevel::kNone)
     {
       std::cerr << "BTF: using data from " << path << std::endl;
     }

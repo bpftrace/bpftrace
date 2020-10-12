@@ -300,7 +300,6 @@ If BTF is available, it is also possible to list struct/union/emum definitions. 
 
 ```
 # bpftrace -lv "struct path"
-BTF: using data from /sys/kernel/btf/vmlinux
 struct path {
         struct vfsmount *mnt;
         struct dentry *dentry;

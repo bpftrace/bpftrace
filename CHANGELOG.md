@@ -56,6 +56,8 @@ and this project adheres to
   - [#1553](https://github.com/iovisor/bpftrace/pull/1553)
 - Improve tuple assignment error message
   - [#1563](https://github.com/iovisor/bpftrace/pull/1563)
+- Remove "BTF: using data from ..." message when using -v flag
+  - [#1554](https://github.com/iovisor/bpftrace/pull/1554)
 
 #### Deprecated
 
