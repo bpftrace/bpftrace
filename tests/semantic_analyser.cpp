@@ -1738,6 +1738,74 @@ TEST(semantic_analyser, type_ctx)
   test(driver, "t:sched:sched_one { @ = (uint64)ctx; }", 1);
 }
 
+TEST(semantic_analyser, double_pointer_basic)
+{
+  test(R"_(BEGIN { $pp = (int8 **)0; $p = *$pp; $val = *$p; })_", 0);
+  test(R"_(BEGIN { $pp = (int8 **)0; $val = **$pp; })_", 0);
+
+  const std::string structs = "struct Foo { int x; }";
+  test(structs + R"_(BEGIN { $pp = (struct Foo **)0; $val = (*$pp)->x; })_", 0);
+}
+
+TEST(semantic_analyser, double_pointer_int)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver, "kprobe:f { $pp = (int8 **)1; $p = *$pp; $val = *$p; }", 0);
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $pp = (int8 **)1;
+  auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+  ASSERT_TRUE(assignment->var->type.IsPtrTy());
+  ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsPtrTy());
+  ASSERT_TRUE(assignment->var->type.GetPointeeTy()->GetPointeeTy()->IsIntTy());
+  EXPECT_EQ(
+      assignment->var->type.GetPointeeTy()->GetPointeeTy()->GetIntBitWidth(),
+      8ULL);
+
+  // $p = *$pp;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
+  ASSERT_TRUE(assignment->var->type.IsPtrTy());
+  ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsIntTy());
+  EXPECT_EQ(assignment->var->type.GetPointeeTy()->GetIntBitWidth(), 8ULL);
+
+  // $val = *$p;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(2));
+  ASSERT_TRUE(assignment->var->type.IsIntTy());
+  EXPECT_EQ(assignment->var->type.GetIntBitWidth(), 8ULL);
+}
+
+TEST(semantic_analyser, double_pointer_struct)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(driver,
+       "struct Foo { char x; long y; }"
+       "kprobe:f { $pp = (struct Foo **)1; $p = *$pp; $val = $p->x; }",
+       0);
+  auto &stmts = driver.root_->probes->at(0)->stmts;
+
+  // $pp = (struct Foo **)1;
+  auto assignment = static_cast<ast::AssignVarStatement *>(stmts->at(0));
+  ASSERT_TRUE(assignment->var->type.IsPtrTy());
+  ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsPtrTy());
+  ASSERT_TRUE(
+      assignment->var->type.GetPointeeTy()->GetPointeeTy()->IsRecordTy());
+  EXPECT_EQ(assignment->var->type.GetPointeeTy()->GetPointeeTy()->GetName(),
+            "struct Foo");
+
+  // $p = *$pp;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(1));
+  ASSERT_TRUE(assignment->var->type.IsPtrTy());
+  ASSERT_TRUE(assignment->var->type.GetPointeeTy()->IsRecordTy());
+  EXPECT_EQ(assignment->var->type.GetPointeeTy()->GetName(), "struct Foo");
+
+  // $val = $p->x;
+  assignment = static_cast<ast::AssignVarStatement *>(stmts->at(2));
+  ASSERT_TRUE(assignment->var->type.IsIntTy());
+  EXPECT_EQ(assignment->var->type.GetIntBitWidth(), 8ULL);
+}
+
 // Basic functionality test
 TEST(semantic_analyser, tuple)
 {
