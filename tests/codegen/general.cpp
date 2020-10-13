@@ -94,19 +94,19 @@ TEST(codegen, printf_offsets)
   // Note that scalar types are promoted to 64-bits when put into
   // a perf event buffer
   EXPECT_EQ(args[0].type.type, Type::integer);
-  EXPECT_EQ(args[0].type.size, 8U);
+  EXPECT_EQ(args[0].type.GetSize(), 8U);
   EXPECT_EQ(args[0].offset, 8);
 
   EXPECT_EQ(args[1].type.type, Type::integer);
-  EXPECT_EQ(args[1].type.size, 8U);
+  EXPECT_EQ(args[1].type.GetSize(), 8U);
   EXPECT_EQ(args[1].offset, 16);
 
   EXPECT_EQ(args[2].type.type, Type::string);
-  EXPECT_EQ(args[2].type.size, 10U);
+  EXPECT_EQ(args[2].type.GetSize(), 10U);
   EXPECT_EQ(args[2].offset, 24);
 
   EXPECT_EQ(args[3].type.type, Type::integer);
-  EXPECT_EQ(args[3].type.size, 8U);
+  EXPECT_EQ(args[3].type.GetSize(), 8U);
   EXPECT_EQ(args[3].offset, 40);
 }
 

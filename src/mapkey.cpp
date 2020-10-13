@@ -17,7 +17,7 @@ size_t MapKey::size() const
 {
   size_t size = 0;
   for (auto &arg : args_)
-    size += arg.size;
+    size += arg.GetSize();
   return size;
 }
 
@@ -43,7 +43,7 @@ std::vector<std::string> MapKey::argument_value_list(BPFtrace &bpftrace,
   for (const SizedType &arg : args_)
   {
     list.push_back(argument_value(bpftrace, arg, &data[offset]));
-    offset += arg.size;
+    offset += arg.GetSize();
   }
   return list;
 }
@@ -65,7 +65,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
   switch (arg.type)
   {
     case Type::integer:
-      switch (arg.size)
+      switch (arg.GetSize())
       {
         case 1:
           return std::to_string(read_data<int8_t>(data));
@@ -105,12 +105,12 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::string:
     {
       auto p = static_cast<const char *>(data);
-      return std::string(p, strnlen(p, arg.size));
+      return std::string(p, strnlen(p, arg.GetSize()));
     }
     case Type::buffer:
     {
       auto p = static_cast<const char *>(data) + 1;
-      return hex_format_buffer(p, arg.size - 1);
+      return hex_format_buffer(p, arg.GetSize() - 1);
     }
     case Type::pointer:
     {

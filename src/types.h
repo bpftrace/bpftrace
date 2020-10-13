@@ -80,17 +80,18 @@ struct Field;
 class SizedType
 {
 public:
-  SizedType() : type(Type::none), size(0) { }
-  SizedType(Type type, size_t size_, bool is_signed)
-      : type(type), size(size_), is_signed_(is_signed)
+  SizedType() : type(Type::none), size_(0)
   {
   }
-  SizedType(Type type, size_t size_) : type(type), size(size_)
+  SizedType(Type type, size_t size_, bool is_signed)
+      : type(type), size_(size_), is_signed_(is_signed)
+  {
+  }
+  SizedType(Type type, size_t size_) : type(type), size_(size_)
   {
   }
 
   Type type;
-  size_t size;                 // in bytes
   StackType stack_type;
   bool is_internal = false;
   bool is_tparg = false;
@@ -98,6 +99,7 @@ public:
   int kfarg_idx = -1;
 
 private:
+  size_t size_; // in bytes
   bool is_signed_ = false;
   SizedType *element_type_ = nullptr; // for "container" and pointer
                                       // (like) types
@@ -165,6 +167,22 @@ public:
 
   bool IsSigned(void) const;
 
+  size_t GetSize() const
+  {
+    return size_;
+  }
+
+  void SetSize(size_t size)
+  {
+    size_ = size;
+    if (IsIntTy())
+    {
+      assert(size == 0 || size == 1 || size == 8 || size == 16 || size == 32 ||
+             size == 64);
+      size_bits_ = size * 8;
+    }
+  }
+
   size_t GetIntBitWidth() const
   {
     assert(IsIntTy());
@@ -174,7 +192,7 @@ public:
   size_t GetNumElements() const
   {
     assert(IsArrayTy() || IsStringTy());
-    return size;
+    return size_;
   };
 
   const std::string GetName() const

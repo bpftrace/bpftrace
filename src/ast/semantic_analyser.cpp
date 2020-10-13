@@ -631,7 +631,8 @@ void SemanticAnalyser::visit(Call &call)
 
     if (call.vargs->size() == 1)
       if (arg.type.IsArrayTy())
-        buffer_size = arg.type.GetNumElements() * arg.type.GetElementTy()->size;
+        buffer_size = arg.type.GetNumElements() *
+                      arg.type.GetElementTy()->GetSize();
       else
         LOG(ERROR, call.loc, err_)
             << call.func << "() expects a length argument for non-array type "
@@ -705,7 +706,7 @@ void SemanticAnalyser::visit(Call &call)
     int buffer_size = 24;
     auto type = arg->type;
 
-    if (arg->type.IsArray() && type.size != 4 && type.size != 16)
+    if (arg->type.IsArray() && type.GetSize() != 4 && type.GetSize() != 16)
       LOG(ERROR, call.loc, err_)
           << call.func << "() argument must be 4 or 16 bytes in size";
 
@@ -855,7 +856,7 @@ void SemanticAnalyser::visit(Call &call)
           auto ty = (*iter)->type;
           // Promote to 64-bit if it's not an aggregate type
           if (!ty.IsAggregate() && !ty.IsTimestampTy())
-            ty.size = 8;
+            ty.SetSize(8);
           args.push_back(Field{
             .type =  ty,
             .offset = 0,
@@ -1249,7 +1250,7 @@ void SemanticAnalyser::visit(Map &map)
 
       // Insert a cast to 64 bits if needed by injecting
       // a cast into the ast.
-      if (expr->type.IsIntTy() && expr->type.size < 8)
+      if (expr->type.IsIntTy() && expr->type.GetSize() < 8)
       {
         std::string type = expr->type.IsSigned() ? "int64" : "uint64";
         Expression *cast = new ast::Cast(type, false, false, expr);
@@ -1281,7 +1282,7 @@ void SemanticAnalyser::visit(Map &map)
         // which use maps as a lookup table
         // TODO (fbs): This needs a better solution
         if (expr->type.IsIntTy())
-          keytype = CreateUInt(keytype.size * 8);
+          keytype = CreateUInt(keytype.GetSize() * 8);
         key.args_.push_back(keytype);
       }
     }
@@ -1351,10 +1352,10 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     {
       Integer *index = static_cast<Integer *>(arr.indexpr);
 
-      if ((size_t) index->n >= type.size)
+      if ((size_t)index->n >= type.GetSize())
         LOG(ERROR, arr.loc, err_)
             << "the index " << index->n
-            << " is out of bounds for array of size " << type.size;
+            << " is out of bounds for array of size " << type.GetSize();
     }
     else {
       LOG(ERROR, arr.loc, err_) << "The array index operator [] only "
@@ -1610,8 +1611,8 @@ void SemanticAnalyser::visit(Unop &unop)
   }
   else if (unop.op == Parser::token::LNOT) {
     // CreateUInt() abort if a size is invalid, so check the size here
-    if (!(type.size == 0 || type.size == 1 || type.size == 2 ||
-          type.size == 4 || type.size == 8))
+    if (!(type.GetSize() == 0 || type.GetSize() == 1 || type.GetSize() == 2 ||
+          type.GetSize() == 4 || type.GetSize() == 8))
     {
       LOG(ERROR, unop.loc, err_)
           << "The " << opstr(unop)
@@ -1620,7 +1621,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
     else
     {
-      unop.type = CreateUInt(8 * type.size);
+      unop.type = CreateUInt(8 * type.GetSize());
     }
   }
   else {
@@ -2007,8 +2008,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
   else if (type.IsStringTy())
   {
-    auto map_size = map_val_[map_ident].size;
-    auto expr_size = assignment.expr->type.size;
+    auto map_size = map_val_[map_ident].GetSize();
+    auto expr_size = assignment.expr->type.GetSize();
     if (map_size != expr_size)
     {
       std::stringstream buf;
@@ -2027,8 +2028,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   }
   else if (type.IsBufferTy())
   {
-    auto map_size = map_val_[map_ident].size;
-    auto expr_size = assignment.expr->type.size;
+    auto map_size = map_val_[map_ident].GetSize();
+    auto expr_size = assignment.expr->type.GetSize();
     if (map_size != expr_size)
     {
       std::stringstream buf;
@@ -2131,8 +2132,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
   else if (assignTy.IsStringTy())
   {
-    auto var_size = storedTy.size;
-    auto expr_size = assignTy.size;
+    auto var_size = storedTy.GetSize();
+    auto expr_size = assignTy.GetSize();
     if (var_size != expr_size)
     {
       LOG(WARNING, assignment.loc, out_)
@@ -2143,8 +2144,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
   else if (assignTy.IsBufferTy())
   {
-    auto var_size = storedTy.size;
-    auto expr_size = assignTy.size;
+    auto var_size = storedTy.GetSize();
+    auto expr_size = assignTy.GetSize();
     if (var_size != expr_size)
     {
       LOG(WARNING, assignment.loc, out_)
@@ -2822,7 +2823,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
     {
       // Store all integer values as 64-bit in maps, so that there will
       // be space for any integer to be assigned to the map later
-      map_val_[map_ident].size = 8;
+      map_val_[map_ident].SetSize(8);
     }
   }
 }
