@@ -40,7 +40,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
   else if (type.IsIntTy())
   {
-    os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.size;
+    os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.GetSize();
   }
   else if (type.IsArrayTy())
   {
@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   }
   else if (type.IsStringTy() || type.IsBufferTy())
   {
-    os << type.type << "[" << type.size << "]";
+    os << type.type << "[" << type.GetSize() << "]";
   }
   else if (type.IsTupleTy())
   {
@@ -90,12 +90,13 @@ bool SizedType::IsEqual(const SizedType &t) const
     return false;
 
   if (IsRecordTy())
-    return t.GetName() == GetName() && t.size == size;
+    return t.GetName() == GetName() && t.GetSize() == GetSize();
 
   if (IsPtrTy())
     return *t.GetPointeeTy() == *GetPointeeTy();
 
-  return type == t.type && size == t.size && is_signed_ == t.is_signed_;
+  return type == t.type && GetSize() == t.GetSize() &&
+         is_signed_ == t.is_signed_;
 }
 
 bool SizedType::operator!=(const SizedType &t) const
@@ -440,7 +441,7 @@ SizedType CreateTuple(const std::vector<SizedType> &fields)
 {
   auto s = SizedType(Type::tuple, 0);
   s.tuple_fields = Tuple::Create(fields);
-  s.size = s.tuple_fields->size;
+  s.size_ = s.tuple_fields->size;
   return s;
 }
 
@@ -483,9 +484,9 @@ ssize_t SizedType::GetAlignment() const
   if (IsTupleTy())
     return tuple_fields->align;
 
-  if (size <= 2)
-    return size;
-  else if (size <= 4)
+  if (GetSize() <= 2)
+    return GetSize();
+  else if (GetSize() <= 4)
     return 4;
   else
     return 8;

@@ -59,7 +59,7 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   else
     map_type_ = BPF_MAP_TYPE_HASH;
 
-  int value_size = type.size;
+  int value_size = type.GetSize();
   int flags = 0;
   mapfd_ = create_map(map_type_, name.c_str(), key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)

@@ -179,7 +179,7 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std:
 
   if (needMemcpy(stype))
   {
-    CREATE_MEMSET(alloca, getInt8(0), stype.size, 1);
+    CREATE_MEMSET(alloca, getInt8(0), stype.GetSize(), 1);
   }
   else
   {
@@ -222,7 +222,7 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   llvm::Type *ty;
   if (stype.IsArray())
   {
-    ty = ArrayType::get(getInt8Ty(), stype.size);
+    ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   }
   else if (stype.IsTupleTy())
   {
@@ -245,11 +245,11 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
   }
   else if (stype.IsRecordTy())
   {
-    ty = ArrayType::get(getInt8Ty(), stype.size);
+    ty = ArrayType::get(getInt8Ty(), stype.GetSize());
   }
   else
   {
-    switch (stype.size)
+    switch (stype.GetSize())
     {
       case 16:
         ty = getInt128Ty();
@@ -267,7 +267,8 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
         ty = getInt8Ty();
         break;
       default:
-        LOG(FATAL) << stype.size << " is not a valid type size for GetType";
+        LOG(FATAL) << stype.GetSize()
+                   << " is not a valid type size for GetType";
     }
   }
   return ty;
@@ -362,7 +363,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   SetInsertPoint(lookup_success_block);
   if (needMemcpy(type))
-    CREATE_MEMCPY(value, call, type.size, 1);
+    CREATE_MEMCPY(value, call, type.GetSize(), 1);
   else
   {
     assert(value->getType()->isPointerTy() &&
@@ -375,7 +376,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
 
   SetInsertPoint(lookup_failure_block);
   if (needMemcpy(type))
-    CREATE_MEMSET(value, getInt8(0), type.size, 1);
+    CREATE_MEMSET(value, getInt8(0), type.GetSize(), 1);
   else
     CreateStore(getInt64(0), value);
   CreateHelperError(ctx, getInt32(0), libbpf::BPF_FUNC_map_lookup_elem, loc);

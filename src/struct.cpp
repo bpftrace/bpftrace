@@ -24,7 +24,7 @@ std::unique_ptr<Tuple> Tuple::Create(std::vector<SizedType> fields)
   {
     auto align = field.GetAlignment();
     struct_align = std::max(align, struct_align);
-    auto size = field.size;
+    auto size = field.GetSize();
 
     auto padding = (align - (offset % align)) % align;
     if (padding)
@@ -71,7 +71,7 @@ void Tuple::Dump(std::ostream &os)
       prefix(offset, os) << pad(delta) << std::endl;
     }
     prefix(offset + delta, os) << field.type << std::endl;
-    offset = field.offset + field.type.size;
+    offset = field.offset + field.type.GetSize();
   }
   os << "} sizeof: [" << size << "]" << std::endl;
 }
