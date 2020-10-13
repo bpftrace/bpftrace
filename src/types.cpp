@@ -249,7 +249,7 @@ SizedType CreateInteger(size_t bits, bool is_signed)
   assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
          bits == 64);
   auto t = SizedType(Type::integer, bits / 8, is_signed);
-  t.size_bits = bits;
+  t.size_bits_ = bits;
   return t;
 }
 
