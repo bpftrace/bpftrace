@@ -740,8 +740,8 @@ TEST(clang_parser, struct_qualifiers)
 TEST(clang_parser, redefined_types)
 {
   BPFtrace bpftrace;
-  parse("struct a {int a}; struct a {int a};", bpftrace, false);
-  parse("struct a {int a}; struct a {int a; short b;};", bpftrace, false);
+  parse("struct a {int a;}; struct a {int a;};", bpftrace, false);
+  parse("struct a {int a;}; struct a {int a; short b;};", bpftrace, false);
 }
 
 TEST(clang_parser, data_loc_annotation)
