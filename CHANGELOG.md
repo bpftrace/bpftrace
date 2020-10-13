@@ -40,6 +40,8 @@ and this project adheres to
   - [#1504](https://github.com/iovisor/bpftrace/pull/1504)
 - Support watchpoint for kernel space address
   - [#1552](https://github.com/iovisor/bpftrace/pull/1552)
+- Support for pointer to pointer
+  - [#1557](https://github.com/iovisor/bpftrace/pull/1557)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
