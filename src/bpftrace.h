@@ -167,6 +167,7 @@ public:
   bool resolve_user_symbols_ = true;
   bool cache_user_symbols_ = true;
   bool safe_mode_ = true;
+  bool force_btf_ = false;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;

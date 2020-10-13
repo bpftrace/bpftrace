@@ -1213,6 +1213,7 @@ TEST(semantic_analyser, field_access)
   test(structs + "kprobe:f { ((struct type1)cpu).field }", 0);
   test(structs + "kprobe:f { $x = (struct type1)cpu; $x.field }", 0);
   test(structs + "kprobe:f { @x = (struct type1)cpu; @x.field }", 0);
+  test("struct task_struct {int x;} kprobe:f { curtask->x }", 0);
 }
 
 TEST(semantic_analyser, field_access_wrong_field)

@@ -53,6 +53,7 @@ void usage()
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
   std::cerr << "    -d             debug info dry run" << std::endl;
   std::cerr << "    -dd            verbose debug info dry run" << std::endl;
+  std::cerr << "    -b             force BTF (BPF type format) processing" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
@@ -259,6 +260,7 @@ int main(int argc, char *argv[])
   std::string cmd_str;
   bool listing = false;
   bool safe_mode = true;
+  bool force_btf = false;
   bool usdt_file_activation = false;
   int helper_check_level = 0;
   std::string script, search, file_name, output_file, output_format, output_elf;
@@ -349,6 +351,7 @@ int main(int argc, char *argv[])
         safe_mode = false;
         break;
       case 'b':
+        force_btf = true;
         break;
       case 'h':
         usage();
@@ -432,6 +435,7 @@ int main(int argc, char *argv[])
 
   bpftrace.usdt_file_activation_ = usdt_file_activation;
   bpftrace.safe_mode_ = safe_mode;
+  bpftrace.force_btf_ = force_btf;
   bpftrace.helper_check_level_ = helper_check_level;
   bpftrace.boottime_ = get_boottime();
 
