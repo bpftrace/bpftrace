@@ -1306,10 +1306,11 @@ void CodegenLLVM::visit(Unop &unop)
     {
       case bpftrace::Parser::token::MUL:
       {
-        if (unop.type.IsIntegerTy())
+        if (unop.type.IsIntegerTy() || unop.type.IsPtrTy())
         {
           auto *et = type.GetPointeeTy();
-          int size = et->GetIntBitWidth() / 8;
+          // Pointer always 64 bits wide
+          int size = unop.type.IsIntegerTy() ? et->GetIntBitWidth() / 8 : 8;
           AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
           b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
           expr_ = b_.CreateIntCast(b_.CreateLoad(dst),

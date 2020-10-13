@@ -248,16 +248,27 @@ void ArrayAccess::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Cast::Cast(const std::string &type, bool is_pointer, Expression *expr)
-    : cast_type(type), is_pointer(is_pointer), expr(expr)
+Cast::Cast(const std::string &type,
+           bool is_pointer,
+           bool is_double_pointer,
+           Expression *expr)
+    : cast_type(type),
+      is_pointer(is_pointer),
+      is_double_pointer(is_double_pointer),
+      expr(expr)
 {
 }
 
 Cast::Cast(const std::string &type,
            bool is_pointer,
+           bool is_double_pointer,
            Expression *expr,
            location loc)
-    : Expression(loc), cast_type(type), is_pointer(is_pointer), expr(expr)
+    : Expression(loc),
+      cast_type(type),
+      is_pointer(is_pointer),
+      is_double_pointer(is_double_pointer),
+      expr(expr)
 {
 }
 

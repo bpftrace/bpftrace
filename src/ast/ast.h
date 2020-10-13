@@ -178,13 +178,18 @@ public:
 
 class Cast : public Expression {
 public:
-  Cast(const std::string &type, bool is_pointer, Expression *expr);
   Cast(const std::string &type,
        bool is_pointer,
+       bool is_double_pointer,
+       Expression *expr);
+  Cast(const std::string &type,
+       bool is_pointer,
+       bool is_double_pointer,
        Expression *expr,
        location loc);
   std::string cast_type;
   bool is_pointer;
+  bool is_double_pointer;
   Expression *expr;
 
   void accept(Visitor &v) override;
