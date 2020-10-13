@@ -105,7 +105,7 @@ private:
   std::string name_; // name of this type, for named types like struct
   bool ctx_ = false; // Is bpf program context
   AddrSpace as_ = AddrSpace::none;
-  ssize_t size_bits; // size in bits for integer types
+  ssize_t size_bits_; // size in bits for integer types
 
   std::shared_ptr<Tuple> tuple_fields; // tuple fields
 
@@ -168,7 +168,7 @@ public:
   size_t GetIntBitWidth() const
   {
     assert(IsIntTy());
-    return size_bits;
+    return size_bits_;
   };
 
   size_t GetNumElements() const
@@ -197,7 +197,7 @@ public:
 
   bool IsBoolTy() const
   {
-    return type == Type::integer && size_bits == 1;
+    return type == Type::integer && size_bits_ == 1;
   };
   bool IsPtrTy() const
   {
