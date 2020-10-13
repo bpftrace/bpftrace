@@ -214,8 +214,11 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
   if (field_name.find("[") == std::string::npos)
     field_type = adjust_integer_types(field_type, size);
 
-  // If BTF is available, we try not to use any header files, including
-  // <linux/types.h> and request all the types we need from BTF.
+  // With --btf on, we try not to use any header files, including
+  // <linux/types.h>. That means we must request all the types we need
+  // from BTF. Note we don't need to gate this on --btf because the
+  // expensive type reslution is already gated on --btf (adding to a set
+  // is cheap).
   bpftrace.btf_set_.emplace(field_type);
 
   return extra + "  " + field_type + " " + field_name + ";\n";

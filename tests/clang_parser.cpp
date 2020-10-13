@@ -661,6 +661,7 @@ TEST(clang_parser, btf_unresolved_typedef)
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
   // extract it from there
   BPFtrace bpftrace;
+  bpftrace.force_btf_ = true;
   parse("struct Foo { size_t x; };", bpftrace);
 
   StructMap &structs = bpftrace.structs_;
@@ -674,23 +675,6 @@ TEST(clang_parser, btf_unresolved_typedef)
   EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
   EXPECT_EQ(structs["struct Foo"].fields["x"].type.size, 8U);
   EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
-}
-
-TEST_F(clang_parser_btf, btf_uprobe_type_override)
-{
-  // Overriding a structure from BTF should not fail for a userspace probe
-  BPFtrace bpftrace;
-  parse("struct Foo1 { int a; };\n",
-        bpftrace,
-        true,
-        "uprobe:/bin/sh:f {@x = (struct Foo1 *) curtask;}");
-
-  StructMap &structs = bpftrace.structs_;
-  ASSERT_EQ(structs.size(), 1U);
-  ASSERT_EQ(structs.count("struct Foo1"), 1U);
-
-  ASSERT_EQ(structs["struct Foo1"].fields.size(), 1U);
-  ASSERT_EQ(structs["struct Foo1"].fields.count("a"), 1U);
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
 
