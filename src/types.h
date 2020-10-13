@@ -422,7 +422,6 @@ std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string probetypeName(const std::string &type);
 std::string probetypeName(ProbeType t);
-bool is_userspace_probe(std::string &probe_name);
 
 struct Probe
 {

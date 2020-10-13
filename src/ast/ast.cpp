@@ -393,15 +393,6 @@ void Program::accept(Visitor &v) {
   v.visit(*this);
 }
 
-bool Program::has_userspace_probes() const
-{
-  for (const auto &probe : *probes)
-    for (const auto &ap : *probe->attach_points)
-      if (is_userspace_probe(ap->provider))
-        return true;
-  return false;
-}
-
 std::string opstr(Jump &jump)
 {
   switch (jump.ident)
