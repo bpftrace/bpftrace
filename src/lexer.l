@@ -28,7 +28,7 @@ oct      [0-7]{1,3}
 hspace   [ \t]
 vspace   [\n\r]
 space    {hspace}|{vspace}
-path     :(\\.|[_\-\./a-zA-Z0-9#\*])*:
+path     :(\\.|[_\-\./a-zA-Z0-9#\*])+
 builtin  arg[0-9]|args|cgroup|comm|cpid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
 call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|uptr|usym|zero|path|unwatch
 
