@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <fcntl.h>
 #include <fstream>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "btf.h"
@@ -304,6 +305,23 @@ bool BPFfeature::has_d_path(void)
   return *has_d_path_;
 }
 
+bool BPFfeature::has_uprobe_refcnt()
+{
+  if (has_uprobe_refcnt_.has_value())
+    return *has_uprobe_refcnt_;
+
+#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
+  struct stat sb;
+  has_uprobe_refcnt_ =
+      ::stat("/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset",
+             &sb) == 0;
+#else
+  has_uprobe_refcnt_ = false;
+#endif // LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
+
+  return *has_uprobe_refcnt_;
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -333,7 +351,8 @@ std::string BPFfeature::report(void)
       << "  Loop support: " << to_str(has_loop())
       << "  btf (depends on Build:libbpf): " << to_str(has_btf())
       << "  map batch (depends on Build:libbpf): " << to_str(has_map_batch())
-      << std::endl;
+      << "  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): "
+      << to_str(has_uprobe_refcnt()) << std::endl;
 
   buf << "Map types" << std::endl
       << "  hash: " << to_str(has_map_hash())
