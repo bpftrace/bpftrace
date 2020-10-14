@@ -96,6 +96,12 @@ EXPECT kretfunc
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+NAME listing with wildcarded probe type
+RUN bpftrace -l "*ware:*"
+EXPECT hardware:
+EXPECT software:
+TIMEOUT 1
+
 NAME errors on invalid character in search expression
 RUN bpftrace -l '\n'
 EXPECT ERROR: invalid character
