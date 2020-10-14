@@ -4,7 +4,19 @@ EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 REQUIRES ./testprogs/usdt_test should_not_skip
 
+NAME "usdt - list probes by file with wildcarded probe type"
+RUN bpftrace -l '*:./testprogs/usdt_test:*' | grep -e '^usdt:'
+EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
+TIMEOUT 5
+
 NAME "usdt probes - list probes by pid"
+RUN bpftrace -l -p {{BEFORE_PID}} | grep -e '^usdt:'
+EXPECT usdt:.*/testprogs/usdt_test:tracetest:testprobe
+TIMEOUT 5
+BEFORE ./testprogs/usdt_test
+REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - list probes by pid; usdt only"
 RUN bpftrace -l 'usdt:*' -p {{BEFORE_PID}}
 EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
