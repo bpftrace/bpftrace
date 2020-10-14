@@ -70,6 +70,7 @@ public:
   bool has_btf();
   bool has_map_batch();
   bool has_d_path();
+  bool has_uprobe_refcnt();
 
   std::string report(void);
 
@@ -99,6 +100,7 @@ protected:
   std::optional<bool> has_d_path_;
   std::optional<int> insns_limit_;
   std::optional<bool> has_map_batch_;
+  std::optional<bool> has_uprobe_refcnt_;
 
 private:
   bool detect_map(enum libbpf::bpf_map_type map_type);
