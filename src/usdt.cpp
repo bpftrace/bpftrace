@@ -109,10 +109,10 @@ void USDTHelper::read_probes_for_pid(int pid)
     if (ctx == nullptr)
     {
       LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
+
       if (kill(pid, 0) == -1 && errno == ESRCH)
-      {
-        std::cerr << "hint: process not running" << std::endl;
-      }
+        LOG(ERROR) << "hint: process not running";
+
       return;
     }
     bcc_usdt_foreach(ctx, usdt_probe_each);
