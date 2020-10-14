@@ -2618,6 +2618,10 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     Value *offset = b_.CreateGEP(fmt_args, {b_.getInt32(0), b_.getInt32(i)});
     if (needMemcpy(arg.type))
       b_.CREATE_MEMCPY(offset, expr_, arg.type.GetSize(), 1);
+    else if (arg.type.IsIntegerTy() && arg.type.GetSize() < 8)
+      b_.CreateStore(
+          b_.CreateIntCast(expr_, b_.getInt64Ty(), arg.type.IsSigned()),
+          offset);
     else
       b_.CreateStore(expr_, offset);
   }
