@@ -54,6 +54,8 @@ and this project adheres to
   - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
 - Change a part of the message of '-v' output
   - [#1553](https://github.com/iovisor/bpftrace/pull/1553)
+- Rename `BPFTRACE_KERNEL_SOURCE` to `BPFTRACE_KERNEL_HEADERS`
+  - [#1561](https://github.com/iovisor/bpftrace/pull/1561)
 
 #### Deprecated
 

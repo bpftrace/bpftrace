@@ -401,7 +401,10 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
   return {KERNEL_HEADERS_DIR, KERNEL_HEADERS_DIR};
 #endif
 
-  const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
+  const char *kpath_env = ::getenv("BPFTRACE_KERNEL_HEADERS");
+  if (!kpath_env)
+    kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
+
   if (kpath_env)
     return std::make_tuple(kpath_env, kpath_env);
 

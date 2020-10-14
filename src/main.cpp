@@ -83,6 +83,7 @@ void usage()
   std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache" << std::endl;
   std::cerr << "    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
   std::cerr << "    BPFTRACE_BTF                [default: none] BTF file" << std::endl;
+  std::cerr << "    BPFTRACE_KERNEL_HEADERS     [default: none] kernel headers search directory" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
