@@ -853,7 +853,9 @@ void SemanticAnalyser::visit(Call &call)
         for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
              iter++)
         {
-          auto ty = (*iter)->type;
+          // NOTE: modifying the type will break the resizing that happens
+          // in the codegen. We have to copy the type here to avoid modification
+          SizedType ty = (*iter)->type;
           // Promote to 64-bit if it's not an aggregate type
           if (!ty.IsAggregate() && !ty.IsTimestampTy())
             ty.SetSize(8);
