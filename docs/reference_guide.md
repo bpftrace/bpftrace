@@ -808,7 +808,7 @@ The `return` keyword is used to exit the current probe. This differs from
 
 N-tuples are supported, where N is any integer greater than 1.
 
-Indexing is supported using the `.` operator.
+Indexing is supported using the `.` operator. Tuples are immutable once created.
 
 Example:
 
