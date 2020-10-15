@@ -76,7 +76,7 @@ void CodegenLLVM::visit(PositionalParameter &param)
           AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
           b_.CREATE_MEMSET(buf, b_.getInt8(0), pstr.length() + 1, 1);
           b_.CreateStore(const_str, buf);
-          expr_ = buf;
+          expr_ = b_.CreatePtrToInt(buf, b_.getInt64Ty());
           expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
         }
       }
