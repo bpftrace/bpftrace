@@ -39,7 +39,18 @@ private:
   void load_prog();
   void attach_kprobe(bool safe_mode);
   void attach_uprobe(bool safe_mode);
+
+  // Note: the following usdt attachment functions will only activate a
+  // semaphore if one exists.
+  //
+  // Increment semaphore count manually with memory hogging API (least
+  // preferrable)
+  int usdt_sem_up_manual(const std::string &fn_name, void *ctx);
+  // Increment semaphore count manually with BCC addsem API
+  int usdt_sem_up_manual_addsem(int pid, const std::string &fn_name, void *ctx);
+  int usdt_sem_up(int pid, const std::string &fn_name, void *ctx);
   void attach_usdt(int pid, BPFfeature &feature);
+
   void attach_tracepoint();
   void attach_profile();
   void attach_interval();
