@@ -163,6 +163,12 @@ static int info()
 #else
             << "no" << std::endl;
 #endif
+  std::cerr << "  bcc bpf_attach_uprobe refcount: "
+#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
+            << "yes" << std::endl;
+#else
+            << "no" << std::endl;
+#endif
   std::cerr << "  libbpf: "
 #ifdef HAVE_LIBBPF
             << "yes" << std::endl;
