@@ -177,14 +177,17 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
   }
 }
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid)
-  : probe_(probe), func_(func)
+AttachedProbe::AttachedProbe(Probe &probe,
+                             std::tuple<uint8_t *, uintptr_t> func,
+                             int pid,
+                             BPFfeature &feature)
+    : probe_(probe), func_(func)
 {
   load_prog();
   switch (probe_.type)
   {
     case ProbeType::usdt:
-      attach_usdt(pid);
+      attach_usdt(pid, feature);
       break;
     case ProbeType::watchpoint:
       attach_watchpoint(pid, probe.mode);
@@ -722,7 +725,7 @@ void AttachedProbe::attach_uprobe(bool safe_mode)
   perf_event_fds_.push_back(perf_event_fd);
 }
 
-void AttachedProbe::attach_usdt(int pid)
+void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
 {
   struct bcc_usdt_location loc = {};
   int err;

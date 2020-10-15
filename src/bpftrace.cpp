@@ -887,7 +887,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
   if (!(file_activation && probe.path.size()))
   {
-    ret.emplace_back(std::make_unique<AttachedProbe>(probe, func, pid));
+    ret.emplace_back(
+        std::make_unique<AttachedProbe>(probe, func, pid, *feature_));
     return ret;
   }
 
@@ -944,7 +945,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       }
 
       ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, func, pid_parsed));
+          std::make_unique<AttachedProbe>(probe, func, pid_parsed, *feature_));
       break;
     }
   }
@@ -997,7 +998,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     else if (probe.type == ProbeType::watchpoint)
     {
       ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, func->second, pid));
+          std::make_unique<AttachedProbe>(probe, func->second, pid, *feature_));
       return ret;
     }
     else
