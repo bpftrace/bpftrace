@@ -1139,6 +1139,15 @@ void CodegenLLVM::visit(Binop &binop)
     auto scoped_del_right = accept(binop.right);
     rhs = expr_;
 
+    // If left or right is PositionalParameter, that means the syntax is
+    // str($1 + num) or str(num + $1). The positional params returns a pointer
+    // to a buffer, and the buffer should live untill str() is accepted.
+    // Extend the liftime of the buffer
+    if (dynamic_cast<PositionalParameter *>(binop.left))
+      expr_deleter_ = scoped_del_left.disarm();
+    if (dynamic_cast<PositionalParameter *>(binop.right))
+      expr_deleter_ = scoped_del_right.disarm();
+
     bool lsign = binop.left->type.IsSigned();
     bool rsign = binop.right->type.IsSigned();
     bool do_signed = lsign && rsign;
