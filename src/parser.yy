@@ -265,6 +265,7 @@ stmt : expr                { $$ = new ast::ExprStatement($1); }
      | jump_stmt           { $$ = $1; }
      | map "=" expr        { $$ = new ast::AssignMapStatement($1, $3, @2); }
      | var "=" expr        { $$ = new ast::AssignVarStatement($1, $3, @2); }
+     | tuple_assignment
      ;
 
 compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::LEFT,  $3, @2)); }
@@ -288,6 +289,8 @@ compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1
                     | map BXORASSIGN expr  { $$ = new ast::AssignMapStatement($1, new ast::Binop($1, token::BXOR,  $3, @2)); }
                     | var BXORASSIGN expr  { $$ = new ast::AssignVarStatement($1, new ast::Binop($1, token::BXOR,  $3, @2)); }
                     ;
+
+tuple_assignment : expr DOT INT "=" expr { error(@1 + @5, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead."); YYERROR; }
 
 int : MINUS INT    { $$ = new ast::Integer(-1 * $2, @$); }
     | INT          { $$ = new ast::Integer($1, @$); }
