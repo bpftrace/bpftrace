@@ -803,10 +803,20 @@ int AttachedProbe::usdt_sem_up_manual_addsem(int pid __attribute__((unused)),
 }
 #endif // HAVE_BCC_USDT_ADDSEM
 
-int AttachedProbe::usdt_sem_up([[maybe_unused]] int pid,
+int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
+                               [[maybe_unused]] int pid,
                                const std::string &fn_name,
                                void *ctx)
 {
+  // If we have BCC and kernel support for uprobe refcnt API, then we don't
+  // need to do anything here. The kernel will increment the semaphore count
+  // for us when we provide the semaphore offset.
+  if (feature.has_uprobe_refcnt())
+  {
+    bcc_usdt_close(ctx);
+    return 0;
+  }
+
 #if defined(HAVE_BCC_USDT_ADDSEM)
   return usdt_sem_up_manual_addsem(pid, fn_name, ctx);
 #else
@@ -855,11 +865,17 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
 
   offset_ = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
 
+  // Should be 0 if there's no semaphore
+  //
+  // Cast to 32 bits b/c kernel API only takes 32 bit offset
+  [[maybe_unused]] auto semaphore_offset = static_cast<uint32_t>(
+      u->semaphore_offset);
+
   // Increment the semaphore count (will noop if no semaphore)
   //
   // NB: Do *not* use `ctx` after this call. It may either be open or closed,
   // depending on which path was taken.
-  err = usdt_sem_up(pid, fn_name, ctx);
+  err = usdt_sem_up(feature, pid, fn_name, ctx);
 
   if (err)
   {
@@ -878,7 +894,7 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
                         probe_.path.c_str(),
                         offset_,
                         pid == 0 ? -1 : pid,
-                        0);
+                        semaphore_offset);
 #else
       bpf_attach_uprobe(progfd_,
                         attachtype(probe_.type),
