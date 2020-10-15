@@ -48,7 +48,10 @@ private:
   int usdt_sem_up_manual(const std::string &fn_name, void *ctx);
   // Increment semaphore count manually with BCC addsem API
   int usdt_sem_up_manual_addsem(int pid, const std::string &fn_name, void *ctx);
-  int usdt_sem_up(int pid, const std::string &fn_name, void *ctx);
+  int usdt_sem_up(BPFfeature &feature,
+                  int pid,
+                  const std::string &fn_name,
+                  void *ctx);
   void attach_usdt(int pid, BPFfeature &feature);
 
   void attach_tracepoint();

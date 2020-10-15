@@ -27,6 +27,11 @@ static void usdt_probe_each(struct bcc_usdt *usdt_probe)
           .path = usdt_probe->bin_path,
           .provider = usdt_probe->provider,
           .name = usdt_probe->name,
+#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
+          .semaphore_offset = usdt_probe->semaphore_offset,
+#else
+          .semaphore_offset = 0,
+#endif
           .num_locations = usdt_probe->num_locations,
       });
 }
