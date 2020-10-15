@@ -5,6 +5,7 @@
 #include <tuple>
 #include <vector>
 
+#include "bpffeature.h"
 #include "types.h"
 
 #include <bcc/libbpf.h>
@@ -21,7 +22,10 @@ public:
   AttachedProbe(Probe &probe,
                 std::tuple<uint8_t *, uintptr_t> func,
                 bool safe_mode);
-  AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, int pid);
+  AttachedProbe(Probe &probe,
+                std::tuple<uint8_t *, uintptr_t> func,
+                int pid,
+                BPFfeature &feature);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
@@ -35,7 +39,7 @@ private:
   void load_prog();
   void attach_kprobe(bool safe_mode);
   void attach_uprobe(bool safe_mode);
-  void attach_usdt(int pid);
+  void attach_usdt(int pid, BPFfeature &feature);
   void attach_tracepoint();
   void attach_profile();
   void attach_interval();
