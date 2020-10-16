@@ -10,6 +10,12 @@ EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
+NAME tracepoint_nested_pointer_type_resolution
+RUN bpftrace --btf -e 'tracepoint:napi:napi_poll { args->napi->dev->name; exit(); }'
+EXPECT Attaching 1 probe...
+TIMEOUT 5
+REQUIRES_FEATURE btf
+
 NAME enum_value_reference
 RUN bpftrace -v --btf -e 'BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }'
 EXPECT ^8$

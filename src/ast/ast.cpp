@@ -589,7 +589,7 @@ Cast::Cast(const Cast &other) : Expression(other)
 Probe::Probe(const Probe &other) : Node(other)
 {
   need_expansion = other.need_expansion;
-  need_tp_args_structs = other.need_tp_args_structs;
+  tp_args_structs_level = other.tp_args_structs_level;
   index_ = other.index_;
 }
 

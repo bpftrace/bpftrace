@@ -70,6 +70,8 @@ and this project adheres to
   - [#1554](https://github.com/iovisor/bpftrace/pull/1554)
 - Add -q option for quiet
   - [#1616](https://github.com/iovisor/bpftrace/pull/1616)
+- Optimize unknown/incomplete types resolution
+  - [#1571](https://github.com/iovisor/bpftrace/pull/1571)
 
 #### Deprecated
 

@@ -24,12 +24,10 @@ private:
   bool visit_children(CXCursor &cursor, BPFtrace &bpftrace);
   /*
    * The user might have written some struct definitions that rely on types
-   * supplied by BTF data. Also, some types may be defined by typedefs that are
-   * in non-included headers, which causes problems to clang.
+   * supplied by BTF data.
    *
    * This method will pull out any forward-declared / incomplete struct
-   * and typedef definitions and return the types (in string form) of
-   * the unresolved types.
+   * definitions and return the types (in string form) of the unresolved types.
    *
    * Note that this method does not report "errors". This is because the user
    * could have typo'd and actually referenced a non-existent type. Put
@@ -38,8 +36,16 @@ private:
   std::unordered_set<std::string> get_incomplete_types(
       const std::string &input,
       std::vector<CXUnsavedFile> &unsaved_files,
-      const std::vector<const char *> &args,
-      const std::unordered_set<std::string> &complete_types);
+      const std::vector<const char *> &args);
+
+  /*
+   * Collect names of types defined by typedefs that are in non-included
+   * headers as they may pose problems for clang parser.
+   */
+  std::unordered_set<std::string> get_unknown_typedefs(
+      const std::string &input,
+      std::vector<CXUnsavedFile> &unsaved_files,
+      const std::vector<const char *> &args);
 
   static std::optional<std::string> get_unknown_type(
       const std::string &diagnostic_msg);

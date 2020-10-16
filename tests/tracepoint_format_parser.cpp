@@ -1,6 +1,7 @@
 #include "tracepoint_format_parser.h"
 #include "mocks.h"
 #include "gtest/gtest.h"
+#include <driver.h>
 
 using namespace testing;
 
@@ -249,6 +250,33 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
   EXPECT_THAT(bpftrace.btf_set_, Contains("u64"));
   EXPECT_THAT(bpftrace.btf_set_, Contains("char *"));
   EXPECT_THAT(bpftrace.btf_set_, Contains("size_t"));
+}
+
+TEST(tracepoint_format_parser, args_field_access)
+{
+  // Test computing the level of nested structs accessed from tracepoint args
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  ast::TracepointArgsVisitor visitor;
+
+  EXPECT_EQ(driver.parse_str("BEGIN { args->f1->f2->f3 }"), 0);
+  visitor.visit(*driver.root_->probes->at(0));
+  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 3);
+
+  // Should work via intermediary variable, too
+  EXPECT_EQ(driver.parse_str("BEGIN { $x = args->f1; $x->f2->f3 }"), 0);
+  visitor.visit(*driver.root_->probes->at(0));
+  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 3);
+
+  // "args" used without field access => level should be 0
+  EXPECT_EQ(driver.parse_str("BEGIN { args }"), 0);
+  visitor.visit(*driver.root_->probes->at(0));
+  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 0);
+
+  // "args" not used => level should be -1
+  EXPECT_EQ(driver.parse_str("BEGIN { x->f1->f2->f3 }"), 0);
+  visitor.visit(*driver.root_->probes->at(0));
+  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, -1);
 }
 
 } // namespace tracepoint_format_parser
