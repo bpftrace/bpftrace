@@ -54,6 +54,8 @@ and this project adheres to
   - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
 - Change a part of the message of '-v' output
   - [#1553](https://github.com/iovisor/bpftrace/pull/1553)
+- Improve tuple assignment error message
+  - [#1563](https://github.com/iovisor/bpftrace/pull/1563)
 
 #### Deprecated
 
