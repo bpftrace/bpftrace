@@ -78,6 +78,8 @@ and this project adheres to
   - [#1514](https://github.com/iovisor/bpftrace/pull/1514)
 - SEGV when using perf format for stacks
   - [#1524](https://github.com/iovisor/bpftrace/pull/1524)
+- Fix llvm errors of PositonalParameter
+  - [#1565](https://github.com/iovisor/bpftrace/pull/1565)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
