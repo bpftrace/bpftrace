@@ -70,7 +70,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             }
           }
 
-          if (!probe->need_tp_args_structs)
+          if (probe->tp_args_structs_level <= 0)
             continue;
 
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
@@ -119,7 +119,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             return false;
           }
 
-          if (!probe->need_tp_args_structs)
+          if (probe->tp_args_structs_level <= 0)
             continue;
 
           // Check to avoid adding the same struct more than once to definitions

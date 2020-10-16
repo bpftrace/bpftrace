@@ -15,9 +15,15 @@ class TracepointArgsVisitor : public ASTVisitor
 public:
   void visit(Builtin &builtin) override
   {
-    if (builtin.ident == "args")
-      probe_->need_tp_args_structs = true;
+    if (builtin.ident == "args" && probe_->tp_args_structs_level == -1)
+      probe_->tp_args_structs_level = 0;
   };
+  void visit(FieldAccess &acc) override
+  {
+    acc.expr->accept(*this);
+    if (probe_->tp_args_structs_level >= 0)
+      probe_->tp_args_structs_level++;
+  }
   void visit(Probe &probe) override {
     probe_ = &probe;
     ASTVisitor::visit(probe);
