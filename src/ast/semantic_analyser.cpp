@@ -1946,6 +1946,11 @@ void SemanticAnalyser::visit(Tuple &tuple)
     Expression *elem = tuple.elems->at(i);
     elem->accept(*this);
 
+    // If elem type is none that means that the tuple contains some
+    // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
+    // creation. Cast already emits the error.
+    if (elem->type.IsNoneTy())
+      return;
     elements.emplace_back(elem->type);
   }
 

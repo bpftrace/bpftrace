@@ -1836,6 +1836,7 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 10);
   test(R"_(BEGIN { @t = (1, 2); @t = 5; })_", 1);
   test(R"_(BEGIN { @t = (1, count()) })_", 1);
+  test(R"_(BEGIN { @t = (1, (aaa)0) })_", 1);
 }
 
 TEST(semantic_analyser, tuple_indexing)
