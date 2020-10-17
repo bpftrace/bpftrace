@@ -1594,7 +1594,19 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   }
   else if (unop.op == Parser::token::LNOT) {
-    unop.type = CreateUInt(type.size);
+    // CreateUInt() abort if a size is invalid, so check the size here
+    if (!(type.size == 0 || type.size == 1 || type.size == 2 ||
+          type.size == 4 || type.size == 8))
+    {
+      LOG(ERROR, unop.loc, err_)
+          << "The " << opstr(unop)
+          << " operator can not be used on expressions of type '" << type
+          << "'";
+    }
+    else
+    {
+      unop.type = CreateUInt(8 * type.size);
+    }
   }
   else {
     unop.type = CreateInteger(64, type.IsSigned());
