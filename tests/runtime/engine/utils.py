@@ -101,6 +101,8 @@ class Utils(object):
         bpffeature["probe_read_kernel"] = output.find("probe_read_kernel: yes") != -1
         bpffeature["btf"] = output.find("btf (depends on Build:libbpf): yes") != -1
         bpffeature["dpath"] = output.find("dpath: yes") != -1
+        bpffeature["uprobe_refcount"] = \
+            output.find("uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes") != -1
         return bpffeature
 
     @staticmethod

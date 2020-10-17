@@ -171,14 +171,14 @@ REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe with semaphore"
 RUN bpftrace -e 'usdt::tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p $(pidof usdt_semaphore_test)
-EXPECT tracetest_testprobe_semaphore: 1
+EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
 
 NAME "usdt probes - file based semaphore activation"
 RUN bpftrace -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' --usdt-file-activation
-EXPECT tracetest_testprobe_semaphore: 1
+EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
@@ -188,6 +188,26 @@ RUN bpftrace -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit
 EXPECT Failed to find processes running
 TIMEOUT 5
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES_FEATURE !uprobe_refcount
+
+# We should be able to attach a probe even without any running processes
+# if the kernel handles the semaphore
+NAME "usdt probes - file based semaphore activation no process, kernel usdt semaphore"
+RUN bpftrace -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit(); }' --usdt-file-activation
+EXPECT Attaching 1 probe
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES_FEATURE uprobe_refcount
+
+# We should be able to activate a semaphore without specifying a PID or
+# --usdt-file-activation if the kernel handles the semaphore
+NAME "usdt probes - file based semaphore activation"
+RUN bpftrace -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }'
+EXPECT tracetest_testprobe_semaphore: [1-9]
+TIMEOUT 5
+BEFORE ./testprogs/usdt_semaphore_test
+REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES_FEATURE uprobe_refcount
 
 NAME "usdt probes - file based semaphore activation multi process"
 RUN bpftrace -v runtime/scripts/usdt_file_activation_multiprocess.bt --usdt-file-activation
