@@ -14,7 +14,7 @@ class UnknownFieldError(Exception):
     pass
 
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch, feature_requirement')
+TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch, feature_requirement neg_feature_requirement')
 
 
 class TestParser(object):
@@ -67,7 +67,8 @@ class TestParser(object):
         requirement = ''
         env = {}
         arch = []
-        feature_requirement = []
+        feature_requirement = set()
+        neg_feature_requirement = set()
 
         for item in test:
             item_split = item.split()
@@ -97,8 +98,16 @@ class TestParser(object):
             elif item_name == 'ARCH':
                 arch = [x.strip() for x in line.split("|")]
             elif item_name == 'REQUIRES_FEATURE':
-                feature_requirement = {x.strip() for x in line.split(" ")}
-                unknown = feature_requirement - {"loop", "btf", "probe_read_kernel", "dpath"}
+                features = {"loop", "btf", "probe_read_kernel", "dpath"}
+
+                for f in line.split(" "):
+                    f = f.strip()
+                    if f.startswith("!"):
+                        neg_feature_requirement.add(f[1:])
+                    else:
+                        feature_requirement.add(f)
+
+                unknown = (feature_requirement | neg_feature_requirement) - features
                 if len(unknown) > 0:
                     raise UnknownFieldError('%s is invalid for REQUIRES_FEATURE. Suite: %s' % (','.join(unknown), test_suite))
             else:
@@ -113,4 +122,17 @@ class TestParser(object):
         elif timeout == '':
             raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
 
-        return TestStruct(name, run, expect, timeout, before, after, test_suite, kernel, requirement, env, arch, feature_requirement)
+        return TestStruct(
+            name,
+            run,
+            expect,
+            timeout,
+            before,
+            after,
+            test_suite,
+            kernel,
+            requirement,
+            env,
+            arch,
+            feature_requirement,
+            neg_feature_requirement)

@@ -65,7 +65,9 @@ class Utils(object):
         elif status == Utils.SKIP_REQUIREMENT_UNSATISFIED:
             return "unmet condition: '%s'" % test.requirement
         elif status == Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
-            return "missed feature: '%s'" % ','.join(test.feature_requirement)
+            neg_reqs = { "!{}".format(f) for f in test.neg_feature_requirement }
+            return "missed feature: '%s'" % ','.join(
+                (neg_reqs | test.feature_requirement))
         elif status == Utils.SKIP_ENVIRONMENT_DISABLED:
             return "disabled by environment variable"
         else:
@@ -132,12 +134,21 @@ class Utils(object):
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_REQUIREMENT_UNSATISFIED
 
-            if test.feature_requirement:
+            if test.feature_requirement or test.neg_feature_requirement:
                 bpffeature = Utils.__get_bpffeature()
+
                 for feature in test.feature_requirement:
                     if feature not in bpffeature:
                         raise ValueError("Invalid feature requirement: %s" % feature)
                     elif not bpffeature[feature]:
+                        print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+                        return Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
+
+                for feature in test.neg_feature_requirement:
+                    if feature not in bpffeature:
+                        raise ValueError("Invalid feature requirement: %s" % feature)
+                    elif bpffeature[feature]:
+                        print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
 
             if test.before:
