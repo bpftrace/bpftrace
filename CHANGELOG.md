@@ -88,6 +88,8 @@ and this project adheres to
   - [#1565](https://github.com/iovisor/bpftrace/pull/1565)
 - Error if Positional Params num is zero
   - [#1568](https://github.com/iovisor/bpftrace/issues/1568)
+- Fix LNOT
+  - [#1570](https://github.com/iovisor/bpftrace/pull/1570)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
