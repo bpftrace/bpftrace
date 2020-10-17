@@ -98,7 +98,7 @@ class TestParser(object):
             elif item_name == 'ARCH':
                 arch = [x.strip() for x in line.split("|")]
             elif item_name == 'REQUIRES_FEATURE':
-                features = {"loop", "btf", "probe_read_kernel", "dpath"}
+                features = {"loop", "btf", "probe_read_kernel", "dpath", "uprobe_refcount"}
 
                 for f in line.split(" "):
                     f = f.strip()

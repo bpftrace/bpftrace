@@ -885,7 +885,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
-  if (!(file_activation && probe.path.size()))
+  if (feature_->has_uprobe_refcnt() || !(file_activation && probe.path.size()))
   {
     ret.emplace_back(
         std::make_unique<AttachedProbe>(probe, func, pid, *feature_));
@@ -896,6 +896,10 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   // which processes have the target executable in their address space
   // with execute permission. If found, we will try to attach to each
   // process we find.
+  //
+  // Note that this is the slow path. If the kernel has semaphore support
+  // (feature_->has_uprobe_refcnt()), the kernel can do this for us and
+  // much faster too.
   glob_t globbuf;
   if (::glob("/proc/[0-9]*/maps", GLOB_NOSORT, nullptr, &globbuf))
     throw std::runtime_error("failed to glob");
