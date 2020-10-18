@@ -38,6 +38,8 @@ and this project adheres to
   - [#1542](https://github.com/iovisor/bpftrace/pull/1542)
 - Set addrspace info for various builtins
   - [#1504](https://github.com/iovisor/bpftrace/pull/1504)
+- Support watchpoint for kernel space address
+  - [#1552](https://github.com/iovisor/bpftrace/pull/1552)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
