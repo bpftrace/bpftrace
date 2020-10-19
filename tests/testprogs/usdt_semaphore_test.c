@@ -33,6 +33,8 @@ main(int argc, char **argv __attribute__((unused))) {
 
   while (1) {
     myclock();
+    // Sleep is necessary to not overflow perf buffer
+    usleep(1000);
   }
   return 0;
 }
