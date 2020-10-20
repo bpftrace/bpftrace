@@ -80,6 +80,8 @@ and this project adheres to
   - [#1571](https://github.com/iovisor/bpftrace/pull/1571)
 - Do not check size of the format string of `printf`
   - [#1538](https://github.com/iovisor/bpftrace/pull/1538)
+- Unify semantics of wildcards in probe listing and attachement
+  - [#1549](https://github.com/iovisor/bpftrace/pull/1549)
 
 #### Deprecated
 
