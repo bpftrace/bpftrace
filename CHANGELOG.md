@@ -86,6 +86,8 @@ and this project adheres to
   - [#1524](https://github.com/iovisor/bpftrace/pull/1524)
 - Fix llvm errors of PositonalParameter
   - [#1565](https://github.com/iovisor/bpftrace/pull/1565)
+- Error if Positional Params num is zero
+  - [#1568](https://github.com/iovisor/bpftrace/issues/1568)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
