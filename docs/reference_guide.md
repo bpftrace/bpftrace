@@ -1267,7 +1267,18 @@ hi
 ^C
 ```
 
-bpftrace also supports USDT semaphores. You may activate semaphores by passing in `-p $PID` or
+bpftrace also supports USDT semaphores. If both your environment and bpftrace
+support uprobe refcounts, then USDT semaphores are automatically activated for
+all processes upon probe attachment (and `--usdt-file-activation` becomes a
+noop). You can check if your system supports uprobe refcounts by running:
+
+```
+# bpftrace --info 2>&1 | grep "uprobe refcount"
+  bcc bpf_attach_uprobe refcount: yes
+  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes
+```
+
+If your system does not support uprobe refcounts, you may activate semaphores by passing in `-p $PID` or
 `--usdt-file-activation`. `--usdt-file-activation` looks through `/proc` to find processes that
 have your probe's binary mapped with executable permissions into their address space and then tries
 to attach your probe. Note that file activation occurs only once (during attach time). In other

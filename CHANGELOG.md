@@ -42,6 +42,8 @@ and this project adheres to
   - [#1552](https://github.com/iovisor/bpftrace/pull/1552)
 - Support for pointer to pointer
   - [#1557](https://github.com/iovisor/bpftrace/pull/1557)
+- Support for uprobe refcounts
+  - [#1567](https://github.com/iovisor/bpftrace/pull/1567)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
