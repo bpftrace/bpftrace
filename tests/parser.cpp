@@ -71,6 +71,7 @@ TEST(Parser, builtin_variables)
 TEST(Parser, positional_param)
 {
   test("kprobe:f { $1 }", "Program\n kprobe:f\n  param: $1\n");
+  test_parse_failure("kprobe:f { $0 }");
 }
 
 TEST(Parser, positional_param_count)

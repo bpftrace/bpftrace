@@ -215,7 +215,9 @@ ternary : expr QUES expr COLON expr { $$ = new ast::Ternary($1, $3, $5, @$); }
 
 param : PARAM      {
                      try {
-                       $$ = new ast::PositionalParameter(PositionalParameterType::positional, std::stol($1.substr(1, $1.size()-1)), @$);
+                       long n = std::stol($1.substr(1, $1.size()-1));
+                       if (n == 0) throw std::exception();
+                       $$ = new ast::PositionalParameter(PositionalParameterType::positional, n, @$);
                      } catch (std::exception const& e) {
                        error(@1, "param " + $1 + " is out of integer range [1, " +
                              std::to_string(std::numeric_limits<long>::max()) + "]");
