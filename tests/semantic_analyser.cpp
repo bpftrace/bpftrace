@@ -1395,6 +1395,30 @@ TEST(semantic_analyser, signed_int_comparison_warnings)
   test_for_warning("kretprobe:f /retval < 1/ {}", cmp_sign, invert);
 }
 
+TEST(semantic_analyser, string_comparison)
+{
+  test("struct MyStruct {char y[4]; } kprobe:f { $s = (struct MyStruct*)arg0; "
+       "$s->y == \"abc\"}",
+       0);
+  test("struct MyStruct {char y[4]; } kprobe:f { $s = (struct MyStruct*)arg0; "
+       "\"abc\" != $s->y}",
+       0);
+  test("struct MyStruct {char y[4]; } kprobe:f { $s = (struct MyStruct*)arg0; "
+       "\"abc\" == \"abc\"}",
+       0);
+
+  bool invert = true;
+  std::string msg = "the condition is always false";
+  test_for_warning("struct MyStruct {char y[4]; } kprobe:f { $s = (struct "
+                   "MyStruct*)arg0; $s->y == \"long string\"}",
+                   msg,
+                   invert);
+  test_for_warning("struct MyStruct {char y[4]; } kprobe:f { $s = (struct "
+                   "MyStruct*)arg0; \"long string\" != $s->y}",
+                   msg,
+                   invert);
+}
+
 TEST(semantic_analyser, signed_int_arithmetic_warnings)
 {
   // Test type warnings for arithmetic

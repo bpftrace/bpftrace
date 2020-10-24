@@ -676,10 +676,9 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
                                    bool inverse)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-#ifndef NDEBUG
   PointerType *valp = cast<PointerType>(val->getType());
+#ifndef NDEBUG
   assert(valp->getElementType()->isArrayTy() &&
-         valp->getElementType()->getArrayNumElements() >= n &&
          valp->getElementType()->getArrayElementType() == getInt8Ty());
 #endif
 
@@ -689,18 +688,25 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
 
   CreateStore(getInt1(!inverse), store);
 
-  const char *c_str = str.c_str();
-  for (size_t i = 0; i < n; i++)
+  // If the size of array is smaller than n, the condition is always false
+  if (valp->getElementType()->getArrayNumElements() >= n)
   {
-    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(), "strcmp.loop", parent);
+    const char *c_str = str.c_str();
+    for (size_t i = 0; i < n; i++)
+    {
+      BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
+                                               "strcmp.loop",
+                                               parent);
 
-    auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
-    Value *l = CreateLoad(getInt8Ty(), ptr);
-    Value *r = getInt8(c_str[i]);
-    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
-    CreateCondBr(cmp, str_ne, char_eq);
-    SetInsertPoint(char_eq);
+      auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
+      Value *l = CreateLoad(getInt8Ty(), ptr);
+      Value *r = getInt8(c_str[i]);
+      Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
+      CreateCondBr(cmp, str_ne, char_eq);
+      SetInsertPoint(char_eq);
+    }
   }
+
   CreateStore(getInt1(inverse), store);
   CreateBr(str_ne);
 
