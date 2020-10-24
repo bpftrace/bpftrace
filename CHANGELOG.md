@@ -84,6 +84,8 @@ and this project adheres to
   - [#1524](https://github.com/iovisor/bpftrace/pull/1524)
 - Fix llvm errors of PositonalParameter
   - [#1565](https://github.com/iovisor/bpftrace/pull/1565)
+- Fix usdt sized args usecase
+  - [#1566](https://github.com/iovisor/bpftrace/pull/1566)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
