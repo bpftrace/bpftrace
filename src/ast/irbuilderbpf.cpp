@@ -582,24 +582,27 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     // https://sourceware.org/systemtap/wiki/UserSpaceProbeImplementation
     int abs_size = std::abs(argument->size);
     assert(abs_size == 1 || abs_size == 2 || abs_size == 4 || abs_size == 8);
-
     // bpftrace's args are internally represented as 64 bit integers. However,
     // the underlying argument (of the target program) may be less than 64
     // bits. So we must be careful to zero out unused bits.
     Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
-    AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
+    // Avoid big endian issue. Make src as 64 bit. dst size as abs_size.
+    AllocaInst *dst = CreateAllocaBPF(GetType(CreateInt(abs_size * 8)),
+                                      builtin.ident);
     if (argument->valid & BCC_USDT_ARGUMENT_DEREF_OFFSET) {
-      Value *ptr = CreateAdd(CreateLoad(getInt64Ty(), reg),
-                             getInt64(argument->deref_offset));
-      // Zero out `dst` here in case we read less than 64 bits
-      CreateStore(getInt64(0), dst);
+      // Addition of same types.
+      reg = CreatePointerCast(reg, getInt64Ty()->getPointerTo());
+      Value *ptr = CreateAdd(CreateLoad(reg), getInt64(argument->deref_offset));
       CreateProbeRead(ctx, dst, abs_size, ptr, as, loc);
-      result = CreateLoad(dst);
+      result = CreateIntCast(CreateLoad(dst), getInt64Ty(), argument->size < 0);
     }
     else
     {
-      result = CreateLoad(GetType(CreateInt(abs_size * 8)), reg);
-      result = CreateIntCast(result, getInt64Ty(), argument->size < 0);
+      // Avoid warning : llvm7 explicit pointee type doesn't match operand's
+      // pointee type
+      reg = CreatePointerCast(reg,
+                              GetType(CreateInt(abs_size * 8))->getPointerTo());
+      result = CreateIntCast(CreateLoad(reg), getInt64Ty(), argument->size < 0);
     }
     CreateLifetimeEnd(dst);
   }
