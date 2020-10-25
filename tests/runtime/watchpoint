@@ -1,10 +1,12 @@
 NAME watchpoint - absolute address
 RUN bpftrace -v -e 'watchpoint::0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
 EXPECT hit!
+ARCH aarch64|ppc64|ppc64le|x86_64
 TIMEOUT 5
 
 NAME kwatchpoint - knl absolute address
 RUN bpftrace -v -e "watchpoint::0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):4:w { printf(\"hit\n\"); exit(); }"
 EXPECT hit
+ARCH aarch64|ppc64|ppc64le|x86_64
 TIMEOUT 5
 REQUIRES awk '$3 == "jiffies" {got=1} END {exit !got}' /proc/kallsyms
