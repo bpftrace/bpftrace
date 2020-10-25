@@ -1465,7 +1465,8 @@ Examples in situ:
 
 ## 14. `watchpoint`: Memory watchpoints
 
-**WARNING**: this feature is experimental and may be subject to interface changes.
+**WARNING**: this feature is experimental and may be subject to interface changes. Memory watchpoints are
+also architecture dependant
 
 Syntax:
 
