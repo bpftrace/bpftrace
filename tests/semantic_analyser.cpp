@@ -198,7 +198,9 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { kaddr(\"sym\") }", 0);
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
+#ifdef ARCH_X86_64
   test("kprobe:f { reg(\"ip\") }", 0);
+#endif
   test("kprobe:f { kstack(1) }", 0);
   test("kprobe:f { ustack(1) }", 0);
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
@@ -728,8 +730,10 @@ TEST(semantic_analyser, call_cgroupid)
 
 TEST(semantic_analyser, call_reg)
 {
+#ifdef ARCH_X86_64
   test("kprobe:f { reg(\"ip\"); }", 0);
   test("kprobe:f { @x = reg(\"ip\"); }", 0);
+#endif
   test("kprobe:f { reg(\"blah\"); }", 1);
   test("kprobe:f { reg(); }", 1);
   test("kprobe:f { reg(123); }", 1);
