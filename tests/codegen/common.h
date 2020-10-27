@@ -303,6 +303,24 @@ static std::string rewrite_gep(const std::string &line)
 #endif
 }
 
+static std::string rewrite_datalayout(const std::string &line)
+{
+  static std::string machine;
+
+  if (machine.empty())
+  {
+    struct utsname utsname;
+    uname(&utsname);
+    machine = utsname.machine;
+  }
+
+  if (machine == "s390x")
+  {
+    return "target datalayout = \"E-m:e-p:64:64-i64:64-n32:64-S128\"";
+  }
+  return line;
+}
+
 static std::string rewrite(const std::string &ir)
 {
   std::stringstream buf;
@@ -333,6 +351,8 @@ static std::string rewrite(const std::string &ir)
       buf << rewrite_gep(line);
     else if (line.find("define i64") == 0)
       buf << rewrite_function_hdr(line);
+    else if (line.find("target datalayout") != std::string::npos)
+      buf << rewrite_datalayout(line);
     else
       buf << line;
     buf << std::endl;
