@@ -95,6 +95,18 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
           BASE: bionic
+        - NAME: LLVM 11 Debug
+          TYPE: Debug
+          LLVM_VERSION: 11
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
+        - NAME: LLVM 11 Release
+          TYPE: Release
+          LLVM_VERSION: 11
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
+          BASE: bionic
     steps:
     - uses: actions/checkout@v2
     - name: Get date
