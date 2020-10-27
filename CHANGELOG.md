@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] 2020-10-28
+
+Add LLVM11 build support
+
 ## [0.11.1] 2020-09-22
 
 Bug fix release for the [Docker build](https://quay.io/repository/iovisor/bpftrace)
