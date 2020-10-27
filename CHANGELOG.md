@@ -103,6 +103,15 @@ and this project adheres to
 
 #### Documentation
 
+## [0.11.2] 2020-10-30
+
+LLVM 11 support release
+
+### Added
+
+Add LLVM11 build support
+- [#1578](https://github.com/iovisor/bpftrace/pull/1578)
+
 ## [0.11.1] 2020-09-22
 
 Bug fix release for the [Docker build](https://quay.io/repository/iovisor/bpftrace)
