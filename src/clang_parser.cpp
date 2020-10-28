@@ -221,8 +221,19 @@ static bool getBitfield(CXCursor c, Bitfield &bitfield)
 
   size_t bitfield_offset = clang_Cursor_getOffsetOfField(c) % 8;
   size_t bitfield_bitwidth = clang_getFieldDeclBitWidth(c);
+  size_t bitfield_bitdidth_max = sizeof(uint64_t) * 8;
 
-  bitfield.mask = (1 << bitfield_bitwidth) - 1;
+  if (bitfield_bitwidth > bitfield_bitdidth_max)
+  {
+    LOG(WARNING) << "bitfiled bitwidth " << bitfield_bitwidth
+                 << "is not supporeted."
+                 << " Use bitwidth " << bitfield_bitdidth_max;
+    bitfield_bitwidth = bitfield_bitdidth_max;
+  }
+  if (bitfield_bitwidth == bitfield_bitdidth_max)
+    bitfield.mask = std::numeric_limits<uint64_t>::max();
+  else
+    bitfield.mask = (1ULL << bitfield_bitwidth) - 1;
   bitfield.access_rshift = bitfield_offset;
   // Round up to nearest byte
   bitfield.read_bytes = (bitfield_offset + bitfield_bitwidth + 7) / 8;

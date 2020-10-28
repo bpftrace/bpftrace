@@ -15,7 +15,7 @@ struct Bitfield
   // Then rshift the resulting value by `access_rshift` to get field value
   size_t access_rshift;
   // Then logical AND `mask` to mask out everything but this bitfield
-  size_t mask;
+  uint64_t mask;
 };
 
 struct Field
