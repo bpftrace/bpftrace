@@ -94,6 +94,8 @@ and this project adheres to
   - [#1572](https://github.com/iovisor/bpftrace/pull/1572)
 - Check string comparison size
   - [#1573](https://github.com/iovisor/bpftrace/pull/1573)
+- Fix a possible integer overflow
+  - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
