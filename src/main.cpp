@@ -551,10 +551,6 @@ int main(int argc, char *argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  // defaults
-  bpftrace.join_argnum_ = 16;
-  bpftrace.join_argsize_ = 1024;
-
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return 1;
 
