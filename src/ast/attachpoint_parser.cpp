@@ -95,7 +95,15 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
   else
     probe_types = { parts_.front() };
 
-  if (probe_types.size() != 1)
+  if (probe_types.empty())
+  {
+    if (has_wildcard(parts_.front()))
+      errs_ << "No probe type matched for " << parts_.front() << std::endl;
+    else
+      errs_ << "Invalid probe type: " << parts_.front() << std::endl;
+    return INVALID;
+  }
+  else if (probe_types.size() > 1)
   {
     // If the probe type string matches more than 1 probe, create a new set of
     // attach points (one for every match) that will replace the original one.
