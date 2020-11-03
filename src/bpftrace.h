@@ -152,8 +152,8 @@ public:
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
 
   std::vector<std::string> probe_ids_;
-  unsigned int join_argnum_;
-  unsigned int join_argsize_;
+  unsigned int join_argnum_ = 16;
+  unsigned int join_argsize_ = 1024;
   std::unique_ptr<Output> out_;
   std::unique_ptr<BPFfeature> feature_;
 
