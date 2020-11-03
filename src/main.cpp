@@ -1,4 +1,5 @@
 #include <array>
+#include <cmath>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -572,6 +573,27 @@ int main(int argc, char *argv[])
                << "Long strings will be pursued in: "
                   "https://github.com/iovisor/bpftrace/issues/305";
     return 1;
+  }
+  else if (!bpftrace.strlen_)
+  {
+    LOG(ERROR) << "'BPFTRACE_STRLEN' must be positive";
+    return 1;
+  }
+  else if (bpftrace.strlen_ & (bpftrace.strlen_ - 1))
+  {
+    // Round down to nearest power of 2
+    for (int i = 0;; ++i)
+    {
+      if (std::pow(2, i) > bpftrace.strlen_)
+      {
+        bpftrace.strlen_ = std::pow(2, i - 1);
+        break;
+      }
+    }
+
+    LOG(WARNING)
+        << "'BPFTRACE_STRLEN' needs to be a power-of-two. Rounding down to "
+        << bpftrace.strlen_;
   }
 
   if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))

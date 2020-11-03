@@ -62,6 +62,8 @@ and this project adheres to
   - [#1563](https://github.com/iovisor/bpftrace/pull/1563)
 - Remove "BTF: using data from ..." message when using -v flag
   - [#1554](https://github.com/iovisor/bpftrace/pull/1554)
+- BPFTRACE_STRLEN is now rounded down to nearest power of 2
+  - [#1586](https://github.com/iovisor/bpftrace/pull/1586)
 
 #### Deprecated
 
