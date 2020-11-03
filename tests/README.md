@@ -37,8 +37,12 @@ automatically, else it will fall back to rewriting.
 
 #### Updating
 
-If the test is run with `BPFTRACE_UPDATE_TESTS=1` the `test` helper will update
-the IR instead of running the tests.
+Run `./scripts/update_codegen_tests.sh` after making codegen changes up update
+the expected LLVM IR.
+
+Alternatively (if you need more control over which tests are updated), if the
+test is run with `BPFTRACE_UPDATE_TESTS=1` the `test` helper will update the IR
+instead of running the tests.
 
 ## Runtime tests
 
