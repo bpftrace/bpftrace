@@ -44,19 +44,31 @@ entry:
   %12 = load i64, i64* %strlen
   %13 = trunc i64 %12 to i32
   %probe_read_kernel_str = call i64 inttoptr (i64 115 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %13, i64 %11)
-  %14 = bitcast i64* %strlen to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
-  %15 = bitcast [1 x i8]* %str1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  %14 = icmp sgt i64 %probe_read_kernel_str, 0
+  br i1 %14, label %str_success, label %str_merge
+
+str_success:                                      ; preds = %entry
+  %15 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %15, i8 0, i64 64, i1 false)
+  %16 = and i64 %probe_read_kernel_str, 63
+  %17 = trunc i64 %16 to i32
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([64 x i8]*, i32, i64)*)([64 x i8]* %str, i32 %17, i64 %11)
+  br label %str_merge
+
+str_merge:                                        ; preds = %str_success, %entry
+  %18 = bitcast i64* %strlen to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = bitcast [1 x i8]* %str1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
+  %20 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %20)
   store i64 0, i64* %"@y_key"
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem3 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [64 x i8]*, i64)*)(i64 %pseudo2, i64* %"@y_key", [64 x i8]* %str, i64 0)
-  %17 = bitcast i64* %"@y_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
-  %18 = bitcast [64 x i8]* %str to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %21 = bitcast i64* %"@y_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
+  %22 = bitcast [64 x i8]* %str to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
   ret i64 0
 }
 
