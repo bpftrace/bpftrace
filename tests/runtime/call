@@ -49,6 +49,11 @@ AFTER ./testprogs/syscall execve /bin/ls
 EXPECT P: /*.
 TIMEOUT 5
 
+NAME str_trailing_bytes
+RUN bpftrace -v -e 'u:./testprogs/str_trailing_bytes:function1 { @[str(arg0)] = count(); @[str(arg1)] = count(); exit() }' -c ./testprogs/str_trailing_bytes
+EXPECT @\[mestring\]: 2
+TIMEOUT 5
+
 NAME buf
 RUN bpftrace -v -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: \\x09\\x08\\x07\\x06-\\x05\\x04\\x03\\x02-\\x01\\x02\\x03\\x04-\\x05\\x00\\x00\\x00\\x06\\x00\\x00\\x00\\x07\\x00\\x00\\x00\\x08\\x00\\x00\\x00

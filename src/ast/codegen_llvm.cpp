@@ -530,8 +530,48 @@ void CodegenLLVM::visit(Call &call)
     b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
-    b_.CreateProbeReadStr(
+    Value *ret = b_.CreateProbeReadStr(
         ctx_, buf, b_.CreateLoad(strlen), expr_, arg0->type.GetAS(), call.loc);
+
+    // bpf_probe_read_*str() may copy a few extra bytes after the nul
+    // terminator b/c the kernel does the copy in strides (instead of byte by
+    // byte). The trailing bytes don't usually matter when printing out a
+    // string but they matter a lot when maps are keyed by strings (b/c map
+    // keys are memcmp'd comparisons of BPFTRACE_STRLEN length).
+    //
+    // As a result, we must do a bit of extra work here. The first copy
+    // determines the length of the string. The second copy copies exactly the
+    // string length. Note that the return value of bpf_probe_read_*str()
+    // includes the nul terminator.
+    //
+    // This should be fixed in future kernels. Perhaps one day this workaround
+    // can be removed.
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *success_block = BasicBlock::Create(module_->getContext(),
+                                                   "str_success",
+                                                   parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "str_merge",
+                                                 parent);
+    Value *condition = b_.CreateICmpSGT(ret, b_.getInt64(0));
+    b_.CreateCondBr(condition, success_block, merge_block);
+    b_.SetInsertPoint(success_block);
+    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+    b_.CreateProbeRead(
+        ctx_,
+        buf,
+        // Please older verifiers by masking retval with a constant value
+        //
+        // bpftrace_.strlen is guaranteed to be a power of 2 so the mask
+        // is all 1s
+        b_.CreateIntCast(b_.CreateAnd(ret, b_.getInt64(bpftrace_.strlen_ - 1)),
+                         b_.getInt32Ty(),
+                         false),
+        expr_,
+        arg0->type.GetAS(),
+        call.loc);
+    b_.CreateBr(merge_block);
+    b_.SetInsertPoint(merge_block);
     b_.CreateLifetimeEnd(strlen);
 
     expr_ = buf;

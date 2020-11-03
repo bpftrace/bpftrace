@@ -100,6 +100,8 @@ and this project adheres to
   - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
 - Printing of small integers with `printf`
   - [#1532](https://github.com/iovisor/bpftrace/pull/1532)
+- Strip trailing bytes after NUL terminator for str() calls
+  - [#1586](https://github.com/iovisor/bpftrace/pull/1586)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
