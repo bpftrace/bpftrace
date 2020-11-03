@@ -62,7 +62,7 @@ shift 2
 [[ $EMBED_LLVM  == "ON" ]] && with_timeout make embedded_llvm "$@"
 [[ $EMBED_CLANG == "ON" ]] && with_timeout make embedded_clang "$@"
 [[ $DEPS_ONLY == "ON" ]] && exit 0
-make "$@"
+make "$@" -j $(nproc)
 
 if [ $RUN_TESTS = 1 ]; then
   if [ "$RUN_ALL_TESTS" = "1" ]; then
