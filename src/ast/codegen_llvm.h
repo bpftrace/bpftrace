@@ -3,10 +3,10 @@
 #include <iostream>
 #include <ostream>
 
-#include "ast.h"
 #include "bpftrace.h"
 #include "irbuilderbpf.h"
 #include "map.h"
+#include "visitors.h"
 
 #include <llvm/Support/raw_os_ostream.h>
 #include <llvm/ExecutionEngine/MCJIT.h>

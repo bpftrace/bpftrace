@@ -4,11 +4,11 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "ast.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "map.h"
 #include "types.h"
+#include "visitors.h"
 
 namespace bpftrace {
 namespace ast {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "ast.h"
 #include "bpftrace.h"
+#include "visitors.h"
 #include <iostream>
 #include <string>
 #include <unordered_set>
