@@ -365,38 +365,6 @@ public:
   void accept(Visitor &v) override;
 };
 
-class Visitor {
-public:
-  virtual ~Visitor() = default;
-  virtual void visit(Integer &integer) = 0;
-  virtual void visit(PositionalParameter &integer) = 0;
-  virtual void visit(String &string) = 0;
-  virtual void visit(Builtin &builtin) = 0;
-  virtual void visit(Identifier &identifier) = 0;
-  virtual void visit(StackMode &mode) = 0;
-  virtual void visit(Call &call) = 0;
-  virtual void visit(Map &map) = 0;
-  virtual void visit(Variable &var) = 0;
-  virtual void visit(Binop &binop) = 0;
-  virtual void visit(Unop &unop) = 0;
-  virtual void visit(Ternary &ternary) = 0;
-  virtual void visit(FieldAccess &acc) = 0;
-  virtual void visit(ArrayAccess &arr) = 0;
-  virtual void visit(Cast &cast) = 0;
-  virtual void visit(Tuple &tuple) = 0;
-  virtual void visit(ExprStatement &expr) = 0;
-  virtual void visit(AssignMapStatement &assignment) = 0;
-  virtual void visit(AssignVarStatement &assignment) = 0;
-  virtual void visit(If &if_block) = 0;
-  virtual void visit(Jump &jump) = 0;
-  virtual void visit(Unroll &unroll) = 0;
-  virtual void visit(While &while_block) = 0;
-  virtual void visit(Predicate &pred) = 0;
-  virtual void visit(AttachPoint &ap) = 0;
-  virtual void visit(Probe &probe) = 0;
-  virtual void visit(Program &program) = 0;
-};
-
 std::string opstr(Binop &binop);
 std::string opstr(Unop &unop);
 std::string opstr(Jump &jump);

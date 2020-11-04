@@ -3,7 +3,7 @@
 #include <istream>
 #include <set>
 
-#include "ast/ast.h"
+#include "ast/visitors.h"
 #include "bpftrace.h"
 
 namespace bpftrace {

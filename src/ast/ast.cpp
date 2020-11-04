@@ -1,6 +1,7 @@
 #include "ast.h"
 #include "log.h"
 #include "parser.tab.hh"
+#include "visitors.h"
 #include <iostream>
 
 namespace bpftrace {

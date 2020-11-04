@@ -7,6 +7,7 @@ add_library(ast
   printer.cpp
   semantic_analyser.cpp
   callback_visitor.cpp
+  visitors.cpp
 )
 
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
