@@ -106,9 +106,15 @@ int offset(std::string reg_name) {
   return distance(registers.begin(), it);
 }
 
-int max_arg() { return arg_registers.size() - 1; }
+int max_arg() 
+{ 
+  return arg_registers.size() - 1; 
+}
 
-int arg_offset(int arg_num) { return offset(arg_registers.at(arg_num)); }
+int arg_offset(int arg_num) 
+{ 
+  return offset(arg_registers.at(arg_num)); 
+}
 
 #pragma GCC push_options
 #pragma GCC optimize("O0")
@@ -121,7 +127,10 @@ static int /*__attribute__((optimize("O0")))*/ *__getpc(void) {
 }
 #pragma GCC pop_options
 
-int ret_offset() { return offset("v0"); }
+int ret_offset() 
+{ 
+  return offset("v0"); 
+}
 
 int pc_offset() {
   int *retAddr, pc;
@@ -132,12 +141,20 @@ int pc_offset() {
   return pc;
 }
 
-int sp_offset() { return offset("sp"); }
+int sp_offset() 
+{ 
+  return offset("sp"); 
+}
 
-int arg_stack_offset() { return ARG0_STACK / 8; }
+int arg_stack_offset() 
+{ 
+  return ARG0_STACK / 8; 
+}
 
-std::string name() { return std::string("mips64"); }
+std::string name() 
+{ 
+  return std::string("mips64"); 
+}
 
 } // namespace arch
 } // namespace bpftrace
-
