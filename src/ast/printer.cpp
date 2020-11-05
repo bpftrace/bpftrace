@@ -9,6 +9,12 @@
 namespace bpftrace {
 namespace ast {
 
+void Printer::print(Node *root)
+{
+  depth_ = 0;
+  Visit(root);
+}
+
 std::string Printer::type(const SizedType &ty)
 {
   std::stringstream buf;

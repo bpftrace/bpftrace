@@ -13,21 +13,19 @@
 namespace bpftrace {
 namespace ast {
 
-class SemanticAnalyser : public Visitor {
+class SemanticAnalyser : public ASTVisitor
+{
 public:
   explicit SemanticAnalyser(Node *root,
                             BPFtrace &bpftrace,
                             std::ostream &out = std::cerr,
                             bool has_child = true)
-      : root_(root),
-        bpftrace_(bpftrace),
-        out_(out),
-        has_child_(has_child)
+      : root_(root), bpftrace_(bpftrace), out_(out), has_child_(has_child)
   {
   }
 
   explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, bool has_child)
-      : SemanticAnalyser(root, bpftrace, std::cerr, has_child)
+      : root_(root), bpftrace_(bpftrace), out_(std::cerr), has_child_(has_child)
   {
   }
 
@@ -63,7 +61,7 @@ public:
   int analyse();
 
 private:
-  Node *root_;
+  Node *root_ = nullptr;
   BPFtrace &bpftrace_;
   std::ostream &out_;
   std::ostringstream err_;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast.h"
+#include "visitors.h"
 #include <functional>
 
 namespace bpftrace {
@@ -8,7 +8,7 @@ namespace ast {
 
 using callback = std::function<void(Node *)>;
 
-class CallbackVisitor : public Visitor
+class CallbackVisitor : public ASTVisitor
 {
 public:
   explicit CallbackVisitor(callback func) : func_(func)

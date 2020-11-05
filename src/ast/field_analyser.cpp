@@ -6,29 +6,9 @@
 namespace bpftrace {
 namespace ast {
 
-void FieldAnalyser::visit(Integer &integer __attribute__((unused)))
-{
-}
-
-void FieldAnalyser::visit(PositionalParameter &param __attribute__((unused)))
-{
-}
-
-void FieldAnalyser::visit(String &string __attribute__((unused)))
-{
-}
-
-void FieldAnalyser::visit(StackMode &mode __attribute__((unused)))
-{
-}
-
 void FieldAnalyser::visit(Identifier &identifier)
 {
   bpftrace_.btf_set_.insert(identifier.ident);
-}
-
-void FieldAnalyser::visit(Jump &jump __attribute__((unused)))
-{
 }
 
 void FieldAnalyser::check_kfunc_args(void)
@@ -83,15 +63,6 @@ void FieldAnalyser::visit(Builtin &builtin)
   }
 }
 
-void FieldAnalyser::visit(Call &call)
-{
-  if (call.vargs) {
-    for (Expression *expr : *call.vargs) {
-      expr->accept(*this);
-    }
-  }
-}
-
 void FieldAnalyser::visit(Map &map)
 {
   MapKey key;
@@ -111,64 +82,6 @@ void FieldAnalyser::visit(Variable &var __attribute__((unused)))
   auto it = var_types_.find(var.ident);
   if (it != var_types_.end())
     type_ = it->second;
-}
-
-void FieldAnalyser::visit(ArrayAccess &arr)
-{
-  arr.expr->accept(*this);
-  arr.indexpr->accept(*this);
-}
-
-void FieldAnalyser::visit(Binop &binop)
-{
-  binop.left->accept(*this);
-  binop.right->accept(*this);
-}
-
-void FieldAnalyser::visit(Unop &unop)
-{
-  unop.expr->accept(*this);
-}
-
-void FieldAnalyser::visit(Ternary &ternary)
-{
-  ternary.cond->accept(*this);
-  ternary.left->accept(*this);
-  ternary.right->accept(*this);
-}
-
-void FieldAnalyser::visit(While &while_block)
-{
-  while_block.cond->accept(*this);
-
-  for (Statement *stmt : *while_block.stmts)
-  {
-    stmt->accept(*this);
-  }
-}
-
-void FieldAnalyser::visit(If &if_block)
-{
-  if_block.cond->accept(*this);
-
-  for (Statement *stmt : *if_block.stmts) {
-    stmt->accept(*this);
-  }
-
-  if (if_block.else_stmts) {
-    for (Statement *stmt : *if_block.else_stmts) {
-      stmt->accept(*this);
-    }
-  }
-}
-
-void FieldAnalyser::visit(Unroll &unroll)
-{
-  // visit statements in unroll once
-  for (Statement *stmt : *unroll.stmts)
-  {
-    stmt->accept(*this);
-  }
 }
 
 void FieldAnalyser::visit(FieldAccess &acc)
@@ -211,17 +124,6 @@ void FieldAnalyser::visit(Cast &cast)
   bpftrace_.btf_set_.insert(type_);
 }
 
-void FieldAnalyser::visit(Tuple &tuple)
-{
-  for (Expression *expr : *tuple.elems)
-    expr->accept(*this);
-}
-
-void FieldAnalyser::visit(ExprStatement &expr)
-{
-  expr.expr->accept(*this);
-}
-
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
   assignment.map->accept(*this);
@@ -233,11 +135,6 @@ void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
   assignment.expr->accept(*this);
   var_types_.emplace(assignment.var->ident, type_);
-}
-
-void FieldAnalyser::visit(Predicate &pred)
-{
-  pred.expr->accept(*this);
 }
 
 bool FieldAnalyser::compare_args(const std::map<std::string, SizedType>& args1,
@@ -387,16 +284,12 @@ void FieldAnalyser::visit(Probe &probe)
   }
 }
 
-void FieldAnalyser::visit(Program &program)
-{
-  for (Probe *probe : *program.probes)
-    probe->accept(*this);
-}
-
 int FieldAnalyser::analyse()
 {
-  if (bpftrace_.btf_.has_data())
-    root_->accept(*this);
+  if (!bpftrace_.btf_.has_data())
+    return 0;
+
+  Visit(root_);
 
   std::string errors = err_.str();
   if (!errors.empty())

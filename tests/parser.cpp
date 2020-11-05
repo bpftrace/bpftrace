@@ -33,7 +33,7 @@ void test(BPFtrace &bpftrace,
 
   std::ostringstream out;
   Printer printer(out);
-  driver.root_->accept(printer);
+  printer.print(driver.root_);
   EXPECT_EQ(output, out.str());
 }
 
