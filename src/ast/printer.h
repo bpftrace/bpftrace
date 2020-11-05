@@ -6,12 +6,15 @@
 namespace bpftrace {
 namespace ast {
 
-class Printer : public Visitor {
+class Printer : public ASTVisitor
+{
 public:
   explicit Printer(std::ostream &out, bool print_types = false)
       : out_(out), print_types(print_types)
   {
   }
+
+  void print(Node *root);
 
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -46,6 +49,7 @@ public:
 private:
   std::ostream &out_;
   bool print_types = false;
+
   std::string type(const SizedType &ty);
 };
 

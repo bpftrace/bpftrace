@@ -680,8 +680,8 @@ int main(int argc, char *argv[])
   {
     std::cout << "\nAST\n";
     std::cout << "-------------------\n";
-    ast::Printer p(std::cout);
-    driver.root_->accept(p);
+    ast::Printer printer(std::cout);
+    printer.print(driver.root_);
     std::cout << std::endl;
   }
 
@@ -735,8 +735,8 @@ int main(int argc, char *argv[])
   {
     std::cout << "\nAST after semantic analysis\n";
     std::cout << "-------------------\n";
-    ast::Printer p(std::cout, true);
-    driver.root_->accept(p);
+    ast::Printer printer(std::cout, true);
+    printer.print(driver.root_);
     std::cout << std::endl;
   }
 
