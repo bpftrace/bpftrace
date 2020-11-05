@@ -140,8 +140,7 @@ int pc_offset()
 {
    int *retAddr, pc;
 
-   retAddr = __getpc();
-   
+   retAddr = __getpc();   
    pc = *retAddr;
 
    return pc;
@@ -164,5 +163,3 @@ std::string name()
 
 } // namespace arch
 } // namespace bpftrace
-
-
