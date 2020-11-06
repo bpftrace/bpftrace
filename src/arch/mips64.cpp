@@ -140,7 +140,4 @@ std::string name() { return std::string("mips64"); }
 
 } // namespace arch
 } // namespace bpftrace
-<<<<<<< HEAD
-=======
 
->>>>>>> c3bbcfa6cf2b9f301d41d1e32abff0050bcb403f
