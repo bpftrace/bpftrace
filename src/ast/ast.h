@@ -18,9 +18,11 @@ class Visitor;
 
 class Node {
 public:
-  Node();
-  Node(location loc);
+  Node() = default;
+  Node(location loc) : loc(loc){};
+  Node(const Node &other) = default;
   virtual ~Node() = default;
+
   virtual void accept(Visitor &v) = 0;
   location loc;
 };
@@ -29,7 +31,10 @@ class Map;
 class Variable;
 class Expression : public Node {
 public:
-  Expression(location loc);
+  Expression() = default;
+  Expression(location loc) : Node(loc){};
+  Expression(const Expression &other);
+
   SizedType type;
   Map *key_for_map = nullptr;
   Map *map = nullptr; // Only set when this expression is assigned to a map
@@ -43,6 +48,7 @@ using ExpressionList = std::vector<Expression *>;
 class Integer : public Expression {
 public:
   explicit Integer(long n, location loc);
+  Integer(const Integer &other) = default;
   long n;
 
   DEFINE_ACCEPT
@@ -53,6 +59,8 @@ public:
   explicit PositionalParameter(PositionalParameterType ptype,
                                long n,
                                location loc);
+  PositionalParameter(const PositionalParameter &other) = default;
+
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
@@ -63,6 +71,8 @@ public:
 class String : public Expression {
 public:
   explicit String(const std::string &str, location loc);
+  String(const String &other) = default;
+
   std::string str;
 
   DEFINE_ACCEPT
@@ -71,6 +81,8 @@ public:
 class StackMode : public Expression {
 public:
   explicit StackMode(const std::string &mode, location loc);
+  StackMode(const StackMode &other) = default;
+
   std::string mode;
 
   DEFINE_ACCEPT
@@ -79,6 +91,8 @@ public:
 class Identifier : public Expression {
 public:
   explicit Identifier(const std::string &ident, location loc);
+  Identifier(const Identifier &other) = default;
+
   std::string ident;
 
   DEFINE_ACCEPT
@@ -87,6 +101,8 @@ public:
 class Builtin : public Expression {
 public:
   explicit Builtin(const std::string &ident, location loc);
+  Builtin(const Builtin &other) = default;
+
   std::string ident;
   int probe_id;
 
@@ -97,6 +113,8 @@ class Call : public Expression {
 public:
   explicit Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
+  Call(const Call &other);
+
   std::string func;
   ExpressionList *vargs;
 
@@ -107,8 +125,10 @@ class Map : public Expression {
 public:
   explicit Map(const std::string &ident, location loc);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
+  Map(const Map &other);
+
   std::string ident;
-  ExpressionList *vargs;
+  ExpressionList *vargs = nullptr;
   bool skip_key_validation = false;
 
   DEFINE_ACCEPT
@@ -117,6 +137,8 @@ public:
 class Variable : public Expression {
 public:
   explicit Variable(const std::string &ident, location loc);
+  Variable(const Variable &other) = default;
+
   std::string ident;
 
   DEFINE_ACCEPT
@@ -125,7 +147,9 @@ public:
 class Binop : public Expression {
 public:
   Binop(Expression *left, int op, Expression *right, location loc);
-  Expression *left, *right;
+  Binop(const Binop &other);
+
+  Expression *left = nullptr, *right = nullptr;
   int op;
 
   DEFINE_ACCEPT
@@ -138,7 +162,9 @@ public:
        Expression *expr,
        bool is_post_op = false,
        location loc = location());
-  Expression *expr;
+  Unop(const Unop &other);
+
+  Expression *expr = nullptr;
   int op;
   bool is_post_op;
 
@@ -150,7 +176,9 @@ public:
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
-  Expression *expr;
+  FieldAccess(const FieldAccess &other);
+
+  Expression *expr = nullptr;
   std::string field;
   ssize_t index = -1;
 
@@ -161,8 +189,10 @@ class ArrayAccess : public Expression {
 public:
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
-  Expression *expr;
-  Expression *indexpr;
+  ArrayAccess(const ArrayAccess &other) : Expression(other){};
+
+  Expression *expr = nullptr;
+  Expression *indexpr = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -178,10 +208,12 @@ public:
        bool is_double_pointer,
        Expression *expr,
        location loc);
+  Cast(const Cast &other);
+
   std::string cast_type;
   bool is_pointer;
   bool is_double_pointer;
-  Expression *expr;
+  Expression *expr = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -190,7 +222,9 @@ class Tuple : public Expression
 {
 public:
   Tuple(ExpressionList *elems, location loc);
-  ExpressionList *elems;
+  Tuple(const Tuple &other);
+
+  ExpressionList *elems = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -198,14 +232,18 @@ public:
 class Statement : public Node {
 public:
   Statement() = default;
-  Statement(location loc);
+  Statement(location loc) : Node(loc){};
+  Statement(const Statement &other) = default;
 };
+
 using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
   explicit ExprStatement(Expression *expr, location loc);
-  Expression *expr;
+  ExprStatement(const ExprStatement &other) : Statement(other){};
+
+  Expression *expr = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -213,8 +251,10 @@ public:
 class AssignMapStatement : public Statement {
 public:
   AssignMapStatement(Map *map, Expression *expr, location loc = location());
-  Map *map;
-  Expression *expr;
+  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
+
+  Map *map = nullptr;
+  Expression *expr = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -223,8 +263,10 @@ class AssignVarStatement : public Statement {
 public:
   AssignVarStatement(Variable *var, Expression *expr);
   AssignVarStatement(Variable *var, Expression *expr, location loc);
-  Variable *var;
-  Expression *expr;
+  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
+
+  Variable *var = nullptr;
+  Expression *expr = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -233,7 +275,9 @@ class If : public Statement {
 public:
   If(Expression *cond, StatementList *stmts);
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
-  Expression *cond;
+  If(const If &other);
+
+  Expression *cond = nullptr;
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
 
@@ -243,9 +287,11 @@ public:
 class Unroll : public Statement {
 public:
   Unroll(Expression *expr, StatementList *stmts, location loc);
+  Unroll(const Unroll &other);
+
   long int var = 0;
-  Expression *expr;
-  StatementList *stmts;
+  Expression *expr = nullptr;
+  StatementList *stmts = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -253,12 +299,12 @@ public:
 class Jump : public Statement
 {
 public:
-  Jump(int ident, location loc = location()) : loc(loc), ident(ident)
+  Jump(int ident, location loc = location()) : Statement(loc), ident(ident)
   {
   }
+  Jump(const Jump &other) = default;
 
-  location loc;
-  int ident;
+  int ident = 0;
 
   DEFINE_ACCEPT
 };
@@ -266,16 +312,21 @@ public:
 class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr, location loc);
-  Expression *expr;
+  Predicate(const Predicate &other) : Node(other){};
+
+  Expression *expr = nullptr;
 
   DEFINE_ACCEPT
 };
 
 class Ternary : public Expression {
 public:
-  Ternary(Expression *cond, Expression *left, Expression *right);
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
-  Expression *cond, *left, *right;
+  Ternary(const Ternary &other) : Expression(other){};
+
+  Expression *cond = nullptr;
+  Expression *left = nullptr;
+  Expression *right = nullptr;
 
   DEFINE_ACCEPT
 };
@@ -284,12 +335,13 @@ class While : public Statement
 {
 public:
   While(Expression *cond, StatementList *stmts, location loc)
-      : cond(cond), stmts(stmts), loc(loc)
+      : Statement(loc), cond(cond), stmts(stmts)
   {
   }
-  Expression *cond;
+  While(const While &other);
+
+  Expression *cond = nullptr;
   StatementList *stmts = nullptr;
-  location loc;
 
   DEFINE_ACCEPT
 };
@@ -297,6 +349,7 @@ public:
 class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &raw_input, location loc = location());
+  AttachPoint(const AttachPoint &other) = default;
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
   std::string raw_input;
@@ -328,10 +381,11 @@ using AttachPointList = std::vector<AttachPoint *>;
 class Probe : public Node {
 public:
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
+  Probe(const Probe &other);
 
-  AttachPointList *attach_points;
-  Predicate *pred;
-  StatementList *stmts;
+  AttachPointList *attach_points = nullptr;
+  Predicate *pred = nullptr;
+  StatementList *stmts = nullptr;
 
   DEFINE_ACCEPT
   std::string name() const;
@@ -348,6 +402,8 @@ using ProbeList = std::vector<Probe *>;
 class Program : public Node {
 public:
   Program(const std::string &c_definitions, ProbeList *probes);
+  Program(const Program &other);
+
   std::string c_definitions;
   ProbeList *probes;
 
