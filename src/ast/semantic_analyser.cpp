@@ -1256,7 +1256,7 @@ void SemanticAnalyser::visit(Map &map)
       if (expr->type.IsIntTy() && expr->type.GetSize() < 8)
       {
         std::string type = expr->type.IsSigned() ? "int64" : "uint64";
-        Expression *cast = new ast::Cast(type, false, false, expr);
+        Expression *cast = new ast::Cast(type, false, false, expr, map.loc);
         cast->accept(*this);
         map.vargs->at(i) = cast;
         expr = cast;

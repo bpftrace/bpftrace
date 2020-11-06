@@ -15,17 +15,8 @@ Node::Node(location loc) : loc(loc)
 {
 }
 
-Expression::Expression() : Node()
-{
-}
-
 Expression::Expression(location loc) : Node(loc)
 {
-}
-
-Integer::Integer(long n) : n(n)
-{
-  is_literal = true;
 }
 
 Integer::Integer(long n, location loc) : Expression(loc), n(n)
@@ -37,11 +28,6 @@ void Integer::accept(Visitor &v) {
   v.visit(*this);
 }
 
-String::String(const std::string &str) : str(str)
-{
-  is_literal = true;
-}
-
 String::String(const std::string &str, location loc) : Expression(loc), str(str)
 {
   is_literal = true;
@@ -49,11 +35,6 @@ String::String(const std::string &str, location loc) : Expression(loc), str(str)
 
 void String::accept(Visitor &v) {
   v.visit(*this);
-}
-
-StackMode::StackMode(const std::string &mode) : mode(mode)
-{
-  is_literal = true;
 }
 
 StackMode::StackMode(const std::string &mode, location loc)
@@ -66,10 +47,6 @@ void StackMode::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Builtin::Builtin(const std::string &ident) : ident(is_deprecated(ident))
-{
-}
-
 Builtin::Builtin(const std::string &ident, location loc)
     : Expression(loc), ident(is_deprecated(ident))
 {
@@ -79,10 +56,6 @@ void Builtin::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Identifier::Identifier(const std::string &ident) : ident(ident)
-{
-}
-
 Identifier::Identifier(const std::string &ident, location loc)
     : Expression(loc), ident(ident)
 {
@@ -90,12 +63,6 @@ Identifier::Identifier(const std::string &ident, location loc)
 
 void Identifier::accept(Visitor &v) {
   v.visit(*this);
-}
-
-PositionalParameter::PositionalParameter(PositionalParameterType ptype, long n)
-    : ptype(ptype), n(n)
-{
-  is_literal = true;
 }
 
 PositionalParameter::PositionalParameter(PositionalParameterType ptype,
@@ -110,17 +77,8 @@ void PositionalParameter::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Call::Call(const std::string &func) : func(is_deprecated(func)), vargs(nullptr)
-{
-}
-
 Call::Call(const std::string &func, location loc)
     : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
-{
-}
-
-Call::Call(const std::string &func, ExpressionList *vargs)
-    : func(is_deprecated(func)), vargs(vargs)
 {
 }
 
@@ -139,12 +97,6 @@ Map::Map(const std::string &ident, location loc)
   is_map = true;
 }
 
-Map::Map(const std::string &ident, ExpressionList *vargs)
-    : ident(ident), vargs(vargs)
-{
-  is_map = true;
-}
-
 Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
     : Expression(loc), ident(ident), vargs(vargs)
 {
@@ -157,11 +109,6 @@ Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
 
 void Map::accept(Visitor &v) {
   v.visit(*this);
-}
-
-Variable::Variable(const std::string &ident) : ident(ident)
-{
-  is_variable = true;
 }
 
 Variable::Variable(const std::string &ident, location loc)
@@ -197,11 +144,6 @@ void Unop::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Ternary::Ternary(Expression *cond, Expression *left, Expression *right)
-    : cond(cond), left(left), right(right)
-{
-}
-
 Ternary::Ternary(Expression *cond,
                  Expression *left,
                  Expression *right,
@@ -212,11 +154,6 @@ Ternary::Ternary(Expression *cond,
 
 void Ternary::accept(Visitor &v) {
   v.visit(*this);
-}
-
-FieldAccess::FieldAccess(Expression *expr, const std::string &field)
-    : expr(expr), field(field)
-{
 }
 
 FieldAccess::FieldAccess(Expression *expr,
@@ -235,11 +172,6 @@ void FieldAccess::accept(Visitor &v) {
   v.visit(*this);
 }
 
-ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr)
-    : expr(expr), indexpr(indexpr)
-{
-}
-
 ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
     : Expression(loc), expr(expr), indexpr(indexpr)
 {
@@ -247,17 +179,6 @@ ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
 
 void ArrayAccess::accept(Visitor &v) {
   v.visit(*this);
-}
-
-Cast::Cast(const std::string &type,
-           bool is_pointer,
-           bool is_double_pointer,
-           Expression *expr)
-    : cast_type(type),
-      is_pointer(is_pointer),
-      is_double_pointer(is_double_pointer),
-      expr(expr)
-{
 }
 
 Cast::Cast(const std::string &type,
@@ -291,10 +212,6 @@ Statement::Statement(location loc) : Node(loc)
 {
 }
 
-ExprStatement::ExprStatement(Expression *expr) : expr(expr)
-{
-}
-
 ExprStatement::ExprStatement(Expression *expr, location loc)
     : Statement(loc), expr(expr)
 {
@@ -314,12 +231,6 @@ void AssignMapStatement::accept(Visitor &v) {
   v.visit(*this);
 }
 
-AssignVarStatement::AssignVarStatement(Variable *var, Expression *expr)
-    : var(var), expr(expr)
-{
-  expr->var = var;
-}
-
 AssignVarStatement::AssignVarStatement(Variable *var,
                                        Expression *expr,
                                        location loc)
@@ -330,10 +241,6 @@ AssignVarStatement::AssignVarStatement(Variable *var,
 
 void AssignVarStatement::accept(Visitor &v) {
   v.visit(*this);
-}
-
-Predicate::Predicate(Expression *expr) : expr(expr)
-{
 }
 
 Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
@@ -375,13 +282,6 @@ void Unroll::accept(Visitor &v) {
   v.visit(*this);
 }
 
-Probe::Probe(AttachPointList *attach_points,
-             Predicate *pred,
-             StatementList *stmts)
-    : attach_points(attach_points), pred(pred), stmts(stmts)
-{
-}
-
 void While::accept(Visitor &v)
 {
   v.visit(*this);
@@ -390,6 +290,13 @@ void While::accept(Visitor &v)
 void Jump::accept(Visitor &v)
 {
   v.visit(*this);
+}
+
+Probe::Probe(AttachPointList *attach_points,
+             Predicate *pred,
+             StatementList *stmts)
+    : attach_points(attach_points), pred(pred), stmts(stmts)
+{
 }
 
 void Probe::accept(Visitor &v) {
