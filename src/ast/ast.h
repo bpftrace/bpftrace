@@ -27,7 +27,6 @@ class Map;
 class Variable;
 class Expression : public Node {
 public:
-  Expression();
   Expression(location loc);
   SizedType type;
   Map *key_for_map = nullptr;
@@ -41,7 +40,6 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  explicit Integer(long n);
   explicit Integer(long n, location loc);
   long n;
 
@@ -50,7 +48,6 @@ public:
 
 class PositionalParameter : public Expression {
 public:
-  explicit PositionalParameter(PositionalParameterType ptype, long n);
   explicit PositionalParameter(PositionalParameterType ptype,
                                long n,
                                location loc);
@@ -63,7 +60,6 @@ public:
 
 class String : public Expression {
 public:
-  explicit String(const std::string &str);
   explicit String(const std::string &str, location loc);
   std::string str;
 
@@ -72,7 +68,6 @@ public:
 
 class StackMode : public Expression {
 public:
-  explicit StackMode(const std::string &mode);
   explicit StackMode(const std::string &mode, location loc);
   std::string mode;
 
@@ -81,7 +76,6 @@ public:
 
 class Identifier : public Expression {
 public:
-  explicit Identifier(const std::string &ident);
   explicit Identifier(const std::string &ident, location loc);
   std::string ident;
 
@@ -90,7 +84,6 @@ public:
 
 class Builtin : public Expression {
 public:
-  explicit Builtin(const std::string &ident);
   explicit Builtin(const std::string &ident, location loc);
   std::string ident;
   int probe_id;
@@ -100,9 +93,7 @@ public:
 
 class Call : public Expression {
 public:
-  explicit Call(const std::string &func);
   explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs);
   Call(const std::string &func, ExpressionList *vargs, location loc);
   std::string func;
   ExpressionList *vargs;
@@ -113,7 +104,6 @@ public:
 class Map : public Expression {
 public:
   explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, ExpressionList *vargs);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
   std::string ident;
   ExpressionList *vargs;
@@ -124,7 +114,6 @@ public:
 
 class Variable : public Expression {
 public:
-  explicit Variable(const std::string &ident);
   explicit Variable(const std::string &ident, location loc);
   std::string ident;
 
@@ -213,7 +202,6 @@ using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
-  explicit ExprStatement(Expression *expr);
   explicit ExprStatement(Expression *expr, location loc);
   Expression *expr;
 
@@ -275,7 +263,6 @@ public:
 
 class Predicate : public Node {
 public:
-  explicit Predicate(Expression *expr);
   explicit Predicate(Expression *expr, location loc);
   Expression *expr;
 
