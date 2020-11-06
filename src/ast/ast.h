@@ -14,6 +14,8 @@ namespace ast {
 
 class Visitor;
 
+#define DEFINE_ACCEPT void accept(Visitor &v) override;
+
 class Node {
 public:
   Node();
@@ -43,7 +45,7 @@ public:
   explicit Integer(long n, location loc);
   long n;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class PositionalParameter : public Expression {
@@ -55,7 +57,7 @@ public:
   long n;
   bool is_in_str = false;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class String : public Expression {
@@ -63,7 +65,7 @@ public:
   explicit String(const std::string &str, location loc);
   std::string str;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class StackMode : public Expression {
@@ -71,7 +73,7 @@ public:
   explicit StackMode(const std::string &mode, location loc);
   std::string mode;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Identifier : public Expression {
@@ -79,7 +81,7 @@ public:
   explicit Identifier(const std::string &ident, location loc);
   std::string ident;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Builtin : public Expression {
@@ -88,7 +90,7 @@ public:
   std::string ident;
   int probe_id;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Call : public Expression {
@@ -98,7 +100,7 @@ public:
   std::string func;
   ExpressionList *vargs;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Map : public Expression {
@@ -109,7 +111,7 @@ public:
   ExpressionList *vargs;
   bool skip_key_validation = false;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Variable : public Expression {
@@ -117,7 +119,7 @@ public:
   explicit Variable(const std::string &ident, location loc);
   std::string ident;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Binop : public Expression {
@@ -126,7 +128,7 @@ public:
   Expression *left, *right;
   int op;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Unop : public Expression {
@@ -140,7 +142,7 @@ public:
   int op;
   bool is_post_op;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class FieldAccess : public Expression {
@@ -152,7 +154,7 @@ public:
   std::string field;
   ssize_t index = -1;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class ArrayAccess : public Expression {
@@ -162,7 +164,7 @@ public:
   Expression *expr;
   Expression *indexpr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Cast : public Expression {
@@ -181,7 +183,7 @@ public:
   bool is_double_pointer;
   Expression *expr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Tuple : public Expression
@@ -190,7 +192,7 @@ public:
   Tuple(ExpressionList *elems, location loc);
   ExpressionList *elems;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Statement : public Node {
@@ -205,7 +207,7 @@ public:
   explicit ExprStatement(Expression *expr, location loc);
   Expression *expr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class AssignMapStatement : public Statement {
@@ -214,7 +216,7 @@ public:
   Map *map;
   Expression *expr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class AssignVarStatement : public Statement {
@@ -224,7 +226,7 @@ public:
   Variable *var;
   Expression *expr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class If : public Statement {
@@ -235,7 +237,7 @@ public:
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Unroll : public Statement {
@@ -245,7 +247,7 @@ public:
   Expression *expr;
   StatementList *stmts;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Jump : public Statement
@@ -258,7 +260,7 @@ public:
   location loc;
   int ident;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Predicate : public Node {
@@ -266,7 +268,7 @@ public:
   explicit Predicate(Expression *expr, location loc);
   Expression *expr;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class Ternary : public Expression {
@@ -275,7 +277,7 @@ public:
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
   Expression *cond, *left, *right;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class While : public Statement
@@ -289,7 +291,7 @@ public:
   StatementList *stmts = nullptr;
   location loc;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 class AttachPoint : public Node {
@@ -311,7 +313,7 @@ public:
   uint64_t address = 0;
   uint64_t func_offset = 0;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
   std::string name(const std::string &attach_point) const;
   std::string name(const std::string &attach_target,
                    const std::string &attach_point) const;
@@ -331,7 +333,7 @@ public:
   Predicate *pred;
   StatementList *stmts;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
   std::string name() const;
   bool need_expansion = false;        // must build a BPF program per wildcard match
   bool need_tp_args_structs = false;  // must import struct for tracepoints
@@ -349,12 +351,14 @@ public:
   std::string c_definitions;
   ProbeList *probes;
 
-  void accept(Visitor &v) override;
+  DEFINE_ACCEPT
 };
 
 std::string opstr(Binop &binop);
 std::string opstr(Unop &unop);
 std::string opstr(Jump &jump);
+
+#undef DEFINE_ACCEPT
 
 } // namespace ast
 } // namespace bpftrace
