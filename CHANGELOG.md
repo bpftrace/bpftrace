@@ -54,6 +54,8 @@ and this project adheres to
   - [#1647](https://github.com/iovisor/bpftrace/pull/1647)
 - Add support for usdt arguments utilising the index register and scale
   - [#1684](https://github.com/iovisor/bpftrace/pull/1684)
+- Add basic mips64 support
+  - [#1599](https://github.com/iovisor/bpftrace/pull/1599)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments

@@ -8,6 +8,8 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "s390" OR
     add_library(arch s390.cpp)
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
     add_library(arch x86_64.cpp)
+elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "mips64")
+    add_library(arch mips64.cpp)
 else()
   message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
 endif()
