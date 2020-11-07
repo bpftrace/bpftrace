@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include "vtable.h"
+
 #include "ast.h"
 
 namespace bpftrace {
@@ -44,8 +47,8 @@ public:
 /**
    Basic tree walking visitor
 
-   The Visit() method is called one for every node in the tree. Providing an
-   easy way to run a generic method on all nodes.
+   The Visit() method is called one for every node in the tree. Providing an easy way to run
+   a generic method on all nodes.
 
    The individual visit() methods run on specific node types.
 */
@@ -62,7 +65,6 @@ public:
 
   /*
     Visit a node
-
    */
   virtual inline void Visit(Node &n)
   {
@@ -72,8 +74,7 @@ public:
   /*
     Visitors for specific node types
 
-    NB: visitor should dispatch through the Visit method and not use
-    node->accept() directly
+    NB: visitor should dispatch through the Visit method and not use node->accept() directly
   */
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
@@ -102,6 +103,171 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
+};
+
+/**
+   Base class for vtable based dispatching
+
+   \tparam R return type for visitors
+*/
+template <typename R>
+class Dispatcher
+{
+private:
+  using tabletype = VTable<R, Dispatcher>;
+  using mytype = Dispatcher;
+
+public:
+  virtual ~Dispatcher() = default;
+
+  /**
+     Visit handles the dispatching on node type
+   */
+  virtual R Visit(Node &node)
+  {
+    static tabletype table = make_vtable();
+    return table(node, this);
+  };
+
+#define DEFAULT_FN                              \
+  {                                             \
+    return default_visitor(node);               \
+  }
+
+  /**
+      Visitors for node subtypes
+   */
+  virtual R visit(Integer &node) DEFAULT_FN;
+  virtual R visit(PositionalParameter &node) DEFAULT_FN;
+  virtual R visit(String &node) DEFAULT_FN;
+  virtual R visit(Builtin &node) DEFAULT_FN;
+  virtual R visit(Identifier &node) DEFAULT_FN;
+  virtual R visit(StackMode &node) DEFAULT_FN;
+  virtual R visit(Call &node) DEFAULT_FN;
+  virtual R visit(Map &node) DEFAULT_FN;
+  virtual R visit(Variable &node) DEFAULT_FN;
+  virtual R visit(Binop &node) DEFAULT_FN;
+  virtual R visit(Unop &node) DEFAULT_FN;
+  virtual R visit(Ternary &node) DEFAULT_FN;
+  virtual R visit(FieldAccess &node) DEFAULT_FN;
+  virtual R visit(ArrayAccess &node) DEFAULT_FN;
+  virtual R visit(Cast &node) DEFAULT_FN;
+  virtual R visit(Tuple &node) DEFAULT_FN;
+  virtual R visit(ExprStatement &node) DEFAULT_FN;
+  virtual R visit(AssignMapStatement &node) DEFAULT_FN;
+  virtual R visit(AssignVarStatement &node) DEFAULT_FN;
+  virtual R visit(If &node) DEFAULT_FN;
+  virtual R visit(Jump &node) DEFAULT_FN;
+  virtual R visit(Unroll &node) DEFAULT_FN;
+  virtual R visit(While &node) DEFAULT_FN;
+  virtual R visit(Predicate &node) DEFAULT_FN;
+  virtual R visit(AttachPoint &node) DEFAULT_FN;
+  virtual R visit(Probe &node) DEFAULT_FN;
+  virtual R visit(Program &node) DEFAULT_FN;
+
+  virtual R default_visitor(Node &node)
+  {
+    throw std::runtime_error(std::string("No visitor for: ") +
+                             typeid(node).name());
+  }
+
+private:
+// Helper for easily defining vtable entries
+#define DEFINE_DISPATCH(T)                                                     \
+  {                                                                            \
+    table.template set<T>(                                                     \
+        [](Node &n, mytype *v) { return v->visit(static_cast<T &>(n)); });     \
+  }
+
+  static tabletype make_vtable()
+  {
+    tabletype table;
+    DEFINE_DISPATCH(Integer);
+    DEFINE_DISPATCH(PositionalParameter);
+    DEFINE_DISPATCH(String);
+    DEFINE_DISPATCH(StackMode);
+    DEFINE_DISPATCH(Identifier);
+    DEFINE_DISPATCH(Builtin);
+    DEFINE_DISPATCH(Call);
+    DEFINE_DISPATCH(Map);
+    DEFINE_DISPATCH(Variable);
+    DEFINE_DISPATCH(Binop);
+    DEFINE_DISPATCH(Unop);
+    DEFINE_DISPATCH(FieldAccess);
+    DEFINE_DISPATCH(ArrayAccess);
+    DEFINE_DISPATCH(Cast);
+    DEFINE_DISPATCH(Tuple);
+    DEFINE_DISPATCH(ExprStatement);
+    DEFINE_DISPATCH(AssignMapStatement);
+    DEFINE_DISPATCH(AssignVarStatement);
+    DEFINE_DISPATCH(If);
+    DEFINE_DISPATCH(Unroll);
+    DEFINE_DISPATCH(Jump);
+    DEFINE_DISPATCH(Predicate);
+    DEFINE_DISPATCH(Ternary);
+    DEFINE_DISPATCH(While);
+    DEFINE_DISPATCH(AttachPoint);
+    DEFINE_DISPATCH(Probe);
+    DEFINE_DISPATCH(Program);
+
+    return table;
+  }
+};
+#undef DEFINE_DISPATCH
+#undef DEFAULT_FN
+
+/**
+   Base for tree mutators
+
+   Mutators are used to create a modified AST. While iterating the tree they
+   construct a copy which will be returned at the end. This makes it possible
+   to write optimizing passes.
+
+*/
+
+class Mutator : public Dispatcher<Node *>
+{
+public:
+  Mutator(){};
+
+  Node *visit(Integer &) override;
+  Node *visit(PositionalParameter &) override;
+  Node *visit(String &) override;
+  Node *visit(Builtin &) override;
+  Node *visit(Identifier &) override;
+  Node *visit(StackMode &) override;
+  Node *visit(Call &) override;
+  Node *visit(Map &) override;
+  Node *visit(Variable &) override;
+  Node *visit(Binop &) override;
+  Node *visit(Unop &) override;
+  Node *visit(Ternary &) override;
+  Node *visit(FieldAccess &) override;
+  Node *visit(ArrayAccess &) override;
+  Node *visit(Cast &) override;
+  Node *visit(Tuple &) override;
+  Node *visit(ExprStatement &) override;
+  Node *visit(AssignMapStatement &) override;
+  Node *visit(AssignVarStatement &) override;
+  Node *visit(If &) override;
+  Node *visit(Jump &) override;
+  Node *visit(Unroll &) override;
+  Node *visit(While &) override;
+  Node *visit(Predicate &) override;
+  Node *visit(AttachPoint &) override;
+  Node *visit(Probe &) override;
+  Node *visit(Program &) override;
+
+protected:
+  // Value is a type casting wrapper for Visit()
+  template <typename T>
+  T *Value(Node *n);
+
+  /*
+    visit each node in the list and return the modified list
+   */
+  ExpressionList *mutateExprList(ExpressionList *src);
+  StatementList *mutateStmtList(StatementList *src);
 };
 
 } // namespace ast
