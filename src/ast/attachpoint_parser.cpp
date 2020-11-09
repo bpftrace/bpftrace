@@ -32,20 +32,26 @@ int AttachPointParser::parse()
     {
       auto &ap = *(*probe->attach_points)[i];
       new_attach_points.clear();
-      if (parse_attachpoint(ap))
+
+      State s = parse_attachpoint(ap);
+      if (s == INVALID)
       {
         ++failed;
         LOG(ERROR, ap.loc, sink_) << errs_.str();
         errs_.str({}); // clear buffer
       }
-      else if (!new_attach_points.empty())
+      else if (s == SKIP || s == NEW_APS)
       {
-        // Remove the current attach point and replace it by new ones
+        // Remove the current attach point
         probe->attach_points->erase(probe->attach_points->begin() + i);
-        probe->attach_points->insert(probe->attach_points->end(),
-                                     new_attach_points.begin(),
-                                     new_attach_points.end());
         i--;
+        if (s == NEW_APS)
+        {
+          // The removed attach point is replaced by new ones
+          probe->attach_points->insert(probe->attach_points->end(),
+                                       new_attach_points.begin(),
+                                       new_attach_points.end());
+        }
       }
     }
   }
@@ -53,18 +59,18 @@ int AttachPointParser::parse()
   return failed;
 }
 
-int AttachPointParser::parse_attachpoint(AttachPoint &ap)
+AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
 {
   ap_ = &ap;
 
   parts_.clear();
-  if (lex_attachpoint(*ap_))
-    return 1;
+  if (State s = lex_attachpoint(*ap_))
+    return s;
 
   if (parts_.empty())
   {
     errs_ << "Invalid attachpoint definition" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   std::set<std::string> probe_types;
@@ -98,9 +104,12 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       std::string raw_input = ap.raw_input;
       erase_prefix(raw_input);
       raw_input = probe_type + ":" + raw_input;
-      new_attach_points.push_back(new AttachPoint(raw_input));
+      // New attach points have ignore_invalid set to true - probe types for
+      // which raw_input has invalid number of parts will be ignored (instead
+      // of throwing an error)
+      new_attach_points.push_back(new AttachPoint(raw_input, true));
     }
-    return 0;
+    return NEW_APS;
   }
 
   ap_->provider = probetypeName(*probe_types.begin());
@@ -136,13 +145,14 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return kfunc_parser();
     default:
       errs_ << "Unrecognized probe type: " << ap_->provider << std::endl;
-      return 1;
+      return INVALID;
   }
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::lex_attachpoint(const AttachPoint &ap)
+AttachPointParser::State AttachPointParser::lex_attachpoint(
+    const AttachPoint &ap)
 {
   const auto &raw = ap.raw_input;
   std::vector<std::string> ret;
@@ -189,7 +199,7 @@ int AttachPointParser::lex_attachpoint(const AttachPoint &ap)
             << "Found trailing text '" << param_idx_str.substr(pos)
             << "' in positional parameter index. Try quoting the trailing text."
             << std::endl;
-        return 1;
+        return State::INVALID;
       }
 
       argument += bpftrace_.get_param(param_idx, true);
@@ -207,15 +217,18 @@ int AttachPointParser::lex_attachpoint(const AttachPoint &ap)
   // ended in a ':' which we will treat as an empty argument.
   parts_.emplace_back(std::move(argument));
 
-  return 0;
+  return State::OK;
 }
 
-int AttachPointParser::kprobe_parser(bool allow_offset)
+AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 {
   if (parts_.size() != 2)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   // Handle kprobe:func+0x100 case
@@ -225,20 +238,20 @@ int AttachPointParser::kprobe_parser(bool allow_offset)
     if (!allow_offset)
     {
       errs_ << "Offset not allowed" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     if (plus_count != 1)
     {
       errs_ << "Cannot take more than one offset" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     auto offset_parts = split_string(parts_[1], '+', true);
     if (offset_parts.size() != 2)
     {
       errs_ << "Invalid offset" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     ap_->func = offset_parts[0];
@@ -252,14 +265,14 @@ int AttachPointParser::kprobe_parser(bool allow_offset)
       {
         errs_ << "Found trailing non-numeric characters: " << offset_parts[1]
               << std::endl;
-        return 1;
+        return INVALID;
       }
     }
     catch (const std::exception &ex)
     {
       errs_ << "Failed to parse '" << offset_parts[1] << "': " << ex.what()
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
   // Default case (eg kprobe:func)
@@ -271,15 +284,16 @@ int AttachPointParser::kprobe_parser(bool allow_offset)
   if (ap_->func.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::kretprobe_parser()
+AttachPointParser::State AttachPointParser::kretprobe_parser()
 {
   return kprobe_parser(false);
 }
 
-int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
+AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
+                                                          bool allow_abs_addr)
 {
   // Handle special probes implemented as uprobes
   if (ap_->provider == "BEGIN" || ap_->provider == "END")
@@ -289,10 +303,10 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
     if (parts_.size() != 1)
     {
       errs_ << ap_->provider << " probe type requires 0 arguments" << std::endl;
-      return 1;
+      return INVALID;
     }
 
-    return 0;
+    return OK;
   }
 
   // Now handle regular uprobes
@@ -304,8 +318,11 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
   }
   if (parts_.size() != 3)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   if (bpftrace_.pid() > 0)
@@ -323,20 +340,20 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
     if (!allow_offset)
     {
       errs_ << "Offset not allowed" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     if (plus_count != 1)
     {
       errs_ << "Cannot take more than one offset" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     auto offset_parts = split_string(parts_[2], '+', true);
     if (offset_parts.size() != 2)
     {
       errs_ << "Invalid offset" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     ap_->func = offset_parts[0];
@@ -350,14 +367,14 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
       {
         errs_ << "Found trailing non-numeric characters: " << offset_parts[1]
               << std::endl;
-        return 1;
+        return INVALID;
       }
     }
     catch (const std::exception &ex)
     {
       errs_ << "Failed to parse '" << offset_parts[1] << "': " << ex.what()
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
   // Default case (eg uprobe:[addr][func])
@@ -392,15 +409,15 @@ int AttachPointParser::uprobe_parser(bool allow_offset, bool allow_abs_addr)
       ap_->func.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::uretprobe_parser()
+AttachPointParser::State AttachPointParser::uretprobe_parser()
 {
   return uprobe_parser(false);
 }
 
-int AttachPointParser::usdt_parser()
+AttachPointParser::State AttachPointParser::usdt_parser()
 {
   if (bpftrace_.pid() > 0)
   {
@@ -413,9 +430,12 @@ int AttachPointParser::usdt_parser()
   }
   if (parts_.size() != 3 && parts_.size() != 4)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 2 or 3 arguments"
           << std::endl;
-    return 1;
+    return INVALID;
   }
 
   if (parts_.size() == 3)
@@ -435,17 +455,20 @@ int AttachPointParser::usdt_parser()
       ap_->func.find('*') != std::string::npos || bpftrace_.pid())
     ap_->need_expansion = true;
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::tracepoint_parser()
+AttachPointParser::State AttachPointParser::tracepoint_parser()
 {
   if (parts_.size() == 2 && parts_.at(1) == "*")
     parts_.push_back("*");
   if (parts_.size() != 3)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   ap_->target = parts_[1];
@@ -455,15 +478,15 @@ int AttachPointParser::tracepoint_parser()
       ap_->func.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::profile_parser()
+AttachPointParser::State AttachPointParser::profile_parser()
 {
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   ap_->target = parts_[1];
@@ -477,25 +500,25 @@ int AttachPointParser::profile_parser()
     {
       errs_ << "Found trailing non-numeric characters: " << parts_[2]
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
   catch (const std::exception &ex)
   {
     errs_ << "Failed to parse '" << parts_[2] << "': " << ex.what()
           << std::endl;
-    return 1;
+    return INVALID;
   }
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::interval_parser()
+AttachPointParser::State AttachPointParser::interval_parser()
 {
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   ap_->target = parts_[1];
@@ -509,31 +532,34 @@ int AttachPointParser::interval_parser()
     {
       errs_ << "Found trailing non-numeric characters: " << parts_[2]
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
   catch (const std::exception &ex)
   {
     errs_ << "Failed to parse '" << parts_[2] << "': " << ex.what()
           << std::endl;
-    return 1;
+    return INVALID;
   }
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::software_parser()
+AttachPointParser::State AttachPointParser::software_parser()
 {
   if (parts_.size() != 2 && parts_.size() != 3)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
           << std::endl;
-    return 1;
+    return INVALID;
   }
 
   ap_->target = parts_[1];
 
-  if (parts_.size() == 3)
+  if (parts_.size() == 3 && parts_[2] != "*")
   {
     try
     {
@@ -544,32 +570,35 @@ int AttachPointParser::software_parser()
       {
         errs_ << "Found trailing non-numeric characters: " << parts_[2]
               << std::endl;
-        return 1;
+        return INVALID;
       }
     }
     catch (const std::exception &ex)
     {
       errs_ << "Failed to parse '" << parts_[2] << "': " << ex.what()
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::hardware_parser()
+AttachPointParser::State AttachPointParser::hardware_parser()
 {
   if (parts_.size() != 2 && parts_.size() != 3)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
           << std::endl;
-    return 1;
+    return INVALID;
   }
 
   ap_->target = parts_[1];
 
-  if (parts_.size() == 3)
+  if (parts_.size() == 3 && parts_[2] != "*")
   {
     try
     {
@@ -580,18 +609,18 @@ int AttachPointParser::hardware_parser()
       {
         errs_ << "Found trailing non-numeric characters: " << parts_[2]
               << std::endl;
-        return 1;
+        return INVALID;
       }
     }
     catch (const std::exception &ex)
     {
       errs_ << "Failed to parse '" << parts_[2] << "': " << ex.what()
             << std::endl;
-      return 1;
+      return INVALID;
     }
   }
 
-  return 0;
+  return OK;
 }
 
 std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
@@ -616,12 +645,12 @@ std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
   }
 }
 
-int AttachPointParser::watchpoint_parser(bool async)
+AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
 {
   if (parts_.size() != 4)
   {
     errs_ << ap_->provider << " probe type requires 3 arguments" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   if (parts_[1].find('+') == std::string::npos)
@@ -630,7 +659,7 @@ int AttachPointParser::watchpoint_parser(bool async)
     if (parsed)
       ap_->address = *parsed;
     else
-      return 1;
+      return INVALID;
   }
   else
   {
@@ -638,7 +667,7 @@ int AttachPointParser::watchpoint_parser(bool async)
     if (func_arg_parts.size() != 2)
     {
       errs_ << "Invalid function/address argument" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     ap_->func = func_arg_parts[0];
@@ -648,21 +677,21 @@ int AttachPointParser::watchpoint_parser(bool async)
     if (func_arg_parts[1].size() <= 3 || func_arg_parts[1].find("arg") != 0)
     {
       errs_ << "Invalid function argument" << std::endl;
-      return 1;
+      return INVALID;
     }
 
     auto parsed = stoull(func_arg_parts[1].substr(3));
     if (parsed)
       ap_->address = *parsed;
     else
-      return 1;
+      return INVALID;
   }
 
   auto len_parsed = stoull(parts_[2]);
   if (len_parsed)
     ap_->len = *len_parsed;
   else
-    return 1;
+    return INVALID;
 
   // Semantic analyser will ensure a cmd/pid was provided
   ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
@@ -671,22 +700,25 @@ int AttachPointParser::watchpoint_parser(bool async)
 
   ap_->async = async;
 
-  return 0;
+  return OK;
 }
 
-int AttachPointParser::kfunc_parser()
+AttachPointParser::State AttachPointParser::kfunc_parser()
 {
   if (parts_.size() != 2)
   {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
     errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
-    return 1;
+    return INVALID;
   }
 
   if (parts_[1].find('*') != std::string::npos)
     ap_->need_expansion = true;
 
   ap_->func = parts_[1];
-  return 0;
+  return OK;
 }
 
 } // namespace ast

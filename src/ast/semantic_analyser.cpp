@@ -2388,7 +2388,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "software probe must have a software event name";
     else {
-      if (!has_wildcard(ap.target))
+      if (!has_wildcard(ap.target) && !ap.ignore_invalid)
       {
         bool found = false;
         for (auto &probeListItem : SW_PROBE_LIST)
@@ -2459,7 +2459,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "hardware probe must have a hardware event name";
     else {
-      if (!has_wildcard(ap.target))
+      if (!has_wildcard(ap.target) && !ap.ignore_invalid)
       {
         bool found = false;
         for (auto &probeListItem : HW_PROBE_LIST)
