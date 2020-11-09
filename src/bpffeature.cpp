@@ -312,20 +312,20 @@ std::string BPFfeature::report(void)
     return f ? "yes\n" : "no\n";
   };
 
+  // clang-format off
   buf << "Kernel helpers" << std::endl
       << "  probe_read: " << to_str(has_helper_probe_read())
       << "  probe_read_str: " << to_str(has_helper_probe_read_str())
       << "  probe_read_user: " << to_str(has_helper_probe_read_user())
       << "  probe_read_user_str: " << to_str(has_helper_probe_read_user_str())
       << "  probe_read_kernel: " << to_str(has_helper_probe_read_kernel())
-      << "  probe_read_kernel_str: "
-      << to_str(has_helper_probe_read_kernel_str())
-      << "  get_current_cgroup_id: "
-      << to_str(has_helper_get_current_cgroup_id())
+      << "  probe_read_kernel_str: " << to_str(has_helper_probe_read_kernel_str())
+      << "  get_current_cgroup_id: " << to_str(has_helper_get_current_cgroup_id())
       << "  send_signal: " << to_str(has_helper_send_signal())
       << "  override_return: " << to_str(has_helper_override_return())
       << "  get_boot_ns: " << to_str(has_helper_ktime_get_boot_ns())
       << "  dpath: " << to_str(has_d_path())
+      << "  get_ns_current_pid_tgid: " << to_str(has_helper_get_ns_current_pid_tgid())
       << std::endl;
 
   buf << "Kernel features" << std::endl
@@ -348,7 +348,9 @@ std::string BPFfeature::report(void)
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
-      << "  kfunc: " << to_str(has_prog_kfunc()) << std::endl;
+      << "  kfunc: " << to_str(has_prog_kfunc())
+      << std::endl;
+  // clang-format on
 
   return buf.str();
 }
