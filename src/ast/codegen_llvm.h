@@ -119,6 +119,9 @@ private:
   void binop_string(Binop &binop);
   void binop_buf(Binop &binop);
   void binop_int(Binop &binop);
+  void kstack_ustack(const std::string &ident,
+                     StackType stack_type,
+                     const location &loc);
 
   // Every time we see a watchpoint that specifies a function + arg pair, we
   // generate a special "setup" probe that:
