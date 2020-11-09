@@ -53,6 +53,12 @@ public:
     }
     return 0;
   }
+
+  const struct stat &get_pidns_self_stat() const override
+  {
+    static struct stat s = {};
+    return s;
+  }
 };
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
@@ -71,6 +77,7 @@ public:
     has_probe_read_kernel_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
+    has_get_ns_current_pid_tgid_ = std::make_optional<bool>(has_features);
   };
   bool has_features_;
 };

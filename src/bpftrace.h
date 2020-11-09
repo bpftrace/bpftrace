@@ -5,6 +5,9 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -186,6 +189,7 @@ public:
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(
       int pid,
       const std::string &target) const;
+  virtual const struct stat &get_pidns_self_stat() const;
 
   BTF btf_;
   std::unordered_set<std::string> btf_set_;

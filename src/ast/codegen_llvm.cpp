@@ -124,8 +124,13 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   // are special because of ASLR and so we do usym()-style packing.
   if (ident == "ustack")
   {
+    // Try to use pid relative to bpftrace's PID namespace whenever available
+    // b/c bpftrace reads the executable file from /proc/<pid>/exe and that
+    // procfs file is PID namespaced
+    Value *pid_tgid = b_.CreateGetCurrentPidTgidPreferSelfNs(ctx_, loc);
+
     // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
+    Value *pidhigh = b_.CreateShl(pid_tgid, 32);
     stackid = b_.CreateOr(stackid, pidhigh);
   }
 
@@ -251,7 +256,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     if (builtin.type.IsUsymTy())
     {
-      expr_ = b_.CreateUSym(expr_);
+      expr_ = b_.CreateUSym(ctx_, expr_, builtin.loc);
       Value *expr = expr_;
       expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
     }
@@ -722,7 +727,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "usym")
   {
     auto scoped_del = accept(call.vargs->front());
-    expr_ = b_.CreateUSym(expr_);
+    expr_ = b_.CreateUSym(ctx_, expr_, call.loc);
   }
   else if (call.func == "ntop")
   {

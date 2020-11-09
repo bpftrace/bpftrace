@@ -147,6 +147,7 @@ public:
                                    Value *dev,
                                    Value *ino,
                                    const location &loc);
+  Value *CreateGetCurrentPidTgidPreferSelfNs(Value *ctx, const location &loc);
   CallInst   *CreateGetCurrentCgroupId();
   CallInst   *CreateGetUidGid();
   CallInst   *CreateGetCpuId();
@@ -162,7 +163,7 @@ public:
   void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);
   void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
-  AllocaInst *CreateUSym(llvm::Value *val);
+  AllocaInst *CreateUSym(Value *ctx, llvm::Value *val, const location &loc);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
   void CreatePath(Value *ctx,
                   AllocaInst *buf,

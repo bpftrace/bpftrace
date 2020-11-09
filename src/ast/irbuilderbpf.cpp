@@ -82,7 +82,24 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
   return fn;
 }
 
-AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
+Value *IRBuilderBPF::CreateGetCurrentPidTgidPreferSelfNs(Value *ctx,
+                                                         const location &loc)
+{
+  const auto &pidns = bpftrace_.get_pidns_self_stat();
+  Value *pid_tgid;
+
+  if (bpftrace_.feature_->has_helper_get_ns_current_pid_tgid())
+    pid_tgid = CreateGetNsCurrentPidTgid(
+        ctx, getInt64(pidns.st_dev), getInt64(pidns.st_ino), loc);
+  else
+    pid_tgid = CreateGetPidTgid();
+
+  return pid_tgid;
+}
+
+AllocaInst *IRBuilderBPF::CreateUSym(Value *ctx,
+                                     llvm::Value *val,
+                                     const location &loc)
 {
   std::vector<llvm::Type *> elements = {
     getInt64Ty(), // addr
@@ -91,7 +108,13 @@ AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
-  Value *pid = CreateLShr(CreateGetPidTgid(), 32);
+  // Try to use pid relative to bpftrace's PID namespace whenever available
+  // b/c bpftrace reads the executable file from /proc/<pid>/exe and that
+  // procfs file is PID namespaced
+  Value *pid_tgid = CreateGetCurrentPidTgidPreferSelfNs(ctx, loc);
+
+  // Extract PID
+  Value *pid = CreateLShr(pid_tgid, 32);
 
   // The extra 0 here ensures the type of addr_offset will be int64
   Value *addr_offset = CreateGEP(buf, { getInt64(0), getInt32(0) });
