@@ -861,6 +861,58 @@ CallInst *IRBuilderBPF::CreateGetPidTgid()
   return createCall(getpidtgid_func, {}, "get_pid_tgid");
 }
 
+Value *IRBuilderBPF::CreateGetNsCurrentPidTgid(Value *ctx,
+                                               Value *dev,
+                                               Value *ino,
+                                               const location &loc)
+{
+  assert(ctx && ctx->getType() == getInt8PtrTy());
+  assert(dev && dev->getType() == getInt64Ty());
+  assert(ino && ino->getType() == getInt64Ty());
+
+  // long bpf_get_ns_current_pid_tgid(u64 dev, u64 ino, struct bpf_pidns_info
+  // *nsdata, u32 size)
+  StructType *bpf_pidns_info = GetStructType("bpf_pidns_info_t",
+                                             { getInt32Ty(), getInt32Ty() },
+                                             false);
+  FunctionType *getnspidtgid_func_type = FunctionType::get(
+      getInt64Ty(),
+      { getInt64Ty(),
+        getInt64Ty(),
+        bpf_pidns_info->getPointerTo(),
+        getInt32Ty() },
+      false);
+  PointerType *getnspidtgid_func_ptr_type = PointerType::get(
+      getnspidtgid_func_type, 0);
+  Constant *getnspidtgid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_get_ns_current_pid_tgid),
+      getnspidtgid_func_ptr_type);
+
+  // Allocate out buf
+  AllocaInst *buf = CreateAllocaBPF(bpf_pidns_info, "bpf_pidns_info");
+  auto &layout = module_.getDataLayout();
+  auto struct_size = layout.getTypeAllocSize(bpf_pidns_info);
+
+  CallInst *call = createCall(getnspidtgid_func,
+                              { dev, ino, buf, getInt32(struct_size) },
+                              "get_ns_current_pid_tgid");
+  CreateHelperErrorCond(
+      ctx, call, libbpf::BPF_FUNC_get_ns_current_pid_tgid, loc);
+
+  // Encode return value just like `CreateGetPidTgid()``
+  Value *pid = CreateIntCast(CreateLoad(
+                                 CreateGEP(buf, { getInt32(0), getInt32(0) })),
+                             getInt64Ty(),
+                             false);
+  Value *tgid = CreateIntCast(CreateLoad(
+                                  CreateGEP(buf, { getInt32(0), getInt32(1) })),
+                              getInt64Ty(),
+                              false);
+  CreateLifetimeEnd(buf);
+  return CreateOr(CreateShl(tgid, 32), pid);
+}
+
 CallInst *IRBuilderBPF::CreateGetCurrentCgroupId()
 {
   // u64 bpf_get_current_cgroup_id(void)

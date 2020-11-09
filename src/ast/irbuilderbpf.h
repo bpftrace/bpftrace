@@ -142,6 +142,11 @@ public:
                        bool inverse = false);
   CallInst *CreateGetNs(bool boot_time);
   CallInst   *CreateGetPidTgid();
+  // Returns in same format as CreateGetPidTgid()
+  Value *CreateGetNsCurrentPidTgid(Value *ctx,
+                                   Value *dev,
+                                   Value *ino,
+                                   const location &loc);
   CallInst   *CreateGetCurrentCgroupId();
   CallInst   *CreateGetUidGid();
   CallInst   *CreateGetCpuId();
