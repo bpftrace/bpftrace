@@ -111,6 +111,27 @@ void CodegenLLVM::visit(Identifier &identifier)
   }
 }
 
+void CodegenLLVM::kstack_ustack(const std::string &ident,
+                                StackType stack_type,
+                                const location &loc)
+{
+  Value *stackid = b_.CreateGetStackId(
+      ctx_, ident == "ustack", stack_type, loc);
+
+  // Kernel stacks should not be differentiated by tid, since the kernel
+  // address space is the same between pids (and when aggregating you *want*
+  // to be able to correlate between pids in most cases). User-space stacks
+  // are special because of ASLR and so we do usym()-style packing.
+  if (ident == "ustack")
+  {
+    // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
+    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
+    stackid = b_.CreateOr(stackid, pidhigh);
+  }
+
+  expr_ = stackid;
+}
+
 void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
@@ -133,19 +154,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "kstack" || builtin.ident == "ustack")
   {
-    Value *stackid = b_.CreateGetStackId(
-        ctx_, builtin.ident == "ustack", builtin.type.stack_type, builtin.loc);
-    // Kernel stacks should not be differentiated by tid, since the kernel
-    // address space is the same between pids (and when aggregating you *want*
-    // to be able to correlate between pids in most cases). User-space stacks
-    // are special because of ASLR and so we do usym()-style packing.
-    if (builtin.ident == "ustack")
-    {
-      // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-      Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
-      stackid = b_.CreateOr(stackid, pidhigh);
-    }
-    expr_ = stackid;
+    kstack_ustack(builtin.ident, builtin.type.stack_type, builtin.loc);
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
@@ -913,19 +922,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "kstack" || call.func == "ustack")
   {
-    Value *stackid = b_.CreateGetStackId(
-        ctx_, call.func == "ustack", call.type.stack_type, call.loc);
-    // Kernel stacks should not be differentiated by tid, since the kernel
-    // address space is the same between pids (and when aggregating you *want*
-    // to be able to correlate between pids in most cases). User-space stacks
-    // are special because of ASLR and so we do usym()-style packing.
-    if (call.func == "ustack")
-    {
-      // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-      Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
-      stackid = b_.CreateOr(stackid, pidhigh);
-    }
-    expr_ = stackid;
+    kstack_ustack(call.func, call.type.stack_type, call.loc);
   }
   else if (call.func == "signal") {
     // int bpf_send_signal(u32 sig)

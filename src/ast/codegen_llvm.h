@@ -116,6 +116,10 @@ private:
   void binop_buf(Binop &binop);
   void binop_int(Binop &binop);
 
+  void kstack_ustack(const std::string &ident,
+                     StackType stack_type,
+                     const location &loc);
+
   Node *root_;
   LLVMContext context_;
   std::unique_ptr<Module> module_;
