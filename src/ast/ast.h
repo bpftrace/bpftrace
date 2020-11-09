@@ -483,6 +483,11 @@ public:
   DEFINE_LEAFCOPY(AttachPoint)
 
   explicit AttachPoint(const std::string &raw_input, location loc = location());
+  AttachPoint(const std::string &raw_input, bool ignore_invalid)
+      : AttachPoint(raw_input)
+  {
+    this->ignore_invalid = ignore_invalid;
+  }
   ~AttachPoint() = default;
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
@@ -500,6 +505,7 @@ public:
   bool need_expansion = false;
   uint64_t address = 0;
   uint64_t func_offset = 0;
+  bool ignore_invalid = false;
 
   std::string name(const std::string &attach_point) const;
   std::string name(const std::string &attach_target,
