@@ -430,9 +430,9 @@ static void test(const std::string &input,
                  const std::string &name,
                  bool safe_mode = true)
 {
-  BPFtrace bpftrace;
-  bpftrace.safe_mode_ = safe_mode;
-  test(bpftrace, input, name);
+  auto bpftrace = get_mock_bpftrace();
+  bpftrace->safe_mode_ = safe_mode;
+  test(*bpftrace, input, name);
 }
 
 } // namespace codegen
