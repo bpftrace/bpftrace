@@ -13,7 +13,7 @@ static AttachPointList *APL(std::vector<AttachPoint *> list)
 {
   auto apl = new AttachPointList();
   for (auto l : list)
-    apl->push_back(new AttachPoint(*l));
+    apl->push_back(l->clone());
   return apl;
 }
 
@@ -51,7 +51,7 @@ TEST(ast, probe_name_kprobe)
   Probe kprobe1(attach_points1, nullptr, nullptr);
   EXPECT_EQ(kprobe1.name(), "kprobe:sys_read");
 
-  auto ap2_copy1 = new AttachPoint(*ap2);
+  auto ap2_copy1 = ap2->clone();
   auto attach_points2 = APL({ ap1, ap2 });
   Probe kprobe2(attach_points2, nullptr, nullptr);
   EXPECT_EQ(kprobe2.name(), "kprobe:sys_read,kprobe:sys_write");
