@@ -16,6 +16,16 @@ class Visitor;
 
 #define DEFINE_ACCEPT void accept(Visitor &v) override;
 
+/**
+ * Copy the node but leave all it's child members uninitialized, effecitvely
+ * turning it into a leaf node
+ */
+#define DEFINE_LEAFCOPY(T)                                                     \
+  T *leafcopy()                                                                \
+  {                                                                            \
+    return new T(*this);                                                       \
+  };
+
 class Node {
 public:
   Node() = default;
@@ -50,73 +60,99 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Integer)
+
   explicit Integer(long n, location loc);
-  Integer(const Integer &other) = default;
+
   long n;
 
-  DEFINE_ACCEPT
+private:
+  Integer(const Integer &other) = default;
 };
 
 class PositionalParameter : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(PositionalParameter)
+
   explicit PositionalParameter(PositionalParameterType ptype,
                                long n,
                                location loc);
-  PositionalParameter(const PositionalParameter &other) = default;
+  ~PositionalParameter() = default;
 
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
 
-  DEFINE_ACCEPT
+private:
+  PositionalParameter(const PositionalParameter &other) = default;
 };
 
 class String : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(String)
+
   explicit String(const std::string &str, location loc);
-  String(const String &other) = default;
+  ~String() = default;
 
   std::string str;
 
-  DEFINE_ACCEPT
+private:
+  String(const String &other) = default;
 };
 
 class StackMode : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(StackMode)
+
   explicit StackMode(const std::string &mode, location loc);
-  StackMode(const StackMode &other) = default;
+  ~StackMode() = default;
 
   std::string mode;
 
-  DEFINE_ACCEPT
+private:
+  StackMode(const StackMode &other) = default;
 };
 
 class Identifier : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Identifier)
+
   explicit Identifier(const std::string &ident, location loc);
-  Identifier(const Identifier &other) = default;
+  ~Identifier() = default;
 
   std::string ident;
 
-  DEFINE_ACCEPT
+private:
+  Identifier(const Identifier &other) = default;
 };
 
 class Builtin : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Builtin)
+
   explicit Builtin(const std::string &ident, location loc);
-  Builtin(const Builtin &other) = default;
+  ~Builtin() = default;
 
   std::string ident;
   int probe_id;
 
-  DEFINE_ACCEPT
+private:
+  Builtin(const Builtin &other) = default;
 };
 
 class Call : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Call)
+
   explicit Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
-  Call(const Call &other);
   ~Call()
   {
     if (vargs)
@@ -130,14 +166,17 @@ public:
   std::string func;
   ExpressionList *vargs = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Call(const Call &other);
 };
 
 class Map : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Map)
+
   explicit Map(const std::string &ident, location loc);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
-  Map(const Map &other);
   ~Map()
   {
     if (vargs)
@@ -152,23 +191,30 @@ public:
   ExpressionList *vargs = nullptr;
   bool skip_key_validation = false;
 
-  DEFINE_ACCEPT
+private:
+  Map(const Map &other);
 };
 
 class Variable : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Variable)
+
   explicit Variable(const std::string &ident, location loc);
-  Variable(const Variable &other) = default;
+  ~Variable() = default;
 
   std::string ident;
 
-  DEFINE_ACCEPT
+private:
+  Variable(const Variable &other) = default;
 };
 
 class Binop : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Binop)
+
   Binop(Expression *left, int op, Expression *right, location loc);
-  Binop(const Binop &other);
 
   ~Binop()
   {
@@ -182,17 +228,20 @@ public:
   Expression *right = nullptr;
   int op;
 
-  DEFINE_ACCEPT
+private:
+  Binop(const Binop &other);
 };
 
 class Unop : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Unop)
+
   Unop(int op, Expression *expr, location loc = location());
   Unop(int op,
        Expression *expr,
        bool is_post_op = false,
        location loc = location());
-  Unop(const Unop &other);
 
   ~Unop()
   {
@@ -204,15 +253,18 @@ public:
   int op;
   bool is_post_op;
 
-  DEFINE_ACCEPT
+private:
+  Unop(const Unop &other);
 };
 
 class FieldAccess : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(FieldAccess)
+
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
-  FieldAccess(const FieldAccess &other);
   ~FieldAccess()
   {
     delete expr;
@@ -223,14 +275,17 @@ public:
   std::string field;
   ssize_t index = -1;
 
-  DEFINE_ACCEPT
+private:
+  FieldAccess(const FieldAccess &other);
 };
 
 class ArrayAccess : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(ArrayAccess)
+
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
-  ArrayAccess(const ArrayAccess &other) : Expression(other){};
   ~ArrayAccess()
   {
     delete expr;
@@ -241,11 +296,16 @@ public:
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
-  DEFINE_ACCEPT
+
+private:
+  ArrayAccess(const ArrayAccess &other) : Expression(other){};
 };
 
 class Cast : public Expression {
 public:
+  DEFINE_LEAFCOPY(Cast)
+  DEFINE_ACCEPT
+
   Cast(const std::string &type,
        bool is_pointer,
        bool is_double_pointer,
@@ -255,7 +315,6 @@ public:
        bool is_double_pointer,
        Expression *expr,
        location loc);
-  Cast(const Cast &other);
   ~Cast()
   {
     delete expr;
@@ -267,14 +326,17 @@ public:
   bool is_double_pointer;
   Expression *expr = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Cast(const Cast &other);
 };
 
 class Tuple : public Expression
 {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Tuple)
+
   Tuple(ExpressionList *elems, location loc);
-  Tuple(const Tuple &other);
   ~Tuple()
   {
     for (Expression *expr : *elems)
@@ -284,7 +346,8 @@ public:
 
   ExpressionList *elems = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Tuple(const Tuple &other);
 };
 
 class Statement : public Node {
@@ -298,8 +361,10 @@ using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(ExprStatement)
+
   explicit ExprStatement(Expression *expr, location loc);
-  ExprStatement(const ExprStatement &other) : Statement(other){};
   ~ExprStatement()
   {
     delete expr;
@@ -308,16 +373,19 @@ public:
 
   Expression *expr = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  ExprStatement(const ExprStatement &other) : Statement(other){};
 };
 
 class AssignMapStatement : public Statement {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(AssignMapStatement)
+
   AssignMapStatement(Map *map,
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
-  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
   ~AssignMapStatement()
   {
     // In a compound assignment, the expression owns the map so
@@ -333,16 +401,19 @@ public:
   Expression *expr = nullptr;
   bool compound;
 
-  DEFINE_ACCEPT
+private:
+  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
 };
 
 class AssignVarStatement : public Statement {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(AssignVarStatement)
+
   AssignVarStatement(Variable *var,
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
-  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
   ~AssignVarStatement()
   {
     // In a compound assignment, the expression owns the map so
@@ -358,14 +429,17 @@ public:
   Expression *expr = nullptr;
   bool compound;
 
-  DEFINE_ACCEPT
+private:
+  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
 };
 
 class If : public Statement {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(If)
+
   If(Expression *cond, StatementList *stmts);
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
-  If(const If &other);
   ~If()
   {
     delete cond;
@@ -388,13 +462,16 @@ public:
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  If(const If &other);
 };
 
 class Unroll : public Statement {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Unroll)
+
   Unroll(Expression *expr, StatementList *stmts, location loc);
-  Unroll(const Unroll &other);
   ~Unroll()
   {
     if (stmts)
@@ -408,27 +485,33 @@ public:
   Expression *expr = nullptr;
   StatementList *stmts = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Unroll(const Unroll &other);
 };
 
 class Jump : public Statement
 {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Jump)
+
   Jump(int ident, location loc = location()) : Statement(loc), ident(ident)
   {
   }
-  Jump(const Jump &other) = default;
   ~Jump() = default;
 
   int ident = 0;
 
-  DEFINE_ACCEPT
+private:
+  Jump(const Jump &other) = default;
 };
 
 class Predicate : public Node {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Predicate)
+
   explicit Predicate(Expression *expr, location loc);
-  Predicate(const Predicate &other) : Node(other){};
   ~Predicate()
   {
     delete expr;
@@ -437,13 +520,16 @@ public:
 
   Expression *expr = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Predicate(const Predicate &other) : Node(other){};
 };
 
 class Ternary : public Expression {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Ternary)
+
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
-  Ternary(const Ternary &other) : Expression(other){};
   ~Ternary()
   {
     delete cond;
@@ -457,18 +543,18 @@ public:
   Expression *cond = nullptr;
   Expression *left = nullptr;
   Expression *right = nullptr;
-
-  DEFINE_ACCEPT
 };
 
 class While : public Statement
 {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(While)
+
   While(Expression *cond, StatementList *stmts, location loc)
       : Statement(loc), cond(cond), stmts(stmts)
   {
   }
-  While(const While &other);
   ~While()
   {
     delete cond;
@@ -480,13 +566,16 @@ public:
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  While(const While &other);
 };
 
 class AttachPoint : public Node {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(AttachPoint)
+
   explicit AttachPoint(const std::string &raw_input, location loc = location());
-  AttachPoint(const AttachPoint &other) = default;
   ~AttachPoint() = default;
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
@@ -504,22 +593,26 @@ public:
   uint64_t address = 0;
   uint64_t func_offset = 0;
 
-  DEFINE_ACCEPT
   std::string name(const std::string &attach_point) const;
   std::string name(const std::string &attach_target,
                    const std::string &attach_point) const;
 
   int index(std::string name);
   void set_index(std::string name, int index);
+
 private:
+  AttachPoint(const AttachPoint &other) = default;
+
   std::map<std::string, int> index_;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
 class Probe : public Node {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Probe)
+
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
-  Probe(const Probe &other);
   ~Probe()
   {
     if (attach_points)
@@ -542,22 +635,25 @@ public:
   Predicate *pred = nullptr;
   StatementList *stmts = nullptr;
 
-  DEFINE_ACCEPT
   std::string name() const;
   bool need_expansion = false;        // must build a BPF program per wildcard match
   bool need_tp_args_structs = false;  // must import struct for tracepoints
 
   int index();
   void set_index(int index);
+
 private:
+  Probe(const Probe &other);
   int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
 
 class Program : public Node {
 public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Program)
+
   Program(const std::string &c_definitions, ProbeList *probes);
-  Program(const Program &other);
 
   ~Program()
   {
@@ -571,7 +667,8 @@ public:
   std::string c_definitions;
   ProbeList *probes = nullptr;
 
-  DEFINE_ACCEPT
+private:
+  Program(const Program &other);
 };
 
 std::string opstr(Binop &binop);
