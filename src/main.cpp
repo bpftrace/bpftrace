@@ -12,7 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "ast/callback_visitor.h"
+#include "ast/node_counter.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -750,9 +750,11 @@ int main(int argc, char *argv[])
 
   // Count AST nodes
   uint64_t node_count = 0;
-  ast::CallbackVisitor counter(
-      [&](ast::Node* node __attribute__((unused))) { node_count += 1; });
-  driver.root_->accept(counter);
+  {
+    ast::NodeCounter c;
+    c.Visit(*driver.root_);
+    node_count = c.get_count();
+  }
   if (bt_verbose)
   {
     LOG(INFO) << "node count: " << node_count;
