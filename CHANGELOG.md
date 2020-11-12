@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] 2020-11-13
+
+bcc 0.17 support release
+
+### Changed
+
+Detect 7 arg bpf_attach_uprobe() API
+- [#1589](https://github.com/iovisor/bpftrace/pull/1589)
+
 ## [0.11.2] 2020-10-30
 
 LLVM 11 support release
