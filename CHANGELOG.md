@@ -66,6 +66,8 @@ and this project adheres to
   - [#1563](https://github.com/iovisor/bpftrace/pull/1563)
 - Remove "BTF: using data from ..." message when using -v flag
   - [#1554](https://github.com/iovisor/bpftrace/pull/1554)
+- Add -q option for quiet
+  - [#1616](https://github.com/iovisor/bpftrace/pull/1492)
 
 #### Deprecated
 
