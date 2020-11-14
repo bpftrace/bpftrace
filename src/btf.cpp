@@ -158,7 +158,11 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
   if (btf)
   {
     libbpf_set_print(libbpf_print);
+#ifdef FUZZ
+    traceable_funcs_ = {};
+#else
     traceable_funcs_ = get_traceable_funcs();
+#endif
     state = OK;
   }
   else if (bt_debug != DebugLevel::kNone)
@@ -699,7 +703,12 @@ std::unique_ptr<std::istream> BTF::kfunc(void) const
 
 bool BTF::is_traceable_func(const std::string &func_name) const
 {
+#ifdef FUZZ
+  (void)func_name;
+  return true;
+#else
   return traceable_funcs_.find(func_name) != traceable_funcs_.end();
+#endif
 }
 
 } // namespace bpftrace
