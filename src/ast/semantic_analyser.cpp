@@ -113,7 +113,7 @@ void SemanticAnalyser::visit(Identifier &identifier)
     identifier.type = CreateRecord(bpftrace_.structs_[identifier.ident].size,
                                    identifier.ident);
   }
-  else if (getIntcasts().count(identifier.ident) != 0)
+  else if (func_ == "sizeof" && getIntcasts().count(identifier.ident) != 0)
   {
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
