@@ -111,6 +111,19 @@ and this project adheres to
 
 #### Documentation
 
+## [0.11.4] 2020-11-14
+
+Alpine build bug fix release
+
+## [0.11.3] 2020-11-13
+
+bcc 0.17 support release
+
+### Changed
+
+Detect 7 arg bpf_attach_uprobe() API
+- [#1589](https://github.com/iovisor/bpftrace/pull/1589)
+
 ## [0.11.2] 2020-10-30
 
 LLVM 11 support release
