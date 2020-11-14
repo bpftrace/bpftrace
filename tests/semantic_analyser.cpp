@@ -1997,6 +1997,12 @@ TEST(semantic_analyser, call_path)
   test("END { $k = path( 1 ) }", 1);
 }
 
+TEST(semantic_analyser, int_ident)
+{
+  test("BEGIN { sizeof(int32) }", 0);
+  test("BEGIN { print(int32) }", 1);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"

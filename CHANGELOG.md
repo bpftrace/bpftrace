@@ -110,6 +110,8 @@ and this project adheres to
   - [#1628](https://github.com/iovisor/bpftrace/pull/1628)
 - Error if using negative length in str() and buf()
   - [#1621](https://github.com/iovisor/bpftrace/pull/1621)
+- Only create int type Identifier when it is used in sizeof()
+  - [#1622](https://github.com/iovisor/bpftrace/pull/1622)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
