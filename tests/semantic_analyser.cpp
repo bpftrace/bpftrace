@@ -1342,7 +1342,8 @@ TEST(semantic_analyser, positional_parameters)
   test(bpftrace, "kprobe:f { printf(\"%d\", $4); }", 0);
 
   test(bpftrace, "kprobe:f { printf(\"%d\", $#); }", 0);
-  test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 10);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($#)); }", 1);
+  test(bpftrace, "kprobe:f { printf(\"%s\", str($#+1)); }", 1);
 
   // Parameters can be used as string literals
   test(bpftrace, "kprobe:f { printf(\"%d\", cgroupid(str($2))); }", 0);

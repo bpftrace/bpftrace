@@ -66,7 +66,8 @@ void SemanticAnalyser::visit(PositionalParameter &param)
       }
       break;
     case PositionalParameterType::count:
-      if (is_final_pass() && param.is_in_str) {
+      if (param.is_in_str)
+      {
         LOG(ERROR, param.loc, err_) << "use $#, not str($#)";
       }
       break;
