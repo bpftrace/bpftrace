@@ -634,6 +634,10 @@ std::unordered_set<std::string> ClangParser::get_incomplete_types(
 
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
+#ifdef FUZZ
+  StderrSilencer silencer;
+  silencer.silence();
+#endif
   auto input = "#include <__btf_generated_header.h>\n" + program->c_definitions;
 
   auto input_files = getTranslationUnitFiles(CXUnsavedFile{
