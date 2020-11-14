@@ -120,6 +120,7 @@ parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 
 ```
 
 ## Found bugs
+### AFL
 - [#1619](https://github.com/iovisor/bpftrace/pull/1619)
 - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
 - [#1573](https://github.com/iovisor/bpftrace/pull/1573)
@@ -135,3 +136,6 @@ parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 
 - [#1221](https://github.com/iovisor/bpftrace/pull/1221)
 - [#1210](https://github.com/iovisor/bpftrace/pull/1210)
 - [#1205](https://github.com/iovisor/bpftrace/pull/1205)
+
+### libFuzzer
+- [#1621](https://github.com/iovisor/bpftrace/pull/1621)
