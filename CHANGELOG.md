@@ -108,6 +108,8 @@ and this project adheres to
   - [#1532](https://github.com/iovisor/bpftrace/pull/1532)
 - Fix bitfield access for big endian
   - [#1628](https://github.com/iovisor/bpftrace/pull/1628)
+- Error if using negative length in str() and buf()
+  - [#1621](https://github.com/iovisor/bpftrace/pull/1621)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
