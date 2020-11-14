@@ -196,7 +196,16 @@ LogStream::LogStream(const std::string& file,
 
 LogStream::~LogStream()
 {
+#ifdef FUZZ
+  // When fuzzing, we don't want to output error messages. However, some
+  // function uses a error message length to determine whether if an error
+  // occur. So, we cannot simply DISABLE_LOG(ERROR). Instead, here, we don't
+  // output error messages to stderr.
+  if (sink_.is_enabled(type_) &&
+      (type_ != LogType::ERROR || (&out_ != &std::cout && &out_ != &std::cerr)))
+#else
   if (sink_.is_enabled(type_))
+#endif
   {
     std::string prefix = "";
     if (type_ == LogType::DEBUG)

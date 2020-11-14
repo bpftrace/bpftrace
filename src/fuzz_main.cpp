@@ -33,20 +33,20 @@
 
 using namespace bpftrace;
 
+int fuzz_main(const char* data, size_t sz);
+
+#ifdef LIBFUZZER
+// main entry for libufuzzer
+// libfuzzer.a provides main function
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t sz)
+{
+  fuzz_main((const char*)data, sz);
+  return 0; // Non-zero return values are reserved for future use.
+}
+#else
+// main function for AFL, etc.
 int main(int argc, char* argv[])
 {
-  if (getuid() != 0)
-    return 1;
-
-  std::unique_ptr<Output> output;
-  std::ostream* os = &std::cout;
-  output = std::make_unique<TextOutput>(*os);
-
-  BPFtrace bpftrace(std::move(output));
-  DISABLE_LOG(WARNING);
-  bpftrace.safe_mode_ = 0;
-
-  Driver driver(bpftrace);
   // Read inputs
   std::stringstream buf;
   std::string line;
@@ -55,7 +55,6 @@ int main(int argc, char* argv[])
     // Input from stdin (AFL's default)
     while (std::getline(std::cin, line))
       buf << line << std::endl;
-    driver.source("stdin", buf.str());
   }
   else
   {
@@ -65,8 +64,44 @@ int main(int argc, char* argv[])
     if (file.fail())
       return 1;
     buf << file.rdbuf();
-    driver.source(filename, buf.str());
   }
+  const auto& str = buf.str();
+  return fuzz_main(str.c_str(), str.size());
+}
+
+#endif // LIBFUZZER
+
+int fuzz_main(const char* data, size_t sz)
+{
+  if (data == nullptr || sz == 0)
+    return 0;
+
+  if (getuid() != 0)
+    return 1;
+
+  DISABLE_LOG(DEBUG);
+  DISABLE_LOG(INFO);
+  DISABLE_LOG(WARNING);
+  // We can't disable error logs because some functions use a length of error
+  // log to see if an error occurs. Instead, suppress error log output at each
+  // place.
+  // DISABLE_LOG(ERROR);
+  std::ofstream devnull;
+  devnull.open("/dev/null", std::ofstream::out | std::ofstream::app);
+
+  // reset global states
+  TracepointFormatParser::clear_struct_list();
+
+  std::unique_ptr<Output> output;
+  std::ostream* os = &std::cout;
+  output = std::make_unique<TextOutput>(*os);
+
+  BPFtrace bpftrace(std::move(output));
+  bpftrace.safe_mode_ = 0;
+
+  Driver driver(bpftrace);
+  std::string script(data, sz);
+  driver.source("fuzz", script);
 
   // Create AST
   auto err = driver.parse();
@@ -85,7 +120,7 @@ int main(int argc, char* argv[])
     return 1;
 
   // Field Analyzer
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  ast::FieldAnalyser fields(driver.root_, bpftrace, devnull);
   err = fields.analyse();
   if (err)
     return err;
@@ -117,7 +152,7 @@ int main(int argc, char* argv[])
     return err;
 
   // Semantic Analyzer
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, false);
+  ast::SemanticAnalyser semantics(driver.root_, bpftrace, devnull, false);
   err = semantics.analyse();
   if (err)
     return err;

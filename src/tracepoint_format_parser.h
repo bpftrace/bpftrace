@@ -41,6 +41,10 @@ public:
   static std::string get_struct_name(const std::string &category,
                                      const std::string &event_name);
   static std::string get_struct_name(const std::string &probe_id);
+  static void clear_struct_list()
+  {
+    struct_list.clear();
+  }
 
 private:
   static std::string parse_field(const std::string &line,
