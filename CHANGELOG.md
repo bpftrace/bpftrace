@@ -46,6 +46,8 @@ and this project adheres to
   - [#1567](https://github.com/iovisor/bpftrace/pull/1567)
 - Add basic options and documentations for fuzzing
   - [#1601](https://github.com/iovisor/bpftrace/pull/1601)
+- Disable `str($# + 1)`
+  - [#1619](https://github.com/iovisor/bpftrace/issues/1619)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
