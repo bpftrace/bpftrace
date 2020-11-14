@@ -18,6 +18,8 @@ set(LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
 set(ENABLE_TEST_VALIDATE_CODEGEN ON CACHE BOOL "Run LLVM IR validation tests")
+set(BUILD_FUZZ OFF CACHE BOOL "Build bpftrace for fuzzing")
+set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -35,6 +37,19 @@ endif()
 
 if(EMBED_LIBCLANG_ONLY AND NOT EMBED_CLANG)
     message(FATAL_ERROR "Cannot set EMBED_LIBCLANG_ONLY without also setting EMBED_CLANG")
+endif()
+
+if(BUILD_FUZZ)
+    message(STATUS "Build for fuzzing")
+    add_compile_options("-DFUZZ")
+endif()
+if(FUZZ_TARGET STREQUAL "semantic")
+    message(STATUS "Fuzzing seantic analyzer")
+    add_compile_options("-DTEST_SEMANTIC")
+elseif(FUZZ_TARGET STREQUAL "codegen")
+    message(STATUS "Fuzzing codegen")
+else()
+    message(FATAL_ERROR "Unsupported FUZZ_TARGET")
 endif()
 
 set (CMAKE_CXX_STANDARD 17)
