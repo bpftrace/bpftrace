@@ -1659,6 +1659,7 @@ TEST(Parser, scientific_notation)
        "Program\n kprobe:f\n  call: print\n   int: 5000000000\n");
 
   test_parse_failure("k:f { print(5e-9); }");
+  test_parse_failure("k:f { print(1e100); }");
 }
 
 TEST(Parser, while_loop)

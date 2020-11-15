@@ -112,6 +112,8 @@ and this project adheres to
   - [#1621](https://github.com/iovisor/bpftrace/pull/1621)
 - Only create int type Identifier when it is used in sizeof()
   - [#1622](https://github.com/iovisor/bpftrace/pull/1622)
+- Check exponent value can be expressed in uint64_t
+  - [#1623](https://github.com/iovisor/bpftrace/pull/1623)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
