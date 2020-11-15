@@ -121,6 +121,7 @@ parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 
 
 ## Found bugs
 ### AFL
+- [#1623](https://github.com/iovisor/bpftrace/pull/1623)
 - [#1619](https://github.com/iovisor/bpftrace/pull/1619)
 - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
 - [#1573](https://github.com/iovisor/bpftrace/pull/1573)

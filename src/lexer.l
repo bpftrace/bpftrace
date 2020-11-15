@@ -60,7 +60,15 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
 {int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
-{exponent}              { return Parser::make_INT(parse_exponent(yytext), loc); }
+{exponent}              {
+                          uint64_t num;
+                          try {
+                            num = parse_exponent(yytext);
+                            return Parser::make_INT(num, loc);
+                          } catch (std::exception const &e) {
+                            driver.error(loc, e.what());
+                          }
+                        }
 {path}                  { return Parser::make_PATH(yytext, loc); }
 {map}                   { return Parser::make_MAP(yytext, loc); }
 {var}                   { return Parser::make_VAR(yytext, loc); }

@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <glob.h>
+#include <limits>
 #include <link.h>
 #include <map>
 #include <memory>
@@ -806,6 +807,9 @@ uint64_t parse_exponent(const char *str)
 
   auto exp = strtoll(e_offset + 1, nullptr, 10);
   auto num = base * std::pow(10, exp);
+  uint64_t max = std::numeric_limits<uint64_t>::max();
+  if (num > (double)max)
+    throw std::runtime_error(std::string(str) + " is too big for uint64_t");
   return num;
 }
 
