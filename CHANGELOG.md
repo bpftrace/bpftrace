@@ -114,6 +114,8 @@ and this project adheres to
   - [#1498](https://github.com/iovisor/bpftrace/pull/1498)
 
 #### Documentation
+- Document uptr() and kptr() function
+  - [#1626](https://github.com/iovisor/bpftrace/pull/1626)
 
 ## [0.11.4] 2020-11-14
 
