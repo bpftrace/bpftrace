@@ -2089,7 +2089,7 @@ Syntax: `str(char *s [, int length])`
 
 Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
 a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
-`BPFTRACE_STRLEN`](#7-env-bpftrace_strlen)).
+`BPFTRACE_STRLEN`](#91-bpftrace_strlen)).
 
 Examples:
 
@@ -2690,7 +2690,7 @@ Syntax: `buf(void *d [, int length])`
 Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
-be tuned using the [`BPFTRACE_STRLEN`](#7-env-bpftrace_strlen) environment variable.
+be tuned using the [`BPFTRACE_STRLEN`](#91-bpftrace_strlen) environment variable.
 
 For example, we can take the `buff` parameter (`void *`) of `sys_enter_sendto`, read the
 number of bytes specified by `len` (`size_t`), and format the bytes in hexadecimal so that
