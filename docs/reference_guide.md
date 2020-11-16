@@ -1242,8 +1242,8 @@ hi
 ^C
 ```
 
-The namespace of the probe is deduced automatically. If the binary `/root/tick` contained multiple probes 
-with the name `loop` (e.g. `tick:loop` and `tock:loop`), no probe would be attached. 
+The namespace of the probe is deduced automatically. If the binary `/root/tick` contained multiple probes
+with the name `loop` (e.g. `tick:loop` and `tock:loop`), no probe would be attached.
 This may be solved by manually specifying the namespace or by using a wildcard:
 
 ```
@@ -1902,7 +1902,7 @@ be used as a string in the `str()` call. If a parameter is used that was not pro
 zero for numeric context, and "" for string context. Positional parameters may also be used in probe
 argument and will be treated as a string parameter.
 
-If a positional parameter is used in `str()`, it is interpreted as a pointer to the actual given string 
+If a positional parameter is used in `str()`, it is interpreted as a pointer to the actual given string
 literal, which allows to do pointer arithmetic on it. Only addition of a single constant, less or equal to
 the length of the supplied string, is allowed.
 
