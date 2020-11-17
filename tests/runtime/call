@@ -50,9 +50,16 @@ EXPECT P: /*.
 TIMEOUT 5
 
 NAME buf
-RUN bpftrace -v -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d)); exit(); }' -c ./testprogs/complex_struct
-EXPECT P: \\x09\\x08\\x07\\x06-\\x05\\x04\\x03\\x02-\\x01\\x02\\x03\\x04-\\x05\\x00\\x00\\x00\\x06\\x00\\x00\\x00\\x07\\x00\\x00\\x00\\x08\\x00\\x00\\x00
+RUN bpftrace -v -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d), buf($s->e), buf($s->f)); exit(); }' -c ./testprogs/complex_struct
+EXPECT P: \\x09\\x08\\x07\\x06-\\x05\\x04\\x03\\x02-\\x01\\x02\\x03\\x04-\\x05\\x00\\x00\\x00\\x06\\x00\\x00\\x00\\x07\\x00\\x00\\x00\\x08\\x00\\x00\\x00-\\x09\\x00\\x0a\\x00\\x0b\\x00\\x0c\\x00-\\x0d\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x0e\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x0f\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x10\\x00\\x00\\x00\\x00\\x00\\x00\\x00
 TIMEOUT 5
+ARCH x86_64|ppc64le|aarch64
+
+NAME buf
+RUN bpftrace -v -e 'struct MyStruct { const char* a; char b[4]; uint8_t c[4]; int d[4]; uint16_t e[4]; uint64_t f[4] }; u:./testprogs/complex_struct:func { $s = (struct MyStruct *)arg0; printf("P: %r-%r-%r-%r-%r-%r\n", buf($s->a, 4), buf($s->b, 4), buf($s->c), buf($s->d), buf($s->e), buf($s->f)); exit(); }' -c ./testprogs/complex_struct
+EXPECT P: \\x09\\x08\\x07\\x06-\\x05\\x04\\x03\\x02-\\x01\\x02\\x03\\x04-\\x00\\x00\\x00\\x05\\x00\\x00\\x00\\x06\\x00\\x00\\x00\\x07\\x00\\x00\\x00\\x08-\\x00\\x09\\x00\\x0a\\x00\\x0b\\x00\\x0c-\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x0d\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x0e\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x0f\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x10
+TIMEOUT 5
+ARCH s390x|ppc64
 
 NAME buf_map_key
 RUN bpftrace -v -e 'i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }'
