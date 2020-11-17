@@ -24,7 +24,6 @@ public:
   virtual ~Node() = default;
 
   virtual void accept(Visitor &v) = 0;
-
   location loc;
 };
 
@@ -35,8 +34,6 @@ public:
   Expression() = default;
   Expression(location loc) : Node(loc){};
   Expression(const Expression &other);
-  // NB: do not free any of non-owned pointers we store
-  virtual ~Expression() = default;
 
   SizedType type;
   Map *key_for_map = nullptr;
@@ -117,15 +114,6 @@ public:
   explicit Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
   Call(const Call &other);
-  ~Call()
-  {
-    if (vargs)
-      for (Expression *expr : *vargs)
-        delete expr;
-
-    delete vargs;
-    vargs = nullptr;
-  }
 
   std::string func;
   ExpressionList *vargs;
@@ -138,15 +126,6 @@ public:
   explicit Map(const std::string &ident, location loc);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
   Map(const Map &other);
-  ~Map()
-  {
-    if (vargs)
-      for (Expression *expr : *vargs)
-        delete expr;
-
-    delete vargs;
-    vargs = nullptr;
-  }
 
   std::string ident;
   ExpressionList *vargs = nullptr;
@@ -170,16 +149,7 @@ public:
   Binop(Expression *left, int op, Expression *right, location loc);
   Binop(const Binop &other);
 
-  ~Binop()
-  {
-    delete left;
-    delete right;
-    left = nullptr;
-    right = nullptr;
-  }
-
-  Expression *left = nullptr;
-  Expression *right = nullptr;
+  Expression *left = nullptr, *right = nullptr;
   int op;
 
   DEFINE_ACCEPT
@@ -194,12 +164,6 @@ public:
        location loc = location());
   Unop(const Unop &other);
 
-  ~Unop()
-  {
-    delete expr;
-    expr = nullptr;
-  }
-
   Expression *expr = nullptr;
   int op;
   bool is_post_op;
@@ -213,11 +177,6 @@ public:
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
   FieldAccess(const FieldAccess &other);
-  ~FieldAccess()
-  {
-    delete expr;
-    expr = nullptr;
-  }
 
   Expression *expr = nullptr;
   std::string field;
@@ -231,16 +190,10 @@ public:
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
   ArrayAccess(const ArrayAccess &other) : Expression(other){};
-  ~ArrayAccess()
-  {
-    delete expr;
-    delete indexpr;
-    expr = nullptr;
-    indexpr = nullptr;
-  }
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
+
   DEFINE_ACCEPT
 };
 
@@ -256,11 +209,6 @@ public:
        Expression *expr,
        location loc);
   Cast(const Cast &other);
-  ~Cast()
-  {
-    delete expr;
-    expr = nullptr;
-  }
 
   std::string cast_type;
   bool is_pointer;
@@ -275,12 +223,6 @@ class Tuple : public Expression
 public:
   Tuple(ExpressionList *elems, location loc);
   Tuple(const Tuple &other);
-  ~Tuple()
-  {
-    for (Expression *expr : *elems)
-      delete expr;
-    delete elems;
-  }
 
   ExpressionList *elems = nullptr;
 
@@ -300,11 +242,6 @@ class ExprStatement : public Statement {
 public:
   explicit ExprStatement(Expression *expr, location loc);
   ExprStatement(const ExprStatement &other) : Statement(other){};
-  ~ExprStatement()
-  {
-    delete expr;
-    expr = nullptr;
-  }
 
   Expression *expr = nullptr;
 
@@ -315,13 +252,6 @@ class AssignMapStatement : public Statement {
 public:
   AssignMapStatement(Map *map, Expression *expr, location loc = location());
   AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
-  ~AssignMapStatement()
-  {
-    delete map;
-    delete expr;
-    map = nullptr;
-    expr = nullptr;
-  }
 
   Map *map = nullptr;
   Expression *expr = nullptr;
@@ -334,13 +264,6 @@ public:
   AssignVarStatement(Variable *var, Expression *expr);
   AssignVarStatement(Variable *var, Expression *expr, location loc);
   AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
-  ~AssignVarStatement()
-  {
-    delete var;
-    delete expr;
-    var = nullptr;
-    expr = nullptr;
-  }
 
   Variable *var = nullptr;
   Expression *expr = nullptr;
@@ -353,23 +276,6 @@ public:
   If(Expression *cond, StatementList *stmts);
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
   If(const If &other);
-  ~If()
-  {
-    delete cond;
-    cond = nullptr;
-
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-
-    if (else_stmts)
-      for (Statement *s : *else_stmts)
-        delete s;
-    delete else_stmts;
-    else_stmts = nullptr;
-  }
 
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
@@ -382,14 +288,6 @@ class Unroll : public Statement {
 public:
   Unroll(Expression *expr, StatementList *stmts, location loc);
   Unroll(const Unroll &other);
-  ~Unroll()
-  {
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-  }
 
   long int var = 0;
   Expression *expr = nullptr;
@@ -405,7 +303,6 @@ public:
   {
   }
   Jump(const Jump &other) = default;
-  ~Jump() = default;
 
   int ident = 0;
 
@@ -416,11 +313,6 @@ class Predicate : public Node {
 public:
   explicit Predicate(Expression *expr, location loc);
   Predicate(const Predicate &other) : Node(other){};
-  ~Predicate()
-  {
-    delete expr;
-    expr = nullptr;
-  }
 
   Expression *expr = nullptr;
 
@@ -431,15 +323,6 @@ class Ternary : public Expression {
 public:
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
   Ternary(const Ternary &other) : Expression(other){};
-  ~Ternary()
-  {
-    delete cond;
-    delete left;
-    delete right;
-    cond = nullptr;
-    left = nullptr;
-    right = nullptr;
-  }
 
   Expression *cond = nullptr;
   Expression *left = nullptr;
@@ -456,13 +339,6 @@ public:
   {
   }
   While(const While &other);
-  ~While()
-  {
-    delete cond;
-    for (auto *stmt : *stmts)
-      delete stmt;
-    delete stmts;
-  }
 
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
@@ -474,7 +350,6 @@ class AttachPoint : public Node {
 public:
   explicit AttachPoint(const std::string &raw_input, location loc = location());
   AttachPoint(const AttachPoint &other) = default;
-  ~AttachPoint() = default;
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
   std::string raw_input;
@@ -507,23 +382,6 @@ class Probe : public Node {
 public:
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
   Probe(const Probe &other);
-  ~Probe()
-  {
-    if (attach_points)
-      for (AttachPoint *ap : *attach_points)
-        delete ap;
-    delete attach_points;
-    attach_points = nullptr;
-
-    delete pred;
-    pred = nullptr;
-
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-  }
 
   AttachPointList *attach_points = nullptr;
   Predicate *pred = nullptr;
@@ -546,17 +404,8 @@ public:
   Program(const std::string &c_definitions, ProbeList *probes);
   Program(const Program &other);
 
-  ~Program()
-  {
-    if (probes)
-      for (Probe *p : *probes)
-        delete p;
-    delete probes;
-    probes = nullptr;
-  }
-
   std::string c_definitions;
-  ProbeList *probes = nullptr;
+  ProbeList *probes;
 
   DEFINE_ACCEPT
 };
