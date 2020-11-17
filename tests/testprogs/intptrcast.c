@@ -3,7 +3,7 @@ int fn(short p1,
        short p3,
        short p4,
        short p5,
-       short p6,
+       unsigned long p6,
        short p7,
        short p8,
        short p9)
@@ -12,6 +12,14 @@ int fn(short p1,
 }
 
 int main() {
-  fn(0x123, 0x456, 0x789, 0xabc, 0xdef, 0xfed, 0xcba, 0xcba, 0xcba);
+  fn(0x123,
+     0x456,
+     0x789,
+     0xabc,
+     0xdef,
+     0x1234567887654321,
+     0xcba,
+     0xcba,
+     0xcba);
   return 0;
 }

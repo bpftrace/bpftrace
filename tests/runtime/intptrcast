@@ -28,7 +28,7 @@ AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 RUN bpftrace -v -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r15")+160)); exit();}'
-EXPECT ^@: 4077
+EXPECT ^@: 4660
 TIMEOUT 5
 ARCH s390x
 AFTER ./testprogs/intptrcast
@@ -63,7 +63,7 @@ AFTER ./testprogs/intptrcast
 
 NAME Casting ints
 RUN bpftrace -v -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r15")+160); printf("%d\n", $a); exit();}'
-EXPECT 4077
+EXPECT 4660
 TIMEOUT 5
 ARCH s390x
 AFTER ./testprogs/intptrcast
