@@ -153,15 +153,7 @@ public:
 
   explicit Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
-  ~Call()
-  {
-    if (vargs)
-      for (Expression *expr : *vargs)
-        delete expr;
-
-    delete vargs;
-    vargs = nullptr;
-  }
+  ~Call();
 
   std::string func;
   ExpressionList *vargs = nullptr;
@@ -177,15 +169,7 @@ public:
 
   explicit Map(const std::string &ident, location loc);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
-  ~Map()
-  {
-    if (vargs)
-      for (Expression *expr : *vargs)
-        delete expr;
-
-    delete vargs;
-    vargs = nullptr;
-  }
+  ~Map();
 
   std::string ident;
   ExpressionList *vargs = nullptr;
@@ -216,13 +200,7 @@ public:
 
   Binop(Expression *left, int op, Expression *right, location loc);
 
-  ~Binop()
-  {
-    delete left;
-    delete right;
-    left = nullptr;
-    right = nullptr;
-  }
+  ~Binop();
 
   Expression *left = nullptr;
   Expression *right = nullptr;
@@ -243,11 +221,7 @@ public:
        bool is_post_op = false,
        location loc = location());
 
-  ~Unop()
-  {
-    delete expr;
-    expr = nullptr;
-  }
+  ~Unop();
 
   Expression *expr = nullptr;
   int op;
@@ -265,11 +239,7 @@ public:
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
-  ~FieldAccess()
-  {
-    delete expr;
-    expr = nullptr;
-  }
+  ~FieldAccess();
 
   Expression *expr = nullptr;
   std::string field;
@@ -286,13 +256,7 @@ public:
 
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
-  ~ArrayAccess()
-  {
-    delete expr;
-    delete indexpr;
-    expr = nullptr;
-    indexpr = nullptr;
-  }
+  ~ArrayAccess();
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
@@ -315,11 +279,7 @@ public:
        bool is_double_pointer,
        Expression *expr,
        location loc);
-  ~Cast()
-  {
-    delete expr;
-    expr = nullptr;
-  }
+  ~Cast();
 
   std::string cast_type;
   bool is_pointer;
@@ -337,12 +297,7 @@ public:
   DEFINE_LEAFCOPY(Tuple)
 
   Tuple(ExpressionList *elems, location loc);
-  ~Tuple()
-  {
-    for (Expression *expr : *elems)
-      delete expr;
-    delete elems;
-  }
+  ~Tuple();
 
   ExpressionList *elems = nullptr;
 
@@ -365,11 +320,7 @@ public:
   DEFINE_LEAFCOPY(ExprStatement)
 
   explicit ExprStatement(Expression *expr, location loc);
-  ~ExprStatement()
-  {
-    delete expr;
-    expr = nullptr;
-  }
+  ~ExprStatement();
 
   Expression *expr = nullptr;
 
@@ -386,16 +337,7 @@ public:
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
-  ~AssignMapStatement()
-  {
-    // In a compound assignment, the expression owns the map so
-    // we shouldn't free
-    if (!compound)
-      delete map;
-    delete expr;
-    map = nullptr;
-    expr = nullptr;
-  }
+  ~AssignMapStatement();
 
   Map *map = nullptr;
   Expression *expr = nullptr;
@@ -414,16 +356,7 @@ public:
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
-  ~AssignVarStatement()
-  {
-    // In a compound assignment, the expression owns the map so
-    // we shouldn't free
-    if (!compound)
-      delete var;
-    delete expr;
-    var = nullptr;
-    expr = nullptr;
-  }
+  ~AssignVarStatement();
 
   Variable *var = nullptr;
   Expression *expr = nullptr;
@@ -440,23 +373,7 @@ public:
 
   If(Expression *cond, StatementList *stmts);
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
-  ~If()
-  {
-    delete cond;
-    cond = nullptr;
-
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-
-    if (else_stmts)
-      for (Statement *s : *else_stmts)
-        delete s;
-    delete else_stmts;
-    else_stmts = nullptr;
-  }
+  ~If();
 
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
@@ -472,14 +389,7 @@ public:
   DEFINE_LEAFCOPY(Unroll)
 
   Unroll(Expression *expr, StatementList *stmts, location loc);
-  ~Unroll()
-  {
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-  }
+  ~Unroll();
 
   long int var = 0;
   Expression *expr = nullptr;
@@ -512,11 +422,7 @@ public:
   DEFINE_LEAFCOPY(Predicate)
 
   explicit Predicate(Expression *expr, location loc);
-  ~Predicate()
-  {
-    delete expr;
-    expr = nullptr;
-  }
+  ~Predicate();
 
   Expression *expr = nullptr;
 
@@ -530,15 +436,7 @@ public:
   DEFINE_LEAFCOPY(Ternary)
 
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
-  ~Ternary()
-  {
-    delete cond;
-    delete left;
-    delete right;
-    cond = nullptr;
-    left = nullptr;
-    right = nullptr;
-  }
+  ~Ternary();
 
   Expression *cond = nullptr;
   Expression *left = nullptr;
@@ -555,13 +453,7 @@ public:
       : Statement(loc), cond(cond), stmts(stmts)
   {
   }
-  ~While()
-  {
-    delete cond;
-    for (auto *stmt : *stmts)
-      delete stmt;
-    delete stmts;
-  }
+  ~While();
 
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
@@ -613,23 +505,7 @@ public:
   DEFINE_LEAFCOPY(Probe)
 
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
-  ~Probe()
-  {
-    if (attach_points)
-      for (AttachPoint *ap : *attach_points)
-        delete ap;
-    delete attach_points;
-    attach_points = nullptr;
-
-    delete pred;
-    pred = nullptr;
-
-    if (stmts)
-      for (Statement *s : *stmts)
-        delete s;
-    delete stmts;
-    stmts = nullptr;
-  }
+  ~Probe();
 
   AttachPointList *attach_points = nullptr;
   Predicate *pred = nullptr;
@@ -655,14 +531,7 @@ public:
 
   Program(const std::string &c_definitions, ProbeList *probes);
 
-  ~Program()
-  {
-    if (probes)
-      for (Probe *p : *probes)
-        delete p;
-    delete probes;
-    probes = nullptr;
-  }
+  ~Program();
 
   std::string c_definitions;
   ProbeList *probes = nullptr;
