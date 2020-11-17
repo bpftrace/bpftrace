@@ -43,11 +43,173 @@ MAKE_ACCEPT(Program)
 
 #undef MAKE_ACCEPT
 
+Call::~Call()
+{
+  if (vargs)
+    for (Expression *expr : *vargs)
+      delete expr;
+
+  delete vargs;
+  vargs = nullptr;
+}
+Map::~Map()
+{
+  if (vargs)
+    for (Expression *expr : *vargs)
+      delete expr;
+
+  delete vargs;
+  vargs = nullptr;
+}
+Binop::~Binop()
+{
+  delete left;
+  delete right;
+  left = nullptr;
+  right = nullptr;
+}
+
+Unop::~Unop()
+{
+  delete expr;
+  expr = nullptr;
+}
+
+FieldAccess::~FieldAccess()
+{
+  delete expr;
+  expr = nullptr;
+}
+
+ArrayAccess::~ArrayAccess()
+{
+  delete expr;
+  delete indexpr;
+  expr = nullptr;
+  indexpr = nullptr;
+}
+
+Cast::~Cast()
+{
+  delete expr;
+  expr = nullptr;
+}
+
+Tuple::~Tuple()
+{
+  for (Expression *expr : *elems)
+    delete expr;
+  delete elems;
+}
+
+ExprStatement::~ExprStatement()
+{
+  delete expr;
+  expr = nullptr;
+}
+
+AssignMapStatement::~AssignMapStatement()
+{
+  // In a compound assignment, the expression owns the map so
+  // we shouldn't free
+  if (!compound)
+    delete map;
+  delete expr;
+  map = nullptr;
+  expr = nullptr;
+}
+
+AssignVarStatement::~AssignVarStatement()
+{
+  // In a compound assignment, the expression owns the map so
+  // we shouldn't free
+  if (!compound)
+    delete var;
+  delete expr;
+  var = nullptr;
+  expr = nullptr;
+}
+
+If::~If()
+{
+  delete cond;
+  cond = nullptr;
+
+  if (stmts)
+    for (Statement *s : *stmts)
+      delete s;
+  delete stmts;
+  stmts = nullptr;
+
+  if (else_stmts)
+    for (Statement *s : *else_stmts)
+      delete s;
+  delete else_stmts;
+  else_stmts = nullptr;
+}
+
+Unroll::~Unroll()
+{
+  if (stmts)
+    for (Statement *s : *stmts)
+      delete s;
+  delete stmts;
+  stmts = nullptr;
+}
+Predicate::~Predicate()
+{
+  delete expr;
+  expr = nullptr;
+}
+Ternary::~Ternary()
+{
+  delete cond;
+  delete left;
+  delete right;
+  cond = nullptr;
+  left = nullptr;
+  right = nullptr;
+}
+
+While::~While()
+{
+  delete cond;
+  for (auto *stmt : *stmts)
+    delete stmt;
+  delete stmts;
+}
+
+Probe::~Probe()
+{
+  if (attach_points)
+    for (AttachPoint *ap : *attach_points)
+      delete ap;
+  delete attach_points;
+  attach_points = nullptr;
+
+  delete pred;
+  pred = nullptr;
+
+  if (stmts)
+    for (Statement *s : *stmts)
+      delete s;
+  delete stmts;
+  stmts = nullptr;
+}
+
+Program::~Program()
+{
+  if (probes)
+    for (Probe *p : *probes)
+      delete p;
+  delete probes;
+  probes = nullptr;
+}
+
 Integer::Integer(long n, location loc) : Expression(loc), n(n)
 {
   is_literal = true;
 }
-
 
 String::String(const std::string &str, location loc) : Expression(loc), str(str)
 {
