@@ -13,11 +13,13 @@ namespace bpftrace {
 
 Driver::Driver(BPFtrace &bpftrace, std::ostream &o) : bpftrace_(bpftrace), out_(o)
 {
+  yylex_init(&scanner_);
+  parser_ = std::make_unique<Parser>(*this, scanner_);
 }
 
 Driver::~Driver()
 {
-  delete root_;
+  yylex_destroy(scanner_);
 }
 
 void Driver::source(std::string filename, std::string script)
@@ -34,20 +36,10 @@ int Driver::parse_str(std::string script)
 
 int Driver::parse()
 {
-  // Ensure we free memory allocated the previous parse if we parse
-  // more than once
-  delete root_;
-  root_ = nullptr;
-
   // Reset source location info on every pass
   loc.initialize();
-
-  yyscan_t scanner;
-  yylex_init(&scanner);
-  Parser parser(*this, scanner);
-  yy_scan_string(Log::get().get_source().c_str(), scanner);
-  parser.parse();
-  yylex_destroy(scanner);
+  yy_scan_string(Log::get().get_source().c_str(), scanner_);
+  parser_->parse();
 
   ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
   if (ap_parser.parse())
