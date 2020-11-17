@@ -106,6 +106,8 @@ and this project adheres to
   - [#1580](https://github.com/iovisor/bpftrace/pull/1580)
 - Printing of small integers with `printf`
   - [#1532](https://github.com/iovisor/bpftrace/pull/1532)
+- Fix bitfield access for big endian
+  - [#1628](https://github.com/iovisor/bpftrace/pull/1628)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
