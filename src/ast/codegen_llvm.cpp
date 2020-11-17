@@ -1611,7 +1611,14 @@ void CodegenLLVM::visit(FieldAccess &acc)
         raw = b_.CreateLoad(dst);
         b_.CreateLifetimeEnd(dst);
       }
-      Value *shifted = b_.CreateLShr(raw, field.bitfield.access_rshift);
+      size_t rshiftbits;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+      rshiftbits = field.bitfield.access_rshift;
+#else
+      rshiftbits = (field.type.GetSize() - field.bitfield.read_bytes) * 8;
+      rshiftbits += field.bitfield.access_rshift;
+#endif
+      Value *shifted = b_.CreateLShr(raw, rshiftbits);
       Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
       expr_ = masked;
     }

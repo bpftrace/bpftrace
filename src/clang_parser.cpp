@@ -234,9 +234,14 @@ static bool getBitfield(CXCursor c, Bitfield &bitfield)
     bitfield.mask = std::numeric_limits<uint64_t>::max();
   else
     bitfield.mask = (1ULL << bitfield_bitwidth) - 1;
-  bitfield.access_rshift = bitfield_offset;
   // Round up to nearest byte
   bitfield.read_bytes = (bitfield_offset + bitfield_bitwidth + 7) / 8;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  bitfield.access_rshift = bitfield_offset;
+#else
+  bitfield.access_rshift = (bitfield.read_bytes * 8 - bitfield_offset -
+                            bitfield_bitwidth);
+#endif
 
   return true;
 }

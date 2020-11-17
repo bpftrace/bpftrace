@@ -195,6 +195,12 @@ EXPECT 1 2 5 0 65535
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
+NAME bitfield_access_2
+RUN bpftrace -v -e 'struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}'
+EXPECT 1 217 5 1 500 31117 1 2 27
+TIMEOUT 5
+AFTER ./testprogs/bitfield_test
+
 NAME exit exits immediately
 RUN bpftrace -e 'i:ms:100 { @++; exit(); @++ }'
 EXPECT @: 1
