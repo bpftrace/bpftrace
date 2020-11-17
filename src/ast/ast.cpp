@@ -43,6 +43,18 @@ MAKE_ACCEPT(Program)
 
 #undef MAKE_ACCEPT
 
+Node::Node() : loc(location())
+{
+}
+
+Node::Node(location loc) : loc(loc)
+{
+}
+
+Expression::Expression(location loc) : Node(loc)
+{
+}
+
 Integer::Integer(long n, location loc) : Expression(loc), n(n)
 {
   is_literal = true;
@@ -93,6 +105,7 @@ Call::Call(const std::string &func, ExpressionList *vargs, location loc)
 {
 }
 
+
 Map::Map(const std::string &ident, location loc)
     : Expression(loc), ident(ident), vargs(nullptr)
 {
@@ -109,11 +122,13 @@ Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
   }
 }
 
+
 Variable::Variable(const std::string &ident, location loc)
     : Expression(loc), ident(ident)
 {
   is_variable = true;
 }
+
 
 Binop::Binop(Expression *left, int op, Expression *right, location loc)
     : Expression(loc), left(left), right(right), op(op)
@@ -179,6 +194,10 @@ Tuple::Tuple(ExpressionList *elems, location loc)
 {
 }
 
+
+Statement::Statement(location loc) : Node(loc)
+{
+}
 
 ExprStatement::ExprStatement(Expression *expr, location loc)
     : Statement(loc), expr(expr)
@@ -367,81 +386,6 @@ int Probe::index() {
 
 void Probe::set_index(int index) {
   index_ = index;
-}
-
-Expression::Expression(const Expression &other) : Node(other)
-{
-  type = other.type;
-  is_literal = other.is_literal;
-  is_variable = other.is_variable;
-  is_map = other.is_map;
-}
-
-Call::Call(const Call &other) : Expression(other)
-{
-  func = other.func;
-}
-
-Binop::Binop(const Binop &other) : Expression(other)
-{
-  left = nullptr;
-  right = nullptr;
-  op = other.op;
-}
-
-Unop::Unop(const Unop &other) : Expression(other)
-{
-  op = other.op;
-  is_post_op = op;
-}
-
-Map::Map(const Map &other) : Expression(other)
-{
-  ident = other.ident;
-  skip_key_validation = true;
-}
-
-FieldAccess::FieldAccess(const FieldAccess &other)
-    : Expression(other), expr(nullptr)
-{
-  field = other.field;
-  index = other.index;
-}
-
-Unroll::Unroll(const Unroll &other) : Statement(other)
-{
-  var = other.var;
-}
-
-Program::Program(const Program &other) : Node(other)
-{
-  c_definitions = other.c_definitions;
-}
-
-Cast::Cast(const Cast &other) : Expression(other)
-{
-  cast_type = other.cast_type;
-  is_pointer = other.is_pointer;
-  is_double_pointer = other.is_double_pointer;
-}
-
-Probe::Probe(const Probe &other) : Node(other)
-{
-  need_expansion = other.need_expansion;
-  need_tp_args_structs = other.need_tp_args_structs;
-  index_ = other.index_;
-}
-
-While::While(const While &other) : Statement(other)
-{
-}
-
-Tuple::Tuple(const Tuple &other) : Expression(other)
-{
-}
-
-If::If(const If &other) : Statement(other)
-{
 }
 
 } // namespace ast
