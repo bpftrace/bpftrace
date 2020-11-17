@@ -16,12 +16,6 @@ class Visitor;
 
 #define DEFINE_ACCEPT void accept(Visitor &v) override;
 
-#define DEFINE_CLONE(T)                                                        \
-  T *clone()                                                                   \
-  {                                                                            \
-    return new T(*this);                                                       \
-  };
-
 class Node {
 public:
   Node() = default;
@@ -56,99 +50,73 @@ using ExpressionList = std::vector<Expression *>;
 
 class Integer : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Integer)
-
   explicit Integer(long n, location loc);
-
+  Integer(const Integer &other) = default;
   long n;
 
-private:
-  Integer(const Integer &other) = default;
+  DEFINE_ACCEPT
 };
 
 class PositionalParameter : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(PositionalParameter)
-
   explicit PositionalParameter(PositionalParameterType ptype,
                                long n,
                                location loc);
-  ~PositionalParameter() = default;
+  PositionalParameter(const PositionalParameter &other) = default;
 
   PositionalParameterType ptype;
   long n;
   bool is_in_str = false;
 
-private:
-  PositionalParameter(const PositionalParameter &other) = default;
+  DEFINE_ACCEPT
 };
 
 class String : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(String)
-
   explicit String(const std::string &str, location loc);
-  ~String() = default;
+  String(const String &other) = default;
 
   std::string str;
 
-private:
-  String(const String &other) = default;
+  DEFINE_ACCEPT
 };
 
 class StackMode : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(StackMode)
-
   explicit StackMode(const std::string &mode, location loc);
-  ~StackMode() = default;
+  StackMode(const StackMode &other) = default;
 
   std::string mode;
 
-private:
-  StackMode(const StackMode &other) = default;
+  DEFINE_ACCEPT
 };
 
 class Identifier : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Identifier)
-
   explicit Identifier(const std::string &ident, location loc);
-  ~Identifier() = default;
+  Identifier(const Identifier &other) = default;
 
   std::string ident;
 
-private:
-  Identifier(const Identifier &other) = default;
+  DEFINE_ACCEPT
 };
 
 class Builtin : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Builtin)
-
   explicit Builtin(const std::string &ident, location loc);
-  ~Builtin() = default;
+  Builtin(const Builtin &other) = default;
 
   std::string ident;
   int probe_id;
 
-private:
-  Builtin(const Builtin &other) = default;
+  DEFINE_ACCEPT
 };
 
 class Call : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Call)
-
   explicit Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
+  Call(const Call &other);
   ~Call()
   {
     if (vargs)
@@ -162,17 +130,14 @@ public:
   std::string func;
   ExpressionList *vargs;
 
-private:
-  Call(const Call &other);
+  DEFINE_ACCEPT
 };
 
 class Map : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Map)
-
   explicit Map(const std::string &ident, location loc);
   Map(const std::string &ident, ExpressionList *vargs, location loc);
+  Map(const Map &other);
   ~Map()
   {
     if (vargs)
@@ -187,30 +152,23 @@ public:
   ExpressionList *vargs = nullptr;
   bool skip_key_validation = false;
 
-private:
-  Map(const Map &other);
+  DEFINE_ACCEPT
 };
 
 class Variable : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Variable)
-
   explicit Variable(const std::string &ident, location loc);
-  ~Variable() = default;
+  Variable(const Variable &other) = default;
 
   std::string ident;
 
-private:
-  Variable(const Variable &other) = default;
+  DEFINE_ACCEPT
 };
 
 class Binop : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Binop)
-
   Binop(Expression *left, int op, Expression *right, location loc);
+  Binop(const Binop &other);
 
   ~Binop()
   {
@@ -224,20 +182,17 @@ public:
   Expression *right = nullptr;
   int op;
 
-private:
-  Binop(const Binop &other);
+  DEFINE_ACCEPT
 };
 
 class Unop : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Unop)
-
   Unop(int op, Expression *expr, location loc = location());
   Unop(int op,
        Expression *expr,
        bool is_post_op = false,
        location loc = location());
+  Unop(const Unop &other);
 
   ~Unop()
   {
@@ -249,18 +204,15 @@ public:
   int op;
   bool is_post_op;
 
-private:
-  Unop(const Unop &other);
+  DEFINE_ACCEPT
 };
 
 class FieldAccess : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(FieldAccess)
-
   FieldAccess(Expression *expr, const std::string &field);
   FieldAccess(Expression *expr, const std::string &field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
+  FieldAccess(const FieldAccess &other);
   ~FieldAccess()
   {
     delete expr;
@@ -271,17 +223,14 @@ public:
   std::string field;
   ssize_t index = -1;
 
-private:
-  FieldAccess(const FieldAccess &other);
+  DEFINE_ACCEPT
 };
 
 class ArrayAccess : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(ArrayAccess)
-
   ArrayAccess(Expression *expr, Expression *indexpr);
   ArrayAccess(Expression *expr, Expression *indexpr, location loc);
+  ArrayAccess(const ArrayAccess &other) : Expression(other){};
   ~ArrayAccess()
   {
     delete expr;
@@ -292,16 +241,11 @@ public:
 
   Expression *expr = nullptr;
   Expression *indexpr = nullptr;
-
-private:
-  ArrayAccess(const ArrayAccess &other) : Expression(other){};
+  DEFINE_ACCEPT
 };
 
 class Cast : public Expression {
 public:
-  DEFINE_CLONE(Cast)
-  DEFINE_ACCEPT
-
   Cast(const std::string &type,
        bool is_pointer,
        bool is_double_pointer,
@@ -311,6 +255,7 @@ public:
        bool is_double_pointer,
        Expression *expr,
        location loc);
+  Cast(const Cast &other);
   ~Cast()
   {
     delete expr;
@@ -322,17 +267,14 @@ public:
   bool is_double_pointer;
   Expression *expr = nullptr;
 
-private:
-  Cast(const Cast &other);
+  DEFINE_ACCEPT
 };
 
 class Tuple : public Expression
 {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Tuple)
-
   Tuple(ExpressionList *elems, location loc);
+  Tuple(const Tuple &other);
   ~Tuple()
   {
     for (Expression *expr : *elems)
@@ -342,8 +284,7 @@ public:
 
   ExpressionList *elems = nullptr;
 
-private:
-  Tuple(const Tuple &other);
+  DEFINE_ACCEPT
 };
 
 class Statement : public Node {
@@ -357,10 +298,8 @@ using StatementList = std::vector<Statement *>;
 
 class ExprStatement : public Statement {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(ExprStatement)
-
   explicit ExprStatement(Expression *expr, location loc);
+  ExprStatement(const ExprStatement &other) : Statement(other){};
   ~ExprStatement()
   {
     delete expr;
@@ -369,19 +308,16 @@ public:
 
   Expression *expr = nullptr;
 
-private:
-  ExprStatement(const ExprStatement &other) : Statement(other){};
+  DEFINE_ACCEPT
 };
 
 class AssignMapStatement : public Statement {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(AssignMapStatement)
-
   AssignMapStatement(Map *map,
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
+  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
   ~AssignMapStatement()
   {
     // In a compound assignment, the expression owns the map so
@@ -397,19 +333,16 @@ public:
   Expression *expr = nullptr;
   bool compound;
 
-private:
-  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
+  DEFINE_ACCEPT
 };
 
 class AssignVarStatement : public Statement {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(AssignVarStatement)
-
   AssignVarStatement(Variable *var,
                      Expression *expr,
                      bool compound = false,
                      location loc = location());
+  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
   ~AssignVarStatement()
   {
     // In a compound assignment, the expression owns the map so
@@ -425,17 +358,14 @@ public:
   Expression *expr = nullptr;
   bool compound;
 
-private:
-  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
+  DEFINE_ACCEPT
 };
 
 class If : public Statement {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(If)
-
   If(Expression *cond, StatementList *stmts);
   If(Expression *cond, StatementList *stmts, StatementList *else_stmts);
+  If(const If &other);
   ~If()
   {
     delete cond;
@@ -458,16 +388,13 @@ public:
   StatementList *stmts = nullptr;
   StatementList *else_stmts = nullptr;
 
-private:
-  If(const If &other);
+  DEFINE_ACCEPT
 };
 
 class Unroll : public Statement {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Unroll)
-
   Unroll(Expression *expr, StatementList *stmts, location loc);
+  Unroll(const Unroll &other);
   ~Unroll()
   {
     if (stmts)
@@ -481,33 +408,27 @@ public:
   Expression *expr = nullptr;
   StatementList *stmts = nullptr;
 
-private:
-  Unroll(const Unroll &other);
+  DEFINE_ACCEPT
 };
 
 class Jump : public Statement
 {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Jump)
-
   Jump(int ident, location loc = location()) : Statement(loc), ident(ident)
   {
   }
+  Jump(const Jump &other) = default;
   ~Jump() = default;
 
   int ident = 0;
 
-private:
-  Jump(const Jump &other) = default;
+  DEFINE_ACCEPT
 };
 
 class Predicate : public Node {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Predicate)
-
   explicit Predicate(Expression *expr, location loc);
+  Predicate(const Predicate &other) : Node(other){};
   ~Predicate()
   {
     delete expr;
@@ -516,16 +437,13 @@ public:
 
   Expression *expr = nullptr;
 
-private:
-  Predicate(const Predicate &other) : Node(other){};
+  DEFINE_ACCEPT
 };
 
 class Ternary : public Expression {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Ternary)
-
   Ternary(Expression *cond, Expression *left, Expression *right, location loc);
+  Ternary(const Ternary &other) : Expression(other){};
   ~Ternary()
   {
     delete cond;
@@ -539,18 +457,18 @@ public:
   Expression *cond = nullptr;
   Expression *left = nullptr;
   Expression *right = nullptr;
+
+  DEFINE_ACCEPT
 };
 
 class While : public Statement
 {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(While)
-
   While(Expression *cond, StatementList *stmts, location loc)
       : Statement(loc), cond(cond), stmts(stmts)
   {
   }
+  While(const While &other);
   ~While()
   {
     delete cond;
@@ -562,16 +480,13 @@ public:
   Expression *cond = nullptr;
   StatementList *stmts = nullptr;
 
-private:
-  While(const While &other);
+  DEFINE_ACCEPT
 };
 
 class AttachPoint : public Node {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(AttachPoint)
-
   explicit AttachPoint(const std::string &raw_input, location loc = location());
+  AttachPoint(const AttachPoint &other) = default;
   ~AttachPoint() = default;
 
   // Raw, unparsed input from user, eg. kprobe:vfs_read
@@ -589,26 +504,22 @@ public:
   uint64_t address = 0;
   uint64_t func_offset = 0;
 
+  DEFINE_ACCEPT
   std::string name(const std::string &attach_point) const;
   std::string name(const std::string &attach_target,
                    const std::string &attach_point) const;
 
   int index(std::string name);
   void set_index(std::string name, int index);
-
 private:
-  AttachPoint(const AttachPoint &other) = default;
-
   std::map<std::string, int> index_;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 
 class Probe : public Node {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Probe)
-
   Probe(AttachPointList *attach_points, Predicate *pred, StatementList *stmts);
+  Probe(const Probe &other);
   ~Probe()
   {
     if (attach_points)
@@ -631,25 +542,22 @@ public:
   Predicate *pred = nullptr;
   StatementList *stmts = nullptr;
 
+  DEFINE_ACCEPT
   std::string name() const;
   bool need_expansion = false;        // must build a BPF program per wildcard match
   bool need_tp_args_structs = false;  // must import struct for tracepoints
 
   int index();
   void set_index(int index);
-
 private:
-  Probe(const Probe &other);
   int index_ = 0;
 };
 using ProbeList = std::vector<Probe *>;
 
 class Program : public Node {
 public:
-  DEFINE_ACCEPT
-  DEFINE_CLONE(Program)
-
   Program(const std::string &c_definitions, ProbeList *probes);
+  Program(const Program &other);
 
   ~Program()
   {
@@ -663,8 +571,7 @@ public:
   std::string c_definitions;
   ProbeList *probes = nullptr;
 
-private:
-  Program(const Program &other);
+  DEFINE_ACCEPT
 };
 
 std::string opstr(Binop &binop);
