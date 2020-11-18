@@ -118,6 +118,7 @@ std::set<std::string> find_wildcard_matches_internal(
 } // namespace
 
 DebugLevel bt_debug = DebugLevel::kNone;
+bool bt_quiet = false;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 const int FMT_BUF_SZ = 512;

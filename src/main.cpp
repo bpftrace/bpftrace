@@ -72,6 +72,7 @@ void usage()
   std::cerr << "    --usdt-file-activation" << std::endl;
   std::cerr << "                   activate usdt semaphores based on file path" << std::endl;
   std::cerr << "    --unsafe       allow unsafe builtin functions" << std::endl;
+  std::cerr << "    -q             keep messages quiet" << std::endl;
   std::cerr << "    -v             verbose messages" << std::endl;
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
@@ -282,7 +283,7 @@ int main(int argc, char *argv[])
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   int c;
 
-  const char* const short_options = "dbB:f:e:hlp:vc:Vo:I:k";
+  const char* const short_options = "dbB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
     option{ "help", no_argument, nullptr, 'h' },
     option{ "version", no_argument, nullptr, 'V' },
@@ -334,6 +335,9 @@ int main(int argc, char *argv[])
           usage();
           return 1;
         }
+        break;
+      case 'q':
+        bt_quiet = true;
         break;
       case 'v':
         bt_verbose = true;
@@ -831,7 +835,8 @@ int main(int argc, char *argv[])
   uint64_t num_probes = bpftrace.num_probes();
   if (num_probes == 0)
   {
-    std::cout << "No probes to attach" << std::endl;
+    if (!bt_quiet)
+      std::cout << "No probes to attach" << std::endl;
     return 1;
   }
   else if (num_probes > bpftrace.max_probes_)
@@ -845,7 +850,7 @@ int main(int argc, char *argv[])
         << "attached can cause your system to crash.";
     return 1;
   }
-  else
+  else if (!bt_quiet)
     bpftrace.out_->attached_probes(num_probes);
 
   err = bpftrace.run(move(bpforc));
