@@ -31,6 +31,11 @@ public:
   Node() = default;
   Node(location loc) : loc(loc){};
   Node(const Node &other) = default;
+
+  Node &operator=(const Node &) = delete;
+  Node(Node &&) = delete;
+  Node &operator=(Node &&) = delete;
+
   virtual ~Node() = default;
 
   virtual void accept(Visitor &v) = 0;
@@ -45,6 +50,11 @@ public:
   Expression() = default;
   Expression(location loc) : Node(loc){};
   Expression(const Expression &other);
+
+  Expression &operator=(const Expression &) = delete;
+  Expression(Expression &&) = delete;
+  Expression &operator=(Expression &&) = delete;
+
   // NB: do not free any of non-owned pointers we store
   virtual ~Expression() = default;
 
@@ -310,6 +320,11 @@ public:
   Statement() = default;
   Statement(location loc) : Node(loc){};
   Statement(const Statement &other) = default;
+  ~Statement() = default;
+
+  Statement &operator=(const Statement &) = delete;
+  Statement(Statement &&) = delete;
+  Statement &operator=(Statement &&) = delete;
 };
 
 using StatementList = std::vector<Statement *>;
