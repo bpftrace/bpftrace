@@ -101,8 +101,8 @@ public:
 private:
   size_t size_; // in bytes
   bool is_signed_ = false;
-  SizedType *element_type_ = nullptr; // for "container" and pointer
-                                      // (like) types
+  std::shared_ptr<SizedType> element_type_; // for "container" and pointer
+                                            // (like) types
   size_t num_elements_;               // for array like types
   std::string name_; // name of this type, for named types like struct
   bool ctx_ = false; // Is bpf program context
@@ -204,13 +204,13 @@ public:
   const SizedType *GetElementTy() const
   {
     assert(IsArrayTy());
-    return element_type_;
+    return element_type_.get();
   }
 
   const SizedType *GetPointeeTy() const
   {
     assert(IsPtrTy());
-    return element_type_;
+    return element_type_.get();
   }
 
   bool IsBoolTy() const
