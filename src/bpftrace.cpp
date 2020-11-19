@@ -1266,6 +1266,9 @@ int BPFtrace::print_maps()
 // clear a map
 int BPFtrace::clear_map(IMap &map)
 {
+  if (!map.is_clearable())
+    return zero_map(map);
+
   std::vector<uint8_t> old_key;
   try
   {

@@ -136,6 +136,16 @@ RUN bpftrace -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n",
 EXPECT 314
 TIMEOUT 1
 
+NAME clear map
+RUN bpftrace -e 'BEGIN { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); exit(); }'
+EXPECT ok
+TIMEOUT 1
+
+NAME clear count-map
+RUN bpftrace -e 'BEGIN { @ = count(); @a[1] = count(); clear(@); clear(@a); exit(); }'
+EXPECT @: 0
+TIMEOUT 1
+
 NAME increment/decrement map
 RUN bpftrace -e 'BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); exit(); }'
 EXPECT 10 12 12 10
