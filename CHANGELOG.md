@@ -132,6 +132,8 @@ and this project adheres to
   - [#1639](https://github.com/iovisor/bpftrace/pull/1639)
 - Add workaround for too deep or long macros
   - [#1650](https://github.com/iovisor/bpftrace/pull/1650)
+- Fix attaching to usdt probes in shared libraries
+  - [#1600](https://github.com/iovisor/bpftrace/pull/1600)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
