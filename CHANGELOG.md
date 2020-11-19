@@ -128,6 +128,8 @@ and this project adheres to
   - [#1658](https://github.com/iovisor/bpftrace/pull/1658)
 - Don't create a tuple if an element size if zero
   - [#1653](https://github.com/iovisor/bpftrace/pull/1653)
+- Support clear() and delete() on a count()-based map without a key
+  - [#1639](https://github.com/iovisor/bpftrace/pull/1639)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
