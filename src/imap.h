@@ -27,6 +27,11 @@ public:
     return map_type_ == BPF_MAP_TYPE_PERCPU_HASH ||
            map_type_ == BPF_MAP_TYPE_PERCPU_ARRAY;
   }
+  bool is_clearable() const
+  {
+    return map_type_ != BPF_MAP_TYPE_ARRAY &&
+           map_type_ != BPF_MAP_TYPE_PERCPU_ARRAY;
+  }
 
   // unique id of this map. Used by (bpf) runtime to reference
   // this map
