@@ -11,6 +11,13 @@ TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 
+NAME "usdt probes - lists linked library probes by pid"
+RUN bpftrace -l 'usdt:*' -p $(pidof usdt_lib)
+EXPECT libusdt_tp.so:tracetestlib:lib_probe_1
+TIMEOUT 5
+BEFORE ./testprogs/usdt_lib
+REQUIRES ./testprogs/usdt_lib should_not_skip
+
 NAME "usdt probes - filter probes by file on provider"
 RUN bpftrace -l 'usdt:./testprogs/usdt_test:tracetest2:*'
 EXPECT usdt:./testprogs/usdt_test:tracetest2:testprobe2
@@ -61,6 +68,13 @@ EXPECT here
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 TIMEOUT 5
+
+NAME "usdt probes - attach to fully specified library probe by pid"
+RUN bpftrace -e 'usdt:./testlibs/libusdt_tp.so:tracetestlib:lib_probe_1 { printf("here\n" ); exit(); }' -p $(pidof usdt_lib)
+BEFORE ./testprogs/usdt_lib
+EXPECT here
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_lib should_not_skip
 
 NAME "usdt probes - all probes by wildcard and file"
 RUN bpftrace -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }'

@@ -6,6 +6,12 @@ if(HAVE_BFD_DISASM)
   set(BFD_DISASM_SRC ${CMAKE_SOURCE_DIR}/src/bfd-disasm.cpp)
 endif()
 
+if (STATIC_LIBC)
+  # STATIC_LIBC will set linker flags to -static. We don't want this for
+  # testprogs linking, so we clear the flags.
+  unset(CMAKE_EXE_LINKER_FLAGS)
+endif()
+
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
 file(GLOB_RECURSE CODEGEN_SOURCES codegen/*.cpp codegen/*.h)
@@ -139,6 +145,9 @@ if (STATIC_LINKING)
   if(EMBED_LLVM OR EMBED_CLANG)
     set_target_properties(bpftrace_test PROPERTIES LINK_FLAGS "${EMBEDDED_LINK_FLAGS}")
   endif()
+  if(STATIC_LIBC)
+    set_target_properties(bpftrace_test PROPERTIES LINK_FLAGS "-static")
+  endif()
 
   # These are not part of the static libbcc so have to be added separate
   target_link_libraries(bpftrace_test ${LIBBCC_BPF_LIBRARY_STATIC})
@@ -210,10 +219,14 @@ foreach(testprog ${testprogs})
   if(HAVE_SYSTEMTAP_SYS_SDT_H)
     target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
   endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  set_target_properties( ${bin_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0" LINK_FLAGS "-no-pie")
+  set_target_properties(${bin_name} PROPERTIES LINK_SEARCH_START_STATIC FALSE LINK_SEARCH_END_STATIC FALSE RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0" LINK_FLAGS "-no-pie")
   list(APPEND compiled_testprogs ${CMAKE_CURRENT_BINARY_DIR}/testprogs/${bin_name})
 endforeach()
 add_custom_target(testprogs DEPENDS ${compiled_testprogs})
+
+target_include_directories(usdt_lib PUBLIC ${CMAKE_SOURCE_DIR}/tests/testlibs/)
+target_compile_options(usdt_lib PRIVATE -fPIC)
+target_link_libraries(usdt_lib usdt_tp)
 
 # Similarly compile all test libs
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/)
@@ -223,6 +236,9 @@ foreach(testlib_source ${testlibs})
   get_filename_component(testlib_name ${testlib_source} NAME_WE)
   add_library(${testlib_name} SHARED ${testlib_source})
   set_target_properties(${testlib_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/ COMPILE_FLAGS "-g -O0")
+  if(HAVE_SYSTEMTAP_SYS_SDT_H)
+    target_compile_definitions(${testlib_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
+  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
   # clear the executable bit
   add_custom_command(TARGET ${testlib_name}
     POST_BUILD
