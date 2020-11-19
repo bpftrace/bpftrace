@@ -71,7 +71,10 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           }
 
           if (probe->tp_args_structs_level <= 0)
+          {
+            globfree(&glob_result);
             continue;
+          }
 
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
