@@ -502,7 +502,19 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
     AllocaInst *key = getMapKey(map);
-    b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+    auto imap = *bpftrace_.maps.Lookup(map.ident);
+    if (!imap->is_clearable())
+    {
+      // store zero insted of calling bpf_map_delete_elem()
+      AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+      b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
+      b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
+      b_.CreateLifetimeEnd(val);
+    }
+    else
+    {
+      b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+    }
     b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   }

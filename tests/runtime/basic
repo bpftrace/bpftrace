@@ -146,6 +146,16 @@ RUN bpftrace -e 'BEGIN { @ = count(); @a[1] = count(); clear(@); clear(@a); exit
 EXPECT @: 0
 TIMEOUT 1
 
+NAME delete map
+RUN bpftrace -e 'BEGIN { @ = 1; @a[1] = 1; delete(@); delete(@a[1]); printf("ok\n"); exit(); }'
+EXPECT ok
+TIMEOUT 1
+
+NAME delete count-map
+RUN bpftrace -e 'BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a[1]); exit(); }'
+EXPECT @: 0
+TIMEOUT 1
+
 NAME increment/decrement map
 RUN bpftrace -e 'BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); exit(); }'
 EXPECT 10 12 12 10
