@@ -605,5 +605,17 @@ If::If(const If &other) : Statement(other)
 {
 }
 
+AssignVarStatement::AssignVarStatement(const AssignVarStatement &other)
+    : Statement(other)
+{
+  compound = other.compound;
+};
+
+AssignMapStatement::AssignMapStatement(const AssignMapStatement &other)
+    : Statement(other)
+{
+  compound = other.compound;
+};
+
 } // namespace ast
 } // namespace bpftrace

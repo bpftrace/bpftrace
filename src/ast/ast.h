@@ -359,7 +359,7 @@ public:
   bool compound;
 
 private:
-  AssignMapStatement(const AssignMapStatement &other) : Statement(other){};
+  AssignMapStatement(const AssignMapStatement &other);
 };
 
 class AssignVarStatement : public Statement {
@@ -378,7 +378,7 @@ public:
   bool compound;
 
 private:
-  AssignVarStatement(const AssignVarStatement &other) : Statement(other){};
+  AssignVarStatement(const AssignVarStatement &other);
 };
 
 class If : public Statement {
