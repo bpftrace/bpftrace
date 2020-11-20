@@ -3,6 +3,7 @@ if(HAVE_BFD_DISASM)
 endif()
 
 if(BUILD_FUZZ)
+  message(STATUS "Build for fuzzing")
   set(MAIN_SRC fuzz_main.cpp)
   set(BPFTRACE bpftrace_fuzz)
 else()
@@ -38,6 +39,27 @@ add_executable(${BPFTRACE}
   ${BFD_DISASM_SRC}
   ${MAIN_SRC}
 )
+
+if (BUILD_FUZZ)
+  target_compile_options(${BPFTRACE} PUBLIC "-DFUZZ")
+
+  if(FUZZ_TARGET STREQUAL "semantic")
+      message(STATUS "Fuzzing seantic analyzer")
+      target_compile_options(${BPFTRACE} PUBLIC -DTEST_SEMANTIC)
+  elseif(FUZZ_TARGET STREQUAL "codegen")
+      message(STATUS "Fuzzing codegen")
+  else()
+      message(FATAL_ERROR "Unsupported FUZZ_TARGET")
+  endif()
+
+  if (USE_LIBFUZZER)
+      if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+          message(FATAL_ERROR "Use Clang for libfuzzer")
+      endif()
+      target_compile_options(${BPFTRACE} PUBLIC "-DLIBFUZZER")
+      message(STATUS "Use libfuzzer")
+  endif()
+endif()
 
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(${BPFTRACE} PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
