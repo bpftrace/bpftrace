@@ -9,8 +9,8 @@ struct Foo
 
 struct Bar
 {
-  short a : 4, b : 8, c : 3, d : 1;
-  int e : 9, f : 15, g : 1, h : 2, i : 5;
+  unsigned short a : 4, b : 8, c : 3, d : 1;
+  unsigned int e : 9, f : 15, g : 1, h : 2, i : 5;
 };
 
 __attribute__((noinline)) unsigned int func(struct Foo *foo)
