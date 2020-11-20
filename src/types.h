@@ -99,15 +99,15 @@ public:
   int kfarg_idx = -1;
 
 private:
-  size_t size_; // in bytes
+  size_t size_ = -1; // in bytes
   bool is_signed_ = false;
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
-  size_t num_elements_;               // for array like types
+  size_t num_elements_ = -1;                // for array like types
   std::string name_; // name of this type, for named types like struct
   bool ctx_ = false; // Is bpf program context
   AddrSpace as_ = AddrSpace::none;
-  ssize_t size_bits_; // size in bits for integer types
+  ssize_t size_bits_ = -1; // size in bits for integer types
 
   std::shared_ptr<Tuple> tuple_fields; // tuple fields
 
