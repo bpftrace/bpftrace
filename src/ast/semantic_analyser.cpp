@@ -768,7 +768,8 @@ void SemanticAnalyser::visit(Call &call)
     if (check_nargs(call, 1)) {
       for (auto &attach_point : *probe_->attach_points) {
         ProbeType type = probetype(attach_point->provider);
-        if (type == ProbeType::tracepoint) {
+        if (!check_available(call, type))
+        {
           LOG(ERROR, call.loc, err_)
               << "The reg function cannot be used with 'tracepoint' probes";
           continue;
@@ -810,8 +811,7 @@ void SemanticAnalyser::visit(Call &call)
     for (auto &ap : *probe_->attach_points)
     {
       ProbeType type = probetype(ap->provider);
-      if (type != ProbeType::usdt && type != ProbeType::uretprobe &&
-          type != ProbeType::uprobe)
+      if (!check_available(call, type))
       {
         LOG(ERROR, call.loc, err_)
             << "uaddr can only be used with u(ret)probes and usdt probes";
@@ -1081,10 +1081,8 @@ void SemanticAnalyser::visit(Call &call)
         LOG(ERROR, call.loc, err_) << call.func << " can not be used with \""
                                    << ap->provider << "\" probes";
       }
-      else if (type == ProbeType::interval
-          || type == ProbeType::software
-          || type == ProbeType::hardware
-          || type == ProbeType::watchpoint) {
+      else if (!check_available(call, type))
+      {
         LOG(ERROR, call.loc, err_) << call.func << " can not be used with \""
                                    << ap->provider << "\" probes";
       }
@@ -2816,6 +2814,83 @@ bool SemanticAnalyser::check_symbol(const Call &call, int arg_num __attribute__(
         << ") as input (\"" << arg << "\" provided)";
     return false;
   }
+
+  return true;
+}
+
+bool SemanticAnalyser::check_available(const Call &call, ProbeType type)
+{
+  auto &func = call.func;
+
+  if (func == "reg")
+  {
+    switch (type)
+    {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::uprobe:
+      case ProbeType::uretprobe:
+      case ProbeType::usdt:
+      case ProbeType::profile:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::tracepoint:
+      case ProbeType::kfunc:
+      case ProbeType::kretfunc:
+        return false;
+    }
+  }
+  else if (func == "uaddr")
+  {
+    switch (type)
+    {
+      case ProbeType::usdt:
+      case ProbeType::uretprobe:
+      case ProbeType::uprobe:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::tracepoint:
+      case ProbeType::profile:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+      case ProbeType::kfunc:
+      case ProbeType::kretfunc:
+        return false;
+    }
+  }
+  else if (func == "signal")
+  {
+    switch (type)
+    {
+      case ProbeType::kprobe:
+      case ProbeType::kretprobe:
+      case ProbeType::uprobe:
+      case ProbeType::uretprobe:
+      case ProbeType::usdt:
+      case ProbeType::tracepoint:
+      case ProbeType::profile:
+      case ProbeType::kfunc:
+      case ProbeType::kretfunc:
+        return true;
+      case ProbeType::invalid:
+      case ProbeType::interval:
+      case ProbeType::software:
+      case ProbeType::hardware:
+      case ProbeType::watchpoint:
+        return false;
+    }
+  }
+
+  if (type == ProbeType::invalid)
+    return false;
 
   return true;
 }
