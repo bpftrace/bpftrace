@@ -2042,6 +2042,11 @@ TEST_F(semantic_analyser_btf, kfunc)
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
   test("kfunc:func_* { $x = args->foo1; }", 0, true, false, 1);
+  // reg() is not available in kfunc
+#ifdef ARCH_X86_64
+  test("kfunc:func_1 { reg(\"ip\") }", 1);
+  test("kretfunc:func_1 { reg(\"ip\") }", 1);
+#endif
 }
 
 TEST_F(semantic_analyser_btf, short_name)
