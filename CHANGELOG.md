@@ -114,6 +114,8 @@ and this project adheres to
   - [#1622](https://github.com/iovisor/bpftrace/pull/1622)
 - Check exponent value can be expressed in uint64_t
   - [#1623](https://github.com/iovisor/bpftrace/pull/1623)
+- Fix tracing of usdt probes across namespaces
+  - [#1637](https://github.com/iovisor/bpftrace/pull/1637)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
