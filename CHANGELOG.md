@@ -122,6 +122,8 @@ and this project adheres to
   - [#1637](https://github.com/iovisor/bpftrace/pull/1637)
 - Disable reg() for kfunc 
   - [#1646](https://github.com/iovisor/bpftrace/pull/1646)
+- Fix several undefined behavior
+  - [#1645](https://github.com/iovisor/bpftrace/pull/1645)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call
