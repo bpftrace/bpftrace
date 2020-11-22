@@ -459,10 +459,10 @@ void CodegenLLVM::visit(Call &call)
     auto scoped_del = accept(call.vargs->front());
 
     // prepare arguments
-    Integer *value_arg = static_cast<Integer *>(call.vargs->at(0));
-    Integer *min_arg = static_cast<Integer *>(call.vargs->at(1));
-    Integer *max_arg = static_cast<Integer *>(call.vargs->at(2));
-    Integer *step_arg = static_cast<Integer *>(call.vargs->at(3));
+    auto *value_arg = call.vargs->at(0);
+    auto *min_arg = call.vargs->at(1);
+    auto *max_arg = call.vargs->at(2);
+    auto *step_arg = call.vargs->at(3);
     Value *value, *min, *max, *step;
     auto scoped_del_value_arg = accept(value_arg);
     value = expr_;
