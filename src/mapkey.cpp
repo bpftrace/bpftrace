@@ -128,6 +128,11 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
                                            i * arg.GetElementTy()->GetSize()));
       return "[" + str_join(elems, ",") + "]";
     }
+    case Type::mac_address:
+    {
+      auto p = static_cast<const uint8_t *>(data);
+      return bpftrace.resolve_mac_address(p);
+    }
     default:
       LOG(ERROR) << "invalid mapkey argument type";
   }

@@ -845,6 +845,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         arg_values.push_back(std::make_unique<PrintableInt>(
             *reinterpret_cast<uint64_t *>(arg_data + arg.offset)));
         break;
+      case Type::mac_address:
+        arg_values.push_back(
+            std::make_unique<PrintableString>(resolve_mac_address(
+                reinterpret_cast<uint8_t *>(arg_data + arg.offset))));
+        break;
         // fall through
       default:
         LOG(FATAL) << "invalid argument type";
@@ -1452,6 +1457,8 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
         reinterpret_cast<AsyncEvent::Strftime *>(value.data())->strftime_id,
         reinterpret_cast<AsyncEvent::Strftime *>(value.data())
             ->nsecs_since_boot);
+  else if (stype.IsMacAddressTy())
+    return resolve_mac_address(value.data());
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
 }
@@ -1974,6 +1981,22 @@ int BPFtrace::resolve_uname(const std::string &name,
   sym->size = 8;
   return 0;
 #endif
+}
+
+std::string BPFtrace::resolve_mac_address(const uint8_t *mac_addr) const
+{
+  const size_t SIZE = 18;
+  char addr[SIZE];
+  snprintf(addr,
+           SIZE,
+           "%02X:%02X:%02X:%02X:%02X:%02X",
+           mac_addr[0],
+           mac_addr[1],
+           mac_addr[2],
+           mac_addr[3],
+           mac_addr[4],
+           mac_addr[5]);
+  return std::string(addr);
 }
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM

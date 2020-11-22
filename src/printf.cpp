@@ -37,7 +37,8 @@ std::string verify_format_string(const std::string &fmt, std::vector<Field> args
     if (arg_type == Type::ksym || arg_type == Type::usym ||
         arg_type == Type::probe || arg_type == Type::username ||
         arg_type == Type::kstack || arg_type == Type::ustack ||
-        arg_type == Type::inet || arg_type == Type::timestamp)
+        arg_type == Type::inet || arg_type == Type::timestamp ||
+        arg_type == Type::mac_address)
       arg_type = Type::string; // Symbols should be printed as strings
     if (arg_type == Type::pointer)
       arg_type = Type::integer; // Casts (pointers) can be printed as integers

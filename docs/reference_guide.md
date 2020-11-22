@@ -93,6 +93,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [25. `path()`: Return full path](#25-path-return-full-path)
     - [26. `uptr()`: Annotate userspace pointer](#26-uptr-annotate-userspace-pointer)
     - [27. `kptr()`: Annotate kernelspace pointer](#27-kptr-annotate-kernelspace-pointer)
+    - [28. `macaddr()`: Convert MAC address data to text](#28-macaddr-convert-mac-address-data-to-text)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2009,6 +2010,7 @@ Tracing block I/O sizes > 0 bytes
 - `path(struct path *path)` - Return full path
 - `uptr(void *p)` - Annotate as userspace pointer
 - `kptr(void *p)` - Annotate as kernelspace pointer
+- `macaddr(char[6] addr)` - Convert MAC address data
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
@@ -2862,6 +2864,19 @@ Annotate `p` as a pointer belonging to kernel address space.
 Just like `uptr`, you'll generally only need this if bpftrace has inferred the
 pointer address space incorrectly.
 
+## 28. `macaddr()`: Convert MAC address data to text
+
+Syntax: `macaddr(char[6] addr)`
+
+This returns the canonical string representation of a MAC address.
+
+Example:
+
+```
+# bpftrace -e 'kprobe:arp_create { printf("SRC %s, DST %s\n", macaddr(sarg0), macaddr(sarg1)); }'
+SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
+^C
+```
 
 # Map Functions
 
