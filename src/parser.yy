@@ -294,7 +294,7 @@ compound_assignment : map LEFTASSIGN expr  { $$ = new ast::AssignMapStatement($1
 
 tuple_assignment : expr DOT INT "=" expr { error(@1 + @5, "Tuples are immutable once created. Consider creating a new tuple and assigning it instead."); YYERROR; }
 
-int : MINUS INT    { $$ = new ast::Integer(-1 * $2, @$); }
+int : MINUS INT    { $$ = new ast::Integer((long)(~(unsigned long)($2) + 1), @$); }
     | INT          { $$ = new ast::Integer($1, @$); }
     ;
 
