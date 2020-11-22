@@ -112,7 +112,8 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsByteArray() const
 {
   return type == Type::string || type == Type::usym || type == Type::inet ||
-         type == Type::buffer || type == Type::timestamp;
+         type == Type::buffer || type == Type::timestamp ||
+         type == Type::mac_address;
 }
 
 bool SizedType::IsAggregate() const
@@ -174,7 +175,8 @@ std::string typestr(Type t)
     case Type::buffer:   return "buffer";   break;
     case Type::tuple:    return "tuple";    break;
     case Type::timestamp:return "timestamp";break;
-    // clang-format on
+    case Type::mac_address: return "mac_address"; break;
+      // clang-format on
   }
 
   return {}; // unreached
@@ -444,6 +446,13 @@ SizedType CreateTuple(const std::vector<SizedType> &fields)
   s.tuple_fields = Tuple::Create(fields);
   s.size_ = s.tuple_fields->size;
   return s;
+}
+
+SizedType CreateMacAddress()
+{
+  auto st = SizedType(Type::mac_address, 6);
+  st.is_internal = true;
+  return st;
 }
 
 bool SizedType::IsSigned(void) const

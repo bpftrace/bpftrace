@@ -12,7 +12,8 @@ inline bool needMemcpy(const SizedType &stype)
 inline bool shouldBeOnStackAlready(const SizedType &type)
 {
   return type.IsStringTy() || type.IsBufferTy() || type.IsInetTy() ||
-         type.IsUsymTy() || type.IsTupleTy() || type.IsTimestampTy();
+         type.IsUsymTy() || type.IsTupleTy() || type.IsTimestampTy() ||
+         type.IsMacAddressTy();
 }
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {

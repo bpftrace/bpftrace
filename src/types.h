@@ -44,7 +44,8 @@ enum class Type
   array,
   buffer,
   tuple,
-  timestamp
+  timestamp,
+  mac_address
   // clang-format on
 };
 
@@ -326,6 +327,10 @@ public:
   {
     return type == Type::timestamp;
   };
+  bool IsMacAddressTy(void) const
+  {
+    return type == Type::mac_address;
+  };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
@@ -386,6 +391,7 @@ SizedType CreateKSym();
 SizedType CreateJoin(size_t argnum, size_t argsize);
 SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
+SizedType CreateMacAddress();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 

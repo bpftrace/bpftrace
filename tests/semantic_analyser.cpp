@@ -206,6 +206,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { cat(\"/proc/uptime\") }", 0);
   test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\") }", 0);
   test("kprobe:f { cgroupid(\"/sys/fs/cgroup/unified/mycg\"); }", 0);
+  test("kprobe:f { macaddr(0xffff) }", 0);
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -804,6 +805,27 @@ TEST(semantic_analyser, call_stack)
   test("kprobe:f { @x = 3; ustack(@x) }", 1);
   test("kprobe:f { @x = 3; kstack(perf, @x) }", 1);
   test("kprobe:f { @x = 3; ustack(perf, @x) }", 1);
+}
+
+TEST(semantic_analyser, call_macaddr)
+{
+  std::string structs =
+      "struct mac { char addr[6]; }; struct invalid { char addr[7]; }; ";
+
+  test("kprobe:f { macaddr(arg0); }", 0);
+
+  test(structs + "kprobe:f { macaddr((struct mac*)arg0); }", 0);
+
+  test(structs + "kprobe:f { @x[macaddr((struct mac*)arg0)] = 1; }", 0);
+  test(structs + "kprobe:f { @x = macaddr((struct mac*)arg0); }", 0);
+
+  test(structs + "kprobe:f { printf(\"%s\", macaddr((struct mac*)arg0)); }", 0);
+
+  test(structs + "kprobe:f { macaddr(((struct invalid*)arg0)->addr); }", 1);
+  test(structs + "kprobe:f { macaddr(*(struct mac*)arg0); }", 1);
+
+  test("kprobe:f { macaddr(); }", 1);
+  test("kprobe:f { macaddr(\"hello\"); }", 1);
 }
 
 TEST(semantic_analyser, map_reassignment)

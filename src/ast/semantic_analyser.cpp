@@ -1187,6 +1187,26 @@ void SemanticAnalyser::visit(Call &call)
     call.type = call.vargs->front()->type;
     call.type.SetAS(as);
   }
+  else if (call.func == "macaddr")
+  {
+    if (!check_nargs(call, 1))
+      return;
+
+    auto &arg = call.vargs->at(0);
+
+    if (!arg->type.IsIntTy() && !arg->type.IsArrayTy() &&
+        !arg->type.IsByteArray() && !arg->type.IsPtrTy())
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports array or pointer arguments"
+          << " (" << arg->type.type << " provided)";
+
+    auto type = arg->type;
+    if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() != 6)
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() argument must be 6 bytes in size";
+
+    call.type = CreateMacAddress();
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

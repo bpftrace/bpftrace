@@ -1016,6 +1016,23 @@ void CodegenLLVM::visit(Call &call)
     auto arg = call.vargs->at(0);
     auto scoped_del = accept(arg);
   }
+  else if (call.func == "macaddr")
+  {
+    // MAC addresses are presented as char[6]
+    AllocaInst *buf = b_.CreateAllocaBPFInit(call.type, "macaddr");
+    auto macaddr = call.vargs->front();
+    auto scoped_del = accept(macaddr);
+
+    b_.CreateProbeRead(ctx_,
+                       static_cast<AllocaInst *>(buf),
+                       macaddr->type.GetSize(),
+                       expr_,
+                       macaddr->type.GetAS(),
+                       call.loc);
+
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";

@@ -119,6 +119,7 @@ public:
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
                             const std::string &path) const;
+  std::string resolve_mac_address(const uint8_t *mac_addr) const;
   std::string map_value_to_str(const SizedType &stype,
                                std::vector<uint8_t> value,
                                bool is_per_cpu,

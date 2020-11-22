@@ -268,3 +268,18 @@ EXPECT OK
 REQUIRES_FEATURE dpath
 TIMEOUT 5
 AFTER ./testprogs/syscall read
+
+NAME macaddr
+RUN bpftrace -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); printf("P: %s\n", macaddr($s->mac)); exit(); }' -c ./testprogs/complex_struct
+EXPECT P: 05:04:03:02:01:02
+TIMEOUT 5
+
+NAME macaddr as map key
+RUN bpftrace -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[macaddr($s->mac)] = 1; exit(); }' -c ./testprogs/complex_struct
+EXPECT @\[05:04:03:02:01:02\]: 1
+TIMEOUT 5
+
+NAME macaddr as map value
+RUN bpftrace -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[1] = macaddr($s->mac); exit(); }' -c ./testprogs/complex_struct
+EXPECT \[1\]: 05:04:03:02:01:02
+TIMEOUT 5
