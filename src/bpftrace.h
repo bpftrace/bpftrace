@@ -164,6 +164,7 @@ public:
   uint64_t max_probes_ = 512;
   uint64_t log_size_ = 1000000;
   uint64_t perf_rb_pages_ = 64;
+  uint64_t max_type_res_iterations = 0;
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
   bool cache_user_symbols_ = true;

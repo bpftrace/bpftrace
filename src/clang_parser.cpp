@@ -665,13 +665,18 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   {
     // Resolution of incomplete types must run at least once, maximum should be
     // the number of levels of nested field accesses for tracepoint args.
-    int field_lvl = 1;
+    // The maximum number of iterations can be also controlled by the
+    // BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable (0 is unlimited).
+    uint64_t field_lvl = 1;
     for (auto &probe : *program->probes)
-      if (probe->tp_args_structs_level > field_lvl)
+      if (probe->tp_args_structs_level > (int)field_lvl)
         field_lvl = probe->tp_args_structs_level;
 
+    unsigned max_iterations = std::max(bpftrace.max_type_res_iterations,
+                                       field_lvl);
+
     bool check_incomplete_types = true;
-    for (int i = 0; i < field_lvl && check_incomplete_types; i++)
+    for (unsigned i = 0; i < max_iterations && check_incomplete_types; i++)
     {
       // Collect incomplete types and retrieve their definitions from BTF.
       auto incomplete_types = get_incomplete_types(input, input_files, args);
