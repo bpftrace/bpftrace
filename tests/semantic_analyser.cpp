@@ -581,7 +581,7 @@ TEST(semantic_analyser, call_str)
 TEST(semantic_analyser, call_str_2_lit)
 {
   test("kprobe:f { str(arg0, 3); }", 0);
-  test("kprobe:f { str(arg0, -3); }", 1);
+  test("kprobe:f { str(arg0, -3); }", 10);
   test("kprobe:f { @x = str(arg0, 3); }", 0);
   test("kprobe:f { str(arg0, \"hello\"); }", 10);
 }
@@ -604,11 +604,11 @@ TEST(semantic_analyser, call_str_state_leak_regression_test)
 TEST(semantic_analyser, call_buf)
 {
   test("kprobe:f { buf(arg0, 1); }", 0);
-  test("kprobe:f { buf(arg0, -1); }", 1);
+  test("kprobe:f { buf(arg0, -1); }", 10);
   test("kprobe:f { @x = buf(arg0, 1); }", 0);
   test("kprobe:f { $x = buf(arg0, 1); }", 0);
   test("kprobe:f { buf(); }", 1);
-  test("kprobe:f { buf(\"hello\"); }", 1);
+  test("kprobe:f { buf(\"hello\"); }", 10);
   test("struct x { int c[4] }; kprobe:f { $foo = (struct x*)0; @x = "
        "buf($foo->c); }",
        0);
@@ -1896,7 +1896,7 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { $t = (1, 2); $t = 5; })_", 1);
   test(R"_(BEGIN { $t = (1, count()) })_", 1);
 
-  test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 10);
+  test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 1);
   test(R"_(BEGIN { @t = (1, 2); @t = 5; })_", 1);
   test(R"_(BEGIN { @t = (1, count()) })_", 1);
   test(R"_(BEGIN { @t = (1, (aaa)0) })_", 1);

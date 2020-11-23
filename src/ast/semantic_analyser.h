@@ -84,6 +84,9 @@ private:
   void check_stack_call(Call &call, bool kernel);
 
   void assign_map_type(const Map &map, const SizedType &type);
+  void update_assign_map_type(const Map &map,
+                              SizedType &type,
+                              const SizedType &new_type);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);
