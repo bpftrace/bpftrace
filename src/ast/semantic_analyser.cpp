@@ -627,22 +627,22 @@ void SemanticAnalyser::visit(Call &call)
         }
       }
 
-      if (call.vargs->size() == 2)
+      if (is_final_pass() && call.vargs->size() == 2 &&
+          check_arg(call, Type::integer, 1, false))
       {
         auto &size_arg = *call.vargs->at(1);
-        long value = static_cast<Integer &>(size_arg).n;
-        if (value < 0)
+        if (size_arg.is_literal)
         {
-          LOG(ERROR, call.loc, err_)
-              << call.func << "cannot use negative length (" << value << ")";
+          auto &integer = static_cast<Integer &>(size_arg);
+          long value = integer.n;
+          if (value < 0)
+            LOG(ERROR, call.loc, err_)
+                << call.func << "cannot use negative length (" << value << ")";
         }
       }
 
       // Required for cases like strncmp(str($1), str(2), 4))
       call.type.SetAS(t.GetAS());
-      if (is_final_pass() && call.vargs->size() > 1) {
-        check_arg(call, Type::integer, 1, false);
-      }
     }
     has_pos_param_ = false;
   }
@@ -664,29 +664,34 @@ void SemanticAnalyser::visit(Call &call)
     size_t max_buffer_size = bpftrace_.strlen_;
     size_t buffer_size = max_buffer_size;
 
-    if (call.vargs->size() == 1)
-      if (arg.type.IsArrayTy())
-        buffer_size = arg.type.GetNumElements() *
-                      arg.type.GetElementTy()->GetSize();
-      else
-        LOG(ERROR, call.loc, err_)
-            << call.func << "() expects a length argument for non-array type "
-            << typestr(arg.type.type);
-    else
+    if (is_final_pass())
     {
-      if (is_final_pass())
-        check_arg(call, Type::integer, 1, false);
-
-      auto &size_arg = *call.vargs->at(1);
-      if (size_arg.is_literal)
-      {
-        long value = static_cast<Integer &>(size_arg).n;
-        if (value < 0)
-        {
+      if (call.vargs->size() == 1)
+        if (arg.type.IsArrayTy())
+          buffer_size = arg.type.GetNumElements() *
+                        arg.type.GetElementTy()->GetSize();
+        else
           LOG(ERROR, call.loc, err_)
-              << call.func << "cannot use negative length (" << value << ")";
+              << call.func << "() expects a length argument for non-array type "
+              << typestr(arg.type.type);
+      else
+      {
+        if (check_arg(call, Type::integer, 1, false))
+        {
+          auto &size_arg = *call.vargs->at(1);
+          if (size_arg.is_literal)
+          {
+            auto &integer = static_cast<Integer &>(size_arg);
+            long value = integer.n;
+            if (value < 0)
+            {
+              LOG(ERROR, call.loc, err_)
+                  << call.func << " cannot use negative length (" << value
+                  << ")";
+            }
+            buffer_size = value;
+          }
         }
-        buffer_size = value;
       }
     }
 
@@ -2890,6 +2895,40 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
   return true;
 }
 
+void SemanticAnalyser::update_assign_map_type(const Map &map,
+                                              SizedType &type,
+                                              const SizedType &new_type)
+{
+  const std::string &map_ident = map.ident;
+  if ((type.IsTupleTy() && new_type.IsTupleTy() &&
+       type.GetFields().size() != new_type.GetFields().size()) ||
+      (type.type != new_type.type) ||
+      (type.IsRecordTy() && type.GetName() != new_type.GetName()))
+  {
+    LOG(ERROR, map.loc, err_)
+        << "Type mismatch for " << map_ident << ": "
+        << "trying to assign value of type '" << new_type
+        << "' when map already contains a value of type '" << type;
+    return;
+  }
+
+  // all integers are 64bit
+  if (type.IsIntTy())
+    return;
+
+  if (type.IsTupleTy() && new_type.IsTupleTy())
+  {
+    auto &fields = type.GetFields();
+    auto &new_fields = new_type.GetFields();
+    for (size_t i = 0; i < fields.size(); i++)
+    {
+      update_assign_map_type(map, fields[i].type, new_fields[i].type);
+    }
+  }
+
+  type = new_type;
+}
+
 /*
  * assign_map_type
  *
@@ -2906,7 +2945,8 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
       if (is_final_pass()) {
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       }
-      else {
+      else
+      {
         search->second = type;
       }
     }
@@ -2916,6 +2956,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
           << "trying to assign value of type '" << type
           << "' when map already contains a value of type '" << search->second;
     }
+    update_assign_map_type(map, search->second, type);
   }
   else {
     // This map hasn't been seen before
