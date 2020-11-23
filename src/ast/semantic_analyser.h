@@ -79,7 +79,7 @@ private:
                  bool want_literal = false,
                  bool fail = true);
   bool check_symbol(const Call &call, int arg_num);
-  bool check_available(const Call &call, ProbeType type);
+  bool check_available(const Call &call, const AttachPoint &ap);
 
   void check_stack_call(Call &call, bool kernel);
 

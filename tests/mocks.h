@@ -40,7 +40,7 @@ public:
     {
       return -1;
     }
-    else if (name[0] > 'A' && name[0] < 'z')
+    else if (name[0] >= 'A' && name[0] <= 'z')
     {
       sym->address = 12345;
       sym->size = 4;
