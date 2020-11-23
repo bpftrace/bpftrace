@@ -965,6 +965,15 @@ TEST(semantic_analyser, printf)
        "8, 9); }",
        0);
   test("kprobe:f { printf(\"%dns\", nsecs) }", 0);
+
+  {
+    // Long format string should be ok
+    std::stringstream prog;
+
+    prog << "i:ms:100 { printf(\"" << std::string(200, 'a')
+         << " %d\\n\", 1); }";
+    test(prog.str(), 0);
+  }
 }
 
 TEST(semantic_analyser, system)

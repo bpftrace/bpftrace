@@ -3,6 +3,11 @@ RUN bpftrace -v -e 'i:ms:1 { printf("hi!\n"); exit();}'
 EXPECT hi!
 TIMEOUT 5
 
+NAME printf_long_fmt
+RUN bpftrace -v -e 'i:ms:1 { printf("hi abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcbaabcdefghijklmnopqrstuvwxyz!\n"); exit();}'
+EXPECT ^hi abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcbaabcdefghijklmnopqrstuvwxyz!
+TIMEOUT 5
+
 NAME printf_argument
 RUN bpftrace -v -e 'i:ms:1 { printf("value: %dms100\n", 100); exit();}'
 EXPECT value: 100ms100
