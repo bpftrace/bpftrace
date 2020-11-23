@@ -621,6 +621,10 @@ int main(int argc, char *argv[])
   if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", bpftrace.perf_rb_pages_))
     return 1;
 
+  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
+                          bpftrace.max_type_res_iterations))
+    return 1;
+
   if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
   {
     uint64_t proposed;
