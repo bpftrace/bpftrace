@@ -161,13 +161,16 @@ class Utils(object):
                     # a test program needs to accept arguments. It covers the
                     # current simple calls with no arguments
                     child_name = os.path.basename(test.before.split()[-1])
-                    while subprocess.call(["pidof", child_name], stdout=dn, stderr=dn) != 0:
+                    while subprocess.call(["pidof", "-s", child_name], stdout=dn, stderr=dn) != 0:
                         time.sleep(0.1)
                         waited+=0.1
                         if waited > test.timeout:
                             raise TimeoutError('Timed out waiting for BEFORE %s ', test.before)
 
             bpf_call = Utils.prepare_bpf_call(test)
+            if test.before:
+                childpid = subprocess.Popen(["pidof", "-s", child_name], stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].strip()
+                bpf_call = re.sub("{{BEFORE_PID}}", str(childpid), bpf_call)
             env = {'test': test.name}
             env.update(test.env)
             p = subprocess.Popen(
