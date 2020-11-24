@@ -928,8 +928,19 @@ uint32_t kernel_version(int attempt)
 
 std::string abs_path(const std::string &rel_path)
 {
-  auto p = std_filesystem::path(rel_path);
-  return std_filesystem::canonical(std_filesystem::absolute(p)).string();
+  // filesystem::canonical does not work very well with /proc/<pid>/root paths
+  // of processes in a different mount namespace (than the one bpftrace is
+  // running in), failing during canonicalization. See iovisor:bpftrace#1595
+  static auto re = std::regex("^/proc/\\d+/root/.*");
+  if (!std::regex_match(rel_path, re))
+  {
+    auto p = std_filesystem::path(rel_path);
+    return std_filesystem::canonical(std_filesystem::absolute(p)).string();
+  }
+  else
+  {
+    return rel_path;
+  }
 }
 
 } // namespace bpftrace
