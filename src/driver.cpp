@@ -49,9 +49,18 @@ int Driver::parse()
   parser.parse();
   yylex_destroy(scanner);
 
-  ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
-  if (ap_parser.parse())
-    failed_ = true;
+  if (!failed_)
+  {
+    ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
+    if (ap_parser.parse())
+      failed_ = true;
+  }
+
+  if (failed_)
+  {
+    delete root_;
+    root_ = nullptr;
+  }
 
   // Keep track of errors thrown ourselves, since the result of
   // parser_->parse() doesn't take scanner errors into account,
