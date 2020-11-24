@@ -187,6 +187,7 @@ struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
 }
 
 {ident}                 {
+                          static int unput_count = 0;
                           if (driver.bpftrace_.macros_.count(yytext) != 0)
                           {
                             const char *s = driver.bpftrace_.macros_[yytext].c_str();
@@ -198,14 +199,22 @@ struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
                             // future.
                             if (strcmp(s, yytext) == 0)
                             {
+                              unput_count = 0;
                               return Parser::make_IDENT(yytext, loc);
                             }
                             else
                             {
-                              for (z=strlen(s) - 1; z >= 0; z--)
+                              for (z=strlen(s) - 1; z >= 0; z--){
+                                if (unput_count >= 1000) {
+                                  driver.error(loc, std::string("Too deep recursive macros detected"));
+                                  yyterminate();
+                                }
                                 unput(s[z]);
+                                unput_count++;
+                              }
                             }
                           } else {
+                            unput_count = 0;
                             return Parser::make_IDENT(yytext, loc);
                           }
                         }
