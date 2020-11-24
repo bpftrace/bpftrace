@@ -12,9 +12,9 @@
 namespace bpftrace {
 namespace ast {
 
-class Visitor;
+class VisitorBase;
 
-#define DEFINE_ACCEPT void accept(Visitor &v) override;
+#define DEFINE_ACCEPT void accept(VisitorBase &v) override;
 
 /**
  * Copy the node but leave all it's child members uninitialized, effecitvely
@@ -38,7 +38,7 @@ public:
 
   virtual ~Node() = default;
 
-  virtual void accept(Visitor &v) = 0;
+  virtual void accept(VisitorBase &v) = 0;
 
   location loc;
 };

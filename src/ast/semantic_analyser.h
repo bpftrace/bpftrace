@@ -13,7 +13,7 @@
 namespace bpftrace {
 namespace ast {
 
-class SemanticAnalyser : public ASTVisitor
+class SemanticAnalyser : public Visitor
 {
 public:
   explicit SemanticAnalyser(Node *root,

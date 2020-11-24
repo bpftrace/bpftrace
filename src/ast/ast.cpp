@@ -8,7 +8,7 @@ namespace bpftrace {
 namespace ast {
 
 #define MAKE_ACCEPT(Ty)                                                        \
-  void Ty::accept(Visitor &v)                                                  \
+  void Ty::accept(VisitorBase &v)                                              \
   {                                                                            \
     v.visit(*this);                                                            \
   };

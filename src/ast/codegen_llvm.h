@@ -20,7 +20,7 @@ using namespace llvm;
 
 using CallArgs = std::vector<std::tuple<std::string, std::vector<Field>>>;
 
-class CodegenLLVM : public ASTVisitor
+class CodegenLLVM : public Visitor
 {
 public:
   explicit CodegenLLVM(Node *root, BPFtrace &bpftrace);

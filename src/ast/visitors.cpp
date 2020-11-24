@@ -4,31 +4,31 @@
 namespace bpftrace {
 namespace ast {
 
-void ASTVisitor::visit(Integer &integer __attribute__((__unused__)))
+void Visitor::visit(Integer &integer __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(PositionalParameter &param __attribute__((__unused__)))
+void Visitor::visit(PositionalParameter &param __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(String &string __attribute__((__unused__)))
+void Visitor::visit(String &string __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(StackMode &mode __attribute__((__unused__)))
+void Visitor::visit(StackMode &mode __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Builtin &builtin __attribute__((__unused__)))
+void Visitor::visit(Builtin &builtin __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Identifier &identifier __attribute__((__unused__)))
+void Visitor::visit(Identifier &identifier __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Call &call)
+void Visitor::visit(Call &call)
 {
   if (call.vargs)
   {
@@ -39,7 +39,7 @@ void ASTVisitor::visit(Call &call)
   }
 }
 
-void ASTVisitor::visit(Map &map)
+void Visitor::visit(Map &map)
 {
   if (map.vargs)
   {
@@ -50,68 +50,68 @@ void ASTVisitor::visit(Map &map)
   }
 }
 
-void ASTVisitor::visit(Variable &var __attribute__((__unused__)))
+void Visitor::visit(Variable &var __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Binop &binop)
+void Visitor::visit(Binop &binop)
 {
   binop.left->accept(*this);
   binop.right->accept(*this);
 }
 
-void ASTVisitor::visit(Unop &unop)
+void Visitor::visit(Unop &unop)
 {
   unop.expr->accept(*this);
 }
 
-void ASTVisitor::visit(Ternary &ternary)
+void Visitor::visit(Ternary &ternary)
 {
   ternary.cond->accept(*this);
   ternary.left->accept(*this);
   ternary.right->accept(*this);
 }
 
-void ASTVisitor::visit(FieldAccess &acc)
+void Visitor::visit(FieldAccess &acc)
 {
   acc.expr->accept(*this);
 }
 
-void ASTVisitor::visit(ArrayAccess &arr)
+void Visitor::visit(ArrayAccess &arr)
 {
   arr.expr->accept(*this);
   arr.indexpr->accept(*this);
 }
 
-void ASTVisitor::visit(Cast &cast)
+void Visitor::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 }
 
-void ASTVisitor::visit(Tuple &tuple)
+void Visitor::visit(Tuple &tuple)
 {
   for (Expression *expr : *tuple.elems)
     expr->accept(*this);
 }
 
-void ASTVisitor::visit(ExprStatement &expr)
+void Visitor::visit(ExprStatement &expr)
 {
   expr.expr->accept(*this);
 }
 
-void ASTVisitor::visit(AssignMapStatement &assignment)
+void Visitor::visit(AssignMapStatement &assignment)
 {
   assignment.map->accept(*this);
   assignment.expr->accept(*this);
 }
 
-void ASTVisitor::visit(AssignVarStatement &assignment)
+void Visitor::visit(AssignVarStatement &assignment)
 {
   assignment.var->accept(*this);
   assignment.expr->accept(*this);
 }
 
-void ASTVisitor::visit(If &if_block)
+void Visitor::visit(If &if_block)
 {
   if_block.cond->accept(*this);
 
@@ -129,7 +129,7 @@ void ASTVisitor::visit(If &if_block)
   }
 }
 
-void ASTVisitor::visit(Unroll &unroll)
+void Visitor::visit(Unroll &unroll)
 {
   unroll.expr->accept(*this);
   for (Statement *stmt : *unroll.stmts)
@@ -138,7 +138,7 @@ void ASTVisitor::visit(Unroll &unroll)
   }
 }
 
-void ASTVisitor::visit(While &while_block)
+void Visitor::visit(While &while_block)
 {
   while_block.cond->accept(*this);
 
@@ -148,20 +148,20 @@ void ASTVisitor::visit(While &while_block)
   }
 }
 
-void ASTVisitor::visit(Jump &jump __attribute__((__unused__)))
+void Visitor::visit(Jump &jump __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Predicate &pred)
+void Visitor::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
 }
 
-void ASTVisitor::visit(AttachPoint &ap __attribute__((__unused__)))
+void Visitor::visit(AttachPoint &ap __attribute__((__unused__)))
 {
 }
 
-void ASTVisitor::visit(Probe &probe)
+void Visitor::visit(Probe &probe)
 {
   for (AttachPoint *ap : *probe.attach_points)
   {
@@ -178,7 +178,7 @@ void ASTVisitor::visit(Probe &probe)
   }
 }
 
-void ASTVisitor::visit(Program &program)
+void Visitor::visit(Program &program)
 {
   for (Probe *probe : *program.probes)
     probe->accept(*this);
