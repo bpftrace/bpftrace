@@ -64,9 +64,9 @@ public:
     Visit a node
 
    */
-  virtual void Visit(Node *n)
+  virtual inline void Visit(Node &n)
   {
-    n->accept(*this);
+    n.accept(*this);
   };
 
   /*
