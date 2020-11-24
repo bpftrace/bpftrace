@@ -9,7 +9,7 @@
 namespace bpftrace {
 namespace ast {
 
-class FieldAnalyser : public ASTVisitor
+class FieldAnalyser : public Visitor
 {
 public:
   explicit FieldAnalyser(Node *root,

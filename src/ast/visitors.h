@@ -5,10 +5,13 @@
 namespace bpftrace {
 namespace ast {
 
-class Visitor
+/**
+   Base visitor for double dispatch based visitation
+*/
+class VisitorBase
 {
 public:
-  virtual ~Visitor() = default;
+  virtual ~VisitorBase() = default;
   virtual void visit(Integer &integer) = 0;
   virtual void visit(PositionalParameter &integer) = 0;
   virtual void visit(String &string) = 0;
@@ -38,22 +41,40 @@ public:
   virtual void visit(Program &program) = 0;
 };
 
-class ASTVisitor : public Visitor
+/**
+   Basic tree walking visitor
+
+   The Visit() method is called one for every node in the tree. Providing an
+   easy way to run a generic method on all nodes.
+
+   The individual visit() methods run on specific node types.
+*/
+class Visitor : public VisitorBase
 {
 public:
-  explicit ASTVisitor() = default;
-  ~ASTVisitor() = default;
+  explicit Visitor() = default;
+  ~Visitor() = default;
 
-  ASTVisitor(const ASTVisitor &) = delete;
-  ASTVisitor &operator=(const ASTVisitor &) = delete;
-  ASTVisitor(ASTVisitor &&) = delete;
-  ASTVisitor &operator=(ASTVisitor &&) = delete;
+  Visitor(const Visitor &) = delete;
+  Visitor &operator=(const Visitor &) = delete;
+  Visitor(Visitor &&) = delete;
+  Visitor &operator=(Visitor &&) = delete;
 
-  virtual void Visit(Node *root)
+  /*
+    Visit a node
+
+   */
+  virtual void Visit(Node *n)
   {
-    root->accept(*this);
+    n->accept(*this);
   };
 
+  /*
+    Visitors for specific node types
+
+    NB: visitor should dispatch through the Visit method and not use
+    node->accept() directly
+  */
   void visit(Integer &integer) override;
   void visit(PositionalParameter &param) override;
   void visit(String &string) override;
