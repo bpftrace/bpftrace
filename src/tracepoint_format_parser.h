@@ -10,7 +10,7 @@ namespace bpftrace {
 
 namespace ast {
 
-class TracepointArgsVisitor : public ASTVisitor
+class TracepointArgsVisitor : public Visitor
 {
 public:
   void visit(Builtin &builtin) override
@@ -26,7 +26,7 @@ public:
   }
   void visit(Probe &probe) override {
     probe_ = &probe;
-    ASTVisitor::visit(probe);
+    Visitor::visit(probe);
   };
 
 private:
