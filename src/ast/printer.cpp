@@ -12,7 +12,7 @@ namespace ast {
 void Printer::print(Node *root)
 {
   depth_ = 0;
-  Visit(root);
+  Visit(*root);
 }
 
 std::string Printer::type(const SizedType &ty)
