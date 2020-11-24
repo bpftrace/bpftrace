@@ -204,13 +204,18 @@ struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
                             }
                             else
                             {
+                              int leng = yyleng;
+                              std::string original_s(s);
+                              std::string original_yytext(yytext);
                               for (z=strlen(s) - 1; z >= 0; z--){
-                                if (unput_count >= 1000) {
-                                  driver.error(loc, std::string("Too deep recursive macros detected"));
+                                if (unput_count >= 1000 || leng <= 0) {
+                                  driver.error(loc, std::string("Macro recursion limit reached: ")
+                                                    + original_yytext + ", " + original_s);
                                   yyterminate();
                                 }
                                 unput(s[z]);
                                 unput_count++;
+                                leng--;
                               }
                             }
                           } else {
