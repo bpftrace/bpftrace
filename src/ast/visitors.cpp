@@ -34,7 +34,7 @@ void Visitor::visit(Call &call)
   {
     for (Expression *expr : *call.vargs)
     {
-      expr->accept(*this);
+      Visit(*expr);
     }
   }
 }
@@ -45,7 +45,7 @@ void Visitor::visit(Map &map)
   {
     for (Expression *expr : *map.vargs)
     {
-      expr->accept(*this);
+      Visit(*expr);
     }
   }
 }
@@ -56,95 +56,95 @@ void Visitor::visit(Variable &var __attribute__((__unused__)))
 
 void Visitor::visit(Binop &binop)
 {
-  binop.left->accept(*this);
-  binop.right->accept(*this);
+  Visit(*binop.left);
+  Visit(*binop.right);
 }
 
 void Visitor::visit(Unop &unop)
 {
-  unop.expr->accept(*this);
+  Visit(*unop.expr);
 }
 
 void Visitor::visit(Ternary &ternary)
 {
-  ternary.cond->accept(*this);
-  ternary.left->accept(*this);
-  ternary.right->accept(*this);
+  Visit(*ternary.cond);
+  Visit(*ternary.left);
+  Visit(*ternary.right);
 }
 
 void Visitor::visit(FieldAccess &acc)
 {
-  acc.expr->accept(*this);
+  Visit(*acc.expr);
 }
 
 void Visitor::visit(ArrayAccess &arr)
 {
-  arr.expr->accept(*this);
-  arr.indexpr->accept(*this);
+  Visit(*arr.expr);
+  Visit(*arr.indexpr);
 }
 
 void Visitor::visit(Cast &cast)
 {
-  cast.expr->accept(*this);
+  Visit(*cast.expr);
 }
 
 void Visitor::visit(Tuple &tuple)
 {
   for (Expression *expr : *tuple.elems)
-    expr->accept(*this);
+    Visit(*expr);
 }
 
 void Visitor::visit(ExprStatement &expr)
 {
-  expr.expr->accept(*this);
+  Visit(*expr.expr);
 }
 
 void Visitor::visit(AssignMapStatement &assignment)
 {
-  assignment.map->accept(*this);
-  assignment.expr->accept(*this);
+  Visit(*assignment.map);
+  Visit(*assignment.expr);
 }
 
 void Visitor::visit(AssignVarStatement &assignment)
 {
-  assignment.var->accept(*this);
-  assignment.expr->accept(*this);
+  Visit(*assignment.var);
+  Visit(*assignment.expr);
 }
 
 void Visitor::visit(If &if_block)
 {
-  if_block.cond->accept(*this);
+  Visit(*if_block.cond);
 
   for (Statement *stmt : *if_block.stmts)
   {
-    stmt->accept(*this);
+    Visit(*stmt);
   }
 
   if (if_block.else_stmts)
   {
     for (Statement *stmt : *if_block.else_stmts)
     {
-      stmt->accept(*this);
+      Visit(*stmt);
     }
   }
 }
 
 void Visitor::visit(Unroll &unroll)
 {
-  unroll.expr->accept(*this);
+  Visit(*unroll.expr);
   for (Statement *stmt : *unroll.stmts)
   {
-    stmt->accept(*this);
+    Visit(*stmt);
   }
 }
 
 void Visitor::visit(While &while_block)
 {
-  while_block.cond->accept(*this);
+  Visit(*while_block.cond);
 
   for (Statement *stmt : *while_block.stmts)
   {
-    stmt->accept(*this);
+    Visit(*stmt);
   }
 }
 
@@ -154,7 +154,7 @@ void Visitor::visit(Jump &jump __attribute__((__unused__)))
 
 void Visitor::visit(Predicate &pred)
 {
-  pred.expr->accept(*this);
+  Visit(*pred.expr);
 }
 
 void Visitor::visit(AttachPoint &ap __attribute__((__unused__)))
@@ -165,23 +165,23 @@ void Visitor::visit(Probe &probe)
 {
   for (AttachPoint *ap : *probe.attach_points)
   {
-    ap->accept(*this);
+    Visit(*ap);
   }
 
   if (probe.pred)
   {
-    probe.pred->accept(*this);
+    Visit(*probe.pred);
   }
   for (Statement *stmt : *probe.stmts)
   {
-    stmt->accept(*this);
+    Visit(*stmt);
   }
 }
 
 void Visitor::visit(Program &program)
 {
   for (Probe *probe : *program.probes)
-    probe->accept(*this);
+    Visit(*probe);
 }
 
 } // namespace ast
