@@ -163,5 +163,6 @@ parallel -N1 "sed -e '/^#\!/d' -e '/\/\*.*/d' -e '/^\s\*.*/d' -e '/\/\/.*/d' -e 
 
 ### libFuzzer
 - [#1653](https://github.com/iovisor/bpftrace/pull/1653)
-- [#1621](https://github.com/iovisor/bpftrace/pull/1621)
+- [#1650](https://github.com/iovisor/bpftrace/pull/1650)
 - [#1622](https://github.com/iovisor/bpftrace/pull/1622)
+- [#1621](https://github.com/iovisor/bpftrace/pull/1621)
