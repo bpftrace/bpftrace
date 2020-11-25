@@ -193,6 +193,13 @@ TIMEOUT 5
 NAME ntop static ip
 RUN bpftrace -v -e 'i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(1), ntop(0x0100007f), ntop(0xffff0000), ntop(0x0000ffff)); exit() }'
 EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
+ARCH x86_64|aarch64|ppc64le
+TIMEOUT 5
+
+NAME ntop static ip
+RUN bpftrace -v -e 'i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(0x01000000), ntop(0x7f000001), ntop(0x0000ffff), ntop(0xffff0000)); exit() }'
+EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
+ARCH s390x|ppc64
 TIMEOUT 5
 
 NAME usym
