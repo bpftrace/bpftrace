@@ -6,6 +6,7 @@ add_library(ast
   irbuilderbpf.cpp
   printer.cpp
   semantic_analyser.cpp
+  pass_manager.cpp
   visitors.cpp
 )
 
