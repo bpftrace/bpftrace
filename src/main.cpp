@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "ast/node_counter.h"
+#include "pass_manager.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -266,6 +267,16 @@ static std::optional<struct timespec> get_boottime()
                     "builtin may be inaccurate";
 
   return ret;
+}
+
+ast::PassManager CreatePM()
+{
+  ast::PassManager pm;
+  pm.AddPass(ast::CreatePositionalParamPass());
+  pm.AddPass(ast::CreateSemanticPass());
+  pm.AddPass(ast::CreateCounterPass());
+  pm.AddPass(ast::CreateMapCreatePass());
+  return pm;
 }
 
 int main(int argc, char *argv[])
@@ -734,44 +745,26 @@ int main(int argc, char *argv[])
   if (err)
     return err;
 
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, !cmd_str.empty());
-  err = semantics.analyse();
-  if (err)
-    return err;
-
-  if (bt_debug != DebugLevel::kNone)
   {
-    std::cout << "\nAST after semantic analysis\n";
-    std::cout << "-------------------\n";
-    ast::Printer printer(std::cout, true);
-    printer.print(driver.root_);
-    std::cout << std::endl;
+    auto oldroot = driver.root_;
+    ast::PositionalParamTransformer t(&bpftrace);
+    driver.root_ = static_cast<ast::Program*>(t.Visit(*oldroot));
+    if (bt_debug != DebugLevel::kNone)
+    {
+      std::cout << "\nnew AST\n";
+      std::cout << "-------------------\n";
+      ast::Printer printer(std::cout);
+      printer.print(driver.root_);
+      std::cout << std::endl;
+    }
   }
 
-  // Count AST nodes
-  uint64_t node_count = 0;
-  {
-    ast::NodeCounter c;
-    c.Visit(*driver.root_);
-    node_count = c.get_count();
-  }
-  if (bt_verbose)
-  {
-    LOG(INFO) << "node count: " << node_count;
-  }
-  if (node_count >= node_max)
-  {
-    LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
-               << node_max << ")";
-    return 1;
-  }
+  ast::PassContext ctx = {.b = bpftrace};
+  ctx.has_child = !cmd_str.empty();
+  ctx.max_ast_nodes = node_max;
 
-  if (test_mode == TestMode::SEMANTIC)
-    return 0;
-
-  err = semantics.create_maps(bt_debug != DebugLevel::kNone);
-  if (err)
-    return err;
+  auto pm = CreatePM();
+  pm.Run(*driver.root_, ctx);
 
   if (!cmd_str.empty())
   {
