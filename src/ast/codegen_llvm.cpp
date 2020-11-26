@@ -61,30 +61,7 @@ void CodegenLLVM::visit(Integer &integer)
 
 void CodegenLLVM::visit(PositionalParameter &param)
 {
-  switch (param.ptype)
-  {
-    case PositionalParameterType::positional:
-      {
-        std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        if (!param.is_in_str)
-        {
-          expr_ = b_.getInt64(std::stoll(pstr, nullptr, 0));
-        }
-        else
-        {
-          Constant *const_str = ConstantDataArray::getString(module_->getContext(), pstr, true);
-          AllocaInst *buf = b_.CreateAllocaBPF(ArrayType::get(b_.getInt8Ty(), pstr.length() + 1), "str");
-          b_.CREATE_MEMSET(buf, b_.getInt8(0), pstr.length() + 1, 1);
-          b_.CreateStore(const_str, buf);
-          expr_ = b_.CreatePtrToInt(buf, b_.getInt64Ty());
-          expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
-        }
-      }
-      break;
-    case PositionalParameterType::count:
-      expr_ = b_.getInt64(bpftrace_.num_params());
-      break;
-  }
+  LOG(FATAL) << "Positional param should not exist anymore";
 }
 
 void CodegenLLVM::visit(String &string)
@@ -1128,15 +1105,6 @@ void CodegenLLVM::binop_int(Binop &binop)
   lhs = expr_;
   auto scoped_del_right = accept(binop.right);
   rhs = expr_;
-
-  // If left or right is PositionalParameter, that means the syntax is
-  // str($1 + num) or str(num + $1). The positional params returns a pointer
-  // to a buffer, and the buffer should live untill str() is accepted.
-  // Extend the liftime of the buffer
-  if (dynamic_cast<PositionalParameter *>(binop.left))
-    expr_deleter_ = scoped_del_left.disarm();
-  if (dynamic_cast<PositionalParameter *>(binop.right))
-    expr_deleter_ = scoped_del_right.disarm();
 
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();

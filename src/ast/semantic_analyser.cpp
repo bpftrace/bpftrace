@@ -40,42 +40,7 @@ void SemanticAnalyser::visit(Integer &integer)
 
 void SemanticAnalyser::visit(PositionalParameter &param)
 {
-  param.type = CreateInt64();
-  if (func_ == "str")
-  {
-    param.is_in_str = true;
-    has_pos_param_ = true;
-  }
-  switch (param.ptype)
-  {
-    case PositionalParameterType::positional:
-      if (param.n <= 0)
-        LOG(ERROR, param.loc, err_)
-            << "$" << std::to_string(param.n) + " is not a valid parameter";
-      if (is_final_pass()) {
-        std::string pstr = bpftrace_.get_param(param.n, param.is_in_str);
-        if (!is_numeric(pstr) && !param.is_in_str)
-        {
-          LOG(ERROR, param.loc, err_)
-              << "$" << param.n << " used numerically but given \"" << pstr
-              << "\". Try using str($" << param.n << ").";
-        }
-        // string allocated in bpf stack. See codegen.
-        if (param.is_in_str)
-          param.type.SetAS(AddrSpace::kernel);
-      }
-      break;
-    case PositionalParameterType::count:
-      if (param.is_in_str)
-      {
-        LOG(ERROR, param.loc, err_) << "use $#, not str($#)";
-      }
-      break;
-    default:
-      LOG(ERROR, param.loc, err_) << "unknown parameter type";
-      param.type = CreateNone();
-      break;
-  }
+  LOG(ERROR, param.loc, err_) << "Cant reach me :/";
 }
 
 void SemanticAnalyser::visit(String &string)
@@ -599,33 +564,17 @@ void SemanticAnalyser::visit(Call &call)
     call.type = CreateNone();
   }
   else if (call.func == "str") {
+    // positional_param transformer needs updating too
     if (check_varargs(call, 1, 2)) {
       auto *arg = call.vargs->at(0);
       auto &t = arg->type;
-      if (!t.IsIntegerTy() && !t.IsPtrTy())
+      if (!t.IsIntegerTy() && !t.IsPtrTy() && !(t.IsStringTy() && arg->is_literal))
       {
         LOG(ERROR, call.loc, err_)
             << call.func << "() expects an integer or a pointer type as first "
             << "argument (" << t << " provided)";
       }
       call.type = CreateString(bpftrace_.strlen_);
-      if (has_pos_param_)
-      {
-        if (dynamic_cast<PositionalParameter *>(arg))
-          call.is_literal = true;
-        else
-        {
-          auto binop = dynamic_cast<Binop *>(arg);
-          if (!(binop && (dynamic_cast<PositionalParameter *>(binop->left) ||
-                          dynamic_cast<PositionalParameter *>(binop->right))))
-          {
-            // Only str($1), str($1 + CONST), or str(CONST + $1) are allowed
-            LOG(ERROR, call.loc, err_)
-                << call.func << "() only accepts positional parameters"
-                << " directly or with a single constant offset added";
-          }
-        }
-      }
 
       if (call.vargs->size() == 2)
       {
@@ -644,7 +593,6 @@ void SemanticAnalyser::visit(Call &call)
         check_arg(call, Type::integer, 1, false);
       }
     }
-    has_pos_param_ = false;
   }
   else if (call.func == "buf")
   {
@@ -1695,21 +1643,6 @@ void SemanticAnalyser::visit(Unroll &unroll)
   if (auto *integer = dynamic_cast<Integer *>(unroll.expr))
   {
     unroll.var = integer->n;
-  }
-  else if (auto *param = dynamic_cast<PositionalParameter *>(unroll.expr))
-  {
-    if (param->ptype == PositionalParameterType::count)
-    {
-      unroll.var = bpftrace_.num_params();
-    }
-    else
-    {
-      std::string pstr = bpftrace_.get_param(param->n, param->is_in_str);
-      if (is_numeric(pstr))
-        unroll.var = std::stoll(pstr, nullptr, 0);
-      else
-        LOG(ERROR, unroll.loc, err_) << "Invalid positonal params: " << pstr;
-    }
   }
   else
   {

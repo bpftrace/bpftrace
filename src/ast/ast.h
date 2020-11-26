@@ -93,7 +93,6 @@ public:
 
   PositionalParameterType ptype;
   long n;
-  bool is_in_str = false;
 
 private:
   PositionalParameter(const PositionalParameter &other) = default;

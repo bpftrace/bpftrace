@@ -30,6 +30,7 @@
 #include "procmon.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
+#include "transform_positional_params.h"
 
 using namespace bpftrace;
 
@@ -119,6 +120,7 @@ static void enforce_infinite_rlimit() {
 
 bool is_root()
 {
+  return true;
   if (geteuid() != 0)
   {
     LOG(ERROR) << "bpftrace currently only supports running as the root user.";
@@ -692,9 +694,6 @@ int main(int argc, char *argv[])
   if (!cmd_str.empty())
     bpftrace.cmd_ = cmd_str;
 
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
-    return 1;
-
   if (bt_debug != DebugLevel::kNone)
   {
     std::cout << "\nAST\n";
@@ -703,6 +702,9 @@ int main(int argc, char *argv[])
     printer.print(driver.root_);
     std::cout << std::endl;
   }
+
+  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+    return 1;
 
   ClangParser clang;
   std::vector<std::string> extra_flags;

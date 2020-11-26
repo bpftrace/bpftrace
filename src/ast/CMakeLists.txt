@@ -8,6 +8,7 @@ add_library(ast
   semantic_analyser.cpp
   pass_manager.cpp
   visitors.cpp
+  transform_positional_params.cpp
 )
 
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
