@@ -5,6 +5,7 @@ add_library(ast
   fake_map.cpp
   field_analyser.cpp
   irbuilderbpf.cpp
+  pass_manager.cpp
   printer.cpp
   semantic_analyser.cpp
   signal.cpp

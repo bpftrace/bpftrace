@@ -3211,5 +3211,33 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
   }
 }
 
+Pass CreateSemanticPass()
+{
+  auto fn = [](Node &n, PassContext &ctx) {
+    ctx.semant = new SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
+    auto err = ctx.semant->analyse();
+    if (err)
+      return PassResult::Error("");
+    return PassResult::Success();
+  };
+
+  return Pass("Semantic", fn);
+};
+
+Pass CreateMapCreatePass()
+{
+  auto fn = [](Node &n __attribute__((unused)), PassContext &ctx) {
+    auto err = ctx.semant->create_maps(bt_debug != DebugLevel::kNone);
+    if (err)
+      return PassResult::Error("");
+
+    delete ctx.semant;
+    ctx.semant = nullptr;
+    return PassResult::Success();
+  };
+
+  return Pass("MapCreate", fn);
+}
+
 } // namespace ast
 } // namespace bpftrace
