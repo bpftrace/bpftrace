@@ -7,6 +7,7 @@
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "map.h"
+#include "pass_manager.h"
 #include "types.h"
 #include "visitors.h"
 
@@ -139,5 +140,7 @@ private:
   bool has_pos_param_ = false;
 };
 
+Pass CreateSemanticPass();
+Pass CreateMapCreatePass();
 } // namespace ast
 } // namespace bpftrace

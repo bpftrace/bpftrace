@@ -24,6 +24,7 @@
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
+#include "pass_manager.h"
 #include "printer.h"
 #include "probe_matcher.h"
 #include "procmon.h"
@@ -270,7 +271,7 @@ static std::optional<struct timespec> get_boottime()
   return ret;
 }
 
-static bool parse_env(BPFtrace& bpftrace)
+[[nodiscard]] static bool parse_env(BPFtrace& bpftrace)
 {
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return false;
@@ -386,11 +387,12 @@ static bool parse_env(BPFtrace& bpftrace)
   return true;
 }
 
-std::unique_ptr<ast::Node> parse(BPFtrace& bpftrace,
-                                 const std::string& name,
-                                 const std::string& program,
-                                 const std::vector<std::string>& include_dirs,
-                                 const std::vector<std::string>& include_files)
+[[nodiscard]] std::unique_ptr<ast::Node> parse(
+    BPFtrace& bpftrace,
+    const std::string& name,
+    const std::string& program,
+    const std::vector<std::string>& include_dirs,
+    const std::vector<std::string>& include_files)
 {
   Driver driver(bpftrace);
   driver.source(name, program);
@@ -452,6 +454,15 @@ std::unique_ptr<ast::Node> parse(BPFtrace& bpftrace,
   auto ast = driver.root_;
   driver.root_ = nullptr;
   return std::unique_ptr<ast::Node>(ast);
+}
+
+ast::PassManager CreatePM()
+{
+  ast::PassManager pm;
+  pm.AddPass(ast::CreateSemanticPass());
+  pm.AddPass(ast::CreateCounterPass());
+  pm.AddPass(ast::CreateMapCreatePass());
+  return pm;
 }
 
 int main(int argc, char* argv[])
@@ -806,53 +817,24 @@ int main(int argc, char* argv[])
   if (!ast_root)
     return 1;
 
-  if (bt_debug != DebugLevel::kNone)
-  {
-    std::cout << "\nAST\n";
-    std::cout << "-------------------\n";
-    ast::Printer printer(std::cout);
-    printer.print(&*ast_root);
-    std::cout << std::endl;
-  }
-
-  ast::SemanticAnalyser semantics(&*ast_root, bpftrace, !cmd_str.empty());
-  err = semantics.analyse();
-  if (err)
-    return err;
-
-  if (bt_debug != DebugLevel::kNone)
-  {
-    std::cout << "\nAST after semantic analysis\n";
-    std::cout << "-------------------\n";
-    ast::Printer printer(std::cout, true);
-    printer.print(&*ast_root);
-    std::cout << std::endl;
-  }
-
-  // Count AST nodes
-  uint64_t node_count = 0;
-  {
-    ast::NodeCounter c;
-    c.Visit(*ast_root);
-    node_count = c.get_count();
-  }
-  if (bt_verbose)
-  {
-    LOG(INFO) << "node count: " << node_count;
-  }
-  if (node_count >= bpftrace.ast_max_nodes_)
-  {
-    LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
-               << bpftrace.ast_max_nodes_ << ")";
+  ast::PassContext ctx(bpftrace);
+  auto pm = CreatePM();
+  ast_root = pm.Run(std::move(ast_root), ctx);
+  if (!ast_root)
     return 1;
+
+  if (!bpftrace.cmd_.empty())
+  {
+    try
+    {
+      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
+    }
+    catch (const std::runtime_error& e)
+    {
+      LOG(ERROR) << "Failed to fork child: " << e.what();
+      return -1;
+    }
   }
-
-  if (test_mode == TestMode::SEMANTIC)
-    return 0;
-
-  err = semantics.create_maps(bt_debug != DebugLevel::kNone);
-  if (err)
-    return err;
 
   ast::CodegenLLVM llvm(&*ast_root, bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
