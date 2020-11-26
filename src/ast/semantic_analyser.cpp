@@ -1991,7 +1991,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple
     // creation. Cast already emits the error.
-    if (elem->type.IsNoneTy())
+    if (elem->type.IsNoneTy() || elem->type.GetSize() == 0)
       return;
     elements.emplace_back(elem->type);
   }
