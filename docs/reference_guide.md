@@ -1618,7 +1618,7 @@ And as you can see in above example it's also possible to access function argume
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
-- `elapsed` - Nanosecond timestamp since bpftrace initialization
+- `elapsed` - Nanoseconds since bpftrace initialization
 - `cpu` - Processor ID
 - `comm` - Process name
 - `kstack` - Kernel stack trace
