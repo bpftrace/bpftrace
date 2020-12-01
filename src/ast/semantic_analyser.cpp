@@ -2202,9 +2202,6 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     if (ty == Type::none)
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << ty;
-    if (ty == Type::array)
-      LOG(ERROR, assignment.expr->loc, err_)
-          << "Assigning array is not supported (#1057)";
   }
 }
 

@@ -864,6 +864,14 @@ TEST(semantic_analyser, array_access) {
   auto assignment = static_cast<ast::AssignMapStatement *>(
       driver.root_->probes->at(0)->stmts->at(1));
   EXPECT_EQ(CreateInt64(), assignment->map->type);
+
+  test(driver,
+       "struct MyStruct { int y[4]; } kprobe:f { $s = ((struct MyStruct *) "
+       "arg0)->y; @x = $s[0];}",
+       0);
+  auto array_var_assignment = static_cast<ast::AssignVarStatement *>(
+      driver.root_->probes->at(0)->stmts->at(0));
+  EXPECT_EQ(CreateArray(4, CreateInt32()), array_var_assignment->var->type);
 }
 
 TEST(semantic_analyser, variable_type)

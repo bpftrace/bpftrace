@@ -1035,7 +1035,8 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  if (needMemcpy(var.type))
+  // Arrays are not memcopied for local variables
+  if (needMemcpy(var.type) && !var.type.IsArrayTy())
   {
     expr_ = variables_[var.ident];
   }
@@ -1874,7 +1875,16 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   if (variables_.find(var.ident) == variables_.end())
   {
-    AllocaInst *val = b_.CreateAllocaBPFInit(var.type, var.ident);
+    SizedType &type = var.type;
+
+    // Arrays need not to be copied when assigned to local variables - it is
+    // sufficient to assign the pointer
+    if (var.type.IsArrayTy())
+    {
+      type = CreatePointer(*var.type.GetElementTy(), var.type.GetAS());
+    }
+
+    AllocaInst *val = b_.CreateAllocaBPFInit(type, var.ident);
     variables_[var.ident] = val;
   }
 
@@ -1884,7 +1894,14 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   }
   else
   {
-    b_.CreateStore(expr_, variables_[var.ident]);
+    Value *val = expr_;
+    if (assignment.expr->type.IsArrayTy())
+    {
+      val = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
+      // Since only the pointer is copied, we need to extend lifetime of RHS
+      scoped_del.disarm();
+    }
+    b_.CreateStore(val, variables_[var.ident]);
   }
 }
 
