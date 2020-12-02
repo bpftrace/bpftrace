@@ -737,7 +737,8 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::integer, 0);
     }
 
-    if (!arg->type.IsIntTy() && !arg->type.IsArray())
+    if (!arg->type.IsIntTy() && !arg->type.IsStringTy() &&
+        !arg->type.IsArrayTy())
       LOG(ERROR, call.loc, err_)
           << call.func << "() expects an integer or array argument, got "
           << arg->type.type;
@@ -754,7 +755,8 @@ void SemanticAnalyser::visit(Call &call)
     int buffer_size = 24;
     auto type = arg->type;
 
-    if (arg->type.IsArray() && type.GetSize() != 4 && type.GetSize() != 16)
+    if ((arg->type.IsArrayTy() || arg->type.IsStringTy()) &&
+        type.GetSize() != 4 && type.GetSize() != 16)
       LOG(ERROR, call.loc, err_)
           << call.func << "() argument must be 4 or 16 bytes in size";
 
@@ -1369,10 +1371,10 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     {
       Integer *index = static_cast<Integer *>(arr.indexpr);
 
-      if ((size_t)index->n >= type.GetSize())
+      if ((size_t)index->n >= type.GetNumElements())
         LOG(ERROR, arr.loc, err_)
             << "the index " << index->n
-            << " is out of bounds for array of size " << type.GetSize();
+            << " is out of bounds for array of size " << type.GetNumElements();
     }
     else {
       LOG(ERROR, arr.loc, err_) << "The array index operator [] only "
@@ -2092,15 +2094,21 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       }
     }
   }
+  else if (type.IsArrayTy())
+  {
+    const auto &map_type = map_val_[map_ident];
+    const auto &expr_type = assignment.expr->type;
+    if (map_type == expr_type)
+    {
+      map_val_[map_ident].is_internal = true;
+    }
+  }
 
   if (is_final_pass())
   {
     if (type.IsNoneTy())
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << type;
-    if (type.IsArrayTy())
-      LOG(ERROR, assignment.expr->loc, err_)
-          << "Assigning array is not supported (#1057)";
   }
 }
 
@@ -2900,7 +2908,8 @@ void SemanticAnalyser::update_assign_map_type(const Map &map,
   if ((type.IsTupleTy() && new_type.IsTupleTy() &&
        type.GetFields().size() != new_type.GetFields().size()) ||
       (type.type != new_type.type) ||
-      (type.IsRecordTy() && type.GetName() != new_type.GetName()))
+      (type.IsRecordTy() && type.GetName() != new_type.GetName()) ||
+      (type.IsArrayTy() && type != new_type))
   {
     LOG(ERROR, map.loc, err_)
         << "Type mismatch for " << map_ident << ": "

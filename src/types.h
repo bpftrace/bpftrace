@@ -149,7 +149,7 @@ public:
     ctx_ = true;
   };
 
-  bool IsArray() const;
+  bool IsByteArray() const;
   bool IsAggregate() const;
   bool IsStack() const;
 
@@ -192,7 +192,7 @@ public:
   size_t GetNumElements() const
   {
     assert(IsArrayTy() || IsStringTy());
-    return size_;
+    return IsStringTy() ? size_ : size_ / element_type_->size_;
   };
 
   const std::string GetName() const

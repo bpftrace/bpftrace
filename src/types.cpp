@@ -109,16 +109,15 @@ bool SizedType::operator==(const SizedType &t) const
   return IsEqual(t);
 }
 
-bool SizedType::IsArray() const
+bool SizedType::IsByteArray() const
 {
-  return type == Type::array || type == Type::string || type == Type::usym ||
-         type == Type::inet || type == Type::buffer || type == Type::record ||
-         type == Type::timestamp;
+  return type == Type::string || type == Type::usym || type == Type::inet ||
+         type == Type::buffer || type == Type::timestamp;
 }
 
 bool SizedType::IsAggregate() const
 {
-  return IsArray() || IsTupleTy() || IsRecordTy();
+  return IsArrayTy() || IsByteArray() || IsTupleTy() || IsRecordTy();
 }
 
 bool SizedType::IsStack() const
@@ -327,7 +326,8 @@ SizedType CreateStackMode()
 
 SizedType CreateArray(size_t num_elements, const SizedType &element_type)
 {
-  auto ty = SizedType(Type::array, num_elements);
+  size_t size = num_elements * element_type.GetSize();
+  auto ty = SizedType(Type::array, size);
   ty.num_elements_ = num_elements;
   ty.element_type_ = std::make_shared<SizedType>(element_type);
   return ty;
