@@ -184,6 +184,7 @@ public:
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
+  uint64_t ast_max_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
   std::optional<struct timespec> boottime_;
 
   static void sort_by_key(

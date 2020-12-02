@@ -270,7 +270,123 @@ static std::optional<struct timespec> get_boottime()
   return ret;
 }
 
-int main(int argc, char *argv[])
+static bool parse_env(BPFtrace& bpftrace)
+{
+  if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
+    return false;
+
+  // in practice, the largest buffer I've seen fit into the BPF stack was 240
+  // bytes. I've set the bar lower, in case your program has a deeper stack than
+  // the one from my tests, in the hope that you'll get this instructive error
+  // instead of getting the BPF verifier's error.
+  if (bpftrace.strlen_ > 200)
+  {
+    // the verifier errors you would encounter when attempting larger
+    // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
+    // is exceeded. Please move large on stack variables into BPF per-cpu array
+    // map.> ~1024= <A call to built-in function 'memset' is not supported.>
+    LOG(ERROR) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
+               << " exceeds the current maximum of 200 bytes.\n"
+               << "This limitation is because strings are currently stored on "
+                  "the 512 byte BPF stack.\n"
+               << "Long strings will be pursued in: "
+                  "https://github.com/iovisor/bpftrace/issues/305";
+    return false;
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
+  {
+    if (std::string(env_p) == "1")
+      bpftrace.demangle_cpp_symbols_ = false;
+    else if (std::string(env_p) == "0")
+      bpftrace.demangle_cpp_symbols_ = true;
+    else
+    {
+      LOG(ERROR) << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a "
+                    "valid value (0 or 1).";
+      return false;
+    }
+  }
+
+  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", bpftrace.perf_rb_pages_))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
+                          bpftrace.max_type_res_iterations))
+    return 1;
+
+  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
+                          bpftrace.max_type_res_iterations))
+    return false;
+
+  if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
+  {
+    uint64_t proposed;
+    std::istringstream stringstream(env_p);
+    if (!(stringstream >> proposed))
+    {
+      LOG(ERROR) << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid "
+                    "uint64_t, or was zero-valued.";
+      return false;
+    }
+    bpftrace.cat_bytes_max_ = proposed;
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_NO_USER_SYMBOLS"))
+  {
+    std::string s(env_p);
+    if (s == "1")
+      bpftrace.resolve_user_symbols_ = false;
+    else if (s == "0")
+      bpftrace.resolve_user_symbols_ = true;
+    else
+    {
+      LOG(ERROR) << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a "
+                    "valid value (0 or 1).";
+      return false;
+    }
+  }
+
+  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
+  {
+    std::string s(env_p);
+    if (s == "1")
+      bpftrace.cache_user_symbols_ = true;
+    else if (s == "0")
+      bpftrace.cache_user_symbols_ = false;
+    else
+    {
+      LOG(ERROR) << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
+                    "valid value (0 or 1).";
+      return false;
+    }
+  }
+  else
+  {
+    // enable user symbol cache if ASLR is disabled on system or `-c` option is
+    // given
+    bpftrace.cache_user_symbols_ = !bpftrace.cmd_.empty() ||
+                                   !bpftrace.is_aslr_enabled(-1);
+  }
+
+  uint64_t node_max = std::numeric_limits<uint64_t>::max();
+  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
+    return false;
+
+  bpftrace.ast_max_nodes_ = node_max;
+  return true;
+}
+
+int main(int argc, char* argv[])
 {
   int err;
   std::string pid_str;
@@ -464,6 +580,12 @@ int main(int argc, char *argv[])
   BPFtrace bpftrace(std::move(output));
   Driver driver(bpftrace);
 
+  if (!cmd_str.empty())
+    bpftrace.cmd_ = cmd_str;
+
+  if (!parse_env(bpftrace))
+    return 1;
+
   bpftrace.usdt_file_activation_ = usdt_file_activation;
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.helper_check_level_ = helper_check_level;
@@ -613,108 +735,6 @@ int main(int argc, char *argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
-    return 1;
-
-  // in practice, the largest buffer I've seen fit into the BPF stack was 240 bytes.
-  // I've set the bar lower, in case your program has a deeper stack than the one from my tests,
-  // in the hope that you'll get this instructive error instead of getting the BPF verifier's error.
-  if (bpftrace.strlen_ > 200) {
-    // the verifier errors you would encounter when attempting larger allocations would be:
-    // >240=  <Looks like the BPF stack limit of 512 bytes is exceeded. Please move large on stack variables into BPF per-cpu array map.>
-    // ~1024= <A call to built-in function 'memset' is not supported.>
-    LOG(ERROR) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
-               << " exceeds the current maximum of 200 bytes.\n"
-               << "This limitation is because strings are currently stored on "
-                  "the 512 byte BPF stack.\n"
-               << "Long strings will be pursued in: "
-                  "https://github.com/iovisor/bpftrace/issues/305";
-    return 1;
-  }
-
-  if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
-  {
-    if (std::string(env_p) == "1")
-      bpftrace.demangle_cpp_symbols_ = false;
-    else if (std::string(env_p) == "0")
-      bpftrace.demangle_cpp_symbols_ = true;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a "
-                    "valid value (0 or 1).";
-      return 1;
-    }
-  }
-
-  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
-    return 1;
-
-  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
-    return 1;
-
-  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
-    return 1;
-
-  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", bpftrace.perf_rb_pages_))
-    return 1;
-
-  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
-                          bpftrace.max_type_res_iterations))
-    return 1;
-
-  if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
-  {
-    uint64_t proposed;
-    std::istringstream stringstream(env_p);
-    if (!(stringstream >> proposed)) {
-      LOG(ERROR) << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid "
-                    "uint64_t, or was zero-valued.";
-      return 1;
-    }
-    bpftrace.cat_bytes_max_ = proposed;
-  }
-
-  if (const char* env_p = std::getenv("BPFTRACE_NO_USER_SYMBOLS"))
-  {
-    std::string s(env_p);
-    if (s == "1")
-      bpftrace.resolve_user_symbols_ = false;
-    else if (s == "0")
-      bpftrace.resolve_user_symbols_ = true;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a "
-                    "valid value (0 or 1).";
-      return 1;
-    }
-  }
-
-  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
-  {
-    std::string s(env_p);
-    if (s == "1")
-      bpftrace.cache_user_symbols_ = true;
-    else if (s == "0")
-      bpftrace.cache_user_symbols_ = false;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
-                    "valid value (0 or 1).";
-      return 1;
-    }
-  }
-  else
-  {
-    // enable user symbol cache if ASLR is disabled on system or `-c` option is
-    // given
-    bpftrace.cache_user_symbols_ = !cmd_str.empty() ||
-                                   !bpftrace.is_aslr_enabled(-1);
-  }
-
-  uint64_t node_max = std::numeric_limits<uint64_t>::max();
-  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
-    return 1;
-
   if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
     return 1;
 
@@ -793,10 +813,10 @@ int main(int argc, char *argv[])
   {
     LOG(INFO) << "node count: " << node_count;
   }
-  if (node_count >= node_max)
+  if (node_count >= bpftrace.ast_max_nodes_)
   {
     LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
-               << node_max << ")";
+               << bpftrace.ast_max_nodes_ << ")";
     return 1;
   }
 
