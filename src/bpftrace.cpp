@@ -1384,6 +1384,20 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
     auto p = reinterpret_cast<const char *>(value.data());
     return std::string(p, strnlen(p, stype.GetSize()));
   }
+  else if (stype.IsArrayTy())
+  {
+    size_t elem_size = stype.GetElementTy()->GetSize();
+    std::vector<std::string> elems;
+    for (size_t i = 0; i < stype.GetNumElements(); i++)
+    {
+      std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
+                                     value.begin() + (i + 1) * elem_size);
+      elems.push_back(
+          map_value_to_str(*stype.GetElementTy(), elem_data, is_per_cpu, div));
+    }
+
+    return "[" + str_join(elems, ",") + "]";
+  }
   else if (stype.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (stype.IsIntTy())

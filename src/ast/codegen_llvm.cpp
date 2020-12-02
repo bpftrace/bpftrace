@@ -770,7 +770,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CREATE_MEMSET(inet_offset, b_.getInt8(0), 16, 1);
 
     auto scoped_del = accept(inet);
-    if (inet->type.IsArray())
+    if (inet->type.IsArrayTy() || inet->type.IsStringTy())
     {
       b_.CreateProbeRead(ctx_,
                          static_cast<AllocaInst *>(inet_offset),
@@ -1684,7 +1684,10 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   size_t element_size = type.GetElementTy()->GetSize();
 
   auto scoped_del_expr = accept(arr.expr);
-  array = expr_;
+  if (expr_->getType()->isPointerTy())
+    array = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
+  else
+    array = expr_;
 
   auto scoped_del_index = accept(arr.indexpr);
 
@@ -1695,29 +1698,27 @@ void CodegenLLVM::visit(ArrayAccess &arr)
 
   auto stype = *type.GetElementTy();
 
-  if (stype.IsIntegerTy() || stype.IsPtrTy())
+  if (arr.expr->type.IsCtxAccess() || arr.expr->type.is_internal)
   {
-    if (arr.expr->type.IsCtxAccess())
-    {
-      auto ty = b_.GetType(stype);
-      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
-    }
-    else
-    {
-      AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-      b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
-      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                               b_.getInt64Ty(),
-                               arr.expr->type.IsSigned());
-      b_.CreateLifetimeEnd(dst);
-    }
+    auto ty = b_.GetType(stype);
+    expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
   }
   else
   {
     AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
     b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
-    expr_ = dst;
-    expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
+    if (stype.IsIntegerTy() || stype.IsPtrTy())
+    {
+      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                               b_.getInt64Ty(),
+                               arr.expr->type.IsSigned());
+      b_.CreateLifetimeEnd(dst);
+    }
+    else
+    {
+      expr_ = dst;
+      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
+    }
   }
 }
 
@@ -1820,7 +1821,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   {
     val = expr;
   }
-  else if (map.type.IsRecordTy())
+  else if (map.type.IsRecordTy() || map.type.IsArrayTy())
   {
     if (assignment.expr->type.is_internal)
     {
@@ -1828,8 +1829,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     }
     else
     {
-      // expr currently contains a pointer to the struct
-      // We now want to read the entire struct in so we can save it
+      // expr currently contains a pointer to the struct or array
+      // We now want to read the entire struct/array in so we can save it
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateProbeRead(ctx_,
                          dst,

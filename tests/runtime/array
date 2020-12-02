@@ -21,3 +21,21 @@ RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array element access via assignment into map
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; printf("Result: %d\n", @a[0][0]); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array element access via assignment into map and var
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array assignment into map
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; exit(); }'
+EXPECT @a: \[1,2,3,4\]
+TIMEOUT 5
+AFTER ./testprogs/array_access
