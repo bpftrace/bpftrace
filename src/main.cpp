@@ -386,6 +386,74 @@ static bool parse_env(BPFtrace& bpftrace)
   return true;
 }
 
+std::unique_ptr<ast::Node> parse(BPFtrace& bpftrace,
+                                 const std::string& name,
+                                 const std::string& program,
+                                 const std::vector<std::string>& include_dirs,
+                                 const std::vector<std::string>& include_files)
+{
+  Driver driver(bpftrace);
+  driver.source(name, program);
+  int err;
+
+  err = driver.parse();
+  if (err)
+    return nullptr;
+
+  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  err = fields.analyse();
+  if (err)
+    return nullptr;
+
+  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+    return nullptr;
+
+  ClangParser clang;
+  std::vector<std::string> extra_flags;
+  {
+    struct utsname utsname;
+    uname(&utsname);
+    std::string ksrc, kobj;
+    auto kdirs = get_kernel_dirs(utsname, !bpftrace.feature_->has_btf());
+    ksrc = std::get<0>(kdirs);
+    kobj = std::get<1>(kdirs);
+
+    if (ksrc != "")
+      extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
+  }
+  extra_flags.push_back("-include");
+  extra_flags.push_back(CLANG_WORKAROUNDS_H);
+
+  for (auto dir : include_dirs)
+  {
+    extra_flags.push_back("-I");
+    extra_flags.push_back(dir);
+  }
+  for (auto file : include_files)
+  {
+    extra_flags.push_back("-include");
+    extra_flags.push_back(file);
+  }
+
+  // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
+  // avoid issues in some versions. Since we're including files in the command
+  // line, we want to force parsing, so we make sure C definitions are not
+  // empty before going to clang parser stage.
+  if (!include_files.empty() && driver.root_->c_definitions.empty())
+    driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
+
+  if (!clang.parse(driver.root_, bpftrace, extra_flags))
+    return nullptr;
+
+  err = driver.parse();
+  if (err)
+    return nullptr;
+
+  auto ast = driver.root_;
+  driver.root_ = nullptr;
+  return std::unique_ptr<ast::Node>(ast);
+}
+
 int main(int argc, char* argv[])
 {
   int err;
@@ -578,7 +646,6 @@ int main(int argc, char* argv[])
   }
 
   BPFtrace bpftrace(std::move(output));
-  Driver driver(bpftrace);
 
   if (!cmd_str.empty())
     bpftrace.cmd_ = cmd_str;
@@ -621,6 +688,9 @@ int main(int argc, char* argv[])
   // Listing probes
   if (listing)
   {
+    if (!is_root())
+      return 1;
+
     if (optind == argc || std::string(argv[optind]) == "*")
       script = "*:*";
     else if (optind == argc - 1)
@@ -640,8 +710,25 @@ int main(int argc, char* argv[])
       return 0;
     }
 
+    Driver driver(bpftrace);
     driver.listing_ = true;
+    driver.source("stdin", script);
+
+    int err = driver.parse();
+    if (err)
+      return err;
+
+    ast::SemanticAnalyser semantics(driver.root_, bpftrace, false, true);
+    err = semantics.analyse();
+    if (err)
+      return err;
+
+    bpftrace.probe_matcher_->list_probes(driver.root_);
+    return 0;
   }
+
+  std::string filename;
+  std::string program;
 
   if (script.empty())
   {
@@ -651,7 +738,7 @@ int main(int argc, char* argv[])
       LOG(ERROR) << "USAGE: filename or -e 'program' required.";
       return 1;
     }
-    std::string filename(argv[optind]);
+    filename = argv[optind];
     std::stringstream buf;
 
     if (filename == "-")
@@ -665,7 +752,8 @@ int main(int argc, char* argv[])
         buf << line << std::endl;
       }
 
-      driver.source("stdin", buf.str());
+      filename = "stdin";
+      program = buf.str();
     }
     else
     {
@@ -677,8 +765,9 @@ int main(int argc, char* argv[])
         return -1;
       }
 
+      program = buf.str();
       buf << file.rdbuf();
-      driver.source(filename, buf.str());
+      program = buf.str();
     }
 
     optind++;
@@ -686,7 +775,8 @@ int main(int argc, char* argv[])
   else
   {
     // Script is provided as a command line argument
-    driver.source("stdin", script);
+    filename = "stdin";
+    program = script;
   }
 
   // Load positional parameters before driver runs so positional
@@ -697,27 +787,8 @@ int main(int argc, char* argv[])
     optind++;
   }
 
-  err = driver.parse();
-  if (err)
-    return err;
-
   if (!is_root())
     return 1;
-
-  // Listing probes
-  if (listing)
-  {
-    if (!is_root())
-      return 1;
-
-    ast::SemanticAnalyser semantics(driver.root_, bpftrace, false, true);
-    err = semantics.analyse();
-    if (err)
-      return err;
-
-    bpftrace.probe_matcher_->list_probes(driver.root_);
-    return 0;
-  }
 
   auto lockdown_state = lockdown::detect(bpftrace.feature_);
   if (lockdown_state == lockdown::LockdownState::Confidentiality)
@@ -726,16 +797,13 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
-  err = fields.analyse();
-  if (err)
-    return err;
-
   // FIXME (mmarchini): maybe we don't want to always enforce an infinite
   // rlimit?
   enforce_infinite_rlimit();
 
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+  auto ast_root = parse(
+      bpftrace, filename, program, include_dirs, include_files);
+  if (!ast_root)
     return 1;
 
   if (bt_debug != DebugLevel::kNone)
@@ -743,52 +811,11 @@ int main(int argc, char* argv[])
     std::cout << "\nAST\n";
     std::cout << "-------------------\n";
     ast::Printer printer(std::cout);
-    printer.print(driver.root_);
+    printer.print(&*ast_root);
     std::cout << std::endl;
   }
 
-  ClangParser clang;
-  std::vector<std::string> extra_flags;
-  {
-    struct utsname utsname;
-    uname(&utsname);
-    std::string ksrc, kobj;
-    auto kdirs = get_kernel_dirs(utsname, !bpftrace.feature_->has_btf());
-    ksrc = std::get<0>(kdirs);
-    kobj = std::get<1>(kdirs);
-
-    if (ksrc != "")
-      extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
-  }
-  extra_flags.push_back("-include");
-  extra_flags.push_back(CLANG_WORKAROUNDS_H);
-
-  for (auto dir : include_dirs)
-  {
-    extra_flags.push_back("-I");
-    extra_flags.push_back(dir);
-  }
-  for (auto file : include_files)
-  {
-    extra_flags.push_back("-include");
-    extra_flags.push_back(file);
-  }
-
-  // NOTE(mmarchini): if there are no C definitions, clang parser won't run to
-  // avoid issues in some versions. Since we're including files in the command
-  // line, we want to force parsing, so we make sure C definitions are not
-  // empty before going to clang parser stage.
-  if (!include_files.empty() && driver.root_->c_definitions.empty())
-    driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
-
-  if (!clang.parse(driver.root_, bpftrace, extra_flags))
-    return 1;
-
-  err = driver.parse();
-  if (err)
-    return err;
-
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, !cmd_str.empty());
+  ast::SemanticAnalyser semantics(&*ast_root, bpftrace, !cmd_str.empty());
   err = semantics.analyse();
   if (err)
     return err;
@@ -798,7 +825,7 @@ int main(int argc, char* argv[])
     std::cout << "\nAST after semantic analysis\n";
     std::cout << "-------------------\n";
     ast::Printer printer(std::cout, true);
-    printer.print(driver.root_);
+    printer.print(&*ast_root);
     std::cout << std::endl;
   }
 
@@ -806,7 +833,7 @@ int main(int argc, char* argv[])
   uint64_t node_count = 0;
   {
     ast::NodeCounter c;
-    c.Visit(*driver.root_);
+    c.Visit(*ast_root);
     node_count = c.get_count();
   }
   if (bt_verbose)
@@ -827,7 +854,7 @@ int main(int argc, char* argv[])
   if (err)
     return err;
 
-  ast::CodegenLLVM llvm(driver.root_, bpftrace);
+  ast::CodegenLLVM llvm(&*ast_root, bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
   try
   {
