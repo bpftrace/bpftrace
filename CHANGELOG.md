@@ -48,6 +48,8 @@ and this project adheres to
   - [#1601](https://github.com/iovisor/bpftrace/pull/1601)
 - Disable `str($# + 1)`
   - [#1619](https://github.com/iovisor/bpftrace/issues/1619)
+- Array improvements (support assignment to variables and usage as a map key)
+  - [#1656](https://github.com/iovisor/bpftrace/pull/1656)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
