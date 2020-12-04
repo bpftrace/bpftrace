@@ -1292,9 +1292,6 @@ void SemanticAnalyser::visit(Map &map)
       if (is_final_pass()) {
         if (expr->type.IsNoneTy())
           LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
-        if (expr->type.IsArrayTy())
-          LOG(ERROR, expr->loc, err_)
-              << "Using array as a map key is not supported (#1052)";
 
         SizedType keytype = expr->type;
         // Skip.IsSigned() when comparing keys to not break existing scripts

@@ -39,3 +39,21 @@ RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_
 EXPECT @a: \[1,2,3,4\]
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array as a map key
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x] = 0; exit(); }'
+EXPECT @x\[\[1,2,3,4\]\]: 0
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as a part of map multikey
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x, 42] = 0; exit(); }'
+EXPECT @x\[\[1,2,3,4\], 42\]: 0
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as a map key assigned from another map
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; @x[@a] = 0; exit(); }'
+EXPECT @x\[\[1,2,3,4\]\]: 0
+TIMEOUT 5
+AFTER ./testprogs/array_access

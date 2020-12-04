@@ -118,6 +118,16 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       ptr << "0x" << std::hex << read_data<int64_t>(data);
       return ptr.str();
     }
+    case Type::array:
+    {
+      std::vector<std::string> elems;
+      for (size_t i = 0; i < arg.GetNumElements(); i++)
+        elems.push_back(argument_value(bpftrace,
+                                       *arg.GetElementTy(),
+                                       (const uint8_t *)data +
+                                           i * arg.GetElementTy()->GetSize()));
+      return "[" + str_join(elems, ",") + "]";
+    }
     default:
       LOG(ERROR) << "invalid mapkey argument type";
   }
