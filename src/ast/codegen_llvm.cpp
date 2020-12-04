@@ -2294,10 +2294,32 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       }
       else
       {
-        key = b_.CreateAllocaBPF(expr->type.GetSize(), map.ident + "_key");
-        b_.CreateStore(
-            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
-            b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
+        key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
+        if (expr->type.IsArrayTy())
+        {
+          // expr currently contains a pointer to the array
+          if (expr->type.is_internal)
+          {
+            // The array is already in the BPF memory - memcpy it
+            b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
+          }
+          else
+          {
+            // We need to read the entire array and save it
+            b_.CreateProbeRead(ctx_,
+                               key,
+                               expr->type.GetSize(),
+                               expr_,
+                               expr->type.GetAS(),
+                               expr->loc);
+          }
+        }
+        else
+        {
+          b_.CreateStore(
+              b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
+              b_.CreatePointerCast(key, expr_->getType()->getPointerTo()));
+        }
       }
     }
     else
@@ -2318,15 +2340,29 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
-        if (shouldBeOnStackAlready(expr->type))
+        if (shouldBeOnStackAlready(expr->type) ||
+            (expr->type.IsArrayTy() && expr->type.is_internal))
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
         else
         {
-          // promote map key to 64-bit:
-          b_.CreateStore(
-              b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
-              b_.CreatePointerCast(offset_val,
-                                   expr_->getType()->getPointerTo()));
+          if (expr->type.IsArrayTy())
+          {
+            // Read the array into the key
+            b_.CreateProbeRead(ctx_,
+                               offset_val,
+                               expr->type.GetSize(),
+                               expr_,
+                               expr->type.GetAS(),
+                               expr->loc);
+          }
+          else
+          {
+            // promote map key to 64-bit:
+            b_.CreateStore(
+                b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
+                b_.CreatePointerCast(offset_val,
+                                     expr_->getType()->getPointerTo()));
+          }
         }
         offset += expr->type.GetSize();
       }

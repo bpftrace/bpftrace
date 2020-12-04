@@ -445,7 +445,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
 }
 
 void IRBuilderBPF::CreateProbeRead(Value *ctx,
-                                   AllocaInst *dst,
+                                   Value *dst,
                                    size_t size,
                                    Value *src,
                                    AddrSpace as,
@@ -455,7 +455,7 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
 }
 
 void IRBuilderBPF::CreateProbeRead(Value *ctx,
-                                   AllocaInst *dst,
+                                   Value *dst,
                                    llvm::Value *size,
                                    Value *src,
                                    AddrSpace as,

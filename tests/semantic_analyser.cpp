@@ -899,6 +899,26 @@ TEST(semantic_analyser, array_in_map)
        1);
 }
 
+TEST(semantic_analyser, array_as_map_key)
+{
+  test("struct MyStruct { int x[2]; int y[4]; }"
+       "kprobe:f { @x[((struct MyStruct *)arg0)->x] = 0; }",
+       0);
+
+  test("struct MyStruct { int x[2]; int y[4]; }"
+       "kprobe:f { @x[((struct MyStruct *)arg0)->x, "
+       "              ((struct MyStruct *)arg0)->y] = 0; }",
+       0);
+
+  // Mismatched key types
+  test("struct MyStruct { int x[2]; int y[4]; }"
+       "kprobe:f { "
+       "    @x[((struct MyStruct *)arg0)->x] = 0; "
+       "    @x[((struct MyStruct *)arg0)->y] = 1; "
+       "}",
+       10);
+}
+
 TEST(semantic_analyser, variable_type)
 {
   BPFtrace bpftrace;
