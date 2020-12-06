@@ -316,4 +316,4 @@ open path: retrans_time_ms
 - #include: 包含必要的path和dentry类型声明的头文件。
 
 bfptrace对内核结构跟踪的支持和bcc是一样的，允许使用头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidate的声明。在将来，bpftrace会使用新的linux BTF支持，到时候所有结构都将可用。
-到这里你已经理解了bpstrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[参考手册](reference_guide.md)更多的功能。
+到这里你已经理解了bpftrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[参考手册](reference_guide.md)更多的功能。
