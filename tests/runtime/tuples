@@ -59,3 +59,8 @@ NAME tuple print
 RUN bpftrace -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
 EXPECT ^@: \(1, 2, string, \(4, 5\)\)$
 TIMEOUT 5
+
+NAME tuple strftime type is packed
+RUN bpftrace -e 'BEGIN { @ = (nsecs, strftime("%M:%S", nsecs)); exit(); }'
+EXPECT ^@: \(\d+, \d+:\d+\)$
+TIMEOUT 5

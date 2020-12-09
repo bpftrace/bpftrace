@@ -112,7 +112,8 @@ bool SizedType::operator==(const SizedType &t) const
 bool SizedType::IsArray() const
 {
   return type == Type::array || type == Type::string || type == Type::usym ||
-         type == Type::inet || type == Type::buffer || type == Type::record;
+         type == Type::inet || type == Type::buffer || type == Type::record ||
+         type == Type::timestamp;
 }
 
 bool SizedType::IsAggregate() const
