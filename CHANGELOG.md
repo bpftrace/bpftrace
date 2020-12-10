@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add disk field to biosnoop
+  - [#1660](https://github.com/iovisor/bpftrace/pull/1660)
 - Add path builtin
   - [#1492](https://github.com/iovisor/bpftrace/pull/1492)
 - Allow wildcards for tracepoint categories
