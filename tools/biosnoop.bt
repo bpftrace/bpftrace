@@ -13,7 +13,7 @@
 
 BEGIN
 {
-	printf("%-12s %-16s %-16s %-6s %7s\n", "TIME(ms)", "DISK", "COMM", "PID", "LAT(ms)");
+	printf("%-12s %-7s %-16s %-6s %7s\n", "TIME(ms)", "DISK", "COMM", "PID", "LAT(ms)");
 }
 
 kprobe:blk_account_io_start
@@ -29,7 +29,7 @@ kprobe:blk_account_io_done
 
 {
 	$now = nsecs;
-	printf("%-12u %-16s %-16s %-6d %7d\n",
+	printf("%-12u %-7s %-16s %-6d %7d\n",
 	    elapsed / 1000000, @disk[arg0], @iocomm[arg0], @iopid[arg0],
 	    ($now - @start[arg0]) / 1000000);
 
