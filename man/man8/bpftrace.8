@@ -51,16 +51,12 @@ See \fBPROBE TYPES\fR and \fBBUILTINS (variables/functions)\fR for the bpftrace 
 .SH "OPTIONS"
 .
 .TP
-\fB\-l [searchterm]\fR
-List probes.
+\fB\-B MODE\fR
+The buffering mode to be used for output ('full', 'none').
 .
 .TP
-\fB\-e 'PROGRAM'\fR
-Execute PROGRAM.
-.
-.TP
-\fB\-p PID\fR
-Enable USDT probes on PID. Will terminate bpftrace on PID termination. Note this is not a global PID filter on probes.
+\fB\-b | --btf\fR
+Force BTF data processing if it's available. By default it's enabled only if the user does not specify any types/includes.
 .
 .TP
 \fB\-c CMD\fR
@@ -68,25 +64,73 @@ Helper to run CMD. Equivalent to manually running CMD and then giving passing th
 you've traced at least the duration CMD's execution.
 .
 .TP
+\fB\-d\fR
+Debug info dry run.
+.
+.TP
+\fB\-dd\fR
+Verbose Debug info dry run.
+.
+.TP
+\fB\-e 'PROGRAM'\fR
+Execute PROGRAM.
+.
+.TP
+\fB\-f FORMAT\fR
+The format to be used for output ('text'. 'json').
+.
+.TP
+\fB\-h | --help\fR
+Show help message. 
+.
+.TP
+\fB\-I DIR\fR
+Add the directory to the INCLUDE search path.
+.
+.TP
+\fB\--include FILE\fR
+Add a #include file before preprocessing.
+.
+.TP
+\fB\--info\fR
+Print information about kernel BPF support.
+.
+.TP
+\fB\-k\fR
+Emit a warning when a bpf helper returns an error (except read functions).
+.
+.TP
+\fB\-kk\fR
+Check all bpf helper functions.
+.
+.TP
+\fB\-l [searchterm]\fR
+List probes.
+.
+.TP
+\fB\-o FILE\fR
+Redirect bpftrace output to file.
+.
+.TP
+\fB\-p PID\fR
+Enable USDT probes on PID. Will terminate bpftrace on PID termination. Note this is not a global PID filter on probes.
+.
+.TP
 \fB\--unsafe\fR
 Enable unsafe builtin functions. By default, bpftrace runs in safe mode. Safe mode ensure programs cannot modify system state.
 Unsafe builtin functions are marked as such in \fBBUILTINS (functions)\fR.
 .
 .TP
-\fB\--btf\fR
-Force BTF data processing if it's available. By default it's enabled only if the user does not specify any types/includes.
+\fB\--usdt-file-activation\fR
+Activate usdt semaphores based on file path..
 .
 .TP
 \fB\-v\fR
 Verbose messages.
 .
 .TP
-\fB\-d\fR
-Debug info on dry run.
-.
-.TP
-\fB\-dd\fR
-Verbose debug info on dry run.
+\fB\-V | --version\fR
+Print version of bpftrace.
 .
 .SH "EXAMPLES"
 .
