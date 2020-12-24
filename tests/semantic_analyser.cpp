@@ -1776,11 +1776,17 @@ TEST(semantic_analyser, type_ctx)
   var = static_cast<ast::Variable *>(unop->expr);
   EXPECT_TRUE(var->type.IsPtrTy());
 
+#if ARCH_X86_64
+  auto chartype = CreateInt8();
+#else
+  auto chartype = CreateUInt8();
+#endif
+
   // $c = $x->c.c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(3));
-  EXPECT_EQ(CreateInt8(), assignment->var->type);
+  EXPECT_EQ(chartype, assignment->var->type);
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
-  EXPECT_EQ(CreateInt8(), fieldaccess->type);
+  EXPECT_EQ(chartype, fieldaccess->type);
   fieldaccess = static_cast<ast::FieldAccess *>(fieldaccess->expr);
   EXPECT_TRUE(fieldaccess->type.IsCtxAccess());
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
@@ -1790,9 +1796,9 @@ TEST(semantic_analyser, type_ctx)
 
   // $d = $x->d->c;
   assignment = static_cast<ast::AssignVarStatement *>(stmts->at(4));
-  EXPECT_EQ(CreateInt8(), assignment->var->type);
+  EXPECT_EQ(chartype, assignment->var->type);
   fieldaccess = static_cast<ast::FieldAccess *>(assignment->expr);
-  EXPECT_EQ(CreateInt8(), fieldaccess->type);
+  EXPECT_EQ(chartype, fieldaccess->type);
   unop = static_cast<ast::Unop *>(fieldaccess->expr);
   EXPECT_TRUE(unop->type.IsRecordTy());
   fieldaccess = static_cast<ast::FieldAccess *>(unop->expr);
