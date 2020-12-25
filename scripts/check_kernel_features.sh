@@ -37,6 +37,9 @@ check_opt 'CONFIG_BPF_JIT'
 check_opt 'CONFIG_BPF_SYSCALL'
 check_opt 'CONFIG_FTRACE_SYSCALLS'
 check_opt 'CONFIG_HAVE_EBPF_JIT'
+check_opt 'CONFIG_FUNCTION_TRACER'
+check_opt 'CONFIG_HAVE_DYNAMIC_FTRACE'
+check_opt 'CONFIG_DYNAMIC_FTRACE'
 
 # Status report
 if [ $err -eq 0 ]; then
