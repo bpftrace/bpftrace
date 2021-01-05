@@ -33,22 +33,34 @@ private:
    * could have typo'd and actually referenced a non-existent type. Put
    * differently, this method is best effort.
    */
-  std::unordered_set<std::string> get_incomplete_types(
-      const std::string &input,
-      std::vector<CXUnsavedFile> &unsaved_files,
-      const std::vector<const char *> &args);
+  std::unordered_set<std::string> get_incomplete_types();
+  /*
+   * Iteratively check for incomplete types, pull their definitions from BTF,
+   * and update the input files with the definitions.
+   */
+  void resolve_incomplete_types_from_btf(BPFtrace &bpftrace,
+                                         const ast::ProbeList *probes);
 
   /*
    * Collect names of types defined by typedefs that are in non-included
    * headers as they may pose problems for clang parser.
    */
-  std::unordered_set<std::string> get_unknown_typedefs(
-      const std::string &input,
-      std::vector<CXUnsavedFile> &unsaved_files,
-      const std::vector<const char *> &args);
+  std::unordered_set<std::string> get_unknown_typedefs();
+  /*
+   * Iteratively check for unknown typedefs, pull their definitions from BTF,
+   * and update the input files with the definitions.
+   */
+  void resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace);
 
   static std::optional<std::string> get_unknown_type(
       const std::string &diagnostic_msg);
+
+  CXUnsavedFile get_btf_generated_header(BPFtrace &bpftrace);
+
+  std::string input;
+  std::vector<const char *> args;
+  std::vector<CXUnsavedFile> input_files;
+  std::string btf_cdef;
 
   class ClangParserHandler
   {
@@ -56,6 +68,12 @@ private:
     ClangParserHandler();
 
     ~ClangParserHandler();
+
+    bool parse_file(const std::string &filename,
+                    const std::string &input,
+                    const std::vector<const char *> &args,
+                    std::vector<CXUnsavedFile> &unsaved_files,
+                    bool bail_on_errors = true);
 
     CXTranslationUnit get_translation_unit();
 
@@ -71,15 +89,16 @@ private:
      * Return true if an error occurred. If bail_on_error is false, only fail
      * on fatal errors.
      */
-    bool check_diagnostics(const std::string &input,
-                           std::vector<std::string> &error_msgs,
-                           bool bail_on_error);
+    bool check_diagnostics(const std::string &input, bool bail_on_error);
 
     CXCursor get_translation_unit_cursor();
+
+    const std::vector<std::string> &get_error_messages();
 
   private:
     CXIndex index;
     CXTranslationUnit translation_unit;
+    std::vector<std::string> error_msgs;
   };
 };
 
