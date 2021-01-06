@@ -110,6 +110,7 @@ TEST(childproc, destructor_destroy_child)
 
 TEST(childproc, child_kill_before_exec)
 {
+  signal(SIGHUP, SIG_DFL);
   auto child = getChild(TEST_BIN_SLOW);
 
   EXPECT_EQ(kill(child->pid(), SIGHUP), 0);
