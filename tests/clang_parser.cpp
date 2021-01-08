@@ -661,7 +661,6 @@ TEST(clang_parser, btf_unresolved_typedef)
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
   // extract it from there
   BPFtrace bpftrace;
-  bpftrace.force_btf_ = true;
   parse("struct Foo { size_t x; };", bpftrace);
 
   StructMap &structs = bpftrace.structs_;
@@ -675,6 +674,38 @@ TEST(clang_parser, btf_unresolved_typedef)
   EXPECT_EQ(structs["struct Foo"].fields["x"].type.type, Type::integer);
   EXPECT_EQ(structs["struct Foo"].fields["x"].type.GetSize(), 8U);
   EXPECT_EQ(structs["struct Foo"].fields["x"].offset, 0);
+}
+
+TEST_F(clang_parser_btf, btf_type_override)
+{
+  // It should be possible to override types from BTF, ...
+  BPFtrace bpftrace;
+  parse("struct Foo1 { int a; };\n",
+        bpftrace,
+        true,
+        "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
+
+  StructMap &structs = bpftrace.structs_;
+  ASSERT_EQ(structs.size(), 1U);
+  ASSERT_EQ(structs.count("struct Foo1"), 1U);
+  ASSERT_EQ(structs["struct Foo1"].fields.size(), 1U);
+  ASSERT_EQ(structs["struct Foo1"].fields.count("a"), 1U);
+
+  // ... however, in such case, no other types are taken from BTF and the
+  // following will fail since Foo2 will be undefined
+  bpftrace.btf_set_.clear();
+  parse("struct Foo1 { struct Foo2 foo2; };\n",
+        bpftrace,
+        false,
+        "kprobe:sys_read { @x = ((struct Foo1 *)curtask); }");
+
+  // Here, Foo1 redefinition will take place when resolving incomplete types
+  // (since Foo3 contains a pointer to Foo1)
+  bpftrace.btf_set_.clear();
+  parse("struct Foo1 { struct Foo2 foo2; };\n",
+        bpftrace,
+        false,
+        "kprobe:sys_read { @x1 = ((struct Foo3 *)curtask); }");
 }
 #endif // HAVE_LIBBPF_BTF_DUMP
 

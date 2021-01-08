@@ -142,7 +142,6 @@ OPTIONS:
     -B MODE        output buffering mode ('line', 'full', or 'none')
     -d             debug info dry run
     -dd            verbose debug info dry run
-    -b             force BTF (BPF type format) processing
     -e 'program'   execute this program
     -h             show this help message
     -I DIR         add the specified DIR to the search path for include files.
@@ -2786,7 +2785,7 @@ Attaching 1 probe...
 Attaching 1 probe...
 8
 
-# bpftrace --btf -e 'BEGIN { printf("%d\n", sizeof(struct task_struct)); }'
+# bpftrace -e 'BEGIN { printf("%d\n", sizeof(struct task_struct)); }'
 Attaching 1 probe...
 13120
 

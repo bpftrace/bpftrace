@@ -56,6 +56,7 @@ private:
       const std::string &diagnostic_msg);
 
   CXUnsavedFile get_btf_generated_header(BPFtrace &bpftrace);
+  CXUnsavedFile get_empty_btf_generated_header();
 
   std::string input;
   std::vector<const char *> args;
@@ -94,6 +95,9 @@ private:
     CXCursor get_translation_unit_cursor();
 
     const std::vector<std::string> &get_error_messages();
+
+    bool has_redefinition_error();
+    bool has_unknown_type_error();
 
   private:
     CXIndex index;

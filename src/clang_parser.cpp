@@ -436,6 +436,26 @@ const std::vector<std::string>
   return error_msgs;
 }
 
+bool ClangParser::ClangParserHandler::has_redefinition_error()
+{
+  for (auto &msg : error_msgs)
+  {
+    if (msg.find("redefinition") != std::string::npos)
+      return true;
+  }
+  return false;
+}
+
+bool ClangParser::ClangParserHandler::has_unknown_type_error()
+{
+  for (auto &msg : error_msgs)
+  {
+    if (ClangParser::get_unknown_type(msg).has_value())
+      return true;
+  }
+  return false;
+}
+
 namespace {
 // Get annotation associated with field declaration `c`
 std::optional<std::string> get_field_decl_annotation(CXCursor c)
@@ -646,6 +666,33 @@ void ClangParser::resolve_incomplete_types_from_btf(
   }
 }
 
+/*
+ * Parse the program using Clang.
+ *
+ * Type resolution rules:
+ *
+ * If BTF is available, necessary types are retrieved from there, otherwise we
+ * rely on headers and types supplied by the user (we also include linux/types.h
+ * in some cases, e.g., for tracepoints).
+ *
+ * The following types are taken from BTF (if available):
+ * 1. Types explicitly used in the program (taken from bpftrace.btf_set_).
+ * 2. Types used by some of the defined types (as struct members). This step
+ *    is done recursively, however, as it may take long time, there is a
+ *    maximal depth set. It is computed as the maximum level of nested field
+ *    accesses in the program and can be manually overridden using
+ *    the BPFTRACE_MAX_TYPE_RES_ITERATIONS env variable.
+ * 3. Typedefs used by some of the defined types. These are also resolved
+ *    recursively, however, they must be resolved completely as any unknown
+ *    typedef will cause the parser to fail (even if the type is not used in
+ *    the program).
+ *
+ * If any of the above steps retrieves a definition that redefines some existing
+ * (user-defined) type, no BTF types are used and all types must be provided.
+ * In practice, this means that user may use kernel types without providing
+ * their definitions but once he redefines any kernel type, he must provide all
+ * necessary definitions.
+ */
 bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<std::string> extra_flags)
 {
 #ifdef FUZZ
@@ -672,46 +719,73 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     args.push_back(flag.c_str());
   }
 
-  bool process_btf = program->c_definitions.empty() ||
-                     (bpftrace.force_btf_ && bpftrace.btf_.has_data());
+  // Push the generated BTF header into input files.
+  // The header must be the last file in the vector since the following methods
+  // count on it.
+  // If BTF is not available, the header is empty.
+  input_files.emplace_back(bpftrace.btf_.has_data()
+                               ? get_btf_generated_header(bpftrace)
+                               : get_empty_btf_generated_header());
 
-  // We set these args early because some systems may not have <linux/types.h>
-  // (containers) and fully rely on BTF.
-  if (process_btf)
+  bool btf_conflict = false;
+  ClangParserHandler handler;
+  if (bpftrace.btf_.has_data())
   {
+    // We set these args early because some systems may not have <linux/types.h>
+    // (containers) and fully rely on BTF.
+
     // Prevent BTF generated header from redefining stuff found
     // in <linux/types.h>
     args.push_back("-D_LINUX_TYPES_H");
     // Since we're omitting <linux/types.h> there's no reason to
     // add the wokarounds for it
     args.push_back("-D__CLANG_WORKAROUNDS_H");
+
+    if (handler.parse_file("definitions.h", input, args, input_files, false) &&
+        handler.has_redefinition_error())
+      btf_conflict = true;
+
+    if (!btf_conflict)
+    {
+      resolve_incomplete_types_from_btf(bpftrace, program->probes);
+
+      if (handler.parse_file(
+              "definitions.h", input, args, input_files, false) &&
+          handler.has_redefinition_error())
+        btf_conflict = true;
+    }
+
+    if (!btf_conflict)
+    {
+      resolve_unknown_typedefs_from_btf(bpftrace);
+
+      if (handler.parse_file(
+              "definitions.h", input, args, input_files, false) &&
+          handler.has_redefinition_error())
+        btf_conflict = true;
+    }
   }
 
-  // Push the (initially empty) BTF generated header into input files.
-  // The header must be the last file in the vector as the following methods
-  // count on it.
-  input_files.emplace_back(CXUnsavedFile{
-      .Filename = "/bpftrace/include/__btf_generated_header.h",
-      .Contents = btf_cdef.c_str(),
-      .Length = btf_cdef.size(),
-  });
-
-  if (process_btf)
+  if (btf_conflict)
   {
-    resolve_incomplete_types_from_btf(bpftrace, program->probes);
-    resolve_unknown_typedefs_from_btf(bpftrace);
+    // There is a conflict (redefinition) between user-supplied types and types
+    // taken from BTF. We cannot use BTF in such a case.
+    args.pop_back();
+    args.pop_back();
+    input_files.back() = get_empty_btf_generated_header();
   }
 
-  ClangParserHandler handler;
   if (!handler.parse_file("definitions.h", input, args, input_files))
   {
-    for (auto &msg : handler.get_error_messages())
+    if (handler.has_redefinition_error())
     {
-      if (get_unknown_type(msg) != "" && !bpftrace.force_btf_)
-      {
-        LOG(ERROR) << "Try running with --btf to force BTF processing or "
-                      "include headers with missing type definitions";
-      }
+      LOG(WARNING) << "Cannot take type definitions from BTF since there is "
+                      "a redefinition conflict with user-defined types.";
+    }
+    else if (handler.has_unknown_type_error())
+    {
+      LOG(ERROR) << "Include headers with missing type definitions or install "
+                    "BTF information to your system.";
     }
     return false;
   }
@@ -783,6 +857,16 @@ void ClangParser::resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace)
 CXUnsavedFile ClangParser::get_btf_generated_header(BPFtrace &bpftrace)
 {
   btf_cdef = bpftrace.btf_.c_def(bpftrace.btf_set_);
+  return CXUnsavedFile{
+    .Filename = "/bpftrace/include/__btf_generated_header.h",
+    .Contents = btf_cdef.c_str(),
+    .Length = btf_cdef.size(),
+  };
+}
+
+CXUnsavedFile ClangParser::get_empty_btf_generated_header()
+{
+  btf_cdef = "";
   return CXUnsavedFile{
     .Filename = "/bpftrace/include/__btf_generated_header.h",
     .Contents = btf_cdef.c_str(),
