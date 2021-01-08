@@ -248,6 +248,8 @@ Bug fix release for the [Docker build](https://quay.io/repository/iovisor/bpftra
 
 - Drop LLVM 5 support
   - [#1215](https://github.com/iovisor/bpftrace/issues/1215)
+- Remove the --btf option
+  - [#1669](https://github.com/iovisor/bpftrace/pull/1669)
 
 #### Fixed
 
