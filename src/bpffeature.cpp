@@ -84,10 +84,20 @@ static bool try_load(enum libbpf::bpf_prog_type prog_type,
     // because it still means kfunc doesn't work, only from a library side, not
     // a kernel side.
     return traceable_funcs.good() &&
-           try_load(
-               "kfunc__strlen", prog_type, insns, len, 0, logbuf, log_size) &&
-           try_load(
-               "kretfunc__strlen", prog_type, insns, len, 0, logbuf, log_size);
+           try_load("kfunc__sched_fork",
+                    prog_type,
+                    insns,
+                    len,
+                    0,
+                    logbuf,
+                    log_size) &&
+           try_load("kretfunc__sched_fork",
+                    prog_type,
+                    insns,
+                    len,
+                    0,
+                    logbuf,
+                    log_size);
   }
 
   return try_load(name, prog_type, insns, len, 0, logbuf, log_size);
