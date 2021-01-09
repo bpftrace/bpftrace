@@ -245,6 +245,24 @@ EXPECT ^1$
 TIMEOUT 5
 BEFORE ./testprogs/usdt_sized_args
 
+NAME "usdt call 2-arg str()"
+RUN bpftrace -e 'usdt:./testprogs/usdt_call_str_2:test:probe1 { printf("<%s>\n", str(arg0, arg1)); exit(); }' -p {{BEFORE_PID}}
+EXPECT ^<hello>$
+TIMEOUT 5
+BEFORE ./testprogs/usdt_call_str_2
+
+NAME "usdt call 2-arg str() with cast"
+RUN bpftrace -e 'usdt:./testprogs/usdt_call_str_2:test:probe1 { printf("<%s>\n", str(arg0, (int32)arg1)); exit(); }' -p {{BEFORE_PID}}
+EXPECT ^<hello>$
+TIMEOUT 5
+BEFORE ./testprogs/usdt_call_str_2
+
+NAME "usdt call 2-arg str() with int"
+RUN bpftrace -e 'usdt:./testprogs/usdt_call_str_2:test:probe2 { printf("<%s>\n", str(arg0, arg1)); exit(); }' -p {{BEFORE_PID}}
+EXPECT ^<hello>$
+TIMEOUT 5
+BEFORE ./testprogs/usdt_call_str_2
+
 # USDT probes can be inlined which creates duplicate identical probes. We must
 # attach to all of them
 NAME "usdt duplicated markers"
