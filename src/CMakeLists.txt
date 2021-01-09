@@ -102,7 +102,11 @@ if (HAVE_LIBBPF_LINK_CREATE)
   target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_LINK_CREATE)
 endif()
 
-if (HAVE_LIBBPF_LINK_CREATE)
+if (HAVE_BCC_PROG_LOAD_XATTR)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_PROG_LOAD_XATTR)
+endif()
+
+if (HAVE_LIBBPF_LINK_CREATE OR HAVE_BCC_PROG_LOAD_XATTR)
   target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BPF_H)
 endif()
 
