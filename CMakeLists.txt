@@ -124,6 +124,12 @@ check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BC
 check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
 check_symbol_exists(bpf_attach_kfunc "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_KFUNC)
 check_symbol_exists(bcc_usdt_addsem_probe "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h" HAVE_BCC_USDT_ADDSEM)
+
+# bcc_prog_load_xattr needs struct bpf_load_program_attr,
+# which is defined in libbpf
+if (LIBBPF_FOUND)
+  check_symbol_exists(bcc_prog_load_xattr "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_PROG_LOAD_XATTR)
+endif()
 set(CMAKE_REQUIRED_LIBRARIES)
 set(CMAKE_REQUIRED_LINK_OPTIONS)
 

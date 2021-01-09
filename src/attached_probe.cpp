@@ -684,6 +684,27 @@ void AttachedProbe::load_prog()
         continue;
       }
 
+#ifdef HAVE_BCC_PROG_LOAD_XATTR
+      struct bpf_load_program_attr attr = {};
+
+      attr.prog_type = progtype(probe_.type);
+      attr.name = namep;
+      attr.insns = reinterpret_cast<struct bpf_insn *>(insns);
+      attr.license = license;
+
+      libbpf::bpf_prog_type prog_type = static_cast<libbpf::bpf_prog_type>(
+          progtype(probe_.type));
+
+      if (prog_type != libbpf::BPF_PROG_TYPE_TRACING &&
+          prog_type != libbpf::BPF_PROG_TYPE_EXT)
+        attr.kern_version = version;
+
+      attr.log_level = log_level;
+
+      progfd_ = bcc_prog_load_xattr(
+          &attr, prog_len, log_buf.get(), log_buf_size, true);
+
+#else // HAVE_BCC_PROG_LOAD_XATTR
 #ifdef HAVE_BCC_PROG_LOAD
       progfd_ = bcc_prog_load(progtype(probe_.type),
                               namep,
@@ -698,6 +719,8 @@ void AttachedProbe::load_prog()
                               log_level,
                               log_buf.get(),
                               log_buf_size);
+#endif // HAVE_BCC_PROG_LOAD_XATTR
+
       if (progfd_ >= 0)
         break;
     }
