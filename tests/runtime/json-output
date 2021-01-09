@@ -4,52 +4,52 @@ EXPECT ^ERROR: Invalid output format "jsonx"$
 TIMEOUT 5
 
 NAME scalar
-RUN bpftrace -q -f json -e 'BEGIN { @scalar = 5; exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @scalar = 5; exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME scalar_str
-RUN bpftrace -q -f json -e 'BEGIN { @scalar_str = "a b \n d e"; exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar_str.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @scalar_str = "a b \n d e"; exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar_str.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME complex
-RUN bpftrace -q -f json -e 'BEGIN { @complex[comm,2] = 5; exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/complex.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @complex[comm,2] = 5; exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/complex.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME map
-RUN bpftrace -q -f json -e 'BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/map.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @map["key1"] = 2; @map["key2"] = 3; exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/map.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME histogram
-RUN bpftrace -q -f json -e 'BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @hist = hist(2); @hist = hist(1025); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME multiple histograms
-RUN bpftrace -q -f json -e 'BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_multiple.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_multiple.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME linear histogram
-RUN bpftrace -q -f json -e 'BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME multiple linear histograms
-RUN bpftrace -q -f json -e 'BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist_multiple.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @stats["bpftrace"] = lhist(2, 0, 100, 10); @stats["curl"] = lhist(50, 0, 100, 10); @stats["bpftrace"] = lhist(1000, 0, 100, 10); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist_multiple.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME stats
-RUN bpftrace -q -f json -e 'BEGIN { @stats = stats(2); @stats = stats(10); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @stats = stats(2); @stats = stats(10); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
 NAME multiple stats
-RUN bpftrace -q -f json -e 'BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10); exit(); }' | python -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats_multiple.json")))'
+RUN bpftrace -q -f json -e 'BEGIN { @stats["curl"] = stats(2); @stats["zsh"] = stats(10); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/stats_multiple.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
