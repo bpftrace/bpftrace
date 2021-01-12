@@ -53,6 +53,7 @@ private:
   State hardware_parser();
   State watchpoint_parser(bool async = false);
   State kfunc_parser();
+  State iter_parser();
 
   std::optional<uint64_t> stoull(const std::string &str);
 

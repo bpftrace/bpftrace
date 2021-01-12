@@ -108,6 +108,7 @@ public:
   int run(std::unique_ptr<BpfOrc> bpforc);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(Probe &probe,
                                                            BpfOrc &bpforc);
+  int run_iter(std::unique_ptr<BpfOrc> bpforc);
   int print_maps();
   int clear_map(IMap &map);
   int zero_map(IMap &map);
@@ -230,6 +231,7 @@ private:
   static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
+  bool has_iter_ = false;
 };
 
 } // namespace bpftrace

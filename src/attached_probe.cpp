@@ -27,6 +27,10 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "usdt.h"
+#ifdef HAVE_LIBBPF_BPF_H
+#include <bpf/bpf.h>
+#endif
+#include <linux/perf_event.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER
@@ -88,6 +92,9 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::kretfunc:
       return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
       break;
+    case ProbeType::iter:
+      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
+      break;
     case ProbeType::invalid:
       LOG(FATAL) << "program type invalid";
   }
@@ -100,9 +107,10 @@ std::string progtypeName(bpf_prog_type t)
   switch (t)
   {
     // clang-format off
-    case BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
-    case BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
-    case BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
+    case libbpf::BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
+    case libbpf::BPF_PROG_TYPE_TRACEPOINT: return "BPF_PROG_TYPE_TRACEPOINT"; break;
+    case libbpf::BPF_PROG_TYPE_PERF_EVENT: return "BPF_PROG_TYPE_PERF_EVENT"; break;
+    case libbpf::BPF_PROG_TYPE_TRACING:    return "BPF_PROG_TYPE_TRACING";    break;
     // clang-format on
     default:
       LOG(FATAL) << "invalid program type: " << t;
@@ -146,6 +154,40 @@ int AttachedProbe::detach_kfunc(void)
 }
 #endif // HAVE_BCC_KFUNC
 
+#ifdef HAVE_LIBBPF_LINK_CREATE
+void AttachedProbe::attach_iter(void)
+{
+  linkfd_ = bpf_link_create(progfd_,
+                            0,
+                            static_cast<enum ::bpf_attach_type>(
+                                libbpf::BPF_TRACE_ITER),
+                            NULL);
+  if (linkfd_ < 0)
+  {
+    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+  }
+}
+
+int AttachedProbe::detach_iter(void)
+{
+  close(linkfd_);
+  return 0;
+}
+#else
+void AttachedProbe::attach_iter(void)
+{
+  throw std::runtime_error(
+      "Error attaching probe: " + probe_.name +
+      ", iter API is not available for linked libbpf version");
+}
+
+int AttachedProbe::detach_iter(void)
+{
+  LOG(ERROR) << "iter is not available for linked bpf version";
+  return 0;
+}
+#endif // HAVE_LIBBPF_LINK_CREATE
+
 AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
   : probe_(probe), func_(func)
 {
@@ -183,6 +225,9 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
       attach_kfunc();
+      break;
+    case ProbeType::iter:
+      attach_iter();
       break;
     default:
       LOG(FATAL) << "invalid attached probe type \""
@@ -232,6 +277,9 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
       err = detach_kfunc();
+      break;
+    case ProbeType::iter:
+      err = detach_iter();
       break;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -617,6 +665,9 @@ void AttachedProbe::load_prog()
     tracing_type = probetypeName(probe_.type);
     if (!tracing_type.empty())
     {
+      if (tracing_type == "iter")
+        tracing_type = "bpf_iter";
+
       tracing_name = tracing_type + "__" + namep;
       namep = tracing_name.c_str();
     }
