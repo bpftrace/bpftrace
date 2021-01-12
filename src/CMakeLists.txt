@@ -98,6 +98,14 @@ if (HAVE_LIBBPF_MAP_BATCH)
   target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_MAP_BATCH)
 endif()
 
+if (HAVE_LIBBPF_LINK_CREATE)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_LINK_CREATE)
+endif()
+
+if (HAVE_LIBBPF_LINK_CREATE)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BPF_H)
+endif()
+
 if (HAVE_BCC_KFUNC)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_KFUNC)
 endif(HAVE_BCC_KFUNC)

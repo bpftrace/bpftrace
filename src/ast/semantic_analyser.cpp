@@ -189,6 +189,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
     case ProbeType::tracepoint:
+    case ProbeType::iter:
       return AddrSpace::kernel;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -2536,6 +2537,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
   }
+  else if (ap.provider == "iter")
+  {
+    bool supported = false;
+
+    if (!supported)
+    {
+      LOG(ERROR, ap.loc, err_)
+          << "iter " << ap.func << " not available for your kernel version.";
+    }
+  }
   else {
     LOG(ERROR, ap.loc, err_) << "Invalid provider: '" << ap.provider << "'";
   }
@@ -2543,11 +2554,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
 void SemanticAnalyser::visit(Probe &probe)
 {
+  auto aps = probe.attach_points->size();
+
   // Clear out map of variable names - variables should be probe-local
   variable_val_.clear();
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
+    if (!listing_ && aps > 1 && ap->provider == "iter")
+    {
+      LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
+      return;
+    }
     ap->accept(*this);
   }
   if (probe.pred) {
@@ -2924,6 +2942,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::tracepoint:
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
+      case ProbeType::iter:
         return false;
     }
   }
@@ -2947,6 +2966,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::asyncwatchpoint:
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
+      case ProbeType::iter:
         return false;
     }
   }
@@ -2972,6 +2992,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::hardware:
       case ProbeType::watchpoint:
       case ProbeType::asyncwatchpoint:
+      case ProbeType::iter:
         return false;
     }
   }

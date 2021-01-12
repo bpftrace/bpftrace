@@ -27,6 +27,9 @@
 
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
+#ifdef HAVE_LIBBPF_BPF_H
+#include <bpf/bpf.h>
+#endif
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
@@ -277,6 +280,10 @@ int BPFtrace::add_probe(ast::Probe &p)
       {
         target = erase_prefix(func_id);
         erase_prefix(func);
+      }
+      else if (probetype(attach_point->provider) == ProbeType::iter)
+      {
+        has_iter_ = true;
       }
 
       Probe probe;
@@ -953,6 +960,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::usdt:
     case ProbeType::software:
     case ProbeType::kfunc:
+    case ProbeType::iter:
       return true;
     case ProbeType::kretfunc:
     case ProbeType::kretprobe:
@@ -989,8 +997,65 @@ int BPFtrace::run_special_probe(std::string name,
   return 0;
 }
 
+#ifdef HAVE_LIBBPF_LINK_CREATE
+int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc)
+{
+  auto probe = probes_.begin();
+  char buf[1024] = {};
+  ssize_t len;
+
+  if (probe == probes_.end())
+  {
+    LOG(ERROR) << "Failed to create iter probe";
+    return 1;
+  }
+
+  auto aps = attach_probe(*probe, *bpforc.get());
+  if (aps.empty())
+  {
+    LOG(ERROR) << "Failed to attach iter probe";
+    return 1;
+  }
+
+  auto &ap = *aps.begin();
+
+  int link_fd = ap.get()->linkfd_;
+
+  if (link_fd < 0)
+  {
+    LOG(ERROR) << "Failed to link iter probe";
+    return 1;
+  }
+
+  int iter_fd = bpf_iter_create(link_fd);
+
+  if (iter_fd < 0)
+  {
+    LOG(ERROR) << "Failed to open iter probe link";
+    return 1;
+  }
+
+  while ((len = read(iter_fd, buf, sizeof(buf))) > 0)
+  {
+    fwrite(buf, len, 1, stdout);
+  }
+
+  close(iter_fd);
+  return 0;
+}
+#else
+int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc __attribute__((unused)))
+{
+  LOG(ERROR) << "iter is not available for linked bpf version";
+  return 1;
+}
+#endif
+
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
+  if (has_iter_)
+    return run_iter(move(bpforc));
+
   bpforc_ = std::move(bpforc);
 
   int epollfd = setup_perf_events();

@@ -60,6 +60,7 @@ if (LIBBPF_FOUND)
   check_symbol_exists(btf_dump__emit_type_decl "${LIBBPF_INCLUDE_DIRS}/bpf/btf.h" HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
 
   check_symbol_exists(bpf_map_lookup_batch "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_MAP_BATCH)
+  check_symbol_exists(bpf_link_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_LINK_CREATE)
   SET(CMAKE_REQUIRED_DEFINITIONS)
   SET(CMAKE_REQUIRED_LIBRARIES)
 endif()

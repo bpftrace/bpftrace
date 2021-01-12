@@ -235,6 +235,9 @@ std::string probetypeName(ProbeType t)
       break;
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
+    case ProbeType::iter:
+      return "iter";
+      break;
   }
 
   return {}; // unreached

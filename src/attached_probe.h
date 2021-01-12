@@ -31,6 +31,7 @@ public:
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
   const Probe &probe() const;
+  int linkfd_ = -1;
 
 private:
   std::string eventprefix() const;
@@ -64,6 +65,8 @@ private:
   void attach_watchpoint(int pid, const std::string &mode);
   void attach_kfunc(void);
   int detach_kfunc(void);
+  void attach_iter(void);
+  int detach_iter(void);
 
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;

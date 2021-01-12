@@ -413,6 +413,7 @@ enum class ProbeType
   asyncwatchpoint,
   kfunc,
   kretfunc,
+  iter,
 };
 
 std::ostream &operator<<(std::ostream &os, ProbeType type);
@@ -441,6 +442,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
   { "asyncwatchpoint", "aw", ProbeType::asyncwatchpoint },
   { "kfunc", "f", ProbeType::kfunc },
   { "kretfunc", "fr", ProbeType::kretfunc },
+  { "iter", "it", ProbeType::iter },
 };
 
 ProbeType probetype(const std::string &type);
