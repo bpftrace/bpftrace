@@ -1529,7 +1529,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
     // Just read from the correct offset of expr_
     Value *src = b_.CreateGEP(expr_, {b_.getInt64(0), b_.getInt64(field.offset)});
 
-    if (field.type.IsRecordTy())
+    if (field.type.IsRecordTy() || field.type.IsArrayTy())
     {
       // TODO This should be do-able without allocating more memory here
       AllocaInst *dst = b_.CreateAllocaBPF(field.type,
@@ -1547,7 +1547,12 @@ void CodegenLLVM::visit(FieldAccess &acc)
     }
     else
     {
-      expr_ = b_.CreateLoad(b_.GetType(field.type), src);
+      // We need to cast src to an appropriate pointer type to make the IR valid
+      // This is necessary since the struct may be stored in memory as a byte
+      // array but we're reading an entire integer (e.g. cast i8* to i32*).
+      auto dst_ty = b_.GetType(field.type);
+      expr_ = b_.CreateLoad(dst_ty,
+                            b_.CreatePointerCast(src, dst_ty->getPointerTo()));
     }
   }
   else
@@ -1701,7 +1706,11 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   if (arr.expr->type.IsCtxAccess() || arr.expr->type.is_internal)
   {
     auto ty = b_.GetType(stype);
-    expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, ty->getPointerTo()), true);
+    auto elem = b_.CreateIntToPtr(src, ty->getPointerTo());
+    if (stype.IsIntegerTy() || stype.IsPtrTy())
+      expr_ = b_.CreateLoad(elem, true);
+    else
+      expr_ = elem;
   }
   else
   {

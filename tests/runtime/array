@@ -57,3 +57,45 @@ RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_
 EXPECT @x\[\[1,2,3,4\]\]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME multi-dimensional array element access
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $x = ((struct B *) arg1)->y[1][0]; printf("Result: %d\n", $x); exit(); }'
+EXPECT Result: 7
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array element access via assignment into var
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; $y = $b[1][0]; printf("Result: %d\n", $y); exit(); }'
+EXPECT Result: 7
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array element access via assignment into map
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; printf("Result: %d\n", @b[0][1][0]); exit(); }'
+EXPECT Result: 7
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array element access via assignment into map and var
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; $x = @b[0]; printf("Result: %d\n", $x[1][0]); exit(); }'
+EXPECT Result: 7
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array assignment into map
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; exit(); }'
+EXPECT @b: \[\[5,6\],\[7,8\]\]
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array as a map key
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @x[((struct B *) arg1)->y] = 0; exit(); }'
+EXPECT @x\[\[\[5,6\],\[7,8\]\]]: 0
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME multi-dimensional array as a map key assigned from another map
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; @x[@b] = 0; exit(); }'
+EXPECT @x\[\[\[5,6\],\[7,8\]\]]: 0
+TIMEOUT 5
+AFTER ./testprogs/array_access
