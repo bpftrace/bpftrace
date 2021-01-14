@@ -332,14 +332,8 @@ static SizedType get_sized_type(CXType clang_type)
         return CreateString(size);
       }
 
-      // Only support one-dimensional arrays for now
-      if (elem_type.kind != CXType_ConstantArray)
-      {
-        auto elem_stype = get_sized_type(elem_type);
-        return CreateArray(size, elem_stype);
-      } else {
-        return CreateNone();
-      }
+      auto elem_stype = get_sized_type(elem_type);
+      return CreateArray(size, elem_stype);
     }
     default:
       return CreateNone();

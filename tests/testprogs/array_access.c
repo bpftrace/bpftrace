@@ -3,7 +3,15 @@ struct A
   int x[4];
 };
 
-void test_struct(struct A *a __attribute__((unused))) { }
+struct B
+{
+  int y[2][2];
+};
+
+void test_struct(struct A *a __attribute__((unused)),
+                 struct B *b __attribute__((unused)))
+{
+}
 
 int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
 {
@@ -12,5 +20,11 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   a.x[1] = 2;
   a.x[2] = 3;
   a.x[3] = 4;
-  test_struct(&a);
+
+  struct B b;
+  b.y[0][0] = 5;
+  b.y[0][1] = 6;
+  b.y[1][0] = 7;
+  b.y[1][1] = 8;
+  test_struct(&a, &b);
 }

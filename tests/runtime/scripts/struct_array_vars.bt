@@ -1,0 +1,46 @@
+struct T {
+  uint32_t a;
+  uint32_t b[2];
+};
+
+struct W {
+  uint32_t a;
+  struct T t;
+};
+
+struct C {
+  uint32_t a;
+  void * b;
+  struct W w[5];
+};
+
+uprobe:./testprogs/struct_array:clear {
+  $c = (struct C *) arg0;
+
+  $w = $c->w;
+  @w[0] = $c->w;
+  @[$c->w] = 42;
+
+  printf("%d ", $w[0].a);
+  printf("%d ", $w[1].a);
+  printf("%d ", $w[2].a);
+  printf("%d ", $w[3].a);
+  printf("%d ", $w[4].a);
+
+  printf("-- ");
+  printf("%d ", @w[0][0].t.a);
+  printf("%d ", @w[0][1].t.a);
+  printf("%d ", @w[0][2].t.a);
+  printf("%d ", @w[0][3].t.a);
+  printf("%d ", @w[0][4].t.a);
+
+  printf("-- ");
+  printf("%d ", @w[0][0].t.b[0]);
+  printf("%d ", @w[0][1].t.b[0]);
+  printf("%d ", @w[0][2].t.b[0]);
+  printf("%d ", @w[0][3].t.b[0]);
+  printf("%d ", @w[0][4].t.b[0]);
+
+  printf("-- ");
+  printf("%d ", @[$c->w]);
+}
