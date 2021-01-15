@@ -1,5 +1,13 @@
 #pragma once
 
+#ifndef BPF_PSEUDO_MAP_FD
+#define BPF_PSEUDO_MAP_FD 1
+#endif
+
+#ifndef BPF_PSEUDO_MAP_VALUE
+#define BPF_PSEUDO_MAP_VALUE 2
+#endif
+
 // clang-format off
 enum bpf_map_type {
 	BPF_MAP_TYPE_UNSPEC,
