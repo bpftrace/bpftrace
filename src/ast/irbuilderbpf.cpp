@@ -287,7 +287,7 @@ CallInst *IRBuilderBPF::createCall(Value *callee,
 #endif
 }
 
-CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
+CallInst *IRBuilderBPF::CreateBpfPseudoCallFd(int mapfd)
 {
   Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
   return createCall(pseudo_func,
@@ -295,15 +295,15 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCall(int mapfd)
                     "pseudo");
 }
 
-CallInst *IRBuilderBPF::CreateBpfPseudoCall(Map &map)
+CallInst *IRBuilderBPF::CreateBpfPseudoCallFd(Map &map)
 {
   int mapfd = bpftrace_.maps[map.ident].value()->mapfd_;
-  return CreateBpfPseudoCall(mapfd);
+  return CreateBpfPseudoCallFd(mapfd);
 }
 
 CallInst *IRBuilderBPF::createMapLookup(int mapfd, AllocaInst *key)
 {
-  Value *map_ptr = CreateBpfPseudoCall(mapfd);
+  Value *map_ptr = CreateBpfPseudoCallFd(mapfd);
   // void *map_lookup_elem(struct bpf_map * map, void * key)
   // Return: Map value or NULL
 
@@ -397,7 +397,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
                                        Value *val,
                                        const location &loc)
 {
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *map_ptr = CreateBpfPseudoCallFd(map);
 
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(key->getType()->isPointerTy());
@@ -429,7 +429,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(key->getType()->isPointerTy());
-  Value *map_ptr = CreateBpfPseudoCall(map);
+  Value *map_ptr = CreateBpfPseudoCallFd(map);
 
   // int map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
@@ -974,7 +974,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
 
-  Value *map_ptr = CreateBpfPseudoCall(
+  Value *map_ptr = CreateBpfPseudoCallFd(
       bpftrace_.maps[stack_type].value()->mapfd_);
 
   int flags = 0;
@@ -1030,7 +1030,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(data && data->getType()->isPointerTy());
 
-  Value *map_ptr = CreateBpfPseudoCall(
+  Value *map_ptr = CreateBpfPseudoCallFd(
       bpftrace_.maps[MapManager::Type::PerfEvent].value()->mapfd_);
 
   Value *flags_val = CreateGetCpuId();

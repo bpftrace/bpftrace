@@ -54,8 +54,8 @@ public:
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
-  CallInst   *CreateBpfPseudoCall(int mapfd);
-  CallInst   *CreateBpfPseudoCall(Map &map);
+  CallInst *CreateBpfPseudoCallFd(int mapfd);
+  CallInst *CreateBpfPseudoCallFd(Map &map);
   Value *CreateMapLookupElem(Value *ctx,
                              Map &map,
                              AllocaInst *key,
