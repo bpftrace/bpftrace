@@ -301,6 +301,20 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCallFd(Map &map)
   return CreateBpfPseudoCallFd(mapfd);
 }
 
+CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(int mapfd)
+{
+  Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
+  return CreateCall(pseudo_func,
+                    { getInt64(BPF_PSEUDO_MAP_VALUE), getInt64(mapfd) },
+                    "pseudo");
+}
+
+CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(Map &map)
+{
+  int mapfd = bpftrace_.maps[map.ident].value()->mapfd_;
+  return CreateBpfPseudoCallValue(mapfd);
+}
+
 CallInst *IRBuilderBPF::createMapLookup(int mapfd, AllocaInst *key)
 {
   Value *map_ptr = CreateBpfPseudoCallFd(mapfd);
