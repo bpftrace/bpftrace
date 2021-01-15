@@ -172,6 +172,7 @@ private:
 
   std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;
+  int seq_printf_id_ = 0;
   int time_id_ = 0;
   int cat_id_ = 0;
   int strftime_id_ = 0;

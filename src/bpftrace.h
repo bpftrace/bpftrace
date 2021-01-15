@@ -156,6 +156,7 @@ public:
   std::map<std::string, uint64_t> enums_;
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
+  std::vector<std::tuple<std::string, std::vector<Field>>> seq_printf_args_;
   std::vector<std::string> join_args_;
   std::vector<std::string> time_args_;
   std::vector<std::string> strftime_args_;
@@ -201,6 +202,8 @@ public:
   {
     return procmon_ ? procmon_->pid() : 0;
   }
+
+  std::vector<std::tuple<int, int>> seq_printf_ids_;
 
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;

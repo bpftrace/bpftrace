@@ -59,6 +59,7 @@ public:
     PerfEvent,
     Join,
     Elapsed,
+    SeqPrintfData,
   };
 
   void Set(Type t, std::unique_ptr<IMap> map);

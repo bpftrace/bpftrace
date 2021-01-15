@@ -235,6 +235,8 @@ std::string to_string(MapManager::Type t)
       return "join";
     case MapManager::Type::Elapsed:
       return "elapsed";
+    case MapManager::Type::SeqPrintfData:
+      return "seq_printf_data";
   }
   return {}; // unreached
 }

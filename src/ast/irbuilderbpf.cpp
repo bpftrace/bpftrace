@@ -1228,5 +1228,43 @@ void IRBuilderBPF::CreatePath(Value *ctx,
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);
 }
 
+void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
+                                   Value *fmt,
+                                   Value *fmt_size,
+                                   AllocaInst *data,
+                                   Value *data_len,
+                                   const location &loc)
+{
+  // long bpf_seq_printf(struct seq_file *m, const char *fmt, __u32 fmt_size,
+  //                     const void *data, __u32 data_len)
+  // Return: 0 or error
+  FunctionType *seq_printf_func_type = FunctionType::get(getInt64Ty(),
+                                                         { getInt64Ty(),
+                                                           getInt8PtrTy(),
+                                                           getInt32Ty(),
+                                                           getInt8PtrTy(),
+                                                           getInt32Ty() },
+                                                         false);
+  PointerType *seq_printf_func_ptr_type = PointerType::get(seq_printf_func_type,
+                                                           0);
+  Constant *seq_printf_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_seq_printf),
+      seq_printf_func_ptr_type);
+
+  ctx = CreatePointerCast(ctx, getInt8Ty()->getPointerTo());
+  Value *meta = CreateLoad(getInt64Ty()->getPointerTo(),
+                           CreateGEP(ctx, getInt64(0)),
+                           "meta");
+  dyn_cast<LoadInst>(meta)->setVolatile(true);
+
+  Value *seq = CreateLoad(getInt64Ty(), CreateGEP(meta, getInt64(0)), "seq");
+
+  CallInst *call = createCall(seq_printf_func,
+                              { seq, fmt, fmt_size, data, data_len },
+                              "seq_printf");
+  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_seq_printf, loc);
+}
+
 } // namespace ast
 } // namespace bpftrace

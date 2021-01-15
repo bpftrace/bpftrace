@@ -912,7 +912,17 @@ void SemanticAnalyser::visit(Call &call)
         }
 
         if (call.func == "printf")
-          bpftrace_.printf_args_.emplace_back(fmt.str, args);
+        {
+          if (single_provider_type() == ProbeType::iter)
+          {
+            bpftrace_.seq_printf_args_.emplace_back(fmt.str, args);
+            needs_data_map_ = true;
+          }
+          else
+          {
+            bpftrace_.printf_args_.emplace_back(fmt.str, args);
+          }
+        }
         else if (call.func == "system")
           bpftrace_.system_args_.emplace_back(fmt.str, args);
         else
@@ -2693,6 +2703,48 @@ int SemanticAnalyser::create_maps_impl(void)
     auto map = std::make_unique<T>(map_ident, type, key, 1);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace_.maps.Set(MapManager::Type::Elapsed, std::move(map));
+  }
+  if (needs_data_map_)
+  {
+    size_t size = 0;
+
+    // get size of all the formats
+    for (auto it : bpftrace_.seq_printf_args_)
+    {
+      size += std::get<0>(it).size() + 1;
+    }
+
+    // compute buffer size to hold all the formats
+    // and create map with that
+    int ptr_size = sizeof(unsigned long);
+    size = (size / ptr_size + 1) * ptr_size;
+    auto map = std::make_unique<T>("data", BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(MapManager::Type::SeqPrintfData, std::move(map));
+
+    // copy all the formats to array and store indexes
+    // and lengths so we can later access it
+    uint32_t idx = 0;
+    std::vector<uint8_t> formats(size, 0);
+
+    for (auto it : bpftrace_.seq_printf_args_)
+    {
+      auto str = std::get<0>(it).c_str();
+      auto len = ::strlen(str);
+
+      memcpy(&formats.data()[idx], str, len);
+
+      bpftrace_.seq_printf_ids_.push_back({ idx, len + 1 });
+      idx += len + 1;
+    }
+
+    // store the data in map
+    uint64_t id = 0;
+
+    bpf_update_elem(bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->mapfd_,
+                    &id,
+                    formats.data(),
+                    0);
   }
 
   {
