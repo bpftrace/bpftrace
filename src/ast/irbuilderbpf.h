@@ -165,6 +165,12 @@ public:
                   AllocaInst *buf,
                   Value *path,
                   const location &loc);
+  void CreateSeqPrintf(Value *ctx,
+                       Value *fmt,
+                       Value *fmt_size,
+                       AllocaInst *data,
+                       Value *data_len,
+                       const location &loc);
   int helper_error_id_ = 0;
 
 private:

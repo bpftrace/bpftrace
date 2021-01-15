@@ -787,11 +787,59 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "printf")
   {
-    createFormatStringCall(call,
-                           printf_id_,
-                           bpftrace_.printf_args_,
-                           "printf",
-                           AsyncAction::printf);
+    // We overload printf call for iterator probe's seq_printf helper.
+    if (probetype(current_attach_point_->provider) == ProbeType::iter)
+    {
+      auto mapfd = bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->mapfd_;
+      auto nargs = call.vargs->size() - 1;
+
+      int ptr_size = sizeof(unsigned long);
+      int data_size = 0;
+
+      // create buffer to store the argument expression values
+      SizedType data_type = CreateBuffer(nargs * 8);
+      AllocaInst *data = b_.CreateAllocaBPFInit(data_type, "data");
+
+      for (size_t i = 1; i < call.vargs->size(); i++)
+      {
+        // process argument expression
+        Expression &arg = *call.vargs->at(i);
+        auto scoped_del = accept(&arg);
+
+        // and store it to data area
+        Value *offset = b_.CreateGEP(
+            data, { b_.getInt64(0), b_.getInt64((i - 1) * ptr_size) });
+        b_.CreateStore(expr_, offset);
+
+        // keep the expression alive, so it's still there
+        // for following seq_printf call
+        expr_deleter_ = scoped_del.disarm();
+        data_size += ptr_size;
+      }
+
+      // pick to current format string
+      auto ids = bpftrace_.seq_printf_ids_.at(seq_printf_id_);
+      auto idx = std::get<0>(ids);
+      auto size = std::get<1>(ids);
+
+      // and load it from the map
+      Value *map_data = b_.CreateBpfPseudoCallValue(mapfd);
+      Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
+
+      // and finally the seq_printf call
+      b_.CreateSeqPrintf(
+          ctx_, fmt, b_.getInt64(size), data, b_.getInt64(data_size), call.loc);
+
+      seq_printf_id_++;
+    }
+    else
+    {
+      createFormatStringCall(call,
+                             printf_id_,
+                             bpftrace_.printf_args_,
+                             "printf",
+                             AsyncAction::printf);
+    }
   }
   else if (call.func == "system")
   {
@@ -2103,6 +2151,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_join_id = join_id_;
     int starting_helper_error_id = b_.helper_error_id_;
     int starting_non_map_print_id = non_map_print_id_;
+    int starting_seq_printf_id = seq_printf_id_;
 
     auto reset_ids = [&]() {
       printf_id_ = starting_printf_id;
@@ -2113,6 +2162,7 @@ void CodegenLLVM::visit(Probe &probe)
       join_id_ = starting_join_id;
       b_.helper_error_id_ = starting_helper_error_id;
       non_map_print_id_ = starting_non_map_print_id;
+      seq_printf_id_ = starting_seq_printf_id;
     };
 
     for (auto attach_point : *probe.attach_points) {
