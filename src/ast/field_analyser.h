@@ -42,6 +42,8 @@ private:
                     const std::map<std::string, SizedType>& args2);
 
   Node *root_;
+  ProbeType probe_type_;
+  std::string attach_func_;
   std::string    type_;
   BPFtrace      &bpftrace_;
   bpf_prog_type  prog_type_;

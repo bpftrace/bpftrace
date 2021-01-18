@@ -36,6 +36,27 @@ void FieldAnalyser::visit(Builtin &builtin)
       default:
         break;
     }
+    // For each iterator probe, the context is pointing to specific struct,
+    // make them resolved and available
+    if (probe_type_ == ProbeType::iter)
+    {
+      std::string it_struct;
+
+      if (attach_func_ == "task")
+      {
+        it_struct = "struct bpf_iter__task";
+      }
+      else if (attach_func_ == "task_file")
+      {
+        it_struct = "struct bpf_iter__task_file";
+      }
+
+      if (!it_struct.empty())
+      {
+        bpftrace_.btf_set_.insert(it_struct);
+        type_ = it_struct;
+      }
+    }
   }
   else if (builtin.ident == "curtask")
   {
@@ -274,8 +295,9 @@ void FieldAnalyser::visit(Probe &probe)
 
   for (AttachPoint *ap : *probe.attach_points) {
     ap->accept(*this);
-    ProbeType pt = probetype(ap->provider);
-    prog_type_ = progtype(pt);
+    probe_type_ = probetype(ap->provider);
+    prog_type_ = progtype(probe_type_);
+    attach_func_ = ap->func;
   }
   if (probe.pred) {
     probe.pred->accept(*this);

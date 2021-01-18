@@ -217,6 +217,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
   {
     ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
     bpf_prog_type bt = progtype(pt);
+    std::string func = (*probe_->attach_points)[0]->func;
+
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType pt = probetype(attach_point->provider);
@@ -226,24 +228,52 @@ void SemanticAnalyser::visit(Builtin &builtin)
             << "ctx cannot be used in different BPF program types: "
             << progtypeName(bt) << " and " << progtypeName(bt2);
     }
-    switch (bt)
+    switch (static_cast<libbpf::bpf_prog_type>(bt))
     {
-      case BPF_PROG_TYPE_KPROBE:
+      case libbpf::BPF_PROG_TYPE_KPROBE:
         builtin.type = CreatePointer(
             CreateRecord(bpftrace_.structs_["pt_regs"].size, "struct pt_regs"),
             AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
-      case BPF_PROG_TYPE_TRACEPOINT:
+      case libbpf::BPF_PROG_TYPE_TRACEPOINT:
         LOG(ERROR, builtin.loc, err_)
             << "Use args instead of ctx in tracepoint";
         break;
-      case BPF_PROG_TYPE_PERF_EVENT:
+      case libbpf::BPF_PROG_TYPE_PERF_EVENT:
         builtin.type = CreatePointer(
             CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size,
                          "struct bpf_perf_event_data"),
             AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
+        break;
+      case libbpf::BPF_PROG_TYPE_TRACING:
+        if (pt == ProbeType::iter)
+        {
+          std::string type;
+
+          if (func == "task")
+          {
+            type = "bpf_iter__task";
+          }
+          else if (func == "task_file")
+          {
+            type = "bpf_iter__task_file";
+          }
+          else
+          {
+            LOG(ERROR, builtin.loc, err_) << "unsupported iter type: " << func;
+          }
+
+          builtin.type = CreatePointer(
+              CreateRecord(bpftrace_.structs_[type].size, "struct " + type),
+              AddrSpace::kernel);
+          builtin.type.MarkCtxAccess();
+        }
+        else
+        {
+          LOG(ERROR, builtin.loc, err_) << "invalid program type";
+        }
         break;
       default:
         LOG(ERROR, builtin.loc, err_) << "invalid program type";
@@ -2550,6 +2580,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "iter")
   {
     bool supported = false;
+
+    if (ap.func == "task")
+    {
+      supported = bpftrace_.feature_->has_prog_iter_task() &&
+                  bpftrace_.btf_.has_data();
+    }
+    else if (ap.func == "task_file")
+    {
+      supported = bpftrace_.feature_->has_prog_iter_task_file() &&
+                  bpftrace_.btf_.has_data();
+    }
 
     if (!supported)
     {
