@@ -3067,6 +3067,28 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
       expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, dst_type->getPointerTo()),
                             true);
       expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), elem_type.IsSigned());
+
+      // check context access for iter probes (required by kernel)
+      if (probetype(current_attach_point_->provider) == ProbeType::iter)
+      {
+        Function *parent = b_.GetInsertBlock()->getParent();
+        BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),
+                                                          "pred_false",
+                                                          parent);
+        BasicBlock *pred_true_block = BasicBlock::Create(module_->getContext(),
+                                                         "pred_true",
+                                                         parent);
+        Value *expr = expr_;
+
+        expr = b_.CreateIntCast(expr, b_.getInt64Ty(), false);
+        expr = b_.CreateICmpEQ(expr, b_.getInt64(0), "predcond");
+
+        b_.CreateCondBr(expr, pred_false_block, pred_true_block);
+        b_.SetInsertPoint(pred_false_block);
+        b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+
+        b_.SetInsertPoint(pred_true_block);
+      }
     }
     else
     {
