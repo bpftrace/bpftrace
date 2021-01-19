@@ -1170,9 +1170,10 @@ void SemanticAnalyser::visit(Call &call)
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kfunc && type != ProbeType::kretfunc)
+      if (type != ProbeType::kfunc && type != ProbeType::kretfunc &&
+          type != ProbeType::iter)
         LOG(ERROR, call.loc, err_) << "The path function can only be used with "
-                                   << "'kfunc', 'kretfunc' probes";
+                                   << "'kfunc', 'kretfunc', 'iter' probes";
     }
   }
   else if (call.func == "strncmp") {
