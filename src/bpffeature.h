@@ -37,7 +37,7 @@ public:                                                                        \
     return *(has_##name##_);                                                   \
   }
 
-#define DEFINE_PROG_TEST(var, progtype)                                        \
+#define __DEFINE_PROG_TEST(var, progtype, name)                                \
 protected:                                                                     \
   std::optional<bool> prog_##var##_;                                           \
                                                                                \
@@ -45,9 +45,15 @@ public:                                                                        \
   bool has_prog_##var(void)                                                    \
   {                                                                            \
     if (!prog_##var##_.has_value())                                            \
-      prog_##var##_ = std::make_optional<bool>(detect_prog_type((progtype)));  \
+      prog_##var##_ = std::make_optional<bool>(                                \
+          detect_prog_type((progtype), (name)));                               \
     return *(prog_##var##_);                                                   \
   }
+
+#define DEFINE_PROG_TEST(var, progtype) __DEFINE_PROG_TEST(var, progtype, NULL)
+
+#define DEFINE_PROG_TEST_FUNC(var, progtype, name)                             \
+  __DEFINE_PROG_TEST(var, progtype, name)
 
 class BPFfeature
 {
@@ -94,6 +100,12 @@ public:
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
   DEFINE_PROG_TEST(kfunc, libbpf::BPF_PROG_TYPE_TRACING);
+  DEFINE_PROG_TEST_FUNC(iter_task,
+                        libbpf::BPF_PROG_TYPE_TRACING,
+                        "bpf_iter__task");
+  DEFINE_PROG_TEST_FUNC(iter_task_file,
+                        libbpf::BPF_PROG_TYPE_TRACING,
+                        "bpf_iter__task_file");
 
 protected:
   std::optional<bool> has_loop_;
@@ -106,7 +118,7 @@ private:
   bool detect_map(enum libbpf::bpf_map_type map_type);
   bool detect_helper(enum libbpf::bpf_func_id func_id,
                      enum libbpf::bpf_prog_type prog_type);
-  bool detect_prog_type(enum libbpf::bpf_prog_type prog_type);
+  bool detect_prog_type(enum libbpf::bpf_prog_type prog_type, const char* name);
 };
 
 #undef DEFINE_PROG_TEST
