@@ -560,10 +560,11 @@ TEST_F(clang_parser_btf, btf)
 
   StructMap &structs = bpftrace.structs_;
 
-  ASSERT_EQ(structs.size(), 3U);
+  ASSERT_EQ(structs.size(), 4U);
   ASSERT_EQ(structs.count("struct Foo1"), 1U);
   ASSERT_EQ(structs.count("struct Foo2"), 1U);
   ASSERT_EQ(structs.count("struct Foo3"), 1U);
+  ASSERT_EQ(structs.count("struct task_struct"), 1U);
 
   EXPECT_EQ(structs["struct Foo1"].size, 16);
   ASSERT_EQ(structs["struct Foo1"].fields.size(), 3U);
@@ -605,6 +606,11 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_EQ(structs["struct Foo3"].fields.size(), 2U);
   ASSERT_EQ(structs["struct Foo3"].fields.count("foo1"), 1U);
   ASSERT_EQ(structs["struct Foo3"].fields.count("foo2"), 1U);
+
+  EXPECT_EQ(structs["struct task_struct"].size, 8);
+  ASSERT_EQ(structs["struct task_struct"].fields.size(), 2U);
+  ASSERT_EQ(structs["struct task_struct"].fields.count("pid"), 1U);
+  ASSERT_EQ(structs["struct task_struct"].fields.count("pgid"), 1U);
 
   auto foo1 = structs["struct Foo3"].fields["foo1"];
   auto foo2 = structs["struct Foo3"].fields["foo2"];

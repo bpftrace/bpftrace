@@ -58,14 +58,19 @@ void test(BPFtrace &bpftrace,
           int expected_result = 0,
           bool safe_mode = true,
           bool has_child = false,
-          int expected_field_analyser = 0)
+          int expected_field_analyser = 0,
+          int expected_parse = 0)
 {
   std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   bpftrace.safe_mode_ = safe_mode;
-  ASSERT_EQ(driver.parse_str(input), 0);
+  ASSERT_EQ(driver.parse_str(input), expected_parse);
+
+  // Can't continue if parsing failed
+  if (expected_parse)
+    return;
 
   ast::FieldAnalyser fields(driver.root_, bpftrace, out);
   EXPECT_EQ(fields.analyse(), expected_field_analyser) << msg.str() + out.str();
@@ -114,7 +119,8 @@ void test(const std::string &input,
           int expected_result = 0,
           bool safe_mode = true,
           bool has_child = false,
-          int expected_field_analyser = 0)
+          int expected_field_analyser = 0,
+          int expected_parse = 0)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
@@ -125,7 +131,8 @@ void test(const std::string &input,
        expected_result,
        safe_mode,
        has_child,
-       expected_field_analyser);
+       expected_field_analyser,
+       expected_parse);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -2236,6 +2243,21 @@ TEST_F(semantic_analyser_btf, call_path)
 {
   test("kfunc:func_1 { $k = path( args->foo1 ) }", 0);
   test("kretfunc:func_1 { $k = path( retval->foo1 ) }", 0);
+}
+
+TEST_F(semantic_analyser_btf, iter)
+{
+  test("iter:task { 1 }", 0);
+  test("iter:task_file { 1 }", 0);
+  test("iter:task { $x = ctx->task->pid }", 0);
+  test("iter:task_file { $x = ctx->file->ino }", 0);
+  test("iter:task { $x = args->foo; }", 1);
+  test("iter:task_file { $x = args->foo; }", 1);
+  test("iter:task* { }", 1, true, false, 1, 1);
+  test("iter:task { printf(\"%d\", ctx->task->pid); }", 0);
+  test("iter:task_file { printf(\"%d\", ctx->file->ino); }", 0);
+  test("iter:task,iter:task_file { 1 }", 1);
+  test("iter:task,f:func_1 { 1 }", 1);
 }
 
 #endif // HAVE_LIBBPF_BTF_DUMP

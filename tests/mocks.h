@@ -88,6 +88,8 @@ public:
     has_get_current_cgroup_id_ = std::make_optional<bool>(has_features);
     has_override_return_ = std::make_optional<bool>(has_features);
     prog_kfunc_ = std::make_optional<bool>(has_features);
+    prog_iter_task_ = std::make_optional<bool>(has_features);
+    prog_iter_task_file_ = std::make_optional<bool>(has_features);
     has_loop_ = std::make_optional<bool>(has_features);
     has_probe_read_kernel_ = std::make_optional<bool>(has_features);
     has_features_ = has_features;
