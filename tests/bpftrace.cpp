@@ -939,7 +939,7 @@ class bpftrace_btf : public test_btf
 {
 };
 
-void check_kfunc(Probe &p, ProbeType type, const std::string &name)
+void check_probe(Probe &p, ProbeType type, const std::string &name)
 {
   EXPECT_EQ(type, p.type);
   EXPECT_EQ(name, p.name);
@@ -955,10 +955,36 @@ TEST_F(bpftrace_btf, add_probes_kfunc)
   ASSERT_EQ(2U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
 
-  check_kfunc(bpftrace.get_probes().at(0), ProbeType::kfunc, "kfunc:func_1");
-  check_kfunc(bpftrace.get_probes().at(1),
+  check_probe(bpftrace.get_probes().at(0), ProbeType::kfunc, "kfunc:func_1");
+  check_probe(bpftrace.get_probes().at(1),
               ProbeType::kretfunc,
               "kretfunc:func_1");
+}
+
+TEST_F(bpftrace_btf, add_probes_iter_task)
+{
+  ast::Probe *probe = parse_probe("iter:task {}");
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task");
+}
+
+TEST_F(bpftrace_btf, add_probes_iter_task_file)
+{
+  ast::Probe *probe = parse_probe("iter:task_file {}");
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task_file");
 }
 
 #endif // HAVE_LIBBPF_BTF_DUMP
