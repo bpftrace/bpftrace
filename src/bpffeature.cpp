@@ -134,10 +134,11 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
          (strstr(buf, "unknown func ") == nullptr);
 }
 
-bool BPFfeature::detect_prog_type(enum libbpf::bpf_prog_type prog_type)
+bool BPFfeature::detect_prog_type(enum libbpf::bpf_prog_type prog_type,
+                                  const char* name)
 {
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
-  return try_load(prog_type, insns, ARRAY_SIZE(insns));
+  return try_load(prog_type, insns, ARRAY_SIZE(insns), name);
 }
 
 bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
@@ -377,7 +378,9 @@ std::string BPFfeature::report(void)
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
-      << "  kfunc: " << to_str(has_prog_kfunc()) << std::endl;
+      << "  kfunc: " << to_str(has_prog_kfunc())
+      << "  iter:task: " << to_str(has_prog_iter_task())
+      << "  iter:task_file: " << to_str(has_prog_iter_task_file()) << std::endl;
 
   return buf.str();
 }
