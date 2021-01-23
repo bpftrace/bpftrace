@@ -733,12 +733,13 @@ AttachPointParser::State AttachPointParser::kfunc_parser()
 
 AttachPointParser::State AttachPointParser::iter_parser()
 {
-  if (parts_.size() != 2)
+  if (parts_.size() != 2 && parts_.size() != 3)
   {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
+    errs_ << ap_->provider << " probe type takes 2 arguments (1 optional)"
+          << std::endl;
     return INVALID;
   }
 
@@ -753,6 +754,9 @@ AttachPointParser::State AttachPointParser::iter_parser()
   }
 
   ap_->func = parts_[1];
+
+  if (parts_.size() == 3)
+    ap_->pin = parts_[2];
   return OK;
 }
 
