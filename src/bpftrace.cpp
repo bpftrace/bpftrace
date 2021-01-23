@@ -303,6 +303,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
       probe.async = attach_point->async;
+      probe.pin = attach_point->pin;
 
       if (probetype(attach_point->provider) == ProbeType::usdt)
       {
@@ -1027,20 +1028,36 @@ int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc)
     return 1;
   }
 
-  int iter_fd = bpf_iter_create(link_fd);
-
-  if (iter_fd < 0)
+  if (probe->pin.empty())
   {
-    LOG(ERROR) << "Failed to open iter probe link";
-    return 1;
+    int iter_fd = bpf_iter_create(link_fd);
+
+    if (iter_fd < 0)
+    {
+      LOG(ERROR) << "Failed to open iter probe link";
+      return 1;
+    }
+
+    while ((len = read(iter_fd, buf, sizeof(buf))) > 0)
+    {
+      fwrite(buf, len, 1, stdout);
+    }
+
+    close(iter_fd);
+  }
+  else
+  {
+    auto pin = probe->pin;
+
+    if (pin.at(0) != '/')
+      pin = "/sys/fs/bpf/" + pin;
+
+    if (bpf_obj_pin(link_fd, pin.c_str()))
+      LOG(ERROR) << "Failed to pin iter probe link";
+    else
+      std::cout << "Program pinned to " << pin << std::endl;
   }
 
-  while ((len = read(iter_fd, buf, sizeof(buf))) > 0)
-  {
-    fwrite(buf, len, 1, stdout);
-  }
-
-  close(iter_fd);
   return 0;
 }
 #else

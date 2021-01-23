@@ -460,6 +460,7 @@ struct Probe
   std::string orig_name;        // original full probe name,
                                 // before wildcard expansion
   std::string name;             // full probe name
+  std::string pin;              // pin file for iterator probes
   std::string ns;               // for USDT probes, if provider namespace not from path
   uint64_t loc = 0;             // for USDT probes
   int usdt_location_idx = 0;    // to disambiguate duplicate USDT markers
