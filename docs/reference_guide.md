@@ -55,6 +55,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [14. `watchpoint`/`asyncwatchpoint`: Memory watchpoints](#14-watchpointasyncwatchpoint-memory-watchpoints)
     - [15. `kfunc`/`kretfunc`: Kernel Functions Tracing](#15-kfunckretfunc-kernel-functions-tracing)
     - [16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#16-kfunckretfunc-kernel-functions-tracing-arguments)
+    - [17. `iter`: Iterators Tracing ](#17-iter-iterators-tracing)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -1643,6 +1644,120 @@ fd 3 name libselinux.so.1
 ...
 ```
 And as you can see in above example it's also possible to access function arguments on `kretfunc` probes.
+
+## 17. `iter`: Iterators Tracing
+
+**WARNING**: this feature is experimental and may be subject to interface changes.
+
+Syntax:
+
+```
+iter:task[:pin]
+iter:task_file[:pin]
+```
+
+Kernel: 5.4
+
+These are eBPF iterator probes, that allows iteration over kernel objects.
+
+Iterator probe can't be mixed with any other probe, not even other iterator.
+
+Each iterator probe provides set of fields that could be accessed with
+ctx pointer. User can display set of available fields for iterator via
+-lv options as described below.
+
+Examples:
+
+```
+# bpftrace -e 'iter:task { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }'
+Attaching 1 probe...
+systemd:1
+kthreadd:2
+rcu_gp:3
+rcu_par_gp:4
+kworker/0:0H:6
+mm_percpu_wq:8
+...
+
+# bpftrace -e 'iter:task_file { printf("%s:%d %d:%s\n", ctx->task->comm, ctx->task->pid, ctx->fd, path(ctx->file->f_path)); }'
+Attaching 1 probe...
+systemd:1 1:/dev/null
+systemd:1 2:/dev/null
+systemd:1 3:/dev/kmsg
+...
+su:1622 1:/dev/pts/1
+su:1622 2:/dev/pts/1
+su:1622 3:/var/lib/sss/mc/passwd
+...
+bpftrace:1892 1:pipe:[35124]
+bpftrace:1892 2:/dev/pts/1
+bpftrace:1892 3:anon_inode:bpf-map
+bpftrace:1892 4:anon_inode:bpf-map
+bpftrace:1892 5:anon_inode:bpf_link
+bpftrace:1892 6:anon_inode:bpf-prog
+bpftrace:1892 7:anon_inode:bpf_iter
+```
+
+You can get list of available functions via list option:
+
+```
+# bpftrace -l iter:*
+iter:task
+iter:task_file
+
+# bpftrace -l iter:* -v
+iter:task
+    struct task_struct *task;
+iter:task_file
+    struct task_struct *task;
+    int fd;
+    struct file *file;
+```
+
+It's possible to pin iterator with specifying optional probe ':pin' part,
+that defines the pin file. It can be specified as absolute path or relative
+to /sys/fs/bpf.
+
+Examples with relative pin file:
+
+```
+# bpftrace -e 'iter:task:list { printf("%s:%d\n", ctx->task->comm, ctx->task->pid); }'
+Attaching 1 probe...
+Program pinned to /sys/fs/bpf/list
+
+
+# cat /sys/fs/bpf/list
+systemd:1
+kthreadd:2
+rcu_gp:3
+rcu_par_gp:4
+kworker/0:0H:6
+mm_percpu_wq:8
+rcu_tasks_kthre:9
+...
+```
+
+Examples with absolute pin file:
+
+```
+# bpftrace -e 'iter:task_file:/sys/fs/bpf/files { printf("%s:%d %s\n", ctx->task->comm, ctx->task->pid, path(ctx->file->f_path)); }'
+Attaching 1 probe...
+Program pinned to /sys/fs/bpf/files
+
+# cat /sys/fs/bpf/files
+systemd:1 anon_inode:inotify
+systemd:1 anon_inode:[timerfd]
+...
+systemd-journal:849 /dev/kmsg
+systemd-journal:849 anon_inode:[eventpoll]
+...
+sssd:1146 /var/log/sssd/sssd.log
+sssd:1146 anon_inode:[eventpoll]
+...
+NetworkManager:1155 anon_inode:[eventfd]
+NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
+
+```
 
 # Variables
 
