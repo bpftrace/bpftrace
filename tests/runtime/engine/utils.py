@@ -103,6 +103,7 @@ class Utils(object):
         bpffeature["dpath"] = output.find("dpath: yes") != -1
         bpffeature["uprobe_refcount"] = \
             output.find("uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes") != -1
+        bpffeature["signal"] = output.find("send_signal: yes") != -1
         return bpffeature
 
     @staticmethod
