@@ -229,5 +229,5 @@ class Utils(object):
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tExpected: ' + test.expect)
-            print('\tFound: ' + output)
+            print('\tFound: ' + output.encode("unicode_escape").decode("utf-8"))
             return Utils.FAIL
