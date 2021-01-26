@@ -15,34 +15,41 @@ NAME function_arg_addr
 RUN bpftrace -v -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_func
 EXPECT hit!
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME function_arg_addr_process_flag
 RUN bpftrace -v -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -p $(pidof watchpoint_func)
 BEFORE ./testprogs/watchpoint_func
 EXPECT hit!
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME many_function_probes
 RUN bpftrace -e 'watchpoint:increment+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_many_probes
 EXPECT You are out of watchpoint registers
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME unwatch
 RUN bpftrace runtime/scripts/watchpoint_unwatch.bt -c ./testprogs/watchpoint_unwatch
 EXPECT count=1
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME function_multiattach
 RUN bpftrace -v runtime/scripts/watchpoint_multiattach.bt -c ./testprogs/watchpoint_func_wildcard
 EXPECT count=3
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME wildcarded_function
 RUN bpftrace -v -e 'watchpoint:increment_*+arg0:4:w { printf("hit!\n") }' -c ./testprogs/watchpoint_func_wildcard
 EXPECT You are out of watchpoint registers
 TIMEOUT 5
+REQUIRES_FEATURE signal
 
 NAME unique_probe_bodies
 RUN bpftrace -v -e 'watchpoint:increment_*+arg0:4:w { printf("%s!\n", probe) }' -c ./testprogs/watchpoint_func_wildcard
 EXPECT .*increment_0:4:w!
 TIMEOUT 5
+REQUIRES_FEATURE signal
