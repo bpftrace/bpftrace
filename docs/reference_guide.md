@@ -108,6 +108,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [1. `printf()`: Per-Event Output](#1-printf-per-event-output)
     - [2. `interval`: Interval Output](#2-interval-interval-output)
     - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-print-histogram-printing)
+- [BTF Support](#btf-support)
 - [Advanced Tools](#advanced-tools)
 - [Errors](#errors)
 
@@ -980,13 +981,7 @@ open path: interrupts
 [...]
 ```
 
-Requirements for using BTF:
-
-- Linux 4.18+ with `CONFIG_DEBUG_INFO_BTF=y`
-    - Building requires dwarves with pahole v1.13+
-- bpftrace v0.9.3+ with BTF support (built with libbpf v0.0.4+)
-
-See [kernel documentation](https://www.kernel.org/doc/html/latest/bpf/btf.html) for more information on BTF.
+See [BTF Support](#btf-support) for more details.
 
 Examples in situ:
 [(kprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
@@ -3288,6 +3283,25 @@ Histograms can also be printed on-demand, using the `print()` function. Eg:
 
 [...]
 ```
+
+# BTF Support
+
+If kernel has BTF, kernel types are automatically available and there is no need to include additional headers
+to use them.
+
+Requirements for using BTF:
+
+- Linux 4.18+ with `CONFIG_DEBUG_INFO_BTF=y`
+    - Building requires dwarves with pahole v1.13+
+- bpftrace v0.9.3+ with BTF support (built with libbpf v0.0.4+)
+
+See [kernel documentation](https://www.kernel.org/doc/html/latest/bpf/btf.html) for more information on BTF.
+
+Beware that BTF types are not available to a bpftrace program if it contains a user-defined type that
+redefines some BTF type. Here, "user-defined types" are also types introduced via included headers.
+Therefore, if you include a kernel header in your bpftrace program, it is very likely that it will define some
+kernel type and that BTF won't be available to your program (and you'll have to define/include all necessary
+types manually).
 
 # Advanced Tools
 
