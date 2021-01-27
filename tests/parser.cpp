@@ -1127,6 +1127,20 @@ TEST(Parser, watchpoint_probe)
   test_parse_failure("watchpoint:func1:8:rw { 1 }");
 }
 
+TEST(Parser, asyncwatchpoint_probe)
+{
+  test("asyncwatchpoint:1234:8:w { 1 }",
+       "Program\n"
+       " asyncwatchpoint:1234:8:w\n"
+       "  int: 1\n");
+
+  test_parse_failure("asyncwatchpoint:1b:8:w { 1 }");
+  test_parse_failure("asyncwatchpoint:1:8a:w { 1 }");
+  test_parse_failure("asyncwatchpoint:1b:8a:w { 1 }");
+  test_parse_failure("asyncwatchpoint:+arg0:8:rw { 1 }");
+  test_parse_failure("asyncwatchpoint:func1:8:rw { 1 }");
+}
+
 TEST(Parser, multiple_attach_points_kprobe)
 {
   test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",

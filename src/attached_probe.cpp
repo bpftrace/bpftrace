@@ -70,10 +70,17 @@ bpf_prog_type progtype(ProbeType t)
     case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::usdt:       return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
-    case ProbeType::profile:      return BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::interval:      return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::profile:
+      return BPF_PROG_TYPE_PERF_EVENT;
+      break;
+    case ProbeType::interval:
+      return BPF_PROG_TYPE_PERF_EVENT;
+      break;
     case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::asyncwatchpoint:
+      return BPF_PROG_TYPE_PERF_EVENT;
+      break;
     case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
     case ProbeType::kfunc:
       return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
@@ -196,6 +203,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       attach_usdt(pid, feature);
       break;
     case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
       attach_watchpoint(pid, probe.mode);
       break;
     default:
@@ -239,6 +247,7 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::interval:
     case ProbeType::software:
     case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
     case ProbeType::hardware:
       break;
     case ProbeType::invalid:

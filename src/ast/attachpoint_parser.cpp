@@ -82,6 +82,8 @@ int AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return hardware_parser();
     case ProbeType::watchpoint:
       return watchpoint_parser();
+    case ProbeType::asyncwatchpoint:
+      return watchpoint_parser(true);
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
       return kfunc_parser();
@@ -542,7 +544,7 @@ std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
   }
 }
 
-int AttachPointParser::watchpoint_parser()
+int AttachPointParser::watchpoint_parser(bool async)
 {
   if (parts_.size() != 4)
   {
@@ -594,6 +596,8 @@ int AttachPointParser::watchpoint_parser()
   ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
 
   ap_->mode = parts_[3];
+
+  ap_->async = async;
 
   return 0;
 }
