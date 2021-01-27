@@ -856,9 +856,11 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
     throw std::runtime_error("Failed to find usdt probe: " + eventname());
   probe_.path = u->path;
 
-  err = bcc_usdt_get_location(
-      ctx, probe_.ns.c_str(), probe_.attach_point.c_str(),
-      probe_.usdt_location_idx, &loc);
+  err = bcc_usdt_get_location(ctx,
+                              probe_.ns.c_str(),
+                              probe_.attach_point.c_str(),
+                              probe_.usdt_location_idx,
+                              &loc);
   if (err)
     throw std::runtime_error("Error finding location for probe: " +
                              probe_.name);
