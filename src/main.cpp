@@ -483,6 +483,20 @@ int main(int argc, char *argv[])
     }
   }
 
+  if (!cmd_str.empty())
+  {
+    bpftrace.cmd_ = cmd_str;
+    try
+    {
+      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
+    }
+    catch (const std::runtime_error& e)
+    {
+      LOG(ERROR) << "Failed to fork child: " << e.what();
+      return -1;
+    }
+  }
+
   // Listing probes
   if (listing)
   {
@@ -678,9 +692,6 @@ int main(int argc, char *argv[])
   if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
     return 1;
 
-  if (!cmd_str.empty())
-    bpftrace.cmd_ = cmd_str;
-
   if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
     return 1;
 
@@ -770,19 +781,6 @@ int main(int argc, char *argv[])
   err = semantics.create_maps(bt_debug != DebugLevel::kNone);
   if (err)
     return err;
-
-  if (!cmd_str.empty())
-  {
-    try
-    {
-      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
-    }
-    catch (const std::runtime_error& e)
-    {
-      LOG(ERROR) << "Failed to fork child: " << e.what();
-      return -1;
-    }
-  }
 
   ast::CodegenLLVM llvm(driver.root_, bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
