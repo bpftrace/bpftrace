@@ -269,7 +269,9 @@ int BPFtrace::add_probe(ast::Probe &p)
     }
     else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
               probetype(attach_point->provider) == ProbeType::uretprobe ||
-              probetype(attach_point->provider) == ProbeType::watchpoint) &&
+              probetype(attach_point->provider) == ProbeType::watchpoint ||
+              probetype(attach_point->provider) ==
+                  ProbeType::asyncwatchpoint) &&
              !attach_point->func.empty())
     {
       std::set<std::string> matches;
@@ -333,7 +335,8 @@ int BPFtrace::add_probe(ast::Probe &p)
         // resolved function name are used in the probe.
         target = erase_prefix(func_id);
       }
-      else if (probetype(attach_point->provider) == ProbeType::watchpoint)
+      else if (probetype(attach_point->provider) == ProbeType::watchpoint ||
+               probetype(attach_point->provider) == ProbeType::asyncwatchpoint)
       {
         target = erase_prefix(func_id);
         erase_prefix(func);
@@ -355,6 +358,7 @@ int BPFtrace::add_probe(ast::Probe &p)
                                                   : p.index();
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
+      probe.async = attach_point->async;
 
       if (probetype(attach_point->provider) == ProbeType::usdt)
       {
@@ -371,7 +375,9 @@ int BPFtrace::add_probe(ast::Probe &p)
           probes_.emplace_back(std::move(probe_copy));
         }
       }
-      else if (probetype(attach_point->provider) == ProbeType::watchpoint &&
+      else if ((probetype(attach_point->provider) == ProbeType::watchpoint ||
+                probetype(attach_point->provider) ==
+                    ProbeType::asyncwatchpoint) &&
                attach_point->func.size())
       {
         probes_.emplace_back(
@@ -415,6 +421,7 @@ std::set<std::string> BPFtrace::find_wildcard_matches(
       func = attach_point.target + ":" + attach_point.func;
       break;
     }
+    case ProbeType::asyncwatchpoint:
     case ProbeType::watchpoint:
     {
       symbol_stream = std::make_unique<std::istringstream>(
@@ -758,6 +765,10 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
 
   out:
+    // Async watchpoints are not SIGSTOP'd
+    if (bpftrace->watchpoint_probes_[probe_idx].async)
+      return;
+
     // Let the tracee continue
     pid_t pid = bpftrace->child_
                     ? bpftrace->child_->pid()
@@ -1132,7 +1143,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
       return ret;
     }
-    else if (probe.type == ProbeType::watchpoint)
+    else if (probe.type == ProbeType::watchpoint ||
+             probe.type == ProbeType::asyncwatchpoint)
     {
       ret.emplace_back(
           std::make_unique<AttachedProbe>(probe, func->second, pid, *feature_));
@@ -1175,6 +1187,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
     case ProbeType::hardware:
       return false;
     case ProbeType::invalid:

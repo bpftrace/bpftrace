@@ -17,6 +17,12 @@ EXPECT hit!
 TIMEOUT 5
 REQUIRES_FEATURE signal
 
+NAME async_function_arg_addr
+RUN bpftrace -v -e 'asyncwatchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint_func
+EXPECT hit!
+TIMEOUT 5
+REQUIRES_FEATURE signal
+
 NAME function_arg_addr_process_flag
 RUN bpftrace -v -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -p $(pidof watchpoint_func)
 BEFORE ./testprogs/watchpoint_func

@@ -409,6 +409,7 @@ enum class ProbeType
   software,
   hardware,
   watchpoint,
+  asyncwatchpoint,
   kfunc,
   kretfunc,
 };
@@ -422,8 +423,7 @@ struct ProbeItem
   ProbeType type;
 };
 
-const std::vector<ProbeItem> PROBE_LIST =
-{
+const std::vector<ProbeItem> PROBE_LIST = {
   { "kprobe", "k", ProbeType::kprobe },
   { "kretprobe", "kr", ProbeType::kretprobe },
   { "uprobe", "u", ProbeType::uprobe },
@@ -437,6 +437,7 @@ const std::vector<ProbeItem> PROBE_LIST =
   { "software", "s", ProbeType::software },
   { "hardware", "h", ProbeType::hardware },
   { "watchpoint", "w", ProbeType::watchpoint },
+  { "asyncwatchpoint", "aw", ProbeType::asyncwatchpoint },
   { "kfunc", "f", ProbeType::kfunc },
   { "kretfunc", "fr", ProbeType::kretfunc },
 };
@@ -464,6 +465,7 @@ struct Probe
   pid_t pid = -1;
   uint64_t len = 0;             // for watchpoint probes, size of region
   std::string mode;             // for watchpoint probes, watch mode (rwx)
+  bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
 };

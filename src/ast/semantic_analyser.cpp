@@ -202,6 +202,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     case ProbeType::software:
     case ProbeType::hardware:
     case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
       // Will trigger a warning in selectProbeReadHelper.
       return AddrSpace::none;
   }
@@ -2401,7 +2402,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.freq < 0)
       LOG(ERROR, ap.loc, err_) << "software count should be a positive integer";
   }
-  else if (ap.provider == "watchpoint") {
+  else if (ap.provider == "watchpoint" || ap.provider == "asyncwatchpoint")
+  {
     if (ap.func.size())
     {
       if (bpftrace_.pid() <= 0 && !has_child_)
@@ -2411,6 +2413,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         LOG(ERROR, ap.loc, err_)
             << arch::name() << " doesn't support arg" << ap.address;
     }
+    else if (ap.provider == "asyncwatchpoint")
+      LOG(ERROR, ap.loc, err_) << ap.provider << " requires a function name";
     else if (!ap.address)
       LOG(ERROR, ap.loc, err_)
           << "watchpoint must be attached to a non-zero address";
@@ -2882,6 +2886,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::software:
       case ProbeType::hardware:
       case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
         return true;
       case ProbeType::invalid:
       case ProbeType::tracepoint:
@@ -2907,6 +2912,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::software:
       case ProbeType::hardware:
       case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
         return false;
@@ -2933,6 +2939,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::software:
       case ProbeType::hardware:
       case ProbeType::watchpoint:
+      case ProbeType::asyncwatchpoint:
         return false;
     }
   }

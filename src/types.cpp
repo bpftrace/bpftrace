@@ -230,6 +230,9 @@ std::string probetypeName(ProbeType t)
     case ProbeType::software:    return "software";    break;
     case ProbeType::hardware:    return "hardware";    break;
     case ProbeType::watchpoint:  return "watchpoint";  break;
+    case ProbeType::asyncwatchpoint:
+      return "asyncwatchpoint";
+      break;
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
   }
