@@ -52,7 +52,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
     - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
     - [13. `BEGIN`/`END`: Built-in events](#13-beginend-built-in-events)
-    - [14. `watchpoint`: Memory watchpoints](#14-watchpoint-memory-watchpoints)
+    - [14. `watchpoint`/`asyncwatchpoint`: Memory watchpoints](#14-watchpointasyncwatchpoint-memory-watchpoints)
     - [15. `kfunc`/`kretfunc`: Kernel Functions Tracing](#15-kfunckretfunc-kernel-functions-tracing)
     - [16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#16-kfunckretfunc-kernel-functions-tracing-arguments)
 - [Variables](#variables)
@@ -1478,7 +1478,7 @@ Examples in situ:
 [(BEGIN) search /tools](https://github.com/iovisor/bpftrace/search?q=BEGIN+extension%3Abt+path%3Atools&type=Code)
 [(END) search /tools](https://github.com/iovisor/bpftrace/search?q=END+extension%3Abt+path%3Atools&type=Code)
 
-## 14. `watchpoint`: Memory watchpoints
+## 14. `watchpoint`/`asyncwatchpoint`: Memory watchpoints
 
 **WARNING**: this feature is experimental and may be subject to interface changes. Memory watchpoints are
 also architecture dependant
@@ -1486,25 +1486,36 @@ also architecture dependant
 Syntax:
 
 ```
-watchpoint::hex_address:length:mode
+watchpoint:absolute_address:length:mode
+watchpoint:function+argN:length:mode
 ```
 
 These are memory watchpoints provided by the kernel. Whenever a memory address is written to (`w`), read
-from (`r`), or executed (`x`), the kernel can generate an event. If you want to add watchpoint for
-an userspace process, a pid (`-p`) or a command (`-c`) must be provided to bpftrace. If not, bpftrace
-will take the address as kernel space address. Also note you may not monitor for execution while
-monitoring read or write.
+from (`r`), or executed (`x`), the kernel can generate an event.
+
+In the first form, an absolute address is monitored. If a pid (`-p`) or a command (`-c`) is provided,
+bpftrace takes the address as a userspace address and monitors the appropriate process. If not,
+bpftrace takes the address as a kernel space address.
+
+In the second form, the address present in `argN` (see [uprobe
+arguments](#4-uprobeuretprobe-dynamic-tracing-user-level-arguments)) when `function` is entered is
+monitored. A pid or command must be provided for this form. If synchronous (`watchpoint`), a
+`SIGSTOP` is sent to the tracee upon function entry. The tracee will be `SIGCONT`d after the
+watchpoint is attached. This is to ensure events are not missed. If you want to avoid the
+`SIGSTOP` + `SIGCONT` use `asyncwatchpoint`.
+
+Note that on most architectures you may not monitor for execution while monitoring read or write.
 
 Examples:
 
 ```
-bpftrace -e 'watchpoint::0x10000000:8:rw { printf("hit!\n"); exit(); }' -c ./testprogs/watchpoint
+bpftrace -e 'watchpoint:0x10000000:8:rw { printf("hit!\n"); exit(); }' -c ./testprogs/watchpoint
 ```
 
 It will output "hit" and exit when the watchpoint process is trying to read or write 0x10000000.
 
 ```
-# bpftrace -e "watchpoint::0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {@[kstack] = count();}"
+# bpftrace -e "watchpoint:0x$(awk '$3 == "jiffies" {print $1}' /proc/kallsyms):8:w {@[kstack] = count();}"
 Attaching 1 probe...
 ^C
 ......
@@ -1527,6 +1538,35 @@ Attaching 1 probe...
 ```
 
 It shows the kernel stacks in which jiffies is updated.
+
+```
+# cat wpfunc.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+__attribute__((noinline))
+void increment(__attribute__((unused)) int _, int *i)
+{
+  (*i)++;
+}
+
+int main()
+{
+  int *i = malloc(sizeof(int));
+  while (1)
+  {
+    increment(0, i);
+    (*i)++;
+    usleep(1000);
+  }
+}
+
+# bpftrace -e 'watchpoint:increment+arg1:4:w { printf("hit!\n"); exit() }' -c ./wpfunc
+```
+
+bpftrace will output "hit" and exit when the memory pointed to by `arg1` of `increment` is
+written.
 
 ## 15. `kfunc`/`kretfunc`: Kernel Functions Tracing
 
