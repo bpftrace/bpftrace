@@ -136,6 +136,8 @@ and this project adheres to
   - [#1650](https://github.com/iovisor/bpftrace/pull/1650)
 - Fix attaching to usdt probes in shared libraries
   - [#1600](https://github.com/iovisor/bpftrace/pull/1600)
+- Fix attaching to multiple usdt probe locations with the same label
+  - [#1681](https://github.com/iovisor/bpftrace/pull/1681)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call

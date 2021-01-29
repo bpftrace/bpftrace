@@ -7,23 +7,27 @@
 #include <sys/time.h>
 #include <unistd.h>
 
-__attribute__((always_inline)) inline static void myclock()
+__attribute__((always_inline)) inline static void myclock(int probe_num)
 {
+  // Volatile forces reading directly from the stack so that
+  // the probe's argument is not saved as a constant value.
+  volatile int on_stack = probe_num;
+  (void)on_stack;
   struct timeval tv;
   gettimeofday(&tv, NULL);
-  DTRACE_PROBE2(tracetest, testprobe, tv.tv_sec, "Hello world");
+  DTRACE_PROBE2(tracetest, testprobe, tv.tv_sec, on_stack);
 }
 
 static void mywrapper()
 {
-  myclock();
+  myclock(100);
 }
 
 static void loop()
 {
   while (1)
   {
-    myclock();
+    myclock(999);
     mywrapper();
     sleep(1);
   }
