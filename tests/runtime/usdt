@@ -130,7 +130,7 @@ TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple files by wildcard"
 RUN bpftrace -e 'usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }'
-EXPECT Attaching 9 probes...
+EXPECT Attaching 41 probes...
 TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
@@ -258,6 +258,32 @@ RUN bpftrace -e 'usdt:./testprogs/usdt_sized_args:test:probe2 { printf("%ld\n", 
 EXPECT ^1$
 TIMEOUT 5
 BEFORE ./testprogs/usdt_sized_args
+
+NAME "usdt constant arguments"
+RUN bpftrace -e 'usdt:./testprogs/usdt_args:usdt_args:const_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
+EXPECT 4092785136 -202182160 61936 -3600 240 -16
+#EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
+# Bug in bcc, constants are stored in a 32-bit int, so 64-bit values are truncated
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_args should_not_skip
+
+NAME "usdt reg arguments"
+RUN bpftrace -e 'usdt:./testprogs/usdt_args:usdt_args:reg_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
+EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_args should_not_skip
+
+NAME "usdt addr arguments"
+RUN bpftrace -e 'usdt:./testprogs/usdt_args:usdt_args:addr_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
+EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_args should_not_skip
+
+NAME "usdt addr+index arguments"
+RUN bpftrace -e 'usdt:./testprogs/usdt_args:usdt_args:index_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
+EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_args should_not_skip
 
 # USDT probes can be inlined which creates duplicate identical probes. We must
 # attach to all of them
