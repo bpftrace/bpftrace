@@ -301,3 +301,15 @@ NAME macaddr as map value
 RUN bpftrace -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); @[1] = macaddr($s->mac); exit(); }' -c ./testprogs/complex_struct
 EXPECT \[1\]: 05:04:03:02:01:02
 TIMEOUT 5
+
+NAME iter:task
+RUN bpftrace -ve 'iter:task { printf("OK"); }'
+EXPECT OK
+REQUIRES_FEATURE iter:task
+TIMEOUT 5
+
+NAME iter:task_file
+RUN bpftrace -ve 'iter:task_file { printf("OK"); }'
+EXPECT OK
+REQUIRES_FEATURE iter:task_file
+TIMEOUT 5

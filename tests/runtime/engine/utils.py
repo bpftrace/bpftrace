@@ -104,6 +104,8 @@ class Utils(object):
         bpffeature["uprobe_refcount"] = \
             output.find("uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): yes") != -1
         bpffeature["signal"] = output.find("send_signal: yes") != -1
+        bpffeature["iter:task"] = output.find("iter:task: yes") != -1
+        bpffeature["iter:task_file"] = output.find("iter:task_file: yes") != -1
         return bpffeature
 
     @staticmethod
