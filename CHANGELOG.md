@@ -52,6 +52,8 @@ and this project adheres to
   - [#1656](https://github.com/iovisor/bpftrace/pull/1656)
 - Add builtin function: `macaddr`
   - [#1647](https://github.com/iovisor/bpftrace/pull/1647)
+- Add support for usdt arguments utilising the index register and scale
+  - [#1684](https://github.com/iovisor/bpftrace/pull/1684)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
@@ -140,6 +142,8 @@ and this project adheres to
   - [#1600](https://github.com/iovisor/bpftrace/pull/1600)
 - Fix attaching to multiple usdt probe locations with the same label
   - [#1681](https://github.com/iovisor/bpftrace/pull/1681)
+- Fix signed extension of usdt arguments to the internal 64-bit integer type
+  - [#1684](https://github.com/iovisor/bpftrace/pull/1684)
 
 #### Tools
 - Hook up execsnoop.bt script onto `execveat` call

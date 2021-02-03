@@ -3,8 +3,8 @@
 #else
 #define DTRACE_PROBE1(a, b, d) (void)0
 #endif
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 /* For best results compile using gcc -O1 (or higher)
  *
  * Clang likes to always put the argument on stack rather than outputting an
@@ -20,7 +20,7 @@
 #if (defined(__GNUC__) && !defined(__clang__))
 #pragma GCC optimize("O1")
 #else
-#pragma message ("non-gcc compiler: the correct probes might not be installed")
+#pragma message("non-gcc compiler: the correct probes might not be installed")
 #endif
 
 #define test_value 0xf7f6f5f4f3f2f1f0
@@ -42,12 +42,12 @@ typedef union all_types
 /* Force the value to be stored in a register, works for both gcc and clang
  *
  * PROBE_REG(al, u, 8) expands to:
- * register uint8_t _reg_u8 asm("al") = (uint8_t) test_value;
+ * register uint8_t _reg_u8 asm("al") = (uint8_t)test_value;
  * DTRACE_PROBE1(usdt_args, reg_u8, _reg_u8)
  */
 #define PROBE_REG(register_, sign, size)                                       \
   register sign##int##size##_t _reg_##sign##size asm(                          \
-      #register_) = (sign##int##size##_t) test_value;                          \
+      #register_) = (sign##int##size##_t)test_value;                           \
   DTRACE_PROBE1(usdt_args, reg_##sign##size, _reg_##sign##size)
 #else
 /* Force a calculation to get the value into a register
