@@ -1069,8 +1069,8 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  // Arrays are not memcopied for local variables
-  if (needMemcpy(var.type) && !var.type.IsArrayTy())
+  // Arrays and structs are not memcopied for local variables
+  if (needMemcpy(var.type) && !(var.type.IsArrayTy() || var.type.IsRecordTy()))
   {
     expr_ = variables_[var.ident];
   }
@@ -1919,33 +1919,37 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   if (variables_.find(var.ident) == variables_.end())
   {
-    SizedType &type = var.type;
+    SizedType alloca_type = var.type;
 
-    // Arrays need not to be copied when assigned to local variables - it is
-    // sufficient to assign the pointer
-    if (var.type.IsArrayTy())
+    // Arrays and structs need not to be copied when assigned to local variables
+    // since they are treated as read-only - it is sufficient to assign
+    // the pointer and do the memcpy/proberead later when necessary
+    if (var.type.IsArrayTy() || var.type.IsRecordTy())
     {
-      type = CreatePointer(*var.type.GetElementTy(), var.type.GetAS());
+      auto &pointee_type = var.type.IsArrayTy() ? *var.type.GetElementTy()
+                                                : var.type;
+      alloca_type = CreatePointer(pointee_type, var.type.GetAS());
     }
 
-    AllocaInst *val = b_.CreateAllocaBPFInit(type, var.ident);
+    AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
     variables_[var.ident] = val;
   }
 
-  if (needMemcpy(var.type))
+  if (var.type.IsArrayTy() || var.type.IsRecordTy())
+  {
+    // For arrays and structs, only the pointer is stored
+    b_.CreateStore(b_.CreatePtrToInt(expr_, b_.getInt64Ty()),
+                   variables_[var.ident]);
+    // Extend lifetime of RHS up to the end of probe
+    scoped_del.disarm();
+  }
+  else if (needMemcpy(var.type))
   {
     b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.GetSize(), 1);
   }
   else
   {
-    Value *val = expr_;
-    if (assignment.expr->type.IsArrayTy())
-    {
-      val = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
-      // Since only the pointer is copied, we need to extend lifetime of RHS
-      scoped_del.disarm();
-    }
-    b_.CreateStore(val, variables_[var.ident]);
+    b_.CreateStore(expr_, variables_[var.ident]);
   }
 }
 
