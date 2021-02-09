@@ -555,20 +555,43 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                                             const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-  // TODO (mmarchini): Handle base + index * scale addressing.
-  // https://github.com/iovisor/bcc/pull/988
-  if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME)
-    LOG(ERROR) << "index register is not handled yet ["
-               << argument->index_register_name << "]";
-  if (argument->valid & BCC_USDT_ARGUMENT_SCALE)
-    LOG(ERROR) << "scale is not handled yet [" << argument->scale << "]";
+  // Argument size must be 1, 2, 4, or 8. See
+  // https://sourceware.org/systemtap/wiki/UserSpaceProbeImplementation
+  int abs_size = std::abs(argument->size);
+  assert(abs_size == 1 || abs_size == 2 || abs_size == 4 || abs_size == 8);
   if (argument->valid & BCC_USDT_ARGUMENT_DEREF_IDENT)
-    LOG(ERROR) << "defer ident is not handled yet [" << argument->deref_ident
+    LOG(ERROR) << "deref ident is not handled yet [" << argument->deref_ident
                << "]";
+  // USDT arguments can be any valid gas (GNU asm) operand.
+  // BCC normalises these into the bcc_usdt_argument and supports most
+  // valid gas operands.
+  //
+  // This code handles the following argument types:
+  // * A constant (ARGUMENT_CONSTANT)
+  //
+  // * The value of a register (ARGUMENT_BASE_REGISTER_NAME without
+  // ARGUMENT_DEREF_OFFSET set).
+  //
+  // * The value at address: base_register + offset + (index_register * scale)
+  // Where index_register and scale are optional.
+  // Note: Offset is optional in the gas operand, however will be set as zero
+  // if the register needs to be dereferenced.
 
   if (argument->valid & BCC_USDT_ARGUMENT_CONSTANT)
-    return getInt64(argument->constant);
+  {
+    // Correctly sign extend and convert to a 64-bit int
+    return CreateIntCast(getIntN(abs_size * 8, argument->constant),
+                         getInt64Ty(),
+                         argument->size < 0);
+  }
 
+  if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME &&
+      !(argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME))
+  {
+    // Invalid combination??
+    LOG(ERROR) << "index register set without base register;"
+               << " this case is not yet handled";
+  }
   Value *result = nullptr;
   if (argument->valid & BCC_USDT_ARGUMENT_BASE_REGISTER_NAME) {
     int offset = 0;
@@ -579,29 +602,46 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
                  << " not known";
     }
 
-    // Argument size must be 1, 2, 4, or 8. See
-    // https://sourceware.org/systemtap/wiki/UserSpaceProbeImplementation
-    int abs_size = std::abs(argument->size);
-    assert(abs_size == 1 || abs_size == 2 || abs_size == 4 || abs_size == 8);
 
     // bpftrace's args are internally represented as 64 bit integers. However,
     // the underlying argument (of the target program) may be less than 64
     // bits. So we must be careful to zero out unused bits.
     Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
+    Value *index_offset = nullptr;
+    if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME)
+    {
+      int ioffset = arch::offset(argument->index_register_name);
+      if (ioffset < 0)
+      {
+        LOG(FATAL) << "offset for register " << argument->index_register_name
+                   << " not known";
+      }
+      index_offset = CreateGEP(ctx,
+                               getInt64(ioffset * sizeof(uintptr_t)),
+                               "load_register");
+      index_offset = CreateLoad(getInt64Ty(), index_offset);
+      if (argument->valid & BCC_USDT_ARGUMENT_SCALE)
+      {
+        index_offset = CreateMul(index_offset, getInt64(argument->scale));
+      }
+    }
     if (argument->valid & BCC_USDT_ARGUMENT_DEREF_OFFSET) {
       Value *ptr = CreateAdd(CreateLoad(getInt64Ty(), reg),
                              getInt64(argument->deref_offset));
-      // Zero out `dst` here in case we read less than 64 bits
-      CreateStore(getInt64(0), dst);
+      if (index_offset)
+      {
+        ptr = CreateAdd(ptr, index_offset);
+      }
       CreateProbeRead(ctx, dst, abs_size, ptr, as, loc);
-      result = CreateLoad(dst);
+      result = CreateLoad(getIntNTy(abs_size * 8), dst);
     }
     else
     {
-      result = CreateLoad(GetType(CreateInt(abs_size * 8)), reg);
-      result = CreateIntCast(result, getInt64Ty(), argument->size < 0);
+      result = CreateLoad(getIntNTy(abs_size * 8), reg);
     }
+    // Sign extend and convert to a bpftools standard 64-bit integer type
+    result = CreateIntCast(result, getInt64Ty(), argument->size < 0);
     CreateLifetimeEnd(dst);
   }
   return result;
