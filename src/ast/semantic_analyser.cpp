@@ -1409,7 +1409,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   }
 
   arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
-  arr.type.is_internal = true;
+  arr.type.is_internal = type.is_internal;
   arr.type.SetAS(type.GetAS());
 }
 

@@ -48,13 +48,13 @@ entry:
   %14 = add i64 %13, 0
   %15 = inttoptr i64 %14 to i16*
   %16 = load volatile i16, i16* %15
-  %17 = bitcast i64* %"@b_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
+  %17 = sext i16 %16 to i64
+  %18 = bitcast i64* %"@b_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
   store i64 0, i64* %"@b_key"
-  %18 = sext i16 %16 to i64
   %19 = bitcast i64* %"@b_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
-  store i64 %18, i64* %"@b_val"
+  store i64 %17, i64* %"@b_val"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem2 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@b_key", i64* %"@b_val", i64 0)
   %20 = bitcast i64* %"@b_key" to i8*
