@@ -53,30 +53,26 @@ lookup_failure:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %12 = bitcast i64* %"@bar_key1" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = ptrtoint [2 x [2 x [4 x i8]]]* %lookup_elem_val to i64
-  %14 = add i64 %13, 0
-  %15 = inttoptr i64 %14 to [2 x [4 x i8]]*
-  %16 = bitcast [2 x [2 x [4 x i8]]]* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = ptrtoint [2 x [4 x i8]]* %15 to i64
-  %18 = add i64 %17, 4
-  %19 = inttoptr i64 %18 to [4 x i8]*
-  %20 = getelementptr [4 x i8], [4 x i8]* %19, i64 0, i64 0
-  %21 = bitcast i8* %20 to i32*
-  %22 = load i32, i32* %21
-  %23 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
+  %13 = getelementptr [2 x [2 x [4 x i8]]], [2 x [2 x [4 x i8]]]* %lookup_elem_val, i32 0, i64 0
+  %14 = getelementptr [2 x [4 x i8]], [2 x [4 x i8]]* %13, i32 0, i64 1
+  %15 = getelementptr [4 x i8], [4 x i8]* %14, i32 0, i64 0
+  %16 = bitcast i8* %15 to i32*
+  %17 = load volatile i32, i32* %16
+  %18 = bitcast [2 x [2 x [4 x i8]]]* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
   store i64 0, i64* %"@_key"
-  %24 = sext i32 %22 to i64
-  %25 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %25)
-  store i64 %24, i64* %"@_val"
+  %20 = sext i32 %17 to i64
+  %21 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %21)
+  store i64 %20, i64* %"@_val"
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo3, i64* %"@_key", i64* %"@_val", i64 0)
-  %26 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %26)
-  %27 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %27)
+  %22 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
+  %23 = bitcast i64* %"@_val" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
   ret i64 0
 }
 

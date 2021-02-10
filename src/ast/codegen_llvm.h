@@ -6,6 +6,7 @@
 
 #include "bpftrace.h"
 #include "irbuilderbpf.h"
+#include "location.hh"
 #include "map.h"
 #include "visitors.h"
 
@@ -133,6 +134,19 @@ private:
                                     const std::string &expanded_probe_name,
                                     int arg_num,
                                     int index);
+
+  void readDatastructElemFromStack(Value *src_data,
+                                   Value *index,
+                                   SizedType &data_type,
+                                   SizedType &elem_type,
+                                   ScopedExprDeleter &scoped_del);
+  void probereadDatastructElem(Value *src_data,
+                               Value *offset,
+                               SizedType &data_type,
+                               SizedType &elem_type,
+                               ScopedExprDeleter &scoped_del,
+                               location loc,
+                               const std::string &temp_name);
 
   Node *root_ = nullptr;
   LLVMContext context_;
