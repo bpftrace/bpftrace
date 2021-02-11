@@ -578,12 +578,14 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
 
     t = btf__type_by_id(btf, t->type);
 
-    DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
-                        decl_opts,
-                        .field_name = "",
-                        .indent_level = 0, );
+    _Pragma("GCC diagnostic push")
+        _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
 
-    const struct btf_param *p;
+            DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts, 0);
+
+    _Pragma("GCC diagnostic pop")
+
+        const struct btf_param *p;
     int j;
 
     for (j = 0, p = btf_params(t); j < btf_vlen(t); j++, p++)
