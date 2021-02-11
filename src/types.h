@@ -163,7 +163,7 @@ public:
   {
     return type != Type::none && type != Type::record &&
            type != Type::pointer && type != Type::stack_mode &&
-           type != Type::array && type != Type::record && !IsCtxAccess();
+           type != Type::record && !IsCtxAccess();
   }
 
   bool IsSigned(void) const;

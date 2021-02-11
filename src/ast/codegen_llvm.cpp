@@ -2785,7 +2785,17 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   Value *content_offset = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(2) });
   b_.CREATE_MEMSET(content_offset, b_.getInt8(0), arg.type.GetSize(), 1);
   if (needMemcpy(arg.type))
-    b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
+  {
+    if (onStack(arg.type))
+      b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
+    else
+      b_.CreateProbeRead(ctx_,
+                         content_offset,
+                         arg.type.GetSize(),
+                         expr_,
+                         arg.type.GetAS(),
+                         arg.loc);
+  }
   else
   {
     auto ptr = b_.CreatePointerCast(content_offset,
