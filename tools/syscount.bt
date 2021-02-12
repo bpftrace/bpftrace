@@ -1,6 +1,6 @@
 #!/usr/bin/env bpftrace
 /*
- * syscount.bt	Count system callls.
+ * syscount.bt	Count system calls.
  *		For Linux, uses bpftrace, eBPF.
  *
  * This is a bpftrace version of the bcc tool of the same name.
