@@ -192,7 +192,7 @@ set -e
 KERNEL_VERSION="${KERNEL_VERSION:-$(uname -r)}"
 kernel_version="$(echo "${KERNEL_VERSION}" | awk -vFS=- '{ print $1 }')"
 major_version="$(echo "${KERNEL_VERSION}" | awk -vFS=. '{ print $1 }')"
-
+apt-get update
 apt-get install -y build-essential bc curl flex bison libelf-dev
 
 mkdir -p /usr/src/linux
@@ -204,6 +204,7 @@ make ARCH=x86 prepare
 mkdir -p /lib/modules/$(uname -r)
 ln -sf /usr/src/linux /lib/modules/$(uname -r)/source
 ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
+apt-get install linux-headers-$(uname -r)
 ```
 
 # Building bpftrace
