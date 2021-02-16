@@ -275,11 +275,9 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto begin = bpftrace_.probe_ids_.begin();
     auto end = bpftrace_.probe_ids_.end();
     auto found = std::find(begin, end, probefull_);
+    builtin.probe_id = std::distance(begin, found);
     if (found == end) {
       bpftrace_.probe_ids_.push_back(probefull_);
-      builtin.probe_id = bpftrace_.next_probe_id();
-    } else {
-      builtin.probe_id = std::distance(begin, found);
     }
     expr_ = b_.getInt64(builtin.probe_id);
   }

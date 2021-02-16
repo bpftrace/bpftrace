@@ -113,9 +113,6 @@ public:
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
-  inline int next_probe_id() {
-    return next_probe_id_++;
-  };
   std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
   std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
@@ -217,7 +214,6 @@ private:
   int ncpus_;
   int online_cpus_;
   std::vector<std::string> params_;
-  int next_probe_id_ = 0;
 
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;
 
