@@ -11,7 +11,8 @@ extern bpftrace::location loc;
 
 namespace bpftrace {
 
-Driver::Driver(BPFtrace &bpftrace, std::ostream &o) : bpftrace_(bpftrace), out_(o)
+Driver::Driver(BPFtrace &bpftrace, std::ostream &o)
+    : bpftrace_(bpftrace), out_(o)
 {
 }
 
@@ -51,7 +52,7 @@ int Driver::parse()
 
   if (!failed_)
   {
-    ast::AttachPointParser ap_parser(root_, bpftrace_, out_);
+    ast::AttachPointParser ap_parser(root_, bpftrace_, out_, listing_);
     if (ap_parser.parse())
       failed_ = true;
   }

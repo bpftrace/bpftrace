@@ -108,10 +108,14 @@ private:
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
 
+  std::unique_ptr<std::istream> get_iter_symbols(void) const;
+
   std::unique_ptr<std::istream> kernel_probe_list();
   std::unique_ptr<std::istream> userspace_probe_list();
 
   FuncParamLists get_tracepoints_params(
       const std::set<std::string> &tracepoints);
+
+  FuncParamLists get_iters_params(const std::set<std::string> &iters);
 };
 } // namespace bpftrace

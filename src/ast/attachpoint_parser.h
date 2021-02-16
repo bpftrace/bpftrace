@@ -13,7 +13,10 @@ namespace ast {
 class AttachPointParser
 {
 public:
-  AttachPointParser(Program *root, BPFtrace &bpftrace, std::ostream &sink);
+  AttachPointParser(Program *root,
+                    BPFtrace &bpftrace,
+                    std::ostream &sink,
+                    bool listing);
   ~AttachPointParser() = default;
   int parse();
 
@@ -64,6 +67,7 @@ private:
   std::stringstream errs_;
   std::vector<std::string> parts_;
   AttachPointList new_attach_points;
+  bool listing_;
 };
 
 } // namespace ast

@@ -114,6 +114,11 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   return matches;
 }
 
+std::unique_ptr<std::istream> ProbeMatcher::get_iter_symbols(void) const
+{
+  return std::make_unique<std::istringstream>("task\ntask_file");
+}
+
 /*
  * Get matches of search_input (containing a wildcard) for a given probe_type.
  * probe_type determines where to take the candidate matches from.
@@ -168,6 +173,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kretfunc:
     {
       symbol_stream = bpftrace_->btf_.get_all_funcs();
+      break;
+    }
+    case ProbeType::iter:
+    {
+      symbol_stream = get_iter_symbols();
       break;
     }
     default:
@@ -390,6 +400,28 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
   return params;
 }
 
+FuncParamLists ProbeMatcher::get_iters_params(
+    const std::set<std::string>& iters)
+{
+  FuncParamLists params;
+
+  for (auto& iter : iters)
+  {
+    if (iter == "task")
+    {
+      params[iter].push_back("struct task_struct * task");
+    }
+    else if (iter == "task_file")
+    {
+      params[iter].push_back("struct task_struct * task");
+      params[iter].push_back("int fd");
+      params[iter].push_back("struct file * file");
+    }
+  }
+
+  return params;
+}
+
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
   for (auto* probe : *prog->probes)
@@ -406,6 +438,8 @@ void ProbeMatcher::list_probes(ast::Program* prog)
         else if (probe_type == ProbeType::kfunc ||
                  probe_type == ProbeType::kretfunc)
           param_lists = bpftrace_->btf_.get_params(matches);
+        else if (probe_type == ProbeType::iter)
+          param_lists = get_iters_params(matches);
       }
 
       for (auto& match : matches)
@@ -431,6 +465,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::kretprobe:
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
+    case ProbeType::iter:
     {
       search_input = attach_point.func;
       break;
