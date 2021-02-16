@@ -2592,6 +2592,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       supported = bpftrace_.feature_->has_prog_iter_task_file() &&
                   bpftrace_.btf_.has_data();
     }
+    else if (listing_)
+    {
+      supported = true;
+    }
 
     if (!supported)
     {
