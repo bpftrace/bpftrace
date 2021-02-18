@@ -33,3 +33,9 @@ RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:fun
 EXPECT @s\[{.m=2,.n=3}\]: 0
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
+
+NAME struct in a tuple
+RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = (1, *((struct Foo *)arg0)); exit(); }'
+EXPECT @s: \(1, { .m = 2, .n = 3 }\)
+TIMEOUT 4
+AFTER ./testprogs/simple_struct

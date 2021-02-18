@@ -1734,8 +1734,15 @@ void CodegenLLVM::visit(Tuple &tuple)
 
     Value *dst = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(i) });
 
-    if (shouldBeOnStackAlready(elem->type))
+    if (onStack(elem->type))
       b_.CREATE_MEMCPY(dst, expr_, elem->type.GetSize(), 1);
+    else if (elem->type.IsArrayTy() || elem->type.IsRecordTy())
+      b_.CreateProbeRead(ctx_,
+                         dst,
+                         elem->type.GetSize(),
+                         expr_,
+                         elem->type.GetAS(),
+                         elem->loc);
     else
       b_.CreateStore(expr_, dst);
   }
