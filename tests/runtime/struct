@@ -15,3 +15,21 @@ RUN bpftrace -v -e 'struct Foo { struct { int m[1] } y; struct { int n } a; } u:
 EXPECT @s: { .a = { .n = 3 }, .y = { .m = \[2\] } }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
+
+NAME struct as a map key
+RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0)] = 0; exit(); }'
+EXPECT @s\[{.m=2,.n=3}\]: 0
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
+
+NAME struct as a part of multikey
+RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0), 42] = 0; exit(); }'
+EXPECT @s\[{.m=2,.n=3}, 42\]: 0
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
+
+NAME struct as a map key assigned from another map
+RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @x = *((struct Foo *)arg0); @s[@x] = 0; exit(); }'
+EXPECT @s\[{.m=2,.n=3}\]: 0
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
