@@ -58,6 +58,12 @@ EXPECT @x\[\[1,2,3,4\]\]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
+NAME array in a tuple
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x = (1, ((struct A *) arg0)->x); exit(); }'
+EXPECT @x: \(1, \[1,2,3,4\]\)
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
 NAME multi-dimensional array element access
 RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $x = ((struct B *) arg1)->y[1][0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 7
