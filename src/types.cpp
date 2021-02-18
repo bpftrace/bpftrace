@@ -505,7 +505,9 @@ ssize_t SizedType::GetAlignment() const
 
   if (GetSize() <= 2)
     return GetSize();
-  else if (GetSize() <= 4)
+  else if (IsArrayTy())
+    return element_type_->GetAlignment();
+  else if (IsByteArray() || GetSize() <= 4)
     return 4;
   else
     return 8;

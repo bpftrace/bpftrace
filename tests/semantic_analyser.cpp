@@ -2055,6 +2055,10 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, kstack()) })_", 0);
   test(R"_(BEGIN { @t = (1, (2,3)) })_", 0);
 
+  test(R"_(struct task_struct { int x; } BEGIN { $t = (1, curtask); })_", 0);
+  test(R"_(struct task_struct { int x[4]; } BEGIN { $t = (1, curtask->x); })_",
+       0);
+
   test(R"_(BEGIN { $t = (1, 2); $t = (4, "other"); })_", 10);
   test(R"_(BEGIN { $t = (1, 2); $t = 5; })_", 1);
   test(R"_(BEGIN { $t = (1, count()) })_", 1);
