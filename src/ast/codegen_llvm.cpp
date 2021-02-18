@@ -2246,7 +2246,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     {
       Expression *expr = map.vargs->at(0);
       auto scoped_del = accept(expr);
-      if (shouldBeOnStackAlready(expr->type))
+      if (onStack(expr->type))
       {
         key = dyn_cast<AllocaInst>(expr_);
         // Call-ee freed
@@ -2255,24 +2255,15 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       else
       {
         key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
-        if (expr->type.IsArrayTy())
+        if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
         {
-          // expr currently contains a pointer to the array
-          if (expr->type.is_internal)
-          {
-            // The array is already in the BPF memory - memcpy it
-            b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
-          }
-          else
-          {
-            // We need to read the entire array and save it
-            b_.CreateProbeRead(ctx_,
-                               key,
-                               expr->type.GetSize(),
-                               expr_,
-                               expr->type.GetAS(),
-                               expr->loc);
-          }
+          // We need to read the entire array/struct and save it
+          b_.CreateProbeRead(ctx_,
+                             key,
+                             expr->type.GetSize(),
+                             expr_,
+                             expr->type.GetAS(),
+                             expr->loc);
         }
         else
         {
@@ -2300,14 +2291,13 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
-        if (shouldBeOnStackAlready(expr->type) ||
-            (expr->type.IsArrayTy() && expr->type.is_internal))
+        if (onStack(expr->type))
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
         else
         {
-          if (expr->type.IsArrayTy())
+          if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
           {
-            // Read the array into the key
+            // Read the array/struct into the key
             b_.CreateProbeRead(ctx_,
                                offset_val,
                                expr->type.GetSize(),
