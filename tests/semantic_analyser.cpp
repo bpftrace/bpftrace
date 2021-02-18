@@ -1461,6 +1461,25 @@ TEST(semantic_analyser, field_access_is_internal)
   }
 }
 
+TEST(semantic_analyser, struct_as_map_key)
+{
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { @x[*((struct A *)arg0)] = 0; }",
+       0);
+
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { @x[*((struct A *)arg0), *((struct B *)arg1)] = 0; }",
+       0);
+
+  // Mismatched key types
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { "
+       "    @x[*((struct A *)arg0)] = 0; "
+       "    @x[*((struct B *)arg1)] = 1; "
+       "}",
+       10);
+}
+
 TEST(semantic_analyser, probe_short_name)
 {
   test("t:a:b { args }", 0);
