@@ -1021,12 +1021,15 @@ void CodegenLLVM::visit(Call &call)
     auto macaddr = call.vargs->front();
     auto scoped_del = accept(macaddr);
 
-    b_.CreateProbeRead(ctx_,
-                       static_cast<AllocaInst *>(buf),
-                       macaddr->type.GetSize(),
-                       expr_,
-                       macaddr->type.GetAS(),
-                       call.loc);
+    if (onStack(macaddr->type))
+      b_.CREATE_MEMCPY(buf, expr_, macaddr->type.GetSize(), 1);
+    else
+      b_.CreateProbeRead(ctx_,
+                         static_cast<AllocaInst *>(buf),
+                         macaddr->type.GetSize(),
+                         expr_,
+                         macaddr->type.GetAS(),
+                         call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
