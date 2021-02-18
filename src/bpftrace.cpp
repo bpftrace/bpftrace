@@ -1306,6 +1306,21 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
 
     return "[" + str_join(elems, ",") + "]";
   }
+  else if (stype.IsRecordTy())
+  {
+    auto &struct_type = structs_[stype.GetName()];
+    std::vector<std::string> elems;
+    for (auto &field : struct_type.fields)
+    {
+      std::vector<uint8_t> elem_data(value.begin() + field.second.offset,
+                                     value.begin() + field.second.offset +
+                                         field.second.type.GetSize());
+      elems.push_back(
+          "." + field.first + " = " +
+          map_value_to_str(field.second.type, elem_data, is_per_cpu, div));
+    }
+    return "{ " + str_join(elems, ", ") + " }";
+  }
   else if (stype.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
   else if (stype.IsIntTy())
