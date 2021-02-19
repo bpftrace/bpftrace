@@ -2037,7 +2037,6 @@ Tracing block I/O sizes > 0 bytes
 - `signal(char[] signal | u32 signal)` - Send a signal to the current task
 - `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
 - `override(u64 rc)` - Override return value
-- `buf(void *d [, length])` - Hex-format a buffer
 - `sizeof(...)` - Return size of a type or expression
 - `print(...)` - Print a non-map value with default formatting
 - `strftime(char *format, int nsecs)` - Return a formatted timestamp
