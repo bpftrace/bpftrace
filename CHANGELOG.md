@@ -56,6 +56,8 @@ and this project adheres to
   - [#1684](https://github.com/iovisor/bpftrace/pull/1684)
 - Add basic mips64 support
   - [#1599](https://github.com/iovisor/bpftrace/pull/1599)
+- Printing structures
+  - [#1705](https://github.com/iovisor/bpftrace/pull/1705)
 
 #### Changed
 - Warn if using `print` on `stats` maps with top and div arguments
@@ -84,6 +86,8 @@ and this project adheres to
   - [#1538](https://github.com/iovisor/bpftrace/pull/1538)
 - Unify semantics of wildcards in probe listing and attachement
   - [#1549](https://github.com/iovisor/bpftrace/pull/1549)
+- Improve codegen for structs and arrays
+  - [#1705](https://github.com/iovisor/bpftrace/pull/1705)
 
 #### Deprecated
 
