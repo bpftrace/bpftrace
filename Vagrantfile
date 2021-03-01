@@ -53,6 +53,11 @@ Vagrant.configure("2") do |config|
       'image'          => 'fedora/32-cloud-base',
       'scripts'        => [ $fedora_deps, ],
       'skip_bcc_build' => 1
+    },
+    'fedora-33'        => {
+      'image'          => 'fedora/33-cloud-base',
+      'scripts'        => [ $fedora_deps, ],
+      'skip_bcc_build' => 1
     }
 }
   boxes.each do | name, params |
