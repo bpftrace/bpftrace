@@ -301,12 +301,9 @@ std::vector<std::string> get_kernel_cflags(
 
 bool is_dir(const std::string& path)
 {
-  struct stat buf;
-
-  if (::stat(path.c_str(), &buf) < 0)
-    return false;
-
-  return S_ISDIR(buf.st_mode);
+  std::error_code ec;
+  std_filesystem::path buf{ path };
+  return std_filesystem::is_directory(buf, ec);
 }
 
 namespace {
@@ -339,21 +336,23 @@ namespace {
 
   std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
   {
-    std::string path_prefix{"/tmp"};
+    std::error_code ec;
+    std_filesystem::path path_prefix{ "/tmp" };
+    std_filesystem::path path_kheaders{ "/sys/kernel/kheaders.tar.xz" };
     if (const char* tmpdir = ::getenv("TMPDIR")) {
       path_prefix = tmpdir;
     }
-    path_prefix += "/kheaders-";
-    std::string shared_path{path_prefix + utsname.release};
+    path_prefix /= "kheaders-";
+    std_filesystem::path shared_path{ path_prefix.string() + utsname.release };
 
-    struct stat stat_buf;
-
-    if (::stat(shared_path.c_str(), &stat_buf) == 0) {
+    if (std_filesystem::exists(shared_path, ec))
+    {
       // already unpacked
-      return shared_path;
+      return shared_path.string();
     }
 
-    if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+    if (!std_filesystem::exists(path_kheaders, ec))
+    {
       StderrSilencer silencer;
       silencer.silence();
 
@@ -362,7 +361,8 @@ namespace {
         return "";
       }
 
-      if (::stat("/sys/kernel/kheaders.tar.xz", &stat_buf) != 0) {
+      if (!std_filesystem::exists(path_kheaders, ec))
+      {
         return "";
       }
     }
@@ -604,62 +604,46 @@ namespace, it will throw an exception
 */
 static bool pid_in_different_mountns(int pid)
 {
-
-  struct stat self_stat, target_stat;
-  int self_fd = -1, target_fd = -1;
-  std::stringstream errmsg;
-  char buf[64];
-
   if (pid <= 0)
     return false;
 
-  if ((size_t)snprintf(buf, sizeof(buf), "/proc/%d/ns/mnt", pid) >= sizeof(buf))
+  std::error_code ec;
+  std_filesystem::path self_path{ "/proc/self/ns/mnt" };
+  std_filesystem::path target_path{ "/proc" };
+  target_path /= std::to_string(pid);
+  target_path /= "ns/mnt";
+
+  if (!std_filesystem::exists(self_path, ec))
   {
-    errmsg << "Reading mountNS would overflow buffer.";
-    goto error;
+    throw MountNSException(
+        "Failed to compare mount ns with PID " + std::to_string(pid) +
+        ". The error was open (/proc/self/ns/mnt): " + ec.message());
   }
 
-  self_fd = open("/proc/self/ns/mnt", O_RDONLY);
-  if (self_fd < 0)
+  if (!std_filesystem::exists(target_path, ec))
   {
-    errmsg << "open(/proc/self/ns/mnt): " << strerror(errno);
-    goto error;
+    throw MountNSException(
+        "Failed to compare mount ns with PID " + std::to_string(pid) +
+        ". The error was open (/proc/<pid>/ns/mnt): " + ec.message());
   }
 
-  target_fd = open(buf, O_RDONLY);
-  if (target_fd < 0)
+  if (target_path.string().length() >= 64)
   {
-    errmsg << "open(/proc/<pid>/ns/mnt): " << strerror(errno);
-    goto error;
+    throw MountNSException(
+        "Failed to compare mount ns with PID " + std::to_string(pid) +
+        ". The error was Reading mountNS would overflow buffer.");
   }
 
-  if (fstat(self_fd, &self_stat))
+  bool result = !std_filesystem::equivalent(self_path, target_path, ec);
+
+  if (ec)
   {
-    errmsg << "fstat(self_fd): " << strerror(errno);
-    goto error;
+    throw MountNSException("Failed to compare mount ns with PID " +
+                           std::to_string(pid) +
+                           ". The error was (fstat): " + ec.message());
   }
 
-  if (fstat(target_fd, &target_stat))
-  {
-    errmsg << "fstat(target_fd)" << strerror(errno);
-    goto error;
-  }
-
-  close(self_fd);
-  close(target_fd);
-  return self_stat.st_ino != target_stat.st_ino;
-
-error:
-  if (self_fd >= 0)
-    close(self_fd);
-  if (target_fd >= 0)
-    close(target_fd);
-
-  throw MountNSException("Failed to compare mount ns with PID " +
-                         std::to_string(pid) + ". " + "The error was " +
-                         errmsg.str());
-
-  return false;
+  return result;
 }
 
 void cat_file(const char *filename, size_t max_bytes, std::ostream &out)
