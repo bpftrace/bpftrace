@@ -150,7 +150,8 @@ ChildProc::ChildProc(std::string cmd)
 
 ChildProc::~ChildProc()
 {
-  if (child_event_fd_ >= 0) {
+  if (child_event_fd_ >= 0)
+  {
     close(child_event_fd_);
   }
 
