@@ -15,27 +15,38 @@ namespace bpftrace {
 using namespace llvm;
 using namespace llvm::orc;
 
+using SectionMap = std::map<std::string, std::tuple<uint8_t *, uintptr_t>>;
 class MemoryManager : public SectionMemoryManager
 {
 public:
-  explicit MemoryManager(std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections)
-    : sections_(sections) { }
-  uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName) override
+  explicit MemoryManager(SectionMap &sections) : sections_(sections)
   {
-    uint8_t *addr = SectionMemoryManager::allocateCodeSection(Size, Alignment, SectionID, SectionName);
+  }
+  uint8_t *allocateCodeSection(uintptr_t Size,
+                               unsigned Alignment,
+                               unsigned SectionID,
+                               StringRef SectionName) override
+  {
+    uint8_t *addr = SectionMemoryManager::allocateCodeSection(
+        Size, Alignment, SectionID, SectionName);
     sections_[SectionName.str()] = std::make_tuple(addr, Size);
     return addr;
   }
 
-  uint8_t *allocateDataSection(uintptr_t Size, unsigned Alignment, unsigned SectionID, StringRef SectionName, bool isReadOnly) override
+  uint8_t *allocateDataSection(uintptr_t Size,
+                               unsigned Alignment,
+                               unsigned SectionID,
+                               StringRef SectionName,
+                               bool isReadOnly) override
   {
-    uint8_t *addr = SectionMemoryManager::allocateDataSection(Size, Alignment, SectionID, SectionName, isReadOnly);
+    uint8_t *addr = SectionMemoryManager::allocateDataSection(
+        Size, Alignment, SectionID, SectionName, isReadOnly);
     sections_[SectionName.str()] = std::make_tuple(addr, Size);
     return addr;
   }
 
 private:
-  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> &sections_;
+  SectionMap &sections_;
 };
 
 #if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
@@ -47,7 +58,7 @@ private:
   IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
 
 public:
-  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
+  SectionMap sections_;
 
   using ModuleHandle = decltype(CompileLayer)::ModuleHandleT;
 
@@ -90,7 +101,7 @@ private:
 #endif
 
 public:
-  std::map<std::string, std::tuple<uint8_t *, uintptr_t>> sections_;
+  SectionMap sections_;
 
   BpfOrc(TargetMachine *TM_)
       : TM(TM_),
