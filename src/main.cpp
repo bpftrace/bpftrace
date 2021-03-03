@@ -833,6 +833,13 @@ int main(int argc, char *argv[])
       return 0;
     }
     bpforc = llvm.emit();
+    if (bt_debug == DebugLevel::kFullDebug)
+    {
+      std::cout << "\nLLVM JITDLib state\n";
+      std::cout << "------------------\n\n";
+      raw_os_ostream os(std::cout);
+      bpforc->dump(os);
+    }
   }
   catch (const std::system_error& ex)
   {
