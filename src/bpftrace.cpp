@@ -858,7 +858,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
-    const BpfOrc &bpforc)
+    BpfOrc &bpforc)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
 
@@ -872,23 +872,27 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                      probe.usdt_location_idx)
                                : std::nullopt;
 
-  auto name =  get_section_name_for_probe(probe.name, probe.index, usdt_location_idx);
+  auto name = get_section_name_for_probe(probe.name,
+                                         probe.index,
+                                         usdt_location_idx);
+  auto orig_name = get_section_name_for_probe(probe.orig_name,
+                                              probe.index,
+                                              usdt_location_idx);
+
   auto section = bpforc.getSection(name);
   if (!section)
   {
-    name = get_section_name_for_probe(probe.orig_name,
-                                      probe.index,
-                                      usdt_location_idx);
-    section = bpforc.getSection(name);
-    if (!section)
-    {
-      if (probe.name != probe.orig_name)
-        LOG(ERROR) << "Code not generated for probe: " << probe.name
-                   << " from: " << probe.orig_name;
-      else
-        LOG(ERROR) << "Code not generated for probe: " << probe.name;
-      return ret;
-    }
+    section = bpforc.getSection(orig_name);
+  }
+
+  if (!section)
+  {
+    if (probe.name != probe.orig_name)
+      LOG(ERROR) << "Code not generated for probe: " << probe.name
+                 << " from: " << probe.orig_name;
+    else
+      LOG(ERROR) << "Code not generated for probe: " << probe.name;
+    return ret;
   }
 
   try
@@ -897,8 +901,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
     if (probe.type == ProbeType::usdt)
     {
-      auto aps = attach_usdt_probe(
-          probe, *section, pid, usdt_file_activation_);
+      auto aps = attach_usdt_probe(probe, *section, pid, usdt_file_activation_);
       for (auto &ap : aps)
         ret.emplace_back(std::move(ap));
 
@@ -908,7 +911,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
              probe.type == ProbeType::asyncwatchpoint)
     {
       ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, *section, pid, *feature_));
+          std::make_unique<AttachedProbe>(probe, *section, pid, *feature_));
       return ret;
     }
     else
@@ -959,7 +962,7 @@ bool attach_reverse(const Probe &p)
 }
 
 int BPFtrace::run_special_probe(std::string name,
-                                const BpfOrc &bpforc,
+                                BpfOrc &bpforc,
                                 void (*trigger)(void))
 {
   for (auto probe = special_probes_.rbegin(); probe != special_probes_.rend();

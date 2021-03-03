@@ -155,7 +155,10 @@ private:
   std::unique_ptr<Module> module_;
   IRBuilderBPF b_;
 
-  const DataLayout &datalayout() const { return orc_->getDataLayout(); }
+  const DataLayout &datalayout() const
+  {
+    return orc_->getDataLayout();
+  }
 
   Value *expr_ = nullptr;
   std::function<void()> expr_deleter_; // intentionally empty
@@ -186,6 +189,7 @@ private:
   }
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
+  std::unordered_map<std::string, bool> probe_names_;
 
   enum class State
   {
