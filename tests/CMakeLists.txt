@@ -49,6 +49,7 @@ add_executable(bpftrace_test
   ${CMAKE_SOURCE_DIR}/src/attached_probe.cpp
   ${CMAKE_SOURCE_DIR}/src/bpftrace.cpp
   ${CMAKE_SOURCE_DIR}/src/bpffeature.cpp
+  ${CMAKE_SOURCE_DIR}/src/bpforc.cpp
   ${CMAKE_SOURCE_DIR}/src/btf.cpp
   ${CMAKE_SOURCE_DIR}/src/child.cpp
   ${CMAKE_SOURCE_DIR}/src/clang_parser.cpp
