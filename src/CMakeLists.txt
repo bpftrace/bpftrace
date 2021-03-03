@@ -14,6 +14,7 @@ endif()
 add_executable(${BPFTRACE}
   attached_probe.cpp
   bpffeature.cpp
+  bpforc.cpp
   bpftrace.cpp
   btf.cpp
   child.cpp

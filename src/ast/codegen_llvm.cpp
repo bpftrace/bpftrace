@@ -2863,7 +2863,7 @@ void CodegenLLVM::optimize()
 std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
 {
   assert(state_ == State::OPT);
-  orc_->compileModule(move(module_));
+  orc_->compile(move(module_));
   state_ = State::DONE;
   return std::move(orc_);
 }
