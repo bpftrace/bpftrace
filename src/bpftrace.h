@@ -106,9 +106,8 @@ public:
                                      const ast::Probe &probe);
   int num_probes() const;
   int run(std::unique_ptr<BpfOrc> bpforc);
-  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
-      Probe &probe,
-      const BpfOrc &bpforc);
+  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(Probe &probe,
+                                                           BpfOrc &bpforc);
   int print_maps();
   int clear_map(IMap &map);
   int zero_map(IMap &map);
@@ -202,13 +201,11 @@ public:
     return procmon_ ? procmon_->pid() : 0;
   }
 
-protected:
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;
-
 private:
   int run_special_probe(std::string name,
-                        const BpfOrc &bpforc,
+                        BpfOrc &bpforc,
                         void (*trigger)(void));
   void* ksyms_{nullptr};
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)

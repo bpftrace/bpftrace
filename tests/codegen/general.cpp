@@ -52,10 +52,8 @@ TEST(codegen, populate_sections)
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   auto bpforc = codegen.compile();
 
-  // Check sections are populated
-  EXPECT_EQ(bpforc->sections_.size(), 2U);
-  EXPECT_EQ(bpforc->sections_.count("s_kprobe:foo_1"), 1U);
-  EXPECT_EQ(bpforc->sections_.count("s_kprobe:bar_1"), 1U);
+  EXPECT_TRUE(bpforc->getSection("s_kprobe:foo_1").has_value());
+  EXPECT_TRUE(bpforc->getSection("s_kprobe:bar_1").has_value());
 }
 
 TEST(codegen, printf_offsets)

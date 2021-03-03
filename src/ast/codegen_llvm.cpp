@@ -33,7 +33,7 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
       b_(orc_->getContext(), *module_.get(), bpftrace)
 {
   module_->setDataLayout(datalayout());
-  module_->setTargetTriple("bpf-pc-linux");
+  module_->setTargetTriple(LLVMTargetTriple);
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -2865,6 +2865,24 @@ std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
   assert(state_ == State::OPT);
   orc_->compile(move(module_));
   state_ = State::DONE;
+
+#ifdef LLVM_ORC_V2
+  auto has_sym = [this](const std::string &s) {
+    auto sym = orc_->lookup(s);
+    return (sym && sym->getAddress());
+  };
+  for (const auto &probe : bpftrace_.special_probes_)
+  {
+    if (has_sym(probe.name) || has_sym(probe.orig_name))
+      return std::move(orc_);
+  }
+  for (const auto &probe : bpftrace_.probes_)
+  {
+    if (has_sym(probe.name) || has_sym(probe.orig_name))
+      return std::move(orc_);
+  }
+#endif
+
   return std::move(orc_);
 }
 
