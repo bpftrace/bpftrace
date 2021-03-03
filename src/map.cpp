@@ -69,6 +69,18 @@ Map::Map(const std::string &name, const SizedType &type, const MapKey &key, int 
   }
 }
 
+Map::Map(const std::string &name, enum bpf_map_type type, int key_size, int value_size, int max_entries, int flags)
+{
+  map_type_ = type;
+  name_ = name;
+  mapfd_ = create_map(type, name.c_str(), key_size, value_size, max_entries, flags);
+  if (mapfd_ < 0)
+  {
+    LOG(ERROR) << "failed to create map: '" << name_
+               << "': " << strerror(errno);
+  }
+}
+
 Map::Map(const SizedType &type) {
 #ifdef DEBUG
   // TODO (mmarchini): replace with DCHECK
