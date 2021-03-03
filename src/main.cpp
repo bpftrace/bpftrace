@@ -141,6 +141,9 @@ static int info()
             << "  version: " << BPFTRACE_VERSION << std::endl
             << "  LLVM: " << LLVM_VERSION_MAJOR << "." << LLVM_VERSION_MINOR
             << "." << LLVM_VERSION_PATCH << std::endl
+#ifdef LLVM_ORC_V2
+            << "  ORC: v2" << std::endl
+#endif
             << "  foreach_sym: "
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
             << "yes" << std::endl
