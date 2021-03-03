@@ -20,6 +20,12 @@ public:
           int max,
           int step,
           int max_entries);
+  FakeMap(const std::string &name,
+          enum bpf_map_type type,
+          int key_size,
+          int value_size,
+          int max_entries,
+          int flags);
 
   static int next_mapfd_;
 };
