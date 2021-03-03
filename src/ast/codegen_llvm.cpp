@@ -19,7 +19,6 @@
 #include <llvm-c/Transforms/IPO.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Support/TargetRegistry.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
@@ -28,30 +27,13 @@ namespace ast {
 
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     : root_(root),
-      module_(std::make_unique<Module>("bpftrace", context_)),
-      b_(context_, *module_.get(), bpftrace),
-      layout_(module_.get()),
-      bpftrace_(bpftrace)
+      bpftrace_(bpftrace),
+      orc_(BpfOrc::Create()),
+      module_(std::make_unique<Module>("bpftrace", orc_->getContext())),
+      b_(orc_->getContext(), *module_.get(), bpftrace)
 {
-  LLVMInitializeBPFTargetInfo();
-  LLVMInitializeBPFTarget();
-  LLVMInitializeBPFTargetMC();
-  LLVMInitializeBPFAsmPrinter();
-
-  std::string targetTriple = "bpf-pc-linux";
-  module_->setTargetTriple(targetTriple);
-
-  std::string error;
-  const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
-  if (!target)
-    throw std::runtime_error("Could not create LLVM target " + error);
-
-  TargetOptions opt;
-  auto RM = Reloc::Model();
-  TM_ = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
-  module_->setDataLayout(TM_->createDataLayout());
-  layout_ = DataLayout(module_.get());
-  orc_ = std::make_unique<BpfOrc>(TM_);
+  module_->setDataLayout(datalayout());
+  module_->setTargetTriple("bpf-pc-linux");
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -1042,7 +1024,7 @@ void CodegenLLVM::visit(Call &call)
     auto elements = AsyncEvent::WatchpointUnwatch().asLLVMType(b_);
     StructType *unwatch_struct = b_.GetStructType("unwatch_t", elements, true);
     AllocaInst *buf = b_.CreateAllocaBPF(unwatch_struct, "unwatch");
-    size_t struct_size = layout_.getTypeAllocSize(unwatch_struct);
+    size_t struct_size = datalayout().getTypeAllocSize(unwatch_struct);
 
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::watchpoint_detach)),
                    b_.CreateGEP(buf, { b_.getInt64(0), b_.getInt32(0) }));
@@ -1693,7 +1675,7 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
   // from that by storing the correct offset.
   //
   size_t our_size = our_type.GetSize();
-  size_t llvm_size = layout_.getTypeAllocSize(llvm_type);
+  size_t llvm_size = datalayout().getTypeAllocSize(llvm_type);
 
   if (llvm_size != our_size)
   {
@@ -1701,7 +1683,7 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
                << ", real: " << llvm_size;
   }
 
-  auto *layout = layout_.getStructLayout(
+  auto *layout = datalayout().getStructLayout(
       reinterpret_cast<llvm::StructType *>(llvm_type));
 
   for (ssize_t i = 0; i < our_type.GetFieldCount(); i++)
@@ -1727,7 +1709,7 @@ void CodegenLLVM::visit(Tuple &tuple)
 
   compareStructure(tuple.type, tuple_ty);
 
-  size_t tuple_size = layout_.getTypeAllocSize(tuple_ty);
+  size_t tuple_size = datalayout().getTypeAllocSize(tuple_ty);
   AllocaInst *buf = b_.CreateAllocaBPF(tuple_ty, "tuple");
   b_.CREATE_MEMSET(buf, b_.getInt8(0), tuple_size, 1);
   for (size_t i = 0; i < tuple.elems->size(); ++i)
@@ -2628,9 +2610,9 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     elements.push_back(ty);
   }
   StructType *fmt_struct = StructType::create(elements, call_name + "_t", false);
-  int struct_size = layout_.getTypeAllocSize(fmt_struct);
+  int struct_size = datalayout().getTypeAllocSize(fmt_struct);
 
-  auto *struct_layout = layout_.getStructLayout(fmt_struct);
+  auto *struct_layout = datalayout().getStructLayout(fmt_struct);
   for (size_t i=0; i<args.size(); i++)
   {
     Field &arg = args[i];
@@ -2699,7 +2681,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
                                                    elements,
                                                    true);
   AllocaInst *buf = b_.CreateAllocaBPF(watchpoint_struct, "watchpoint");
-  size_t struct_size = layout_.getTypeAllocSize(watchpoint_struct);
+  size_t struct_size = datalayout().getTypeAllocSize(watchpoint_struct);
 
   // Fill in perf event struct
   b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::watchpoint_attach)),
@@ -2771,7 +2753,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
                                               elements,
                                               true);
   AllocaInst *buf = b_.CreateAllocaBPF(print_struct, struct_name.str());
-  size_t struct_size = layout_.getTypeAllocSize(print_struct);
+  size_t struct_size = datalayout().getTypeAllocSize(print_struct);
 
   // Store asyncactionid:
   b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::print_non_map)),
@@ -2835,7 +2817,7 @@ void CodegenLLVM::emit_elf(const std::string &filename)
     throw std::system_error(err.value(),
                             std::generic_category(),
                             "Failed to open: " + filename);
-  if (TM_->addPassesToEmitFile(PM, out, nullptr, type))
+  if (orc_->getTargetMachine().addPassesToEmitFile(PM, out, nullptr, type))
     throw std::runtime_error("Cannot emit a file of this type");
   PM.run(*module_.get());
 

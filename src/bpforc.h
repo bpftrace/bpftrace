@@ -8,6 +8,7 @@
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include <llvm/Support/TargetRegistry.h>
 #include "llvm/Target/TargetMachine.h"
 
 namespace bpftrace {
@@ -55,7 +56,10 @@ class BpfOrc
 private:
   ExecutionSession ES;
   std::unique_ptr<TargetMachine> TM;
+  DataLayout DL;
   std::shared_ptr<SymbolResolver> Resolver;
+  LLVMContext CTX;
+
 #if LLVM_VERSION_MAJOR >= 8
   LegacyRTDyldObjectLinkingLayer ObjectLayer;
   LegacyIRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
@@ -67,8 +71,9 @@ private:
 public:
   SectionMap sections_;
 
-  BpfOrc(TargetMachine *TM_)
-      : TM(TM_),
+  BpfOrc(TargetMachine *TM)
+      : TM(TM),
+        DL(this->TM->createDataLayout()),
         Resolver(createLegacyLookupResolver(
             ES,
 #if LLVM_VERSION_MAJOR >= 11
@@ -91,7 +96,7 @@ public:
                     }),
         CompileLayer(AcknowledgeORCv1Deprecation,
                      ObjectLayer,
-                     SimpleCompiler(*TM))
+                     SimpleCompiler(*this->TM))
   {
   }
 #elif LLVM_VERSION_MAJOR == 8
@@ -101,7 +106,7 @@ public:
                         std::make_shared<MemoryManager>(sections_), Resolver
                       };
                     }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM))
+        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM))
   {
   }
 #else
@@ -111,22 +116,52 @@ public:
                         std::make_shared<MemoryManager>(sections_), Resolver
                       };
                     }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM))
+        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM))
   {
   }
 #endif
 
   void compileModule(std::unique_ptr<Module> M)
   {
-    auto K = addModule(move(M));
+    auto K = ES.allocateVModule();
+    cantFail(CompileLayer.addModule(K, std::move(M)));
     cantFail(CompileLayer.emitAndFinalize(K));
   }
 
-  VModuleKey addModule(std::unique_ptr<Module> M)
+  const DataLayout &getDataLayout() const
   {
-    auto K = ES.allocateVModule();
-    cantFail(CompileLayer.addModule(K, std::move(M)));
-    return K;
+    return DL;
+  }
+
+  LLVMContext &getContext()
+  {
+    return CTX;
+  }
+
+  TargetMachine & getTargetMachine()
+  {
+    return *TM;
+  }
+
+  static std::unique_ptr<BpfOrc> Create()
+  {
+    std::string targetTriple = "bpf-pc-linux";
+
+    LLVMInitializeBPFTargetInfo();
+    LLVMInitializeBPFTarget();
+    LLVMInitializeBPFTargetMC();
+    LLVMInitializeBPFAsmPrinter();
+
+    std::string error;
+    const Target *target = TargetRegistry::lookupTarget(targetTriple, error);
+    if (!target)
+      throw std::runtime_error("Could not create LLVM target " + error);
+
+    TargetOptions opt;
+    auto RM = Reloc::Model();
+    auto TM = target->createTargetMachine(targetTriple, "generic", "", opt, RM);
+
+    return std::make_unique<BpfOrc>(TM);
   }
 };
 #else
