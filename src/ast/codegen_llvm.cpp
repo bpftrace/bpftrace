@@ -2832,7 +2832,8 @@ void CodegenLLVM::emit_elf(const std::string &filename)
   std::unique_ptr<SmallVectorImpl<char>> buf(new SmallVector<char, 0>());
   raw_svector_ostream out(*buf);
 
-  if (TM_->addPassesToEmitFile(PM, out, type, true, nullptr))
+  if (orc_->getTargetMachine().addPassesToEmitFile(
+          PM, out, type, true, nullptr))
     throw std::runtime_error("Cannot emit a file of this type");
 
   file.write(buf->data(), buf->size_in_bytes());
