@@ -149,17 +149,18 @@ private:
                                const std::string &temp_name);
 
   Node *root_ = nullptr;
-  LLVMContext context_;
+
+  BPFtrace &bpftrace_;
+  std::unique_ptr<BpfOrc> orc_;
   std::unique_ptr<Module> module_;
-  std::unique_ptr<ExecutionEngine> ee_;
-  TargetMachine *TM_;
   IRBuilderBPF b_;
-  DataLayout layout_;
+
+  const DataLayout &datalayout() const { return orc_->getDataLayout(); }
+
   Value *expr_ = nullptr;
   std::function<void()> expr_deleter_; // intentionally empty
   Value *ctx_;
   AttachPoint *current_attach_point_ = nullptr;
-  BPFtrace &bpftrace_;
   std::string probefull_;
   std::string tracepoint_struct_;
   std::map<std::string, int> next_probe_index_;
@@ -178,11 +179,10 @@ private:
 
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;
-  std::unique_ptr<BpfOrc> orc_;
 
   size_t getStructSize(StructType *s)
   {
-    return layout_.getTypeAllocSize(s);
+    return datalayout().getTypeAllocSize(s);
   }
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
