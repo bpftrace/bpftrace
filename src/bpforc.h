@@ -49,43 +49,7 @@ private:
   SectionMap &sections_;
 };
 
-#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
-class BpfOrc
-{
-private:
-  std::unique_ptr<TargetMachine> TM;
-  RTDyldObjectLinkingLayer ObjectLayer;
-  IRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
-
-public:
-  SectionMap sections_;
-
-  using ModuleHandle = decltype(CompileLayer)::ModuleHandleT;
-
-  BpfOrc(TargetMachine *TM_)
-    : TM(TM_),
-      ObjectLayer([this]() { return std::make_shared<MemoryManager>(sections_); }),
-      CompileLayer(ObjectLayer, SimpleCompiler(*TM))
-  {
-  }
-
-  void compileModule(std::unique_ptr<Module> M)
-  {
-    auto mod = addModule(move(M));
-    cantFail(CompileLayer.emitAndFinalize(mod));
-  }
-
-  ModuleHandle addModule(std::unique_ptr<Module> M)
-  {
-    // We don't actually care about resolving symbols from other modules
-    auto Resolver = createLambdaResolver(
-        [](const std::string &) { return JITSymbol(nullptr); },
-        [](const std::string &) { return JITSymbol(nullptr); });
-
-    return cantFail(CompileLayer.addModule(std::move(M), std::move(Resolver)));
-  }
-};
-#elif LLVM_VERSION_MAJOR >= 7
+#if LLVM_VERSION_MAJOR >= 7
 class BpfOrc
 {
 private:
