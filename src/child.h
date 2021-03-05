@@ -10,7 +10,7 @@ namespace bpftrace {
 struct child_args
 {
   std::vector<std::string> cmd;
-  int pipe_fd;
+  int event_fd;
 };
 
 class ChildProcBase
@@ -136,7 +136,7 @@ private:
     return state_ == State::DIED;
   };
 
-  int child_pipe_ = -1;
+  int child_event_fd_ = -1;
 };
 
 } // namespace bpftrace
