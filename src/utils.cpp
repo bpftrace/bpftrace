@@ -627,13 +627,6 @@ static bool pid_in_different_mountns(int pid)
         ". The error was open (/proc/<pid>/ns/mnt): " + ec.message());
   }
 
-  if (target_path.string().length() >= 64)
-  {
-    throw MountNSException(
-        "Failed to compare mount ns with PID " + std::to_string(pid) +
-        ". The error was Reading mountNS would overflow buffer.");
-  }
-
   bool result = !std_filesystem::equivalent(self_path, target_path, ec);
 
   if (ec)
