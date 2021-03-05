@@ -8,7 +8,9 @@
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
 #include <llvm/ExecutionEngine/Orc/ExecutionUtils.h>
 #include <llvm/ExecutionEngine/Orc/IRCompileLayer.h>
+#if LLVM_VERSION_MAJOR == 6
 #include <llvm/ExecutionEngine/Orc/LambdaResolver.h>
+#endif
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/Error.h>
@@ -63,6 +65,8 @@ private:
   DataLayout DL;
 #if LLVM_VERSION_MAJOR >= 7
   ExecutionSession ES;
+#endif
+#if LLVM_VERSION_MAJOR >= 7 && LLVM_VERSION_MAJOR < 12
   std::shared_ptr<SymbolResolver> Resolver;
 #endif
 
