@@ -7,7 +7,7 @@
 
 $ubuntu_deps = <<EOF
 apt-get -qq update
-apt-get -qq install linux-headers-$(uname -r) binutils-dev
+apt-get -qq install linux-headers-$(uname -r) binutils-dev python
 apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
 apt-get -qq install llvm-8-dev llvm-8-runtime libclang-8-dev clang-8
 EOF
