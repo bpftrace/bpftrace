@@ -465,6 +465,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     else
       msg << return_value;
     LOG(WARNING, info.loc, std::cerr) << msg.str();
+    return;
   }
   else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach))
   {
