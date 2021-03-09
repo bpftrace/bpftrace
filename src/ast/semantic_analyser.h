@@ -109,6 +109,8 @@ private:
   int create_maps_impl(void);
   AddrSpace find_addrspace(ProbeType pt);
 
+  void binop_int(Binop &op);
+
   bool in_loop(void)
   {
     return loop_depth_ > 0;
