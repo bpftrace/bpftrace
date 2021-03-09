@@ -13,7 +13,7 @@ TIME     PID      COMM             SADDR          SPORT  DADDR          DPORT
 
 
 This output shows three connections, one from a "agent" process, one from
-"curl", and one from "redis-cli". The output details shows the IP version, source
+"curl", and one from "nginx". The output details shows the IP version, source
 address, source socket port, destination address, and destination port. This traces attempted
 connections: these may have failed.
 
