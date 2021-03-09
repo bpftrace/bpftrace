@@ -13,7 +13,7 @@ TIME     PID     COMM           RADDR          RPORT LADDR          LPORT BL
 00:34:19 3949062 nginx          10.228.23.128  35408 10.229.20.169  8080  0/128
 
 
-This output shows three connections, an IPv4 connections to PID 3949061, a "ruby"
+This output shows three connections, an IPv4 connections to PID 3951399, a "ruby"
 process listening on port 8000, and one connection to a "nginx" process
 listening on port 8080. The remote address and port are also printed, and the accept queue
 current size as well as maximum size are shown.
