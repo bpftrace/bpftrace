@@ -4,6 +4,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <sys/eventfd.h>
 #include <sys/prctl.h>
 #include <sys/ptrace.h>
 #include <sys/types.h>
@@ -20,8 +21,8 @@ extern char** environ;
 namespace bpftrace {
 
 constexpr unsigned int maxargs = 256;
-constexpr char CHILD_GO = 'g';
-constexpr char CHILD_PTRACE = 'p';
+constexpr uint64_t CHILD_GO = 'g';
+constexpr uint64_t CHILD_PTRACE = 'p';
 constexpr unsigned int STACK_SIZE = (64 * 1024UL);
 
 std::system_error SYS_ERROR(std::string msg)
@@ -66,15 +67,16 @@ static int childfn(void* arg)
   }
   argv[idx] = nullptr; // must be null terminated
 
-  char bf;
-  int ret = read(args->pipe_fd, &bf, 1);
-  if (ret != 1)
+  uint64_t bf;
+  int ret = read(args->event_fd, &bf, sizeof(bf));
+  if (ret < 0)
   {
-    perror("child: failed to read 'go' pipe");
+    perror("child: failed to read 'go' event fd");
     return 11;
   }
 
-  close(args->pipe_fd);
+  close(args->event_fd);
+
   if (bf == CHILD_PTRACE)
   {
     if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0)
@@ -124,34 +126,34 @@ ChildProc::ChildProc(std::string cmd)
   child_args->cmd = split_string(cmd, ' ');
   validate_cmd(child_args->cmd);
 
-  int pipefd[2];
-  int ret = pipe2(pipefd, O_CLOEXEC);
-  if (ret < 0)
+  int event_fd = eventfd(0, EFD_CLOEXEC);
+  if (event_fd < 0)
   {
-    SYS_ERROR("Failed to create pipe");
+    SYS_ERROR("Failed to create event fd");
   }
 
-  child_args->pipe_fd = pipefd[0];
-  child_pipe_ = pipefd[1];
+  child_args->event_fd = event_fd;
+  child_event_fd_ = event_fd;
 
   pid_t cpid = clone(
       childfn, child_stack.get() + STACK_SIZE, SIGCHLD, child_args.get());
 
   if (cpid <= 0)
   {
-    close(pipefd[0]);
-    close(pipefd[1]);
+    close(event_fd);
     throw SYS_ERROR("Failed to clone child");
   }
 
   child_pid_ = cpid;
-  close(pipefd[0]);
   state_ = State::FORKED;
 }
 
 ChildProc::~ChildProc()
 {
-  close(child_pipe_);
+  if (child_event_fd_ >= 0)
+  {
+    close(child_event_fd_);
+  }
 
   if (is_alive())
     terminate(true);
@@ -200,14 +202,14 @@ void ChildProc::run(bool pause)
   assert(state_ == State::FORKED);
 
   auto* data = pause ? &CHILD_PTRACE : &CHILD_GO;
-  if (write(child_pipe_, data, 1) < 0)
+  if (write(child_event_fd_, data, sizeof(*data)) < 0)
   {
-    close(child_pipe_);
+    close(child_event_fd_);
     terminate(true);
-    throw SYS_ERROR("Failed to write 'go' pipe");
+    throw SYS_ERROR("Failed to write 'go' event fd");
   }
 
-  close(child_pipe_);
+  close(child_event_fd_);
 
   if (!pause)
   {
@@ -252,7 +254,7 @@ void ChildProc::run(bool pause)
   {
     ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);
     terminate(true);
-    throw SYS_ERROR("Failed to write 'go' pipe");
+    throw SYS_ERROR("Failed to write 'go' event fd");
   }
 }
 

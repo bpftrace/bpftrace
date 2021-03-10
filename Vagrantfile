@@ -39,10 +39,10 @@ Vagrant.configure("2") do |config|
       'image'          => 'ubuntu/bionic64',
       'scripts'        => [ $ubuntu_deps, ],
     },
-    'ubuntu-19.10'     => {
-      'image'          => 'ubuntu/eoan64',
+    'ubuntu-20.04'     => {
+      'image'          => 'ubuntu/focal64',
       'scripts'        => [ $ubuntu_deps, ],
-      'fix_console'    => 1
+      'fix_console'    => 0,
     },
     'fedora-31'        => {
       'image'          => 'fedora/31-cloud-base',
@@ -51,6 +51,11 @@ Vagrant.configure("2") do |config|
     },
     'fedora-32'        => {
       'image'          => 'fedora/32-cloud-base',
+      'scripts'        => [ $fedora_deps, ],
+      'skip_bcc_build' => 1
+    },
+    'fedora-33'        => {
+      'image'          => 'fedora/33-cloud-base',
       'scripts'        => [ $fedora_deps, ],
       'skip_bcc_build' => 1
     }

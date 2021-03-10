@@ -40,6 +40,13 @@ check_opt 'CONFIG_HAVE_EBPF_JIT'
 check_opt 'CONFIG_FUNCTION_TRACER'
 check_opt 'CONFIG_HAVE_DYNAMIC_FTRACE'
 check_opt 'CONFIG_DYNAMIC_FTRACE'
+check_opt 'CONFIG_HAVE_KPROBES'
+check_opt 'CONFIG_KPROBES'
+check_opt 'CONFIG_KPROBE_EVENTS'
+check_opt 'CONFIG_ARCH_SUPPORTS_UPROBES'
+check_opt 'CONFIG_UPROBES'
+check_opt 'CONFIG_UPROBE_EVENTS'
+check_opt 'CONFIG_DEBUG_FS'
 
 # Status report
 if [ $err -eq 0 ]; then
