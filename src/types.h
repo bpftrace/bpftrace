@@ -331,6 +331,8 @@ public:
     return type == Type::mac_address;
   };
 
+  bool IsTupleWithStruct(void) const;
+
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
 
