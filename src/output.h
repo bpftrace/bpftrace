@@ -55,6 +55,9 @@ public:
                      const SizedType &ty,
                      const std::vector<uint8_t> &value) const = 0;
 
+  virtual std::string struct_field_def_to_str(
+      const std::string &field) const = 0;
+
   virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
@@ -86,6 +89,7 @@ public:
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      const std::vector<uint8_t> &value) const override;
+  std::string struct_field_def_to_str(const std::string &field) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
@@ -121,6 +125,7 @@ public:
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
                      const std::vector<uint8_t> &value) const override;
+  std::string struct_field_def_to_str(const std::string &field) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void message(MessageType type, const std::string& field, uint64_t value) const;
