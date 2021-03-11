@@ -149,25 +149,23 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
   return true;
 }
 
-std::string get_pid_exe(pid_t pid)
+std::string get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
   std_filesystem::path proc_path{ "/proc" };
-  proc_path /= std::to_string(pid);
+  proc_path /= pid;
   proc_path /= "exe";
 
   if (!std_filesystem::exists(proc_path, ec) ||
       !std_filesystem::is_symlink(proc_path, ec))
     return "";
 
-  std::string exe_path = std_filesystem::read_symlink(proc_path).string();
+  return std_filesystem::read_symlink(proc_path).string();
+}
 
-  if (exe_path.length() >= 4096)
-  {
-    throw std::runtime_error(
-        "executable path exceeded maximum supported size of 4096 characters");
-  }
-  return exe_path;
+std::string get_pid_exe(pid_t pid)
+{
+  return get_pid_exe(std::to_string(pid));
 }
 
 bool has_wildcard(const std::string &str)
