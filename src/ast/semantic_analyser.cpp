@@ -1598,52 +1598,11 @@ void SemanticAnalyser::visit(Binop &binop)
 {
   binop.left->accept(*this);
   binop.right->accept(*this);
-  Type &lhs = binop.left->type.type;
-  Type &rhs = binop.right->type.type;
+
   auto &lht = binop.left->type;
   auto &rht = binop.right->type;
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
-
-  if (is_final_pass()) {
-    if ((lhs != rhs) && !(lht.IsPtrTy() && rht.IsIntegerTy()) &&
-        !(lht.IsIntegerTy() && rht.IsPtrTy()))
-    {
-      LOG(ERROR, binop.left->loc + binop.right->loc, err_)
-          << "Type mismatch for '" << opstr(binop) << "': comparing '" << lhs
-          << "' with '" << rhs << "'";
-    }
-    // Follow what C does
-    else if (lhs == Type::integer && rhs == Type::integer) {
-      binop_int(binop);
-    }
-    // Also allow combination like reg("sp") + 8
-    else if (!(lhs == Type::integer && rhs == Type::integer) &&
-             binop.op != Parser::token::EQ && binop.op != Parser::token::NE &&
-             !(lht.IsPtrTy() && rht.IsIntegerTy()) &&
-             !(lht.IsIntegerTy() && rht.IsPtrTy()))
-    {
-      LOG(ERROR, binop.loc, err_)
-          << "The " << opstr(binop)
-          << " operator can not be used on expressions of types " << lhs << ", "
-          << rhs;
-    }
-    else if (binop.op == Parser::token::EQ &&
-             ((!binop.left->is_literal && binop.right->is_literal) ||
-              (binop.left->is_literal && !binop.right->is_literal)))
-    {
-      auto *lit = binop.left->is_literal ? binop.left : binop.right;
-      auto *str = lit == binop.left ? binop.right : binop.left;
-      auto lit_len = bpftrace_.get_string_literal(lit).size();
-      auto str_len = str->type.GetNumElements();
-      if (lit_len > str_len)
-      {
-        LOG(WARNING, binop.left->loc + binop.loc + binop.right->loc, out_)
-            << "The literal is longer than the variable string (size="
-            << str_len << "), condition will always be false";
-      }
-    }
-  }
 
   bool is_signed = lsign && rsign;
   switch (binop.op) {
@@ -1678,6 +1637,51 @@ void SemanticAnalyser::visit(Binop &binop)
   {
     // In case rhs is none, then this triggers warning in selectProbeReadHelper.
     binop.type.SetAS(addr_rhs);
+  }
+
+  if (!is_final_pass())
+  {
+    return;
+  }
+
+  if (lht.IsIntTy() && rht.IsIntTy())
+  {
+    binop_int(binop);
+  }
+  else if ((lht.IsPtrTy() && rht.IsIntTy()) || (lht.IsIntTy() && rht.IsPtrTy()))
+  {
+    // noop
+  }
+  // Compare type here, not the sized type as we it needs to work on strings of
+  // different lengths
+  else if (lht.type != rht.type)
+  {
+    LOG(ERROR, binop.left->loc + binop.right->loc, err_)
+        << "Type mismatch for '" << opstr(binop) << "': comparing '" << lht
+        << "' with '" << rht << "'";
+  }
+  // Also allow combination like reg("sp") + 8
+  else if (binop.op != Parser::token::EQ && binop.op != Parser::token::NE)
+  {
+    LOG(ERROR, binop.loc, err_)
+        << "The " << opstr(binop)
+        << " operator can not be used on expressions of types " << lht << ", "
+        << rht;
+  }
+  else if (binop.op == Parser::token::EQ &&
+           ((!binop.left->is_literal && binop.right->is_literal) ||
+            (binop.left->is_literal && !binop.right->is_literal)))
+  {
+    auto *lit = binop.left->is_literal ? binop.left : binop.right;
+    auto *str = lit == binop.left ? binop.right : binop.left;
+    auto lit_len = bpftrace_.get_string_literal(lit).size();
+    auto str_len = str->type.GetNumElements();
+    if (lit_len > str_len)
+    {
+      LOG(WARNING, binop.left->loc + binop.loc + binop.right->loc, out_)
+          << "The literal is longer than the variable string (size=" << str_len
+          << "), condition will always be false";
+    }
   }
 }
 
