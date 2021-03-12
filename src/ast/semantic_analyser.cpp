@@ -1756,20 +1756,33 @@ void SemanticAnalyser::visit(Unop &unop)
           << "The " << opstr(unop)
           << " operator must be applied to a map or variable";
     }
+
     if (unop.expr->is_map) {
       Map &map = static_cast<Map&>(*unop.expr);
-      assign_map_type(map, CreateInt64());
+      auto *maptype = get_map_type(map);
+      if (!maptype)
+        assign_map_type(map, CreateInt64());
     }
   }
 
   unop.expr->accept(*this);
 
+  auto valid_ptr_op = false;
+  switch (unop.op)
+  {
+    case bpftrace::Parser::token::INCREMENT:
+    case bpftrace::Parser::token::DECREMENT:
+    case bpftrace::Parser::token::MUL:
+      valid_ptr_op = true;
+      break;
+    default:;
+  }
+
   SizedType &type = unop.expr->type;
   if (is_final_pass())
   {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
-    if (!type.IsIntegerTy() &&
-        !(unop.op == Parser::token::MUL && type.IsPtrTy()))
+    if (!type.IsIntegerTy() && !(type.IsPtrTy() && valid_ptr_op))
     {
       LOG(ERROR, unop.loc, err_)
           << "The " << opstr(unop)
@@ -1815,6 +1828,10 @@ void SemanticAnalyser::visit(Unop &unop)
     {
       unop.type = CreateUInt(8 * type.GetSize());
     }
+  }
+  else if (type.IsPtrTy() && valid_ptr_op)
+  {
+    unop.type = unop.expr->type;
   }
   else {
     unop.type = CreateInteger(64, type.IsSigned());
@@ -3222,6 +3239,15 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
   return true;
 }
 
+SizedType *SemanticAnalyser::get_map_type(const Map &map)
+{
+  const std::string &map_ident = map.ident;
+  auto search = map_val_.find(map_ident);
+  if (search == map_val_.end())
+    return nullptr;
+  return &search->second;
+}
+
 void SemanticAnalyser::update_assign_map_type(const Map &map,
                                               SizedType &type,
                                               const SizedType &new_type)
@@ -3266,29 +3292,30 @@ void SemanticAnalyser::update_assign_map_type(const Map &map,
 void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 {
   const std::string &map_ident = map.ident;
-  auto search = map_val_.find(map_ident);
-  if (search != map_val_.end()) {
-    if (search->second.IsNoneTy())
+
+  auto *maptype = get_map_type(map);
+  if (maptype)
+  {
+    if (maptype->IsNoneTy())
     {
-      if (is_final_pass()) {
+      if (is_final_pass())
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
-      }
       else
-      {
-        search->second = type;
-      }
+        *maptype = type;
     }
-    else if (search->second.type != type.type) {
+    else if (maptype->type != type.type)
+    {
       LOG(ERROR, map.loc, err_)
           << "Type mismatch for " << map_ident << ": "
           << "trying to assign value of type '" << type
-          << "' when map already contains a value of type '" << search->second;
+          << "' when map already contains a value of type '" << *maptype;
     }
-    update_assign_map_type(map, search->second, type);
+    update_assign_map_type(map, *maptype, type);
   }
-  else {
+  else
+  {
     // This map hasn't been seen before
-    map_val_.insert({map_ident, type});
+    map_val_.insert({ map_ident, type });
     if (map_val_[map_ident].IsIntTy())
     {
       // Store all integer values as 64-bit in maps, so that there will

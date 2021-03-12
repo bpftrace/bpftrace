@@ -1527,6 +1527,53 @@ void CodegenLLVM::visit(Unop &unop)
         }
         break;
       }
+      case bpftrace::Parser::token::INCREMENT:
+      case bpftrace::Parser::token::DECREMENT: {
+        bool is_increment = unop.op == bpftrace::Parser::token::INCREMENT;
+        auto pointee_size = type.GetPointeeTy()->GetSize();
+
+        if (unop.expr->is_map)
+        {
+          Map &map = static_cast<Map &>(*unop.expr);
+          AllocaInst *key = getMapKey(map);
+          Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, unop.loc);
+          AllocaInst *newval = b_.CreateAllocaBPF(map.type,
+                                                  map.ident + "_newval");
+          if (is_increment)
+            b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(pointee_size)), newval);
+          else
+            b_.CreateStore(b_.CreateSub(oldval, b_.getInt64(pointee_size)), newval);
+          b_.CreateMapUpdateElem(ctx_, map, key, newval, unop.loc);
+          b_.CreateLifetimeEnd(key);
+
+          if (unop.is_post_op)
+            expr_ = oldval;
+          else
+            expr_ = b_.CreateLoad(newval);
+          b_.CreateLifetimeEnd(newval);
+        }
+        else if (unop.expr->is_variable)
+        {
+          Variable &var = static_cast<Variable &>(*unop.expr);
+          Value *oldval = b_.CreateLoad(variables_[var.ident]);
+          Value *newval;
+          if (is_increment)
+            newval = b_.CreateAdd(oldval, b_.getInt64(pointee_size));
+          else
+            newval = b_.CreateSub(oldval, b_.getInt64(pointee_size));
+          b_.CreateStore(newval, variables_[var.ident]);
+
+          if (unop.is_post_op)
+            expr_ = oldval;
+          else
+            expr_ = newval;
+        }
+        else
+        {
+          LOG(FATAL) << "invalid expression passed to " << opstr(unop);
+        }
+        break;
+      }
       default:; // Do nothing
     }
   }
