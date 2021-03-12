@@ -1043,7 +1043,7 @@ TEST(semantic_analyser, unop_increment_decrement)
   test("kprobe:f { --@x; }", 0);
 
   test("kprobe:f { $x++; }", 1);
-  test("kprobe:f { @x = \"a\"; @x++; }", 1);
+  test("kprobe:f { @x = \"a\"; @x++; }", 10);
   test("kprobe:f { $x = \"a\"; $x++; }", 10);
 }
 
@@ -2078,22 +2078,29 @@ TEST(semantic_analyser, pointer_arith)
 {
   test(R"_(BEGIN { $t = (int32*) 32; $t = $t + 1 })_", 0);
   test(R"_(BEGIN { $t = (int32*) 32; $t +=1 })_", 0);
-  // test(R"_(BEGIN { $t = (int32*) 32; $t++ })_", 0);
-  // test(R"_(BEGIN { $t = (int32*) 32; ++$t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t++ })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; ++$t })_", 0);
   test(R"_(BEGIN { $t = (int32*) 32; $t = $t - 1 })_", 0);
   test(R"_(BEGIN { $t = (int32*) 32; $t -=1 })_", 0);
-  // test(R"_(BEGIN { $t = (int32*) 32; $t-- })_", 0);
-  // test(R"_(BEGIN { $t = (int32*) 32; --$t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t-- })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; --$t })_", 0);
+
+  // pointer compare
+  test(R"_(BEGIN { $t = (int32*) 32; @ = ($t > $t); })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; @ = ($t < $t); })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; @ = ($t >= $t); })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; @ = ($t <= $t); })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; @ = ($t == $t); })_", 0);
 
   // map
   test(R"_(BEGIN { @ = (int32*) 32; @ = @ + 1 })_", 0);
   test(R"_(BEGIN { @ = (int32*) 32; @ +=1 })_", 0);
-  // test(R"_(BEGIN { @ = (int32*) 32; @++ })_", 0);
-  // test(R"_(BEGIN { @ = (int32*) 32; ++@ })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; @++ })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; ++@ })_", 0);
   test(R"_(BEGIN { @ = (int32*) 32; @ = @ - 1 })_", 0);
   test(R"_(BEGIN { @ = (int32*) 32; @ -=1 })_", 0);
-  // test(R"_(BEGIN { @ = (int32*) 32; @-- })_", 0);
-  // test(R"_(BEGIN { @ = (int32*) 32; --@ })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; @-- })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; --@ })_", 0);
 
   // associativity
   test(R"_(BEGIN { $t = (int32*) 32; $t = $t + 1 })_", 0);
@@ -2107,6 +2114,8 @@ TEST(semantic_analyser, pointer_arith)
   test(R"_(BEGIN { $t = (int32*) 32; $t %= 5 })_", 1);
   test(R"_(BEGIN { $t = (int32*) 32; $t <<= 5 })_", 1);
   test(R"_(BEGIN { $t = (int32*) 32; $t >>= 5 })_", 1);
+
+  test(R"_(BEGIN { $t = (int32*) 32; $t -= $t })_", 1);
   test(R"_(BEGIN { $t = (int32*) 32; $t += $t })_", 1);
 
   // invalid types
@@ -2130,6 +2139,18 @@ TEST(semantic_analyser, pointer_compare)
   test(R"_(BEGIN { $t = (int32*) 32; $c = $t <= $t })_", 0);
   test(R"_(BEGIN { $t = (int32*) 32; $c = $t >= $t })_", 0);
   test(R"_(BEGIN { $t = (int32*) 32; $c = $t != $t })_", 0);
+
+  // pointer compare diff types
+  test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t > $y); })_",
+       0);
+  test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t < $y); })_",
+       0);
+  test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t >= $y); })_",
+       0);
+  test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t <= $y); })_",
+       0);
+  test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t == $y); })_",
+       0);
 }
 
 // Basic functionality test

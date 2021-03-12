@@ -97,6 +97,7 @@ private:
 
   void check_stack_call(Call &call, bool kernel);
 
+  SizedType *get_map_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
   void update_assign_map_type(const Map &map,
                               SizedType &type,
