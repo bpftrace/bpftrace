@@ -1,0 +1,24 @@
+NAME Pointer increment 1
+RUN bpftrace -e 'BEGIN { @=(int32*) 32; @+=1; exit(); }'
+EXPECT ^@: 36
+TIMEOUT 5
+
+NAME Pointer decrement 1
+RUN bpftrace -e 'BEGIN { @=(int32*) 32; @-=1; exit(); }'
+EXPECT ^@: 28
+TIMEOUT 5
+
+NAME Pointer increment 6
+RUN bpftrace -e 'BEGIN { @=(int32*) 32; @+=6; exit(); }'
+EXPECT ^@: 56
+TIMEOUT 5
+
+NAME Pointer decrement 6
+RUN bpftrace -e 'BEGIN { @=(int32*) 32; @-=6; exit(); }'
+EXPECT ^@: 8
+TIMEOUT 5
+
+NAME Pointer decrement 6
+RUN bpftrace -e 'struct A {int32_t a; int32_t b; char c[28] }; BEGIN { $a=(struct A*) 1024; printf("%lu - 5 * %lu = %lu\n", $a, sizeof(struct A), $a-5); exit(); }'
+EXPECT ^1024 - 5 * 36 = 844
+TIMEOUT 5

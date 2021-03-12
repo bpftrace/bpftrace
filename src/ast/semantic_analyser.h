@@ -109,6 +109,7 @@ private:
   int create_maps_impl(void);
   AddrSpace find_addrspace(ProbeType pt);
 
+  void binop_ptr(Binop &op);
   void binop_int(Binop &op);
 
   bool in_loop(void)

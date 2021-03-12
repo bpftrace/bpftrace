@@ -2054,6 +2054,64 @@ TEST(semantic_analyser, double_pointer_struct)
   EXPECT_EQ(assignment->var->type.GetIntBitWidth(), 8ULL);
 }
 
+TEST(semantic_analyser, pointer_arith)
+{
+  test(R"_(BEGIN { $t = (int32*) 32; $t = $t + 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t +=1 })_", 0);
+  // test(R"_(BEGIN { $t = (int32*) 32; $t++ })_", 0);
+  // test(R"_(BEGIN { $t = (int32*) 32; ++$t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t = $t - 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t -=1 })_", 0);
+  // test(R"_(BEGIN { $t = (int32*) 32; $t-- })_", 0);
+  // test(R"_(BEGIN { $t = (int32*) 32; --$t })_", 0);
+
+  // map
+  test(R"_(BEGIN { @ = (int32*) 32; @ = @ + 1 })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; @ +=1 })_", 0);
+  // test(R"_(BEGIN { @ = (int32*) 32; @++ })_", 0);
+  // test(R"_(BEGIN { @ = (int32*) 32; ++@ })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; @ = @ - 1 })_", 0);
+  test(R"_(BEGIN { @ = (int32*) 32; @ -=1 })_", 0);
+  // test(R"_(BEGIN { @ = (int32*) 32; @-- })_", 0);
+  // test(R"_(BEGIN { @ = (int32*) 32; --@ })_", 0);
+
+  // associativity
+  test(R"_(BEGIN { $t = (int32*) 32; $t = $t + 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t = 1 + $t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t = $t - 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $t = 1 - $t })_", 1);
+
+  // invalid ops
+  test(R"_(BEGIN { $t = (int32*) 32; $t *= 5 })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t /= 5 })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t %= 5 })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t <<= 5 })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t >>= 5 })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t += $t })_", 1);
+
+  // invalid types
+  test(R"_(BEGIN { $t = (int32*) 32; $t += "abc" })_", 1);
+  test(R"_(BEGIN { $t = (int32*) 32; $t += comm })_", 1);
+  test(
+      R"_(struct A {}; BEGIN { $t = (int32*) 32; $s = *(struct A*) 0; $t += $s })_",
+      1);
+}
+
+TEST(semantic_analyser, pointer_compare)
+{
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t < 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t > 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t <= 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t >= 1 })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t != 1 })_", 0);
+
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t < $t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t > $t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t <= $t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t >= $t })_", 0);
+  test(R"_(BEGIN { $t = (int32*) 32; $c = $t != $t })_", 0);
+}
+
 // Basic functionality test
 TEST(semantic_analyser, tuple)
 {
