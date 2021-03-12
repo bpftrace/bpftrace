@@ -576,9 +576,9 @@ void CodegenLLVM::visit(Call &call)
     }
 
     auto elements = AsyncEvent::Buf().asLLVMType(b_, fixed_buffer_length);
-    char dynamic_sized_struct_name[30];
-    sprintf(dynamic_sized_struct_name, "buffer_%ld_t", fixed_buffer_length);
-    StructType *buf_struct = b_.GetStructType(dynamic_sized_struct_name,
+    std::ostringstream dynamic_sized_struct_name;
+    dynamic_sized_struct_name << "buffer_" << fixed_buffer_length << "_t";
+    StructType *buf_struct = b_.GetStructType(dynamic_sized_struct_name.str(),
                                               elements,
                                               false);
     AllocaInst *buf = b_.CreateAllocaBPF(buf_struct, "buffer");
