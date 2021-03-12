@@ -1544,6 +1544,68 @@ void SemanticAnalyser::binop_int(Binop &binop)
   }
 }
 
+void SemanticAnalyser::binop_ptr(Binop &binop)
+{
+  auto &lht = binop.left->type;
+  auto &rht = binop.right->type;
+
+  bool left_is_ptr = lht.IsPtrTy();
+  auto &ptr = left_is_ptr ? lht : rht;
+  auto &other = left_is_ptr ? rht : lht;
+
+  auto compare = false;
+
+  // Do what C does
+  switch (binop.op)
+  {
+    case bpftrace::Parser::token::EQ:
+    case bpftrace::Parser::token::NE:
+    case bpftrace::Parser::token::LE:
+    case bpftrace::Parser::token::GE:
+    case bpftrace::Parser::token::LT:
+    case bpftrace::Parser::token::GT:
+      compare = true;
+      break;
+    default:;
+  }
+
+  auto invalid_op = [&binop, this, &lht, &rht]() {
+    LOG(ERROR, binop.loc, err_)
+        << "The " << opstr(binop)
+        << " operator can not be used on expressions of types " << lht << ", "
+        << rht;
+  };
+
+  // Binop on two pointers
+  if (other.IsPtrTy())
+  {
+    if (compare)
+      binop.type = CreateUInt(64);
+    else
+      invalid_op();
+  }
+  // Binop on a pointer and int
+  else if (other.IsIntTy())
+  {
+    // sum is associative but minus only works with pointer on the left hand
+    // side
+    if (binop.op == bpftrace::Parser::token::MINUS && !left_is_ptr)
+      invalid_op();
+    else if (binop.op == bpftrace::Parser::token::PLUS ||
+             binop.op == bpftrace::Parser::token::MINUS)
+      binop.type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
+    else if (compare)
+      binop.type = CreateInt(64);
+    else
+      invalid_op();
+  }
+  // Binop on a pointer and something else
+  else
+  {
+    invalid_op();
+  }
+}
+
 void SemanticAnalyser::visit(Binop &binop)
 {
   binop.left->accept(*this);
@@ -1553,6 +1615,12 @@ void SemanticAnalyser::visit(Binop &binop)
   auto &rht = binop.right->type;
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
+
+  if (lht.IsPtrTy() || rht.IsPtrTy())
+  {
+    binop_ptr(binop);
+    return;
+  }
 
   bool is_signed = lsign && rsign;
   switch (binop.op) {
@@ -1598,9 +1666,10 @@ void SemanticAnalyser::visit(Binop &binop)
   {
     binop_int(binop);
   }
-  else if ((lht.IsPtrTy() && rht.IsIntTy()) || (lht.IsIntTy() && rht.IsPtrTy()))
+  else if (lht.IsPtrTy() || rht.IsPtrTy())
   {
-    // noop
+    // This case is caught earlier, just here for readability of the if/else
+    // flow
   }
   // Compare type here, not the sized type as we it needs to work on strings of
   // different lengths

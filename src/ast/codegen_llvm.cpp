@@ -1294,6 +1294,87 @@ void CodegenLLVM::binop_int(Binop &binop)
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
 }
 
+void CodegenLLVM::binop_ptr(Binop &binop)
+{
+  auto compare = false;
+  auto arith = false;
+
+  // Do what C does
+  switch (binop.op)
+  {
+    case bpftrace::Parser::token::EQ:
+    case bpftrace::Parser::token::NE:
+    case bpftrace::Parser::token::LE:
+    case bpftrace::Parser::token::GE:
+    case bpftrace::Parser::token::LT:
+    case bpftrace::Parser::token::GT:
+      compare = true;
+      break;
+    case bpftrace::Parser::token::LEFT:
+    case bpftrace::Parser::token::RIGHT:
+    case bpftrace::Parser::token::MOD:
+    case bpftrace::Parser::token::BAND:
+    case bpftrace::Parser::token::BOR:
+    case bpftrace::Parser::token::BXOR:
+    case bpftrace::Parser::token::MUL:
+    case bpftrace::Parser::token::DIV:
+      break;
+    case bpftrace::Parser::token::PLUS:
+    case bpftrace::Parser::token::MINUS:
+      arith = true;
+      break;
+  }
+
+  auto scoped_del_left = accept(binop.left);
+  Value *lhs = expr_;
+  auto scoped_del_right = accept(binop.right);
+  Value *rhs = expr_;
+
+  // note: the semantic phase blocks invalid combinations
+  if (compare)
+  {
+    switch (binop.op)
+    {
+      case bpftrace::Parser::token::EQ:
+        expr_ = b_.CreateICmpEQ(lhs, rhs);
+        break;
+      case bpftrace::Parser::token::NE:
+        expr_ = b_.CreateICmpNE(lhs, rhs);
+        break;
+      case bpftrace::Parser::token::LE: {
+        expr_ = b_.CreateICmpULE(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::GE: {
+        expr_ = b_.CreateICmpUGE(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::LT: {
+        expr_ = b_.CreateICmpULT(lhs, rhs);
+        break;
+      }
+      case bpftrace::Parser::token::GT: {
+        expr_ = b_.CreateICmpUGT(lhs, rhs);
+        break;
+      }
+    }
+  }
+  else if (arith)
+  {
+    // Cannot use GEP here as LLVM doesn't know its a pointer
+    bool leftptr = binop.left->type.IsPtrTy();
+    auto &ptr = leftptr ? binop.left->type : binop.right->type;
+    Value *ptr_expr = leftptr ? lhs : rhs;
+    Value *other_expr = leftptr ? rhs : lhs;
+    auto elem_size = b_.getInt64(ptr.GetPointeeTy()->GetSize());
+    expr_ = b_.CreateMul(elem_size, other_expr);
+    if (binop.op == bpftrace::Parser::token::PLUS)
+      expr_ = b_.CreateAdd(ptr_expr, expr_);
+    else
+      expr_ = b_.CreateSub(ptr_expr, expr_);
+  }
+}
+
 void CodegenLLVM::visit(Binop &binop)
 {
   // Handle && and || separately so short circuiting works
@@ -1309,7 +1390,11 @@ void CodegenLLVM::visit(Binop &binop)
   }
 
   SizedType &type = binop.left->type;
-  if (type.IsStringTy())
+  if (binop.left->type.IsPtrTy() || binop.right->type.IsPtrTy())
+  {
+    binop_ptr(binop);
+  }
+  else if (type.IsStringTy())
   {
     binop_string(binop);
   }
