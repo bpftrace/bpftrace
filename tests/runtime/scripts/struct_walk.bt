@@ -1,0 +1,26 @@
+struct C {
+  uint32_t a;
+  uint64_t b;
+};
+
+uprobe:./testprogs/struct_walk:clear {
+  $c = (struct C *) arg0;
+  $size = (uint32) arg1;
+
+  if ($size != 10) {
+    print("Size should be 10");
+    exit();
+  }
+
+/* Verifier doesn't know size is always 10
+ * we have to clamp it */
+  $i = 10;
+  while ($i-- > 0) {
+    @a += $c->a;
+    @b += ($c++)->b;
+  }
+
+  printf("a: %d b: %d\n", @a, @b);
+  clear(@a);
+  clear(@b);
+}
