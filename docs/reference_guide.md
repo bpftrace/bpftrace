@@ -436,7 +436,7 @@ being executed.
 
 ```
 # bpftrace --include linux/path.h --include linux/dcache.h \
-    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((path *)arg0)->dentry->d_name.name)); }'
+    -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
 Attaching 1 probe...
 open path: .com.google.Chrome.ASsbu2
 open path: .com.google.Chrome.gimc10
