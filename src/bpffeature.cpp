@@ -4,13 +4,11 @@
 #endif
 #include <bpffeature.h>
 #include <cstddef>
-#include <cstdio>
-#include <fcntl.h>
 #include <fstream>
-#include <sys/stat.h>
 #include <unistd.h>
 
 #include "btf.h"
+#include "filesystem_wrapper.h"
 #include "probe_matcher.h"
 #include "utils.h"
 
@@ -321,10 +319,9 @@ bool BPFfeature::has_uprobe_refcnt()
     return *has_uprobe_refcnt_;
 
 #ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
-  struct stat sb;
-  has_uprobe_refcnt_ =
-      ::stat("/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset",
-             &sb) == 0;
+  std::error_code ec;
+  has_uprobe_refcnt_ = std_filesystem::exists(
+      "/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset", ec);
 #else
   has_uprobe_refcnt_ = false;
 #endif // LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE

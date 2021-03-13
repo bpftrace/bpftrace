@@ -13,10 +13,10 @@
 #include <sstream>
 #include <string>
 #include <sys/auxv.h>
-#include <sys/stat.h>
 #include <tuple>
 #include <unistd.h>
 
+#include "filesystem_wrapper.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "utils.h"
@@ -26,16 +26,6 @@
 #include <elf.h>
 
 #include <linux/version.h>
-
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace std_filesystem = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
-namespace std_filesystem = std::experimental::filesystem;
-#else
-#error "neither <filesystem> nor <experimental/filesystem> are present"
-#endif
 
 namespace {
 
