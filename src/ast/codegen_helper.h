@@ -15,12 +15,6 @@ inline bool shouldBeOnStackAlready(const SizedType &type)
          type.IsUsymTy() || type.IsTupleTy() || type.IsTimestampTy() ||
          type.IsMacAddressTy();
 }
-
-inline bool onStack(const SizedType &type)
-{
-  return type.is_internal || shouldBeOnStackAlready(type);
-}
-
 inline AddrSpace find_addrspace_stack(const SizedType &ty)
 {
   return (shouldBeOnStackAlready(ty)) ? AddrSpace::kernel : ty.GetAS();

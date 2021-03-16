@@ -128,19 +128,6 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
                                            i * arg.GetElementTy()->GetSize()));
       return "[" + str_join(elems, ",") + "]";
     }
-    case Type::record:
-    {
-      std::vector<std::string> elems;
-      for (auto &field : bpftrace.structs_[arg.GetName()].fields)
-      {
-        elems.push_back(
-            "." + field.first + "=" +
-            argument_value(bpftrace,
-                           field.second.type,
-                           (const uint8_t *)data + field.second.offset));
-      }
-      return "{" + str_join(elems, ",") + "}";
-    }
     case Type::mac_address:
     {
       auto p = static_cast<const uint8_t *>(data);

@@ -11,7 +11,7 @@ struct W {
 struct C {
   uint32_t a;
   void * b;
-  struct W w[10];
+  struct W w[5];
 };
 
 uprobe:./testprogs/struct_array:clear {
@@ -22,24 +22,24 @@ uprobe:./testprogs/struct_array:clear {
   @[$c->w] = 42;
 
   printf("%d ", $w[0].a);
+  printf("%d ", $w[1].a);
   printf("%d ", $w[2].a);
+  printf("%d ", $w[3].a);
   printf("%d ", $w[4].a);
-  printf("%d ", $w[6].a);
-  printf("%d ", $w[8].a);
 
   printf("-- ");
+  printf("%d ", @w[0][0].t.a);
   printf("%d ", @w[0][1].t.a);
+  printf("%d ", @w[0][2].t.a);
   printf("%d ", @w[0][3].t.a);
-  printf("%d ", @w[0][5].t.a);
-  printf("%d ", @w[0][7].t.a);
-  printf("%d ", @w[0][9].t.a);
+  printf("%d ", @w[0][4].t.a);
 
   printf("-- ");
-  printf("%d ", @w[0][0].t.b[1]);
-  printf("%d ", @w[0][1].t.b[1]);
-  printf("%d ", @w[0][2].t.b[1]);
-  printf("%d ", @w[0][3].t.b[1]);
-  printf("%d ", @w[0][4].t.b[1]);
+  printf("%d ", @w[0][0].t.b[0]);
+  printf("%d ", @w[0][1].t.b[0]);
+  printf("%d ", @w[0][2].t.b[0]);
+  printf("%d ", @w[0][3].t.b[0]);
+  printf("%d ", @w[0][4].t.b[0]);
 
   printf("-- ");
   printf("%d ", @[$c->w]);

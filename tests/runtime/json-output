@@ -105,12 +105,6 @@ RUN bpftrace -q -f json -e 'BEGIN { $t = (1, 2, "string"); print($t); exit() }'
 EXPECT ^{"type": "value", "data": \[1,2,"string"\]}$
 TIMEOUT 1
 
-NAME print_non_map_struct
-RUN bpftrace -v -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
-EXPECT ^{"type": "value", "data": { "m": 2, "n": 3 }}$
-TIMEOUT 5
-AFTER ./testprogs/simple_struct
-
 NAME print_avg_map_args
 RUN bpftrace -q -f json -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); clear(@); exit(); }'
 EXPECT {"type": "stats", "data": {"@": { *"c": 3, *"d": 4}}}

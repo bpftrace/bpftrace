@@ -505,23 +505,10 @@ ssize_t SizedType::GetAlignment() const
 
   if (GetSize() <= 2)
     return GetSize();
-  else if (IsArrayTy())
-    return element_type_->GetAlignment();
-  else if (IsByteArray() || GetSize() <= 4)
+  else if (GetSize() <= 4)
     return 4;
   else
     return 8;
-}
-
-bool SizedType::IsTupleWithStruct(void) const
-{
-  if (!IsTupleTy())
-    return false;
-
-  for (auto &field : tuple_fields->fields)
-    if (field.type.IsRecordTy())
-      return true;
-  return false;
 }
 
 } // namespace bpftrace

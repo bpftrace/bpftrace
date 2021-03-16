@@ -1,11 +1,11 @@
 NAME struct-array
 RUN bpftrace runtime/scripts/struct_array.bt -c ./testprogs/struct_array
-EXPECT 100 102 104 106 108 -- 1 3 5 7 9 -- 100 98 96 94 92
+EXPECT 100 101 102 103 104 -- 0 1 2 3 4 -- 100 99 98 97 96
 TIMEOUT 5
 
 NAME struct-array with variables
 RUN bpftrace runtime/scripts/struct_array_vars.bt -c ./testprogs/struct_array
-EXPECT 100 102 104 106 108 -- 1 3 5 7 9 -- 100 98 96 94 92 -- 42
+EXPECT 100 101 102 103 104 -- 0 1 2 3 4 -- 100 99 98 97 96 -- 42
 TIMEOUT 5
 
 NAME pointer_to_pointer

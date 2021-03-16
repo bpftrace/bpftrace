@@ -17,7 +17,7 @@ struct C
 {
   uint32_t a;
   void* b;
-  struct W w[10];
+  struct W w[5];
 };
 
 void clear(struct C* c)
@@ -34,7 +34,7 @@ int main()
 
   c.a = 0x55555555;
   c.b = (void*)0x55555555;
-  for (int x = 0; x < 10; x++)
+  for (int x = 0; x < 5; x++)
   {
     c.w[x].a = 100 + x;
     c.w[x].t.a = x;
