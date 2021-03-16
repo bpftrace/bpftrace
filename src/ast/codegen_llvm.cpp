@@ -1021,12 +1021,15 @@ void CodegenLLVM::visit(Call &call)
     auto macaddr = call.vargs->front();
     auto scoped_del = accept(macaddr);
 
-    b_.CreateProbeRead(ctx_,
-                       static_cast<AllocaInst *>(buf),
-                       macaddr->type.GetSize(),
-                       expr_,
-                       macaddr->type.GetAS(),
-                       call.loc);
+    if (onStack(macaddr->type))
+      b_.CREATE_MEMCPY(buf, expr_, macaddr->type.GetSize(), 1);
+    else
+      b_.CreateProbeRead(ctx_,
+                         static_cast<AllocaInst *>(buf),
+                         macaddr->type.GetSize(),
+                         expr_,
+                         macaddr->type.GetAS(),
+                         call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -1069,8 +1072,8 @@ void CodegenLLVM::visit(Map &map)
 
 void CodegenLLVM::visit(Variable &var)
 {
-  // Arrays are not memcopied for local variables
-  if (needMemcpy(var.type) && !var.type.IsArrayTy())
+  // Arrays and structs are not memcopied for local variables
+  if (needMemcpy(var.type) && !(var.type.IsArrayTy() || var.type.IsRecordTy()))
   {
     expr_ = variables_[var.ident];
   }
@@ -1556,212 +1559,113 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
   auto &field = cstruct.fields[acc.field];
 
-  if (is_internal)
+  if (onStack(type))
   {
-    // The struct we are reading from has already been pulled into
-    // BPF-memory, e.g. by being stored in a map.
-    // Just read from the correct offset of expr_
-    Value *src = b_.CreateGEP(expr_, {b_.getInt64(0), b_.getInt64(field.offset)});
-
-    if (field.type.IsRecordTy() || field.type.IsArrayTy())
-    {
-      // TODO This should be do-able without allocating more memory here
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                           "internal_" + type.GetName() + "." +
-                                               acc.field);
-      b_.CREATE_MEMCPY(dst, src, field.type.GetSize(), 1);
-      expr_ = dst;
-      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
-    }
-    else if (field.type.IsStringTy() || field.type.IsBufferTy())
-    {
-      expr_ = src;
-      // Extend lifetime of source buffer
-      expr_deleter_ = scoped_del.disarm();
-    }
-    else
-    {
-      // We need to cast src to an appropriate pointer type to make the IR valid
-      // This is necessary since the struct may be stored in memory as a byte
-      // array but we're reading an entire integer (e.g. cast i8* to i32*).
-      auto dst_ty = b_.GetType(field.type);
-      expr_ = b_.CreateLoad(dst_ty,
-                            b_.CreatePointerCast(src, dst_ty->getPointerTo()));
-    }
+    readDatastructElemFromStack(
+        expr_, b_.getInt64(field.offset), type, field.type, scoped_del);
   }
   else
   {
-    // The struct we are reading from has not been pulled into BPF-memory,
-    // so expr_ will contain an external pointer to the start of the struct
+    // Structs may contain two kinds of fields that must be handled separately
+    // (bitfields and _data_loc)
+    if (field.type.IsIntTy() && (field.is_bitfield || field.is_data_loc))
+    {
+      Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
 
-    Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
-
-    if (field.type.IsRecordTy())
-    {
-      // struct X
-      // {
-      //   struct Y y;
-      // };
-      //
-      // We are trying to access an embedded struct, e.g. "x.y"
-      //
-      // Instead of copying the entire struct Y in, we'll just store it as a
-      // pointer internally and dereference later when necessary.
-      expr_ = src;
-      // Extend lifetime of source buffer
-      expr_deleter_ = scoped_del.disarm();
-      return;
-    }
-
-    llvm::Type *field_ty = b_.GetType(field.type);
-    if (field.type.IsArrayTy())
-    {
-      // For array types, we want to just pass pointer along,
-      // since the offset of the field should be the start of the array.
-      // The pointer will be dereferenced when the array is accessed by a []
-      // operation
-      expr_ = src;
-      // Extend lifetime of source buffer
-      expr_deleter_ = scoped_del.disarm();
-    }
-    else if (field.type.IsStringTy() || field.type.IsBufferTy())
-    {
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                           type.GetName() + "." + acc.field);
-      if (type.IsCtxAccess())
+      if (field.is_bitfield)
       {
-        // Map functions only accept a pointer to a element in the stack
-        // Copy data to avoid the above issue
-        b_.CREATE_MEMCPY_VOLATILE(dst,
-                                  b_.CreateIntToPtr(src,
-                                                    field_ty->getPointerTo()),
-                                  field.type.GetSize(),
-                                  1);
-      }
-      else
-      {
-        b_.CreateProbeRead(
-            ctx_, dst, field.type.GetSize(), src, type.GetAS(), acc.loc);
-      }
-      expr_ = dst;
-      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
-    }
-    else if (field.type.IsIntTy() && field.is_bitfield)
-    {
-      Value *raw;
-      if (type.IsCtxAccess())
-        raw = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
-                            true);
-      else
-      {
-        AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                             type.GetName() + "." + acc.field);
-        // memset so verifier doesn't complain about reading uninitialized stack
-        b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.GetSize(), 1);
-        b_.CreateProbeRead(
-            ctx_, dst, field.bitfield.read_bytes, src, type.GetAS(), acc.loc);
-        raw = b_.CreateLoad(dst);
-        b_.CreateLifetimeEnd(dst);
-      }
-      size_t rshiftbits;
+        Value *raw;
+        if (type.IsCtxAccess())
+          raw = b_.CreateLoad(
+              b_.CreateIntToPtr(src, b_.GetType(field.type)->getPointerTo()),
+              true);
+        else
+        {
+          AllocaInst *dst = b_.CreateAllocaBPF(field.type,
+                                               type.GetName() + "." +
+                                                   acc.field);
+          // memset so verifier doesn't complain about reading uninitialized
+          // stack
+          b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.GetSize(), 1);
+          b_.CreateProbeRead(
+              ctx_, dst, field.bitfield.read_bytes, src, type.GetAS(), acc.loc);
+          raw = b_.CreateLoad(dst);
+          b_.CreateLifetimeEnd(dst);
+        }
+        size_t rshiftbits;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-      rshiftbits = field.bitfield.access_rshift;
+        rshiftbits = field.bitfield.access_rshift;
 #else
-      rshiftbits = (field.type.GetSize() - field.bitfield.read_bytes) * 8;
-      rshiftbits += field.bitfield.access_rshift;
+        rshiftbits = (field.type.GetSize() - field.bitfield.read_bytes) * 8;
+        rshiftbits += field.bitfield.access_rshift;
 #endif
-      Value *shifted = b_.CreateLShr(raw, rshiftbits);
-      Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
-      expr_ = masked;
-    }
-    else if (field.type.IsIntTy() && field.is_data_loc)
-    {
-      // `is_data_loc` should only be set if field access is on `args` which
-      // has to be a ctx access
-      assert(type.IsCtxAccess());
-      assert(ctx_->getType() == b_.getInt8PtrTy());
-      // Parser needs to have rewritten field to be a u64
-      assert(field.type.IsIntTy());
-      assert(field.type.GetIntBitWidth() == 64);
+        Value *shifted = b_.CreateLShr(raw, rshiftbits);
+        Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
+        expr_ = masked;
+      }
+      else
+      {
+        // `is_data_loc` should only be set if field access is on `args` which
+        // has to be a ctx access
+        assert(type.IsCtxAccess());
+        assert(ctx_->getType() == b_.getInt8PtrTy());
+        // Parser needs to have rewritten field to be a u64
+        assert(field.type.IsIntTy());
+        assert(field.type.GetIntBitWidth() == 64);
 
-      // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
-      // offset which we add to the start of the tracepoint struct.
-      expr_ = b_.CreateLoad(
-          b_.getInt32Ty(),
-          b_.CreateGEP(b_.CreatePointerCast(ctx_,
-                                            b_.getInt32Ty()->getPointerTo()),
-                       b_.getInt64(field.offset / 4)));
-      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
-      expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
-      expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
-    }
-    else if ((field.type.IsIntTy() || field.type.IsPtrTy()) &&
-             type.IsCtxAccess())
-    {
-      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, field_ty->getPointerTo()),
-                            true);
-      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), field.type.IsSigned());
+        // Top 2 bytes are length (which we'll ignore). Bottom two bytes are
+        // offset which we add to the start of the tracepoint struct.
+        expr_ = b_.CreateLoad(
+            b_.getInt32Ty(),
+            b_.CreateGEP(b_.CreatePointerCast(ctx_,
+                                              b_.getInt32Ty()->getPointerTo()),
+                         b_.getInt64(field.offset / 4)));
+        expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+        expr_ = b_.CreateAnd(expr_, b_.getInt64(0xFFFF));
+        expr_ = b_.CreateAdd(expr_, b_.CreatePtrToInt(ctx_, b_.getInt64Ty()));
+      }
     }
     else
     {
-      AllocaInst *dst = b_.CreateAllocaBPF(field.type,
-                                           type.GetName() + "." + acc.field);
-      b_.CreateProbeRead(
-          ctx_, dst, field.type.GetSize(), src, type.GetAS(), acc.loc);
-      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                               b_.getInt64Ty(),
-                               field.type.IsSigned());
-      b_.CreateLifetimeEnd(dst);
+      probereadDatastructElem(expr_,
+                              b_.getInt64(field.offset),
+                              type,
+                              field.type,
+                              scoped_del,
+                              acc.loc,
+                              type.GetName() + "." + acc.field);
     }
   }
 }
 
 void CodegenLLVM::visit(ArrayAccess &arr)
 {
-  Value *array, *index, *offset;
   SizedType &type = arr.expr->type;
-  size_t element_size = type.GetElementTy()->GetSize();
+  auto elem_type = *type.GetElementTy();
+  size_t elem_size = elem_type.GetSize();
 
   auto scoped_del_expr = accept(arr.expr);
-  if (expr_->getType()->isPointerTy())
-    array = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
-  else
-    array = expr_;
+  Value *array = expr_;
 
   auto scoped_del_index = accept(arr.indexpr);
 
-  index = b_.CreateIntCast(expr_, b_.getInt64Ty(), arr.expr->type.IsSigned());
-  offset = b_.CreateMul(index, b_.getInt64(element_size));
-
-  Value *src = b_.CreateAdd(array, offset);
-
-  auto stype = *type.GetElementTy();
-
-  if (arr.expr->type.IsCtxAccess() || arr.expr->type.is_internal)
-  {
-    auto ty = b_.GetType(stype);
-    auto elem = b_.CreateIntToPtr(src, ty->getPointerTo());
-    if (stype.IsIntegerTy() || stype.IsPtrTy())
-      expr_ = b_.CreateLoad(elem, true);
-    else
-      expr_ = elem;
-  }
+  if (onStack(type))
+    readDatastructElemFromStack(array, expr_, type, elem_type, scoped_del_expr);
   else
   {
-    AllocaInst *dst = b_.CreateAllocaBPF(stype, "array_access");
-    b_.CreateProbeRead(ctx_, dst, element_size, src, type.GetAS(), arr.loc);
-    if (stype.IsIntegerTy() || stype.IsPtrTy())
-    {
-      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
-                               b_.getInt64Ty(),
-                               arr.expr->type.IsSigned());
-      b_.CreateLifetimeEnd(dst);
-    }
-    else
-    {
-      expr_ = dst;
-      expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
-    }
+    if (array->getType()->isPointerTy())
+      array = b_.CreatePtrToInt(array, b_.getInt64Ty());
+
+    Value *index = b_.CreateIntCast(expr_, b_.getInt64Ty(), type.IsSigned());
+    Value *offset = b_.CreateMul(index, b_.getInt64(elem_size));
+
+    probereadDatastructElem(array,
+                            offset,
+                            type,
+                            elem_type,
+                            scoped_del_expr,
+                            arr.loc,
+                            "array_access");
   }
 }
 
@@ -1833,8 +1737,15 @@ void CodegenLLVM::visit(Tuple &tuple)
 
     Value *dst = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(i) });
 
-    if (shouldBeOnStackAlready(elem->type))
+    if (onStack(elem->type))
       b_.CREATE_MEMCPY(dst, expr_, elem->type.GetSize(), 1);
+    else if (elem->type.IsArrayTy() || elem->type.IsRecordTy())
+      b_.CreateProbeRead(ctx_,
+                         dst,
+                         elem->type.GetSize(),
+                         expr_,
+                         elem->type.GetAS(),
+                         elem->loc);
     else
       b_.CreateStore(expr_, dst);
   }
@@ -1919,33 +1830,37 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
 
   if (variables_.find(var.ident) == variables_.end())
   {
-    SizedType &type = var.type;
+    SizedType alloca_type = var.type;
 
-    // Arrays need not to be copied when assigned to local variables - it is
-    // sufficient to assign the pointer
-    if (var.type.IsArrayTy())
+    // Arrays and structs need not to be copied when assigned to local variables
+    // since they are treated as read-only - it is sufficient to assign
+    // the pointer and do the memcpy/proberead later when necessary
+    if (var.type.IsArrayTy() || var.type.IsRecordTy())
     {
-      type = CreatePointer(*var.type.GetElementTy(), var.type.GetAS());
+      auto &pointee_type = var.type.IsArrayTy() ? *var.type.GetElementTy()
+                                                : var.type;
+      alloca_type = CreatePointer(pointee_type, var.type.GetAS());
     }
 
-    AllocaInst *val = b_.CreateAllocaBPFInit(type, var.ident);
+    AllocaInst *val = b_.CreateAllocaBPFInit(alloca_type, var.ident);
     variables_[var.ident] = val;
   }
 
-  if (needMemcpy(var.type))
+  if (var.type.IsArrayTy() || var.type.IsRecordTy())
+  {
+    // For arrays and structs, only the pointer is stored
+    b_.CreateStore(b_.CreatePtrToInt(expr_, b_.getInt64Ty()),
+                   variables_[var.ident]);
+    // Extend lifetime of RHS up to the end of probe
+    scoped_del.disarm();
+  }
+  else if (needMemcpy(var.type))
   {
     b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.GetSize(), 1);
   }
   else
   {
-    Value *val = expr_;
-    if (assignment.expr->type.IsArrayTy())
-    {
-      val = b_.CreatePtrToInt(expr_, b_.getInt64Ty());
-      // Since only the pointer is copied, we need to extend lifetime of RHS
-      scoped_del.disarm();
-    }
-    b_.CreateStore(val, variables_[var.ident]);
+    b_.CreateStore(expr_, variables_[var.ident]);
   }
 }
 
@@ -2341,7 +2256,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     {
       Expression *expr = map.vargs->at(0);
       auto scoped_del = accept(expr);
-      if (shouldBeOnStackAlready(expr->type))
+      if (onStack(expr->type))
       {
         key = dyn_cast<AllocaInst>(expr_);
         // Call-ee freed
@@ -2350,24 +2265,15 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       else
       {
         key = b_.CreateAllocaBPF(expr->type, map.ident + "_key");
-        if (expr->type.IsArrayTy())
+        if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
         {
-          // expr currently contains a pointer to the array
-          if (expr->type.is_internal)
-          {
-            // The array is already in the BPF memory - memcpy it
-            b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
-          }
-          else
-          {
-            // We need to read the entire array and save it
-            b_.CreateProbeRead(ctx_,
-                               key,
-                               expr->type.GetSize(),
-                               expr_,
-                               expr->type.GetAS(),
-                               expr->loc);
-          }
+          // We need to read the entire array/struct and save it
+          b_.CreateProbeRead(ctx_,
+                             key,
+                             expr->type.GetSize(),
+                             expr_,
+                             expr->type.GetAS(),
+                             expr->loc);
         }
         else
         {
@@ -2395,14 +2301,13 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
         Value *offset_val = b_.CreateGEP(
             key, { b_.getInt64(0), b_.getInt64(offset) });
 
-        if (shouldBeOnStackAlready(expr->type) ||
-            (expr->type.IsArrayTy() && expr->type.is_internal))
+        if (onStack(expr->type))
           b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
         else
         {
-          if (expr->type.IsArrayTy())
+          if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
           {
-            // Read the array into the key
+            // Read the array/struct into the key
             b_.CreateProbeRead(ctx_,
                                offset_val,
                                expr->type.GetSize(),
@@ -2880,7 +2785,17 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   Value *content_offset = b_.CreateGEP(buf, { b_.getInt32(0), b_.getInt32(2) });
   b_.CREATE_MEMSET(content_offset, b_.getInt8(0), arg.type.GetSize(), 1);
   if (needMemcpy(arg.type))
-    b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
+  {
+    if (onStack(arg.type))
+      b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
+    else
+      b_.CreateProbeRead(ctx_,
+                         content_offset,
+                         arg.type.GetSize(),
+                         expr_,
+                         arg.type.GetAS(),
+                         arg.loc);
+  }
   else
   {
     auto ptr = b_.CreatePointerCast(content_offset,
@@ -2997,6 +2912,121 @@ CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
   auto deleter = std::move(expr_deleter_);
   expr_deleter_ = nullptr;
   return ScopedExprDeleter(deleter);
+}
+
+// Read a single element from a compound data structure (i.e. an array or
+// a struct) that has been pulled onto BPF stack.
+// Params:
+//   src_data   pointer to the entire data structure
+//   index      index of the field to read
+//   data_type  type of the structure
+//   elem_type  type of the element
+//   scoped_del scope deleter for the data structure
+void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
+                                              Value *index,
+                                              SizedType &data_type,
+                                              SizedType &elem_type,
+                                              ScopedExprDeleter &scoped_del)
+{
+  // src_data should contain a pointer to the data structure, but it may be
+  // internally represented as an integer and then we need to cast it
+  if (src_data->getType()->isIntegerTy())
+    src_data = b_.CreateIntToPtr(src_data,
+                                 b_.GetType(data_type)->getPointerTo());
+
+  Value *src = b_.CreateGEP(src_data, { b_.getInt32(0), index });
+
+  // It may happen that the result pointer type is not correct, in such case
+  // do a typecast
+  auto dst_type = b_.GetType(elem_type);
+  if (src->getType() != dst_type->getPointerTo())
+    src = b_.CreatePointerCast(src, dst_type->getPointerTo());
+
+  if (elem_type.IsIntegerTy() || elem_type.IsPtrTy())
+  {
+    // Load the correct type from src
+    expr_ = b_.CreateLoad(src, true);
+  }
+  else
+  {
+    // The inner type is an aggregate - instead of copying it, just pass
+    // the pointer and extend lifetime of the source data
+    expr_ = src;
+    expr_deleter_ = scoped_del.disarm();
+  }
+}
+
+// Read a single element from a compound data structure (i.e. an array or
+// a struct) that has not been yet pulled into BPF memory.
+// Params:
+//   src_data  (external) pointer to the entire data structure
+//   offset     offset of the requested element from the structure beginning
+//   data_type  type of the data structure
+//   elem_type  type of the requested element
+//   scoped_del scoped deleter for the source structure
+//   loc        location of the element access (for proberead)
+//   temp_name  name of a temporary variable, if the function creates any
+void CodegenLLVM::probereadDatastructElem(Value *src_data,
+                                          Value *offset,
+                                          SizedType &data_type,
+                                          SizedType &elem_type,
+                                          ScopedExprDeleter &scoped_del,
+                                          location loc,
+                                          const std::string &temp_name)
+{
+  Value *src = b_.CreateAdd(src_data, offset);
+
+  auto dst_type = b_.GetType(elem_type);
+  if (elem_type.IsRecordTy() || elem_type.IsArrayTy())
+  {
+    // For nested arrays and structs, just pass the pointer along and
+    // dereference it later when necessary. We just need to extend lifetime
+    // of the source pointer.
+    expr_ = src;
+    expr_deleter_ = scoped_del.disarm();
+  }
+  else if (elem_type.IsStringTy() || elem_type.IsBufferTy())
+  {
+    // Read data onto stack
+    AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
+    if (data_type.IsCtxAccess())
+    {
+      // Map functions only accept a pointer to a element in the stack
+      // Copy data to avoid the above issue
+      b_.CREATE_MEMCPY_VOLATILE(dst,
+                                b_.CreateIntToPtr(src,
+                                                  dst_type->getPointerTo()),
+                                elem_type.GetSize(),
+                                1);
+    }
+    else
+    {
+      b_.CreateProbeRead(
+          ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
+    }
+    expr_ = dst;
+    expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
+  }
+  else
+  {
+    // Read data onto stack
+    if (data_type.IsCtxAccess())
+    {
+      expr_ = b_.CreateLoad(b_.CreateIntToPtr(src, dst_type->getPointerTo()),
+                            true);
+      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), elem_type.IsSigned());
+    }
+    else
+    {
+      AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
+      b_.CreateProbeRead(
+          ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
+      expr_ = b_.CreateIntCast(b_.CreateLoad(dst),
+                               b_.getInt64Ty(),
+                               elem_type.IsSigned());
+      b_.CreateLifetimeEnd(dst);
+    }
+  }
 }
 
 } // namespace ast

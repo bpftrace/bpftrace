@@ -1265,7 +1265,8 @@ int BPFtrace::zero_map(IMap &map)
 std::string BPFtrace::map_value_to_str(const SizedType &stype,
                                        std::vector<uint8_t> value,
                                        bool is_per_cpu,
-                                       uint32_t div)
+                                       uint32_t div,
+                                       const Output &output)
 {
   uint32_t nvalues = is_per_cpu ? ncpus_ : 1;
   if (stype.IsKstackTy())
@@ -1300,11 +1301,27 @@ std::string BPFtrace::map_value_to_str(const SizedType &stype,
     {
       std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
                                      value.begin() + (i + 1) * elem_size);
-      elems.push_back(
-          map_value_to_str(*stype.GetElementTy(), elem_data, is_per_cpu, div));
+      elems.push_back(map_value_to_str(
+          *stype.GetElementTy(), elem_data, is_per_cpu, div, output));
     }
 
     return "[" + str_join(elems, ",") + "]";
+  }
+  else if (stype.IsRecordTy())
+  {
+    auto &struct_type = structs_[stype.GetName()];
+    std::vector<std::string> elems;
+    for (auto &field : struct_type.fields)
+    {
+      std::vector<uint8_t> elem_data(value.begin() + field.second.offset,
+                                     value.begin() + field.second.offset +
+                                         field.second.type.GetSize());
+      elems.push_back(
+          output.struct_field_def_to_str(field.first) +
+          map_value_to_str(
+              field.second.type, elem_data, is_per_cpu, div, output));
+    }
+    return "{ " + str_join(elems, ", ") + " }";
   }
   else if (stype.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);

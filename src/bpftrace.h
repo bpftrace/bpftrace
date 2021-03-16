@@ -128,7 +128,8 @@ public:
   std::string map_value_to_str(const SizedType &stype,
                                std::vector<uint8_t> value,
                                bool is_per_cpu,
-                               uint32_t div);
+                               uint32_t div,
+                               const Output &output);
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;

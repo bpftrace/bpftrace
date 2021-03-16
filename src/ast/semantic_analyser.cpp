@@ -1409,7 +1409,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   }
 
   arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
-  arr.type.is_internal = true;
+  arr.type.is_internal = type.is_internal;
   arr.type.SetAS(type.GetAS());
 }
 
@@ -2016,12 +2016,6 @@ void SemanticAnalyser::visit(Tuple &tuple)
   {
     Expression *elem = tuple.elems->at(i);
     elem->accept(*this);
-
-    if (elem->type.IsArrayTy() || elem->type.IsRecordTy())
-    {
-      LOG(ERROR, elem->loc, err_)
-          << elem->type.type << " type not allowed inside a tuple";
-    }
 
     // If elem type is none that means that the tuple contains some
     // invalid cast (e.g., (0, (aaa)0)). In this case, skip the tuple

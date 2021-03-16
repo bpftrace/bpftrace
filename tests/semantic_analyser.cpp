@@ -1461,6 +1461,25 @@ TEST(semantic_analyser, field_access_is_internal)
   }
 }
 
+TEST(semantic_analyser, struct_as_map_key)
+{
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { @x[*((struct A *)arg0)] = 0; }",
+       0);
+
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { @x[*((struct A *)arg0), *((struct B *)arg1)] = 0; }",
+       0);
+
+  // Mismatched key types
+  test("struct A { int x; } struct B { char x; } "
+       "kprobe:f { "
+       "    @x[*((struct A *)arg0)] = 0; "
+       "    @x[*((struct B *)arg1)] = 1; "
+       "}",
+       10);
+}
+
 TEST(semantic_analyser, probe_short_name)
 {
   test("t:a:b { args }", 0);
@@ -2035,6 +2054,10 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, 2, "string"); @t = (3, 4, "other"); })_", 0);
   test(R"_(BEGIN { @t = (1, kstack()) })_", 0);
   test(R"_(BEGIN { @t = (1, (2,3)) })_", 0);
+
+  test(R"_(struct task_struct { int x; } BEGIN { $t = (1, curtask); })_", 0);
+  test(R"_(struct task_struct { int x[4]; } BEGIN { $t = (1, curtask->x); })_",
+       0);
 
   test(R"_(BEGIN { $t = (1, 2); $t = (4, "other"); })_", 10);
   test(R"_(BEGIN { $t = (1, 2); $t = 5; })_", 1);

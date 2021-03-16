@@ -227,6 +227,24 @@ RUN bpftrace -e 'BEGIN { $t = (1, 2, "string"); print($t); exit() }'
 EXPECT (1, 2, string)
 TIMEOUT 1
 
+NAME print_non_map_array
+RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; print($a); exit(); }'
+EXPECT \[1,2,3,4\]
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME print_non_map_multi_dimensional_array
+RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; print($b); exit(); }'
+EXPECT \[\[5,6\],\[7,8\]\]
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME print_non_map_struct
+RUN bpftrace -v -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
+EXPECT { .m = 2, .n = 3 }
+TIMEOUT 5
+AFTER ./testprogs/simple_struct
+
 NAME strftime
 RUN bpftrace -v -e 'BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts); exit(); } '
 EXPECT [0-9]{2}\/[0-9]{2}\/[0-9]{2}
