@@ -27,6 +27,9 @@ EXPECT SUCCESS kprobe_offset [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+# Note: this test may fail if you've installed a new kernel but not rebooted
+# yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
+# version.
 NAME kprobe_offset_fail_size
 RUN bpftrace -v -e 'kprobe:vfs_read+1000000 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT Offset outside the function bounds \('vfs_read' size is*
