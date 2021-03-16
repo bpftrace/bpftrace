@@ -161,8 +161,9 @@ public:
 
   bool IsPrintableTy()
   {
-    return type != Type::none && type != Type::pointer &&
-           type != Type::stack_mode && !IsCtxAccess();
+    return type != Type::none && type != Type::record &&
+           type != Type::pointer && type != Type::stack_mode &&
+           type != Type::array && type != Type::record && !IsCtxAccess();
   }
 
   bool IsSigned(void) const;
@@ -330,8 +331,6 @@ public:
   {
     return type == Type::mac_address;
   };
-
-  bool IsTupleWithStruct(void) const;
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);

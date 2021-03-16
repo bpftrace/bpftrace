@@ -55,13 +55,15 @@ lookup_failure:                                   ; preds = %entry
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
   %13 = bitcast i64* %"@x_key1" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  %14 = getelementptr [4 x i32], [4 x i32]* %lookup_elem_val, i32 0, i64 0
-  %15 = load volatile i32, i32* %14
-  %16 = bitcast [4 x i32]* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast i32* %"$var" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
-  store i32 %15, i32* %"$var"
+  %14 = ptrtoint [4 x i32]* %lookup_elem_val to i64
+  %15 = add i64 %14, 0
+  %16 = inttoptr i64 %15 to i32*
+  %17 = load volatile i32, i32* %16
+  %18 = bitcast [4 x i32]* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+  %19 = bitcast i32* %"$var" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
+  store i32 %17, i32* %"$var"
   ret i64 0
 }
 

@@ -18,22 +18,22 @@ uprobe:./testprogs/struct_array:clear {
   $c = (struct C *) arg0;
 
   printf("%d ", $c->w[0].a);
+  printf("%d ", $c->w[1].a);
   printf("%d ", $c->w[2].a);
+  printf("%d ", $c->w[3].a);
   printf("%d ", $c->w[4].a);
-  printf("%d ", $c->w[6].a);
-  printf("%d ", $c->w[8].a);
 
   printf("-- ");
+  printf("%d ", $c->w[0].t.a);
   printf("%d ", $c->w[1].t.a);
+  printf("%d ", $c->w[2].t.a);
   printf("%d ", $c->w[3].t.a);
-  printf("%d ", $c->w[5].t.a);
-  printf("%d ", $c->w[7].t.a);
-  printf("%d ", $c->w[9].t.a);
+  printf("%d ", $c->w[4].t.a);
 
   printf("-- ");
-  printf("%d ", $c->w[0].t.b[1]);
-  printf("%d ", $c->w[1].t.b[1]);
-  printf("%d ", $c->w[2].t.b[1]);
-  printf("%d ", $c->w[3].t.b[1]);
-  printf("%d\n", $c->w[4].t.b[1]);
+  printf("%d ", $c->w[0].t.b[0]);
+  printf("%d ", $c->w[1].t.b[0]);
+  printf("%d ", $c->w[2].t.b[0]);
+  printf("%d ", $c->w[3].t.b[0]);
+  printf("%d\n", $c->w[4].t.b[0]);
 }
