@@ -233,6 +233,15 @@ int BPFtrace::add_probe(ast::Probe &p)
         attach_funcs.push_back(attach_point->func);
     }
 
+    // You may notice that the below loop is somewhat duplicated in
+    // codegen_llvm.cpp. The reason is because codegen tries to avoid
+    // generating duplicate programs if it can be avoided. For example, a
+    // program `kprobe:do_* { print("hi") }` can be generated once and reused
+    // for multiple attachpoints. Thus, we need this loop here to attach the
+    // single program to multiple attach points.
+    //
+    // There may be a way to refactor and unify the codepaths in a clean manner
+    // but so far it has eluded your author.
     for (const auto &f : attach_funcs)
     {
       std::string func = f;
