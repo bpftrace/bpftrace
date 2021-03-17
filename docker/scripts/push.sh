@@ -5,7 +5,7 @@ set -e
 # You must run login.sh before running this script.
 
 DEFAULT_DOCKER_REPO="quay.io"
-DEFAULT_RELEASE_TARGET="vanilla_llvm+clang+glibc2.27"
+DEFAULT_RELEASE_TARGET="vanilla_llvm12+clang+glibc2.27"
 
 # Currently only support pushing to quay.io
 DOCKER_REPO=${DEFAULT_DOCKER_REPO}
