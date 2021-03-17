@@ -1016,7 +1016,8 @@ void SemanticAnalyser::visit(Call &call)
               << "Non-map print() only takes 1 argument, " << call.vargs->size()
               << " found";
 
-        bpftrace_.non_map_print_args_.emplace_back(arg.type);
+        if (is_final_pass())
+          bpftrace_.non_map_print_args_.emplace_back(arg.type);
       }
       else
       {
