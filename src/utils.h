@@ -1,6 +1,5 @@
 #pragma once
 
-#include <csignal>
 #include <cstring>
 #include <exception>
 #include <iostream>
@@ -212,8 +211,6 @@ inline std::string &trim(std::string &s)
 {
   return ltrim(rtrim(s));
 }
-
-int signal_name_to_num(std::string &signal);
 
 template <typename T>
 T read_data(const void *src)
