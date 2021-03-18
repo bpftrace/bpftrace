@@ -141,7 +141,8 @@ std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
 bool is_dir(const std::string &path);
 std::tuple<std::string, std::string> get_kernel_dirs(
-    const struct utsname &utsname);
+    const struct utsname &utsname,
+    bool unpack_kheaders);
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &ksrc,
                                            const std::string &kobj);

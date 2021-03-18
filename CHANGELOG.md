@@ -88,6 +88,8 @@ and this project adheres to
   - [#1549](https://github.com/iovisor/bpftrace/pull/1549)
 - Improve codegen for structs and arrays
   - [#1705](https://github.com/iovisor/bpftrace/pull/1705)
+- Do not unpack in-kernel headers if system has BTF
+  - [#1740](https://github.com/iovisor/bpftrace/pull/1740)
 
 #### Deprecated
 
