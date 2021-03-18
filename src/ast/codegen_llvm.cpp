@@ -6,6 +6,7 @@
 #include "codegen_helper.h"
 #include "log.h"
 #include "parser.tab.hh"
+#include "signal_bt.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
 #include "usdt.h"

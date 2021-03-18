@@ -6,6 +6,7 @@
 #include "parser.tab.hh"
 #include "printf.h"
 #include "probe_matcher.h"
+#include "signal_bt.h"
 #include "tracepoint_format_parser.h"
 #include "usdt.h"
 #include <algorithm>

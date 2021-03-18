@@ -35,5 +35,4 @@ FakeMap::FakeMap(enum bpf_map_type map_type __attribute__((unused)))
   mapfd_ = next_mapfd_++;
 }
 
-
 } // namespace bpftrace
