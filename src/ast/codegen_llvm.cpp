@@ -1623,7 +1623,8 @@ void CodegenLLVM::visit(FieldAccess &acc)
 void CodegenLLVM::visit(ArrayAccess &arr)
 {
   SizedType &type = arr.expr->type;
-  auto elem_type = *type.GetElementTy();
+  auto elem_type = type.IsArrayTy() ? *type.GetElementTy()
+                                    : *type.GetPointeeTy();
   size_t elem_size = elem_type.GetSize();
 
   auto scoped_del_expr = accept(arr.expr);

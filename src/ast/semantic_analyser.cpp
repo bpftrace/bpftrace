@@ -1385,22 +1385,31 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   SizedType &indextype = arr.indexpr->type;
 
   if (is_final_pass()) {
-    if (!type.IsArrayTy())
+    if (!type.IsArrayTy() && !type.IsPtrTy())
     {
-      LOG(ERROR, arr.loc, err_)
-          << "The array index operator [] can only be used on arrays, found "
-          << type.type << ".";
+      LOG(ERROR, arr.loc, err_) << "The array index operator [] can only be "
+                                   "used on arrays and pointers, found "
+                                << type.type << ".";
       return;
+    }
+
+    if (type.IsPtrTy() && type.GetPointeeTy()->GetSize() == 0)
+    {
+      LOG(ERROR, arr.loc, err_) << "The array index operator [] cannot be used "
+                                   "on a pointer to an unsized type (void *).";
     }
 
     if (indextype.IsIntTy() && arr.indexpr->is_literal)
     {
-      Integer *index = static_cast<Integer *>(arr.indexpr);
+      if (type.IsArrayTy())
+      {
+        Integer *index = static_cast<Integer *>(arr.indexpr);
 
-      if ((size_t)index->n >= type.GetNumElements())
-        LOG(ERROR, arr.loc, err_)
-            << "the index " << index->n
-            << " is out of bounds for array of size " << type.GetNumElements();
+        if ((size_t)index->n >= type.GetNumElements())
+          LOG(ERROR, arr.loc, err_) << "the index " << index->n
+                                    << " is out of bounds for array of size "
+                                    << type.GetNumElements();
+      }
     }
     else {
       LOG(ERROR, arr.loc, err_) << "The array index operator [] only "
@@ -1408,7 +1417,12 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     }
   }
 
-  arr.type = type.IsArrayTy() ? *type.GetElementTy() : CreateNone();
+  if (type.IsArrayTy())
+    arr.type = *type.GetElementTy();
+  else if (type.IsPtrTy())
+    arr.type = *type.GetPointeeTy();
+  else
+    arr.type = CreateNone();
   arr.type.is_internal = type.is_internal;
   arr.type.SetAS(type.GetAS());
 }

@@ -877,6 +877,10 @@ TEST(semantic_analyser, array_access) {
   test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
        "arg0; $idx = 0; @x = $s->y[$idx];}",
        10);
+  test("kprobe:f { $s = arg0; @x = $s[0]; }", 10);
+  test("struct MyStruct { void *y; } kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @x = $s->y[5];}",
+       10);
   BPFtrace bpftrace;
   Driver driver(bpftrace);
   test(driver,
@@ -902,6 +906,11 @@ TEST(semantic_analyser, array_access) {
   auto array_map_assignment = static_cast<ast::AssignMapStatement *>(
       driver.root_->probes->at(0)->stmts->at(0));
   EXPECT_EQ(CreateArray(4, CreateInt32()), array_map_assignment->map->type);
+
+  test(driver, "kprobe:f { $s = (int32 *) arg0; $x = $s[0]; }", 0);
+  auto var_assignment = static_cast<ast::AssignVarStatement *>(
+      driver.root_->probes->at(0)->stmts->at(1));
+  EXPECT_EQ(CreateInt32(), var_assignment->var->type);
 }
 
 TEST(semantic_analyser, array_in_map)
