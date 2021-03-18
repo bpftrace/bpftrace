@@ -8,6 +8,10 @@ struct B
   int y[2][2];
 };
 
+void test_array(int *a __attribute__((unused)))
+{
+}
+
 void test_struct(struct A *a __attribute__((unused)),
                  struct B *b __attribute__((unused)))
 {
@@ -27,4 +31,5 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   b.y[1][0] = 7;
   b.y[1][1] = 8;
   test_struct(&a, &b);
+  test_array(a.x);
 }

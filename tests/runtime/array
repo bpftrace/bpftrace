@@ -105,3 +105,33 @@ RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:te
 EXPECT @x\[\[\[5,6\],\[7,8\]\]]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array as pointer element access - assign to map
+RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; @x = $a[0]; exit(); }'
+EXPECT @x: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as pointer element access - assign to var
+RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as pointer access via assignment into var
+RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as pointer element access via assignment into map
+RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; printf("Result: %d\n", @a[0][0]); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array as pointer element access via assignment into map and var
+RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access
