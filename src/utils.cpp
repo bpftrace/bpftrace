@@ -419,17 +419,20 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
   if (!is_dir(kobj)) {
     kobj = "";
   }
-  if (ksrc == "" && kobj == "") {
+  if (ksrc.empty() && kobj.empty())
+  {
     const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
     if (kheaders_tar_xz_path.size() > 0) {
       return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
     }
     return std::make_tuple("", "");
   }
-  if (ksrc == "") {
+  if (ksrc.empty())
+  {
     ksrc = kobj;
   }
-  else if (kobj == "") {
+  else if (kobj.empty())
+  {
     kobj = ksrc;
   }
 
