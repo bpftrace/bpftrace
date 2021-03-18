@@ -396,7 +396,7 @@ SizedType BTF::get_stype(__u32 id)
     const char *cast = btf_str(btf, t->name_off);
     assert(cast);
     std::string comp = btf_is_struct(t) ? "struct" : "union";
-    stype = CreateRecord(0, comp + " " + cast);
+    stype = CreateRecord(t->size, comp + " " + cast);
   }
   else if (btf_is_ptr(t))
   {
