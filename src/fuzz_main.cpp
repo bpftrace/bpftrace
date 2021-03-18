@@ -17,7 +17,6 @@
 #include <unistd.h>
 
 #include "ast/callback_visitor.h"
-#include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
