@@ -136,7 +136,7 @@ int fuzz_main(const char* data, size_t sz)
     struct utsname utsname;
     uname(&utsname);
     std::string ksrc, kobj;
-    auto kdirs = get_kernel_dirs(utsname);
+    auto kdirs = get_kernel_dirs(utsname, !bpftrace.features_->has_btf());
     ksrc = std::get<0>(kdirs);
     kobj = std::get<1>(kdirs);
 

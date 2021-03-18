@@ -398,7 +398,9 @@ namespace {
 //
 // {"", ""} is returned if no trace of kernel headers was found at all.
 // Both ksrc and kobj are guaranteed to be != "", if at least some trace of kernel sources was found.
-std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsname)
+std::tuple<std::string, std::string> get_kernel_dirs(
+    const struct utsname &utsname,
+    bool unpack_kheaders)
 {
 #ifdef KERNEL_HEADERS_DIR
   return {KERNEL_HEADERS_DIR, KERNEL_HEADERS_DIR};
@@ -421,9 +423,11 @@ std::tuple<std::string, std::string> get_kernel_dirs(const struct utsname& utsna
   }
   if (ksrc.empty() && kobj.empty())
   {
-    const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
-    if (kheaders_tar_xz_path.size() > 0) {
-      return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
+    if (unpack_kheaders)
+    {
+      const auto kheaders_tar_xz_path = unpack_kheaders_tar_xz(utsname);
+      if (kheaders_tar_xz_path.size() > 0)
+        return std::make_tuple(kheaders_tar_xz_path, kheaders_tar_xz_path);
     }
     return std::make_tuple("", "");
   }
