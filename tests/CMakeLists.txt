@@ -1,10 +1,4 @@
 add_compile_options("-Wno-undef")
-add_compile_options("-Wno-switch-default")
-add_compile_options("-Wno-switch-enum")
-
-if(HAVE_BFD_DISASM)
-  set(BFD_DISASM_SRC ${CMAKE_SOURCE_DIR}/src/bfd-disasm.cpp)
-endif()
 
 if (STATIC_LIBC)
   # STATIC_LIBC will set linker flags to -static. We don't want this for
