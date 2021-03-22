@@ -144,6 +144,7 @@ jobs:
         -v /sys/kernel/debug:/sys/kernel/debug:rw
         -v /lib/modules:/lib/modules:ro
         -v /usr/src:/usr/src:ro
+        -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_LLVM=${EMBED_LLVM}
@@ -168,6 +169,7 @@ jobs:
         -v /sys/kernel/debug:/sys/kernel/debug:rw
         -v /lib/modules:/lib/modules:ro
         -v /usr/src:/usr/src:ro
+        -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_LLVM=${EMBED_LLVM}
@@ -189,6 +191,7 @@ jobs:
         -v /sys/kernel/debug:/sys/kernel/debug:rw
         -v /lib/modules:/lib/modules:ro
         -v /usr/src:/usr/src:ro
+        -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_LLVM=${EMBED_LLVM}
