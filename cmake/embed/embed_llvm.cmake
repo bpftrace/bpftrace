@@ -48,7 +48,6 @@ set(LLVM_LIBRARY_TARGETS
     LLVMBitReader
     LLVMBitWriter
     LLVMBPFAsmParser
-    LLVMBPFAsmPrinter
     LLVMBPFCodeGen
     LLVMBPFDesc
     LLVMBPFDisassembler
@@ -102,6 +101,16 @@ set(LLVM_LIBRARY_TARGETS
     LLVMXRay
     LLVMSupport
     )
+
+if(LLVM_MAJOR_VERSION STREQUAL "7" OR LLVM_MAJOR_VERSION STREQUAL "8")
+  # https://github.com/llvm/llvm-project/commit/48803aa65c96857fb4245cd0d74a6b422d8f8ff6
+  # removed BPFAsmPrinter as an independent target for LLVM 9+
+  #
+  # NB: This target must be placed before `LLVMBPFDesc` so the linker does not
+  # discard the symbols from `LLVMBPFDesc` that `LLVMBPFAsmPrinter` requires.
+  # Link order matters.
+  list(PREPEND LLVM_LIBRARY_TARGETS "LLVMBPFAsmPrinter")
+endif()
 
 # These build flags are based off of Alpine, Debian and Gentoo packages
 # optimized for compatibility and reducing build targets
