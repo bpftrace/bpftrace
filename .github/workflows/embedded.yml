@@ -9,7 +9,7 @@ jobs:
         env:
         - TYPE: Debug
           NAME: debian_llvm+libclang+glibc2.27
-          LLVM_VERSION: 8
+          LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_LLVM: OFF
@@ -24,7 +24,7 @@ jobs:
           DISTRO: ubuntu-glibc
         - TYPE: Release
           NAME: debian_llvm+libclang+glibc2.27
-          LLVM_VERSION: 8
+          LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_LLVM: OFF
@@ -39,21 +39,6 @@ jobs:
           DISTRO: ubuntu-glibc
         - TYPE: Release
           NAME: vanilla_llvm+clang+glibc2.27
-          LLVM_VERSION: 8
-          STATIC_LINKING: ON
-          STATIC_LIBC: OFF
-          EMBED_LLVM: ON
-          EMBED_CLANG: ON
-          EMBED_LIBCLANG_ONLY: OFF
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
-          BASE: bionic
-          DISTRO: ubuntu-glibc
-        - TYPE: Release
-          NAME: vanilla_llvm12+clang+glibc2.27
           LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
@@ -71,7 +56,7 @@ jobs:
           NAME: vanilla_llvm+clang+glibc2.27_edge
           EDGE: ON
           BCC_REF: master
-          LLVM_VERSION: 9
+          LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_LLVM: ON
@@ -86,7 +71,7 @@ jobs:
           DISTRO: ubuntu-glibc
         - TYPE: Release
           NAME: vanilla_llvm+clang+glibc2.23
-          LLVM_VERSION: 8
+          LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_LLVM: ON
