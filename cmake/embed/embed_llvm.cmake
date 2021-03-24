@@ -38,7 +38,6 @@ set(LLVM_LIBRARY_TARGETS
     LLVMBitReader
     LLVMBitWriter
     LLVMBPFAsmParser
-    LLVMBPFAsmPrinter
     LLVMBPFCodeGen
     LLVMBPFDesc
     LLVMBPFDisassembler
