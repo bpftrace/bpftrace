@@ -90,6 +90,17 @@ RUN bpftrace -q -f json -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
 EXPECT ^{"type": "map", "data": {"@": \[1,2,"string",\[4,5\]\]}}$
 TIMEOUT 5
 
+NAME tuple_with_struct
+RUN bpftrace -v -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); @ = (0, $f); exit(); }'
+EXPECT ^{"type": "map", "data": {"@": \[0,{ "m": 2, "n": 3 }\]}}$
+TIMEOUT 5
+AFTER ./testprogs/simple_struct
+
+NAME tuple_with_escaped_string
+RUN bpftrace -q -f json -e 'BEGIN { @ = (1, 2, "string with \"quotes\""); exit(); }'
+EXPECT ^{"type": "map", "data": {"@": \[1,2,"string with \\"quotes\\""\]}}$
+TIMEOUT 5
+
 NAME print_non_map
 RUN bpftrace -q -f json -e 'BEGIN { $x = 5; print($x); exit() }'
 EXPECT ^{"type": "value", "data": 5}$
@@ -108,6 +119,12 @@ TIMEOUT 1
 NAME print_non_map_struct
 RUN bpftrace -v -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
 EXPECT ^{"type": "value", "data": { "m": 2, "n": 3 }}$
+TIMEOUT 5
+AFTER ./testprogs/simple_struct
+
+NAME print_non_map_nested_struct
+RUN bpftrace -v -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
+EXPECT ^{"type": "value", "data": { "a": { "n": 3 }, "y": { "m": \[2\] } }}$
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 

@@ -51,12 +51,12 @@ public:
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
       const std::vector<std::pair<std::vector<uint8_t>, int64_t>>
           &total_counts_by_key) const = 0;
+  // Write non-map value to output
+  // Ideally, the implementation should use value_to_str to convert a value into
+  // a string, format it properly, and print it to out_.
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
-                     const std::vector<uint8_t> &value) const = 0;
-
-  virtual std::string struct_field_def_to_str(
-      const std::string &field) const = 0;
+                     std::vector<uint8_t> &value) const = 0;
 
   virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
@@ -67,6 +67,30 @@ protected:
   std::ostream &err_;
   void hist_prepare(const std::vector<uint64_t> &values, int &min_index, int &max_index, int &max_value) const;
   void lhist_prepare(const std::vector<uint64_t> &values, int min, int max, int step, int &max_index, int &max_value, int &buckets, int &start_value, int &end_value) const;
+
+  // Convert non-map value into string
+  // This method should properly handle all non-map value types.
+  // Aggregate types (array, struct, tuple) are formatted using output-specific
+  // methods.
+  virtual std::string value_to_str(BPFtrace &bpftrace,
+                                   const SizedType &type,
+                                   std::vector<uint8_t> &value,
+                                   bool is_per_cpu = false,
+                                   uint32_t div = 1) const;
+  // Convert an array to string
+  // Default behaviour: [elem1, elem2, ...]
+  virtual std::string array_to_str(const std::vector<std::string> &elems) const;
+  // Convert a struct to string
+  // Default behaviour: { elem1, elem2, ... }
+  // elems are expected to be properly formatted
+  virtual std::string struct_to_str(
+      const std::vector<std::string> &elems) const;
+  // Convert struct field (given by its name and value) into string
+  virtual std::string field_to_str(const std::string &name,
+                                   const std::string &value) const = 0;
+  // Convert tuple to string
+  virtual std::string tuple_to_str(
+      const std::vector<std::string> &elems) const = 0;
 };
 
 class TextOutput : public Output {
@@ -88,8 +112,7 @@ public:
           &total_counts_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
-                     const std::vector<uint8_t> &value) const override;
-  std::string struct_field_def_to_str(const std::string &field) const override;
+                     std::vector<uint8_t> &value) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
@@ -100,9 +123,12 @@ private:
   static std::string lhist_index_label(int number);
   void hist(const std::vector<uint64_t> &values, uint32_t div) const;
   void lhist(const std::vector<uint64_t> &values, int min, int max, int step) const;
-  std::string tuple_to_str(BPFtrace &bpftrace,
-                           const SizedType &ty,
-                           const std::vector<uint8_t> &value) const;
+
+protected:
+  std::string field_to_str(const std::string &name,
+                           const std::string &value) const override;
+  std::string tuple_to_str(
+      const std::vector<std::string> &elems) const override;
 };
 
 class JsonOutput : public Output {
@@ -124,8 +150,7 @@ public:
           &total_counts_by_key) const override;
   virtual void value(BPFtrace &bpftrace,
                      const SizedType &ty,
-                     const std::vector<uint8_t> &value) const override;
-  std::string struct_field_def_to_str(const std::string &field) const override;
+                     std::vector<uint8_t> &value) const override;
 
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void message(MessageType type, const std::string& field, uint64_t value) const;
@@ -140,9 +165,17 @@ private:
              int min,
              int max,
              int step) const;
-  std::string tuple_to_str(BPFtrace &bpftrace,
-                           const SizedType &ty,
-                           const std::vector<uint8_t> &value) const;
+
+protected:
+  std::string value_to_str(BPFtrace &bpftrace,
+                           const SizedType &type,
+                           std::vector<uint8_t> &value,
+                           bool is_per_cpu,
+                           uint32_t div) const override;
+  std::string field_to_str(const std::string &name,
+                           const std::string &value) const override;
+  std::string tuple_to_str(
+      const std::vector<std::string> &elems) const override;
 };
 
 } // namespace bpftrace
