@@ -223,4 +223,18 @@ T read_data(const void *src)
 
 uint64_t parse_exponent(const char *str);
 uint32_t kernel_version(int attempt);
+
+template <typename T>
+T reduce_value(const std::vector<uint8_t> &value, int nvalues)
+{
+  T sum = 0;
+  for (int i = 0; i < nvalues; i++)
+  {
+    sum += read_data<T>(value.data() + i * sizeof(T));
+  }
+  return sum;
+}
+int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
+uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
+
 } // namespace bpftrace

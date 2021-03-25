@@ -229,10 +229,6 @@ private:
   void poll_perf_events(int epollfd, bool drain = false);
   int print_map_hist(IMap &map, uint32_t top, uint32_t div);
   int print_map_stats(IMap &map, uint32_t top, uint32_t div);
-  template <typename T>
-  static T reduce_value(const std::vector<uint8_t> &value, int nvalues);
-  static int64_t min_value(const std::vector<uint8_t> &value, int nvalues);
-  static uint64_t max_value(const std::vector<uint8_t> &value, int nvalues);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   bool has_iter_ = false;
