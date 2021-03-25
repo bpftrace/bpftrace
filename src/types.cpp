@@ -510,15 +510,4 @@ ssize_t SizedType::GetAlignment() const
     return 8;
 }
 
-bool SizedType::IsTupleWithStruct(void) const
-{
-  if (!IsTupleTy())
-    return false;
-
-  for (auto &field : tuple_fields->fields)
-    if (field.type.IsRecordTy())
-      return true;
-  return false;
-}
-
 } // namespace bpftrace
