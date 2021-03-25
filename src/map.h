@@ -30,7 +30,7 @@ public:
   virtual ~Map() override;
 
   int create_map(enum bpf_map_type map_type,
-                 const char *name,
+                 const std::string &name,
                  int key_size,
                  int value_size,
                  int max_entries,
