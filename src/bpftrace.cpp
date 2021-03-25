@@ -1723,29 +1723,6 @@ int BPFtrace::print_map_stats(IMap &map, uint32_t top, uint32_t div)
   return 0;
 }
 
-template <typename T>
-T BPFtrace::reduce_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  T sum = 0;
-  for (int i=0; i<nvalues; i++)
-  {
-    sum += read_data<T>(value.data() + i * sizeof(T));
-  }
-  return sum;
-}
-
-uint64_t BPFtrace::max_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  uint64_t val, max = 0;
-  for (int i=0; i<nvalues; i++)
-  {
-    val = read_data<uint64_t>(value.data() + i * sizeof(uint64_t));
-    if (val > max)
-      max = val;
-  }
-  return max;
-}
-
 std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
 {
   if (child_)
@@ -1762,32 +1739,6 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   {
     return std::nullopt;
   }
-}
-
-int64_t BPFtrace::min_value(const std::vector<uint8_t> &value, int nvalues)
-{
-  int64_t val, max = 0, retval;
-  for (int i=0; i<nvalues; i++)
-  {
-    val = read_data<int64_t>(value.data() + i * sizeof(int64_t));
-    if (val > max)
-      max = val;
-  }
-
-  /*
-   * This is a hack really until the code generation for the min() function
-   * is sorted out. The way it is currently implemented doesn't allow >
-   * 32 bit quantities and also means we have to do gymnastics with the return
-   * value owing to the way it is stored (i.e., 0xffffffff - val).
-   */
-  if (max == 0) /* If we have applied the zero() function */
-    retval = max;
-  else if ((0xffffffff - max) <= 0) /* A negative 32 bit value */
-    retval =  0 - (max - 0xffffffff);
-  else
-    retval =  0xffffffff - max; /* A positive 32 bit value */
-
-  return retval;
 }
 
 std::vector<uint8_t> BPFtrace::find_empty_key(IMap &map, size_t size) const
