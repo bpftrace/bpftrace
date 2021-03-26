@@ -49,6 +49,12 @@ EXPECT kfunc
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
+NAME it lists kfunc params
+RUN bpftrace -lv "kfunc:*" | grep kfunc
+EXPECT \s+[a-zA-Z_\*\s]+
+REQUIRES_FEATURE btf
+TIMEOUT 1
+
 NAME it lists kprobes with regex filter
 RUN bpftrace -l "kprobe:*"
 EXPECT kprobe:

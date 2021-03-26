@@ -581,7 +581,9 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     _Pragma("GCC diagnostic push")
         _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
 
-            DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts, decl_opts, 0);
+            DECLARE_LIBBPF_OPTS(btf_dump_emit_type_decl_opts,
+                                decl_opts,
+                                .field_name = "");
 
     _Pragma("GCC diagnostic pop")
 
