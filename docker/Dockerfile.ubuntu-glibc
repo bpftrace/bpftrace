@@ -3,14 +3,12 @@ FROM ubuntu:${BASE}
 
 ARG BASE
 ARG LLVM_VERSION="8"
-ARG CMAKE_VER="3.16"
-ARG CMAKE_BUILD="2"
+ARG CMAKE_VER="3.20.0"
 ARG bcc_ref="v0.12.0"
 ARG bcc_org="iovisor"
 
 ENV LLVM_VERSION=$LLVM_VERSION
 ENV CMAKE_VER=${CMAKE_VER}
-ENV CMAKE_BUILD="${CMAKE_BUILD}"
 ENV BASE=${BASE}
 
 RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg &&\
@@ -44,24 +42,15 @@ RUN apt-get update && apt-get install -y \
       libllvm${LLVM_VERSION} \
       systemtap-sdt-dev \
       python3 \
-      quilt
+      quilt \
+      rsync
 
-# Install from source if using xenial due to incompatibility with older cmake
-RUN if [ "${BASE}" = "xenial" ]; then \
-    apt-get install -y make python libssl-dev \
-    && version=${CMAKE_VER} \
-    && build=${CMAKE_BUILD} \
-    && mkdir -p /tmp \
-    && cd /tmp \
-    && curl -OL https://cmake.org/files/v${version}/cmake-${version}.${build}.tar.gz \
-    && tar -xzvf cmake-${CMAKE_VER}.$build.tar.gz \
-    && cd cmake-${CMAKE_VER}.$build/ \
-    && ./bootstrap --parallel=$(nproc) \
-    && make -j$(nproc) \
-    && make install \
-    ; else \
-    apt install -y cmake \
-    ; fi
+# Install pre-built cmake -- older versions of cmake aren't compatible with LLVM 12
+RUN mkdir -p /tmp \
+  && cd /tmp \
+  && curl -OL https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-linux-x86_64.tar.gz \
+  && tar -xzf cmake-${CMAKE_VER}-linux-x86_64.tar.gz \
+  && rsync -a cmake-${CMAKE_VER}-linux-x86_64/ /usr/local/
 
 # Install C++17 compatible compiler
 RUN if [ "${BASE}" = "xenial" ]; then \
