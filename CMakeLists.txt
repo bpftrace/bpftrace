@@ -25,6 +25,10 @@ set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(EMBED_LLVM OR EMBED_CLANG OR STATIC_LIBC)
+  # find_package() may overwrite `LLVM_VERSION`, so save the requested version
+  # for when we need to download packages
+  set(EMBEDDED_LLVM_VERSION ${LLVM_VERSION})
+
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
   include(embed_helpers)
   if (NOT STATIC_LINKING)

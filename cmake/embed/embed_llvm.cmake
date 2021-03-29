@@ -19,13 +19,13 @@ else()
   set(EMBEDDED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
-if(${LLVM_VERSION} VERSION_GREATER_EQUAL "12")
+if(${EMBEDDED_LLVM_VERSION} VERSION_GREATER_EQUAL "12")
   set(LLVM_FULL_VERSION "12.0.0")
   set(LLVM_VERSION_MAJOR "12")
   set(LLVM_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}-rc3/llvm-${LLVM_FULL_VERSION}rc3.src.tar.xz")
   set(LLVM_URL_CHECKSUM "SHA256=e51984ff9c7869c3af38f9b4cd9047f22083cac5f4a52d3dbb9da1259b9dedd2")
 else()
-  message(FATAL_ERROR "No supported LLVM version has been specified with LLVM_VERSION (LLVM_VERSION=${LLVM_VERSION}), aborting")
+  message(FATAL_ERROR "No supported LLVM version has been specified with LLVM_VERSION (LLVM_VERSION=${EMBEDDED_LLVM_VERSION}), aborting")
 endif()
 
 # Default to building almost all targets, + BPF specific ones
