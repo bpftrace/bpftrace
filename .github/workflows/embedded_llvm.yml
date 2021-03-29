@@ -1,0 +1,22 @@
+name: Embedded LLVM
+on:
+  schedule:
+    - cron: '0 12 1 * *'
+jobs:
+  build:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build
+      run: >
+        docker build
+        -t bpftrace-llvm12
+        -f docker/Dockerfile.ubuntu-glibc
+    - name: Tag SHA
+      run: docker tag bpftrace-llvm12 quay.io/${{ github.repository }}:${{ github.sha }}
+    - name: Publish SHA
+      run: docker push quay.io/${{ github.repository }}:${{ github.sha }}
+    - name: Publish latest
+      run: docker tag bpftrace-llvm12 quay.io/${{ github.repository }}:latest
+    - name: Publish latest
+      run: docker push quay.io/${{ github.repository }}:latest
