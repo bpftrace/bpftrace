@@ -1565,8 +1565,6 @@ written.
 
 ## 15. `kfunc`/`kretfunc`: Kernel Functions Tracing
 
-**WARNING**: this feature is experimental and may be subject to interface changes.
-
 Syntax:
 
 ```
