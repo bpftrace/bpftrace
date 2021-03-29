@@ -12,9 +12,9 @@ jobs:
           LLVM_VERSION: 12
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
-          EMBED_LLVM: OFF
+          EMBED_LLVM: ON
           EMBED_CLANG: ON
-          EMBED_LIBCLANG_ONLY: ON
+          EMBED_LIBCLANG_ONLY: OFF
           EMBED_BCC: OFF
           EMBED_LIBELF: OFF
           EMBED_BINUTILS: OFF
