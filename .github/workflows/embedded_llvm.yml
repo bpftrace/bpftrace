@@ -10,7 +10,7 @@ jobs:
         docker build
         -t bpftrace-llvm12
         -f docker/Dockerfile.ubuntu-glibc
-        --build_arg BASE=bionic
+        --build-arg BASE=bionic
         docker/
     - name: Tag SHA
       run: docker tag bpftrace-llvm12 quay.io/${{ github.repository }}:${{ github.sha }}
