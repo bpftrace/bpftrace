@@ -1,8 +1,8 @@
 ARG BASE=bionic
-FROM ubuntu:${BASE}
+FROM quay.io/fbs/bpftrace-llvm12:latest
 
 ARG BASE
-ARG LLVM_VERSION="8"
+ARG LLVM_VERSION="12"
 ARG CMAKE_VER="3.16"
 ARG CMAKE_BUILD="2"
 ARG bcc_ref="v0.12.0"
