@@ -37,9 +37,7 @@ jobs:
         --build-arg bcc_ref=${{ matrix.env['BCC_REF'] }}
         --build-arg BASE=${{ matrix.env['BASE'] }}
         --build-arg ALPINE_VERSION=${{ matrix.env['ALPINE_VERSION'] }}
-        docker/ &&
-        mkdir -p /tmp/docker-save &&
-        docker save bpftrace-embedded-${{ matrix.env['BASE'] }} -o /tmp/docker-save/i.tar
+        docker/
     - name: bpftrace embedded build
       env: ${{ matrix.env }}
       run: >
