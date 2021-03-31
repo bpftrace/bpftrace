@@ -5,7 +5,7 @@ ARG BASE
 ARG LLVM_VERSION="12"
 ARG CMAKE_VER="3.16"
 ARG CMAKE_BUILD="2"
-ARG bcc_ref="v0.12.0"
+ARG bcc_ref="v0.18.0"
 ARG bcc_org="iovisor"
 
 ENV LLVM_VERSION=$LLVM_VERSION
