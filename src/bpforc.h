@@ -22,6 +22,8 @@
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
 #endif
 
+#include <optional>
+
 namespace bpftrace {
 
 const std::string LLVMTargetTriple = "bpf-pc-linux";
