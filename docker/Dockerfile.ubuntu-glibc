@@ -13,15 +13,6 @@ ENV CMAKE_VER=${CMAKE_VER}
 ENV CMAKE_BUILD="${CMAKE_BUILD}"
 ENV BASE=${BASE}
 
-RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg &&\
-    llvmRepository="\n\
-deb http://apt.llvm.org/${BASE}/ llvm-toolchain-${BASE} main\n\
-deb-src http://apt.llvm.org/${BASE}/ llvm-toolchain-${BASE} main\n\
-deb http://apt.llvm.org/${BASE}/ llvm-toolchain-${BASE}-${LLVM_VERSION} main\n\
-deb-src http://apt.llvm.org/${BASE}/ llvm-toolchain-${BASE}-${LLVM_VERSION} main\n" &&\
-    echo $llvmRepository >> /etc/apt/sources.list && \
-    curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
-
 RUN apt-get update && apt-get install -y \
       bison \
       binutils-dev \
@@ -34,51 +25,17 @@ RUN apt-get update && apt-get install -y \
       libiberty-dev \
       libbfd-dev \
       libedit-dev \
-      clang-${LLVM_VERSION} \
-      libclang-${LLVM_VERSION}-dev \
-      libclang-common-${LLVM_VERSION}-dev \
-      libclang1-${LLVM_VERSION} \
-      llvm-${LLVM_VERSION} \
-      llvm-${LLVM_VERSION}-dev \
-      llvm-${LLVM_VERSION}-runtime \
-      libllvm${LLVM_VERSION} \
       systemtap-sdt-dev \
       python3 \
       quilt
-
-# Install from source if using xenial due to incompatibility with older cmake
-RUN if [ "${BASE}" = "xenial" ]; then \
-    apt-get install -y make python libssl-dev \
-    && version=${CMAKE_VER} \
-    && build=${CMAKE_BUILD} \
-    && mkdir -p /tmp \
-    && cd /tmp \
-    && curl -OL https://cmake.org/files/v${version}/cmake-${version}.${build}.tar.gz \
-    && tar -xzvf cmake-${CMAKE_VER}.$build.tar.gz \
-    && cd cmake-${CMAKE_VER}.$build/ \
-    && ./bootstrap --parallel=$(nproc) \
-    && make -j$(nproc) \
-    && make install \
-    ; else \
-    apt install -y cmake \
-    ; fi
-
-# Install C++17 compatible compiler
-RUN if [ "${BASE}" = "xenial" ]; then \
-    apt-get install -y software-properties-common \
-    && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
-    && apt update \
-    ; fi \
-    ; apt install -y g++-8 \
-    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 \
-                           --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
 # Build BCC and install static libs
 RUN mkdir -p /src && git clone https://github.com/$bcc_org/bcc /src/bcc
 
 RUN cd /src/bcc && git checkout $bcc_ref && git submodule update && \
     mkdir build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../ && make -j$(nproc) && \
+    cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_EXAMPLES=0 -DENABLE_TESTS=0 ../ && \
+    make -j$(nproc) && \
     make install &&  mkdir -p /usr/local/lib && \
     cp src/cc/libbcc.a /usr/local/lib/libbcc.a && \
     cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a && \
