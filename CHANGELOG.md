@@ -8,6 +8,8 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.12.0] 2021-04-01
+
 #### Added
 - Add path builtin
   - [#1492](https://github.com/iovisor/bpftrace/pull/1492)
