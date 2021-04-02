@@ -1,0 +1,43 @@
+name: Embedded LLVM
+on:
+  push:
+    paths:
+      - docker/Dockerfile.llvm
+      - docker/embedded/*
+  pull_request:
+    paths:
+      - docker/Dockerfile.llvm
+      - docker/embedded/*
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  publish_llvm_build:
+    runs-on: ubuntu-18.04
+    strategy:
+      matrix:
+        llvm_version: [8]
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v2
+    - name: Build container
+      run: >
+        docker build
+        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.llvm_version }}
+        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.llvm_version }}_$(date +%s)
+        -f docker/Dockerfile.llvm
+        --build-arg BASE=bionic
+        .
+    - name: Login quay.io
+      if: >
+        (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
+        github.repository == 'iovisor/bpftrace'
+      env:
+        QUAY_USER: "iovisor+bpftrace_buildbot"
+        QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+      run: 'echo "${QUAY_TOKEN}" | docker login -u="${QUAY_USER}" --password-stdin quay.io'
+    - name: Publish container
+      if: >
+        (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')) &&
+        github.repository == 'iovisor/bpftrace'
+      run: docker push --all-tags quay.io/iovisor/bpftrace-llvm
