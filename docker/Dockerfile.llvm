@@ -1,0 +1,45 @@
+ARG BASE=bionic
+FROM ubuntu:${BASE}
+
+ARG BASE
+ARG LLVM_VERSION
+
+ENV LLVM_VERSION=${LLVM_VERSION}
+ENV BASE=${BASE}
+
+COPY cmake /build/llvm/cmake
+COPY CMakeLists-LLVM.txt /build/llvm/CMakeLists.txt
+
+RUN if [ "${BASE}" = "xenial" ]; then \
+      apt update \
+      && apt install -y software-properties-common \
+      && add-apt-repository -y ppa:ubuntu-toolchain-r/test \
+      ; fi
+
+RUN apt update \
+  && apt install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    g++-8 \
+    gcc-8 \
+    gcc-8-plugin-dev \
+    make \
+    python \
+    python3 \
+    rsync \
+    tar \
+  && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 \
+                         --slave /usr/bin/g++ g++ /usr/bin/g++-8      \
+  && cp /usr/lib/gcc/x86_64-linux-gnu/8/plugin/include/plugin-api.h /usr/local/include
+
+RUN curl -L --output /tmp/cmake.tar.gz \
+  https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.tar.gz \
+  && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
+
+RUN cd /build/llvm \
+  && cmake . -DLLVM_VERSION=${LLVM_VERSION} \
+  && make embedded_llvm -j$(nproc) \
+  && make embedded_clang -j$(nproc) \
+  && rsync -a embedded_clang-prefix/ embedded_llvm-prefix/ \
+    --exclude '/tmp' --exclude '/src' /usr/local \
+  && rm -rf /build/llvm

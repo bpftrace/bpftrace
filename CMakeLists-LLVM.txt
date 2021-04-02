@@ -1,0 +1,33 @@
+cmake_minimum_required(VERSION 3.16)
+project(bpftrace-llvm-builder)
+
+include(GNUInstallDirs)
+
+set(LLVM_VERSION "8" CACHE STRING "LLVM version to build")
+
+set(STATIC_LINKING ON)
+set(STATIC_LIBC OFF)
+set(EMBED_USE_LLVM ON)
+set(EMBED_BUILD_LLVM ON)
+set(EMBED_LLVM_VERSION ${LLVM_VERSION} CACHE STRING "LLVM version to build")
+
+message(STATUS "Using LLVM: ${EMBED_LLVM_VERSION}")
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
+include(embed_helpers)
+
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_STANDARD_REQUIRED ON)
+set (CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+set(CMAKE_LINK_SEARCH_START_STATIC TRUE)
+set(CMAKE_LINK_SEARCH_END_STATIC TRUE)
+
+set(FIND_LIBRARY_USE_LIB64_PATHS TRUE)
+
+cmake_policy(SET CMP0075 NEW)
+
+include(embed_llvm)
+include(embed_clang)
