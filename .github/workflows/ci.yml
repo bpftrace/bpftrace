@@ -33,60 +33,70 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 6 Release
           TYPE: Release
           LLVM_VERSION: "6.0"
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 7 Debug
           TYPE: Debug
           LLVM_VERSION: 7
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 7 Release
           TYPE: Release
           LLVM_VERSION: 7
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 8 Debug
           TYPE: Debug
           LLVM_VERSION: 8
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 8 Release
           TYPE: Release
           LLVM_VERSION: 8
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 9 Debug
           TYPE: Debug
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 9 Release
           TYPE: Release
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 10 Debug
           TYPE: Debug
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 10 Release
           TYPE: Release
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 10 Clang Debug
           TYPE: Debug
           LLVM_VERSION: 10
@@ -95,24 +105,28 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 11 Debug
           TYPE: Debug
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 11 Release
           TYPE: Release
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 12 Release
           TYPE: Release
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
+          VENDOR_GTEST: ON
     steps:
     - uses: actions/checkout@v2
     - name: Get date
@@ -158,6 +172,7 @@ jobs:
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
+        -e VENDOR_GTEST="${VENDOR_GTEST}"
         -e CC="${CC}"
         -e CXX="${CXX}"
         bpftrace-builder-$BASE-llvm-$LLVM_VERSION
