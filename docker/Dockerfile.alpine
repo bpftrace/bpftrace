@@ -16,6 +16,7 @@ RUN apk add --update \
   elfutils-dev \
   flex-dev \
   git \
+  gtest-dev \
   libc6-compat \
   linux-headers \
   llvm${LLVM_VERSION}-dev \

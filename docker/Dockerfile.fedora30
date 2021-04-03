@@ -8,6 +8,8 @@ RUN dnf install -y \
     flex \
     gcc-c++ \
     git \
+    gtest-devel \
+    gmock-devel \
     llvm-devel \
     make \
     zlib-devel \
