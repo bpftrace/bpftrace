@@ -89,6 +89,7 @@ jobs:
           BASE: alpine
           DISTRO: alpine
           ALPINE_VERSION: 3.11
+          VENDOR_GTEST: ON
         - TYPE: Release
           NAME: alpine
           LLVM_VERSION: 9
@@ -105,6 +106,7 @@ jobs:
           BASE: alpine
           DISTRO: alpine
           ALPINE_VERSION: 3.11
+          VENDOR_GTEST: ON
     steps:
     - uses: actions/checkout@v2
     - name: Get date
