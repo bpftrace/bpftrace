@@ -25,6 +25,7 @@
 #include "log.h"
 #include "output.h"
 #include "pass_manager.h"
+#include "passes/remove_positional_params.h"
 #include "printer.h"
 #include "probe_matcher.h"
 #include "procmon.h"
@@ -459,6 +460,8 @@ static std::optional<struct timespec> get_boottime()
 ast::PassManager CreatePM()
 {
   ast::PassManager pm;
+
+  pm.AddPass(ast::CreateRemovePositionalParamPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateMapCreatePass());
