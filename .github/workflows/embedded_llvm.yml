@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        llvm_version: [8]
+        llvm_version: [8,12]
         base: [xenial, bionic]
     steps:
     - name: Checkout repo
