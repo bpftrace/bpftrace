@@ -16,17 +16,18 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        llvm_version: [8]
+        llvm_version: [8,12]
+        base: [xenial, bionic]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
     - name: Build container
       run: >
         docker build
-        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.llvm_version }}
-        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.llvm_version }}_$(date +%s)
+        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.base }}_${{ matrix.llvm_version }}
+        -t quay.io/iovisor/bpftrace-llvm:${{ matrix.base }}_${{ matrix.llvm_version }}_$(date +%s)
         -f docker/Dockerfile.llvm
-        --build-arg BASE=bionic
+        --build-arg BASE=${{ matrix.base }}
         .
     - name: Login quay.io
       if: >
