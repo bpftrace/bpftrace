@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-18.04
     strategy:
       matrix:
-        llvm_version: [8]
+        llvm_version: [8,12]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
