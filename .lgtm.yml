@@ -8,6 +8,8 @@ extraction:
         - g++
         - git
         - libelf-dev
+        - libgtest-dev
+        - libgmock-dev
         - zlib1g-dev
         - libfl-dev
         - systemtap-sdt-dev
