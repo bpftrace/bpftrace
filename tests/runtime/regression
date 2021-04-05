@@ -33,3 +33,9 @@ NAME c_array_indexing
 RUN bpftrace -v -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
 EXPECT h e l l o
 TIMEOUT 5
+
+# https://github.com/iovisor/bpftrace/issues/1773
+NAME single_arg_wildcard_listing
+RUN bpftrace -l "*do_nanosleep*"
+EXPECT kprobe:do_nanosleep
+TIMEOUT 1

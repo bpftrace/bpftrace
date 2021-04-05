@@ -77,6 +77,9 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
   std::set<std::string> probe_types;
   if (has_wildcard(parts_.front()))
   {
+    // Single argument listing looks at all relevant probe types
+    std::string probetype_query = (parts_.size() == 1) ? "*" : parts_.front();
+
     // Probe type expansion
     // If PID is specified or the second part of the attach point is a path
     // (contains '/'), use userspace probe types.
@@ -85,12 +88,12 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
         (parts_.size() >= 2 && parts_[1].find('/') != std::string::npos))
     {
       probe_types = bpftrace_.probe_matcher_->expand_probetype_userspace(
-          parts_.front());
+          probetype_query);
     }
     else
     {
       probe_types = bpftrace_.probe_matcher_->expand_probetype_kernel(
-          parts_.front());
+          probetype_query);
     }
   }
   else
@@ -111,7 +114,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     for (const auto &probe_type : probe_types)
     {
       std::string raw_input = ap.raw_input;
-      erase_prefix(raw_input);
+      if (parts_.size() > 1)
+        erase_prefix(raw_input);
       raw_input = probe_type + ":" + raw_input;
       // New attach points have ignore_invalid set to true - probe types for
       // which raw_input has invalid number of parts will be ignored (instead
