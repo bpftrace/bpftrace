@@ -68,7 +68,6 @@ endif(STATIC_LINKING)
 # Still need to support vendored gtest/gmock b/c old ubuntu versions (< focal)
 # only provide gtest/gmock sources -- no precompiled binaries
 if(VENDOR_GTEST)
-  find_package(Threads REQUIRED)
   # Ninja build system needs the byproducts set explicilty so it can
   # check for missing dependencies.
   # https://cmake.org/pipermail/cmake/2015-April/060234.html
@@ -92,9 +91,6 @@ if(VENDOR_GTEST)
   target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
   target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
   target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
-  if(NOT STATIC_LINKING)
-    target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
-  endif(NOT STATIC_LINKING)
 else()
   find_package(GTest REQUIRED)
   find_package(GMock REQUIRED)
@@ -102,6 +98,10 @@ else()
   target_link_libraries(bpftrace_test ${GTEST_BOTH_LIBRARIES} ${GMOCK_LIBRARIES})
 endif(VENDOR_GTEST)
 add_test(NAME bpftrace_test COMMAND bpftrace_test)
+if(NOT STATIC_LINKING)
+  find_package(Threads REQUIRED)
+  target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
+endif(NOT STATIC_LINKING)
 
 # Compile all testprograms, one per .c file for runtime testing
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
