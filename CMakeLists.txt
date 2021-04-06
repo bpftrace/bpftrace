@@ -161,6 +161,10 @@ else()
   add_definitions(${LLVM_DEFINITIONS})
 endif()
 
+add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
+add_definitions(-DLLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
+add_definitions(-DLLVM_VERSION_PATCH=${LLVM_VERSION_PATCH})
+
 if(${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL 11)
   set(LLVM_ORC_V2)
   add_definitions(-DLLVM_ORC_V2)

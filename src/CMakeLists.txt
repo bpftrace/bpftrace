@@ -17,6 +17,7 @@ add_library(libbpftrace
   bpforc.cpp
   bpftrace.cpp
   btf.cpp
+  build_info.cpp
   child.cpp
   clang_parser.cpp
   disasm.cpp
