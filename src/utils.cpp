@@ -17,6 +17,7 @@
 #include <tuple>
 #include <unistd.h>
 
+#include "bpftrace.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "utils.h"

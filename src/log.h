@@ -1,11 +1,12 @@
 #pragma once
 
+#include <cassert>
 #include <iostream>
 #include <optional>
 #include <sstream>
 #include <unordered_map>
 
-#include "bpftrace.h"
+#include "location.hh"
 
 namespace bpftrace {
 
