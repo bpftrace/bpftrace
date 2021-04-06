@@ -39,3 +39,8 @@ NAME single_arg_wildcard_listing
 RUN bpftrace -l "*do_nanosleep*"
 EXPECT kprobe:do_nanosleep
 TIMEOUT 1
+
+NAME single_arg_wildcard_listing_tracepoint
+RUN bpftrace -l "*sched_switch*"
+EXPECT tracepoint:sched:sched_switch
+TIMEOUT 1

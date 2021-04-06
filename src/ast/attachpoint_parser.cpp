@@ -475,8 +475,12 @@ AttachPointParser::State AttachPointParser::usdt_parser()
 
 AttachPointParser::State AttachPointParser::tracepoint_parser()
 {
-  if (parts_.size() == 2 && parts_.at(1) == "*")
-    parts_.push_back("*");
+  // Help with `bpftrace -l 'tracepoint:*foo*'` listing -- wildcard the
+  // tracepoint category b/c user is most likely to be looking for the event
+  // name
+  if (parts_.size() == 2 && has_wildcard(parts_.at(1)))
+    parts_.insert(parts_.begin() + 1, "*");
+
   if (parts_.size() != 3)
   {
     if (ap_->ignore_invalid)
