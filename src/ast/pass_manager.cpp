@@ -47,6 +47,11 @@ std::unique_ptr<Node> PassManager::Run(std::unique_ptr<Node> node,
   return std::unique_ptr<Node>(root);
 }
 
+PassResult PassResult::Error()
+{
+  return Error("");
+}
+
 PassResult PassResult::Error(const std::string &msg)
 {
   PassResult p;
