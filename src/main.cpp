@@ -16,6 +16,7 @@
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
+#include "build_info.h"
 #include "child.h"
 #include "clang_parser.h"
 #include "codegen_llvm.h"
@@ -137,71 +138,10 @@ static int info()
             << utsname.version << std::endl
             << "  Arch: " << utsname.machine << std::endl;
 
-  std::cerr << std::endl
-            << "Build" << std::endl
-            << "  version: " << BPFTRACE_VERSION << std::endl
-            << "  LLVM: " << LLVM_VERSION_MAJOR << "." << LLVM_VERSION_MINOR
-            << "." << LLVM_VERSION_PATCH << std::endl
-#ifdef LLVM_ORC_V2
-            << "  ORC: v2" << std::endl
-#endif
-            << "  foreach_sym: "
-#ifdef HAVE_BCC_ELF_FOREACH_SYM
-            << "yes" << std::endl
-#else
-            << "no" << std::endl
-#endif
-            << "  unsafe uprobe: "
-#ifdef HAVE_UNSAFE_UPROBE
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  bfd: "
-#ifdef HAVE_BFD_DISASM
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  bpf_attach_kfunc: "
-#ifdef HAVE_BCC_KFUNC
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  bcc_usdt_addsem: "
-#ifdef HAVE_BCC_USDT_ADDSEM
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  bcc bpf_attach_uprobe refcount: "
-#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  libbpf: "
-#ifdef HAVE_LIBBPF
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  libbpf btf dump: "
-#ifdef HAVE_LIBBPF_BTF_DUMP
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
-  std::cerr << "  libbpf btf dump type decl: "
-#ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
-            << "yes" << std::endl;
-#else
-            << "no" << std::endl;
-#endif
+  std::cerr << std::endl;
+  std::cerr << BuildInfo::report();
 
   std::cerr << std::endl;
-
   std::cerr << BPFfeature().report();
 
   return 0;

@@ -19,6 +19,8 @@ and this project adheres to
 #### Fixed
 - Fix single arg wildcard probe listing
   - [#1775](https://github.com/iovisor/bpftrace/pull/1775)
+- Fix --info reporting wrong libbpf build info
+  - [#1776](https://github.com/iovisor/bpftrace/pull/1776)
 
 #### Tools
 
