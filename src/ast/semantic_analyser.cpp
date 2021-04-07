@@ -3217,7 +3217,7 @@ Pass CreateSemanticPass()
     ctx.semant = new SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
     auto err = ctx.semant->analyse();
     if (err)
-      return PassResult::Error();
+      return PassResult::Error("Semantic", err);
     return PassResult::Success();
   };
 
@@ -3229,7 +3229,7 @@ Pass CreateMapCreatePass()
   auto fn = [](Node &n __attribute__((unused)), PassContext &ctx) {
     auto err = ctx.semant->create_maps(bt_debug != DebugLevel::kNone);
     if (err)
-      return PassResult::Error();
+      return PassResult::Error("MapCreate", err);
 
     delete ctx.semant;
     ctx.semant = nullptr;
