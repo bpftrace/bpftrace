@@ -805,9 +805,12 @@ int main(int argc, char* argv[])
       pm = CreateAotPM(aot);
       break;
   }
-  ast_root = pm.Run(std::move(ast_root), ctx);
-  if (!ast_root)
+
+  auto pmresult = pm.Run(std::move(ast_root), ctx);
+  if (!pmresult.Ok())
     return 1;
+
+  ast_root = std::unique_ptr<ast::Node>(pmresult.Root());
 
   if (!bpftrace.cmd_.empty())
   {
