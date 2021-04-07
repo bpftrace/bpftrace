@@ -40,7 +40,7 @@ Pass CreateCounterPass()
     {
       LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
                  << max << ")";
-      return PassResult::Error("node count exceeded");
+      return PassResult::Error("NodeCounter", "node count exceeded");
     }
     return PassResult::Success();
   };

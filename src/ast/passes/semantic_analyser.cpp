@@ -3179,7 +3179,7 @@ Pass CreateSemanticPass()
     auto semantics = SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
     int err = semantics.analyse();
     if (err)
-      return PassResult::Error();
+      return PassResult::Error("Semantic", err);
     return PassResult::Success();
   };
 
