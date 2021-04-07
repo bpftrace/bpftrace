@@ -132,8 +132,7 @@ public:
   PassManager() = default;
 
   void AddPass(Pass p);
-  [[nodiscard]] std::unique_ptr<Node> Run(std::unique_ptr<Node> n,
-                                          PassContext &ctx);
+  [[nodiscard]] PassResult Run(std::unique_ptr<Node> n, PassContext &ctx);
 
 private:
   std::vector<Pass> passes_;
