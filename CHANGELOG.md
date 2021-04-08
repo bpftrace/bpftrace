@@ -13,6 +13,8 @@ and this project adheres to
 #### Changed
 - Disallow accessing common tracepoint fields
   - [#1810](https://github.com/iovisor/bpftrace/pull/1810)
+- Improve JSON printing (nested structs)
+  - [#1778](https://github.com/iovisor/bpftrace/pull/1778)
 
 #### Deprecated
 
