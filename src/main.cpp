@@ -820,7 +820,8 @@ int main(int argc, char* argv[])
   if (!ast_root)
     return 1;
 
-  ast::PassContext ctx(bpftrace);
+  ast::PassContext ctx(bpftrace, std::cerr);
+
   auto pm = CreatePM();
   auto pmresult = pm.Run(std::move(ast_root), ctx);
   if (!pmresult.Ok())

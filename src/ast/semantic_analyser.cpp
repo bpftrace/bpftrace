@@ -3215,7 +3215,7 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
 Pass CreateSemanticPass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
-    ctx.semant = new SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
+    ctx.semant = new SemanticAnalyser(&n, ctx.b, ctx.out, !ctx.b.cmd_.empty());
     auto err = ctx.semant->analyse();
     if (err)
       return PassResult::Error("Semantic", err);

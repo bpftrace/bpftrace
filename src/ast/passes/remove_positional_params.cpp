@@ -184,7 +184,7 @@ Pass CreateRemovePositionalParamPass()
     auto errors = pass.err_.str();
     if (!errors.empty())
     {
-      std::cerr << errors;
+      ctx.out << errors;
       return PassResult::Error(passname, 1);
     }
     return PassResult::Success(newroot);

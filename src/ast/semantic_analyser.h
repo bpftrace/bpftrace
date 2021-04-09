@@ -30,11 +30,6 @@ public:
   {
   }
 
-  explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, bool has_child)
-      : SemanticAnalyser(root, bpftrace, std::cerr, has_child)
-  {
-  }
-
   explicit SemanticAnalyser(Node *root,
                             BPFtrace &bpftrace,
                             bool has_child,

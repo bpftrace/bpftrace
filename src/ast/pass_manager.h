@@ -97,8 +97,12 @@ private:
 struct PassContext
 {
 public:
-  PassContext(BPFtrace &b) : b(b){};
+  PassContext(BPFtrace &b, std::ostream &out) : b(b), out(out){};
   BPFtrace &b;
+  /**
+     output stream for log messages
+   */
+  std::ostream &out;
 
 private:
   // As semantic pass and map creation are separate passes we need this
