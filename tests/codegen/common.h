@@ -393,7 +393,7 @@ static void test(BPFtrace &bpftrace,
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root(), bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
@@ -407,13 +407,16 @@ static void test(BPFtrace &bpftrace,
 
   ast::PassContext ctx(bpftrace, std::cerr);
 
-  auto result = pm.Run(std::unique_ptr<ast::Node>(driver.root_), ctx);
-  driver.root_ = nullptr;
+  auto result = pm.Run(driver.release(), ctx);
 
   ASSERT_TRUE(result.Ok());
+  if (!result.Ok())
+    return;
+
+  auto root = result.Root();
 
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(root, bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
   // Test that generated code compiles cleanly

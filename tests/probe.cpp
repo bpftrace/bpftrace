@@ -26,19 +26,19 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.root_, *bpftrace);
+  ast::FieldAnalyser fields(driver.root(), *bpftrace);
   EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, *bpftrace);
+  clang.parse(driver.root(), *bpftrace);
 
   // Override to mockbpffeature.
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
+  ast::SemanticAnalyser semantics(driver.root(), *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
+  ast::CodegenLLVM codegen(driver.root(), *bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
 }

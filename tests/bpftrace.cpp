@@ -63,8 +63,8 @@ static auto parse_probe(const std::string &str)
   {
     throw std::runtime_error("Parser failed");
   }
-  auto probe = d.root_->probes->front();
-  d.root_->probes->clear();
+  auto probe = d.root()->probes->front();
+  d.root()->probes->clear();
   return probe;
 }
 

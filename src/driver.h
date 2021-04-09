@@ -25,15 +25,18 @@ public:
   void error(std::ostream &, const location &, const std::string &);
   void error(const location &l, const std::string &m);
   void error(const std::string &m);
-  ast::Program *root_ = nullptr;
 
   BPFtrace &bpftrace_;
-
   bool listing_ = false;
+
+  void set_root(ast::Program *root);
+  ast::Program *root();
+  std::unique_ptr<ast::Node> release();
 
 private:
   std::ostream &out_;
   bool failed_ = false;
+  ast::Program *root_ = nullptr;
 };
 
 } // namespace bpftrace

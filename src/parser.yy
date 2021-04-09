@@ -154,7 +154,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 %%
 
-program : c_definitions probes { driver.root_ = new ast::Program($1, $2); }
+program : c_definitions probes { driver.set_root(new ast::Program($1, $2)); }
         ;
 
 c_definitions : CPREPROC c_definitions    { $$ = $1 + "\n" + $2; }

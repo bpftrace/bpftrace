@@ -260,23 +260,23 @@ TEST(tracepoint_format_parser, args_field_access)
   ast::TracepointArgsVisitor visitor;
 
   EXPECT_EQ(driver.parse_str("BEGIN { args->f1->f2->f3 }"), 0);
-  visitor.visit(*driver.root_->probes->at(0));
-  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 3);
+  visitor.visit(*driver.root()->probes->at(0));
+  EXPECT_EQ(driver.root()->probes->at(0)->tp_args_structs_level, 3);
 
   // Should work via intermediary variable, too
   EXPECT_EQ(driver.parse_str("BEGIN { $x = args->f1; $x->f2->f3 }"), 0);
-  visitor.visit(*driver.root_->probes->at(0));
-  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 3);
+  visitor.visit(*driver.root()->probes->at(0));
+  EXPECT_EQ(driver.root()->probes->at(0)->tp_args_structs_level, 3);
 
   // "args" used without field access => level should be 0
   EXPECT_EQ(driver.parse_str("BEGIN { args }"), 0);
-  visitor.visit(*driver.root_->probes->at(0));
-  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, 0);
+  visitor.visit(*driver.root()->probes->at(0));
+  EXPECT_EQ(driver.root()->probes->at(0)->tp_args_structs_level, 0);
 
   // "args" not used => level should be -1
   EXPECT_EQ(driver.parse_str("BEGIN { x->f1->f2->f3 }"), 0);
-  visitor.visit(*driver.root_->probes->at(0));
-  EXPECT_EQ(driver.root_->probes->at(0)->tp_args_structs_level, -1);
+  visitor.visit(*driver.root()->probes->at(0));
+  EXPECT_EQ(driver.root()->probes->at(0)->tp_args_structs_level, -1);
 }
 
 } // namespace tracepoint_format_parser

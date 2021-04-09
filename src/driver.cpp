@@ -81,4 +81,23 @@ void Driver::error(const std::string &m)
   failed_ = true;
 }
 
+ast::Program *Driver::root()
+{
+  return root_;
+}
+
+std::unique_ptr<ast::Node> Driver::release()
+{
+  auto r = root_;
+  root_ = nullptr;
+  return std::unique_ptr<ast::Node>(r);
+}
+
+void Driver::set_root(ast::Program *root)
+{
+  if (root_)
+    delete root_;
+  root_ = root;
+}
+
 } // namespace bpftrace

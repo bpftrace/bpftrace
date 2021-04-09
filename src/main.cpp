@@ -403,12 +403,12 @@ static std::optional<struct timespec> get_boottime()
   if (err)
     return nullptr;
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  ast::FieldAnalyser fields(driver.root(), bpftrace);
   err = fields.analyse();
   if (err)
     return nullptr;
 
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.root(), bpftrace) == false)
     return nullptr;
 
   ClangParser clang;
@@ -442,19 +442,17 @@ static std::optional<struct timespec> get_boottime()
   // avoid issues in some versions. Since we're including files in the command
   // line, we want to force parsing, so we make sure C definitions are not
   // empty before going to clang parser stage.
-  if (!include_files.empty() && driver.root_->c_definitions.empty())
-    driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
+  if (!include_files.empty() && driver.root()->c_definitions.empty())
+    driver.root()->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  if (!clang.parse(driver.root_, bpftrace, extra_flags))
+  if (!clang.parse(driver.root(), bpftrace, extra_flags))
     return nullptr;
 
   err = driver.parse();
   if (err)
     return nullptr;
 
-  auto ast = driver.root_;
-  driver.root_ = nullptr;
-  return std::unique_ptr<ast::Node>(ast);
+  return driver.release();
 }
 
 ast::PassManager CreatePM()
@@ -735,12 +733,12 @@ int main(int argc, char* argv[])
     if (err)
       return err;
 
-    ast::SemanticAnalyser semantics(driver.root_, bpftrace, false, true);
+    ast::SemanticAnalyser semantics(driver.root(), bpftrace, false, true);
     err = semantics.analyse();
     if (err)
       return err;
 
-    bpftrace.probe_matcher_->list_probes(driver.root_);
+    bpftrace.probe_matcher_->list_probes(driver.root());
     return 0;
   }
 

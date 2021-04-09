@@ -26,15 +26,15 @@ TEST(codegen, call_ustack_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root(), bpftrace);
 
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ast::SemanticAnalyser semantics(driver.root(), bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root(), bpftrace);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
@@ -58,15 +58,15 @@ TEST(codegen, call_ustack_modes_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root(), bpftrace);
 
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  ast::SemanticAnalyser semantics(driver.root(), bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
 
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root(), bpftrace);
   codegen.compile();
 
   ASSERT_EQ(FakeMap::next_mapfd_, 7);
