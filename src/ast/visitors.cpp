@@ -319,6 +319,7 @@ Node *Mutator::visit(AssignVarStatement &assignment)
   auto a = assignment.leafcopy();
   a->var = Value<Variable>(assignment.var);
   a->expr = Value<Expression>(assignment.expr);
+  a->expr->var = a->var;
   return a;
 }
 
