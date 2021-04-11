@@ -19,9 +19,9 @@ entry:
   store i64 %get_cur_task, i64* %"@x_ptr"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_ptr", i64 0)
-  %3 = bitcast i64* %"@x_key" to i8*
+  %3 = bitcast i64* %"@x_ptr" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast i64* %"@x_ptr" to i8*
+  %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
   ret i64 0
 }

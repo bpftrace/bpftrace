@@ -46,9 +46,9 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   store i64 %10, i64* %"@_val"
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@_key", i64* %"@_val", i64 0)
-  %11 = bitcast i64* %"@_key" to i8*
+  %11 = bitcast i64* %"@_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
-  %12 = bitcast i64* %"@_val" to i8*
+  %12 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   ret i64 0
 }

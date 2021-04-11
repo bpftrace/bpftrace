@@ -64,9 +64,9 @@ helper_failure:                                   ; preds = %lookup_merge
   br label %helper_merge
 
 helper_merge:                                     ; preds = %helper_failure, %lookup_merge
-  %15 = bitcast i64* %"@_key" to i8*
+  %15 = bitcast i64* %"@_newval" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast i64* %"@_newval" to i8*
+  %16 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
   ret i64 0
 }

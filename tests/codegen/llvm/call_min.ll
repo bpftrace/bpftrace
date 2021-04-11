@@ -44,9 +44,9 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   br i1 %9, label %min.ge, label %min.lt
 
 min.lt:                                           ; preds = %min.ge, %lookup_merge
-  %10 = bitcast i64* %"@x_key" to i8*
+  %10 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = bitcast i64* %"@x_val" to i8*
+  %11 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   ret i64 0
 

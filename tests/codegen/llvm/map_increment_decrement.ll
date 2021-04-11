@@ -30,9 +30,9 @@ entry:
   store i64 10, i64* %"@x_val"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_val", i64 0)
-  %3 = bitcast i64* %"@x_key" to i8*
+  %3 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
-  %4 = bitcast i64* %"@x_val" to i8*
+  %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
   %5 = bitcast i64* %"@x_key1" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
@@ -64,9 +64,9 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   store i64 %11, i64* %"@x_newval"
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo3, i64* %"@x_key1", i64* %"@x_newval", i64 0)
-  %12 = bitcast i64* %"@x_key1" to i8*
+  %12 = bitcast i64* %"@x_newval" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast i64* %"@x_newval" to i8*
+  %13 = bitcast i64* %"@x_key1" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   %14 = bitcast i64* %"@x_key5" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
@@ -98,10 +98,10 @@ lookup_merge10:                                   ; preds = %lookup_failure9, %l
   store i64 %20, i64* %"@x_newval14"
   %pseudo15 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem16 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo15, i64* %"@x_key5", i64* %"@x_newval14", i64 0)
-  %21 = bitcast i64* %"@x_key5" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
-  %22 = load i64, i64* %"@x_newval14"
-  %23 = bitcast i64* %"@x_newval14" to i8*
+  %21 = load i64, i64* %"@x_newval14"
+  %22 = bitcast i64* %"@x_newval14" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
+  %23 = bitcast i64* %"@x_key5" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
   %24 = bitcast i64* %"@x_key17" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
@@ -133,9 +133,9 @@ lookup_merge22:                                   ; preds = %lookup_failure21, %
   store i64 %30, i64* %"@x_newval26"
   %pseudo27 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem28 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo27, i64* %"@x_key17", i64* %"@x_newval26", i64 0)
-  %31 = bitcast i64* %"@x_key17" to i8*
+  %31 = bitcast i64* %"@x_newval26" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %31)
-  %32 = bitcast i64* %"@x_newval26" to i8*
+  %32 = bitcast i64* %"@x_key17" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %32)
   %33 = bitcast i64* %"@x_key29" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %33)
@@ -167,10 +167,10 @@ lookup_merge34:                                   ; preds = %lookup_failure33, %
   store i64 %39, i64* %"@x_newval38"
   %pseudo39 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem40 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo39, i64* %"@x_key29", i64* %"@x_newval38", i64 0)
-  %40 = bitcast i64* %"@x_key29" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %40)
-  %41 = load i64, i64* %"@x_newval38"
-  %42 = bitcast i64* %"@x_newval38" to i8*
+  %40 = load i64, i64* %"@x_newval38"
+  %41 = bitcast i64* %"@x_newval38" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %41)
+  %42 = bitcast i64* %"@x_key29" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %42)
   ret i64 0
 }
