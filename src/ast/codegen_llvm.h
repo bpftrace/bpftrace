@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 #include <ostream>
+#include <tuple>
 
 #include "bpftrace.h"
 #include "irbuilderbpf.h"
@@ -54,7 +55,6 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
-  AllocaInst *getMapKey(Map &map);
   AllocaInst *getHistMapKey(Map &map, Value *log2);
   int         getNextIndexForProbe(const std::string &probe_name);
   Value      *createLogicalAnd(Binop &binop);
@@ -85,6 +85,11 @@ private:
       deleter_ = std::move(deleter);
     }
 
+    ScopedExprDeleter(const ScopedExprDeleter &other) = delete;
+    ScopedExprDeleter &operator=(const ScopedExprDeleter &other) = delete;
+    ScopedExprDeleter(ScopedExprDeleter &&other) = default;
+    ScopedExprDeleter &operator=(ScopedExprDeleter &&other) = default;
+
     ~ScopedExprDeleter()
     {
       if (deleter_)
@@ -110,6 +115,7 @@ private:
                      std::optional<int> usdt_location_index = std::nullopt);
 
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
+  [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
 
   void compareStructure(SizedType &our_type, llvm::Type *llvm_type);
 

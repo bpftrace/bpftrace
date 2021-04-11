@@ -60,21 +60,21 @@ public:
   CallInst *CreateBpfPseudoCallValue(Map &map);
   Value *CreateMapLookupElem(Value *ctx,
                              Map &map,
-                             AllocaInst *key,
+                             Value *key,
                              const location &loc);
   Value *CreateMapLookupElem(Value *ctx,
                              int mapfd,
-                             AllocaInst *key,
+                             Value *key,
                              SizedType &type,
                              const location &loc);
   void CreateMapUpdateElem(Value *ctx,
                            Map &map,
-                           AllocaInst *key,
+                           Value *key,
                            Value *val,
                            const location &loc);
   void CreateMapDeleteElem(Value *ctx,
                            Map &map,
-                           AllocaInst *key,
+                           Value *key,
                            const location &loc);
   void CreateProbeRead(Value *ctx,
                        Value *dst,
@@ -182,7 +182,7 @@ private:
                                 Builtin &builtin,
                                 AddrSpace as,
                                 const location &loc);
-  CallInst   *createMapLookup(int mapfd, AllocaInst *key);
+  CallInst *createMapLookup(int mapfd, Value *key);
   Constant *createProbeReadStrFn(llvm::Type *dst,
                                  llvm::Type *src,
                                  AddrSpace as);
