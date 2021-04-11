@@ -464,7 +464,10 @@ ast::PassManager CreatePM()
   pm.AddPass(ast::CreateRemovePositionalParamPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
-  pm.AddPass(ast::CreateMapCreatePass());
+  if (bt_debug == DebugLevel::kNone)
+    pm.AddPass(ast::CreateMapCreatePass());
+  else
+    pm.AddPass(ast::CreateFakeMapCreatePass());
   return pm;
 }
 

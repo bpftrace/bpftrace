@@ -3228,7 +3228,22 @@ Pass CreateSemanticPass()
 Pass CreateMapCreatePass()
 {
   auto fn = [](Node &n __attribute__((unused)), PassContext &ctx) {
-    auto err = ctx.semant->create_maps(bt_debug != DebugLevel::kNone);
+    auto err = ctx.semant->create_maps(false);
+    if (err)
+      return PassResult::Error("MapCreate", err);
+
+    delete ctx.semant;
+    ctx.semant = nullptr;
+    return PassResult::Success();
+  };
+
+  return Pass("MapCreate", fn);
+}
+
+Pass CreateFakeMapCreatePass()
+{
+  auto fn = [](Node &n __attribute__((unused)), PassContext &ctx) {
+    auto err = ctx.semant->create_maps(true);
     if (err)
       return PassResult::Error("MapCreate", err);
 

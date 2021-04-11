@@ -111,6 +111,7 @@ private:
   // Only ones allowed to access semant
   friend Pass CreateSemanticPass();
   friend Pass CreateMapCreatePass();
+  friend Pass CreateFakeMapCreatePass();
 };
 
 using PassFPtr = std::function<PassResult(Node &, PassContext &)>;

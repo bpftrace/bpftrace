@@ -137,5 +137,7 @@ private:
 
 Pass CreateSemanticPass();
 Pass CreateMapCreatePass();
+Pass CreateFakeMapCreatePass();
+
 } // namespace ast
 } // namespace bpftrace
