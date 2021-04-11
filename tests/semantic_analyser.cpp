@@ -5,6 +5,7 @@
 #include "driver.h"
 #include "field_analyser.h"
 #include "mocks.h"
+#include "passes/remove_positional_params.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -14,6 +15,31 @@ namespace semantic_analyser {
 
 using ::testing::_;
 using ::testing::HasSubstr;
+
+int run_passes(Driver &driver, BPFtrace &b, std::ostream &out)
+{
+  ast::PassManager pm;
+
+  pm.AddPass(ast::CreateRemovePositionalParamPass());
+  pm.AddPass(ast::CreateSemanticPass());
+
+  ast::PassContext ctx(b, out);
+  auto result = pm.Run(std::unique_ptr<ast::Node>(driver.root_), ctx);
+  driver.root_ = nullptr;
+
+  if (result.Ok())
+  {
+    // Store root so we can have patterns like:
+    // test(driver, "prog");
+    // auto v = driver.root_->probes->at(0)->stmts->at(i));
+    driver.root_ = static_cast<ast::Program *>(result.Root());
+    return 0;
+  }
+
+  auto errcode = result.GetErrorCode();
+  EXPECT_TRUE(errcode.has_value()) << "Failed in pass before semantic";
+  return *errcode;
+}
 
 void test_for_warning(
           BPFtrace &bpftrace,
@@ -33,8 +59,8 @@ void test_for_warning(
   std::stringstream out;
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
-  semantics.analyse();
+
+  run_passes(driver, bpftrace, out);
   if (invert)
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
   else
@@ -80,10 +106,13 @@ void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
-  // Override to mockbpffeature.
+
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out, has_child);
-  EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
+  if (has_child)
+    bpftrace.cmd_ = "dummy";
+
+  auto res = run_passes(driver, bpftrace, out);
+  EXPECT_EQ(expected_result, res) << msg.str() + out.str();
 }
 
 void test(BPFtrace &bpftrace,

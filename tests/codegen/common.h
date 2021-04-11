@@ -13,6 +13,7 @@
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "fake_map.h"
+#include "passes/remove_positional_params.h"
 #include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
@@ -398,9 +399,18 @@ static void test(BPFtrace &bpftrace,
 
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
-  ASSERT_EQ(semantics.create_maps(true), 0);
+
+  ast::PassManager pm;
+  pm.AddPass(ast::CreateRemovePositionalParamPass());
+  pm.AddPass(ast::CreateSemanticPass());
+  pm.AddPass(ast::CreateFakeMapCreatePass());
+
+  ast::PassContext ctx(bpftrace, std::cerr);
+
+  auto result = pm.Run(std::unique_ptr<ast::Node>(driver.root_), ctx);
+  driver.root_ = nullptr;
+
+  ASSERT_TRUE(result.Ok());
 
   std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
