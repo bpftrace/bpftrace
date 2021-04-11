@@ -1881,8 +1881,9 @@ void SemanticAnalyser::visit(Unroll &unroll)
   }
   else
   {
-    out_ << "Unsupported expression" << std::endl;
-    abort();
+    LOG(ERROR, unroll.loc, err_) << "Cannot use expression of type: '"
+                                 << unroll.expr->type << "' as unroll count";
+    unroll.var = 0;
   }
 
   if (unroll.var > 100)
