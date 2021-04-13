@@ -301,7 +301,7 @@ tracepoint:syscalls:sys_enter_open
     umode_t mode;
 ```
 
-If BTF is available, it is also possible to list struct/union/emum definitions. For example:
+If BTF is available, it is also possible to list struct/union/enum definitions. For example:
 
 ```
 # bpftrace -lv "struct path"
