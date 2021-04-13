@@ -135,7 +135,7 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
       &module_);
 }
 
-AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize, const std::string &name)
+void IRBuilderBPF::hoist(const std::function<void()> &functor)
 {
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock &entry_block = parent->getEntryBlock();
@@ -145,8 +145,19 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize
     SetInsertPoint(&entry_block);
   else
     SetInsertPoint(&entry_block.front());
-  AllocaInst *alloca = CreateAlloca(ty, arraysize, name);
+
+  functor();
   restoreIP(ip);
+}
+
+AllocaInst *IRBuilderBPF::CreateAllocaBPF(llvm::Type *ty,
+                                          llvm::Value *arraysize,
+                                          const std::string &name)
+{
+  AllocaInst *alloca;
+  hoist([this, ty, arraysize, &name, &alloca]() {
+    alloca = CreateAlloca(ty, arraysize, name);
+  });
 
   CreateLifetimeStart(alloca);
   return alloca;
@@ -165,30 +176,20 @@ AllocaInst *IRBuilderBPF::CreateAllocaBPF(const SizedType &stype, const std::str
 
 AllocaInst *IRBuilderBPF::CreateAllocaBPFInit(const SizedType &stype, const std::string &name)
 {
-  Function *parent = GetInsertBlock()->getParent();
-  BasicBlock &entry_block = parent->getEntryBlock();
-
-  auto ip = saveIP();
-  if (entry_block.empty())
-    SetInsertPoint(&entry_block);
-  else
-    SetInsertPoint(&entry_block.front());
-
-  llvm::Type *ty = GetType(stype);
-  AllocaInst *alloca = CreateAllocaBPF(ty, nullptr, name);
-
-  if (needMemcpy(stype))
-  {
-    CREATE_MEMSET(alloca, getInt8(0), stype.GetSize(), 1);
-  }
-  else
-  {
-    CreateStore(ConstantInt::get(ty, 0), alloca);
-  }
-
-  restoreIP(ip);
-
-  CreateLifetimeStart(alloca);
+  AllocaInst *alloca;
+  hoist([this, &stype, &name, &alloca]() {
+    llvm::Type *ty = GetType(stype);
+    alloca = CreateAlloca(ty, nullptr, name);
+    CreateLifetimeStart(alloca);
+    if (needMemcpy(stype))
+    {
+      CREATE_MEMSET(alloca, getInt8(0), stype.GetSize(), 1);
+    }
+    else
+    {
+      CreateStore(ConstantInt::get(ty, 0), alloca);
+    }
+  });
   return alloca;
 }
 
