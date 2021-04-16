@@ -8,6 +8,10 @@ and this project adheres to
 
 ## Unreleased
 
+## [0.12.1] 2021-04-16
+
+Incorrect --info output bug fix release
+
 ## [0.12.0] 2021-04-01
 
 #### Added
