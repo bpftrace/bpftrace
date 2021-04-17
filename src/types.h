@@ -36,7 +36,6 @@ enum class Type
   string,
   ksym,
   usym,
-  join,
   probe,
   username,
   inet,
@@ -285,11 +284,6 @@ public:
   {
     return type == Type::usym;
   };
-
-  bool IsJoinTy(void) const
-  {
-    return type == Type::join;
-  };
   bool IsProbeTy(void) const
   {
     return type == Type::probe;
@@ -389,7 +383,6 @@ SizedType CreateLhist();
 SizedType CreateHist();
 SizedType CreateUSym();
 SizedType CreateKSym();
-SizedType CreateJoin(size_t argnum, size_t argsize);
 SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
 SizedType CreateMacAddress();

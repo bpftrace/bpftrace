@@ -2748,11 +2748,9 @@ int SemanticAnalyser::create_maps_impl(void)
   {
     // join uses map storage as we'd like to process data larger than can fit on
     // the BPF stack.
-    std::string map_ident = "join";
-    SizedType type = CreateJoin(bpftrace_.join_argnum_,
-                                bpftrace_.join_argsize_);
-    MapKey key;
-    auto map = std::make_unique<T>(map_ident, type, key, 1);
+    int value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
+    auto map = std::make_unique<T>(
+        "join", BPF_MAP_TYPE_PERCPU_ARRAY, 4, value_size, 1, 0);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace_.maps.Set(MapManager::Type::Join, std::move(map));
   }
