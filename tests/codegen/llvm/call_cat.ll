@@ -18,8 +18,7 @@ entry:
   %3 = getelementptr %cat_t, %cat_t* %cat_args, i32 0, i32 0
   store i64 20000, i64* %3
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %cat_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %cat_t* %cat_args, i64 8)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %cat_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %cat_t* %cat_args, i64 8)
   %4 = bitcast %cat_t* %cat_args to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
   ret i64 0

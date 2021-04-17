@@ -42,8 +42,7 @@ entry:
   %15 = bitcast %"int64_string[64]__tuple_t"* %tuple to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %14, i8* align 1 %15, i64 72, i1 false)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_tuple_72_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %print_tuple_72_t* %print_tuple_72_t, i64 88)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_tuple_72_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %print_tuple_72_t* %print_tuple_72_t, i64 88)
   %16 = bitcast %print_tuple_72_t* %print_tuple_72_t to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
   %17 = bitcast %"int64_string[64]__tuple_t"* %tuple to i8*

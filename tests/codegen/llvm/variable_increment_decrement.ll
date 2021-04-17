@@ -13,8 +13,8 @@ declare i64 @llvm.bpf.pseudo(i64, i64) #0
 
 define i64 @BEGIN(i8*) section "s_BEGIN_1" {
 entry:
-  %printf_args9 = alloca %printf_t.2
-  %printf_args5 = alloca %printf_t.1
+  %printf_args7 = alloca %printf_t.2
+  %printf_args4 = alloca %printf_t.1
   %printf_args1 = alloca %printf_t.0
   %printf_args = alloca %printf_t
   %"$x" = alloca i64
@@ -36,8 +36,7 @@ entry:
   %8 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
   store i64 %6, i64* %8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* %printf_args, i64 16)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %printf_t* %printf_args, i64 16)
   %9 = bitcast %printf_t* %printf_args to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   %10 = bitcast %printf_t.0* %printf_args1 to i8*
@@ -52,41 +51,38 @@ entry:
   %15 = getelementptr %printf_t.0, %printf_t.0* %printf_args1, i32 0, i32 1
   store i64 %14, i64* %15
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id3 = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output4 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.0*, i64)*)(i8* %0, i64 %pseudo2, i64 %get_cpu_id3, %printf_t.0* %printf_args1, i64 16)
+  %perf_event_output3 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.0*, i64)*)(i8* %0, i64 %pseudo2, i64 4294967295, %printf_t.0* %printf_args1, i64 16)
   %16 = bitcast %printf_t.0* %printf_args1 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast %printf_t.1* %printf_args5 to i8*
+  %17 = bitcast %printf_t.1* %printf_args4 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
-  %18 = bitcast %printf_t.1* %printf_args5 to i8*
+  %18 = bitcast %printf_t.1* %printf_args4 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %18, i8 0, i64 16, i1 false)
-  %19 = getelementptr %printf_t.1, %printf_t.1* %printf_args5, i32 0, i32 0
+  %19 = getelementptr %printf_t.1, %printf_t.1* %printf_args4, i32 0, i32 0
   store i64 2, i64* %19
   %20 = load i64, i64* %"$x"
   %21 = sub i64 %20, 1
   store i64 %21, i64* %"$x"
-  %22 = getelementptr %printf_t.1, %printf_t.1* %printf_args5, i32 0, i32 1
+  %22 = getelementptr %printf_t.1, %printf_t.1* %printf_args4, i32 0, i32 1
   store i64 %20, i64* %22
-  %pseudo6 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id7 = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output8 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.1*, i64)*)(i8* %0, i64 %pseudo6, i64 %get_cpu_id7, %printf_t.1* %printf_args5, i64 16)
-  %23 = bitcast %printf_t.1* %printf_args5 to i8*
+  %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %perf_event_output6 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.1*, i64)*)(i8* %0, i64 %pseudo5, i64 4294967295, %printf_t.1* %printf_args4, i64 16)
+  %23 = bitcast %printf_t.1* %printf_args4 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
-  %24 = bitcast %printf_t.2* %printf_args9 to i8*
+  %24 = bitcast %printf_t.2* %printf_args7 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
-  %25 = bitcast %printf_t.2* %printf_args9 to i8*
+  %25 = bitcast %printf_t.2* %printf_args7 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %25, i8 0, i64 16, i1 false)
-  %26 = getelementptr %printf_t.2, %printf_t.2* %printf_args9, i32 0, i32 0
+  %26 = getelementptr %printf_t.2, %printf_t.2* %printf_args7, i32 0, i32 0
   store i64 3, i64* %26
   %27 = load i64, i64* %"$x"
   %28 = sub i64 %27, 1
   store i64 %28, i64* %"$x"
-  %29 = getelementptr %printf_t.2, %printf_t.2* %printf_args9, i32 0, i32 1
+  %29 = getelementptr %printf_t.2, %printf_t.2* %printf_args7, i32 0, i32 1
   store i64 %28, i64* %29
-  %pseudo10 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %get_cpu_id11 = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output12 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.2*, i64)*)(i8* %0, i64 %pseudo10, i64 %get_cpu_id11, %printf_t.2* %printf_args9, i64 16)
-  %30 = bitcast %printf_t.2* %printf_args9 to i8*
+  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %perf_event_output9 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.2*, i64)*)(i8* %0, i64 %pseudo8, i64 4294967295, %printf_t.2* %printf_args7, i64 16)
+  %30 = bitcast %printf_t.2* %printf_args7 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %30)
   ret i64 0
 }

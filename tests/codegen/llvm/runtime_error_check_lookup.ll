@@ -42,8 +42,7 @@ lookup_failure:                                   ; preds = %entry
   %7 = getelementptr %helper_error_t, %helper_error_t* %helper_error_t, i64 0, i32 2
   store i32 0, i32* %7
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %helper_error_t*, i64)*)(i8* %0, i64 %pseudo1, i64 %get_cpu_id, %helper_error_t* %helper_error_t, i64 20)
+  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %helper_error_t*, i64)*)(i8* %0, i64 %pseudo1, i64 4294967295, %helper_error_t* %helper_error_t, i64 20)
   %8 = bitcast %helper_error_t* %helper_error_t to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
   br label %lookup_merge
@@ -72,8 +71,7 @@ helper_failure:                                   ; preds = %lookup_merge
   %18 = getelementptr %helper_error_t, %helper_error_t* %helper_error_t3, i64 0, i32 2
   store i32 %13, i32* %18
   %pseudo4 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %get_cpu_id5 = call i64 inttoptr (i64 8 to i64 ()*)()
-  %perf_event_output6 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %helper_error_t*, i64)*)(i8* %0, i64 %pseudo4, i64 %get_cpu_id5, %helper_error_t* %helper_error_t3, i64 20)
+  %perf_event_output5 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %helper_error_t*, i64)*)(i8* %0, i64 %pseudo4, i64 4294967295, %helper_error_t* %helper_error_t3, i64 20)
   %19 = bitcast %helper_error_t* %helper_error_t3 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
   br label %helper_merge

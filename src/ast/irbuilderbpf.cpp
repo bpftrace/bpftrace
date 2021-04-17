@@ -1047,7 +1047,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   Value *map_ptr = CreateBpfPseudoCallFd(
       bpftrace_.maps[MapManager::Type::PerfEvent].value()->mapfd_);
 
-  Value *flags_val = CreateGetCpuId();
+  Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
 
   // int bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,
