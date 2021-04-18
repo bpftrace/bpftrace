@@ -225,23 +225,31 @@ static std::optional<struct timespec> get_boottime()
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return false;
 
-  // in practice, the largest buffer I've seen fit into the BPF stack was 240
-  // bytes. I've set the bar lower, in case your program has a deeper stack than
-  // the one from my tests, in the hope that you'll get this instructive error
-  // instead of getting the BPF verifier's error.
+  // how sensitive your program is to BPFTRACE_STRLEN depends on how many
+  // strings it stores on the 512-byte BPF stack.
+  // functions such as str(), buf(), path() and strncmp() stack-allocate
+  // strings of this size, as do string variables.
+  // we pick a threshold over which a program is likely to run into limits,
+  // to forewarn the user of the underlying reason (helping them understand
+  // any errors that may follow).
   if (bpftrace.strlen_ > 200)
   {
-    // the verifier errors you would encounter when attempting larger
-    // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
-    // is exceeded. Please move large on stack variables into BPF per-cpu array
-    // map.> ~1024= <A call to built-in function 'memset' is not supported.>
-    LOG(ERROR) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
-               << " exceeds the current maximum of 200 bytes.\n"
-               << "This limitation is because strings are currently stored on "
-                  "the 512 byte BPF stack.\n"
-               << "Long strings will be pursued in: "
-                  "https://github.com/iovisor/bpftrace/issues/305";
-    return false;
+    // if we emit a program that overflows the BPF stack, LLVM will warn us:
+    // https://lists.llvm.org/pipermail/llvm-commits/Week-of-Mon-20170116/420316.html
+    // <Looks like the BPF stack limit of 512 bytes is exceeded. Please move
+    // large on stack variables into BPF per-cpu array map.>
+    // LLVM also limits the number of load/store instructions emitted to 128:
+    // https://github.com/llvm/llvm-project/blob/llvmorg-12.0.0/llvm/lib/Target/BPF/BPFISelLowering.cpp#L158
+    // this effectively means that strings longer than 1024 will complain:
+    // <A call to built-in function 'memset' is not supported.>
+    // see https://github.com/iovisor/bpftrace/discussions/1800 for discussion
+    // of how to overcome this limit.
+    LOG(WARNING) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
+                 << " exceeds the current recommended maximum of 200 bytes.\n"
+                 << "This limitation is because strings are currently stored "
+                 << "on the 512 byte BPF stack.\n"
+                 << "Long strings will be pursued in: "
+                    "https://github.com/iovisor/bpftrace/issues/305";
   }
 
   if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
