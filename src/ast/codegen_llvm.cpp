@@ -2686,7 +2686,8 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
     arg.offset = struct_layout->getElementOffset(i+1); // +1 for the id field
   }
 
-  AllocaInst *fmt_args = b_.CreateAllocaBPF(fmt_struct, call_name + "_args");
+  auto fmt_struct_ptr_ty = PointerType::get(fmt_struct, 0);
+  Value *fmt_args = b_.CreateGetFmtStrMap(ctx_, fmt_struct_ptr_ty, call.loc);
   // as the struct is not packed we need to memset it.
   b_.CREATE_MEMSET(fmt_args, b_.getInt8(0), struct_size, 1);
 
@@ -2710,7 +2711,6 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
 
   id++;
   b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
-  b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
 }
 
