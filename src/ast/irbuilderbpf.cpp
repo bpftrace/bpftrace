@@ -355,6 +355,18 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx, const location &loc)
                              loc);
 }
 
+CallInst *IRBuilderBPF::CreateGetFmtStrMap(Value *ctx,
+                                           PointerType *printf_struct_ptr_ty,
+                                           const location &loc)
+{
+  return CreateGetScratchMap(
+      ctx,
+      bpftrace_.maps[MapManager::Type::FmtStr].value()->id,
+      "fmtstr",
+      printf_struct_ptr_ty,
+      loc);
+}
+
 CallInst *IRBuilderBPF::CreateGetScratchMap(Value *ctx,
                                             int mapid,
                                             const std::string &name,

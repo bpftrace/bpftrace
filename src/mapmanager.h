@@ -60,6 +60,7 @@ public:
     Join,
     Elapsed,
     SeqPrintfData,
+    FmtStr,
   };
 
   void Set(Type t, std::unique_ptr<IMap> map);

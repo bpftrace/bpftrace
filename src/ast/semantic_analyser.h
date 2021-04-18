@@ -134,10 +134,12 @@ private:
   bool needs_join_map_ = false;
   bool needs_elapsed_map_ = false;
   bool needs_data_map_ = false;
+  bool needs_fmtstr_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
   bool has_pos_param_ = false;
+  size_t max_fmtstr_args_size_ = 0;
 };
 
 Pass CreateSemanticPass();

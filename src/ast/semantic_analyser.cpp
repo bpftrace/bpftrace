@@ -9,6 +9,7 @@
 #include "signal_bt.h"
 #include "tracepoint_format_parser.h"
 #include "usdt.h"
+#include "utils.h"
 #include <algorithm>
 #include <cstring>
 #include <regex>
@@ -913,6 +914,7 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "printf" || call.func == "system" || call.func == "cat")
   {
+    needs_fmtstr_map_ = true;
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 128))
     {
@@ -922,6 +924,7 @@ void SemanticAnalyser::visit(Call &call)
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
+        size_t args_size = 0;
         for (auto iter = call.vargs->begin() + 1; iter != call.vargs->end();
              iter++)
         {
@@ -943,7 +946,18 @@ void SemanticAnalyser::visit(Call &call)
                       .mask = 0,
                   },
           });
+          /*
+           * codegen allocates a non-packed struct, so we need to align struct
+           * members to word size. this may be an overshoot (i.e. if a more
+           * efficient pack is possible). that won't affect the IR emitted;
+           * we'll just end up allocating a slightly bigger map than necessary.
+           *
+           * TODO: get access to llvm::DataLayout and actually measure the
+           * formatString struct size
+           */
+          args_size += align_to(ty.GetSize(), 8);
         }
+        max_fmtstr_args_size_ = std::max(max_fmtstr_args_size_, args_size);
         std::string msg = verify_format_string(fmt.str, args);
         if (msg != "")
         {
@@ -2836,6 +2850,14 @@ int SemanticAnalyser::create_maps_impl(void)
                     &id,
                     formats.data(),
                     0);
+  }
+  if (needs_fmtstr_map_)
+  {
+    size_t printf_struct_size = 8 + max_fmtstr_args_size_;
+    auto map = std::make_unique<T>(
+        "fmtstr", BPF_MAP_TYPE_PERCPU_ARRAY, 4, printf_struct_size, 1, 0);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace_.maps.Set(MapManager::Type::FmtStr, std::move(map));
   }
 
   {

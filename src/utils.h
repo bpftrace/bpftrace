@@ -215,6 +215,12 @@ inline std::string &trim(std::string &s)
   return ltrim(rtrim(s));
 }
 
+// rounds up to nearest factor of `alignment`
+inline size_t align_to(size_t proposed, size_t alignment)
+{
+  return (proposed + alignment - 1) / alignment * alignment;
+};
+
 template <typename T>
 T read_data(const void *src)
 {
