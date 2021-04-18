@@ -643,25 +643,8 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
                                             call.func + "_second");
     Value *perfdata = b_.CreateGetJoinMap(ctx_, call.loc);
-    Function *parent = b_.GetInsertBlock()->getParent();
-
-    BasicBlock *zero = BasicBlock::Create(module_->getContext(),
-                                          "joinzero",
-                                          parent);
-    BasicBlock *notzero = BasicBlock::Create(module_->getContext(),
-                                             "joinnotzero",
-                                             parent);
-
-    b_.CreateCondBr(b_.CreateICmpNE(perfdata,
-                                    ConstantExpr::getCast(Instruction::IntToPtr,
-                                                          b_.getInt64(0),
-                                                          b_.getInt8PtrTy()),
-                                    "joinzerocond"),
-                    notzero,
-                    zero);
 
     // arg0
-    b_.SetInsertPoint(notzero);
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
     b_.CreateStore(b_.getInt64(join_id_),
                    b_.CreateGEP(perfdata, b_.getInt64(8)));
@@ -697,10 +680,6 @@ void CodegenLLVM::visit(Call &call)
         perfdata,
         8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
 
-    b_.CreateBr(zero);
-
-    // done
-    b_.SetInsertPoint(zero);
     expr_ = nullptr;
   }
   else if (call.func == "ksym")
