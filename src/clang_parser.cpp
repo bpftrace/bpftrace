@@ -292,7 +292,7 @@ static std::string get_unqualified_type_name(CXType clang_type)
   return remove_qualifiers(get_clang_string(clang_getTypeSpelling(clang_type)));
 }
 
-static SizedType get_sized_type(CXType clang_type)
+static SizedType get_sized_type(CXType clang_type, StructManager &structs)
 {
   auto size = 8 * clang_Type_getSizeOf(clang_type);
   auto typestr = get_unqualified_type_name(clang_type);
@@ -307,8 +307,12 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_ULong:
     case CXType_ULongLong:
       return CreateUInt(size);
-    case CXType_Record:
-      return CreateRecord(size / 8, typestr);
+    case CXType_Record: {
+      // Struct map entry may not exist for forward declared types so we create
+      // it now and fill it later
+      auto s = structs.LookupOrAdd(typestr, size / 8);
+      return CreateRecord(typestr, s);
+    }
     case CXType_Char_S:
     case CXType_SChar:
     case CXType_Short:
@@ -321,7 +325,7 @@ static SizedType get_sized_type(CXType clang_type)
     case CXType_Pointer:
     {
       auto pointee_type = clang_getPointeeType(clang_type);
-      return CreatePointer(get_sized_type(pointee_type));
+      return CreatePointer(get_sized_type(pointee_type, structs));
     }
     case CXType_ConstantArray:
     {
@@ -332,7 +336,7 @@ static SizedType get_sized_type(CXType clang_type)
         return CreateString(size);
       }
 
-      auto elem_stype = get_sized_type(elem_type);
+      auto elem_stype = get_sized_type(elem_type, structs);
       return CreateArray(size, elem_stype);
     }
     default:
@@ -523,7 +527,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
         if (clang_getCursorKind(c) == CXCursor_FieldDecl)
         {
-          auto &structs = static_cast<BPFtrace*>(client_data)->structs_;
+          auto &structs = static_cast<BPFtrace *>(client_data)->structs;
 
           auto named_parent = get_named_parent(c);
           auto ptype = clang_getCanonicalType(clang_getCursorType(named_parent));
@@ -533,7 +537,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           auto ident = get_clang_string(clang_getCursorSpelling(c));
           auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
           auto type = clang_getCanonicalType(clang_getCursorType(c));
-          auto sized_type = get_sized_type(type);
+          auto sized_type = get_sized_type(type, structs);
           Bitfield bitfield;
           bool is_bitfield = getBitfield(c, bitfield);
           bool is_data_loc = false;
@@ -555,15 +559,15 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
             }
           }
 
+          // Initialize a new record type if needed
+          if (!structs.Has(ptypestr))
+            structs.Add(ptypestr, ptypesize);
+
           // No need to worry about redefined types b/c we should have already
           // checked clang diagnostics. The diagnostics will tell us if we have
           // duplicated types.
-          structs[ptypestr].fields[ident].offset = offset;
-          structs[ptypestr].fields[ident].type = sized_type;
-          structs[ptypestr].fields[ident].is_bitfield = is_bitfield;
-          structs[ptypestr].fields[ident].bitfield = bitfield;
-          structs[ptypestr].fields[ident].is_data_loc = is_data_loc;
-          structs[ptypestr].size = ptypesize;
+          structs.Lookup(ptypestr)->AddField(
+              ident, sized_type, offset, is_bitfield, bitfield, is_data_loc);
         }
 
         return CXChildVisit_Recurse;

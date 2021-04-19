@@ -151,13 +151,13 @@ private:
 
   void readDatastructElemFromStack(Value *src_data,
                                    Value *index,
-                                   SizedType &data_type,
-                                   SizedType &elem_type,
+                                   const SizedType &data_type,
+                                   const SizedType &elem_type,
                                    ScopedExprDeleter &scoped_del);
   void probereadDatastructElem(Value *src_data,
                                Value *offset,
-                               SizedType &data_type,
-                               SizedType &elem_type,
+                               const SizedType &data_type,
+                               const SizedType &elem_type,
                                ScopedExprDeleter &scoped_del,
                                location loc,
                                const std::string &temp_name);

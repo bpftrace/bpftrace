@@ -118,10 +118,10 @@ void SemanticAnalyser::visit(Identifier &identifier)
   if (bpftrace_.enums_.count(identifier.ident) != 0) {
     identifier.type = CreateUInt64();
   }
-  else if (bpftrace_.structs_.count(identifier.ident) != 0)
+  else if (bpftrace_.structs.Has(identifier.ident))
   {
-    identifier.type = CreateRecord(bpftrace_.structs_[identifier.ident].size,
-                                   identifier.ident);
+    identifier.type = CreateRecord(identifier.ident,
+                                   bpftrace_.structs.Lookup(identifier.ident));
   }
   else if (func_ == "sizeof" && getIntcasts().count(identifier.ident) != 0)
   {
@@ -152,10 +152,11 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     auto &match = *matches.begin();
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         match);
-    Struct &cstruct = bpftrace_.structs_[tracepoint_struct];
     AddrSpace as = (attach_point->target == "syscalls") ? AddrSpace::user
                                                         : AddrSpace::kernel;
-    builtin.type = CreatePointer(CreateRecord(cstruct.size, tracepoint_struct),
+    builtin.type = CreatePointer(CreateRecord(tracepoint_struct,
+                                              bpftrace_.structs.Lookup(
+                                                  tracepoint_struct)),
                                  as);
     builtin.type.MarkCtxAccess();
     builtin.type.is_tparg = true;
@@ -231,9 +232,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
     switch (static_cast<libbpf::bpf_prog_type>(bt))
     {
       case libbpf::BPF_PROG_TYPE_KPROBE:
-        builtin.type = CreatePointer(
-            CreateRecord(bpftrace_.structs_["pt_regs"].size, "struct pt_regs"),
-            AddrSpace::kernel);
+        builtin.type = CreatePointer(CreateRecord("struct pt_regs",
+                                                  bpftrace_.structs.Lookup(
+                                                      "structs pt_regs")),
+                                     AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
       case libbpf::BPF_PROG_TYPE_TRACEPOINT:
@@ -242,8 +244,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
         break;
       case libbpf::BPF_PROG_TYPE_PERF_EVENT:
         builtin.type = CreatePointer(
-            CreateRecord(bpftrace_.structs_["bpf_perf_event_data"].size,
-                         "struct bpf_perf_event_data"),
+            CreateRecord("struct bpf_perf_event_data",
+                         bpftrace_.structs.Lookup(
+                             "struct bpf_perf_event_data")),
             AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
@@ -254,11 +257,11 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
           if (func == "task")
           {
-            type = "bpf_iter__task";
+            type = "struct bpf_iter__task";
           }
           else if (func == "task_file")
           {
-            type = "bpf_iter__task_file";
+            type = "struct bpf_iter__task_file";
           }
           else
           {
@@ -266,7 +269,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
           }
 
           builtin.type = CreatePointer(
-              CreateRecord(bpftrace_.structs_[type].size, "struct " + type),
+              CreateRecord(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.type.MarkCtxAccess();
         }
@@ -304,7 +307,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     /*
      * Retype curtask to its original type: struct task_struct.
      */
-    builtin.type = CreatePointer(CreateRecord(0, "struct task_struct"),
+    builtin.type = CreatePointer(CreateRecord("struct task_struct",
+                                              bpftrace_.structs.Lookup(
+                                                  "struct task_struct")),
                                  AddrSpace::kernel);
   }
   else if (builtin.ident == "retval")
@@ -444,7 +449,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
-      builtin.type = CreatePointer(CreateRecord(0, "struct kfunc"),
+      builtin.type = CreatePointer(CreateRecord("struct kfunc",
+                                                bpftrace_.structs.Lookup(
+                                                    "struct kfunc")),
                                    AddrSpace::kernel);
       builtin.type.MarkCtxAccess();
       builtin.type.is_kfarg = true;
@@ -1927,7 +1934,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (bpftrace_.structs_.count(type.GetName()) == 0)
+  if (!bpftrace_.structs.Has(type.GetName()))
   {
     LOG(ERROR, acc.loc, err_)
         << "Unknown struct/union: '" << type.GetName() << "'";
@@ -1953,13 +1960,14 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       for (auto &match : matches) {
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);
-        structs[tracepoint_struct] = bpftrace_.structs_[tracepoint_struct].fields;
+        structs[tracepoint_struct] =
+            bpftrace_.structs.Lookup(tracepoint_struct)->fields;
       }
     }
   }
   else
   {
-    structs[type.GetName()] = bpftrace_.structs_[type.GetName()].fields;
+    structs[type.GetName()] = type.GetStructFields();
   }
 
   for (auto it : structs) {
@@ -1999,7 +2007,6 @@ void SemanticAnalyser::visit(Cast &cast)
   bool is_ctx = cast.expr->type.IsCtxAccess();
   auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
-  int cast_size;
 
   // Built-in int types
   if (k_v != intcasts.end())
@@ -2037,18 +2044,19 @@ void SemanticAnalyser::visit(Cast &cast)
     return;
   }
 
-  if (bpftrace_.structs_.count(cast.cast_type) == 0)
+  if (!bpftrace_.structs.Has(cast.cast_type))
   {
     LOG(ERROR, cast.loc, err_)
         << "Unknown struct/union: '" << cast.cast_type << "'";
     return;
   }
 
-  cast_size = bpftrace_.structs_[cast.cast_type].size;
+  SizedType struct_type = CreateRecord(
+      cast.cast_type, bpftrace_.structs.Lookup(cast.cast_type));
 
   if (cast.is_pointer)
   {
-    cast.type = CreatePointer(CreateRecord(cast_size, cast.cast_type));
+    cast.type = CreatePointer(struct_type);
 
     if (cast.is_double_pointer)
       cast.type = CreatePointer(cast.type);
@@ -2060,7 +2068,7 @@ void SemanticAnalyser::visit(Cast &cast)
     {
       LOG(ERROR, cast.loc, err_) << "Cannot convert " << etype << " to struct";
     }
-    cast.type = CreateRecord(cast_size, cast.cast_type);
+    cast.type = struct_type;
   }
   if (is_ctx)
     cast.type.MarkCtxAccess();

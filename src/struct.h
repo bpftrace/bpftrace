@@ -42,6 +42,19 @@ struct Struct
 {
   int size; // in bytes
   FieldsMap fields;
+
+  explicit Struct(int size) : size(size)
+  {
+  }
+
+  bool HasField(const std::string &name) const;
+  const Field &GetField(const std::string &name) const;
+  void AddField(const std::string &field_name,
+                const SizedType &type,
+                ssize_t offset,
+                bool is_bitfield,
+                const Bitfield &bitfield,
+                bool is_data_loc);
 };
 
 struct Tuple
@@ -56,4 +69,17 @@ struct Tuple
 };
 
 std::ostream &operator<<(std::ostream &os, const TupleFields &t);
+
+class StructManager
+{
+public:
+  void Add(const std::string &name, size_t size);
+  std::shared_ptr<Struct> Lookup(const std::string &name) const;
+  std::shared_ptr<Struct> LookupOrAdd(const std::string &name, size_t size);
+  bool Has(const std::string &name) const;
+
+private:
+  std::map<std::string, std::shared_ptr<Struct>> struct_map_;
+};
+
 } // namespace bpftrace
