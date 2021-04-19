@@ -1566,10 +1566,9 @@ void CodegenLLVM::visit(FieldAccess &acc)
   }
 
   std::string cast_type = is_tparg ? tracepoint_struct_ : type.GetName();
-  Struct &cstruct = bpftrace_.structs_[cast_type];
 
   // This overwrites the stored type!
-  type = CreateRecord(cstruct.size, cast_type);
+  type = CreateRecord(cast_type, bpftrace_.structs.Lookup(cast_type));
   if (is_ctx)
     type.MarkCtxAccess();
   type.is_tparg = is_tparg;
@@ -1579,7 +1578,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
   type.SetAS(addrspace);
 
-  auto &field = cstruct.fields[acc.field];
+  auto &field = type.GetField(acc.field);
 
   if (onStack(type))
   {
@@ -3014,8 +3013,8 @@ CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
 //   scoped_del scope deleter for the data structure
 void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
                                               Value *index,
-                                              SizedType &data_type,
-                                              SizedType &elem_type,
+                                              const SizedType &data_type,
+                                              const SizedType &elem_type,
                                               ScopedExprDeleter &scoped_del)
 {
   // src_data should contain a pointer to the data structure, but it may be
@@ -3058,8 +3057,8 @@ void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
 //   temp_name  name of a temporary variable, if the function creates any
 void CodegenLLVM::probereadDatastructElem(Value *src_data,
                                           Value *offset,
-                                          SizedType &data_type,
-                                          SizedType &elem_type,
+                                          const SizedType &data_type,
+                                          const SizedType &elem_type,
                                           ScopedExprDeleter &scoped_del,
                                           location loc,
                                           const std::string &temp_name)

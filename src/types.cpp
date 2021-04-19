@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "bpftrace.h"
 #include "log.h"
 #include "struct.h"
 #include "types.h"
@@ -355,10 +356,11 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
   return ty;
 }
 
-SizedType CreateRecord(size_t size, const std::string &name)
+SizedType CreateRecord(const std::string &name, std::shared_ptr<Struct> record)
 {
-  auto ty = SizedType(Type::record, size);
+  auto ty = SizedType(Type::record, record ? record->size : 0);
   ty.name_ = name;
+  ty.record = record;
   return ty;
 }
 
@@ -508,6 +510,18 @@ ssize_t SizedType::GetAlignment() const
     return 4;
   else
     return 8;
+}
+
+const std::map<std::string, Field> &SizedType::GetStructFields() const
+{
+  assert(IsRecordTy() && record);
+  return record->fields;
+}
+
+const Field &SizedType::GetField(const std::string &name) const
+{
+  assert(IsRecordTy());
+  return record->fields[name];
 }
 
 } // namespace bpftrace

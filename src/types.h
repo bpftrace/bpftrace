@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <sstream>
@@ -74,6 +75,8 @@ struct StackType
   }
 };
 
+class BPFtrace;
+struct Struct;
 struct Tuple;
 struct Field;
 
@@ -110,6 +113,7 @@ private:
   ssize_t size_bits_ = -1; // size in bits for integer types
 
   std::shared_ptr<Tuple> tuple_fields; // tuple fields
+  std::shared_ptr<Struct> record;      // struct type
 
 public:
   /**
@@ -118,6 +122,12 @@ public:
   std::vector<Field> &GetFields() const;
   Field &GetField(ssize_t n) const;
   ssize_t GetFieldCount() const;
+
+  /**
+     Struct field accessors
+   */
+  const std::map<std::string, Field> &GetStructFields() const;
+  const Field &GetField(const std::string &name) const;
 
   /**
      Required alignment for this type
@@ -334,7 +344,8 @@ public:
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
-  friend SizedType CreateRecord(size_t size, const std::string &name);
+  friend SizedType CreateRecord(const std::string &name,
+                                std::shared_ptr<Struct> record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
   friend SizedType CreateTuple(const std::vector<SizedType> &fields);
 };
@@ -358,11 +369,8 @@ SizedType CreateString(size_t size);
 SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
-/**
-   size in bytes
- */
-SizedType CreateRecord(size_t size, const std::string &name);
 
+SizedType CreateRecord(const std::string &name, std::shared_ptr<Struct> record);
 SizedType CreateTuple(const std::vector<SizedType> &fields);
 
 SizedType CreateStackMode();

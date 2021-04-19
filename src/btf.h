@@ -26,7 +26,7 @@ class BTF
 
 public:
   BTF();
-  BTF(const BPFtrace* bpftrace) : BTF()
+  BTF(BPFtrace* bpftrace) : BTF()
   {
     bpftrace_ = bpftrace;
   };
@@ -52,7 +52,7 @@ private:
 
   struct btf* btf;
   enum state state = NODATA;
-  const BPFtrace* bpftrace_ = nullptr;
+  BPFtrace* bpftrace_ = nullptr;
 };
 
 inline bool BTF::has_data(void) const

@@ -393,7 +393,11 @@ SizedType BTF::get_stype(__u32 id)
     const char *cast = btf_str(btf, t->name_off);
     assert(cast);
     std::string comp = btf_is_struct(t) ? "struct" : "union";
-    stype = CreateRecord(t->size, comp + " " + cast);
+    std::string name = comp + " " + cast;
+    // We're usually resolving types before running ClangParser, so the struct
+    // definitions are not yet pulled into the struct map. We initialize them
+    // now and fill them later.
+    stype = CreateRecord(name, bpftrace_->structs.LookupOrAdd(name, t->size));
   }
   else if (btf_is_ptr(t))
   {

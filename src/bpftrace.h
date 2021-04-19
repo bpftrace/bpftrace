@@ -149,7 +149,7 @@ public:
 
   MapManager maps;
   std::unique_ptr<BpfOrc> bpforc_;
-  std::map<std::string, Struct> structs_;
+  StructManager structs;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
   std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;

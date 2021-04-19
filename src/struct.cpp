@@ -76,4 +76,54 @@ void Tuple::Dump(std::ostream &os)
   os << "} sizeof: [" << size << "]" << std::endl;
 }
 
+bool Struct::HasField(const std::string &name) const
+{
+  return fields.find(name) != fields.end();
+}
+
+const Field &Struct::GetField(const std::string &name) const
+{
+  return fields.at(name);
+}
+
+void Struct::AddField(const std::string &field_name,
+                      const SizedType &type,
+                      ssize_t offset,
+                      bool is_bitfield,
+                      const Bitfield &bitfield,
+                      bool is_data_loc)
+{
+  fields[field_name] = Field{ .type = type,
+                              .offset = offset,
+                              .is_bitfield = is_bitfield,
+                              .bitfield = bitfield,
+                              .is_data_loc = is_data_loc };
+}
+
+void StructManager::Add(const std::string &name, size_t size)
+{
+  if (struct_map_.find(name) != struct_map_.end())
+    throw std::runtime_error("Type redefinition: type with name \'" + name +
+                             "\' already exists");
+  struct_map_[name] = std::make_shared<Struct>(size);
+}
+
+std::shared_ptr<Struct> StructManager::Lookup(const std::string &name) const
+{
+  auto s = struct_map_.find(name);
+  return s != struct_map_.end() ? s->second : nullptr;
+}
+
+std::shared_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
+                                                   size_t size)
+{
+  auto s = struct_map_.insert({ name, std::make_shared<Struct>(size) });
+  return s.first->second;
+}
+
+bool StructManager::Has(const std::string &name) const
+{
+  return struct_map_.find(name) != struct_map_.end();
+}
+
 } // namespace bpftrace
