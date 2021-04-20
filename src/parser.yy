@@ -120,7 +120,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Ternary *> ternary
 %type <ast::StatementList *> block stmts block_or_if
-%type <ast::Statement *> if_stmt block_stmt stmt semicolon_ended_stmt compound_assignment jump_stmt loop_stmt
+%type <ast::Statement *> if_stmt block_stmt stmt semicolon_ended_stmt compound_assignment jump_stmt loop_stmt tuple_assignment
 %type <ast::Expression *> expr
 %type <ast::Call *> call
 %type <ast::Map *> map
