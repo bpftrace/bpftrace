@@ -20,7 +20,7 @@ if(${LLVM_VERSION} VERSION_LESS 11.0.0)
   set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
 else()
   set(CODEGEN_SRC "")
-  message("Disabled codegen test for LLVM >= 11")
+  message(STATUS "Disabled codegen test for LLVM >= 11")
 endif()
 
 add_executable(bpftrace_test
