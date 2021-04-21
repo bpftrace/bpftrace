@@ -13,7 +13,7 @@ cd ..
 pushd docker
 docker build                  \
   --network host              \
-  --build-arg LLVM_VERSION=8  \
+  --build-arg LLVM_VERSION=12 \
   -t bpftrace-builder-bionic  \
   -f Dockerfile.bionic        \
   .

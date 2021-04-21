@@ -16,11 +16,11 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
   DEPENDS ${CODEGEN_SOURCES})
 
-if(${LLVM_VERSION_MAJOR} VERSION_LESS 11)
+if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
   set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
 else()
   set(CODEGEN_SRC "")
-  message(STATUS "Disabled codegen test for LLVM >= 11")
+  message(STATUS "Disabled codegen test for LLVM != 12")
 endif()
 
 add_executable(bpftrace_test
@@ -177,13 +177,13 @@ add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
 add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
 
 if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL "7")
+  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
     message(STATUS "Adding codegen-validator test")
     configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
     add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
     add_test(NAME codegen-validator COMMAND ./codegen-validator.sh ${CMAKE_SOURCE_DIR})
   else()
-    message(STATUS "Not building with LLVM 7, skipping codegen-validator test")
+    message(STATUS "Not building with LLVM 12, skipping codegen-validator test")
   endif()
 else()
   message(STATUS "codegen-validator test disabled")

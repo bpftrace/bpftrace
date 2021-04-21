@@ -6,10 +6,11 @@
 # SKIP_BCC_BUILD: Set to skip the building bcc from source
 
 $ubuntu_deps = <<EOF
+wget https://apt.llvm.org/llvm.sh
+bash ./llvm.sh 12
 apt-get -qq update
 apt-get -qq install linux-headers-$(uname -r) binutils-dev python
-apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev
-apt-get -qq install llvm-8-dev llvm-8-runtime libclang-8-dev clang-8
+apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev
 EOF
 
 $fedora_deps = <<EOF
