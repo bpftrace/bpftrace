@@ -168,8 +168,10 @@ public:
                              Value *return_value,
                              libbpf::bpf_func_id func_id,
                              const location &loc,
+                             const std::string &helper_name = "helper",
                              bool compare_zero = false,
-                             bool require_success = false);
+                             bool require_success = false,
+                             llvm::BasicBlock *helper_merge_block = nullptr);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
@@ -192,6 +194,7 @@ public:
   // BEGIN { if (nsecs > 0) { $a = 1 } else { $a = 2 } print($a); exit() }
   void hoist(const std::function<void()> &functor);
   int helper_error_id_ = 0;
+  BasicBlock *post_hoist_block_ = nullptr;
 
 private:
   Module &module_;

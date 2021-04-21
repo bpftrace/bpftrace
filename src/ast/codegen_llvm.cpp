@@ -2057,7 +2057,13 @@ void CodegenLLVM::generateProbe(Probe &probe,
   func->setSection(
       get_section_name_for_probe(section_name, index, usdt_location_index));
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+  BasicBlock *post_hoist = BasicBlock::Create(module_->getContext(),
+                                              "post_hoist",
+                                              func);
+  b_.post_hoist_block_ = post_hoist;
   b_.SetInsertPoint(entry);
+  b_.CreateBr(post_hoist);
+  b_.SetInsertPoint(post_hoist);
 
   // check: do the following 8 lines need to be in the wildcard loop?
   ctx_ = func->arg_begin();

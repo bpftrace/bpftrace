@@ -1,5 +1,7 @@
+#include <array>
 #include <iostream>
 #include <sstream>
+#include <tuple>
 
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
@@ -11,6 +13,7 @@
 
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER
@@ -374,6 +377,20 @@ CallInst *IRBuilderBPF::CreateGetScratchMap(Value *ctx,
                                             const location &loc,
                                             int key)
 {
+  assert(post_hoist_block_ != nullptr);
+  auto ip = saveIP();
+  BasicBlock *get_map = SplitEdge(post_hoist_block_->getSinglePredecessor(),
+                                  post_hoist_block_,
+                                  nullptr,
+                                  nullptr,
+                                  nullptr,
+                                  "validate_map_lookup_" + name);
+  // remove the unconditional break to posthoist which SplitEdge gives us,
+  // because CreateHelperErrorCond() will emit a conditional break to posthoist
+  // instead
+  get_map->getTerminator()->eraseFromParent();
+  SetInsertPoint(get_map);
+
   AllocaInst *keyAlloca = CreateAllocaBPF(getInt32Ty(),
                                           nullptr,
                                           "lookup_" + name + "_key");
@@ -386,8 +403,11 @@ CallInst *IRBuilderBPF::CreateGetScratchMap(Value *ctx,
                         call,
                         libbpf::BPF_FUNC_map_lookup_elem,
                         loc,
+                        "lookup_" + name + "_map_validate",
                         /*compare_zero=*/true,
-                        /*require_success=*/true);
+                        /*require_success=*/true,
+                        post_hoist_block_);
+  restoreIP(ip);
   return call;
 }
 
@@ -1229,8 +1249,10 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
                                          Value *return_value,
                                          libbpf::bpf_func_id func_id,
                                          const location &loc,
+                                         const std::string &helper_name,
                                          bool compare_zero,
-                                         bool require_success)
+                                         bool require_success,
+                                         BasicBlock *helper_merge_block)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
   if (!require_success &&
@@ -1239,12 +1261,12 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
     return;
 
   Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *helper_failure_block = BasicBlock::Create(module_.getContext(),
-                                                        "helper_failure",
-                                                        parent);
-  BasicBlock *helper_merge_block = BasicBlock::Create(module_.getContext(),
-                                                      "helper_merge",
-                                                      parent);
+  BasicBlock *helper_failure_block = BasicBlock::Create(
+      module_.getContext(), helper_name + "_failure", parent);
+  if (helper_merge_block == nullptr)
+    helper_merge_block = BasicBlock::Create(module_.getContext(),
+                                            helper_name + "_merge",
+                                            parent);
   // A return type of most helper functions are Int64Ty but they actually
   // return int and we need to use Int32Ty value to check if a return
   // value is negative. TODO: use Int32Ty as a return type
@@ -1257,6 +1279,7 @@ void IRBuilderBPF::CreateHelperErrorCond(Value *ctx,
   CreateCondBr(condition, helper_merge_block, helper_failure_block);
   SetInsertPoint(helper_failure_block);
   CreateHelperError(ctx, ret, func_id, loc, /*is_fatal=*/require_success);
+
   if (require_success)
   {
     CreateRet(ConstantInt::get(module_.getContext(), APInt(64, 0)));
