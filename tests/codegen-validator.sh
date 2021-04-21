@@ -4,7 +4,7 @@
 IGNORE="LLVM-"
 EXIT=0
 
-LLVM=$(command -v llvm-as-7)
+LLVM=$(command -v llvm-as-12)
 if [[ -z "$LLVM" ]]; then
   echo "llvm-as-7 not found"
   exit 1
