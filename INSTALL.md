@@ -249,7 +249,7 @@ sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev
 sudo apt-get install -y llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
 make -j8
 sudo make install
 ```
@@ -266,7 +266,7 @@ You'll want the newest kernel possible (see kernel requirements), eg, by using F
 sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel binutils-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
-mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
+mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
 make -j8
 sudo make install
 ```
