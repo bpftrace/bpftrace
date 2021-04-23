@@ -2200,6 +2200,12 @@ TEST(semantic_analyser, int_ident)
   test("BEGIN { print(int32) }", 1);
 }
 
+TEST(semantic_analyser, tracepoint_common_field)
+{
+  test("tracepoint:file:filename { args->filename }", 0);
+  test("tracepoint:file:filename { args->common_field }", 1);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"

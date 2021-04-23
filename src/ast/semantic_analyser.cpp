@@ -1971,7 +1971,9 @@ void SemanticAnalyser::visit(FieldAccess &acc)
           << "a field named '" << acc.field << "'";
     }
     else {
-      acc.type = fields[acc.field].type;
+      const auto &field = fields[acc.field];
+
+      acc.type = field.type;
       if (acc.expr->type.IsCtxAccess() &&
           (acc.type.IsArrayTy() || acc.type.IsRecordTy()))
       {
@@ -1980,6 +1982,12 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       }
       acc.type.is_internal = type.is_internal;
       acc.type.SetAS(acc.expr->type.GetAS());
+
+      // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
+      // access to the first 8 bytes results in verifier error.
+      if (type.is_tparg && field.offset < 8)
+        LOG(ERROR, acc.loc, err_)
+            << "BPF does not support accessing common tracepoint fields";
     }
   }
 }
