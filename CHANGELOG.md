@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 
 #### Changed
+- Disallow accessing common tracepoint fields
+  - [#1810](https://github.com/iovisor/bpftrace/pull/1810)
 
 #### Deprecated
 

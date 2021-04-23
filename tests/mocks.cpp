@@ -112,7 +112,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
     .fields = { { "saddr_v6",
                   Field{
                       .type = CreateArray(16, CreateUInt(8)),
-                      .offset = 0,
+                      .offset = 8,
                       .is_bitfield = false,
                       .bitfield = {},
                   } } },
@@ -121,7 +121,14 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   auto ptr_type = CreatePointer(CreateInt8());
   bpftrace.structs_["struct _tracepoint_file_filename"] = Struct{
     .size = 8,
-    .fields = { { "filename",
+    .fields = { { "common_field",
+                  Field{
+                      .type = CreateUInt64(),
+                      .offset = 0,
+                      .is_bitfield = false,
+                      .bitfield = {},
+                  } },
+                { "filename",
                   Field{
                       .type = ptr_type,
                       .offset = 8,
