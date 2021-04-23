@@ -21,6 +21,8 @@ and this project adheres to
   - [#1775](https://github.com/iovisor/bpftrace/pull/1775)
 - Fix --info reporting wrong libbpf build info
   - [#1776](https://github.com/iovisor/bpftrace/pull/1776)
+- Reduce frequency of lost stack traces
+  - [#1812](https://github.com/iovisor/bpftrace/pull/1812)
 
 #### Tools
 
