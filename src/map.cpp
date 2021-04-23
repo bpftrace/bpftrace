@@ -102,6 +102,28 @@ Map::Map(const std::string &name,
   }
 }
 
+// bpf_get_stackid() is kind of broken by design.
+//
+// First, stacks can suffer from hash collisions and we can lose stacks. We
+// receive collision errors in userspace b/c we do not set BPF_F_REUSE_STACKID.
+// Note that we should **NEVER** set this flag b/c then we can silently receive
+// unrelated stacks in userspace.
+//
+// Second, there is not a great way to reduce the frequency of collision (other
+// than increasing map size) b/c multiple probes can be sharing the same stack
+// (remember they are hashed). As a result, we cannot delete entries in this
+// map b/c we don't know when all the sharers are gone.
+//
+// Fortunately, we haven't seen many bug reports about missing stacks (or maybe
+// people don't care that much). The proper solution would be to use
+// bpf_get_stack() to get the actual stack trace and pass it to userspace
+// through the ring buffer.  However, there is additional complexity with this
+// b/c we need to set up a percpu map to use as scratch space for
+// bpf_get_stack() to write into. Using the stack directly wouldn't work well
+// b/c it would take too much stack space.
+//
+// The temporary fix is to bump the map size to 128K. Any futher bumps should
+// warrant consideration of the previous paragraph.
 Map::Map(const SizedType &type)
 {
 #ifdef DEBUG
@@ -116,7 +138,7 @@ Map::Map(const SizedType &type)
   int key_size = 4;
   int value_size = sizeof(uintptr_t) * type.stack_type.limit;
   std::string name = "stack";
-  int max_entries = 4096;
+  int max_entries = 128 << 10;
   int flags = 0;
   enum bpf_map_type map_type = BPF_MAP_TYPE_STACK_TRACE;
 
