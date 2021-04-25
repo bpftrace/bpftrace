@@ -146,6 +146,7 @@ foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
   list(APPEND LLVM_TARGET_LIBS "<INSTALL_DIR>/lib/lib${llvm_target}.a")
 endforeach(llvm_target)
 
+if(EMBED_SKIP_BUILD)
 ExternalProject_Add(embedded_llvm
   URL "${LLVM_DOWNLOAD_URL}"
   URL_HASH "${LLVM_URL_CHECKSUM}"
@@ -168,3 +169,4 @@ foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
   set_property(TARGET ${llvm_target} PROPERTY IMPORTED_LOCATION ${EMBEDDED_LLVM_INSTALL_DIR}/lib/lib${llvm_target}.a)
   add_dependencies(${llvm_target} embedded_llvm)
 endforeach(llvm_target)
+endif(EMBED_SKIP_BUILD)

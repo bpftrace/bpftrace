@@ -106,6 +106,7 @@ foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
   list(APPEND CLANG_TARGET_LIBS "<INSTALL_DIR>/lib/lib${clang_target}.a")
 endforeach(clang_target)
 
+if(EMBED_SKIP_BUILD)
 ExternalProject_Add(embedded_clang
    URL "${CLANG_DOWNLOAD_URL}"
    URL_HASH "${CLANG_URL_CHECKSUM}"
@@ -146,3 +147,4 @@ foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
     add_dependencies(${clang_target} embedded_clang)
   endif()
 endforeach(clang_target)
+endif(EMBED_SKIP_BUILD)

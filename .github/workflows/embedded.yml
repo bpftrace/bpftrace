@@ -146,6 +146,7 @@ jobs:
         -e EMBED_LIBELF=${EMBED_LIBELF}
         -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY}
         -e EMBED_BINUTILS=${EMBED_BINUTILS}
+        -e EMBED_SKIP_BUILD=ON
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
@@ -168,6 +169,7 @@ jobs:
         -e EMBED_LIBELF=${EMBED_LIBELF}
         -e EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY}
         -e EMBED_BINUTILS=${EMBED_BINUTILS}
+        -e EMBED_SKIP_BUILD=ON
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "strip --keep-symbol BEGIN_trigger --keep-symbol END_trigger $(pwd)/build-embedded/src/bpftrace"
