@@ -57,7 +57,7 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
 endif()
 
 if(STATIC_LINKING)
-  if(EMBED_LLVM OR EMBED_CLANG)
+  if(CI_LLVM_BUILD)
     set_target_properties(bpftrace_test PROPERTIES LINK_FLAGS "${EMBEDDED_LINK_FLAGS}")
   endif()
   if(STATIC_LIBC)
