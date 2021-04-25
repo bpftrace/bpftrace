@@ -78,7 +78,9 @@ RUN mkdir -p /src && git clone https://github.com/$bcc_org/bcc /src/bcc
 
 RUN cd /src/bcc && git checkout $bcc_ref && git submodule update && \
     mkdir build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../ && make -j$(nproc) && \
+    cmake ../ -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DENABLE_EXAMPLES=0 -DENABLE_MAN=0 -DENABLE_TESTS=0 \
+    && make -j$(nproc) && \
     make install &&  mkdir -p /usr/local/lib && \
     cp src/cc/libbcc.a /usr/local/lib/libbcc.a && \
     cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a && \
