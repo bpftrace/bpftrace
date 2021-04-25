@@ -55,23 +55,6 @@ jobs:
           BASE: bionic
           DISTRO: ubuntu-glibc
           VENDOR_GTEST: ON
-        - TYPE: Release
-          NAME: vanilla_llvm+clang+glibc2.23
-          LLVM_VERSION: 8
-          STATIC_LINKING: ON
-          STATIC_LIBC: OFF
-          EMBED_LLVM: ON
-          EMBED_CLANG: ON
-          EMBED_LIBCLANG_ONLY: OFF
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size,other.string compare map lookup
-          BASE: xenial
-          DISTRO: ubuntu-glibc
-          CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
-          VENDOR_GTEST: ON
         - TYPE: Debug
           NAME: alpine
           LLVM_VERSION: 9
@@ -109,22 +92,6 @@ jobs:
           VENDOR_GTEST: ON
     steps:
     - uses: actions/checkout@v2
-    - name: Get date
-      id: get-date
-      run: echo "::set-output name=date::$(/bin/date -u "+%Y.week%g")"
-      shell: bash
-    - name: Cache docker image
-      env: ${{matrix.env}}
-      id: docker-cache
-      uses: actions/cache@v2
-      with:
-        path: /tmp/docker-save
-        # Key the cache entry by:
-        #   * the operating system
-        #   * the week (so cache gets invalidated every week)
-        #   * the image configuration (ie config + build type)
-        #   * the hash of all the files in docker/
-        key: ${{ runner.os }}-docker-cache-${{ steps.get-date.outputs.date }}-${{ env.NAME }}-${{ env.TYPE }}-${{ hashFiles('docker/**') }}
     - name: Build docker container
       if: steps.docker-cache.outputs.cache-hit != 'true'
       run: >
@@ -134,13 +101,7 @@ jobs:
         --build-arg bcc_ref=${{ matrix.env['BCC_REF'] }}
         --build-arg BASE=${{ matrix.env['BASE'] }}
         --build-arg ALPINE_VERSION=${{ matrix.env['ALPINE_VERSION'] }}
-        docker/ &&
-        mkdir -p /tmp/docker-save &&
-        docker save bpftrace-embedded-${{ matrix.env['BASE'] }} -o /tmp/docker-save/i.tar
-    - name: Load the cached docker image (if available)
-      if: steps.docker-cache.outputs.cache-hit == 'true'
-      run: >
-        docker load --input /tmp/docker-save/i.tar
+        docker/
     - name: bpftrace embedded build
       env: ${{ matrix.env }}
       run: >
