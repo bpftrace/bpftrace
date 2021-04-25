@@ -2,6 +2,7 @@ if(NOT EMBED_CLANG)
   return()
 endif()
 include(embed_helpers)
+include(embed_targets)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(EMBEDDED_BUILD_TYPE "RelWithDebInfo")
@@ -37,45 +38,6 @@ set(CLANG_INSTALL_COMMAND INSTALL_COMMAND /bin/bash -c
     "${CMAKE_MAKE_PROGRAM} install -j${nproc} && ${LIBCLANG_INSTALL_COMMAND}"
    )
 
-if(NOT EMBED_LLVM)
-  # If not linking and building against embedded LLVM, patches may need to
-  # be applied to link with the distribution LLVM. This is handled by a
-  # helper function
-  prepare_clang_patches(patch_command)
-  set(CLANG_PATCH_COMMAND PATCH_COMMAND /bin/bash -c "${patch_command}")
-endif()
-
-if(EMBED_LIBCLANG_ONLY)
-  set(CLANG_LIBRARY_TARGETS clang)
-  set(CLANG_BUILD_COMMAND BUILD_COMMAND /bin/bash -c
-      "${CMAKE_MAKE_PROGRAM} libclang_static -j${nproc}"
-     )
-  set(CLANG_INSTALL_COMMAND INSTALL_COMMAND /bin/bash -c "${LIBCLANG_INSTALL_COMMAND}")
-
-  # Include system clang here to deal with the rest of the targets
-  find_package(Clang REQUIRED)
-  include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
-else()
-  set(CLANG_LIBRARY_TARGETS
-      clang
-      clangAST
-      clangAnalysis
-      clangBasic
-      clangDriver
-      clangEdit
-      clangFormat
-      clangFrontend
-      clangIndex
-      clangLex
-      clangParse
-      clangRewrite
-      clangSema
-      clangSerialization
-      clangToolingCore
-      clangToolingInclusions
-      )
-endif()
-
 # These configure flags are a blending of the Alpine, debian, and gentoo
 # packages configure flags, customized to reduce build targets as much as
 # possible
@@ -97,14 +59,7 @@ set(CLANG_CONFIGURE_FLAGS
    )
 
 # If LLVM is being embedded, inform Clang to use its Cmake file instead of system
-if(EMBED_LLVM)
-  list(APPEND CLANG_CONFIGURE_FLAGS  -DLLVM_DIR=${EMBEDDED_LLVM_INSTALL_DIR}/lib/cmake/llvm)
-endif()
-
-set(CLANG_TARGET_LIBS "")
-foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
-  list(APPEND CLANG_TARGET_LIBS "<INSTALL_DIR>/lib/lib${clang_target}.a")
-endforeach(clang_target)
+list(APPEND CLANG_CONFIGURE_FLAGS  -DLLVM_DIR=${EMBEDDED_LLVM_INSTALL_DIR}/lib/cmake/llvm)
 
 if(EMBED_SKIP_BUILD)
 ExternalProject_Add(embedded_clang

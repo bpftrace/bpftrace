@@ -1,7 +1,5 @@
-if(NOT EMBED_LLVM)
-  return()
-endif()
 include(embed_helpers)
+include(embed_targes)
 
 # TO DO
 # Set up cross-compilation
@@ -45,70 +43,6 @@ else()
 endif()
 
 # Default to building almost all targets, + BPF specific ones
-set(LLVM_LIBRARY_TARGETS
-    LLVMAggressiveInstCombine
-    LLVMAnalysis
-    LLVMAsmParser
-    LLVMAsmPrinter
-    LLVMBinaryFormat
-    LLVMBitReader
-    LLVMBitWriter
-    LLVMBPFAsmParser
-    LLVMBPFAsmPrinter
-    LLVMBPFCodeGen
-    LLVMBPFDesc
-    LLVMBPFDisassembler
-    LLVMBPFInfo
-    LLVMCodeGen
-    LLVMCore
-    LLVMCoroutines
-    LLVMCoverage
-    LLVMDebugInfoCodeView
-    LLVMDebugInfoDWARF
-    LLVMDebugInfoMSF
-    LLVMDebugInfoPDB
-    LLVMDemangle
-    LLVMDlltoolDriver
-    LLVMExecutionEngine
-    LLVMFuzzMutate
-    LLVMGlobalISel
-    LLVMInstCombine
-    LLVMInstrumentation
-    LLVMInterpreter
-    LLVMipo
-    LLVMIRReader
-    LLVMLibDriver
-    LLVMLineEditor
-    LLVMLinker
-    LLVMLTO
-    LLVMMC
-    LLVMMCA
-    LLVMMCDisassembler
-    LLVMMCJIT
-    LLVMMCParser
-    LLVMMIRParser
-    LLVMObjCARCOpts
-    LLVMObject
-    LLVMObjectYAML
-    LLVMOption
-    LLVMOptRemarks
-    LLVMOrcJIT
-    LLVMPasses
-    LLVMProfileData
-    LLVMRuntimeDyld
-    LLVMScalarOpts
-    LLVMSelectionDAG
-    LLVMSymbolize
-    LLVMTableGen
-    LLVMTarget
-    LLVMTextAPI
-    LLVMTransformUtils
-    LLVMVectorize
-    LLVMWindowsManifest
-    LLVMXRay
-    LLVMSupport
-    )
-
 # These build flags are based off of Alpine, Debian and Gentoo packages
 # optimized for compatibility and reducing build targets
 set(LLVM_CONFIGURE_FLAGS
@@ -140,11 +74,6 @@ set(LLVM_CONFIGURE_FLAGS
     -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_APPEND_VC_REV=OFF
     )
-
-set(LLVM_TARGET_LIBS "")
-foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
-  list(APPEND LLVM_TARGET_LIBS "<INSTALL_DIR>/lib/lib${llvm_target}.a")
-endforeach(llvm_target)
 
 if(EMBED_SKIP_BUILD)
 ExternalProject_Add(embedded_llvm
