@@ -81,7 +81,7 @@ RUN cd /src/bcc \
     && git submodule update \
     && mkdir build \
     && cd build \
-    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_EXAMPLES=0 -DENABLE_MAN=0 -DENABLE_TESTS=0 \
     && make -j$(nproc) \
     && make install \
     && mkdir -p /usr/local/lib \
