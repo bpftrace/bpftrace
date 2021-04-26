@@ -76,14 +76,19 @@ RUN if [ "${BASE}" = "xenial" ]; then \
 # Build BCC and install static libs
 RUN mkdir -p /src && git clone https://github.com/$bcc_org/bcc /src/bcc
 
-RUN cd /src/bcc && git checkout $bcc_ref && git submodule update && \
-    mkdir build && cd build && \
-    cmake -DCMAKE_INSTALL_PREFIX=/usr/local ../ && make -j$(nproc) && \
-    make install &&  mkdir -p /usr/local/lib && \
-    cp src/cc/libbcc.a /usr/local/lib/libbcc.a && \
-    cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a && \
-    cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a && \
-    cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbcc_bpf.a
+RUN cd /src/bcc \
+    && git checkout $bcc_ref \
+    && git submodule update \
+    && mkdir build \
+    && cd build \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+    && make -j$(nproc) \
+    && make install \
+    && mkdir -p /usr/local/lib \
+    && cp src/cc/libbcc.a /usr/local/lib/libbcc.a \
+    && cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a \
+    && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a \
+    && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbcc_bpf.a
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
