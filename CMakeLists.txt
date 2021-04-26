@@ -153,7 +153,7 @@ else()
     find_package(LLVM REQUIRED)
   endif()
 
-  if(${LLVM_VERSION_MAJOR} VERSION_LESS 6)
+  if((${LLVM_VERSION_MAJOR} VERSION_LESS 6) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER 12))
     message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
     message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
   endif()

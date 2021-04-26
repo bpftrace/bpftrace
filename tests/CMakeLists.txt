@@ -16,7 +16,7 @@ add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp
     -P ${CMAKE_SOURCE_DIR}/tests/codegen/generate_codegen_includes.cmake
   DEPENDS ${CODEGEN_SOURCES})
 
-if(${LLVM_VERSION} VERSION_LESS 11.0.0)
+if(${LLVM_VERSION_MAJOR} VERSION_LESS 11)
   set(CODEGEN_SRC ${CMAKE_BINARY_DIR}/tests/codegen_includes.cpp)
 else()
   set(CODEGEN_SRC "")
@@ -177,7 +177,7 @@ add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
 add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
 
 if(ENABLE_TEST_VALIDATE_CODEGEN)
-  if((${LLVM_VERSION} VERSION_GREATER 6.99.0) AND (${LLVM_VERSION} VERSION_LESS 8.0.0))
+  if(${LLVM_VERSION_MAJOR} VERSION_EQUAL "7")
     message(STATUS "Adding codegen-validator test")
     configure_file(codegen-validator.sh codegen-validator.sh COPYONLY)
     add_custom_target(codegen-validator COMMAND ./codegen-validator.sh)
