@@ -12,6 +12,7 @@ set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with musl. Has issues with dlopen.")
 
+set(EMBED_USE_LLVM OFF CACHE BOOL "Use a prebuilt embedded LLVM, speeds up the build process")
 set(EMBED_BUILD_LLVM OFF CACHE BOOL "Build Clang&LLVM static libs as an ExternalProject and link to these instead of system libs.")
 set(EMBED_LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 
@@ -26,7 +27,11 @@ set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-if(EMBED_BUILD_LLVM OR STATIC_LIBC)
+if(EMBED_BUILD_LLVM)
+  set(EMBED_USE_LLVM ON)
+endif()
+
+if(EMBED_USE_LLVM OR STATIC_LIBC)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
   include(embed_helpers)
   if (NOT STATIC_LINKING)
