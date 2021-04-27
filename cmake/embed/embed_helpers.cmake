@@ -1,6 +1,5 @@
 include(ExternalProject)
 include(ProcessorCount)
-include(embed_patches)
 
 # Workaround to remove dynamic libs from library dependencies
 function(unlink_transitive_dependency targets dep_to_remove)

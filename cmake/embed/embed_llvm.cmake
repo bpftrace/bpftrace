@@ -1,4 +1,4 @@
-if(NOT EMBED_LLVM)
+if(NOT EMBED_BUILD_LLVM)
   return()
 endif()
 include(embed_helpers)
