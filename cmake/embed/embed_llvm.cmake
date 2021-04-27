@@ -1,4 +1,4 @@
-if(NOT EMBED_BUILD_LLVM)
+if(NOT EMBED_USE_LLVM)
   return()
 endif()
 include(embed_helpers)
@@ -141,25 +141,27 @@ foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
   list(APPEND LLVM_TARGET_LIBS "<INSTALL_DIR>/lib/lib${llvm_target}.a")
 endforeach(llvm_target)
 
-ExternalProject_Add(embedded_llvm
-  URL "${LLVM_DOWNLOAD_URL}"
-  URL_HASH "${LLVM_URL_CHECKSUM}"
-  CMAKE_ARGS "${LLVM_CONFIGURE_FLAGS}"
-  BUILD_BYPRODUCTS ${LLVM_TARGET_LIBS}
-  UPDATE_DISCONNECTED 1
-  DOWNLOAD_NO_PROGRESS 1
-)
+if(EMBED_BUILD_LLVM)
+  ExternalProject_Add(embedded_llvm
+    URL "${LLVM_DOWNLOAD_URL}"
+    URL_HASH "${LLVM_URL_CHECKSUM}"
+    CMAKE_ARGS "${LLVM_CONFIGURE_FLAGS}"
+    BUILD_BYPRODUCTS ${LLVM_TARGET_LIBS}
+    UPDATE_DISCONNECTED 1
+    DOWNLOAD_NO_PROGRESS 1
+  )
 
-# Set up build targets and map to embedded paths
-ExternalProject_Get_Property(embedded_llvm INSTALL_DIR)
-set(EMBEDDED_LLVM_INSTALL_DIR ${INSTALL_DIR})
-set(LLVM_EMBEDDED_CMAKE_TARGETS "")
+  # Set up build targets and map to embedded paths
+  ExternalProject_Get_Property(embedded_llvm INSTALL_DIR)
+  set(EMBEDDED_LLVM_INSTALL_DIR ${INSTALL_DIR})
+  set(LLVM_EMBEDDED_CMAKE_TARGETS "")
 
-include_directories(SYSTEM ${EMBEDDED_LLVM_INSTALL_DIR}/include)
+  include_directories(SYSTEM ${EMBEDDED_LLVM_INSTALL_DIR}/include)
 
-foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
-  list(APPEND LLVM_EMBEDDED_CMAKE_TARGETS ${llvm_target})
-  add_library(${llvm_target} STATIC IMPORTED)
-  set_property(TARGET ${llvm_target} PROPERTY IMPORTED_LOCATION ${EMBEDDED_LLVM_INSTALL_DIR}/lib/lib${llvm_target}.a)
-  add_dependencies(${llvm_target} embedded_llvm)
-endforeach(llvm_target)
+  foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
+    list(APPEND LLVM_EMBEDDED_CMAKE_TARGETS ${llvm_target})
+    add_library(${llvm_target} STATIC IMPORTED)
+    set_property(TARGET ${llvm_target} PROPERTY IMPORTED_LOCATION ${EMBEDDED_LLVM_INSTALL_DIR}/lib/lib${llvm_target}.a)
+    add_dependencies(${llvm_target} embedded_llvm)
+  endforeach(llvm_target)
+endif(EMBED_BUILD_LLVM)

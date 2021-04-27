@@ -40,7 +40,7 @@ if (STATIC_LINKING)
       clangSerialization
       clangToolingCore)
 
-  if(EMBED_BUILD_LLVM)
+  if(EMBED_USE_LLVM)
     list(APPEND clang_libs clangToolingInclusions)
     target_link_libraries(ast ${CLANG_EMBEDDED_CMAKE_TARGETS})
     target_link_libraries(ast ${LLVM_EMBEDDED_CMAKE_TARGETS})

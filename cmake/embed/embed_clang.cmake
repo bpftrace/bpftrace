@@ -1,4 +1,4 @@
-if(NOT EMBED_BUILD_LLVM)
+if(NOT EMBED_USE_LLVM)
   return()
 endif()
 include(embed_helpers)
@@ -76,32 +76,34 @@ foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
   list(APPEND CLANG_TARGET_LIBS "<INSTALL_DIR>/lib/lib${clang_target}.a")
 endforeach(clang_target)
 
-ExternalProject_Add(embedded_clang
-   URL "${CLANG_DOWNLOAD_URL}"
-   URL_HASH "${CLANG_URL_CHECKSUM}"
-   CMAKE_ARGS "${CLANG_CONFIGURE_FLAGS}"
-   ${CLANG_PATCH_COMMAND}
-   ${CLANG_BUILD_COMMAND}
-   ${CLANG_INSTALL_COMMAND}
-   BUILD_BYPRODUCTS ${CLANG_TARGET_LIBS}
-   UPDATE_DISCONNECTED 1
-   DOWNLOAD_NO_PROGRESS 1
- )
+if(EMBED_BUILD_LLVM)
+  ExternalProject_Add(embedded_clang
+    URL "${CLANG_DOWNLOAD_URL}"
+    URL_HASH "${CLANG_URL_CHECKSUM}"
+    CMAKE_ARGS "${CLANG_CONFIGURE_FLAGS}"
+    ${CLANG_PATCH_COMMAND}
+    ${CLANG_BUILD_COMMAND}
+    ${CLANG_INSTALL_COMMAND}
+    BUILD_BYPRODUCTS ${CLANG_TARGET_LIBS}
+    UPDATE_DISCONNECTED 1
+    DOWNLOAD_NO_PROGRESS 1
+  )
 
-ExternalProject_Add_StepDependencies(embedded_clang install embedded_llvm)
+  ExternalProject_Add_StepDependencies(embedded_clang install embedded_llvm)
 
-# Set up library targets and locations
-ExternalProject_Get_Property(embedded_clang INSTALL_DIR)
-set(EMBEDDED_CLANG_INSTALL_DIR ${INSTALL_DIR})
-set(CLANG_EMBEDDED_CMAKE_TARGETS "")
+  # Set up library targets and locations
+  ExternalProject_Get_Property(embedded_clang INSTALL_DIR)
+  set(EMBEDDED_CLANG_INSTALL_DIR ${INSTALL_DIR})
+  set(CLANG_EMBEDDED_CMAKE_TARGETS "")
 
-include_directories(SYSTEM ${EMBEDDED_CLANG_INSTALL_DIR}/include)
+  include_directories(SYSTEM ${EMBEDDED_CLANG_INSTALL_DIR}/include)
 
-foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
-  # Special handling is needed to not overlap with the library definition from
-  # system cmake files for Clang's "clang" target.
-  list(APPEND CLANG_EMBEDDED_CMAKE_TARGETS ${clang_target})
-  add_library(${clang_target} STATIC IMPORTED)
-  set_property(TARGET ${clang_target} PROPERTY IMPORTED_LOCATION ${EMBEDDED_CLANG_INSTALL_DIR}/lib/lib${clang_target}.a)
-  add_dependencies(${clang_target} embedded_clang)
-endforeach(clang_target)
+  foreach(clang_target IN LISTS CLANG_LIBRARY_TARGETS)
+    # Special handling is needed to not overlap with the library definition from
+    # system cmake files for Clang's "clang" target.
+    list(APPEND CLANG_EMBEDDED_CMAKE_TARGETS ${clang_target})
+    add_library(${clang_target} STATIC IMPORTED)
+    set_property(TARGET ${clang_target} PROPERTY IMPORTED_LOCATION ${EMBEDDED_CLANG_INSTALL_DIR}/lib/lib${clang_target}.a)
+    add_dependencies(${clang_target} embedded_clang)
+  endforeach(clang_target)
+endif(EMBED_BUILD_LLVM)
