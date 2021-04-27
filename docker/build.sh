@@ -6,8 +6,7 @@ WARNINGS_AS_ERRORS=${WARNINGS_AS_ERRORS:-OFF}
 STATIC_LINKING=${STATIC_LINKING:-OFF}
 STATIC_LIBC=${STATIC_LIBC:-OFF}
 LLVM_VERSION=${LLVM_VERSION:-8} # default llvm to latest version
-EMBED_LLVM=${EMBED_LLVM:-OFF}
-EMBED_CLANG=${EMBED_CLANG:-OFF}
+EMBED_BULID_LLVM=${EMBED_BUILD_LLVM:-OFF}
 EMBED_LIBCLANG_ONLY=${EMBED_LIBCLANG_ONLY:-OFF}
 ALLOW_UNSAFE_PROBE=${ALLOW_UNSAFE_PROBE:-OFF}
 DEPS_ONLY=${DEPS_ONLY:-OFF}
@@ -56,8 +55,7 @@ cmake -DCMAKE_BUILD_TYPE="$2" \
       -DWARNINGS_AS_ERRORS:BOOL=$WARNINGS_AS_ERRORS \
       -DSTATIC_LINKING:BOOL=$STATIC_LINKING \
       -DSTATIC_LIBC:BOOL=$STATIC_LIBC \
-      -DEMBED_LLVM:BOOL=$EMBED_LLVM \
-      -DEMBED_CLANG:BOOL=$EMBED_CLANG \
+      -DEMBED_BUILD_LLVM:BOOL=$EMBED_BUILD_LLVM \
       -DEMBED_LIBCLANG_ONLY:BOOL=$EMBED_LIBCLANG_ONLY \
       -DEMBED_LLVM_VERSION=$LLVM_VERSION \
       -DALLOW_UNSAFE_PROBE:BOOL=$ALLOW_UNSAFE_PROBE \
@@ -68,8 +66,8 @@ shift 2
 
 # It is necessary to build embedded llvm and clang targets first,
 # so that their headers can be referenced
-[[ $EMBED_LLVM  == "ON" ]] && with_timeout make embedded_llvm "$@"
-[[ $EMBED_CLANG == "ON" ]] && with_timeout make embedded_clang "$@"
+[[ $EMBED_BUILD_LLVM == "ON" ]] && with_timeout make embedded_llvm "$@"
+[[ $EMBED_BUILD_LLVM == "ON" ]] && with_timeout make embedded_clang "$@"
 [[ $DEPS_ONLY == "ON" ]] && exit 0
 make "$@" -j $(nproc)
 
