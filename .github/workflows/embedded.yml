@@ -13,9 +13,6 @@ jobs:
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_BUILD_LLVM: ON
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
           BASE: bionic
@@ -27,9 +24,6 @@ jobs:
           STATIC_LINKING: ON
           STATIC_LIBC: OFF
           EMBED_BUILD_LLVM: ON
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size,other.string compare map lookup
           BASE: xenial
@@ -42,9 +36,6 @@ jobs:
           STATIC_LINKING: ON
           STATIC_LIBC: ON
           EMBED_BUILD_LLVM: OFF
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
           TEST_GROUPS_DISABLE: "tools-parsing-test"
           RUNTIME_TEST_DISABLE: json-output.join_delim,other.string compare map lookup,probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe on multiple files by wildcard",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",usdt."usdt - list probes by file with wildcarded probe type",uprobe."uprobes - list probes by pid; uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace",other.positional pointer arithmetics
@@ -58,9 +49,6 @@ jobs:
           STATIC_LINKING: ON
           STATIC_LIBC: ON
           EMBED_BUILD_LLVM: OFF
-          EMBED_BCC: OFF
-          EMBED_LIBELF: OFF
-          EMBED_BINUTILS: OFF
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: other.string compare map lookup,probe.kprobe_offset_fail_size,usdt."usdt probes - attach to fully specified probe of child",usdt."usdt probes - all probes by wildcard and file with child",usdt."usdt probes - attach to probe by wildcard and file with child",usdt."usdt probes - attach to probes by wildcard file with child",usdt."usdt probes - attach to probe on multiple files by wildcard",usdt."usdt probes - attach to probe with probe builtin and args by file with child",usdt."usdt probes - list probes by pid in separate mountns",usdt."usdt sized arguments",usdt."usdt - list probes by file with wildcarded probe type",uprobe."uprobes - list probes by pid; uprobes only",uprobe."uprobes - list probes by pid in separate mount namespace",other.positional pointer arithmetics
           BASE: alpine
@@ -114,9 +102,6 @@ jobs:
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
-        -e EMBED_BCC=${EMBED_BCC}
-        -e EMBED_LIBELF=${EMBED_LIBELF}
-        -e EMBED_BINUTILS=${EMBED_BINUTILS}
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e TEST_GROUPS_DISABLE="${TEST_GROUPS_DISABLE}"
@@ -138,9 +123,6 @@ jobs:
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
-        -e EMBED_BCC=${EMBED_BCC}
-        -e EMBED_LIBELF=${EMBED_LIBELF}
-        -e EMBED_BINUTILS=${EMBED_BINUTILS}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
@@ -158,9 +140,6 @@ jobs:
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
-        -e EMBED_BCC=${EMBED_BCC}
-        -e EMBED_LIBELF=${EMBED_LIBELF}
-        -e EMBED_BINUTILS=${EMBED_BINUTILS}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "strip --keep-symbol BEGIN_trigger --keep-symbol END_trigger $(pwd)/build-embedded/src/bpftrace"
