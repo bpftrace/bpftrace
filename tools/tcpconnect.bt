@@ -19,8 +19,12 @@
  * 23-Nov-2018	Dale Hamel	created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/socket.h>
 #include <net/sock.h>
+#else
+#include <sys/socket.h>
+#endif
 
 BEGIN
 {

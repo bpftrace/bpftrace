@@ -13,10 +13,14 @@
  * 17-Apr-2019  Brendan Gregg   Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <net/tcp_states.h>
 #include <net/sock.h>
 #include <linux/socket.h>
 #include <linux/tcp.h>
+#else
+#include <sys/socket.h>
+#endif
 
 BEGIN
 {

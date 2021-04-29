@@ -3522,7 +3522,8 @@ Histograms can also be printed on-demand, using the `print()` function. Eg:
 # BTF Support
 
 If kernel has BTF, kernel types are automatically available and there is no need to include additional headers
-to use them.
+to use them. To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` 
+is defined if BTF is detected. See tools/ for examples of its usage.
 
 Requirements for using BTF:
 

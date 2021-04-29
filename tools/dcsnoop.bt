@@ -15,6 +15,7 @@
  * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/fs.h>
 #include <linux/sched.h>
 
@@ -24,6 +25,7 @@ struct nameidata {
         struct qstr     last;
         // [...]
 };
+#endif
 
 BEGIN
 {

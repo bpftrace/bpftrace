@@ -1,5 +1,4 @@
 #!/usr/bin/env bpftrace
-#include <linux/blkdev.h>
 /*
  * biosnoop.bt   Block I/O tracing tool, showing per I/O latency.
  *               For Linux, uses bpftrace, eBPF.
@@ -10,6 +9,10 @@
  *
  * 15-Nov-2017	Brendan Gregg	Created this.
  */
+
+#ifndef BPFTRACE_HAVE_BTF
+#include <linux/blkdev.h>
+#endif
 
 BEGIN
 {

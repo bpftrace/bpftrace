@@ -13,8 +13,10 @@
  * 16-Feb-2019  Brendan Gregg   Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/time.h>
 #include <linux/sched.h>
+#endif
 
 BEGIN
 {
