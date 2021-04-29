@@ -13,7 +13,9 @@
  * 19-Apr-2019  Brendan Gregg   Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <net/sock.h>
+#endif
 
 BEGIN
 {

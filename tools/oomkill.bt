@@ -20,7 +20,9 @@
  * 07-Sep-2018	Brendan Gregg	Created this.
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/oom.h>
+#endif
 
 BEGIN
 {

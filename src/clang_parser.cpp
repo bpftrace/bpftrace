@@ -748,6 +748,9 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     // Since we're omitting <linux/types.h> there's no reason to
     // add the wokarounds for it
     args.push_back("-D__CLANG_WORKAROUNDS_H");
+    // Let script know we have BTF -- this is useful for prewritten tools to
+    // conditionally include headers if BTF isn't available.
+    args.push_back("-DBPFTRACE_HAVE_BTF");
 
     if (handler.parse_file("definitions.h", input, args, input_files, false) &&
         handler.has_redefinition_error())
@@ -778,6 +781,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   {
     // There is a conflict (redefinition) between user-supplied types and types
     // taken from BTF. We cannot use BTF in such a case.
+    args.pop_back();
     args.pop_back();
     args.pop_back();
     input_files.back() = get_empty_btf_generated_header();
