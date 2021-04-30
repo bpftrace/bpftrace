@@ -13,7 +13,7 @@ endif()
 
 if(${LLVM_VERSION} VERSION_EQUAL "12.0.0")
   set(CLANG_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/clang-${LLVM_VERSION}.src.tar.xz")
-  set(CLANG_URL_CHECKSUM "SHA256=1267b88d4590d638bab598cc5b54ba0b7520c9aa35d931206941b66f90e7e2f5")
+  set(CLANG_URL_CHECKSUM "SHA256=e26e452e91d4542da3ebbf404f024d3e1cbf103f4cd110c26bf0a19621cca9ed")
 elseif(${LLVM_VERSION} VERSION_EQUAL "8.0.1")
   set(CLANG_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/cfe-${LLVM_VERSION}.src.tar.xz")
   set(CLANG_URL_CHECKSUM "SHA256=70effd69f7a8ab249f66b0a68aba8b08af52aa2ab710dfb8a0fba102685b1646")
