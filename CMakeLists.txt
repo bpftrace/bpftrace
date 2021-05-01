@@ -31,6 +31,10 @@ if(EMBED_BUILD_LLVM)
   set(EMBED_USE_LLVM ON)
 endif()
 
+if(EMBED_USE_LLVM AND NOT EMBED_BUILD_LLVM)
+  set(EMBED_LLVM_PATH "/usr/local/lib")
+endif()
+
 if(EMBED_USE_LLVM OR STATIC_LIBC)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
   include(embed_helpers)
@@ -143,7 +147,7 @@ endif()
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 
-if (EMBED_BUILD_LLVM)
+if (EMBED_USE_LLVM)
   include(embed_llvm)
 else()
   # Some users have multiple versions of llvm installed and would like to specify
@@ -176,7 +180,7 @@ else()
   add_definitions(-DLLVM_ORC_V1)
 endif()
 
-if(EMBED_BUILD_LLVM)
+if(EMBED_USE_LLVM)
   include(embed_clang)
 else()
   find_package(Clang REQUIRED)
