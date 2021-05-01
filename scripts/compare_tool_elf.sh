@@ -53,7 +53,7 @@ for script in ${TOOLDIR}/*.bt; do
     if [[ $(hash "a_${s}") != $(hash "b_${s}")  ]]; then
         echo "###############################"
         echo "Change detected for script: ${s}"
-        diff -u <($OBJDUMP "a_${s}") <($OBJDUMP "b_${s}")
+        diff -u <($OBJDUMP -S "a_${s}") <($OBJDUMP -S "b_${s}")
     fi
 done
 
