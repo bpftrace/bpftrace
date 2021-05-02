@@ -45,6 +45,7 @@ add_executable(${BPFTRACE}
   ${MAIN_SRC}
 )
 
+install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
 target_link_libraries(${BPFTRACE} libbpftrace)
 
 if (BUILD_FUZZ)
@@ -68,29 +69,73 @@ if (BUILD_FUZZ)
   endif()
 endif()
 
+# compile definitions
+
+set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
+if (KERNEL_HEADERS_DIR)
+  MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
+  target_compile_definitions(libbpftrace PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
+endif()
+
+execute_process(
+  COMMAND git describe --abbrev=4 --dirty --tags
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  OUTPUT_VARIABLE BPFTRACE_VERSION
+  ERROR_VARIABLE GIT_DESCRIBE_ERROR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE retcode
+)
+
+# If the build is not done from a git repo, get the version information from
+# the version variables in main CMakeLists.txt
+if(NOT "${retcode}" STREQUAL "0")
+  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}.${bpftrace_VERSION_PATCH}")
+endif()
+
+add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
+
+
+
+if (ALLOW_UNSAFE_PROBE)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_UNSAFE_PROBE)
+endif(ALLOW_UNSAFE_PROBE)
+
 if(HAVE_NAME_TO_HANDLE_AT)
   target_compile_definitions(libbpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)
+
 if(HAVE_BCC_PROG_LOAD)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_PROG_LOAD)
 endif(HAVE_BCC_PROG_LOAD)
+
 if(HAVE_BCC_CREATE_MAP)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_CREATE_MAP)
 endif(HAVE_BCC_CREATE_MAP)
+
 if(HAVE_BCC_ELF_FOREACH_SYM)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_ELF_FOREACH_SYM)
 endif(HAVE_BCC_ELF_FOREACH_SYM)
+
 if(HAVE_BCC_USDT_ADDSEM)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_USDT_ADDSEM)
 endif(HAVE_BCC_USDT_ADDSEM)
-if (LIBBPF_BTF_DUMP_FOUND)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP)
-  target_include_directories(libbpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
-  target_link_libraries(libbpftrace ${LIBBPF_LIBRARIES})
-  if (HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
-    target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
-  endif()
-endif(LIBBPF_BTF_DUMP_FOUND)
+
+if(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+endif(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
+
+if(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
+  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
+endif(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
+
+if (HAVE_BCC_KFUNC)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_KFUNC)
+endif(HAVE_BCC_KFUNC)
+
+if (HAVE_LIBBPF_LINK_CREATE OR HAVE_BCC_PROG_LOAD_XATTR)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BPF_H)
+endif()
+
 if (LIBBPF_FOUND)
   target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF)
 endif(LIBBPF_FOUND)
@@ -107,18 +152,30 @@ if (HAVE_BCC_PROG_LOAD_XATTR)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_PROG_LOAD_XATTR)
 endif()
 
-if (HAVE_LIBBPF_LINK_CREATE OR HAVE_BCC_PROG_LOAD_XATTR)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BPF_H)
-endif()
-
-if (HAVE_BCC_KFUNC)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_KFUNC)
-endif(HAVE_BCC_KFUNC)
 if(HAVE_BFD_DISASM)
   target_compile_definitions(libbpftrace PRIVATE HAVE_BFD_DISASM)
   if(LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
     target_compile_definitions(libbpftrace PRIVATE LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
   endif(LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
+endif(HAVE_BFD_DISASM)
+
+if (LIBBPF_BTF_DUMP_FOUND)
+  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP)
+  if (HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
+    target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
+  endif()
+endif(LIBBPF_BTF_DUMP_FOUND)
+
+# Linking
+
+if (LIBBPF_BTF_DUMP_FOUND)
+  target_include_directories(libbpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
+  target_link_libraries(libbpftrace ${LIBBPF_LIBRARIES})
+endif(LIBBPF_BTF_DUMP_FOUND)
+
+target_link_libraries(libbpftrace arch ast parser resources)
+
+if(HAVE_BFD_DISASM)
   if(STATIC_LINKING)
     add_library(LIBBFD STATIC IMPORTED)
     set_property(TARGET LIBBFD PROPERTY IMPORTED_LOCATION ${LIBBFD_LIBRARIES})
@@ -134,20 +191,9 @@ if(HAVE_BFD_DISASM)
     target_link_libraries(libbpftrace ${LIBOPCODES_LIBRARIES})
   endif(STATIC_LINKING)
 endif(HAVE_BFD_DISASM)
-if(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-endif(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-if(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-endif(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-
-if (ALLOW_UNSAFE_PROBE)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_UNSAFE_PROBE)
-endif(ALLOW_UNSAFE_PROBE)
-
-target_link_libraries(libbpftrace arch ast parser resources)
 
 target_link_libraries(libbpftrace ${LIBBCC_LIBRARIES})
+
 if(STATIC_LINKING)
   # These are not part of the static libbcc so have to be added separate
   target_link_libraries(libbpftrace ${LIBBCC_BPF_LIBRARY_STATIC})
@@ -188,35 +234,10 @@ if (USE_LIBFUZZER)
     target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer,address")
     target_link_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer")
   else()
-      target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer")
-      target_link_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer,address")
+    target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer")
+    target_link_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer,address")
   endif()
 endif()
-
-install(TARGETS ${BPFTRACE} DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-set(KERNEL_HEADERS_DIR "" CACHE PATH "Hard-code kernel headers directory")
-if (KERNEL_HEADERS_DIR)
-  MESSAGE(STATUS "Using KERNEL_HEADERS_DIR=${KERNEL_HEADERS_DIR}")
-  target_compile_definitions(libbpftrace PUBLIC KERNEL_HEADERS_DIR="${KERNEL_HEADERS_DIR}")
-endif()
-
-execute_process(
-  COMMAND git describe --abbrev=4 --dirty --tags
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  OUTPUT_VARIABLE BPFTRACE_VERSION
-  ERROR_VARIABLE GIT_DESCRIBE_ERROR
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  RESULT_VARIABLE retcode
-)
-
-# If the build is not done from a git repo, get the version information from
-# the version variables in main CMakeLists.txt
-if(NOT "${retcode}" STREQUAL "0")
-  set(BPFTRACE_VERSION "v${bpftrace_VERSION_MAJOR}.${bpftrace_VERSION_MINOR}.${bpftrace_VERSION_PATCH}")
-endif()
-
-add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
 
 unset(MAIN_SRC)
 unset(BPFTRACE)
