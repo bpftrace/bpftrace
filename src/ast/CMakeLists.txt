@@ -25,6 +25,7 @@ add_dependencies(ast parser)
 
 if (STATIC_LINKING)
   set(clang_libs
+      libclang.a
       clangAST
       clangAnalysis
       clangBasic
@@ -40,13 +41,21 @@ if (STATIC_LINKING)
       clangSerialization
       clangToolingCore)
 
+  set(llvm_lib_names
+      bpfcodegen
+      ipo
+      irreader
+      mcjit
+      option
+      orcjit
+      ${LLVM_TARGETS_TO_BUILD})
+
+
   if(EMBED_USE_LLVM)
-    list(APPEND clang_libs clangToolingInclusions)
     target_link_libraries(ast ${CLANG_EMBEDDED_CMAKE_TARGETS})
     target_link_libraries(ast ${LLVM_EMBEDDED_CMAKE_TARGETS})
   else()
-    list(INSERT clang_libs 0 libclang.a)
-    llvm_map_components_to_libnames(llvm_libs bpfcodegen ipo irreader mcjit option orcjit ${LLVM_TARGETS_TO_BUILD})
+    llvm_map_components_to_libnames(llvm_libs ${llvm_lib_names})
     target_link_libraries(ast ${clang_libs})
     target_link_libraries(ast ${llvm_libs})
   endif()
