@@ -52,8 +52,7 @@ if (STATIC_LINKING)
 
 
   if(EMBED_USE_LLVM)
-    target_link_libraries(ast ${CLANG_EMBEDDED_CMAKE_TARGETS})
-    target_link_libraries(ast ${LLVM_EMBEDDED_CMAKE_TARGETS})
+    target_link_libraries(ast "-Wl,--start-group" ${CLANG_EMBEDDED_CMAKE_TARGETS} ${LLVM_EMBEDDED_CMAKE_TARGETS} "-Wl,--end-group")
   else()
     llvm_map_components_to_libnames(llvm_libs ${llvm_lib_names})
     target_link_libraries(ast ${clang_libs})
