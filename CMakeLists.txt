@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.13.0)
 project(bpftrace)
 
 # bpftrace version number components.
@@ -70,15 +70,6 @@ endif()
 include(CTest)
 
 if(STATIC_LINKING)
-  if(STATIC_LIBC)
-    set(CMAKE_EXE_LINKER_FLAGS "-static")
-  elseif(EMBED_USE_LLVM)
-    set(EMBEDDED_LINK_FLAGS "-static-libgcc -static-libstdc++ -Wl,--start-group")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lrt")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -lpthread")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bdynamic -ldl -lm")
-    set(EMBEDDED_LINK_FLAGS "${EMBEDDED_LINK_FLAGS} -Wl,-Bstatic -lz")
-  endif(STATIC_LIBC)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set(CMAKE_LINK_SEARCH_START_STATIC TRUE)
   set(CMAKE_LINK_SEARCH_END_STATIC TRUE)

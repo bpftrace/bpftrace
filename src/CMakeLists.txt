@@ -167,13 +167,21 @@ if (LIBBPF_BTF_DUMP_FOUND)
 endif(LIBBPF_BTF_DUMP_FOUND)
 
 # Linking
+if(STATIC_LINKING)
+  if(STATIC_LIBC)
+    target_link_options(${BPFTRACE} BEFORE PRIVATE "-static")
+  else()
+    target_link_options(${BPFTRACE} BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")
+  endif(STATIC_LIBC)
+endif(STATIC_LINKING)
+
+
+target_link_libraries(libbpftrace parser resources ast arch)
 
 if (LIBBPF_BTF_DUMP_FOUND)
   target_include_directories(libbpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
   target_link_libraries(libbpftrace ${LIBBPF_LIBRARIES})
 endif(LIBBPF_BTF_DUMP_FOUND)
-
-target_link_libraries(libbpftrace arch ast parser resources)
 
 if(HAVE_BFD_DISASM)
   if(STATIC_LINKING)
@@ -203,10 +211,6 @@ if(STATIC_LINKING)
   add_library(LIBELF STATIC IMPORTED)
   set_property(TARGET LIBELF PROPERTY IMPORTED_LOCATION ${LIBELF_LIBRARIES})
   target_link_libraries(libbpftrace LIBELF)
-
-  if(NOT STATIC_LIBC)
-    set_target_properties(${BPFTRACE} PROPERTIES LINK_FLAGS "${EMBEDDED_LINK_FLAGS}")
-  endif()
 else()
   target_link_libraries(libbpftrace ${LIBELF_LIBRARIES})
 endif(STATIC_LINKING)
@@ -218,18 +222,11 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_VERSION}
 endif()
 
 if (BUILD_ASAN)
-  if(${CMAKE_VERSION} VERSION_LESS "3.13.0")
-    # target_link_options is supported in CMake 3.13 and newer
-    message("Please use CMake 3.13 or newer to enable ASAN")
-  endif()
   target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=address")
   target_link_options(${BPFTRACE} PUBLIC "-fsanitize=address")
 endif()
 
 if (USE_LIBFUZZER)
-  if(${CMAKE_VERSION} VERSION_LESS "3.13.0")
-    message("Please use CMake 3.13 or newer to use libfuzzer")
-  endif()
   if (BUILD_ASAN)
     target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer,address")
     target_link_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer")
@@ -237,6 +234,11 @@ if (USE_LIBFUZZER)
     target_compile_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer")
     target_link_options(${BPFTRACE} PUBLIC "-fsanitize=fuzzer,address")
   endif()
+endif()
+
+if (STATIC_LINKING)
+  target_link_libraries(libbpftrace "-Wl,-Bdynamic" "-lrt" "-lpthread" "-ldl" "-lm")
+  target_link_libraries(libbpftrace "-Wl,-Bstatic" "-lz")
 endif()
 
 unset(MAIN_SRC)
