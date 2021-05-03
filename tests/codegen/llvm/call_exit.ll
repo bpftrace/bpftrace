@@ -29,9 +29,9 @@ deadcode:                                         ; No predecessors!
   store i64 10, i64* %"@_val"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@_key", i64* %"@_val", i64 0)
-  %5 = bitcast i64* %"@_key" to i8*
+  %5 = bitcast i64* %"@_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
-  %6 = bitcast i64* %"@_val" to i8*
+  %6 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
   ret i64 0
 }

@@ -299,21 +299,20 @@ void CodegenLLVM::visit(Call &call)
   if (call.func == "count")
   {
     Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
+    auto [key, scoped_key_deleter] = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
     b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
-    b_.CreateLifetimeEnd(key);
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "sum")
   {
     Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
+    auto [key, scoped_key_deleter] = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
@@ -326,14 +325,13 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
 
     // oldval can only be an integer so won't be in memory and doesn't need lifetime end
-    b_.CreateLifetimeEnd(key);
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "min")
   {
     Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
+    auto [key, scoped_key_deleter] = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
@@ -356,14 +354,13 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateBr(lt);
 
     b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(key);
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "max")
   {
     Map &map = *call.map;
-    AllocaInst *key = getMapKey(map);
+    auto [key, scoped_key_deleter] = getMapKey(map);
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
     AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
 
@@ -383,7 +380,6 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateBr(lt);
 
     b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(key);
     b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
@@ -491,7 +487,7 @@ void CodegenLLVM::visit(Call &call)
   {
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map&>(arg);
-    AllocaInst *key = getMapKey(map);
+    auto [key, scoped_key_deleter] = getMapKey(map);
     auto imap = *bpftrace_.maps.Lookup(map.ident);
     if (!imap->is_clearable())
     {
@@ -505,7 +501,6 @@ void CodegenLLVM::visit(Call &call)
     {
       b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
     }
-    b_.CreateLifetimeEnd(key);
     expr_ = nullptr;
   }
   else if (call.func == "str")
@@ -1089,13 +1084,12 @@ void CodegenLLVM::visit(Call &call)
 
 void CodegenLLVM::visit(Map &map)
 {
-  AllocaInst *key = getMapKey(map);
+  auto [key, scoped_key_deleter] = getMapKey(map);
   Value *value = b_.CreateMapLookupElem(ctx_, map, key, map.loc);
   expr_ = value;
 
   if (dyn_cast<AllocaInst>(value))
     expr_deleter_ = [this, value]() { b_.CreateLifetimeEnd(value); };
-  b_.CreateLifetimeEnd(key);
 }
 
 void CodegenLLVM::visit(Variable &var)
@@ -1372,7 +1366,7 @@ void CodegenLLVM::visit(Unop &unop)
         if (unop.expr->is_map)
         {
           Map &map = static_cast<Map&>(*unop.expr);
-          AllocaInst *key = getMapKey(map);
+          auto [key, scoped_key_deleter] = getMapKey(map);
           Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, unop.loc);
           AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_newval");
           if (is_increment)
@@ -1380,7 +1374,6 @@ void CodegenLLVM::visit(Unop &unop)
           else
             b_.CreateStore(b_.CreateSub(oldval, b_.getInt64(1)), newval);
           b_.CreateMapUpdateElem(ctx_, map, key, newval, unop.loc);
-          b_.CreateLifetimeEnd(key);
 
           if (unop.is_post_op)
             expr_ = oldval;
@@ -1799,7 +1792,7 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
 
   Value *val, *expr;
   expr = expr_;
-  AllocaInst *key = getMapKey(map);
+  auto [key, scoped_key_deleter] = getMapKey(map);
   if (shouldBeOnStackAlready(assignment.expr->type))
   {
     val = expr;
@@ -1846,7 +1839,6 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
     self_alloca = true;
   }
   b_.CreateMapUpdateElem(ctx_, map, key, val, assignment.loc);
-  b_.CreateLifetimeEnd(key);
   if (self_alloca)
     b_.CreateLifetimeEnd(val);
 }
@@ -2278,9 +2270,10 @@ int CodegenLLVM::getNextIndexForProbe(const std::string &probe_name) {
   return index;
 }
 
-AllocaInst *CodegenLLVM::getMapKey(Map &map)
+std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
+    Map &map)
 {
-  AllocaInst *key;
+  Value *key;
   if (map.vargs) {
     // A single value as a map key (e.g., @[comm] = 0;)
     if (map.vargs->size() == 1)
@@ -2289,7 +2282,7 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
       auto scoped_del = accept(expr);
       if (onStack(expr->type))
       {
-        key = dyn_cast<AllocaInst>(expr_);
+        key = expr_;
         // Call-ee freed
         scoped_del.disarm();
       }
@@ -2365,7 +2358,12 @@ AllocaInst *CodegenLLVM::getMapKey(Map &map)
     key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
     b_.CreateStore(b_.getInt64(0), key);
   }
-  return key;
+
+  auto key_deleter = [this, key]() {
+    if (dyn_cast<AllocaInst>(key))
+      b_.CreateLifetimeEnd(key);
+  };
+  return std::make_tuple(key, ScopedExprDeleter(std::move(key_deleter)));
 }
 
 AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)

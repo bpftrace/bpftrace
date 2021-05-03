@@ -21,9 +21,9 @@ entry:
   store i64 %retval, i64* %"@x_val"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_val", i64 0)
-  %5 = bitcast i64* %"@x_key" to i8*
+  %5 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
-  %6 = bitcast i64* %"@x_val" to i8*
+  %6 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
   ret i64 0
 }

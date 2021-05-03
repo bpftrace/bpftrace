@@ -39,9 +39,9 @@ entry:
   store i64 %7, i64* %"@a_val"
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@a_key", i64* %"@a_val", i64 0)
-  %10 = bitcast i64* %"@a_key" to i8*
+  %10 = bitcast i64* %"@a_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = bitcast i64* %"@a_val" to i8*
+  %11 = bitcast i64* %"@a_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   %12 = load i64, i64* %"$x"
   %13 = add i64 %12, 8
@@ -57,9 +57,9 @@ entry:
   store i64 %17, i64* %"@b_val"
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem2 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@b_key", i64* %"@b_val", i64 0)
-  %20 = bitcast i64* %"@b_key" to i8*
+  %20 = bitcast i64* %"@b_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
-  %21 = bitcast i64* %"@b_val" to i8*
+  %21 = bitcast i64* %"@b_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
   %22 = load i64, i64* %"$x"
   %23 = add i64 %22, 16
@@ -75,9 +75,9 @@ entry:
   store i64 %27, i64* %"@c_val"
   %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo3, i64* %"@c_key", i64* %"@c_val", i64 0)
-  %30 = bitcast i64* %"@c_key" to i8*
+  %30 = bitcast i64* %"@c_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %30)
-  %31 = bitcast i64* %"@c_val" to i8*
+  %31 = bitcast i64* %"@c_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %31)
   %32 = load i64, i64* %"$x"
   %33 = add i64 %32, 24
@@ -97,9 +97,9 @@ entry:
   store i64 %38, i64* %"@d_val"
   %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
   %update_elem6 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* %"@d_key", i64* %"@d_val", i64 0)
-  %41 = bitcast i64* %"@d_key" to i8*
+  %41 = bitcast i64* %"@d_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %41)
-  %42 = bitcast i64* %"@d_val" to i8*
+  %42 = bitcast i64* %"@d_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %42)
   %43 = load i64, i64* %"$x"
   %44 = add i64 %43, 32
