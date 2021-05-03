@@ -81,6 +81,7 @@ jobs:
         -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
+        -e EMBED_USE_LLVM=${EMBED_USE_LLVM}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
@@ -102,6 +103,7 @@ jobs:
         -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
+        -e EMBED_USE_LLVM=${EMBED_USE_LLVM}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
@@ -119,6 +121,7 @@ jobs:
         -e LLVM_VERSION=${LLVM_VERSION}
         -e STATIC_LINKING=${STATIC_LINKING}
         -e STATIC_LIBC=${STATIC_LIBC}
+        -e EMBED_USE_LLVM=${EMBED_USE_LLVM}
         -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
