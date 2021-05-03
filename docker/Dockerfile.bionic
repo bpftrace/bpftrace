@@ -14,10 +14,14 @@ deb-src http://apt.llvm.org/bionic/ llvm-toolchain-bionic-${LLVM_VERSION} main\n
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD && \
     echo "deb https://repo.iovisor.org/apt/bionic bionic main" | tee /etc/apt/sources.list.d/iovisor.list
 
+RUN curl -L --output /tmp/cmake.tar.gz \
+  https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.tar.gz \
+  && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
+
 RUN apt-get update && apt-get install -y \
+      make \
       bison \
       binutils-dev \
-      cmake \
       flex \
       g++-8 \
       git \
