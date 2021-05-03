@@ -19,7 +19,6 @@ RUN apt-get update \
     && apt-get install -y \
         bison \
         binutils-dev \
-        build-essential \
         flex \
         git \
         libelf-dev \
