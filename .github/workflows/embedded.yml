@@ -97,14 +97,6 @@ jobs:
         docker run --privileged
         -v $(pwd):$(pwd)
         -w $(pwd)
-        -v /sys/kernel/debug:/sys/kernel/debug:rw
-        -v /lib/modules:/lib/modules:ro
-        -v /usr/src:/usr/src:ro
-        -e LLVM_VERSION=${LLVM_VERSION}
-        -e STATIC_LINKING=${STATIC_LINKING}
-        -e STATIC_LIBC=${STATIC_LIBC}
-        -e EMBED_USE_LLVM=${EMBED_USE_LLVM}
-        -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
@@ -115,14 +107,6 @@ jobs:
         docker run --privileged
         -v $(pwd):$(pwd)
         -w $(pwd)
-        -v /sys/kernel/debug:/sys/kernel/debug:rw
-        -v /lib/modules:/lib/modules:ro
-        -v /usr/src:/usr/src:ro
-        -e LLVM_VERSION=${LLVM_VERSION}
-        -e STATIC_LINKING=${STATIC_LINKING}
-        -e STATIC_LIBC=${STATIC_LIBC}
-        -e EMBED_USE_LLVM=${EMBED_USE_LLVM}
-        -e EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM}
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "strip --keep-symbol BEGIN_trigger --keep-symbol END_trigger $(pwd)/build-embedded/src/bpftrace"
