@@ -59,8 +59,6 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %15 = load volatile i32, i32* %14
   %16 = bitcast [4 x i32]* %lookup_elem_val to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
-  %17 = bitcast i32* %"$var" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
   store i32 %15, i32* %"$var"
   ret i64 0
 }
