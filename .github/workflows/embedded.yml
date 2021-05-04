@@ -110,7 +110,15 @@ jobs:
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         -c "strip --keep-symbol BEGIN_trigger --keep-symbol END_trigger $(pwd)/build-embedded/src/bpftrace"
-
+    - name: Report size
+      env: ${{ matrix.env }}
+      run: >
+        docker run --privileged
+        -v $(pwd):$(pwd)
+        -w $(pwd)
+        --entrypoint /bin/bash
+        bpftrace-embedded-${{ matrix.env['BASE'] }}
+        -c "echo SIZE: ; du -sh $(pwd)/build-embedded/src/bpftrace"
     - uses: actions/upload-artifact@v1
       with:
         name: bpftrace-${{ matrix.env['TYPE'] }}-${{ matrix.env['NAME'] }}
