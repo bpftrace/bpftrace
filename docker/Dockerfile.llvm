@@ -3,9 +3,11 @@ FROM ubuntu:${BASE}
 
 ARG BASE
 ARG LLVM_VERSION
+ARG BUILD_TYPE="Release"
 
 ENV LLVM_VERSION=${LLVM_VERSION}
 ENV BASE=${BASE}
+ENV BUILD_TYPE=${BUILD_TYPE}
 
 COPY cmake /build/llvm/cmake
 COPY CMakeLists-LLVM.txt /build/llvm/CMakeLists.txt
@@ -37,7 +39,7 @@ RUN curl -L --output /tmp/cmake.tar.gz \
   && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
 
 RUN cd /build/llvm \
-  && cmake . -DLLVM_VERSION=${LLVM_VERSION} \
+  && cmake . -DLLVM_VERSION=${LLVM_VERSION} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
   && make embedded_llvm -j$(nproc) \
   && make embedded_clang -j$(nproc) \
   && rm -rf embedded_llvm-prefix/src embedded_clang-prefix/src \

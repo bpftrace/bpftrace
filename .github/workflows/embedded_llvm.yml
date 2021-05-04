@@ -28,6 +28,7 @@ jobs:
         -t quay.io/iovisor/bpftrace-llvm:${{ matrix.base }}_${{ matrix.llvm_version }}_$(date +%s)
         -f docker/Dockerfile.llvm
         --build-arg BASE=${{ matrix.base }}
+        --build-arg BULD_TYPE="Release"
         --build-arg LLVM_VERSION=${{ matrix.llvm_version }}
         .
     - name: Login quay.io
