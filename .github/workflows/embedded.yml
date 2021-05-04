@@ -99,7 +99,7 @@ jobs:
         -w $(pwd)
         --entrypoint /bin/bash
         bpftrace-embedded-${{ matrix.env['BASE'] }}
-        -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl'"
+        -c "[[ -f $(pwd)/build-embedded/src/bpftrace ]] && ! readelf --dynamic $(pwd)/build-embedded/src/bpftrace | grep NEEDED | grep -v 'libm\|libc\|ld-linux\|libpthread\|libdl\|librt\.so'"
     - name: Strip artifacts
       env: ${{ matrix.env }}
       if: matrix.env['TYPE'] == 'Release'
