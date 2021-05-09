@@ -92,6 +92,7 @@ jobs:
         -f docker/Dockerfile.${{ matrix.env['DISTRO'] }}
         --build-arg bcc_ref=${{ matrix.env['BCC_REF'] }}
         --build-arg BASE=${{ matrix.env['BASE'] }}
+        --build-arg LLVM_VERSION=${{ matrix.env['LLVM_VERSION'] }}
         --build-arg ALPINE_VERSION=${{ matrix.env['ALPINE_VERSION'] }}
         docker/
     - name: bpftrace embedded build
