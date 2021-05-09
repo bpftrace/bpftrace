@@ -49,7 +49,6 @@ set(LLVM_LIBRARY_TARGETS
     LLVMBitReader
     LLVMBitWriter
     LLVMBPFAsmParser
-    LLVMBPFAsmPrinter
     LLVMBPFCodeGen
     LLVMBPFDesc
     LLVMBPFDisassembler
@@ -86,7 +85,6 @@ set(LLVM_LIBRARY_TARGETS
     LLVMObject
     LLVMObjectYAML
     LLVMOption
-    LLVMOptRemarks
     LLVMOrcJIT
     LLVMPasses
     LLVMProfileData
@@ -103,6 +101,33 @@ set(LLVM_LIBRARY_TARGETS
     LLVMXRay
     LLVMSupport
     )
+
+
+if(${EMBED_LLVM_VERSION} VERSION_EQUAL "8")
+  set(LLVM_LIBRARY_TARGETS ${LLVM_LIBRARY_TARGETS}
+      LLVMBPFAsmPrinter
+      LLVMOptRemarks
+      )
+endif()
+
+if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
+  set(LLVM_LIBRARY_TARGETS ${LLVM_LIBRARY_TARGETS}
+    LLVMBitstreamReader
+    LLVMCFGuard
+    LLVMDWARFLinker
+    LLVMDebugInfoGSYM
+    LLVMExtensions
+    LLVMFileCheck
+    LLVMFrontendOpenACC
+    LLVMFrontendOpenMP
+    LLVMHelloNew
+    LLVMInterfaceStub
+    LLVMJITLink
+    LLVMOrcShared
+    LLVMOrcTargetProcess
+    LLVMRemarks
+    )
+endif()
 
 # These build flags are based off of Alpine, Debian and Gentoo packages
 # optimized for compatibility and reducing build targets

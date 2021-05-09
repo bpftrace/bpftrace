@@ -50,6 +50,33 @@ set(CLANG_LIBRARY_TARGETS
     clangToolingInclusions
     )
 
+if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
+  set(CLANG_LIBRARY_TARGETS ${CLANG_LIBRARY_TARGETS}
+      clangAPINotes # 12
+      clangARCMigrate
+      clangASTMatchers
+      clangCodeGen
+      clangCrossTU
+      clangDependencyScanning #12
+      clangDirectoryWatcher #12
+      clangDynamicASTMatchers
+      clangFrontendTool
+      clangHandleCXX
+      clangHandleLLVM
+      clangIndexSerialization # 12
+      clangRewriteFrontend
+      clangStaticAnalyzerCheckers
+      clangStaticAnalyzerCore
+      clangStaticAnalyzerFrontend
+      clangTesting
+      clangTooling
+      clangToolingASTDiff
+      clangToolingRefactoring
+      clangToolingSyntax
+      clangTransformer
+    )
+endif()
+
 # These configure flags are a blending of the Alpine, debian, and gentoo
 # packages configure flags, customized to reduce build targets as much as
 # possible
