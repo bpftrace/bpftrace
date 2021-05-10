@@ -612,6 +612,8 @@ void CodegenLLVM::visit(Call &call)
     uint64_t addr;
     auto name = bpftrace_.get_string_literal(call.vargs->at(0));
     addr = bpftrace_.resolve_kname(name);
+    if (!addr)
+      throw std::runtime_error("Failed to resolve kernel symbol: " + name);
     expr_ = b_.getInt64(addr);
   }
   else if (call.func == "uaddr")
