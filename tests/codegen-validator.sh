@@ -3,11 +3,16 @@
 ## Don't add to this
 IGNORE="LLVM-"
 EXIT=0
+LLVM_VERSION=12
 
-LLVM=$(command -v llvm-as-12)
-if [[ -z "$LLVM" ]]; then
-  echo "llvm-as-7 not found"
+LLVM=$(command -v "llvm-as-${LLVM_VERSION}" || command -v llvm-as)
+if [[ $? -ne 0 ]]; then
+  echo "llvm-as not found, exiting"
   exit 1
+fi
+
+if ! $LLVM --version | grep -q "LLVM version ${LLVM_VERSION}"; then
+  echo "llvm-as is not version ${LLVM_VERSION}"
 fi
 
 if [[ -z "$1" ]]; then
