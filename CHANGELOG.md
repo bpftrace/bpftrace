@@ -27,6 +27,8 @@ and this project adheres to
   - [#1776](https://github.com/iovisor/bpftrace/pull/1776)
 - Reduce frequency of lost stack traces
   - [#1812](https://github.com/iovisor/bpftrace/pull/1812)
+- Make kaddr() report failure for unknown kernel symbols
+  - [#1836](https://github.com/iovisor/bpftrace/pull/1836)
 
 #### Tools
 
