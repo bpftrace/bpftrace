@@ -2329,6 +2329,17 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_) << "kprobes should not have a target";
     if (ap.func == "")
       LOG(ERROR, ap.loc, err_) << "kprobes should be attached to a function";
+    if (is_final_pass())
+    {
+      // Warn if user tries to attach to a non-traceable function
+      if (!has_wildcard(ap.func) && !bpftrace_.is_traceable_func(ap.func))
+      {
+        LOG(WARNING, ap.loc, out_)
+            << ap.func
+            << " is not traceable (probably it is inlined or marked as "
+               "\"notrace\"), attaching to it will likely fail";
+      }
+    }
   }
   else if (ap.provider == "uprobe" || ap.provider == "uretprobe") {
     if (ap.target == "")

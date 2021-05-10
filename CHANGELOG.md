@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Warn if attaching a kprobe to a non-traceable function
+  - [#1835](https://github.com/iovisor/bpftrace/pull/1835)
 
 #### Changed
 - Disallow accessing common tracepoint fields

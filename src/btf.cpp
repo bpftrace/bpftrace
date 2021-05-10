@@ -24,6 +24,8 @@
 #pragma GCC diagnostic pop
 #include <bpf/libbpf.h>
 
+#include "bpftrace.h"
+
 namespace bpftrace {
 
 static unsigned char *get_data(const char *file, ssize_t *sizep)
@@ -158,11 +160,6 @@ BTF::BTF(void) : btf(nullptr), state(NODATA)
   if (btf)
   {
     libbpf_set_print(libbpf_print);
-#ifdef FUZZ
-    traceable_funcs_ = {};
-#else
-    traceable_funcs_ = get_traceable_funcs();
-#endif
     state = OK;
   }
   else if (bt_debug != DebugLevel::kNone)
@@ -435,9 +432,9 @@ int BTF::resolve_args(const std::string &func,
       throw std::runtime_error("not a function");
     }
 
-    if (!is_traceable_func(name))
+    if (bpftrace_ && !bpftrace_->is_traceable_func(name))
     {
-      if (traceable_funcs_.empty())
+      if (bpftrace_->traceable_funcs_.empty())
         throw std::runtime_error("could not read traceable functions from " +
                                  kprobe_path + " (is debugfs mounted?)");
       else
@@ -523,7 +520,7 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
       break;
     }
 
-    if (!is_traceable_func(func_name))
+    if (bpftrace_ && !bpftrace_->is_traceable_func(func_name))
       continue;
 
     if (btf_vlen(t) > arch::max_arg() + 1)
@@ -709,16 +706,6 @@ std::set<std::string> BTF::get_all_structs() const
   }
 
   return struct_set;
-}
-
-bool BTF::is_traceable_func(const std::string &func_name) const
-{
-#ifdef FUZZ
-  (void)func_name;
-  return true;
-#else
-  return traceable_funcs_.find(func_name) != traceable_funcs_.end();
-#endif
 }
 
 } // namespace bpftrace

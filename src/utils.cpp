@@ -759,6 +759,9 @@ std::string hex_format_buffer(const char *buf, size_t size)
 
 std::unordered_set<std::string> get_traceable_funcs()
 {
+#ifdef FUZZ
+  return {};
+#else
   // Try to get the list of functions from BPFTRACE_AVAILABLE_FUNCTIONS_TEST env
   const char *path = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
 
@@ -782,6 +785,7 @@ std::unordered_set<std::string> get_traceable_funcs()
   while (std::getline(available_funs, line))
     result.insert(line);
   return result;
+#endif
 }
 
 uint64_t parse_exponent(const char *str)

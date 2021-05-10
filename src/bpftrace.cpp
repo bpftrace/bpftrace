@@ -2142,4 +2142,14 @@ std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
   return "";
 }
 
+bool BPFtrace::is_traceable_func(const std::string &func_name) const
+{
+#ifdef FUZZ
+  (void)func_name;
+  return true;
+#else
+  return traceable_funcs_.find(func_name) != traceable_funcs_.end();
+#endif
+}
+
 } // namespace bpftrace
