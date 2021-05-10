@@ -4,8 +4,7 @@
 EXIT=0
 LLVM_VERSION=12
 
-LLVM=$(command -v "llvm-as-${LLVM_VERSION}" || command -v llvm-as)
-if [[ $? -ne 0 ]]; then
+if ! LLVM=$(command -v "llvm-as-${LLVM_VERSION}" || command -v llvm-as); then
   echo "llvm-as not found, exiting"
   exit 1
 fi
@@ -20,8 +19,7 @@ if [[ -z "$1" ]]; then
 fi
 
 for file in "${1}"/tests/codegen/llvm/*.ll; do
-    $LLVM -o /dev/null "${file}"
-    if [[ $? -eq 0 ]]; then
+    if $LLVM -o /dev/null "${file}"; then
       echo -e "[   OK   ]\t$file"
     else
       echo -e "[ FAILED ]\t$file"
