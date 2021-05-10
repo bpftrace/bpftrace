@@ -93,9 +93,11 @@ class BPFtrace
 {
 public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout))
-      : out_(std::move(o)),
+      : traceable_funcs_(get_traceable_funcs()),
+        out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>()),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
+        btf_(this),
         ncpus_(get_possible_cpus().size())
   {
   }
@@ -136,6 +138,7 @@ public:
   bool is_aslr_enabled(int pid);
   std::string get_string_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
+  bool is_traceable_func(const std::string &func_name) const;
 
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<Probe> watchpoint_probes_;
@@ -158,6 +161,7 @@ public:
   std::vector<std::tuple<std::string, std::vector<Field>>> cat_args_;
   std::vector<SizedType> non_map_print_args_;
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
+  std::unordered_set<std::string> traceable_funcs_;
 
   std::vector<std::string> probe_ids_;
   unsigned int join_argnum_ = 16;
