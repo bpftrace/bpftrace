@@ -1,7 +1,6 @@
 #!/bin/bash
 
 ## Don't add to this
-IGNORE="LLVM-"
 EXIT=0
 LLVM_VERSION=12
 
@@ -21,9 +20,6 @@ if [[ -z "$1" ]]; then
 fi
 
 for file in "${1}"/tests/codegen/llvm/*.ll; do
-  if echo "$file" | grep -qE "$IGNORE"; then
-    echo -e "[  SKIP  ]\t$file"
-  else
     $LLVM -o /dev/null "${file}"
     if [[ $? -eq 0 ]]; then
       echo -e "[   OK   ]\t$file"
@@ -31,7 +27,6 @@ for file in "${1}"/tests/codegen/llvm/*.ll; do
       echo -e "[ FAILED ]\t$file"
       EXIT=1
     fi
-  fi
 done
 
 exit $EXIT
