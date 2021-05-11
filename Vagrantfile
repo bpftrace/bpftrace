@@ -26,7 +26,9 @@ fi
 git clone https://github.com/iovisor/bcc.git
 mkdir -p bcc/build
 cd bcc/build
-cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local ..
+git checkout v0.19.0
+cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DENABLE_EXAMPLES=0 -DENABLE_TESTS=0 -DENABLE_MAN=0
 make && sudo make install && sudo ldconfig
 EOF
 
