@@ -32,6 +32,7 @@ std::unique_ptr<Tuple> Tuple::Create(std::vector<SizedType> fields)
     offset += padding;
 
     tuple->fields.push_back(Field{
+        .name = "",
         .type = field,
         .offset = offset,
         .is_bitfield = false,
@@ -78,12 +79,22 @@ void Tuple::Dump(std::ostream &os)
 
 bool Struct::HasField(const std::string &name) const
 {
-  return fields.find(name) != fields.end();
+  for (auto &field : fields)
+  {
+    if (field.name == name)
+      return true;
+  }
+  return false;
 }
 
 const Field &Struct::GetField(const std::string &name) const
 {
-  return fields.at(name);
+  for (auto &field : fields)
+  {
+    if (field.name == name)
+      return field;
+  }
+  throw std::runtime_error("struct has no field named " + name);
 }
 
 void Struct::AddField(const std::string &field_name,
@@ -93,11 +104,13 @@ void Struct::AddField(const std::string &field_name,
                       const Bitfield &bitfield,
                       bool is_data_loc)
 {
-  fields[field_name] = Field{ .type = type,
-                              .offset = offset,
-                              .is_bitfield = is_bitfield,
-                              .bitfield = bitfield,
-                              .is_data_loc = is_data_loc };
+  if (!HasField(field_name))
+    fields.emplace_back(Field{ .name = field_name,
+                               .type = type,
+                               .offset = offset,
+                               .is_bitfield = is_bitfield,
+                               .bitfield = bitfield,
+                               .is_data_loc = is_data_loc });
 }
 
 void StructManager::Add(const std::string &name, size_t size)

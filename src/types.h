@@ -126,8 +126,9 @@ public:
   /**
      Struct field accessors
    */
-  const std::map<std::string, Field> &GetStructFields() const;
+  const std::vector<Field> &GetStructFields() const;
   const Field &GetField(const std::string &name) const;
+  const Struct *GetStruct() const;
 
   /**
      Required alignment for this type

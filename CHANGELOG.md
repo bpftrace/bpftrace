@@ -19,6 +19,8 @@ and this project adheres to
   - [#1778](https://github.com/iovisor/bpftrace/pull/1778)
 - Return 1 from tracepoint probes
   - [#1857](https://github.com/iovisor/bpftrace/pull/1857)
+- Preserve original order of struct types
+  - [#1850](https://github.com/iovisor/bpftrace/pull/1850)
 
 #### Deprecated
 

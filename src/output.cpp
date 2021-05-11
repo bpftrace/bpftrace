@@ -198,13 +198,12 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     std::vector<std::string> elems;
     for (auto &field : type.GetStructFields())
     {
-      std::vector<uint8_t> elem_data(value.begin() + field.second.offset,
-                                     value.begin() + field.second.offset +
-                                         field.second.type.GetSize());
+      std::vector<uint8_t> elem_data(value.begin() + field.offset,
+                                     value.begin() + field.offset +
+                                         field.type.GetSize());
       elems.push_back(field_to_str(
-          field.first,
-          value_to_str(
-              bpftrace, field.second.type, elem_data, is_per_cpu, div)));
+          field.name,
+          value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div)));
     }
     return struct_to_str(elems);
   }

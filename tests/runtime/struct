@@ -10,9 +10,15 @@ EXPECT @s: { .m = 2, .n = 3 }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
+NAME struct field order
+RUN bpftrace -v -e 'struct Foo { int n; int m; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
+EXPECT @s: { .n = 2, .m = 3 }
+TIMEOUT 4
+AFTER ./testprogs/simple_struct
+
 NAME nested struct assignment into map
 RUN bpftrace -v -e 'struct Foo { struct { int m[1] } y; struct { int n } a; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
-EXPECT @s: { .a = { .n = 3 }, .y = { .m = \[2\] } }
+EXPECT @s: { .y = { .m = \[2\] }, .a = { .n = 3 } }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 

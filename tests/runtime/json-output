@@ -124,7 +124,7 @@ AFTER ./testprogs/simple_struct
 
 NAME print_non_map_nested_struct
 RUN bpftrace -v -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
-EXPECT ^{"type": "value", "data": { "a": { "n": 3 }, "y": { "m": \[2\] } }}$
+EXPECT ^{"type": "value", "data": { "y": { "m": \[2\] }, "a": { "n": 3 } }}$
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
