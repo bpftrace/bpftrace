@@ -20,6 +20,7 @@ struct Bitfield
 
 struct Field
 {
+  std::string name;
   SizedType type;
   ssize_t offset;
 
@@ -35,13 +36,12 @@ struct Field
   bool is_data_loc = false;
 };
 
-using FieldsMap = std::map<std::string, Field>;
-using TupleFields = std::vector<Field>;
+using Fields = std::vector<Field>;
 
 struct Struct
 {
   int size; // in bytes
-  FieldsMap fields;
+  Fields fields;
 
   explicit Struct(int size) : size(size)
   {
@@ -62,13 +62,13 @@ struct Tuple
   size_t size; // in bytes
   int align;   // in bytes
   bool padded = false;
-  TupleFields fields;
+  Fields fields;
 
   static std::unique_ptr<Tuple> Create(std::vector<SizedType> fields);
   void Dump(std::ostream &os);
 };
 
-std::ostream &operator<<(std::ostream &os, const TupleFields &t);
+std::ostream &operator<<(std::ostream &os, const Fields &t);
 
 class StructManager
 {

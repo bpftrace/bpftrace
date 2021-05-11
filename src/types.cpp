@@ -512,7 +512,7 @@ ssize_t SizedType::GetAlignment() const
     return 8;
 }
 
-const std::map<std::string, Field> &SizedType::GetStructFields() const
+const std::vector<Field> &SizedType::GetStructFields() const
 {
   assert(IsRecordTy() && record);
   return record->fields;
@@ -521,7 +521,13 @@ const std::map<std::string, Field> &SizedType::GetStructFields() const
 const Field &SizedType::GetField(const std::string &name) const
 {
   assert(IsRecordTy());
-  return record->fields[name];
+  return record->GetField(name);
+}
+
+const Struct *SizedType::GetStruct() const
+{
+  assert(IsRecordTy());
+  return record.get();
 }
 
 } // namespace bpftrace

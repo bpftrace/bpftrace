@@ -932,14 +932,16 @@ void SemanticAnalyser::visit(Call &call)
           if (!ty.IsAggregate() && !ty.IsTimestampTy())
             ty.SetSize(8);
           args.push_back(Field{
-            .type =  ty,
-            .offset = 0,
-            .is_bitfield = false,
-            .bitfield = Bitfield{
-              .read_bytes = 0,
-              .access_rshift = 0,
-              .mask = 0,
-            },
+              .name = "",
+              .type = ty,
+              .offset = 0,
+              .is_bitfield = false,
+              .bitfield =
+                  Bitfield{
+                      .read_bytes = 0,
+                      .access_rshift = 0,
+                      .mask = 0,
+                  },
           });
         }
         std::string msg = verify_format_string(fmt.str, args);
@@ -1941,7 +1943,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  std::map<std::string, FieldsMap> structs;
+  std::map<std::string, const Struct *> structs;
 
   if (type.is_tparg)
   {
@@ -1961,25 +1963,26 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);
         structs[tracepoint_struct] =
-            bpftrace_.structs.Lookup(tracepoint_struct)->fields;
+            bpftrace_.structs.Lookup(tracepoint_struct).get();
       }
     }
   }
   else
   {
-    structs[type.GetName()] = type.GetStructFields();
+    structs[type.GetName()] = type.GetStruct();
   }
 
   for (auto it : structs) {
     std::string cast_type = it.first;
-    FieldsMap fields = it.second;
-    if (fields.count(acc.field) == 0) {
+    const Struct *record = it.second;
+    if (!record->HasField(acc.field))
+    {
       LOG(ERROR, acc.loc, err_)
           << "Struct/union of type '" << cast_type << "' does not contain "
           << "a field named '" << acc.field << "'";
     }
     else {
-      const auto &field = fields[acc.field];
+      const auto &field = record->GetField(acc.field);
 
       acc.type = field.type;
       if (acc.expr->type.IsCtxAccess() &&
