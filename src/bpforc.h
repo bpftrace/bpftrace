@@ -55,6 +55,11 @@ public:
                                StringRef SectionName,
                                bool isReadOnly) override;
 
+  ~MemoryManager()
+  {
+    deregisterEHFrames();
+  };
+
 private:
   SectionMap &sections_;
 };
