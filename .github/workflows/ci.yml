@@ -127,6 +127,14 @@ jobs:
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
           VENDOR_GTEST: ON
+        - NAME: LLVM 12 Release + libbpf
+          TYPE: Release
+          LLVM_VERSION: 12
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
+          BASE: bionic
+          VENDOR_GTEST: ON
+          BUILD_LIBBPF: ON
     steps:
     - uses: actions/checkout@v2
     - name: Get date
@@ -173,6 +181,7 @@ jobs:
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"
+        -e BUILD_LIBBPF="${BUILD_LIBBPF}"
         -e CC="${CC}"
         -e CXX="${CXX}"
         bpftrace-builder-$BASE-llvm-$LLVM_VERSION
