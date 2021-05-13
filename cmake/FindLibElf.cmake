@@ -21,26 +21,17 @@ endif (LIBELF_LIBRARIES AND LIBELF_INCLUDE_DIRS)
 find_path (LIBELF_INCLUDE_DIRS
   NAMES
     libelf.h
+  PATH_SUFFIXES
+    libelf
   PATHS
-    /usr/include
-    /usr/include/libelf
-    /usr/local/include
-    /usr/local/include/libelf
-    /opt/local/include
-    /opt/local/include/libelf
-    /sw/include
-    /sw/include/libelf
     ENV CPATH)
 
 find_library (LIBELF_LIBRARIES
   NAMES
     elf
+  PATH_SUFFIXES
+    libelf
   PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 

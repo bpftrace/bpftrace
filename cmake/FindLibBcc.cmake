@@ -21,25 +21,12 @@ find_path (LIBBCC_INCLUDE_DIRS
   NAMES
     bcc/libbpf.h
   PATHS
-    /usr/include
-    /usr/include/bcc
-    /usr/local/include
-    /usr/local/include/libbcc
-    /usr/local/include/bcc
-    /opt/local/include
-    /opt/local/include/libbcc
-    /sw/include
-    /sw/include/libbcc
     ENV CPATH)
 
 find_library (LIBBCC_LIBRARIES
   NAMES
     bcc
   PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
@@ -47,10 +34,6 @@ find_library (LIBBCC_BPF_LIBRARY_STATIC
   NAMES
     bcc_bpf
   PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
@@ -58,10 +41,6 @@ find_library (LIBBCC_LOADER_LIBRARY_STATIC
   NAMES
     bcc-loader-static
   PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
