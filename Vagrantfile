@@ -11,6 +11,7 @@ bash ./llvm.sh 12
 apt-get -qq update
 apt-get -qq install linux-headers-$(uname -r) binutils-dev python
 apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev
+apt-get -qq install --no-install-recommends pkg-config
 EOF
 
 $fedora_deps = <<EOF
@@ -31,6 +32,17 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/usr/local \
   -DENABLE_EXAMPLES=0 -DENABLE_TESTS=0 -DENABLE_MAN=0 \
   -DENABLE_LLVM_SHARED=1
 make && sudo make install && sudo ldconfig
+EOF
+
+$build_libbpf = <<EOF
+if [ -e /usr/local/lib/libbpf.so ]; then
+   echo "libbpf already built, skipping"
+   exit 0
+fi
+git clone https://github.com/libbpf/libbpf.git
+cd libbpf/src
+make
+sudo PREFIX=/usr/local/ LIBDIR=/usr/local/lib make install install_uapi_headers
 EOF
 
 Vagrant.configure("2") do |config|
@@ -79,6 +91,9 @@ Vagrant.configure("2") do |config|
       end
       unless ENV['SKIP_BCC_BUILD'] || (params['skip_bcc_build'] == 1)
         box.vm.provision :shell, privileged: false, inline: $build_bcc
+      end
+      unless ENV['SKIP_LIBBPF_BUILD'] || (params['skip_libbpf_build'] == 1)
+        box.vm.provision :shell, privileged: false, inline: $build_libbpf
       end
       config.vm.post_up_message = <<-HEREDOC
 #######
