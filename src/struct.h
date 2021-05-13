@@ -41,6 +41,8 @@ using Fields = std::vector<Field>;
 struct Struct
 {
   int size; // in bytes
+  int align = 1; // in bytes, used for tuples only
+  bool padded = false;
   Fields fields;
 
   explicit Struct(int size) : size(size)
@@ -55,16 +57,8 @@ struct Struct
                 bool is_bitfield,
                 const Bitfield &bitfield,
                 bool is_data_loc);
-};
 
-struct Tuple
-{
-  size_t size; // in bytes
-  int align;   // in bytes
-  bool padded = false;
-  Fields fields;
-
-  static std::unique_ptr<Tuple> Create(std::vector<SizedType> fields);
+  static std::unique_ptr<Struct> CreateTuple(std::vector<SizedType> fields);
   void Dump(std::ostream &os);
 };
 

@@ -77,7 +77,6 @@ struct StackType
 
 class BPFtrace;
 struct Struct;
-struct Tuple;
 struct Field;
 
 class SizedType
@@ -112,22 +111,17 @@ private:
   AddrSpace as_ = AddrSpace::none;
   ssize_t size_bits_ = -1; // size in bits for integer types
 
-  std::shared_ptr<Tuple> tuple_fields; // tuple fields
-  std::shared_ptr<Struct> record;      // struct type
+  std::shared_ptr<Struct> inner_struct_; // inner struct for records and tuples
 
 public:
   /**
-     Tuple accessors
+     Tuple/struct accessors
   */
   std::vector<Field> &GetFields() const;
+  bool HasField(const std::string &name) const;
+  const Field &GetField(const std::string &name) const;
   Field &GetField(ssize_t n) const;
   ssize_t GetFieldCount() const;
-
-  /**
-     Struct field accessors
-   */
-  const std::vector<Field> &GetStructFields() const;
-  const Field &GetField(const std::string &name) const;
   const Struct *GetStruct() const;
 
   /**

@@ -13,10 +13,10 @@ bool Bitfield::operator!=(const Bitfield &other) const {
   return !(*this == other);
 }
 
-std::unique_ptr<Tuple> Tuple::Create(std::vector<SizedType> fields)
+std::unique_ptr<Struct> Struct::CreateTuple(std::vector<SizedType> fields)
 {
   // See llvm::StructLayout::StructLayout source
-  std::unique_ptr<Tuple> tuple(new Tuple);
+  std::unique_ptr<Struct> tuple(new Struct(0));
   ssize_t offset = 0;
   ssize_t struct_align = 1;
 
@@ -50,9 +50,9 @@ std::unique_ptr<Tuple> Tuple::Create(std::vector<SizedType> fields)
   return tuple;
 }
 
-void Tuple::Dump(std::ostream &os)
+void Struct::Dump(std::ostream &os)
 {
-  os << "tuple {" << std::endl;
+  os << " {" << std::endl;
 
   auto pad = [](int size) -> std::string {
     return "__pad[" + std::to_string(size) + "]";
