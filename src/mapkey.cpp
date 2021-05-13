@@ -131,7 +131,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::record:
     {
       std::vector<std::string> elems;
-      for (auto &field : arg.GetStructFields())
+      for (auto &field : arg.GetFields())
       {
         elems.push_back("." + field.name + "=" +
                         argument_value(bpftrace,

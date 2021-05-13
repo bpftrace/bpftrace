@@ -196,7 +196,7 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   else if (type.IsRecordTy())
   {
     std::vector<std::string> elems;
-    for (auto &field : type.GetStructFields())
+    for (auto &field : type.GetFields())
     {
       std::vector<uint8_t> elem_data(value.begin() + field.offset,
                                      value.begin() + field.offset +
