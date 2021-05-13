@@ -8,12 +8,6 @@ find_library(LIBZ_LIBRARIES
   NAMES
     libz.a
   PATHS
-    /lib
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 

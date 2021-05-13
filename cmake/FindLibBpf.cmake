@@ -16,20 +16,12 @@ find_path (LIBBPF_INCLUDE_DIRS
     bpf/btf.h
     bpf/libbpf.h
   PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
     ENV CPATH)
 
 find_library (LIBBPF_LIBRARIES
   NAMES
     bpf
   PATHS
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 

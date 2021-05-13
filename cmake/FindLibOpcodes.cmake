@@ -14,22 +14,12 @@ find_path (LIBOPCODES_INCLUDE_DIRS
   NAMES
     dis-asm.h
   PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
     ENV CPATH)
 
 find_library (LIBOPCODES_LIBRARIES
   NAMES
     opcodes
   PATHS
-    /lib
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 

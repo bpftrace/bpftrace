@@ -16,22 +16,12 @@ find_path (LIBBFD_INCLUDE_DIRS
   NAMES
     bfd.h
   PATHS
-    /usr/include
-    /usr/local/include
-    /opt/local/include
-    /sw/include
     ENV CPATH)
 
 find_library (LIBBFD_LIBRARIES
   NAMES
     bfd
   PATHS
-    /lib
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
@@ -42,12 +32,6 @@ find_library (LIBIBERTY_LIBRARIES
   NAMES
     libiberty.a
   PATHS
-    /lib
-    /usr/lib
-    /usr/local/lib
-    /opt/local/lib
-    /usr/lib/x86_64-linux-gnu/
-    /sw/lib
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
