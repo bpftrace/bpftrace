@@ -13,8 +13,19 @@ DEPS_ONLY=${DEPS_ONLY:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
 VENDOR_GTEST=${VENDOR_GTEST:-OFF}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
+BUILD_LIBBPF=${BUILD_LIBBPF:-OFF}
 CC=${CC:cc}
 CXX=${CXX:c++}
+
+if [[ $BUILD_LIBBPF = ON ]]; then
+  mkdir /src
+  git clone https://github.com/libbpf/libbpf.git /src/libbpf
+  cd /src/libbpf/src
+  CC=gcc make -j$(nproc)
+  # libbpf defaults to /usr/lib64 which doesn't work on debian like systems
+  # this should work on both
+  PREFIX=/usr/local/ LIBDIR=/usr/local/lib make install install_uapi_headers
+fi
 
 # Build bpftrace
 mkdir -p "$1"
