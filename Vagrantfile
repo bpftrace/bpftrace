@@ -98,7 +98,7 @@ Vagrant.configure("2") do |config|
       config.vm.post_up_message = <<-HEREDOC
 #######
 bpftrace source is available in /vagrant
-Build command: cmake /vagrant -DCMAKE_INSTALL_PREFIX=/usr/local && make
+Build command: mkdir build && cd build && cmake /vagrant -DVENDOR_GTEST=1 && make
 #######
       HEREDOC
     end
