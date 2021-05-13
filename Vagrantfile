@@ -48,18 +48,13 @@ Vagrant.configure("2") do |config|
       'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 0,
     },
-    'fedora-31'        => {
-      'image'          => 'fedora/31-cloud-base',
-      'scripts'        => [ $fedora_deps, ],
-      'skip_bcc_build' => 1
+    'ubuntu-21.04'     => {
+      'image'          => 'ubuntu/hirsute64',
+      'scripts'        => [ $ubuntu_deps, ],
+      'fix_console'    => 0,
     },
-    'fedora-32'        => {
-      'image'          => 'fedora/32-cloud-base',
-      'scripts'        => [ $fedora_deps, ],
-      'skip_bcc_build' => 1
-    },
-    'fedora-33'        => {
-      'image'          => 'fedora/33-cloud-base',
+    'fedora-34'        => {
+      'image'          => 'fedora/34-cloud-base',
       'scripts'        => [ $fedora_deps, ],
       'skip_bcc_build' => 1
     }
