@@ -23,7 +23,7 @@ jobs:
       run: git diff --exit-code
 
   build_test:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         env:
