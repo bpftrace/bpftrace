@@ -34,7 +34,7 @@ Pass CreateCounterPass()
     auto max = ctx.b.ast_max_nodes_;
     if (bt_verbose)
     {
-      LOG(INFO) << "node count: " << max;
+      LOG(INFO) << "node count: " << node_count;
     }
     if (node_count >= max)
     {
