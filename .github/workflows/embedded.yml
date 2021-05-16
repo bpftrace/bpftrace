@@ -3,7 +3,7 @@ name: Embedded Builds
 on: [push, pull_request]
 jobs:
   llvm_clang:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         env:
