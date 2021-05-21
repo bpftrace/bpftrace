@@ -73,9 +73,7 @@ private:
   std::vector<int> perf_event_fds_;
   int progfd_ = -1;
   uint64_t offset_ = 0;
-#ifdef HAVE_BCC_KFUNC
   int tracing_fd_ = -1;
-#endif
   std::function<void()> usdt_destructor_;
 };
 
