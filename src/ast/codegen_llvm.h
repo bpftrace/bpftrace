@@ -129,6 +129,11 @@ private:
                      StackType stack_type,
                      const location &loc);
 
+  // Create return instruction
+  //
+  // If null, return value will depend on current attach point
+  void createRet(Value *value = nullptr);
+
   // Every time we see a watchpoint that specifies a function + arg pair, we
   // generate a special "setup" probe that:
   //

@@ -17,6 +17,8 @@ and this project adheres to
   - [#1810](https://github.com/iovisor/bpftrace/pull/1810)
 - Improve JSON printing (nested structs)
   - [#1778](https://github.com/iovisor/bpftrace/pull/1778)
+- Return 1 from tracepoint probes
+  - [#1857](https://github.com/iovisor/bpftrace/pull/1857)
 
 #### Deprecated
 

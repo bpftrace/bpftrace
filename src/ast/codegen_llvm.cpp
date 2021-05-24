@@ -871,7 +871,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t));
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
-    b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+    createRet();
 
     // create an unreachable basic block for all the "dead instructions" that
     // may come after exit(). If we don't, LLVM will emit the instructions
@@ -1958,7 +1958,7 @@ void CodegenLLVM::visit(Jump &jump)
   {
     case bpftrace::Parser::token::RETURN:
       // return can be used outside of loops
-      b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+      createRet();
       break;
     case bpftrace::Parser::token::BREAK:
       b_.CreateBr(std::get<1>(loops_.back()));
@@ -2048,7 +2048,7 @@ void CodegenLLVM::visit(Predicate &pred)
 
   b_.CreateCondBr(expr_, pred_false_block, pred_true_block);
   b_.SetInsertPoint(pred_false_block);
-  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+  createRet();
 
   b_.SetInsertPoint(pred_true_block);
 }
@@ -2092,13 +2092,54 @@ void CodegenLLVM::generateProbe(Probe &probe,
   {
     auto scoped_del = accept(stmt);
   }
-  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+  createRet();
 
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
       current_attach_point_->func.size())
     generateWatchpointSetupProbe(
         func_type, section_name, current_attach_point_->address, index);
+}
+
+void CodegenLLVM::createRet(Value *value)
+{
+  // If value is explicitly provided, use it
+  if (value)
+  {
+    b_.CreateRet(value);
+    return;
+  }
+
+  // Fall back to default return value
+  switch (probetype(current_attach_point_->provider))
+  {
+    case ProbeType::invalid:
+      LOG(FATAL) << "Returning from invalid probetype";
+      break;
+    case ProbeType::tracepoint:
+      // Classic (ie. *not* raw) tracepoints have a kernel quirk stopping perf
+      // subsystem from seeing a tracepoint event if BPF program returns 0.
+      // This breaks perf in some situations and generally makes such BPF
+      // programs bad citizens. Return 1 instead.
+      b_.CreateRet(b_.getInt64(1));
+      break;
+    case ProbeType::kprobe:
+    case ProbeType::kretprobe:
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+    case ProbeType::usdt:
+    case ProbeType::profile:
+    case ProbeType::interval:
+    case ProbeType::software:
+    case ProbeType::hardware:
+    case ProbeType::watchpoint:
+    case ProbeType::asyncwatchpoint:
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
+    case ProbeType::iter:
+      b_.CreateRet(b_.getInt64(0));
+      break;
+  }
 }
 
 void CodegenLLVM::visit(Probe &probe)
@@ -2522,7 +2563,7 @@ Function *CodegenLLVM::createLog2Function()
                   is_less_than_zero,
                   is_not_less_than_zero);
   b_.SetInsertPoint(is_less_than_zero);
-  b_.CreateRet(b_.CreateLoad(result));
+  createRet(b_.CreateLoad(result));
   b_.SetInsertPoint(is_not_less_than_zero);
 
   // test for equal to zero
@@ -2533,7 +2574,7 @@ Function *CodegenLLVM::createLog2Function()
                   is_not_zero);
   b_.SetInsertPoint(is_zero);
   b_.CreateStore(b_.getInt64(1), result);
-  b_.CreateRet(b_.CreateLoad(result));
+  createRet(b_.CreateLoad(result));
   b_.SetInsertPoint(is_not_zero);
 
   // power-of-2 index, offset by +2
@@ -2545,7 +2586,7 @@ Function *CodegenLLVM::createLog2Function()
     b_.CreateStore(b_.CreateLShr(n, shift), n_alloc);
     b_.CreateStore(b_.CreateAdd(b_.CreateLoad(result), shift), result);
   }
-  b_.CreateRet(b_.CreateLoad(result));
+  createRet(b_.CreateLoad(result));
   b_.restoreIP(ip);
   return module_->getFunction("log2");
 }
@@ -2604,7 +2645,7 @@ Function *CodegenLLVM::createLinearFunction()
   b_.CreateCondBr(cmp, lt_min, ge_min);
 
   b_.SetInsertPoint(lt_min);
-  b_.CreateRet(b_.getInt64(0));
+  createRet(b_.getInt64(0));
 
   b_.SetInsertPoint(ge_min);
   {
@@ -2623,7 +2664,7 @@ Function *CodegenLLVM::createLinearFunction()
     Value *max = b_.CreateLoad(max_alloc);
     Value *div = b_.CreateUDiv(b_.CreateSub(max, min), step);
     b_.CreateStore(b_.CreateAdd(div, b_.getInt64(1)), result_alloc);
-    b_.CreateRet(b_.CreateLoad(result_alloc));
+    createRet(b_.CreateLoad(result_alloc));
   }
 
   b_.SetInsertPoint(le_max);
@@ -2633,7 +2674,7 @@ Function *CodegenLLVM::createLinearFunction()
     Value *val = b_.CreateLoad(value_alloc);
     Value *div3 = b_.CreateUDiv(b_.CreateSub(val, min), step);
     b_.CreateStore(b_.CreateAdd(div3, b_.getInt64(1)), result_alloc);
-    b_.CreateRet(b_.CreateLoad(result_alloc));
+    createRet(b_.CreateLoad(result_alloc));
   }
 
   b_.restoreIP(ip);
@@ -2741,7 +2782,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreatePerfEventOutput(ctx, buf, struct_size);
   b_.CreateLifetimeEnd(buf);
 
-  b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+  createRet();
 }
 
 void CodegenLLVM::createPrintMapCall(Call &call)
@@ -3082,7 +3123,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
 
         b_.CreateCondBr(expr, pred_false_block, pred_true_block);
         b_.SetInsertPoint(pred_false_block);
-        b_.CreateRet(ConstantInt::get(module_->getContext(), APInt(64, 0)));
+        createRet();
 
         b_.SetInsertPoint(pred_true_block);
       }

@@ -22,7 +22,7 @@ entry:
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %4)
-  ret i64 0
+  ret i64 1
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
