@@ -17,7 +17,7 @@ entry:
   br i1 %predcond, label %pred_false, label %pred_true
 
 pred_false:                                       ; preds = %entry
-  ret i64 0
+  ret i64 1
 
 pred_true:                                        ; preds = %entry
   %get_cgroup_id1 = call i64 inttoptr (i64 80 to i64 ()*)()
@@ -33,7 +33,7 @@ pred_true:                                        ; preds = %entry
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
   %6 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
-  ret i64 0
+  ret i64 1
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn

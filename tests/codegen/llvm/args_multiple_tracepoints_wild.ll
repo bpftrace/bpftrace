@@ -49,7 +49,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   %13 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  ret i64 0
+  ret i64 1
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
@@ -101,7 +101,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   %13 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  ret i64 0
+  ret i64 1
 }
 
 attributes #0 = { nounwind }

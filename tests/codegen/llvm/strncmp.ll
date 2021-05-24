@@ -54,7 +54,7 @@ entry:
   br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 pred_false:                                       ; preds = %strcmp.false
-  ret i64 0
+  ret i64 1
 
 pred_true:                                        ; preds = %strcmp.false
   %19 = bitcast i64* %"@_key" to i8*
@@ -69,7 +69,7 @@ pred_true:                                        ; preds = %strcmp.false
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
   %22 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  ret i64 0
+  ret i64 1
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop86, %strcmp.loop80, %strcmp.loop74, %strcmp.loop68, %strcmp.loop62, %strcmp.loop56, %strcmp.loop50, %strcmp.loop44, %strcmp.loop38, %strcmp.loop32, %strcmp.loop26, %strcmp.loop20, %strcmp.loop14, %strcmp.loop8, %strcmp.loop2, %strcmp.loop, %entry
   %23 = load i1, i1* %strcmp.result, align 1
