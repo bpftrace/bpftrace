@@ -67,6 +67,7 @@ TEST(probe, short_name)
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
+#ifdef HAVE_BCC_KFUNC
 
 #include "btf_common.h"
 
@@ -82,6 +83,7 @@ TEST_F(probe_btf, short_name)
   compare_bytecode("iter:task_file { 1 }", "it:task_file { 1 }");
 }
 
+#endif // HAVE_BCC_KFUNC
 #endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace probe
