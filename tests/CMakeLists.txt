@@ -56,6 +56,8 @@ elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
   target_compile_definitions(bpftrace_test PRIVATE ARCH_X86_64)
 endif()
 
+target_compile_definitions(bpftrace_test PRIVATE ${BPFTRACE_FLAGS})
+
 if(STATIC_LINKING)
   if(EMBED_USE_LLVM)
     target_link_options(bpftrace_test BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")

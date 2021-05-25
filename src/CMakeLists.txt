@@ -94,77 +94,7 @@ endif()
 
 add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
 
-
-
-if (ALLOW_UNSAFE_PROBE)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_UNSAFE_PROBE)
-endif(ALLOW_UNSAFE_PROBE)
-
-if(HAVE_NAME_TO_HANDLE_AT)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_NAME_TO_HANDLE_AT=1)
-endif(HAVE_NAME_TO_HANDLE_AT)
-
-if(HAVE_BCC_PROG_LOAD)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_PROG_LOAD)
-endif(HAVE_BCC_PROG_LOAD)
-
-if(HAVE_BCC_CREATE_MAP)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_CREATE_MAP)
-endif(HAVE_BCC_CREATE_MAP)
-
-if(HAVE_BCC_ELF_FOREACH_SYM)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_ELF_FOREACH_SYM)
-endif(HAVE_BCC_ELF_FOREACH_SYM)
-
-if(HAVE_BCC_USDT_ADDSEM)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_USDT_ADDSEM)
-endif(HAVE_BCC_USDT_ADDSEM)
-
-if(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-endif(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-
-if(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-  target_compile_definitions(libbpftrace PRIVATE LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-endif(LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-
-if (HAVE_BCC_KFUNC)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_KFUNC)
-endif(HAVE_BCC_KFUNC)
-
-if (HAVE_LIBBPF_LINK_CREATE OR HAVE_BCC_PROG_LOAD_XATTR)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BPF_H)
-endif()
-
-if (LIBBPF_FOUND)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF)
-endif(LIBBPF_FOUND)
-
-if (HAVE_LIBBPF_MAP_BATCH)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_MAP_BATCH)
-endif()
-
-if (HAVE_LIBBPF_LINK_CREATE)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_LINK_CREATE)
-endif()
-
-if (HAVE_BCC_PROG_LOAD_XATTR)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BCC_PROG_LOAD_XATTR)
-endif()
-
-if(HAVE_BFD_DISASM)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_BFD_DISASM)
-  if(LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
-    target_compile_definitions(libbpftrace PRIVATE LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
-  endif(LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
-endif(HAVE_BFD_DISASM)
-
-if (LIBBPF_BTF_DUMP_FOUND)
-  target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP)
-  if (HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
-    target_compile_definitions(libbpftrace PRIVATE HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
-  endif()
-endif(LIBBPF_BTF_DUMP_FOUND)
+target_compile_definitions(libbpftrace PRIVATE ${BPFTRACE_FLAGS})
 
 # Linking
 if(STATIC_LINKING)
