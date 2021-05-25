@@ -667,6 +667,9 @@ TEST(clang_parser, btf_unresolved_typedef)
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
   // extract it from there
   BPFtrace bpftrace;
+  if (!bpftrace.btf_.has_data())
+    GTEST_SKIP();
+
   parse("struct Foo { size_t x; };", bpftrace);
 
   StructMap &structs = bpftrace.structs_;
