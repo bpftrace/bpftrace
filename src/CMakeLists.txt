@@ -30,6 +30,7 @@ add_library(libbpftrace
   probe_matcher.cpp
   procmon.cpp
   printf.cpp
+  relocator.cpp
   resolve_cgroupid.cpp
   struct.cpp
   tracepoint_format_parser.cpp

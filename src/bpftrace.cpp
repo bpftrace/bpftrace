@@ -35,6 +35,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "printf.h"
+#include "relocator.h"
 #include "resolve_cgroupid.h"
 #include "triggers.h"
 #include "utils.h"
@@ -909,6 +910,21 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                  << " from: " << probe.orig_name;
     else
       LOG(ERROR) << "Code not generated for probe: " << probe.name;
+    return ret;
+  }
+
+  // Make a copy of the bytecode and perform relocations
+  //
+  // We choose not to modify the original bytecode to void keeping
+  // track of state when the same bytecode is attached to multiple probes.
+  std::vector<uint8_t> relocated;
+  relocated.reserve(std::get<1>(*section));
+  memcpy(relocated.data(), std::get<0>(*section), std::get<1>(*section));
+  std::get<0>(*section) = relocated.data();
+  auto relocator = Relocator(*section, *this);
+  if (relocator.relocate())
+  {
+    LOG(ERROR) << "Failed to relocate insns for probe: " << probe.name;
     return ret;
   }
 
