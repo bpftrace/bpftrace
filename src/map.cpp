@@ -236,7 +236,10 @@ std::optional<IMap *> MapManager::Lookup(ssize_t id)
 
 void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
 {
-  maps_by_type_[t] = std::move(map);
+  auto id = maps_by_id_.size();
+  map->id = id;
+  maps_by_type_[t] = map.get();
+  maps_by_id_.emplace_back(std::move(map));
 }
 
 std::optional<IMap *> MapManager::Lookup(Type t)
@@ -247,7 +250,7 @@ std::optional<IMap *> MapManager::Lookup(Type t)
     return {};
   }
 
-  return search->second.get();
+  return search->second;
 }
 
 bool MapManager::Has(Type t)
@@ -257,12 +260,15 @@ bool MapManager::Has(Type t)
 
 void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
 {
-  stackid_maps_[t] = std::move(map);
+  auto id = maps_by_id_.size();
+  map->id = id;
+  stackid_maps_[t] = map.get();
+  maps_by_id_.emplace_back(std::move(map));
 }
 
 std::optional<IMap *> MapManager::Lookup(StackType t)
 {
-  return stackid_maps_[t].get();
+  return stackid_maps_[t];
 }
 
 bool MapManager::Has(StackType t)
