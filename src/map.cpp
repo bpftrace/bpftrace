@@ -268,7 +268,13 @@ void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
 
 std::optional<IMap *> MapManager::Lookup(StackType t)
 {
-  return stackid_maps_[t];
+  auto search = stackid_maps_.find(t);
+  if (search == stackid_maps_.end())
+  {
+    return {};
+  }
+
+  return search->second;
 }
 
 bool MapManager::Has(StackType t)
