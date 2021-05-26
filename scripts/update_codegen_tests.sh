@@ -27,4 +27,5 @@ docker run                                \
   -v $(pwd):$(pwd)                        \
   -e BPFTRACE_UPDATE_TESTS=1              \
   -e TEST_ARGS="--gtest_filter=codegen.*" \
+  -e VENDOR_GTEST="ON"                    \
   bpftrace-builder-bionic "$(pwd)/build-codegen-update" Debug "$@"
