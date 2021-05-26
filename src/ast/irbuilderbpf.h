@@ -54,16 +54,16 @@ public:
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
-  CallInst *CreateBpfPseudoCallFd(int mapfd);
-  CallInst *CreateBpfPseudoCallFd(Map &map);
-  CallInst *CreateBpfPseudoCallValue(int mapfd);
+  CallInst *CreateBpfPseudoCallId(int mapid);
+  CallInst *CreateBpfPseudoCallId(Map &map);
+  CallInst *CreateBpfPseudoCallValue(int mapid);
   CallInst *CreateBpfPseudoCallValue(Map &map);
   Value *CreateMapLookupElem(Value *ctx,
                              Map &map,
                              Value *key,
                              const location &loc);
   Value *CreateMapLookupElem(Value *ctx,
-                             int mapfd,
+                             int mapid,
                              Value *key,
                              SizedType &type,
                              const location &loc);
@@ -190,7 +190,7 @@ private:
                                 Builtin &builtin,
                                 AddrSpace as,
                                 const location &loc);
-  CallInst *createMapLookup(int mapfd, Value *key);
+  CallInst *createMapLookup(int mapid, Value *key);
   Constant *createProbeReadStrFn(llvm::Type *dst,
                                  llvm::Type *src,
                                  AddrSpace as);

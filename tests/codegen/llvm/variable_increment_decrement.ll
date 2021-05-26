@@ -33,7 +33,7 @@ entry:
   store i64 %6, i64* %"$x", align 8
   %7 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
   store i64 %5, i64* %7, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %printf_t* %printf_args, i64 16)
   %8 = bitcast %printf_t* %printf_args to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
@@ -48,7 +48,7 @@ entry:
   store i64 %13, i64* %"$x", align 8
   %14 = getelementptr %printf_t.0, %printf_t.0* %printf_args1, i32 0, i32 1
   store i64 %13, i64* %14, align 8
-  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output3 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.0*, i64)*)(i8* %0, i64 %pseudo2, i64 4294967295, %printf_t.0* %printf_args1, i64 16)
   %15 = bitcast %printf_t.0* %printf_args1 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
@@ -63,7 +63,7 @@ entry:
   store i64 %20, i64* %"$x", align 8
   %21 = getelementptr %printf_t.1, %printf_t.1* %printf_args4, i32 0, i32 1
   store i64 %19, i64* %21, align 8
-  %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output6 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.1*, i64)*)(i8* %0, i64 %pseudo5, i64 4294967295, %printf_t.1* %printf_args4, i64 16)
   %22 = bitcast %printf_t.1* %printf_args4 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
@@ -78,7 +78,7 @@ entry:
   store i64 %27, i64* %"$x", align 8
   %28 = getelementptr %printf_t.2, %printf_t.2* %printf_args7, i32 0, i32 1
   store i64 %27, i64* %28, align 8
-  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output9 = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t.2*, i64)*)(i8* %0, i64 %pseudo8, i64 4294967295, %printf_t.2* %printf_args7, i64 16)
   %29 = bitcast %printf_t.2* %printf_args7 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %29)

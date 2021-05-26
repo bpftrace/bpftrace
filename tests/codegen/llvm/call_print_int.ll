@@ -22,7 +22,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 1 %5, i8 0, i64 8, i1 false)
   %6 = bitcast [8 x i8]* %4 to i64*
   store i64 3, i64* %6, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_integer_8_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %print_integer_8_t* %print_integer_8_t, i64 24)
   %7 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)

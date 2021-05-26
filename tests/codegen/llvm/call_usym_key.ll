@@ -21,7 +21,7 @@ entry:
   %4 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 1
   store i64 0, i64* %3, align 8
   store i64 %2, i64* %4, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %usym_t*)*)(i64 %pseudo, %usym_t* %usym)
   %5 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
@@ -46,7 +46,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   %10 = add i64 %7, 1
   store i64 %10, i64* %"@x_val", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, %usym_t*, i64*, i64)*)(i64 %pseudo1, %usym_t* %usym, i64* %"@x_val", i64 0)
   %11 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)

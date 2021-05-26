@@ -33,7 +33,7 @@ entry:
   %10 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   store i64 44, i64* %"@x_val", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [128 x i8]*, i64*, i64)*)(i64 %pseudo, [128 x i8]* %"@x_key", i64* %"@x_val", i64 0)
   %11 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
