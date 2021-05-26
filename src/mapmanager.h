@@ -86,10 +86,12 @@ public:
   };
 
 private:
+  // `maps_by_id_` holds *all* maps
   std::vector<std::unique_ptr<IMap>> maps_by_id_;
+
   std::unordered_map<std::string, IMap *> maps_by_name_;
-  std::unordered_map<Type, std::unique_ptr<IMap>> maps_by_type_;
-  std::unordered_map<StackType, std::unique_ptr<IMap>> stackid_maps_;
+  std::unordered_map<Type, IMap *> maps_by_type_;
+  std::unordered_map<StackType, IMap *> stackid_maps_;
 };
 
 std::string to_string(MapManager::Type t);
