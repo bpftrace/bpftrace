@@ -35,7 +35,7 @@ entry:
   %8 = bitcast i64* %"@a_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i64 %6, i64* %"@a_val", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@a_key", i64* %"@a_val", i64 0)
   %9 = bitcast i64* %"@a_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
@@ -53,7 +53,7 @@ entry:
   %18 = bitcast i64* %"@b_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
   store i64 %16, i64* %"@b_val", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
+  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %update_elem2 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@b_key", i64* %"@b_val", i64 0)
   %19 = bitcast i64* %"@b_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
@@ -71,7 +71,7 @@ entry:
   %28 = bitcast i64* %"@c_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %28)
   store i64 %26, i64* %"@c_val", align 8
-  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
+  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
   %update_elem4 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo3, i64* %"@c_key", i64* %"@c_val", i64 0)
   %29 = bitcast i64* %"@c_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %29)
@@ -93,7 +93,7 @@ entry:
   %39 = bitcast i64* %"@d_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %39)
   store i64 %37, i64* %"@d_val", align 8
-  %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
+  %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
   %update_elem6 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* %"@d_key", i64* %"@d_val", i64 0)
   %40 = bitcast i64* %"@d_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %40)
@@ -110,7 +110,7 @@ entry:
   %48 = bitcast i64* %"@e_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %48)
   store i64 0, i64* %"@e_key", align 8
-  %pseudo7 = call i64 @llvm.bpf.pseudo(i64 1, i64 5)
+  %pseudo7 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
   %update_elem8 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [4 x i8]*, i64)*)(i64 %pseudo7, i64* %"@e_key", [4 x i8]* %"struct x.e", i64 0)
   %49 = bitcast i64* %"@e_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %49)

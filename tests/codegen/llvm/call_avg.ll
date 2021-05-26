@@ -17,7 +17,7 @@ entry:
   %1 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 0, i64* %"@x_key", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* %"@x_key")
   %2 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
@@ -42,7 +42,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
   %7 = add i64 %4, 1
   store i64 %7, i64* %"@x_num", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@x_key", i64* %"@x_num", i64 0)
   %8 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
@@ -51,7 +51,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %10 = bitcast i64* %"@x_key2" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   store i64 1, i64* %"@x_key2", align 8
-  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem4 = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo3, i64* %"@x_key2")
   %11 = bitcast i64* %lookup_elem_val8 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
@@ -78,7 +78,7 @@ lookup_merge7:                                    ; preds = %lookup_failure6, %l
   %16 = lshr i64 %get_pid_tgid, 32
   %17 = add i64 %16, %13
   store i64 %17, i64* %"@x_val", align 8
-  %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem12 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo11, i64* %"@x_key2", i64* %"@x_val", i64 0)
   %18 = bitcast i64* %"@x_key2" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)

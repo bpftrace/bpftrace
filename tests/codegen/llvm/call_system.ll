@@ -19,7 +19,7 @@ entry:
   store i64 10000, i64* %3, align 8
   %4 = getelementptr %system_t, %system_t* %system_args, i32 0, i32 1
   store i64 100, i64* %4, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %system_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %system_t* %system_args, i64 16)
   %5 = bitcast %system_t* %system_args to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)

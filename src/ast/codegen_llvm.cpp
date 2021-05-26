@@ -128,8 +128,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     auto *map = bpftrace_.maps[MapManager::Type::Elapsed].value();
     auto type = CreateUInt64();
-    auto start = b_.CreateMapLookupElem(
-        ctx_, map->mapfd_, key, type, builtin.loc);
+    auto start = b_.CreateMapLookupElem(ctx_, map->id, key, type, builtin.loc);
     expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns());
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
@@ -796,7 +795,7 @@ void CodegenLLVM::visit(Call &call)
     // We overload printf call for iterator probe's seq_printf helper.
     if (probetype(current_attach_point_->provider) == ProbeType::iter)
     {
-      auto mapfd = bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->mapfd_;
+      auto mapid = bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->id;
       auto nargs = call.vargs->size() - 1;
 
       int ptr_size = sizeof(unsigned long);
@@ -829,7 +828,7 @@ void CodegenLLVM::visit(Call &call)
       auto size = std::get<1>(ids);
 
       // and load it from the map
-      Value *map_data = b_.CreateBpfPseudoCallValue(mapfd);
+      Value *map_data = b_.CreateBpfPseudoCallValue(mapid);
       Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
       // and finally the seq_printf call

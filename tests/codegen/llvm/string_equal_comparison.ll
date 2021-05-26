@@ -35,7 +35,7 @@ pred_true:                                        ; preds = %strcmp.false
   %7 = bitcast [16 x i8]* %comm9 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %7, i8 0, i64 16, i1 false)
   %get_comm10 = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm9, i64 16)
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* %comm9)
   %8 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
@@ -98,7 +98,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
   %25 = add i64 %22, 1
   store i64 %25, i64* %"@_val", align 8
-  %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %pseudo11 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo11, [16 x i8]* %comm9, i64* %"@_val", i64 0)
   %26 = bitcast i64* %"@_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %26)
