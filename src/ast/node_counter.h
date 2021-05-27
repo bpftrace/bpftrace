@@ -10,7 +10,7 @@ namespace ast {
 class NodeCounter : public Visitor
 {
 public:
-  void Visit(Node &node)
+  void Visit(Node &node) override
   {
     count_++;
     Visitor::Visit(node);
