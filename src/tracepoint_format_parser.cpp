@@ -3,7 +3,7 @@
 #include <glob.h>
 #include <iostream>
 
-#include "ast.h"
+#include "ast/ast.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "struct.h"

@@ -12,7 +12,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "ast/field_analyser.h"
 #include "ast/node_counter.h"
+#include "ast/pass_manager.h"
+#include "ast/semantic_analyser.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -21,15 +24,11 @@
 #include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
-#include "field_analyser.h"
 #include "lockdown.h"
 #include "log.h"
 #include "output.h"
-#include "pass_manager.h"
-#include "printer.h"
 #include "probe_matcher.h"
 #include "procmon.h"
-#include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
 using namespace bpftrace;

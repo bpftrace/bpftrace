@@ -5,10 +5,10 @@
 
 #include "llvm/Config/llvm-config.h"
 
-#include "ast.h"
+#include "ast/ast.h"
+#include "ast/field_analyser.h"
 #include "btf.h"
 #include "clang_parser.h"
-#include "field_analyser.h"
 #include "headers.h"
 #include "log.h"
 #include "types.h"

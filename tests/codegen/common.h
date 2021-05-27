@@ -6,6 +6,7 @@
 #include "gtest/gtest.h"
 
 #include "../mocks.h"
+#include "ast/semantic_analyser.h"
 #include "bpffeature.h"
 #include "bpforc.h"
 #include "bpftrace.h"
@@ -13,7 +14,6 @@
 #include "codegen_llvm.h"
 #include "driver.h"
 #include "fake_map.h"
-#include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
 namespace bpftrace {

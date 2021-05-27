@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "ast.h"
+#include "ast/ast.h"
 #include "attached_probe.h"
 #include "bpffeature.h"
 #include "bpforc.h"

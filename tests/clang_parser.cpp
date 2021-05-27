@@ -1,9 +1,9 @@
-#include "gtest/gtest.h"
 #include "clang_parser.h"
-#include "driver.h"
+#include "ast/field_analyser.h"
 #include "bpftrace.h"
+#include "driver.h"
 #include "struct.h"
-#include "field_analyser.h"
+#include "gtest/gtest.h"
 #include <iostream>
 
 namespace bpftrace {

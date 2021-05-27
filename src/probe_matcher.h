@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ast.h"
+#include "ast/ast.h"
 
 #include <set>
 #include <sstream>

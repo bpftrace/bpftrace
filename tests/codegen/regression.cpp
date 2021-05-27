@@ -1,12 +1,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "ast/semantic_analyser.h"
 #include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
-#include "semantic_analyser.h"
 
 #include "common.h"
 
