@@ -6,6 +6,7 @@ add_library(ast
   field_analyser.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
+  portability_analyser.cpp
   printer.cpp
   semantic_analyser.cpp
   signal.cpp
