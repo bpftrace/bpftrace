@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <iterator>
+
 namespace bpftrace {
 namespace test {
 namespace codegen {
@@ -19,7 +21,6 @@ TEST(codegen, call_kstack_mapids)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(
                 "kprobe:f { @x = kstack(5); @y = kstack(6); @z = kstack(6) }"),
@@ -37,7 +38,7 @@ TEST(codegen, call_kstack_mapids)
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   codegen.compile();
 
-  ASSERT_EQ(FakeMap::next_mapfd_, 7);
+  ASSERT_EQ(std::distance(bpftrace.maps.begin(), bpftrace.maps.end()), 6);
   ASSERT_EQ(bpftrace.maps.CountStackTypes(), 2U);
 
   StackType stack_type;
@@ -51,7 +52,6 @@ TEST(codegen, call_kstack_modes_mapids)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str("kprobe:f { @x = kstack(perf); @y = "
                              "kstack(bpftrace); @z = kstack() }"),
@@ -69,7 +69,7 @@ TEST(codegen, call_kstack_modes_mapids)
   ast::CodegenLLVM codegen(driver.root_, bpftrace);
   codegen.compile();
 
-  ASSERT_EQ(FakeMap::next_mapfd_, 7);
+  ASSERT_EQ(std::distance(bpftrace.maps.begin(), bpftrace.maps.end()), 6);
   ASSERT_EQ(bpftrace.maps.CountStackTypes(), 2U);
 
   StackType stack_type;

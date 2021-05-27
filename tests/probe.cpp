@@ -22,7 +22,6 @@ void gen_bytecode(const std::string &input, std::stringstream &out)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
-  FakeMap::next_mapfd_ = 1;
 
   ASSERT_EQ(driver.parse_str(input), 0);
 

@@ -2,8 +2,6 @@
 
 namespace bpftrace {
 
-int FakeMap::next_mapfd_ = 1;
-
 FakeMap::FakeMap(const std::string &name,
                  const SizedType &type __attribute__((unused)),
                  const MapKey &key __attribute__((unused)),
@@ -13,7 +11,7 @@ FakeMap::FakeMap(const std::string &name,
                  int max_entries __attribute__((unused)))
 {
   name_ = name;
-  mapfd_ = next_mapfd_++;
+  mapfd_ = 0;
 }
 
 FakeMap::FakeMap(const std::string &name,
@@ -22,7 +20,7 @@ FakeMap::FakeMap(const std::string &name,
                  int max_entries __attribute__((unused)))
 {
   name_ = name;
-  mapfd_ = next_mapfd_++;
+  mapfd_ = 0;
 }
 
 FakeMap::FakeMap(const std::string &name,
@@ -33,17 +31,17 @@ FakeMap::FakeMap(const std::string &name,
                  int flags __attribute__((unused)))
 {
   name_ = name;
-  mapfd_ = next_mapfd_++;
+  mapfd_ = 0;
 }
 
 FakeMap::FakeMap(const SizedType &type __attribute__((unused)))
 {
-  mapfd_ = next_mapfd_++;
+  mapfd_ = 0;
 }
 
 FakeMap::FakeMap(enum bpf_map_type map_type __attribute__((unused)))
 {
-  mapfd_ = next_mapfd_++;
+  mapfd_ = 0;
 }
 
 } // namespace bpftrace
