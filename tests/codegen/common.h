@@ -40,8 +40,6 @@ static void test(BPFtrace &bpftrace,
                  const std::string &name)
 {
   Driver driver(bpftrace);
-  FakeMap::next_mapfd_ = 1;
-
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;

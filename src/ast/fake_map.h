@@ -26,8 +26,6 @@ public:
           int value_size,
           int max_entries,
           int flags);
-
-  static int next_mapfd_;
 };
 
 } // namespace bpftrace
