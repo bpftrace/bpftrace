@@ -3,7 +3,7 @@
 #include <fstream>
 #include <memory>
 
-#include "ast.h"
+#include "ast/ast.h"
 #include "bpftrace.h"
 #include "parser.tab.hh"
 

@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "ast.h"
+#include "ast/ast.h"
 #include "printf_format_types.h"
 #include "types.h"
 

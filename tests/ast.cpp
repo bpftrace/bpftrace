@@ -1,5 +1,6 @@
+#include "ast/ast.h"
+
 #include "gtest/gtest.h"
-#include "ast.h"
 
 namespace bpftrace {
 namespace test {

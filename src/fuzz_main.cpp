@@ -17,15 +17,15 @@
 #include <unistd.h>
 
 #include "ast/callback_visitor.h"
+#include "ast/clang_parser.h"
+#include "ast/field_analyser.h"
+#include "ast/semantic_analyser.h"
 #include "bpforc.h"
 #include "bpftrace.h"
-#include "clang_parser.h"
 #include "codegen_llvm.h"
 #include "driver.h"
-#include "field_analyser.h"
 #include "log.h"
 #include "output.h"
-#include "semantic_analyser.h"
 #include "tracepoint_format_parser.h"
 
 #define DEFAULT_NODE_MAX 200
