@@ -79,7 +79,7 @@ if(VENDOR_GTEST)
   include(ExternalProject)
   ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.8.1
+    GIT_TAG release-1.10.0
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     BUILD_BYPRODUCTS ${gtest_byproducts}
@@ -88,10 +88,13 @@ if(VENDOR_GTEST)
   ExternalProject_Get_Property(gtest-git source_dir binary_dir)
   target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
   target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
-  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest.a)
-  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/gtest/libgtest_main.a)
-  target_link_libraries(bpftrace_test ${binary_dir}/googlemock/libgmock.a)
+  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgtest.a)
+  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgtest_main.a)
+  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgmock.a)
 else()
+  # bpftrace tests require (at minimum) the vendored version (see above).
+  # There's no great way to enforce a minimum version from cmake -- the cmake
+  # modules don't respect minimum requested version.
   find_package(GTest REQUIRED)
   find_package(GMock REQUIRED)
   include_directories(SYSTEM ${GTEST_INCLUDE_DIRS} ${GMOCK_INCLUDE_DIRS})
