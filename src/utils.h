@@ -162,6 +162,8 @@ bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 pid_t parse_pid(const std::string &str);
 std::string hex_format_buffer(const char *buf, size_t size);
 std::optional<std::string> abs_path(const std::string &rel_path);
+bool symbol_has_module(const std::string &symbol);
+std::string strip_symbol_module(const std::string &symbol);
 
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(
