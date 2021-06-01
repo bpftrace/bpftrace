@@ -31,6 +31,8 @@ and this project adheres to
   - [#1812](https://github.com/iovisor/bpftrace/pull/1812)
 - Make kaddr() report failure for unknown kernel symbols
   - [#1836](https://github.com/iovisor/bpftrace/pull/1836)
+- Fix false non-traceable function warnings
+  - [#1866](https://github.com/iovisor/bpftrace/pull/1866)
 
 #### Tools
 

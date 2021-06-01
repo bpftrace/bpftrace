@@ -73,10 +73,9 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   std::set<std::string> matches;
   while (std::getline(symbol_stream, line, delim))
   {
-    if (ignore_trailing_module && !line.empty() && line[line.size() - 1] == ']')
+    if (ignore_trailing_module && symbol_has_module(line))
     {
-      if (size_t idx = line.rfind(" ["); idx != std::string::npos)
-        line = line.substr(0, idx);
+      line = strip_symbol_module(line);
     }
 
     if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))

@@ -783,7 +783,12 @@ std::unordered_set<std::string> get_traceable_funcs()
   std::unordered_set<std::string> result;
   std::string line;
   while (std::getline(available_funs, line))
-    result.insert(line);
+  {
+    if (symbol_has_module(line))
+      result.insert(strip_symbol_module(line));
+    else
+      result.insert(line);
+  }
   return result;
 #endif
 }
@@ -977,6 +982,17 @@ uint64_t max_value(const std::vector<uint8_t> &value, int nvalues)
       max = val;
   }
   return max;
+}
+
+bool symbol_has_module(const std::string &symbol)
+{
+  return !symbol.empty() && symbol[symbol.size() - 1] == ']';
+}
+
+std::string strip_symbol_module(const std::string &symbol)
+{
+  size_t idx = symbol.rfind(" [");
+  return idx != std::string::npos ? symbol.substr(0, idx) : symbol;
 }
 
 } // namespace bpftrace
