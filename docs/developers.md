@@ -7,7 +7,7 @@ We use clang-format with our custom config for formatting code. This was
 was already written. Instead of formatting the whole code base at once and
 breaking `git blame` we're taking an incremental approach, each new/modified bit
 of code needs to be formatted.
-The CI checks this too, if the changes don't adhere to our style the job will fali.
+The CI checks this too, if the changes don't adhere to our style the job will fail.
 
 ### Using clang-format
 

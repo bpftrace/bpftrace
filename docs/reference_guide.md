@@ -407,7 +407,7 @@ iscsid is sleeping.
 [...]
 ```
 
-This includes `The verifier log:` and then the log message from the in-kernel vertifier.
+This includes `The verifier log:` and then the log message from the in-kernel verifier.
 
 ## 7. Preprocessor Options
 
@@ -717,7 +717,7 @@ i: 5
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
-Note that maps will be implictly declared and initialized to 0 if not already
+Note that maps will be implicitly declared and initialized to 0 if not already
 declared or defined. Scratch variables must be initialized before using these
 operators.
 
