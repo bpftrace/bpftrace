@@ -21,6 +21,12 @@ public:
   int analyse();
 
 private:
+  void visit(PositionalParameter &param) override;
+  void visit(Builtin &builtin) override;
+  void visit(Call &call) override;
+  void visit(Cast &cast) override;
+  void visit(AttachPoint &ap) override;
+
   Node *root_;
   std::ostream &out_;
   std::ostringstream err_;
