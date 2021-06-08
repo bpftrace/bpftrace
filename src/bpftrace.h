@@ -138,7 +138,7 @@ public:
   bool is_aslr_enabled(int pid);
   std::string get_string_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
-  bool is_traceable_func(const std::string &func_name) const;
+  virtual bool is_traceable_func(const std::string &func_name) const;
 
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::vector<Probe> watchpoint_probes_;
