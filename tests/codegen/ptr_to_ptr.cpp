@@ -6,9 +6,10 @@ namespace codegen {
 
 TEST(codegen, ptr_to_ptr)
 {
-  test(R"PROG(kprobe:f { $pp = (int32 **)0; printf("%d\n", **$pp); })PROG",
+  test(
+      R"PROG(kprobe:f { $pp = (int32 **)0; printf("%d\n", **kptr($pp)); })PROG",
 
-       NAME);
+      NAME);
 }
 
 } // namespace codegen
