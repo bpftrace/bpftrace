@@ -67,6 +67,12 @@ public:
     return 0;
   }
 
+  bool is_traceable_func(
+      const std::string &__attribute__((unused))) const override
+  {
+    return true;
+  }
+
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
   {
     probe_matcher_ = std::move(probe_matcher);
