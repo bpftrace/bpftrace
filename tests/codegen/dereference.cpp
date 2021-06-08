@@ -6,7 +6,7 @@ namespace codegen {
 
 TEST(codegen, dereference)
 {
-  test("kprobe:f { @x = *1234 }",
+  test("kprobe:f { @x = *kptr(1234) }",
 
        NAME);
 }
