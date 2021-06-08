@@ -36,20 +36,26 @@ public:
     sym->size = 4;
     return 0;
   }
+
+  bool is_traceable_func(
+      const std::string &__attribute__((unused))) const override
+  {
+    return true;
+  }
 };
 
 TEST(codegen, populate_sections)
 {
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
 
   ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
   // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   auto bpforc = codegen.compile();
 
   EXPECT_TRUE(bpforc->getSection("s_kprobe:foo_1").has_value());
@@ -58,8 +64,8 @@ TEST(codegen, populate_sections)
 
 TEST(codegen, printf_offsets)
 {
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
+  auto bpftrace = get_mock_bpftrace();
+  Driver driver(*bpftrace);
 
   ASSERT_EQ(driver.parse_str(
                 "struct Foo { char c; int i; char str[10]; }\n"
@@ -70,20 +76,20 @@ TEST(codegen, printf_offsets)
                 "}"),
             0);
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_, *bpftrace);
 
   // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace);
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+  ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ASSERT_EQ(semantics.create_maps(true), 0);
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_, bpftrace);
+  ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   codegen.generate_ir();
 
-  EXPECT_EQ(bpftrace.printf_args_.size(), 1U);
-  auto &fmt = std::get<0>(bpftrace.printf_args_[0]);
-  auto &args = std::get<1>(bpftrace.printf_args_[0]);
+  EXPECT_EQ(bpftrace->printf_args_.size(), 1U);
+  auto &fmt = std::get<0>(bpftrace->printf_args_[0]);
+  auto &args = std::get<1>(bpftrace->printf_args_[0]);
 
   EXPECT_EQ(fmt, "%c %u %s %p\n");
 
