@@ -1363,21 +1363,34 @@ TEST(semantic_analyser, map_cast_types)
 
 TEST(semantic_analyser, variable_casts_are_local)
 {
-  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { $x = (struct type1*)cpu } kprobe:g { $x = (struct "
-                 "type2*)cpu; }",
+  std::string structs =
+      "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { $x = *(struct type1 *)cpu } "
+                 "kprobe:g { $x = *(struct type2 *)cpu; }",
        0);
 }
 
 TEST(semantic_analyser, map_casts_are_global)
 {
-  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
-  test(structs + "kprobe:f { @x = (struct type1)cpu } kprobe:g { @x = (struct type2)cpu; }", 1);
+  std::string structs =
+      "struct type1 { int field; } struct type2 { int field; }";
+  test(structs + "kprobe:f { @x = *(struct type1 *)cpu }"
+                 "kprobe:g { @x = *(struct type2 *)cpu }",
+       1);
 }
 
 TEST(semantic_analyser, cast_unknown_type)
 {
-  test("kprobe:f { (struct faketype)cpu }", 1);
+  test("kprobe:f { (struct faketype *)cpu }", 1);
+}
+
+TEST(semantic_analyser, cast_struct)
+{
+  // Casting struct by value is forbidden
+  test("struct type { int field; }"
+       "kprobe:f { $s = (struct type *)cpu; $u = (uint32)*$s; }",
+       1);
+  test("struct type { int field; } kprobe:f { $s = (struct type)cpu }", 1);
 }
 
 TEST(semantic_analyser, field_access)
@@ -1391,9 +1404,9 @@ TEST(semantic_analyser, field_access)
 TEST(semantic_analyser, field_access_wrong_field)
 {
   std::string structs = "struct type1 { int field; }";
-  test(structs + "kprobe:f { ((struct type1)cpu).blah }", 1);
-  test(structs + "kprobe:f { $x = (struct type1)cpu; $x.blah }", 1);
-  test(structs + "kprobe:f { @x = (struct type1)cpu; @x.blah }", 1);
+  test(structs + "kprobe:f { ((struct type1 *)cpu)->blah }", 1);
+  test(structs + "kprobe:f { $x = (struct type1 *)cpu; $x->blah }", 1);
+  test(structs + "kprobe:f { @x = (struct type1 *)cpu; @x->blah }", 1);
 }
 
 TEST(semantic_analyser, field_access_wrong_expr)
