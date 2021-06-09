@@ -21,6 +21,8 @@ and this project adheres to
   - [#1857](https://github.com/iovisor/bpftrace/pull/1857)
 - Preserve original order of struct types
   - [#1850](https://github.com/iovisor/bpftrace/pull/1850)
+- Forbid casting from/to struct types
+  - [#1873](https://github.com/iovisor/bpftrace/pull/1873)
 
 #### Deprecated
 

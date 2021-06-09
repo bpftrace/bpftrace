@@ -2007,6 +2007,12 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
+  if (cast.expr->type.IsRecordTy())
+  {
+    LOG(ERROR, cast.loc, err_)
+        << "Cannot cast from struct type \"" << cast.expr->type << "\"";
+  }
+
   bool is_ctx = cast.expr->type.IsCtxAccess();
   auto &intcasts = getIntcasts();
   auto k_v = intcasts.find(cast.cast_type);
@@ -2066,12 +2072,8 @@ void SemanticAnalyser::visit(Cast &cast)
   }
   else
   {
-    auto &etype = cast.expr->type;
-    if (etype.IsIntegerTy() || etype.IsPtrTy())
-    {
-      LOG(ERROR, cast.loc, err_) << "Cannot convert " << etype << " to struct";
-    }
-    cast.type = struct_type;
+    LOG(ERROR, cast.loc, err_)
+        << "Cannot cast to struct type \"" << cast.cast_type << "\"";
   }
   if (is_ctx)
     cast.type.MarkCtxAccess();
