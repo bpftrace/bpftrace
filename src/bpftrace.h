@@ -84,12 +84,6 @@ private:
   std::string msg_;
 };
 
-struct HelperErrorInfo
-{
-  int func_id;
-  location loc;
-};
-
 class BPFtrace
 {
 public:
