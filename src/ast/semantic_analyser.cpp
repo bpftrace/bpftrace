@@ -1414,6 +1414,12 @@ void SemanticAnalyser::visit(Map &map)
     }
     map.type = CreateNone();
   }
+
+  // MapKey default initializes to no args so we don't need to do anything
+  // if we don't find a key here
+  auto map_key_search_val = map_key_.find(map.ident);
+  if (map_key_search_val != map_key_.end())
+    map.key_type = map_key_search_val->second;
 }
 
 void SemanticAnalyser::visit(Variable &var)

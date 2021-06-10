@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "mapkey.h"
 #include "types.h"
 #include "usdt.h"
 
@@ -182,6 +183,7 @@ public:
   ~Map();
 
   std::string ident;
+  MapKey key_type;
   ExpressionList *vargs = nullptr;
   bool skip_key_validation = false;
 
