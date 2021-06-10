@@ -8,6 +8,7 @@ add_library(ast
   pass_manager.cpp
   portability_analyser.cpp
   printer.cpp
+  resource_analyser.cpp
   semantic_analyser.cpp
   signal.cpp
   visitors.cpp
