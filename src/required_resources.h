@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <tuple>
 #include <unordered_set>
@@ -37,6 +38,16 @@ struct LinearHistogramArgs
 class RequiredResources
 {
 public:
+  // Create maps in `maps` based on stored metadata
+  //
+  // If `fake` is set, then `FakeMap`s will be created. This is useful for:
+  // * allocating map IDs for codegen, because there's no need to prematurely
+  //   create resources that may not get used (debug mode, AOT codepath, etc.)
+  // * unit tests, as unit tests should not make system state changes
+  //
+  // Returns 0 on success, number of maps that failed to be created otherwise
+  int create_maps(BPFtrace &bpftrace, bool fake);
+
   // Async argument metadata
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args;
   std::vector<std::tuple<std::string, std::vector<Field>>> seq_printf_args;
@@ -65,6 +76,10 @@ public:
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
   bool needs_data_map = false;
+
+private:
+  template <typename T>
+  int create_maps_impl(BPFtrace &bpftrace, bool fake);
 };
 
 } // namespace bpftrace
