@@ -3,6 +3,7 @@
 #include "imap.h"
 #include <map>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 namespace bpftrace {
