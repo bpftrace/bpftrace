@@ -16,6 +16,7 @@
 #include "ast/node_counter.h"
 #include "ast/pass_manager.h"
 #include "ast/portability_analyser.h"
+#include "ast/resource_analyser.h"
 #include "ast/semantic_analyser.h"
 #include "bpffeature.h"
 #include "bpforc.h"
@@ -410,6 +411,7 @@ ast::PassManager CreateDynamicPM()
   ast::PassManager pm;
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
+  pm.AddPass(ast::CreateResourcePass());
   pm.AddPass(ast::CreateMapCreatePass());
 
   return pm;
@@ -420,6 +422,7 @@ ast::PassManager CreateAotPM(std::string __attribute__((unused)))
   ast::PassManager pm;
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreatePortabilityPass());
+  pm.AddPass(ast::CreateResourcePass());
 
   return pm;
 }

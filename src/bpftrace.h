@@ -21,6 +21,7 @@
 #include "printf.h"
 #include "probe_matcher.h"
 #include "procmon.h"
+#include "required_resources.h"
 #include "struct.h"
 #include "types.h"
 #include "utils.h"
@@ -147,6 +148,7 @@ public:
   // Global variable checking if an exit signal was received
   static volatile sig_atomic_t exitsig_recv;
 
+  RequiredResources resources;
   MapManager maps;
   std::unique_ptr<BpfOrc> bpforc_;
   StructManager structs;

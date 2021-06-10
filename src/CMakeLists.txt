@@ -32,6 +32,7 @@ add_library(libbpftrace
   printf.cpp
   relocator.cpp
   resolve_cgroupid.cpp
+  required_resources.cpp
   struct.cpp
   tracepoint_format_parser.cpp
   types.cpp
