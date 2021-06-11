@@ -3,45 +3,32 @@
 namespace bpftrace {
 
 FakeMap::FakeMap(const std::string &name,
-                 const SizedType &type __attribute__((unused)),
-                 const MapKey &key __attribute__((unused)),
-                 int min __attribute__((unused)),
-                 int max __attribute__((unused)),
-                 int step __attribute__((unused)),
-                 int max_entries __attribute__((unused)))
+                 const SizedType &type,
+                 const MapKey &key,
+                 int min,
+                 int max,
+                 int step,
+                 int max_entries)
+    : IMap(name, type, key, min, max, step, max_entries)
 {
-  name_ = name;
-  mapfd_ = 0;
 }
 
 FakeMap::FakeMap(const std::string &name,
-                 const SizedType &type __attribute__((unused)),
-                 const MapKey &key __attribute__((unused)),
-                 int max_entries __attribute__((unused)))
+                 enum bpf_map_type type,
+                 int key_size,
+                 int value_size,
+                 int max_entries,
+                 int flags)
+    : IMap(name, type, key_size, value_size, max_entries, flags)
 {
-  name_ = name;
-  mapfd_ = 0;
 }
 
-FakeMap::FakeMap(const std::string &name,
-                 enum bpf_map_type type __attribute__((unused)),
-                 int key_size __attribute__((unused)),
-                 int value_size __attribute__((unused)),
-                 int max_entries __attribute__((unused)),
-                 int flags __attribute__((unused)))
+FakeMap::FakeMap(const SizedType &type) : IMap(type)
 {
-  name_ = name;
-  mapfd_ = 0;
 }
 
-FakeMap::FakeMap(const SizedType &type __attribute__((unused)))
+FakeMap::FakeMap(enum bpf_map_type map_type) : IMap(map_type)
 {
-  mapfd_ = 0;
-}
-
-FakeMap::FakeMap(enum bpf_map_type map_type __attribute__((unused)))
-{
-  mapfd_ = 0;
 }
 
 } // namespace bpftrace

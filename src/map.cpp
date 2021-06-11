@@ -1,6 +1,5 @@
 #include <cstring>
 #include <iostream>
-#include <linux/version.h>
 #include <unistd.h>
 
 #include "bpftrace.h"
@@ -13,12 +12,14 @@
 
 namespace bpftrace {
 
-int Map::create_map(enum bpf_map_type map_type,
-                    const std::string &name,
-                    int key_size,
-                    int value_size,
-                    int max_entries,
-                    int flags)
+namespace {
+
+int create_map(enum bpf_map_type map_type,
+               const std::string &name,
+               int key_size,
+               int value_size,
+               int max_entries,
+               int flags)
 {
   std::string fixed_name;
   const std::string *name_ptr = &name;
@@ -36,6 +37,8 @@ int Map::create_map(enum bpf_map_type map_type,
 #endif
 }
 
+} // namespace
+
 Map::Map(const std::string &name,
          const SizedType &type,
          const MapKey &key,
@@ -43,36 +46,18 @@ Map::Map(const std::string &name,
          int max,
          int step,
          int max_entries)
+    : IMap(name, type, key, min, max, step, max_entries)
 {
-  name_ = name;
-  type_ = type;
-  key_ = key;
-  // for lhist maps:
-  lqmin = min;
-  lqmax = max;
-  lqstep = step;
-
   int key_size = key.size();
   if (type.IsHistTy() || type.IsLhistTy() || type.IsAvgTy() || type.IsStatsTy())
     key_size += 8;
   if (key_size == 0)
     key_size = 8;
-
   if (type.IsCountTy() && !key.args_.size())
   {
-    map_type_ = BPF_MAP_TYPE_PERCPU_ARRAY;
     max_entries = 1;
     key_size = 4;
   }
-  else if ((type.IsHistTy() || type.IsLhistTy() || type.IsCountTy() ||
-            type.IsSumTy() || type.IsMinTy() || type.IsMaxTy() ||
-            type.IsAvgTy() || type.IsStatsTy()) &&
-           (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
-  {
-    map_type_ = BPF_MAP_TYPE_PERCPU_HASH;
-  }
-  else
-    map_type_ = BPF_MAP_TYPE_HASH;
 
   int value_size = type.GetSize();
   int flags = 0;
@@ -91,10 +76,10 @@ Map::Map(const std::string &name,
          int value_size,
          int max_entries,
          int flags)
+    : IMap(name, type, key_size, value_size, max_entries, flags)
 {
-  map_type_ = type;
-  name_ = name;
-  mapfd_ = create_map(type, name, key_size, value_size, max_entries, flags);
+  mapfd_ = create_map(
+      map_type_, name_, key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
     LOG(ERROR) << "failed to create map: '" << name_
@@ -124,25 +109,15 @@ Map::Map(const std::string &name,
 //
 // The temporary fix is to bump the map size to 128K. Any futher bumps should
 // warrant consideration of the previous paragraph.
-Map::Map(const SizedType &type)
+Map::Map(const SizedType &type) : IMap(type)
 {
-#ifdef DEBUG
-  // TODO (mmarchini): replace with DCHECK
-  if (!type.IsStack())
-  {
-    LOG(FATAL) << "Map::Map(SizedType) constructor should be called only with "
-                  "stack types";
-  }
-#endif
-  type_ = type;
   int key_size = 4;
   int value_size = sizeof(uintptr_t) * type.stack_type.limit;
-  std::string name = "stack";
   int max_entries = 128 << 10;
   int flags = 0;
-  enum bpf_map_type map_type = BPF_MAP_TYPE_STACK_TRACE;
 
-  mapfd_ = create_map(map_type, name, key_size, value_size, max_entries, flags);
+  mapfd_ = create_map(
+      map_type_, "stack", key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
     LOG(ERROR)
@@ -155,37 +130,19 @@ Map::Map(const SizedType &type)
   }
 }
 
-Map::Map(enum bpf_map_type map_type)
+Map::Map(enum bpf_map_type map_type) : IMap(map_type)
 {
-  int key_size, value_size, max_entries, flags;
-  map_type_ = map_type;
+  std::vector<int> cpus = get_online_cpus();
+  int key_size = 4;
+  int value_size = 4;
+  int max_entries = cpus.size();
+  int flags = 0;
 
-  std::string name;
-#ifdef DEBUG
-  // TODO (mmarchini): replace with DCHECK
-  if (map_type == BPF_MAP_TYPE_STACK_TRACE)
-  {
-    LOG(FATAL) << "Use Map::Map(SizedType) constructor instead";
-  }
-#endif
-  if (map_type == BPF_MAP_TYPE_PERF_EVENT_ARRAY)
-  {
-    std::vector<int> cpus = get_online_cpus();
-    name = "printf";
-    key_size = 4;
-    value_size = 4;
-    max_entries = cpus.size();
-    flags = 0;
-  }
-  else
-  {
-    LOG(FATAL) << "invalid map type";
-  }
-
-  mapfd_ = create_map(map_type, name, key_size, value_size, max_entries, flags);
+  mapfd_ = create_map(
+      map_type, "printf", key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    LOG(ERROR) << "failed to create " << name << " map: " << strerror(errno);
+    LOG(ERROR) << "failed to create " << name_ << " map: " << strerror(errno);
   }
 }
 

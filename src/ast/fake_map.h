@@ -10,7 +10,8 @@ public:
   FakeMap(const std::string &name,
           const SizedType &type,
           const MapKey &key,
-          int max_entries = 0);
+          int max_entries)
+      : FakeMap(name, type, key, 0, 0, 0, max_entries){};
   FakeMap(const SizedType &type);
   FakeMap(enum bpf_map_type map_type);
   FakeMap(const std::string &name,
