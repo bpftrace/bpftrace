@@ -148,18 +148,8 @@ public:
   StructManager structs;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
-  std::vector<std::tuple<std::string, std::vector<Field>>> printf_args_;
-  std::vector<std::tuple<std::string, std::vector<Field>>> system_args_;
-  std::vector<std::tuple<std::string, std::vector<Field>>> seq_printf_args_;
-  std::vector<std::string> join_args_;
-  std::vector<std::string> time_args_;
-  std::vector<std::string> strftime_args_;
-  std::vector<std::tuple<std::string, std::vector<Field>>> cat_args_;
-  std::vector<SizedType> non_map_print_args_;
-  std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info_;
   std::unordered_set<std::string> traceable_funcs_;
 
-  std::vector<std::string> probe_ids_;
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
   std::unique_ptr<Output> out_;
@@ -200,8 +190,6 @@ public:
   }
   int ncpus_;
   int online_cpus_;
-
-  std::vector<std::tuple<int, int>> seq_printf_ids_;
 
   std::vector<Probe> probes_;
   std::vector<Probe> special_probes_;

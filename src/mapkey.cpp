@@ -101,7 +101,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::username:
       return bpftrace.resolve_uid(read_data<uint64_t>(data));
     case Type::probe:
-      return bpftrace.probe_ids_[read_data<uint64_t>(data)];
+      return bpftrace.resources.probe_ids[read_data<uint64_t>(data)];
     case Type::string:
     {
       auto p = static_cast<const char *>(data);

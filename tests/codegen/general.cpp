@@ -54,7 +54,6 @@ TEST(codegen, populate_sections)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
-  std::stringstream out;
   ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   auto bpforc = codegen.compile();
 
@@ -82,14 +81,18 @@ TEST(codegen, printf_offsets)
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.root_, *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
-  ASSERT_EQ(semantics.create_maps(true), 0);
-  std::stringstream out;
+
+  ast::ResourceAnalyser resource_analyser(driver.root_);
+  auto resources = resource_analyser.analyse();
+  ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
+  bpftrace->resources = resources;
+
   ast::CodegenLLVM codegen(driver.root_, *bpftrace);
   codegen.generate_ir();
 
-  EXPECT_EQ(bpftrace->printf_args_.size(), 1U);
-  auto &fmt = std::get<0>(bpftrace->printf_args_[0]);
-  auto &args = std::get<1>(bpftrace->printf_args_[0]);
+  EXPECT_EQ(resources.printf_args.size(), 1U);
+  auto &fmt = std::get<0>(bpftrace->resources.printf_args[0]);
+  auto &args = std::get<1>(bpftrace->resources.printf_args[0]);
 
   EXPECT_EQ(fmt, "%c %u %s %p\n");
 
