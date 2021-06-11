@@ -18,7 +18,9 @@ template <typename T>
 int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
 {
   uint32_t failed_maps = 0;
-  auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
+  auto is_invalid_map = [=](int a) -> uint8_t {
+    return (!fake && a < 0) ? 1 : 0;
+  };
   for (auto &map_val : map_vals)
   {
     std::string map_name = map_val.first;
