@@ -59,14 +59,6 @@ struct PassContext
 public:
   PassContext(BPFtrace &b) : b(b){};
   BPFtrace &b;
-
-private:
-  // As semantic pass and map creation are separate passes we need this
-  SemanticAnalyser *semant;
-
-  // Only ones allowed to access semant
-  friend Pass CreateSemanticPass();
-  friend Pass CreateMapCreatePass();
 };
 
 using PassFPtr = std::function<PassResult(Node &, PassContext &)>;

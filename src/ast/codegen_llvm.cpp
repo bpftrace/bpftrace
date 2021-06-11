@@ -263,12 +263,12 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "probe")
   {
-    auto begin = bpftrace_.probe_ids_.begin();
-    auto end = bpftrace_.probe_ids_.end();
+    auto begin = bpftrace_.resources.probe_ids.begin();
+    auto end = bpftrace_.resources.probe_ids.end();
     auto found = std::find(begin, end, probefull_);
     builtin.probe_id = std::distance(begin, found);
     if (found == end) {
-      bpftrace_.probe_ids_.push_back(probefull_);
+      bpftrace_.resources.probe_ids.push_back(probefull_);
     }
     expr_ = b_.getInt64(builtin.probe_id);
   }
@@ -823,7 +823,7 @@ void CodegenLLVM::visit(Call &call)
       }
 
       // pick to current format string
-      auto ids = bpftrace_.seq_printf_ids_.at(seq_printf_id_);
+      auto ids = bpftrace_.resources.seq_printf_ids.at(seq_printf_id_);
       auto idx = std::get<0>(ids);
       auto size = std::get<1>(ids);
 
@@ -841,7 +841,7 @@ void CodegenLLVM::visit(Call &call)
     {
       createFormatStringCall(call,
                              printf_id_,
-                             bpftrace_.printf_args_,
+                             bpftrace_.resources.printf_args,
                              "printf",
                              AsyncAction::printf);
     }
@@ -850,14 +850,14 @@ void CodegenLLVM::visit(Call &call)
   {
     createFormatStringCall(call,
                            system_id_,
-                           bpftrace_.system_args_,
+                           bpftrace_.resources.system_args,
                            "system",
                            AsyncAction::syscall);
   }
   else if (call.func == "cat")
   {
     createFormatStringCall(
-        call, cat_id_, bpftrace_.cat_args_, "cat", AsyncAction::cat);
+        call, cat_id_, bpftrace_.resources.cat_args, "cat", AsyncAction::cat);
   }
   else if (call.func == "exit")
   {

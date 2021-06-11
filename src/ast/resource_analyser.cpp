@@ -109,7 +109,9 @@ void ResourceAnalyser::visit(Call &call)
   }
   else if (call.func == "join")
   {
-    resources_.join_args.push_back(get_literal_string(*call.vargs->at(1)));
+    auto delim = call.vargs->size() > 1 ? get_literal_string(*call.vargs->at(1))
+                                        : " ";
+    resources_.join_args.push_back(delim);
     resources_.needs_join_map = true;
   }
   else if (call.func == "lhist")
@@ -177,6 +179,11 @@ Pass CreateResourcePass()
     ResourceAnalyser analyser{ &n };
     auto resources = analyser.analyse();
     ctx.b.resources = resources;
+
+    // Create fake maps so that codegen has access to map IDs
+    //
+    // At runtime we will replace the fake maps with real maps
+    ctx.b.resources.create_maps(ctx.b, true);
 
     return PassResult::Success();
   };

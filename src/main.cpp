@@ -412,7 +412,6 @@ ast::PassManager CreateDynamicPM()
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());
-  pm.AddPass(ast::CreateMapCreatePass());
 
   return pm;
 }

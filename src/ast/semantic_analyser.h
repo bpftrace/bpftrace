@@ -70,7 +70,6 @@ public:
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
   void visit(Program &program) override;
-  int create_maps(bool debug);
 
   int analyse();
 
@@ -105,8 +104,6 @@ private:
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);
-  template <typename T>
-  int create_maps_impl(void);
   AddrSpace find_addrspace(ProbeType pt);
 
   void binop_int(Binop &op);
@@ -128,14 +125,9 @@ private:
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
-  std::map<std::string, ExpressionList> map_args_;
   std::map<std::string, SizedType> ap_args_;
-  std::unordered_set<StackType> needs_stackid_maps_;
 
   uint32_t loop_depth_ = 0;
-  bool needs_join_map_ = false;
-  bool needs_elapsed_map_ = false;
-  bool needs_data_map_ = false;
   bool has_begin_probe_ = false;
   bool has_end_probe_ = false;
   bool has_child_ = false;
@@ -143,6 +135,5 @@ private:
 };
 
 Pass CreateSemanticPass();
-Pass CreateMapCreatePass();
 } // namespace ast
 } // namespace bpftrace

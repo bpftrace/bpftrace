@@ -1153,7 +1153,8 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
     return;
 
   int error_id = helper_error_id_++;
-  bpftrace_.helper_error_info_[error_id] = { .func_id = func_id, .loc = loc };
+  bpftrace_.resources.helper_error_info[error_id] = { .func_id = func_id,
+                                                      .loc = loc };
 
   auto elements = AsyncEvent::HelperError().asLLVMType(*this);
   StructType *helper_error_struct = GetStructType("helper_error_t",

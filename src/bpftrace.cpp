@@ -403,7 +403,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   else if (printf_id == asyncactionint(AsyncAction::print_non_map))
   {
     auto print = static_cast<AsyncEvent::PrintNonMap *>(data);
-    const SizedType &ty = bpftrace->non_map_print_args_.at(print->print_id);
+    const SizedType &ty = bpftrace->resources.non_map_print_args.at(
+        print->print_id);
 
     std::vector<uint8_t> bytes;
     for (size_t i = 0; i < ty.GetSize(); ++i)
@@ -445,7 +446,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       return;
     }
     auto time = static_cast<AsyncEvent::Time *>(data);
-    auto fmt = bpftrace->time_args_[time->time_id].c_str();
+    auto fmt = bpftrace->resources.time_args[time->time_id].c_str();
     if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0)
     {
       LOG(ERROR) << "strftime returned 0";
@@ -457,7 +458,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   else if (printf_id == asyncactionint(AsyncAction::join))
   {
     uint64_t join_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
-    auto delim = bpftrace->join_args_[join_id].c_str();
+    auto delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
       auto *arg = arg_data + 2*sizeof(uint64_t) + i * bpftrace->join_argsize_;
@@ -475,7 +476,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto helpererror = static_cast<AsyncEvent::HelperError *>(data);
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
-    auto &info = bpftrace->helper_error_info_[error_id];
+    auto &info = bpftrace->resources.helper_error_info[error_id];
     std::stringstream msg;
     msg << "Failed to " << libbpf::bpf_func_name[info.func_id] << ": ";
     if (return_value < 0)
@@ -586,8 +587,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
 
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
-    auto fmt = std::get<0>(bpftrace->system_args_[id]);
-    auto args = std::get<1>(bpftrace->system_args_[id]);
+    auto fmt = std::get<0>(bpftrace->resources.system_args[id]);
+    auto args = std::get<1>(bpftrace->resources.system_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     bpftrace->out_->message(MessageType::syscall,
@@ -598,8 +599,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   else if ( printf_id >= asyncactionint(AsyncAction::cat))
   {
     auto id = printf_id - asyncactionint(AsyncAction::cat);
-    auto fmt = std::get<0>(bpftrace->cat_args_[id]);
-    auto args = std::get<1>(bpftrace->cat_args_[id]);
+    auto fmt = std::get<0>(bpftrace->resources.cat_args[id]);
+    auto args = std::get<1>(bpftrace->resources.cat_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     std::stringstream buf;
@@ -610,8 +611,8 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
 
   // printf
-  auto fmt = std::get<0>(bpftrace->printf_args_[printf_id]);
-  auto args = std::get<1>(bpftrace->printf_args_[printf_id]);
+  auto fmt = std::get<0>(bpftrace->resources.printf_args[printf_id]);
+  auto args = std::get<1>(bpftrace->resources.printf_args[printf_id]);
   auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
   bpftrace->out_->message(MessageType::printf, format(fmt, arg_values), false);
@@ -1086,6 +1087,11 @@ int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc __attribute__((unused)))
 
 int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
 {
+  // Clear fake maps and replace with real maps
+  maps = {};
+  if (resources.create_maps(*this, false))
+    return 1;
+
   if (has_iter_)
     return run_iter(move(bpforc));
 
@@ -1748,7 +1754,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
     LOG(ERROR) << "Cannot resolve timestamp due to failed boot time calcuation";
     return "(?)";
   }
-  auto fmt = strftime_args_[strftime_id].c_str();
+  auto fmt = resources.strftime_args[strftime_id].c_str();
   char timestr[STRING_SIZE];
   struct tm tmp;
   time_t time = boottime_->tv_sec +
@@ -2079,8 +2085,8 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 
 std::string BPFtrace::resolve_probe(uint64_t probe_id) const
 {
-  assert(probe_id < probe_ids_.size());
-  return probe_ids_[probe_id];
+  assert(probe_id < resources.probe_ids.size());
+  return resources.probe_ids[probe_id];
 }
 
 void BPFtrace::sort_by_key(std::vector<SizedType> key_args,

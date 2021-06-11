@@ -297,10 +297,6 @@ void SemanticAnalyser::visit(Builtin &builtin)
           << "BPF_FUNC_get_current_cgroup_id is not available for your kernel "
              "version";
     }
-    else if (builtin.ident == "elapsed")
-    {
-      needs_elapsed_map_ = true;
-    }
   }
   else if (builtin.ident == "curtask")
   {
@@ -343,11 +339,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "kstack") {
     builtin.type = CreateStack(true, StackType());
-    needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "ustack") {
     builtin.type = CreateStack(false, StackType());
-    needs_stackid_maps_.insert(builtin.type.stack_type);
   }
   else if (builtin.ident == "comm") {
     builtin.type = CreateString(COMM_SIZE);
@@ -575,11 +569,6 @@ void SemanticAnalyser::visit(Call &call)
             << "lhist() step is too large for the given range (provided step "
             << step.n << " for range " << (max.n - min.n) << ")";
       }
-
-      // store args for later passing to bpftrace::Map
-      auto search = map_args_.find(call.map->ident);
-      if (search == map_args_.end())
-        map_args_.insert({call.map->ident, *call.vargs});
     }
     call.type = CreateLhist();
   }
@@ -806,7 +795,6 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "join") {
     check_assignment(call, false, false, false);
     call.type = CreateNone();
-    needs_join_map_ = true;
 
     if (!check_varargs(call, 1, 2))
       return;
@@ -822,18 +810,7 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     if (call.vargs && call.vargs->size() > 1)
-    {
-      if (check_arg(call, Type::string, 1, true))
-      {
-        auto join_delim_str = bpftrace_.get_string_literal(call.vargs->at(1));
-        bpftrace_.join_args_.push_back(join_delim_str);
-      }
-    }
-    else
-    {
-      std::string join_delim_default = " ";
-      bpftrace_.join_args_.push_back(join_delim_default);
-    }
+      check_arg(call, Type::string, 1, true);
   }
   else if (call.func == "reg") {
     if (check_nargs(call, 1)) {
@@ -950,23 +927,6 @@ void SemanticAnalyser::visit(Call &call)
         {
           LOG(ERROR, call.loc, err_) << msg;
         }
-
-        if (call.func == "printf")
-        {
-          if (single_provider_type() == ProbeType::iter)
-          {
-            bpftrace_.seq_printf_args_.emplace_back(fmt.str, args);
-            needs_data_map_ = true;
-          }
-          else
-          {
-            bpftrace_.printf_args_.emplace_back(fmt.str, args);
-          }
-        }
-        else if (call.func == "system")
-          bpftrace_.system_args_.emplace_back(fmt.str, args);
-        else
-          bpftrace_.cat_args_.emplace_back(fmt.str, args);
       }
     }
 
@@ -1025,9 +985,6 @@ void SemanticAnalyser::visit(Call &call)
           LOG(ERROR, call.loc, err_)
               << "Non-map print() only takes 1 argument, " << call.vargs->size()
               << " found";
-
-        if (is_final_pass())
-          bpftrace_.non_map_print_args_.emplace_back(arg.type);
       }
       else
       {
@@ -1075,30 +1032,17 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, false, false, false);
     if (check_varargs(call, 0, 1)) {
       if (is_final_pass()) {
-        if (call.vargs && call.vargs->size() > 0) {
-          if (check_arg(call, Type::string, 0, true)) {
-            auto &fmt_arg = *call.vargs->at(0);
-            String &fmt = static_cast<String&>(fmt_arg);
-            bpftrace_.time_args_.push_back(fmt.str);
-          }
-        } else {
-          std::string fmt_default = "%H:%M:%S\n";
-          bpftrace_.time_args_.push_back(fmt_default.c_str());
-        }
+        if (call.vargs && call.vargs->size() > 0)
+          check_arg(call, Type::string, 0, true);
       }
     }
   }
   else if (call.func == "strftime")
   {
     call.type = CreateTimestamp();
-    if (check_varargs(call, 2, 2) && is_final_pass() &&
+    check_varargs(call, 2, 2) && is_final_pass() &&
         check_arg(call, Type::string, 0, true) &&
-        check_arg(call, Type::integer, 1, false))
-    {
-      auto &fmt_arg = *call.vargs->at(0);
-      String &fmt = static_cast<String &>(fmt_arg);
-      bpftrace_.strftime_args_.push_back(fmt.str);
-    }
+        check_arg(call, Type::integer, 1, false);
   }
   else if (call.func == "kstack") {
     check_stack_call(call, true);
@@ -1338,7 +1282,6 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
         << MAX_STACK_SIZE << ", " << stack_type.limit << " given";
   }
   call.type = CreateStack(kernel, stack_type);
-  needs_stackid_maps_.insert(stack_type);
 }
 
 void SemanticAnalyser::visit(Map &map)
@@ -2735,154 +2678,6 @@ int SemanticAnalyser::analyse()
   return 0;
 }
 
-int SemanticAnalyser::create_maps(bool debug)
-{
-  // Doing `semantic.create_maps<bpftrace::Map>` in main()
-  // wouldn't work as the template needs to be instantiated
-  // in the source file (or header). This exists to work
-  // around that
-  if (debug)
-    return create_maps_impl<bpftrace::FakeMap>();
-  else
-    return create_maps_impl<bpftrace::Map>();
-}
-
-template <typename T>
-int SemanticAnalyser::create_maps_impl(void)
-{
-  uint32_t failed_maps = 0;
-  auto is_invalid_map = [](int a) -> uint8_t { return a < 0 ? 1 : 0; };
-  for (auto &map_val : map_val_)
-  {
-    std::string map_name = map_val.first;
-    SizedType type = map_val.second;
-
-    auto search_args = map_key_.find(map_name);
-    if (search_args == map_key_.end())
-    {
-      out_ << "map key \"" << map_name << "\" not found" << std::endl;
-      abort();
-    }
-
-    auto &key = search_args->second;
-
-    if (type.IsLhistTy())
-    {
-      auto map_args = map_args_.find(map_name);
-      if (map_args == map_args_.end())
-      {
-        out_ << "map arg \"" << map_name << "\" not found" << std::endl;
-        abort();
-      }
-
-      Expression &min_arg = *map_args->second.at(1);
-      Expression &max_arg = *map_args->second.at(2);
-      Expression &step_arg = *map_args->second.at(3);
-      Integer &min = static_cast<Integer &>(min_arg);
-      Integer &max = static_cast<Integer &>(max_arg);
-      Integer &step = static_cast<Integer &>(step_arg);
-      auto map = std::make_unique<T>(
-          map_name, type, key, min.n, max.n, step.n, bpftrace_.mapmax_);
-      failed_maps += is_invalid_map(map->mapfd_);
-      bpftrace_.maps.Add(std::move(map));
-    }
-    else
-    {
-      auto map = std::make_unique<T>(map_name, type, key, bpftrace_.mapmax_);
-      failed_maps += is_invalid_map(map->mapfd_);
-      bpftrace_.maps.Add(std::move(map));
-    }
-  }
-
-  for (StackType stack_type : needs_stackid_maps_) {
-    // The stack type doesn't matter here, so we use kstack to force SizedType
-    // to set stack_size.
-
-    auto map = std::make_unique<T>(CreateStack(true, stack_type));
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace_.maps.Set(stack_type, std::move(map));
-  }
-
-  if (needs_join_map_)
-  {
-    // join uses map storage as we'd like to process data larger than can fit on
-    // the BPF stack.
-    int value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
-    auto map = std::make_unique<T>(
-        "join", BPF_MAP_TYPE_PERCPU_ARRAY, 4, value_size, 1, 0);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace_.maps.Set(MapManager::Type::Join, std::move(map));
-  }
-  if (needs_elapsed_map_)
-  {
-    std::string map_ident = "elapsed";
-    SizedType type = CreateUInt64();
-    MapKey key;
-    auto map = std::make_unique<T>(map_ident, type, key, 1);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace_.maps.Set(MapManager::Type::Elapsed, std::move(map));
-  }
-  if (needs_data_map_)
-  {
-    size_t size = 0;
-
-    // get size of all the formats
-    for (auto it : bpftrace_.seq_printf_args_)
-    {
-      size += std::get<0>(it).size() + 1;
-    }
-
-    // compute buffer size to hold all the formats
-    // and create map with that
-    int ptr_size = sizeof(unsigned long);
-    size = (size / ptr_size + 1) * ptr_size;
-    auto map = std::make_unique<T>("data", BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace_.maps.Set(MapManager::Type::SeqPrintfData, std::move(map));
-
-    // copy all the formats to array and store indexes
-    // and lengths so we can later access it
-    uint32_t idx = 0;
-    std::vector<uint8_t> formats(size, 0);
-
-    for (auto it : bpftrace_.seq_printf_args_)
-    {
-      auto str = std::get<0>(it).c_str();
-      auto len = ::strlen(str);
-
-      memcpy(&formats.data()[idx], str, len);
-
-      bpftrace_.seq_printf_ids_.push_back({ idx, len + 1 });
-      idx += len + 1;
-    }
-
-    // store the data in map
-    uint64_t id = 0;
-
-    bpf_update_elem(bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->mapfd_,
-                    &id,
-                    formats.data(),
-                    0);
-  }
-
-  {
-    auto map = std::make_unique<T>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace_.maps.Set(MapManager::Type::PerfEvent, std::move(map));
-  }
-
-  if (failed_maps > 0)
-  {
-    out_ << "Creation of the required BPF maps has failed." << std::endl;
-    out_ << "Make sure you have all the required permissions and are not";
-    out_ << " confined (e.g. like" << std::endl;
-    out_ << "snapcraft does). `dmesg` will likely have useful output for";
-    out_ << " further troubleshooting" << std::endl;
-  }
-
-  return failed_maps;
-}
-
 bool SemanticAnalyser::is_final_pass() const
 {
   return pass_ == num_passes_;
@@ -3271,8 +3066,8 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
 Pass CreateSemanticPass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
-    ctx.semant = new SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
-    auto err = ctx.semant->analyse();
+    auto semantics = SemanticAnalyser(&n, ctx.b, !ctx.b.cmd_.empty());
+    int err = semantics.analyse();
     if (err)
       return PassResult::Error("");
     return PassResult::Success();
@@ -3280,21 +3075,6 @@ Pass CreateSemanticPass()
 
   return Pass("Semantic", fn);
 };
-
-Pass CreateMapCreatePass()
-{
-  auto fn = [](Node &n __attribute__((unused)), PassContext &ctx) {
-    auto err = ctx.semant->create_maps(bt_debug != DebugLevel::kNone);
-    if (err)
-      return PassResult::Error("");
-
-    delete ctx.semant;
-    ctx.semant = nullptr;
-    return PassResult::Success();
-  };
-
-  return Pass("MapCreate", fn);
-}
 
 } // namespace ast
 } // namespace bpftrace
