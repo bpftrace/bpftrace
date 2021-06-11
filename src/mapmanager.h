@@ -16,11 +16,11 @@ class MapManager
 {
 public:
   MapManager() = default;
+  MapManager &operator=(MapManager &&) = default;
 
   MapManager(const MapManager &) = delete;
   MapManager &operator=(const MapManager &) = delete;
   MapManager(MapManager &&) = delete;
-  MapManager &operator=(MapManager &&) = delete;
 
   /**
      Store and lookup named maps
