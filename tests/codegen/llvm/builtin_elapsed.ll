@@ -36,7 +36,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   %4 = load i64, i64* %lookup_elem_val, align 8
   %5 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)
-  %get_ns = call i64 inttoptr (i64 5 to i64 ()*)()
+  %get_ns = call i64 inttoptr (i64 125 to i64 ()*)()
   %6 = sub i64 %get_ns, %4
   %7 = bitcast i64* %elapsed_key to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)

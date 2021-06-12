@@ -23,7 +23,7 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
   %5 = getelementptr %strftime_t, %strftime_t* %strftime_args, i64 0, i32 0
   store i64 0, i64* %5, align 8
-  %get_ns = call i64 inttoptr (i64 5 to i64 ()*)()
+  %get_ns = call i64 inttoptr (i64 125 to i64 ()*)()
   %6 = getelementptr %strftime_t, %strftime_t* %strftime_args, i64 0, i32 1
   store i64 %get_ns, i64* %6, align 8
   %7 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
