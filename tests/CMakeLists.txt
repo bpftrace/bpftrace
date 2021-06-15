@@ -59,6 +59,11 @@ endif()
 
 target_compile_definitions(bpftrace_test PRIVATE ${BPFTRACE_FLAGS})
 
+if(BUILD_ASAN)
+  target_compile_options(bpftrace_test PUBLIC "-fsanitize=address")
+  target_link_options(bpftrace_test PUBLIC "-fsanitize=address")
+endif()
+
 if(STATIC_LINKING)
   if(EMBED_USE_LLVM)
     target_link_options(bpftrace_test BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")
