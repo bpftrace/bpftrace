@@ -101,7 +101,7 @@ private:
 
   private:
     CXIndex index;
-    CXTranslationUnit translation_unit;
+    CXTranslationUnit translation_unit = nullptr;
     std::vector<std::string> error_msgs;
   };
 };

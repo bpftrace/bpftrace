@@ -367,6 +367,9 @@ CXErrorCode ClangParser::ClangParserHandler::parse_translation_unit(
     unsigned num_unsaved_files,
     unsigned options)
 {
+  // Clean up previous translation unit to prevent resource leak
+  clang_disposeTranslationUnit(translation_unit);
+
   return clang_parseTranslationUnit2(
       index,
       source_filename,

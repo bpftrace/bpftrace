@@ -39,6 +39,8 @@ and this project adheres to
   - [#1836](https://github.com/iovisor/bpftrace/pull/1836)
 - Fix false non-traceable function warnings
   - [#1866](https://github.com/iovisor/bpftrace/pull/1866)
+- Fix memory leak in clang parser
+  - [#1878](https://github.com/iovisor/bpftrace/pull/1878)
 
 #### Tools
 
