@@ -612,7 +612,7 @@ TEST(semantic_analyser, call_str_state_leak_regression_test)
 TEST(semantic_analyser, call_buf)
 {
   test("kprobe:f { buf(arg0, 1); }", 0);
-  test("kprobe:f { buf(arg0, -1); }", 10);
+  test("kprobe:f { buf(arg0, -1); }", 1);
   test("kprobe:f { @x = buf(arg0, 1); }", 0);
   test("kprobe:f { $x = buf(arg0, 1); }", 0);
   test("kprobe:f { buf(); }", 1);
