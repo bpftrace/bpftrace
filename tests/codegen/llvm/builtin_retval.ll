@@ -10,6 +10,9 @@ define i64 @"kretprobe:f"(i8* %0) section "s_kretprobe:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i8* %0 to i64*
   %2 = getelementptr i64, i64* %1, i64 10
   %retval = load volatile i64, i64* %2, align 8

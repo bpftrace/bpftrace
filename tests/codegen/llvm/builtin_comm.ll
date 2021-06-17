@@ -10,6 +10,9 @@ define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_key" = alloca i64, align 8
   %comm = alloca [16 x i8], align 1
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast [16 x i8]* %comm to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast [16 x i8]* %comm to i8*

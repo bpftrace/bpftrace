@@ -11,6 +11,9 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %"||_result" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i64* %"||_result" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
@@ -20,7 +23,7 @@ entry:
   %lhs_true_cond = icmp ne i64 %4, 0
   br i1 %lhs_true_cond, label %"||_true", label %"||_lhs_false"
 
-"||_lhs_false":                                   ; preds = %entry
+"||_lhs_false":                                   ; preds = %post_hoist
   %get_pid_tgid1 = call i64 inttoptr (i64 14 to i64 ()*)()
   %5 = lshr i64 %get_pid_tgid1, 32
   %6 = icmp eq i64 %5, 1235
@@ -32,7 +35,7 @@ entry:
   store i64 0, i64* %"||_result", align 8
   br label %"||_merge"
 
-"||_true":                                        ; preds = %"||_lhs_false", %entry
+"||_true":                                        ; preds = %"||_lhs_false", %post_hoist
   store i64 1, i64* %"||_result", align 8
   br label %"||_merge"
 

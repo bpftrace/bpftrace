@@ -8,6 +8,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %signal = call i64 inttoptr (i64 109 to i64 (i32)*)(i32 9)
   ret i64 0
 }

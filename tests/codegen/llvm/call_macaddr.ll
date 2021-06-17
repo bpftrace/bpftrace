@@ -14,6 +14,9 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast [6 x i8]* %macaddr to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 6, i1 false)
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([6 x i8]*, i32, i64)*)([6 x i8]* %macaddr, i32 6, i64 0)
   %3 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)

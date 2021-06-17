@@ -23,6 +23,9 @@ entry:
   %1 = bitcast i64* %"$x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 0, i64* %"$x", align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %2 = ptrtoint i8* %0 to i64
   store i64 %2, i64* %"$x", align 8
   %3 = load i64, i64* %"$x", align 8

@@ -10,16 +10,19 @@ define i64 @"tracepoint:syscalls:sys_enter_openat"(i8* %0) section "s_tracepoint
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %get_cgroup_id = call i64 inttoptr (i64 80 to i64 ()*)()
   %1 = icmp eq i64 %get_cgroup_id, 4294967297
   %2 = zext i1 %1 to i64
   %predcond = icmp eq i64 %2, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
-pred_false:                                       ; preds = %entry
+pred_false:                                       ; preds = %post_hoist
   ret i64 1
 
-pred_true:                                        ; preds = %entry
+pred_true:                                        ; preds = %post_hoist
   %get_cgroup_id1 = call i64 inttoptr (i64 80 to i64 ()*)()
   %3 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)

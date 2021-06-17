@@ -12,6 +12,9 @@ entry:
   %"@y_key" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
   %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo, i64 256)
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()

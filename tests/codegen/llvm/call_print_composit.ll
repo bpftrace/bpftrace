@@ -14,6 +14,9 @@ entry:
   %print_tuple_72_t = alloca %print_tuple_72_t, align 8
   %str = alloca [64 x i8], align 1
   %tuple = alloca %"int64_string[64]__tuple_t", align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast %"int64_string[64]__tuple_t"* %tuple to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast %"int64_string[64]__tuple_t"* %tuple to i8*

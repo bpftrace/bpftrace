@@ -11,6 +11,9 @@ entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %perfdata = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i64* %perfdata to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 30000, i64* %perfdata, align 8

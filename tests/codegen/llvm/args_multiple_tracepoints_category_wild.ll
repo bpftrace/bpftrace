@@ -11,6 +11,9 @@ entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 8
   %3 = inttoptr i64 %2 to i64*
@@ -25,13 +28,13 @@ entry:
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-lookup_success:                                   ; preds = %entry
+lookup_success:                                   ; preds = %post_hoist
   %cast = bitcast i8* %lookup_elem to i64*
   %7 = load i64, i64* %cast, align 8
   store i64 %7, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 
-lookup_failure:                                   ; preds = %entry
+lookup_failure:                                   ; preds = %post_hoist
   store i64 0, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 
@@ -63,6 +66,9 @@ entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 16
   %3 = inttoptr i64 %2 to i64*
@@ -77,13 +83,13 @@ entry:
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-lookup_success:                                   ; preds = %entry
+lookup_success:                                   ; preds = %post_hoist
   %cast = bitcast i8* %lookup_elem to i64*
   %7 = load i64, i64* %cast, align 8
   store i64 %7, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 
-lookup_failure:                                   ; preds = %entry
+lookup_failure:                                   ; preds = %post_hoist
   store i64 0, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 
@@ -109,6 +115,9 @@ entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = ptrtoint i8* %0 to i64
   %2 = add i64 %1, 24
   %3 = inttoptr i64 %2 to i64*
@@ -123,13 +132,13 @@ entry:
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-lookup_success:                                   ; preds = %entry
+lookup_success:                                   ; preds = %post_hoist
   %cast = bitcast i8* %lookup_elem to i64*
   %7 = load i64, i64* %cast, align 8
   store i64 %7, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 
-lookup_failure:                                   ; preds = %entry
+lookup_failure:                                   ; preds = %post_hoist
   store i64 0, i64* %lookup_elem_val, align 8
   br label %lookup_merge
 

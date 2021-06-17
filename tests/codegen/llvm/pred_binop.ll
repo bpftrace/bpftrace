@@ -10,6 +10,9 @@ define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = lshr i64 %get_pid_tgid, 32
   %2 = icmp eq i64 %1, 1234
@@ -17,10 +20,10 @@ entry:
   %predcond = icmp eq i64 %3, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
-pred_false:                                       ; preds = %entry
+pred_false:                                       ; preds = %post_hoist
   ret i64 0
 
-pred_true:                                        ; preds = %entry
+pred_true:                                        ; preds = %post_hoist
   %4 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
   store i64 0, i64* %"@x_key", align 8

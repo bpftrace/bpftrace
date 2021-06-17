@@ -8,11 +8,17 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   ret i64 0
 }
 
 define i64 @"kprobe:f.1"(i8* %0) section "s_kprobe:f_2" {
 entry:
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   ret i64 0
 }
 

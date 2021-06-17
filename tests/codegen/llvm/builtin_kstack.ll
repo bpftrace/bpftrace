@@ -10,6 +10,9 @@ define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
   %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo, i64 0)
   %1 = bitcast i64* %"@x_key" to i8*

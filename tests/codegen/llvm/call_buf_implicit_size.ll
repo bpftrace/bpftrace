@@ -16,6 +16,9 @@ entry:
   %1 = bitcast i64* %"$foo" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 0, i64* %"$foo", align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   store i64 0, i64* %"$foo", align 8
   %2 = bitcast %buffer_16_t* %buffer to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)

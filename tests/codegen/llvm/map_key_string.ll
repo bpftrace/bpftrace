@@ -12,6 +12,9 @@ entry:
   %str1 = alloca [64 x i8], align 1
   %str = alloca [64 x i8], align 1
   %"@x_key" = alloca [128 x i8], align 1
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast [128 x i8]* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast [64 x i8]* %str to i8*

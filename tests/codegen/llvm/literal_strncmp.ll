@@ -13,6 +13,9 @@ entry:
   %comm3 = alloca [16 x i8], align 1
   %strcmp.result = alloca i1, align 1
   %comm = alloca [16 x i8], align 1
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast [16 x i8]* %comm to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast [16 x i8]* %comm to i8*
@@ -42,7 +45,7 @@ pred_true:                                        ; preds = %strcmp.false
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-strcmp.false:                                     ; preds = %strcmp.loop1, %strcmp.loop, %entry
+strcmp.false:                                     ; preds = %strcmp.loop1, %strcmp.loop, %post_hoist
   %9 = load i1, i1* %strcmp.result, align 1
   %10 = bitcast i1* %strcmp.result to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
@@ -52,7 +55,7 @@ strcmp.false:                                     ; preds = %strcmp.loop1, %strc
   %predcond = icmp eq i64 %11, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
-strcmp.loop:                                      ; preds = %entry
+strcmp.loop:                                      ; preds = %post_hoist
   %13 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 1
   %14 = load i8, i8* %13, align 1
   %strcmp.cmp2 = icmp ne i8 %14, 115

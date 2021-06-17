@@ -11,6 +11,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %print_integer_8_t = alloca %print_integer_8_t, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast %print_integer_8_t* %print_integer_8_t to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = getelementptr %print_integer_8_t, %print_integer_8_t* %print_integer_8_t, i64 0, i32 0

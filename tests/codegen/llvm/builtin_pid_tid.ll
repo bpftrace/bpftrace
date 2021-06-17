@@ -12,6 +12,9 @@ entry:
   %"@y_key" = alloca i64, align 8
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = lshr i64 %get_pid_tgid, 32
   %2 = bitcast i64* %"@x_key" to i8*

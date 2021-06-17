@@ -8,6 +8,9 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i8* %0 to i64*
   %2 = getelementptr i64, i64* %1, i64 14
   %arg0 = load volatile i64, i64* %2, align 8

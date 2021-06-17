@@ -11,6 +11,9 @@ entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
   %deref = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i64* %deref to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i64*, i32, i64)*)(i64* %deref, i32 8, i64 1234)

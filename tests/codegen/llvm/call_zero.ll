@@ -12,6 +12,9 @@ define i64 @BEGIN(i8* %0) section "s_BEGIN_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 0, i64* %"@x_key", align 8
@@ -36,6 +39,9 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"zero_@x" = alloca %zero_t, align 8
+  br label %post_hoist
+
+post_hoist:                                       ; preds = %entry
   %1 = bitcast %zero_t* %"zero_@x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = getelementptr %zero_t, %zero_t* %"zero_@x", i64 0, i32 0
