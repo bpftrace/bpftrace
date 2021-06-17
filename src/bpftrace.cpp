@@ -1016,7 +1016,7 @@ int BPFtrace::run_special_probe(std::string name,
 }
 
 #ifdef HAVE_LIBBPF_LINK_CREATE
-int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc)
+int BPFtrace::run_iter()
 {
   auto probe = probes_.begin();
   char buf[1024] = {};
@@ -1028,17 +1028,16 @@ int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc)
     return 1;
   }
 
-  auto aps = attach_probe(*probe, *bpforc.get());
-  if (aps.empty())
+  // If a script contains an iter probe, it must be the only probe
+  assert(attached_probes_.size() == 1);
+  if (attached_probes_.empty())
   {
     LOG(ERROR) << "Failed to attach iter probe";
     return 1;
   }
 
-  auto &ap = *aps.begin();
-
-  int link_fd = ap.get()->linkfd_;
-
+  auto &ap = *attached_probes_.begin();
+  int link_fd = ap->linkfd_;
   if (link_fd < 0)
   {
     LOG(ERROR) << "Failed to link iter probe";
@@ -1078,7 +1077,7 @@ int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc)
   return 0;
 }
 #else
-int BPFtrace::run_iter(std::unique_ptr<BpfOrc> bpforc __attribute__((unused)))
+int BPFtrace::run_iter()
 {
   LOG(ERROR) << "iter is not available for linked bpf version";
   return 1;
@@ -1091,9 +1090,6 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   maps = {};
   if (resources.create_maps(*this, false))
     return 1;
-
-  if (has_iter_)
-    return run_iter(move(bpforc));
 
   bpforc_ = std::move(bpforc);
 
@@ -1186,7 +1182,17 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   if (bt_verbose)
     std::cerr << "Running..." << std::endl;
 
-  poll_perf_events(epollfd);
+  if (has_iter_)
+  {
+    int err = run_iter();
+    if (err)
+      return err;
+  }
+  else
+  {
+    poll_perf_events(epollfd);
+  }
+
   attached_probes_.clear();
   // finalize_ and exitsig_recv should be false from now on otherwise
   // perf_event_printer() can ignore the END_trigger() events.
