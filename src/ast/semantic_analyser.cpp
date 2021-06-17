@@ -692,8 +692,8 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     auto &arg = *call.vargs->at(0);
-    if (!(arg.type.IsIntTy() || arg.type.IsStringTy() || arg.type.IsPtrTy() ||
-          arg.type.IsArrayTy()))
+    if (is_final_pass() && !(arg.type.IsIntTy() || arg.type.IsStringTy() ||
+                             arg.type.IsPtrTy() || arg.type.IsArrayTy()))
     {
       LOG(ERROR, call.loc, err_)
           << call.func
@@ -704,33 +704,34 @@ void SemanticAnalyser::visit(Call &call)
     size_t max_buffer_size = bpftrace_.strlen_;
     size_t buffer_size = max_buffer_size;
 
-    if (is_final_pass())
+    if (call.vargs->size() == 1)
     {
-      if (call.vargs->size() == 1)
-        if (arg.type.IsArrayTy())
-          buffer_size = arg.type.GetNumElements() *
-                        arg.type.GetElementTy()->GetSize();
-        else
-          LOG(ERROR, call.loc, err_)
-              << call.func << "() expects a length argument for non-array type "
-              << typestr(arg.type.type);
-      else
+      if (arg.type.IsArrayTy())
+        buffer_size = arg.type.GetNumElements() *
+                      arg.type.GetElementTy()->GetSize();
+      else if (is_final_pass())
+        LOG(ERROR, call.loc, err_)
+            << call.func << "() expects a length argument for non-array type "
+            << typestr(arg.type.type);
+    }
+    else
+    {
+      if (is_final_pass())
+        check_arg(call, Type::integer, 1, false);
+
+      auto &size_arg = *call.vargs->at(1);
+      if (size_arg.is_literal)
       {
-        if (check_arg(call, Type::integer, 1, false))
+        auto *integer = dynamic_cast<Integer *>(&size_arg);
+        if (integer)
         {
-          auto &size_arg = *call.vargs->at(1);
-          if (size_arg.is_literal)
+          long value = integer->n;
+          if (value < 0)
           {
-            auto &integer = static_cast<Integer &>(size_arg);
-            long value = integer.n;
-            if (value < 0)
-            {
-              LOG(ERROR, call.loc, err_)
-                  << call.func << " cannot use negative length (" << value
-                  << ")";
-            }
-            buffer_size = value;
+            LOG(ERROR, call.loc, err_)
+                << call.func << " cannot use negative length (" << value << ")";
           }
+          buffer_size = value;
         }
       }
     }
