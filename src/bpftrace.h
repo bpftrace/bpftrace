@@ -105,7 +105,7 @@ public:
   int run(std::unique_ptr<BpfOrc> bpforc);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(Probe &probe,
                                                            BpfOrc &bpforc);
-  int run_iter(std::unique_ptr<BpfOrc> bpforc);
+  int run_iter();
   int print_maps();
   int clear_map(IMap &map);
   int zero_map(IMap &map);
