@@ -13,7 +13,6 @@
 
 #include <llvm/IR/DataLayout.h>
 #include <llvm/IR/Module.h>
-#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER
@@ -379,12 +378,12 @@ CallInst *IRBuilderBPF::CreateGetScratchMap(Value *ctx,
 {
   assert(post_hoist_block_ != nullptr);
   auto ip = saveIP();
-  BasicBlock *get_map = SplitEdge(post_hoist_block_->getSinglePredecessor(),
-                                  post_hoist_block_,
-                                  nullptr,
-                                  nullptr,
-                                  nullptr,
-                                  "validate_map_lookup_" + name);
+  BasicBlock *get_map = SPLIT_EDGE(post_hoist_block_->getSinglePredecessor(),
+                                   post_hoist_block_,
+                                   nullptr,
+                                   nullptr,
+                                   nullptr,
+                                   "validate_map_lookup_" + name);
   // remove the unconditional break to posthoist which SplitEdge gives us,
   // because CreateHelperErrorCond() will emit a conditional break to posthoist
   // instead

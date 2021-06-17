@@ -7,6 +7,7 @@
 
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 #if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 7
 #define CREATE_MEMCPY(dst, src, size, algn)                                    \
@@ -33,6 +34,19 @@
 #else
 #define CREATE_MEMSET(ptr, val, size, align)                                   \
   CreateMemSet((ptr), (val), (size), (align))
+#endif
+
+#if LLVM_VERSION_MAJOR >= 5 && LLVM_VERSION_MAJOR < 8
+#define SPLIT_EDGE(from, to, dt, li, mssau, bbname)                            \
+  SplitEdge((from), (to), (dt), (li))
+#elif LLVM_VERSION_MAJOR >= 8 && LLVM_VERSION_MAJOR < 12
+#define SPLIT_EDGE(from, to, dt, li, mssau, bbname)                            \
+  SplitEdge((from), (to), (dt), (li), (mssau))
+#elif LLVM_VERSION_MAJOR >= 12
+#define SPLIT_EDGE(from, to, dt, li, mssau, bbname)                            \
+  SplitEdge((from), (to), (dt), (li), (mssau), (bbname))
+#else
+#error Unsupported LLVM version
 #endif
 
 namespace bpftrace {
