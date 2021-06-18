@@ -118,25 +118,30 @@ void StructManager::Add(const std::string &name, size_t size)
   if (struct_map_.find(name) != struct_map_.end())
     throw std::runtime_error("Type redefinition: type with name \'" + name +
                              "\' already exists");
-  struct_map_[name] = std::make_shared<Struct>(size);
+  struct_map_[name] = std::make_unique<Struct>(size);
 }
 
-std::shared_ptr<Struct> StructManager::Lookup(const std::string &name) const
+Struct *StructManager::Lookup(const std::string &name) const
 {
   auto s = struct_map_.find(name);
-  return s != struct_map_.end() ? s->second : nullptr;
+  return s != struct_map_.end() ? s->second.get() : nullptr;
 }
 
-std::shared_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
-                                                   size_t size)
+Struct *StructManager::LookupOrAdd(const std::string &name, size_t size)
 {
-  auto s = struct_map_.insert({ name, std::make_shared<Struct>(size) });
-  return s.first->second;
+  auto s = struct_map_.insert({ name, std::make_unique<Struct>(size) });
+  return s.first->second.get();
 }
 
 bool StructManager::Has(const std::string &name) const
 {
   return struct_map_.find(name) != struct_map_.end();
+}
+
+Struct *StructManager::AddTuple(std::vector<SizedType> fields)
+{
+  tuples_.push_back(Struct::CreateTuple(fields));
+  return tuples_.back().get();
 }
 
 } // namespace bpftrace

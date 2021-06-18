@@ -2116,7 +2116,8 @@ TEST(semantic_analyser, tuple_assign_var)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  SizedType ty = CreateTuple({ CreateInt64(), CreateString(64) });
+  SizedType ty = CreateTuple(
+      bpftrace.structs.AddTuple({ CreateInt64(), CreateString(64) }));
   test(driver, R"_(BEGIN { $t = (1, "str"); $t = (4, "other"); })_", 0);
 
   auto &stmts = driver.root_->probes->at(0)->stmts;
@@ -2142,14 +2143,14 @@ TEST(semantic_analyser, tuple_assign_map)
 
   // $t = (1, 3, 3, 7);
   auto assignment = static_cast<ast::AssignMapStatement *>(stmts->at(0));
-  ty = CreateTuple(
-      { CreateInt64(), CreateUInt64(), CreateUInt64(), CreateUInt64() });
+  ty = CreateTuple(bpftrace.structs.AddTuple(
+      { CreateInt64(), CreateUInt64(), CreateUInt64(), CreateUInt64() }));
   EXPECT_EQ(ty, assignment->map->type);
 
   // $t = (0, 0, 0, 0);
   assignment = static_cast<ast::AssignMapStatement *>(stmts->at(1));
-  ty = CreateTuple(
-      { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() });
+  ty = CreateTuple(bpftrace.structs.AddTuple(
+      { CreateInt64(), CreateInt64(), CreateInt64(), CreateInt64() }));
   EXPECT_EQ(ty, assignment->map->type);
 }
 
@@ -2158,8 +2159,10 @@ TEST(semantic_analyser, tuple_nested)
 {
   BPFtrace bpftrace;
   Driver driver(bpftrace);
-  SizedType ty_inner = CreateTuple({ CreateInt64(), CreateInt64() });
-  SizedType ty = CreateTuple({ CreateInt64(), ty_inner });
+  SizedType ty_inner = CreateTuple(
+      bpftrace.structs.AddTuple({ CreateInt64(), CreateInt64() }));
+  SizedType ty = CreateTuple(
+      bpftrace.structs.AddTuple({ CreateInt64(), ty_inner }));
   test(driver, R"_(BEGIN { $t = (1,(1,2)); })_", 0);
 
   auto &stmts = driver.root_->probes->at(0)->stmts;

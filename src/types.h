@@ -111,7 +111,8 @@ private:
   AddrSpace as_ = AddrSpace::none;
   ssize_t size_bits_ = -1; // size in bits for integer types
 
-  std::shared_ptr<Struct> inner_struct_; // inner struct for records and tuples
+  Struct *inner_struct_; // inner struct for records and tuples
+                         // the actual Struct object is owned by StructManager
 
 public:
   /**
@@ -339,10 +340,9 @@ public:
                                const SizedType &element_type);
 
   friend SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as);
-  friend SizedType CreateRecord(const std::string &name,
-                                std::shared_ptr<Struct> record);
+  friend SizedType CreateRecord(const std::string &name, Struct *record);
   friend SizedType CreateInteger(size_t bits, bool is_signed);
-  friend SizedType CreateTuple(const std::vector<SizedType> &fields);
+  friend SizedType CreateTuple(Struct *tuple);
 };
 // Type helpers
 
@@ -365,8 +365,8 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type);
 SizedType CreatePointer(const SizedType &pointee_type,
                         AddrSpace as = AddrSpace::none);
 
-SizedType CreateRecord(const std::string &name, std::shared_ptr<Struct> record);
-SizedType CreateTuple(const std::vector<SizedType> &fields);
+SizedType CreateRecord(const std::string &name, Struct *record);
+SizedType CreateTuple(Struct *tuple);
 
 SizedType CreateStackMode();
 SizedType CreateStack(bool kernel, StackType st = StackType());

@@ -68,12 +68,14 @@ class StructManager
 {
 public:
   void Add(const std::string &name, size_t size);
-  std::shared_ptr<Struct> Lookup(const std::string &name) const;
-  std::shared_ptr<Struct> LookupOrAdd(const std::string &name, size_t size);
+  Struct *AddTuple(std::vector<SizedType> fields);
+  Struct *Lookup(const std::string &name) const;
+  Struct *LookupOrAdd(const std::string &name, size_t size);
   bool Has(const std::string &name) const;
 
 private:
-  std::map<std::string, std::shared_ptr<Struct>> struct_map_;
+  std::map<std::string, std::unique_ptr<Struct>> struct_map_;
+  std::vector<std::unique_ptr<Struct>> tuples_;
 };
 
 } // namespace bpftrace

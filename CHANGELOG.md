@@ -17,6 +17,8 @@ and this project adheres to
 #### Removed
 
 #### Fixed
+- Fix memory leaks in struct types
+  - [#1885](https://github.com/iovisor/bpftrace/pull/1885)
 
 #### Tools
 
