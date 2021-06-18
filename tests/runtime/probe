@@ -127,10 +127,9 @@ RUN bpftrace -v -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit "); }' -c 
 EXPECT hit hit
 TIMEOUT 5
 
-# Test that we get at least two characters out
 NAME tracepoint_data_loc
-RUN bpftrace -v -e 'tracepoint:irq:irq_handler_entry { print(str(args->name)); exit(); }'
-EXPECT ..+
+RUN bpftrace -v -e 'tracepoint:irq:irq_handler_entry { printf("irq: %s\n", str(args->name)); exit(); }'
+EXPECT irq: .+
 TIMEOUT 5
 
 NAME profile
