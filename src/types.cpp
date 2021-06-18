@@ -356,7 +356,7 @@ SizedType CreatePointer(const SizedType &pointee_type, AddrSpace as)
   return ty;
 }
 
-SizedType CreateRecord(const std::string &name, std::shared_ptr<Struct> record)
+SizedType CreateRecord(const std::string &name, Struct *record)
 {
   auto ty = SizedType(Type::record, record ? record->size : 0);
   ty.name_ = name;
@@ -448,11 +448,10 @@ SizedType CreateTimestamp()
   return SizedType(Type::timestamp, 16);
 }
 
-SizedType CreateTuple(const std::vector<SizedType> &fields)
+SizedType CreateTuple(Struct *tuple)
 {
-  auto s = SizedType(Type::tuple, 0);
-  s.inner_struct_ = Struct::CreateTuple(fields);
-  s.size_ = s.inner_struct_->size;
+  auto s = SizedType(Type::tuple, tuple->size);
+  s.inner_struct_ = tuple;
   return s;
 }
 
@@ -531,7 +530,7 @@ const Field &SizedType::GetField(const std::string &name) const
 const Struct *SizedType::GetStruct() const
 {
   assert(IsRecordTy());
-  return inner_struct_.get();
+  return inner_struct_;
 }
 
 } // namespace bpftrace

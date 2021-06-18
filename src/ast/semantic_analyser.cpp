@@ -1932,8 +1932,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       for (auto &match : matches) {
         std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
             match);
-        structs[tracepoint_struct] =
-            bpftrace_.structs.Lookup(tracepoint_struct).get();
+        structs[tracepoint_struct] = bpftrace_.structs.Lookup(
+            tracepoint_struct);
       }
     }
   }
@@ -2074,7 +2074,7 @@ void SemanticAnalyser::visit(Tuple &tuple)
     elements.emplace_back(elem->type);
   }
 
-  tuple.type = CreateTuple(elements);
+  tuple.type = CreateTuple(bpftrace_.structs.AddTuple(elements));
 }
 
 void SemanticAnalyser::visit(ExprStatement &expr)
