@@ -129,7 +129,7 @@ TIMEOUT 5
 
 # Test that we get at least two characters out
 NAME tracepoint_data_loc
-RUN bpftrace -v -e 'tracepoint:irq:irq_handler_entry { print(str(args->name)) }'
+RUN bpftrace -v -e 'tracepoint:irq:irq_handler_entry { print(str(args->name)); exit(); }'
 EXPECT ..+
 TIMEOUT 5
 
