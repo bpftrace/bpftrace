@@ -96,6 +96,7 @@ Vagrant.configure("2") do |config|
         v.memory = 2048
         v.cpus = 2
       end
+      box.vm.synced_folder ".", "/vagrant", disabled: false
       (params['scripts'] || []).each do |script|
         box.vm.provision :shell, inline: script
       end
