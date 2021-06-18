@@ -19,6 +19,12 @@ dnf builddep -q -y bpftrace
 dnf install -q -y git
 EOF
 
+$centos_deps = <<EOF
+dnf install -q -y bison flex cmake elfutils-libelf-devel zlib-devel gcc gcc-c++ python3
+dnf install -q -y clang-devel llvm-devel binutils-devel kernel-devel binutils
+ln -s `which python3` /usr/local/bin/python
+EOF
+
 $build_bcc = <<EOF
 if [ -e /usr/local/lib/libbcc.so ]; then
    echo "libbcc already built, skipping"
@@ -69,7 +75,11 @@ Vagrant.configure("2") do |config|
       'image'          => 'fedora/34-cloud-base',
       'scripts'        => [ $fedora_deps, ],
       'skip_bcc_build' => 1
-    }
+    },
+    'centos-8'         => {
+      'image'          => 'generic/centos8',
+      'scripts'        => [ $centos_deps, ],
+    },
 }
   boxes.each do | name, params |
     config.vm.define name do |box|
