@@ -44,6 +44,7 @@ public:
   SizedType type_;
   MapKey key_;
   enum bpf_map_type map_type_ = BPF_MAP_TYPE_UNSPEC;
+  bool printable_ = true;
 
   // used by lhist(). TODO: move to separate Map object.
   int lqmin = 0;
@@ -59,6 +60,10 @@ public:
   {
     return map_type_ != BPF_MAP_TYPE_ARRAY &&
            map_type_ != BPF_MAP_TYPE_PERCPU_ARRAY;
+  }
+  bool is_printable() const
+  {
+    return printable_;
   }
 };
 
