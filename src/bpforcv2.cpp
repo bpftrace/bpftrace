@@ -14,9 +14,6 @@ BpfOrc::BpfOrc(TargetMachine *TM, DataLayout DL)
       CTX(std::make_unique<LLVMContext>()),
       MainJD(cantFail(ES.createJITDylib("<main>")))
 {
-  MainJD.addGenerator(
-      cantFail(DynamicLibrarySearchGenerator::GetForCurrentProcess(
-          DL.getGlobalPrefix())));
 }
 
 LLVMContext &BpfOrc::getContext()
