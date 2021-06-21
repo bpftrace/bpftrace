@@ -1,10 +1,14 @@
 #pragma once
 
 #include <cstdint>
+#include <istream>
+#include <ostream>
 #include <string>
 #include <tuple>
 #include <unordered_set>
 #include <vector>
+
+#include <cereal/access.hpp>
 
 #include "location.hh"
 #include "mapkey.h"
@@ -27,6 +31,14 @@ struct LinearHistogramArgs
   long min = -1;
   long max = -1;
   long step = -1;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(min, max, step);
+  }
 };
 
 // This class contains script-specific metadata that bpftrace's runtime needs.
@@ -47,6 +59,18 @@ public:
   //
   // Returns 0 on success, number of maps that failed to be created otherwise
   int create_maps(BPFtrace &bpftrace, bool fake);
+
+  // `save_state()` serializes `RequiredResources` and writes results into
+  // `out`. `load_state()` does the reverse: takes serialized data and loads it
+  // into the current instance.
+  //
+  // NB: The serialized data is not versioned and is not forward/backwards
+  // compatible.
+  //
+  // NB: both the output and input stream must be opened in binary
+  // (std::ios::binary) mode to avoid binary data from being interpreted wrong
+  void save_state(std::ostream &out) const;
+  void load_state(std::istream &in);
 
   // Async argument metadata
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args;
@@ -80,6 +104,31 @@ public:
 private:
   template <typename T>
   int create_maps_impl(BPFtrace &bpftrace, bool fake);
+
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(system_args,
+            seq_printf_args,
+            seq_printf_ids,
+            join_args,
+            time_args,
+            strftime_args,
+            cat_args,
+            non_map_print_args,
+            // Hard to annotate flex types, so skip
+            // helper_error_info,
+            printf_args,
+            probe_ids,
+            map_vals,
+            lhist_args,
+            map_keys,
+            stackid_maps,
+            needs_join_map,
+            needs_elapsed_map,
+            needs_data_map);
+  }
 };
 
 } // namespace bpftrace

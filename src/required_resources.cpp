@@ -1,5 +1,13 @@
 #include "required_resources.h"
 
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/tuple.hpp>
+#include <cereal/types/unordered_set.hpp>
+#include <cereal/types/vector.hpp>
+
 #include "bpftrace.h"
 #include "fake_map.h"
 #include "log.h"
@@ -130,6 +138,18 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   }
 
   return failed_maps;
+}
+
+void RequiredResources::save_state(std::ostream &out) const
+{
+  cereal::BinaryOutputArchive archive(out);
+  archive(*this);
+}
+
+void RequiredResources::load_state(std::istream &in)
+{
+  cereal::BinaryInputArchive archive(in);
+  archive(*this);
 }
 
 } // namespace bpftrace

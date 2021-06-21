@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+#include <cereal/access.hpp>
+
 #include "types.h"
 
 namespace bpftrace {
@@ -28,6 +30,13 @@ private:
   static std::string argument_value(BPFtrace &bpftrace,
                                     const SizedType &arg,
                                     const void *data);
+
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(args_);
+  }
 };
 
 } // namespace bpftrace
