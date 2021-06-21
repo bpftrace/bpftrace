@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <vector>
 
+#include <cereal/access.hpp>
+
 namespace bpftrace {
 
 const int MAX_STACK_SIZE = 1024;
@@ -73,6 +75,14 @@ struct StackType
   bool operator ==(const StackType &obj) const {
     return limit == obj.limit && mode == obj.mode;
   }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(limit, mode);
+  }
 };
 
 class BPFtrace;
@@ -114,6 +124,27 @@ private:
   std::weak_ptr<Struct> inner_struct_; // inner struct for records and tuples
                                        // the actual Struct object is owned by
                                        // StructManager
+
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(type,
+            stack_type,
+            is_internal,
+            is_tparg,
+            is_kfarg,
+            kfarg_idx,
+            size_,
+            is_signed_,
+            element_type_,
+            num_elements_,
+            name_,
+            ctx_,
+            as_,
+            size_bits_,
+            inner_struct_);
+  }
 
 public:
   /**

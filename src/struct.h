@@ -3,6 +3,8 @@
 #include <map>
 #include <memory>
 
+#include <cereal/access.hpp>
+
 #include "types.h"
 #include "utils.h"
 
@@ -19,6 +21,14 @@ struct Bitfield
   size_t access_rshift;
   // Then logical AND `mask` to mask out everything but this bitfield
   uint64_t mask;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(read_bytes, access_rshift, mask);
+  }
 };
 
 struct Field
@@ -44,17 +54,26 @@ struct Field
            is_bitfield == rhs.is_bitfield && bitfield == rhs.bitfield &&
            is_data_loc == rhs.is_data_loc;
   }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(name, type, offset, is_bitfield, bitfield, is_data_loc);
+  }
 };
 
 using Fields = std::vector<Field>;
 
 struct Struct
 {
-  int size; // in bytes
+  int size = -1; // in bytes
   int align = 1; // in bytes, used for tuples only
   bool padded = false;
   Fields fields;
 
+  Struct() = default;
   explicit Struct(int size) : size(size)
   {
   }
@@ -75,6 +94,14 @@ struct Struct
   {
     return size == rhs.size && align == rhs.align && padded == rhs.padded &&
            fields == rhs.fields;
+  }
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(size, align, padded, fields);
   }
 };
 
