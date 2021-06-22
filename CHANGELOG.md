@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Build time dependency on cereal
+  - [#1893](https://github.com/iovisor/bpftrace/pull/1893)
 
 #### Changed
 
