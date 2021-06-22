@@ -632,6 +632,13 @@ int main(int argc, char* argv[])
   if (!parse_env(bpftrace))
     return 1;
 
+  // Difficult to serialize flex generated types
+  if (helper_check_level && build_mode == BuildMode::AHEAD_OF_TIME)
+  {
+    LOG(ERROR) << "Cannot use -k[k] with --aot";
+    return 1;
+  }
+
   bpftrace.usdt_file_activation_ = usdt_file_activation;
   bpftrace.safe_mode_ = safe_mode;
   bpftrace.helper_check_level_ = helper_check_level;
