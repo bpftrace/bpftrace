@@ -26,6 +26,7 @@ RUN apt-get update \
         zlib1g-dev \
         libiberty-dev \
         libbfd-dev \
+        libcereal-dev \
         libedit-dev \
         systemtap-sdt-dev \
         python3 \
