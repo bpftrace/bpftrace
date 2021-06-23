@@ -274,6 +274,7 @@ if (LIBDW_FOUND)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBDW)
 endif ()
 
+add_subdirectory(src/aot)
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
 add_subdirectory(src/ast/bpforc)

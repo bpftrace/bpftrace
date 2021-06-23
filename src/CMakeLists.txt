@@ -111,7 +111,7 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
-target_link_libraries(libbpftrace parser resources ast arch)
+target_link_libraries(libbpftrace parser resources aot ast arch)
 
 if (LIBBPF_BTF_DUMP_FOUND)
   target_include_directories(libbpftrace PUBLIC ${LIBBPF_INCLUDE_DIRS})
