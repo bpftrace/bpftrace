@@ -34,6 +34,13 @@ struct Field
   // The last 2 bytes is the offset from the start of the tracepoint struct
   // where the data begins.
   bool is_data_loc = false;
+
+  bool operator==(const Field &rhs) const
+  {
+    return name == rhs.name && type == rhs.type && offset == rhs.offset &&
+           is_bitfield == rhs.is_bitfield && bitfield == rhs.bitfield &&
+           is_data_loc == rhs.is_data_loc;
+  }
 };
 
 using Fields = std::vector<Field>;
@@ -60,6 +67,12 @@ struct Struct
 
   static std::unique_ptr<Struct> CreateTuple(std::vector<SizedType> fields);
   void Dump(std::ostream &os);
+
+  bool operator==(const Struct &rhs) const
+  {
+    return size == rhs.size && align == rhs.align && padded == rhs.padded &&
+           fields == rhs.fields;
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const Fields &t);

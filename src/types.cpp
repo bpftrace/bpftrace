@@ -96,6 +96,13 @@ bool SizedType::IsEqual(const SizedType &t) const
   if (IsPtrTy())
     return *t.GetPointeeTy() == *GetPointeeTy();
 
+  if (IsArrayTy())
+    return t.GetNumElements() == GetNumElements() &&
+           *t.GetElementTy() == *GetElementTy();
+
+  if (IsTupleTy())
+    return *t.GetStruct() == *GetStruct();
+
   return type == t.type && GetSize() == t.GetSize() &&
          is_signed_ == t.is_signed_;
 }
@@ -529,7 +536,7 @@ const Field &SizedType::GetField(const std::string &name) const
 
 const Struct *SizedType::GetStruct() const
 {
-  assert(IsRecordTy());
+  assert(IsRecordTy() || IsTupleTy());
   return inner_struct_;
 }
 
