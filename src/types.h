@@ -500,6 +500,31 @@ struct Probe
   bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(type,
+            path,
+            attach_point,
+            orig_name,
+            name,
+            pin,
+            ns,
+            loc,
+            usdt_location_idx,
+            log_size,
+            index,
+            freq,
+            pid,
+            len,
+            mode,
+            async,
+            address,
+            func_offset);
+  }
 };
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;

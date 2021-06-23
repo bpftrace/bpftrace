@@ -36,11 +36,11 @@ class MockBPFtrace : public BPFtrace
 public:
   std::vector<Probe> get_probes()
   {
-    return probes_;
+    return resources.probes;
   }
   std::vector<Probe> get_special_probes()
   {
-    return special_probes_;
+    return resources.special_probes;
   }
 
   int resolve_uname(const std::string &name,

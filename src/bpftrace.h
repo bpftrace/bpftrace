@@ -136,7 +136,6 @@ public:
   virtual bool is_traceable_func(const std::string &func_name) const;
 
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
-  std::vector<Probe> watchpoint_probes_;
   std::string cmd_;
   bool finalize_ = false;
   // Global variable checking if an exit signal was received
@@ -191,8 +190,6 @@ public:
   int ncpus_;
   int online_cpus_;
 
-  std::vector<Probe> probes_;
-  std::vector<Probe> special_probes_;
 private:
   int run_special_probe(std::string name,
                         BpfOrc &bpforc,

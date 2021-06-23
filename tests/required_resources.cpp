@@ -151,6 +151,34 @@ TEST(required_resources, round_trip_set_stack_type)
   }
 }
 
+TEST(required_resources, round_trip_probes)
+{
+  std::ostringstream serialized(std::ios::binary);
+  {
+    RequiredResources r;
+
+    Probe p;
+    p.type = ProbeType::hardware;
+    p.path = "mypath";
+    p.index = 3;
+    r.special_probes.emplace_back(std::move(p));
+
+    r.save_state(serialized);
+  }
+
+  std::istringstream input(serialized.str());
+  {
+    RequiredResources r;
+    r.load_state(input);
+
+    ASSERT_EQ(r.special_probes.size(), 1);
+    auto &probe = r.special_probes[0];
+    EXPECT_EQ(probe.type, ProbeType::hardware);
+    EXPECT_EQ(probe.path, "mypath");
+    EXPECT_EQ(probe.index, 3);
+  }
+}
+
 TEST(required_resources, round_trip_multiple_members)
 {
   std::ostringstream serialized(std::ios::binary);
