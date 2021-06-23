@@ -159,7 +159,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.pid = getpid();
       probe.index = attach_point->index(probe.name) > 0 ?
           attach_point->index(probe.name) : p.index();
-      special_probes_.push_back(probe);
+      resources.special_probes.push_back(probe);
       continue;
     }
 
@@ -319,7 +319,7 @@ int BPFtrace::add_probe(ast::Probe &p)
           probe_copy.index = attach_point->index(func + "_loc" +
                                                  std::to_string(i));
 
-          probes_.emplace_back(std::move(probe_copy));
+          resources.probes.emplace_back(std::move(probe_copy));
         }
       }
       else if ((probetype(attach_point->provider) == ProbeType::watchpoint ||
@@ -327,14 +327,14 @@ int BPFtrace::add_probe(ast::Probe &p)
                     ProbeType::asyncwatchpoint) &&
                attach_point->func.size())
       {
-        probes_.emplace_back(
+        resources.probes.emplace_back(
             generateWatchpointSetupProbe(func_id, *attach_point, p));
 
-        watchpoint_probes_.emplace_back(std::move(probe));
+        resources.watchpoint_probes.emplace_back(std::move(probe));
       }
       else
       {
-        probes_.push_back(probe);
+        resources.probes.push_back(probe);
       }
     }
   }
@@ -344,7 +344,7 @@ int BPFtrace::add_probe(ast::Probe &p)
 
 int BPFtrace::num_probes() const
 {
-  return special_probes_.size() + probes_.size();
+  return resources.special_probes.size() + resources.probes.size();
 }
 
 void BPFtrace::request_finalize()
@@ -494,7 +494,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     uint64_t probe_idx = watchpoint->watchpoint_idx;
     uint64_t addr = watchpoint->addr;
 
-    if (probe_idx >= bpftrace->watchpoint_probes_.size())
+    if (probe_idx >= bpftrace->resources.watchpoint_probes.size())
     {
       std::cerr << "Invalid watchpoint probe idx=" << probe_idx << std::endl;
       abort = true;
@@ -507,13 +507,13 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     // NB: this check works b/c we set Probe::addr below
     //
     // TODO: Should we be printing a warning or info message out here?
-    if (bpftrace->watchpoint_probes_[probe_idx].address == addr)
+    if (bpftrace->resources.watchpoint_probes[probe_idx].address == addr)
       goto out;
 
     // Attach the real watchpoint probe
     {
       bool registers_available = true;
-      Probe &wp_probe = bpftrace->watchpoint_probes_[probe_idx];
+      Probe &wp_probe = bpftrace->resources.watchpoint_probes[probe_idx];
       wp_probe.address = addr;
       std::vector<std::unique_ptr<AttachedProbe>> aps;
       try
@@ -542,7 +542,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
   out:
     // Async watchpoints are not SIGSTOP'd
-    if (bpftrace->watchpoint_probes_[probe_idx].async)
+    if (bpftrace->resources.watchpoint_probes[probe_idx].async)
       return;
 
     // Let the tracee continue
@@ -1001,7 +1001,8 @@ int BPFtrace::run_special_probe(std::string name,
                                 BpfOrc &bpforc,
                                 void (*trigger)(void))
 {
-  for (auto probe = special_probes_.rbegin(); probe != special_probes_.rend();
+  for (auto probe = resources.special_probes.rbegin();
+       probe != resources.special_probes.rend();
        ++probe)
   {
     if ((*probe).attach_point == name)
@@ -1019,11 +1020,11 @@ int BPFtrace::run_special_probe(std::string name,
 #ifdef HAVE_LIBBPF_LINK_CREATE
 int BPFtrace::run_iter()
 {
-  auto probe = probes_.begin();
+  auto probe = resources.probes.begin();
   char buf[1024] = {};
   ssize_t len;
 
-  if (probe == probes_.end())
+  if (probe == resources.probes.end())
   {
     LOG(ERROR) << "Failed to create iter probe";
     return 1;
@@ -1137,7 +1138,8 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   // twice: in the first pass iterate forward and attach the probes that will
   // be fired in the same order they were attached, and in the second pass
   // iterate in reverse and attach the rest.
-  for (auto probes = probes_.begin(); probes != probes_.end(); ++probes)
+  for (auto probes = resources.probes.begin(); probes != resources.probes.end();
+       ++probes)
   {
     if (!attach_reverse(*probes)) {
       auto aps = attach_probe(*probes, *bpforc_);
@@ -1150,7 +1152,9 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     }
   }
 
-  for (auto r_probes = probes_.rbegin(); r_probes != probes_.rend(); ++r_probes)
+  for (auto r_probes = resources.probes.rbegin();
+       r_probes != resources.probes.rend();
+       ++r_probes)
   {
     if (attach_reverse(*r_probes)) {
       auto aps = attach_probe(*r_probes, *bpforc_);

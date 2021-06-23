@@ -2960,12 +2960,12 @@ std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
     auto sym = orc_->lookup(s);
     return (sym && sym->getAddress());
   };
-  for (const auto &probe : bpftrace_.special_probes_)
+  for (const auto &probe : bpftrace_.resources.special_probes)
   {
     if (has_sym(probe.name) || has_sym(probe.orig_name))
       return std::move(orc_);
   }
-  for (const auto &probe : bpftrace_.probes_)
+  for (const auto &probe : bpftrace_.resources.probes)
   {
     if (has_sym(probe.name) || has_sym(probe.orig_name))
       return std::move(orc_);

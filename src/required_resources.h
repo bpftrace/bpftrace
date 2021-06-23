@@ -101,6 +101,14 @@ public:
   bool needs_elapsed_map = false;
   bool needs_data_map = false;
 
+  // Probe metadata
+  //
+  // Probe metadata that codegen creates. Ideally ResourceAnalyser pass should
+  // be collecting this, but it's complex to move the logic.
+  std::vector<Probe> probes;
+  std::vector<Probe> special_probes;
+  std::vector<Probe> watchpoint_probes;
+
 private:
   template <typename T>
   int create_maps_impl(BPFtrace &bpftrace, bool fake);
@@ -127,7 +135,9 @@ private:
             stackid_maps,
             needs_join_map,
             needs_elapsed_map,
-            needs_data_map);
+            needs_data_map,
+            probes,
+            special_probes);
   }
 };
 
