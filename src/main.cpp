@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "aot/aot.h"
 #include "ast/bpforc/bpforc.h"
 #include "ast/pass_manager.h"
 
@@ -876,9 +877,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (bt_debug != DebugLevel::kNone || test_mode == TestMode::CODEGEN ||
-      build_mode == BuildMode::AHEAD_OF_TIME)
+  if (bt_debug != DebugLevel::kNone || test_mode == TestMode::CODEGEN)
     return 0;
+
+  if (build_mode == BuildMode::AHEAD_OF_TIME)
+    return aot::generate(bpftrace.resources, bytecode, aot);
 
   // Signal handler that lets us know an exit signal was received.
   struct sigaction act = {};
