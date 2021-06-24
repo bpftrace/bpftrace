@@ -11,6 +11,7 @@
 #include "bpftrace.h"
 #include "fake_map.h"
 #include "log.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -149,6 +150,15 @@ void RequiredResources::save_state(std::ostream &out) const
 void RequiredResources::load_state(std::istream &in)
 {
   cereal::BinaryInputArchive archive(in);
+  archive(*this);
+}
+
+void RequiredResources::load_state(const uint8_t *ptr, size_t len)
+{
+  auto addr = const_cast<uint8_t *>(ptr);
+  Membuf mbuf(addr, addr + len);
+  std::istream istream(&mbuf);
+  cereal::BinaryInputArchive archive(istream);
   archive(*this);
 }
 

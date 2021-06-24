@@ -13,5 +13,7 @@ int generate(const RequiredResources &resources,
              const BpfBytecode &bytecode,
              const std::string &out);
 
+int load(BPFtrace &bpftrace, const std::string &in);
+
 } // namespace aot
 } // namespace bpftrace
