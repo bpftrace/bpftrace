@@ -12,7 +12,6 @@
 #include "ast/ast.h"
 #include "attached_probe.h"
 #include "bpffeature.h"
-#include "bpforc.h"
 #include "btf.h"
 #include "child.h"
 #include "map.h"
@@ -84,6 +83,8 @@ private:
   std::string msg_;
 };
 
+using BpfBytecode = std::unordered_map<std::string, std::vector<uint8_t>>;
+
 class BPFtrace
 {
 public:
@@ -102,9 +103,10 @@ public:
                                      const ast::AttachPoint &ap,
                                      const ast::Probe &probe);
   int num_probes() const;
-  int run(std::unique_ptr<BpfOrc> bpforc);
-  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(Probe &probe,
-                                                           BpfOrc &bpforc);
+  int run(BpfBytecode bytecode);
+  std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
+      Probe &probe,
+      BpfBytecode &bytecode);
   int run_iter();
   int print_maps();
   int clear_map(IMap &map);
@@ -143,7 +145,7 @@ public:
 
   RequiredResources resources;
   MapManager maps;
-  std::unique_ptr<BpfOrc> bpforc_;
+  BpfBytecode bytecode_;
   StructManager structs;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
@@ -192,7 +194,7 @@ public:
 
 private:
   int run_special_probe(std::string name,
-                        BpfOrc &bpforc,
+                        BpfBytecode &bytecode,
                         void (*trigger)(void));
   void* ksyms_{nullptr};
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)

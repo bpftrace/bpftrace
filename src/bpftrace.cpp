@@ -517,7 +517,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
       std::vector<std::unique_ptr<AttachedProbe>> aps;
       try
       {
-        aps = bpftrace->attach_probe(wp_probe, *bpftrace->bpforc_);
+        aps = bpftrace->attach_probe(wp_probe, bpftrace->bytecode_);
       }
       catch (const EnospcException &ex)
       {
@@ -877,10 +877,16 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
-    BpfOrc &bpforc)
+    BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
-
+  auto get_section = [](BpfBytecode &bytecode, const std::string &name)
+      -> std::optional<std::tuple<uint8_t *, size_t>> {
+    auto sec = bytecode.find(name);
+    if (sec == bytecode.end())
+      return std::nullopt;
+    return std::make_tuple(sec->second.data(), sec->second.size());
+  };
 
   // use the single-probe program if it exists (as is the case with wildcards
   // and the name builtin, which must be expanded into separate programs per
@@ -898,10 +904,10 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto section = bpforc.getSection(name);
+  auto section = get_section(bytecode, name);
   if (!section)
   {
-    section = bpforc.getSection(orig_name);
+    section = get_section(bytecode, orig_name);
   }
 
   if (!section)
@@ -997,7 +1003,7 @@ bool attach_reverse(const Probe &p)
 }
 
 int BPFtrace::run_special_probe(std::string name,
-                                BpfOrc &bpforc,
+                                BpfBytecode &bytecode,
                                 void (*trigger)(void))
 {
   for (auto probe = resources.special_probes.rbegin();
@@ -1006,7 +1012,7 @@ int BPFtrace::run_special_probe(std::string name,
   {
     if ((*probe).attach_point == name)
     {
-      auto aps = attach_probe(*probe, bpforc);
+      auto aps = attach_probe(*probe, bytecode);
 
       trigger();
       return aps.size() ? 0 : -1;
@@ -1085,14 +1091,14 @@ int BPFtrace::run_iter()
 }
 #endif
 
-int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
+int BPFtrace::run(BpfBytecode bytecode)
 {
   // Clear fake maps and replace with real maps
   maps = {};
   if (resources.create_maps(*this, false))
     return 1;
 
-  bpforc_ = std::move(bpforc);
+  bytecode_ = std::move(bytecode);
 
   int epollfd = setup_perf_events();
   if (epollfd < 0)
@@ -1115,7 +1121,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
     }
   }
 
-  if (run_special_probe("BEGIN_trigger", *bpforc_, BEGIN_trigger))
+  if (run_special_probe("BEGIN_trigger", bytecode_, BEGIN_trigger))
     return -1;
 
   if (child_ && has_usdt_)
@@ -1141,7 +1147,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
        ++probes)
   {
     if (!attach_reverse(*probes)) {
-      auto aps = attach_probe(*probes, *bpforc_);
+      auto aps = attach_probe(*probes, bytecode_);
 
       if (aps.empty())
         return -1;
@@ -1156,7 +1162,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
        ++r_probes)
   {
     if (attach_reverse(*r_probes)) {
-      auto aps = attach_probe(*r_probes, *bpforc_);
+      auto aps = attach_probe(*r_probes, bytecode_);
 
       if (aps.empty())
         return -1;
@@ -1203,7 +1209,7 @@ int BPFtrace::run(std::unique_ptr<BpfOrc> bpforc)
   finalize_ = false;
   exitsig_recv = false;
 
-  if (run_special_probe("END_trigger", *bpforc_, END_trigger))
+  if (run_special_probe("END_trigger", bytecode_, END_trigger))
     return -1;
 
   poll_perf_events(epollfd, true);

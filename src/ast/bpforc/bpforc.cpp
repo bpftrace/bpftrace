@@ -28,6 +28,23 @@ uint8_t *MemoryManager::allocateDataSection(uintptr_t Size,
   return addr;
 }
 
+std::unordered_map<std::string, std::vector<uint8_t>> BpfOrc::getBytecode()
+    const
+{
+  std::unordered_map<std::string, std::vector<uint8_t>> ret;
+
+  for (const auto &[section, bytecode_tuple] : sections_)
+  {
+    std::vector<uint8_t> section_bytecode;
+    const auto &[ptr, size] = bytecode_tuple;
+    section_bytecode.reserve(size);
+    section_bytecode.assign(ptr, ptr + size);
+    ret.insert({ section, section_bytecode });
+  }
+
+  return ret;
+}
+
 std::optional<std::tuple<uint8_t *, uintptr_t>> BpfOrc::getSection(
     const std::string &name)
 {

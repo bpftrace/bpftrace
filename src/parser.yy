@@ -17,6 +17,7 @@
 // Forward declarations of classes referenced in the parser
 %code requires
 {
+#include <limits>
 #include <regex>
 
 namespace bpftrace {
