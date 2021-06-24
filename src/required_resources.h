@@ -71,6 +71,7 @@ public:
   // (std::ios::binary) mode to avoid binary data from being interpreted wrong
   void save_state(std::ostream &out) const;
   void load_state(std::istream &in);
+  void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
   std::vector<std::tuple<std::string, std::vector<Field>>> system_args;

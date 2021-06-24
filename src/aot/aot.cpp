@@ -1,9 +1,13 @@
 #include "aot.h"
 
 #include <cstdint>
+#include <cstring>
 #include <exception>
 #include <fcntl.h>
 #include <fstream>
+#include <istream>
+#include <streambuf>
+#include <sys/mman.h>
 #include <sys/stat.h>
 
 #include <cereal/archives/binary.hpp>
@@ -12,6 +16,7 @@
 #include <cereal/types/vector.hpp>
 
 #include "log.h"
+#include "utils.h"
 
 static constexpr auto AOT_MAGIC = 0xA07;
 
@@ -58,6 +63,39 @@ void serialize_bytecode(const BpfBytecode &bytecode, std::ostream &out)
 {
   cereal::BinaryOutputArchive archive(out);
   archive(bytecode);
+}
+
+int load_required_resources(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
+{
+  try
+  {
+    bpftrace.resources.load_state(ptr, len);
+  }
+  catch (const std::exception &ex)
+  {
+    LOG(ERROR) << "Failed to deserialize metadata: " << ex.what();
+    return 1;
+  }
+
+  return 0;
+}
+
+int load_bytecode(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
+{
+  try
+  {
+    Membuf mbuf(ptr, ptr + len);
+    std::istream istream(&mbuf);
+    cereal::BinaryInputArchive archive(istream);
+    archive(bpftrace.bytecode_);
+  }
+  catch (const std::exception &ex)
+  {
+    LOG(ERROR) << "Failed to deserialize metadata: " << ex.what();
+    return 1;
+  }
+
+  return 0;
 }
 
 } // namespace
@@ -145,6 +183,90 @@ int generate(const RequiredResources &resources,
   }
 
   return 0;
+}
+
+int load(BPFtrace &bpftrace, const std::string &in)
+{
+  int err = 0;
+
+  int infd = ::open(in.c_str(), O_RDONLY);
+  if (infd < 0)
+  {
+    auto saved_err = errno;
+    LOG(ERROR) << "Failed to open: " << in << ": " << std::strerror(saved_err);
+    return 1;
+  }
+
+  struct stat sb;
+  if (fstat(infd, &sb))
+  {
+    auto saved_err = errno;
+    LOG(ERROR) << "Failed to stat: " << in << ": " << std::strerror(saved_err);
+    return 1;
+  }
+
+  uint8_t *ptr = static_cast<uint8_t *>(
+      ::mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, infd, 0));
+  if (ptr == MAP_FAILED)
+  {
+    auto saved_err = errno;
+    LOG(ERROR) << "Failed to mmap: " << in << ": " << std::strerror(saved_err);
+    return 1;
+  }
+
+  // Validate header
+  auto hdr = reinterpret_cast<const Header *>(ptr);
+  if (hdr->magic != AOT_MAGIC)
+  {
+    LOG(ERROR) << "Invalid magic in " << in << ": " << hdr->magic;
+    err = 1;
+    goto out;
+  }
+  if (hdr->unused != 0)
+  {
+    LOG(ERROR) << "Unused bytes are used: " << hdr->unused;
+    err = 1;
+    goto out;
+  }
+  if (hdr->header_len != sizeof(Header))
+  {
+    LOG(ERROR) << "Invalid header len: " << hdr->header_len;
+    err = 1;
+    goto out;
+  }
+  if (hdr->version != rs_hash(BPFTRACE_VERSION))
+  {
+    LOG(ERROR) << "Build hash mismatch! "
+               << "Did you build with a different bpftrace version?";
+    err = 1;
+    goto out;
+  }
+  if ((hdr->rr_off + hdr->rr_len) > static_cast<uint64_t>(sb.st_size) ||
+      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(sb.st_size))
+  {
+    LOG(ERROR) << "Corrupted AOT bpftrace file: incomplete payload";
+    err = 1;
+    goto out;
+  }
+
+  // Load payloads
+  err = load_required_resources(bpftrace, ptr + hdr->rr_off, hdr->rr_len);
+  if (err)
+    goto out;
+
+  err = load_bytecode(bpftrace, ptr + hdr->bc_off, hdr->bc_len);
+  if (err)
+    goto out;
+
+out:
+  if (::munmap(ptr, sb.st_size))
+  {
+    auto saved_err = errno;
+    LOG(ERROR) << "Failed to munmap(): " << in << ": "
+               << std::strerror(saved_err);
+  }
+
+  return err;
 }
 
 } // namespace aot

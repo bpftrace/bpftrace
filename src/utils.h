@@ -93,6 +93,18 @@ public:
   }
 };
 
+// Helper class to convert a pointer to an `std::istream`
+class Membuf : public std::streambuf
+{
+public:
+  Membuf(uint8_t *begin, uint8_t *end)
+  {
+    auto b = reinterpret_cast<char *>(begin);
+    auto e = reinterpret_cast<char *>(end);
+    this->setg(b, b, e);
+  }
+};
+
 // Hack used to suppress build warning related to #474
 template <typename new_signature, typename old_signature>
 new_signature cast_signature(old_signature func) {
