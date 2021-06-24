@@ -501,6 +501,8 @@ enum class PositionalParameterType
 
 } // namespace bpftrace
 
+// SizedType hash function
+// Allows to use SizedType in unordered_set/map.
 namespace std {
 template <>
 struct hash<bpftrace::StackType>
@@ -517,6 +519,12 @@ struct hash<bpftrace::StackType>
 
     return {}; // unreached
   }
+};
+
+template <>
+struct hash<bpftrace::SizedType>
+{
+  size_t operator()(const bpftrace::SizedType &type) const;
 };
 
 } // namespace std

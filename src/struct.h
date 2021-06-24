@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "utils.h"
 #include <map>
 
 namespace bpftrace {
@@ -76,6 +77,24 @@ struct Struct
 };
 
 std::ostream &operator<<(std::ostream &os, const Fields &t);
+
+} // namespace bpftrace
+
+namespace std {
+template <>
+struct hash<bpftrace::Struct>
+{
+  size_t operator()(const bpftrace::Struct &s) const
+  {
+    size_t hash = std::hash<int>()(s.size);
+    for (auto &field : s.fields)
+      bpftrace::hash_combine(hash, field.type);
+    return hash;
+  }
+};
+} // namespace std
+
+namespace bpftrace {
 
 class StructManager
 {
