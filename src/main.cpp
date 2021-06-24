@@ -821,9 +821,11 @@ int main(int argc, char* argv[])
   }
 
   ast::CodegenLLVM llvm(&*ast_root, bpftrace);
-  std::unique_ptr<BpfOrc> bpforc;
+  BpfBytecode bytecode;
   try
   {
+    std::unique_ptr<BpfOrc> bpforc;
+
     llvm.generate_ir();
     if (bt_debug == DebugLevel::kFullDebug)
     {
@@ -855,6 +857,8 @@ int main(int argc, char* argv[])
       raw_os_ostream os(std::cout);
       bpforc->dump(os);
     }
+
+    bytecode = std::move(bpforc->getBytecode());
   }
   catch (const std::system_error& ex)
   {
@@ -898,7 +902,7 @@ int main(int argc, char* argv[])
   else if (!bt_quiet)
     bpftrace.out_->attached_probes(num_probes);
 
-  err = bpftrace.run(move(bpforc));
+  err = bpftrace.run(std::move(bytecode));
   if (err)
     return err;
 
