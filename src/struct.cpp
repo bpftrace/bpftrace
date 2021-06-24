@@ -140,8 +140,13 @@ bool StructManager::Has(const std::string &name) const
 
 Struct *StructManager::AddTuple(std::vector<SizedType> fields)
 {
-  tuples_.push_back(Struct::CreateTuple(fields));
-  return tuples_.back().get();
+  auto t = tuples_.insert(Struct::CreateTuple(std::move(fields)));
+  return t.first->get();
+}
+
+size_t StructManager::GetTuplesCnt() const
+{
+  return tuples_.size();
 }
 
 } // namespace bpftrace
