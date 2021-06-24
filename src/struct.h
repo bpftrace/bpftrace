@@ -92,6 +92,25 @@ struct hash<bpftrace::Struct>
     return hash;
   }
 };
+
+template <>
+struct hash<unique_ptr<bpftrace::Struct>>
+{
+  size_t operator()(const std::unique_ptr<bpftrace::Struct> &s_ptr) const
+  {
+    return std::hash<bpftrace::Struct>()(*s_ptr);
+  }
+};
+
+template <>
+struct equal_to<unique_ptr<bpftrace::Struct>>
+{
+  bool operator()(const std::unique_ptr<bpftrace::Struct> &lhs,
+                  const std::unique_ptr<bpftrace::Struct> &rhs) const
+  {
+    return *lhs == *rhs;
+  }
+};
 } // namespace std
 
 namespace bpftrace {
@@ -99,15 +118,19 @@ namespace bpftrace {
 class StructManager
 {
 public:
+  // struct map manipulation
   void Add(const std::string &name, size_t size);
-  Struct *AddTuple(std::vector<SizedType> fields);
   Struct *Lookup(const std::string &name) const;
   Struct *LookupOrAdd(const std::string &name, size_t size);
   bool Has(const std::string &name) const;
 
+  // tuples set manipulation
+  Struct *AddTuple(std::vector<SizedType> fields);
+  size_t GetTuplesCnt() const;
+
 private:
   std::map<std::string, std::unique_ptr<Struct>> struct_map_;
-  std::vector<std::unique_ptr<Struct>> tuples_;
+  std::unordered_set<std::unique_ptr<Struct>> tuples_;
 };
 
 } // namespace bpftrace
