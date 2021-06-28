@@ -1094,6 +1094,16 @@ TEST(Parser, interval_probe)
       " interval:s:1\n"
       "  int: 1\n");
 
+  test("interval:s:1e3 { 1 }",
+       "Program\n"
+       " interval:s:1000\n"
+       "  int: 1\n");
+
+  test("interval:s:1_0_0_0 { 1 }",
+       "Program\n"
+       " interval:s:1000\n"
+       "  int: 1\n");
+
   test_parse_failure("interval:s:1b { 1 }");
 }
 
@@ -1104,6 +1114,16 @@ TEST(Parser, software_probe)
       " software:faults:1000\n"
       "  int: 1\n");
 
+  test("software:faults:1e3 { 1 }",
+       "Program\n"
+       " software:faults:1000\n"
+       "  int: 1\n");
+
+  test("software:faults:1_000 { 1 }",
+       "Program\n"
+       " software:faults:1000\n"
+       "  int: 1\n");
+
   test_parse_failure("software:faults:1b { 1 }");
 }
 
@@ -1113,6 +1133,16 @@ TEST(Parser, hardware_probe)
       "Program\n"
       " hardware:cache-references:1000000\n"
       "  int: 1\n");
+
+  test("hardware:cache-references:1e6 { 1 }",
+       "Program\n"
+       " hardware:cache-references:1000000\n"
+       "  int: 1\n");
+
+  test("hardware:cache-references:1_000_000 { 1 }",
+       "Program\n"
+       " hardware:cache-references:1000000\n"
+       "  int: 1\n");
 
   test_parse_failure("hardware:cache-references:1b { 1 }");
 }
@@ -1689,15 +1719,28 @@ TEST(Parser, empty_arguments)
   test_parse_failure(":w:0x10000000:8:rw { 1 }");
 }
 
-TEST(Parser, scientific_notation)
+TEST(Parser, int_notation)
 {
   test("k:f { print(1e6); }",
        "Program\n kprobe:f\n  call: print\n   int: 1000000\n");
   test("k:f { print(5e9); }",
        "Program\n kprobe:f\n  call: print\n   int: 5000000000\n");
+  test("k:f { print(1e1_0); }",
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+  test("k:f { print(1_000_000_000_0); }",
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+  test("k:f { print(1_0_0_0_00_0_000_0); }",
+       "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
+  test("k:f { print(123_456_789_0); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1234567890\n");
 
   test_parse_failure("k:f { print(5e-9); }");
-  test_parse_failure("k:f { print(1e100); }");
+  test_parse_failure("k:f { print(1e17); }");
+  test_parse_failure("k:f { print(12e4); }");
+  test_parse_failure("k:f { print(1_1e100); }");
+  test_parse_failure("k:f { print(1e1_1_); }");
+  test_parse_failure("k:f { print(1_1_e100); }");
+  test_parse_failure("k:f { print(1_1_); }");
 }
 
 TEST(Parser, while_loop)
