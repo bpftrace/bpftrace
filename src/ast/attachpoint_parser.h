@@ -59,6 +59,7 @@ private:
   State iter_parser();
 
   std::optional<uint64_t> stoull(const std::string &str);
+  std::optional<int64_t> stoll(const std::string &str);
 
   Program *root_{ nullptr }; // Non-owning pointer
   BPFtrace &bpftrace_;

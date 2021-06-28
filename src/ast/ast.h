@@ -501,7 +501,7 @@ public:
   std::string func;
   std::string pin;
   usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with wildcard matches
-  int freq = 0;
+  int64_t freq = 0;
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr
   std::string mode;   // for watchpoint probes, the watch mode
   bool async = false; // for watchpoint probes, if it's an async watchpoint
