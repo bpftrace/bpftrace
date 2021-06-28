@@ -223,7 +223,6 @@ T read_data(const void *src)
   return v;
 }
 
-uint64_t parse_exponent(const char *str);
 uint32_t kernel_version(int attempt);
 
 template <typename T>

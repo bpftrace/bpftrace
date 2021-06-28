@@ -793,22 +793,6 @@ std::unordered_set<std::string> get_traceable_funcs()
 #endif
 }
 
-uint64_t parse_exponent(const char *str)
-{
-  char *e_offset;
-  auto base = strtoll(str, &e_offset, 10);
-
-  if (*e_offset != 'e')
-    return base;
-
-  auto exp = strtoll(e_offset + 1, nullptr, 10);
-  auto num = base * std::pow(10, exp);
-  uint64_t max = std::numeric_limits<uint64_t>::max();
-  if (num > (double)max)
-    throw std::runtime_error(std::string(str) + " is too big for uint64_t");
-  return num;
-}
-
 /**
  * Search for LINUX_VERSION_CODE in the vDSO, returning 0 if it can't be found.
  */

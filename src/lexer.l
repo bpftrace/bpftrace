@@ -19,13 +19,15 @@ static std::string buffer;
 using namespace bpftrace;
 %}
 
+/* Number with underscores in it, e.g. 1_000_000 */
+int      [0-9]([0-9_]*[0-9])?
+hex      0[xX][0-9a-fA-F]+
+/* scientific notation, e.g. 2e4 or 1e6 */
+exponent {int}[eE]{int}
+
 ident    [_a-zA-Z][_a-zA-Z0-9]*
 map      @{ident}|@
 var      ${ident}
-int      [0-9]+|0[xX][0-9a-fA-F]+
-exponent [0-9]+e[0-9]+
-hex      (x|X)[0-9a-fA-F]{1,2}
-oct      [0-7]{1,3}
 hspace   [ \t]
 vspace   [\n\r]
 space    {hspace}|{vspace}
@@ -35,6 +37,11 @@ call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack
+
+/* escape sequences in strings */
+hex_esc  (x|X)[0-9a-fA-F]{1,2}
+oct_esc  [0-7]{1,3}
+
 %x STR
 %x STRUCT
 %x ENUM
@@ -60,13 +67,14 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 {builtin}               { return Parser::make_BUILTIN(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
-{int}                   { return Parser::make_INT(strtoul(yytext, NULL, 0), loc); }
-{exponent}              {
-                          uint64_t num;
-                          try {
-                            num = parse_exponent(yytext);
-                            return Parser::make_INT(num, loc);
-                          } catch (std::exception const &e) {
+{int}|{hex}|{exponent}  {
+                          try
+                          {
+                            auto res = ast::int_parser::to_uint(yytext, 0);
+                            return Parser::make_INT(res, loc);
+                          }
+                          catch (const std::exception &e)
+                          {
                             driver.error(loc, e.what());
                           }
                         }
@@ -140,14 +148,14 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   \\r                   buffer += '\r';
   \\\"                  buffer += '\"';
   \\\\                  buffer += '\\';
-  \\{oct}               {
+  \\{oct_esc}           {
                             long value = strtol(yytext+1, NULL, 8);
                             if (value > UCHAR_MAX)
                               driver.error(loc, std::string("octal escape sequence out of range '") +
                                                 yytext + "'");
                             buffer += value;
                         }
-  \\{hex}               buffer += strtol(yytext+2, NULL, 16);
+  \\{hex_esc}           buffer += strtol(yytext+2, NULL, 16);
   \n                    driver.error(loc, "unterminated string"); yy_pop_state(yyscanner); loc.lines(1); loc.step();
   <<EOF>>               driver.error(loc, "unterminated string"); yy_pop_state(yyscanner);
   \\.                   { driver.error(loc, std::string("invalid escape character '") +
