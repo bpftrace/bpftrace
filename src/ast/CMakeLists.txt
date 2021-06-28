@@ -4,6 +4,7 @@ add_library(ast
   codegen_llvm.cpp
   fake_map.cpp
   field_analyser.cpp
+  int_parser.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
   portability_analyser.cpp
