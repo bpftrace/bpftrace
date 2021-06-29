@@ -12,7 +12,7 @@ void print(Node *root, const std::string &name, std::ostream &out)
 {
   out << "\nAST after: " << name << std::endl;
   out << "-------------------\n";
-  ast::Printer printer(out);
+  ast::Printer printer(out, true);
   printer.print(root);
   out << std::endl;
 }
