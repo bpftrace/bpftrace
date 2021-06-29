@@ -1580,7 +1580,21 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   if (other.IsPtrTy())
   {
     if (compare)
+    {
       binop.type = CreateUInt(64);
+
+      if (is_final_pass())
+      {
+        auto le = lht.GetPointeeTy();
+        auto re = rht.GetPointeeTy();
+        if (*le != *re)
+        {
+          LOG(WARNING, binop.left->loc + binop.right->loc, out_)
+              << "comparison of distinct pointer types ('" << *le << ", '"
+              << *re << "')";
+        }
+      }
+    }
     else
       invalid_op();
   }

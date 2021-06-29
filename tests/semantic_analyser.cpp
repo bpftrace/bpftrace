@@ -2151,6 +2151,9 @@ TEST(semantic_analyser, pointer_compare)
        0);
   test(R"_(BEGIN { $t = (int32*) 32; $y = (int64*) 1024; @ = ($t == $y); })_",
        0);
+
+  test_for_warning("k:f { $a = (int8*) 1; $b = (int16*) 2; $c = ($a == $b) }",
+                   "comparison of distinct pointer types ('int8, 'int16')");
 }
 
 // Basic functionality test
