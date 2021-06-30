@@ -5,7 +5,7 @@
 #  LIBBCC_INCLUDE_DIRS - the libbcc include directory
 #  LIBBCC_LIBRARIES - Link these to use libbcc
 #  LIBBCC_DEFINITIONS - Compiler switches required for using libbcc
-#  LIBBCC_BPF_LIBRARY_STATIC - libbpf static library (for static compilation)
+#  LIBBCC_BPF_LIBRARIES - libbcc runtime library
 #  LIBBCC_LOADER_LIBRARY_STATIC - libbcc helper static library (for static compilation)
 #  LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
 #  LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
@@ -30,7 +30,7 @@ find_library (LIBBCC_LIBRARIES
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
-find_library (LIBBCC_BPF_LIBRARY_STATIC
+find_library (LIBBCC_BPF_LIBRARIES
   NAMES
     bcc_bpf
   PATHS
@@ -60,7 +60,7 @@ if(STATIC_LINKING)
   find_package(LibBpf)
   find_package(LibElf)
   find_package(LibZ)
-  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARY_STATIC} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
 else()
   SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_LIBRARIES} ${LIBBPF_LIBRARIES})
 endif()
