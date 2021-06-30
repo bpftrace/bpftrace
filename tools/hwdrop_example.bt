@@ -1,0 +1,22 @@
+Demonstrations of hwdrop, the Linux bpftrace/eBPF version.
+
+hwdrop prints packet interface and trap info that were dropped by the
+kernel hardware.
+
+# ./hwdrop.bt
+Attaching 2 probes...
+Tracing kernel hardware packets drops. Hit Ctrl-C to end.
+drop at fid_miss, dev driver netdevsim, protocol 0x08, skb len 142
+drop at ttl_value_is_too_small, dev driver netdevsim, protocol 0x08, skb len 142
+drop at fid_miss, dev driver netdevsim, protocol 0x08, skb len 142
+drop at blackhole_route, dev driver netdevsim, protocol 0x08, skb len 142
+drop at ttl_value_is_too_small, dev driver netdevsim, protocol 0x08, skb len 142
+[...]
+
+The example shows devlink tap info when there are kernel hardware drops.
+
+This tool is useful to diagnose where packets are getting dropped in hardware.
+
+USAGE:
+
+# ./hwdrop.bt

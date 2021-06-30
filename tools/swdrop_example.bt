@@ -1,0 +1,44 @@
+Demonstrations of swdrop, the Linux bpftrace/eBPF version.
+
+swdrop prints details of packets that were dropped by the kernel from
+software stack.
+
+# ./swdrop.bt
+Attaching 4 probes...
+Tracing kernel software packets drops. Hit Ctrl-C to end.
+08:40:25
+@[
+    kfree_skb+1
+    ip_rcv_core.isra.23+487
+    ip_list_rcv+202
+    __netif_receive_skb_list_core+667
+    netif_receive_skb_list_internal+451
+    gro_normal_list.part.155+25
+    napi_complete_done+103
+    virtqueue_napi_complete+42
+    virtnet_poll+790
+    __napi_poll+43
+    net_rx_action+566
+    __softirqentry_text_start+201
+    irq_exit_rcu+212
+    common_interrupt+127
+    asm_common_interrupt+30
+    default_idle+19
+    default_idle_call+50
+    do_idle+514
+    cpu_startup_entry+25
+    start_secondary+283
+    secondary_startup_64_no_verify+194
+]: 3
+
+[...]
+
+The example shows kernel packet drops via kfree_skb.
+
+Although there may have some false positives as some driver may free the
+skb wrongly with kfree_skb() instead of consume_skb(), which is a bug.
+It's still the most useful way to find where packets are getting dropped.
+
+USAGE:
+
+# ./swdrop.bt

@@ -1,0 +1,38 @@
+#!/usr/bin/env bpftrace
+/*
+ * swdrop.bt	Trace kernel packets software drops.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * USAGE: swdrop.bt
+ *
+ * This provides kernel packets software drops by tracking kernel function
+ * kfree_skb(). It will printing drop stacks every 1 second.
+ *
+ * Copyright (c) 2021 Hangbin Liu.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ */
+
+#include <linux/devlink.h>
+#include <net/devlink.h>
+
+BEGIN
+{
+	printf("Tracing kernel software packets drops. Hit Ctrl-C to end.\n");
+}
+
+tracepoint:skb:kfree_skb
+{
+	@[kstack] = count();
+}
+
+interval:s:1
+{
+        time();
+        print(@);
+        clear(@);
+}
+
+END
+{
+        clear(@);
+}
