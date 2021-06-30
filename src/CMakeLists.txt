@@ -21,6 +21,7 @@ add_library(runtime
   child.cpp
   disasm.cpp
   dwarf_parser.cpp
+  fake_map.cpp
   imap.cpp
   log.cpp
   map.cpp
