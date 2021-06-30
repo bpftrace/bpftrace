@@ -145,7 +145,12 @@ if(HAVE_BFD_DISASM)
   endif(STATIC_LINKING)
 endif(HAVE_BFD_DISASM)
 
-target_link_libraries(runtime ${LIBBCC_LIBRARIES})
+# Link to bcc libraries (without LLVM) if possible
+if(LIBBCC_BPF_CONTAINS_RUNTIME)
+  target_link_libraries(runtime ${LIBBCC_BPF_LIBRARIES})
+else()
+  target_link_libraries(runtime ${LIBBCC_LIBRARIES})
+endif()
 
 if(STATIC_LINKING)
   # These are not part of the static libbcc so have to be added separate
