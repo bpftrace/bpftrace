@@ -1,7 +1,6 @@
 add_library(ast
   ast.cpp
   attachpoint_parser.cpp
-  fake_map.cpp
   int_parser.cpp
   irbuilderbpf.cpp
   pass_manager.cpp
