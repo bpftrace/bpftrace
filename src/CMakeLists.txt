@@ -188,3 +188,7 @@ endif()
 
 unset(MAIN_SRC)
 unset(BPFTRACE)
+
+add_subdirectory(aot)
+add_subdirectory(arch)
+add_subdirectory(ast)

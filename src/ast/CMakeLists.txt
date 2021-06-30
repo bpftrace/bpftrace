@@ -80,3 +80,5 @@ else()
   endif()
   target_link_libraries(ast libclang)
 endif()
+
+add_subdirectory(bpforc)
