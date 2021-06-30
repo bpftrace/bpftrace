@@ -1,8 +1,9 @@
+#include "bpffeature.h"
+
 #include <bcc/libbpf.h>
 #ifdef HAVE_LIBBPF_MAP_BATCH
 #include <bpf/bpf.h>
 #endif
-#include <bpffeature.h>
 #include <cstddef>
 #include <cstdio>
 #include <fcntl.h>
