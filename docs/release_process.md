@@ -42,9 +42,11 @@ You must do these things to formally release a version:
    as "commits"), then "Draft a new release". The tag version and release title
    should be the same and in `vX.Y.Z` format. The tag description should
    be the same as what you added to `CHANGELOG.md`.
-1. Attach a tar of the tools to the release.
 1. Once the release tag pipeline has finished, extract the bpftrace binary from
    the release build on and attach it to the release.
   -  `docker run -v
 $(pwd):/output quay.io/iovisor/bpftrace:vXX.YY.ZZ /bin/bash -c "cp
 /usr/bin/bpftrace /output"`
+1. Run `scripts/create-assets.sh` from bpftrace root dir and attach the
+   generated archives to the release.
+
