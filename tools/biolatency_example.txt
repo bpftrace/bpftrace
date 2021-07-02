@@ -21,7 +21,7 @@ Tracing block device I/O... Hit Ctrl-C to end.
 [128K, 256K)          10 |@                                                   |
 
 While tracing, this shows that 426 block I/O had a latency of between 1K and 2K
-usecs (1024 and 2048 microseconds), which is between 1 and 2 milliseconds.
+usecs (1000 and 2000 microseconds), which is between 1 and 2 milliseconds.
 There are also two modes visible, one between 1 and 2 milliseconds, and another
 between 8 and 16 milliseconds: this sounds like cache hits and cache misses.
 There were also 10 I/O with latency 128 to 256 ms: outliers. Other tools and
