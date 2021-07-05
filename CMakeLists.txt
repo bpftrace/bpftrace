@@ -69,6 +69,12 @@ if (WARNINGS_AS_ERRORS)
   add_compile_options("-Werror")
 endif()
 
+# Clang compiler produces narrowing errors when calling BPF_LD_MAP_FD in the bcc library
+# Turning off them before bcc library fixes this
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  add_compile_options("-Wno-narrowing")
+endif()
+
 # Ninja buffers output so gcc/clang think it's not an interactive session.
 # Colors are useful for compiler errors so force the color
 if("${CMAKE_GENERATOR}" STREQUAL "Ninja")
