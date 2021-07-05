@@ -77,6 +77,7 @@ public:
   bool has_map_batch();
   bool has_d_path();
   bool has_uprobe_refcnt();
+  bool has_skb_output();
 
   std::string report(void);
 
@@ -113,6 +114,7 @@ protected:
   std::optional<int> insns_limit_;
   std::optional<bool> has_map_batch_;
   std::optional<bool> has_uprobe_refcnt_;
+  std::optional<bool> has_skb_output_;
 
 private:
   bool detect_map(enum libbpf::bpf_map_type map_type);
