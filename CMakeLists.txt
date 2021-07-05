@@ -265,6 +265,10 @@ if (LIBBPF_BTF_DUMP_FOUND)
   endif()
 endif(LIBBPF_BTF_DUMP_FOUND)
 
+if(LIBPCAP_FOUND)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBPCAP)
+endif(LIBPCAP_FOUND)
+
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
 add_subdirectory(src/ast/bpforc)
