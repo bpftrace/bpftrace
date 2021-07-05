@@ -81,6 +81,7 @@ public:
   bool has_uprobe_refcnt();
   bool has_kprobe_multi();
   bool has_kfunc();
+  bool has_skb_output();
 
   std::string report(void);
 
@@ -123,6 +124,7 @@ protected:
   std::optional<bool> has_map_batch_;
   std::optional<bool> has_uprobe_refcnt_;
   std::optional<bool> has_kprobe_multi_;
+  std::optional<bool> has_skb_output_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);

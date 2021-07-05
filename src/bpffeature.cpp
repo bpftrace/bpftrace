@@ -424,6 +424,65 @@ bool BPFfeature::has_kprobe_multi()
   return *has_kprobe_multi_;
 }
 
+bool BPFfeature::has_skb_output(void)
+{
+  if (!has_kfunc())
+    return false;
+
+  if (has_skb_output_.has_value())
+    return *has_skb_output_;
+
+  int map_fd = 0;
+
+#ifdef HAVE_LIBBPF_BPF_MAP_CREATE
+  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  opts.map_flags = 0;
+  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
+                              libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY),
+                          "rb",
+                          sizeof(int),
+                          sizeof(int),
+                          1,
+                          &opts);
+#else
+  struct bpf_create_map_attr attr = {};
+  attr.name = "rb";
+  attr.map_flags = 0;
+  attr.map_type = static_cast<enum ::bpf_map_type>(
+      libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  attr.key_size = sizeof(int);
+  attr.value_size = sizeof(int);
+  attr.max_entries = 1;
+  map_fd = bpf_create_map_xattr(&attr);
+#endif
+
+  if (map_fd < 0)
+    return false;
+
+  struct bpf_insn insns[] = {
+    BPF_LDX_MEM(BPF_W, BPF_REG_1, BPF_REG_1, 0),
+    BPF_LD_MAP_FD(BPF_REG_2, map_fd),
+    BPF_MOV64_IMM(BPF_REG_3, 0),
+    BPF_MOV64_REG(BPF_REG_4, BPF_REG_10),
+    BPF_ALU64_IMM(BPF_ADD, BPF_REG_4, -8),
+    BPF_MOV64_IMM(BPF_REG_6, 0),
+    BPF_STX_MEM(BPF_DW, BPF_REG_4, BPF_REG_6, 0),
+    BPF_LD_IMM64(BPF_REG_5, 8),
+    BPF_RAW_INSN(BPF_JMP | BPF_CALL, 0, 0, 0, libbpf::BPF_FUNC_skb_output),
+    BPF_MOV64_IMM(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  has_skb_output_ = std::make_optional<bool>(
+      try_load(libbpf::BPF_PROG_TYPE_TRACING,
+               insns,
+               ARRAY_SIZE(insns),
+               "kfunc__kfree_skb"));
+
+  close(map_fd);
+  return *has_skb_output_;
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -446,6 +505,8 @@ std::string BPFfeature::report(void)
       << "  override_return: " << to_str(has_helper_override_return())
       << "  get_boot_ns: " << to_str(has_helper_ktime_get_boot_ns())
       << "  dpath: " << to_str(has_d_path())
+      << "  skboutput: " << to_str(has_skb_output())
+
       << std::endl;
 
   buf << "Kernel features" << std::endl
