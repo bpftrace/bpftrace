@@ -25,6 +25,8 @@ set(BUILD_FUZZ OFF CACHE BOOL "Build bpftrace for fuzzing")
 set(USE_LIBFUZZER OFF CACHE BOOL "Use libfuzzer for fuzzing")
 set(FUZZ_TARGET "codegen" CACHE STRING "Fuzzing target")
 
+set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(EMBED_BUILD_LLVM)
@@ -118,7 +120,10 @@ set(CMAKE_REQUIRED_DEFINITIONS)
 find_package(LibBfd)
 find_package(LibOpcodes)
 find_package(LibDw)
+
+if(ENABLE_SKB_OUTPUT)
 find_package(LibPcap)
+endif()
 
 if(POLICY CMP0075)
   cmake_policy(SET CMP0075 NEW)
@@ -266,6 +271,10 @@ endif(HAVE_LIBBPF_KPROBE_MULTI)
 if (LIBDW_FOUND)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBDW)
 endif ()
+
+if(LIBPCAP_FOUND)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBPCAP)
+endif(LIBPCAP_FOUND)
 
 add_subdirectory(src)
 if (BUILD_TESTING)
