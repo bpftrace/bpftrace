@@ -152,6 +152,13 @@ void ResourceAnalyser::visit(Call &call)
   {
     resources_.stackid_maps.insert(call.type.stack_type);
   }
+  else if (call.func == "skboutput")
+  {
+    auto &file_arg = *call.vargs->at(0);
+    String &file = static_cast<String&>(file_arg);
+
+    resources_.skboutput_args_.emplace_back(file.str, 0);
+  }
 }
 
 void ResourceAnalyser::visit(Map &map)

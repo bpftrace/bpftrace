@@ -579,6 +579,20 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::skboutput))
+  {
+    struct hdr_t {
+      uint64_t  aid;
+      uint64_t  id;
+      uint64_t  ns;
+      uint8_t   pkt[];
+    } __attribute__((packed)) *hdr;
+
+    hdr = static_cast<struct hdr_t*>(data);
+
+    bpftrace->write_pcaps(hdr->id, hdr->ns, hdr->pkt, size - sizeof(*hdr));
+    return;
+  }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
             printf_id < asyncactionint(AsyncAction::syscall) + RESERVED_IDS_PER_ASYNCACTION)
   {
@@ -2203,6 +2217,37 @@ bool BPFtrace::is_traceable_func(const std::string &func_name) const
 #else
   return traceable_funcs_.find(func_name) != traceable_funcs_.end();
 #endif
+}
+
+int BPFtrace::create_pcaps(void)
+{
+  for (auto pcap : resources.skboutput_args_)
+  {
+    auto file   = std::get<0>(pcap);
+    auto writer = std::make_unique<PCAPwriter>();
+
+    if (!writer->open(file))
+      return -1;
+
+    pcaps.push_back(std::move(writer));
+  }
+
+  return 0;
+}
+
+void BPFtrace::close_pcaps(void)
+{
+  for (auto& writer : pcaps)
+  {
+    writer->close();
+  }
+}
+
+bool BPFtrace::write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size)
+{
+  auto& writer = pcaps.at(id);
+
+  return writer->write(ns, pkt, size);
 }
 
 } // namespace bpftrace

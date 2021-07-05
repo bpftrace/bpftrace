@@ -161,6 +161,7 @@ public:
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  void        CreateSkboutput(Value *skb, Value *len, AllocaInst *data, size_t size, int caplen);
   void CreatePath(Value *ctx,
                   AllocaInst *buf,
                   Value *path,

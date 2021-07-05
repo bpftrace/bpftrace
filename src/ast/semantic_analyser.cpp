@@ -1214,6 +1214,24 @@ void SemanticAnalyser::visit(Call &call)
     // Return type cannot be used
     call.type = SizedType(Type::none, 0);
   }
+  else if (call.func == "skboutput")
+  {
+    check_assignment(call, false, false, false);
+    if (check_varargs(call, 2, 3))
+    {
+      if (is_final_pass())
+      {
+        check_arg(call, Type::string,  0, true);
+        check_arg(call, Type::pointer, 1, false);
+        check_arg(call, Type::integer, 2, false);
+
+        auto &file_arg = *call.vargs->at(0);
+        String &file = static_cast<String&>(file_arg);
+
+        bpftrace_.resources.skboutput_args_.emplace_back(file.str, 0);
+      }
+    }
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

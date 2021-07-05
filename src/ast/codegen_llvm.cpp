@@ -1077,6 +1077,39 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
+  else if (call.func == "skboutput")
+  {
+    std::vector<llvm::Type *> elements = {
+      b_.getInt64Ty(), // AsyncAction::skboutput
+      b_.getInt64Ty(), // id
+      b_.getInt64Ty(), // time
+    };
+
+    StructType *hdr_t = b_.GetStructType("hdr_t", elements, false);
+    AllocaInst *data  = b_.CreateAllocaBPF(hdr_t, "hdr");
+
+    // The extra 0 here ensures the type of addr_offset will be int64
+    Value *aid_addr  = b_.CreateGEP(data, { b_.getInt64(0), b_.getInt32(0) });
+    Value *id_addr   = b_.CreateGEP(data, { b_.getInt64(0), b_.getInt32(1) });
+    Value *time_addr = b_.CreateGEP(data, { b_.getInt64(0), b_.getInt32(2) });
+
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::skboutput)), aid_addr);
+    b_.CreateStore(b_.getInt64(skb_output_id_), id_addr);
+    b_.CreateStore(b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns()), time_addr);
+
+    auto &arg_skb= *call.vargs->at(1);
+    arg_skb.accept(*this);
+    Value *skb = expr_;
+
+    auto &arg_len = *call.vargs->at(2);
+    arg_len.accept(*this);
+    Value *len = expr_;
+
+    int caplen = std::get<1>(bpftrace_.resources.skboutput_args_.at(skb_output_id_));
+
+    b_.CreateSkboutput(skb, len, data, getStructSize(hdr_t), caplen);
+    skb_output_id_++;
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
@@ -2246,6 +2279,7 @@ void CodegenLLVM::visit(Probe &probe)
     int starting_helper_error_id = b_.helper_error_id_;
     int starting_non_map_print_id = non_map_print_id_;
     int starting_seq_printf_id = seq_printf_id_;
+    int starting_skb_output_id = skb_output_id_;
 
     auto reset_ids = [&]() {
       printf_id_ = starting_printf_id;
@@ -2257,6 +2291,7 @@ void CodegenLLVM::visit(Probe &probe)
       b_.helper_error_id_ = starting_helper_error_id;
       non_map_print_id_ = starting_non_map_print_id;
       seq_printf_id_ = starting_seq_printf_id;
+      skb_output_id_ = starting_skb_output_id;
     };
 
     for (auto attach_point : *probe.attach_points) {
