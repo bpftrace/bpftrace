@@ -35,6 +35,7 @@ jobs:
           BASE: xenial
           DISTRO: ubuntu-glibc
           CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
+          ENABLE_SKB_OUTPUT: OFF
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
           BCC_REF: v0.23.0

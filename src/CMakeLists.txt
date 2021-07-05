@@ -38,6 +38,7 @@ add_library(runtime
   types.cpp
   usdt.cpp
   utils.cpp
+  pcap_writer.cpp
   ${BFD_DISASM_SRC}
 )
 # Ensure flex+bison outputs are built first
@@ -127,6 +128,10 @@ target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdeman
 if (LIBBPF_BTF_DUMP_FOUND)
   target_link_libraries(runtime ${LIBBPF_LIBRARIES})
 endif(LIBBPF_BTF_DUMP_FOUND)
+
+if(LIBPCAP_FOUND)
+  target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})
+endif(LIBPCAP_FOUND)
 
 if(HAVE_BFD_DISASM)
   if(STATIC_LINKING)
