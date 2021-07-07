@@ -11,6 +11,7 @@ EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM:-OFF}
 ALLOW_UNSAFE_PROBE=${ALLOW_UNSAFE_PROBE:-OFF}
 DEPS_ONLY=${DEPS_ONLY:-OFF}
 RUN_TESTS=${RUN_TESTS:-1}
+RUN_MEMLEAK_TEST=${RUN_MEMLEAK_TEST:-0}
 VENDOR_GTEST=${VENDOR_GTEST:-OFF}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
 BUILD_LIBBPF=${BUILD_LIBBPF:-OFF}
@@ -39,6 +40,7 @@ cmake -DCMAKE_BUILD_TYPE="$2" \
       -DEMBED_LLVM_VERSION=$LLVM_VERSION \
       -DALLOW_UNSAFE_PROBE:BOOL=$ALLOW_UNSAFE_PROBE \
       -DVENDOR_GTEST=$VENDOR_GTEST \
+      -DBUILD_ASAN:BOOL=$RUN_MEMLEAK_TEST \
       -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
       "${CMAKE_EXTRA_FLAGS}" \
       ../
@@ -55,4 +57,10 @@ if [ $RUN_TESTS = 1 ]; then
   else
     ./tests/bpftrace_test $TEST_ARGS;
   fi
+fi
+
+# Memleak tests require bpftrace built with -fsanitize=address so it cannot be
+# usually run with unit/runtime tests (RUN_TESTS should be set to 0). 
+if [ $RUN_MEMLEAK_TEST = 1 ]; then
+  ./tests/memleak-tests.sh
 fi
