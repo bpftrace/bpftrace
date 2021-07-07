@@ -135,6 +135,20 @@ jobs:
           BASE: bionic
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
+        - NAME: Memleak test (LLVM 11 Debug)
+          TYPE: Debug
+          LLVM_VERSION: 11
+          BASE: bionic
+          RUN_MEMLEAK_TEST: 1
+          RUN_TESTS: 0
+          VENDOR_GTEST: ON
+        - NAME: Memleak test (LLVM 11 Release)
+          TYPE: Release
+          LLVM_VERSION: 11
+          BASE: bionic
+          RUN_MEMLEAK_TEST: 1
+          RUN_TESTS: 0
+          VENDOR_GTEST: ON
     steps:
     - uses: actions/checkout@v2
     - name: Get date
@@ -177,7 +191,9 @@ jobs:
         -v /sys/kernel/debug:/sys/kernel/debug:rw
         -v /lib/modules:/lib/modules:ro
         -v /usr/src:/usr/src:ro
+        -e RUN_TESTS=${RUN_TESTS}
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
+        -e RUN_MEMLEAK_TEST="${RUN_MEMLEAK_TEST}"
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"
