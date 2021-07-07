@@ -188,6 +188,11 @@ configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)
 add_test(NAME tools-parsing-test COMMAND ./tools-parsing-test.sh)
 
+if (BUILD_ASAN)
+  configure_file(memleak-tests.sh memleak-tests.sh COPYONLY)
+  add_custom_target(memleak-test COMMAND ./memleak-tests.sh)
+endif()
+
 if(ENABLE_TEST_VALIDATE_CODEGEN)
   if(${LLVM_VERSION_MAJOR} VERSION_EQUAL 12)
     message(STATUS "Adding codegen-validator test")
