@@ -77,10 +77,12 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   // Fill in some default tracepoint struct definitions
   bpftrace.structs.Add("struct _tracepoint_sched_sched_one", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one")
+      .lock()
       ->AddField("common_field", CreateUInt64(), 8, false, {}, false);
 
   bpftrace.structs.Add("struct _tracepoint_sched_sched_two", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_two")
+      .lock()
       ->AddField("common_field",
                  CreateUInt64(),
                  16, // different offset than
@@ -90,6 +92,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                  false);
   bpftrace.structs.Add("struct _tracepoint_sched_extra_sched_extra", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_extra_sched_extra")
+      .lock()
       ->AddField("common_field",
                  CreateUInt64(),
                  24, // different offset than
@@ -99,14 +102,17 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                  false);
   bpftrace.structs.Add("struct _tracepoint_tcp_some_tcp_tp", 16);
   bpftrace.structs.Lookup("struct _tracepoint_tcp_some_tcp_tp")
+      .lock()
       ->AddField(
           "saddr_v6", CreateArray(16, CreateUInt(8)), 8, false, {}, false);
 
   auto ptr_type = CreatePointer(CreateInt8());
   bpftrace.structs.Add("struct _tracepoint_file_filename", 8);
   bpftrace.structs.Lookup("struct _tracepoint_file_filename")
+      .lock()
       ->AddField("common_field", CreateUInt64(), 0, false, {}, false);
   bpftrace.structs.Lookup("struct _tracepoint_file_filename")
+      .lock()
       ->AddField("filename", ptr_type, 8, false, {}, false);
 }
 
