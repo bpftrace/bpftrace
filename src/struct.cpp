@@ -121,16 +121,17 @@ void StructManager::Add(const std::string &name, size_t size)
   struct_map_[name] = std::make_unique<Struct>(size);
 }
 
-Struct *StructManager::Lookup(const std::string &name) const
+std::weak_ptr<Struct> StructManager::Lookup(const std::string &name) const
 {
   auto s = struct_map_.find(name);
-  return s != struct_map_.end() ? s->second.get() : nullptr;
+  return s != struct_map_.end() ? s->second : std::weak_ptr<Struct>();
 }
 
-Struct *StructManager::LookupOrAdd(const std::string &name, size_t size)
+std::weak_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
+                                                 size_t size)
 {
   auto s = struct_map_.insert({ name, std::make_unique<Struct>(size) });
-  return s.first->second.get();
+  return s.first->second;
 }
 
 bool StructManager::Has(const std::string &name) const
@@ -138,10 +139,10 @@ bool StructManager::Has(const std::string &name) const
   return struct_map_.find(name) != struct_map_.end();
 }
 
-Struct *StructManager::AddTuple(std::vector<SizedType> fields)
+std::weak_ptr<Struct> StructManager::AddTuple(std::vector<SizedType> fields)
 {
   auto t = tuples_.insert(Struct::CreateTuple(std::move(fields)));
-  return t.first->get();
+  return *t.first;
 }
 
 size_t StructManager::GetTuplesCnt() const

@@ -1,8 +1,10 @@
 #pragma once
 
+#include <map>
+#include <memory>
+
 #include "types.h"
 #include "utils.h"
-#include <map>
 
 namespace bpftrace {
 
@@ -94,19 +96,19 @@ struct hash<bpftrace::Struct>
 };
 
 template <>
-struct hash<unique_ptr<bpftrace::Struct>>
+struct hash<shared_ptr<bpftrace::Struct>>
 {
-  size_t operator()(const std::unique_ptr<bpftrace::Struct> &s_ptr) const
+  size_t operator()(const std::shared_ptr<bpftrace::Struct> &s_ptr) const
   {
     return std::hash<bpftrace::Struct>()(*s_ptr);
   }
 };
 
 template <>
-struct equal_to<unique_ptr<bpftrace::Struct>>
+struct equal_to<shared_ptr<bpftrace::Struct>>
 {
-  bool operator()(const std::unique_ptr<bpftrace::Struct> &lhs,
-                  const std::unique_ptr<bpftrace::Struct> &rhs) const
+  bool operator()(const std::shared_ptr<bpftrace::Struct> &lhs,
+                  const std::shared_ptr<bpftrace::Struct> &rhs) const
   {
     return *lhs == *rhs;
   }
@@ -120,17 +122,17 @@ class StructManager
 public:
   // struct map manipulation
   void Add(const std::string &name, size_t size);
-  Struct *Lookup(const std::string &name) const;
-  Struct *LookupOrAdd(const std::string &name, size_t size);
+  std::weak_ptr<Struct> Lookup(const std::string &name) const;
+  std::weak_ptr<Struct> LookupOrAdd(const std::string &name, size_t size);
   bool Has(const std::string &name) const;
 
   // tuples set manipulation
-  Struct *AddTuple(std::vector<SizedType> fields);
+  std::weak_ptr<Struct> AddTuple(std::vector<SizedType> fields);
   size_t GetTuplesCnt() const;
 
 private:
-  std::map<std::string, std::unique_ptr<Struct>> struct_map_;
-  std::unordered_set<std::unique_ptr<Struct>> tuples_;
+  std::map<std::string, std::shared_ptr<Struct>> struct_map_;
+  std::unordered_set<std::shared_ptr<Struct>> tuples_;
 };
 
 } // namespace bpftrace

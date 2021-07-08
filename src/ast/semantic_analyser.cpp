@@ -1913,7 +1913,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  std::map<std::string, const Struct *> structs;
+  std::map<std::string, std::weak_ptr<const Struct>> structs;
 
   if (type.is_tparg)
   {
@@ -1944,7 +1944,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   for (auto it : structs) {
     std::string cast_type = it.first;
-    const Struct *record = it.second;
+    const auto record = it.second.lock();
     if (!record->HasField(acc.field))
     {
       LOG(ERROR, acc.loc, err_)
