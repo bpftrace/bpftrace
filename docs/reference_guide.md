@@ -27,17 +27,18 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [1. `{...}`: Action Blocks](#1--action-blocks)
     - [2. `/.../`: Filtering](#2--filtering)
     - [3. `//`, `/*`: Comments](#3---comments)
-    - [4. `->`: C Struct Navigation](#4---c-struct-navigation)
-    - [5. `struct`: Struct Declaration](#5-struct-struct-declaration)
-    - [6. `? :`: ternary operators](#6---ternary-operators)
-    - [7. `if () {...} else {...}`: if-else statements](#7-if---else--if-else-statements)
-    - [8. `unroll () {...}`: unroll](#8-unroll---unroll)
-    - [9. `++ and --`: increment operators](#9--and----increment-operators)
-    - [10. `[]`: Array access](#10--array-access)
-    - [11. Integer casts](#11-integer-casts)
-    - [12. Looping constructs](#12-looping-constructs)
-    - [13. `return`: Terminate Early](#13-return-terminate-early)
-    - [14. `( , )`: Tuples](#14----tuples)
+    - [4. Literals](#4-literals)
+    - [5. `->`: C Struct Navigation](#5---c-struct-navigation)
+    - [6. `struct`: Struct Declaration](#6-struct-struct-declaration)
+    - [7. `? :`: ternary operators](#7---ternary-operators)
+    - [8. `if () {...} else {...}`: if-else statements](#8-if---else--if-else-statements)
+    - [9. `unroll () {...}`: unroll](#9-unroll---unroll)
+    - [10. `++ and --`: increment operators](#10--and----increment-operators)
+    - [11. `[]`: Array access](#11--array-access)
+    - [12. Integer casts](#12-integer-casts)
+    - [13. Looping constructs](#13-looping-constructs)
+    - [14. `return`: Terminate Early](#14-return-terminate-early)
+    - [15. `( , )`: Tuples](#15----tuples)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -607,7 +608,26 @@ Syntax
 
 These can be used in bpftrace scripts to document your code.
 
-## 4. `->`: C Struct Navigation
+## 4. Literals
+
+ Integer, char and string literals are supported.
+ Integer literals are a sequence of digits with an optional underscore (`_`) as
+ field separator.
+ Scientific notation is also supported but only for integer values as BPF
+ doesn't support floating point.
+
+ ```
+ # bpftrace -e 'BEGIN { printf("%lu %lu %lu", 1000000, 1e6, 1_000_000)}'
+Attaching 1 probe...
+1000000 1000000 1000000
+ ```
+
+ Char literals are enclosed in single quotes, e.g. `'a'` and `'@'`.
+
+ String literals are enclosed in double quotes, e.g. `"a string"`.
+
+
+## 5. `->`: C Struct Navigation
 
 tracepoint example:
 
@@ -647,7 +667,7 @@ open path: retrans_time_ms
 This uses dynamic tracing of the `vfs_open()` kernel function, via the short script path.bt. Some kernel
 headers needed to be included to understand the `path` and `dentry` structs.
 
-## 5. `struct`: Struct Declaration
+## 6. `struct`: Struct Declaration
 
 Example:
 
@@ -664,7 +684,7 @@ You can define your own structs when needed. In some cases, kernel structs are n
 headers package, and are declared manually in bpftrace tools (or partial structs are: enough to reach the
 member to dereference).
 
-## 6. `? :`: ternary operators
+## 7. `? :`: ternary operators
 
 Examples:
 
@@ -683,7 +703,7 @@ Attaching 1 probe...
 Odd
 ```
 
-## 7. `if () {...} else {...}`: if-else statements
+## 8. `if () {...} else {...}`: if-else statements
 
 Example:
 
@@ -697,7 +717,7 @@ Attaching 1 probe...
 @reads: 80
 ```
 
-## 8. `unroll () {...}`: Unroll
+## 9. `unroll () {...}`: Unroll
 
 Example:
 
@@ -713,7 +733,7 @@ i: 5
 
 ```
 
-## 9. `++` and `--`: Increment operators
+## 10. `++` and `--`: Increment operators
 
 `++` and `--` can be used to conveniently increment or decrement counters in maps or variables.
 
@@ -750,7 +770,7 @@ Attaching 1 probe...
 @[kprobe:vfs_read]: 13369
 ```
 
-## 10. `[]`: Array Access
+## 11. `[]`: Array Access
 
 You may access one-dimensional constant arrays with the array access operator `[]`.
 
@@ -764,7 +784,7 @@ Attaching 1 probe...
 @x: 1
 ```
 
-## 11. Integer casts
+## 12. Integer casts
 
 Integers are internally represented as 64 bit signed. If you need another
 representation, you may cast to the following built in types:
@@ -789,7 +809,7 @@ Attaching 1 probe...
 ^C
 ```
 
-## 12. Looping Constructs
+## 13. Looping Constructs
 
 **Experimental**
 
@@ -803,12 +823,12 @@ bpftrace supports C style while loops:
 
 Loops can be short circuited by using the `continue` and `break` keywords.
 
-## 13. `return`: Terminate Early
+## 14. `return`: Terminate Early
 
 The `return` keyword is used to exit the current probe. This differs from
 `exit()` in that it doesn't exit bpftrace.
 
-## 14. `( , )`: Tuples
+## 15. `( , )`: Tuples
 
 N-tuples are supported, where N is any integer greater than 1.
 

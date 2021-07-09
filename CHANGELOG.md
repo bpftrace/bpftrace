@@ -13,6 +13,8 @@ and this project adheres to
   - [#1893](https://github.com/iovisor/bpftrace/pull/1893)
 - Support microsecond timestamps in stftime()
   - [#1922](https://github.com/iovisor/bpftrace/pull/1922)
+- Add `_` as integer literal digit separator
+  - [#1900](https://github.com/iovisor/bpftrace/pull/1900)
 
 #### Changed
 
