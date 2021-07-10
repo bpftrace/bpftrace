@@ -256,6 +256,7 @@ sudo apt-get install -y \
   libfl-dev \
   systemtap-sdt-dev \
   binutils-dev \
+  libcereal-dev \
   llvm-7-dev \
   llvm-7-runtime \
   libclang-7-dev \
@@ -291,7 +292,8 @@ sudo dnf install -y bison \
   binutils-devel \
   libbpf-devel \
   gtest-devel \
-  gmock-devel
+  gmock-devel \
+  cereal-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -380,6 +382,7 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - BCC development package
 - LibElf
 - Binutils development package
+- Libcereal
 - Kernel requirements described earlier
 
 ### Compilation
