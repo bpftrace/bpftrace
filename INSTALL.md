@@ -170,7 +170,8 @@ docker pull quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23
 To copy the binary out of bpftrace in the current directory:
 
 ```
-$ docker run -v $(pwd):/output quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23 /bin/bash -c "cp /usr/bin/bpftrace /output"
+$ docker run -v $(pwd):/output quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23 \
+  /bin/bash -c "cp /usr/bin/bpftrace /output"
 $ ./bpftrace -V
 v0.9.4
 ```
@@ -203,7 +204,8 @@ major_version="$(echo "${KERNEL_VERSION}" | awk -vFS=. '{ print $1 }')"
 apt-get install -y build-essential bc curl flex bison libelf-dev
 
 mkdir -p /usr/src/linux
-curl -sL "https://www.kernel.org/pub/linux/kernel/v${major_version}.x/linux-$kernel_version.tar.gz"     | tar --strip-components=1 -xzf - -C /usr/src/linux
+curl -sL "https://www.kernel.org/pub/linux/kernel/v${major_version}.x/linux-$kernel_version.tar.gz" \
+  | tar --strip-components=1 -xzf - -C /usr/src/linux
 cd /usr/src/linux
 zcat /proc/config.gz > .config
 make ARCH=x86 oldconfig
@@ -245,8 +247,21 @@ sudo apt-get install -y libbpfcc-dev
 
 ```
 sudo apt-get update
-sudo apt-get install -y bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev binutils-dev
-sudo apt-get install -y llvm-7-dev llvm-7-runtime libclang-7-dev clang-7
+sudo apt-get install -y \
+  bison \
+  cmake \
+  flex \
+  g++ \
+  git \
+  libelf-dev \
+  zlib1g-dev \
+  libfl-dev \
+  systemtap-sdt-dev \
+  binutils-dev \
+  llvm-7-dev \
+  llvm-7-runtime \
+  libclang-7-dev \
+  clang-7
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
 cmake -DCMAKE_BUILD_TYPE=Release ..
@@ -263,7 +278,22 @@ argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
 
 ```
-sudo dnf install -y bison flex cmake make git gcc-c++ elfutils-libelf-devel zlib-devel llvm-devel clang-devel bcc-devel systemtap-sdt-devel binutils-devel libbpf-devel gtest-devel gmock-devel
+sudo dnf install -y bison \
+  flex \
+  cmake \
+  make \
+  git \
+  gcc-c++ \
+  elfutils-libelf-devel \
+  zlib-devel \
+  llvm-devel \
+  clang-devel \
+  bcc-devel \
+  systemtap-sdt-devel \
+  binutils-devel \
+  libbpf-devel \
+  gtest-devel \
+  gmock-devel
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
