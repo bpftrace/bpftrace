@@ -156,7 +156,6 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
-      probe.pid = getpid();
       probe.index = attach_point->index(probe.name) > 0 ?
           attach_point->index(probe.name) : p.index();
       resources.special_probes.push_back(probe);
@@ -1013,6 +1012,7 @@ int BPFtrace::run_special_probe(std::string name,
   {
     if ((*probe).attach_point == name)
     {
+      probe->pid = getpid();
       auto aps = attach_probe(*probe, bytecode);
 
       trigger();
