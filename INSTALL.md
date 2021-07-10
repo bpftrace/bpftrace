@@ -217,8 +217,6 @@ ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
 
 # Building bpftrace
 
-bpftrace's build system will download `gtest` at build time. If you don't want that or don't want tests, you can use the `make bpftrace` target.
-
 ## Ubuntu
 
 Due to the kernel requirements Ubuntu 18.04 or newer is highly recommended.
