@@ -8,7 +8,9 @@ if(BUILD_FUZZ)
   set(BPFTRACE bpftrace_fuzz)
 else()
   set(MAIN_SRC main.cpp)
-  set(BPFTRACE bpftrace)
+  if (NOT DEFINED BPFTRACE)
+    set(BPFTRACE bpftrace)
+  endif ()
 endif()
 
 add_library(libbpftrace
