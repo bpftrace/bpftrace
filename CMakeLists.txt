@@ -266,6 +266,7 @@ endif(LIBBPF_BTF_DUMP_FOUND)
 
 add_subdirectory(src/arch)
 add_subdirectory(src/ast)
+add_subdirectory(src/ast/bpforc)
 add_subdirectory(src)
 if (BUILD_TESTING)
   add_subdirectory(tests)

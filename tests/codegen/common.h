@@ -6,10 +6,10 @@
 #include "gtest/gtest.h"
 
 #include "../mocks.h"
+#include "ast/bpforc/bpforc.h"
 #include "ast/resource_analyser.h"
 #include "ast/semantic_analyser.h"
 #include "bpffeature.h"
-#include "bpforc.h"
 #include "bpftrace.h"
 #include "clang_parser.h"
 #include "codegen_llvm.h"

@@ -14,7 +14,6 @@ endif()
 add_library(libbpftrace
   attached_probe.cpp
   bpffeature.cpp
-  bpforc.cpp
   bpftrace.cpp
   btf.cpp
   build_info.cpp
