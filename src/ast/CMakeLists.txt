@@ -17,7 +17,7 @@ add_library(ast
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})
-target_link_libraries(ast arch)
+target_link_libraries(ast arch bpforc)
 
 if (HAVE_BCC_KFUNC)
   target_compile_definitions(ast PRIVATE HAVE_BCC_KFUNC)

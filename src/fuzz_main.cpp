@@ -16,11 +16,11 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "ast/bpforc/bpforc.h"
 #include "ast/callback_visitor.h"
 #include "ast/clang_parser.h"
 #include "ast/field_analyser.h"
 #include "ast/semantic_analyser.h"
-#include "bpforc.h"
 #include "bpftrace.h"
 #include "codegen_llvm.h"
 #include "driver.h"

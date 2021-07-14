@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "ast/bpforc/bpforc.h"
 #include "ast/field_analyser.h"
 #include "ast/node_counter.h"
 #include "ast/pass_manager.h"
@@ -19,7 +20,6 @@
 #include "ast/resource_analyser.h"
 #include "ast/semantic_analyser.h"
 #include "bpffeature.h"
-#include "bpforc.h"
 #include "bpftrace.h"
 #include "build_info.h"
 #include "child.h"
