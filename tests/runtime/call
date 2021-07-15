@@ -260,6 +260,18 @@ RUN bpftrace -v -e 'BEGIN { @[nsecs] = strftime("%m/%d/%y", nsecs); exit();}'
 EXPECT @\[[0-9]*\]: [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 TIMEOUT 5
 
+# Output two microsecond timestamps, 123000 nsecs apart. Use python to evaluate and verify there's a 123us delta
+NAME strftime_microsecond_extension
+RUN bpftrace -e 'BEGIN { printf("%s - %s\n", strftime("%f", 1000123000), strftime("%f", 0)); exit(); }' | tail -n +2 | xargs -I{} python -c "print({})"
+EXPECT 123
+TIMEOUT 1
+
+# Similar to above test but test that rolling over past 1s works as expected
+NAME strftime_microsecond_extension_rollover
+RUN bpftrace -e 'BEGIN { printf("%s - %s\n", strftime("%f", 1000000123000), strftime("%f", 0)); exit(); }' | tail -n +2 | xargs -I{} python -c "print({})"
+EXPECT 123
+TIMEOUT 1
+
 NAME print_avg_map_args
 RUN bpftrace -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }'
 EXPECT Attaching 1 probe\.\.\.\n@\[c\]: 3\n@\[d\]: 4\n\nEND

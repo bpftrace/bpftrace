@@ -7,6 +7,7 @@
 #include <glob.h>
 #include <iomanip>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <sys/epoll.h>
 
@@ -1754,13 +1755,15 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
 std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
                                         uint64_t nsecs_since_boot)
 {
+  static const auto usec_regex = std::regex("%f");
+
   if (!boottime_)
   {
     LOG(ERROR) << "Cannot resolve timestamp due to failed boot time calcuation";
     return "(?)";
   }
-  auto fmt = resources.strftime_args[strftime_id].c_str();
-  char timestr[STRING_SIZE];
+
+  // Calculate and localize timestamp
   struct tm tmp;
   time_t time = boottime_->tv_sec +
                 ((boottime_->tv_nsec + nsecs_since_boot) / 1e9);
@@ -1769,7 +1772,16 @@ std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
     LOG(ERROR) << "localtime_r: " << strerror(errno);
     return "(?)";
   }
-  if (strftime(timestr, sizeof(timestr), fmt, &tmp) == 0)
+
+  // Process strftime() format string extensions
+  const auto &raw_fmt = resources.strftime_args[strftime_id];
+  uint64_t us = ((boottime_->tv_nsec + nsecs_since_boot) % 1000000000) / 1000;
+  char usecs_buf[7];
+  snprintf(usecs_buf, sizeof(usecs_buf), "%06lu", us);
+  auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
+
+  char timestr[STRING_SIZE];
+  if (strftime(timestr, sizeof(timestr), fmt.c_str(), &tmp) == 0)
   {
     LOG(ERROR) << "strftime returned 0";
     return "(?)";

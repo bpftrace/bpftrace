@@ -2939,6 +2939,12 @@ Use format specifier "%s" when printing the return value. Note that `strftime`
 does not actually return a string in bpf (kernel), the formatting happens in
 userspace.
 
+bpftrace also supports the following format string extensions:
+
+Specifier | Description
+---- | -----------
+`%f` | Microsecond as a decimal number, zero-padded on the left
+
 Examples:
 
 ```
@@ -2949,6 +2955,11 @@ Attaching 1 probe...
 13:11:24
 13:11:25
 13:11:26
+^C
+
+# bpftrace -e 'i:s:1 { printf("%s\n", strftime("%H:%M:%S:%f", nsecs)); }'
+Attaching 1 probe...
+15:22:24:104033
 ^C
 ```
 
