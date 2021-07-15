@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Build time dependency on cereal
   - [#1893](https://github.com/iovisor/bpftrace/pull/1893)
+- Support microsecond timestamps in stftime()
+  - [#1922](https://github.com/iovisor/bpftrace/pull/1922)
 
 #### Changed
 
