@@ -39,7 +39,7 @@ RUN curl -L --output /tmp/cmake.tar.gz \
   && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
 
 RUN cd /build/llvm \
-  && cmake . -DLLVM_VERSION=${LLVM_VERSION} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  && cmake . -DLLVM_VERSION=${LLVM_VERSION} -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DENABLE_MAN=0 \
   && make embedded_llvm -j$(nproc) \
   && make embedded_clang -j$(nproc) \
   && rm -rf embedded_llvm-prefix/src embedded_clang-prefix/src \
