@@ -21,6 +21,7 @@ RUN curl -L --output /tmp/cmake.tar.gz \
 RUN apt-get update && apt-get install -y \
       make \
       pkg-config \
+      asciidoctor \
       bison \
       binutils-dev \
       flex \

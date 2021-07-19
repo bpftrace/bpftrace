@@ -5,6 +5,7 @@ ARG LLVM_VERSION="9"
 ARG CEREAL_VERSION=1.3.0
 
 RUN apk add --update \
+  asciidoctor \
   bash \
   bison \
   bcc-dev \
