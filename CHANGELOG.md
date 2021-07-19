@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Build time dependency on cereal
   - [#1893](https://github.com/iovisor/bpftrace/pull/1893)
+- Build time dependency on asciidoctor for man page generation
+  - [#1927] (https://github.com/iovisor/bpftrace/pull/1927)
 - Support microsecond timestamps in stftime()
   - [#1922](https://github.com/iovisor/bpftrace/pull/1922)
 - Add `_` as integer literal digit separator
@@ -29,6 +31,8 @@ and this project adheres to
 #### Tools
 
 #### Documentation
+- Write new man page for `bpftrace(8)`
+  - [#1711](https://github.com/iovisor/bpftrace/pull/1711)
 
 ## [0.13.0] 2021-07-01
 
