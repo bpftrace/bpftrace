@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <exception>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <type_traits>
@@ -33,13 +34,21 @@ uint64_t _parse_int(const std::string &num, size_t *idx, int base)
 template <typename T>
 std::variant<T, std::string> _parse_int(const std::string &num, int base)
 {
+  // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
+  static auto int_size_re = std::regex("^(u|u?l?l)$", std::regex::icase);
   try
   {
     std::size_t idx;
     T ret = _parse_int<T>(num, &idx, base);
 
     if (idx != num.size())
-      return "Found trailing non-numeric characters";
+    {
+      auto trail = num.substr(idx, std::string::npos);
+      auto match = std::regex_match(trail, int_size_re);
+
+      if (!match)
+        return "Found trailing non-numeric characters";
+    }
 
     return ret;
   }

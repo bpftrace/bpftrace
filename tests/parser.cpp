@@ -1734,6 +1734,17 @@ TEST(Parser, int_notation)
   test("k:f { print(123_456_789_0); }",
        "Program\n kprobe:f\n  call: print\n   int: 1234567890\n");
 
+  test("k:f { print(1_000u); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+  test("k:f { print(1_000ul); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+  test("k:f { print(1_000ull); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+  test("k:f { print(1_000l); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+  test("k:f { print(1_000ll); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1000\n");
+
   test_parse_failure("k:f { print(5e-9); }");
   test_parse_failure("k:f { print(1e17); }");
   test_parse_failure("k:f { print(12e4); }");
@@ -1741,6 +1752,8 @@ TEST(Parser, int_notation)
   test_parse_failure("k:f { print(1e1_1_); }");
   test_parse_failure("k:f { print(1_1_e100); }");
   test_parse_failure("k:f { print(1_1_); }");
+  test_parse_failure("k:f { print(1ulll); }");
+  test_parse_failure("k:f { print(1lul); }");
 }
 
 TEST(Parser, while_loop)

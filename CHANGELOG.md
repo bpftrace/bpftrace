@@ -17,6 +17,8 @@ and this project adheres to
   - [#1922](https://github.com/iovisor/bpftrace/pull/1922)
 - Add `_` as integer literal digit separator
   - [#1900](https://github.com/iovisor/bpftrace/pull/1900)
+- Support for C style integer suffix in parser
+  - [#1938](https://github.com/iovisor/bpftrace/pull/1938)
 
 #### Changed
 
