@@ -398,6 +398,9 @@ Note that scientific literals are integer only due to the lack of floating point
 
 To improve the readability of big literals a underscore `_` can be used as field separator, e.g. 1_000_123_000.
 
+Integer suffixes as found in the C language are parsed by bpftrace to ensure compatibility with C headers/definitions but they're not used as size specifiers.
+`123UL`, `123U` and `123LL` all result in the same integer type with a value of `123`.
+
 Character constants can be defined by enclosing the character in single quotes, e.g. `$c = 'c';`.
 
 String constants can be defined by enclosing the character string in double quotes, e.g. `$str = "Hello world";`.
