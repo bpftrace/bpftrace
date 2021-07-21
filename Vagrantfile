@@ -10,18 +10,18 @@ wget https://apt.llvm.org/llvm.sh
 bash ./llvm.sh 12
 apt-get -qq update
 apt-get -qq install linux-headers-$(uname -r) binutils-dev python
-apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev
+apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev libcereal-dev
 apt-get -qq install --no-install-recommends pkg-config
 EOF
 
 $fedora_deps = <<EOF
 dnf builddep -q -y bpftrace
-dnf install -q -y git
+dnf install -q -y git cereal-devel
 EOF
 
 $centos_deps = <<EOF
 dnf install -q -y bison flex cmake elfutils-libelf-devel zlib-devel gcc gcc-c++ python3
-dnf install -q -y clang-devel llvm-devel binutils-devel kernel-devel binutils
+dnf install -q -y clang-devel llvm-devel binutils-devel kernel-devel binutils cereal-devel
 ln -s `which python3` /usr/local/bin/python
 EOF
 
