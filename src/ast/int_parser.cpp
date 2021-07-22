@@ -10,7 +10,9 @@
 namespace {
 
 template <typename T>
-T _parse_int(const std::string &num, size_t *idx, int base)
+T _parse_int(const std::string &num __attribute__((unused)),
+             size_t *idx __attribute__((unused)),
+             int base __attribute__((unused)))
 {
   static_assert(not std::is_same_v<T, T>,
                 "BUG: _parse_int not implemented for type");
