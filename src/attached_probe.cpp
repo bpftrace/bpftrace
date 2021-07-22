@@ -104,7 +104,7 @@ bpf_prog_type progtype(ProbeType t)
 
 std::string progtypeName(bpf_prog_type t)
 {
-  switch (t)
+  switch (static_cast<libbpf::bpf_prog_type>(t))
   {
     // clang-format off
     case libbpf::BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
