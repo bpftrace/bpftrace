@@ -13,8 +13,10 @@ namespace {
 // well formed.
 ProbeType single_provider_type_postsema(Probe *probe)
 {
-  for (auto &attach_point : *probe->attach_points)
-    return probetype(attach_point->provider);
+  if (!probe->attach_points->empty())
+  {
+    return probetype(probe->attach_points->at(0)->provider);
+  }
 
   return ProbeType::invalid;
 }
