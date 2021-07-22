@@ -858,7 +858,7 @@ int main(int argc, char* argv[])
       bpforc->dump(os);
     }
 
-    bytecode = std::move(bpforc->getBytecode());
+    bytecode = bpforc->getBytecode();
   }
   catch (const std::system_error& ex)
   {
@@ -902,7 +902,7 @@ int main(int argc, char* argv[])
   else if (!bt_quiet)
     bpftrace.out_->attached_probes(num_probes);
 
-  err = bpftrace.run(std::move(bytecode));
+  err = bpftrace.run(bytecode);
   if (err)
     return err;
 
