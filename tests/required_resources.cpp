@@ -29,7 +29,7 @@ TEST(required_resources, round_trip_simple)
   {
     RequiredResources r;
     r.load_state(input);
-    ASSERT_EQ(r.probe_ids.size(), 1);
+    ASSERT_EQ(r.probe_ids.size(), 1ul);
     EXPECT_EQ(r.probe_ids[0], "itsastring");
   }
 }
@@ -60,20 +60,20 @@ TEST(required_resources, round_trip_field_sized_type)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.system_args.size(), 1);
+    ASSERT_EQ(r.system_args.size(), 1ul);
     EXPECT_EQ(std::get<0>(r.system_args[0]), "field0");
 
     auto &fields = std::get<1>(r.system_args[0]);
-    ASSERT_EQ(fields.size(), 1);
+    ASSERT_EQ(fields.size(), 1ul);
     auto &field = fields[0];
     EXPECT_EQ(field.name, "myfield");
     EXPECT_TRUE(field.type.IsIntTy());
-    EXPECT_EQ(field.type.GetSize(), 4);
+    EXPECT_EQ(field.type.GetSize(), 4ul);
     EXPECT_EQ(field.offset, 123);
     EXPECT_EQ(field.is_bitfield, false);
-    EXPECT_EQ(field.bitfield.read_bytes, 1);
-    EXPECT_EQ(field.bitfield.access_rshift, 2);
-    EXPECT_EQ(field.bitfield.mask, 0xFF);
+    EXPECT_EQ(field.bitfield.read_bytes, 1ul);
+    EXPECT_EQ(field.bitfield.access_rshift, 2ul);
+    EXPECT_EQ(field.bitfield.mask, 0xFFul);
   }
 }
 
@@ -91,10 +91,10 @@ TEST(required_resources, round_trip_map_sized_type)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.map_vals.count("mymap"), 1);
+    ASSERT_EQ(r.map_vals.count("mymap"), 1ul);
     auto &type = r.map_vals["mymap"];
     EXPECT_TRUE(type.IsInetTy());
-    EXPECT_EQ(type.GetSize(), 3);
+    EXPECT_EQ(type.GetSize(), 3ul);
   }
 }
 
@@ -117,7 +117,7 @@ TEST(required_resources, round_trip_map_lhist_args)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.lhist_args.count("mymap"), 1);
+    ASSERT_EQ(r.lhist_args.count("mymap"), 1ul);
     auto &args = r.lhist_args["mymap"];
     EXPECT_EQ(args.min, 99);
     EXPECT_EQ(args.max, 123);
@@ -142,10 +142,10 @@ TEST(required_resources, round_trip_set_stack_type)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.stackid_maps.size(), 1);
+    ASSERT_EQ(r.stackid_maps.size(), 1ul);
     for (const auto &st : r.stackid_maps)
     {
-      EXPECT_EQ(st.limit, 33);
+      EXPECT_EQ(st.limit, 33ul);
       EXPECT_EQ(st.mode, StackMode::perf);
     }
   }
@@ -171,7 +171,7 @@ TEST(required_resources, round_trip_probes)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.special_probes.size(), 1);
+    ASSERT_EQ(r.special_probes.size(), 1ul);
     auto &probe = r.special_probes[0];
     EXPECT_EQ(probe.type, ProbeType::hardware);
     EXPECT_EQ(probe.path, "mypath");
@@ -198,12 +198,12 @@ TEST(required_resources, round_trip_multiple_members)
     RequiredResources r;
     r.load_state(input);
 
-    ASSERT_EQ(r.join_args.size(), 1);
+    ASSERT_EQ(r.join_args.size(), 1ul);
     EXPECT_EQ(r.join_args[0], "joinarg0");
-    ASSERT_EQ(r.stackid_maps.size(), 1);
+    ASSERT_EQ(r.stackid_maps.size(), 1ul);
     for (const auto &st : r.stackid_maps)
     {
-      EXPECT_EQ(st.limit, 33);
+      EXPECT_EQ(st.limit, 33ul);
       EXPECT_EQ(st.mode, StackMode::perf);
     }
     EXPECT_TRUE(r.needs_elapsed_map);
