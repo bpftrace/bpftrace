@@ -46,6 +46,10 @@ int Driver::parse()
   yyscan_t scanner;
   yylex_init(&scanner);
   Parser parser(*this, scanner);
+  if (debug_)
+  {
+    parser.set_debug_level(1);
+  }
   yy_scan_string(Log::get().get_source().c_str(), scanner);
   parser.parse();
   yylex_destroy(scanner);
