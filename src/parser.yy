@@ -8,6 +8,7 @@
 %define api.value.type variant
 %define parse.assert
 %define parse.trace
+%expect 5
 
 %define parse.error verbose
 

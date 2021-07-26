@@ -2,6 +2,7 @@
 %option never-interactive
 %option reentrant
 %option stack
+
 %{
 #include <climits>
 #include "driver.h"
