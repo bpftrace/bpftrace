@@ -27,6 +27,11 @@ public:
   void error(const std::string &m);
   ast::Program *root_ = nullptr;
 
+  void debug()
+  {
+    debug_ = true;
+  };
+
   BPFtrace &bpftrace_;
 
   bool listing_ = false;
@@ -34,6 +39,7 @@ public:
 private:
   std::ostream &out_;
   bool failed_ = false;
+  bool debug_ = false;
 };
 
 } // namespace bpftrace

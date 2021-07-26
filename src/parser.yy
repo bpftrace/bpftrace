@@ -7,6 +7,7 @@
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
+%define parse.trace
 
 %define parse.error verbose
 
