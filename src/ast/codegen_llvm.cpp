@@ -1318,6 +1318,7 @@ void CodegenLLVM::binop_ptr(Binop &binop)
     case bpftrace::Parser::token::BXOR:
     case bpftrace::Parser::token::MUL:
     case bpftrace::Parser::token::DIV:
+      assert(false && "BUG: binop_ptr not implemented for type");
       break;
     case bpftrace::Parser::token::PLUS:
     case bpftrace::Parser::token::MINUS:
