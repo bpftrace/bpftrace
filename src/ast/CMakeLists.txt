@@ -19,13 +19,11 @@ add_library(ast
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast PUBLIC ${CMAKE_BINARY_DIR})
-target_link_libraries(ast arch bpforc)
+target_link_libraries(ast arch bpforc parser)
 
 if (HAVE_BCC_KFUNC)
   target_compile_definitions(ast PRIVATE HAVE_BCC_KFUNC)
 endif(HAVE_BCC_KFUNC)
-
-add_dependencies(ast parser)
 
 if (STATIC_LINKING)
   set(clang_libs

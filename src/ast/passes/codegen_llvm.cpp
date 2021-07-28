@@ -5,7 +5,6 @@
 #include "ast/bpforc/bpforc.h"
 #include "codegen_helper.h"
 #include "log.h"
-#include "parser.tab.hh"
 #include "signal_bt.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -1108,8 +1107,7 @@ void CodegenLLVM::visit(Variable &var)
 
 void CodegenLLVM::binop_string(Binop &binop)
 {
-  if (binop.op != bpftrace::Parser::token::EQ &&
-      binop.op != bpftrace::Parser::token::NE)
+  if (binop.op != Operator::EQ && binop.op != Operator::NE)
   {
     LOG(FATAL) << "missing codegen to string operator \"" << opstr(binop)
                << "\"";
@@ -1118,7 +1116,7 @@ void CodegenLLVM::binop_string(Binop &binop)
   std::string string_literal;
 
   // strcmp returns 0 when strings are equal
-  bool inverse = binop.op == bpftrace::Parser::token::EQ;
+  bool inverse = binop.op == Operator::EQ;
 
   auto left_as = binop.left->type.GetAS();
   auto right_as = binop.right->type.GetAS();
@@ -1162,8 +1160,7 @@ void CodegenLLVM::binop_string(Binop &binop)
 
 void CodegenLLVM::binop_buf(Binop &binop)
 {
-  if (binop.op != bpftrace::Parser::token::EQ &&
-      binop.op != bpftrace::Parser::token::NE)
+  if (binop.op != Operator::EQ && binop.op != Operator::NE)
   {
     LOG(FATAL) << "missing codegen to buffer operator \"" << opstr(binop)
                << "\"";
@@ -1172,7 +1169,7 @@ void CodegenLLVM::binop_buf(Binop &binop)
   std::string string_literal("");
 
   // strcmp returns 0 when strings are equal
-  bool inverse = binop.op == bpftrace::Parser::token::EQ;
+  bool inverse = binop.op == Operator::EQ;
 
   auto scoped_del_right = accept(binop.right);
   Value *right_string = expr_;
@@ -1220,56 +1217,51 @@ void CodegenLLVM::binop_int(Binop &binop)
 
   switch (binop.op)
   {
-    case bpftrace::Parser::token::EQ:
+    case Operator::EQ:
       expr_ = b_.CreateICmpEQ(lhs, rhs);
       break;
-    case bpftrace::Parser::token::NE:
+    case Operator::NE:
       expr_ = b_.CreateICmpNE(lhs, rhs);
       break;
-    case bpftrace::Parser::token::LE:
-    {
+    case Operator::LE: {
       expr_ = do_signed ? b_.CreateICmpSLE(lhs, rhs)
                         : b_.CreateICmpULE(lhs, rhs);
       break;
     }
-    case bpftrace::Parser::token::GE:
-    {
+    case Operator::GE: {
       expr_ = do_signed ? b_.CreateICmpSGE(lhs, rhs)
                         : b_.CreateICmpUGE(lhs, rhs);
       break;
     }
-    case bpftrace::Parser::token::LT:
-    {
+    case Operator::LT: {
       expr_ = do_signed ? b_.CreateICmpSLT(lhs, rhs)
                         : b_.CreateICmpULT(lhs, rhs);
       break;
     }
-    case bpftrace::Parser::token::GT:
-    {
+    case Operator::GT: {
       expr_ = do_signed ? b_.CreateICmpSGT(lhs, rhs)
                         : b_.CreateICmpUGT(lhs, rhs);
       break;
     }
-    case bpftrace::Parser::token::LEFT:
+    case Operator::LEFT:
       expr_ = b_.CreateShl(lhs, rhs);
       break;
-    case bpftrace::Parser::token::RIGHT:
+    case Operator::RIGHT:
       expr_ = b_.CreateLShr(lhs, rhs);
       break;
-    case bpftrace::Parser::token::PLUS:
+    case Operator::PLUS:
       expr_ = b_.CreateAdd(lhs, rhs);
       break;
-    case bpftrace::Parser::token::MINUS:
+    case Operator::MINUS:
       expr_ = b_.CreateSub(lhs, rhs);
       break;
-    case bpftrace::Parser::token::MUL:
+    case Operator::MUL:
       expr_ = b_.CreateMul(lhs, rhs);
       break;
-    case bpftrace::Parser::token::DIV:
+    case Operator::DIV:
       expr_ = b_.CreateUDiv(lhs, rhs);
       break;
-    case bpftrace::Parser::token::MOD:
-    {
+    case Operator::MOD: {
       // Always do an unsigned modulo operation here even if `do_signed`
       // is true. bpf instruction set does not support signed division.
       // We already warn in the semantic analyser that signed modulo can
@@ -1277,18 +1269,17 @@ void CodegenLLVM::binop_int(Binop &binop)
       expr_ = b_.CreateURem(lhs, rhs);
       break;
     }
-    case bpftrace::Parser::token::BAND:
+    case Operator::BAND:
       expr_ = b_.CreateAnd(lhs, rhs);
       break;
-    case bpftrace::Parser::token::BOR:
+    case Operator::BOR:
       expr_ = b_.CreateOr(lhs, rhs);
       break;
-    case bpftrace::Parser::token::BXOR:
+    case Operator::BXOR:
       expr_ = b_.CreateXor(lhs, rhs);
       break;
-    case bpftrace::Parser::token::LAND:
-    case bpftrace::Parser::token::LOR:
-      LOG(FATAL) << "\"" << opstr(binop) << "\" was handled earlier";
+    default:
+      LOG(FATAL) << "BUG: \"" << opstr(binop) << "\" was handled earlier";
   }
   // Using signed extension will result in -1 which will likely confuse users
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
@@ -1302,28 +1293,31 @@ void CodegenLLVM::binop_ptr(Binop &binop)
   // Do what C does
   switch (binop.op)
   {
-    case bpftrace::Parser::token::EQ:
-    case bpftrace::Parser::token::NE:
-    case bpftrace::Parser::token::LE:
-    case bpftrace::Parser::token::GE:
-    case bpftrace::Parser::token::LT:
-    case bpftrace::Parser::token::GT:
+    case Operator::EQ:
+    case Operator::NE:
+    case Operator::LE:
+    case Operator::GE:
+    case Operator::LT:
+    case Operator::GT:
       compare = true;
       break;
-    case bpftrace::Parser::token::LEFT:
-    case bpftrace::Parser::token::RIGHT:
-    case bpftrace::Parser::token::MOD:
-    case bpftrace::Parser::token::BAND:
-    case bpftrace::Parser::token::BOR:
-    case bpftrace::Parser::token::BXOR:
-    case bpftrace::Parser::token::MUL:
-    case bpftrace::Parser::token::DIV:
-      assert(false && "BUG: binop_ptr not implemented for type");
+    case Operator::LEFT:
+    case Operator::RIGHT:
+    case Operator::MOD:
+    case Operator::BAND:
+    case Operator::BOR:
+    case Operator::BXOR:
+    case Operator::MUL:
+    case Operator::DIV:
+      LOG(FATAL) << "BUG: binop_ptr: op not implemented for type\""
+                 << opstr(binop) << "\"";
       break;
-    case bpftrace::Parser::token::PLUS:
-    case bpftrace::Parser::token::MINUS:
+    case Operator::PLUS:
+    case Operator::MINUS:
       arith = true;
       break;
+    default:
+      LOG(FATAL) << "BUG: binop_ptr invalid op \"" << opstr(binop) << "\"";
   }
 
   auto scoped_del_left = accept(binop.left);
@@ -1336,28 +1330,30 @@ void CodegenLLVM::binop_ptr(Binop &binop)
   {
     switch (binop.op)
     {
-      case bpftrace::Parser::token::EQ:
+      case Operator::EQ:
         expr_ = b_.CreateICmpEQ(lhs, rhs);
         break;
-      case bpftrace::Parser::token::NE:
+      case Operator::NE:
         expr_ = b_.CreateICmpNE(lhs, rhs);
         break;
-      case bpftrace::Parser::token::LE: {
+      case Operator::LE: {
         expr_ = b_.CreateICmpULE(lhs, rhs);
         break;
       }
-      case bpftrace::Parser::token::GE: {
+      case Operator::GE: {
         expr_ = b_.CreateICmpUGE(lhs, rhs);
         break;
       }
-      case bpftrace::Parser::token::LT: {
+      case Operator::LT: {
         expr_ = b_.CreateICmpULT(lhs, rhs);
         break;
       }
-      case bpftrace::Parser::token::GT: {
+      case Operator::GT: {
         expr_ = b_.CreateICmpUGT(lhs, rhs);
         break;
       }
+      default:
+        LOG(FATAL) << "BUG: invalid op \"" << opstr(binop) << "\"";
     }
   }
   else if (arith)
@@ -1369,7 +1365,7 @@ void CodegenLLVM::binop_ptr(Binop &binop)
     Value *other_expr = leftptr ? rhs : lhs;
     auto elem_size = b_.getInt64(ptr.GetPointeeTy()->GetSize());
     expr_ = b_.CreateMul(elem_size, other_expr);
-    if (binop.op == bpftrace::Parser::token::PLUS)
+    if (binop.op == Operator::PLUS)
       expr_ = b_.CreateAdd(ptr_expr, expr_);
     else
       expr_ = b_.CreateSub(ptr_expr, expr_);
@@ -1379,12 +1375,12 @@ void CodegenLLVM::binop_ptr(Binop &binop)
 void CodegenLLVM::visit(Binop &binop)
 {
   // Handle && and || separately so short circuiting works
-  if (binop.op == bpftrace::Parser::token::LAND)
+  if (binop.op == Operator::LAND)
   {
     expr_ = createLogicalAnd(binop);
     return;
   }
-  else if (binop.op == bpftrace::Parser::token::LOR)
+  else if (binop.op == Operator::LOR)
   {
     expr_ = createLogicalOr(binop);
     return;
@@ -1413,8 +1409,7 @@ static bool unop_skip_accept(Unop &unop)
 {
   if (unop.expr->type.IsIntTy())
   {
-    if (unop.op == bpftrace::Parser::token::INCREMENT ||
-        unop.op == bpftrace::Parser::token::DECREMENT)
+    if (unop.op == Operator::INCREMENT || unop.op == Operator::DECREMENT)
       return unop.expr->is_map || unop.expr->is_variable;
   }
 
@@ -1426,7 +1421,7 @@ void CodegenLLVM::unop_int(Unop &unop)
   SizedType &type = unop.expr->type;
   switch (unop.op)
   {
-    case bpftrace::Parser::token::LNOT: {
+    case Operator::LNOT: {
       auto ty = expr_->getType();
       Value *zero_value = Constant::getNullValue(ty);
       expr_ = b_.CreateICmpEQ(expr_, zero_value);
@@ -1436,18 +1431,18 @@ void CodegenLLVM::unop_int(Unop &unop)
       expr_ = b_.CreateIntCast(expr_, ty, false);
       break;
     }
-    case bpftrace::Parser::token::BNOT:
+    case Operator::BNOT:
       expr_ = b_.CreateNot(expr_);
       break;
-    case bpftrace::Parser::token::MINUS:
+    case Operator::MINUS:
       expr_ = b_.CreateNeg(expr_);
       break;
-    case bpftrace::Parser::token::INCREMENT:
-    case bpftrace::Parser::token::DECREMENT: {
+    case Operator::INCREMENT:
+    case Operator::DECREMENT: {
       createIncDec(unop);
       break;
     }
-    case bpftrace::Parser::token::MUL: {
+    case Operator::MUL: {
       // When dereferencing a 32-bit integer, only read in 32-bits, etc.
       int size = type.GetSize();
       auto as = type.GetAS();
@@ -1460,6 +1455,8 @@ void CodegenLLVM::unop_int(Unop &unop)
       b_.CreateLifetimeEnd(dst);
       break;
     }
+    default:
+      LOG(FATAL) << "BUG: unop_int: invalid op \"" << opstr(unop) << "\"";
   }
 }
 
@@ -1468,7 +1465,7 @@ void CodegenLLVM::unop_ptr(Unop &unop)
   SizedType &type = unop.expr->type;
   switch (unop.op)
   {
-    case bpftrace::Parser::token::MUL: {
+    case Operator::MUL: {
       if (unop.type.IsIntegerTy() || unop.type.IsPtrTy())
       {
         auto *et = type.GetPointeeTy();
@@ -1483,8 +1480,8 @@ void CodegenLLVM::unop_ptr(Unop &unop)
       }
       break;
     }
-    case bpftrace::Parser::token::INCREMENT:
-    case bpftrace::Parser::token::DECREMENT: {
+    case Operator::INCREMENT:
+    case Operator::DECREMENT: {
       createIncDec(unop);
       break;
     }
@@ -2018,16 +2015,18 @@ void CodegenLLVM::visit(Jump &jump)
 {
   switch (jump.ident)
   {
-    case bpftrace::Parser::token::RETURN:
+    case JumpType::RETURN:
       // return can be used outside of loops
       createRet();
       break;
-    case bpftrace::Parser::token::BREAK:
+    case JumpType::BREAK:
       b_.CreateBr(std::get<1>(loops_.back()));
       break;
-    case bpftrace::Parser::token::CONTINUE:
+    case JumpType::CONTINUE:
       b_.CreateBr(std::get<0>(loops_.back()));
       break;
+    default:
+      LOG(FATAL) << "BUG: jump: invalid op \"" << opstr(jump) << "\"";
   }
 
   // LLVM doesn't like having instructions after an unconditional branch (segv)
@@ -3205,7 +3204,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
 
 void CodegenLLVM::createIncDec(Unop &unop)
 {
-  bool is_increment = unop.op == bpftrace::Parser::token::INCREMENT;
+  bool is_increment = unop.op == Operator::INCREMENT;
   SizedType &type = unop.expr->type;
   uint64_t step = type.IsPtrTy() ? type.GetPointeeTy()->GetSize() : 1;
 

@@ -3,6 +3,7 @@
 #include "ast/attachpoint_parser.h"
 #include "driver.h"
 #include "log.h"
+#include "parser.tab.hh"
 
 extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);

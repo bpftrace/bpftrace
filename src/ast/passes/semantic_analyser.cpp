@@ -3,7 +3,6 @@
 #include "ast.h"
 #include "fake_map.h"
 #include "log.h"
-#include "parser.tab.hh"
 #include "printf.h"
 #include "probe_matcher.h"
 #include "signal_bt.h"
@@ -1468,22 +1467,22 @@ void SemanticAnalyser::binop_int(Binop &binop)
     {
       switch (binop.op)
       {
-        case bpftrace::Parser::token::EQ:
-        case bpftrace::Parser::token::NE:
-        case bpftrace::Parser::token::LE:
-        case bpftrace::Parser::token::GE:
-        case bpftrace::Parser::token::LT:
-        case bpftrace::Parser::token::GT:
+        case Operator::EQ:
+        case Operator::NE:
+        case Operator::LE:
+        case Operator::GE:
+        case Operator::LT:
+        case Operator::GT:
           LOG(WARNING, binop.loc, out_)
               << "comparison of integers of different signs: '" << left->type
               << "' and '" << right->type << "'"
               << " can lead to undefined behavior";
           break;
-        case bpftrace::Parser::token::PLUS:
-        case bpftrace::Parser::token::MINUS:
-        case bpftrace::Parser::token::MUL:
-        case bpftrace::Parser::token::DIV:
-        case bpftrace::Parser::token::MOD:
+        case Operator::PLUS:
+        case Operator::MINUS:
+        case Operator::MUL:
+        case Operator::DIV:
+        case Operator::MOD:
           LOG(WARNING, binop.loc, out_)
               << "arithmetic on integers of different signs: '" << left->type
               << "' and '" << right->type << "'"
@@ -1499,8 +1498,7 @@ void SemanticAnalyser::binop_int(Binop &binop)
   //
   // SDIV is not implemented for bpf. See Documentation/bpf/bpf_design_QA
   // in kernel sources
-  if (binop.op == bpftrace::Parser::token::DIV ||
-      binop.op == bpftrace::Parser::token::MOD)
+  if (binop.op == Operator::DIV || binop.op == Operator::MOD)
   {
     // Convert operands to unsigned if possible
     if (lsign && left->is_literal && get_int_literal(left) >= 0)
@@ -1532,8 +1530,8 @@ void SemanticAnalyser::binop_int(Binop &binop)
     if (pos_param)
     {
       auto len = bpftrace_.get_param(pos_param->n, true).length();
-      if (!offset || binop.op != bpftrace::Parser::token::PLUS ||
-          offset->n < 0 || (size_t)offset->n > len)
+      if (!offset || binop.op != Operator::PLUS || offset->n < 0 ||
+          (size_t)offset->n > len)
       {
         LOG(ERROR, binop.loc + binop.right->loc, err_)
             << "only addition of a single constant less or equal to the "
@@ -1558,12 +1556,12 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   // Do what C does
   switch (binop.op)
   {
-    case bpftrace::Parser::token::EQ:
-    case bpftrace::Parser::token::NE:
-    case bpftrace::Parser::token::LE:
-    case bpftrace::Parser::token::GE:
-    case bpftrace::Parser::token::LT:
-    case bpftrace::Parser::token::GT:
+    case Operator::EQ:
+    case Operator::NE:
+    case Operator::LE:
+    case Operator::GE:
+    case Operator::LT:
+    case Operator::GT:
       compare = true;
       break;
     default:;
@@ -1603,10 +1601,9 @@ void SemanticAnalyser::binop_ptr(Binop &binop)
   {
     // sum is associative but minus only works with pointer on the left hand
     // side
-    if (binop.op == bpftrace::Parser::token::MINUS && !left_is_ptr)
+    if (binop.op == Operator::MINUS && !left_is_ptr)
       invalid_op();
-    else if (binop.op == bpftrace::Parser::token::PLUS ||
-             binop.op == bpftrace::Parser::token::MINUS)
+    else if (binop.op == Operator::PLUS || binop.op == Operator::MINUS)
       binop.type = CreatePointer(*ptr.GetPointeeTy(), ptr.GetAS());
     else if (compare)
       binop.type = CreateInt(64);
@@ -1638,8 +1635,8 @@ void SemanticAnalyser::visit(Binop &binop)
 
   bool is_signed = lsign && rsign;
   switch (binop.op) {
-    case bpftrace::Parser::token::LEFT:
-    case bpftrace::Parser::token::RIGHT:
+    case Operator::LEFT:
+    case Operator::RIGHT:
       is_signed = lsign;
       break;
     default:
@@ -1694,14 +1691,14 @@ void SemanticAnalyser::visit(Binop &binop)
         << "' with '" << rht << "'";
   }
   // Also allow combination like reg("sp") + 8
-  else if (binop.op != Parser::token::EQ && binop.op != Parser::token::NE)
+  else if (binop.op != Operator::EQ && binop.op != Operator::NE)
   {
     LOG(ERROR, binop.loc, err_)
         << "The " << opstr(binop)
         << " operator can not be used on expressions of types " << lht << ", "
         << rht;
   }
-  else if (binop.op == Parser::token::EQ &&
+  else if (binop.op == Operator::EQ &&
            ((!binop.left->is_literal && binop.right->is_literal) ||
             (binop.left->is_literal && !binop.right->is_literal)))
   {
@@ -1720,8 +1717,8 @@ void SemanticAnalyser::visit(Binop &binop)
 
 void SemanticAnalyser::visit(Unop &unop)
 {
-  if (unop.op == Parser::token::INCREMENT ||
-      unop.op == Parser::token::DECREMENT) {
+  if (unop.op == Operator::INCREMENT || unop.op == Operator::DECREMENT)
+  {
     // Handle ++ and -- before visiting unop.expr, because these
     // operators should be able to work with undefined maps.
     if (!unop.expr->is_map && !unop.expr->is_variable) {
@@ -1743,9 +1740,9 @@ void SemanticAnalyser::visit(Unop &unop)
   auto valid_ptr_op = false;
   switch (unop.op)
   {
-    case bpftrace::Parser::token::INCREMENT:
-    case bpftrace::Parser::token::DECREMENT:
-    case bpftrace::Parser::token::MUL:
+    case Operator::INCREMENT:
+    case Operator::DECREMENT:
+    case Operator::MUL:
       valid_ptr_op = true;
       break;
     default:;
@@ -1764,7 +1761,7 @@ void SemanticAnalyser::visit(Unop &unop)
     }
   }
 
-  if (unop.op == Parser::token::MUL)
+  if (unop.op == Operator::MUL)
   {
     if (type.IsPtrTy())
     {
@@ -1787,7 +1784,8 @@ void SemanticAnalyser::visit(Unop &unop)
       unop.type = CreateUInt64();
     }
   }
-  else if (unop.op == Parser::token::LNOT) {
+  else if (unop.op == Operator::LNOT)
+  {
     // CreateUInt() abort if a size is invalid, so check the size here
     if (!(type.GetSize() == 0 || type.GetSize() == 1 || type.GetSize() == 2 ||
           type.GetSize() == 4 || type.GetSize() == 8))
@@ -1904,11 +1902,11 @@ void SemanticAnalyser::visit(Jump &jump)
 {
   switch (jump.ident)
   {
-    case bpftrace::Parser::token::RETURN:
+    case JumpType::RETURN:
       // return can be used outside of loops
       break;
-    case bpftrace::Parser::token::BREAK:
-    case bpftrace::Parser::token::CONTINUE:
+    case JumpType::BREAK:
+    case JumpType::CONTINUE:
       if (!in_loop())
         LOG(ERROR, jump.loc, err_) << opstr(jump) << " used outside of a loop";
       break;

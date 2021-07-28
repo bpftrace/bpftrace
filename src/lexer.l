@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "parser.tab.hh"
 #include "ast/int_parser.h"
+#include "lexer.h"
 
 bpftrace::location loc;
 static std::string struct_type;
