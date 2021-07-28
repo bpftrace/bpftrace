@@ -1,200 +1,200 @@
 NAME pid
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", pid); exit(); }'
 EXPECT SUCCESS pid [0-9][0-9]*
 TIMEOUT 5
 
 NAME tid
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", tid); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", tid); exit(); }'
 EXPECT SUCCESS tid [0-9][0-9]*
 TIMEOUT 5
 
 NAME uid
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", uid); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", uid); exit(); }'
 EXPECT SUCCESS uid [0-9][0-9]*
 TIMEOUT 5
 
 NAME gid
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", gid); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", gid); exit(); }'
 EXPECT SUCCESS gid [0-9][0-9]*
 TIMEOUT 5
 
 NAME nsecs
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", nsecs); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", nsecs); exit(); }'
 EXPECT SUCCESS nsecs -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME elapsed
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", elapsed); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", elapsed); exit(); }'
 EXPECT SUCCESS elapsed -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cpu
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cpu); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cpu); exit(); }'
 EXPECT SUCCESS cpu -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME comm
-RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", comm); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", comm); exit(); }'
 EXPECT SUCCESS comm .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME stack
-RUN bpftrace -v -e 'k:vfs_read{ printf("SUCCESS '$test' %s\n", stack); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read{ printf("SUCCESS '$test' %s\n", stack); exit(); }'
 EXPECT SUCCESS stack
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kstack
-RUN bpftrace -v -e 'k:vfs_read{ printf("SUCCESS '$test' %s\n", kstack); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read{ printf("SUCCESS '$test' %s\n", kstack); exit(); }'
 EXPECT SUCCESS kstack
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME ustack
-RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", ustack); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", ustack); exit(); }'
 EXPECT SUCCESS ustack
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME arg
-RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }'
 EXPECT SUCCESS arg -?[0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME sarg
-RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
 EXPECT SUCCESS sarg 32 64
 ARCH x86_64
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME sarg
-RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
 EXPECT SUCCESS sarg 128 256
 ARCH aarch64|ppc64|ppc64le
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME sarg
-RUN bpftrace -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }'
 EXPECT SUCCESS sarg 16 32
 ARCH s390x
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME retval
-RUN bpftrace -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
+RUN {{BPFTRACE}} -v -e 'kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }'
 EXPECT SUCCESS retval .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME func
-RUN bpftrace -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", func); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { printf("SUCCESS '$test' %s\n", func); exit(); }'
 EXPECT SUCCESS func .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME func_uprobe
-RUN bpftrace -v -e 'uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }'
 EXPECT SUCCESS .*
 AFTER ./testprogs/uprobe_negative_retval
 TIMEOUT 5
 
 NAME username
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %s\n", username); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %s\n", username); exit(); }'
 EXPECT SUCCESS username .*
 TIMEOUT 5
 
 NAME probe
-RUN bpftrace -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", probe); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", probe); exit(); }'
 EXPECT SUCCESS probe kprobe:do_nanosleep
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME begin probe
-RUN bpftrace -e 'BEGIN { printf("%s", probe);exit(); } END{printf("-%s\n", probe); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%s", probe);exit(); } END{printf("-%s\n", probe); }'
 EXPECT ^BEGIN-END$
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }'
 EXPECT SUCCESS curtask -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME curtask_field
-RUN bpftrace -v -e 'struct task_struct {int x;} i:ms:1 { printf("SUCCESS '$test' %d\n", curtask->x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct task_struct {int x;} i:ms:1 { printf("SUCCESS '$test' %d\n", curtask->x); exit(); }'
 EXPECT SUCCESS curtask_field -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME rand
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", rand); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", rand); exit(); }'
 EXPECT SUCCESS rand -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cgroup
-RUN bpftrace -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }'
 EXPECT SUCCESS cgroup -?[0-9][0-9]*
 TIMEOUT 5
 MIN_KERNEL 4.18
 
 NAME ctx
-RUN bpftrace -v -e 'struct x {unsigned long x}; i:ms:1 { printf("SUCCESS '$test' %d\n", ((struct x*)ctx)->x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct x {unsigned long x}; i:ms:1 { printf("SUCCESS '$test' %d\n", ((struct x*)ctx)->x); exit(); }'
 EXPECT SUCCESS ctx -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cat
-RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
+RUN {{BPFTRACE}} -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
 EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME cat limited output
 ENV BPFTRACE_CAT_BYTES_MAX=1
-RUN bpftrace -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
+RUN {{BPFTRACE}} -e 'i:ms:1 { cat("/proc/loadavg"); exit(); }'
 EXPECT ^[0-9]$
 TIMEOUT 5
 
 NAME cat format str
-RUN bpftrace -e 'i:ms:1 { $s = "loadavg"; cat("/proc/%s", $s); exit(); }'
+RUN {{BPFTRACE}} -e 'i:ms:1 { $s = "loadavg"; cat("/proc/%s", $s); exit(); }'
 EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME log size too small
 ENV BPFTRACE_LOG_SIZE=1
-RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+RUN {{BPFTRACE}} -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
 EXPECT Error loading program: BEGIN
 TIMEOUT 5
 
 NAME increase log size
-RUN bpftrace -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
+RUN {{BPFTRACE}} -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
 EXPECT ^Attaching 1 probe
 TIMEOUT 5
 
 NAME cat "no such file"
-RUN bpftrace -e 'i:ms:1 { cat("/does/not/exist/file"); exit(); }'
+RUN {{BPFTRACE}} -e 'i:ms:1 { cat("/does/not/exist/file"); exit(); }'
 EXPECT ^ERROR: failed to open file '/does/not/exist/file': No such file or directory$
 TIMEOUT 5
 
 NAME sizeof
-RUN bpftrace -e 'struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x)); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x)); exit(); }'
 EXPECT ^8 4 1 8 8$
 TIMEOUT 5
 
 NAME sizeof_ints
-RUN bpftrace -e 'BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32)); exit(); }'
 EXPECT ^1 1 2 2 4 4$
 TIMEOUT 5
 
 # printf only takes 7 args
 NAME sizeof_ints_pt2
-RUN bpftrace -e 'BEGIN { printf("%d %d\n", sizeof(uint64), sizeof(int64)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%d %d\n", sizeof(uint64), sizeof(int64)); exit(); }'
 EXPECT ^8 8$
 TIMEOUT 5
 
 NAME sizeof_btf
-RUN bpftrace -e 'BEGIN { printf("size=%d\n", sizeof(struct task_struct)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("size=%d\n", sizeof(struct task_struct)); exit(); }'
 EXPECT ^size=
 TIMEOUT 5
 REQUIRES_FEATURE btf

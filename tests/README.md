@@ -60,6 +60,7 @@ before running the test. These exist b/c the values of the variables are general
 not known until test time. The following runtime variables are available for the
 `RUN` directive:
 
+* `{{BPFTRACE}}`: Path to bpftrace executable
 * `{{BEFORE_PID}}`: Process ID of the process in `BEFORE` directive
 
 ### Test programs

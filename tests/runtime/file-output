@@ -1,19 +1,19 @@
 NAME printf to file
-RUN bpftrace -v -e 'i:ms:10 { printf("%s %d\n", "SUCCESS", 1); exit() }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
+RUN {{BPFTRACE}} -v -e 'i:ms:10 { printf("%s %d\n", "SUCCESS", 1); exit() }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
 EXPECT ^SUCCESS 1$
 TIMEOUT 5
 
 NAME cat to file
-RUN bpftrace -v -e 'i:ms:10 { cat("/proc/loadavg"); exit(); }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
+RUN {{BPFTRACE}} -v -e 'i:ms:10 { cat("/proc/loadavg"); exit(); }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
 EXPECT ^([0-9]+\.[0-9]+ )+.*$
 TIMEOUT 5
 
 NAME print map to file
-RUN bpftrace -v -e 'i:ms:10 { @=lhist(50, 0, 100, 10); exit();}' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
+RUN {{BPFTRACE}} -v -e 'i:ms:10 { @=lhist(50, 0, 100, 10); exit();}' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
 EXPECT ^\[50, 60\).*\@+\|$
 TIMEOUT 5
 
 NAME system stdout to file
-RUN bpftrace -v --unsafe -e 'i:ms:10 { system("cat /proc/loadavg"); exit(); }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
+RUN {{BPFTRACE}} -v --unsafe -e 'i:ms:10 { system("cat /proc/loadavg"); exit(); }' -o /tmp/bpftrace-file-output-test >/dev/null; cat /tmp/bpftrace-file-output-test; rm /tmp/bpftrace-file-output-test
 EXPECT ^([0-9]+\.[0-9]+ )+.*$
 TIMEOUT 5

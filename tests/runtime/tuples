@@ -1,90 +1,90 @@
 NAME basic tuple
-RUN bpftrace -e 'BEGIN { $v = 99; $t = (0, 1, "str", (5, 6), $v); printf("%d %d %s %d %d %d\n", $t.0, $t.1, $t.2, $t.3.0, $t.3.1, $t.4); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { $v = 99; $t = (0, 1, "str", (5, 6), $v); printf("%d %d %s %d %d %d\n", $t.0, $t.1, $t.2, $t.3.0, $t.3.1, $t.4); exit(); }'
 EXPECT 0 1 str 5 6 99
 TIMEOUT 5
 
 NAME basic tuple map
-RUN bpftrace -e 'BEGIN { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { $v = 99; @t = (0, 1, "str"); printf("%d %d %s\n", @t.0, @t.1, @t.2); exit(); }'
 EXPECT 0 1 str
 TIMEOUT 5
 
 NAME mixed int tuple map
-RUN bpftrace -e 'BEGIN { @ = ( (int32) -100, (int8) 10, 50 ); exit();}'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = ( (int32) -100, (int8) 10, 50 ); exit();}'
 EXPECT @: \(-100, 10, 50\)
 TIMEOUT 5
 
 NAME mixed int tuple map 2
-RUN bpftrace -e 'BEGIN { @ = ( -100, (int8) 10, (int32) 50 ); exit();}'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = ( -100, (int8) 10, (int32) 50 ); exit();}'
 EXPECT @: \(-100, 10, 50\)
 TIMEOUT 5
 
 NAME mixed int tuple map 3
-RUN bpftrace -e 'BEGIN { @ = ( -100, (int8) 10, (int32) 50, 100 ); exit();}'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = ( -100, (int8) 10, (int32) 50, 100 ); exit();}'
 EXPECT @: \(-100, 10, 50, 100\)
 TIMEOUT 5
 
 NAME complex tuple 1
-RUN bpftrace -e 'BEGIN { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555)); exit(); }'
 EXPECT \(-100, 100, abcdef, 3, 1, -10, 10, -555\)
 TIMEOUT 5
 
 NAME tuple struct sizing 1
-RUN bpftrace -e 'BEGIN { $t = ((int8) 1, (int64) 1, (int8) 1, (int64) 1); print(sizeof($t)); exit() }'
+RUN {{BPFTRACE}} -e 'BEGIN { $t = ((int8) 1, (int64) 1, (int8) 1, (int64) 1); print(sizeof($t)); exit() }'
 EXPECT 32
 TIMEOUT 5
 
 NAME tuple struct sizing 2
-RUN bpftrace -e 'BEGIN { $t = ((int8) 1, (int16) 1, (int32) 1); print(sizeof($t)); exit() }'
+RUN {{BPFTRACE}} -e 'BEGIN { $t = ((int8) 1, (int16) 1, (int32) 1); print(sizeof($t)); exit() }'
 EXPECT 8
 TIMEOUT 5
 
 NAME tuple struct sizing 3
-RUN bpftrace -e 'BEGIN { $t = ((int32) 1, (int16) 1, (int8) 1); print(sizeof($t)); exit() }'
+RUN {{BPFTRACE}} -e 'BEGIN { $t = ((int32) 1, (int16) 1, (int8) 1); print(sizeof($t)); exit() }'
 EXPECT 8
 TIMEOUT 5
 
 NAME complex tuple 4
-RUN bpftrace -e 'BEGIN { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a)); exit(); }'
 EXPECT 168
 TIMEOUT 5
 
 NAME struct in tuple
-RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }'
 EXPECT @t: \(1, \{ .m = 2, .n = 3 \}\)
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME struct in tuple sizing
-RUN bpftrace -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = ((int32)1, *((struct Foo *)arg0)); print(sizeof($t)); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = ((int32)1, *((struct Foo *)arg0)); print(sizeof($t)); exit(); }'
 EXPECT 12
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME array in tuple
-RUN bpftrace -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }'
 EXPECT @t: \(1, \[1,2,3,4\]\)
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array in tuple sizing
-RUN bpftrace -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0)->x); print(sizeof($t)); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0)->x); print(sizeof($t)); exit(); }'
 EXPECT 20
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME nested tuple
-RUN bpftrace -e 'BEGIN{ @ = ((int8)1, ((int8)-20, (int8)30)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN{ @ = ((int8)1, ((int8)-20, (int8)30)); exit(); }'
 EXPECT @: \(1, \(-20, 30\)\)
 TIMEOUT 5
 
 # Careful with '(' and ')', they are read by the test engine as a regex group,
 # so make sure to escape them.
 NAME tuple print
-RUN bpftrace -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }'
 EXPECT ^@: \(1, 2, string, \(4, 5\)\)$
 TIMEOUT 5
 
 NAME tuple strftime type is packed
-RUN bpftrace -e 'BEGIN { @ = (nsecs, strftime("%M:%S", nsecs)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = (nsecs, strftime("%M:%S", nsecs)); exit(); }'
 EXPECT ^@: \(\d+, \d+:\d+\)$
 TIMEOUT 5

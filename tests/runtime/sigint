@@ -1,9 +1,9 @@
 NAME strace no quit
-RUN bpftrace -v -e 'i:s:1 { printf("%s %d\n", "SUCCESS", 1); exit() }' & (./testprogs/syscall nanosleep 5e8 && strace -p $! -o /dev/null)
+RUN {{BPFTRACE}} -v -e 'i:s:1 { printf("%s %d\n", "SUCCESS", 1); exit() }' & (./testprogs/syscall nanosleep 5e8 && strace -p $! -o /dev/null)
 EXPECT SUCCESS 1
 TIMEOUT 3
 
 NAME sigint quit
-RUN bpftrace -v -e 'END { printf("%s %d", "SUCCESS", 1) }' & (./testprogs/syscall nanosleep 1e9 && /usr/bin/env kill -s SIGINT $!)
+RUN {{BPFTRACE}} -v -e 'END { printf("%s %d", "SUCCESS", 1) }' & (./testprogs/syscall nanosleep 1e9 && /usr/bin/env kill -s SIGINT $!)
 EXPECT ^SUCCESS 1$
 TIMEOUT 2

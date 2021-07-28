@@ -1,14 +1,14 @@
 NAME struct-array
-RUN bpftrace runtime/scripts/struct_array.bt -c ./testprogs/struct_array
+RUN {{BPFTRACE}} runtime/scripts/struct_array.bt -c ./testprogs/struct_array
 EXPECT 100 102 104 106 108 -- 1 3 5 7 9 -- 100 98 96 94 92
 TIMEOUT 5
 
 NAME struct-array with variables
-RUN bpftrace runtime/scripts/struct_array_vars.bt -c ./testprogs/struct_array
+RUN {{BPFTRACE}} runtime/scripts/struct_array_vars.bt -c ./testprogs/struct_array
 EXPECT 100 102 104 106 108 -- 1 3 5 7 9 -- 100 98 96 94 92 -- 42
 TIMEOUT 5
 
 NAME pointer_to_pointer
-RUN bpftrace -e 'struct Foo { int a; char b[10]; } uprobe:./testprogs/ptr_to_ptr:function { $pp = (struct Foo **)arg0; printf("%d\n", (*$pp)->a); }' -c ./testprogs/ptr_to_ptr
+RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:./testprogs/ptr_to_ptr:function { $pp = (struct Foo **)arg0; printf("%d\n", (*$pp)->a); }' -c ./testprogs/ptr_to_ptr
 EXPECT 123
 TIMEOUT 5

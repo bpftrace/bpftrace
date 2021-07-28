@@ -1,57 +1,57 @@
 NAME global_int
-RUN bpftrace -v -e 'i:ms:1 {@a = 10; printf("%d\n", @a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 {@a = 10; printf("%d\n", @a); exit();}'
 EXPECT \@a: 10
 TIMEOUT 5
 
 NAME global_string
-RUN bpftrace -v -e 'i:ms:1 {@a = "hi"; printf("%s\n", @a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 {@a = "hi"; printf("%s\n", @a); exit();}'
 EXPECT @a: hi
 TIMEOUT 5
 
 NAME global_buf
-RUN bpftrace -v -e 'i:ms:1 {@a = buf("hi", 2); printf("%r\n", @a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 {@a = buf("hi", 2); printf("%r\n", @a); exit();}'
 EXPECT @a: hi
 TIMEOUT 5
 
 NAME local_int
-RUN bpftrace -v -e 'i:ms:1  {$a = 10; printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1  {$a = 10; printf("a=%d\n", $a); exit();}'
 EXPECT a=10
 TIMEOUT 5
 
 NAME local_string
-RUN bpftrace -v -e 'i:ms:1  {$a = "hi"; printf("a=%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1  {$a = "hi"; printf("a=%s\n", $a); exit();}'
 EXPECT a=hi
 TIMEOUT 5
 
 NAME local_buf
-RUN bpftrace -v -e 'i:ms:1 {$a = buf("hi", 2); printf("a=%r\n", $a); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = buf("hi", 2); printf("a=%r\n", $a); exit();}'
 EXPECT a=hi
 TIMEOUT 5
 
 NAME buf_equality
-RUN bpftrace -v -e 'i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d\n", $a == $a, $a != $b); exit();}'
+RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = buf("hi", 2); $b = buf("bye", 3); printf("equal=%d, unequal=%d\n", $a == $a, $a != $b); exit();}'
 EXPECT equal=1, unequal=1
 TIMEOUT 5
 
 NAME global_associative_arrays
-RUN bpftrace -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}'
 EXPECT slept for [0-9]+ ms
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME scratch
-RUN bpftrace -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }'
 EXPECT slept for [0-9]* ms
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME 32-bit tracepoint arg
-RUN bpftrace -v -e 'tracepoint:random:urandom_read { $i = args->got_bits; printf("bits: %d\n", $i); if ($i == 24) { exit() } }'
+RUN {{BPFTRACE}} -v -e 'tracepoint:random:urandom_read { $i = args->got_bits; printf("bits: %d\n", $i); if ($i == 24) { exit() } }'
 EXPECT bits: 24
 TIMEOUT 5
 AFTER dd if=/dev/urandom bs=3 count=1
 
 NAME tracepoint arg casts in predicates
-RUN bpftrace -v -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
+RUN {{BPFTRACE}} -v -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
 EXPECT @: 1
 TIMEOUT 5

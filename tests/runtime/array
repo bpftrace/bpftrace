@@ -1,137 +1,137 @@
 NAME array element access - assign to map
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; @x = $a->x[0]; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; @x = $a->x[0]; exit(); }'
 EXPECT @x: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array element access - assign to var
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[0]; printf("Result: %d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array element access - out of bounds
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[5]; printf("%d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[5]; printf("%d\n", $x); exit(); }'
 EXPECT the index 5 is out of bounds for array of size 4
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array element access via assignment into var
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array element access via assignment into map
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; printf("Result: %d\n", @a[0][0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; printf("Result: %d\n", @a[0][0]); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array element access via assignment into map and var
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a[0] = ((struct A *) arg0)->x; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array assignment into map
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; exit(); }'
 EXPECT @a: \[1,2,3,4\]
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as a map key
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x] = 0; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x] = 0; exit(); }'
 EXPECT @x\[\[1,2,3,4\]\]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as a part of map multikey
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x, 42] = 0; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x[((struct A *) arg0)->x, 42] = 0; exit(); }'
 EXPECT @x\[\[1,2,3,4\], 42\]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as a map key assigned from another map
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; @x[@a] = 0; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @a = ((struct A *) arg0)->x; @x[@a] = 0; exit(); }'
 EXPECT @x\[\[1,2,3,4\]\]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array in a tuple
-RUN bpftrace -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x = (1, ((struct A *) arg0)->x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { @x = (1, ((struct A *) arg0)->x); exit(); }'
 EXPECT @x: \(1, \[1,2,3,4\]\)
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array element access
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $x = ((struct B *) arg1)->y[1][0]; printf("Result: %d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $x = ((struct B *) arg1)->y[1][0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 7
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array element access via assignment into var
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; $y = $b[1][0]; printf("Result: %d\n", $y); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; $y = $b[1][0]; printf("Result: %d\n", $y); exit(); }'
 EXPECT Result: 7
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array element access via assignment into map
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; printf("Result: %d\n", @b[0][1][0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; printf("Result: %d\n", @b[0][1][0]); exit(); }'
 EXPECT Result: 7
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array element access via assignment into map and var
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; $x = @b[0]; printf("Result: %d\n", $x[1][0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b[0] = ((struct B *) arg1)->y; $x = @b[0]; printf("Result: %d\n", $x[1][0]); exit(); }'
 EXPECT Result: 7
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array assignment into map
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; exit(); }'
 EXPECT @b: \[\[5,6\],\[7,8\]\]
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array as a map key
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @x[((struct B *) arg1)->y] = 0; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @x[((struct B *) arg1)->y] = 0; exit(); }'
 EXPECT @x\[\[\[5,6\],\[7,8\]\]]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME multi-dimensional array as a map key assigned from another map
-RUN bpftrace -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; @x[@b] = 0; exit(); }'
+RUN {{BPFTRACE}} -v -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { @b = ((struct B *) arg1)->y; @x[@b] = 0; exit(); }'
 EXPECT @x\[\[\[5,6\],\[7,8\]\]]: 0
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as pointer element access - assign to map
-RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; @x = $a[0]; exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; @x = $a[0]; exit(); }'
 EXPECT @x: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as pointer element access - assign to var
-RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as pointer access via assignment into var
-RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/array_access:test_array { $a = (int32 *) arg0; $x = $a[0]; printf("Result: %d\n", $x); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as pointer element access via assignment into map
-RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; printf("Result: %d\n", @a[0][0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; printf("Result: %d\n", @a[0][0]); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array as pointer element access via assignment into map and var
-RUN bpftrace -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
+RUN {{BPFTRACE}} -v -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32 *) arg0; $x = @a[0]; printf("Result: %d\n", $x[0]); exit(); }'
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
