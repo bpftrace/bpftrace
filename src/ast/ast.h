@@ -27,7 +27,44 @@ class VisitorBase;
     return new T(*this);                                                       \
   };
 
-class Node {
+enum class JumpType
+{
+  INVALID = 0,
+  RETURN,
+  CONTINUE,
+  BREAK,
+};
+
+enum class Operator
+{
+  INVALID = 0,
+  ASSIGN,
+  EQ,
+  NE,
+  LE,
+  GE,
+  LEFT,
+  RIGHT,
+  LT,
+  GT,
+  LAND,
+  LOR,
+  PLUS,
+  INCREMENT,
+  DECREMENT,
+  MINUS,
+  MUL,
+  DIV,
+  MOD,
+  BAND,
+  BOR,
+  BXOR,
+  LNOT,
+  BNOT,
+};
+
+class Node
+{
 public:
   Node() = default;
   Node(location loc) : loc(loc){};
@@ -210,13 +247,13 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Binop)
 
-  Binop(Expression *left, int op, Expression *right, location loc);
+  Binop(Expression *left, Operator op, Expression *right, location loc);
 
   ~Binop();
 
   Expression *left = nullptr;
   Expression *right = nullptr;
-  int op;
+  Operator op;
 
 private:
   Binop(const Binop &other);
@@ -227,8 +264,8 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Unop)
 
-  Unop(int op, Expression *expr, location loc = location());
-  Unop(int op,
+  Unop(Operator op, Expression *expr, location loc = location());
+  Unop(Operator op,
        Expression *expr,
        bool is_post_op = false,
        location loc = location());
@@ -236,7 +273,7 @@ public:
   ~Unop();
 
   Expression *expr = nullptr;
-  int op;
+  Operator op;
   bool is_post_op;
 
 private:
@@ -422,12 +459,12 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Jump)
 
-  Jump(int ident, location loc = location()) : Statement(loc), ident(ident)
+  Jump(JumpType ident, location loc = location()) : Statement(loc), ident(ident)
   {
   }
   ~Jump() = default;
 
-  int ident = 0;
+  JumpType ident = JumpType::INVALID;
 
 private:
   Jump(const Jump &other) = default;

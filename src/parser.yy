@@ -35,6 +35,7 @@ class Node;
 #include <iostream>
 
 #include "driver.h"
+#include "lexer.h"
 
 void yyerror(bpftrace::Driver &driver, const char *s);
 %}
@@ -118,7 +119,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> STACK_MODE "stack_mode"
 
 
-%type <int> unary_op compound_op
+%type <ast::Operator> unary_op compound_op
 %type <std::string> attach_point_def c_definitions ident
 
 %type <ast::AttachPoint *> attach_point
@@ -289,9 +290,9 @@ expr_stmt:
                 ;
 
 jump_stmt:
-                BREAK    { $$ = new ast::Jump(token::BREAK, @$); }
-        |       CONTINUE { $$ = new ast::Jump(token::CONTINUE, @$); }
-        |       RETURN   { $$ = new ast::Jump(token::RETURN, @$); }
+                BREAK    { $$ = new ast::Jump(ast::JumpType::BREAK, @$); }
+        |       CONTINUE { $$ = new ast::Jump(ast::JumpType::CONTINUE, @$); }
+        |       RETURN   { $$ = new ast::Jump(ast::JumpType::RETURN, @$); }
                 ;
 
 loop_stmt:
@@ -353,14 +354,14 @@ postfix_expr:
                 primary_expr                { $$ = $1; }
 /* pointer  */
         |       postfix_expr DOT ident    { $$ = new ast::FieldAccess($1, $3, @2); }
-        |       postfix_expr PTR ident    { $$ = new ast::FieldAccess(new ast::Unop(token::MUL, $1, @2), $3, @$); }
+        |       postfix_expr PTR ident    { $$ = new ast::FieldAccess(new ast::Unop(ast::Operator::MUL, $1, @2), $3, @$); }
 /* tuple  */
         |       tuple_access_expr         { $$ = $1; }
 /* array  */
         |       postfix_expr "[" expr "]" { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
         |       call                      { $$ = $1; }
-        |       map_or_var INCREMENT      { $$ = new ast::Unop(token::INCREMENT, $1, true, @2); }
-        |       map_or_var DECREMENT      { $$ = new ast::Unop(token::DECREMENT, $1, true, @2); }
+        |       map_or_var INCREMENT      { $$ = new ast::Unop(ast::Operator::INCREMENT, $1, true, @2); }
+        |       map_or_var DECREMENT      { $$ = new ast::Unop(ast::Operator::DECREMENT, $1, true, @2); }
 /* errors */
         |       INCREMENT ident           { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
         |       DECREMENT ident           { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
@@ -376,18 +377,18 @@ tuple_access_expr:
 unary_expr:
                 unary_op cast_expr   { $$ = new ast::Unop($1, $2, @1); }
         |       postfix_expr         { $$ = $1; }
-        |       INCREMENT map_or_var { $$ = new ast::Unop(token::INCREMENT, $2, @1); }
-        |       DECREMENT map_or_var { $$ = new ast::Unop(token::DECREMENT, $2, @1); }
+        |       INCREMENT map_or_var { $$ = new ast::Unop(ast::Operator::INCREMENT, $2, @1); }
+        |       DECREMENT map_or_var { $$ = new ast::Unop(ast::Operator::DECREMENT, $2, @1); }
 /* errors */
         |       ident DECREMENT      { error(@1, "The -- operator must be applied to a map or variable"); YYERROR; }
         |       ident INCREMENT      { error(@1, "The ++ operator must be applied to a map or variable"); YYERROR; }
                 ;
 
 unary_op:
-                MUL    { $$ = token::MUL; }
-        |       BNOT   { $$ = token::BNOT; }
-        |       LNOT   { $$ = token::LNOT; }
-        |       MINUS  { $$ = token::MINUS; }
+                MUL    { $$ = ast::Operator::MUL; }
+        |       BNOT   { $$ = ast::Operator::BNOT; }
+        |       LNOT   { $$ = ast::Operator::LNOT; }
+        |       MINUS  { $$ = ast::Operator::MINUS; }
                 ;
 
 expr:
@@ -402,57 +403,57 @@ conditional_expr:
 
 logical_or_expr:
                 logical_and_expr                     { $$ = $1; }
-        |       logical_or_expr LOR logical_and_expr { $$ = new ast::Binop($1, token::LOR, $3, @2); }
+        |       logical_or_expr LOR logical_and_expr { $$ = new ast::Binop($1, ast::Operator::LOR, $3, @2); }
                 ;
 
 logical_and_expr:
                 or_expr                       { $$ = $1; }
-        |       logical_and_expr LAND or_expr { $$ = new ast::Binop($1, token::LAND, $3, @2); }
+        |       logical_and_expr LAND or_expr { $$ = new ast::Binop($1, ast::Operator::LAND, $3, @2); }
                 ;
 
 or_expr:
                 xor_expr             { $$ = $1; }
-        |       or_expr BOR xor_expr { $$ = new ast::Binop($1, token::BOR, $3, @2); }
+        |       or_expr BOR xor_expr { $$ = new ast::Binop($1, ast::Operator::BOR, $3, @2); }
                 ;
 
 xor_expr:
                 and_expr               { $$ = $1; }
-        |       xor_expr BXOR and_expr { $$ = new ast::Binop($1, token::BXOR, $3, @2); }
+        |       xor_expr BXOR and_expr { $$ = new ast::Binop($1, ast::Operator::BXOR, $3, @2); }
                 ;
 
 
 and_expr:
                 equality_expr               { $$ = $1; }
-        |       and_expr BAND equality_expr { $$ = new ast::Binop($1, token::BAND, $3, @2); }
+        |       and_expr BAND equality_expr { $$ = new ast::Binop($1, ast::Operator::BAND, $3, @2); }
                 ;
 
 equality_expr:
                 relational_expr                  { $$ = $1; }
-        |       equality_expr EQ relational_expr { $$ = new ast::Binop($1, token::EQ, $3, @2); }
-        |       equality_expr NE relational_expr { $$ = new ast::Binop($1, token::NE, $3, @2); }
+        |       equality_expr EQ relational_expr { $$ = new ast::Binop($1, ast::Operator::EQ, $3, @2); }
+        |       equality_expr NE relational_expr { $$ = new ast::Binop($1, ast::Operator::NE, $3, @2); }
                 ;
 
 relational_expr:
                 shift_expr                    { $$ = $1; }
-        |       relational_expr LE shift_expr { $$ = new ast::Binop($1, token::LE, $3, @2); }
-        |       relational_expr GE shift_expr { $$ = new ast::Binop($1, token::GE, $3, @2); }
-        |       relational_expr LT shift_expr { $$ = new ast::Binop($1, token::LT, $3, @2); }
-        |       relational_expr GT shift_expr { $$ = new ast::Binop($1, token::GT, $3, @2); }
+        |       relational_expr LE shift_expr { $$ = new ast::Binop($1, ast::Operator::LE, $3, @2); }
+        |       relational_expr GE shift_expr { $$ = new ast::Binop($1, ast::Operator::GE, $3, @2); }
+        |       relational_expr LT shift_expr { $$ = new ast::Binop($1, ast::Operator::LT, $3, @2); }
+        |       relational_expr GT shift_expr { $$ = new ast::Binop($1, ast::Operator::GT, $3, @2); }
                 ;
 
 shift_expr:
                 arith_expr                  { $$ = $1; }
-        |       shift_expr LEFT arith_expr  { $$ = new ast::Binop($1, token::LEFT, $3, @2); }
-        |       shift_expr RIGHT arith_expr { $$ = new ast::Binop($1, token::RIGHT, $3, @2); }
+        |       shift_expr LEFT arith_expr  { $$ = new ast::Binop($1, ast::Operator::LEFT, $3, @2); }
+        |       shift_expr RIGHT arith_expr { $$ = new ast::Binop($1, ast::Operator::RIGHT, $3, @2); }
                 ;
 
 arith_expr:
                 cast_expr                  { $$ = $1; }
-        |       arith_expr PLUS cast_expr  { $$ = new ast::Binop($1, token::PLUS, $3, @2); }
-        |       arith_expr MINUS cast_expr { $$ = new ast::Binop($1, token::MINUS, $3, @2); }
-        |       arith_expr MUL cast_expr   { $$ = new ast::Binop($1, token::MUL, $3, @2); }
-        |       arith_expr DIV cast_expr   { $$ = new ast::Binop($1, token::DIV, $3, @2); }
-        |       arith_expr MOD cast_expr   { $$ = new ast::Binop($1, token::MOD, $3, @2); }
+        |       arith_expr PLUS cast_expr  { $$ = new ast::Binop($1, ast::Operator::PLUS, $3, @2); }
+        |       arith_expr MINUS cast_expr { $$ = new ast::Binop($1, ast::Operator::MINUS, $3, @2); }
+        |       arith_expr MUL cast_expr   { $$ = new ast::Binop($1, ast::Operator::MUL, $3, @2); }
+        |       arith_expr DIV cast_expr   { $$ = new ast::Binop($1, ast::Operator::DIV, $3, @2); }
+        |       arith_expr MOD cast_expr   { $$ = new ast::Binop($1, ast::Operator::MOD, $3, @2); }
                 ;
 
 cast_expr:
@@ -508,16 +509,16 @@ vargs:
                 ;
 
 compound_op:
-                LEFTASSIGN   { $$ = token::LEFT; }
-        |       BANDASSIGN   { $$ = token::BAND; }
-        |       BORASSIGN    { $$ = token::BOR; }
-        |       BXORASSIGN   { $$ = token::BXOR; }
-        |       DIVASSIGN    { $$ = token::DIV; }
-        |       MINUSASSIGN  { $$ = token::MINUS; }
-        |       MODASSIGN    { $$ = token::MOD; }
-        |       MULASSIGN    { $$ = token::MUL; }
-        |       PLUSASSIGN   { $$ = token::PLUS; }
-        |       RIGHTASSIGN  { $$ = token::RIGHT; }
+                LEFTASSIGN   { $$ = ast::Operator::LEFT; }
+        |       BANDASSIGN   { $$ = ast::Operator::BAND; }
+        |       BORASSIGN    { $$ = ast::Operator::BOR; }
+        |       BXORASSIGN   { $$ = ast::Operator::BXOR; }
+        |       DIVASSIGN    { $$ = ast::Operator::DIV; }
+        |       MINUSASSIGN  { $$ = ast::Operator::MINUS; }
+        |       MODASSIGN    { $$ = ast::Operator::MOD; }
+        |       MULASSIGN    { $$ = ast::Operator::MUL; }
+        |       PLUSASSIGN   { $$ = ast::Operator::PLUS; }
+        |       RIGHTASSIGN  { $$ = ast::Operator::RIGHT; }
                 ;
 
 %%

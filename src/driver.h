@@ -5,11 +5,8 @@
 
 #include "ast/ast.h"
 #include "bpftrace.h"
-#include "parser.tab.hh"
 
 typedef void* yyscan_t;
-#define YY_DECL bpftrace::Parser::symbol_type yylex(bpftrace::Driver &driver, yyscan_t yyscanner)
-YY_DECL;
 
 namespace bpftrace {
 
