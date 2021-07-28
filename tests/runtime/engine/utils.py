@@ -76,7 +76,12 @@ class Utils(object):
     @staticmethod
     def prepare_bpf_call(test):
         bpftrace_path = "{}/bpftrace".format(BPF_PATH)
-        return re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
+        ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
+
+        bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
+        ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
+
+        return ret
 
     @staticmethod
     def __handler(signum, frame):
