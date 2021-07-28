@@ -53,6 +53,15 @@ separate minimal programs to test tracing functionality, and argument passing
 hasn't been required. If test programs need arguments, a more sophisticated
 approach will be necessary.
 
+## Runtime variables
+
+Runtime variables are placeholders that the runtime test engine will fill out
+before running the test. These exist b/c the values of the variables are generally
+not known until test time. The following runtime variables are available for the
+`RUN` directive:
+
+* `{{BEFORE_PID}}`: Process ID of the process in `BEFORE` directive
+
 ### Test programs
 
 You can add test programs for your runtime tests by placing a `.c` file corresponding to your test program in `tests/testprogs`.
