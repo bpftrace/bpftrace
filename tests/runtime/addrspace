@@ -1,5 +1,5 @@
 NAME openat uptr
-RUN bpftrace -v -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { print(str(uptr(args->filename))) }' -c "./testprogs/syscall openat"
+RUN {{BPFTRACE}} -v -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { print(str(uptr(args->filename))) }' -c "./testprogs/syscall openat"
 EXPECT bpftrace_runtime_test_syscall
 REQUIRES_FEATURE probe_read_kernel
 TIMEOUT 5

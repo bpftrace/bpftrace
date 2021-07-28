@@ -1,205 +1,205 @@
 NAME it shows version
-RUN bpftrace --version
+RUN {{BPFTRACE}} --version
 EXPECT bpftrace v
 TIMEOUT 1
 
 NAME it shows usage with help flag
-RUN bpftrace -h
+RUN {{BPFTRACE}} -h
 EXPECT USAGE
 TIMEOUT 1
 
 NAME it shows usage with bad flag
-RUN bpftrace -idonotexist
+RUN {{BPFTRACE}} -idonotexist
 EXPECT USAGE
 TIMEOUT 1
 
 NAME errors on non existent file
-RUN bpftrace non_existent_file.bt
+RUN {{BPFTRACE}} non_existent_file.bt
 EXPECT ERROR: failed to open file 'non_existent_file.bt': No such file or directory
 TIMEOUT 1
 
 NAME piped script
-RUN bpftrace - < runtime/scripts/hello_world.bt
+RUN {{BPFTRACE}} - < runtime/scripts/hello_world.bt
 EXPECT hello world!
 TIMEOUT 1
 
 NAME it lists kprobes
-RUN bpftrace -l | grep kprobes
+RUN {{BPFTRACE}} -l | grep kprobes
 EXPECT kprobe
 TIMEOUT 1
 
 NAME it lists tracepoints
-RUN bpftrace -l | grep tracepoint
+RUN {{BPFTRACE}} -l | grep tracepoint
 EXPECT tracepoint
 TIMEOUT 1
 
 NAME it lists software events
-RUN bpftrace -l | grep software
+RUN {{BPFTRACE}} -l | grep software
 EXPECT software
 TIMEOUT 1
 
 NAME it lists hardware events
-RUN bpftrace -l | grep hardware
+RUN {{BPFTRACE}} -l | grep hardware
 EXPECT hardware
 TIMEOUT 1
 
 NAME it lists kfuncs
-RUN bpftrace -l | grep kfunc
+RUN {{BPFTRACE}} -l | grep kfunc
 EXPECT kfunc
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
 NAME it lists kfunc params
-RUN bpftrace -lv "kfunc:*" | grep kfunc
+RUN {{BPFTRACE}} -lv "kfunc:*" | grep kfunc
 EXPECT \s+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
 NAME it lists kprobes with regex filter
-RUN bpftrace -l "kprobe:*"
+RUN {{BPFTRACE}} -l "kprobe:*"
 EXPECT kprobe:
 TIMEOUT 1
 
 NAME it lists kretprobes with regex filter
-RUN bpftrace -l "kretprobe:*"
+RUN {{BPFTRACE}} -l "kretprobe:*"
 EXPECT kretprobe:
 TIMEOUT 1
 
 NAME it lists uprobes with regex filter
-RUN bpftrace -l "uprobe:./testprogs/syscall:*"
+RUN {{BPFTRACE}} -l "uprobe:./testprogs/syscall:*"
 EXPECT uprobe:
 TIMEOUT 1
 
 NAME it lists uretprobes with regex filter
-RUN bpftrace -l "uretprobe:./testprogs/syscall:*"
+RUN {{BPFTRACE}} -l "uretprobe:./testprogs/syscall:*"
 EXPECT uretprobe:
 TIMEOUT 1
 
 NAME it lists tracepoints with regex filter
-RUN bpftrace -l "tracepoint:raw_syscalls:*"
+RUN {{BPFTRACE}} -l "tracepoint:raw_syscalls:*"
 EXPECT tracepoint:raw_syscalls:sys_exit
 TIMEOUT 1
 
 NAME it lists software events with regex filter
-RUN bpftrace -l "software:*"
+RUN {{BPFTRACE}} -l "software:*"
 EXPECT software
 TIMEOUT 1
 
 NAME it lists hardware events with regex filter
-RUN bpftrace -l "hardware:*"
+RUN {{BPFTRACE}} -l "hardware:*"
 EXPECT hardware
 TIMEOUT 1
 
 NAME it lists kfuncs events with regex filter
-RUN bpftrace -l "kfunc:*"
+RUN {{BPFTRACE}} -l "kfunc:*"
 EXPECT kfunc
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
 NAME it lists kretfuncs events with regex filter
-RUN bpftrace -l "kretfunc:*"
+RUN {{BPFTRACE}} -l "kretfunc:*"
 EXPECT kretfunc
 REQUIRES_FEATURE btf
 TIMEOUT 1
 
 NAME listing with wildcarded probe type
-RUN bpftrace -l "*ware:*"
+RUN {{BPFTRACE}} -l "*ware:*"
 EXPECT hardware:
 EXPECT software:
 TIMEOUT 1
 
 NAME errors on invalid character in search expression
-RUN bpftrace -l '\n'
+RUN {{BPFTRACE}} -l '\n'
 EXPECT ERROR: invalid character
 TIMEOUT 1
 
 NAME pid fails validation with leading non-number
-RUN bpftrace -p a1111
+RUN {{BPFTRACE}} -p a1111
 EXPECT ERROR: pid 'a1111' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid fails validation with non-number in between
-RUN bpftrace -p 111a1
+RUN {{BPFTRACE}} -p 111a1
 EXPECT ERROR: pid '111a1' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid fails validation with non-numeric argument
-RUN bpftrace -p not_a_pid
+RUN {{BPFTRACE}} -p not_a_pid
 EXPECT ERROR: pid 'not_a_pid' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid outside of valid pid range
-RUN bpftrace -p 5000000
+RUN {{BPFTRACE}} -p 5000000
 EXPECT ERROR: pid '5000000' out of valid pid range \[1,4194304\]
 TIMEOUT 1
 
 NAME libraries under /usr/include are in the search path
-RUN bpftrace -e "$(echo "#include <sys/types.h>"; echo "BEGIN { exit(); }")" 2>&1
+RUN {{BPFTRACE}} -e "$(echo "#include <sys/types.h>"; echo "BEGIN { exit(); }")" 2>&1
 EXPECT ^((?!file not found).)*$
 TIMEOUT 1
 
 NAME non existent library include fails
-RUN bpftrace -e "$(echo "#include <lol/no.h>"; echo "BEGIN { exit(); }")" 2>&1
+RUN {{BPFTRACE}} -e "$(echo "#include <lol/no.h>"; echo "BEGIN { exit(); }")" 2>&1
 EXPECT file not found
 TIMEOUT 1
 
 NAME defines work
-RUN bpftrace -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n", _UNDERSCORE); exit(); }')"
+RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n", _UNDERSCORE); exit(); }')"
 EXPECT 314
 TIMEOUT 1
 
 NAME clear map
-RUN bpftrace -e 'BEGIN { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = 1; @a[1] = 1; clear(@); clear(@a); printf("ok\n"); exit(); }'
 EXPECT ok
 TIMEOUT 1
 
 NAME clear count-map
-RUN bpftrace -e 'BEGIN { @ = count(); @a[1] = count(); clear(@); clear(@a); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = count(); @a[1] = count(); clear(@); clear(@a); exit(); }'
 EXPECT @: 0
 TIMEOUT 1
 
 NAME delete map
-RUN bpftrace -e 'BEGIN { @ = 1; @a[1] = 1; delete(@); delete(@a[1]); printf("ok\n"); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = 1; @a[1] = 1; delete(@); delete(@a[1]); printf("ok\n"); exit(); }'
 EXPECT ok
 TIMEOUT 1
 
 NAME delete count-map
-RUN bpftrace -e 'BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a[1]); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @ = count(); @a[1] = count(); delete(@); delete(@a[1]); exit(); }'
 EXPECT @: 0
 TIMEOUT 1
 
 NAME increment/decrement map
-RUN bpftrace -e 'BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x--); printf(" %d\n", --@x); delete(@x); exit(); }'
 EXPECT 10 12 12 10
 TIMEOUT 1
 
 NAME increment/decrement variable
-RUN bpftrace -e 'BEGIN { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x); exit(); }'
 EXPECT 10 12 12 10
 TIMEOUT 1
 
 NAME spawn child
-RUN bpftrace -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
+RUN {{BPFTRACE}} -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
 EXPECT [0-9]+
 TIMEOUT 1
 
 NAME info flag
-RUN bpftrace --info
+RUN {{BPFTRACE}} --info
 EXPECT perf_event_array: yes
 TIMEOUT 1
 
 NAME basic while loop
-RUN bpftrace -e 'BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) } exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { $a = 0; while ($a <= 100) { @=avg($a++) } exit(); }'
 EXPECT @: 50
 TIMEOUT 5
 REQUIRES_FEATURE loop
 
 NAME disable warnings
-RUN bpftrace --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); exit();}' 2>&1| grep -c -E "WARNING|invalid option"
+RUN {{BPFTRACE}} --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); exit();}' 2>&1| grep -c -E "WARNING|invalid option"
 EXPECT ^0$
 TIMEOUT 1
 
 NAME kaddr fails
-RUN bpftrace -e 'BEGIN { print(kaddr("asdfzzzzzzz")) }'
+RUN {{BPFTRACE}} -e 'BEGIN { print(kaddr("asdfzzzzzzz")) }'
 EXPECT Failed to resolve kernel symbol
 TIMEOUT 1
