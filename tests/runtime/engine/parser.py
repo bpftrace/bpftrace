@@ -14,7 +14,24 @@ class UnknownFieldError(Exception):
     pass
 
 
-TestStruct = namedtuple('TestStruct', 'name run expect timeout before after suite kernel requirement env arch, feature_requirement neg_feature_requirement')
+TestStruct = namedtuple(
+    'TestStruct',
+    [
+        'name',
+        'run',
+        'expect',
+        'timeout',
+        'before',
+        'after',
+        'suite',
+        'kernel',
+        'requirement',
+        'env',
+        'arch',
+        'feature_requirement',
+        'neg_feature_requirement',
+    ],
+)
 
 
 class TestParser(object):
