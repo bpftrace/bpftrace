@@ -117,9 +117,13 @@ void StdioSilencer::silence()
 {
   fflush(ofile);
   int fd = fileno(ofile);
+  assert(fd >= 0);
   old_stdio_ = dup(fd);
+  assert(old_stdio_ >= 0);
   int new_stdio_ = open("/dev/null", O_WRONLY);
-  dup2(new_stdio_, fd);
+  assert(new_stdio_ >= 0);
+  int ret = dup2(new_stdio_, fd);
+  assert(ret >= 0);
   close(new_stdio_);
 }
 
@@ -129,7 +133,9 @@ StdioSilencer::~StdioSilencer()
   {
     fflush(ofile);
     int fd = fileno(ofile);
-    dup2(old_stdio_, fd);
+    assert(fd >= 0);
+    int ret = dup2(old_stdio_, fd);
+    assert(ret >= 0);
     close(old_stdio_);
     old_stdio_ = -1;
   }
