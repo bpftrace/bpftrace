@@ -402,7 +402,6 @@ The verifier log:
 processed 26 insns (limit 131072), stack depth 40
 
 Attaching tracepoint:syscalls:sys_enter_nanosleep
-Running...
 iscsid is sleeping.
 iscsid is sleeping.
 [...]
