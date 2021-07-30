@@ -54,22 +54,22 @@ EXPECT ^True$
 TIMEOUT 5
 
 NAME printf
-RUN {{BPFTRACE}} -q -f json -v -e 'BEGIN { printf("test %d", 5); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test %d", 5); exit(); }'
 EXPECT ^{"type": "printf", "data": "test 5"}$
 TIMEOUT 5
 
 NAME printf_escaping
-RUN {{BPFTRACE}} -q -f json -v -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { printf("test \r \n \t \\ \" bar"); exit(); }'
 EXPECT ^{"type": "printf", "data": "test \\r \\n \\t \\\\ \\\" bar"}$
 TIMEOUT 5
 
 NAME time
-RUN {{BPFTRACE}} -q -f json -v -e 'BEGIN { time(); exit(); }'
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { time(); exit(); }'
 EXPECT ^{"type": "time", "data": "[0-9]*:[0-9]*:[0-9]*\\n"}$
 TIMEOUT 5
 
 NAME syscall
-RUN {{BPFTRACE}} --unsafe -v -f json -e 'BEGIN { system("echo a b c"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -f json -e 'BEGIN { system("echo a b c"); exit(); }'
 EXPECT ^{"type": "syscall", "data": "a b c\\n"}$
 TIMEOUT 5
 
@@ -79,7 +79,7 @@ EXPECT ^{"type": "join", "data": "/bin/echo,'A'"}
 TIMEOUT 5
 
 NAME cat
-RUN {{BPFTRACE}} -v -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
 EXPECT ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 TIMEOUT 5
 
@@ -91,7 +91,7 @@ EXPECT ^{"type": "map", "data": {"@": \[1,2,"string",\[4,5\]\]}}$
 TIMEOUT 5
 
 NAME tuple_with_struct
-RUN {{BPFTRACE}} -v -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); @ = (0, $f); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); @ = (0, $f); exit(); }'
 EXPECT ^{"type": "map", "data": {"@": \[0,{ "m": 2, "n": 3 }\]}}$
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
@@ -117,13 +117,13 @@ EXPECT ^{"type": "value", "data": \[1,2,"string"\]}$
 TIMEOUT 1
 
 NAME print_non_map_struct
-RUN {{BPFTRACE}} -v -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
 EXPECT ^{"type": "value", "data": { "m": 2, "n": 3 }}$
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME print_non_map_nested_struct
-RUN {{BPFTRACE}} -v -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
+RUN {{BPFTRACE}} -f json -e 'struct Foo { struct { int m[1] } y; struct { int n; } a; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
 EXPECT ^{"type": "value", "data": { "y": { "m": \[2\] }, "a": { "n": 3 } }}$
 TIMEOUT 5
 AFTER ./testprogs/simple_struct

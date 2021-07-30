@@ -236,7 +236,7 @@ REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
 REQUIRES_FEATURE uprobe_refcount
 
 NAME "usdt probes - file based semaphore activation multi process"
-RUN {{BPFTRACE}} -v runtime/scripts/usdt_file_activation_multiprocess.bt --usdt-file-activation
+RUN {{BPFTRACE}} runtime/scripts/usdt_file_activation_multiprocess.bt --usdt-file-activation
 EXPECT found 2 processes
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test & ./testprogs/usdt_semaphore_test

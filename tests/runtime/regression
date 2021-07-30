@@ -5,7 +5,7 @@ EXPECT done
 TIMEOUT 1
 
 NAME logical_and_or_different_sizes
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struct Foo*)arg0; printf("%d %d %d %d %d\n", $foo->m, $foo->m && 0, 1 && $foo->m, $foo->m || 0, 0 || $foo->m); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; } uprobe:./testprogs/simple_struct:func { $foo = (struct Foo*)arg0; printf("%d %d %d %d %d\n", $foo->m, $foo->m && 0, 1 && $foo->m, $foo->m || 0, 0 || $foo->m); exit(); }'
 AFTER ./testprogs/simple_struct
 EXPECT 2 0 1 1 1
 TIMEOUT 5
@@ -13,7 +13,7 @@ TIMEOUT 5
 # https://github.com/iovisor/bpftrace/issues/759
 # Update test once https://github.com/iovisor/bpftrace/pull/781 lands
 # NAME ntop_map_printf
-# RUN {{BPFTRACE}} -v -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } END { printf("v6: %s", @b); clear(@a); clear(@b) }'
+# RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } END { printf("v6: %s", @b); clear(@a); clear(@b) }'
 # AFTER ./testprogs/ntop
 # EXPECT v4: 127.0.0.1; v6: ffee:ffee:ddcc:ddcc:bbaa:bbaa:c0a8:1
 # TIMEOUT 1
@@ -24,13 +24,13 @@ EXPECT 0
 TIMEOUT 5
 
 NAME ntop_tracepoint_args
-RUN {{BPFTRACE}} -v -e 'tracepoint:tcp:tcp_destroy_sock { printf("%s\n", ntop(args->daddr)); exit(); }'
+RUN {{BPFTRACE}} -e 'tracepoint:tcp:tcp_destroy_sock { printf("%s\n", ntop(args->daddr)); exit(); }'
 EXPECT [0-9]+.[0-9]+.[0-9]+.[0-9]+
 AFTER curl -s www.google.com > /dev/null
 TIMEOUT 5
 
 NAME c_array_indexing
-RUN {{BPFTRACE}} -v -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
 EXPECT h e l l o
 TIMEOUT 5
 
