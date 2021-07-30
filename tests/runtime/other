@@ -39,8 +39,8 @@ EXPECT yes
 TIMEOUT 5
 
 NAME ternary_lnot
-RUN {{BPFTRACE}} -v -e 'i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit();}'
-EXPECT 0
+RUN {{BPFTRACE}} -e 'i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit() }'
+EXPECT 1
 TIMEOUT 5
 
 NAME ternary_int8
