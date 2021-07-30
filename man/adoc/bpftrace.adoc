@@ -21,6 +21,8 @@ bpftrace - a high-level tracing language
 bpftrace is a high-level tracing language and runtime for Linux based on BPF.
 It supports static and dynamic tracing for both the kernel and user-space.
 
+When _FILENAME_ is "_-_", read from stdin.
+
 == Examples
 
 List all probes with "sleep" in their name::
