@@ -19,7 +19,7 @@ TIMEOUT 5
 # TIMEOUT 1
 
 NAME modulo_operator
-RUN {{BPFTRACE}} -v -e 'BEGIN { @x = 4; printf("%d\n", @x % 2) }'
+RUN {{BPFTRACE}} -e 'BEGIN { @x = 4; printf("%d\n", @x % 2); exit() }'
 EXPECT 0
 TIMEOUT 5
 
