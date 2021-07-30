@@ -275,13 +275,13 @@ EXPECT 123
 TIMEOUT 1
 
 NAME print_avg_map_args
-RUN {{BPFTRACE}} -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }'
-EXPECT Attaching 1 probe\.\.\.\n@\[c\]: 3\n@\[d\]: 4\n\nEND
+RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }'
+EXPECT BEGIN\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-RUN {{BPFTRACE}} -e 'BEGIN { @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }'
-EXPECT Attaching 1 probe\.\.\.\n@\[a\]: 1\n@\[b\]: 2\n@\[c\]: 3\n@\[d\]: 4\n\nEND
+RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }'
+EXPECT BEGIN\n@\[a\]: 1\n@\[b\]: 2\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
 NAME print_hist_with_top_arg

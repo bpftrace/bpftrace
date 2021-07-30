@@ -1190,8 +1190,9 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
-  if (bt_verbose)
-    std::cerr << "Running..." << std::endl;
+  // Used by runtime test framework to know when to run AFTER directive
+  if (std::getenv("__BPFTRACE_NOTIFY_PROBES_ATTACHED"))
+    std::cerr << "__BPFTRACE_NOTIFY_PROBES_ATTACHED" << std::endl;
 
   if (has_iter_)
   {

@@ -175,7 +175,10 @@ class Utils(object):
             if test.before:
                 childpid = subprocess.Popen(["pidof", "-s", child_name], stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].strip()
                 bpf_call = re.sub("{{BEFORE_PID}}", str(childpid), bpf_call)
-            env = {'test': test.name}
+            env = {
+                'test': test.name,
+                '__BPFTRACE_NOTIFY_PROBES_ATTACHED': '1',
+            }
             env.update(test.env)
             p = subprocess.Popen(
                 bpf_call,
@@ -195,7 +198,7 @@ class Utils(object):
             while p.poll() is None:
                 nextline = p.stdout.readline()
                 output += nextline
-                if nextline == "Running...\n":
+                if nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if not after and test.after:
                         after = subprocess.Popen(test.after, shell=True, preexec_fn=os.setsid)
