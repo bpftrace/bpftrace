@@ -49,25 +49,25 @@ EXPECT 168
 TIMEOUT 5
 
 NAME struct in tuple
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }'
 EXPECT @t: \(1, \{ .m = 2, .n = 3 \}\)
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME struct in tuple sizing
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = ((int32)1, *((struct Foo *)arg0)); print(sizeof($t)); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { $t = ((int32)1, *((struct Foo *)arg0)); print(sizeof($t)); exit(); }'
 EXPECT 12
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME array in tuple
-RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }'
+RUN {{BPFTRACE}} -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }'
 EXPECT @t: \(1, \[1,2,3,4\]\)
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME array in tuple sizing
-RUN {{BPFTRACE}} -v -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0)->x); print(sizeof($t)); exit(); }'
+RUN {{BPFTRACE}} -e 'struct A { int x[4]; } u:./testprogs/array_access:test_struct { $t = ((int32)1, ((struct A *)arg0)->x); print(sizeof($t)); exit(); }'
 EXPECT 20
 TIMEOUT 5
 AFTER ./testprogs/array_access

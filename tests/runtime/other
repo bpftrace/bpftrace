@@ -1,40 +1,40 @@
 NAME if_gt
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
 EXPECT a=20
 TIMEOUT 5
 
 NAME if_lt
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
 EXPECT a=10
 TIMEOUT 5
 
 NAME ifelse_go_else
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
 EXPECT a=hello
 TIMEOUT 5
 
 NAME ifelse_go_if
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
 EXPECT a=hi
 TIMEOUT 5
 
 NAME ifelseif_go_elseif
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}'
 EXPECT a=hello
 TIMEOUT 5
 
 NAME ifelseifelse_go_else
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}'
 EXPECT a=asdf
 TIMEOUT 5
 
 NAME if_cast
-RUN {{BPFTRACE}} -v -e 'i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}'
 EXPECT done
 TIMEOUT 5
 
 NAME ternary
-RUN {{BPFTRACE}} -v -e 'i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}'
 EXPECT yes
 TIMEOUT 5
 
@@ -44,52 +44,52 @@ EXPECT 1
 TIMEOUT 5
 
 NAME ternary_int8
-RUN {{BPFTRACE}} -v -e 'i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}'
 EXPECT 1
 TIMEOUT 5
 
 NAME ternary_none_type
-RUN {{BPFTRACE}} -v -e 'i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }'
+RUN {{BPFTRACE}} -e 'i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }'
 EXPECT  yes
 TIMEOUT 5
 
 NAME unroll
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
 EXPECT a=11
 TIMEOUT 5
 
 NAME unroll_max_value
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
 EXPECT unroll maximum value is 100
 TIMEOUT 5
 
 NAME unroll_min_value
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
 EXPECT unroll minimum value is 1
 TIMEOUT 5
 
 NAME unroll_param
-RUN {{BPFTRACE}} -v -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n", $a); exit();}' 10
+RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n", $a); exit();}' 10
 EXPECT a=11
 TIMEOUT 5
 
 NAME if_compare_and_print_string
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
+RUN {{BPFTRACE}} -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
 EXPECT comm: bpftrace
 TIMEOUT 5
 
 NAME struct positional string compare - equal returns true
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
+RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} exit();}' "hello" "hello"
 EXPECT I got hello
 TIMEOUT 5
 
 NAME struct positional string compare - equal returns false
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hi" "hello"
+RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hi" "hello"
 EXPECT not equal
 TIMEOUT 5
 
 NAME struct positional string compare - not equal
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
+RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str($1));} else { printf("not equal\n");} exit();}' "hello" "hello"
 EXPECT not equal
 TIMEOUT 5
 
@@ -104,27 +104,27 @@ EXPECT hello world
 TIMEOUT 1
 
 NAME string compare map lookup
-RUN {{BPFTRACE}} -v -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
+RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
 EXPECT @\[syscall\]: 1
 TIMEOUT 5
 
 NAME struct partial string compare - pass
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
+RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm" "hhvm-proc"
 EXPECT I got hhvm
 TIMEOUT 5
 
 NAME struct partial string compare - pass reverse
-RUN {{BPFTRACE}} -v -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
+RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp(str($1), str($2), 4) == 0) { printf("I got %s\n", str($1));} exit();}' "hhvm-proc" "hhvm"
 EXPECT I got hhvm-proc
 TIMEOUT 5
 
 NAME strncmp function argument
-RUN {{BPFTRACE}} -v -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
+RUN {{BPFTRACE}} -e 'struct F {char s[8];} u:./testprogs/string_args:print { @=strncmp(((struct F*)arg0)->s, "hello", 5); }' -c ./testprogs/string_args
 EXPECT @: 0
 TIMEOUT 5
 
 NAME short non null-terminated string print
-RUN {{BPFTRACE}} -v -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a = ((struct F*)arg0)->s; printf("%s %s\n", $a, $a); }' -c ./testprogs/string_args
+RUN {{BPFTRACE}} -e 'struct F {char s[5];} u:./testprogs/string_args:print { $a = ((struct F*)arg0)->s; printf("%s %s\n", $a, $a); }' -c ./testprogs/string_args
 EXPECT hello hello
 TIMEOUT 5
 
@@ -149,7 +149,7 @@ EXPECT Attaching 1 probe...
 TIMEOUT 5
 
 NAME positional arg count
-RUN {{BPFTRACE}} -v -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exit();}' "one" 2
+RUN {{BPFTRACE}} -e 'BEGIN { printf("got %d args: %s %d\n", $#, str($1), $2); exit();}' "one" 2
 EXPECT got 2 args: one 2
 TIMEOUT 5
 
@@ -184,19 +184,19 @@ EXPECT .*
 TIMEOUT 1
 
 NAME sigint under heavy load
-RUN {{BPFTRACE}} --unsafe -v -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
+RUN {{BPFTRACE}} --unsafe -e 'tracepoint:sched:sched_switch { system("echo foo"); } END { printf("end"); }'
 EXPECT end
 TIMEOUT 5
 AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
 NAME bitfield access
-RUN {{BPFTRACE}} -v -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'
+RUN {{BPFTRACE}} -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'
 EXPECT 1 2 5 0 65535
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
 NAME bitfield_access_2
-RUN {{BPFTRACE}} -v -e 'struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}'
+RUN {{BPFTRACE}} -e 'struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}'
 EXPECT 1 217 5 1 500 31117 1 2 27
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test

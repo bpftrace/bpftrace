@@ -1,47 +1,47 @@
 NAME struct assignment into variable
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; } u:./testprogs/simple_struct:func { $s = *((struct Foo *)arg0); printf("Result: %d\n", $s.m); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; } u:./testprogs/simple_struct:func { $s = *((struct Foo *)arg0); printf("Result: %d\n", $s.m); exit(); }'
 EXPECT Result: 2
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct assignment into map
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
 EXPECT @s: { .m = 2, .n = 3 }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct field order
-RUN {{BPFTRACE}} -v -e 'struct Foo { int n; int m; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int n; int m; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
 EXPECT @s: { .n = 2, .m = 3 }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME nested struct assignment into map
-RUN {{BPFTRACE}} -v -e 'struct Foo { struct { int m[1] } y; struct { int n } a; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { struct { int m[1] } y; struct { int n } a; } u:./testprogs/simple_struct:func { @s = *((struct Foo *)arg0); exit(); }'
 EXPECT @s: { .y = { .m = \[2\] }, .a = { .n = 3 } }
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct as a map key
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0)] = 0; exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0)] = 0; exit(); }'
 EXPECT @s\[{.m=2,.n=3}\]: 0
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct as a part of multikey
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0), 42] = 0; exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s[*((struct Foo *)arg0), 42] = 0; exit(); }'
 EXPECT @s\[{.m=2,.n=3}, 42\]: 0
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct as a map key assigned from another map
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @x = *((struct Foo *)arg0); @s[@x] = 0; exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @x = *((struct Foo *)arg0); @s[@x] = 0; exit(); }'
 EXPECT @s\[{.m=2,.n=3}\]: 0
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
 
 NAME struct in a tuple
-RUN {{BPFTRACE}} -v -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = (1, *((struct Foo *)arg0)); exit(); }'
+RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @s = (1, *((struct Foo *)arg0)); exit(); }'
 EXPECT @s: \(1, { .m = 2, .n = 3 }\)
 TIMEOUT 4
 AFTER ./testprogs/simple_struct
