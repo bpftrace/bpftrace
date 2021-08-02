@@ -2130,7 +2130,8 @@ void CodegenLLVM::generateProbe(Probe &probe,
                                 const std::string &section_name,
                                 FunctionType *func_type,
                                 bool expansion,
-                                std::optional<int> usdt_location_index)
+                                std::optional<int> usdt_location_index,
+                                bool dummy)
 {
   // tracepoint wildcard expansion, part 3 of 3. Set tracepoint_struct_ for use
   // by args builtin.
@@ -2160,6 +2161,12 @@ void CodegenLLVM::generateProbe(Probe &probe,
     auto scoped_del = accept(stmt);
   }
   createRet();
+
+  if (dummy)
+  {
+    func->eraseFromParent();
+    return;
+  }
 
   auto pt = probetype(current_attach_point_->provider);
   if ((pt == ProbeType::watchpoint || pt == ProbeType::asyncwatchpoint) &&
@@ -2223,6 +2230,7 @@ void CodegenLLVM::visit(Probe &probe)
   if (probetype(attach_point->provider) == ProbeType::usdt)
     probe.need_expansion = true;
 
+  bool generated = false;
   current_attach_point_ = attach_point;
 
   /*
@@ -2236,6 +2244,7 @@ void CodegenLLVM::visit(Probe &probe)
     // build a single BPF program pre-wildcards
     probefull_ = probe.name();
     generateProbe(probe, probefull_, probefull_, func_type, false);
+    generated = true;
   } else {
     /*
      * Build a separate BPF program for each wildcard match.
@@ -2279,6 +2288,7 @@ void CodegenLLVM::visit(Probe &probe)
       {
         reset_ids();
         std::string match = m;
+        generated = true;
 
         // USDT probes must specify a target binary path, a provider,
         // and a function name.
@@ -2360,8 +2370,14 @@ void CodegenLLVM::visit(Probe &probe)
         }
       }
     }
+
+    if (!generated)
+      generateProbe(
+          probe, "dummy", "dummy", func_type, false, std::nullopt, true);
   }
-  bpftrace_.add_probe(probe);
+
+  if (generated)
+    bpftrace_.add_probe(probe);
   current_attach_point_ = nullptr;
 }
 

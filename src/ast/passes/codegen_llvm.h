@@ -108,12 +108,18 @@ private:
     std::function<void()> deleter_;
   };
 
+  // Generate a probe for `current_attach_point_`
+  //
+  // If `dummy` is passed, then code is generated but immediately thrown away.
+  // This is used to progress state (eg. asyncids) in this class instance for
+  // invalid probes that still need to be visited.
   void generateProbe(Probe &probe,
                      const std::string &full_func_id,
                      const std::string &section_name,
                      FunctionType *func_type,
                      bool expansion,
-                     std::optional<int> usdt_location_index = std::nullopt);
+                     std::optional<int> usdt_location_index = std::nullopt,
+                     bool dummy = false);
 
   [[nodiscard]] ScopedExprDeleter accept(Node *node);
   [[nodiscard]] std::tuple<Value *, ScopedExprDeleter> getMapKey(Map &map);
