@@ -38,3 +38,9 @@ NAME single_arg_wildcard_listing_tracepoint
 RUN {{BPFTRACE}} -l "*sched_switch*"
 EXPECT tracepoint:sched:sched_switch
 TIMEOUT 1
+
+# https://github.com/iovisor/bpftrace/issues/1952
+NAME async_id_invalid_probe_expansion
+RUN {{BPFTRACE}} -e 'kprobe:zzzzz { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }'
+EXPECT _success_
+TIMEOUT 1
