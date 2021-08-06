@@ -75,6 +75,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  libdw (DWARF support): "
+#ifdef HAVE_LIBDW
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
 
   return buf.str();
 }
