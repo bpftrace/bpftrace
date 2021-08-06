@@ -108,6 +108,7 @@ class Utils(object):
         bpffeature["iter:task"] = output.find("iter:task: yes") != -1
         bpffeature["iter:task_file"] = output.find("iter:task_file: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
+        bpffeature["dwarf"] = output.find("libdw (DWARF support): yes") != -1
         return bpffeature
 
     @staticmethod
