@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "bpftrace.h"
+#include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "utils.h"
@@ -17,7 +18,7 @@
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <bcc/bcc_elf.h>
-#include <linux/elf.h>
+#include <elf.h>
 #endif
 
 namespace bpftrace {
@@ -421,6 +422,30 @@ FuncParamLists ProbeMatcher::get_iters_params(
   return params;
 }
 
+FuncParamLists ProbeMatcher::get_uprobe_params(
+    const std::set<std::string>& uprobes)
+{
+  FuncParamLists params;
+  static std::set<std::string> warned_paths;
+
+  for (auto& match : uprobes)
+  {
+    std::string fun = match;
+    std::string path = erase_prefix(fun);
+    auto dwarf = Dwarf::GetFromBinary(path);
+    if (dwarf)
+      params.emplace(match, dwarf->get_function_params(fun));
+    else
+    {
+      if (warned_paths.insert(path).second)
+        LOG(WARNING) << "No DWARF found for \"" << path << "\""
+                     << ", cannot show parameter info";
+    }
+  }
+
+  return params;
+}
+
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
   for (auto* probe : *prog->probes)
@@ -439,6 +464,8 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = bpftrace_->btf_.get_params(matches);
         else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
+        else if (probe_type == ProbeType::uprobe)
+          param_lists = get_uprobe_params(matches);
       }
 
       for (auto& match : matches)

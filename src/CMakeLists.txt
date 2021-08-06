@@ -23,6 +23,7 @@ add_library(libbpftrace
   clang_parser.cpp
   disasm.cpp
   driver.cpp
+  dwarf_parser.cpp
   imap.cpp
   lockdown.cpp
   log.cpp
