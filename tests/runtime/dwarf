@@ -1,0 +1,17 @@
+NAME list uprobe args - basic type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:main'
+EXPECT int argc
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME list uprobe args - pointer type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:function1'
+EXPECT int\* n
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+
+NAME list uprobe args - pointer type
+RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:function2'
+EXPECT struct Foo\* foo1
+REQUIRES_FEATURE dwarf
+TIMEOUT 5

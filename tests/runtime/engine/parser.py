@@ -117,7 +117,7 @@ class TestParser(object):
             elif item_name == 'REQUIRES_FEATURE':
                 features = {"loop", "btf", "probe_read_kernel", "dpath",
                             "uprobe_refcount", "signal", "iter:task",
-                            "iter:task_file", "libpath_resolv"}
+                            "iter:task_file", "libpath_resolv", "dwarf"}
 
                 for f in line.split(" "):
                     f = f.strip()
