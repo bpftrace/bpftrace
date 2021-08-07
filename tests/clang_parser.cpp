@@ -1,5 +1,5 @@
 #include "clang_parser.h"
-#include "ast/field_analyser.h"
+#include "ast/passes/field_analyser.h"
 #include "bpftrace.h"
 #include "driver.h"
 #include "struct.h"

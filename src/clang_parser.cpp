@@ -7,7 +7,7 @@
 #include "llvm/Config/llvm-config.h"
 
 #include "ast/ast.h"
-#include "ast/field_analyser.h"
+#include "ast/passes/field_analyser.h"
 #include "btf.h"
 #include "clang_parser.h"
 #include "headers.h"

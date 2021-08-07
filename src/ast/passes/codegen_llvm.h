@@ -12,10 +12,10 @@
 #include "map.h"
 #include "visitors.h"
 
-#include <llvm/Support/raw_os_ostream.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
+#include <llvm/Support/raw_os_ostream.h>
 
 namespace bpftrace {
 namespace ast {

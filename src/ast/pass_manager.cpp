@@ -2,7 +2,7 @@
 #include <pass_manager.h>
 
 #include "bpftrace.h"
-#include "printer.h"
+#include "passes/printer.h"
 
 namespace bpftrace {
 namespace ast {

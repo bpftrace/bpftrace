@@ -1,5 +1,5 @@
-#include "ast/semantic_analyser.h"
-#include "ast/field_analyser.h"
+#include "ast/passes/semantic_analyser.h"
+#include "ast/passes/field_analyser.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "clang_parser.h"

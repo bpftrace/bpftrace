@@ -1,10 +1,12 @@
 #include "ast/bpforc/bpforc.h"
-#include "ast/field_analyser.h"
-#include "ast/resource_analyser.h"
-#include "ast/semantic_analyser.h"
+
+#include "ast/passes/codegen_llvm.h"
+#include "ast/passes/field_analyser.h"
+#include "ast/passes/resource_analyser.h"
+#include "ast/passes/semantic_analyser.h"
+
 #include "bpftrace.h"
 #include "clang_parser.h"
-#include "codegen_llvm.h"
 #include "driver.h"
 #include "fake_map.h"
 #include "mocks.h"
