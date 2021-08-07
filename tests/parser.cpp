@@ -1,9 +1,9 @@
 #include <limits.h>
 #include <sstream>
 
-#include "gtest/gtest.h"
+#include "ast/passes/printer.h"
 #include "driver.h"
-#include "printer.h"
+#include "gtest/gtest.h"
 
 namespace bpftrace {
 namespace test {

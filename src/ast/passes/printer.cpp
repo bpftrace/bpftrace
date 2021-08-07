@@ -3,8 +3,8 @@
 #include <regex>
 #include <sstream>
 
-#include "printer.h"
 #include "ast.h"
+#include "printer.h"
 
 namespace bpftrace {
 namespace ast {

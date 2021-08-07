@@ -1,13 +1,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "ast/bpforc/bpforc.h"
-#include "ast/semantic_analyser.h"
-#include "bpftrace.h"
-#include "clang_parser.h"
-#include "codegen_llvm.h"
-#include "driver.h"
-
 #include "common.h"
 
 namespace bpftrace {

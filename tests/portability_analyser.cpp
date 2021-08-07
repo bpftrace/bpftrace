@@ -1,9 +1,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "ast/field_analyser.h"
-#include "ast/portability_analyser.h"
-#include "ast/semantic_analyser.h"
+#include "ast/passes/field_analyser.h"
+#include "ast/passes/portability_analyser.h"
+#include "ast/passes/semantic_analyser.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
