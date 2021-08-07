@@ -23,6 +23,7 @@
 #endif
 
 #include <optional>
+#include <unordered_map>
 
 namespace bpftrace {
 
