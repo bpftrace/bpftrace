@@ -18,7 +18,9 @@
 
 #include <llvm-c/Transforms/IPO.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/IR/Metadata.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
@@ -2056,6 +2058,9 @@ void CodegenLLVM::visit(Jump &jump)
 
 void CodegenLLVM::visit(While &while_block)
 {
+  if (!loop_metadata_)
+    loop_metadata_ = createLoopMetadata();
+
   Function *parent = b_.GetInsertBlock()->getParent();
   BasicBlock *while_cond = BasicBlock::Create(module_->getContext(),
                                               "while_cond",
@@ -2075,7 +2080,8 @@ void CodegenLLVM::visit(While &while_block)
   auto scoped_del = accept(while_block.cond);
   Value *zero_value = Constant::getNullValue(expr_->getType());
   auto *cond = b_.CreateICmpNE(expr_, zero_value, "true_cond");
-  b_.CreateCondBr(cond, while_body, while_end);
+  Instruction *loop_hdr = b_.CreateCondBr(cond, while_body, while_end);
+  loop_hdr->setMetadata(LLVMContext::MD_loop, loop_metadata_);
 
   b_.SetInsertPoint(while_body);
   for (Statement *stmt : *while_block.stmts)
@@ -2740,6 +2746,22 @@ Function *CodegenLLVM::createLinearFunction()
 
   b_.restoreIP(ip);
   return module_->getFunction("linear");
+}
+
+MDNode *CodegenLLVM::createLoopMetadata()
+{
+  // Create metadata to disable loop unrolling
+  //
+  // For legacy reasons, the first item of a loop metadata node must be
+  // a self-reference. See https://llvm.org/docs/LangRef.html#llvm-loop
+  LLVMContext &context = orc_->getContext();
+  MDNode *unroll_disable = MDNode::get(
+      context, MDString::get(context, "llvm.loop.unroll.disable"));
+  MDNode *loopid = MDNode::getDistinct(context,
+                                       { unroll_disable, unroll_disable });
+  loopid->replaceOperandWith(0, loopid);
+
+  return loopid;
 }
 
 void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_args,

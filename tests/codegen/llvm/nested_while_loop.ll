@@ -27,7 +27,7 @@ while_cond:                                       ; preds = %while_end3, %entry
   %4 = icmp sle i64 %3, 100
   %5 = zext i1 %4 to i64
   %true_cond = icmp ne i64 %5, 0
-  br i1 %true_cond, label %while_body, label %while_end
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !0
 
 while_body:                                       ; preds = %while_cond
   store i64 0, i64* %"$j", align 8
@@ -44,7 +44,7 @@ while_cond1:                                      ; preds = %lookup_merge, %whil
   %9 = icmp sle i64 %8, 100
   %10 = zext i1 %9 to i64
   %true_cond4 = icmp ne i64 %10, 0
-  br i1 %true_cond4, label %while_body2, label %while_end3
+  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !0
 
 while_body2:                                      ; preds = %while_cond1
   %11 = bitcast i64* %"@_key" to i8*
@@ -98,3 +98,6 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.disable"}
