@@ -22,7 +22,7 @@ while_cond:                                       ; preds = %while_body, %entry
   %3 = icmp sle i64 %2, 150
   %4 = zext i1 %3 to i64
   %true_cond = icmp ne i64 %4, 0
-  br i1 %true_cond, label %while_body, label %while_end
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !0
 
 while_body:                                       ; preds = %while_cond
   %5 = load i64, i64* %"$a", align 8
@@ -54,3 +54,6 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.disable"}
