@@ -23,6 +23,8 @@ and this project adheres to
   - [#1881](https://github.com/iovisor/bpftrace/pull/1881)
 
 #### Changed
+- Prevent LLVM from unrolling loops
+  - [#1967](https://github.com/iovisor/bpftrace/pull/1967)
 
 #### Deprecated
 
