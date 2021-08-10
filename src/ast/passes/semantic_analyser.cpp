@@ -2418,8 +2418,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       {
         LOG(WARNING, ap.loc, out_)
             << ap.func
-            << " is not traceable (probably it is inlined or marked as "
-               "\"notrace\"), attaching to it will likely fail";
+            << " is not traceable (either non-existing, inlined, or marked as "
+               "\"notrace\"); attaching to it will likely fail";
       }
     }
   }
