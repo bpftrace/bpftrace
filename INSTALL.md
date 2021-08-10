@@ -260,7 +260,10 @@ sudo apt-get install -y \
   llvm-7-dev \
   llvm-7-runtime \
   libclang-7-dev \
-  clang-7
+  clang-7 \
+  libgtest-dev \
+  libgmock-dev \
+  asciidoctor
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
 cmake -DCMAKE_BUILD_TYPE=Release ..
