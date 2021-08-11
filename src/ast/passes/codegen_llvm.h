@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <iostream>
 #include <optional>
 #include <ostream>
@@ -176,6 +177,12 @@ private:
                                const std::string &temp_name);
 
   void createIncDec(Unop &unop);
+
+  // Return a lambda that has captured-by-value CodegenLLVM's async id state
+  // (ie `printf_id_`, `seq_printf_id_`, etc.).  Running the returned lambda
+  // will restore `CodegenLLVM`s async id state back to when this function was
+  // first called.
+  std::function<void()> create_reset_ids();
 
   Node *root_ = nullptr;
 

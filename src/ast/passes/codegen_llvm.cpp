@@ -2251,27 +2251,7 @@ void CodegenLLVM::visit(Probe &probe)
      * We begin by saving state that gets changed by the codegen pass, so we
      * can restore it for the next pass (printf_id_, time_id_).
      */
-    int starting_printf_id = printf_id_;
-    int starting_cat_id = cat_id_;
-    int starting_system_id = system_id_;
-    int starting_time_id = time_id_;
-    int starting_strftime_id = strftime_id_;
-    int starting_join_id = join_id_;
-    int starting_helper_error_id = b_.helper_error_id_;
-    int starting_non_map_print_id = non_map_print_id_;
-    int starting_seq_printf_id = seq_printf_id_;
-
-    auto reset_ids = [&]() {
-      printf_id_ = starting_printf_id;
-      cat_id_ = starting_cat_id;
-      system_id_ = starting_system_id;
-      time_id_ = starting_time_id;
-      strftime_id_ = starting_strftime_id;
-      join_id_ = starting_join_id;
-      b_.helper_error_id_ = starting_helper_error_id;
-      non_map_print_id_ = starting_non_map_print_id;
-      seq_printf_id_ = starting_seq_printf_id;
-    };
+    auto reset_ids = create_reset_ids();
 
     for (auto attach_point : *probe.attach_points) {
       current_attach_point_ = attach_point;
@@ -3286,6 +3266,30 @@ void CodegenLLVM::createIncDec(Unop &unop)
   {
     LOG(FATAL) << "invalid expression passed to " << opstr(unop);
   }
+}
+
+std::function<void()> CodegenLLVM::create_reset_ids()
+{
+  return [this,
+          starting_printf_id = this->printf_id_,
+          starting_cat_id = this->cat_id_,
+          starting_system_id = this->system_id_,
+          starting_time_id = this->time_id_,
+          starting_strftime_id = this->strftime_id_,
+          starting_join_id = this->join_id_,
+          starting_helper_error_id = this->b_.helper_error_id_,
+          starting_non_map_print_id = this->non_map_print_id_,
+          starting_seq_printf_id = this->seq_printf_id_] {
+    this->printf_id_ = starting_printf_id;
+    this->cat_id_ = starting_cat_id;
+    this->system_id_ = starting_system_id;
+    this->time_id_ = starting_time_id;
+    this->strftime_id_ = starting_strftime_id;
+    this->join_id_ = starting_join_id;
+    this->b_.helper_error_id_ = starting_helper_error_id;
+    this->non_map_print_id_ = starting_non_map_print_id;
+    this->seq_printf_id_ = starting_seq_printf_id;
+  };
 }
 
 } // namespace ast
