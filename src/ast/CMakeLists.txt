@@ -25,6 +25,10 @@ if (HAVE_BCC_KFUNC)
   target_compile_definitions(ast PRIVATE HAVE_BCC_KFUNC)
 endif(HAVE_BCC_KFUNC)
 
+if (HAVE_BCC_WHICH_SO)
+  target_compile_definitions(ast PRIVATE HAVE_BCC_WHICH_SO)
+endif (HAVE_BCC_WHICH_SO)
+
 if (STATIC_LINKING)
   set(clang_libs
       libclang.a

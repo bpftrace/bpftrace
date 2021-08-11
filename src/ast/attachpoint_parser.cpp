@@ -11,6 +11,10 @@
 #include "log.h"
 #include "types.h"
 
+#ifdef HAVE_BCC_WHICH_SO
+#include <bcc/bcc_proc.h>
+#endif
+
 namespace bpftrace {
 namespace ast {
 
@@ -358,13 +362,32 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     return INVALID;
   }
 
-  if (bpftrace_.pid() > 0)
+  ap_->target = "";
+
+#ifdef HAVE_BCC_WHICH_SO
+  if (!has_wildcard(parts_[1]) && parts_[1].find("lib") == 0)
   {
-    ap_->target = get_pid_exe(bpftrace_.pid());
-    ap_->target = path_for_pid_mountns(bpftrace_.pid(), ap_->target);
+    // Automatic resolution of shared library paths.
+    // If the target has form "libXXX" then we use BCC to find the correct path
+    // to the given library as it may differ across systems.
+    auto libname = parts_[1].substr(3);
+    const char *lib_path = bcc_procutils_which_so(libname.c_str(),
+                                                  bpftrace_.pid());
+    if (lib_path)
+      ap_->target = lib_path;
   }
-  else
-    ap_->target = parts_[1];
+#endif
+
+  if (ap_->target.empty())
+  {
+    if (bpftrace_.pid() > 0)
+    {
+      ap_->target = get_pid_exe(bpftrace_.pid());
+      ap_->target = path_for_pid_mountns(bpftrace_.pid(), ap_->target);
+    }
+    else
+      ap_->target = parts_[1];
+  }
 
   // Handle uprobe:/lib/asdf:func+0x100 case
   auto plus_count = std::count(parts_[2].cbegin(), parts_[2].cend(), '+');

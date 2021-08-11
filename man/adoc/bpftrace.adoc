@@ -2252,6 +2252,15 @@ snmpd /proc/net/dev
 `uprobe` s or user-space probes are the user-space equivalent of `kprobe` s.
 The same limitations that apply <<probes-kprobe>> also apply to `uprobe` s and `uretprobe` s.
 
+When tracing libraries, it is sufficient to specify the library name instead of
+a full path. The path will be then automatically resolved using `/etc/ld.so.cache`:
+
+----
+# bpftrace -e 'uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }'
+Allocated 4 bytes
+...
+----
+
 It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
 This can cause issues with languages that have their own runtime like Golang:
 

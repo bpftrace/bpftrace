@@ -51,6 +51,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  bcc library path resolution: "
+#ifdef HAVE_BCC_WHICH_SO
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
   buf << "  libbpf: "
 #ifdef HAVE_LIBBPF
       << "yes" << std::endl;
