@@ -37,6 +37,8 @@ and this project adheres to
   - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
 - Fix strncmp() to check for NUL terminator
   - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
+- Fix unroll() with async calls
+  - [#1972](https://github.com/iovisor/bpftrace/pull/1972)
 
 #### Tools
 
