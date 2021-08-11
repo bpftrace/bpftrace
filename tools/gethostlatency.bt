@@ -26,17 +26,17 @@ BEGIN
 	    "HOST");
 }
 
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:getaddrinfo,
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname,
-uprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname2
+uprobe:libc:getaddrinfo,
+uprobe:libc:gethostbyname,
+uprobe:libc:gethostbyname2
 {
 	@start[tid] = nsecs;
 	@name[tid] = arg0;
 }
 
-uretprobe:/lib/x86_64-linux-gnu/libc.so.6:getaddrinfo,
-uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname,
-uretprobe:/lib/x86_64-linux-gnu/libc.so.6:gethostbyname2
+uretprobe:libc:getaddrinfo,
+uretprobe:libc:gethostbyname,
+uretprobe:libc:gethostbyname2
 /@start[tid]/
 {
 	$latms = (nsecs - @start[tid]) / 1e6;
