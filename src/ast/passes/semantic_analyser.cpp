@@ -1895,8 +1895,7 @@ void SemanticAnalyser::visit(Unroll &unroll)
     LOG(ERROR, unroll.loc, err_) << "unroll minimum value is 1";
   }
 
-  for (int i = 0; i < unroll.var; i++)
-    accept_statements(unroll.stmts);
+  accept_statements(unroll.stmts);
 }
 
 void SemanticAnalyser::visit(Jump &jump)
