@@ -2006,10 +2006,16 @@ void CodegenLLVM::visit(If &if_block)
 void CodegenLLVM::visit(Unroll &unroll)
 {
   for (int i=0; i < unroll.var; i++) {
+    // Make sure to save/restore async ID state b/c we could be processing
+    // the same async calls multiple times.
+    auto reset_ids = create_reset_ids();
+
     for (Statement *stmt : *unroll.stmts)
     {
       auto scoped_del = accept(stmt);
     }
+
+    reset_ids();
   }
 }
 
