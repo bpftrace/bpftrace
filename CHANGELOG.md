@@ -21,6 +21,9 @@ and this project adheres to
   - [#2166](https://github.com/iovisor/bpftrace/pull/2166)
 
 #### Changed
+- Use auto-resolution of library paths for tools
+  - [#2181](https://github.com/iovisor/bpftrace/pull/2181)
+
 #### Deprecated
 #### Removed
 #### Fixed
