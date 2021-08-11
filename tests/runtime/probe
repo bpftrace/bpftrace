@@ -86,6 +86,13 @@ RUN {{BPFTRACE}} -e 'uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}'
 EXPECT Could not resolve address: /bin/bash:0xa
 TIMEOUT 5
 
+NAME uprobe_library
+RUN {{BPFTRACE}} -e 'uprobe:libc:fread { printf("size: %d\n", arg1); exit(); }'
+EXPECT size: [0-9]+
+TIMEOUT 5
+AFTER ./testprogs/uprobe_library
+REQUIRES_FEATURE libpath_resolv
+
 NAME uprobe_order
 RUN {{BPFTRACE}} runtime/scripts/uprobe_order.bt
 EXPECT first second
