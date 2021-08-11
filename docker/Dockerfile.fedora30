@@ -7,6 +7,7 @@ RUN dnf install -y \
     clang-devel \
     cmake \
     elfutils-libelf-devel \
+    elfutils-libs \
     flex \
     gcc-c++ \
     git \
