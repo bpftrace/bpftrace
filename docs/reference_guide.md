@@ -1108,6 +1108,14 @@ Attaching 1 probe...
 WARNING: could not determine instruction boundary for uprobe:bin:4377 (binary appears stripped). Misaligned probes can lead to tracee crashes!
 ```
 
+When tracing libraries, it is sufficient to specify the library name instead of
+a full path. The path will be then automatically resolved using `/etc/ld.so.cache`.
+```
+# bpftrace -e 'uprobe:libc:malloc { printf("Allocated %d bytes\n", arg0); }'
+Allocated 4 bytes
+...
+```
+
 Examples in situ:
 [(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
 [(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)

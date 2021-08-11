@@ -135,6 +135,7 @@ check_symbol_exists(bcc_create_map "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BC
 check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
 check_symbol_exists(bpf_attach_kfunc "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_KFUNC)
 check_symbol_exists(bcc_usdt_addsem_probe "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h" HAVE_BCC_USDT_ADDSEM)
+check_symbol_exists(bcc_procutils_which_so "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_proc.h" HAVE_BCC_WHICH_SO)
 
 # bcc_prog_load_xattr needs struct bpf_load_program_attr,
 # which is defined in libbpf
@@ -217,6 +218,10 @@ endif(HAVE_BCC_ELF_FOREACH_SYM)
 if(HAVE_BCC_USDT_ADDSEM)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BCC_USDT_ADDSEM)
 endif(HAVE_BCC_USDT_ADDSEM)
+
+if(HAVE_BCC_WHICH_SO)
+  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BCC_WHICH_SO)
+endif(HAVE_BCC_WHICH_SO)
 
 if(LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
