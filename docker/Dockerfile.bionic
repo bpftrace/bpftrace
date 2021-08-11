@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install -y \
       zlib1g-dev \
       libbcc \
       libcereal-dev \
+      libdw-dev \
       clang-${LLVM_VERSION} \
       libclang-${LLVM_VERSION}-dev \
       libclang-common-${LLVM_VERSION}-dev \
