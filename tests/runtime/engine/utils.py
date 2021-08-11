@@ -107,6 +107,7 @@ class Utils(object):
         bpffeature["signal"] = output.find("send_signal: yes") != -1
         bpffeature["iter:task"] = output.find("iter:task: yes") != -1
         bpffeature["iter:task_file"] = output.find("iter:task_file: yes") != -1
+        bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
         return bpffeature
 
     @staticmethod
