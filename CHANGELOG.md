@@ -21,6 +21,8 @@ and this project adheres to
   - [#1938](https://github.com/iovisor/bpftrace/pull/1938)
 - Add C like pointer arithmetic
   - [#1881](https://github.com/iovisor/bpftrace/pull/1881)
+- Automatic resolution of library paths for uprobes
+  - [#1971](https://github.com/iovisor/bpftrace/pull/1971)
 
 #### Changed
 - Prevent LLVM from unrolling loops
