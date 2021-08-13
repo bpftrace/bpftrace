@@ -35,6 +35,8 @@ and this project adheres to
   - [#1885](https://github.com/iovisor/bpftrace/pull/1885)
 - Fix strncmp() when N is bigger than on-stack buffer
   - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
+- Fix strncmp() to check for NUL terminator
+  - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
 
 #### Tools
 

@@ -740,6 +740,9 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
 
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "strcmp.done",
+                                        parent);
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
   // Clamp reads to within the on-stack buffer -- verifier doesn't like
   // us going out of bounds
@@ -747,9 +750,13 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
 
   CreateStore(getInt1(!inverse), store);
 
+  Value *null_byte = getInt8(0);
   const char *c_str = str.c_str();
   for (size_t i = 0; i < n; i++)
   {
+    BasicBlock *check = BasicBlock::Create(module_.getContext(),
+                                           "strcmp.check",
+                                           parent);
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
                                              "strcmp.loop",
                                              parent);
@@ -757,11 +764,20 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
     auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
     Value *l = CreateLoad(getInt8Ty(), ptr);
     Value *r = getInt8(c_str[i]);
+
+    Value *lhs_cmp_null = CreateICmpEQ(l, null_byte, "strcmp.lhs_cmp_null");
+    Value *rhs_cmp_null = CreateICmpEQ(r, null_byte, "strcmp.rhs_cmp_null");
+    Value *seen_null = CreateOr(lhs_cmp_null, rhs_cmp_null);
+    CreateCondBr(seen_null, done, check);
+
+    SetInsertPoint(check);
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, char_eq);
     SetInsertPoint(char_eq);
   }
 
+  CreateBr(done);
+  SetInsertPoint(done);
   CreateStore(getInt1(inverse), store);
   CreateBr(str_ne);
 
