@@ -33,6 +33,8 @@ and this project adheres to
 #### Fixed
 - Fix memory leaks in struct types
   - [#1885](https://github.com/iovisor/bpftrace/pull/1885)
+- Fix strncmp() when N is bigger than on-stack buffer
+  - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
 
 #### Tools
 
