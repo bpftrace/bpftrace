@@ -741,26 +741,25 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
+  // Clamp reads to within the on-stack buffer -- verifier doesn't like
+  // us going out of bounds
+  n = std::min(n, valp->getElementType()->getArrayNumElements());
 
   CreateStore(getInt1(!inverse), store);
 
-  // If the size of array is smaller than n, the condition is always false
-  if (valp->getElementType()->getArrayNumElements() >= n)
+  const char *c_str = str.c_str();
+  for (size_t i = 0; i < n; i++)
   {
-    const char *c_str = str.c_str();
-    for (size_t i = 0; i < n; i++)
-    {
-      BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
-                                               "strcmp.loop",
-                                               parent);
+    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
+                                             "strcmp.loop",
+                                             parent);
 
-      auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
-      Value *l = CreateLoad(getInt8Ty(), ptr);
-      Value *r = getInt8(c_str[i]);
-      Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
-      CreateCondBr(cmp, str_ne, char_eq);
-      SetInsertPoint(char_eq);
-    }
+    auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
+    Value *l = CreateLoad(getInt8Ty(), ptr);
+    Value *r = getInt8(c_str[i]);
+    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
+    CreateCondBr(cmp, str_ne, char_eq);
+    SetInsertPoint(char_eq);
   }
 
   CreateStore(getInt1(inverse), store);

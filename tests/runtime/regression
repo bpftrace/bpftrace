@@ -44,3 +44,8 @@ NAME async_id_invalid_probe_expansion
 RUN {{BPFTRACE}} -e 'kprobe:zzzzz { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }'
 EXPECT _success_
 TIMEOUT 1
+
+NAME strncmp_n_longer_than_buffer
+RUN {{BPFTRACE}} -e 'BEGIN { printf("_%d_\n", strncmp("wow", comm, 17)); exit() }'
+EXPECT _1_
+TIMEOUT 1
