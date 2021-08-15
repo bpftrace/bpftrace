@@ -32,31 +32,6 @@ jobs:
           DISTRO: ubuntu-glibc
           CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
           VENDOR_GTEST: ON
-        - TYPE: Release
-          NAME: vanilla_llvm+clang+glibc2.27
-          LLVM_VERSION: 8
-          STATIC_LINKING: ON
-          STATIC_LIBC: OFF
-          EMBED_BUILD_LLVM: OFF
-          EMBED_USE_LLVM: ON
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size
-          BASE: bionic
-          DISTRO: ubuntu-glibc
-          VENDOR_GTEST: ON
-        - TYPE: Release
-          NAME: vanilla_llvm+clang+glibc2.23
-          LLVM_VERSION: 8
-          STATIC_LINKING: ON
-          STATIC_LIBC: OFF
-          EMBED_BUILD_LLVM: OFF
-          EMBED_USE_LLVM: ON
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: builtin.cgroup,probe.kprobe_offset_fail_size,other.string compare map lookup
-          BASE: xenial
-          DISTRO: ubuntu-glibc
-          CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
-          VENDOR_GTEST: ON
         - TYPE: Debug
           NAME: alpine
           LLVM_VERSION: 9
