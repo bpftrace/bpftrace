@@ -123,14 +123,23 @@ T to_int(const std::string &num, int base)
 
   std::variant<T, std::string> res;
 
-  auto pos = n.find_first_of("eE");
-  if (pos != std::string::npos)
+  // If hex
+  if ((n.rfind("0x", 0) == 0) || (n.rfind("0X", 0) == 0))
   {
-    res = _parse_exp<T>(n.substr(0, pos), n.substr(pos + 1, std::string::npos));
+    res = _parse_int<T>(n, base);
   }
   else
   {
-    res = _parse_int<T>(n, base);
+    auto pos = n.find_first_of("eE");
+    if (pos != std::string::npos)
+    {
+      res = _parse_exp<T>(n.substr(0, pos),
+                          n.substr(pos + 1, std::string::npos));
+    }
+    else
+    {
+      res = _parse_int<T>(n, base);
+    }
   }
 
   if (std::string *err = std::get_if<std::string>(&res))

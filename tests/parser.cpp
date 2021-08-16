@@ -1733,6 +1733,16 @@ TEST(Parser, int_notation)
        "Program\n kprobe:f\n  call: print\n   int: 10000000000\n");
   test("k:f { print(123_456_789_0); }",
        "Program\n kprobe:f\n  call: print\n   int: 1234567890\n");
+  test("k:f { print(0xe5); }",
+       "Program\n kprobe:f\n  call: print\n   int: 229\n");
+  test("k:f { print(0x5e5); }",
+       "Program\n kprobe:f\n  call: print\n   int: 1509\n");
+  test("k:f { print(0xeeee); }",
+       "Program\n kprobe:f\n  call: print\n   int: 61166\n");
+  test("k:f { print(0777); }",
+       "Program\n kprobe:f\n  call: print\n   int: 511\n");
+  test("k:f { print(0123); }",
+       "Program\n kprobe:f\n  call: print\n   int: 83\n");
 
   test("k:f { print(1_000u); }",
        "Program\n kprobe:f\n  call: print\n   int: 1000\n");
