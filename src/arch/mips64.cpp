@@ -161,5 +161,11 @@ std::string name()
   return std::string("mips64");
 }
 
+std::vector<std::string> invalid_watchpoint_modes()
+{
+  throw std::runtime_error(
+      "Watchpoints are not supported on this architecture");
+}
+
 } // namespace arch
 } // namespace bpftrace
