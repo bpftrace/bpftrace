@@ -93,6 +93,16 @@ RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) != str($2)) { printf("I got %s\n", str(
 EXPECT not equal
 TIMEOUT 5
 
+NAME positional string compare via variable - equal
+RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello")) { printf("I got hello\n");} else { printf("not equal\n");} exit();}' "hello"
+EXPECT I got hello
+TIMEOUT 5
+
+NAME positional string compare via variable - not equal
+RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello")) { printf("I got hello\n");} else { printf("not equal\n");} exit();}' "hell"
+EXPECT not equal
+TIMEOUT 5
+
 NAME positional attachpoint
 RUN {{BPFTRACE}} -e 'i:ms:$1 { printf("hello world\n"); exit(); }' 1
 EXPECT hello world

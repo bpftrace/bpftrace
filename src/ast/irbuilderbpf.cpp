@@ -711,103 +711,9 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   return result;
 }
 
-Value *IRBuilderBPF::CreateStrcmp(Value *ctx,
-                                  Value *val,
-                                  AddrSpace as,
-                                  std::string str,
-                                  const location &loc,
-                                  bool inverse)
-{
-  assert(ctx && ctx->getType() == getInt8PtrTy());
-  auto cmpAmount = strlen(str.c_str()) + 1;
-  return CreateStrncmp(ctx, val, as, str, cmpAmount, loc, inverse);
-}
-
-Value *IRBuilderBPF::CreateStrncmp(Value *ctx __attribute__((unused)),
-                                   Value *val,
-                                   AddrSpace as __attribute__((unused)),
-                                   std::string str,
-                                   uint64_t n,
-                                   const location &loc __attribute__((unused)),
-                                   bool inverse)
-{
-  assert(ctx && ctx->getType() == getInt8PtrTy());
-  PointerType *valp = cast<PointerType>(val->getType());
-#ifndef NDEBUG
-  assert(valp->getElementType()->isArrayTy() &&
-         valp->getElementType()->getArrayElementType() == getInt8Ty());
-#endif
-
-  Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *str_ne = BasicBlock::Create(module_.getContext(), "strcmp.false", parent);
-  BasicBlock *done = BasicBlock::Create(module_.getContext(),
-                                        "strcmp.done",
-                                        parent);
-  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
-  // Clamp reads to within the on-stack buffer -- verifier doesn't like
-  // us going out of bounds
-  n = std::min(n, valp->getElementType()->getArrayNumElements());
-
-  CreateStore(getInt1(!inverse), store);
-
-  Value *null_byte = getInt8(0);
-  const char *c_str = str.c_str();
-  for (size_t i = 0; i < n; i++)
-  {
-    BasicBlock *check = BasicBlock::Create(module_.getContext(),
-                                           "strcmp.check",
-                                           parent);
-    BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
-                                             "strcmp.loop",
-                                             parent);
-
-    auto *ptr = CreateGEP(val, { getInt32(0), getInt32(i) });
-    Value *l = CreateLoad(getInt8Ty(), ptr);
-    Value *r = getInt8(c_str[i]);
-
-    Value *lhs_cmp_null = CreateICmpEQ(l, null_byte, "strcmp.lhs_cmp_null");
-    Value *rhs_cmp_null = CreateICmpEQ(r, null_byte, "strcmp.rhs_cmp_null");
-    Value *seen_null = CreateOr(lhs_cmp_null, rhs_cmp_null);
-    CreateCondBr(seen_null, done, check);
-
-    SetInsertPoint(check);
-    Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
-    CreateCondBr(cmp, str_ne, char_eq);
-    SetInsertPoint(char_eq);
-  }
-
-  CreateBr(done);
-  SetInsertPoint(done);
-  CreateStore(getInt1(inverse), store);
-  CreateBr(str_ne);
-
-  SetInsertPoint(str_ne);
-  Value *result = CreateLoad(store);
-  CreateLifetimeEnd(store);
-  result = CreateIntCast(result, getInt64Ty(), false);
-  return result;
-}
-
-Value *IRBuilderBPF::CreateStrcmp(Value *ctx,
-                                  Value *val1,
-                                  AddrSpace as1,
-                                  Value *val2,
-                                  AddrSpace as2,
-                                  const location &loc,
-                                  bool inverse)
-{
-  assert(ctx && ctx->getType() == getInt8PtrTy());
-  return CreateStrncmp(
-      ctx, val1, as1, val2, as2, bpftrace_.strlen_, loc, inverse);
-}
-
-Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
-                                   Value *val1,
-                                   AddrSpace as1,
+Value *IRBuilderBPF::CreateStrncmp(Value *val1,
                                    Value *val2,
-                                   AddrSpace as2,
                                    uint64_t n,
-                                   const location &loc,
                                    bool inverse)
 {
   /*
@@ -832,15 +738,38 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
      }
   */
 
+  // Check if the compared strings are literals.
+  // If so, we can avoid storing the literal in memory.
+  std::optional<std::string> literal1;
+  if (auto constString1 = dyn_cast<ConstantDataArray>(val1))
+    literal1 = constString1->getAsString();
+  else if (isa<ConstantAggregateZero>(val1))
+    literal1 = "";
+  else
+    literal1 = std::nullopt;
+
+  std::optional<std::string> literal2;
+  if (auto constString2 = dyn_cast<ConstantDataArray>(val2))
+    literal2 = constString2->getAsString();
+  else if (isa<ConstantAggregateZero>(val2))
+    literal2 = "";
+  else
+    literal2 = std::nullopt;
+
 #ifndef NDEBUG
-  PointerType *val1p = cast<PointerType>(val1->getType());
-  PointerType *val2p = cast<PointerType>(val2->getType());
+  if (!literal1)
+  {
+    PointerType *val1p = cast<PointerType>(val1->getType());
+    assert(val1p->getElementType()->isArrayTy() &&
+           val1p->getElementType()->getArrayElementType() == getInt8Ty());
+  }
+  if (!literal2)
+  {
+    PointerType *val2p = cast<PointerType>(val2->getType());
 
-  assert(val1p->getElementType()->isArrayTy() &&
-         val1p->getElementType()->getArrayElementType() == getInt8Ty());
-
-  assert(val2p->getElementType()->isArrayTy() &&
-         val2p->getElementType()->getArrayElementType() == getInt8Ty());
+    assert(val2p->getElementType()->isArrayTy() &&
+           val2p->getElementType()->getArrayElementType() == getInt8Ty());
+  }
 #endif
 
   Function *parent = GetInsertBlock()->getParent();
@@ -855,9 +784,6 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
   CreateStore(getInt1(!inverse), store);
 
   Value *null_byte = getInt8(0);
-
-  AllocaInst *val_l = CreateAllocaBPF(getInt8Ty(), "strcmp.char_l");
-  AllocaInst *val_r = CreateAllocaBPF(getInt8Ty(), "strcmp.char_r");
   for (size_t i = 0; i < n; i++)
   {
     BasicBlock *char_eq = BasicBlock::Create(module_.getContext(),
@@ -867,13 +793,23 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
                                                      "strcmp.loop_null_cmp",
                                                      parent);
 
-    auto *ptr1 = CreateGEP(val1, { getInt32(0), getInt32(i) });
-    CreateProbeRead(ctx, val_l, 1, ptr1, as1, loc);
-    Value *l = CreateLoad(getInt8Ty(), val_l);
+    Value *l;
+    if (literal1)
+      l = getInt8(literal1->c_str()[i]);
+    else
+    {
+      auto *ptr_l = CreateGEP(val1, { getInt32(0), getInt32(i) });
+      l = CreateLoad(getInt8Ty(), ptr_l);
+    }
 
-    auto *ptr2 = CreateGEP(val2, { getInt32(0), getInt32(i) });
-    CreateProbeRead(ctx, val_r, 1, ptr2, as2, loc);
-    Value *r = CreateLoad(getInt8Ty(), val_r);
+    Value *r;
+    if (literal2)
+      r = getInt8(literal2->c_str()[i]);
+    else
+    {
+      auto *ptr_r = CreateGEP(val2, { getInt32(0), getInt32(i) });
+      r = CreateLoad(getInt8Ty(), ptr_r);
+    }
 
     Value *cmp = CreateICmpNE(l, r, "strcmp.cmp");
     CreateCondBr(cmp, str_ne, loop_null_check);
@@ -895,8 +831,6 @@ Value *IRBuilderBPF::CreateStrncmp(Value *ctx,
 
   Value *result = CreateLoad(store);
   CreateLifetimeEnd(store);
-  CreateLifetimeEnd(val_l);
-  CreateLifetimeEnd(val_r);
   result = CreateIntCast(result, getInt64Ty(), false);
 
   return result;
