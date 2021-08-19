@@ -41,6 +41,8 @@ and this project adheres to
   - [#1974](https://github.com/iovisor/bpftrace/pull/1974)
 - Fix unroll() with async calls
   - [#1972](https://github.com/iovisor/bpftrace/pull/1972)
+- Fix string comparison codegen
+  - [#1979](https://github.com/iovisor/bpftrace/pull/1979)
 
 #### Tools
 

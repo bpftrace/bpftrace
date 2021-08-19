@@ -52,5 +52,20 @@ TIMEOUT 1
 
 NAME strncmp_checks_for_nul
 RUN {{BPFTRACE}} -e 'BEGIN { printf("_%d_\n", strncmp("one", "one ", 4)); exit() }'
-EXPECT _0_
+EXPECT _1_
 TIMEOUT 1
+
+NAME string compare with empty
+RUN {{BPFTRACE}} -e 'BEGIN { if ("hello" == "") { printf("equal"); } else { printf("not equal"); } exit(); }'
+EXPECT not equal
+TIMEOUT 3
+
+NAME string compare with prefix
+RUN {{BPFTRACE}} -e 'BEGIN { if ("hello" == "hell") { printf("equal"); } else { printf("not equal"); } exit(); }'
+EXPECT not equal
+TIMEOUT 3
+
+NAME strncmp with prefix
+RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp("hello", "hell") == 0) { printf("equal"); } else { printf("not equal"); } exit(); }'
+EXPECT not equal
+TIMEOUT 3

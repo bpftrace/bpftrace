@@ -131,6 +131,8 @@ private:
   Function *createLinearFunction();
   MDNode *createLoopMetadata();
 
+  std::pair<Value *, uint64_t> getString(Expression *expr);
+
   void binop_string(Binop &binop);
   void binop_buf(Binop &binop);
   void binop_int(Binop &binop);

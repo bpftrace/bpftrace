@@ -23,55 +23,55 @@ entry:
   store i1 true, i1* %strcmp.result, align 1
   %4 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 0
   %5 = load i8, i8* %4, align 1
-  %strcmp.lhs_cmp_null = icmp eq i8 %5, 0
-  br i1 %strcmp.lhs_cmp_null, label %strcmp.done, label %strcmp.check
+  %strcmp.cmp = icmp ne i8 %5, 115
+  br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop_null_cmp
 
 pred_false:                                       ; preds = %strcmp.false
   ret i64 0
 
 pred_true:                                        ; preds = %strcmp.false
-  %6 = bitcast [16 x i8]* %comm5 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
+  %6 = bitcast [16 x i8]* %comm to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
   %7 = bitcast [16 x i8]* %comm5 to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %7, i8 0, i64 16, i1 false)
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  %8 = bitcast [16 x i8]* %comm5 to i8*
+  call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 16, i1 false)
   %get_comm6 = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm5, i64 16)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* %comm5)
-  %8 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
+  %9 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 
-strcmp.false:                                     ; preds = %strcmp.done, %strcmp.check1, %strcmp.check
-  %9 = load i1, i1* %strcmp.result, align 1
-  %10 = bitcast i1* %strcmp.result to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = zext i1 %9 to i64
-  %12 = bitcast [16 x i8]* %comm to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %predcond = icmp eq i64 %11, 0
+strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop, %entry
+  %10 = load i1, i1* %strcmp.result, align 1
+  %11 = bitcast i1* %strcmp.result to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = zext i1 %10 to i64
+  %predcond = icmp eq i64 %12, 0
   br i1 %predcond, label %pred_false, label %pred_true
 
-strcmp.done:                                      ; preds = %strcmp.loop2, %strcmp.loop, %entry
+strcmp.done:                                      ; preds = %strcmp.loop1, %strcmp.loop_null_cmp2, %strcmp.loop_null_cmp
   store i1 false, i1* %strcmp.result, align 1
   br label %strcmp.false
 
-strcmp.check:                                     ; preds = %entry
-  %strcmp.cmp = icmp ne i8 %5, 115
-  br i1 %strcmp.cmp, label %strcmp.false, label %strcmp.loop
-
-strcmp.loop:                                      ; preds = %strcmp.check
+strcmp.loop:                                      ; preds = %strcmp.loop_null_cmp
   %13 = getelementptr [16 x i8], [16 x i8]* %comm, i32 0, i32 1
   %14 = load i8, i8* %13, align 1
-  %strcmp.lhs_cmp_null3 = icmp eq i8 %14, 0
-  br i1 %strcmp.lhs_cmp_null3, label %strcmp.done, label %strcmp.check1
+  %strcmp.cmp3 = icmp ne i8 %14, 115
+  br i1 %strcmp.cmp3, label %strcmp.false, label %strcmp.loop_null_cmp2
 
-strcmp.check1:                                    ; preds = %strcmp.loop
-  %strcmp.cmp4 = icmp ne i8 %14, 115
-  br i1 %strcmp.cmp4, label %strcmp.false, label %strcmp.loop2
+strcmp.loop_null_cmp:                             ; preds = %entry
+  %strcmp.cmp_null = icmp eq i8 %5, 0
+  br i1 %strcmp.cmp_null, label %strcmp.done, label %strcmp.loop
 
-strcmp.loop2:                                     ; preds = %strcmp.check1
+strcmp.loop1:                                     ; preds = %strcmp.loop_null_cmp2
   br label %strcmp.done
+
+strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
+  %strcmp.cmp_null4 = icmp eq i8 %14, 0
+  br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 
 lookup_success:                                   ; preds = %pred_true
   %cast = bitcast i8* %lookup_elem to i64*

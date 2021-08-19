@@ -114,34 +114,7 @@ public:
                                 pid_t pid,
                                 AddrSpace as,
                                 const location &loc);
-  Value *CreateStrcmp(Value *ctx,
-                      Value *val,
-                      AddrSpace as,
-                      std::string str,
-                      const location &loc,
-                      bool inverse = false);
-  Value *CreateStrcmp(Value *ctx,
-                      Value *val1,
-                      AddrSpace as1,
-                      Value *val2,
-                      AddrSpace as2,
-                      const location &loc,
-                      bool inverse = false);
-  Value *CreateStrncmp(Value *ctx,
-                       Value *val,
-                       AddrSpace as,
-                       std::string str,
-                       uint64_t n,
-                       const location &loc,
-                       bool inverse = false);
-  Value *CreateStrncmp(Value *ctx,
-                       Value *val1,
-                       AddrSpace as1,
-                       Value *val2,
-                       AddrSpace as2,
-                       uint64_t n,
-                       const location &loc,
-                       bool inverse = false);
+  Value *CreateStrncmp(Value *val1, Value *val2, uint64_t n, bool inverse);
   CallInst *CreateGetNs(bool boot_time);
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetCurrentCgroupId();

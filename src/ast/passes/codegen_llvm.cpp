@@ -988,42 +988,12 @@ void CodegenLLVM::visit(Call &call)
     uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
     const auto& left_arg = call.vargs->at(0);
     const auto& right_arg = call.vargs->at(1);
-    auto left_as = left_arg->type.GetAS();
-    auto right_as = right_arg->type.GetAS();
 
-    // If one of the strings is fixed, we can avoid storing the
-    // literal in memory by calling a different function.
-    if (right_arg->is_literal)
-    {
-      auto scoped_del = accept(left_arg);
-      Value *left_string = expr_;
-      const auto string_literal = bpftrace_.get_string_literal(right_arg);
-      expr_ = b_.CreateStrncmp(
-          ctx_, left_string, left_as, string_literal, size, call.loc, false);
-    }
-    else if (left_arg->is_literal)
-    {
-      auto scoped_del = accept(right_arg);
-      Value *right_string = expr_;
-      const auto string_literal = bpftrace_.get_string_literal(left_arg);
-      expr_ = b_.CreateStrncmp(
-          ctx_, right_string, right_as, string_literal, size, call.loc, false);
-    }
-    else
-    {
-      auto scoped_del_right = accept(right_arg);
-      Value *right_string = expr_;
-      auto scoped_del_left = accept(left_arg);
-      Value *left_string = expr_;
-      expr_ = b_.CreateStrncmp(ctx_,
-                               left_string,
-                               left_as,
-                               right_string,
-                               right_as,
-                               size,
-                               call.loc,
-                               false);
-    }
+    auto left_string = getString(left_arg);
+    auto right_string = getString(right_arg);
+
+    expr_ = b_.CreateStrncmp(
+        left_string.first, right_string.first, size, false);
   }
   else if (call.func == "override")
   {
@@ -1107,6 +1077,25 @@ void CodegenLLVM::visit(Variable &var)
   }
 }
 
+std::pair<Value *, uint64_t> CodegenLLVM::getString(Expression *expr)
+{
+  std::pair<Value *, uint64_t> result;
+  if (expr->is_literal)
+  {
+    auto str = bpftrace_.get_string_literal(expr);
+    result.first = ConstantDataArray::getString(module_->getContext(), str);
+    result.second = str.size() + 1;
+  }
+  else
+  {
+    auto scoped_del = accept(expr);
+    result.first = expr_;
+    result.second = expr->type.GetSize();
+    expr_deleter_ = scoped_del.disarm();
+  }
+  return result;
+}
+
 void CodegenLLVM::binop_string(Binop &binop)
 {
   if (binop.op != Operator::EQ && binop.op != Operator::NE)
@@ -1120,44 +1109,11 @@ void CodegenLLVM::binop_string(Binop &binop)
   // strcmp returns 0 when strings are equal
   bool inverse = binop.op == Operator::EQ;
 
-  auto left_as = binop.left->type.GetAS();
-  auto right_as = binop.right->type.GetAS();
+  auto left_string = getString(binop.left);
+  auto right_string = getString(binop.right);
 
-  // If one of the strings is fixed, we can avoid storing the
-  // literal in memory by calling a different function.
-  if (binop.right->is_literal)
-  {
-    auto scoped_del = accept(binop.left);
-    string_literal = bpftrace_.get_string_literal(binop.right);
-    expr_ = b_.CreateStrcmp(
-        ctx_, expr_, left_as, string_literal, binop.loc, inverse);
-  }
-  else if (binop.left->is_literal)
-  {
-    auto scoped_del = accept(binop.right);
-    string_literal = bpftrace_.get_string_literal(binop.left);
-    expr_ = b_.CreateStrcmp(
-        ctx_, expr_, right_as, string_literal, binop.loc, inverse);
-  }
-  else
-  {
-    auto scoped_del_right = accept(binop.right);
-    Value *right_string = expr_;
-
-    auto scoped_del_left = accept(binop.left);
-    Value *left_string = expr_;
-
-    size_t len = std::min(binop.left->type.GetSize(),
-                          binop.right->type.GetSize());
-    expr_ = b_.CreateStrncmp(ctx_,
-                             left_string,
-                             left_as,
-                             right_string,
-                             right_as,
-                             len + 1,
-                             binop.loc,
-                             inverse);
-  }
+  size_t len = std::min(left_string.second, right_string.second);
+  expr_ = b_.CreateStrncmp(left_string.first, right_string.first, len, inverse);
 }
 
 void CodegenLLVM::binop_buf(Binop &binop)
@@ -1175,22 +1131,13 @@ void CodegenLLVM::binop_buf(Binop &binop)
 
   auto scoped_del_right = accept(binop.right);
   Value *right_string = expr_;
-  auto right_as = binop.right->type.GetAS();
 
   auto scoped_del_left = accept(binop.left);
   Value *left_string = expr_;
-  auto left_as = binop.left->type.GetAS();
 
   size_t len = std::min(binop.left->type.GetSize(),
                         binop.right->type.GetSize());
-  expr_ = b_.CreateStrncmp(ctx_,
-                           left_string,
-                           left_as,
-                           right_string,
-                           right_as,
-                           len,
-                           binop.loc,
-                           inverse);
+  expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
 }
 
 void CodegenLLVM::binop_int(Binop &binop)
