@@ -133,6 +133,7 @@ public:
   void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val);
+  Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
   void CreatePath(Value *ctx,
                   AllocaInst *buf,
