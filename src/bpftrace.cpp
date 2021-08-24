@@ -2196,6 +2196,36 @@ std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
   return "";
 }
 
+std::optional<long> BPFtrace::get_int_literal(const ast::Expression *expr) const
+{
+  if (expr->is_literal)
+  {
+    if (auto *integer = dynamic_cast<const ast::Integer *>(expr))
+      return integer->n;
+    else if (auto *pos_param = dynamic_cast<const ast::PositionalParameter *>(
+                 expr))
+    {
+      if (pos_param->ptype == PositionalParameterType::positional)
+      {
+        auto param_str = get_param(pos_param->n, false);
+        if (is_numeric(param_str))
+          return std::stol(param_str);
+        else
+        {
+          LOG(ERROR, pos_param->loc)
+              << "$" << pos_param->n << " used numerically but given \""
+              << param_str << "\"";
+          return std::nullopt;
+        }
+      }
+      else
+        return (long)num_params();
+    }
+  }
+
+  return std::nullopt;
+}
+
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
 #ifdef FUZZ

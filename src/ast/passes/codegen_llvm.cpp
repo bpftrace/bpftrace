@@ -552,7 +552,7 @@ void CodegenLLVM::visit(Call &call)
           cmp, proposed_length, max_length, "length.select");
 
       if (arg.is_literal)
-        fixed_buffer_length = static_cast<Integer &>(arg).n;
+        fixed_buffer_length = *bpftrace_.get_int_literal(&arg);
     }
     else
     {
@@ -985,7 +985,7 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.getInt64(call.vargs->at(0)->type.GetSize());
   }
   else if (call.func == "strncmp") {
-    uint64_t size = static_cast<Integer *>(call.vargs->at(2))->n;
+    uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs->at(2));
     const auto& left_arg = call.vargs->at(0);
     const auto& right_arg = call.vargs->at(1);
     auto left_as = left_arg->type.GetAS();

@@ -163,6 +163,34 @@ RUN {{BPFTRACE}} -e 'BEGIN { printf("%s", str($1 + 1)); exit(); }' hello
 EXPECT ello
 TIMEOUT 1
 
+NAME positional strncmp
+RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp("hello", "hell", $1) == 0) { printf("ok\n"); } exit(); }' 3
+EXPECT ok
+TIMEOUT 1
+
+NAME positional lhist
+RUN {{BPFTRACE}} -e 'kretprobe:vfs_read { @bytes = lhist(retval, $1, $2, $3); exit()}' 0 10000 1000
+EXPECT @bytes: *\n[\[(].*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME positional buf
+RUN {{BPFTRACE}} -e 'BEGIN { @ = buf("hello", $1); exit(); }' 5
+EXPECT @: hello
+TIMEOUT 1
+
+NAME positional kstack
+RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", kstack(), kstack($1)); exit(); }' 1
+EXPECT SUCCESS
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME positional ustack
+RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS %s\n%s\n", ustack(), ustack($1)); exit(); }' 1
+EXPECT SUCCESS
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
 NAME lhist can be cleared
 RUN {{BPFTRACE}} -e 'BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }'
 EXPECT .*
