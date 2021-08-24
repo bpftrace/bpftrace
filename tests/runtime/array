@@ -135,3 +135,9 @@ RUN {{BPFTRACE}} -e 'uprobe:./testprogs/array_access:test_array { @a[0] = (int32
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array element access via positional index
+RUN {{BPFTRACE}} -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (struct A *) arg0; $x = $a->x[$1]; printf("Result: %d\n", $x); exit(); }' 0
+EXPECT Result: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access

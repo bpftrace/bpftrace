@@ -377,6 +377,17 @@ TEST(semantic_analyser, call_lhist)
   test("kprobe:f { lhist() ? 0 : 1; }", 1);
 }
 
+TEST(semantic_analyser, call_lhist_posparam)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("0");
+  bpftrace.add_param("10");
+  bpftrace.add_param("1");
+  bpftrace.add_param("hello");
+  test(bpftrace, "kprobe:f { @ = lhist(5, $1, $2, $3); }", 0);
+  test(bpftrace, "kprobe:f { @ = lhist(5, $1, $2, $4); }", 10);
+}
+
 TEST(semantic_analyser, call_count)
 {
   test("kprobe:f { @x = count(); }", 0);
@@ -634,6 +645,15 @@ TEST(semantic_analyser, call_buf_expr)
   test("kprobe:f { @x = buf(arg0, arg1); }", 0);
 }
 
+TEST(semantic_analyser, call_buf_posparam)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("1");
+  bpftrace.add_param("hello");
+  test(bpftrace, "kprobe:f { buf(arg0, $1); }", 0);
+  test(bpftrace, "kprobe:f { buf(arg0, $2); }", 1);
+}
+
 TEST(semantic_analyser, call_ksym)
 {
   test("kprobe:f { ksym(arg0); }", 0);
@@ -812,6 +832,19 @@ TEST(semantic_analyser, call_stack)
   test("kprobe:f { @x = 3; ustack(@x) }", 1);
   test("kprobe:f { @x = 3; kstack(perf, @x) }", 1);
   test("kprobe:f { @x = 3; ustack(perf, @x) }", 1);
+
+  // Positional params
+  BPFtrace bpftrace;
+  bpftrace.add_param("3");
+  bpftrace.add_param("hello");
+  test(bpftrace, "kprobe:f { kstack($1) }", 0);
+  test(bpftrace, "kprobe:f { ustack($1) }", 0);
+  test(bpftrace, "kprobe:f { kstack(perf, $1) }", 0);
+  test(bpftrace, "kprobe:f { ustack(perf, $1) }", 0);
+  test(bpftrace, "kprobe:f { kstack($2) }", 1);
+  test(bpftrace, "kprobe:f { ustack($2) }", 1);
+  test(bpftrace, "kprobe:f { kstack(perf, $2) }", 1);
+  test(bpftrace, "kprobe:f { ustack(perf, $2) }", 1);
 }
 
 TEST(semantic_analyser, call_macaddr)
@@ -918,6 +951,18 @@ TEST(semantic_analyser, array_access) {
   auto var_assignment = static_cast<ast::AssignVarStatement *>(
       driver.root_->probes->at(0)->stmts->at(1));
   EXPECT_EQ(CreateInt32(), var_assignment->var->type);
+
+  // Positional parameter as index
+  bpftrace.add_param("0");
+  bpftrace.add_param("hello");
+  test(bpftrace,
+       "struct MyStruct { int y[4]; } "
+       "kprobe:f { $s = ((struct MyStruct *)arg0)->y[$1]; }",
+       0);
+  test(bpftrace,
+       "struct MyStruct { int y[4]; } "
+       "kprobe:f { $s = ((struct MyStruct *)arg0)->y[$2]; }",
+       10);
 }
 
 TEST(semantic_analyser, array_in_map)
@@ -1823,6 +1868,13 @@ TEST(semantic_analyser, signal)
   MockBPFfeature feature(false);
   test(feature, "k:f { signal(1) }", 1, false);
   test(feature, "k:f { signal(\"KILL\"); }", 1, false);
+
+  // Positional parameter
+  BPFtrace bpftrace;
+  bpftrace.add_param("1");
+  bpftrace.add_param("hello");
+  test(bpftrace, "k:f { signal($1) }", 0, false);
+  test(bpftrace, "k:f { signal($2) }", 1, false);
 }
 
 TEST(semantic_analyser, strncmp)
@@ -1835,6 +1887,15 @@ TEST(semantic_analyser, strncmp)
   test("i:s:1 { strncmp(\"a\",1,1) }", 10);
   test("i:s:1 { strncmp(\"a\",\"a\",-1) }", 1);
   test("i:s:1 { strncmp(\"a\",\"a\",\"foo\") }", 1);
+}
+
+TEST(semantic_analyser, strncmp_posparam)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("1");
+  bpftrace.add_param("hello");
+  test(bpftrace, "i:s:1 { strncmp(\"foo\", \"bar\", $1) }", 0);
+  test(bpftrace, "i:s:1 { strncmp(\"foo\", \"bar\", $2) }", 1);
 }
 
 TEST(semantic_analyser, override)

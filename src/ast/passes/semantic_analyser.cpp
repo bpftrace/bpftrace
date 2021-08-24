@@ -529,20 +529,37 @@ void SemanticAnalyser::visit(Call &call)
     }
 
     if (is_final_pass()) {
-      Expression &min_arg = *call.vargs->at(1);
-      Expression &max_arg = *call.vargs->at(2);
-      Expression &step_arg = *call.vargs->at(3);
-      Integer &min = static_cast<Integer&>(min_arg);
-      Integer &max = static_cast<Integer&>(max_arg);
-      Integer &step = static_cast<Integer&>(step_arg);
-      if (step.n <= 0)
+      Expression *min_arg = call.vargs->at(1);
+      Expression *max_arg = call.vargs->at(2);
+      Expression *step_arg = call.vargs->at(3);
+      auto min = bpftrace_.get_int_literal(min_arg);
+      auto max = bpftrace_.get_int_literal(max_arg);
+      auto step = bpftrace_.get_int_literal(step_arg);
+
+      if (!min.has_value())
+      {
+        LOG(ERROR, call.loc, err_) << call.func << ": invalid min value";
+        return;
+      }
+      if (!max.has_value())
+      {
+        LOG(ERROR, call.loc, err_) << call.func << ": invalid max value";
+        return;
+      }
+      if (!step.has_value())
+      {
+        LOG(ERROR, call.loc, err_) << call.func << ": invalid step value";
+        return;
+      }
+
+      if (*step <= 0)
       {
         LOG(ERROR, call.loc, err_)
-            << "lhist() step must be >= 1 (" << step.n << " provided)";
+            << "lhist() step must be >= 1 (" << *step << " provided)";
       }
       else
       {
-        int buckets = (max.n - min.n) / step.n;
+        int buckets = (*max - *min) / *step;
         if (buckets > 1000)
         {
           LOG(ERROR, call.loc, err_)
@@ -550,23 +567,22 @@ void SemanticAnalyser::visit(Call &call)
               << buckets << ")";
         }
       }
-      if (min.n < 0)
+      if (*min < 0)
       {
         LOG(ERROR, call.loc, err_)
-            << "lhist() min must be non-negative (provided min " << min.n
-            << ")";
+            << "lhist() min must be non-negative (provided min " << *min << ")";
       }
-      if (min.n > max.n)
+      if (*min > *max)
       {
         LOG(ERROR, call.loc, err_)
-            << "lhist() min must be less than max (provided min " << min.n
-            << " and max ";
+            << "lhist() min must be less than max (provided min " << *min
+            << " and max " << *max << ")";
       }
-      if ((max.n - min.n) < step.n)
+      if ((*max - *min) < *step)
       {
         LOG(ERROR, call.loc, err_)
             << "lhist() step is too large for the given range (provided step "
-            << step.n << " for range " << (max.n - min.n) << ")";
+            << *step << " for range " << (*max - *min) << ")";
       }
     }
     call.type = CreateLhist();
@@ -708,19 +724,21 @@ void SemanticAnalyser::visit(Call &call)
         check_arg(call, Type::integer, 1, false);
 
       auto &size_arg = *call.vargs->at(1);
-      if (size_arg.is_literal)
+      if (size_arg.type.IsIntTy() && size_arg.is_literal)
       {
-        auto *integer = dynamic_cast<Integer *>(&size_arg);
-        if (integer)
+        auto value = bpftrace_.get_int_literal(&size_arg);
+        if (value.has_value())
         {
-          long value = integer->n;
-          if (value < 0)
+          if (*value < 0)
           {
             LOG(ERROR, call.loc, err_)
-                << call.func << " cannot use negative length (" << value << ")";
+                << call.func << " cannot use negative length (" << *value
+                << ")";
           }
-          buffer_size = value;
+          buffer_size = *value;
         }
+        else
+          LOG(ERROR, call.loc, err_) << call.func << ": invalid length value";
       }
     }
 
@@ -1072,10 +1090,11 @@ void SemanticAnalyser::visit(Call &call)
     }
     else if (arg.type.IsIntTy() && arg.is_literal)
     {
-      auto sig = static_cast<Integer&>(arg).n;
-      if (sig < 1 || sig > 64) {
+      auto sig = bpftrace_.get_int_literal(&arg);
+      if (!sig.has_value() || *sig < 1 || *sig > 64)
+      {
         LOG(ERROR, call.loc, err_)
-            << std::to_string(sig)
+            << std::to_string(*sig)
             << " is not a valid signal, allowed range: [1,64]";
       }
     }
@@ -1135,10 +1154,15 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::string, 0);
       check_arg(call, Type::string, 1);
       if (check_arg(call, Type::integer, 2, true)){
-        Integer &size = static_cast<Integer&>(*call.vargs->at(2));
-        if (size.n < 0)
-          LOG(ERROR, call.loc, err_)
-              << "Builtin strncmp requires a non-negative size";
+        auto size = bpftrace_.get_int_literal(call.vargs->at(2));
+        if (size.has_value())
+        {
+          if (size < 0)
+            LOG(ERROR, call.loc, err_)
+                << "Builtin strncmp requires a non-negative size";
+        }
+        else
+          LOG(ERROR, call.loc, err_) << call.func << ": invalid size value";
       }
     }
     call.type = CreateUInt64();
@@ -1249,7 +1273,14 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
         else
         {
           if (check_arg(call, Type::integer, 0, true))
-            stack_type.limit = static_cast<Integer &>(arg).n;
+          {
+            auto limit = bpftrace_.get_int_literal(&arg);
+            if (limit.has_value())
+              stack_type.limit = *limit;
+            else
+              LOG(ERROR, call.loc, err_)
+                  << call.func << ": invalid limit value";
+          }
         }
         break;
       }
@@ -1264,8 +1295,12 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 
         if (check_arg(call, Type::integer, 1, true))
         {
-          auto &limit_arg = *call.vargs->at(1);
-          stack_type.limit = static_cast<Integer &>(limit_arg).n;
+          auto &limit_arg = call.vargs->at(1);
+          auto limit = bpftrace_.get_int_literal(limit_arg);
+          if (limit.has_value())
+            stack_type.limit = *limit;
+          else
+            LOG(ERROR, call.loc, err_) << call.func << ": invalid limit value";
         }
         break;
       }
@@ -1405,12 +1440,16 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     {
       if (type.IsArrayTy())
       {
-        Integer *index = static_cast<Integer *>(arr.indexpr);
-
-        if ((size_t)index->n >= type.GetNumElements())
-          LOG(ERROR, arr.loc, err_) << "the index " << index->n
-                                    << " is out of bounds for array of size "
-                                    << type.GetNumElements();
+        auto index = bpftrace_.get_int_literal(arr.indexpr);
+        if (index.has_value())
+        {
+          if ((size_t)*index >= type.GetNumElements())
+            LOG(ERROR, arr.loc, err_) << "the index " << *index
+                                      << " is out of bounds for array of size "
+                                      << type.GetNumElements();
+        }
+        else
+          LOG(ERROR, arr.loc, err_) << "invalid index expression";
       }
     }
     else {
@@ -1431,10 +1470,6 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
 
 void SemanticAnalyser::binop_int(Binop &binop)
 {
-  auto get_int_literal = [](const auto expr) -> long {
-    return static_cast<ast::Integer *>(expr)->n;
-  };
-
   bool lsign = binop.left->type.IsSigned();
   bool rsign = binop.right->type.IsSigned();
 
@@ -1453,13 +1488,14 @@ void SemanticAnalyser::binop_int(Binop &binop)
     //
     // No warning should be emitted as we know that 10 can be
     // represented as unsigned int
-    if (lsign && !rsign && left->is_literal && get_int_literal(left) >= 0)
+    if (lsign && !rsign && left->is_literal &&
+        *bpftrace_.get_int_literal(left) >= 0)
     {
       lsign = false;
     }
     // The reverse (10 < a) should also hold
     else if (!lsign && rsign && right->is_literal &&
-             get_int_literal(right) >= 0)
+             *bpftrace_.get_int_literal(right) >= 0)
     {
       rsign = false;
     }
@@ -1501,9 +1537,9 @@ void SemanticAnalyser::binop_int(Binop &binop)
   if (binop.op == Operator::DIV || binop.op == Operator::MOD)
   {
     // Convert operands to unsigned if possible
-    if (lsign && left->is_literal && get_int_literal(left) >= 0)
+    if (lsign && left->is_literal && *bpftrace_.get_int_literal(left) >= 0)
       lsign = false;
-    if (rsign && right->is_literal && get_int_literal(right) >= 0)
+    if (rsign && right->is_literal && *bpftrace_.get_int_literal(right) >= 0)
       rsign = false;
 
     // If they're still signed, we have to warn
@@ -1858,33 +1894,14 @@ void SemanticAnalyser::visit(Unroll &unroll)
 {
   unroll.expr->accept(*this);
 
-  unroll.var = 0;
+  auto unroll_value = bpftrace_.get_int_literal(unroll.expr);
+  if (!unroll_value.has_value())
+  {
+    LOG(ERROR, unroll.loc, err_) << "invalid unroll value";
+    return;
+  }
 
-  if (auto *integer = dynamic_cast<Integer *>(unroll.expr))
-  {
-    unroll.var = integer->n;
-  }
-  else if (auto *param = dynamic_cast<PositionalParameter *>(unroll.expr))
-  {
-    if (param->ptype == PositionalParameterType::count)
-    {
-      unroll.var = bpftrace_.num_params();
-    }
-    else
-    {
-      std::string pstr = bpftrace_.get_param(param->n, param->is_in_str);
-      if (is_numeric(pstr))
-        unroll.var = std::stoll(pstr, nullptr, 0);
-      else
-        LOG(ERROR, unroll.loc, err_) << "Invalid positonal params: " << pstr;
-    }
-  }
-  else
-  {
-    LOG(ERROR, unroll.loc, err_) << "Cannot use expression of type: '"
-                                 << unroll.expr->type << "' as unroll count";
-    unroll.var = 0;
-  }
+  unroll.var = *unroll_value;
 
   if (unroll.var > 100)
   {
