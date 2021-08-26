@@ -6,6 +6,7 @@
 
 #ifdef HAVE_LIBDW
 #include <elfutils/libdwfl.h>
+#include <optional>
 #include <unordered_map>
 
 namespace bpftrace {
