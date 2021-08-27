@@ -196,14 +196,43 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   else if (type.IsRecordTy())
   {
     std::vector<std::string> elems;
+    SizedType field_type;
+    std::vector<uint8_t> elem_data;
+    uint64_t bitfield_data;
     for (auto &field : type.GetFields())
     {
-      std::vector<uint8_t> elem_data(value.begin() + field.offset,
-                                     value.begin() + field.offset +
-                                         field.type.GetSize());
+      if (field.is_bitfield)
+      {
+        elem_data = std::vector<uint8_t>(value.begin() + field.offset,
+                                         value.begin() + field.offset +
+                                           field.bitfield.read_bytes);
+        bitfield_data = reduce_value<uint64_t>(elem_data, 1);
+        bitfield_data >>= field.bitfield.access_rshift;
+        bitfield_data &= field.bitfield.mask;
+
+        elem_data = std::vector<uint8_t>{
+          static_cast<uint8_t>(bitfield_data & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 8) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 16) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 24) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 32) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 40) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 48) & 0xFF),
+          static_cast<uint8_t>((bitfield_data >> 56) & 0xFF),
+        };
+        field_type = CreateUInt64();
+      }
+      else
+      {
+        elem_data = std::vector<uint8_t>(value.begin() + field.offset,
+                                         value.begin() + field.offset +
+                                          field.type.GetSize());
+        field_type = field.type;
+      }
+
       elems.push_back(field_to_str(
           field.name,
-          value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div)));
+          value_to_str(bpftrace, field_type, elem_data, is_per_cpu, div)));
     }
     return struct_to_str(elems);
   }
