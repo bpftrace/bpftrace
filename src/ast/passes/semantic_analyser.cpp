@@ -447,7 +447,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
                                                     "struct kfunc")),
                                    AddrSpace::kernel);
       builtin.type.MarkCtxAccess();
-      builtin.type.is_kfarg = true;
+      builtin.type.is_funcarg = true;
     }
     else
     {
@@ -1805,7 +1805,7 @@ void SemanticAnalyser::visit(Unop &unop)
       if (type.IsCtxAccess())
       {
         unop.type.MarkCtxAccess();
-        unop.type.is_kfarg = type.is_kfarg;
+        unop.type.is_funcarg = type.is_funcarg;
         unop.type.is_tparg = type.is_tparg;
       }
       unop.type.SetAS(type.GetAS());
@@ -1981,7 +1981,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     return;
   }
 
-  if (type.is_kfarg)
+  if (type.is_funcarg)
   {
     auto it = ap_args_.find(acc.field);
 
@@ -1992,7 +1992,8 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     }
     else
     {
-      LOG(ERROR, acc.loc, err_) << "Can't find a field " << acc.field;
+      LOG(ERROR, acc.loc, err_)
+          << "Can't find function parameter " << acc.field;
     }
     return;
   }
@@ -2312,7 +2313,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   assignment.var->type = assignment.expr->type;
 
   auto *builtin = dynamic_cast<Builtin *>(assignment.expr);
-  if (builtin && builtin->ident == "args" && builtin->type.is_kfarg)
+  if (builtin && builtin->ident == "args" && builtin->type.is_funcarg)
   {
     LOG(ERROR, assignment.loc, err_) << "args cannot be assigned to a variable";
   }
@@ -2695,7 +2696,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
     if (!listing_)
     {
-      const auto &ap_map = bpftrace_.btf_ap_args_;
+      const auto &ap_map = bpftrace_.ap_args_;
       auto it = ap_map.find(probe_->name());
 
       if (it != ap_map.end())

@@ -127,7 +127,7 @@ private:
   std::map<std::string, SizedType> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
-  std::map<std::string, SizedType> ap_args_;
+  ProbeArgs ap_args_;
 
   uint32_t loop_depth_ = 0;
   bool has_begin_probe_ = false;
