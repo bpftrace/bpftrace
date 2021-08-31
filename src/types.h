@@ -107,8 +107,8 @@ public:
   StackType stack_type;
   bool is_internal = false;
   bool is_tparg = false;
-  bool is_kfarg = false;
-  int kfarg_idx = -1;
+  bool is_funcarg = false;
+  int funcarg_idx = -1;
 
 private:
   size_t size_ = -1; // in bytes
@@ -133,8 +133,8 @@ private:
             stack_type,
             is_internal,
             is_tparg,
-            is_kfarg,
-            kfarg_idx,
+            is_funcarg,
+            funcarg_idx,
             size_,
             is_signed_,
             element_type_,
@@ -526,6 +526,8 @@ private:
             func_offset);
   }
 };
+
+typedef std::map<std::string, SizedType> ProbeArgs;
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 

@@ -183,7 +183,7 @@ public:
 
   BTF btf_;
   std::unordered_set<std::string> btf_set_;
-  std::map<std::string, std::map<std::string, SizedType>> btf_ap_args_;
+  std::map<std::string, ProbeArgs> ap_args_;
   std::unique_ptr<ChildProcBase> child_;
   std::unique_ptr<ProcMonBase> procmon_;
   pid_t pid(void) const

@@ -193,7 +193,7 @@ void CodegenLLVM::visit(Builtin &builtin)
       builtin.ident == "retval" ||
       builtin.ident == "func")
   {
-    if (builtin.type.is_kfarg)
+    if (builtin.type.is_funcarg)
     {
       expr_ = b_.CreatKFuncArg(ctx_, builtin.type, builtin.ident);
       return;
@@ -1531,10 +1531,10 @@ void CodegenLLVM::visit(FieldAccess &acc)
   bool is_ctx = type.IsCtxAccess();
   bool is_tparg = type.is_tparg;
   bool is_internal = type.is_internal;
-  bool is_kfarg = type.is_kfarg;
+  bool is_funcarg = type.is_funcarg;
   assert(type.IsRecordTy() || type.IsTupleTy());
 
-  if (type.is_kfarg)
+  if (type.is_funcarg)
   {
     expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
     return;
@@ -1565,7 +1565,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
     type.MarkCtxAccess();
   type.is_tparg = is_tparg;
   type.is_internal = is_internal;
-  type.is_kfarg = is_kfarg;
+  type.is_funcarg = is_funcarg;
   // Restore the addrspace info
   // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
   type.SetAS(addrspace);

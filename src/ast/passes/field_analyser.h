@@ -38,8 +38,7 @@ public:
 private:
   void check_kfunc_args(void);
   bool resolve_args(AttachPoint &ap);
-  bool compare_args(const std::map<std::string, SizedType>& args1,
-                    const std::map<std::string, SizedType>& args2);
+  bool compare_args(const ProbeArgs &args1, const ProbeArgs &args2);
 
   Node *root_;
   ProbeType probe_type_;
@@ -56,7 +55,7 @@ private:
   std::ostream       &out_;
   std::ostringstream  err_;
 
-  std::map<std::string, SizedType> ap_args_;
+  ProbeArgs ap_args_;
   std::map<std::string, std::string> var_types_;
 };
 

@@ -465,16 +465,16 @@ int BTF::resolve_args(const std::string &func,
       }
 
       SizedType stype = get_stype(p->type);
-      stype.kfarg_idx = j;
-      stype.is_kfarg = true;
+      stype.funcarg_idx = j;
+      stype.is_funcarg = true;
       args.insert({ str, stype });
     }
 
     if (ret)
     {
       SizedType stype = get_stype(t->type);
-      stype.kfarg_idx = j;
-      stype.is_kfarg = true;
+      stype.funcarg_idx = j;
+      stype.is_funcarg = true;
       args.insert({ "$retval", stype });
     }
 

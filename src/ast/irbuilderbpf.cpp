@@ -1057,7 +1057,7 @@ Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
   assert(type.IsIntTy() || type.IsPtrTy());
   ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
   Value *expr = CreateLoad(GetType(type),
-                           CreateGEP(ctx, getInt64(type.kfarg_idx)),
+                           CreateGEP(ctx, getInt64(type.funcarg_idx)),
                            name);
 
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),

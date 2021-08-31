@@ -159,8 +159,7 @@ void FieldAnalyser::visit(AssignVarStatement &assignment)
   var_types_.emplace(assignment.var->ident, type_);
 }
 
-bool FieldAnalyser::compare_args(const std::map<std::string, SizedType>& args1,
-                                 const std::map<std::string, SizedType>& args2)
+bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
 {
   auto pred = [](auto a, auto b) { return a.first == b.first; };
 
@@ -201,7 +200,7 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
 
     for (auto func : matches)
     {
-      std::map<std::string, SizedType> args;
+      ProbeArgs args;
 
       // Trying to attach to multiple kfuncs. If some of them fails on argument
       // resolution, do not fail hard, just print a warning and continue with
@@ -241,9 +240,9 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
   }
 
   // check if we already stored arguments for this probe
-  auto it = bpftrace_.btf_ap_args_.find(probe_->name());
+  auto it = bpftrace_.ap_args_.find(probe_->name());
 
-  if (it != bpftrace_.btf_ap_args_.end())
+  if (it != bpftrace_.ap_args_.end())
   {
     // we did, and it's different.. save the state and
     // triger the error if there's args->xxx detected
@@ -255,8 +254,8 @@ bool FieldAnalyser::resolve_args(AttachPoint &ap)
   }
   else
   {
-    // store/save args for each kfunc ap for later processing
-    bpftrace_.btf_ap_args_.insert({ probe_->name(), ap_args_ });
+    // store/save args for each ap for later processing
+    bpftrace_.ap_args_.insert({ probe_->name(), ap_args_ });
   }
   return true;
 }
@@ -268,7 +267,7 @@ void FieldAnalyser::visit(AttachPoint &ap)
     has_kfunc_probe_ = true;
 
     // starting new attach point, clear and load new
-    // variables/arguments for kfunc if detected
+    // variables/arguments for attachpoint if detected
     if (resolve_args(ap))
     {
       // pick up cast arguments immediately and let the
