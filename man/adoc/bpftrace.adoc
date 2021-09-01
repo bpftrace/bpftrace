@@ -2263,6 +2263,8 @@ Allocated 4 bytes
 ...
 ----
 
+If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
+
 It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
 This can cause issues with languages that have their own runtime like Golang:
 
@@ -2414,4 +2416,7 @@ tracepoint:syscalls:sys_enter_openat
     const char * filename
     int flags
     umode_t mode
+# bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
+uprobe:/bin/bash:rl_set_prompt
+    const char *prompt
 ----

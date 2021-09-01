@@ -1174,6 +1174,33 @@ readline: "uname -r"
 Back to the bash `readline()` example: after checking the source code, I saw that the return value was
 the string read. So I can use a `uretprobe` and the `retval` variable to see the read string.
 
+***
+
+If the traced binary has DWARF available, it is possible to access `uprobe` arguments by name.
+
+Syntax:
+```
+uprobe: args->NAME
+```
+
+The arguments can be accessed by dereferencing `args` and accessing the argument's `NAME`. Currently, only
+simple types (integer, char, bool, enum) and pointers to them are supported.
+
+The list of function's arguments can be retrieved using the verbose list option:
+```
+# bpftrace -lv 'uprobe:/bin/bash:rl_set_prompt'
+uprobe:/bin/bash:rl_set_prompt
+    const char* prompt
+```
+
+Example (requires debuginfo for `/bin/bash` installed):
+```
+# bpftrace -e 'uprobe:/bin/bash:rl_set_prompt { printf("prompt: %s\n", str(args->prompt)); }'
+Attaching 1 probe...
+prompt: [user@localhost ~]$
+^C
+```
+
 Examples in situ:
 [(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
 [(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)

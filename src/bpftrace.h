@@ -14,6 +14,7 @@
 #include "bpffeature.h"
 #include "btf.h"
 #include "child.h"
+#include "dwarf_parser.h"
 #include "map.h"
 #include "mapmanager.h"
 #include "output.h"
@@ -138,6 +139,9 @@ public:
   std::optional<std::string> get_watchpoint_binary_path() const;
   virtual bool is_traceable_func(const std::string &func_name) const;
 
+  Dwarf *get_dwarf(const std::string &filename);
+  Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
+
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::string cmd_;
   bool finalize_ = false;
@@ -215,6 +219,8 @@ private:
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   bool has_iter_ = false;
+
+  std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };
 
 } // namespace bpftrace

@@ -11,7 +11,7 @@ struct Foo
   char b[10];
 };
 
-int function1(int *n)
+int function1(int *n, char c __attribute__((unused)))
 {
   return *n;
 }
@@ -26,7 +26,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
   usleep(1000000);
 
   int n = 13;
-  function1(&n);
+  char c = 'x';
+  function1(&n, c);
 
   struct Foo foo1 = { .a = 123, .b = "hello" };
   struct Foo foo2 = { .a = 456, .b = "world" };

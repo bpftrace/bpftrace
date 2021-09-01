@@ -1363,7 +1363,6 @@ TEST(semantic_analyser, args_builtin_wrong_use)
   test("END { args->foo }", 1);
   test("kprobe:f { args->foo }", 1);
   test("kretprobe:f { args->foo }", 1);
-  test("uprobe:/bin/sh:f { args->foo }", 1);
   test("uretprobe:/bin/sh/:f { args->foo }", 1);
   test("profile:ms:1 { args->foo }", 1);
   test("usdt:sh:probe { args->foo }", 1);
