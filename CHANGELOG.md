@@ -25,6 +25,8 @@ and this project adheres to
   - [#1971](https://github.com/iovisor/bpftrace/pull/1971)
 - Support positional parameters as integer literals
   - [#1982](https://github.com/iovisor/bpftrace/pull/1982)
+- Access to uprobe arguments by name
+  - [#1994](https://github.com/iovisor/bpftrace/pull/1994)
 
 #### Changed
 - Prevent LLVM from unrolling loops

@@ -15,3 +15,17 @@ RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:function2'
 EXPECT struct Foo\* foo1
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
+
+NAME uprobe arg by name - char
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test:function1 { printf("c = %c\n", args->c); exit(); }'
+EXPECT c = x
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME uprobe arg by name - pointer
+RUN {{BPFTRACE}} -e 'uprobe:./testprogs/uprobe_test:function1 { printf("n = %d\n", *(args->n)); exit(); }'
+EXPECT n = 13
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test

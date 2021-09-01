@@ -449,11 +449,22 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.type.MarkCtxAccess();
       builtin.type.is_funcarg = true;
     }
+    else if (type == ProbeType::uprobe)
+    {
+      // Add a dummy "placeholder" type here to satisfy semantic analyser.
+      // An eventual FieldAccess is then resolved as an argument lookup.
+      builtin.type = CreatePointer(CreateRecord("struct uprobe_args",
+                                                bpftrace_.structs.Lookup(
+                                                    "struct uprobe_args")),
+                                   AddrSpace::user);
+      builtin.type.MarkCtxAccess();
+      builtin.type.is_funcarg = true;
+    }
     else
     {
       LOG(ERROR, builtin.loc, err_)
-          << "The args builtin can only be used with tracepoint/kfunc probes ("
-          << probetypeName(type) << " used here)";
+          << "The args builtin can only be used with tracepoint/kfunc/uprobe"
+          << "probes (" << probetypeName(type) << " used here)";
     }
   }
   else {
@@ -1989,6 +2000,12 @@ void SemanticAnalyser::visit(FieldAccess &acc)
     {
       acc.type = it->second;
       acc.type.SetAS(acc.expr->type.GetAS());
+
+      if (is_final_pass())
+      {
+        if (acc.type.IsNoneTy())
+          LOG(ERROR, acc.loc, err_) << acc.field << " has unsupported type";
+      }
     }
     else
     {
@@ -2472,6 +2489,13 @@ void SemanticAnalyser::visit(AttachPoint &ap)
             << "' but matched " << std::to_string(paths.size()) << " binaries";
         ap.target = paths.front();
       }
+    }
+    // Check if there were some arguments resolved for the probe
+    auto args_it = bpftrace_.ap_args_.find(probe_->name());
+    if (args_it != bpftrace_.ap_args_.end())
+    {
+      ap_args_.clear();
+      ap_args_.insert(args_it->second.begin(), args_it->second.end());
     }
   }
   else if (ap.provider == "usdt") {

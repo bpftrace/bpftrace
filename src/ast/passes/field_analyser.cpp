@@ -1,4 +1,5 @@
 #include "field_analyser.h"
+#include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include <cassert>
@@ -167,10 +168,12 @@ bool FieldAnalyser::resolve_args(Probe &probe)
   for (auto *ap : *probe.attach_points)
   {
     auto probe_type = probetype(ap->provider);
-    if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc)
+    if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
+        probe_type != ProbeType::uprobe)
       continue;
-
-    bool kretfunc = probe_type == ProbeType::kretfunc;
+    // BEGIN and END are special uprobe cases that do not have args
+    if (ap->provider == "BEGIN" || ap->provider == "END")
+      continue;
 
     if (ap->need_expansion)
     {
@@ -191,21 +194,41 @@ bool FieldAnalyser::resolve_args(Probe &probe)
 
       bool first = true;
 
-      for (auto &func : matches)
+      for (auto &match : matches)
       {
         ProbeArgs args;
 
         // Trying to attach to multiple kfuncs. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and
         // continue with other functions.
-        try
+        if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
         {
-          bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc);
+          try
+          {
+            bpftrace_.btf_.resolve_args(match,
+                                        first ? ap_args_ : args,
+                                        probe_type == ProbeType::kretfunc);
+          }
+          catch (const std::runtime_error &e)
+          {
+            LOG(WARNING) << "kfunc:" << ap->func << ": " << e.what();
+            continue;
+          }
         }
-        catch (const std::runtime_error &e)
+        else // uprobe
         {
-          LOG(WARNING) << "kfunc:" << ap->func << ": " << e.what();
-          continue;
+          std::string func = match;
+          std::string file = erase_prefix(func);
+
+          Dwarf *dwarf = bpftrace_.get_dwarf(file);
+          if (dwarf)
+          {
+            args = dwarf->resolve_args(func);
+            if (first)
+              ap_args_ = args;
+          }
+          else
+            LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << file;
         }
 
         if (!first && !compare_args(args, ap_args_))
@@ -221,14 +244,29 @@ bool FieldAnalyser::resolve_args(Probe &probe)
     else
     {
       // Resolving args for an explicit function failed, print an error and fail
-      try
+      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
       {
-        bpftrace_.btf_.resolve_args(ap->func, ap_args_, kretfunc);
+        try
+        {
+          bpftrace_.btf_.resolve_args(ap->func,
+                                      ap_args_,
+                                      probe_type == ProbeType::kretfunc);
+        }
+        catch (const std::runtime_error &e)
+        {
+          LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << e.what();
+          return false;
+        }
       }
-      catch (const std::runtime_error &e)
+      else // uprobe
       {
-        LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << e.what();
-        return false;
+        Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
+        if (dwarf)
+          ap_args_ = dwarf->resolve_args(ap->func);
+        else
+        {
+          LOG(ERROR, ap->loc, err_) << "No debuginfo found for " << ap->target;
+        }
       }
     }
 
@@ -272,9 +310,6 @@ void FieldAnalyser::visit(Probe &probe)
 
 int FieldAnalyser::analyse()
 {
-  if (!bpftrace_.btf_.has_data())
-    return 0;
-
   Visit(*root_);
 
   std::string errors = err_.str();

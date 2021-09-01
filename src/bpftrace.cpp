@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-#include <linux/elf.h>
+#include <elf.h>
 
 #include <bcc/bcc_elf.h>
 #endif
@@ -2234,6 +2234,25 @@ bool BPFtrace::is_traceable_func(const std::string &func_name) const
 #else
   return traceable_funcs_.find(func_name) != traceable_funcs_.end();
 #endif
+}
+
+Dwarf *BPFtrace::get_dwarf(const std::string &filename)
+{
+  auto dwarf = dwarves_.find(filename);
+  if (dwarf == dwarves_.end())
+  {
+    dwarf = dwarves_.emplace(filename, Dwarf::GetFromBinary(filename)).first;
+  }
+  return dwarf->second.get();
+}
+
+Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
+{
+  auto probe_type = probetype(attachpoint.provider);
+  if (probe_type != ProbeType::uprobe && probe_type != ProbeType::uretprobe)
+    return nullptr;
+
+  return get_dwarf(attachpoint.target);
 }
 
 } // namespace bpftrace

@@ -1536,7 +1536,13 @@ void CodegenLLVM::visit(FieldAccess &acc)
 
   if (type.is_funcarg)
   {
-    expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
+    auto probe_type = probetype(current_attach_point_->provider);
+    if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
+      expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
+    else
+      expr_ = b_.CreateRegisterRead(ctx_,
+                                    "arg" +
+                                        std::to_string(acc.type.funcarg_idx));
     return;
   }
   else if (type.IsTupleTy())
