@@ -12,15 +12,6 @@ void FieldAnalyser::visit(Identifier &identifier)
   bpftrace_.btf_set_.insert(identifier.ident);
 }
 
-void FieldAnalyser::check_kfunc_args(void)
-{
-  if (has_kfunc_probe_ && has_mixed_args_)
-  {
-    LOG(ERROR, mixed_args_loc_, err_)
-        << "Probe has attach points with mixed arguments";
-  }
-}
-
 void FieldAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "ctx")
@@ -65,11 +56,12 @@ void FieldAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "args")
   {
+    resolve_args(*probe_);
     has_builtin_args_ = true;
   }
   else if (builtin.ident == "retval")
   {
-    check_kfunc_args();
+    resolve_args(*probe_);
 
     auto it = ap_args_.find("$retval");
 
@@ -82,6 +74,8 @@ void FieldAnalyser::visit(Builtin &builtin)
       else
         type_ = "";
     }
+
+    bpftrace_.btf_set_.insert(type_);
   }
 }
 
@@ -114,8 +108,6 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
   if (has_builtin_args_)
   {
-    check_kfunc_args();
-
     auto it = ap_args_.find(acc.field);
 
     if (it != ap_args_.end())
@@ -167,133 +159,105 @@ bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
          std::equal(args1.begin(), args1.end(), args2.begin(), pred);
 }
 
-bool FieldAnalyser::resolve_args(AttachPoint &ap)
+bool FieldAnalyser::resolve_args(Probe &probe)
 {
-  bool kretfunc = ap.provider == "kretfunc";
-  std::string func = ap.func;
-
   // load AP arguments into ap_args_
   ap_args_.clear();
 
-  if (ap.need_expansion)
+  for (auto *ap : *probe.attach_points)
   {
-    std::set<std::string> matches;
+    auto probe_type = probetype(ap->provider);
+    if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc)
+      continue;
 
-    // Find all the matches for the wildcard..
-    try
+    bool kretfunc = probe_type == ProbeType::kretfunc;
+
+    if (ap->need_expansion)
     {
-      matches = bpftrace_.probe_matcher_->get_matches_for_ap(ap);
-    }
-    catch (const WildcardException &e)
-    {
-      LOG(ERROR) << e.what();
-      return false;
-    }
+      std::set<std::string> matches;
 
-    // ... and check if they share same arguments.
-    //
-    // If they have different arguments, we have a potential
-    // problem, but only if the 'args->arg' is actually used.
-    // So far we just set has_mixed_args_ bool and continue.
-
-    bool first = true;
-
-    for (auto func : matches)
-    {
-      ProbeArgs args;
-
-      // Trying to attach to multiple kfuncs. If some of them fails on argument
-      // resolution, do not fail hard, just print a warning and continue with
-      // other functions.
+      // Find all the matches for the wildcard..
       try
       {
-        bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc);
+        matches = bpftrace_.probe_matcher_->get_matches_for_ap(*ap);
+      }
+      catch (const WildcardException &e)
+      {
+        LOG(ERROR) << e.what();
+        return false;
+      }
+
+      // ... and check if they share same arguments.
+
+      bool first = true;
+
+      for (auto &func : matches)
+      {
+        ProbeArgs args;
+
+        // Trying to attach to multiple kfuncs. If some of them fails on
+        // argument resolution, do not fail hard, just print a warning and
+        // continue with other functions.
+        try
+        {
+          bpftrace_.btf_.resolve_args(func, first ? ap_args_ : args, kretfunc);
+        }
+        catch (const std::runtime_error &e)
+        {
+          LOG(WARNING) << "kfunc:" << ap->func << ": " << e.what();
+          continue;
+        }
+
+        if (!first && !compare_args(args, ap_args_))
+        {
+          LOG(ERROR, ap->loc, err_)
+              << "Probe has attach points with mixed arguments";
+          break;
+        }
+
+        first = false;
+      }
+    }
+    else
+    {
+      // Resolving args for an explicit function failed, print an error and fail
+      try
+      {
+        bpftrace_.btf_.resolve_args(ap->func, ap_args_, kretfunc);
       }
       catch (const std::runtime_error &e)
       {
-        LOG(WARNING) << "kfunc:" << ap.func << ": " << e.what();
-        continue;
+        LOG(ERROR, ap->loc, err_) << "kfunc:" << ap->func << ": " << e.what();
+        return false;
       }
+    }
 
-      if (!first && !compare_args(args, ap_args_))
+    // check if we already stored arguments for this probe
+    auto it = bpftrace_.ap_args_.find(probe_->name());
+
+    if (it != bpftrace_.ap_args_.end())
+    {
+      // we did, and it's different...trigger the error
+      if (!compare_args(it->second, ap_args_))
       {
-        has_mixed_args_ = true;
-        mixed_args_loc_ = ap.loc;
-        break;
+        LOG(ERROR, ap->loc, err_)
+            << "Probe has attach points with mixed arguments";
       }
-
-      first = false;
     }
-  }
-  else
-  {
-    // Resolving args for an explicit function failed, print an error and fail
-    try
+    else
     {
-      bpftrace_.btf_.resolve_args(ap.func, ap_args_, kretfunc);
+      // store/save args for each ap for later processing
+      bpftrace_.ap_args_.insert({ probe_->name(), ap_args_ });
     }
-    catch (const std::runtime_error &e)
-    {
-      LOG(ERROR, ap.loc, err_) << "kfunc:" << ap.func << ": " << e.what();
-      return false;
-    }
-  }
-
-  // check if we already stored arguments for this probe
-  auto it = bpftrace_.ap_args_.find(probe_->name());
-
-  if (it != bpftrace_.ap_args_.end())
-  {
-    // we did, and it's different.. save the state and
-    // triger the error if there's args->xxx detected
-    if (!compare_args(it->second, ap_args_))
-    {
-      has_mixed_args_ = true;
-      mixed_args_loc_ = ap.loc;
-    }
-  }
-  else
-  {
-    // store/save args for each ap for later processing
-    bpftrace_.ap_args_.insert({ probe_->name(), ap_args_ });
   }
   return true;
 }
 
-void FieldAnalyser::visit(AttachPoint &ap)
-{
-  if (ap.provider == "kfunc" || ap.provider == "kretfunc")
-  {
-    has_kfunc_probe_ = true;
-
-    // starting new attach point, clear and load new
-    // variables/arguments for attachpoint if detected
-    if (resolve_args(ap))
-    {
-      // pick up cast arguments immediately and let the
-      // FieldAnalyser to resolve args builtin
-      for (const auto& arg : ap_args_)
-      {
-        auto stype = arg.second;
-
-        if (stype.IsPtrTy())
-          stype = *stype.GetPointeeTy();
-
-        if (stype.IsRecordTy())
-          bpftrace_.btf_set_.insert(stype.GetName());
-      }
-    }
-  }
-}
-
 void FieldAnalyser::visit(Probe &probe)
 {
-  has_kfunc_probe_ = false;
-  has_mixed_args_ = false;
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
-    Visit(*ap);
     probe_type_ = probetype(ap->provider);
     prog_type_ = progtype(probe_type_);
     attach_func_ = ap->func;

@@ -2705,10 +2705,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap_args_.clear();
         ap_args_.insert(args.begin(), args.end());
       }
-      else
-      {
-        LOG(ERROR, ap.loc, err_) << "Failed to resolve kfunc args.";
-      }
     }
   }
   else if (ap.provider == "iter")
