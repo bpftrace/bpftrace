@@ -20,6 +20,9 @@
 #ifdef LLVM_ORC_V2
 #include <llvm/ExecutionEngine/Orc/Core.h>
 #include <llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h>
+#if LLVM_VERSION_MAJOR >= 13
+#include <llvm/ExecutionEngine/Orc/ExecutorProcessControl.h>
+#endif
 #endif
 
 #include <optional>
@@ -72,7 +75,11 @@ private:
   std::unique_ptr<TargetMachine> TM;
   DataLayout DL;
 #if LLVM_VERSION_MAJOR >= 7
+#ifdef LLVM_ORC_V2
+  std::unique_ptr<ExecutionSession> ES;
+#else // LLVM_ORC_V1
   ExecutionSession ES;
+#endif
 #endif
 #if LLVM_VERSION_MAJOR >= 7 && LLVM_VERSION_MAJOR < 12
   std::shared_ptr<SymbolResolver> Resolver;
@@ -98,7 +105,21 @@ private:
 #endif
 
 public:
+#if LLVM_VERSION_MAJOR >= 13
+  ~BpfOrc()
+  {
+    if (auto Err = ES->endSession())
+      ES->reportError(std::move(Err));
+  }
+#endif
+#ifdef LLVM_ORC_V2
+  BpfOrc(TargetMachine *TM,
+         DataLayout DL,
+         std::unique_ptr<ExecutionSession> ES);
+#else
   BpfOrc(TargetMachine *TM, DataLayout DL);
+#endif
+
   void compile(std::unique_ptr<Module> M);
 
   /* Helper for creating a orc object, responsible for creating internal objects
@@ -134,7 +155,7 @@ public:
 #ifdef LLVM_ORC_V2
   Expected<JITEvaluatedSymbol> lookup(StringRef Name)
   {
-    return ES.lookup({ &MainJD }, Mangle(Name.str()));
+    return ES->lookup({ &MainJD }, Mangle(Name.str()));
   }
 #endif
 };
