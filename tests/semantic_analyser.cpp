@@ -2464,6 +2464,57 @@ TEST_F(semantic_analyser_btf, iter)
 
 #endif // HAVE_LIBBPF_BTF_DUMP
 
+#ifdef HAVE_LIBDW
+
+#include "dwarf_common.h"
+
+class semantic_analyser_dwarf : public test_dwarf
+{
+};
+
+TEST_F(semantic_analyser_dwarf, uprobe_args)
+{
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(uprobe + ":func_1 { $x = args->a; }", 0);
+  test(uprobe + ":func_2 { $x = args->b; }", 0);
+
+  // func_1 and func_2 have different args, but none of them
+  // is used in probe code, so we're good -> PASS
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", 0);
+  // func_1 and func_2 have different args, one of them
+  // is used in probe code, we can't continue -> FAIL in the field analyser
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args->a; }",
+       0,
+       true,
+       false,
+       1);
+  // func_2 and func_3 have same args -> PASS
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args->a; }", 0);
+
+  // "none" is not an arg -> FAIL in semantic analyser
+  test(uprobe + ":func_1 { $x = args->none; }", 1, true, false, 0);
+
+  // Probes with wildcards (need non-mock BPFtrace)
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  // func_* have different args, but none of them
+  // is used in probe code, so we're good -> PASS
+  test(bpftrace, false, driver, uprobe + ":func_* { }", 0);
+  // func_* have different args, one of them
+  // is used in probe code, we can't continue -> FAIL in the field analyser
+  test(bpftrace,
+       false,
+       driver,
+       uprobe + ":func_* { $x = args->a; }",
+       0,
+       true,
+       false,
+       1);
+}
+
+#endif // HAVE_LIBDW
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace
