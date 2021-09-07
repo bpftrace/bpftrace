@@ -23,13 +23,7 @@ target_link_libraries(ast ast_defs arch bpforc parser)
 
 add_dependencies(ast_defs parser)
 
-if (HAVE_BCC_KFUNC)
-  target_compile_definitions(ast PRIVATE HAVE_BCC_KFUNC)
-endif(HAVE_BCC_KFUNC)
-
-if (HAVE_BCC_WHICH_SO)
-  target_compile_definitions(ast PRIVATE HAVE_BCC_WHICH_SO)
-endif (HAVE_BCC_WHICH_SO)
+target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 
 if (STATIC_LINKING)
   set(clang_libs
