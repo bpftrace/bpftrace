@@ -446,3 +446,7 @@ $ sudo mokutil --disable-validation
 ```
 3. Use the `SysRQ+x` key combination to temporarily lift lockdown (until next
    boot)
+
+Note that you may encounter kernel lockdown error if you install bpftrace
+via `snap` incorrectly. Please refer to [Ubuntu](#ubuntu-packages) for more
+details regrading how to use `snap` to install `bpftrace`.
