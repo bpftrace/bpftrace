@@ -164,8 +164,12 @@ else()
     find_package(LLVM REQUIRED)
   endif()
 
-  if((${LLVM_VERSION_MAJOR} VERSION_LESS 6) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER 12))
-    message(SEND_ERROR "Unsupported LLVM version found: ${LLVM_INCLUDE_DIRS}")
+  set(MIN_LLVM_MAJOR 6)
+  set(MAX_LLVM_MAJOR 12)
+
+  if((${LLVM_VERSION_MAJOR} VERSION_LESS ${MIN_LLVM_MAJOR}) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER ${MAX_LLVM_MAJOR}))
+    message(SEND_ERROR "Unsupported LLVM version found via ${LLVM_INCLUDE_DIRS}: ${LLVM_VERSION_MAJOR}")
+    message(SEND_ERROR "Only versions between ${MIN_LLVM_MAJOR} and ${MAX_LLVM_MAJOR} are supported")
     message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
   endif()
 
