@@ -24,23 +24,26 @@ description: BPFtrace is a high-level tracing language for
 
 confinement: strict
 grade: stable
-base: core18
-architectures: [amd64, arm64]
+base: core20
 assumes: [snapd2.37]
 adopt-info: bpftrace
 
+architectures:
+    - build-on: amd64
+    - build-on: arm64
+
 parts:
     bcclibs3:
+        plugin: cmake
         source: https://github.com/iovisor/bcc.git
         source-tag: v0.8.0
-        plugin: cmake
-        configflags:
+        cmake-parameters:
             - -DLLVM_DEFINITIONS="-D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS"
-            - -DREVISION_LAST=v0.8.0
+            - -DREVISION_LAST=v0.21.0
             - -DBCC_KERNEL_HAS_SOURCE_DIR=1
-            - -DPYTHON_CMD='python2;python3'
-            - -DCMAKE_BUILD_PARALLEL_LEVEL=1
+            - -DPYTHON_CMD='python3'
             - -DCMAKE_INSTALL_PREFIX=/usr
+
         override-pull: |
           snapcraftctl pull
           sed -i "s;if os.environ.get('DESTDIR'):;if \"sdist\" not in sys.argv and os.environ.get('DESTDIR'):;" src/python/setup.py.in
@@ -79,14 +82,28 @@ parts:
             - python3-netaddr
             - python3-pyroute2
             - python3-distutils
+        stage:
+            - usr/lib/$SNAPCRAFT_ARCH_TRIPLET/*
+            - usr/lib/*
+            - usr/include/*
+            - usr/include/bcc/*
+        stage-packages:
+            - libbinutils
+            - libclang1-7
+            - libllvm7
+
     bpftrace:
         after:
             - bcclibs3
         source: https://github.com/iovisor/bpftrace.git
+        source-tag: v0.13.0
         plugin: cmake
-        configflags:
+        cmake-parameters:
             - -DCMAKE_BUILD_TYPE=Release
-            - -DLIBBCC_INCLUDE_DIRS=$SNAPCRAFT_STAGE/usr/include/bcc
+            - -DCMAKE_LIBRARY_PATH=$SNAPCRAFT_STAGE/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/
+            - -DLIBBCC_INCLUDE_DIRS=$SNAPCRAFT_STAGE/usr/include/
+            - -DCMAKE_INSTALL_PREFIX=/usr
+
         override-pull: |
             snapcraftctl pull
             description=$(git describe HEAD --tags)
@@ -97,27 +114,34 @@ parts:
             version=$(echo $version$date-$commits-$sha | cut -c1-32)
             snapcraftctl set-version "$version"
         build-packages:
-          - bison
-          - cmake
-          - flex
-          - g++
-          - git
-          - libelf-dev
-          - zlib1g-dev
-          - libfl-dev
-          - systemtap-sdt-dev
-          - binutils-dev
-          - llvm-7-dev
-          - llvm-7-runtime
-          - libclang-7-dev
-          - clang-7
+            - bison
+            - cmake
+            - flex
+            - g++
+            - git
+            - libelf-dev
+            - zlib1g-dev
+            - libfl-dev
+            - systemtap-sdt-dev
+            - binutils-dev
+            - llvm-7-dev
+            - llvm-7-runtime
+            - libclang-7-dev
+            - libcereal-dev
+            - clang-7
+            - libgtest-dev
+            - libgmock-dev
+            - asciidoctor
         stage-packages:
-          - libbinutils
-          - libclang1-7
-          - libllvm7
+            - libbinutils
+            - libclang1-7
+            - libllvm7
+        stage:
+            - usr/bin
+            - usr/share
 
 apps:
     bpftrace:
-        command: bpftrace
+        command: usr/bin/bpftrace
         plugs: [ home, system-trace ]
 
