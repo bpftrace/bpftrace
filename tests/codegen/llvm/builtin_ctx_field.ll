@@ -103,19 +103,16 @@ entry:
   %43 = add i64 %42, 32
   %44 = bitcast [4 x i8]* %"struct x.e" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %44)
-  %45 = inttoptr i64 %43 to [4 x i8]*
-  %46 = bitcast [4 x i8]* %"struct x.e" to i8*
-  %47 = bitcast [4 x i8]* %45 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %46, i8* align 1 %47, i64 4, i1 true)
-  %48 = bitcast i64* %"@e_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %48)
+  %probe_read_kernel7 = call i64 inttoptr (i64 113 to i64 ([4 x i8]*, i32, i64)*)([4 x i8]* %"struct x.e", i32 4, i64 %43)
+  %45 = bitcast i64* %"@e_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %45)
   store i64 0, i64* %"@e_key", align 8
-  %pseudo7 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
-  %update_elem8 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [4 x i8]*, i64)*)(i64 %pseudo7, i64* %"@e_key", [4 x i8]* %"struct x.e", i64 0)
-  %49 = bitcast i64* %"@e_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %49)
-  %50 = bitcast [4 x i8]* %"struct x.e" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %50)
+  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
+  %update_elem9 = call i64 inttoptr (i64 2 to i64 (i64, i64*, [4 x i8]*, i64)*)(i64 %pseudo8, i64* %"@e_key", [4 x i8]* %"struct x.e", i64 0)
+  %46 = bitcast i64* %"@e_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %46)
+  %47 = bitcast [4 x i8]* %"struct x.e" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %47)
   ret i64 0
 }
 
@@ -124,9 +121,6 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
-
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

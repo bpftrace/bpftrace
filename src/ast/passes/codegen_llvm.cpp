@@ -3111,21 +3111,8 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
   {
     // Read data onto stack
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    if (data_type.IsCtxAccess())
-    {
-      // Map functions only accept a pointer to a element in the stack
-      // Copy data to avoid the above issue
-      b_.CREATE_MEMCPY_VOLATILE(dst,
-                                b_.CreateIntToPtr(src,
-                                                  dst_type->getPointerTo()),
-                                elem_type.GetSize(),
-                                1);
-    }
-    else
-    {
-      b_.CreateProbeRead(
-          ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
-    }
+    b_.CreateProbeRead(
+        ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
     expr_ = dst;
     expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
   }

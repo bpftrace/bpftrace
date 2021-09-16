@@ -69,3 +69,10 @@ NAME strncmp with prefix
 RUN {{BPFTRACE}} -e 'BEGIN { if (strncmp("hello", "hell") == 0) { printf("equal"); } else { printf("not equal"); } exit(); }'
 EXPECT not equal
 TIMEOUT 3
+
+# The issue this test catches is the verifier doesn't allow multiple ALU ops on ctx pointer.
+# ctx+const is ok, but ctx+const+const is not ok.
+NAME access ctx struct field twice
+RUN {{BPFTRACE}} -e 'tracepoint:sched:sched_wakeup { if (args->comm == "asdf") { print(args->comm) } exit(); }'
+EXPECT Attaching 1 probe
+TIMEOUT 1
