@@ -45,6 +45,8 @@ and this project adheres to
   - [#1972](https://github.com/iovisor/bpftrace/pull/1972)
 - Fix string comparison codegen
   - [#1979](https://github.com/iovisor/bpftrace/pull/1979)
+- Fix verifier error when accessing same tracepoint field twice
+  - [#2008](https://github.com/iovisor/bpftrace/pull/2008)
 
 #### Tools
 
