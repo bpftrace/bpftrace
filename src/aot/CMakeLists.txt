@@ -3,6 +3,12 @@ target_include_directories(aot PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(aot PUBLIC ${CMAKE_BINARY_DIR})
 target_compile_definitions(aot PRIVATE ${BPFTRACE_FLAGS})
 
+# Only build aotrt if supported bcc is used
+# (https://github.com/iovisor/bcc/commit/719191867a25ce07dc96f7faf9b8ccedadc7ec44)
+if(NOT LIBBCC_BPF_CONTAINS_RUNTIME)
+  return()
+endif()
+
 # TODO(dxu): remove LLVM requirement
 # Currently the only LLVM API the runtime uses is llvm::itaniumDemangle()
 find_package(LLVM REQUIRED CONFIG)
