@@ -49,6 +49,8 @@ and this project adheres to
   - [#2008](https://github.com/iovisor/bpftrace/pull/2008)
 - Fix reading too many bits for <64 bit kfunc args
   - [#2014](https://github.com/iovisor/bpftrace/pull/2014)
+- Fix misaligned stack access for map keys
+  - [#2012](https://github.com/iovisor/bpftrace/pull/2012)
 
 #### Tools
 

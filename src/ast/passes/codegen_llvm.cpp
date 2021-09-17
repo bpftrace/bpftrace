@@ -2397,6 +2397,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
 
   int offset = 0;
+  bool aligned = true;
   // Construct a map key in the stack
   for (Expression *expr : *map.vargs)
   {
@@ -2405,7 +2406,11 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
                                      { b_.getInt64(0), b_.getInt64(offset) });
 
     if (onStack(expr->type))
+    {
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
+      if ((expr->type.GetSize() % 8) != 0)
+        aligned = false;
+    }
     else
     {
       if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
@@ -2417,13 +2422,21 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
                            expr_,
                            expr->type.GetAS(),
                            expr->loc);
+        if ((expr->type.GetSize() % 8) != 0)
+          aligned = false;
       }
       else
       {
         // promote map key to 64-bit:
-        b_.CreateStore(
-            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
-            b_.CreatePointerCast(offset_val, expr_->getType()->getPointerTo()));
+        Value *key_elem = b_.CreateIntCast(expr_,
+                                           b_.getInt64Ty(),
+                                           expr->type.IsSigned());
+        Value *dst_ptr = b_.CreatePointerCast(offset_val,
+                                              expr_->getType()->getPointerTo());
+        if (aligned)
+          b_.CreateStore(key_elem, dst_ptr);
+        else
+          b_.createAlignedStore(key_elem, dst_ptr, 1);
       }
     }
     offset += expr->type.GetSize();
@@ -2433,7 +2446,10 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
   {
     Value *offset_val = b_.CreateGEP(key,
                                      { b_.getInt64(0), b_.getInt64(offset) });
-    b_.CreateStore(extra_key, offset_val);
+    if (aligned)
+      b_.CreateStore(extra_key, offset_val);
+    else
+      b_.createAlignedStore(extra_key, offset_val, 1);
   }
 
   return key;
