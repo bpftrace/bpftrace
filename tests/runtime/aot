@@ -2,30 +2,36 @@ NAME special probes
 RUN {{BPFTRACE}} -e 'BEGIN { printf("begin"); exit() } END { print("end") }' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT beginend
 TIMEOUT 5
+REQUIRES_FEATURE aot
 
 NAME kprobe
 RUN {{BPFTRACE}} -e 'kprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT SUCCESS kprobe [0-9][0-9]*
 TIMEOUT 5
+REQUIRES_FEATURE aot
 
 NAME uprobe
 RUN {{BPFTRACE}} -e 'uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT arg0: [0-9]*
 TIMEOUT 5
 AFTER /bin/bash -c "echo lala"
+REQUIRES_FEATURE aot
 
 NAME profile
 RUN {{BPFTRACE}} -e 'profile:hz:599 { @[tid] = count(); exit();}' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT \@\[[0-9]*\]\:\s[0-9]
 TIMEOUT 5
+REQUIRES_FEATURE aot
 
 NAME software
 RUN {{BPFTRACE}} -e 'software:cpu:1 { @[comm] = count(); exit();}' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
+REQUIRES_FEATURE aot
 
 NAME hardware
 RUN {{BPFTRACE}} -e 'hardware:cache-misses:10 { @[pid] = count(); exit(); }' --aot /tmp/tmpscript.btaot && {{BPFTRACE_AOTRT}} /tmp/tmpscript.btaot
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
 REQUIRES ls /sys/devices/cpu/events/cache-misses
+REQUIRES_FEATURE aot
