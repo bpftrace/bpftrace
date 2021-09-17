@@ -9,6 +9,8 @@ from distutils.version import LooseVersion
 import re
 from functools import lru_cache
 
+import cmake_vars
+
 BPF_PATH = environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
 ENV_PATH = environ["PATH"]
 ATTACH_TIMEOUT = 5
@@ -114,6 +116,7 @@ class Utils(object):
         bpffeature["iter:task_file"] = output.find("iter:task_file: yes") != -1
         bpffeature["libpath_resolv"] = output.find("bcc library path resolution: yes") != -1
         bpffeature["dwarf"] = output.find("libdw (DWARF support): yes") != -1
+        bpffeature["aot"] = cmake_vars.LIBBCC_BPF_CONTAINS_RUNTIME
         return bpffeature
 
     @staticmethod
