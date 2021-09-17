@@ -144,6 +144,8 @@ public:
                        AllocaInst *data,
                        Value *data_len,
                        const location &loc);
+
+  StoreInst *createAlignedStore(Value *val, Value *ptr, unsigned align);
   // moves the insertion point to the start of the function you're inside,
   // invokes functor, then moves the insertion point back to its original
   // position. this enables you to emit instructions at the start of your

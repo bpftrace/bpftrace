@@ -1218,5 +1218,16 @@ void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_seq_printf, loc);
 }
 
+StoreInst *IRBuilderBPF::createAlignedStore(Value *val,
+                                            Value *ptr,
+                                            unsigned int align)
+{
+#if LLVM_VERSION_MAJOR < 10
+  return CreateAlignedStore(val, ptr, align);
+#else
+  return CreateAlignedStore(val, ptr, MaybeAlign(align));
+#endif
+}
+
 } // namespace ast
 } // namespace bpftrace

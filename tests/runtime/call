@@ -71,6 +71,16 @@ RUN {{BPFTRACE}} -e 'i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }'
 EXPECT @\[ok_key\]: 1
 TIMEOUT 5
 
+NAME buf_map_multikey
+RUN {{BPFTRACE}} -e 'BEGIN { @[buf("ok_key", 8), 1] = hist(1); exit(); }'
+EXPECT @\[ok_key\\x00\\x00\, 1]
+TIMEOUT 5
+
+NAME buf_hist_map_key
+RUN {{BPFTRACE}} -e 'BEGIN { @[buf("ok_key", 8)] = hist(1); exit(); }'
+EXPECT @\[ok_key\\x00\\x00\]
+TIMEOUT 5
+
 NAME buf_map_value
 RUN {{BPFTRACE}} -e 'i:ms:100 { @ = buf("ok_value", 8); exit(); }'
 EXPECT @: ok_value
