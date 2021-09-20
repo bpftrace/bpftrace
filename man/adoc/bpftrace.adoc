@@ -1249,6 +1249,8 @@ For arrays the `length` is optional, it is automatically inferred from the signa
 
 The `buf_t` object returned by `buf` can safely be printed as a hex encoded string with the `%r` format specifier.
 
+Bytes with values >=32 and \<=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`).
+
 ----
 i:s:1 {
   printf("%r\n", buf(kaddr("avenrun"), 8));
