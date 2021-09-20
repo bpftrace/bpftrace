@@ -2161,7 +2161,6 @@ Tracing block I/O sizes > 0 bytes
 - `time(char *fmt)` - Print formatted time
 - `join(char *arr[] [, char *delim])` - Print the array
 - `str(char *s [, int length])` - Returns the string pointed to by s
-- `buf(void *d [, int length])` - Returns a hex-formatted string of the data pointed to by d
 - `ksym(void *p)` - Resolve kernel address
 - `usym(void *p)` - Resolve user space address
 - `kaddr(char *name)` - Resolve kernel symbol name
@@ -2177,7 +2176,7 @@ Tracing block I/O sizes > 0 bytes
 - `signal(char[] signal | u32 signal)` - Send a signal to the current task
 - `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
 - `override(u64 rc)` - Override return value
-- `buf(void *d [, length])` - Hex-format a buffer
+- `buf(void *d [, int length])` - Returns a hex-formatted string of the data pointed to by d
 - `sizeof(...)` - Return size of a type or expression
 - `print(...)` - Print a non-map value with default formatting
 - `strftime(char *format, int nsecs)` - Return a formatted timestamp
@@ -2876,6 +2875,9 @@ Returns a hex-formatted string of the data pointed to by `d` that is safe to pri
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
 be tuned using the [`BPFTRACE_STRLEN`](#91-bpftrace_strlen) environment variable.
+
+Bytes with values >=32 and <=126 are printed using their ASCII character, other
+bytes are printed in hex form (e.g. `\x00`).
 
 For example, we can take the `buff` parameter (`void *`) of `sys_enter_sendto`, read the
 number of bytes specified by `len` (`size_t`), and format the bytes in hexadecimal so that
