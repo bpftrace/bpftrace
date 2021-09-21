@@ -2368,46 +2368,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     else
     {
       // Two or more values as a map key (e.g, @[comm, pid] = 1;)
-      size_t size = 0;
-      for (Expression *expr : *map.vargs)
-      {
-        size += expr->type.GetSize();
-      }
-      key = b_.CreateAllocaBPF(size, map.ident + "_key");
-
-      int offset = 0;
-      // Construct a map key in the stack
-      for (Expression *expr : *map.vargs)
-      {
-        auto scoped_del = accept(expr);
-        Value *offset_val = b_.CreateGEP(
-            key, { b_.getInt64(0), b_.getInt64(offset) });
-
-        if (onStack(expr->type))
-          b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
-        else
-        {
-          if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
-          {
-            // Read the array/struct into the key
-            b_.CreateProbeRead(ctx_,
-                               offset_val,
-                               expr->type.GetSize(),
-                               expr_,
-                               expr->type.GetAS(),
-                               expr->loc);
-          }
-          else
-          {
-            // promote map key to 64-bit:
-            b_.CreateStore(
-                b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
-                b_.CreatePointerCast(offset_val,
-                                     expr_->getType()->getPointerTo()));
-          }
-        }
-        offset += expr->type.GetSize();
-      }
+      key = getMultiMapKey(map, {}, 0);
     }
   }
   else
@@ -2424,35 +2385,67 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
   return std::make_tuple(key, ScopedExprDeleter(std::move(key_deleter)));
 }
 
+AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
+                                        const std::vector<Value *> &extra_keys,
+                                        size_t extra_keys_size)
+{
+  size_t size = extra_keys_size;
+  for (Expression *expr : *map.vargs)
+  {
+    size += expr->type.GetSize();
+  }
+  AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
+
+  int offset = 0;
+  // Construct a map key in the stack
+  for (Expression *expr : *map.vargs)
+  {
+    auto scoped_del = accept(expr);
+    Value *offset_val = b_.CreateGEP(key,
+                                     { b_.getInt64(0), b_.getInt64(offset) });
+
+    if (onStack(expr->type))
+      b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
+    else
+    {
+      if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
+      {
+        // Read the array/struct into the key
+        b_.CreateProbeRead(ctx_,
+                           offset_val,
+                           expr->type.GetSize(),
+                           expr_,
+                           expr->type.GetAS(),
+                           expr->loc);
+      }
+      else
+      {
+        // promote map key to 64-bit:
+        b_.CreateStore(
+            b_.CreateIntCast(expr_, b_.getInt64Ty(), expr->type.IsSigned()),
+            b_.CreatePointerCast(offset_val, expr_->getType()->getPointerTo()));
+      }
+    }
+    offset += expr->type.GetSize();
+  }
+
+  for (auto *extra_key : extra_keys)
+  {
+    Value *offset_val = b_.CreateGEP(key,
+                                     { b_.getInt64(0), b_.getInt64(offset) });
+    b_.CreateStore(extra_key, offset_val);
+  }
+
+  return key;
+}
+
 AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
-  AllocaInst *key;
-  if (map.vargs) {
-    size_t size = 8; // Extra space for the bucket value
-    for (Expression *expr : *map.vargs)
-    {
-      size += expr->type.GetSize();
-    }
-    key = b_.CreateAllocaBPF(size, map.ident + "_key");
+  if (map.vargs)
+    return getMultiMapKey(map, { log2 }, 8);
 
-    int offset = 0;
-    for (Expression *expr : *map.vargs) {
-      auto scoped_del = accept(expr);
-      Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-      if (shouldBeOnStackAlready(expr->type))
-        b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
-      else
-        b_.CreateStore(expr_, offset_val);
-      offset += expr->type.GetSize();
-    }
-    Value *offset_val = b_.CreateGEP(key, {b_.getInt64(0), b_.getInt64(offset)});
-    b_.CreateStore(log2, offset_val);
-  }
-  else
-  {
-    key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
-    b_.CreateStore(log2, key);
-  }
+  AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
+  b_.CreateStore(log2, key);
   return key;
 }
 
