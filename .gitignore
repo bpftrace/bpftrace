@@ -1,6 +1,7 @@
 build/
 build-*/
 tests/runtime/*.pyc
+tests/data/dwarf_data.h
 .vagrant
 tests/**/*.bc
 *~
