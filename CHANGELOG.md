@@ -47,6 +47,8 @@ and this project adheres to
   - [#1979](https://github.com/iovisor/bpftrace/pull/1979)
 - Fix verifier error when accessing same tracepoint field twice
   - [#2008](https://github.com/iovisor/bpftrace/pull/2008)
+- Fix reading too many bits for <64 bit kfunc args
+  - [#2014](https://github.com/iovisor/bpftrace/pull/2014)
 
 #### Tools
 

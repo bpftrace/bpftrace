@@ -1054,8 +1054,9 @@ Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
                                    SizedType &type,
                                    std::string &name)
 {
+  assert(type.IsIntTy() || type.IsPtrTy());
   ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
-  Value *expr = CreateLoad(getInt64Ty(),
+  Value *expr = CreateLoad(GetType(type),
                            CreateGEP(ctx, getInt64(type.kfarg_idx)),
                            name);
 
