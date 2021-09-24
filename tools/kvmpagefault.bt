@@ -1,0 +1,30 @@
+#!/usr/bin/env bpftrace
+/*
+ * kvmpagefault.bt	Trace kvm_page_fault
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Also a basic example of bpftrace.
+ *
+ * USAGE: kvmpagefault.bt
+ *
+ * Copyright 2021 CESTC, Inc.
+ * Licensed under the GPL License, Version 2.0 (the "License")
+ *
+ * 24-Sep-2021	Rong Tao	Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing KVM page fault... Hit Ctrl-C to end.\n");
+	printf("%-6s %-16s %-18s %-3s\n", "PID", "COMM", "FaultAddr", "ERRCode");
+}
+
+tracepoint:kvm:kvm_page_fault
+{
+	@[kstack, ustack, comm, pid] = count();
+	printf("%-6d %-16s 0x%-018lx %-3d\n", pid, comm, args->fault_address, args->error_code);
+}
+
+END
+{
+}
