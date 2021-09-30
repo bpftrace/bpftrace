@@ -296,7 +296,8 @@ sudo dnf install -y bison \
   libbpf-devel \
   gtest-devel \
   gmock-devel \
-  cereal-devel
+  cereal-devel \
+  asciidoctor
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
