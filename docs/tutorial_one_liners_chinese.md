@@ -1,6 +1,6 @@
 # bpftrace一行教程
 
-该教程通过12个简单小节帮助你了解bpftrace的使用。每一小节都是一行的命令，你可以立马运行并看到运行效果。该教程系列用来介绍bpftrace的概念。关于bpftrace的完整参考，见[bpftrace完整参考](reference_guide.md)。
+该教程通过12个简单小节帮助你了解bpftrace的使用。每一小节都是一行的命令，你可以立马运行并看到运行效果。该教程系列用来介绍bpftrace的概念。关于bpftrace的完整参考，见[bpftrace手册](man/adoc/bpftrace.adoc)。
 
 该教程贡献者是Brendan Gregg, Netflix (2018), 基于他的DTrace教程系列 [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial)。
 
@@ -315,5 +315,5 @@ open path: retrans_time_ms
 - `((struct path *)arg0)->dentry->d_name.name`: 这里`arg0`作为`struct path *`并引用dentry。
 - #include: 包含必要的path和dentry类型声明的头文件。
 
-bfptrace对内核结构跟踪的支持和bcc是一样的，允许使用头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidate的声明。在将来，bpftrace会使用新的linux BTF支持，到时候所有结构都将可用。
+bfptrace对内核结构跟踪的支持和bcc是一样的，允许使用头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidata的声明。倘若内核有提供BPF (BPF Type Format)数据，则所有结构都可用。
 到这里你已经理解了bpftrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[参考手册](reference_guide.md)更多的功能。
