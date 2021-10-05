@@ -7,14 +7,13 @@
 #include <vector>
 
 #include "bpftrace.h"
+#include "cxxdemangler/cxxdemangler.h"
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "utils.h"
 
 #include <bcc/bcc_syms.h>
-
-#include <llvm/Demangle/Demangle.h>
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <bcc/bcc_elf.h>
@@ -87,8 +86,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
                         : "";
       if (symbol_has_cpp_mangled_signature(fun_line))
       {
-        char* demangled_name = llvm::itaniumDemangle(
-            fun_line.c_str(), nullptr, nullptr, nullptr);
+        char* demangled_name = cxxdemangle(fun_line.c_str());
         if (demangled_name)
         {
           if (!wildcard_match(prefix + demangled_name, tokens, true, true))

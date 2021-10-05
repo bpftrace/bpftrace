@@ -121,7 +121,7 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
-target_link_libraries(libbpftrace parser resources runtime aot ast arch)
+target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm)
 
 if (LIBBPF_BTF_DUMP_FOUND)
   target_include_directories(runtime PUBLIC ${LIBBPF_INCLUDE_DIRS})
@@ -210,3 +210,4 @@ unset(BPFTRACE)
 add_subdirectory(aot)
 add_subdirectory(arch)
 add_subdirectory(ast)
+add_subdirectory(cxxdemangler)
