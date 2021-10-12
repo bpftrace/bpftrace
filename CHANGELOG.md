@@ -17,6 +17,8 @@ and this project adheres to
   - [#2147](https://github.com/iovisor/bpftrace/pull/2147)
 - Improve include paths resolution
   - [#2149](https://github.com/iovisor/bpftrace/pull/2149)
+- Automatic type resolution from DWARF
+  - [#2034](https://github.com/iovisor/bpftrace/pull/2034)
 - Add builtin function: `bswap`
   - [#2166](https://github.com/iovisor/bpftrace/pull/2166)
 
