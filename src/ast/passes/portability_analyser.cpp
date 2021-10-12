@@ -1,5 +1,7 @@
 #include "portability_analyser.h"
 
+#include <cstdlib>
+
 #include "log.h"
 #include "types.h"
 
@@ -118,7 +120,13 @@ Pass CreatePortabilityPass()
   auto fn = [](Node &n, PassContext &__attribute__((unused))) {
     PortabilityAnalyser analyser{ &n };
     if (analyser.analyse())
+    {
+      // Used by runtime test framework to know when to skip an AOT test
+      if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))
+        std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED" << std::endl;
+
       return PassResult::Error("");
+    }
 
     return PassResult::Success();
   };
