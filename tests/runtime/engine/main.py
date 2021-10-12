@@ -8,12 +8,12 @@ from parser import TestParser, UnknownFieldError, RequiredFieldError
 from runner import Runner, ok, fail, warn
 
 
-def main(test_filter = None):
+def main(test_filter, run_aot_tests):
     if not test_filter:
         test_filter = "*"
 
     try:
-        test_suite = sorted(TestParser.read_all(test_filter))
+        test_suite = sorted(TestParser.read_all(test_filter, run_aot_tests))
         test_suite = [ (n, sorted(t)) for n, t in test_suite ]
     except (UnknownFieldError, RequiredFieldError) as error:
         print(fail(str(error)))
@@ -65,7 +65,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Runtime tests for bpftrace.')
     parser.add_argument('--filter', dest='tests_filter',
                         help='filter runtime tests')
+    parser.add_argument('--run-aot-tests', action='store_true',
+                        help='Run ahead-of-time compliation tests. Note this would roughly double test time.')
 
     args = parser.parse_args()
 
-    main(args.tests_filter)
+    main(args.tests_filter, args.run_aot_tests)

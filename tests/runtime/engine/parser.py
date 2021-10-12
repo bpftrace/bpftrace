@@ -41,7 +41,9 @@ TestStruct = namedtuple(
 
 class TestParser(object):
     @staticmethod
-    def read_all(test_filter):
+    def read_all(test_filter, run_aot_tests):
+        aot_tests = []
+
         for root, subdirs, files in os.walk('./runtime'):
             for ignore_dir in ["engine", "scripts", "outputs"]:
                 if ignore_dir in subdirs:
@@ -51,7 +53,22 @@ class TestParser(object):
                     continue
                 parser = TestParser.read(root + '/' + filename, test_filter)
                 if parser[1]:
+                    if run_aot_tests:
+                        for test in parser[1]:
+                            # Only reuse tests that use PROG directive
+                            if not test.prog:
+                                continue
+
+                            # _replace() creates a new instance w/ specified fields replaced
+                            test = test._replace(
+                                name='{}.{}'.format(test.suite, test.name),
+                                suite='aot')
+                            aot_tests.append(test)
+
                     yield parser
+
+        if run_aot_tests:
+            yield ('aot', aot_tests)
 
     @staticmethod
     def read(file_name, test_filter):
