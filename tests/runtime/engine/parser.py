@@ -14,11 +14,16 @@ class UnknownFieldError(Exception):
     pass
 
 
+class InvalidFieldError(Exception):
+    pass
+
+
 TestStruct = namedtuple(
     'TestStruct',
     [
         'name',
         'run',
+        'prog',
         'expect',
         'timeout',
         'before',
@@ -76,6 +81,7 @@ class TestParser(object):
     def __read_test_struct(test, test_suite):
         name = ''
         run = ''
+        prog = ''
         expect = ''
         timeout = ''
         before = ''
@@ -96,6 +102,8 @@ class TestParser(object):
                 name = line
             elif item_name == 'RUN':
                 run = line
+            elif item_name == "PROG":
+                prog = line
             elif item_name == 'EXPECT':
                 expect = line
             elif item_name == 'TIMEOUT':
@@ -144,8 +152,10 @@ class TestParser(object):
 
         if name == '':
             raise RequiredFieldError('Test NAME is required. Suite: ' + test_suite)
-        elif run == '':
-            raise RequiredFieldError('Test RUN is required. Suite: ' + test_suite)
+        elif run == '' and prog == '':
+            raise RequiredFieldError('Test RUN or PROG is required. Suite: ' + test_suite)
+        elif run != '' and prog != '':
+            raise InvalidFieldError('Test RUN and PROG both specified. Suit: ' + test_suite)
         elif expect == '':
             raise RequiredFieldError('Test EXPECT is required. Suite: ' + test_suite)
         elif timeout == '':
@@ -154,6 +164,7 @@ class TestParser(object):
         return TestStruct(
             name,
             run,
+            prog,
             expect,
             timeout,
             before,

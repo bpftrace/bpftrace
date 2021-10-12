@@ -78,12 +78,16 @@ class Runner(object):
     @staticmethod
     def prepare_bpf_call(test):
         bpftrace_path = "{}/bpftrace".format(BPF_PATH)
-        ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
 
-        bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
-        ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
+        if test.run:
+            ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
 
-        return ret
+            bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
+            ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
+
+            return ret
+        else:  # PROG
+            return "{} -e '{}'".format(bpftrace_path, test.prog)
 
     @staticmethod
     def __handler(signum, frame):
