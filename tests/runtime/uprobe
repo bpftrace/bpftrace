@@ -58,6 +58,6 @@ EXPECT uprobe:./testlibs/libsimple.so:fun
 TIMEOUT 5
 
 NAME "uprobes - probe function in non-executable library"
-RUN {{BPFTRACE}} -e 'uprobe:./testlibs/libsimple.so:fun {}'
+PROG uprobe:./testlibs/libsimple.so:fun {}
 EXPECT Attaching 1 probe...
 TIMEOUT 5

@@ -1,70 +1,70 @@
 NAME if_gt
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+PROG i:ms:1 {$a = 10; if ($a > 2) { $a = 20 } printf("a=%d\n", $a); exit();}
 EXPECT a=20
 TIMEOUT 5
 
 NAME if_lt
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}'
+PROG i:ms:1 {$a = 10; if ($a < 2) { $a = 20 } printf("a=%d\n", $a); exit();}
 EXPECT a=10
 TIMEOUT 5
 
 NAME ifelse_go_else
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+PROG i:ms:1 {$a = ""; if (10 < 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hello
 TIMEOUT 5
 
 NAME ifelse_go_if
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}'
+PROG i:ms:1 {$a = ""; if (10 > 2) { $a = "hi" } else {$a = "hello"} printf("a=%s\n", $a); exit();}
 EXPECT a=hi
 TIMEOUT 5
 
 NAME ifelseif_go_elseif
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}'
+PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (2 < 3) { $a = "hello" } printf("a=%s\n", $a); exit();}
 EXPECT a=hello
 TIMEOUT 5
 
 NAME ifelseifelse_go_else
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}'
+PROG i:ms:1 {$a = ""; if (1 > 2) { $a = "hi" } else if (5 < 3) { $a = "hello" } else { $a = "asdf" } printf("a=%s\n", $a); exit();}
 EXPECT a=asdf
 TIMEOUT 5
 
 NAME if_cast
-RUN {{BPFTRACE}} -e 'i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}'
+PROG i:ms:1 { if ((int32)pid) {} printf("done\n"); exit();}
 EXPECT done
 TIMEOUT 5
 
 NAME ternary
-RUN {{BPFTRACE}} -e 'i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}'
+PROG i:ms:1 { $a = 1 ? "yes" : "no"; printf("%s\n", $a); exit();}
 EXPECT yes
 TIMEOUT 5
 
 NAME ternary_lnot
-RUN {{BPFTRACE}} -e 'i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit() }'
+PROG i:ms:1 { $a = !nsecs ? 0 : 1; printf("%d\n", $a); exit() }
 EXPECT 1
 TIMEOUT 5
 
 NAME ternary_int8
-RUN {{BPFTRACE}} -e 'i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}'
+PROG i:ms:1 { $a = 1 ? (int8)1 : 0; printf("%d\n", $a); exit();}
 EXPECT 1
 TIMEOUT 5
 
 NAME ternary_none_type
-RUN {{BPFTRACE}} -e 'i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }'
+PROG i:ms:1 { nsecs ? printf("yes\n") : printf("no") ; exit(); }
 EXPECT  yes
 TIMEOUT 5
 
 NAME unroll
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}'
+PROG i:ms:1 {$a = 1; unroll (10) { $a = $a + 1; } printf("a=%d\n", $a); exit();}
 EXPECT a=11
 TIMEOUT 5
 
 NAME unroll_max_value
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT unroll maximum value is 100
 TIMEOUT 5
 
 NAME unroll_min_value
-RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}'
+PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT unroll minimum value is 1
 TIMEOUT 5
 
@@ -74,7 +74,7 @@ EXPECT a=11
 TIMEOUT 5
 
 NAME if_compare_and_print_string
-RUN {{BPFTRACE}} -e 'BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}'
+PROG BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}
 EXPECT comm: bpftrace
 TIMEOUT 5
 
@@ -139,12 +139,12 @@ EXPECT hello hello
 TIMEOUT 5
 
 NAME optional_positional_int
-RUN {{BPFTRACE}} -e 'BEGIN { printf("-%d-\n", $1); exit() }'
+PROG BEGIN { printf("-%d-\n", $1); exit() }
 EXPECT -0-
 TIMEOUT 1
 
 NAME optional_positional_str
-RUN {{BPFTRACE}} -e 'BEGIN { printf("-%s-\n", str($1)); exit() }'
+PROG BEGIN { printf("-%s-\n", str($1)); exit() }
 EXPECT --
 TIMEOUT 1
 
@@ -202,22 +202,22 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME lhist can be cleared
-RUN {{BPFTRACE}} -e 'BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }'
+PROG BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }
 EXPECT .*
 TIMEOUT 1
 
 NAME hist can be cleared
-RUN {{BPFTRACE}} -e 'BEGIN{ @[1] = hist(1); clear(@); exit() }'
+PROG BEGIN{ @[1] = hist(1); clear(@); exit() }
 EXPECT .*
 TIMEOUT 1
 
 NAME stats can be cleared
-RUN {{BPFTRACE}} -e 'BEGIN{ @[1] = stats(1); clear(@); exit() }'
+PROG BEGIN{ @[1] = stats(1); clear(@); exit() }
 EXPECT .*
 TIMEOUT 1
 
 NAME avg can be cleared
-RUN {{BPFTRACE}} -e 'BEGIN{ @[1] = avg(1); clear(@); exit() }'
+PROG BEGIN{ @[1] = avg(1); clear(@); exit() }
 EXPECT .*
 TIMEOUT 1
 
@@ -228,24 +228,24 @@ TIMEOUT 5
 AFTER  ./testprogs/syscall nanosleep 2e9; pkill -SIGINT bpftrace
 
 NAME bitfield access
-RUN {{BPFTRACE}} -e 'struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}'
+PROG struct Foo { unsigned int a:4, b:8, c:3, d:1, e:16; } uprobe:./testprogs/bitfield_test:func{ $foo = (struct Foo *)arg0; printf("%d %d %d %d %d\n", $foo->a, $foo->b, $foo->c, $foo->d, $foo->e); exit()}
 EXPECT 1 2 5 0 65535
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
 NAME bitfield_access_2
-RUN {{BPFTRACE}} -e 'struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}'
+PROG struct Bar { short a:4, b:8, c:3, d:1; int e:9, f:15, g:1, h:2, i:5 } uprobe:./testprogs/bitfield_test:func2 { $bar = (struct Bar *)arg0; printf("%d %d %d %d %d", $bar->a, $bar->b, $bar->c, $bar->d, $bar->e); printf(" %d %d %d %d", $bar->f, $bar->g, $bar->h, $bar->i); exit()}
 EXPECT 1 217 5 1 500 31117 1 2 27
 TIMEOUT 5
 AFTER ./testprogs/bitfield_test
 
 NAME exit exits immediately
-RUN {{BPFTRACE}} -e 'i:ms:100 { @++; exit(); @++ }'
+PROG i:ms:100 { @++; exit(); @++ }
 EXPECT @: 1
 TIMEOUT 1
 
 NAME map_assign_map_ptr
-RUN {{BPFTRACE}} -e 'i:ms:100 { @ = curtask; @a = @; printf("%d\n", @a); exit(); }'
+PROG i:ms:100 { @ = curtask; @a = @; printf("%d\n", @a); exit(); }
 EXPECT -?[0-9]+
 TIMEOUT 1
 

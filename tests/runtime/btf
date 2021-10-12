@@ -1,35 +1,35 @@
 NAME user_supplied_c_def_using_btf
-RUN {{BPFTRACE}} -e 'struct foo { struct task_struct t; } BEGIN { exit(); }'
+PROG struct foo { struct task_struct t; } BEGIN { exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME tracepoint_pointer_type_resolution
-RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_nanosleep { args->rqtp->tv_sec; exit(); }'
+PROG tracepoint:syscalls:sys_enter_nanosleep { args->rqtp->tv_sec; exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME tracepoint_nested_pointer_type_resolution
-RUN {{BPFTRACE}} -e 'tracepoint:napi:napi_poll { args->napi->dev->name; exit(); }'
+PROG tracepoint:napi:napi_poll { args->napi->dev->name; exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME enum_value_reference
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }'
+PROG BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }
 EXPECT ^8$
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type
-RUN {{BPFTRACE}} -e 'struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); }'
+PROG struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); }
 EXPECT -?[0-9][0-9]*
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type_missing_def
-RUN {{BPFTRACE}} -e 'struct task_struct { struct thread_info x; } BEGIN { printf("%d\n", curtask->x.status); }'
+PROG struct task_struct { struct thread_info x; } BEGIN { printf("%d\n", curtask->x.status); }
 EXPECT error:.*'struct thread_info'
 TIMEOUT 5
 REQUIRES_FEATURE btf

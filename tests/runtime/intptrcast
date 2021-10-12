@@ -1,68 +1,68 @@
 NAME Sum casted value
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}
 EXPECT ^@: 3258
 TIMEOUT 5
 ARCH x86_64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
 EXPECT ^@: 3258
 TIMEOUT 5
 ARCH aarch64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+96)); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+96)); exit();}
 EXPECT ^@: 3258
 TIMEOUT 5
 ARCH ppc64le
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+112)); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+112)); exit();}
 EXPECT ^@: 3258
 TIMEOUT 5
 ARCH ppc64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r15")+160)); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r15")+160)); exit();}
 EXPECT ^@: 4660
 TIMEOUT 5
 ARCH s390x
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+8); printf("%d\n", $a); exit();}
 EXPECT 3258
 TIMEOUT 5
 ARCH x86_64
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+0); printf("%d\n", $a); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+0); printf("%d\n", $a); exit();}
 EXPECT 3258
 TIMEOUT 5
 ARCH aarch64
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+96); printf("%d\n", $a); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+96); printf("%d\n", $a); exit();}
 EXPECT 3258
 TIMEOUT 5
 ARCH ppc64le
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+112); printf("%d\n", $a); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r1")+112); printf("%d\n", $a); exit();}
 EXPECT 3258
 TIMEOUT 5
 ARCH ppc64
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints
-RUN {{BPFTRACE}} -e 'uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r15")+160); printf("%d\n", $a); exit();}'
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("r15")+160); printf("%d\n", $a); exit();}
 EXPECT 4660
 TIMEOUT 5
 ARCH s390x
