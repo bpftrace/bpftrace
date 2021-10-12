@@ -38,7 +38,7 @@ def fail(s):
 class TimeoutError(Exception):
     pass
 
-class Utils(object):
+class Runner(object):
     PASS = 0
     FAIL = 1
     SKIP_KERNEL_VERSION = 2
@@ -49,28 +49,28 @@ class Utils(object):
 
     @staticmethod
     def failed(status):
-        return status in [Utils.FAIL, Utils.TIMEOUT]
+        return status in [Runner.FAIL, Runner.TIMEOUT]
 
     @staticmethod
     def skipped(status):
         return status in [
-            Utils.SKIP_KERNEL_VERSION,
-            Utils.SKIP_REQUIREMENT_UNSATISFIED,
-            Utils.SKIP_ENVIRONMENT_DISABLED,
-            Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
+            Runner.SKIP_KERNEL_VERSION,
+            Runner.SKIP_REQUIREMENT_UNSATISFIED,
+            Runner.SKIP_ENVIRONMENT_DISABLED,
+            Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
         ]
 
     @staticmethod
     def skip_reason(test, status):
-        if status == Utils.SKIP_KERNEL_VERSION:
+        if status == Runner.SKIP_KERNEL_VERSION:
             return "min Kernel: %s" % test.kernel
-        elif status == Utils.SKIP_REQUIREMENT_UNSATISFIED:
+        elif status == Runner.SKIP_REQUIREMENT_UNSATISFIED:
             return "unmet condition: '%s'" % test.requirement
-        elif status == Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
+        elif status == Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
             neg_reqs = { "!{}".format(f) for f in test.neg_feature_requirement }
             return "missed feature: '%s'" % ','.join(
                 (neg_reqs | test.feature_requirement))
-        elif status == Utils.SKIP_ENVIRONMENT_DISABLED:
+        elif status == Runner.SKIP_ENVIRONMENT_DISABLED:
             return "disabled by environment variable"
         else:
             raise ValueError("Invalid skip reason: %d" % status)
@@ -124,14 +124,14 @@ class Utils(object):
         current_kernel = LooseVersion(uname()[2])
         if test.kernel and LooseVersion(test.kernel) > current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-            return Utils.SKIP_KERNEL_VERSION
+            return Runner.SKIP_KERNEL_VERSION
 
         full_test_name = test.suite + "." + test.name
         if full_test_name in os.getenv("RUNTIME_TEST_DISABLE", "").split(","):
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-            return Utils.SKIP_ENVIRONMENT_DISABLED
+            return Runner.SKIP_ENVIRONMENT_DISABLED
 
-        signal.signal(signal.SIGALRM, Utils.__handler)
+        signal.signal(signal.SIGALRM, Runner.__handler)
 
         try:
             before = None
@@ -148,24 +148,24 @@ class Utils(object):
                         env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
                     ) != 0:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-                        return Utils.SKIP_REQUIREMENT_UNSATISFIED
+                        return Runner.SKIP_REQUIREMENT_UNSATISFIED
 
             if test.feature_requirement or test.neg_feature_requirement:
-                bpffeature = Utils.__get_bpffeature()
+                bpffeature = Runner.__get_bpffeature()
 
                 for feature in test.feature_requirement:
                     if feature not in bpffeature:
                         raise ValueError("Invalid feature requirement: %s" % feature)
                     elif not bpffeature[feature]:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-                        return Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
+                        return Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
 
                 for feature in test.neg_feature_requirement:
                     if feature not in bpffeature:
                         raise ValueError("Invalid feature requirement: %s" % feature)
                     elif bpffeature[feature]:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-                        return Utils.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
+                        return Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
 
             if test.before:
                 before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)
@@ -181,7 +181,7 @@ class Utils(object):
                         if waited > test.timeout:
                             raise TimeoutError('Timed out waiting for BEFORE %s ', test.before)
 
-            bpf_call = Utils.prepare_bpf_call(test)
+            bpf_call = Runner.prepare_bpf_call(test)
             if test.before:
                 childpid = subprocess.Popen(["pidof", "-s", child_name], stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].strip()
                 bpf_call = re.sub("{{BEFORE_PID}}", str(childpid), bpf_call)
@@ -231,7 +231,7 @@ class Utils(object):
                 print('\tCommand: %s' % bpf_call)
                 print('\tTimeout: %s' % test.timeout)
                 print('\tCurrent output: %s' % output)
-                return Utils.TIMEOUT
+                return Runner.TIMEOUT
         finally:
             if before and before.poll() is None:
                 os.killpg(os.getpgid(before.pid), signal.SIGKILL)
@@ -241,10 +241,10 @@ class Utils(object):
 
         if result:
             print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
-            return Utils.PASS
+            return Runner.PASS
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tExpected: ' + test.expect)
             print('\tFound: ' + output.encode("unicode_escape").decode("utf-8"))
-            return Utils.FAIL
+            return Runner.FAIL

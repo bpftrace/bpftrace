@@ -4,8 +4,8 @@ import time
 from datetime import timedelta
 import argparse
 
-from utils import Utils, ok, fail, warn
 from parser import TestParser, UnknownFieldError, RequiredFieldError
+from runner import Runner, ok, fail, warn
 
 
 def main(test_filter = None):
@@ -33,10 +33,10 @@ def main(test_filter = None):
     for fname, tests in test_suite:
         print(ok("[----------]") + " %d tests from %s" % (len(tests), fname))
         for test in tests:
-            status = Utils.run_test(test)
-            if Utils.skipped(status):
+            status = Runner.run_test(test)
+            if Runner.skipped(status):
                 skipped_tests.append((fname, test, status))
-            if Utils.failed(status):
+            if Runner.failed(status):
                 failed_tests.append("%s.%s" % (fname, test.name))
         # TODO(mmarchini) elapsed time per test suite and per test (like gtest)
         print(ok("[----------]") + " %d tests from %s\n" % (len(tests), fname))
@@ -50,7 +50,7 @@ def main(test_filter = None):
     if skipped_tests:
         print(warn("[   SKIP   ]") + " %d tests, listed below:" % len(skipped_tests))
         for test_suite, test, status in skipped_tests:
-            print(warn("[   SKIP   ]") + " %s.%s (%s)" % (test_suite, test.name, Utils.skip_reason(test, status)))
+            print(warn("[   SKIP   ]") + " %s.%s (%s)" % (test_suite, test.name, Runner.skip_reason(test, status)))
 
     if failed_tests:
         print(fail("[  FAILED  ]") + " %d tests, listed below:" % len(failed_tests))
