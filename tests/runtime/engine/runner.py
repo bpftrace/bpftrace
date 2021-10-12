@@ -78,16 +78,20 @@ class Runner(object):
     @staticmethod
     def prepare_bpf_call(test):
         bpftrace_path = "{}/bpftrace".format(BPF_PATH)
+        bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
 
         if test.run:
             ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
-
-            bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
             ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
 
             return ret
         else:  # PROG
-            return "{} -e '{}'".format(bpftrace_path, test.prog)
+            # We're only reusing PROG-directive tests for AOT tests
+            if test.suite == 'aot':
+                return "{} -e '{}' --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(
+                    bpftrace_path, test.prog, bpftrace_aotrt_path)
+            else:
+                return "{} -e '{}'".format(bpftrace_path, test.prog)
 
     @staticmethod
     def __handler(signum, frame):
