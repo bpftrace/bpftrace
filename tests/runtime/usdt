@@ -63,7 +63,7 @@ BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to fully specified probe by file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }'
+PROG usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }
 EXPECT here
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
@@ -89,7 +89,7 @@ TIMEOUT 5
 REQUIRES ./testprogs/usdt_lib should_not_skip
 
 NAME "usdt probes - all probes by wildcard and file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }'
+PROG usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }
 EXPECT Attaching 3 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
@@ -117,7 +117,7 @@ REQUIRES bash -c "exit 1"
 # REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe by wildcard and file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }'
+PROG usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }
 EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
@@ -129,7 +129,7 @@ EXPECT Attaching 2 probes...
 TIMEOUT 5
 
 NAME "usdt probes - attach to probes by wildcard file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }'
+PROG usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }
 EXPECT Attaching 3 probes...
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
@@ -141,7 +141,7 @@ EXPECT Attaching 3 probes...
 TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple files by wildcard"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }'
+PROG usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }
 EXPECT Attaching 41 probes...
 TIMEOUT 5
 
@@ -157,7 +157,7 @@ REQUIRES ./testprogs/usdt_test should_not_skip
 # we should:
 #  - Skip if bcc doesn't support multiple probes with the same name
 NAME "usdt probes - attach to probe with args by file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }'
+PROG usdt:./testprogs/usdt_test:* { printf("%s\n", str(arg1) ); exit(); }
 EXPECT Hello world
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
@@ -177,7 +177,7 @@ REQUIRES bash -c "exit 1"
 # REQUIRES ./testprogs/usdt_test should_not_skip
 
 NAME "usdt probes - attach to probe with probe builtin and args by file"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }'
+PROG usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
@@ -228,7 +228,7 @@ REQUIRES_FEATURE uprobe_refcount
 # We should be able to activate a semaphore without specifying a PID or
 # --usdt-file-activation if the kernel handles the semaphore
 NAME "usdt probes - file based semaphore activation"
-RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }'
+PROG usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }
 EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test

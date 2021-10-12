@@ -1,90 +1,90 @@
 NAME u8 pointer increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int8*) 32; @+=1; exit(); }'
+PROG BEGIN { @=(int8*) 32; @+=1; exit(); }
 EXPECT ^@: 33
 TIMEOUT 5
 
 NAME u16 pointer increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int16*) 32; @+=1; exit(); }'
+PROG BEGIN { @=(int16*) 32; @+=1; exit(); }
 EXPECT ^@: 34
 TIMEOUT 5
 
 NAME u32 pointer increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @+=1; exit(); }'
+PROG BEGIN { @=(int32*) 32; @+=1; exit(); }
 EXPECT ^@: 36
 TIMEOUT 5
 
 NAME u64 pointer increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int64*) 32; @+=1; exit(); }'
+PROG BEGIN { @=(int64*) 32; @+=1; exit(); }
 EXPECT ^@: 40
 TIMEOUT 5
 
 NAME u8 pointer unop post increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int8*) 32; @++; exit(); }'
+PROG BEGIN { @=(int8*) 32; @++; exit(); }
 EXPECT ^@: 33
 TIMEOUT 5
 
 NAME u16 pointer unop post increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int16*) 32; @++; exit(); }'
+PROG BEGIN { @=(int16*) 32; @++; exit(); }
 EXPECT ^@: 34
 TIMEOUT 5
 
 NAME u32 pointer unop post increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @++; exit(); }'
+PROG BEGIN { @=(int32*) 32; @++; exit(); }
 EXPECT ^@: 36
 TIMEOUT 5
 
 NAME u64 pointer unop post increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int64*) 32; @++; exit(); }'
+PROG BEGIN { @=(int64*) 32; @++; exit(); }
 EXPECT ^@: 40
 TIMEOUT 5
 
 NAME u8 pointer unop pre increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int8*) 32; @++; exit(); }'
+PROG BEGIN { @=(int8*) 32; @++; exit(); }
 EXPECT ^@: 33
 TIMEOUT 5
 
 NAME u16 pointer unop pre increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int16*) 32; @++; exit(); }'
+PROG BEGIN { @=(int16*) 32; @++; exit(); }
 EXPECT ^@: 34
 TIMEOUT 5
 
 NAME u32 pointer unop pre increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @++; exit(); }'
+PROG BEGIN { @=(int32*) 32; @++; exit(); }
 EXPECT ^@: 36
 TIMEOUT 5
 
 NAME u64 pointer unop pre increment
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int64*) 32; @++; exit(); }'
+PROG BEGIN { @=(int64*) 32; @++; exit(); }
 EXPECT ^@: 40
 TIMEOUT 5
 
 NAME Pointer decrement 1
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @-=1; exit(); }'
+PROG BEGIN { @=(int32*) 32; @-=1; exit(); }
 EXPECT ^@: 28
 TIMEOUT 5
 
 NAME Pointer decrement
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @--; exit(); }'
+PROG BEGIN { @=(int32*) 32; @--; exit(); }
 EXPECT ^@: 28
 TIMEOUT 5
 
 NAME Pointer increment 6
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @+=6; exit(); }'
+PROG BEGIN { @=(int32*) 32; @+=6; exit(); }
 EXPECT ^@: 56
 TIMEOUT 5
 
 NAME Pointer decrement 6
-RUN {{BPFTRACE}} -e 'BEGIN { @=(int32*) 32; @-=6; exit(); }'
+PROG BEGIN { @=(int32*) 32; @-=6; exit(); }
 EXPECT ^@: 8
 TIMEOUT 5
 
 NAME Struct pointer math
-RUN {{BPFTRACE}} -e 'struct A {int32_t a; int32_t b; char c[28] }; BEGIN { $a=(struct A*) 1024; printf("%lu - 5 x %lu = %lu\n", $a, sizeof(struct A), $a-5); exit(); }'
+PROG struct A {int32_t a; int32_t b; char c[28] }; BEGIN { $a=(struct A*) 1024; printf("%lu - 5 x %lu = %lu\n", $a, sizeof(struct A), $a-5); exit(); }
 EXPECT 1024 - 5 x 36 = 844
 TIMEOUT 5
 
 NAME Pointer decrement with map
-RUN {{BPFTRACE}} -e 'BEGIN { @dec = 4; @=(int32*) 32; @-=@dec; exit(); }'
+PROG BEGIN { @dec = 4; @=(int32*) 32; @-=@dec; exit(); }
 EXPECT ^@: 16
 TIMEOUT 5
 

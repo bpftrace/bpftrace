@@ -1,20 +1,20 @@
 NAME printf
-RUN {{BPFTRACE}} -e 'i:ms:1 { printf("hi!\n"); exit();}'
+PROG i:ms:1 { printf("hi!\n"); exit();}
 EXPECT hi!
 TIMEOUT 5
 
 NAME printf_long_fmt
-RUN {{BPFTRACE}} -e 'i:ms:1 { printf("hi abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcbaabcdefghijklmnopqrstuvwxyz!\n"); exit();}'
+PROG i:ms:1 { printf("hi abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcbaabcdefghijklmnopqrstuvwxyz!\n"); exit();}
 EXPECT ^hi abcdefghijklmnopqrstuvwxyzzyxwvutsrqponmlkjihgfedcbaabcdefghijklmnopqrstuvwxyz!
 TIMEOUT 5
 
 NAME printf_argument
-RUN {{BPFTRACE}} -e 'i:ms:1 { printf("value: %dms100\n", 100); exit();}'
+PROG i:ms:1 { printf("value: %dms100\n", 100); exit();}
 EXPECT value: 100ms100
 TIMEOUT 5
 
 NAME printf_llu
-RUN {{BPFTRACE}} -e 'BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); exit();}'
+PROG BEGIN { @start = nsecs; } i:s:1 { printf("Elapsed time: %llus\n", (nsecs - @start)/1000000000); clear(@start); exit();}
 EXPECT Elapsed time: 1s
 TIMEOUT 5
 
@@ -24,17 +24,17 @@ EXPECT 123 hello 456 world
 TIMEOUT 5
 
 NAME printf_more_arguments
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd"); exit(); }'
+PROG BEGIN { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\\n", 1, "a", 2, "ab", 3, "abc", 4, "abcd"); exit(); }
 EXPECT 1st: aa; 2nd: abb;; 3rd: abcc;;; 4th: abcdd;;;;
 TIMEOUT 5
 
 NAME time
-RUN {{BPFTRACE}} -e 'i:ms:1 { time("%H:%M:%S\n"); exit();}'
+PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT [0-9]*:[0-9]*:[0-9]*
 TIMEOUT 5
 
 NAME time_short
-RUN {{BPFTRACE}} -e 'i:ms:1 { time("%H-%M:%S\n"); exit();}'
+PROG i:ms:1 { time("%H-%M:%S\n"); exit();}
 EXPECT [0-9]*-[0-9]*
 TIMEOUT 5
 
@@ -49,7 +49,7 @@ EXPECT A
 TIMEOUT 5
 
 NAME str
-RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}'
+PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}
 AFTER ./testprogs/syscall execve /bin/ls
 EXPECT P: /*.
 TIMEOUT 5
@@ -67,48 +67,48 @@ TIMEOUT 5
 ARCH s390x|ppc64
 
 NAME buf_map_key
-RUN {{BPFTRACE}} -e 'i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }'
+PROG i:ms:100 { @[buf("ok_key", 6)] = 1; exit(); }
 EXPECT @\[ok_key\]: 1
 TIMEOUT 5
 
 NAME buf_map_multikey
-RUN {{BPFTRACE}} -e 'BEGIN { @[buf("ok_key", 8), 1] = hist(1); exit(); }'
+PROG BEGIN { @[buf("ok_key", 8), 1] = hist(1); exit(); }
 EXPECT @\[ok_key\\x00\\x00\, 1]
 TIMEOUT 5
 
 NAME buf_hist_map_key
-RUN {{BPFTRACE}} -e 'BEGIN { @[buf("ok_key", 8)] = hist(1); exit(); }'
+PROG BEGIN { @[buf("ok_key", 8)] = hist(1); exit(); }
 EXPECT @\[ok_key\\x00\\x00\]
 TIMEOUT 5
 
 NAME buf_map_value
-RUN {{BPFTRACE}} -e 'i:ms:100 { @ = buf("ok_value", 8); exit(); }'
+PROG i:ms:100 { @ = buf("ok_value", 8); exit(); }
 EXPECT @: ok_value
 TIMEOUT 5
 
 NAME ksym
-RUN {{BPFTRACE}} -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}'
+PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}
 EXPECT do_nanosleep
 TIMEOUT 5
 ARCH x86_64
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME ksym
-RUN {{BPFTRACE}} -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("pswaddr"))); exit();}'
+PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("pswaddr"))); exit();}
 EXPECT do_nanosleep
 TIMEOUT 5
 ARCH s390x
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME ksym
-RUN {{BPFTRACE}} -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("pc"))); exit();}'
+PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("pc"))); exit();}
 EXPECT do_nanosleep
 TIMEOUT 5
 ARCH aarch64
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME ksym
-RUN {{BPFTRACE}} -e 'kprobe:do_nanosleep { printf("%s\n", ksym(reg("nip"))); exit();}'
+PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("nip"))); exit();}
 EXPECT do_nanosleep
 TIMEOUT 5
 ARCH ppc64|ppc64le
@@ -125,78 +125,78 @@ EXPECT 1 2 3 4 5 6 7
 TIMEOUT 5
 
 NAME count
-RUN {{BPFTRACE}} -e 'i:ms:100 { @ = count(); exit();}'
+PROG i:ms:100 { @ = count(); exit();}
 EXPECT @:\s[0-9]+
 TIMEOUT 5
 
 NAME sum
-RUN {{BPFTRACE}} -e 'kprobe:vfs_read { @bytes[comm] = sum(arg2); exit();}'
+PROG kprobe:vfs_read { @bytes[comm] = sum(arg2); exit();}
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME avg
-RUN {{BPFTRACE}} -e 'kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}'
+PROG kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME min
-RUN {{BPFTRACE}} -e 'kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}'
+PROG kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}
 EXPECT @.*\[.*\]\:\s[0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME max
-RUN {{BPFTRACE}} -e 'kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}'
+PROG kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}
 EXPECT @.*\[.*\]\:\s[0-9]*
 AFTER ./testprogs/syscall read
 TIMEOUT 5
 
 NAME stats
-RUN {{BPFTRACE}} -e 'kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}'
+PROG kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}
 EXPECT @.*\[.*\]\:\scount\s[0-9]*\,\saverage\s[0-9]*\,\stotal\s[0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME hist
-RUN {{BPFTRACE}} -e 'kretprobe:vfs_read { @bytes = hist(retval); exit();}'
+PROG kretprobe:vfs_read { @bytes = hist(retval); exit();}
 EXPECT @bytes: *\n[\[(].*
 AFTER ./testprogs/syscall read
 TIMEOUT 5
 
 NAME lhist
-RUN {{BPFTRACE}} -e 'kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}'
+PROG kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}
 EXPECT @bytes: *\n[\[(].*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kstack
-RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }'
+PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }
 EXPECT SUCCESS kstack
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME kstack perf mode
-RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n", kstack(perf, 1)); exit(); }'
+PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n", kstack(perf, 1)); exit(); }
 EXPECT SUCCESS kstack
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 
 NAME ustack
-RUN {{BPFTRACE}} -e 'k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }'
+PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }
 EXPECT SUCCESS ustack
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME cat
-RUN {{BPFTRACE}} -e 'i:ms:1 { cat("/proc/uptime"); exit();}'
+PROG i:ms:1 { cat("/proc/uptime"); exit();}
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
 TIMEOUT 5
 
 NAME cat_more_args
-RUN {{BPFTRACE}} -e 'i:ms:1 { cat("/%s%s%s%s/%s%s%s", "p", "r", "o", "c", "u", "p", "time"); exit();}'
+PROG i:ms:1 { cat("/%s%s%s%s/%s%s%s", "p", "r", "o", "c", "u", "p", "time"); exit();}
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
 TIMEOUT 5
 
@@ -206,67 +206,67 @@ EXPECT 0x55555555 -- 0x33333333
 TIMEOUT 5
 
 NAME ntop static ip
-RUN {{BPFTRACE}} -e 'i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(1), ntop(0x0100007f), ntop(0xffff0000), ntop(0x0000ffff)); exit() }'
+PROG i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(1), ntop(0x0100007f), ntop(0xffff0000), ntop(0x0000ffff)); exit() }
 EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
 ARCH x86_64|aarch64|ppc64le
 TIMEOUT 5
 
 NAME ntop static ip
-RUN {{BPFTRACE}} -e 'i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(0x01000000), ntop(0x7f000001), ntop(0x0000ffff), ntop(0xffff0000)); exit() }'
+PROG i:ms:100 { printf("IP: %s, %s, %s, %s\n", ntop(0x01000000), ntop(0x7f000001), ntop(0x0000ffff), ntop(0xffff0000)); exit() }
 EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
 ARCH s390x|ppc64
 TIMEOUT 5
 
 NAME usym
-RUN {{BPFTRACE}} -e 'i:ms:100 { @=usym(1); @a=@; exit(); }'
+PROG i:ms:100 { @=usym(1); @a=@; exit(); }
 EXPECT ^@a: 0x1$
 TIMEOUT 5
 
 NAME print_non_map
-RUN {{BPFTRACE}} -e 'BEGIN { $x = 5; print($x); exit() }'
+PROG BEGIN { $x = 5; print($x); exit() }
 EXPECT 5
 TIMEOUT 1
 
 NAME print_non_map_builtin
-RUN {{BPFTRACE}} -e 'BEGIN { print(comm); exit() }'
+PROG BEGIN { print(comm); exit() }
 EXPECT bpftrace
 TIMEOUT 1
 
 NAME print_non_map_tuple
-RUN {{BPFTRACE}} -e 'BEGIN { $t = (1, 2, "string"); print($t); exit() }'
+PROG BEGIN { $t = (1, 2, "string"); print($t); exit() }
 EXPECT (1, 2, string)
 TIMEOUT 1
 
 NAME print_non_map_array
-RUN {{BPFTRACE}} -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; print($a); exit(); }'
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; print($a); exit(); }
 EXPECT \[1,2,3,4\]
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME print_non_map_multi_dimensional_array
-RUN {{BPFTRACE}} -e 'struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; print($b); exit(); }'
+PROG struct B { int y[2][2]; } uprobe:./testprogs/array_access:test_struct { $b = ((struct B *) arg1)->y; print($b); exit(); }
 EXPECT \[\[5,6\],\[7,8\]\]
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
 NAME print_non_map_struct
-RUN {{BPFTRACE}} -e 'struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }'
+PROG struct Foo { int m; int n; } uprobe:./testprogs/simple_struct:func { $f = *((struct Foo *) arg0); print($f); exit(); }
 EXPECT { .m = 2, .n = 3 }
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME strftime
-RUN {{BPFTRACE}} -e 'BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts); exit(); } '
+PROG BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts); exit(); }
 EXPECT [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 TIMEOUT 5
 
 NAME strftime_as_map_key
-RUN {{BPFTRACE}} -e 'BEGIN { @[strftime("%m/%d/%y", nsecs)] = 1; exit();}'
+PROG BEGIN { @[strftime("%m/%d/%y", nsecs)] = 1; exit();}
 EXPECT \[[0-9]{2}\/[0-9]{2}\/[0-9]{2}\]: 1
 TIMEOUT 5
 
 NAME strftime_as_map_value
-RUN {{BPFTRACE}} -e 'BEGIN { @[nsecs] = strftime("%m/%d/%y", nsecs); exit();}'
+PROG BEGIN { @[nsecs] = strftime("%m/%d/%y", nsecs); exit();}
 EXPECT @\[[0-9]*\]: [0-9]{2}\/[0-9]{2}\/[0-9]{2}
 TIMEOUT 5
 
@@ -285,22 +285,22 @@ EXPECT 123
 TIMEOUT 1
 
 NAME print_avg_map_args
-RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }'
+PROG BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 2, 10); print("END"); clear(@); exit(); }
 EXPECT BEGIN\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
 NAME print_avg_map_with_large_top
-RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }'
+PROG BEGIN { print("BEGIN"); @["a"] = avg(10); @["b"] = avg(20); @["c"] = avg(30); @["d"] = avg(40); print(@, 10, 10); print("END"); clear(@); exit(); }
 EXPECT BEGIN\n@\[a\]: 1\n@\[b\]: 2\n@\[c\]: 3\n@\[d\]: 4\n\nEND
 TIMEOUT 1
 
 NAME print_hist_with_top_arg
-RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("END"); clear(@); exit(); } '
+PROG BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 2); print("END"); clear(@); exit(); }
 EXPECT BEGIN\n@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
 TIMEOUT 1
 
 NAME print_hist_with_large_top_arg
-RUN {{BPFTRACE}} -e 'BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("END"); clear(@); exit(); } '
+PROG BEGIN { print("BEGIN"); @[1] = hist(10); @[2] = hist(20); @[3] = hist(30); print(@, 10); print("END"); clear(@); exit(); }
 EXPECT BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
 TIMEOUT 1
 
@@ -327,13 +327,13 @@ EXPECT \[1\]: 05:04:03:02:01:02
 TIMEOUT 5
 
 NAME iter:task
-RUN {{BPFTRACE}} -ve 'iter:task { printf("OK"); }'
+PROG iter:task { printf("OK"); }
 EXPECT OK
 REQUIRES_FEATURE iter:task
 TIMEOUT 5
 
 NAME iter:task_file
-RUN {{BPFTRACE}} -ve 'iter:task_file { printf("OK"); }'
+PROG iter:task_file { printf("OK"); }
 EXPECT OK
 REQUIRES_FEATURE iter:task_file
 TIMEOUT 5
