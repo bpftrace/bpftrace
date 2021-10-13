@@ -121,7 +121,7 @@ bool SizedType::IsByteArray() const
 {
   return type == Type::string || type == Type::usym || type == Type::inet ||
          type == Type::buffer || type == Type::timestamp ||
-         type == Type::mac_address;
+         type == Type::mac_address || type == Type::cgroup_path;
 }
 
 bool SizedType::IsAggregate() const
@@ -183,6 +183,7 @@ std::string typestr(Type t)
     case Type::tuple:    return "tuple";    break;
     case Type::timestamp:return "timestamp";break;
     case Type::mac_address: return "mac_address"; break;
+    case Type::cgroup_path: return "cgroup_path"; break;
       // clang-format on
   }
 
@@ -469,6 +470,11 @@ SizedType CreateMacAddress()
   return st;
 }
 
+SizedType CreateCgroupPath()
+{
+  return SizedType(Type::cgroup_path, 16);
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
@@ -615,6 +621,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::buffer:
     case bpftrace::Type::timestamp:
     case bpftrace::Type::mac_address:
+    case bpftrace::Type::cgroup_path:
       break;
   }
 

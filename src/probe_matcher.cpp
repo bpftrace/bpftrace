@@ -35,25 +35,6 @@ static int add_symbol(const char* symname,
 #endif
 
 /*
- * Splits input string by '*' delimiter and return the individual parts.
- * Sets start_wildcard and end_wildcard if input starts or ends with '*'.
- */
-std::vector<std::string> get_tokens(const std::string& input,
-                                    bool& start_wildcard,
-                                    bool& end_wildcard)
-{
-  if (input.empty())
-    return {};
-
-  start_wildcard = input[0] == '*';
-  end_wildcard = input[input.length() - 1] == '*';
-
-  std::vector<std::string> tokens = split_string(input, '*');
-  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
-  return tokens;
-}
-
-/*
  * Finds all matches of search_input in the provided input stream.
  *
  * If `ignore_trailing_module` is true, will ignore trailing kernel module.
@@ -67,7 +48,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
     const char delim)
 {
   bool start_wildcard, end_wildcard;
-  auto tokens = get_tokens(search_input, start_wildcard, end_wildcard);
+  auto tokens = get_wildcard_tokens(search_input, start_wildcard, end_wildcard);
 
   std::string line;
   std::set<std::string> matches;

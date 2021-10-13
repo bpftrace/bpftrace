@@ -759,6 +759,15 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
             std::make_unique<PrintableString>(resolve_mac_address(
                 reinterpret_cast<uint8_t *>(arg_data + arg.offset))));
         break;
+      case Type::cgroup_path:
+        arg_values.push_back(std::make_unique<PrintableString>(
+            resolve_cgroup_path(reinterpret_cast<AsyncEvent::CgroupPath *>(
+                                    arg_data + arg.offset)
+                                    ->cgroup_path_id,
+                                reinterpret_cast<AsyncEvent::CgroupPath *>(
+                                    arg_data + arg.offset)
+                                    ->cgroup_id)));
+        break;
         // fall through
       default:
         LOG(FATAL) << "invalid argument type";
@@ -1955,6 +1964,21 @@ std::string BPFtrace::resolve_mac_address(const uint8_t *mac_addr) const
            mac_addr[4],
            mac_addr[5]);
   return std::string(addr);
+}
+
+std::string BPFtrace::resolve_cgroup_path(uint64_t cgroup_path_id,
+                                          uint64_t cgroup_id) const
+{
+  auto paths = get_cgroup_paths(cgroup_id,
+                                resources.cgroup_path_args[cgroup_path_id]);
+  std::stringstream result;
+  for (auto &pair : paths)
+  {
+    if (pair.second.empty())
+      continue;
+    result << pair.first << ":" << pair.second << ",";
+  }
+  return result.str().substr(0, result.str().size() - 1);
 }
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM

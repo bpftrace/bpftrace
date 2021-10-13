@@ -96,6 +96,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [26. `uptr()`: Annotate userspace pointer](#26-uptr-annotate-userspace-pointer)
     - [27. `kptr()`: Annotate kernelspace pointer](#27-kptr-annotate-kernelspace-pointer)
     - [28. `macaddr()`: Convert MAC address data to text](#28-macaddr-convert-mac-address-data-to-text)
+    - [29. `cgroup_path()`: Convert cgroup id to cgroup path](#29-cgroup_path-convert-cgroup-id-to-cgroup-path)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -3090,6 +3091,25 @@ Example:
 # bpftrace -e 'kprobe:arp_create { printf("SRC %s, DST %s\n", macaddr(sarg0), macaddr(sarg1)); }'
 SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
 ^C
+```
+
+## 29. `cgroup_path`: Convert cgroup id to cgroup path
+
+Syntax: `cgroup_path(int cgroupid, string filter)`
+
+Converts the given cgroup id into the corresponding cgroup path for each cgroup hierarchy the id
+appears in. Because the conversion is done in user space, the resulting object can only be used for
+printing.
+
+Optionally a string literal may be passed as the second argument to filter cgroup hierarchies to look
+in (interpreted as a wildcard expression).
+
+Example:
+
+```
+# bpftrace -e 'BEGIN { print(cgroup_path(5386)); }'
+Attaching 1 probe...
+unified:/user.slice/user-1000.slice/session-3.scope
 ```
 
 # Map Functions

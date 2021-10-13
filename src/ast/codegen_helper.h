@@ -7,7 +7,7 @@ namespace ast {
 
 inline bool needMemcpy(const SizedType &stype)
 {
-  return stype.IsAggregate() || stype.IsTimestampTy();
+  return stype.IsAggregate() || stype.IsTimestampTy() || stype.IsCgroupPathTy();
 }
 
 inline bool shouldBeOnStackAlready(const SizedType &type)

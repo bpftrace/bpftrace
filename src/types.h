@@ -47,7 +47,8 @@ enum class Type
   buffer,
   tuple,
   timestamp,
-  mac_address
+  mac_address,
+  cgroup_path
   // clang-format on
 };
 
@@ -363,6 +364,10 @@ public:
   {
     return type == Type::mac_address;
   };
+  bool IsCgroupPathTy(void) const
+  {
+    return type == Type::cgroup_path;
+  };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
@@ -421,6 +426,7 @@ SizedType CreateKSym();
 SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
 SizedType CreateMacAddress();
+SizedType CreateCgroupPath();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 

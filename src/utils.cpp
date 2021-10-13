@@ -228,6 +228,25 @@ bool wildcard_match(const std::string &str, std::vector<std::string> &tokens, bo
   return true;
 }
 
+/*
+ * Splits input string by '*' delimiter and return the individual parts.
+ * Sets start_wildcard and end_wildcard if input starts or ends with '*'.
+ */
+std::vector<std::string> get_wildcard_tokens(const std::string &input,
+                                             bool &start_wildcard,
+                                             bool &end_wildcard)
+{
+  if (input.empty())
+    return {};
+
+  start_wildcard = input[0] == '*';
+  end_wildcard = input[input.length() - 1] == '*';
+
+  std::vector<std::string> tokens = split_string(input, '*');
+  tokens.erase(std::remove(tokens.begin(), tokens.end(), ""), tokens.end());
+  return tokens;
+}
+
 std::vector<int> get_online_cpus()
 {
   return read_cpu_range("/sys/devices/system/cpu/online");
@@ -302,6 +321,123 @@ std::vector<std::string> get_kernel_cflags(
     cflags.push_back("-D__TARGET_ARCH_" + arch);
 
   return cflags;
+}
+
+std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
+                                         std::string base_path)
+{
+  static std::map<std::pair<uint64_t, std::string>, std::string> path_cache;
+  struct stat path_st;
+
+  auto cached_path = path_cache.find({ cgroupid, base_path });
+  if (cached_path != path_cache.end() &&
+      stat(cached_path->second.c_str(), &path_st) >= 0 &&
+      path_st.st_ino == cgroupid)
+    return cached_path->second;
+
+  // Check for root cgroup path separately, since recursive_directory_iterator
+  // does not iterate over base directory
+  if (stat(base_path.c_str(), &path_st) >= 0 && path_st.st_ino == cgroupid)
+  {
+    path_cache[{ cgroupid, base_path }] = "/";
+    return "/";
+  }
+
+  for (auto &path_iter :
+       std_filesystem::recursive_directory_iterator(base_path))
+  {
+    if (stat(path_iter.path().c_str(), &path_st) < 0)
+      return "";
+    if (path_st.st_ino == cgroupid)
+    {
+      // Base directory is not a part of cgroup path
+      path_cache[{ cgroupid, base_path }] = path_iter.path().string().substr(
+          base_path.length());
+      return path_cache[{ cgroupid, base_path }];
+    }
+  }
+
+  return "";
+}
+
+std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots()
+{
+  // Get all cgroup mounts and their type (cgroup/cgroup2) from /proc/mounts
+  std::ifstream mounts_file("/proc/mounts");
+  std::vector<std::pair<std::string, std::string>> result;
+
+  const std::regex cgroup_mount_regex("(cgroup[2]?) (\\S*)[ ]?.*");
+  for (std::string line; std::getline(mounts_file, line);)
+  {
+    std::smatch match;
+    if (std::regex_match(line, match, cgroup_mount_regex))
+    {
+      result.push_back({ match[1].str(), match[2].str() });
+    }
+  }
+
+  mounts_file.close();
+  return result;
+}
+
+std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
+    uint64_t cgroupid,
+    std::string filter)
+{
+  // TODO: Rewrite using std::views when C++20 support becomes common
+  auto roots = get_cgroup_hierarchy_roots();
+
+  // Replace cgroup version with cgroup mount point directory name for cgroupv1
+  // roots and "unified" for cgroupv2 roots
+  for (auto &root : roots)
+  {
+    if (root.first == "cgroup")
+    {
+      root = { std_filesystem::path(root.second).filename().string(),
+               root.second };
+    }
+    else if (root.first == "cgroup2")
+    {
+      root = { "unified", root.second };
+    }
+  }
+
+  // Filter roots
+  bool start_wildcard, end_wildcard;
+  auto tokens = get_wildcard_tokens(filter, start_wildcard, end_wildcard);
+  std::vector<std::pair<std::string, std::string>> filtered_roots;
+  std::copy_if(roots.begin(),
+               roots.end(),
+               std::back_inserter(filtered_roots),
+               [&tokens, &start_wildcard, &end_wildcard](auto &pair) {
+                 return wildcard_match(
+                     pair.first, tokens, start_wildcard, end_wildcard);
+               });
+
+  // Get cgroup path for each root
+  std::vector<std::pair<std::string, std::string>> result;
+  std::transform(filtered_roots.begin(),
+                 filtered_roots.end(),
+                 std::back_inserter(result),
+                 [&cgroupid](auto &pair) {
+                   return std::pair<std::string, std::string>{
+                     pair.first,
+                     get_cgroup_path_in_hierarchy(cgroupid, pair.second)
+                   };
+                 });
+
+  // Sort paths lexically by name (with the exception of unified, which always
+  // comes first)
+  std::sort(result.begin(), result.end(), [](auto &pair1, auto &pair2) {
+    if (pair1.first == "unified")
+      return true;
+    else if (pair2.first == "unified")
+      return false;
+    else
+      return pair1.first < pair2.first;
+  });
+
+  return result;
 }
 
 bool is_dir(const std::string& path)

@@ -1287,6 +1287,34 @@ t:syscalls:sys_enter_execve {
 55f683ee2000-55f683ee3000 rw-p 00000000 00:00 0
 ----
 
+=== cgroup_path
+
+.variants
+* `cgroup_path cgroup_path(int cgroupid, string filter)`
+
+Convert cgroup id to cgroup path.
+This is done asynchronously in userspace when the cgroup_path value is printed,
+therefore it can resolve to a different value if the cgroup id gets reassigned.
+This also means that the returned value can only be used for printing.
+
+A string literal may be passed as an optional second argument to filter cgroup
+hierarchies in which the cgroup id is looked up by a wildcard expression (cgroup2
+is always represented by "unified", regardless of where it is mounted).
+
+The currently mounted hierarchy at /sys/fs/cgroup is used to do the lookup. If
+the cgroup with the given id isn't present here (e.g. when running in a Docker
+container), the cgroup path won't be found (unlike when looking up the cgroup
+path of a process via /proc/.../cgroup).
+
+----
+BEGIN {
+  $cgroup_path = cgroup_path(3436);
+  print($cgroup_path);
+  print($cgroup_path); /* This may print a different path */
+  printf("%s %s", $cgroup_path, $cgroup_path); /* This may print two different paths */
+}
+----
+
 === cgroupid
 
 .variants
