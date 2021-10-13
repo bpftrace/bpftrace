@@ -868,6 +868,21 @@ TEST(semantic_analyser, call_macaddr)
   test("kprobe:f { macaddr(\"hello\"); }", 1);
 }
 
+TEST(semantic_analyser, call_cgroup_path)
+{
+  test("kprobe:f { cgroup_path(1) }", 0);
+  test("kprobe:f { cgroup_path(1, \"hello\") }", 0);
+
+  test("kprobe:f { cgroup_path(1, 2) }", 10);
+  test("kprobe:f { cgroup_path(\"1\") }", 10);
+
+  test("kprobe:f { printf(\"%s\", cgroup_path(1)) }", 0);
+  test("kprobe:f { printf(\"%s %s\", cgroup_path(1), cgroup_path(2)) }", 0);
+  test("kprobe:f { $var = cgroup_path(0); printf(\"%s %s\", $var, $var) }", 0);
+
+  test("kprobe:f { printf(\"%d\", cgroup_path(1)) }", 10);
+}
+
 TEST(semantic_analyser, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }", 0);

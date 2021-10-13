@@ -126,6 +126,8 @@ public:
                             struct symbol *sym,
                             const std::string &path) const;
   std::string resolve_mac_address(const uint8_t *mac_addr) const;
+  std::string resolve_cgroup_path(uint64_t cgroup_path_id,
+                                  uint64_t cgroup_id) const;
   virtual std::string extract_func_symbols_from_path(const std::string &path) const;
   std::string resolve_probe(uint64_t probe_id) const;
   uint64_t resolve_cgroupid(const std::string &path) const;

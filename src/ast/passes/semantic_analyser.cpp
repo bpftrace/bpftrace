@@ -1021,6 +1021,15 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
   }
+  else if (call.func == "cgroup_path")
+  {
+    call.type = CreateCgroupPath();
+    if (check_varargs(call, 1, 2))
+    {
+      check_arg(call, Type::integer, 0, false);
+      call.vargs->size() > 1 && check_arg(call, Type::string, 1, false);
+    }
+  }
   else if (call.func == "clear") {
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {

@@ -80,6 +80,7 @@ public:
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
+  std::vector<std::string> cgroup_path_args;
   std::vector<std::tuple<std::string, std::vector<Field>>> cat_args;
   std::vector<SizedType> non_map_print_args;
 

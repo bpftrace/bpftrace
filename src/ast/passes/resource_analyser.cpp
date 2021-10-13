@@ -152,6 +152,14 @@ void ResourceAnalyser::visit(Call &call)
   {
     resources_.stackid_maps.insert(call.type.stack_type);
   }
+  else if (call.func == "cgroup_path")
+  {
+    if (call.vargs->size() > 1)
+      resources_.cgroup_path_args.push_back(
+          get_literal_string(*call.vargs->at(1)));
+    else
+      resources_.cgroup_path_args.push_back("*");
+  }
 }
 
 void ResourceAnalyser::visit(Map &map)

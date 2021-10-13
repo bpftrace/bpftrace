@@ -109,5 +109,13 @@ struct WatchpointUnwatch
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
+struct CgroupPath
+{
+  uint64_t cgroup_path_id;
+  uint64_t cgroup_id;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace

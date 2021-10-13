@@ -86,5 +86,13 @@ std::vector<llvm::Type*> WatchpointUnwatch::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
+std::vector<llvm::Type*> CgroupPath::asLLVMType(ast::IRBuilderBPF& b)
+{
+  return {
+    b.getInt64Ty(), // cgroup path (pseudo-event) id
+    b.getInt64Ty(), // cgroup id
+  };
+}
+
 } // namespace AsyncEvent
 } // namespace bpftrace

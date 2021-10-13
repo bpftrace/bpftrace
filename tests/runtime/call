@@ -337,3 +337,17 @@ PROG iter:task_file { printf("OK"); }
 EXPECT OK
 REQUIRES_FEATURE iter:task_file
 TIMEOUT 5
+
+NAME cgroup_path
+PROG BEGIN { print(cgroup_path(cgroup & ((1 << 32) - 1))); exit(); }
+EXPECT ([a-z]*:\/.*;)*[a-z]*:\/.*
+REQUIRES grep -q '^cgroup2' /proc/mounts
+TIMEOUT 5
+MIN_KERNEL 4.18
+
+NAME cgroup_path printf
+PROG BEGIN { printf("path: %s", cgroup_path(cgroup & ((1 << 32) - 1))); exit(); }
+EXPECT path: ([a-z]*:\/.*;)*[a-z]*:\/.*
+REQUIRES grep -q '^cgroup2' /proc/mounts
+TIMEOUT 5
+MIN_KERNEL 4.18

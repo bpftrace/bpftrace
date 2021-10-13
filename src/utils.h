@@ -149,6 +149,9 @@ bool wildcard_match(const std::string &str,
                     std::vector<std::string> &tokens,
                     bool start_wildcard,
                     bool end_wildcard);
+std::vector<std::string> get_wildcard_tokens(const std::string &input,
+                                             bool &start_wildcard,
+                                             bool &end_wildcard);
 std::vector<int> get_online_cpus();
 std::vector<int> get_possible_cpus();
 bool is_dir(const std::string &path);
@@ -158,6 +161,12 @@ std::tuple<std::string, std::string> get_kernel_dirs(
 std::vector<std::string> get_kernel_cflags(const char *uname_machine,
                                            const std::string &ksrc,
                                            const std::string &kobj);
+std::string get_cgroup_path_in_hierarchy(uint64_t cgroupid,
+                                         std::string base_path);
+std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots();
+std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
+    uint64_t cgroupid,
+    std::string filter);
 std::unordered_set<std::string> get_traceable_funcs();
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);

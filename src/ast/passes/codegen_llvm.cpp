@@ -895,6 +895,32 @@ void CodegenLLVM::visit(Call &call)
     else
       createPrintNonMapCall(call, non_map_print_id_);
   }
+  else if (call.func == "cgroup_path")
+  {
+    auto elements = AsyncEvent::CgroupPath().asLLVMType(b_);
+    StructType *cgroup_path_struct = b_.GetStructType(call.func + "_t",
+                                                      elements,
+                                                      true);
+    AllocaInst *buf = b_.CreateAllocaBPF(cgroup_path_struct,
+                                         call.func + "_args");
+
+    // Store cgroup path event id
+    b_.CreateStore(b_.GetIntSameSize(cgroup_path_id_, elements.at(0)),
+                   b_.CreateGEP(cgroup_path_struct,
+                                buf,
+                                { b_.getInt64(0), b_.getInt32(0) }));
+    cgroup_path_id_++;
+
+    // Store cgroup id
+    auto arg = call.vargs->at(0);
+    auto scoped_del = accept(arg);
+    b_.CreateStore(expr_,
+                   b_.CreateGEP(cgroup_path_struct,
+                                buf,
+                                { b_.getInt64(0), b_.getInt32(1) }));
+
+    expr_ = buf;
+  }
   else if (call.func == "clear" || call.func == "zero")
   {
     auto elements = AsyncEvent::MapEvent().asLLVMType(b_);

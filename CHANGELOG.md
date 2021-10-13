@@ -9,6 +9,9 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add builtin function: `cgroup_path`
+  - [#2055](https://github.com/iovisor/bpftrace/pull/2055)
+
 #### Changed
 #### Deprecated
 #### Removed

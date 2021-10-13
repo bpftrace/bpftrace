@@ -275,6 +275,11 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
             ->nsecs_since_boot);
   else if (type.IsMacAddressTy())
     return bpftrace.resolve_mac_address(value.data());
+  else if (type.IsCgroupPathTy())
+    return bpftrace.resolve_cgroup_path(
+        reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())
+            ->cgroup_path_id,
+        reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())->cgroup_id);
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
 }

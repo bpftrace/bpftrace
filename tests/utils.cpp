@@ -3,9 +3,20 @@
 #include "gtest/gtest.h"
 #include <cstring>
 #include <fcntl.h>
+#include <fstream>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#if __has_include(<filesystem>)
+#include <filesystem>
+namespace std_filesystem = std::filesystem;
+#elif __has_include(<experimental/filesystem>)
+#include <experimental/filesystem>
+namespace std_filesystem = std::experimental::filesystem;
+#else
+#error "neither <filesystem> nor <experimental/filesystem> are present"
+#endif
 
 namespace bpftrace {
 namespace test {
@@ -156,6 +167,59 @@ TEST(utils, abs_path)
             std::string("/proc/1/root/usr/local/bin/usdt_test.so"));
 
   remove(rel_file.c_str());
+}
+
+TEST(utils, get_cgroup_hierarchy_roots)
+{
+  auto roots = get_cgroup_hierarchy_roots();
+
+  // Check that each entry is a proper cgroup filesystem
+  for (auto root : roots)
+  {
+    EXPECT_TRUE(root.first == "cgroup" || root.first == "cgroup2");
+    std_filesystem::path root_path(root.second);
+    EXPECT_TRUE(std_filesystem::exists(root_path / "cgroup.procs"));
+  }
+}
+
+TEST(utils, get_cgroup_path_in_hierarchy)
+{
+  std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
+
+  if (::mkdtemp(&tmpdir[0]) == nullptr)
+  {
+    throw std::runtime_error("creating temporary path for tests failed");
+  }
+
+  const std_filesystem::path path(tmpdir);
+  const std_filesystem::path file_1 = path / "file1";
+  const std_filesystem::path subdir = path / "subdir";
+  const std_filesystem::path file_2 = subdir / "file2";
+
+  // Make a few files in the directory to imitate cgroup files and get their
+  // inodes
+  if (!std_filesystem::create_directory(subdir))
+  {
+    throw std::runtime_error("creating subdirectory for tests failed");
+  }
+  static_cast<std::ofstream &>(std::ofstream(file_1) << "File 1 content")
+      .close();
+  static_cast<std::ofstream &>(std::ofstream(file_2) << "File 2 content")
+      .close();
+  struct stat file_1_st, file_2_st;
+  if (stat(file_1.c_str(), &file_1_st) < 0 ||
+      stat(file_2.c_str(), &file_2_st) < 0)
+  {
+    throw std::runtime_error("stat on test files failed");
+  }
+
+  // Look for both "cgroup files" by their inode twice (to test caching)
+  for (int i = 0; i < 2; i++)
+  {
+    EXPECT_EQ(get_cgroup_path_in_hierarchy(file_1_st.st_ino, tmpdir), "/file1");
+    EXPECT_EQ(get_cgroup_path_in_hierarchy(file_2_st.st_ino, tmpdir),
+              "/subdir/file2");
+  }
 }
 
 } // namespace utils
