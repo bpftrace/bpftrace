@@ -46,6 +46,7 @@ class Runner(object):
     SKIP_REQUIREMENT_UNSATISFIED = 4
     SKIP_ENVIRONMENT_DISABLED = 5
     SKIP_FEATURE_REQUIREMENT_UNSATISFIED = 6
+    SKIP_AOT_NOT_SUPPORTED = 7
 
     @staticmethod
     def failed(status):
@@ -58,6 +59,7 @@ class Runner(object):
             Runner.SKIP_REQUIREMENT_UNSATISFIED,
             Runner.SKIP_ENVIRONMENT_DISABLED,
             Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
+            Runner.SKIP_AOT_NOT_SUPPORTED,
         ]
 
     @staticmethod
@@ -72,6 +74,8 @@ class Runner(object):
                 (neg_reqs | test.feature_requirement))
         elif status == Runner.SKIP_ENVIRONMENT_DISABLED:
             return "disabled by environment variable"
+        elif status == Runner.SKIP_AOT_NOT_SUPPORTED:
+            return "aot does not yet support this"
         else:
             raise ValueError("Invalid skip reason: %d" % status)
 
@@ -196,6 +200,7 @@ class Runner(object):
             env = {
                 'test': test.name,
                 '__BPFTRACE_NOTIFY_PROBES_ATTACHED': '1',
+                '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED': '1',
             }
             env.update(test.env)
             p = subprocess.Popen(
@@ -250,6 +255,9 @@ class Runner(object):
         if result:
             print(ok("[       OK ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.PASS
+        elif '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED' in output:
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Runner.SKIP_AOT_NOT_SUPPORTED
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
