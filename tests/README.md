@@ -37,8 +37,42 @@ instead of running the tests.
 ## Runtime tests
 
 Runtime tests will call the bpftrace executable.
+
 * Run: `sudo make runtime-tests` inside your build folder
 * By default, runtime-tests will look for the executable in the build folder. You can set a value to the environment variable `BPFTRACE_RUNTIME_TEST_EXECUTABLE` to customize it
+
+Runtime tests are grouped into "suites". A suite is usually a single file. The
+name of the file is the name of the suite.
+
+### Runtime test directives
+
+Each runtime testcase consists of multiple directives. In no particular order:
+
+* `NAME`: Name of the test case. This field is required.
+* `RUN`: Run the command in a shell. See "Runtime variables" below for
+  available placeholders. This XOR the `PROG` field is required
+* `PROG`: Run the provided bpftrace program. This directive is preferred over
+  `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
+  `RUN` field is required
+* `EXPECT`: The expected output. Python regular expressions are supported. This
+  field is required.
+* `TIMEOUT`: The timeout for the testcase (in seconds). This field is required.
+* `BEFORE`: Run the command in a shell before running bpftrace. The command
+  will be terminated after testcase is over.
+* `AFTER`: Run the command in a shell after running bpftrace. The command will
+  be terminated after the testcase is over.
+* `MIN_KERNEL`: Skip the test unless the host's kernel version is >= the
+  provided kernel version. Try not to use this directive as kernel versions may
+  be misleading (backported kernel features, for example)
+* `REQUIREMENT`: Run a command in a shell. If it succeeds, run the testcase.
+  Else, skip the testcase.
+* `ENV`: Run bpftrace invocation with additional environment variables. Must be
+  in format NAME=VALUE. Supports multiple values separated by spaces.
+* `ARCH`: Only run testcase on provided architectures. Supports `|` to logical
+  OR multiple arches.
+* `REQUIRES_FEATURE`: Only run testcase if the following bpftrace feature is
+  built in. See `bpftrace --info` and `runtime/engine/runner.py` for more
+  details. Also supports negative features (by prefixing `!` before feature).
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
@@ -53,7 +87,7 @@ separate minimal programs to test tracing functionality, and argument passing
 hasn't been required. If test programs need arguments, a more sophisticated
 approach will be necessary.
 
-## Runtime variables
+### Runtime variables
 
 Runtime variables are placeholders that the runtime test engine will fill out
 before running the test. These exist b/c the values of the variables are generally
