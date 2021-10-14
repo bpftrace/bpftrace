@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import time
-from datetime import timedelta
 import argparse
+from datetime import timedelta
+from fnmatch import fnmatch
+import time
 
 from parser import TestParser, UnknownFieldError, RequiredFieldError
 from runner import Runner, ok, fail, warn
@@ -13,11 +14,19 @@ def main(test_filter, run_aot_tests):
         test_filter = "*"
 
     try:
-        test_suite = sorted(TestParser.read_all(test_filter, run_aot_tests))
+        test_suite = sorted(TestParser.read_all(run_aot_tests))
         test_suite = [ (n, sorted(t)) for n, t in test_suite ]
     except (UnknownFieldError, RequiredFieldError) as error:
         print(fail(str(error)))
         exit(1)
+
+    # Apply filter
+    filtered_suites = []
+    for fname, tests in test_suite:
+        filtered_tests = [t for t in tests if fnmatch("{}.{}".format(fname, t.name), test_filter)]
+        if len(filtered_tests) != 0:
+            filtered_suites.append((fname, filtered_tests))
+    test_suite = filtered_suites
 
     total_tests = 0
     for fname, suite_tests in test_suite:

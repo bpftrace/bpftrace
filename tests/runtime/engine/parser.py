@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-from fnmatch import fnmatch
 from collections import namedtuple
 import os
 import platform
@@ -41,7 +40,7 @@ TestStruct = namedtuple(
 
 class TestParser(object):
     @staticmethod
-    def read_all(test_filter, run_aot_tests):
+    def read_all(run_aot_tests):
         aot_tests = []
 
         for root, subdirs, files in os.walk('./runtime'):
@@ -51,7 +50,7 @@ class TestParser(object):
             for filename in files:
                 if filename.startswith("."):
                     continue
-                parser = TestParser.read(root + '/' + filename, test_filter)
+                parser = TestParser.read(root + '/' + filename)
                 if parser[1]:
                     if run_aot_tests:
                         for test in parser[1]:
@@ -71,7 +70,7 @@ class TestParser(object):
             yield ('aot', aot_tests)
 
     @staticmethod
-    def read(file_name, test_filter):
+    def read(file_name):
         tests = []
         test_lines = []
         test_suite = file_name.split('/')[-1]
@@ -87,8 +86,7 @@ class TestParser(object):
                 if line == '\n' or line_num == len(lines):
                     if test_lines:
                         test_struct = TestParser.__read_test_struct(test_lines, test_suite)
-                        if fnmatch("%s.%s" % (test_suite, test_struct.name), test_filter) and \
-                           (not test_struct.arch or (platform.machine().lower() in test_struct.arch)):
+                        if not test_struct.arch or (platform.machine().lower() in test_struct.arch):
                             tests.append(test_struct)
                         test_lines = []
 
