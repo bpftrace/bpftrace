@@ -889,27 +889,6 @@ int main(int argc, char* argv[])
   sigaction(SIGINT, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
 
-  uint64_t num_probes = bpftrace.num_probes();
-  if (num_probes == 0)
-  {
-    if (!bt_quiet)
-      std::cout << "No probes to attach" << std::endl;
-    return 1;
-  }
-  else if (num_probes > bpftrace.max_probes_)
-  {
-    LOG(ERROR)
-        << "Can't attach to " << num_probes << " probes because it "
-        << "exceeds the current limit of " << bpftrace.max_probes_
-        << " probes.\n"
-        << "You can increase the limit through the BPFTRACE_MAX_PROBES "
-        << "environment variable, but BE CAREFUL since a high number of probes "
-        << "attached can cause your system to crash.";
-    return 1;
-  }
-  else if (!bt_quiet)
-    bpftrace.out_->attached_probes(num_probes);
-
   err = bpftrace.run(bytecode);
   if (err)
     return err;
