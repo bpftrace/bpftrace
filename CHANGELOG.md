@@ -31,6 +31,8 @@ and this project adheres to
 #### Changed
 - Prevent LLVM from unrolling loops
   - [#1967](https://github.com/iovisor/bpftrace/pull/1967)
+- Allow resizing empty string assigned to a map
+  - [#2036](https://github.com/iovisor/bpftrace/pull/2036)
 
 #### Deprecated
 

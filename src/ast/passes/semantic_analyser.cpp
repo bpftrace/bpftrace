@@ -95,6 +95,7 @@ void SemanticAnalyser::visit(String &string)
                                  << " bytes): " << string.str;
   }
   string.type = CreateString(STRING_SIZE);
+  string.type.SetRealSize(string.str.size());
   // @a = buf("hi", 2). String allocated on bpf stack. See codegen
   string.type.SetAS(AddrSpace::kernel);
 }
@@ -2225,6 +2226,8 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   const std::string &map_ident = assignment.map->ident;
   auto type = assignment.expr->type;
 
+  update_expr_assigned_to_map(map_val_[map_ident], assignment.expr);
+
   if (type.IsRecordTy())
   {
     std::string ty = assignment.expr->type.GetName();
@@ -3113,7 +3116,7 @@ SizedType *SemanticAnalyser::get_map_type(const Map &map)
   return &search->second;
 }
 
-void SemanticAnalyser::update_assign_map_type(const Map &map,
+bool SemanticAnalyser::update_assign_map_type(const Map &map,
                                               SizedType &type,
                                               const SizedType &new_type)
 {
@@ -3122,30 +3125,89 @@ void SemanticAnalyser::update_assign_map_type(const Map &map,
        type.GetFields().size() != new_type.GetFields().size()) ||
       (type.type != new_type.type) ||
       (type.IsRecordTy() && type.GetName() != new_type.GetName()) ||
-      (type.IsArrayTy() && type != new_type))
+      (type.IsArrayTy() && type != new_type) ||
+      (type.IsStringTy() && type.GetSize() != new_type.GetSize() &&
+       type.GetRealSize() != 0 && new_type.GetRealSize() != 0))
   {
     LOG(ERROR, map.loc, err_)
         << "Type mismatch for " << map_ident << ": "
         << "trying to assign value of type '" << new_type
         << "' when map already contains a value of type '" << type;
-    return;
+    return false;
+  }
+
+  if (type.IsStringTy())
+  {
+    if (new_type.GetRealSize() != 0)
+    {
+      type = new_type;
+      return true;
+    }
+    return false;
   }
 
   // all integers are 64bit
   if (type.IsIntTy())
-    return;
+    return false;
 
   if (type.IsTupleTy() && new_type.IsTupleTy())
   {
     auto &fields = type.GetFields();
     auto &new_fields = new_type.GetFields();
+    bool updated = false;
     for (size_t i = 0; i < fields.size(); i++)
     {
-      update_assign_map_type(map, fields[i].type, new_fields[i].type);
+      if (update_assign_map_type(map, fields[i].type, new_fields[i].type))
+        updated = true;
     }
+    if (updated)
+      type = new_type;
+    return updated;
   }
 
   type = new_type;
+  return true;
+}
+
+/*
+ * Updates the type of an expression assigned to a map, based on the type
+ * stored in the map, if possible.
+ *
+ * Currently supports changing the size of an empty string (possibly stored
+ * inside a tuple) to the size stored in the map.
+ */
+bool SemanticAnalyser::update_expr_assigned_to_map(const SizedType &map_type,
+                                                   Expression *expr)
+{
+  if (auto *str = dynamic_cast<String *>(expr))
+  {
+    if (map_type.IsStringTy() && str->type.GetRealSize() == 0)
+    {
+      expr->type = map_type;
+      return true;
+    }
+  }
+  else if (auto *tuple = dynamic_cast<Tuple *>(expr))
+  {
+    if (!map_type.IsTupleTy())
+      return false;
+
+    auto &map_fields = map_type.GetFields();
+    if (map_fields.size() == tuple->elems->size())
+    {
+      bool updated = false;
+      for (size_t i = 0; i < tuple->elems->size(); i++)
+      {
+        if (update_expr_assigned_to_map(map_fields[i].type,
+                                        tuple->elems->at(i)))
+          updated = true;
+      }
+      if (updated)
+        tuple->type = map_type;
+      return updated;
+    }
+  }
+  return false;
 }
 
 /*

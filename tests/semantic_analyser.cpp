@@ -245,6 +245,14 @@ TEST(semantic_analyser, consistent_map_keys)
   test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 10);
 }
 
+TEST(semantic_analyser, map_empty_string_resize)
+{
+  // "" should be resized from string[64] to string[16] (type of comm)
+  // both if used directly or inside a tuple
+  test("kprobe:f { @x = \"\"; } kprobe:g { @x = comm; }", 0);
+  test("kprobe:f { @x = (\"\", 0); } kprobe:g { @x = (comm, 1); }", 0);
+}
+
 TEST(semantic_analyser, if_statements)
 {
   test("kprobe:f { if(1) { 123 } }", 0);

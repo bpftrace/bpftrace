@@ -112,6 +112,8 @@ public:
 
 private:
   size_t size_ = -1; // in bytes
+  size_t real_size_ = -1; // used for string literals to store the actual size
+                          // of the literal
   bool is_signed_ = false;
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
@@ -218,6 +220,16 @@ public:
              size == 64);
       size_bits_ = size * 8;
     }
+  }
+
+  size_t GetRealSize() const
+  {
+    return real_size_;
+  }
+
+  void SetRealSize(size_t size)
+  {
+    real_size_ = size;
   }
 
   size_t GetIntBitWidth() const

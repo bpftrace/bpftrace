@@ -55,3 +55,15 @@ NAME tracepoint arg casts in predicates
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
 EXPECT @: 1
 TIMEOUT 5
+
+NAME map resize empty string
+RUN {{BPFTRACE}} -e 'BEGIN { @ = ""; } k:vfs_read { @ = comm; exit(); }'
+EXPECT @: .*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME map resize empty string in tuple
+RUN {{BPFTRACE}} -e 'BEGIN { @ = ("", 0); } k:vfs_read { @ = (comm, 1); exit(); }'
+EXPECT @: \(.*, 1\)
+TIMEOUT 5
+AFTER ./testprogs/syscall read
