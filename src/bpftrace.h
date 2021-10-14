@@ -104,6 +104,7 @@ public:
                                      const ast::AttachPoint &ap,
                                      const ast::Probe &probe);
   int num_probes() const;
+  int prerun() const;
   int run(BpfBytecode bytecode);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,

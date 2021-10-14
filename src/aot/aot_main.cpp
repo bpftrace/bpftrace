@@ -18,6 +18,7 @@ void usage()
   std::cerr << "OPTIONS:" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
+  std::cerr << "    -q,            keep messages quiet" << std::endl;
   std::cerr << "    -v,            verbose messages" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -V, --version  bpftrace version" << std::endl;
@@ -68,7 +69,7 @@ int main(int argc, char* argv[])
   int c;
 
   // TODO: which other options from `bpftrace` should be included?
-  const char* const short_opts = "f:hVo:v";
+  const char* const short_opts = "f:hVo:qv";
   option long_opts[] = {
     option{ "help", no_argument, nullptr, 'h' },
     option{ "version", no_argument, nullptr, 'V' },
@@ -91,6 +92,9 @@ int main(int argc, char* argv[])
       case 'V':
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         return 0;
+      case 'q':
+        bt_quiet = true;
+        break;
       case 'v':
         bt_verbose = true;
         break;

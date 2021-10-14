@@ -1092,8 +1092,37 @@ int BPFtrace::run_iter()
 }
 #endif
 
+int BPFtrace::prerun() const
+{
+  uint64_t num_probes = this->num_probes();
+  if (num_probes == 0)
+  {
+    if (!bt_quiet)
+      std::cout << "No probes to attach" << std::endl;
+    return 1;
+  }
+  else if (num_probes > max_probes_)
+  {
+    LOG(ERROR)
+        << "Can't attach to " << num_probes << " probes because it "
+        << "exceeds the current limit of " << max_probes_ << " probes.\n"
+        << "You can increase the limit through the BPFTRACE_MAX_PROBES "
+        << "environment variable, but BE CAREFUL since a high number of probes "
+        << "attached can cause your system to crash.";
+    return 1;
+  }
+  else if (!bt_quiet)
+    out_->attached_probes(num_probes);
+
+  return 0;
+}
+
 int BPFtrace::run(BpfBytecode bytecode)
 {
+  int err = prerun();
+  if (err)
+    return err;
+
   // Clear fake maps and replace with real maps
   maps = {};
   if (resources.create_maps(*this, false))
