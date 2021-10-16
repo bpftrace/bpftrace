@@ -127,6 +127,13 @@ jobs:
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           BASE: bionic
           VENDOR_GTEST: ON
+        - NAME: LLVM 13 Release
+          TYPE: Release
+          LLVM_VERSION: 13
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
+          BASE: bionic
+          VENDOR_GTEST: ON
         - NAME: LLVM 12 Release + libbpf
           TYPE: Release
           LLVM_VERSION: 12
