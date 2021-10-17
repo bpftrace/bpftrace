@@ -1,98 +1,92 @@
 NAME pid
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS pid [0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME tid
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", tid); exit(); }
-EXPECT SUCCESS tid [0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", tid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME uid
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", uid); exit(); }
-EXPECT SUCCESS uid [0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", uid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME gid
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", gid); exit(); }
-EXPECT SUCCESS gid [0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME nsecs
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", nsecs); exit(); }
-EXPECT SUCCESS nsecs -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", nsecs); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME elapsed
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", elapsed); exit(); }
-EXPECT SUCCESS elapsed -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", elapsed); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cpu
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", cpu); exit(); }
-EXPECT SUCCESS cpu -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", cpu); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME comm
-PROG k:vfs_read { printf("SUCCESS '$test' %s\n", comm); exit(); }
-EXPECT SUCCESS comm .*
-TIMEOUT 5
-AFTER ./testprogs/syscall read
-
-NAME stack
-PROG k:vfs_read{ printf("SUCCESS '$test' %s\n", stack); exit(); }
-EXPECT SUCCESS stack
+PROG k:vfs_read { printf("SUCCESS %s\n", comm); exit(); }
+EXPECT SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kstack
-PROG k:vfs_read{ printf("SUCCESS '$test' %s\n", kstack); exit(); }
-EXPECT SUCCESS kstack
+PROG k:vfs_read{ printf("%s\n", kstack); exit(); }
+EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME ustack
-PROG k:vfs_read { printf("SUCCESS '$test' %s\n", ustack); exit(); }
-EXPECT SUCCESS ustack
+PROG k:vfs_read { printf("%s\n", ustack); exit(); }
+EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME arg
-PROG k:vfs_read { printf("SUCCESS '$test' %d\n", arg0); exit(); }
-EXPECT SUCCESS arg -?[0-9][0-9]*
+PROG k:vfs_read { printf("SUCCESS %d\n", arg0); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME sarg
-PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }
-EXPECT SUCCESS sarg 32 64
+PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS %d %d\n", sarg0, sarg1); exit(); }
+EXPECT SUCCESS 32 64
 ARCH x86_64
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME sarg
-PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }
-EXPECT SUCCESS sarg 128 256
+PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS %d %d\n", sarg0, sarg1); exit(); }
+EXPECT SUCCESS 128 256
 ARCH aarch64|ppc64|ppc64le
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME sarg
-PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS '$test' %d %d\n", sarg0, sarg1); exit(); }
-EXPECT SUCCESS sarg 16 32
+PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS %d %d\n", sarg0, sarg1); exit(); }
+EXPECT SUCCESS 16 32
 ARCH s390x
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
 NAME retval
-PROG kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", retval); exit(); }
-EXPECT SUCCESS retval .*
+PROG kretprobe:vfs_read { printf("SUCCESS %d\n", retval); exit(); }
+EXPECT SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME func
-PROG k:vfs_read { printf("SUCCESS '$test' %s\n", func); exit(); }
-EXPECT SUCCESS func .*
+PROG k:vfs_read { printf("SUCCESS %s\n", func); exit(); }
+EXPECT SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
@@ -103,13 +97,13 @@ AFTER ./testprogs/uprobe_negative_retval
 TIMEOUT 5
 
 NAME username
-PROG i:ms:1 { printf("SUCCESS '$test' %s\n", username); exit(); }
-EXPECT SUCCESS username .*
+PROG i:ms:1 { printf("SUCCESS %s\n", username); exit(); }
+EXPECT SUCCESS .*
 TIMEOUT 5
 
 NAME probe
-PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n", probe); exit(); }
-EXPECT SUCCESS probe kprobe:do_nanosleep
+PROG k:do_nanosleep { printf("SUCCESS %s\n", probe); exit(); }
+EXPECT SUCCESS kprobe:do_nanosleep
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
@@ -120,29 +114,29 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", curtask); exit(); }
-EXPECT SUCCESS curtask -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", curtask); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME curtask_field
-PROG struct task_struct {int x;} i:ms:1 { printf("SUCCESS '$test' %d\n", curtask->x); exit(); }
-EXPECT SUCCESS curtask_field -?[0-9][0-9]*
+PROG struct task_struct {int x;} i:ms:1 { printf("SUCCESS %d\n", curtask->x); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME rand
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", rand); exit(); }
-EXPECT SUCCESS rand -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", rand); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cgroup
-PROG i:ms:1 { printf("SUCCESS '$test' %d\n", cgroup); exit(); }
-EXPECT SUCCESS cgroup -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %d\n", cgroup); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 MIN_KERNEL 4.18
 
 NAME ctx
-PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS '$test' %d\n", ((struct x*)ctx)->x); exit(); }
-EXPECT SUCCESS ctx -?[0-9][0-9]*
+PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %d\n", ((struct x*)ctx)->x); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME cat

@@ -172,21 +172,21 @@ TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kstack
-PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", kstack(), kstack(1)); exit(); }
-EXPECT SUCCESS kstack
+PROG k:do_nanosleep { printf("%s\n%s\n", kstack(), kstack(1)); exit(); }
+EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME kstack perf mode
-PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n", kstack(perf, 1)); exit(); }
-EXPECT SUCCESS kstack
+PROG k:do_nanosleep { printf("%s\n", kstack(perf, 1)); exit(); }
+EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
 
 NAME ustack
-PROG k:do_nanosleep { printf("SUCCESS '$test' %s\n%s\n", ustack(), ustack(1)); exit(); }
-EXPECT SUCCESS ustack
+PROG k:do_nanosleep { printf("%s\n%s\n", ustack(), ustack(1)); exit(); }
+EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
