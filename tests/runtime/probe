@@ -1,17 +1,17 @@
 NAME kprobe
-PROG kprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS kprobe [0-9][0-9]*
+PROG kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_short_name
-PROG k:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS kprobe_short_name [0-9][0-9]*
+PROG k:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kprobe_target
-PROG kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }
+PROG kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT kprobe probe type requires 1 argument
 TIMEOUT 5
 
@@ -22,8 +22,8 @@ TIMEOUT 5
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
 
 NAME kprobe_offset
-PROG kprobe:vfs_read+0 { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS kprobe_offset [0-9][0-9]*
+PROG kprobe:vfs_read+0 { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
@@ -37,24 +37,24 @@ REQUIRES /usr/sbin/bpftool
 # yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
 # version.
 NAME kprobe_offset_fail_size
-PROG kprobe:vfs_read+1000000 { printf("SUCCESS '$test' %d\n", pid); exit(); }
+PROG kprobe:vfs_read+1000000 { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT Offset outside the function bounds \('vfs_read' size is*
 TIMEOUT 5
 
 NAME kretprobe
-PROG kretprobe:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS kretprobe [0-9][0-9]*
+PROG kretprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_short_name
-PROG kr:vfs_read { printf("SUCCESS '$test' %d\n", pid); exit(); }
-EXPECT SUCCESS kretprobe_short_name [0-9][0-9]*
+PROG kr:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretprobe_target
-PROG kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", pid); exit(); }
+PROG kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT kretprobe probe type requires 1 argument
 TIMEOUT 5
 
@@ -124,14 +124,14 @@ TIMEOUT 5
 AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
 NAME tracepoint
-PROG tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }
-EXPECT SUCCESS tracepoint [0-9][0-9]*
+PROG tracepoint:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
 TIMEOUT 5
 
 NAME tracepoint_short_name
-PROG t:syscalls:sys_exit_nanosleep { printf("SUCCESS '$test' %d\n", gid); exit(); }
-EXPECT SUCCESS tracepoint_short_name [0-9][0-9]*
+PROG t:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
 AFTER ./testprogs/syscall nanosleep 1e8
 TIMEOUT 5
 
