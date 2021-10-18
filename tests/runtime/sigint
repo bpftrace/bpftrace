@@ -1,6 +1,7 @@
 NAME strace no quit
 RUN {{BPFTRACE}} -e 'i:s:1 { printf("%s %d\n", "SUCCESS", 1); exit() }' & (./testprogs/syscall nanosleep 5e8 && strace -p $! -o /dev/null)
 EXPECT SUCCESS 1
+REQUIRES command -v strace
 TIMEOUT 3
 
 NAME sigint quit

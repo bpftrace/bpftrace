@@ -1,7 +1,7 @@
 # https://github.com/iovisor/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
-PROG struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (struct Foo)0; @bar = @foo.bar; @x = @foo.bar.x; printf("done\n"); exit(); }
-EXPECT done
+PROG struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (struct Foo *)0; @bar = @foo->bar; @x = @foo->bar.x; printf("_%s_\n", "done"); exit(); }
+EXPECT _done_
 TIMEOUT 1
 
 NAME logical_and_or_different_sizes
@@ -66,7 +66,7 @@ EXPECT not equal
 TIMEOUT 3
 
 NAME strncmp with prefix
-PROG BEGIN { if (strncmp("hello", "hell") == 0) { printf("equal"); } else { printf("not equal"); } exit(); }
+PROG BEGIN { if (strncmp("hello", "hell", 5) == 0) { printf("equal"); } else { printf("not equal"); } exit(); }
 EXPECT not equal
 TIMEOUT 3
 

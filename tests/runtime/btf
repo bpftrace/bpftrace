@@ -23,7 +23,7 @@ TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type
-PROG struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); }
+PROG struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); exit() }
 EXPECT -?[0-9][0-9]*
 TIMEOUT 5
 REQUIRES_FEATURE btf

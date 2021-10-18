@@ -307,7 +307,7 @@ TIMEOUT 1
 REQUIRES ./testprogs/usdt_inlined should_not_skip
 
 NAME "usdt probes in multiple modules"
-RUN {{BPFTRACE}} runtime/scripts/usdt_multi_modules.bt -c ./testprogs/usdt_test
+RUN {{BPFTRACE}} runtime/scripts/usdt_multi_modules.bt
 EXPECT Attaching 2 probes
 TIMEOUT 1
 REQUIRES ./testprogs/usdt_test should_not_skip

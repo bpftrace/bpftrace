@@ -96,12 +96,12 @@ EXPECT not equal
 TIMEOUT 5
 
 NAME positional string compare via variable - equal
-RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello")) { printf("I got hello\n");} else { printf("not equal\n");} exit();}' "hello"
+RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello") { printf("I got %s\n", "hello");} else { printf("not equal\n");} exit();}' "hello"
 EXPECT I got hello
 TIMEOUT 5
 
 NAME positional string compare via variable - not equal
-RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello")) { printf("I got hello\n");} else { printf("not equal\n");} exit();}' "hell"
+RUN {{BPFTRACE}} -e 'BEGIN { $x = str($1); if ($x == "hello") { printf("I got hello\n");} else { printf("not %s\n", "equal");} exit();}' "hell"
 EXPECT not equal
 TIMEOUT 5
 

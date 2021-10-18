@@ -205,12 +205,13 @@ REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { @[pid] = count(); exit(); }
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
+
 NAME BEGIN
 PROG BEGIN { printf("Hello\n"); exit();}
 EXPECT Hello
 TIMEOUT 2
 
 NAME END_processing_after_exit
-RUN {{BPFTRACE}} -e "interval:s:1 { exit(); } END { printf("end"); }"
+PROG interval:s:1 { exit(); } END { printf("end"); }
 EXPECT end
 TIMEOUT 2

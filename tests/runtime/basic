@@ -141,8 +141,9 @@ TIMEOUT 1
 WILL_FAIL
 
 NAME libraries under /usr/include are in the search path
-RUN {{BPFTRACE}} -e "$(echo "#include <sys/types.h>"; echo "BEGIN { exit(); }")" 2>&1
+RUN {{BPFTRACE}} -e "$(echo "#include <sys/xattr.h>"; echo "BEGIN { exit(); }")" 2>&1
 EXPECT ^((?!file not found).)*$
+REQUIRES ls /usr/include/sys/xattr.h
 TIMEOUT 1
 
 NAME non existent library include fails
@@ -189,7 +190,7 @@ TIMEOUT 1
 NAME spawn child
 RUN {{BPFTRACE}} -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
 EXPECT [0-9]+
-TIMEOUT 1
+TIMEOUT 3
 
 NAME info flag
 RUN {{BPFTRACE}} --info
