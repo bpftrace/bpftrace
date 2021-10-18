@@ -1,5 +1,5 @@
 NAME watchpoint - absolute address
-RUN {{BPFTRACE}} -e 'watchpoint::0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
+RUN {{BPFTRACE}} -e 'watchpoint:0x10000000:8:w { printf("hit!\n"); exit() }' -c ./testprogs/watchpoint
 EXPECT hit!
 ARCH aarch64|ppc64|ppc64le|x86_64
 TIMEOUT 5
