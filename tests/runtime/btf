@@ -33,3 +33,4 @@ PROG struct task_struct { struct thread_info x; } BEGIN { printf("%d\n", curtask
 EXPECT error:.*'struct thread_info'
 TIMEOUT 5
 REQUIRES_FEATURE btf
+WILL_FAIL

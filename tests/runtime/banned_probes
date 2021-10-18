@@ -2,18 +2,22 @@ NAME kretprobe:_raw_spin_lock is banned
 PROG kretprobe:_raw_spin_lock { exit(); }
 EXPECT error: kretprobe:_raw_spin_lock can't be used as it might lock up your system.
 TIMEOUT 1
+WILL_FAIL
 
 NAME kretprobe:queued_spin_lock_slowpath is banned
 PROG kretprobe:queued_spin_lock_slowpath { exit(); }
 EXPECT error: kretprobe:queued_spin_lock_slowpath can't be used as it might lock up your system.
 TIMEOUT 1
+WILL_FAIL
 
 NAME kretprobe:_raw_spin_unlock_irqrestore is banned
 PROG kretprobe:_raw_spin_unlock_irqrestore { exit(); }
 EXPECT error: kretprobe:_raw_spin_unlock_irqrestore can't be used as it might lock up your system.
 TIMEOUT 1
+WILL_FAIL
 
 NAME kretprobe:_raw_spin_lock_irqsave is banned
 PROG kretprobe:_raw_spin_lock_irqsave { exit(); }
 EXPECT error: kretprobe:_raw_spin_lock_irqsave can't be used as it might lock up your system.
 TIMEOUT 1
+WILL_FAIL

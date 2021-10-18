@@ -14,6 +14,7 @@ NAME kprobe_target
 PROG kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT kprobe probe type requires 1 argument
 TIMEOUT 5
+WILL_FAIL
 
 NAME kprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kprobe_order.bt
@@ -40,6 +41,7 @@ NAME kprobe_offset_fail_size
 PROG kprobe:vfs_read+1000000 { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT Offset outside the function bounds \('vfs_read' size is*
 TIMEOUT 5
+WILL_FAIL
 
 NAME kretprobe
 PROG kretprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
@@ -57,6 +59,7 @@ NAME kretprobe_target
 PROG kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT kretprobe probe type requires 1 argument
 TIMEOUT 5
+WILL_FAIL
 
 NAME kretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt
@@ -92,11 +95,13 @@ NAME uprobe_offset_fail_size
 PROG uprobe:/bin/bash:echo_builtin+1000000 { printf("arg0: %d\n", arg0); exit();}
 EXPECT Offset outside the function bounds \('echo_builtin' size is*
 TIMEOUT 5
+WILL_FAIL
 
 NAME uprobe_address_fail_resolve
 PROG uprobe:/bin/bash:10 { printf("arg0: %d\n", arg0); exit();}
 EXPECT Could not resolve address: /bin/bash:0xa
 TIMEOUT 5
+WILL_FAIL
 
 NAME uprobe_library
 PROG uprobe:libc:fread { printf("size: %d\n", arg1); exit(); }
@@ -150,12 +155,14 @@ NAME tracepoint_missing
 PROG t:syscalls:nonsense { printf("hit"); exit(); }
 EXPECT ERROR: tracepoint not found: syscalls:nonsense
 TIMEOUT 5
+WILL_FAIL
 
 NAME tracepoint_multiattach_missing
 PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { printf("hit"); exit(); }
 EXPECT hit
 AFTER ./testprogs/syscall nanosleep 1e8
 TIMEOUT 5
+WILL_FAIL
 
 # Test that we get at least two characters out
 NAME tracepoint_data_loc

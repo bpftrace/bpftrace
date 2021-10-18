@@ -215,6 +215,7 @@ EXPECT Failed to find processes running
 TIMEOUT 5
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
 REQUIRES_FEATURE !uprobe_refcount
+WILL_FAIL
 
 # We should be able to attach a probe even without any running processes
 # if the kernel handles the semaphore
