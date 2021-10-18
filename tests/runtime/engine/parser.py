@@ -34,6 +34,7 @@ TestStruct = namedtuple(
         'arch',
         'feature_requirement',
         'neg_feature_requirement',
+        'will_fail'
     ],
 )
 
@@ -107,6 +108,7 @@ class TestParser(object):
         arch = []
         feature_requirement = set()
         neg_feature_requirement = set()
+        will_fail = False
 
         for item in test:
             item_split = item.split()
@@ -162,6 +164,8 @@ class TestParser(object):
                 unknown = (feature_requirement | neg_feature_requirement) - features
                 if len(unknown) > 0:
                     raise UnknownFieldError('%s is invalid for REQUIRES_FEATURE. Suite: %s' % (','.join(unknown), test_suite))
+            elif item_name == "WILL_FAIL":
+                will_fail = True
             else:
                 raise UnknownFieldError('Field %s is unknown. Suite: %s' % (item_name, test_suite))
 
@@ -190,4 +194,5 @@ class TestParser(object):
             env,
             arch,
             feature_requirement,
-            neg_feature_requirement)
+            neg_feature_requirement,
+            will_fail)
