@@ -73,6 +73,7 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `REQUIRES_FEATURE`: Only run testcase if the following bpftrace feature is
   built in. See `bpftrace --info` and `runtime/engine/runner.py` for more
   details. Also supports negative features (by prefixing `!` before feature).
+* `WILL_FAIL`: Mark that this test case will exit uncleanly (ie exit code != 0)
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
