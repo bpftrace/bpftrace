@@ -15,6 +15,7 @@ PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = (
 EXPECT the index 5 is out of bounds for array of size 4
 TIMEOUT 5
 AFTER ./testprogs/array_access
+WILL_FAIL
 
 NAME array element access via assignment into var
 PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_struct { $a = ((struct A *) arg0)->x; $x = $a[0]; printf("Result: %d\n", $x); exit(); }

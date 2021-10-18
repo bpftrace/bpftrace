@@ -62,11 +62,13 @@ NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT unroll maximum value is 100
 TIMEOUT 5
+WILL_FAIL
 
 NAME unroll_min_value
 PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
 EXPECT unroll minimum value is 1
 TIMEOUT 5
+WILL_FAIL
 
 NAME unroll_param
 RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n", $a); exit();}' 10

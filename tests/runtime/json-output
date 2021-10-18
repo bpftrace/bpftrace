@@ -2,6 +2,7 @@ NAME invalid_format
 RUN {{BPFTRACE}} -q -f jsonx -e 'BEGIN { @scalar = 5; exit(); }'
 EXPECT ^ERROR: Invalid output format "jsonx"$
 TIMEOUT 5
+WILL_FAIL
 
 NAME scalar
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @scalar = 5; exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/scalar.json")))'

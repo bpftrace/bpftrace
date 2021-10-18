@@ -160,6 +160,7 @@ ENV BPFTRACE_LOG_SIZE=1
 RUN {{BPFTRACE}} -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
 EXPECT Error loading program: BEGIN
 TIMEOUT 5
+WILL_FAIL
 
 NAME increase log size
 RUN {{BPFTRACE}} -ve 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"

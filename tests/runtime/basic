@@ -12,11 +12,13 @@ NAME it shows usage with bad flag
 RUN {{BPFTRACE}} -idonotexist
 EXPECT USAGE
 TIMEOUT 1
+WILL_FAIL
 
 NAME errors on non existent file
 RUN {{BPFTRACE}} non_existent_file.bt
 EXPECT ERROR: failed to open file 'non_existent_file.bt': No such file or directory
 TIMEOUT 1
+WILL_FAIL
 
 NAME piped script
 RUN {{BPFTRACE}} - < runtime/scripts/hello_world.bt
@@ -112,26 +114,31 @@ NAME errors on invalid character in search expression
 RUN {{BPFTRACE}} -l '\n'
 EXPECT ERROR: invalid character
 TIMEOUT 1
+WILL_FAIL
 
 NAME pid fails validation with leading non-number
 RUN {{BPFTRACE}} -p a1111 file.bt
 EXPECT ERROR: pid 'a1111' is not a valid decimal number
 TIMEOUT 1
+WILL_FAIL
 
 NAME pid fails validation with non-number in between
 RUN {{BPFTRACE}} -p 111a1 file.bt
 EXPECT ERROR: pid '111a1' is not a valid decimal number
 TIMEOUT 1
+WILL_FAIL
 
 NAME pid fails validation with non-numeric argument
 RUN {{BPFTRACE}} -p not_a_pid file.bt
 EXPECT ERROR: pid 'not_a_pid' is not a valid decimal number
 TIMEOUT 1
+WILL_FAIL
 
 NAME pid outside of valid pid range
 RUN {{BPFTRACE}} -p 5000000 file.bt
 EXPECT ERROR: pid '5000000' out of valid pid range \[1,4194304\]
 TIMEOUT 1
+WILL_FAIL
 
 NAME libraries under /usr/include are in the search path
 RUN {{BPFTRACE}} -e "$(echo "#include <sys/types.h>"; echo "BEGIN { exit(); }")" 2>&1
@@ -142,6 +149,7 @@ NAME non existent library include fails
 RUN {{BPFTRACE}} -e "$(echo "#include <lol/no.h>"; echo "BEGIN { exit(); }")" 2>&1
 EXPECT file not found
 TIMEOUT 1
+WILL_FAIL
 
 NAME defines work
 RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n", _UNDERSCORE); exit(); }')"
@@ -198,8 +206,10 @@ NAME disable warnings
 RUN {{BPFTRACE}} --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); exit();}' 2>&1| grep -c -E "WARNING|invalid option"
 EXPECT ^0$
 TIMEOUT 1
+WILL_FAIL
 
 NAME kaddr fails
 PROG BEGIN { print(kaddr("asdfzzzzzzz")) }
 EXPECT Failed to resolve kernel symbol
 TIMEOUT 1
+WILL_FAIL
