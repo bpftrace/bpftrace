@@ -7,7 +7,7 @@ ARG LLVM_VERSION
 
 ARG CMAKE_VER="3.16"
 ARG CMAKE_BUILD="2"
-ARG bcc_ref="v0.19.0"
+ARG bcc_ref="v0.22.0"
 ARG bcc_org="iovisor"
 ARG libbpf_ref="092a606856"
 
