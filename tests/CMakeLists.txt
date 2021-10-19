@@ -96,7 +96,7 @@ if(VENDOR_GTEST)
   include(ExternalProject)
   ExternalProject_Add(gtest-git
     GIT_REPOSITORY https://github.com/google/googletest.git
-    GIT_TAG release-1.10.0
+    GIT_TAG release-1.11.0
     STEP_TARGETS build update
     EXCLUDE_FROM_ALL 1
     BUILD_BYPRODUCTS ${gtest_byproducts}
