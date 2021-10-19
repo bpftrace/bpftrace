@@ -18,6 +18,10 @@ BUILD_LIBBPF=${BUILD_LIBBPF:-OFF}
 CC=${CC:cc}
 CXX=${CXX:c++}
 
+if [[ $LLVM_VERSION -eq 13 ]]; then 
+  touch /usr/lib/llvm-13/bin/llvm-omp-device-info
+fi
+
 if [[ $BUILD_LIBBPF = ON ]]; then
   mkdir /src
   git clone https://github.com/libbpf/libbpf.git /src/libbpf
