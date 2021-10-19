@@ -71,6 +71,11 @@ Vagrant.configure("2") do |config|
       'scripts'        => [ $ubuntu_deps, ],
       'fix_console'    => 0,
     },
+    'ubuntu-21.10'     => {
+      'image'          => 'ubuntu/impish64',
+      'scripts'        => [ $ubuntu_deps, ],
+      'fix_console'    => 0,
+    },
     'fedora-34'        => {
       'image'          => 'fedora/34-cloud-base',
       'scripts'        => [ $fedora_deps, ],
