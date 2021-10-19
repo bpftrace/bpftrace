@@ -10,7 +10,7 @@ wget https://apt.llvm.org/llvm.sh
 bash ./llvm.sh 12
 apt-get -qq update
 apt-get -qq install linux-headers-$(uname -r) binutils-dev python
-apt-get -qq install bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev libcereal-dev
+apt-get -qq install asciidoctor bison cmake flex g++ git libelf-dev zlib1g-dev libfl-dev systemtap-sdt-dev libclang-12-dev libcereal-dev
 apt-get -qq install --no-install-recommends pkg-config
 EOF
 
