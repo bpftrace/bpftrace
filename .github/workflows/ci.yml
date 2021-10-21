@@ -132,6 +132,7 @@ jobs:
           LLVM_VERSION: 13
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
+          GTEST_FILTER: '-clang_parser.nested_struct_no_type'
           BASE: bionic
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release + libbpf
@@ -207,6 +208,7 @@ jobs:
         -e BUILD_LIBBPF="${BUILD_LIBBPF}"
         -e CC="${CC}"
         -e CXX="${CXX}"
+        -e GTEST_FILTER="$GTEST_FILTER"
         bpftrace-builder-$BASE-llvm-$LLVM_VERSION
         ${PWD}/build-$TYPE-$BASE
         $TYPE
