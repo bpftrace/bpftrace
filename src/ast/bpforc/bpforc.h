@@ -14,7 +14,11 @@
 #include <llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/Support/Error.h>
+#if LLVM_VERSION_MAJOR < 14
 #include <llvm/Support/TargetRegistry.h>
+#else
+#include <llvm/MC/TargetRegistry.h>
+#endif
 #include <llvm/Target/TargetMachine.h>
 
 #ifdef LLVM_ORC_V2
