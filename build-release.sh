@@ -1,3 +1,3 @@
 #!/bin/bash
-set -e
-docker run --network host --rm -it -u $(id -u):$(id -g) -v $(pwd):$(pwd) -e STATIC_LINKING=ON -e STATIC_LIBC=ON -e ALLOW_UNSAFE_PROBE=OFF -e RUN_TESTS=0 bpftrace-builder-alpine "$(pwd)/build-release" Release "$@"
+set -eu
+docker run --network host --rm -it -u $(id -u):$(id -g) -v $(pwd):$(pwd) -e STATIC_LINKING=OFF -e STATIC_LIBC=OFF -e ALLOW_UNSAFE_PROBE=OFF -e VENDOR_GTEST=ON -e RUN_TESTS=${RUN_TESTS} bpftrace-builder-${BASE} "$(pwd)/build-release-${BASE}" Release "$@"
