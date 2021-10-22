@@ -45,7 +45,7 @@ TIMEOUT 5
 
 NAME complex tuple 4
 PROG BEGIN { $a = ((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555, "abc"); print(sizeof($a)); exit(); }
-EXPECT 168
+EXPECT 48
 TIMEOUT 5
 
 NAME struct in tuple

@@ -2274,7 +2274,7 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     {
       const auto &map_type = map_val_[map_ident];
       const auto &expr_type = assignment.expr->type;
-      if (map_type != expr_type)
+      if (!expr_type.FitsInto(map_type))
       {
         LOG(ERROR, assignment.loc, err_) << "Tuple type mismatch: " << map_type
                                          << " != " << expr_type << ".";
@@ -2330,7 +2330,8 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
         search->second = assignTy;
       }
     }
-    else if (search->second.IsStringTy() && assignTy.IsStringTy())
+    else if ((search->second.IsStringTy() && assignTy.IsStringTy()) ||
+             (search->second.IsTupleTy() && assignTy.IsTupleTy()))
     {
       update_string_size(search->second, assignTy);
     }
@@ -2393,7 +2394,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     {
       auto var_type = storedTy;
       auto expr_type = assignTy;
-      if (var_type != expr_type)
+      if (!expr_type.FitsInto(var_type))
       {
         LOG(ERROR, assignment.loc, err_) << "Tuple type mismatch: " << var_type
                                          << " != " << expr_type << ".";
@@ -3127,7 +3128,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
           << "' when map already contains a value of type '" << *maptype;
     }
 
-    if (maptype->IsStringTy())
+    if (maptype->IsStringTy() || maptype->IsTupleTy())
       update_string_size(*maptype, type);
   }
   else
@@ -3209,6 +3210,22 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
   {
     type.SetSize(std::max(type.GetSize(), new_type.GetSize()));
     return true;
+  }
+
+  if (type.IsTupleTy() && new_type.IsTupleTy() &&
+      type.GetFieldCount() == new_type.GetFieldCount())
+  {
+    bool updated = false;
+    std::vector<SizedType> new_elems;
+    for (ssize_t i = 0; i < type.GetFieldCount(); i++)
+    {
+      if (update_string_size(type.GetField(i).type, new_type.GetField(i).type))
+        updated = true;
+      new_elems.push_back(type.GetField(i).type);
+    }
+    if (updated)
+      type = CreateTuple(bpftrace_.structs.AddTuple(new_elems));
+    return updated;
   }
 
   return false;

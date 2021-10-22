@@ -195,6 +195,7 @@ public:
   bool operator==(const SizedType &t) const;
   bool operator!=(const SizedType &t) const;
   bool IsSameType(const SizedType &t) const;
+  bool FitsInto(const SizedType &t) const;
 
   bool IsPrintableTy()
   {

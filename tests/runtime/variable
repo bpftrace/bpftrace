@@ -75,3 +75,8 @@ NAME map multi-key string type resize
 PROG BEGIN { @["hello", 0] = 0; } i:ms:1 { @["hi", 1] = 1; exit(); }
 EXPECT @\[hi, 1\]: 1
 TIMEOUT 2
+
+NAME tuple string resize
+PROG BEGIN { @ = ("hello", 0); } i:ms:1 { @ = ("hi", 1); exit(); }
+EXPECT @: \(hi, 1\)
+TIMEOUT 2
