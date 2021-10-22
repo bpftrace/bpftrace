@@ -2409,6 +2409,12 @@ TEST(semantic_analyser, string_size)
   auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsStringTy());
   ASSERT_EQ(var_assign->var->type.GetSize(), 6);
+
+  test(bpftrace, true, driver, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
+  stmt = driver.root->probes->at(0)->stmts->at(0);
+  auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
+  ASSERT_TRUE(map_assign->map->type.IsStringTy());
+  ASSERT_EQ(map_assign->map->type.GetSize(), 6);
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP

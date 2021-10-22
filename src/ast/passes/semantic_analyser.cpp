@@ -2251,20 +2251,11 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
   {
     auto map_size = map_val_[map_ident].GetSize();
     auto expr_size = assignment.expr->type.GetSize();
-    if (map_size != expr_size)
+    if (map_size < expr_size)
     {
-      std::stringstream buf;
-      buf << "String size mismatch: " << map_size << " != " << expr_size << ".";
-      if (map_size < expr_size)
-      {
-        buf << " The value may be truncated.";
-        LOG(WARNING, assignment.loc, out_) << buf.str();
-      }
-      else
-      {
-        // bpf_map_update_elem() expects map_size-length value
-        LOG(ERROR, assignment.loc, err_) << buf.str();
-      }
+      LOG(WARNING, assignment.loc, out_)
+          << "String size mismatch: " << map_size << " < " << expr_size
+          << ". The value may be truncated.";
     }
   }
   else if (type.IsBufferTy())
@@ -2314,6 +2305,11 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
     if (map_type == expr_type)
     {
       map_val_[map_ident].is_internal = true;
+    }
+    else
+    {
+      LOG(ERROR, assignment.loc, err_)
+          << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
   }
 
@@ -3120,41 +3116,6 @@ SizedType *SemanticAnalyser::get_map_type(const Map &map)
   return &search->second;
 }
 
-void SemanticAnalyser::update_assign_map_type(const Map &map,
-                                              SizedType &type,
-                                              const SizedType &new_type)
-{
-  const std::string &map_ident = map.ident;
-  if ((type.IsTupleTy() && new_type.IsTupleTy() &&
-       type.GetFields().size() != new_type.GetFields().size()) ||
-      (type.type != new_type.type) ||
-      (type.IsRecordTy() && type.GetName() != new_type.GetName()) ||
-      (type.IsArrayTy() && type != new_type))
-  {
-    LOG(ERROR, map.loc, err_)
-        << "Type mismatch for " << map_ident << ": "
-        << "trying to assign value of type '" << new_type
-        << "' when map already contains a value of type '" << type;
-    return;
-  }
-
-  // all integers are 64bit
-  if (type.IsIntTy())
-    return;
-
-  if (type.IsTupleTy() && new_type.IsTupleTy())
-  {
-    auto &fields = type.GetFields();
-    auto &new_fields = new_type.GetFields();
-    for (size_t i = 0; i < fields.size(); i++)
-    {
-      update_assign_map_type(map, fields[i].type, new_fields[i].type);
-    }
-  }
-
-  type = new_type;
-}
-
 /*
  * assign_map_type
  *
@@ -3182,7 +3143,9 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
           << "trying to assign value of type '" << type
           << "' when map already contains a value of type '" << *maptype;
     }
-    update_assign_map_type(map, *maptype, type);
+
+    if (maptype->IsStringTy())
+      update_string_size(*maptype, type);
   }
   else
   {

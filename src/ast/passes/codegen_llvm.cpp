@@ -1798,7 +1798,16 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   auto [key, scoped_key_deleter] = getMapKey(map);
   if (shouldBeOnStackAlready(assignment.expr->type))
   {
-    val = expr;
+    if (assignment.expr->type.IsStringTy() &&
+        assignment.expr->type.GetSize() != map.type.GetSize())
+    {
+      val = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+      b_.CREATE_MEMSET(val, b_.getInt8(0), map.type.GetSize(), 1);
+      b_.CREATE_MEMCPY(val, expr, assignment.expr->type.GetSize(), 1);
+      self_alloca = true;
+    }
+    else
+      val = expr;
   }
   else if (map.type.IsRecordTy() || map.type.IsArrayTy())
   {
