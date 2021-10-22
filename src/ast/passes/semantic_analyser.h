@@ -99,6 +99,7 @@ private:
 
   SizedType *get_map_type(const Map &map);
   void assign_map_type(const Map &map, const SizedType &type);
+  void update_key_type(const Map &map, const MapKey &new_key);
   bool update_string_size(SizedType &type, const SizedType &new_type);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);

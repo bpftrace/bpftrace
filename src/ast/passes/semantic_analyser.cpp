@@ -1363,38 +1363,21 @@ void SemanticAnalyser::visit(Map &map)
                " array instead (eg `@map[$1, $2] = ...)`.";
       }
 
-      if (is_final_pass()) {
-        if (expr->type.IsNoneTy())
-          LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
+      if (is_final_pass() && expr->type.IsNoneTy())
+        LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
 
-        SizedType keytype = expr->type;
-        // Skip.IsSigned() when comparing keys to not break existing scripts
-        // which use maps as a lookup table
-        // TODO (fbs): This needs a better solution
-        if (expr->type.IsIntTy())
-          keytype = CreateUInt(keytype.GetSize() * 8);
-        key.args_.push_back(keytype);
-      }
+      SizedType keytype = expr->type;
+      // Skip.IsSigned() when comparing keys to not break existing scripts
+      // which use maps as a lookup table
+      // TODO (fbs): This needs a better solution
+      if (expr->type.IsIntTy())
+        keytype = CreateUInt(keytype.GetSize() * 8);
+      key.args_.push_back(keytype);
     }
   }
 
-  if (is_final_pass()) {
-    if (!map.skip_key_validation) {
-      auto search = map_key_.find(map.ident);
-      if (search != map_key_.end()) {
-        if (search->second != key) {
-          LOG(ERROR, map.loc, err_)
-              << "Argument mismatch for " << map.ident << ": "
-              << "trying to access with arguments: " << key.argument_type_list()
-              << " when map expects arguments: "
-              << search->second.argument_type_list();
-        }
-      }
-      else {
-        map_key_.insert({map.ident, key});
-      }
-    }
-  }
+  if (pass_ > 1 && !map.skip_key_validation)
+    update_key_type(map, key);
 
   auto search_val = map_val_.find(map.ident);
   if (search_val != map_val_.end()) {
@@ -3177,6 +3160,45 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
       }
     }
   }
+}
+void SemanticAnalyser::update_key_type(const Map &map, const MapKey &new_key)
+{
+  auto key = map_key_.find(map.ident);
+  if (key != map_key_.end())
+  {
+    bool valid = true;
+    if (key->second.args_.size() == new_key.args_.size())
+    {
+      for (size_t i = 0; i < key->second.args_.size(); i++)
+      {
+        SizedType &key_type = key->second.args_[i];
+        const SizedType &new_key_type = new_key.args_[i];
+        if (key_type.IsStringTy() && new_key_type.IsStringTy())
+        {
+          key_type.SetSize(
+              std::max(key_type.GetSize(), new_key_type.GetSize()));
+        }
+        else if (key_type != new_key_type)
+        {
+          valid = false;
+          break;
+        }
+      }
+    }
+    else
+      valid = false;
+
+    if (!valid)
+    {
+      LOG(ERROR, map.loc, err_)
+          << "Argument mismatch for " << map.ident << ": "
+          << "trying to access with arguments: " << new_key.argument_type_list()
+          << " when map expects arguments: "
+          << key->second.argument_type_list();
+    }
+  }
+  else
+    map_key_.insert({ map.ident, new_key });
 }
 
 bool SemanticAnalyser::update_string_size(SizedType &type,
