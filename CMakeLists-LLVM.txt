@@ -3,7 +3,7 @@ project(bpftrace-llvm-builder)
 
 include(GNUInstallDirs)
 
-set(LLVM_VERSION "8" CACHE STRING "LLVM version to build")
+set(LLVM_VERSION "12" CACHE STRING "LLVM version to build")
 
 set(STATIC_LINKING ON)
 set(STATIC_LIBC OFF)

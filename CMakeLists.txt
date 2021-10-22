@@ -14,7 +14,7 @@ set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with m
 
 set(EMBED_USE_LLVM OFF CACHE BOOL "Use a prebuilt embedded LLVM, speeds up the build process")
 set(EMBED_BUILD_LLVM OFF CACHE BOOL "Build Clang&LLVM static libs as an ExternalProject and link to these instead of system libs.")
-set(EMBED_LLVM_VERSION "8" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
+set(EMBED_LLVM_VERSION "12" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
