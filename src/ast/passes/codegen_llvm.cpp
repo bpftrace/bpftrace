@@ -2344,9 +2344,20 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
       auto scoped_del = accept(expr);
       if (onStack(expr->type))
       {
-        key = expr_;
-        // Call-ee freed
-        scoped_del.disarm();
+        auto &key_type = map.key_type.args_[0];
+        if (expr->type.IsStringTy() &&
+            expr->type.GetSize() != key_type.GetSize())
+        {
+          key = b_.CreateAllocaBPF(key_type, map.ident + "_key");
+          b_.CREATE_MEMSET(key, b_.getInt8(0), key_type.GetSize(), 1);
+          b_.CREATE_MEMCPY(key, expr_, expr->type.GetSize(), 1);
+        }
+        else
+        {
+          key = expr_;
+          // Call-ee freed
+          scoped_del.disarm();
+        }
       }
       else
       {
@@ -2394,23 +2405,27 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
                                         size_t extra_keys_size)
 {
   size_t size = extra_keys_size;
-  for (Expression *expr : *map.vargs)
+  for (auto &key_type : map.key_type.args_)
   {
-    size += expr->type.GetSize();
+    size += key_type.GetSize();
   }
   AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
 
   int offset = 0;
   bool aligned = true;
+  int i = 0;
   // Construct a map key in the stack
   for (Expression *expr : *map.vargs)
   {
     auto scoped_del = accept(expr);
     Value *offset_val = b_.CreateGEP(key,
                                      { b_.getInt64(0), b_.getInt64(offset) });
+    size_t map_key_size = map.key_type.args_[i++].GetSize();
 
     if (onStack(expr->type))
     {
+      if (expr->type.IsStringTy() && expr->type.GetSize() < map_key_size)
+        b_.CREATE_MEMSET(offset_val, b_.getInt8(0), map_key_size, 1);
       b_.CREATE_MEMCPY(offset_val, expr_, expr->type.GetSize(), 1);
       if ((expr->type.GetSize() % 8) != 0)
         aligned = false;
@@ -2443,7 +2458,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
           b_.createAlignedStore(key_elem, dst_ptr, 1);
       }
     }
-    offset += expr->type.GetSize();
+    offset += map_key_size;
   }
 
   for (auto *extra_key : extra_keys)

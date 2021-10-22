@@ -234,15 +234,15 @@ TEST(semantic_analyser, consistent_map_keys)
   test("kprobe:f { @x = 0; @x; }", 0);
   test("kprobe:f { @x[1] = 0; @x[2]; }", 0);
 
-  test("kprobe:f { @x = 0; @x[1]; }", 10);
-  test("kprobe:f { @x[1] = 0; @x; }", 10);
+  test("kprobe:f { @x = 0; @x[1]; }", 2);
+  test("kprobe:f { @x[1] = 0; @x; }", 2);
 
   test("kprobe:f { @x[1,2] = 0; @x[3,4]; }", 0);
-  test("kprobe:f { @x[1,2] = 0; @x[3]; }", 10);
-  test("kprobe:f { @x[1] = 0; @x[2,3]; }", 10);
+  test("kprobe:f { @x[1,2] = 0; @x[3]; }", 2);
+  test("kprobe:f { @x[1] = 0; @x[2,3]; }", 2);
 
   test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[2,\"b\", kstack]; }", 0);
-  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 10);
+  test("kprobe:f { @x[1,\"a\",kstack] = 0; @x[\"b\", 2, kstack]; }", 2);
 }
 
 TEST(semantic_analyser, if_statements)
@@ -1006,7 +1006,7 @@ TEST(semantic_analyser, array_as_map_key)
        "    @x[((struct MyStruct *)arg0)->x] = 0; "
        "    @x[((struct MyStruct *)arg0)->y] = 1; "
        "}",
-       10);
+       2);
 }
 
 TEST(semantic_analyser, variable_type)
@@ -1560,7 +1560,7 @@ TEST(semantic_analyser, struct_as_map_key)
        "    @x[*((struct A *)arg0)] = 0; "
        "    @x[*((struct B *)arg1)] = 1; "
        "}",
-       10);
+       2);
 }
 
 TEST(semantic_analyser, probe_short_name)
@@ -2415,6 +2415,27 @@ TEST(semantic_analyser, string_size)
   auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->type.IsStringTy());
   ASSERT_EQ(map_assign->map->type.GetSize(), 6);
+
+  test(bpftrace,
+       true,
+       driver,
+       R"_(k:f1 {@["hi"] = 0;} k:f2 {@["hello"] = 1;})_",
+       0);
+  stmt = driver.root->probes->at(0)->stmts->at(0);
+  map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
+  ASSERT_TRUE(map_assign->map->key_type.args_.at(0).IsStringTy());
+  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6);
+
+  test(bpftrace,
+       true,
+       driver,
+       R"_(k:f1 {@["hi", 0] = 0;} k:f2 {@["hello", 1] = 1;})_",
+       0);
+  stmt = driver.root->probes->at(0)->stmts->at(0);
+  map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
+  ASSERT_EQ(map_assign->map->key_type.size(), 14);
+  ASSERT_TRUE(map_assign->map->key_type.args_.at(0).IsStringTy());
+  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6);
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
