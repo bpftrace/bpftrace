@@ -3,7 +3,7 @@ project(bpftrace)
 
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
-set(bpftrace_VERSION_MINOR 13)
+set(bpftrace_VERSION_MINOR 14)
 set(bpftrace_VERSION_PATCH 0)
 
 include(GNUInstallDirs)
