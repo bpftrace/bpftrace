@@ -9,8 +9,8 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_key" = alloca i64, align 8
-  %str1 = alloca [64 x i8], align 1
-  %str = alloca [64 x i8], align 1
+  %str1 = alloca [3 x i8], align 1
+  %str = alloca [3 x i8], align 1
   %buf = alloca [64 x i8], align 1
   %result = alloca [64 x i8], align 1
   %1 = bitcast [64 x i8]* %result to i8*
@@ -25,27 +25,27 @@ entry:
   br i1 %true_cond, label %left, label %right
 
 left:                                             ; preds = %entry
-  %6 = bitcast [64 x i8]* %str to i8*
+  %6 = bitcast [3 x i8]* %str to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  store [64 x i8] c"lo\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", [64 x i8]* %str, align 1
+  store [3 x i8] c"lo\00", [3 x i8]* %str, align 1
   %7 = bitcast [64 x i8]* %buf to i8*
-  %8 = bitcast [64 x i8]* %str to i8*
+  %8 = bitcast [3 x i8]* %str to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %7, i8* align 1 %8, i64 64, i1 false)
   br label %done
 
 right:                                            ; preds = %entry
-  %9 = bitcast [64 x i8]* %str1 to i8*
+  %9 = bitcast [3 x i8]* %str1 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
-  store [64 x i8] c"hi\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00", [64 x i8]* %str1, align 1
+  store [3 x i8] c"hi\00", [3 x i8]* %str1, align 1
   %10 = bitcast [64 x i8]* %buf to i8*
-  %11 = bitcast [64 x i8]* %str1 to i8*
+  %11 = bitcast [3 x i8]* %str1 to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %10, i8* align 1 %11, i64 64, i1 false)
   br label %done
 
 done:                                             ; preds = %right, %left
-  %12 = bitcast [64 x i8]* %str1 to i8*
+  %12 = bitcast [3 x i8]* %str1 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast [64 x i8]* %str to i8*
+  %13 = bitcast [3 x i8]* %str to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   %14 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)

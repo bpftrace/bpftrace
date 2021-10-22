@@ -60,3 +60,8 @@ NAME variable string type resize
 PROG BEGIN { $x = "hello"; $x = "hi"; printf("%s\n", $x); exit(); }
 EXPECT hi
 TIMEOUT 2
+
+NAME map string type resize
+PROG BEGIN { @ = "hello"; } i:ms:1 { @ = "hi"; exit(); }
+EXPECT @: hi
+TIMEOUT 2
