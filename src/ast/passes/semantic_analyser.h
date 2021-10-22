@@ -102,6 +102,7 @@ private:
   void update_assign_map_type(const Map &map,
                               SizedType &type,
                               const SizedType &new_type);
+  bool update_string_size(SizedType &type, const SizedType &new_type);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);
@@ -124,7 +125,7 @@ private:
   // SemanticAnalyser.
   int func_arg_idx_ = -1;
 
-  std::map<std::string, SizedType> variable_val_;
+  std::map<Probe *, std::map<std::string, SizedType>> variable_val_;
   std::map<std::string, SizedType> map_val_;
   std::map<std::string, MapKey> map_key_;
   ProbeArgs ap_args_;

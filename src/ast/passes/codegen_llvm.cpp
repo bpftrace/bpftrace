@@ -569,16 +569,19 @@ void CodegenLLVM::visit(Call &call)
 
     auto scoped_del = accept(call.vargs->front());
     auto arg0 = call.vargs->front();
-    // arg0 is already on the bpf stack -> use probe kernel
-    // otherwise ->  addrspace of arg0->type
+    // arg0 is already on the bpf stack -> use memcpy
+    // otherwise -> probe read in addrspace of arg0->type
     // case : struct MyStruct { char b[4]; };
     // $s = (struct MyStruct *)arg0; buf($s->b, 4)
-    b_.CreateProbeRead(ctx_,
-                       static_cast<AllocaInst *>(buf_data_offset),
-                       length,
-                       expr_,
-                       find_addrspace_stack(arg0->type),
-                       call.loc);
+    if (shouldBeOnStackAlready(arg0->type))
+      b_.CREATE_MEMCPY(buf_data_offset, expr_, length, 1);
+    else
+      b_.CreateProbeRead(ctx_,
+                         static_cast<AllocaInst *>(buf_data_offset),
+                         length,
+                         expr_,
+                         find_addrspace_stack(arg0->type),
+                         call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -1877,7 +1880,8 @@ void CodegenLLVM::visit(AssignVarStatement &assignment)
   }
   else if (needMemcpy(var.type))
   {
-    b_.CREATE_MEMCPY(variables_[var.ident], expr_, var.type.GetSize(), 1);
+    b_.CREATE_MEMCPY(
+        variables_[var.ident], expr_, assignment.expr->type.GetSize(), 1);
   }
   else
   {
