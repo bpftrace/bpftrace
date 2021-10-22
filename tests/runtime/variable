@@ -55,3 +55,8 @@ NAME tracepoint arg casts in predicates
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
 EXPECT @: 1
 TIMEOUT 5
+
+NAME variable string type resize
+PROG BEGIN { $x = "hello"; $x = "hi"; printf("%s\n", $x); exit(); }
+EXPECT hi
+TIMEOUT 2

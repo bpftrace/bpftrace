@@ -82,21 +82,18 @@ void SemanticAnalyser::visit(PositionalParameter &param)
 
 void SemanticAnalyser::visit(String &string)
 {
+  string.type = CreateString(string.str.size() + 1);
   // Skip check for printf()'s format string (1st argument) and create the
   // string with the original size. This is because format string is not part of
   // bpf byte code.
   if (func_ == "printf" && func_arg_idx_ == 0)
-  {
-    string.type = CreateString(string.str.size());
     return;
-  }
 
   if (!is_compile_time_func(func_) && string.str.size() > STRING_SIZE - 1)
   {
     LOG(ERROR, string.loc, err_) << "String is too long (over " << STRING_SIZE
                                  << " bytes): " << string.str;
   }
-  string.type = CreateString(STRING_SIZE);
   // @a = buf("hi", 2). String allocated on bpf stack. See codegen
   string.type.SetAS(AddrSpace::kernel);
 }
@@ -1240,6 +1237,10 @@ void SemanticAnalyser::visit(Call &call)
       LOG(ERROR, call.loc, err_)
           << call.func << "() argument must be 6 bytes in size";
 
+    if (type.IsStringTy() && arg->is_literal)
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() does not support literal string arguments";
+
     call.type = CreateMacAddress();
   }
   else if (call.func == "unwatch")
@@ -1415,8 +1416,9 @@ void SemanticAnalyser::visit(Map &map)
 
 void SemanticAnalyser::visit(Variable &var)
 {
-  auto search_val = variable_val_.find(var.ident);
-  if (search_val != variable_val_.end()) {
+  auto search_val = variable_val_[probe_].find(var.ident);
+  if (search_val != variable_val_[probe_].end())
+  {
     var.type = search_val->second;
   }
   else {
@@ -2328,8 +2330,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   assignment.expr->accept(*this);
 
   std::string var_ident = assignment.var->ident;
-  auto search = variable_val_.find(var_ident);
-  assignment.var->type = assignment.expr->type;
+  auto search = variable_val_[probe_].find(var_ident);
+
+  auto &assignTy = assignment.expr->type;
 
   auto *builtin = dynamic_cast<Builtin *>(assignment.expr);
   if (builtin && builtin->ident == "args" && builtin->type.is_funcarg)
@@ -2337,33 +2340,38 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     LOG(ERROR, assignment.loc, err_) << "args cannot be assigned to a variable";
   }
 
-  if (search != variable_val_.end()) {
+  if (search != variable_val_[probe_].end())
+  {
     if (search->second.IsNoneTy())
     {
       if (is_final_pass()) {
         LOG(ERROR, assignment.loc, err_) << "Undefined variable: " + var_ident;
       }
       else {
-        search->second = assignment.expr->type;
+        search->second = assignTy;
       }
     }
-    else if (!search->second.IsSameType(assignment.expr->type))
+    else if (search->second.IsStringTy() && assignTy.IsStringTy())
+    {
+      update_string_size(search->second, assignTy);
+    }
+    else if (!search->second.IsSameType(assignTy))
     {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
-          << "trying to assign value of type '" << assignment.expr->type
+          << "trying to assign value of type '" << assignTy
           << "' when variable already contains a value of type '"
           << search->second << "'";
     }
   }
   else {
     // This variable hasn't been seen before
-    variable_val_[var_ident] = assignment.expr->type;
-    assignment.var->type = assignment.expr->type;
+    variable_val_[probe_].insert({ var_ident, assignment.expr->type });
   }
 
-  auto &storedTy = variable_val_[var_ident];
-  auto &assignTy = assignment.expr->type;
+  auto &storedTy = variable_val_[probe_][var_ident];
+
+  assignment.var->type = storedTy;
 
   if (assignTy.IsRecordTy())
   {
@@ -2379,12 +2387,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   {
     auto var_size = storedTy.GetSize();
     auto expr_size = assignTy.GetSize();
-    if (var_size != expr_size)
+    if (var_size < expr_size)
     {
       LOG(WARNING, assignment.loc, out_)
           << "String size mismatch: " << var_size << " != " << expr_size
-          << (var_size < expr_size ? ". The value may be truncated."
-                                   : ". The value may contain garbage.");
+          << ". The value may be truncated.";
     }
   }
   else if (assignTy.IsBufferTy())
@@ -2767,8 +2774,6 @@ void SemanticAnalyser::visit(Probe &probe)
 {
   auto aps = probe.attach_points->size();
 
-  // Clear out map of variable names - variables should be probe-local
-  variable_val_.clear();
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
@@ -3209,6 +3214,19 @@ void SemanticAnalyser::accept_statements(StatementList *stmts)
       }
     }
   }
+}
+
+bool SemanticAnalyser::update_string_size(SizedType &type,
+                                          const SizedType &new_type)
+{
+  if (type.IsStringTy() && new_type.IsStringTy() &&
+      type.GetSize() != new_type.GetSize())
+  {
+    type.SetSize(std::max(type.GetSize(), new_type.GetSize()));
+    return true;
+  }
+
+  return false;
 }
 
 Pass CreateSemanticPass()

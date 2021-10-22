@@ -1075,7 +1075,7 @@ TEST(semantic_analyser, unop_lnot)
   test("kprobe:f { !(int32)0; }", 0);
   test("struct X { int n; } kprobe:f { $x = (struct X*)0; !$x; }", 10);
   test("struct X { int n; } kprobe:f { $x = *(struct X*)0; !$x; }", 10);
-  test("kprobe:f { !\"0\"; }", 1);
+  test("kprobe:f { !\"0\"; }", 10);
 }
 
 TEST(semantic_analyser, unop_increment_decrement)
@@ -2397,6 +2397,18 @@ TEST(semantic_analyser, tracepoint_common_field)
 {
   test("tracepoint:file:filename { args->filename }", 0);
   test("tracepoint:file:filename { args->common_field }", 1);
+}
+
+TEST(semantic_analyser, string_size)
+{
+  // Size of the variable should be the size of the larger string (incl. null)
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+  test(bpftrace, true, driver, R"_(BEGIN { $x = "hi"; $x = "hello"; })_", 0);
+  auto stmt = driver.root->probes->at(0)->stmts->at(0);
+  auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
+  ASSERT_TRUE(var_assign->var->type.IsStringTy());
+  ASSERT_EQ(var_assign->var->type.GetSize(), 6);
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
