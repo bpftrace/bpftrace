@@ -37,6 +37,8 @@ and this project adheres to
   - [#1982](https://github.com/iovisor/bpftrace/pull/1982)
 - Access to uprobe arguments by name
   - [#1994](https://github.com/iovisor/bpftrace/pull/1994)
+- Support variable strings size
+  - [#2044](https://github.com/iovisor/bpftrace/pull/2044)
 
 #### Changed
 - Prevent LLVM from unrolling loops
