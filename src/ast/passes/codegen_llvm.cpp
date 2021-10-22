@@ -1798,7 +1798,8 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
   auto [key, scoped_key_deleter] = getMapKey(map);
   if (shouldBeOnStackAlready(assignment.expr->type))
   {
-    if (assignment.expr->type.IsStringTy() &&
+    if ((assignment.expr->type.IsStringTy() ||
+         assignment.expr->type.IsTupleTy()) &&
         assignment.expr->type.GetSize() != map.type.GetSize())
     {
       val = b_.CreateAllocaBPF(map.type, map.ident + "_val");

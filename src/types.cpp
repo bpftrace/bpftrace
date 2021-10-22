@@ -540,6 +540,29 @@ std::weak_ptr<const Struct> SizedType::GetStruct() const
   return inner_struct_;
 }
 
+// Checks if values of this type can be copied into values of another type
+// Currently checks if strings in the other type (at corresponding places) are
+// larger.
+bool SizedType::FitsInto(const SizedType &t) const
+{
+  if (IsStringTy() && t.IsStringTy())
+    return GetSize() <= t.GetSize();
+
+  if (IsTupleTy() && t.IsTupleTy())
+  {
+    if (GetFieldCount() != t.GetFieldCount())
+      return false;
+
+    for (ssize_t i = 0; i < GetFieldCount(); i++)
+    {
+      if (!GetField(i).type.FitsInto(t.GetField(i).type))
+        return false;
+    }
+    return true;
+  }
+  return IsEqual(t);
+}
+
 } // namespace bpftrace
 
 namespace std {
