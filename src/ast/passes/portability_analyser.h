@@ -3,8 +3,8 @@
 #include <iostream>
 #include <sstream>
 
-#include "pass_manager.h"
-#include "visitors.h"
+#include "ast/pass_manager.h"
+#include "ast/visitors.h"
 
 namespace bpftrace {
 namespace ast {

@@ -1,8 +1,9 @@
-#include <ostream>
-#include <pass_manager.h>
+#include "ast/pass_manager.h"
 
+#include <ostream>
+
+#include "ast/passes/printer.h"
 #include "bpftrace.h"
-#include "passes/printer.h"
 
 namespace bpftrace {
 namespace ast {

@@ -1,13 +1,5 @@
 #include "semantic_analyser.h"
-#include "arch/arch.h"
-#include "ast.h"
-#include "fake_map.h"
-#include "log.h"
-#include "printf.h"
-#include "probe_matcher.h"
-#include "signal_bt.h"
-#include "tracepoint_format_parser.h"
-#include "usdt.h"
+
 #include <algorithm>
 #include <cstring>
 #include <regex>
@@ -15,6 +7,16 @@
 #include <sys/stat.h>
 
 #include <bcc/libbpf.h>
+
+#include "arch/arch.h"
+#include "ast/ast.h"
+#include "ast/signal_bt.h"
+#include "fake_map.h"
+#include "log.h"
+#include "printf.h"
+#include "probe_matcher.h"
+#include "tracepoint_format_parser.h"
+#include "usdt.h"
 
 namespace bpftrace {
 namespace ast {

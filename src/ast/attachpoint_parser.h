@@ -4,7 +4,7 @@
 #include <sstream>
 #include <vector>
 
-#include "ast.h"
+#include "ast/ast.h"
 #include "bpftrace.h"
 
 namespace bpftrace {

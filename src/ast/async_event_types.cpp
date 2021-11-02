@@ -1,9 +1,9 @@
-#include "async_event_types.h"
+#include "ast/async_event_types.h"
 
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Type.h>
 
-#include "irbuilderbpf.h"
+#include "ast/irbuilderbpf.h"
 
 namespace bpftrace {
 namespace AsyncEvent {

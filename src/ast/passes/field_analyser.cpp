@@ -1,9 +1,11 @@
 #include "field_analyser.h"
+
+#include <cassert>
+#include <iostream>
+
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
-#include <cassert>
-#include <iostream>
 
 namespace bpftrace {
 namespace ast {

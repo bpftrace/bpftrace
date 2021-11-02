@@ -4,12 +4,12 @@
 #include <sstream>
 #include <unordered_set>
 
+#include "ast/pass_manager.h"
+#include "ast/visitors.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "map.h"
-#include "pass_manager.h"
 #include "types.h"
-#include "visitors.h"
 
 namespace bpftrace {
 namespace ast {

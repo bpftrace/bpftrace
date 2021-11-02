@@ -1,10 +1,11 @@
+#include "ast/passes/printer.h"
+
 #include <cctype>
 #include <iomanip>
 #include <regex>
 #include <sstream>
 
-#include "ast.h"
-#include "printer.h"
+#include "ast/ast.h"
 
 namespace bpftrace {
 namespace ast {

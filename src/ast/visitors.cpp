@@ -1,5 +1,6 @@
-#include "visitors.h"
-#include "ast.h"
+#include "ast/visitors.h"
+
+#include "ast/ast.h"
 
 namespace bpftrace {
 namespace ast {

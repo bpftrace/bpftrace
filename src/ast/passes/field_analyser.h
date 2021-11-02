@@ -1,10 +1,11 @@
 #pragma once
 
-#include "bpftrace.h"
-#include "visitors.h"
 #include <iostream>
 #include <string>
 #include <unordered_set>
+
+#include "ast/visitors.h"
+#include "bpftrace.h"
 
 namespace bpftrace {
 namespace ast {

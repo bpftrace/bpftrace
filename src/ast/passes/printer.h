@@ -1,7 +1,8 @@
 #pragma once
 
-#include "visitors.h"
 #include <ostream>
+
+#include "ast/visitors.h"
 
 namespace bpftrace {
 namespace ast {

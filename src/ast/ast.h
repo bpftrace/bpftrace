@@ -1,14 +1,14 @@
 #pragma once
 
-#include "location.hh"
-#include "utils.h"
 #include <map>
 #include <string>
 #include <vector>
 
+#include "location.hh"
 #include "mapkey.h"
 #include "types.h"
 #include "usdt.h"
+#include "utils.h"
 
 namespace bpftrace {
 namespace ast {

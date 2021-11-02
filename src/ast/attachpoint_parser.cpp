@@ -1,4 +1,4 @@
-#include "attachpoint_parser.h"
+#include "ast/attachpoint_parser.h"
 
 #include <algorithm>
 #include <exception>
@@ -7,13 +7,13 @@
 #include <unordered_map>
 #include <vector>
 
-#include "int_parser.h"
-#include "log.h"
-#include "types.h"
-
 #ifdef HAVE_BCC_WHICH_SO
 #include <bcc/bcc_proc.h>
 #endif
+
+#include "ast/int_parser.h"
+#include "log.h"
+#include "types.h"
 
 namespace bpftrace {
 namespace ast {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "vtable.h"
 #include <string>
 
-#include "ast.h"
+#include "ast/ast.h"
+#include "ast/vtable.h"
 
 namespace bpftrace {
 namespace ast {

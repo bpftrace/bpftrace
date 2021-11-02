@@ -3,9 +3,9 @@
 #include <iostream>
 #include <sstream>
 
-#include "pass_manager.h"
+#include "ast/pass_manager.h"
+#include "ast/visitors.h"
 #include "required_resources.h"
-#include "visitors.h"
 
 namespace bpftrace {
 namespace ast {

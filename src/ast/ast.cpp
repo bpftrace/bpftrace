@@ -1,7 +1,9 @@
-#include "ast.h"
-#include "log.h"
-#include "visitors.h"
+#include "ast/ast.h"
+
 #include <iostream>
+
+#include "ast/visitors.h"
+#include "log.h"
 
 namespace bpftrace {
 namespace ast {
