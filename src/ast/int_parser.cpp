@@ -1,3 +1,5 @@
+#include "ast/int_parser.h"
+
 #include <algorithm>
 #include <exception>
 #include <regex>
@@ -5,8 +7,6 @@
 #include <stdexcept>
 #include <type_traits>
 #include <variant>
-
-#include "int_parser.h"
 
 namespace {
 

@@ -1,14 +1,5 @@
 #include "codegen_llvm.h"
-#include "arch/arch.h"
-#include "ast.h"
-#include "ast/async_event_types.h"
-#include "ast/bpforc/bpforc.h"
-#include "codegen_helper.h"
-#include "log.h"
-#include "signal_bt.h"
-#include "tracepoint_format_parser.h"
-#include "types.h"
-#include "usdt.h"
+
 #include <algorithm>
 #include <arpa/inet.h>
 #include <cerrno>
@@ -23,6 +14,17 @@
 #include <llvm/IR/Metadata.h>
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+
+#include "arch/arch.h"
+#include "ast.h"
+#include "ast/async_event_types.h"
+#include "ast/bpforc/bpforc.h"
+#include "ast/codegen_helper.h"
+#include "ast/signal_bt.h"
+#include "log.h"
+#include "tracepoint_format_parser.h"
+#include "types.h"
+#include "usdt.h"
 
 namespace bpftrace {
 namespace ast {

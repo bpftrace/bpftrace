@@ -1,8 +1,9 @@
 #pragma once
+
+#include "ast/pass_manager.h"
+#include "ast/visitors.h"
 #include "bpftrace.h"
 #include "log.h"
-#include "pass_manager.h"
-#include "visitors.h"
 
 namespace bpftrace {
 namespace ast {

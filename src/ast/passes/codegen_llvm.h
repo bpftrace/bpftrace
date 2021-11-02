@@ -6,17 +6,17 @@
 #include <ostream>
 #include <tuple>
 
-#include "ast/bpforc/bpforc.h"
-#include "bpftrace.h"
-#include "irbuilderbpf.h"
-#include "location.hh"
-#include "map.h"
-#include "visitors.h"
-
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
+
+#include "ast/bpforc/bpforc.h"
+#include "ast/irbuilderbpf.h"
+#include "ast/visitors.h"
+#include "bpftrace.h"
+#include "location.hh"
+#include "map.h"
 
 namespace bpftrace {
 namespace ast {
