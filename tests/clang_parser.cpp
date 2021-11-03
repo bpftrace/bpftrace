@@ -17,11 +17,11 @@ static void parse(const std::string &input, BPFtrace &bpftrace, bool result = tr
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(extended_input), 0);
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace);
   EXPECT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
-  ASSERT_EQ(clang.parse(driver.root_, bpftrace), result);
+  ASSERT_EQ(clang.parse(driver.root_.get(), bpftrace), result);
 }
 
 TEST(clang_parser, integers)

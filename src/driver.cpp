@@ -17,11 +17,6 @@ Driver::Driver(BPFtrace &bpftrace, std::ostream &o)
 {
 }
 
-Driver::~Driver()
-{
-  delete root_;
-}
-
 void Driver::source(std::string filename, std::string script)
 {
   Log::get().set_source(filename, script);
@@ -36,10 +31,8 @@ int Driver::parse_str(std::string script)
 
 int Driver::parse()
 {
-  // Ensure we free memory allocated the previous parse if we parse
-  // more than once
-  delete root_;
-  root_ = nullptr;
+  // Reset previous state if we parse more than once
+  root_.reset();
 
   // Reset source location info on every pass
   loc.initialize();
@@ -57,15 +50,14 @@ int Driver::parse()
 
   if (!failed_)
   {
-    ast::AttachPointParser ap_parser(root_, bpftrace_, out_, listing_);
+    ast::AttachPointParser ap_parser(root_.get(), bpftrace_, out_, listing_);
     if (ap_parser.parse())
       failed_ = true;
   }
 
   if (failed_)
   {
-    delete root_;
-    root_ = nullptr;
+    root_.reset();
   }
 
   // Keep track of errors thrown ourselves, since the result of

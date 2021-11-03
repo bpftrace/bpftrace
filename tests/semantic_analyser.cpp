@@ -27,13 +27,13 @@ void test_for_warning(
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
   std::stringstream out;
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, out);
   semantics.analyse();
   if (invert)
     EXPECT_THAT(out.str(), Not(HasSubstr(warning)));
@@ -72,17 +72,17 @@ void test(BPFtrace &bpftrace,
   if (expected_parse)
     return;
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace, out);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace, out);
   EXPECT_EQ(fields.analyse(), expected_field_analyser) << msg.str() + out.str();
 
   ClangParser clang;
-  clang.parse(driver.root_, bpftrace);
+  clang.parse(driver.root_.get(), bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out, has_child);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, out, has_child);
   EXPECT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
 }
 
