@@ -119,13 +119,13 @@ int fuzz_main(const char* data, size_t sz)
     return 1;
 
   // Field Analyzer
-  ast::FieldAnalyser fields(driver.root_, bpftrace, devnull);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace, devnull);
   err = fields.analyse();
   if (err)
     return err;
 
   // Tracepoint parser
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.root_.get(), bpftrace) == false)
     return 1;
 
   // ClangParser
@@ -144,14 +144,14 @@ int fuzz_main(const char* data, size_t sz)
   }
   extra_flags.push_back("-include");
   extra_flags.push_back(CLANG_WORKAROUNDS_H);
-  if (!clang.parse(driver.root_, bpftrace, extra_flags))
+  if (!clang.parse(driver.root_.get(), bpftrace, extra_flags))
     return 1;
   err = driver.parse();
   if (err)
     return err;
 
   // Semantic Analyzer
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, devnull, false);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, devnull, false);
   err = semantics.analyse();
   if (err)
     return err;
@@ -166,7 +166,7 @@ int fuzz_main(const char* data, size_t sz)
     return err;
 
   // Codegen
-  ast::CodegenLLVM llvm(driver.root_, bpftrace);
+  ast::CodegenLLVM llvm(driver.root_.get(), bpftrace);
   std::unique_ptr<BpfOrc> bpforc;
   try
   {

@@ -23,18 +23,18 @@ void test(BPFtrace &bpftrace, const std::string &input, int expected_result = 0)
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace, out);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace, out);
   ASSERT_EQ(fields.analyse(), 0) << msg.str() << out.str();
 
   ClangParser clang;
-  ASSERT_TRUE(clang.parse(driver.root_, bpftrace));
+  ASSERT_TRUE(clang.parse(driver.root_.get(), bpftrace));
 
   ASSERT_EQ(driver.parse_str(input), 0);
   out.str("");
-  ast::SemanticAnalyser semantics(driver.root_, bpftrace, out, false);
+  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, out, false);
   ASSERT_EQ(semantics.analyse(), 0) << msg.str() << out.str();
 
-  ast::PortabilityAnalyser portability(driver.root_, out);
+  ast::PortabilityAnalyser portability(driver.root_.get(), out);
   EXPECT_EQ(portability.analyse(), expected_result) << msg.str() << out.str();
 }
 

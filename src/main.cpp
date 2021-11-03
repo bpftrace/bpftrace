@@ -355,12 +355,12 @@ static std::optional<struct timespec> get_boottime()
   if (err)
     return nullptr;
 
-  ast::FieldAnalyser fields(driver.root_, bpftrace);
+  ast::FieldAnalyser fields(driver.root_.get(), bpftrace);
   err = fields.analyse();
   if (err)
     return nullptr;
 
-  if (TracepointFormatParser::parse(driver.root_, bpftrace) == false)
+  if (TracepointFormatParser::parse(driver.root_.get(), bpftrace) == false)
     return nullptr;
 
   ClangParser clang;
@@ -397,16 +397,14 @@ static std::optional<struct timespec> get_boottime()
   if (!include_files.empty() && driver.root_->c_definitions.empty())
     driver.root_->c_definitions = "#define __BPFTRACE_DUMMY__";
 
-  if (!clang.parse(driver.root_, bpftrace, extra_flags))
+  if (!clang.parse(driver.root_.get(), bpftrace, extra_flags))
     return nullptr;
 
   err = driver.parse();
   if (err)
     return nullptr;
 
-  auto ast = driver.root_;
-  driver.root_ = nullptr;
-  return std::unique_ptr<ast::Node>(ast);
+  return std::move(driver.root_);
 }
 
 ast::PassManager CreateDynamicPM()
@@ -707,12 +705,12 @@ int main(int argc, char* argv[])
     if (err)
       return err;
 
-    ast::SemanticAnalyser semantics(driver.root_, bpftrace, false, true);
+    ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace, false, true);
     err = semantics.analyse();
     if (err)
       return err;
 
-    bpftrace.probe_matcher_->list_probes(driver.root_);
+    bpftrace.probe_matcher_->list_probes(driver.root_.get());
     return 0;
   }
 

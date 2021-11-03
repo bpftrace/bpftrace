@@ -14,7 +14,6 @@ class Driver
 {
 public:
   explicit Driver(BPFtrace &bpftrace, std::ostream &o = std::cerr);
-  ~Driver();
 
   int parse();
   int parse_str(std::string script);
@@ -22,7 +21,7 @@ public:
   void error(std::ostream &, const location &, const std::string &);
   void error(const location &l, const std::string &m);
   void error(const std::string &m);
-  ast::Program *root_ = nullptr;
+  std::unique_ptr<ast::Program> root_;
 
   void debug()
   {
