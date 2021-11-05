@@ -1,3 +1,4 @@
+/.idea
 build/
 build-*/
 tests/runtime/*.pyc
