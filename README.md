@@ -111,6 +111,24 @@ For additional help / discussion, please use our [discussions](https://github.co
 
 ## Development
 
+### Docker
+
+For build & test directly in docker
+
+```
+$ ./build.sh
+```
+
+For build in docker then test directly on host
+
+```
+$ ./build-static.sh
+$ ./build-static/src/bpftrace
+$ ./build-static/testing/bpftrace_test
+```
+
+### Vagrant
+
 For development and testing a [Vagrantfile](Vagrantfile) is available.
 
 Make sure you have the `vbguest` plugin installed, it is required to correctly
