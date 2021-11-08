@@ -46,22 +46,22 @@ static void test(BPFtrace &bpftrace,
   ASSERT_EQ(driver.parse_str(input), 0);
 
   ClangParser clang;
-  clang.parse(driver.root_.get(), bpftrace);
+  clang.parse(driver.root.get(), bpftrace);
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
   // Override to mockbpffeature.
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_.get(), bpftrace);
+  ast::SemanticAnalyser semantics(driver.root.get(), bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.root_.get());
+  ast::ResourceAnalyser resource_analyser(driver.root.get());
   auto resources = resource_analyser.analyse();
   ASSERT_EQ(resources.create_maps(bpftrace, true), 0);
   bpftrace.resources = resources;
 
   std::stringstream out;
-  ast::CodegenLLVM codegen(driver.root_.get(), bpftrace);
+  ast::CodegenLLVM codegen(driver.root.get(), bpftrace);
   codegen.generate_ir();
   codegen.DumpIR(out);
   // Test that generated code compiles cleanly

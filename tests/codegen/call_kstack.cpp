@@ -27,19 +27,19 @@ TEST(codegen, call_kstack_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_.get(), *bpftrace);
+  clang.parse(driver.root.get(), *bpftrace);
 
   // Override to mockbpffeature.
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_.get(), *bpftrace);
+  ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.root_.get());
+  ast::ResourceAnalyser resource_analyser(driver.root.get());
   auto resources = resource_analyser.analyse();
   ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
   bpftrace->resources = resources;
 
-  ast::CodegenLLVM codegen(driver.root_.get(), *bpftrace);
+  ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   codegen.compile();
 
   ASSERT_EQ(std::distance(bpftrace->maps.begin(), bpftrace->maps.end()), 6);
@@ -62,19 +62,19 @@ TEST(codegen, call_kstack_modes_mapids)
             0);
 
   ClangParser clang;
-  clang.parse(driver.root_.get(), *bpftrace);
+  clang.parse(driver.root.get(), *bpftrace);
 
   // Override to mockbpffeature.
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_.get(), *bpftrace);
+  ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.root_.get());
+  ast::ResourceAnalyser resource_analyser(driver.root.get());
   auto resources = resource_analyser.analyse();
   ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
   bpftrace->resources = resources;
 
-  ast::CodegenLLVM codegen(driver.root_.get(), *bpftrace);
+  ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   codegen.compile();
 
   ASSERT_EQ(std::distance(bpftrace->maps.begin(), bpftrace->maps.end()), 6);

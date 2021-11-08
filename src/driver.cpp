@@ -32,7 +32,7 @@ int Driver::parse_str(std::string script)
 int Driver::parse()
 {
   // Reset previous state if we parse more than once
-  root_.reset();
+  root.reset();
 
   // Reset source location info on every pass
   loc.initialize();
@@ -50,14 +50,14 @@ int Driver::parse()
 
   if (!failed_)
   {
-    ast::AttachPointParser ap_parser(root_.get(), bpftrace_, out_, listing_);
+    ast::AttachPointParser ap_parser(root.get(), bpftrace_, out_, listing_);
     if (ap_parser.parse())
       failed_ = true;
   }
 
   if (failed_)
   {
-    root_.reset();
+    root.reset();
   }
 
   // Keep track of errors thrown ourselves, since the result of

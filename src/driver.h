@@ -21,7 +21,7 @@ public:
   void error(std::ostream &, const location &, const std::string &);
   void error(const location &l, const std::string &m);
   void error(const std::string &m);
-  std::unique_ptr<ast::Program> root_;
+  std::unique_ptr<ast::Program> root;
 
   void debug()
   {
