@@ -16,15 +16,15 @@ TEST(codegen, regression_957)
 
   ASSERT_EQ(driver.parse_str("t:sched:sched_one* { cat(\"%s\", probe); }"), 0);
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root_.get(), *bpftrace);
+  ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
-  ast::ResourceAnalyser resource_analyser(driver.root_.get());
+  ast::ResourceAnalyser resource_analyser(driver.root.get());
   auto resources = resource_analyser.analyse();
   ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
   bpftrace->resources = resources;
 
-  ast::CodegenLLVM codegen(driver.root_.get(), *bpftrace);
+  ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   codegen.compile();
 }
 
