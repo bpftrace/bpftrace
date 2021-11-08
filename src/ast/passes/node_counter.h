@@ -25,7 +25,7 @@ private:
   size_t count_ = 0;
 };
 
-Pass CreateCounterPass()
+inline Pass CreateCounterPass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
     NodeCounter c;
