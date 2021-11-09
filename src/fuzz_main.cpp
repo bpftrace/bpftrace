@@ -17,12 +17,12 @@
 #include <unistd.h>
 
 #include "ast/bpforc/bpforc.h"
-#include "ast/clang_parser.h"
 #include "ast/passes/callback_visitor.h"
+#include "ast/passes/codegen_llvm.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 #include "bpftrace.h"
-#include "codegen_llvm.h"
+#include "clang_parser.h"
 #include "driver.h"
 #include "log.h"
 #include "output.h"
@@ -135,7 +135,7 @@ int fuzz_main(const char* data, size_t sz)
     struct utsname utsname;
     uname(&utsname);
     std::string ksrc, kobj;
-    auto kdirs = get_kernel_dirs(utsname, !bpftrace.features_->has_btf());
+    auto kdirs = get_kernel_dirs(utsname, !bpftrace.feature_->has_btf());
     ksrc = std::get<0>(kdirs);
     kobj = std::get<1>(kdirs);
 
