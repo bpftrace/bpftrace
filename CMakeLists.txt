@@ -96,7 +96,7 @@ find_package(LibElf REQUIRED)
 include_directories(SYSTEM ${LIBELF_INCLUDE_DIRS})
 
 find_package(LibCereal REQUIRED)
-include_directories(SYSTEM ${CEREAL_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBCEREAL_INCLUDE_DIRS})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
