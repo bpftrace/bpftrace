@@ -1130,9 +1130,9 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   bytecode_ = std::move(bytecode);
 
-  int epollfd = setup_perf_events();
-  if (epollfd < 0)
-    return epollfd;
+  err = setup_perf_events();
+  if (err)
+    return err;
 
   if (maps.Has(MapManager::Type::Elapsed))
   {
@@ -1231,7 +1231,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   }
   else
   {
-    poll_perf_events(epollfd);
+    poll_perf_events();
   }
 
   attached_probes_.clear();
@@ -1243,7 +1243,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (run_special_probe("END_trigger", bytecode_, END_trigger))
     return -1;
 
-  poll_perf_events(epollfd, true);
+  poll_perf_events(/* drain */ true);
 
   // Calls perf_reader_free() on all open perf buffers.
   open_perf_buffers_.clear();
@@ -1253,8 +1253,8 @@ int BPFtrace::run(BpfBytecode bytecode)
 
 int BPFtrace::setup_perf_events()
 {
-  int epollfd = epoll_create1(EPOLL_CLOEXEC);
-  if (epollfd == -1)
+  epollfd_ = epoll_create1(EPOLL_CLOEXEC);
+  if (epollfd_ == -1)
   {
     LOG(ERROR) << "Failed to create epollfd";
     return -1;
@@ -1283,21 +1283,29 @@ int BPFtrace::setup_perf_events()
 
     bpf_update_elem(
         maps[MapManager::Type::PerfEvent].value()->mapfd_, &cpu, &reader_fd, 0);
-    if (epoll_ctl(epollfd, EPOLL_CTL_ADD, reader_fd, &ev) == -1)
+    if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, reader_fd, &ev) == -1)
     {
       LOG(ERROR) << "Failed to add perf reader to epoll";
       return -1;
     }
   }
-  return epollfd;
+  return 0;
 }
 
-void BPFtrace::poll_perf_events(int epollfd, bool drain)
+void BPFtrace::poll_perf_events(bool drain)
 {
+  const int timeout_ms = 100;
+
+  if (epollfd_ < 0)
+  {
+    LOG(ERROR) << "Invalid epollfd " << epollfd_;
+    return;
+  }
+
   auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
   {
-    int ready = epoll_wait(epollfd, events.data(), online_cpus_, 100);
+    int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);
     if (ready < 0 && errno == EINTR && !BPFtrace::exitsig_recv) {
       // We received an interrupt not caused by SIGINT, skip and run again
       continue;
@@ -1680,7 +1688,7 @@ std::optional<std::string> BPFtrace::get_watchpoint_binary_path() const
   {
     // We can ignore all error checking here b/c child.cpp:validate_cmd() has
     // already done it
-    auto args = split_string(cmd_, ' ', /* remove_empty= */ true);
+    auto args = split_string(cmd_, ' ', /* remove_empty */ true);
     assert(!args.empty());
     return resolve_binary_path(args[0]).front();
   }
