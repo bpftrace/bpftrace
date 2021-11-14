@@ -141,7 +141,7 @@ bool is_root()
     return true;
 }
 
-static int info()
+static void info()
 {
   struct utsname utsname;
   uname(&utsname);
@@ -156,8 +156,6 @@ static int info()
 
   std::cerr << std::endl;
   std::cerr << BPFfeature().report();
-
-  return 0;
 }
 
 static std::optional<struct timespec> get_boottime()
@@ -427,9 +425,8 @@ ast::PassManager CreateAotPM(std::string __attribute__((unused)))
   return pm;
 }
 
-int main(int argc, char* argv[])
+struct Args
 {
-  int err;
   std::string pid_str;
   std::string cmd_str;
   bool listing = false;
@@ -437,11 +434,23 @@ int main(int argc, char* argv[])
   bool usdt_file_activation = false;
   int helper_check_level = 0;
   TestMode test_mode = TestMode::UNSET;
-  std::string script, search, file_name, output_file, output_format, output_elf,
-      aot;
+  std::string script;
+  std::string search;
+  std::string filename;
+  std::string output_file;
+  std::string output_format;
+  std::string output_elf;
+  std::string aot;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   BuildMode build_mode = BuildMode::DYNAMIC;
-  int c;
+  std::vector<std::string> include_dirs;
+  std::vector<std::string> include_files;
+  std::vector<std::string> params;
+};
+
+Args parse_args(int argc, char* argv[])
+{
+  Args args;
 
   const char* const short_options = "dbB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
@@ -458,8 +467,8 @@ int main(int argc, char* argv[])
     option{ "aot", required_argument, nullptr, 2004 },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
-  std::vector<std::string> include_dirs;
-  std::vector<std::string> include_files;
+
+  int c;
   while ((c = getopt_long(
               argc, argv, short_options, long_options, nullptr)) != -1)
   {
@@ -467,38 +476,41 @@ int main(int argc, char* argv[])
     {
       case 2000: // --info
         if (is_root())
-          return info();
-        return 1;
+        {
+          info();
+          exit(0);
+        }
+        exit(1);
         break;
       case 2001: // --emit-elf
-        output_elf = optarg;
+        args.output_elf = optarg;
         break;
       case 2002: // --no-warnings
         DISABLE_LOG(WARNING);
         break;
       case 2003: // --test
         if (std::strcmp(optarg, "semantic") == 0)
-          test_mode = TestMode::SEMANTIC;
+          args.test_mode = TestMode::SEMANTIC;
         else if (std::strcmp(optarg, "codegen") == 0)
-          test_mode = TestMode::CODEGEN;
+          args.test_mode = TestMode::CODEGEN;
         else
         {
           LOG(ERROR) << "USAGE: --test must be either 'semantic' or 'codegen'.";
-          return 1;
+          exit(1);
         }
         break;
       case 2004: // --aot
-        aot = optarg;
-        build_mode = BuildMode::AHEAD_OF_TIME;
+        args.aot = optarg;
+        args.build_mode = BuildMode::AHEAD_OF_TIME;
         break;
       case 'o':
-        output_file = optarg;
+        args.output_file = optarg;
         break;
       case 'd':
         bt_debug++;
         if (bt_debug == DebugLevel::kNone) {
           usage();
-          return 1;
+          exit(1);
         }
         break;
       case 'q':
@@ -509,90 +521,154 @@ int main(int argc, char* argv[])
         break;
       case 'B':
         if (std::strcmp(optarg, "line") == 0) {
-          obc = OutputBufferConfig::LINE;
+          args.obc = OutputBufferConfig::LINE;
         } else if (std::strcmp(optarg, "full") == 0) {
-          obc = OutputBufferConfig::FULL;
+          args.obc = OutputBufferConfig::FULL;
         } else if (std::strcmp(optarg, "none") == 0) {
-          obc = OutputBufferConfig::NONE;
+          args.obc = OutputBufferConfig::NONE;
         } else {
           LOG(ERROR) << "USAGE: -B must be either 'line', 'full', or 'none'.";
-          return 1;
+          exit(1);
         }
         break;
       case 'f':
-        output_format = optarg;
+        args.output_format = optarg;
         break;
       case 'e':
-        script = optarg;
+        args.script = optarg;
         break;
       case 'p':
-        pid_str = optarg;
+        args.pid_str = optarg;
         break;
       case 'I':
-        include_dirs.push_back(optarg);
+        args.include_dirs.push_back(optarg);
         break;
       case '#':
-        include_files.push_back(optarg);
+        args.include_files.push_back(optarg);
         break;
       case 'l':
-        listing = true;
+        args.listing = true;
         break;
       case 'c':
-        cmd_str = optarg;
+        args.cmd_str = optarg;
         break;
       case '$':
-        usdt_file_activation = true;
+        args.usdt_file_activation = true;
         break;
       case 'u':
-        safe_mode = false;
+        args.safe_mode = false;
         break;
       case 'b':
         break;
       case 'h':
         usage();
-        return 0;
+        exit(0);
       case 'V':
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
-        return 0;
+        exit(0);
       case 'k':
-        helper_check_level++;
-        if (helper_check_level >= 3)
+        args.helper_check_level++;
+        if (args.helper_check_level >= 3)
         {
           usage();
-          return 1;
+          exit(1);
         }
         break;
       default:
         usage();
-        return 1;
+        exit(1);
     }
   }
 
   if (argc == 1) {
     usage();
-    return 1;
+    exit(1);
   }
 
   if (bt_verbose && (bt_debug != DebugLevel::kNone))
   {
     // TODO: allow both
     LOG(ERROR) << "USAGE: Use either -v or -d.";
-    return 1;
+    exit(1);
   }
 
-  if (!cmd_str.empty() && !pid_str.empty())
+  if (!args.cmd_str.empty() && !args.pid_str.empty())
   {
     LOG(ERROR) << "USAGE: Cannot use both -c and -p.";
     usage();
-    return 1;
+    exit(1);
   }
+
+  // Difficult to serialize flex generated types
+  if (args.helper_check_level && args.build_mode == BuildMode::AHEAD_OF_TIME)
+  {
+    LOG(ERROR) << "Cannot use -k[k] with --aot";
+    exit(1);
+  }
+
+  if (args.listing)
+  {
+    // Expect zero or one positional arguments
+    if (optind == argc)
+    {
+      args.search = "*:*";
+    }
+    else if (optind == argc - 1)
+    {
+      args.search = argv[optind];
+      if (args.search == "*")
+      {
+        args.search = "*:*";
+      }
+      optind++;
+    }
+    else
+    {
+      usage();
+      exit(1);
+    }
+  }
+  else
+  {
+    // Expect to find a script either through -e or filename
+    if (args.script.empty() && argv[optind] == nullptr)
+    {
+      LOG(ERROR) << "USAGE: filename or -e 'program' required.";
+      exit(1);
+    }
+
+    // If no script was specified with -e, then we expect to find a script file
+    if (args.script.empty())
+    {
+      args.filename = argv[optind];
+      optind++;
+    }
+
+    // Load positional parameters before driver runs so positional
+    // parameters used inside attach point definitions can be resolved.
+    while (optind < argc)
+    {
+      args.params.push_back(argv[optind]);
+      optind++;
+    }
+  }
+
+  return args;
+}
+
+int main(int argc, char* argv[])
+{
+  int err;
+
+  const Args args = parse_args(argc, argv);
 
   std::ostream * os = &std::cout;
   std::ofstream outputstream;
-  if (!output_file.empty()) {
-    outputstream.open(output_file);
+  if (!args.output_file.empty())
+  {
+    outputstream.open(args.output_file);
     if (outputstream.fail()) {
-      LOG(ERROR) << "Failed to open output file: \"" << output_file
+      LOG(ERROR) << "Failed to open output file: \"" << args.output_file
                  << "\": " << strerror(errno);
       return 1;
     }
@@ -600,19 +676,22 @@ int main(int argc, char* argv[])
   }
 
   std::unique_ptr<Output> output;
-  if (output_format.empty() || output_format == "text") {
+  if (args.output_format.empty() || args.output_format == "text")
+  {
     output = std::make_unique<TextOutput>(*os);
   }
-  else if (output_format == "json") {
+  else if (args.output_format == "json")
+  {
     output = std::make_unique<JsonOutput>(*os);
   }
   else {
-    LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
+    LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
     return 1;
   }
 
-  switch (obc) {
+  switch (args.obc)
+  {
     case OutputBufferConfig::UNSET:
     case OutputBufferConfig::LINE:
       std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
@@ -627,29 +706,22 @@ int main(int argc, char* argv[])
 
   BPFtrace bpftrace(std::move(output));
 
-  if (!cmd_str.empty())
-    bpftrace.cmd_ = cmd_str;
+  if (!args.cmd_str.empty())
+    bpftrace.cmd_ = args.cmd_str;
 
   if (!parse_env(bpftrace))
     return 1;
 
-  // Difficult to serialize flex generated types
-  if (helper_check_level && build_mode == BuildMode::AHEAD_OF_TIME)
-  {
-    LOG(ERROR) << "Cannot use -k[k] with --aot";
-    return 1;
-  }
-
-  bpftrace.usdt_file_activation_ = usdt_file_activation;
-  bpftrace.safe_mode_ = safe_mode;
-  bpftrace.helper_check_level_ = helper_check_level;
+  bpftrace.usdt_file_activation_ = args.usdt_file_activation;
+  bpftrace.safe_mode_ = args.safe_mode;
+  bpftrace.helper_check_level_ = args.helper_check_level;
   bpftrace.boottime_ = get_boottime();
 
-  if (!pid_str.empty())
+  if (!args.pid_str.empty())
   {
     try
     {
-      bpftrace.procmon_ = std::make_unique<ProcMon>(pid_str);
+      bpftrace.procmon_ = std::make_unique<ProcMon>(args.pid_str);
     }
     catch (const std::exception& e)
     {
@@ -658,12 +730,12 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (!cmd_str.empty())
+  if (!args.cmd_str.empty())
   {
-    bpftrace.cmd_ = cmd_str;
+    bpftrace.cmd_ = args.cmd_str;
     try
     {
-      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
+      bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
     }
     catch (const std::runtime_error& e)
     {
@@ -673,33 +745,23 @@ int main(int argc, char* argv[])
   }
 
   // Listing probes
-  if (listing)
+  if (args.listing)
   {
     if (!is_root())
       return 1;
 
-    if (optind == argc || std::string(argv[optind]) == "*")
-      script = "*:*";
-    else if (optind == argc - 1)
-      script = argv[optind];
-    else
-    {
-      usage();
-      return 1;
-    }
-
-    if (script.find(':') == std::string::npos &&
-        (script.find("struct") == 0 || script.find("union") == 0 ||
-         script.find("enum") == 0))
+    if (args.search.find(':') == std::string::npos &&
+        (args.search.find("struct") == 0 || args.search.find("union") == 0 ||
+         args.search.find("enum") == 0))
     {
       // Print structure definitions
-      bpftrace.probe_matcher_->list_structs(script);
+      bpftrace.probe_matcher_->list_structs(args.search);
       return 0;
     }
 
     Driver driver(bpftrace);
     driver.listing_ = true;
-    driver.source("stdin", script);
+    driver.source("stdin", args.search);
 
     int err = driver.parse();
     if (err)
@@ -717,18 +779,11 @@ int main(int argc, char* argv[])
   std::string filename;
   std::string program;
 
-  if (script.empty())
+  if (!args.filename.empty())
   {
-    // Script file
-    if (argv[optind] == nullptr)
-    {
-      LOG(ERROR) << "USAGE: filename or -e 'program' required.";
-      return 1;
-    }
-    filename = argv[optind];
     std::stringstream buf;
 
-    if (filename == "-")
+    if (args.filename == "-")
     {
       std::string line;
       while (std::getline(std::cin, line))
@@ -744,34 +799,30 @@ int main(int argc, char* argv[])
     }
     else
     {
-      std::ifstream file(filename);
+      std::ifstream file(args.filename);
       if (file.fail())
       {
-        LOG(ERROR) << "failed to open file '" << filename
+        LOG(ERROR) << "failed to open file '" << args.filename
                    << "': " << std::strerror(errno);
         return -1;
       }
 
+      filename = args.filename;
       program = buf.str();
       buf << file.rdbuf();
       program = buf.str();
     }
-
-    optind++;
   }
   else
   {
     // Script is provided as a command line argument
     filename = "stdin";
-    program = script;
+    program = args.script;
   }
 
-  // Load positional parameters before driver runs so positional
-  // parameters used inside attach point definitions can be resolved.
-  while (optind < argc)
+  for (const auto& param : args.params)
   {
-    bpftrace.add_param(argv[optind]);
-    optind++;
+    bpftrace.add_param(param);
   }
 
   if (!is_root())
@@ -789,19 +840,19 @@ int main(int argc, char* argv[])
   enforce_infinite_rlimit();
 
   auto ast_root = parse(
-      bpftrace, filename, program, include_dirs, include_files);
+      bpftrace, filename, program, args.include_dirs, args.include_files);
   if (!ast_root)
     return 1;
 
   ast::PassContext ctx(bpftrace);
   ast::PassManager pm;
-  switch (build_mode)
+  switch (args.build_mode)
   {
     case BuildMode::DYNAMIC:
       pm = CreateDynamicPM();
       break;
     case BuildMode::AHEAD_OF_TIME:
-      pm = CreateAotPM(aot);
+      pm = CreateAotPM(args.aot);
       break;
   }
 
@@ -815,7 +866,7 @@ int main(int argc, char* argv[])
   {
     try
     {
-      bpftrace.child_ = std::make_unique<ChildProc>(cmd_str);
+      bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
     }
     catch (const std::runtime_error& e)
     {
@@ -848,9 +899,9 @@ int main(int argc, char* argv[])
       }
       llvm.DumpIR();
     }
-    if (!output_elf.empty())
+    if (!args.output_elf.empty())
     {
-      llvm.emit_elf(output_elf);
+      llvm.emit_elf(args.output_elf);
       return 0;
     }
     bpforc = llvm.emit();
@@ -875,11 +926,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  if (bt_debug != DebugLevel::kNone || test_mode == TestMode::CODEGEN)
+  if (bt_debug != DebugLevel::kNone || args.test_mode == TestMode::CODEGEN)
     return 0;
 
-  if (build_mode == BuildMode::AHEAD_OF_TIME)
-    return aot::generate(bpftrace.resources, bytecode, aot);
+  if (args.build_mode == BuildMode::AHEAD_OF_TIME)
+    return aot::generate(bpftrace.resources, bytecode, args.aot);
 
   // Signal handler that lets us know an exit signal was received.
   struct sigaction act = {};
