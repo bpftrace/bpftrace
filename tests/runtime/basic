@@ -114,22 +114,22 @@ EXPECT ERROR: invalid character
 TIMEOUT 1
 
 NAME pid fails validation with leading non-number
-RUN {{BPFTRACE}} -p a1111
+RUN {{BPFTRACE}} -p a1111 file.bt
 EXPECT ERROR: pid 'a1111' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid fails validation with non-number in between
-RUN {{BPFTRACE}} -p 111a1
+RUN {{BPFTRACE}} -p 111a1 file.bt
 EXPECT ERROR: pid '111a1' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid fails validation with non-numeric argument
-RUN {{BPFTRACE}} -p not_a_pid
+RUN {{BPFTRACE}} -p not_a_pid file.bt
 EXPECT ERROR: pid 'not_a_pid' is not a valid decimal number
 TIMEOUT 1
 
 NAME pid outside of valid pid range
-RUN {{BPFTRACE}} -p 5000000
+RUN {{BPFTRACE}} -p 5000000 file.bt
 EXPECT ERROR: pid '5000000' out of valid pid range \[1,4194304\]
 TIMEOUT 1
 
