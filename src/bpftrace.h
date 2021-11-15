@@ -143,7 +143,6 @@ public:
   Dwarf *get_dwarf(const std::string &filename);
   Dwarf *get_dwarf(const ast::AttachPoint &attachpoint);
 
-  std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
   std::string cmd_;
   bool finalize_ = false;
   // Global variable checking if an exit signal was received
@@ -156,6 +155,7 @@ public:
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
   std::unordered_set<std::string> traceable_funcs_;
+  std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
 
   unsigned int join_argnum_ = 16;
   unsigned int join_argsize_ = 1024;
