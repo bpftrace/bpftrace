@@ -9,7 +9,6 @@ ARG CMAKE_VER="3.16"
 ARG CMAKE_BUILD="2"
 ARG bcc_ref="v0.22.0"
 ARG bcc_org="iovisor"
-ARG libbpf_ref="092a606856"
 
 ENV LLVM_VERSION=$LLVM_VERSION
 ENV CMAKE_VER=${CMAKE_VER}
@@ -54,11 +53,6 @@ RUN mkdir -p /src \
     && cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a \
     && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a \
     && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbcc_bpf.a
-
-RUN git clone https://github.com/libbpf/libbpf.git /src/libbpf \
-    && cd /src/libbpf/src \
-    && git checkout $libbpf_ref \
-    && CC=gcc make -j$(nproc) install install_uapi_headers
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
