@@ -23,9 +23,10 @@ if [[ $LLVM_VERSION -eq 13 ]]; then
 fi
 
 if [[ $BUILD_LIBBPF = ON ]]; then
-  mkdir /src
+  mkdir -p /src
   git clone https://github.com/libbpf/libbpf.git /src/libbpf
   cd /src/libbpf/src
+  git checkout v0.5.0
   CC=gcc make -j$(nproc)
   # libbpf defaults to /usr/lib64 which doesn't work on debian like systems
   # this should work on both
