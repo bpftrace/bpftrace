@@ -150,6 +150,7 @@ class Runner(object):
             before = None
             bpftrace = None
             after = None
+            timeout = False
 
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
@@ -236,6 +237,13 @@ class Runner(object):
             result = re.search(test.expect, output, re.M)
 
         except (TimeoutError):
+            # If bpftrace timed out (probably b/c the test case didn't explicitly
+            # terminate bpftrace), then we mark the test case as timed out so that
+            # we don't check the return code. The return code will probably not be
+            # clean b/c we ran the subprocess in shellout mode and the shell won't
+            # return a clean exit.
+            timeout = True
+
             # Give it a last chance, the test might have worked but the
             # bpftrace process might still be alive
             #
@@ -261,7 +269,7 @@ class Runner(object):
             if after and after.poll() is None:
                 os.killpg(os.getpgid(after.pid), signal.SIGKILL)
 
-        if p.returncode != 0 and not test.will_fail:
+        if p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
