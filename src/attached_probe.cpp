@@ -188,10 +188,13 @@ int AttachedProbe::detach_iter(void)
 }
 #endif // HAVE_LIBBPF_LINK_CREATE
 
-AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func, bool safe_mode)
-  : probe_(probe), func_(func)
+AttachedProbe::AttachedProbe(Probe &probe,
+                             std::tuple<uint8_t *, uintptr_t> func,
+                             bool safe_mode,
+                             BPFfeature &feature)
+    : probe_(probe), func_(func)
 {
-  load_prog();
+  load_prog(feature);
   if (bt_verbose)
     std::cerr << "Attaching " << probe_.orig_name << std::endl;
   switch (probe_.type)
@@ -241,7 +244,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BPFfeature &feature)
     : probe_(probe), func_(func)
 {
-  load_prog();
+  load_prog(feature);
   switch (probe_.type)
   {
     case ProbeType::usdt:
@@ -272,7 +275,10 @@ AttachedProbe::~AttachedProbe()
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-      err = bpf_detach_kprobe(eventname().c_str());
+      if (probe_.funcs.empty())
+        err = bpf_detach_kprobe(eventname().c_str());
+      else
+        close(linkfd_);
       break;
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
@@ -664,7 +670,7 @@ void AttachedProbe::cache_progfd(void)
   cached_prog_fds_[probe_.orig_name] = progfd_;
 }
 
-void AttachedProbe::load_prog()
+void AttachedProbe::load_prog(BPFfeature &feature)
 {
   if (use_cached_progfd())
     return;
@@ -735,7 +741,17 @@ void AttachedProbe::load_prog()
       struct bpf_load_program_attr attr = {};
 
       attr.prog_type = progtype(probe_.type);
-      attr.name = name.c_str();
+
+      if (feature.has_kprobe_multi() && !probe_.funcs.empty())
+      {
+        attr.expected_attach_type = static_cast<enum ::bpf_attach_type>(
+            libbpf::BPF_TRACE_KPROBE_MULTI);
+      }
+      else
+      {
+        attr.name = name.c_str();
+      }
+
       attr.insns = reinterpret_cast<struct bpf_insn *>(insns);
       attr.license = license;
 
@@ -808,8 +824,65 @@ void AttachedProbe::load_prog()
   cache_progfd();
 }
 
+#ifdef HAVE_LIBBPF_KPROBE_MULTI
+static inline uint64_t ptr_to_u64(const void *ptr)
+{
+  return (uint64_t)(unsigned long)ptr;
+}
+
+void AttachedProbe::attach_multi_kprobe(void)
+{
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+  std::vector<const char *> syms;
+  unsigned int i = 0;
+
+  for (i = 0; i < probe_.funcs.size(); i++)
+  {
+    syms.push_back(probe_.funcs[i].c_str());
+  }
+
+  opts.kprobe_multi.syms = syms.data();
+  opts.kprobe_multi.cnt = syms.size();
+  opts.kprobe_multi.flags = probe_.type == ProbeType::kretprobe
+                                ? BPF_F_KPROBE_MULTI_RETURN
+                                : 0;
+
+  if (bt_verbose)
+  {
+    std::cout << "Attaching to " << probe_.funcs.size() << " functions"
+              << std::endl;
+
+    if (bt_verbose2)
+    {
+      for (i = 0; i < opts.kprobe_multi.cnt; i++)
+      {
+        std::cout << " " << syms[i] << std::endl;
+      }
+    }
+  }
+
+  linkfd_ = bpf_link_create(progfd_,
+                            0,
+                            static_cast<enum ::bpf_attach_type>(
+                                libbpf::BPF_TRACE_KPROBE_MULTI),
+                            &opts);
+  if (linkfd_ < 0)
+  {
+    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+  }
+}
+#endif // HAVE_LIBBPF_KPROBE_MULTI
+
 void AttachedProbe::attach_kprobe(bool safe_mode)
 {
+#ifdef HAVE_LIBBPF_KPROBE_MULTI
+  if (!probe_.funcs.empty())
+  {
+    attach_multi_kprobe();
+    return;
+  }
+#endif
+
   resolve_offset_kprobe(safe_mode);
 #ifdef LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
   int perf_event_fd = bpf_attach_kprobe(progfd_,

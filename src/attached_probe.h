@@ -21,7 +21,8 @@ class AttachedProbe
 public:
   AttachedProbe(Probe &probe,
                 std::tuple<uint8_t *, uintptr_t> func,
-                bool safe_mode);
+                bool safe_mode,
+                BPFfeature &feature);
   AttachedProbe(Probe &probe,
                 std::tuple<uint8_t *, uintptr_t> func,
                 int pid,
@@ -39,7 +40,8 @@ private:
   static std::string sanitise(const std::string &str);
   void resolve_offset_kprobe(bool safe_mode);
   void resolve_offset_uprobe(bool safe_mode);
-  void load_prog();
+  void load_prog(BPFfeature &feature);
+  void attach_multi_kprobe(void);
   void attach_kprobe(bool safe_mode);
   void attach_uprobe(bool safe_mode);
 
