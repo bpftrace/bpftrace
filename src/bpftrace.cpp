@@ -139,6 +139,25 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
 
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
+
+      if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
+          attach_funcs.size() &&
+          (probetype(attach_point->provider) == ProbeType::kprobe ||
+           probetype(attach_point->provider) == ProbeType::kretprobe))
+      {
+        Probe probe;
+        probe.attach_point = attach_point->func;
+        probe.type = probetype(attach_point->provider);
+        probe.log_size = log_size_;
+        probe.orig_name = p.name();
+        probe.name = attach_point->name(attach_point->target,
+                                        attach_point->func);
+        probe.index = p.index();
+        probe.funcs.assign(attach_funcs.begin(), attach_funcs.end());
+
+        resources.probes.push_back(probe);
+        continue;
+      }
     }
     else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
               probetype(attach_point->provider) == ProbeType::uretprobe ||
@@ -909,8 +928,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     }
     else
     {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, *section, safe_mode_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(
+          probe, *section, safe_mode_, *feature_));
       return ret;
     }
   }
