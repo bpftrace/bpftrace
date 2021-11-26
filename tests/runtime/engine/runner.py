@@ -2,6 +2,7 @@
 
 import subprocess
 import signal
+import sys
 import os
 import time
 from os import environ, uname, devnull
@@ -24,7 +25,7 @@ NO_COLOR = '\033[0m'
 
 # TODO(mmarchini) only add colors if terminal supports it
 def colorify(s, color):
-    return "%s%s%s" % (color, s, NO_COLOR)
+    return "%s%s%s" % (color, s, NO_COLOR) if sys.stdout.isatty() else s
 
 def ok(s):
     return colorify(s, OK_COLOR)
