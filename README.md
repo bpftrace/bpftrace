@@ -124,7 +124,7 @@ For build in docker then test directly on host
 ```
 $ ./build-static.sh
 $ ./build-static/src/bpftrace
-$ ./build-static/testing/bpftrace_test
+$ ./build-static/tests/bpftrace_test
 ```
 
 ### Vagrant
