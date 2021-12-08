@@ -1,23 +1,29 @@
 # bpftrace Install
 
+- [bpftrace Install](#bpftrace-install)
 - [Linux Kernel Requirements](#linux-kernel-requirements)
 - [Package install](#package-install)
-  - [Ubuntu](#ubuntu-packages)
-  - [Fedora](#fedora-package)
-  - [Gentoo](#gentoo-package)
-  - [Debian](#debian-package)
-  - [openSUSE](#openSUSE-package)
-  - [CentOS](#CentOS-package)
+  - [Ubuntu packages](#ubuntu-packages)
+  - [Fedora package](#fedora-package)
+  - [Gentoo package](#gentoo-package)
+  - [Debian package](#debian-package)
+  - [openSUSE package](#opensuse-package)
+  - [CentOS package](#centos-package)
+  - [Arch package](#arch-package)
 - [Docker images](#docker-images)
-  - [Copying bpftrace binary docker](#copying-bpftrace-binary-from-docker)
+  - [Copying bpftrace binary from docker](#copying-bpftrace-binary-from-docker)
   - [Kernel headers install](#kernel-headers-install)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
+    - [18.04 and 18.10](#1804-and-1810)
+    - [19.04 and newer](#1904-and-newer)
+    - [Building `bpftrace`](#building-bpftrace-1)
   - [Fedora](#fedora)
   - [Amazon Linux](#amazon-linux)
-  - (*please add sections for other OSes)*
   - [Using Docker](#using-docker)
-  - [Generic build](#generic-build-process)
+  - [Generic build process](#generic-build-process)
+    - [Requirements](#requirements)
+    - [Compilation](#compilation)
 - [Disable Lockdown](#disable-lockdown)
 
 # Linux Kernel Requirements
@@ -102,6 +108,13 @@ Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
 
 A build maintained by @fbs can be found
 [here](https://github.com/fbs/el7-bpf-specs/blob/master/README.md#repository).
+
+## Arch package
+
+In Arch Linux, bpftrace is available in the official repositories.
+```
+sudo pacman -S bpftrace
+```
 
 # Docker images
 
