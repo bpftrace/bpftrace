@@ -8,6 +8,7 @@
   - [Debian](#debian-package)
   - [openSUSE](#openSUSE-package)
   - [CentOS](#CentOS-package)
+  - [Arch](#arch-package)
 - [Docker images](#docker-images)
   - [Copying bpftrace binary docker](#copying-bpftrace-binary-from-docker)
   - [Kernel headers install](#kernel-headers-install)
@@ -102,6 +103,13 @@ Is available and tracked [here](https://software.opensuse.org/package/bpftrace).
 
 A build maintained by @fbs can be found
 [here](https://github.com/fbs/el7-bpf-specs/blob/master/README.md#repository).
+
+## Arch package
+
+In Arch Linux, bpftrace is available in the official repositories.
+```
+sudo pacman -S bpftrace
+```
 
 # Docker images
 
