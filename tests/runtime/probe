@@ -27,6 +27,12 @@ EXPECT SUCCESS kprobe_offset [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+NAME kprobe_wildcard
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+EXPECT 1
+TIMEOUT 5
+REQUIRES /usr/sbin/bpftool
+
 # Note: this test may fail if you've installed a new kernel but not rebooted
 # yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
 # version.
@@ -57,6 +63,12 @@ RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt
 EXPECT first second
 TIMEOUT 5
 AFTER /bin/bash -c "./testprogs/syscall nanosleep 1000"; /bin/bash -c "./testprogs/syscall nanosleep 1000"
+
+NAME kretprobe_wildcard
+RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+EXPECT 1
+TIMEOUT 5
+REQUIRES /usr/sbin/bpftool
 
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
