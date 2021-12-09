@@ -32,70 +32,70 @@ jobs:
           LLVM_VERSION: "6.0"
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 6 Release
           TYPE: Release
           LLVM_VERSION: "6.0"
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 7 Debug
           TYPE: Debug
           LLVM_VERSION: 7
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 7 Release
           TYPE: Release
           LLVM_VERSION: 7
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 8 Debug
           TYPE: Debug
           LLVM_VERSION: 8
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 8 Release
           TYPE: Release
           LLVM_VERSION: 8
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 9 Debug
           TYPE: Debug
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 9 Release
           TYPE: Release
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Debug
           TYPE: Debug
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Release
           TYPE: Release
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Clang Debug
           TYPE: Debug
@@ -104,28 +104,28 @@ jobs:
           CXX: clang++-10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Debug
           TYPE: Debug
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Release
           TYPE: Release
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release
           TYPE: Release
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 13 Release
           TYPE: Release
@@ -133,27 +133,27 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           GTEST_FILTER: '-clang_parser.nested_struct_no_type'
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release + libbpf
           TYPE: Release
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: bionic
+          BASE: focal
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
         - NAME: Memleak test (LLVM 11 Debug)
           TYPE: Debug
           LLVM_VERSION: 11
-          BASE: bionic
+          BASE: focal
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
           VENDOR_GTEST: ON
         - NAME: Memleak test (LLVM 11 Release)
           TYPE: Release
           LLVM_VERSION: 11
-          BASE: bionic
+          BASE: focal
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
           VENDOR_GTEST: ON
