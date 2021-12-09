@@ -27,48 +27,6 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 6 Debug
-          TYPE: Debug
-          LLVM_VERSION: "6.0"
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 6 Release
-          TYPE: Release
-          LLVM_VERSION: "6.0"
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 7 Debug
-          TYPE: Debug
-          LLVM_VERSION: 7
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 7 Release
-          TYPE: Release
-          LLVM_VERSION: 7
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 8 Debug
-          TYPE: Debug
-          LLVM_VERSION: 8
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 8 Release
-          TYPE: Release
-          LLVM_VERSION: 8
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 9 Debug
           TYPE: Debug
           LLVM_VERSION: 9
