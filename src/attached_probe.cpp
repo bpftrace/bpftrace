@@ -193,7 +193,7 @@ AttachedProbe::AttachedProbe(Probe &probe, std::tuple<uint8_t *, uintptr_t> func
 {
   load_prog();
   if (bt_verbose)
-    std::cerr << "Attaching " << probe_.name << std::endl;
+    std::cerr << "Attaching " << probe_.orig_name << std::endl;
   switch (probe_.type)
   {
     case ProbeType::kprobe:
@@ -305,7 +305,7 @@ AttachedProbe::~AttachedProbe()
   if (err)
     LOG(ERROR) << "failed to detach probe: " << probe_.name;
 
-  if (progfd_ >= 0)
+  if (close_progfd_ && progfd_ >= 0)
     close(progfd_);
 }
 
@@ -627,8 +627,48 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
       path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
 }
 
+std::map<std::string, int> AttachedProbe::cached_prog_fds_;
+
+bool AttachedProbe::use_cached_progfd(void)
+{
+  // Enabled for so far only for kprobes/kretprobes
+  if (probe_.type != ProbeType::kprobe && probe_.type != ProbeType::kretprobe)
+    return false;
+
+  // Only for the wildcard probe, because we can have multiple
+  // programs attached to single probe
+  if (!has_wildcard(probe_.orig_name))
+    return false;
+
+  // Keep map of loaded programs based on their 'orig_name',
+  // and make sure they are loaded just once and use cached
+  // fd as probe's progfd_.
+  // This way we prevent multiple copies of the same program
+  // loaded for wildcard probe.
+  auto search = cached_prog_fds_.find(probe_.orig_name);
+
+  if (search != cached_prog_fds_.end())
+  {
+    progfd_ = search->second;
+    close_progfd_ = false;
+    return true;
+  }
+
+  return false;
+}
+
+void AttachedProbe::cache_progfd(void)
+{
+  if (probe_.type != ProbeType::kprobe && probe_.type != ProbeType::kretprobe)
+    return;
+  cached_prog_fds_[probe_.orig_name] = progfd_;
+}
+
 void AttachedProbe::load_prog()
 {
+  if (use_cached_progfd())
+    return;
+
   uint8_t *insns = std::get<0>(func_);
   int prog_len = std::get<1>(func_);
   const char *license = "GPL";
@@ -652,9 +692,16 @@ void AttachedProbe::load_prog()
     if (bt_verbose)
       log_level = 1;
 
-    // bpf_prog_load rejects colons in the probe name
-    strncpy(name, probe_.name.c_str(), STRING_SIZE - 1);
+    // Use orig_name for program name so we get proper name for
+    // wildcard probes, replace wildcards with '.'
+    std::string orig_name = probe_.orig_name;
+    std::replace(orig_name.begin(), orig_name.end(), '*', '.');
+
+    strncpy(name, orig_name.c_str(), STRING_SIZE - 1);
     namep = name;
+
+    // bpf_prog_load rejects colons in the probe name,
+    // so start the name after the probe type, after ':'
     if (strrchr(name, ':') != NULL)
       namep = strrchr(name, ':') + 1;
 
@@ -757,6 +804,8 @@ void AttachedProbe::load_prog()
               << "The verifier log: " << std::endl
               << log_buf.get() << std::endl;
   }
+
+  cache_progfd();
 }
 
 void AttachedProbe::attach_kprobe(bool safe_mode)

@@ -68,9 +68,14 @@ private:
   void attach_iter(void);
   int detach_iter(void);
 
+  static std::map<std::string, int> cached_prog_fds_;
+  bool use_cached_progfd(void);
+  void cache_progfd(void);
+
   Probe &probe_;
   std::tuple<uint8_t *, uintptr_t> func_;
   std::vector<int> perf_event_fds_;
+  bool close_progfd_ = true;
   int progfd_ = -1;
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
