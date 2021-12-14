@@ -626,6 +626,18 @@ Probe::Probe(const Probe &other) : Node(other)
   index_ = other.index_;
 }
 
+bool Probe::has_ap_of_probetype(ProbeType probe_type)
+{
+  if (!attach_points)
+    return false;
+  for (auto ap : *attach_points)
+  {
+    if (probetype(ap->provider) == probe_type)
+      return true;
+  }
+  return false;
+}
+
 While::While(const While &other) : Statement(other)
 {
 }

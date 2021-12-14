@@ -581,6 +581,8 @@ public:
   int index() const;
   void set_index(int index);
 
+  bool has_ap_of_probetype(ProbeType probe_type);
+
 private:
   Probe(const Probe &other);
   int index_ = 0;
