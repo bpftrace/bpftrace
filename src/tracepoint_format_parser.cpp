@@ -107,18 +107,30 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
             // Errno might get clobbered by LOG().
             int saved_errno = errno;
 
-            LOG(ERROR, ap->loc, std::cerr)
-                << "tracepoint not found: " << category << ":" << event_name;
+            // Do not fail if trying to attach to multiple tracepoints
+            // (at least one of them could succeed)
+            bool fail = probe->attach_points->size() == 1;
+            auto msg = "tracepoint not found: " + category + ":" + event_name;
+            if (fail)
+              LOG(ERROR, ap->loc, std::cerr) << msg;
+            else
+              LOG(WARNING, ap->loc, std::cerr) << msg;
+
             // helper message:
             if (category == "syscall")
               LOG(WARNING, ap->loc, std::cerr)
                   << "Did you mean syscalls:" << event_name << "?";
-            if (bt_verbose) {
+
+            if (fail && bt_verbose)
+            {
               // Having the location info isn't really useful here, so no
               // bpftrace.error
               LOG(ERROR) << strerror(saved_errno) << ": " << format_file_path;
             }
-            return false;
+            if (fail)
+              return false;
+            else
+              continue;
           }
 
           if (probe->tp_args_structs_level <= 0)

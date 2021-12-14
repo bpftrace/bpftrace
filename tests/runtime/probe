@@ -146,6 +146,17 @@ RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_*_nanosleep { printf("hit "); }' -c
 EXPECT hit hit
 TIMEOUT 5
 
+NAME tracepoint_missing
+PROG t:syscalls:nonsense { printf("hit"); exit(); }
+EXPECT ERROR: tracepoint not found: syscalls:nonsense
+TIMEOUT 5
+
+NAME tracepoint_multiattach_missing
+PROG t:syscalls:sys_exit_nanosleep,t:syscalls:nonsense { printf("hit"); exit(); }
+EXPECT hit
+AFTER ./testprogs/syscall nanosleep 1e8
+TIMEOUT 5
+
 # Test that we get at least two characters out
 NAME tracepoint_data_loc
 PROG tracepoint:irq:irq_handler_entry { print(str(args->name)); exit(); }
