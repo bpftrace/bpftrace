@@ -17,11 +17,10 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
 {
   std::vector<ast::Probe*> probes_with_tracepoint;
   for (ast::Probe *probe : *program->probes)
-    for (ast::AttachPoint *ap : *probe->attach_points)
-      if (ap->provider == "tracepoint") {
-        probes_with_tracepoint.push_back(probe);
-        continue;
-      }
+  {
+    if (probe->has_ap_of_probetype(ProbeType::tracepoint))
+      probes_with_tracepoint.push_back(probe);
+  }
 
   if (probes_with_tracepoint.empty())
     return true;
