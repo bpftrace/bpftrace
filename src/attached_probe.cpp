@@ -1018,8 +1018,11 @@ void AttachedProbe::attach_tracepoint()
   int perf_event_fd = bpf_attach_tracepoint(progfd_, probe_.path.c_str(),
       eventname().c_str());
 
-  if (perf_event_fd < 0)
+  if (perf_event_fd < 0 && probe_.name == probe_.orig_name)
+  {
+    // do not fail if there are other attach points where attaching may succeed
     throw std::runtime_error("Error attaching probe: " + probe_.name);
+  }
 
   perf_event_fds_.push_back(perf_event_fd);
 }
