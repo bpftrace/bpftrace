@@ -140,9 +140,13 @@ RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit();
 EXPECT Attaching 3 probes...
 TIMEOUT 5
 
+# Wasn't fully debugged, but looks like old bcc API (bcc_usdt_enable_fully_specified_probe)
+# doesn't like inlined usdt probes very much. So that's why the bcc_usdt_addsem feature is
+# required
 NAME "usdt probes - attach to probe on multiple files by wildcard"
 PROG usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }
 EXPECT Attaching 41 probes...
+REQUIRES_FEATURE bcc_usdt_addsem
 TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
