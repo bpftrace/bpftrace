@@ -125,7 +125,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList *> attach_points
 %type <ast::Call *> call
-%type <ast::Expression *> and_expr arith_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr
+%type <ast::Expression *> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression *> logical_or_expr map_or_var or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList *> vargs
 %type <ast::Integer *> int
@@ -442,18 +442,22 @@ relational_expr:
                 ;
 
 shift_expr:
-                arith_expr                  { $$ = $1; }
-        |       shift_expr LEFT arith_expr  { $$ = new ast::Binop($1, ast::Operator::LEFT, $3, @2); }
-        |       shift_expr RIGHT arith_expr { $$ = new ast::Binop($1, ast::Operator::RIGHT, $3, @2); }
+                addi_expr                  { $$ = $1; }
+        |       shift_expr LEFT addi_expr  { $$ = new ast::Binop($1, ast::Operator::LEFT, $3, @2); }
+        |       shift_expr RIGHT addi_expr { $$ = new ast::Binop($1, ast::Operator::RIGHT, $3, @2); }
                 ;
 
-arith_expr:
+muli_expr:
                 cast_expr                  { $$ = $1; }
-        |       arith_expr PLUS cast_expr  { $$ = new ast::Binop($1, ast::Operator::PLUS, $3, @2); }
-        |       arith_expr MINUS cast_expr { $$ = new ast::Binop($1, ast::Operator::MINUS, $3, @2); }
-        |       arith_expr MUL cast_expr   { $$ = new ast::Binop($1, ast::Operator::MUL, $3, @2); }
-        |       arith_expr DIV cast_expr   { $$ = new ast::Binop($1, ast::Operator::DIV, $3, @2); }
-        |       arith_expr MOD cast_expr   { $$ = new ast::Binop($1, ast::Operator::MOD, $3, @2); }
+        |       muli_expr MUL cast_expr    { $$ = new ast::Binop($1, ast::Operator::MUL, $3, @2); }
+        |       muli_expr DIV cast_expr    { $$ = new ast::Binop($1, ast::Operator::DIV, $3, @2); }
+        |       muli_expr MOD cast_expr    { $$ = new ast::Binop($1, ast::Operator::MOD, $3, @2); }
+                ;
+
+addi_expr:
+                muli_expr                  { $$ = $1; }
+        |       addi_expr PLUS muli_expr   { $$ = new ast::Binop($1, ast::Operator::PLUS, $3, @2); }
+        |       addi_expr MINUS muli_expr  { $$ = new ast::Binop($1, ast::Operator::MINUS, $3, @2); }
                 ;
 
 cast_expr:
