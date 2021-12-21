@@ -1,0 +1,19 @@
+NAME operator_precedence_1
+PROG BEGIN { print(1 + 2 * 3 ); exit() }
+EXPECT 7
+TIMEOUT 5
+
+NAME operator_precedence_2
+PROG BEGIN { print(1 + 2 * 3 + 1); exit() }
+EXPECT 8
+TIMEOUT 5
+
+NAME operator_precedence_3
+PROG BEGIN { print(1 + 2 * 3 + 1 * 10); exit() }
+EXPECT 17
+TIMEOUT 5
+
+NAME operator_precedence_3
+PROG BEGIN { print(1 + 2 / 2 * 3); exit() }
+EXPECT 4
+TIMEOUT 5

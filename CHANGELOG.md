@@ -13,6 +13,10 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+
+- Fix precedence of multiplicative operations
+  - [#2096](https//github.com/iovisor/bpftrace/pull/2096)
+
 #### Tools
 #### Documentation
 
