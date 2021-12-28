@@ -1,0 +1,64 @@
+.TH sslsnoop 8  "2021-12-28" "USER COMMANDS"
+.SH NAME
+sslsnoop.bt \- Show SSL/TLS handshake events. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B sslsnoop.bt
+.SH DESCRIPTION
+sslsnoop traces OpenSSL handshake functions, and shows latency and return
+value. This can be used to analyze SSL/TLS performance.
+
+This tool works by dynamic tracing the uprobes in OpenSSL and related crypto
+libs, and may need updating to match future changes to these functions.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace SSL/TLS handshake events, printing per-line summaries:
+#
+.B sslsnoop.bt
+.SH FIELDS
+.TP
+TIME(us)
+Time of the call completion, in microseconds since program start.
+.TP
+TID
+Thread ID.
+.TP
+COMM
+Process name.
+.TP
+LAT(us)
+Latency of the call, in microseconds.
+.TP
+RET
+Return value of the call.
+.TP
+FUNC
+Function name.
+.SH OVERHEAD
+SSL/TLS handshake usually contains network latency and the traced crypto
+functions are CPU intensive tasks, so call frequency should be low and the
+overhead of this tool is expected to be negligible.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file containing
+example usage, output, and commentary for this tool.
+
+There is a bcc tool sslsniff that can show SSL/TLS handshake event latency
+before sniffing the plaintext in SSL_read/write. This tool provides more
+detailed crypto latency distribution during the handshake event.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Tao Xu
+.SH SEE ALSO
+biosnoop(8)

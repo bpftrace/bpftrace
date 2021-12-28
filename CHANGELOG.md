@@ -19,6 +19,8 @@ and this project adheres to
 #### Added
 #### Docs
 #### Tools
+- Add sslsnoop and ssllatency tools
+  - [#2117](https://github.com/iovisor/bpftrace/pull/2117)
 
 ## [0.15.0] 2022-05-24
 
