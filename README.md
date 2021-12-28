@@ -74,6 +74,8 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[runqlat.bt](tools/runqlat.bt): CPU scheduler run queue latency as a histogram. [Examples](tools/runqlat_example.txt).
 - tools/[runqlen.bt](tools/runqlen.bt): CPU scheduler run queue length as a histogram. [Examples](tools/runqlen_example.txt).
 - tools/[setuids.bt](tools/setuids.bt): Trace the setuid syscalls: privilege escalation. [Examples](tools/setuids_example.txt).
+- tools/[ssllatency.bt](tools/ssllatency.bt): Summarize SSL/TLS handshake latency as a histogram. [Examples](tools/ssllatency_example.txt)
+- tools/[sslsnoop.bt](tools/sslsnoop.bt): Trace SSL/TLS handshake, showing latency and return value. [Examples](tools/sslsnoop_example.txt)
 - tools/[statsnoop.bt](tools/statsnoop.bt): Trace stat() syscalls for general debugging. [Examples](tools/statsnoop_example.txt).
 - tools/[swapin.bt](tools/swapin.bt): Show swapins by process. [Examples](tools/swapin_example.txt).
 - tools/[syncsnoop.bt](tools/syncsnoop.bt): Trace sync() variety of syscalls. [Examples](tools/syncsnoop_example.txt).

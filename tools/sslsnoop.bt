@@ -1,0 +1,69 @@
+#!/usr/bin/bpftrace
+/*
+ * sslsnoop	Trace SSL/TLS handshake for OpenSSL.
+ * 		For Linux, uses bpftrace and eBPF.
+ *
+ * sslsnoop shows handshake latency and retval. This is useful for SSL/TLS
+ * performance analysis.
+ *
+ * Copyright (c) 2021 Tao Xu.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 15-Dec-2021	Tao Xu	created this.
+ */
+
+BEGIN
+{
+	printf("Tracing SSL/TLS handshake... Hit Ctrl-C to end.\n");
+	printf("%-10s %-8s %-8s %7s %5s %s\n", "TIME(us)", "TID",
+	       "COMM", "LAT(us)", "RET", "FUNC");
+}
+
+uprobe:libssl:SSL_read,
+uprobe:libssl:SSL_write,
+uprobe:libssl:SSL_do_handshake
+{
+	@start_ssl[tid] = nsecs;
+	@func_ssl[tid] = func; // store for uretprobe
+}
+
+uretprobe:libssl:SSL_read,
+uretprobe:libssl:SSL_write,
+uretprobe:libssl:SSL_do_handshake
+/@start_ssl[tid] != 0/
+{
+	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
+	       (nsecs - @start_ssl[tid])/1000, retval, @func_ssl[tid]);
+	delete(@start_ssl[tid]); delete(@func_ssl[tid]);
+}
+
+// need debug symbol for ossl local functions
+uprobe:libcrypto:rsa_ossl_public_encrypt,
+uprobe:libcrypto:rsa_ossl_public_decrypt,
+uprobe:libcrypto:rsa_ossl_private_encrypt,
+uprobe:libcrypto:rsa_ossl_private_decrypt,
+uprobe:libcrypto:RSA_sign,
+uprobe:libcrypto:RSA_verify,
+uprobe:libcrypto:ossl_ecdsa_sign,
+uprobe:libcrypto:ossl_ecdsa_verify,
+uprobe:libcrypto:ossl_ecdh_compute_key
+{
+	@start_crypto[tid] = nsecs;
+	@func_crypto[tid] = func; // store for uretprobe
+}
+
+uretprobe:libcrypto:rsa_ossl_public_encrypt,
+uretprobe:libcrypto:rsa_ossl_public_decrypt,
+uretprobe:libcrypto:rsa_ossl_private_encrypt,
+uretprobe:libcrypto:rsa_ossl_private_decrypt,
+uretprobe:libcrypto:RSA_sign,
+uretprobe:libcrypto:RSA_verify,
+uretprobe:libcrypto:ossl_ecdsa_sign,
+uretprobe:libcrypto:ossl_ecdsa_verify,
+uretprobe:libcrypto:ossl_ecdh_compute_key
+/@start_crypto[tid] != 0/
+{
+	printf("%-10u %-8d %-8s %7u %5d %s\n", elapsed/1000, tid, comm,
+	       (nsecs - @start_crypto[tid])/1000, retval, @func_crypto[tid]);
+	delete(@start_crypto[tid]); delete(@func_crypto[tid]);
+}

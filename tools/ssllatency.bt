@@ -1,0 +1,78 @@
+#!/usr/bin/bpftrace
+/*
+ * ssllatency	Trace SSL/TLS handshake for OpenSSL.
+ * 		For Linux, uses bpftrace and eBPF.
+ *
+ * ssllatency shows handshake latency stats and distribution.
+ *
+ * Copyright (c) 2021 Tao Xu.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 17-Dec-2021	Tao Xu	created this.
+ */
+
+BEGIN
+{
+	printf("Tracing SSL/TLS handshake... Hit Ctrl-C to end.\n");
+}
+
+uprobe:libssl:SSL_read,
+uprobe:libssl:SSL_write,
+uprobe:libssl:SSL_do_handshake
+{
+	@start_ssl[tid] = nsecs;
+	@func_ssl[tid] = func; // store for uretprobe
+}
+
+uretprobe:libssl:SSL_read,
+uretprobe:libssl:SSL_write,
+uretprobe:libssl:SSL_do_handshake
+/@start_ssl[tid] != 0/
+{
+	$lat_us = (nsecs - @start_ssl[tid]) / 1000;
+	if ((int8)retval >= 1) {
+		@hist[@func_ssl[tid]] = lhist($lat_us, 0, 1000, 200);
+		@stat[@func_ssl[tid]] = stats($lat_us);
+	} else {
+		@histF[@func_ssl[tid]] = lhist($lat_us, 0, 1000, 200);
+		@statF[@func_ssl[tid]] = stats($lat_us);
+	}
+	delete(@start_ssl[tid]); delete(@func_ssl[tid]);
+}
+
+// need debug symbol for ossl local functions
+uprobe:libcrypto:rsa_ossl_public_encrypt,
+uprobe:libcrypto:rsa_ossl_public_decrypt,
+uprobe:libcrypto:rsa_ossl_private_encrypt,
+uprobe:libcrypto:rsa_ossl_private_decrypt,
+uprobe:libcrypto:RSA_sign,
+uprobe:libcrypto:RSA_verify,
+uprobe:libcrypto:ossl_ecdsa_sign,
+uprobe:libcrypto:ossl_ecdsa_verify,
+uprobe:libcrypto:ecdh_simple_compute_key
+{
+	@start_crypto[tid] = nsecs;
+	@func_crypto[tid] = func; // store for uretprobe
+}
+
+uretprobe:libcrypto:rsa_ossl_public_encrypt,
+uretprobe:libcrypto:rsa_ossl_public_decrypt,
+uretprobe:libcrypto:rsa_ossl_private_encrypt,
+uretprobe:libcrypto:rsa_ossl_private_decrypt,
+uretprobe:libcrypto:RSA_sign,
+uretprobe:libcrypto:RSA_verify,
+uretprobe:libcrypto:ossl_ecdsa_sign,
+uretprobe:libcrypto:ossl_ecdsa_verify,
+uretprobe:libcrypto:ecdh_simple_compute_key
+/@start_crypto[tid] != 0/
+{
+	$lat_us = (nsecs - @start_crypto[tid]) / 1000;
+	@hist[@func_crypto[tid]] = lhist($lat_us, 0, 1000, 200);
+	@stat[@func_crypto[tid]] = stats($lat_us);
+	delete(@start_crypto[tid]); delete(@func_crypto[tid]);
+}
+
+END
+{
+	printf("\nLatency distribution in microsecond:");
+}

@@ -32,6 +32,7 @@ RUN apt-get update \
         python3 \
         python3-setuptools \
         quilt \
+        libssl-dev \
     && apt-get install --no-install-recommends -y \
         pkg-config
 

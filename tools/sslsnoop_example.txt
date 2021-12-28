@@ -1,0 +1,42 @@
+Demonstrations of sslsnoop, the Linux bpftrace/eBPF version.
+
+sslsnoop shows OpenSSL handshake function latency and return value. This
+can be used to analyzea SSL/TLS performance. For example:
+
+# ./sslsnoop.bt
+Attaching 25 probes...
+Tracing SSL/TLS handshake... Hit Ctrl-C to end.
+TIME(us)   TID      COMM     LAT(us)   RET FUNC
+1623016    2834695  openssl       71     1 ossl_ecdh_compute_key
+1623319    2834695  openssl       32    51 rsa_ossl_public_decrypt
+1623418    2834695  openssl       31    51 rsa_ossl_public_decrypt
+1623547    2834695  openssl       27   256 rsa_ossl_public_decrypt
+1623612    2834695  openssl   361150     0 SSL_write
+1804646    2834695  openssl       92    -1 SSL_read
+1804730    2834695  openssl       76    -1 SSL_read
+^C
+
+Above shows the output of 'openssl s_client -connect example.com:443'.
+The first SSL_write call returned after 361ms that is the TLS handshake
+time. Local ECDH and RSA crypto calculation is fast at client side. Most
+time is spent at server side including crypto and network latency.
+
+# ./sslsnoop.bt
+Attaching 25 probes...
+Tracing SSL/TLS handshake... Hit Ctrl-C to end.
+TIME(us)   TID      COMM     LAT(us)   RET FUNC
+1133960    2826460  nginx         81    -1 SSL_do_handshake
+1134910    2826460  nginx        631   256 rsa_ossl_private_decrypt
+1134977    2826460  nginx        709     1 SSL_do_handshake
+1134984    2826460  nginx          3    -1 SSL_read
+1134209    2834970  openssl       37   256 rsa_ossl_public_encrypt
+1134994    2834970  openssl     1244     0 SSL_write
+^C
+
+Change example.com to localhost to exclude network latency. Output above
+shows 1.2ms overall handshake time, and RSA calculation took 0.7ms at nginx
+server. As event print is asynchronous, timestamp is not guaranteed to show
+in order.
+
+The bcc tool sslsniff shows similar event latency, and additional plaintext
+and ciphertext in SSL_read/wirte: https://github.com/iovisor/bcc

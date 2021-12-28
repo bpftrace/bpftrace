@@ -26,7 +26,8 @@ RUN apk add --update \
   python3 \
   wget \
   zlib-dev \
-  zlib-static
+  zlib-static \
+  openssl-dev
 
 WORKDIR /
 
