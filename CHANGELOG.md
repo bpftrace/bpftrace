@@ -15,10 +15,17 @@ and this project adheres to
 #### Fixed
 
 - Fix precedence of multiplicative operations
-  - [#2096](https//github.com/iovisor/bpftrace/pull/2096)
+  - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
 
 #### Tools
 #### Documentation
+
+## [0.14.1] 2021-12-29
+
+#### Fixed
+
+- Fix precedence of multiplicative operations
+  - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
 
 ## [0.14.0] 2021-10-22
 
@@ -75,6 +82,13 @@ and this project adheres to
 #### Documentation
 - Write new man page for `bpftrace(8)`
   - [#1711](https://github.com/iovisor/bpftrace/pull/1711)
+
+## [0.13.1] 2021-12-29
+
+#### Fixed
+
+- Fix precedence of multiplicative operations
+  - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
 
 ## [0.13.0] 2021-07-01
 
