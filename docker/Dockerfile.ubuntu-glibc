@@ -30,6 +30,7 @@ RUN apt-get update \
         libedit-dev \
         systemtap-sdt-dev \
         python3 \
+        python3-setuptools \
         quilt \
     && apt-get install --no-install-recommends -y \
         pkg-config
