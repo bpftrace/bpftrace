@@ -95,8 +95,8 @@ AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
   Value *pid = CreateLShr(CreateGetPidTgid(), 32);
 
   // The extra 0 here ensures the type of addr_offset will be int64
-  Value *addr_offset = CreateGEP(buf, { getInt64(0), getInt32(0) });
-  Value *pid_offset = CreateGEP(buf, { getInt64(0), getInt32(1) });
+  Value *addr_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(0) });
+  Value *pid_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(1) });
 
   CreateStore(val, addr_offset);
   CreateStore(pid, pid_offset);
@@ -402,7 +402,8 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   if (needMemcpy(type))
     return value;
 
-  Value *ret = CreateLoad(value);
+  // value is a pointer to i64
+  Value *ret = CreateLoad(getInt64Ty(), value);
   CreateLifetimeEnd(value);
   return ret;
 }
@@ -622,7 +623,10 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
     // bpftrace's args are internally represented as 64 bit integers. However,
     // the underlying argument (of the target program) may be less than 64
     // bits. So we must be careful to zero out unused bits.
-    Value* reg = CreateGEP(ctx, getInt64(offset * sizeof(uintptr_t)), "load_register");
+    Value *reg = CreateGEP(getInt8Ty(),
+                           ctx,
+                           getInt64(offset * sizeof(uintptr_t)),
+                           "load_register");
     AllocaInst *dst = CreateAllocaBPF(builtin.type, builtin.ident);
     Value *index_offset = nullptr;
     if (argument->valid & BCC_USDT_ARGUMENT_INDEX_REGISTER_NAME)
@@ -633,7 +637,8 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
         LOG(FATAL) << "offset for register " << argument->index_register_name
                    << " not known";
       }
-      index_offset = CreateGEP(ctx,
+      index_offset = CreateGEP(getInt8Ty(),
+                               ctx,
                                getInt64(ioffset * sizeof(uintptr_t)),
                                "load_register");
       index_offset = CreateLoad(getInt64Ty(), index_offset);
@@ -757,17 +762,18 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
   else
     literal2 = std::nullopt;
 
+  auto *val1p = dyn_cast<PointerType>(val1->getType());
+  auto *val2p = dyn_cast<PointerType>(val2->getType());
 #ifndef NDEBUG
   if (!literal1)
   {
-    PointerType *val1p = cast<PointerType>(val1->getType());
+    assert(val1p);
     assert(val1p->getElementType()->isArrayTy() &&
            val1p->getElementType()->getArrayElementType() == getInt8Ty());
   }
   if (!literal2)
   {
-    PointerType *val2p = cast<PointerType>(val2->getType());
-
+    assert(val2p);
     assert(val2p->getElementType()->isArrayTy() &&
            val2p->getElementType()->getArrayElementType() == getInt8Ty());
   }
@@ -799,7 +805,9 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
       l = getInt8(literal1->c_str()[i]);
     else
     {
-      auto *ptr_l = CreateGEP(val1, { getInt32(0), getInt32(i) });
+      auto *ptr_l = CreateGEP(val1p->getElementType(),
+                              val1,
+                              { getInt32(0), getInt32(i) });
       l = CreateLoad(getInt8Ty(), ptr_l);
     }
 
@@ -808,7 +816,9 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
       r = getInt8(literal2->c_str()[i]);
     else
     {
-      auto *ptr_r = CreateGEP(val2, { getInt32(0), getInt32(i) });
+      auto *ptr_r = CreateGEP(val2p->getElementType(),
+                              val2,
+                              { getInt32(0), getInt32(i) });
       r = CreateLoad(getInt8Ty(), ptr_r);
     }
 
@@ -830,7 +840,8 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
   CreateBr(str_ne);
   SetInsertPoint(str_ne);
 
-  Value *result = CreateLoad(store);
+  // store is a pointer to bool (i1 *)
+  Value *result = CreateLoad(getInt1Ty(), store);
   CreateLifetimeEnd(store);
   result = CreateIntCast(result, getInt64Ty(), false);
 
@@ -1057,9 +1068,10 @@ Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
 {
   assert(type.IsIntTy() || type.IsPtrTy());
   ctx = CreatePointerCast(ctx, getInt64Ty()->getPointerTo());
-  Value *expr = CreateLoad(GetType(type),
-                           CreateGEP(ctx, getInt64(type.funcarg_idx)),
-                           name);
+  Value *expr = CreateLoad(
+      GetType(type),
+      CreateGEP(getInt64Ty(), ctx, getInt64(type.funcarg_idx)),
+      name);
 
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
   // so call setVolatile() manually
@@ -1082,7 +1094,7 @@ Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
   // `(uint8*)ctx`, but sometimes this causes invalid context access.
   // Mark every context access to suppress any LLVM optimization.
   Value *result = CreateLoad(getInt64Ty(),
-                             CreateGEP(ctx_ptr, getInt64(offset)),
+                             CreateGEP(getInt64Ty(), ctx_ptr, getInt64(offset)),
                              builtin);
   // LLVM 7.0 <= does not have CreateLoad(*Ty, *Ptr, isVolatile, Name),
   // so call setVolatile() manually
@@ -1135,12 +1147,15 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
                                                   elements,
                                                   true);
   AllocaInst *buf = CreateAllocaBPF(helper_error_struct, "helper_error_t");
-  CreateStore(GetIntSameSize(asyncactionint(AsyncAction::helper_error),
-                             elements.at(0)),
-              CreateGEP(buf, { getInt64(0), getInt32(0) }));
-  CreateStore(GetIntSameSize(error_id, elements.at(1)),
-              CreateGEP(buf, { getInt64(0), getInt32(1) }));
-  CreateStore(return_value, CreateGEP(buf, { getInt64(0), getInt32(2) }));
+  CreateStore(
+      GetIntSameSize(asyncactionint(AsyncAction::helper_error), elements.at(0)),
+      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(0) }));
+  CreateStore(
+      GetIntSameSize(error_id, elements.at(1)),
+      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(1) }));
+  CreateStore(
+      return_value,
+      CreateGEP(helper_error_struct, buf, { getInt64(0), getInt32(2) }));
 
   auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(helper_error_struct);
@@ -1230,11 +1245,13 @@ void IRBuilderBPF::CreateSeqPrintf(Value *ctx,
 
   ctx = CreatePointerCast(ctx, getInt8Ty()->getPointerTo());
   Value *meta = CreateLoad(getInt64Ty()->getPointerTo(),
-                           CreateGEP(ctx, getInt64(0)),
+                           CreateGEP(getInt8Ty(), ctx, getInt64(0)),
                            "meta");
   dyn_cast<LoadInst>(meta)->setVolatile(true);
 
-  Value *seq = CreateLoad(getInt64Ty(), CreateGEP(meta, getInt64(0)), "seq");
+  Value *seq = CreateLoad(getInt64Ty(),
+                          CreateGEP(getInt64Ty(), meta, getInt64(0)),
+                          "seq");
 
   CallInst *call = createCall(seq_printf_func,
                               { seq, fmt, fmt_size, data, data_len },
