@@ -20,6 +20,7 @@ jobs:
           DISTRO: ubuntu-glibc
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
+          BCC_REF: v0.23.0
         - TYPE: Release
           NAME: vanilla_llvm12+clang+glibc2.23
           LLVM_VERSION: 12
@@ -34,6 +35,7 @@ jobs:
           CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
+          BCC_REF: v0.23.0
         - TYPE: Debug
           NAME: alpine
           LLVM_VERSION: 9
