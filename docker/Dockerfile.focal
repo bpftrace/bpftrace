@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y \
       systemtap-sdt-dev \
       python3 \
       xxd
+RUN if [ "$LLVM_VERSION" -ge 13 ] ; then apt-get install -y libmlir-${LLVM_VERSION}-dev ; fi
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 COPY build.sh /build.sh
