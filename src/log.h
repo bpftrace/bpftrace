@@ -17,7 +17,8 @@ enum class LogType
   INFO,
   WARNING,
   ERROR,
-  FATAL
+  FATAL,
+  BUG,
 };
 // clang-format on
 
@@ -118,6 +119,23 @@ public:
   [[noreturn]] ~LogStreamFatal();
 };
 
+class LogStreamBug : public LogStream
+{
+public:
+  LogStreamBug(const std::string& file,
+               int line,
+               __attribute__((unused)) LogType,
+               std::ostream& out = std::cerr)
+      : LogStream(file, line, LogType::BUG, out){};
+  LogStreamBug(const std::string& file,
+               int line,
+               __attribute__((unused)) LogType,
+               const location& loc,
+               std::ostream& out = std::cerr)
+      : LogStream(file, line, LogType::BUG, loc, out){};
+  [[noreturn]] ~LogStreamBug();
+};
+
 // Usage examples:
 // 1. LOG(WARNING) << "this is a " << "warning!"; (this goes to std::cerr)
 // 2. LOG(DEBUG, std::cout) << "this is a " << " message.";
@@ -131,6 +149,7 @@ public:
 #define LOGSTREAM_WARNING(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_ERROR(...) LOGSTREAM_COMMON(__VA_ARGS__)
 #define LOGSTREAM_FATAL(...) bpftrace::LogStreamFatal(__FILE__, __LINE__, __VA_ARGS__)
+#define LOGSTREAM_BUG(...) bpftrace::LogStreamBug(__FILE__, __LINE__, __VA_ARGS__)
 // clang-format on
 
 #define LOG(type, ...) LOGSTREAM_##type(bpftrace::LogType::type, ##__VA_ARGS__)
