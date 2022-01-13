@@ -2,6 +2,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <errno.h>
 #include <fcntl.h>
 #include <fstream>
 #include <glob.h>
@@ -14,6 +15,7 @@
 #include <string>
 #include <sys/auxv.h>
 #include <sys/stat.h>
+#include <system_error>
 #include <tuple>
 #include <unistd.h>
 
@@ -115,29 +117,63 @@ resolve_binary_path(const std::string &cmd, const char *env_paths, int pid);
 
 void StdioSilencer::silence()
 {
-  fflush(ofile);
-  int fd = fileno(ofile);
-  assert(fd >= 0);
-  old_stdio_ = dup(fd);
-  assert(old_stdio_ >= 0);
-  int new_stdio_ = open("/dev/null", O_WRONLY);
-  assert(new_stdio_ >= 0);
-  [[maybe_unused]] int ret = dup2(new_stdio_, fd);
-  assert(ret >= 0);
-  close(new_stdio_);
+  auto syserr = [](std::string msg) {
+    return std::system_error(errno, std::generic_category(), msg);
+  };
+
+  try
+  {
+    int fd = fileno(ofile);
+    if (fd < 0)
+      throw syserr("fileno()");
+
+    fflush(ofile);
+
+    if ((old_stdio_ = dup(fd)) < 0)
+      throw syserr("dup(fd)");
+
+    int new_stdio = -1;
+    if ((new_stdio = open("/dev/null", O_WRONLY)) < 0)
+      throw syserr("open(\"/dev/null\")");
+
+    if (dup2(new_stdio, fd) < 0)
+      throw syserr("dup2(new_stdio_, fd)");
+
+    close(new_stdio);
+  }
+  catch (const std::system_error &e)
+  {
+    if (errno == EMFILE)
+      LOG(FATAL) << e.what() << ": please raise NOFILE";
+    else
+      LOG(BUG) << e.what();
+  }
 }
 
 StdioSilencer::~StdioSilencer()
 {
-  if (old_stdio_ != -1)
+  if (old_stdio_ == -1)
+    return;
+
+  auto syserr = [](std::string msg) {
+    return std::system_error(errno, std::generic_category(), msg);
+  };
+
+  try
   {
-    fflush(ofile);
     int fd = fileno(ofile);
-    assert(fd >= 0);
-    [[maybe_unused]] int ret = dup2(old_stdio_, fd);
-    assert(ret >= 0);
+    if (fd < 0)
+      throw syserr("fileno()");
+
+    fflush(ofile);
+    if (dup2(old_stdio_, fd) < 0)
+      throw syserr("dup2(old_stdio_)");
     close(old_stdio_);
     old_stdio_ = -1;
+  }
+  catch (const std::system_error &e)
+  {
+    LOG(BUG) << e.what();
   }
 }
 
