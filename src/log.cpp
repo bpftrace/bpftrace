@@ -12,7 +12,8 @@ std::string logtype_str(LogType t)
     case LogType::WARNING : return "WARNING";
     case LogType::ERROR   : return "ERROR";
     case LogType::FATAL   : return "FATAL";
-    // clang-format on
+    case LogType::BUG     : return "BUG";
+      // clang-format on
   }
 
   return {}; // unreached
@@ -25,6 +26,7 @@ Log::Log()
   enabled_map_[LogType::INFO] = true;
   enabled_map_[LogType::DEBUG] = true;
   enabled_map_[LogType::FATAL] = true;
+  enabled_map_[LogType::BUG] = true;
 }
 
 Log& Log::get()
@@ -207,16 +209,20 @@ LogStream::~LogStream()
   if (sink_.is_enabled(type_))
 #endif
   {
-    std::string prefix = "";
-    if (type_ == LogType::DEBUG)
-      prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "] ";
-    sink_.take_input(type_, loc_, out_, prefix + buf_.str());
+    sink_.take_input(type_, loc_, out_, buf_.str());
   }
 }
 
 [[noreturn]] LogStreamFatal::~LogStreamFatal()
 {
   sink_.take_input(type_, loc_, out_, buf_.str());
+  abort();
+}
+
+[[noreturn]] LogStreamBug::~LogStreamBug()
+{
+  std::string prefix = "[" + log_file_ + ":" + std::to_string(log_line_) + "] ";
+  sink_.take_input(type_, loc_, out_, prefix + buf_.str());
   abort();
 }
 
