@@ -1050,8 +1050,8 @@ uint32_t kernel_version(int attempt)
       return *a2;
     }
     default:
-      throw std::runtime_error("BUG: kernel_version(): Invalid attempt: " +
-                               std::to_string(attempt));
+      LOG(BUG) << "kernel_version(): Invalid attempt: "
+               << std::to_string(attempt);
   }
 }
 

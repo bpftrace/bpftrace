@@ -174,7 +174,7 @@ void ChildProc::terminate(bool force)
     return;
 
   if (child_pid_ <= 1)
-    throw std::runtime_error("BUG: child_pid <= 1");
+    LOG(BUG) << "child_pid <= 1";
 
   int sig = force ? SIGKILL : SIGTERM;
 
@@ -287,7 +287,7 @@ void ChildProc::check_child(bool block)
   if (ret < 0)
   {
     if (errno == EINVAL)
-      throw std::runtime_error("BUG: waitpid() EINVAL");
+      LOG(BUG) << "waitpid() EINVAL";
     else
     {
       LOG(ERROR) << "waitpid(" << child_pid_

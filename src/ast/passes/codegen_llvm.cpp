@@ -270,7 +270,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   {
     pid_t cpid = bpftrace_.child_->pid();
     if (cpid < 1) {
-      LOG(FATAL) << "BUG: Invalid cpid: " << cpid;
+      LOG(BUG) << "Invalid cpid: " << cpid;
     }
     expr_ = b_.getInt64(cpid);
   }
@@ -1010,7 +1010,7 @@ void CodegenLLVM::visit(Call &call)
       int sigid = signal_name_to_num(signame);
       // Should be caught in semantic analyser
       if (sigid < 1) {
-        LOG(FATAL) << "BUG: Invalid signal ID for \"" << signame << "\"";
+        LOG(BUG) << "Invalid signal ID for \"" << signame << "\"";
       }
       b_.CreateSignal(ctx_, b_.getInt32(sigid), call.loc);
       return;
@@ -1286,7 +1286,7 @@ void CodegenLLVM::binop_int(Binop &binop)
       expr_ = b_.CreateXor(lhs, rhs);
       break;
     default:
-      LOG(FATAL) << "BUG: \"" << opstr(binop) << "\" was handled earlier";
+      LOG(BUG) << "\"" << opstr(binop) << "\" was handled earlier";
   }
   // Using signed extension will result in -1 which will likely confuse users
   expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
@@ -1316,15 +1316,15 @@ void CodegenLLVM::binop_ptr(Binop &binop)
     case Operator::BXOR:
     case Operator::MUL:
     case Operator::DIV:
-      LOG(FATAL) << "BUG: binop_ptr: op not implemented for type\""
-                 << opstr(binop) << "\"";
+      LOG(BUG) << "binop_ptr: op not implemented for type\"" << opstr(binop)
+               << "\"";
       break;
     case Operator::PLUS:
     case Operator::MINUS:
       arith = true;
       break;
     default:
-      LOG(FATAL) << "BUG: binop_ptr invalid op \"" << opstr(binop) << "\"";
+      LOG(BUG) << "binop_ptr invalid op \"" << opstr(binop) << "\"";
   }
 
   auto scoped_del_left = accept(binop.left);
@@ -1360,7 +1360,7 @@ void CodegenLLVM::binop_ptr(Binop &binop)
         break;
       }
       default:
-        LOG(FATAL) << "BUG: invalid op \"" << opstr(binop) << "\"";
+        LOG(BUG) << "invalid op \"" << opstr(binop) << "\"";
     }
   }
   else if (arith)
@@ -1464,7 +1464,7 @@ void CodegenLLVM::unop_int(Unop &unop)
       break;
     }
     default:
-      LOG(FATAL) << "BUG: unop_int: invalid op \"" << opstr(unop) << "\"";
+      LOG(BUG) << "unop_int: invalid op \"" << opstr(unop) << "\"";
   }
 }
 
@@ -1797,8 +1797,8 @@ void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)
 
   if (llvm_size != our_size)
   {
-    LOG(FATAL) << "BUG: Struct size mismatch: expected: " << our_size
-               << ", real: " << llvm_size;
+    LOG(BUG) << "Struct size mismatch: expected: " << our_size
+             << ", real: " << llvm_size;
   }
 
   auto *layout = datalayout().getStructLayout(
@@ -2063,7 +2063,7 @@ void CodegenLLVM::visit(Jump &jump)
       b_.CreateBr(std::get<0>(loops_.back()));
       break;
     default:
-      LOG(FATAL) << "BUG: jump: invalid op \"" << opstr(jump) << "\"";
+      LOG(BUG) << "jump: invalid op \"" << opstr(jump) << "\"";
   }
 
   // LLVM doesn't like having instructions after an unconditional branch (segv)
