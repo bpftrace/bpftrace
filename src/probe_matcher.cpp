@@ -327,7 +327,7 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
     if (p.type == ProbeType::kfunc)
     {
       // kfunc must be available
-      if (bpftrace_->btf_.has_data())
+      if (bpftrace_->feature_->has_prog_kfunc() && bpftrace_->btf_.has_data())
         probes += p.name + "\n";
     }
     else if (p.name.find("ret") == std::string::npos &&
