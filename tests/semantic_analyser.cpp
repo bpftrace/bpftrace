@@ -2408,13 +2408,13 @@ TEST(semantic_analyser, string_size)
   auto stmt = driver.root->probes->at(0)->stmts->at(0);
   auto var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsStringTy());
-  ASSERT_EQ(var_assign->var->type.GetSize(), 6);
+  ASSERT_EQ(var_assign->var->type.GetSize(), 6UL);
 
   test(bpftrace, true, driver, R"_(k:f1 {@ = "hi";} k:f2 {@ = "hello";})_", 0);
   stmt = driver.root->probes->at(0)->stmts->at(0);
   auto map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->type.IsStringTy());
-  ASSERT_EQ(map_assign->map->type.GetSize(), 6);
+  ASSERT_EQ(map_assign->map->type.GetSize(), 6UL);
 
   test(bpftrace,
        true,
@@ -2424,7 +2424,7 @@ TEST(semantic_analyser, string_size)
   stmt = driver.root->probes->at(0)->stmts->at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
   ASSERT_TRUE(map_assign->map->key_type.args_.at(0).IsStringTy());
-  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6);
+  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6UL);
 
   test(bpftrace,
        true,
@@ -2433,9 +2433,9 @@ TEST(semantic_analyser, string_size)
        0);
   stmt = driver.root->probes->at(0)->stmts->at(0);
   map_assign = dynamic_cast<ast::AssignMapStatement *>(stmt);
-  ASSERT_EQ(map_assign->map->key_type.size(), 14);
+  ASSERT_EQ(map_assign->map->key_type.size(), 14UL);
   ASSERT_TRUE(map_assign->map->key_type.args_.at(0).IsStringTy());
-  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6);
+  ASSERT_EQ(map_assign->map->key_type.args_.at(0).GetSize(), 6UL);
 
   test(bpftrace,
        true,
@@ -2446,8 +2446,8 @@ TEST(semantic_analyser, string_size)
   var_assign = dynamic_cast<ast::AssignVarStatement *>(stmt);
   ASSERT_TRUE(var_assign->var->type.IsTupleTy());
   ASSERT_TRUE(var_assign->var->type.GetField(0).type.IsStringTy());
-  ASSERT_EQ(var_assign->var->type.GetSize(), 16); // tuples are not packed
-  ASSERT_EQ(var_assign->var->type.GetField(0).type.GetSize(), 6);
+  ASSERT_EQ(var_assign->var->type.GetSize(), 16UL); // tuples are not packed
+  ASSERT_EQ(var_assign->var->type.GetField(0).type.GetSize(), 6UL);
 }
 
 #ifdef HAVE_LIBBPF_BTF_DUMP
