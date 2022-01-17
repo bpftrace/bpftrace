@@ -11,6 +11,10 @@
  * This provides information such as packet details, socket state, and kernel
  * stack trace for packets/segments that were dropped via tcp_drop().
 
+ * WARNING: this script attaches to the tcp_drop kprobe which is likely inlined
+ *          on newer kernels and not replaced by anything else, therefore
+ *          the script will stop working
+
  * Copyright (c) 2018 Dale Hamel.
  * Licensed under the Apache License, Version 2.0 (the "License")
 
