@@ -18,7 +18,8 @@ BEGIN
 	printf("Tracing block I/O with init stacks. Hit Ctrl-C to end.\n");
 }
 
-kprobe:blk_account_io_start
+kprobe:blk_account_io_start,
+kprobe:__blk_account_io_start
 {
 	@reqstack[arg0] = kstack;
 	@reqts[arg0] = nsecs;

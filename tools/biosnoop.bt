@@ -16,7 +16,8 @@ BEGIN
 	printf("%-12s %-7s %-16s %-6s %7s\n", "TIME(ms)", "DISK", "COMM", "PID", "LAT(ms)");
 }
 
-kprobe:blk_account_io_start
+kprobe:blk_account_io_start,
+kprobe:__blk_account_io_start
 {
 	@start[arg0] = nsecs;
 	@iopid[arg0] = pid;
@@ -24,7 +25,8 @@ kprobe:blk_account_io_start
 	@disk[arg0] = ((struct request *)arg0)->rq_disk->disk_name;
 }
 
-kprobe:blk_account_io_done
+kprobe:blk_account_io_done,
+kprobe:__blk_account_io_done
 /@start[arg0] != 0 && @iopid[arg0] != 0 && @iocomm[arg0] != ""/
 
 {
