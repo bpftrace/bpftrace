@@ -16,12 +16,14 @@ BEGIN
 	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
 }
 
-kprobe:blk_account_io_start
+kprobe:blk_account_io_start,
+kprobe:__blk_account_io_start
 {
 	@start[arg0] = nsecs;
 }
 
-kprobe:blk_account_io_done
+kprobe:blk_account_io_done,
+kprobe:__blk_account_io_done
 /@start[arg0]/
 {
 	@usecs = hist((nsecs - @start[arg0]) / 1000);
