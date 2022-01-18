@@ -7,7 +7,7 @@
  *
  * This is a bpftrace version of the bcc tool of the same name.
  *
- * For Linux 5.12+ (see tools/old for script for lower versions).
+ * For Linux <= 5.11.
  *
  * Copyright 2018 Netflix, Inc.
  * Licensed under the Apache License, Version 2.0 (the "License")
@@ -15,8 +15,10 @@
  * 08-Sep-2018	Brendan Gregg	Created this.
  */
 
+#ifndef __BPFTRACE_HAVE_BTF
 #include <linux/genhd.h>
 #include <linux/bio.h>
+#endif
 
 BEGIN
 {
@@ -28,5 +30,5 @@ kprobe:md_flush_request
 {
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %s\n", pid, comm,
-	    ((struct bio *)arg1)->bi_bdev->bd_disk->disk_name);
+	    ((struct bio *)arg1)->bi_disk->disk_name);
 }
