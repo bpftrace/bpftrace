@@ -1,0 +1,2 @@
+file(GLOB BT_FILES *.bt)
+install(FILES ${BT_FILES} DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/bpftrace/tools/old)
