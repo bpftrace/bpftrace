@@ -93,6 +93,7 @@ jobs:
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"
         -e BUILD_LIBBPF="${BUILD_LIBBPF}"
+        -e TOOLS_TEST_OLDVERSION="$TOOLS_TEST_OLDVERSION"
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         $(pwd)/build-embedded ${TYPE}
         -j`nproc`

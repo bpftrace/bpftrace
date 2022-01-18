@@ -15,6 +15,8 @@ EXIT_STATUS=0;
 
 TOOLDIR=""
 
+OLDTOOLS=${TOOLS_TEST_OLDVERSION:-}
+
 function tooldir() {
     for dir in "../../tools" "/vagrant/tools"; do
         if [[ -d "$dir" ]]; then
@@ -30,11 +32,16 @@ function tooldir() {
 tooldir
 
 for f in "$TOOLDIR"/*.bt; do
-  if $BPFTRACE_EXECUTABLE --unsafe -d $f 2>/dev/null >/dev/null; then
-    echo "$f    passed"
+  if [[ $OLDTOOLS =~ $(basename $f) ]]; then
+      tool=$(dirname $f)/old/$(basename $f)
   else
-    echo "$f    failed";
-    $BPFTRACE_EXECUTABLE --unsafe -d $f;
+      tool=$f
+  fi
+  if $BPFTRACE_EXECUTABLE --unsafe -d $tool 2>/dev/null >/dev/null; then
+    echo "$tool    passed"
+  else
+    echo "$tool    failed";
+    $BPFTRACE_EXECUTABLE --unsafe -d $tool;
     EXIT_STATUS=1;
   fi
 done
