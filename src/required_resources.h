@@ -26,21 +26,6 @@ struct HelperErrorInfo
   location loc;
 };
 
-struct LinearHistogramArgs
-{
-  long min = -1;
-  long max = -1;
-  long step = -1;
-
-private:
-  friend class cereal::access;
-  template <typename Archive>
-  void serialize(Archive &archive)
-  {
-    archive(min, max, step);
-  }
-};
-
 // This class contains script-specific metadata that bpftrace's runtime needs.
 //
 // This class is intended to completely encapsulate all of a script's runtime
@@ -96,7 +81,6 @@ public:
 
   // Map metadata
   std::map<std::string, SizedType> map_vals;
-  std::map<std::string, LinearHistogramArgs> lhist_args;
   std::map<std::string, MapKey> map_keys;
   std::unordered_set<StackType> stackid_maps;
   bool needs_join_map = false;
@@ -132,7 +116,6 @@ private:
             printf_args,
             probe_ids,
             map_vals,
-            lhist_args,
             map_keys,
             stackid_maps,
             needs_join_map,

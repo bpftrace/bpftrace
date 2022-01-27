@@ -116,21 +116,6 @@ void ResourceAnalyser::visit(Call &call)
     resources_.join_args.push_back(delim);
     resources_.needs_join_map = true;
   }
-  else if (call.func == "lhist")
-  {
-    Expression &min_arg = *call.vargs->at(1);
-    Expression &max_arg = *call.vargs->at(2);
-    Expression &step_arg = *call.vargs->at(3);
-    Integer &min = static_cast<Integer &>(min_arg);
-    Integer &max = static_cast<Integer &>(max_arg);
-    Integer &step = static_cast<Integer &>(step_arg);
-
-    resources_.lhist_args[call.map->ident] = LinearHistogramArgs{
-      .min = min.n,
-      .max = max.n,
-      .step = step.n,
-    };
-  }
   else if (call.func == "time")
   {
     if (call.vargs && call.vargs->size() > 0)

@@ -41,26 +41,9 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
 
     auto &key = search_args->second;
 
-    if (type.IsLhistTy())
-    {
-      auto args = lhist_args.find(map_name);
-      if (args == lhist_args.end())
-        LOG(FATAL) << "map arg \"" << map_name << "\" not found";
-
-      auto min = args->second.min;
-      auto max = args->second.max;
-      auto step = args->second.step;
-      auto map = std::make_unique<T>(
-          map_name, type, key, min, max, step, bpftrace.mapmax_);
-      failed_maps += is_invalid_map(map->mapfd_);
-      bpftrace.maps.Add(std::move(map));
-    }
-    else
-    {
-      auto map = std::make_unique<T>(map_name, type, key, bpftrace.mapmax_);
-      failed_maps += is_invalid_map(map->mapfd_);
-      bpftrace.maps.Add(std::move(map));
-    }
+    auto map = std::make_unique<T>(map_name, type, key, bpftrace.mapmax_);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace.maps.Add(std::move(map));
   }
 
   for (StackType stack_type : stackid_maps)

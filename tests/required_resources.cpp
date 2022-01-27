@@ -98,33 +98,6 @@ TEST(required_resources, round_trip_map_sized_type)
   }
 }
 
-TEST(required_resources, round_trip_map_lhist_args)
-{
-  std::ostringstream serialized(std::ios::binary);
-  {
-    RequiredResources r;
-    r.lhist_args.insert({ "mymap",
-                          LinearHistogramArgs{
-                              .min = 99,
-                              .max = 123,
-                              .step = 33,
-                          } });
-    r.save_state(serialized);
-  }
-
-  std::istringstream input(serialized.str());
-  {
-    RequiredResources r;
-    r.load_state(input);
-
-    ASSERT_EQ(r.lhist_args.count("mymap"), 1ul);
-    auto &args = r.lhist_args["mymap"];
-    EXPECT_EQ(args.min, 99);
-    EXPECT_EQ(args.max, 123);
-    EXPECT_EQ(args.step, 33);
-  }
-}
-
 TEST(required_resources, round_trip_set_stack_type)
 {
   std::ostringstream serialized(std::ios::binary);

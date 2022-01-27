@@ -457,6 +457,45 @@ void CodegenLLVM::visit(Call &call)
                                   { value, min, max, step },
                                   "linear");
 
+    // write lhist bounds into map
+    std::vector<Value *> lhist_bounds;
+    for (auto key_suffix :
+         std::vector<lhist_bound_index>{ lhist_bound_index_min,
+                                         lhist_bound_index_max,
+                                         lhist_bound_index_step })
+    {
+      AllocaInst *bound_key = getHistMapKey(
+          map,
+          Constant::getIntegerValue(b_.getInt64Ty(),
+                                    APInt(64, key_suffix, true)));
+      Value *val = nullptr;
+      std::string name;
+      switch (key_suffix)
+      {
+        case lhist_bound_index_min:
+          val = min;
+          name = "min";
+          break;
+        case lhist_bound_index_max:
+          val = max;
+          name = "max";
+          break;
+        case lhist_bound_index_step:
+          val = step;
+          name = "step";
+          break;
+      }
+      if (val)
+      {
+        AllocaInst *val_alloca = b_.CreateAllocaBPF(map.type,
+                                                    map.ident + "_" + name);
+        b_.CreateStore(val, val_alloca);
+        b_.CreateMapUpdateElem(ctx_, map, bound_key, val_alloca, call.loc);
+        b_.CreateLifetimeEnd(val_alloca);
+      }
+      b_.CreateLifetimeEnd(bound_key);
+    }
+
     AllocaInst *key = getHistMapKey(map, linear);
 
     Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);

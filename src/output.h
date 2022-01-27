@@ -26,6 +26,24 @@ enum class MessageType
   lost_events
 };
 
+struct HistData
+{
+  int64_t count;
+  std::vector<uint64_t> value;
+
+  // Only valid for lhist
+  long min = -1;
+  long max = -1;
+  long step = -1;
+};
+
+enum lhist_bound_index
+{
+  lhist_bound_index_min = -1,
+  lhist_bound_index_max = -2,
+  lhist_bound_index_step = -3
+};
+
 std::ostream& operator<<(std::ostream& out, MessageType type);
 
 // Abstract class (interface) for output
@@ -51,9 +69,12 @@ public:
   // Write map histogram to output
   // Ideally, the implementation should use map_hist_to_str to convert a map
   // histogram into a string, format it properly, and print it to out_.
-  virtual void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                        const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                        const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const = 0;
+  virtual void map_hist(
+      BPFtrace &bpftrace,
+      IMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::map<std::vector<uint8_t>, HistData> &hists_by_key) const = 0;
   // Write map statistics to output
   // Ideally, the implementation should use map_stats_to_str to convert map
   // statistics into a string, format it properly, and print it to out_.
@@ -108,10 +129,7 @@ protected:
       IMap &map,
       uint32_t top,
       uint32_t div,
-      const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
-          &values_by_key,
-      const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
-          &total_counts_by_key) const;
+      const std::map<std::vector<uint8_t>, HistData> &hists_by_key) const;
   // Convert map statistics into string
   // Default behaviour: format each (key, stats) pair using output-specific
   // methods and join them into a single string
@@ -170,9 +188,12 @@ public:
 
   void map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
            const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const override;
-  void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
+  void map_hist(BPFtrace &bpftrace,
+                IMap &map,
+                uint32_t top,
+                uint32_t div,
+                const std::map<std::vector<uint8_t>, HistData> &hists_by_key)
+      const override;
   void map_stats(
       BPFtrace &bpftrace,
       IMap &map,
@@ -220,9 +241,12 @@ public:
 
   void map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
            const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const override;
-  void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
+  void map_hist(BPFtrace &bpftrace,
+                IMap &map,
+                uint32_t top,
+                uint32_t div,
+                const std::map<std::vector<uint8_t>, HistData> &hists_by_key)
+      const override;
   void map_stats(
       BPFtrace &bpftrace,
       IMap &map,

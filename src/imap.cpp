@@ -7,11 +7,8 @@ namespace bpftrace {
 IMap::IMap(const std::string &name,
            const SizedType &type,
            const MapKey &key,
-           int min,
-           int max,
-           int step,
            int max_entries __attribute__((unused)))
-    : name_(name), type_(type), key_(key), lqmin(min), lqmax(max), lqstep(step)
+    : name_(name), type_(type), key_(key)
 {
   if (type.IsCountTy() && !key.args_.size())
   {

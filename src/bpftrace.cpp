@@ -1552,12 +1552,12 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   }
   auto key(old_key);
 
-  std::map<std::vector<uint8_t>, std::vector<uint64_t>> values_by_key;
+  std::map<std::vector<uint8_t>, HistData> hists_by_key;
 
   while (bpf_get_next_key(map.mapfd_, old_key.data(), key.data()) == 0)
   {
     auto key_prefix = std::vector<uint8_t>(map.key_.size());
-    uint64_t bucket = read_data<uint64_t>(key.data() + map.key_.size());
+    int64_t bucket = read_data<int64_t>(key.data() + map.key_.size());
 
     for (size_t i=0; i<map.key_.size(); i++)
       key_prefix.at(i) = key.at(i);
@@ -1577,38 +1577,73 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
       return -1;
     }
 
-    if (values_by_key.find(key_prefix) == values_by_key.end())
+    if (hists_by_key.find(key_prefix) == hists_by_key.end())
     {
       // New key - create a list of buckets for it
       if (map.type_.IsHistTy())
-        values_by_key[key_prefix] = std::vector<uint64_t>(65);
+        hists_by_key[key_prefix] = HistData{
+          .count = 0, .value = std::vector<uint64_t>(65)
+        };
       else
-        values_by_key[key_prefix] = std::vector<uint64_t>(1002);
+        hists_by_key[key_prefix] = HistData{ .count = 0,
+                                             .value = std::vector<uint64_t>(
+                                                 1002),
+                                             .min = 0,
+                                             .max = 0,
+                                             .step = 0 };
     }
-    values_by_key[key_prefix].at(bucket) = reduce_value<uint64_t>(value, nvalues);
+
+    if (bucket < 0)
+    {
+      // write lhist bounds data into the structure
+      assert(bucket >= -3);
+      for (uint32_t cpu = 0; cpu < nvalues; cpu++)
+      {
+        // Iterate over lhist bounds for each CPU
+        // For each CPU with collected values they're the same, but there might
+        // be CPUs with no values, so we have to check all of them
+        uint64_t int_value = read_data<uint64_t>(value.data() +
+                                                 cpu * map.type_.GetSize());
+        if (int_value == 0)
+          // Values default to 0 if not set for the current CPU
+          // This can't be distinguished from 0 set by the user, but that is not
+          // an issue, since the bounds attributes are initialized with 0
+          continue;
+        switch (bucket)
+        {
+          case lhist_bound_index_min:
+            hists_by_key[key_prefix].min = int_value;
+            break;
+          case lhist_bound_index_max:
+            hists_by_key[key_prefix].max = int_value;
+            break;
+          case lhist_bound_index_step:
+            hists_by_key[key_prefix].step = int_value;
+            break;
+        }
+      }
+    }
+    else
+    {
+      hists_by_key[key_prefix].value.at(
+          bucket) = reduce_value<uint64_t>(value, nvalues);
+    }
 
     old_key = key;
   }
 
-  // Sort based on sum of counts in all buckets
-  std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
-  for (auto &map_elem : values_by_key)
+  // Generate sums of counts in all buckets
+  for (auto &map_elem : hists_by_key)
   {
-    int64_t sum = 0;
-    for (size_t i=0; i<map_elem.second.size(); i++)
+    for (size_t i = 0; i < map_elem.second.value.size(); i++)
     {
-      sum += map_elem.second.at(i);
+      map_elem.second.count += map_elem.second.value.at(i);
     }
-    total_counts_by_key.push_back({map_elem.first, sum});
   }
-  std::sort(total_counts_by_key.begin(), total_counts_by_key.end(), [&](auto &a, auto &b)
-  {
-    return a.second < b.second;
-  });
 
   if (div == 0)
     div = 1;
-  out_->map_hist(*this, map, top, div, values_by_key, total_counts_by_key);
+  out_->map_hist(*this, map, top, div, hists_by_key);
   return 0;
 }
 

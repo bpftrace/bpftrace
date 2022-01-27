@@ -82,3 +82,9 @@ NAME address_probe_invalid_expansion
 RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "function1" {print $1}') { @[probe] = count(); exit() }"
 EXPECT Attaching 1 probe
 TIMEOUT 1
+
+# https://github.com/iovisor/bpftrace/issues/2121
+NAME lhist_labels_misprint
+PROG BEGIN { @[0] = lhist(0, 0, 100000, 1000); @[1] = lhist(0, 0, 100000, 10000); @[1] = lhist(0, 0, 100000, 10000); exit() }
+EXPECT @\[0\]:\s*\[0, 1000\)[0123456789|@\s]*@\[1\]:\s*\[0, 10000\)
+TIMEOUT 5

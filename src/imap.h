@@ -15,14 +15,6 @@ public:
   IMap(const std::string &name,
        const SizedType &type,
        const MapKey &key,
-       int max_entries)
-      : IMap(name, type, key, 0, 0, 0, max_entries){};
-  IMap(const std::string &name,
-       const SizedType &type,
-       const MapKey &key,
-       int min,
-       int max,
-       int step,
        int max_entries);
   IMap(const std::string &name,
        enum bpf_map_type type,
@@ -45,11 +37,6 @@ public:
   MapKey key_;
   enum bpf_map_type map_type_ = BPF_MAP_TYPE_UNSPEC;
   bool printable_ = true;
-
-  // used by lhist(). TODO: move to separate Map object.
-  int lqmin = 0;
-  int lqmax = 0;
-  int lqstep = 0;
 
   bool is_per_cpu_type()
   {

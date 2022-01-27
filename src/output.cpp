@@ -330,28 +330,37 @@ std::string Output::map_hist_to_str(
     IMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
-        &total_counts_by_key) const
+    const std::map<std::vector<uint8_t>, HistData> &hists_by_key) const
 {
-  std::vector<std::string> elems;
+  std::vector<std::pair<int64_t, std::string>> elems;
+  std::vector<std::string> output_elems;
   uint32_t i = 0;
-  for (auto &key_count : total_counts_by_key)
+  for (auto &hist : hists_by_key)
   {
-    auto &key = key_count.first;
-    auto &value = values_by_key.at(key);
+    auto &key = hist.first;
+    auto &key_count = hist.second.count;
+    auto &value = hist.second.value;
 
-    if (top && values_by_key.size() > top && i++ < (values_by_key.size() - top))
+    if (top && hists_by_key.size() > top && i++ < (hists_by_key.size() - top))
       continue;
 
     auto key_str = map_key_to_str(bpftrace, map, key);
-    auto val_str = map.type_.IsHistTy()
-                       ? hist_to_str(value, div)
-                       : lhist_to_str(value, map.lqmin, map.lqmax, map.lqstep);
+    auto val_str = map.type_.IsHistTy() ? hist_to_str(value, div)
+                                        : lhist_to_str(value,
+                                                       hist.second.min,
+                                                       hist.second.max,
+                                                       hist.second.step);
 
-    elems.push_back(map_keyval_to_str(map, key_str, val_str));
+    elems.push_back({ key_count, map_keyval_to_str(map, key_str, val_str) });
   }
-  return str_join(elems, map_elem_delim_to_str(map));
+
+  // Sort hists by total count
+  std::sort(elems.begin(), elems.end());
+  std::transform(elems.begin(),
+                 elems.end(),
+                 std::back_inserter(output_elems),
+                 [](auto &pair) { return pair.second; });
+  return str_join(output_elems, map_elem_delim_to_str(map));
 }
 
 std::string Output::map_stats_to_str(
@@ -492,12 +501,9 @@ void TextOutput::map_hist(
     IMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
-        &total_counts_by_key) const
+    const std::map<std::vector<uint8_t>, HistData> &hists_by_key) const
 {
-  out_ << map_hist_to_str(
-      bpftrace, map, top, div, values_by_key, total_counts_by_key);
+  out_ << map_hist_to_str(bpftrace, map, top, div, hists_by_key);
   out_ << std::endl;
 }
 
@@ -734,11 +740,9 @@ void JsonOutput::map_hist(
     IMap &map,
     uint32_t top,
     uint32_t div,
-    const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-    const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
-        &total_counts_by_key) const
+    const std::map<std::vector<uint8_t>, HistData> &hists_by_key) const
 {
-  if (total_counts_by_key.empty())
+  if (hists_by_key.empty())
     return;
 
   out_ << "{\"type\": \"" << MessageType::hist << "\", \"data\": {";
@@ -746,8 +750,7 @@ void JsonOutput::map_hist(
   if (map.key_.size() > 0) // check if this map has keys
     out_ << "{";
 
-  out_ << map_hist_to_str(
-      bpftrace, map, top, div, values_by_key, total_counts_by_key);
+  out_ << map_hist_to_str(bpftrace, map, top, div, hists_by_key);
 
   if (map.key_.size() > 0)
     out_ << "}";

@@ -29,6 +29,8 @@ and this project adheres to
   - [#2138](https://github.com/iovisor/bpftrace/pull/2138)
 - Fix tools to work on new kernel versions
   - [#2136](https://github.com/iovisor/bpftrace/pull/2136)
+- Fix misprinting of lhist labels
+  - [#2153](https://github.com/iovisor/bpftrace/pull/2153)
 
 #### Tools
 #### Documentation

@@ -5,11 +5,8 @@ namespace bpftrace {
 FakeMap::FakeMap(const std::string &name,
                  const SizedType &type,
                  const MapKey &key,
-                 int min,
-                 int max,
-                 int step,
                  int max_entries)
-    : IMap(name, type, key, min, max, step, max_entries)
+    : IMap(name, type, key, max_entries)
 {
 }
 

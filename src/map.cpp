@@ -42,11 +42,8 @@ int create_map(enum bpf_map_type map_type,
 Map::Map(const std::string &name,
          const SizedType &type,
          const MapKey &key,
-         int min,
-         int max,
-         int step,
          int max_entries)
-    : IMap(name, type, key, min, max, step, max_entries)
+    : IMap(name, type, key, max_entries)
 {
   int key_size = key.size();
   if (type.IsHistTy() || type.IsLhistTy() || type.IsAvgTy() || type.IsStatsTy())
