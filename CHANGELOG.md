@@ -25,6 +25,8 @@ and this project adheres to
   - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
 - Fix probe matching for uprobes with absolute address
   - [#2138](https://github.com/iovisor/bpftrace/pull/2138)
+- Fix tools to work on new kernel versions
+  - [#2136](https://github.com/iovisor/bpftrace/pull/2136)
 
 #### Tools
 #### Documentation
