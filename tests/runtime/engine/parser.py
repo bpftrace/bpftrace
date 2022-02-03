@@ -143,6 +143,7 @@ class TestParser(object):
                 features = {
                     "loop",
                     "btf",
+                    "kfunc",
                     "probe_read_kernel",
                     "dpath",
                     "uprobe_refcount",
