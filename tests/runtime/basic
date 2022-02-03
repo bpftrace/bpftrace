@@ -49,12 +49,14 @@ NAME it lists kfuncs
 RUN {{BPFTRACE}} -l | grep kfunc
 EXPECT kfunc
 REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kfunc params
 RUN {{BPFTRACE}} -lv "kfunc:*" | grep kfunc
 EXPECT \s+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kprobes with regex filter
@@ -96,12 +98,14 @@ NAME it lists kfuncs events with regex filter
 RUN {{BPFTRACE}} -l "kfunc:*"
 EXPECT kfunc
 REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kretfuncs events with regex filter
 RUN {{BPFTRACE}} -l "kretfunc:*"
 EXPECT kretfunc
 REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME listing with wildcarded probe type
