@@ -990,6 +990,7 @@ TEST(Parser, uprobe)
 
   test_parse_failure("uprobe:f { 1 }");
   test_parse_failure("uprobe { 1 }");
+  test_parse_failure("uprobe:/my/program*:0x1234 { 1 }");
 }
 
 TEST(Parser, usdt)

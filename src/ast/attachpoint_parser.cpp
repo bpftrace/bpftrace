@@ -432,6 +432,11 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       auto res = stoll(parts_[2]);
       if (res)
       {
+        if (has_wildcard(ap_->target))
+        {
+          errs_ << "Cannot use wildcards with absolute address" << std::endl;
+          return INVALID;
+        }
         ap_->address = *res;
       }
       else
