@@ -19,6 +19,8 @@ and this project adheres to
 
 - Fix precedence of multiplicative operations
   - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
+- Fix probe matching for uprobes with absolute address
+  - [#2138](https://github.com/iovisor/bpftrace/pull/2138)
 
 #### Tools
 #### Documentation
