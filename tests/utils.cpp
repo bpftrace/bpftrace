@@ -202,9 +202,9 @@ TEST(utils, get_cgroup_path_in_hierarchy)
   {
     throw std::runtime_error("creating subdirectory for tests failed");
   }
-  static_cast<std::ofstream &>(std::ofstream(file_1) << "File 1 content")
+  static_cast<std::ofstream &&>(std::ofstream(file_1) << "File 1 content")
       .close();
-  static_cast<std::ofstream &>(std::ofstream(file_2) << "File 2 content")
+  static_cast<std::ofstream &&>(std::ofstream(file_2) << "File 2 content")
       .close();
   struct stat file_1_st, file_2_st;
   if (stat(file_1.c_str(), &file_1_st) < 0 ||
