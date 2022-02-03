@@ -76,3 +76,9 @@ NAME access ctx struct field twice
 PROG tracepoint:sched:sched_wakeup { if (args->comm == "asdf") { print(args->comm) } exit(); }
 EXPECT Attaching 1 probe
 TIMEOUT 1
+
+# https://github.com/iovisor/bpftrace/issues/2135
+NAME address_probe_invalid_expansion
+RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "function1" {print $1}') { @[probe] = count(); exit() }"
+EXPECT Attaching 1 probe
+TIMEOUT 1

@@ -483,6 +483,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::hardware:
     case ProbeType::software:
     {
+      // Do not expand "target:" as that would match all functions in target.
+      // This may occur when an absolute address is given instead of a function.
+      if (attach_point.func.empty())
+        return { attach_point.target + ":" };
+
       search_input = attach_point.target + ":" + attach_point.func;
       break;
     }
