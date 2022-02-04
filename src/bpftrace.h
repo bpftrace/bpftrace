@@ -168,6 +168,7 @@ public:
   uint64_t mapmax_ = 4096;
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;
+  uint64_t max_programs_ = 512;
   uint64_t log_size_ = 1000000;
   uint64_t perf_rb_pages_ = 64;
   uint64_t max_type_res_iterations = 0;

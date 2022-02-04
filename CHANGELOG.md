@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Add builtin function: `cgroup_path`
   - [#2055](https://github.com/iovisor/bpftrace/pull/2055)
+- Limit number of generated BPF programs
+  - [#2141](https://github.com/iovisor/bpftrace/pull/2141)
 
 #### Changed
 #### Deprecated

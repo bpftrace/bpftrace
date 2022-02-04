@@ -2281,6 +2281,18 @@ void CodegenLLVM::visit(Probe &probe)
         matches = bpftrace_.probe_matcher_->get_matches_for_ap(*attach_point);
       }
 
+      probe_count_ += matches.size();
+      if (probe_count_ > bpftrace_.max_programs_)
+      {
+        throw std::runtime_error(
+            "Your program is trying to generate more than " +
+            std::to_string(probe_count_) +
+            " BPF programs, which exceeds the current limit of " +
+            std::to_string(bpftrace_.max_programs_) +
+            ".\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
+            "environment variable.");
+      }
+
       tracepoint_struct_ = "";
       for (const auto &m : matches)
       {
