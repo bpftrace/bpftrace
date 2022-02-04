@@ -164,6 +164,7 @@ ENVIRONMENT:
     BPFTRACE_NO_CPP_DEMANGLE    [default: 0] disable C++ symbol demangling
     BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map
     BPFTRACE_MAX_PROBES         [default: 512] max number of probes bpftrace can attach to
+    BPFTRACE_MAX_BPF_PROGS      [default: 512] max number of generated BPF programs
     BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache
     BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution
     BPFTRACE_BTF                [default: none] BTF file
@@ -529,6 +530,14 @@ Number of pages to allocate per CPU for perf ring buffer. The value must be a po
 If you're getting a lot of dropped events bpftrace may not be processing events in the ring buffer
 fast enough. It may be useful to bump the value higher so more events can be queued up. The tradeoff
 is that bpftrace will use more memory.
+
+### 9.9 `BPFTRACE_MAX_BPF_PROGS`
+
+Default: 512
+
+This is the maximum number of BPF programs (functions) that bpftrace can generate.
+The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
+takes a lot of resources (and it should not happen often).
 
 ## 10. Clang Environment Variables
 

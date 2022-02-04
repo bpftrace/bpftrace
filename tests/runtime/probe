@@ -215,3 +215,11 @@ NAME END_processing_after_exit
 PROG interval:s:1 { exit(); } END { printf("end"); }
 EXPECT end
 TIMEOUT 2
+
+# The "probe" builtin forces bpftrace to generate one BPF function for each
+# match and so we should fail on exceeding BPFTRACE_MAX_BPF_PROGS.
+NAME bpf_programs_limit
+PROG k:* { @[probe] = count(); }
+EXPECT BPFTRACE_MAX_BPF_PROGS
+WILL_FAIL
+TIMEOUT 2

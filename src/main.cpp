@@ -100,6 +100,7 @@ void usage()
   std::cerr << "    BPFTRACE_MAP_KEYS_MAX       [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_CAT_BYTES_MAX      [default: 10k] maximum bytes read by cat builtin" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES         [default: 512] max number of probes" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_BPF_PROGS      [default: 512] max number of generated BPF programs" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE           [default: 1000000] log size in bytes" << std::endl;
   std::cerr << "    BPFTRACE_PERF_RB_PAGES      [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
   std::cerr << "    BPFTRACE_NO_USER_SYMBOLS    [default: 0] disable user symbol resolution" << std::endl;
@@ -264,6 +265,9 @@ static std::optional<struct timespec> get_boottime()
     return false;
 
   if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", bpftrace.max_programs_))
     return false;
 
   if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))

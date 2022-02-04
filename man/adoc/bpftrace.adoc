@@ -244,6 +244,14 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 It may be useful to bump the value higher so more events can be queued up.
 The tradeoff is that bpftrace will use more memory.
 
+=== BPFTRACE_MAX_BPF_PROGS
+
+Default: 512
+
+This is the maximum number of BPF programs (functions) that bpftrace can generate.
+The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
+takes a lot of resources (and it should not happen often).
+
 ////
 !
 !

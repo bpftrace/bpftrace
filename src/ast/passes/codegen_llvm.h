@@ -207,6 +207,7 @@ private:
   AttachPoint *current_attach_point_ = nullptr;
   std::string probefull_;
   std::string tracepoint_struct_;
+  uint64_t probe_count_ = 0;
   std::map<std::string, int> next_probe_index_;
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
