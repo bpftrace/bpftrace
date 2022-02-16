@@ -178,6 +178,24 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
       // void *
       return CreatePointer(CreateNone());
     }
+    case DW_TAG_array_type: {
+      Dwarf_Die inner_type_die = type_of(type_die);
+      Dwarf_Word inner_enc = get_type_encoding(inner_type_die);
+      SizedType inner_type = get_stype(inner_type_die);
+      SizedType result;
+      for (auto &d : get_all_children_with_tag(&type_die, DW_TAG_subrange_type))
+      {
+        ssize_t size = get_array_size(d);
+        if (dwarf_tag(&inner_type_die) == DW_TAG_base_type &&
+            (inner_enc == DW_ATE_signed_char ||
+             inner_enc == DW_ATE_unsigned_char))
+          result = CreateString(size);
+        else
+          result = CreateArray(size, inner_type);
+        inner_type = result;
+      }
+      return result;
+    }
     default:
       return CreateNone();
   }
@@ -259,6 +277,26 @@ std::vector<Dwarf_Die> Dwarf::get_all_children_with_tag(Dwarf_Die *die, int tag)
   } while (dwarf_siblingof(child_iter, &child_die) == 0);
 
   return children;
+}
+
+ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
+{
+  Dwarf_Attribute size_attr;
+  Dwarf_Word size;
+  if (dwarf_hasattr(&subrange_die, DW_AT_upper_bound))
+  {
+    dwarf_formudata(
+        dwarf_attr_integrate(&subrange_die, DW_AT_upper_bound, &size_attr),
+        &size);
+    return (ssize_t)size + 1;
+  }
+  if (dwarf_hasattr(&subrange_die, DW_AT_count))
+  {
+    dwarf_formudata(
+        dwarf_attr_integrate(&subrange_die, DW_AT_count, &size_attr), &size);
+    return (ssize_t)size;
+  }
+  return 0;
 }
 
 } // namespace bpftrace

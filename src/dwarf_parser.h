@@ -35,6 +35,7 @@ private:
   std::string get_type_name(Dwarf_Die &type_die) const;
   Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
   std::optional<Dwarf_Die> find_type(const std::string &name) const;
+  static ssize_t get_array_size(Dwarf_Die &subrange_die);
 
   static std::optional<Dwarf_Die> get_child_with_tagname(
       Dwarf_Die *die,
