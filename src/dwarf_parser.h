@@ -20,27 +20,35 @@ class Dwarf
 public:
   virtual ~Dwarf();
 
-  static std::unique_ptr<Dwarf> GetFromBinary(const std::string &file_path);
+  static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace,
+                                              const std::string &file_path);
 
   std::vector<std::string> get_function_params(
       const std::string &function) const;
-
   ProbeArgs resolve_args(const std::string &function);
 
 private:
-  explicit Dwarf(const std::string &file_path);
+  Dwarf(BPFtrace *bpftrace, const std::string &file_path);
 
   std::vector<Dwarf_Die> function_param_dies(const std::string &function) const;
-
   std::optional<Dwarf_Die> get_func_die(const std::string &function) const;
-
   std::string get_type_name(Dwarf_Die &type_die) const;
+  Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
+  std::optional<Dwarf_Die> find_type(const std::string &name) const;
+
+  static std::optional<Dwarf_Die> get_child_with_tagname(
+      Dwarf_Die *die,
+      int tag,
+      const std::string &name);
+  static std::vector<Dwarf_Die> get_all_children_with_tag(Dwarf_Die *die,
+                                                          int tag);
 
   SizedType get_stype(Dwarf_Die &type_die) const;
 
   Dwfl *dwfl = nullptr;
   Dwfl_Callbacks callbacks;
 
+  BPFtrace *bpftrace_;
   std::string file_path_;
 };
 
@@ -52,10 +60,14 @@ private:
 
 namespace bpftrace {
 
+class BPFtrace;
+
 class Dwarf
 {
 public:
-  static std::unique_ptr<Dwarf> GetFromBinary(const std::string &file_path_
+  static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
+                                              __attribute__((unused)),
+                                              const std::string &file_path_
                                               __attribute__((unused)))
   {
     static bool warned = false;

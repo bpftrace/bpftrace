@@ -411,7 +411,7 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   {
     std::string fun = match;
     std::string path = erase_prefix(fun);
-    auto dwarf = Dwarf::GetFromBinary(path);
+    auto dwarf = Dwarf::GetFromBinary(nullptr, path);
     if (dwarf)
       params.emplace(match, dwarf->get_function_params(fun));
     else

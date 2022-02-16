@@ -2,6 +2,7 @@
 
 #ifdef HAVE_LIBDW
 
+#include "bpftrace.h"
 #include "log.h"
 
 #include <dwarf.h>
@@ -15,7 +16,8 @@ struct FuncInfo
   Dwarf_Die die;
 };
 
-Dwarf::Dwarf(const std::string &file_path) : file_path_(file_path)
+Dwarf::Dwarf(BPFtrace *bpftrace, const std::string &file_path)
+    : bpftrace_(bpftrace), file_path_(file_path)
 {
   callbacks.find_debuginfo = dwfl_standard_find_debuginfo;
   callbacks.section_address = dwfl_offline_section_address;
@@ -25,9 +27,10 @@ Dwarf::Dwarf(const std::string &file_path) : file_path_(file_path)
   dwfl_report_end(dwfl, NULL, NULL);
 }
 
-std::unique_ptr<Dwarf> Dwarf::GetFromBinary(const std::string &file_path)
+std::unique_ptr<Dwarf> Dwarf::GetFromBinary(BPFtrace *bpftrace,
+                                            const std::string &file_path)
 {
-  std::unique_ptr<Dwarf> dwarf(new Dwarf(file_path));
+  std::unique_ptr<Dwarf> dwarf(new Dwarf(bpftrace, file_path));
   Dwarf_Addr bias;
   if (dwfl_nextcu(dwarf->dwfl, NULL, &bias) == NULL)
     return nullptr;
@@ -81,19 +84,7 @@ std::vector<Dwarf_Die> Dwarf::function_param_dies(
   if (!func_die)
     return {};
 
-  Dwarf_Die param_die;
-  Dwarf_Die *param_iter = &param_die;
-  if (dwarf_child(&func_die.value(), &param_die) != 0)
-    return {};
-
-  std::vector<Dwarf_Die> param_dies;
-  do
-  {
-    if (dwarf_tag(&param_die) == DW_TAG_formal_parameter)
-      param_dies.push_back(param_die);
-  } while (dwarf_siblingof(param_iter, &param_die) == 0);
-
-  return param_dies;
+  return get_all_children_with_tag(&func_die.value(), DW_TAG_formal_parameter);
 }
 
 std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
@@ -140,6 +131,16 @@ std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
   }
 }
 
+Dwarf_Word Dwarf::get_type_encoding(Dwarf_Die &type_die) const
+{
+  Dwarf_Attribute encoding_attr;
+  Dwarf_Word encoding;
+  dwarf_formudata(
+      dwarf_attr_integrate(&type_die, DW_AT_encoding, &encoding_attr),
+      &encoding);
+  return encoding;
+}
+
 SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
 {
   Dwarf_Die type;
@@ -152,11 +153,7 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
   switch (tag)
   {
     case DW_TAG_base_type: {
-      Dwarf_Attribute encoding_attr;
-      Dwarf_Word encoding;
-      dwarf_formudata(
-          dwarf_attr_integrate(&type, DW_AT_encoding, &encoding_attr),
-          &encoding);
+      Dwarf_Word encoding = get_type_encoding(type);
       switch (encoding)
       {
         case DW_ATE_boolean:
@@ -212,6 +209,56 @@ ProbeArgs Dwarf::resolve_args(const std::string &function)
     result.emplace(dwarf_diename(&param_die), arg_type);
   }
   return result;
+}
+
+std::optional<Dwarf_Die> Dwarf::find_type(const std::string &name) const
+{
+  Dwarf_Die *cudie = nullptr;
+  Dwarf_Addr cubias;
+  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr)
+  {
+    if (auto type_die = get_child_with_tagname(cudie,
+                                               DW_TAG_structure_type,
+                                               name))
+      return type_die;
+  }
+  return std::nullopt;
+}
+
+std::optional<Dwarf_Die> Dwarf::get_child_with_tagname(Dwarf_Die *die,
+                                                       int tag,
+                                                       const std::string &name)
+{
+  Dwarf_Die child_die;
+  Dwarf_Die *child_iter = &child_die;
+  if (dwarf_child(die, &child_die) != 0)
+    return std::nullopt;
+
+  do
+  {
+    if (dwarf_tag(&child_die) == tag && dwarf_hasattr(&child_die, DW_AT_name) &&
+        dwarf_diename(&child_die) == name)
+      return child_die;
+  } while (dwarf_siblingof(child_iter, &child_die) == 0);
+
+  return std::nullopt;
+}
+
+std::vector<Dwarf_Die> Dwarf::get_all_children_with_tag(Dwarf_Die *die, int tag)
+{
+  Dwarf_Die child_die;
+  Dwarf_Die *child_iter = &child_die;
+  if (dwarf_child(die, &child_die) != 0)
+    return {};
+
+  std::vector<Dwarf_Die> children;
+  do
+  {
+    if (dwarf_tag(&child_die) == tag)
+      children.push_back(child_die);
+  } while (dwarf_siblingof(child_iter, &child_die) == 0);
+
+  return children;
 }
 
 } // namespace bpftrace
