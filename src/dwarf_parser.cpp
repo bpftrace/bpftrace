@@ -141,7 +141,7 @@ Dwarf_Word Dwarf::get_type_encoding(Dwarf_Die &type_die) const
   return encoding;
 }
 
-SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
+SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
 {
   Dwarf_Die type;
   dwarf_peel_type(&type_die, &type);
@@ -173,10 +173,20 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
       if (dwarf_hasattr(&type, DW_AT_type))
       {
         Dwarf_Die inner_type = type_of(type);
-        return CreatePointer(get_stype(inner_type));
+        return CreatePointer(get_stype(inner_type, false));
       }
       // void *
       return CreatePointer(CreateNone());
+    }
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type: {
+      std::string name = dwarf_diename(&type_die);
+      name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
+      auto result = CreateRecord(
+          name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
+      if (resolve_structs)
+        resolve_fields(result);
+      return result;
     }
     case DW_TAG_array_type: {
       Dwarf_Die inner_type_die = type_of(type_die);
@@ -198,6 +208,55 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die) const
     }
     default:
       return CreateNone();
+  }
+}
+
+SizedType Dwarf::get_stype(const std::string &type_name) const
+{
+  std::string name = type_name;
+  if (name.find("struct ") == 0)
+    name = name.substr(strlen("struct "));
+
+  auto type_die = find_type(name);
+  if (!type_die)
+    return CreateNone();
+
+  return get_stype(type_die.value());
+}
+
+void Dwarf::resolve_fields(const SizedType &type) const
+{
+  if (!type.IsRecordTy())
+    return;
+
+  auto str = bpftrace_->structs.Lookup(type.GetName()).lock();
+  if (str->HasFields())
+    return;
+
+  std::string type_name = type.GetName();
+  if (type_name.find("struct ") == 0)
+    type_name = type_name.substr(strlen("struct "));
+  auto type_die = find_type(type_name);
+  if (!type_die)
+    return;
+
+  for (auto &field_die :
+       get_all_children_with_tag(&type_die.value(), DW_TAG_member))
+  {
+    if (dwarf_hasattr(&field_die, DW_AT_bit_size))
+    {
+      // Parsing bitfields from DWARF is not supported, yet -> clear the struct
+      // and let Clang parser resolve the fields.
+      str->ClearFields();
+      break;
+    }
+    Dwarf_Die field_type = type_of(field_die);
+    str->AddField(dwarf_diename(&field_die),
+                  get_stype(field_type),
+                  get_field_offset(field_die),
+                  false,
+                  {},
+                  false);
   }
 }
 
@@ -296,6 +355,28 @@ ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
         dwarf_attr_integrate(&subrange_die, DW_AT_count, &size_attr), &size);
     return (ssize_t)size;
   }
+  return 0;
+}
+
+ssize_t Dwarf::get_field_offset(Dwarf_Die &field_die)
+{
+  Dwarf_Attribute attr;
+  Dwarf_Word value;
+  if (dwarf_hasattr(&field_die, DW_AT_data_member_location))
+  {
+    if (dwarf_formudata(
+            dwarf_attr_integrate(&field_die, DW_AT_data_member_location, &attr),
+            &value) >= 0)
+      return (ssize_t)value;
+  }
+  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset))
+  {
+    if (dwarf_formudata(
+            dwarf_attr_integrate(&field_die, DW_AT_data_bit_offset, &attr),
+            &value) >= 0)
+      return (ssize_t)value;
+  }
+
   return 0;
 }
 
