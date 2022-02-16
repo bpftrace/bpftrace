@@ -73,8 +73,11 @@ struct Struct
   bool padded = false;
   Fields fields;
 
+  bool allow_override = true;
+
   Struct() = default;
-  explicit Struct(int size) : size(size)
+  explicit Struct(int size, bool allow_override = true)
+      : size(size), allow_override(allow_override)
   {
   }
 
@@ -86,6 +89,8 @@ struct Struct
                 bool is_bitfield,
                 const Bitfield &bitfield,
                 bool is_data_loc);
+  bool HasFields() const;
+  void ClearFields();
 
   static std::unique_ptr<Struct> CreateTuple(std::vector<SizedType> fields);
   void Dump(std::ostream &os);
@@ -148,9 +153,11 @@ class StructManager
 {
 public:
   // struct map manipulation
-  void Add(const std::string &name, size_t size);
+  void Add(const std::string &name, size_t size, bool allow_override = true);
   std::weak_ptr<Struct> Lookup(const std::string &name) const;
-  std::weak_ptr<Struct> LookupOrAdd(const std::string &name, size_t size);
+  std::weak_ptr<Struct> LookupOrAdd(const std::string &name,
+                                    size_t size,
+                                    bool allow_override = true);
   bool Has(const std::string &name) const;
 
   // tuples set manipulation

@@ -565,7 +565,14 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
 
           // Initialize a new record type if needed
           if (!structs.Has(ptypestr))
-            structs.Add(ptypestr, ptypesize);
+            structs.Add(ptypestr, ptypesize, false);
+
+          auto str = structs.Lookup(ptypestr).lock();
+          if (str->allow_override)
+          {
+            str->ClearFields();
+            str->allow_override = false;
+          }
 
           // No need to worry about redefined types b/c we should have already
           // checked clang diagnostics. The diagnostics will tell us if we have

@@ -1193,8 +1193,7 @@ Syntax:
 uprobe: args->NAME
 ```
 
-The arguments can be accessed by dereferencing `args` and accessing the argument's `NAME`. Currently, only
-simple types (integer, char, bool, enum) and pointers to them are supported.
+The arguments can be accessed by dereferencing `args` and accessing the argument's `NAME`.
 
 The list of function's arguments can be retrieved using the verbose list option:
 ```

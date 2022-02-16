@@ -38,11 +38,13 @@ public:
 private:
   bool resolve_args(Probe &probe);
   bool compare_args(const ProbeArgs &args1, const ProbeArgs &args2);
+  void resolve_fields(SizedType &type);
 
   Node *root_;
   ProbeType probe_type_;
   std::string attach_func_;
   std::string    type_;
+  SizedType sized_type_;
   BPFtrace      &bpftrace_;
   bpf_prog_type  prog_type_;
   bool           has_builtin_args_;
@@ -52,7 +54,7 @@ private:
   std::ostringstream  err_;
 
   ProbeArgs ap_args_;
-  std::map<std::string, std::string> var_types_;
+  std::map<std::string, std::pair<std::string, SizedType>> var_types_;
 };
 
 } // namespace ast

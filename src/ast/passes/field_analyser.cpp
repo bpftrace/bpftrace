@@ -93,14 +93,20 @@ void FieldAnalyser::visit(Map &map)
 
   auto it = var_types_.find(map.ident);
   if (it != var_types_.end())
-    type_ = it->second;
+  {
+    type_ = it->second.first;
+    sized_type_ = it->second.second;
+  }
 }
 
 void FieldAnalyser::visit(Variable &var __attribute__((unused)))
 {
   auto it = var_types_.find(var.ident);
   if (it != var_types_.end())
-    type_ = it->second;
+  {
+    type_ = it->second.first;
+    sized_type_ = it->second.second;
+  }
 }
 
 void FieldAnalyser::visit(FieldAccess &acc)
@@ -121,6 +127,7 @@ void FieldAnalyser::visit(FieldAccess &acc)
         type_ = it->second.GetPointeeTy()->GetName();
       else
         type_ = "";
+      sized_type_ = it->second;
     }
 
     bpftrace_.btf_set_.insert(type_);
@@ -130,6 +137,15 @@ void FieldAnalyser::visit(FieldAccess &acc)
   {
     type_ = bpftrace_.btf_.type_of(type_, acc.field);
     bpftrace_.btf_set_.insert(type_);
+
+    if (sized_type_.IsPtrTy())
+    {
+      sized_type_ = *sized_type_.GetPointeeTy();
+      resolve_fields(sized_type_);
+    }
+
+    if (sized_type_.IsRecordTy() && sized_type_.HasField(acc.field))
+      sized_type_ = sized_type_.GetField(acc.field).type;
   }
 }
 
@@ -139,19 +155,23 @@ void FieldAnalyser::visit(Cast &cast)
   type_ = cast.cast_type;
   assert(!type_.empty());
   bpftrace_.btf_set_.insert(type_);
+
+  for (auto &ap : *probe_->attach_points)
+    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+      sized_type_ = dwarf->get_stype(cast.cast_type);
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
 {
   Visit(*assignment.map);
   Visit(*assignment.expr);
-  var_types_.emplace(assignment.map->ident, type_);
+  var_types_.emplace(assignment.map->ident, std::make_pair(type_, sized_type_));
 }
 
 void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
   Visit(*assignment.expr);
-  var_types_.emplace(assignment.var->ident, type_);
+  var_types_.emplace(assignment.var->ident, std::make_pair(type_, sized_type_));
 }
 
 bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
@@ -294,6 +314,16 @@ bool FieldAnalyser::resolve_args(Probe &probe)
     }
   }
   return true;
+}
+
+void FieldAnalyser::resolve_fields(SizedType &type)
+{
+  if (!type.IsRecordTy())
+    return;
+
+  for (auto &ap : *probe_->attach_points)
+    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+      dwarf->resolve_fields(sized_type_);
 }
 
 void FieldAnalyser::visit(Probe &probe)

@@ -113,12 +113,24 @@ void Struct::AddField(const std::string &field_name,
                                .is_data_loc = is_data_loc });
 }
 
-void StructManager::Add(const std::string &name, size_t size)
+bool Struct::HasFields() const
+{
+  return !fields.empty();
+}
+
+void Struct::ClearFields()
+{
+  fields.clear();
+}
+
+void StructManager::Add(const std::string &name,
+                        size_t size,
+                        bool allow_override)
 {
   if (struct_map_.find(name) != struct_map_.end())
     throw std::runtime_error("Type redefinition: type with name \'" + name +
                              "\' already exists");
-  struct_map_[name] = std::make_unique<Struct>(size);
+  struct_map_[name] = std::make_unique<Struct>(size, allow_override);
 }
 
 std::weak_ptr<Struct> StructManager::Lookup(const std::string &name) const
@@ -128,9 +140,11 @@ std::weak_ptr<Struct> StructManager::Lookup(const std::string &name) const
 }
 
 std::weak_ptr<Struct> StructManager::LookupOrAdd(const std::string &name,
-                                                 size_t size)
+                                                 size_t size,
+                                                 bool allow_override)
 {
-  auto s = struct_map_.insert({ name, std::make_unique<Struct>(size) });
+  auto s = struct_map_.insert(
+      { name, std::make_unique<Struct>(size, allow_override) });
   return s.first->second;
 }
 
