@@ -2616,6 +2616,35 @@ TEST_F(semantic_analyser_dwarf, uprobe_args)
        1);
 }
 
+TEST_F(semantic_analyser_dwarf, parse_struct)
+{
+  BPFtrace bpftrace;
+  Driver driver(bpftrace);
+
+  std::string uprobe = "uprobe:" + std::string(bin_);
+  test(bpftrace, false, driver, uprobe + ":func_1 { $x = args->foo1->a; }", 0);
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
+  auto str = bpftrace.structs.Lookup("struct Foo1").lock();
+
+  ASSERT_TRUE(str->HasFields());
+  ASSERT_EQ(str->fields.size(), 3);
+  ASSERT_EQ(str->size, 16);
+
+  ASSERT_TRUE(str->HasField("a"));
+  ASSERT_TRUE(str->GetField("a").type.IsIntTy());
+  ASSERT_EQ(str->GetField("a").type.GetSize(), 4);
+  ASSERT_EQ(str->GetField("a").offset, 0);
+
+  ASSERT_TRUE(str->HasField("b"));
+  ASSERT_TRUE(str->GetField("b").type.IsIntTy());
+  ASSERT_EQ(str->GetField("b").type.GetSize(), 1);
+  ASSERT_EQ(str->GetField("b").offset, 4);
+
+  ASSERT_TRUE(str->HasField("c"));
+  ASSERT_TRUE(str->GetField("c").type.IsIntTy());
+  ASSERT_EQ(str->GetField("c").type.GetSize(), 8);
+}
+
 #endif // HAVE_LIBDW
 
 } // namespace semantic_analyser
