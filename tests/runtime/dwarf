@@ -10,7 +10,7 @@ EXPECT int\* n
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
-NAME list uprobe args - pointer type
+NAME list uprobe args - struct pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:function2'
 EXPECT struct Foo\* foo1
 REQUIRES_FEATURE dwarf
@@ -26,6 +26,41 @@ BEFORE ./testprogs/uprobe_test
 NAME uprobe arg by name - pointer
 PROG uprobe:./testprogs/uprobe_test:function1 { printf("n = %d\n", *(args->n)); exit(); }
 EXPECT n = 13
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME uprobe arg by name - struct
+PROG uprobe:./testprogs/uprobe_test:function2 { printf("foo1->a = %d\n", args->foo1->a); exit(); }
+EXPECT foo1->a = 123
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME struct field string
+PROG uprobe:./testprogs/uprobe_test:function2 { printf("foo1->b = %s\n", args->foo1->b); exit(); }
+EXPECT foo1->b = hello
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME struct field array
+PROG uprobe:./testprogs/uprobe_test:function2 { print(args->foo1->c); exit(); }
+EXPECT \[1,2,3\]
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME cast to struct
+PROG uprobe:./testprogs/uprobe_test:function2 { printf("foo1->a = %d\n", ((struct Foo *)arg0)->a); exit(); }
+EXPECT foo1->a = 123
+REQUIRES_FEATURE dwarf
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME struct override
+PROG struct Foo { int b; } uprobe:./testprogs/uprobe_test:function2 { printf("foo1->b = %d\n", ((struct Foo *)arg0)->b); exit(); }
+EXPECT foo1->b = 123
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test

@@ -9,6 +9,7 @@ struct Foo
 {
   int a;
   char b[10];
+  int c[3];
 };
 
 int function1(int *n, char c __attribute__((unused)))
@@ -29,8 +30,8 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
   char c = 'x';
   function1(&n, c);
 
-  struct Foo foo1 = { .a = 123, .b = "hello" };
-  struct Foo foo2 = { .a = 456, .b = "world" };
+  struct Foo foo1 = { .a = 123, .b = "hello", .c = { 1, 2, 3 } };
+  struct Foo foo2 = { .a = 456, .b = "world", .c = { 4, 5, 6 } };
   function2(&foo1, &foo2);
 
   return 0;
