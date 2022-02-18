@@ -265,10 +265,10 @@ sudo apt-get install -y \
   systemtap-sdt-dev \
   binutils-dev \
   libcereal-dev \
-  llvm-7-dev \
-  llvm-7-runtime \
-  libclang-7-dev \
-  clang-7 \
+  llvm-12-dev \
+  llvm-12-runtime \
+  libclang-12-dev \
+  clang-12 \
   libgtest-dev \
   libgmock-dev \
   asciidoctor
