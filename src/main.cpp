@@ -60,6 +60,21 @@ enum class BuildMode
   // Compile script into portable executable
   AHEAD_OF_TIME,
 };
+
+enum Options
+{
+  INFO = 2000,
+  EMIT_ELF,
+  NO_WARNING,
+  TEST,
+  AOT,
+  HELP,
+  VERSION,
+  USDT_SEMAPHORE,
+  UNSAFE,
+  BTF,
+  INCLUDE,
+};
 } // namespace
 
 void usage()
@@ -458,17 +473,18 @@ Args parse_args(int argc, char* argv[])
 
   const char* const short_options = "dbB:f:e:hlp:vqc:Vo:I:k";
   option long_options[] = {
-    option{ "help", no_argument, nullptr, 'h' },
-    option{ "version", no_argument, nullptr, 'V' },
-    option{ "usdt-file-activation", no_argument, nullptr, '$' },
-    option{ "unsafe", no_argument, nullptr, 'u' },
-    option{ "btf", no_argument, nullptr, 'b' },
-    option{ "include", required_argument, nullptr, '#' },
-    option{ "info", no_argument, nullptr, 2000 },
-    option{ "emit-elf", required_argument, nullptr, 2001 },
-    option{ "no-warnings", no_argument, nullptr, 2002 },
-    option{ "test", required_argument, nullptr, 2003 },
-    option{ "aot", required_argument, nullptr, 2004 },
+    option{ "help", no_argument, nullptr, Options::HELP },
+    option{ "version", no_argument, nullptr, Options::VERSION },
+    option{
+        "usdt-file-activation", no_argument, nullptr, Options::USDT_SEMAPHORE },
+    option{ "unsafe", no_argument, nullptr, Options::UNSAFE },
+    option{ "btf", no_argument, nullptr, Options::BTF },
+    option{ "include", required_argument, nullptr, Options::INCLUDE },
+    option{ "info", no_argument, nullptr, Options::INFO },
+    option{ "emit-elf", required_argument, nullptr, Options::EMIT_ELF },
+    option{ "no-warnings", no_argument, nullptr, Options::NO_WARNING },
+    option{ "test", required_argument, nullptr, Options::TEST },
+    option{ "aot", required_argument, nullptr, Options::AOT },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
@@ -478,7 +494,7 @@ Args parse_args(int argc, char* argv[])
   {
     switch (c)
     {
-      case 2000: // --info
+      case Options::INFO: // --info
         if (is_root())
         {
           info();
@@ -486,13 +502,13 @@ Args parse_args(int argc, char* argv[])
         }
         exit(1);
         break;
-      case 2001: // --emit-elf
+      case Options::EMIT_ELF: // --emit-elf
         args.output_elf = optarg;
         break;
-      case 2002: // --no-warnings
+      case Options::NO_WARNING: // --no-warnings
         DISABLE_LOG(WARNING);
         break;
-      case 2003: // --test
+      case Options::TEST: // --test
         if (std::strcmp(optarg, "semantic") == 0)
           args.test_mode = TestMode::SEMANTIC;
         else if (std::strcmp(optarg, "codegen") == 0)
@@ -503,7 +519,7 @@ Args parse_args(int argc, char* argv[])
           exit(1);
         }
         break;
-      case 2004: // --aot
+      case Options::AOT: // --aot
         args.aot = optarg;
         args.build_mode = BuildMode::AHEAD_OF_TIME;
         break;
@@ -547,7 +563,7 @@ Args parse_args(int argc, char* argv[])
       case 'I':
         args.include_dirs.push_back(optarg);
         break;
-      case '#':
+      case Options::INCLUDE:
         args.include_files.push_back(optarg);
         break;
       case 'l':
@@ -556,18 +572,21 @@ Args parse_args(int argc, char* argv[])
       case 'c':
         args.cmd_str = optarg;
         break;
-      case '$':
+      case Options::USDT_SEMAPHORE:
         args.usdt_file_activation = true;
         break;
-      case 'u':
+      case Options::UNSAFE:
         args.safe_mode = false;
         break;
       case 'b':
+      case Options::BTF:
         break;
       case 'h':
+      case Options::HELP:
         usage();
         exit(0);
       case 'V':
+      case Options::VERSION:
         std::cout << "bpftrace " << BPFTRACE_VERSION << std::endl;
         exit(0);
       case 'k':
