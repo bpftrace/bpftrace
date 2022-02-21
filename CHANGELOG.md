@@ -13,6 +13,8 @@ and this project adheres to
   - [#2055](https://github.com/iovisor/bpftrace/pull/2055)
 - Limit number of generated BPF programs
   - [#2141](https://github.com/iovisor/bpftrace/pull/2141)
+- Support the octal format specifier (`%o`) in `printf`
+  - [#2147](https://github.com/iovisor/bpftrace/pull/2147)
 
 #### Changed
 #### Deprecated
