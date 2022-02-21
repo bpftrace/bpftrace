@@ -1153,6 +1153,7 @@ TEST(semantic_analyser, printf_format_int)
   test("kprobe:f { $x = 123; printf(\"int: %d\", $x) }", 0);
 
   test("kprobe:f { printf(\"int: %u\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %o\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %x\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %X\", 1234) }", 0);
 }
@@ -1161,48 +1162,56 @@ TEST(semantic_analyser, printf_format_int_with_length)
 {
   test("kprobe:f { printf(\"int: %d\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %u\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %o\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %x\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %X\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %p\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %hhd\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hhu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %hho\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hhx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hhX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hhp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %hd\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %ho\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %hp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %ld\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %lu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %lo\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %lx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %lX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %lp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %lld\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %llu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %llo\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %llx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %llX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %llp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %jd\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %ju\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %jo\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %jx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %jX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %jp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %zd\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %zu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %zo\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %zx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %zX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %zp\", 1234) }", 0);
 
   test("kprobe:f { printf(\"int: %td\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %tu\", 1234) }", 0);
+  test("kprobe:f { printf(\"int: %to\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %tx\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %tX\", 1234) }", 0);
   test("kprobe:f { printf(\"int: %tp\", 1234) }", 0);
