@@ -166,8 +166,8 @@ EXPECT got 2 args: one 2
 TIMEOUT 5
 
 NAME positional multiple bases
-RUN {{BPFTRACE}} -e 'BEGIN { printf("got: %d %d 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
-EXPECT got: 123 509 0x123
+RUN {{BPFTRACE}} -e 'BEGIN { printf("got: %d %o 0x%x\n", $1, $2, $3); exit() }' 123 0775 0x123
+EXPECT got: 123 775 0x123
 TIMEOUT 5
 
 NAME positional pointer arithmetics
