@@ -3206,6 +3206,15 @@ void CodegenLLVM::DumpIR(std::ostream &out)
   module_->print(os, nullptr, false, true);
 }
 
+void CodegenLLVM::DumpIR(const std::string filename)
+{
+  assert(module_.get() != nullptr);
+  std::ofstream file;
+  file.open(filename);
+  raw_os_ostream os(file);
+  module_->print(os, nullptr, false, true);
+}
+
 CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
 {
   expr_deleter_ = nullptr;
