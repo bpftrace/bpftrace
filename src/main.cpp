@@ -64,7 +64,6 @@ enum class BuildMode
 enum Options
 {
   INFO = 2000,
-  EMIT_ELF,
   NO_WARNING,
   TEST,
   AOT,
@@ -74,6 +73,8 @@ enum Options
   UNSAFE,
   BTF,
   INCLUDE,
+  EMIT_ELF,
+  EMIT_LLVM,
 };
 } // namespace
 
@@ -89,8 +90,6 @@ void usage()
   std::cerr << "    -B MODE        output buffering mode ('full', 'none')" << std::endl;
   std::cerr << "    -f FORMAT      output format ('text', 'json')" << std::endl;
   std::cerr << "    -o file        redirect bpftrace output to file" << std::endl;
-  std::cerr << "    -d             debug info dry run" << std::endl;
-  std::cerr << "    -dd            verbose debug info dry run" << std::endl;
   std::cerr << "    -e 'program'   execute this program" << std::endl;
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
@@ -102,12 +101,18 @@ void usage()
   std::cerr << "                   activate usdt semaphores based on file path" << std::endl;
   std::cerr << "    --unsafe       allow unsafe builtin functions" << std::endl;
   std::cerr << "    -q             keep messages quiet" << std::endl;
-  std::cerr << "    -v             verbose messages" << std::endl;
   std::cerr << "    --info         Print information about kernel BPF support" << std::endl;
   std::cerr << "    -k             emit a warning when a bpf helper returns an error (except read functions)" << std::endl;
   std::cerr << "    -kk            check all bpf helper functions" << std::endl;
   std::cerr << "    -V, --version  bpftrace version" << std::endl;
   std::cerr << "    --no-warnings  disable all warning messages" << std::endl;
+  std::cerr << std::endl;
+  std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
+  std::cerr << "    -v                      verbose messages" << std::endl;
+  std::cerr << "    -d                      (dry run) debug info" << std::endl;
+  std::cerr << "    -dd                     (dry run) verbose debug info" << std::endl;
+  std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
+  std::cerr << "    --emit-llvm FILE        write LLVM IR to FILE.original.ll and FILE.optimized.ll" << std::endl;
   std::cerr << std::endl;
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_STRLEN             [default: 64] bytes on BPF stack per str()" << std::endl;
@@ -455,6 +460,7 @@ struct Args
   std::string output_file;
   std::string output_format;
   std::string output_elf;
+  std::string output_llvm;
   std::string aot;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   BuildMode build_mode = BuildMode::DYNAMIC;
@@ -477,6 +483,7 @@ Args parse_args(int argc, char* argv[])
     option{ "btf", no_argument, nullptr, Options::BTF },
     option{ "include", required_argument, nullptr, Options::INCLUDE },
     option{ "info", no_argument, nullptr, Options::INFO },
+    option{ "emit-llvm", required_argument, nullptr, Options::EMIT_LLVM },
     option{ "emit-elf", required_argument, nullptr, Options::EMIT_ELF },
     option{ "no-warnings", no_argument, nullptr, Options::NO_WARNING },
     option{ "test", required_argument, nullptr, Options::TEST },
@@ -500,6 +507,9 @@ Args parse_args(int argc, char* argv[])
         break;
       case Options::EMIT_ELF: // --emit-elf
         args.output_elf = optarg;
+        break;
+      case Options::EMIT_LLVM:
+        args.output_llvm = optarg;
         break;
       case Options::NO_WARNING: // --no-warnings
         DISABLE_LOG(WARNING);
@@ -907,6 +917,10 @@ int main(int argc, char* argv[])
       std::cout << "-------------------\n\n";
       llvm.DumpIR();
     }
+    if (!args.output_llvm.empty())
+    {
+      llvm.DumpIR(args.output_llvm + ".original.ll");
+    }
 
     llvm.optimize();
     if (bt_debug != DebugLevel::kNone)
@@ -917,6 +931,10 @@ int main(int argc, char* argv[])
         std::cout << "------------------\n\n";
       }
       llvm.DumpIR();
+    }
+    if (!args.output_llvm.empty())
+    {
+      llvm.DumpIR(args.output_llvm + ".optimized.ll");
     }
     if (!args.output_elf.empty())
     {

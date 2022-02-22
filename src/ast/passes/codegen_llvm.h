@@ -66,6 +66,7 @@ public:
   // Exists to make calling from a debugger easier
   void DumpIR(void);
   void DumpIR(std::ostream &out);
+  void DumpIR(const std::string filename);
   void createFormatStringCall(Call &call, int &id, CallArgs &call_args,
                               const std::string &call_name, AsyncAction async_action);
 
