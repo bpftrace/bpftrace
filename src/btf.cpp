@@ -28,6 +28,15 @@
 
 namespace bpftrace {
 
+static __u32 type_cnt(const struct btf *btf)
+{
+#ifdef HAVE_LIBBPF_BTF_TYPE_CNT
+  return btf__type_cnt(btf);
+#else
+  return btf__get_nr_types(btf);
+#endif
+}
+
 static unsigned char *get_data(const char *file, ssize_t *sizep)
 {
   struct stat st;
@@ -185,6 +194,21 @@ static void dump_printf(void *ctx, const char *fmt, va_list args)
   free(str);
 }
 
+static struct btf_dump *dump_new(const struct btf *btf,
+                                 btf_dump_printf_fn_t dump_printf,
+                                 void *ctx)
+{
+#ifdef HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0
+  return btf_dump__new(btf, dump_printf, ctx, nullptr);
+#else
+  struct btf_dump_opts opts = {
+    .ctx = ctx,
+  };
+
+  return btf_dump__new(btf, nullptr, &opts, dump_printf);
+#endif
+}
+
 static const char *btf_str(const struct btf *btf, __u32 off)
 {
   if (!off)
@@ -220,12 +244,11 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
     return std::string("");
 
   std::string ret = std::string("");
-  struct btf_dump_opts opts = { .ctx = &ret, };
   struct btf_dump *dump;
   char err_buf[256];
   int err;
 
-  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  dump = dump_new(btf, dump_printf, &ret);
   err = libbpf_get_error(dump);
   if (err)
   {
@@ -235,7 +258,7 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   }
 
   std::unordered_set<std::string> myset(set);
-  __s32 id, max = (__s32) btf__get_nr_types(btf);
+  __s32 id, max = (__s32)type_cnt(btf);
 
   for (id = 1; id <= max && myset.size(); id++)
   {
@@ -415,7 +438,7 @@ int BTF::resolve_args(const std::string &func,
   if (!has_data())
     throw std::runtime_error("BTF data not available");
 
-  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  __s32 id, max = (__s32)type_cnt(btf);
   std::string name = func;
 
   for (id = 1; id <= max; id++)
@@ -486,17 +509,14 @@ int BTF::resolve_args(const std::string &func,
 
 std::unique_ptr<std::istream> BTF::get_all_funcs() const
 {
-  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  __s32 id, max = (__s32)type_cnt(btf);
   std::string type = std::string("");
-  struct btf_dump_opts opts = {
-    .ctx = &type,
-  };
   struct btf_dump *dump;
   std::string funcs;
   char err_buf[256];
   int err;
 
-  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  dump = dump_new(btf, dump_printf, &type);
   err = libbpf_get_error(dump);
   if (err)
   {
@@ -545,16 +565,13 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     const std::set<std::string> &funcs) const
 {
 #ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
-  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  __s32 id, max = (__s32)type_cnt(btf);
   std::string type = std::string("");
-  struct btf_dump_opts opts = {
-    .ctx = &type,
-  };
   struct btf_dump *dump;
   char err_buf[256];
   int err;
 
-  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  dump = dump_new(btf, dump_printf, &type);
   err = libbpf_get_error(dump);
   if (err)
   {
@@ -639,16 +656,13 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
 std::set<std::string> BTF::get_all_structs() const
 {
   std::set<std::string> struct_set;
-  __s32 id, max = (__s32)btf__get_nr_types(btf);
+  __s32 id, max = (__s32)type_cnt(btf);
   std::string types = std::string("");
-  struct btf_dump_opts opts = {
-    .ctx = &types,
-  };
   struct btf_dump *dump;
   char err_buf[256];
   int err;
 
-  dump = btf_dump__new(btf, nullptr, &opts, dump_printf);
+  dump = dump_new(btf, dump_printf, &types);
   err = libbpf_get_error(dump);
   if (err)
   {

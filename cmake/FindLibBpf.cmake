@@ -55,4 +55,29 @@ if (LIBBPF_FOUND)
   check_symbol_exists(bpf_link_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_LINK_CREATE)
   SET(CMAKE_REQUIRED_DEFINITIONS)
   SET(CMAKE_REQUIRED_LIBRARIES)
+
+  INCLUDE(CheckCXXSourceCompiles)
+  SET(CMAKE_REQUIRED_INCLUDES ${LIBBPF_INCLUDE_DIRS})
+  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
+  CHECK_CXX_SOURCE_COMPILES("
+#include <bpf/btf.h>
+
+int main(void) {
+  btf__type_cnt(NULL);
+  return 0;
+}
+" HAVE_LIBBPF_BTF_TYPE_CNT)
+
+  CHECK_CXX_SOURCE_COMPILES("
+#include <bpf/btf.h>
+
+int main(void) {
+  const struct btf_dump_opts *opts = (const struct btf_dump_opts*) 1;
+
+  btf_dump__new(NULL, NULL, NULL, opts);
+  return 0;
+}
+" HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0)
+  SET(CMAKE_REQUIRED_INCLUDES)
+  SET(CMAKE_REQUIRED_LIBRARIES)
 endif()
