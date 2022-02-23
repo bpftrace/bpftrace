@@ -15,6 +15,8 @@ and this project adheres to
   - [#2141](https://github.com/iovisor/bpftrace/pull/2141)
 - Support the octal format specifier (`%o`) in `printf`
   - [#2147](https://github.com/iovisor/bpftrace/pull/2147)
+- Improve include paths resolution
+  - [#2149](https://github.com/iovisor/bpftrace/pull/2149)
 
 #### Changed
 #### Deprecated

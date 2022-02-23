@@ -715,13 +715,13 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
       .Length = input.size(),
   });
 
-  // clang-format off
-  args = {
-    "-isystem", "/usr/local/include",
-    "-isystem", "/bpftrace/include",
-    "-isystem", "/usr/include",
-  };
-  // clang-format on
+  args = { "-isystem", "/bpftrace/include" };
+  auto system_paths = system_include_paths();
+  for (auto &path : system_paths)
+  {
+    args.push_back("-isystem");
+    args.push_back(path.c_str());
+  }
   std::string arch_path = get_arch_include_path();
   args.push_back("-isystem");
   args.push_back(arch_path.c_str());
@@ -895,6 +895,33 @@ std::string ClangParser::get_arch_include_path()
   struct utsname utsname;
   uname(&utsname);
   return "/usr/include/" + std::string(utsname.machine) + "-linux-gnu";
+}
+
+std::vector<std::string> ClangParser::system_include_paths()
+{
+  std::vector<std::string> result;
+  try
+  {
+    auto clang = "clang-" + std::to_string(LLVM_VERSION_MAJOR);
+    auto cmd = clang + " -Wp,-v -x c -fsyntax-only /dev/null 2>&1";
+    auto check = exec_system(cmd.c_str());
+    std::istringstream lines(check);
+    std::string line;
+    while (std::getline(lines, line) &&
+           line != "#include <...> search starts here:")
+    {
+    }
+    while (std::getline(lines, line) && line != "End of search list.")
+      result.push_back(trim(line));
+  }
+  catch (std::runtime_error &)
+  { // If exec_system fails, just ignore it
+  }
+
+  if (result.empty())
+    result = { "/usr/local/include", "/usr/include" };
+
+  return result;
 }
 
 } // namespace bpftrace
