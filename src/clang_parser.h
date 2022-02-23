@@ -59,6 +59,7 @@ private:
   CXUnsavedFile get_empty_btf_generated_header();
 
   std::string get_arch_include_path();
+  std::vector<std::string> system_include_paths();
 
   std::string input;
   std::vector<const char *> args;
