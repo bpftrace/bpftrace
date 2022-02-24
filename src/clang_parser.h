@@ -58,6 +58,8 @@ private:
   CXUnsavedFile get_btf_generated_header(BPFtrace &bpftrace);
   CXUnsavedFile get_empty_btf_generated_header();
 
+  std::string get_arch_include_path();
+
   std::string input;
   std::vector<const char *> args;
   std::vector<CXUnsavedFile> input_files;

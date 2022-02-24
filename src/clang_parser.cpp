@@ -722,6 +722,10 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     "-isystem", "/usr/include",
   };
   // clang-format on
+  std::string arch_path = get_arch_include_path();
+  args.push_back("-isystem");
+  args.push_back(arch_path.c_str());
+
   for (auto &flag : extra_flags)
   {
     args.push_back(flag.c_str());
@@ -884,6 +888,13 @@ CXUnsavedFile ClangParser::get_empty_btf_generated_header()
     .Contents = btf_cdef.c_str(),
     .Length = btf_cdef.size(),
   };
+}
+
+std::string ClangParser::get_arch_include_path()
+{
+  struct utsname utsname;
+  uname(&utsname);
+  return "/usr/include/" + std::string(utsname.machine) + "-linux-gnu";
 }
 
 } // namespace bpftrace
