@@ -5,7 +5,7 @@ For a reference summary, see the [README.md](../README.md) for the sections on
 
 This is a work in progress. If something is missing, check the bpftrace source to see if these docs are
 just out of date. And if you find something, please file an issue or pull request to update these docs.
-Also, please keep these docs as terse as possible to maintain it's brevity (inspired by the 6-page awk
+Also, please keep these docs as terse as possible to maintain its brevity (inspired by the 6-page awk
 summary from page 106 of [v7vol2b.pdf](https://9p.io/7thEdMan/bswv7.html)). Leave longer examples and
 discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog posts and other articles.
 
