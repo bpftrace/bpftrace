@@ -89,8 +89,17 @@ private:
 
     ScopedExprDeleter(const ScopedExprDeleter &other) = delete;
     ScopedExprDeleter &operator=(const ScopedExprDeleter &other) = delete;
-    ScopedExprDeleter(ScopedExprDeleter &&other) = default;
-    ScopedExprDeleter &operator=(ScopedExprDeleter &&other) = default;
+
+    ScopedExprDeleter(ScopedExprDeleter &&other)
+    {
+      *this = std::move(other);
+    }
+
+    ScopedExprDeleter &operator=(ScopedExprDeleter &&other)
+    {
+      deleter_ = other.disarm();
+      return *this;
+    }
 
     ~ScopedExprDeleter()
     {
