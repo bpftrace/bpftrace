@@ -1,10 +1,10 @@
 # bpftrace Tests
 
-There are two test suites in the project.
-
 ## Unit tests
 
 These tests can be run with the `bpftrace_test` executable.
+Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER`
+environment variable, see `--help` for more information.
 
 ### Codegen tests
 
@@ -109,3 +109,21 @@ The test file `tests/testprogs/my_test.c` will result in an executable that you 
 
 This is intended to be useful for testing uprobes and USDT probes, or using uprobes to verify some other behavior in bpftrace. It can also
 be used to tightly control what code paths are triggered in the system.
+
+## Tool parsing tests
+
+`./tests/tools-parsing-test.sh`
+
+The tool parsing tests ensure that the tools shipped with bpftrace are valid and
+can run. The actual output is not validated.
+
+### Flags and variables
+
+The following environment variables can be set to modify the behaviour of the
+test suite
+
+- `BPFTRACE_EXECUTABLE`: location of the bpftrace executable, if left unset the
+  script attempts to autodetect it.
+- `TOOLS_TEST_DISABLE`: comma separated list of tools to skip, e.g.
+  `vfscount.bt,swapin.bt`
+- `TOOLS_TEST_OLDVERSION`: tests the tools/old version of these tools instead.
