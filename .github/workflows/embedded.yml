@@ -98,6 +98,7 @@ jobs:
         -e VENDOR_GTEST="${VENDOR_GTEST}"
         -e BUILD_LIBBPF="${BUILD_LIBBPF}"
         -e TOOLS_TEST_OLDVERSION="$TOOLS_TEST_OLDVERSION"
+        -e TOOLS_TEST_DISABLE="$TOOLS_TEST_DISABLE"
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         $(pwd)/build-embedded ${TYPE}
         -j`nproc`
