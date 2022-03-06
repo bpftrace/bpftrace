@@ -177,6 +177,7 @@ jobs:
         -e CC="${CC}"
         -e CXX="${CXX}"
         -e GTEST_FILTER="$GTEST_FILTER"
+        -e TOOLS_TEST_DISABLE="$TOOLS_TEST_DISABLE"
         -e TOOLS_TEST_OLDVERSION="$TOOLS_TEST_OLDVERSION"
         bpftrace-builder-$BASE-llvm-$LLVM_VERSION
         ${PWD}/build-$TYPE-$BASE
