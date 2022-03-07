@@ -282,7 +282,7 @@ CallInst *IRBuilderBPF::createCall(Value *callee,
 {
 #if LLVM_VERSION_MAJOR >= 11
   auto *calleePtrType = cast<PointerType>(callee->getType());
-  auto *calleeType = cast<FunctionType>(calleePtrType->getElementType());
+  auto *calleeType = cast<FunctionType>(calleePtrType->getPointerElementType());
   return CreateCall(calleeType, callee, args, Name);
 #else
   return CreateCall(callee, args, Name);
@@ -383,7 +383,7 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   else
   {
     assert(value->getType()->isPointerTy() &&
-           (value->getType()->getElementType() == getInt64Ty()));
+           (value->getType()->getPointerElementType() == getInt64Ty()));
     // createMapLookup  returns an u8*
     auto *cast = CreatePointerCast(call, value->getType(), "cast");
     CreateStore(CreateLoad(getInt64Ty(), cast), value);
@@ -768,14 +768,16 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
   if (!literal1)
   {
     assert(val1p);
-    assert(val1p->getElementType()->isArrayTy() &&
-           val1p->getElementType()->getArrayElementType() == getInt8Ty());
+    assert(val1p->getPointerElementType()->isArrayTy() &&
+           val1p->getPointerElementType()->getArrayElementType() ==
+               getInt8Ty());
   }
   if (!literal2)
   {
     assert(val2p);
-    assert(val2p->getElementType()->isArrayTy() &&
-           val2p->getElementType()->getArrayElementType() == getInt8Ty());
+    assert(val2p->getPointerElementType()->isArrayTy() &&
+           val2p->getPointerElementType()->getArrayElementType() ==
+               getInt8Ty());
   }
 #endif
 
@@ -805,7 +807,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
       l = getInt8(literal1->c_str()[i]);
     else
     {
-      auto *ptr_l = CreateGEP(val1p->getElementType(),
+      auto *ptr_l = CreateGEP(val1p->getPointerElementType(),
                               val1,
                               { getInt32(0), getInt32(i) });
       l = CreateLoad(getInt8Ty(), ptr_l);
@@ -816,7 +818,7 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
       r = getInt8(literal2->c_str()[i]);
     else
     {
-      auto *ptr_r = CreateGEP(val2p->getElementType(),
+      auto *ptr_r = CreateGEP(val2p->getPointerElementType(),
                               val2,
                               { getInt32(0), getInt32(i) });
       r = CreateLoad(getInt8Ty(), ptr_r);
@@ -981,9 +983,10 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
                                         size_t size,
                                         const location &loc)
 {
-  assert(buf->getType()->getElementType()->isArrayTy() &&
-         buf->getType()->getElementType()->getArrayNumElements() >= size &&
-         buf->getType()->getElementType()->getArrayElementType() ==
+  assert(buf->getType()->getPointerElementType()->isArrayTy() &&
+         buf->getType()->getPointerElementType()->getArrayNumElements() >=
+             size &&
+         buf->getType()->getPointerElementType()->getArrayElementType() ==
              getInt8Ty());
 
   // int bpf_get_current_comm(char *buf, int size_of_buf)
