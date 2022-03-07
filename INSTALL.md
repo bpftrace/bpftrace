@@ -9,6 +9,7 @@
   - [openSUSE](#openSUSE-package)
   - [CentOS](#CentOS-package)
   - [Arch](#arch-package)
+  - [Alpine](#alpine-package)
 - [Docker images](#docker-images)
   - [Copying bpftrace binary docker](#copying-bpftrace-binary-from-docker)
   - [Kernel headers install](#kernel-headers-install)
@@ -109,6 +110,20 @@ A build maintained by @fbs can be found
 In Arch Linux, bpftrace is available in the official repositories.
 ```
 sudo pacman -S bpftrace
+```
+
+## Alpine package
+
+bpftrace is available in Alpine's official `community` repository:
+
+```
+sudo apk add bpftrace
+```
+
+To install tools and documentation:
+
+```
+sudo apk add bpftrace-doc bpftrace-tools bpftrace-tools-doc
 ```
 
 # Docker images
