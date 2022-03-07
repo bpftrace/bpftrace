@@ -1114,7 +1114,8 @@ void CodegenLLVM::visit(Variable &var)
   else
   {
     auto *var_alloca = variables_[var.ident];
-    expr_ = b_.CreateLoad(var_alloca->getType()->getElementType(), var_alloca);
+    expr_ = b_.CreateLoad(var_alloca->getType()->getPointerElementType(),
+                          var_alloca);
   }
 }
 
@@ -3319,7 +3320,7 @@ void CodegenLLVM::createIncDec(Unop &unop)
   {
     Variable &var = static_cast<Variable &>(*unop.expr);
     Value *oldval = b_.CreateLoad(
-        variables_[var.ident]->getType()->getElementType(),
+        variables_[var.ident]->getType()->getPointerElementType(),
         variables_[var.ident]);
     Value *newval;
     if (is_increment)
