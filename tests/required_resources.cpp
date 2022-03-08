@@ -5,6 +5,7 @@
 
 #include <gtest/gtest.h>
 
+#include "format_string.h"
 #include "struct.h"
 #include "types.h"
 
@@ -39,7 +40,7 @@ TEST(required_resources, round_trip_field_sized_type)
   std::ostringstream serialized(std::ios::binary);
   {
     RequiredResources r;
-    r.system_args.emplace_back("field0",
+    r.system_args.emplace_back(FormatString("field0"),
                                std::vector{ Field{
                                    .name = "myfield",
                                    .type = CreateInt32(),
@@ -61,7 +62,7 @@ TEST(required_resources, round_trip_field_sized_type)
     r.load_state(input);
 
     ASSERT_EQ(r.system_args.size(), 1ul);
-    EXPECT_EQ(std::get<0>(r.system_args[0]), "field0");
+    EXPECT_EQ(std::get<0>(r.system_args[0]).str(), "field0");
 
     auto &fields = std::get<1>(r.system_args[0]);
     ASSERT_EQ(fields.size(), 1ul);

@@ -38,7 +38,7 @@ RequiredResources ResourceAnalyser::analyse()
   Visit(*root_);
   prepare_seq_printf_ids();
 
-  return resources_;
+  return std::move(resources_);
 }
 
 void ResourceAnalyser::visit(Probe &probe)
@@ -65,8 +65,8 @@ void ResourceAnalyser::visit(Call &call)
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat")
   {
-    std::string fmt = get_literal_string(*call.vargs->at(0));
     std::vector<Field> args;
+    // NOTE: the same logic can be found in the semantic_analyser pass
     for (auto it = call.vargs->begin() + 1; it != call.vargs->end(); it++)
     {
       // Promote to 64-bit if it's not an aggregate type
@@ -88,25 +88,26 @@ void ResourceAnalyser::visit(Call &call)
       });
     }
 
+    auto fmtstr = get_literal_string(*call.vargs->at(0));
     if (call.func == "printf")
     {
       if (single_provider_type_postsema(probe_) == ProbeType::iter)
       {
-        resources_.seq_printf_args.emplace_back(fmt, args);
+        resources_.seq_printf_args.emplace_back(fmtstr, args);
         resources_.needs_data_map = true;
       }
       else
       {
-        resources_.printf_args.emplace_back(fmt, args);
+        resources_.printf_args.emplace_back(fmtstr, args);
       }
     }
     else if (call.func == "system")
     {
-      resources_.system_args.emplace_back(fmt, args);
+      resources_.system_args.emplace_back(fmtstr, args);
     }
     else
     {
-      resources_.cat_args.emplace_back(fmt, args);
+      resources_.cat_args.emplace_back(fmtstr, args);
     }
   }
   else if (call.func == "join")
@@ -187,8 +188,7 @@ Pass CreateResourcePass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
     ResourceAnalyser analyser{ &n };
-    auto resources = analyser.analyse();
-    ctx.b.resources = resources;
+    ctx.b.resources = analyser.analyse();
 
     // Create fake maps so that codegen has access to map IDs
     //

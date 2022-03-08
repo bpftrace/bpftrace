@@ -25,9 +25,6 @@ const std::regex format_specifier_re(generate_pattern_string());
 
 struct Field;
 
-std::string verify_format_string(const std::string& fmt,
-                                 std::vector<Field> args);
-
 class IPrintable
 {
 public:

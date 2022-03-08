@@ -15,6 +15,7 @@
 #include "ast/irbuilderbpf.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
+#include "format_string.h"
 #include "location.hh"
 #include "map.h"
 
@@ -23,7 +24,7 @@ namespace ast {
 
 using namespace llvm;
 
-using CallArgs = std::vector<std::tuple<std::string, std::vector<Field>>>;
+using CallArgs = std::vector<std::tuple<FormatString, std::vector<Field>>>;
 
 class CodegenLLVM : public Visitor
 {

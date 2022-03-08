@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 
 #include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
@@ -62,6 +63,7 @@ uint32_t rs_hash(const std::string &str)
 void serialize_bytecode(const BpfBytecode &bytecode, std::ostream &out)
 {
   cereal::BinaryOutputArchive archive(out);
+  // cereal::JSONOutputArchive archive(out);
   archive(bytecode);
 }
 

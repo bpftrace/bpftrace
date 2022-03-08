@@ -95,7 +95,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   {
     // get size of all the format strings
     size_t size = 0;
-    for (auto it : seq_printf_args)
+    for (auto &it : seq_printf_args)
       size += std::get<0>(it).size() + 1;
 
     // compute buffer size to hold all the formats and create map with that
