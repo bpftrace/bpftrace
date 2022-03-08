@@ -10,6 +10,7 @@
 
 #include <cereal/access.hpp>
 
+#include "format_string.h"
 #include "location.hh"
 #include "mapkey.h"
 #include "mapmanager.h"
@@ -74,14 +75,14 @@ public:
   void load_state(const uint8_t *ptr, size_t len);
 
   // Async argument metadata
-  std::vector<std::tuple<std::string, std::vector<Field>>> system_args;
-  std::vector<std::tuple<std::string, std::vector<Field>>> seq_printf_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> seq_printf_args;
   std::vector<std::tuple<int, int>> seq_printf_ids;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
   std::vector<std::string> cgroup_path_args;
-  std::vector<std::tuple<std::string, std::vector<Field>>> cat_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
   std::vector<SizedType> non_map_print_args;
 
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
@@ -91,7 +92,7 @@ public:
   std::unordered_map<int64_t, struct HelperErrorInfo> helper_error_info;
   // `printf_args` is created here but the field offsets are fixed up
   // by codegen -- only codegen knows data layout to compute offsets
-  std::vector<std::tuple<std::string, std::vector<Field>>> printf_args;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> printf_args;
   std::vector<std::string> probe_ids;
 
   // Map metadata

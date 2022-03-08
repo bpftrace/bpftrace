@@ -53,67 +53,6 @@ DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_quiet = false;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
-const int FMT_BUF_SZ = 512;
-
-std::string format(std::string fmt,
-                   std::vector<std::unique_ptr<IPrintable>> &args)
-{
-  std::string retstr;
-  auto buffer = std::vector<char>(FMT_BUF_SZ);
-  auto check_snprintf_ret = [](int r) {
-    if (r < 0)
-    {
-      LOG(FATAL) << "format() error occurred: " << std::strerror(errno);
-    }
-  };
-  // Args have been made safe for printing by now, so replace nonstandard format
-  // specifiers with %s
-  size_t start_pos = 0;
-  while ((start_pos = fmt.find("%r", start_pos)) != std::string::npos)
-  {
-    fmt.replace(start_pos, 2, "%s");
-    start_pos += 2;
-  }
-
-  auto tokens_begin = std::sregex_iterator(fmt.begin(),
-                                           fmt.end(),
-                                           format_specifier_re);
-  auto tokens_end = std::sregex_iterator();
-
-  // replace format string tokens with args one by one
-  int literal_text_pos = 0; // starting pos of literal text (text that is not
-                            // format specifier)
-  int i = 0;                // args index
-  while (tokens_begin != tokens_end)
-  {
-    // take out the literal text
-    retstr += fmt.substr(literal_text_pos,
-                         tokens_begin->position() - literal_text_pos);
-    // replace current specifier with an arg
-    int r = args.at(i)->print(buffer.data(),
-                              buffer.capacity(),
-                              tokens_begin->str().c_str());
-
-    check_snprintf_ret(r);
-    if (static_cast<size_t>(r) >= buffer.capacity())
-    {
-      // the buffer is not big enough to hold the string, resize it
-      buffer.resize(r + 1);
-      int r = args.at(i)->print(buffer.data(),
-                                buffer.capacity(),
-                                tokens_begin->str().c_str());
-      check_snprintf_ret(r);
-    }
-    retstr += std::string(buffer.data());
-    // move to the next literal text
-    literal_text_pos = tokens_begin->position() + tokens_begin->length();
-    ++tokens_begin;
-    ++i;
-  }
-  // append whatever is left
-  retstr += fmt.substr(literal_text_pos);
-  return retstr;
-}
 
 BPFtrace::~BPFtrace()
 {
@@ -587,35 +526,37 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     }
 
     auto id = printf_id - asyncactionint(AsyncAction::syscall);
-    auto fmt = std::get<0>(bpftrace->resources.system_args[id]);
-    auto args = std::get<1>(bpftrace->resources.system_args[id]);
+    auto &fmt = std::get<0>(bpftrace->resources.system_args[id]);
+    auto &args = std::get<1>(bpftrace->resources.system_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     bpftrace->out_->message(MessageType::syscall,
-                            exec_system(format(fmt, arg_values).c_str()),
+                            exec_system(fmt.format_str(arg_values).c_str()),
                             false);
     return;
   }
   else if ( printf_id >= asyncactionint(AsyncAction::cat))
   {
     auto id = printf_id - asyncactionint(AsyncAction::cat);
-    auto fmt = std::get<0>(bpftrace->resources.cat_args[id]);
-    auto args = std::get<1>(bpftrace->resources.cat_args[id]);
+    auto &fmt = std::get<0>(bpftrace->resources.cat_args[id]);
+    auto &args = std::get<1>(bpftrace->resources.cat_args[id]);
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     std::stringstream buf;
-    cat_file(format(fmt, arg_values).c_str(), bpftrace->cat_bytes_max_, buf);
+    cat_file(fmt.format_str(arg_values).c_str(), bpftrace->cat_bytes_max_, buf);
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
     return;
   }
 
   // printf
-  auto fmt = std::get<0>(bpftrace->resources.printf_args[printf_id]);
-  auto args = std::get<1>(bpftrace->resources.printf_args[printf_id]);
+  auto &fmt = std::get<0>(bpftrace->resources.printf_args[printf_id]);
+  auto &args = std::get<1>(bpftrace->resources.printf_args[printf_id]);
   auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
-  bpftrace->out_->message(MessageType::printf, format(fmt, arg_values), false);
+  bpftrace->out_->message(MessageType::printf,
+                          fmt.format_str(arg_values),
+                          false);
 }
 
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)

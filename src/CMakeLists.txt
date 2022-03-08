@@ -22,6 +22,7 @@ add_library(runtime
   disasm.cpp
   dwarf_parser.cpp
   fake_map.cpp
+  format_string.cpp
   imap.cpp
   log.cpp
   map.cpp

@@ -924,6 +924,7 @@ void SemanticAnalyser::visit(Call &call)
       check_arg(call, Type::string, 0, true);
       if (is_final_pass())
       {
+        // NOTE: the same logic can be found in the resource_analyser pass
         auto &fmt_arg = *call.vargs->at(0);
         String &fmt = static_cast<String&>(fmt_arg);
         std::vector<Field> args;
@@ -949,7 +950,7 @@ void SemanticAnalyser::visit(Call &call)
                   },
           });
         }
-        std::string msg = verify_format_string(fmt.str, args);
+        std::string msg = validate_format_string(fmt.str, args);
         if (msg != "")
         {
           LOG(ERROR, call.loc, err_) << msg;

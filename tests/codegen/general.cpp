@@ -84,7 +84,7 @@ TEST(codegen, printf_offsets)
   codegen.generate_ir();
 
   EXPECT_EQ(resources.printf_args.size(), 1U);
-  auto &fmt = std::get<0>(bpftrace->resources.printf_args[0]);
+  auto fmt = std::get<0>(bpftrace->resources.printf_args[0]).str();
   auto &args = std::get<1>(bpftrace->resources.printf_args[0]);
 
   EXPECT_EQ(fmt, "%c %u %s %p\n");
