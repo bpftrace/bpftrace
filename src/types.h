@@ -86,7 +86,6 @@ private:
   }
 };
 
-class BPFtrace;
 struct Struct;
 struct Field;
 
