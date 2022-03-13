@@ -351,3 +351,33 @@ EXPECT path: ([a-z]*:\/.*;)*[a-z]*:\/.*
 REQUIRES grep -q '^cgroup2' /proc/mounts
 TIMEOUT 5
 MIN_KERNEL 4.18
+
+NAME bswap_int64
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%lx", bswap(0x1122334455667788)); exit(); }'
+EXPECT 8877665544332211
+TIMEOUT 1
+
+NAME bswap_int32
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int32)0x12345678)); exit(); }'
+EXPECT 78563412
+TIMEOUT 1
+
+NAME bswap_int16
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int16)0x1234)); exit(); }'
+EXPECT 3412
+TIMEOUT 1
+
+NAME bswap_int8
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap((int8)0x12)); exit(); }'
+EXPECT 12
+TIMEOUT 1
+
+NAME bswap_int64_op
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%lx", bswap(0x12340000 + 0x5678)); exit(); }'
+EXPECT 7856341200000000
+TIMEOUT 1
+
+NAME bswap_twice
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%x", bswap(bswap(0x1234))); exit(); }'
+EXPECT 1234
+TIMEOUT 1

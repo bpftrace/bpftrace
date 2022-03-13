@@ -65,7 +65,7 @@ kprobe:tcp_drop
     $dport = $sk->__sk_common.skc_dport;
 
     // Destination port is big endian, it must be flipped
-    $dport = ($dport >> 8) | (($dport << 8) & 0x00FF00);
+    $dport = bswap($dport);
 
     $state = $sk->__sk_common.skc_state;
     $statestr = @tcp_states[$state];

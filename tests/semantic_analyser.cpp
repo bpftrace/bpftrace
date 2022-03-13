@@ -868,6 +868,24 @@ TEST(semantic_analyser, call_macaddr)
   test("kprobe:f { macaddr(\"hello\"); }", 1);
 }
 
+TEST(semantic_analyser, call_bswap)
+{
+  test("kprobe:f { bswap(arg0); }", 0);
+
+  test("kprobe:f { bswap(0x12); }", 0);
+  test("kprobe:f { bswap(0x12 + 0x34); }", 0);
+
+  test("kprobe:f { bswap((int8)0x12); }", 0);
+  test("kprobe:f { bswap((int16)0x12); }", 0);
+  test("kprobe:f { bswap((int32)0x12); }", 0);
+  test("kprobe:f { bswap((int64)0x12); }", 0);
+
+  test("kprobe:f { bswap(); }", 1);
+  test("kprobe:f { bswap(0x12, 0x34); }", 1);
+
+  test("kprobe:f { bswap(\"hello\"); }", 1);
+}
+
 TEST(semantic_analyser, call_cgroup_path)
 {
   test("kprobe:f { cgroup_path(1) }", 0);

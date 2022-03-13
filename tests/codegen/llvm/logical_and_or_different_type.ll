@@ -41,10 +41,9 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %10)
   %probe_read_user = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m", i32 4, i64 %9)
   %11 = load i32, i32* %"struct Foo.m", align 4
-  %12 = sext i32 %11 to i64
-  %13 = bitcast i32* %"struct Foo.m" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
-  %lhs_true_cond = icmp ne i64 %12, 0
+  %12 = bitcast i32* %"struct Foo.m" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
+  %lhs_true_cond = icmp ne i32 %11, 0
   br i1 %lhs_true_cond, label %"&&_lhs_true", label %"&&_false"
 
 "&&_lhs_true":                                    ; preds = %entry
@@ -59,24 +58,23 @@ entry:
   br label %"&&_merge"
 
 "&&_merge":                                       ; preds = %"&&_false", %"&&_true"
-  %14 = load i64, i64* %"&&_result", align 8
-  %15 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
-  store i64 %14, i64* %15, align 8
-  %16 = bitcast i64* %"&&_result5" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
+  %13 = load i64, i64* %"&&_result", align 8
+  %14 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
+  store i64 %13, i64* %14, align 8
+  %15 = bitcast i64* %"&&_result5" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
   br i1 true, label %"&&_lhs_true1", label %"&&_false3"
 
 "&&_lhs_true1":                                   ; preds = %"&&_merge"
-  %17 = load i64, i64* %"$foo", align 8
-  %18 = add i64 %17, 0
-  %19 = bitcast i32* %"struct Foo.m6" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %19)
-  %probe_read_user7 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m6", i32 4, i64 %18)
-  %20 = load i32, i32* %"struct Foo.m6", align 4
-  %21 = sext i32 %20 to i64
-  %22 = bitcast i32* %"struct Foo.m6" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %22)
-  %rhs_true_cond = icmp ne i64 %21, 0
+  %16 = load i64, i64* %"$foo", align 8
+  %17 = add i64 %16, 0
+  %18 = bitcast i32* %"struct Foo.m6" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
+  %probe_read_user7 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m6", i32 4, i64 %17)
+  %19 = load i32, i32* %"struct Foo.m6", align 4
+  %20 = bitcast i32* %"struct Foo.m6" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
+  %rhs_true_cond = icmp ne i32 %19, 0
   br i1 %rhs_true_cond, label %"&&_true2", label %"&&_false3"
 
 "&&_true2":                                       ; preds = %"&&_lhs_true1"
@@ -88,21 +86,20 @@ entry:
   br label %"&&_merge4"
 
 "&&_merge4":                                      ; preds = %"&&_false3", %"&&_true2"
-  %23 = load i64, i64* %"&&_result5", align 8
-  %24 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 2
-  store i64 %23, i64* %24, align 8
-  %25 = bitcast i64* %"||_result" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %25)
-  %26 = load i64, i64* %"$foo", align 8
-  %27 = add i64 %26, 0
+  %21 = load i64, i64* %"&&_result5", align 8
+  %22 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 2
+  store i64 %21, i64* %22, align 8
+  %23 = bitcast i64* %"||_result" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
+  %24 = load i64, i64* %"$foo", align 8
+  %25 = add i64 %24, 0
+  %26 = bitcast i32* %"struct Foo.m8" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %26)
+  %probe_read_user9 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m8", i32 4, i64 %25)
+  %27 = load i32, i32* %"struct Foo.m8", align 4
   %28 = bitcast i32* %"struct Foo.m8" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %28)
-  %probe_read_user9 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m8", i32 4, i64 %27)
-  %29 = load i32, i32* %"struct Foo.m8", align 4
-  %30 = sext i32 %29 to i64
-  %31 = bitcast i32* %"struct Foo.m8" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %31)
-  %lhs_true_cond10 = icmp ne i64 %30, 0
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %28)
+  %lhs_true_cond10 = icmp ne i32 %27, 0
   br i1 %lhs_true_cond10, label %"||_true", label %"||_lhs_false"
 
 "||_lhs_false":                                   ; preds = %"&&_merge4"
@@ -117,24 +114,23 @@ entry:
   br label %"||_merge"
 
 "||_merge":                                       ; preds = %"||_true", %"||_false"
-  %32 = load i64, i64* %"||_result", align 8
-  %33 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 3
-  store i64 %32, i64* %33, align 8
-  %34 = bitcast i64* %"||_result15" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %34)
+  %29 = load i64, i64* %"||_result", align 8
+  %30 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 3
+  store i64 %29, i64* %30, align 8
+  %31 = bitcast i64* %"||_result15" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %31)
   br i1 false, label %"||_true13", label %"||_lhs_false11"
 
 "||_lhs_false11":                                 ; preds = %"||_merge"
-  %35 = load i64, i64* %"$foo", align 8
-  %36 = add i64 %35, 0
-  %37 = bitcast i32* %"struct Foo.m16" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %37)
-  %probe_read_user17 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m16", i32 4, i64 %36)
-  %38 = load i32, i32* %"struct Foo.m16", align 4
-  %39 = sext i32 %38 to i64
-  %40 = bitcast i32* %"struct Foo.m16" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %40)
-  %rhs_true_cond18 = icmp ne i64 %39, 0
+  %32 = load i64, i64* %"$foo", align 8
+  %33 = add i64 %32, 0
+  %34 = bitcast i32* %"struct Foo.m16" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %34)
+  %probe_read_user17 = call i64 inttoptr (i64 112 to i64 (i32*, i32, i64)*)(i32* %"struct Foo.m16", i32 4, i64 %33)
+  %35 = load i32, i32* %"struct Foo.m16", align 4
+  %36 = bitcast i32* %"struct Foo.m16" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %36)
+  %rhs_true_cond18 = icmp ne i32 %35, 0
   br i1 %rhs_true_cond18, label %"||_true13", label %"||_false12"
 
 "||_false12":                                     ; preds = %"||_lhs_false11"
@@ -146,13 +142,13 @@ entry:
   br label %"||_merge14"
 
 "||_merge14":                                     ; preds = %"||_true13", %"||_false12"
-  %41 = load i64, i64* %"||_result15", align 8
-  %42 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 4
-  store i64 %41, i64* %42, align 8
+  %37 = load i64, i64* %"||_result15", align 8
+  %38 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 4
+  store i64 %37, i64* %38, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %printf_t* %printf_args, i64 40)
-  %43 = bitcast %printf_t* %printf_args to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %43)
+  %39 = bitcast %printf_t* %printf_args to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %39)
   ret i64 0
 }
 

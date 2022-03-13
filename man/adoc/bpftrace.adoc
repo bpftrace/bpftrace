@@ -1244,6 +1244,17 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 
 *unsafe* functions can have dangerous side effects and should be used with care, the `--unsafe` flag is required for use.
 
+=== bswap
+
+.variants
+* `uint8 bswap(uint8 n)`
+* `uint16 bswap(uint16 n)`
+* `uint32 bswap(uint32 n)`
+* `uint64 bswap(uint64 n)`
+
+`bswap` reverses the order of the bytes in integer `n`. In case of 8 bit integers, `n` is returned without being modified.
+The return type is an unsigned integer of the same width as `n`.
+
 === buf
 
 .variants
