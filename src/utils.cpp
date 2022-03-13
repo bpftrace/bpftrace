@@ -1089,6 +1089,7 @@ uint32_t kernel_version(int attempt)
       LOG(BUG) << "kernel_version(): Invalid attempt: "
                << std::to_string(attempt);
   }
+  // lgtm[cpp/missing-return]
 }
 
 std::optional<std::string> abs_path(const std::string &rel_path)
