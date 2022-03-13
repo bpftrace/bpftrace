@@ -156,7 +156,10 @@ void FieldAnalyser::visit(AssignVarStatement &assignment)
 
 bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
 {
-  auto pred = [](auto a, auto b) { return a.first == b.first; };
+  using ProbeArgsValue = ProbeArgs::value_type;
+  auto pred = [](const ProbeArgsValue &a, const ProbeArgsValue &b) {
+    return a.first == b.first;
+  };
 
   return args1.size() == args2.size() &&
          std::equal(args1.begin(), args1.end(), args2.begin(), pred);
