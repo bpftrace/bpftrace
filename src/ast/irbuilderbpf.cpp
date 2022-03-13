@@ -41,6 +41,7 @@ std::string probeReadHelperName(libbpf::bpf_func_id id)
     default:
       LOG(BUG) << "unknown probe_read id: " << std::to_string(id);
   }
+  // lgtm[cpp/missing-return]
 }
 } // namespace
 
