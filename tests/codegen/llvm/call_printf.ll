@@ -32,10 +32,10 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %"struct Foo.c")
   %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* %"struct Foo.c", i32 1, i64 %8)
   %9 = load i8, i8* %"struct Foo.c", align 1
-  %10 = sext i8 %9 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %"struct Foo.c")
-  %11 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
-  store i64 %10, i64* %11, align 8
+  %10 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
+  %11 = sext i8 %9 to i64
+  store i64 %11, i64* %10, align 8
   %12 = load i64, i64* %"$foo", align 8
   %13 = add i64 %12, 8
   %14 = bitcast i64* %"struct Foo.l" to i8*

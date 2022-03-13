@@ -1260,6 +1260,22 @@ void SemanticAnalyser::visit(Call &call)
     // Return type cannot be used
     call.type = SizedType(Type::none, 0);
   }
+  else if (call.func == "bswap")
+  {
+    if (!check_nargs(call, 1))
+      return;
+
+    Expression *arg = call.vargs->at(0);
+    if (arg->type.type != Type::integer)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports integer arguments ("
+          << arg->type.type << " provided)";
+      return;
+    }
+
+    call.type = CreateUInt(arg->type.GetIntBitWidth());
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

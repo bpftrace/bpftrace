@@ -85,14 +85,14 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %"struct c.c")
   %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* %"struct c.c", i32 1, i64 %35)
   %36 = load i8, i8* %"struct c.c", align 1
-  %37 = sext i8 %36 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %"struct c.c")
-  %38 = bitcast i64* %"@d_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %38)
+  %37 = bitcast i64* %"@d_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %37)
   store i64 0, i64* %"@d_key", align 8
+  %38 = sext i8 %36 to i64
   %39 = bitcast i64* %"@d_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %39)
-  store i64 %37, i64* %"@d_val", align 8
+  store i64 %38, i64* %"@d_val", align 8
   %pseudo5 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
   %update_elem6 = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo5, i64* %"@d_key", i64* %"@d_val", i64 0)
   %40 = bitcast i64* %"@d_val" to i8*

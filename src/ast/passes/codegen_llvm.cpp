@@ -1088,6 +1088,22 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
+  else if (call.func == "bswap")
+  {
+    bpftrace::ast::Expression *arg = call.vargs->at(0);
+    auto scoped_del_arg = accept(arg);
+
+    assert(arg->type.IsIntegerTy());
+    if (arg->type.GetSize() > 1)
+    {
+      llvm::Type *arg_type = b_.GetType(arg->type);
+      Function *swap_fun = Intrinsic::getDeclaration(module_.get(),
+                                                     Intrinsic::bswap,
+                                                     { arg_type });
+
+      expr_ = b_.CreateCall(swap_fun, { expr_ });
+    }
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
@@ -3282,9 +3298,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
       AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
       b_.CreateProbeRead(
           ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
-      expr_ = b_.CreateIntCast(b_.CreateLoad(b_.GetType(elem_type), dst),
-                               b_.getInt64Ty(),
-                               elem_type.IsSigned());
+      expr_ = b_.CreateLoad(b_.GetType(elem_type), dst);
       b_.CreateLifetimeEnd(dst);
     }
   }

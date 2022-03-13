@@ -62,7 +62,7 @@ kprobe:tcp_set_state
 		$delta_ms = (nsecs - @birth[$sk]) / 1e6;
 		$lport = $sk->__sk_common.skc_num;
 		$dport = $sk->__sk_common.skc_dport;
-		$dport = ($dport >> 8) | (($dport << 8) & 0xff00);
+		$dport = bswap($dport);
 		$tp = (struct tcp_sock *)$sk;
 		$pid = @skpid[$sk];
 		$comm = @skcomm[$sk];
