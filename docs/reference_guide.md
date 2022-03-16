@@ -5,7 +5,7 @@ For a reference summary, see the [README.md](../README.md) for the sections on
 
 This is a work in progress. If something is missing, check the bpftrace source to see if these docs are
 just out of date. And if you find something, please file an issue or pull request to update these docs.
-Also, please keep these docs as terse as possible to maintain its brevity (inspired by the 6-page awk
+Also, please keep these docs as terse as possible to maintain their brevity (inspired by the 6-page awk
 summary from page 106 of [v7vol2b.pdf](https://9p.io/7thEdMan/bswv7.html)). Leave longer examples and
 discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog posts and other articles.
 
@@ -504,7 +504,7 @@ Default: 0 if ASLR is enabled on system and `-c` option is not given; otherwise 
 By default, bpftrace caches the results of symbols resolutions only when ASLR (Address Space Layout
 Randomization) is disabled. This is because the symbol addresses change with each execution with ASLR.
 However, disabling caching may incur some performance. Set this env variable to 1 to force bpftrace to
-cache. This is fine if only trace one program execution.
+cache. This is fine if only tracing one program execution.
 
 ### 9.6 `BPFTRACE_VMLINUX`
 
@@ -1385,7 +1385,7 @@ profile:ms:rate
 profile:us:rate
 ```
 
-These operating using perf_events (a Linux kernel facility), which is also used by the `perf` command).
+These operate using perf_events (a Linux kernel facility, which is also used by the `perf` command).
 
 Examples:
 
@@ -1720,11 +1720,11 @@ iter:task_file[:pin]
 
 Kernel: 5.4
 
-These are eBPF iterator probes, that allows iteration over kernel objects.
+These are eBPF iterator probes, that allow iteration over kernel objects.
 
 Iterator probe can't be mixed with any other probe, not even other iterator.
 
-Each iterator probe provides set of fields that could be accessed with
+Each iterator probe provides set of fields that can be accessed with
 ctx pointer. User can display set of available fields for iterator via
 -lv options as described below.
 
@@ -1760,7 +1760,7 @@ bpftrace:1892 6:anon_inode:bpf-prog
 bpftrace:1892 7:anon_inode:bpf_iter
 ```
 
-You can get list of available functions via list option:
+You can get the list of available functions via list option:
 
 ```
 # bpftrace -l iter:*
@@ -2227,7 +2227,7 @@ processed in user-space. The asynchronous actions are: `printf()`, `time()`, and
 and `usym()`, as well as the variables `kstack` and `ustack`, record addresses synchronously, but then do
 symbol translation asynchronously.
 
-A selection of these are discussed in the following sections.
+A selection of these is discussed in the following sections.
 
 ## 2. `printf()`: Printing
 
@@ -3340,7 +3340,7 @@ Attaching 1 probe...
 @bytes[sshd]: count 15, average 16384, total 245760
 ```
 
-This stats() function returns three statistics: the count of events, the average for the argument value,
+The stats() function returns three statistics: the count of events, the average for the argument value,
 and the total of the argument value. This is similar to using count(), avg(), and sum().
 
 ## 8. `hist()`: Log2 Histogram
@@ -3620,7 +3620,7 @@ to stay within the limit:
    unnecessary: use `pid` instead of `comm`. Use fewer map keys.
 1. Split your program over multiple probes.
 1. Check the status of the BPF stack limit in Linux (it may be increased in the future, maybe as a
-   tuneabe).
+   tuneable).
 1. (advanced): Run -d and examine the LLVM IR, and look for ways to optimize src/ast/codegen_llvm.cpp.
 
 ## 2. Kernel headers not found
