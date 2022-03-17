@@ -3631,4 +3631,5 @@ bpftrace requires kernel headers for certain features, which are searched for by
 /lib/modules/$(uname -r)
 ```
 
-The default search directory can be overridden using the environment variable `BPFTRACE_KERNEL_SOURCE`.
+The default search directory can be overridden using the environment variable `BPFTRACE_KERNEL_SOURCE`, and
+also `BPFTRACE_KERNEL_BUILD` if it is out-of-tree Linux kernel build.

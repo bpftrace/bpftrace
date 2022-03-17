@@ -551,7 +551,14 @@ std::tuple<std::string, std::string> get_kernel_dirs(
 
   const char *kpath_env = ::getenv("BPFTRACE_KERNEL_SOURCE");
   if (kpath_env)
-    return std::make_tuple(kpath_env, kpath_env);
+  {
+    const char *kpath_build_env = ::getenv("BPFTRACE_KERNEL_BUILD");
+    if (!kpath_build_env)
+    {
+      kpath_build_env = kpath_env;
+    }
+    return std::make_tuple(kpath_env, kpath_build_env);
+  }
 
   std::string kdir = std::string("/lib/modules/") + utsname.release;
   auto ksrc = kdir + "/source";
