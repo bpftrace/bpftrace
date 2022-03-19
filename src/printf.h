@@ -1,5 +1,6 @@
 #pragma once
 
+#include <regex>
 #include <sstream>
 
 #include "ast/ast.h"

@@ -1,5 +1,3 @@
-#include <regex>
-
 #include "printf.h"
 #include "printf_format_types.h"
 #include "struct.h"
