@@ -12,6 +12,7 @@
 
 #ifndef BPFTRACE_HAVE_BTF
 #include <linux/blkdev.h>
+#include <linux/blk-mq.h>
 #endif
 
 BEGIN
