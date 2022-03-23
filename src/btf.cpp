@@ -24,6 +24,15 @@
 #pragma GCC diagnostic pop
 #include <bpf/libbpf.h>
 
+/*
+ * Since libbtf 0.6, btf_dump__new() has been overloaded and now can design
+ * either btf_dump__new_v0_6_0() or btf_dump__new_deprecated(), which is the
+ * same as btf_dump__new() for libbtf < 0.6, and the one we still use.
+ */
+#if LIBBPF_MAJOR_VERSION == 0 && LIBBPF_MINOR_VERSION >= 6
+#define btf_dump__new(a1, a2, a3, a4) btf_dump__new_deprecated(a1, a2, a3, a4)
+#endif
+
 #include "bpftrace.h"
 
 namespace bpftrace {
