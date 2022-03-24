@@ -1,0 +1,23 @@
+Demonstrations of softirqstat, the Linux bpftrace/eBPF version.
+
+Written as a basic example of counting softirqs and printing a
+per-second Statistic.
+
+$ sudo ./softirqstat.bt $(nproc)
+
+Statistic Softirq...
+CPU  HI         TIMER      NET_TX     NET_RX     BLOCK      IRQ_POLL   TASKLET    SCHED      HRTIMER    RCU
+0    0          8          0          0          0          0          0          35         0          50
+1    0          10         0          0          0          0          0          24         0          22
+2    0          21         0          0          0          0          0          41         0          35
+3    0          140        1          0          0          0          0          147        0          136
+4    0          4          0          0          0          0          0          37         0          52
+5    0          9          0          0          0          0          0          18         0          19
+6    219        6          0          0          0          0          0          9          0          13
+7    36         119        0          40         0          0          0          384        0          272
+8    224        69         0          0          0          0          67         79         0          31
+9    0          18         0          0          0          0          0          71         0          66
+10   147        218        0          0          0          0          0          284        0          203
+11   0          3          0          0          0          0          0          24         0          34
+
+Each second, show softirq Statistics.
