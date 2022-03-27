@@ -293,10 +293,6 @@ static std::optional<struct timespec> get_boottime()
 
   if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
                           bpftrace.max_type_res_iterations))
-    return 1;
-
-  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
-                          bpftrace.max_type_res_iterations))
     return false;
 
   if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
