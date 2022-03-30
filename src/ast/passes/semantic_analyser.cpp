@@ -285,7 +285,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
            builtin.ident == "pid" || builtin.ident == "tid" ||
            builtin.ident == "cgroup" || builtin.ident == "uid" ||
            builtin.ident == "gid" || builtin.ident == "cpu" ||
-           builtin.ident == "rand")
+           builtin.ident == "rand" || builtin.ident == "numaid")
   {
     builtin.type = CreateUInt64();
     if (builtin.ident == "cgroup" &&

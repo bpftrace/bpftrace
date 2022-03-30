@@ -53,6 +53,7 @@ TEST(Parser, builtin_variables)
   test("kprobe:f { gid }", "Program\n kprobe:f\n  builtin: gid\n");
   test("kprobe:f { nsecs }", "Program\n kprobe:f\n  builtin: nsecs\n");
   test("kprobe:f { elapsed }", "Program\n kprobe:f\n  builtin: elapsed\n");
+  test("kprobe:f { numaid }", "Program\n kprobe:f\n  builtin: numaid\n");
   test("kprobe:f { cpu }", "Program\n kprobe:f\n  builtin: cpu\n");
   test("kprobe:f { curtask }", "Program\n kprobe:f\n  builtin: curtask\n");
   test("kprobe:f { rand }", "Program\n kprobe:f\n  builtin: rand\n");

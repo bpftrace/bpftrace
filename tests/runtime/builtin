@@ -28,6 +28,11 @@ PROG i:ms:1 { printf("SUCCESS %d\n", elapsed); exit(); }
 EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME numaid
+PROG i:ms:1 { printf("SUCCESS %d\n", numaid); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
+TIMEOUT 5
+
 NAME cpu
 PROG i:ms:1 { printf("SUCCESS %d\n", cpu); exit(); }
 EXPECT SUCCESS -?[0-9][0-9]*
