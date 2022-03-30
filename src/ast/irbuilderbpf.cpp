@@ -906,6 +906,19 @@ CallInst *IRBuilderBPF::CreateGetUidGid()
   return createCall(getuidgid_func, {}, "get_uid_gid");
 }
 
+CallInst *IRBuilderBPF::CreateGetNumaId()
+{
+  // long bpf_get_numa_node_id(void)
+  // Return: NUMA Node ID
+  FunctionType *numaid_func_type = FunctionType::get(getInt32Ty(), false);
+  PointerType *numaid_func_ptr_type = PointerType::get(numaid_func_type, 0);
+  Constant *numaid_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_get_numa_node_id),
+      numaid_func_ptr_type);
+  return createCall(numaid_func, {}, "get_numa_id");
+}
+
 CallInst *IRBuilderBPF::CreateGetCpuId()
 {
   // u32 bpf_raw_smp_processor_id(void)

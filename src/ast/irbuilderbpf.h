@@ -120,6 +120,7 @@ public:
   CallInst   *CreateGetPidTgid();
   CallInst   *CreateGetCurrentCgroupId();
   CallInst   *CreateGetUidGid();
+  CallInst   *CreateGetNumaId();
   CallInst   *CreateGetCpuId();
   CallInst   *CreateGetCurrentTask();
   CallInst   *CreateGetRandom();

@@ -936,6 +936,12 @@ For string arguments use the `str()` call to retrieve the value.
 | n/a
 | PID of the child process
 
+| numaid
+| uint32
+| 5.8
+| numa_node_id
+| ID of the NUMA node executing the BPF program
+
 | cpu
 | uint32
 | 4.1

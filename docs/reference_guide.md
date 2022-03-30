@@ -1831,6 +1831,7 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp
 - `elapsed` - Nanoseconds since bpftrace initialization
+- `numaid` - NUMA Node ID
 - `cpu` - Processor ID
 - `comm` - Process name
 - `kstack` - Kernel stack trace

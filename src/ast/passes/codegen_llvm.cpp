@@ -172,6 +172,11 @@ void CodegenLLVM::visit(Builtin &builtin)
       expr_ = b_.CreateLShr(uidgid, 32);
     }
   }
+  else if (builtin.ident == "numaid")
+  {
+    Value *tmp = b_.CreateGetNumaId();
+    expr_ = b_.CreateZExt(tmp, b_.getInt64Ty());
+  }
   else if (builtin.ident == "cpu")
   {
     expr_ = b_.CreateGetCpuId();

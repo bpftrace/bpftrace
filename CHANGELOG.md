@@ -9,6 +9,9 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add builtin: `numaid`
+  - [#2177](https://github.com/iovisor/bpftrace/pull/2177)
+
 #### Changed
 #### Deprecated
 #### Removed
