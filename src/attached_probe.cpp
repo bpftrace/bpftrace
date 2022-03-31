@@ -676,9 +676,8 @@ void AttachedProbe::load_prog()
 
   uint64_t log_buf_size = probe_.log_size;
   auto log_buf = std::make_unique<char[]>(log_buf_size);
-  char name[STRING_SIZE];
-  const char *namep;
-  std::string tracing_type, tracing_name;
+  std::string name;
+  std::string tracing_type;
 
   {
     // Redirect stderr, so we don't get error messages from BCC
@@ -694,16 +693,13 @@ void AttachedProbe::load_prog()
 
     // Use orig_name for program name so we get proper name for
     // wildcard probes, replace wildcards with '.'
-    std::string orig_name = probe_.orig_name;
-    std::replace(orig_name.begin(), orig_name.end(), '*', '.');
-
-    strncpy(name, orig_name.c_str(), STRING_SIZE - 1);
-    namep = name;
+    name = probe_.orig_name;
+    std::replace(name.begin(), name.end(), '*', '.');
 
     // bpf_prog_load rejects colons in the probe name,
     // so start the name after the probe type, after ':'
-    if (strrchr(name, ':') != NULL)
-      namep = strrchr(name, ':') + 1;
+    if (auto last_colon = name.rfind(':'); last_colon != std::string::npos)
+      name = name.substr(last_colon + 1);
 
     // The bcc_prog_load function now recognizes 'kfunc__/kretfunc__'
     // prefixes and detects and fills in all the necessary BTF related
@@ -715,8 +711,7 @@ void AttachedProbe::load_prog()
       if (tracing_type == "iter")
         tracing_type = "bpf_iter";
 
-      tracing_name = tracing_type + "__" + namep;
-      namep = tracing_name.c_str();
+      name = tracing_type + "__" + name;
     }
 
     for (int attempt = 0; attempt < 3; attempt++)
@@ -735,7 +730,7 @@ void AttachedProbe::load_prog()
       struct bpf_load_program_attr attr = {};
 
       attr.prog_type = progtype(probe_.type);
-      attr.name = namep;
+      attr.name = name.c_str();
       attr.insns = reinterpret_cast<struct bpf_insn *>(insns);
       attr.license = license;
 
@@ -754,10 +749,10 @@ void AttachedProbe::load_prog()
 #else // HAVE_BCC_PROG_LOAD_XATTR
 #ifdef HAVE_BCC_PROG_LOAD
       progfd_ = bcc_prog_load(progtype(probe_.type),
-                              namep,
+                              name.c_str(),
 #else
       progfd_ = bpf_prog_load(progtype(probe_.type),
-                              namep,
+                              name.c_str(),
 #endif
                               reinterpret_cast<struct bpf_insn *>(insns),
                               prog_len,
