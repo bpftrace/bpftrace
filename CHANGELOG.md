@@ -23,6 +23,8 @@ and this project adheres to
 #### Changed
 - Use auto-resolution of library paths for tools
   - [#2181](https://github.com/iovisor/bpftrace/pull/2181)
+- Improve handling empty attach points
+  - [#2179](https://github.com/iovisor/bpftrace/pull/2179)
 
 #### Deprecated
 #### Removed
