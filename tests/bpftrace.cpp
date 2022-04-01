@@ -727,6 +727,17 @@ TEST(bpftrace, invalid_provider)
   ASSERT_EQ(0, bpftrace.add_probe(*probe));
 }
 
+TEST(bpftrace, empty_attachpoints)
+{
+  StrictMock<MockBPFtrace> bpftrace;
+  Driver driver(bpftrace);
+
+  // Trailing comma is fine
+  ASSERT_EQ(driver.parse_str("kprobe:f1, {}"), 0);
+  // Empty attach point should fail
+  ASSERT_EQ(driver.parse_str("{}"), 1);
+}
+
 std::pair<std::vector<uint8_t>, std::vector<uint8_t>> key_value_pair_int(std::vector<uint64_t> key, int val)
 {
   std::pair<std::vector<uint8_t>, std::vector<uint8_t>> pair;
