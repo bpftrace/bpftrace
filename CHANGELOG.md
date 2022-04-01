@@ -31,6 +31,8 @@ and this project adheres to
   - [#2138](https://github.com/iovisor/bpftrace/pull/2138)
 - Fix tools to work on new kernel versions
   - [#2136](https://github.com/iovisor/bpftrace/pull/2136)
+- Fix uprobe target resolution
+  - [#2180](https://github.com/iovisor/bpftrace/pull/2180)
 
 #### Tools
 #### Documentation
