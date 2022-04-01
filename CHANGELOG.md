@@ -44,6 +44,8 @@ and this project adheres to
   - [#2180](https://github.com/iovisor/bpftrace/pull/2180)
 - Improve handling of format strings
   - [#2164](https://github.com/iovisor/bpftrace/pull/2164)
+- Fix codegen for buf
+  - [#2217](https://github.com/iovisor/bpftrace/pull/2217)
 
 #### Tools
 #### Documentation

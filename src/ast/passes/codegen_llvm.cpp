@@ -539,6 +539,8 @@ void CodegenLLVM::visit(Call &call)
       auto scoped_del = accept(&arg);
 
       Value *proposed_length = expr_;
+      if (arg.type.GetSize() != 8)
+        proposed_length = b_.CreateZExt(proposed_length, max_length->getType());
       Value *cmp = b_.CreateICmp(
           CmpInst::ICMP_ULE, proposed_length, max_length, "length.cmp");
       length = b_.CreateSelect(
