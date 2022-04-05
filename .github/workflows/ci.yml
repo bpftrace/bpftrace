@@ -32,7 +32,6 @@ jobs:
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 9 Release
@@ -40,7 +39,6 @@ jobs:
           LLVM_VERSION: 9
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Debug
@@ -48,7 +46,6 @@ jobs:
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Release
@@ -56,7 +53,6 @@ jobs:
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Clang Debug
@@ -66,7 +62,6 @@ jobs:
           CXX: clang++-10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Debug
@@ -74,7 +69,6 @@ jobs:
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Release
@@ -82,7 +76,6 @@ jobs:
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release
@@ -90,7 +83,6 @@ jobs:
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 13 Release
@@ -99,7 +91,6 @@ jobs:
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
           GTEST_FILTER: '-clang_parser.nested_struct_no_type'
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release + libbpf
@@ -107,7 +98,6 @@ jobs:
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: mdflush.bt
           BASE: focal
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
