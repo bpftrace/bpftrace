@@ -533,7 +533,10 @@ Args parse_args(int argc, char* argv[])
         bt_quiet = true;
         break;
       case 'v':
-        bt_verbose = true;
+        if (bt_verbose)
+          bt_verbose2 = true;
+        else
+          bt_verbose = true;
         break;
       case 'B':
         if (std::strcmp(optarg, "line") == 0) {

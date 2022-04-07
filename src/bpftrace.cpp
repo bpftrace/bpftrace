@@ -52,6 +52,7 @@ namespace bpftrace {
 DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_quiet = false;
 bool bt_verbose = false;
+bool bt_verbose2 = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
