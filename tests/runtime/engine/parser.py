@@ -28,7 +28,8 @@ TestStruct = namedtuple(
         'before',
         'after',
         'suite',
-        'kernel',
+        'kernel_min',
+        'kernel_max',
         'requirement',
         'env',
         'arch',
@@ -102,7 +103,8 @@ class TestParser(object):
         timeout = ''
         before = ''
         after = ''
-        kernel = ''
+        kernel_min = ''
+        kernel_max = ''
         requirement = ''
         env = {}
         arch = []
@@ -130,7 +132,9 @@ class TestParser(object):
             elif item_name == 'AFTER':
                 after = line
             elif item_name == 'MIN_KERNEL':
-                kernel = line
+                kernel_min = line
+            elif item_name == 'MAX_KERNEL':
+                kernel_max = line
             elif item_name == 'REQUIRES':
                 requirement = line
             elif item_name == 'ENV':
@@ -191,7 +195,8 @@ class TestParser(object):
             before,
             after,
             test_suite,
-            kernel,
+            kernel_min,
+            kernel_max,
             requirement,
             env,
             arch,

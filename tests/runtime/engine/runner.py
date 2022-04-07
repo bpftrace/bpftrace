@@ -42,12 +42,13 @@ class TimeoutError(Exception):
 class Runner(object):
     PASS = 0
     FAIL = 1
-    SKIP_KERNEL_VERSION = 2
+    SKIP_KERNEL_VERSION_MIN = 2
     TIMEOUT = 3
     SKIP_REQUIREMENT_UNSATISFIED = 4
     SKIP_ENVIRONMENT_DISABLED = 5
     SKIP_FEATURE_REQUIREMENT_UNSATISFIED = 6
     SKIP_AOT_NOT_SUPPORTED = 7
+    SKIP_KERNEL_VERSION_MAX = 8
 
     @staticmethod
     def failed(status):
@@ -56,7 +57,8 @@ class Runner(object):
     @staticmethod
     def skipped(status):
         return status in [
-            Runner.SKIP_KERNEL_VERSION,
+            Runner.SKIP_KERNEL_VERSION_MIN,
+            Runner.SKIP_KERNEL_VERSION_MAX,
             Runner.SKIP_REQUIREMENT_UNSATISFIED,
             Runner.SKIP_ENVIRONMENT_DISABLED,
             Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED,
@@ -65,8 +67,10 @@ class Runner(object):
 
     @staticmethod
     def skip_reason(test, status):
-        if status == Runner.SKIP_KERNEL_VERSION:
-            return "min Kernel: %s" % test.kernel
+        if status == Runner.SKIP_KERNEL_VERSION_MIN:
+            return "min Kernel: %s" % test.kernel_min
+        if status == Runner.SKIP_KERNEL_VERSION_MAX:
+            return "max Kernel: %s" % test.kernel_max
         elif status == Runner.SKIP_REQUIREMENT_UNSATISFIED:
             return "unmet condition: '%s'" % test.requirement
         elif status == Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
@@ -137,9 +141,13 @@ class Runner(object):
     @staticmethod
     def run_test(test):
         current_kernel = LooseVersion(uname()[2])
-        if test.kernel and LooseVersion(test.kernel) > current_kernel:
+        if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-            return Runner.SKIP_KERNEL_VERSION
+            return Runner.SKIP_KERNEL_VERSION_MIN
+
+        if test.kernel_max and LooseVersion(test.kernel_max) < current_kernel:
+            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+            return Runner.SKIP_KERNEL_VERSION_MAX
 
         full_test_name = test.suite + "." + test.name
         if full_test_name in os.getenv("RUNTIME_TEST_DISABLE", "").split(","):
