@@ -49,6 +49,7 @@ NAME 32-bit tracepoint arg
 PROG tracepoint:random:urandom_read { $i = args->got_bits; printf("bits: %d\n", $i); if ($i == 24) { exit() } }
 EXPECT bits: 24
 TIMEOUT 5
+MAX_KERNEL 5.16
 AFTER dd if=/dev/urandom bs=3 count=1
 
 NAME tracepoint arg casts in predicates
