@@ -78,6 +78,17 @@ int main(void) {
   return 0;
 }
 " HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0)
+
+CHECK_CXX_SOURCE_COMPILES("
+#include <bpf/bpf.h>
+
+int main(void) {
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+
+  opts.kprobe_multi.syms = NULL;
+  return 0;
+}
+" HAVE_LIBBPF_KPROBE_MULTI)
   SET(CMAKE_REQUIRED_INCLUDES)
   SET(CMAKE_REQUIRED_LIBRARIES)
 endif()

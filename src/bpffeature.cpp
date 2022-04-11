@@ -334,6 +334,63 @@ bool BPFfeature::has_uprobe_refcnt()
   return *has_uprobe_refcnt_;
 }
 
+bool BPFfeature::has_kprobe_multi()
+{
+  if (has_kprobe_multi_.has_value())
+    return *has_kprobe_multi_;
+
+#if defined(HAVE_LIBBPF_KPROBE_MULTI) && defined(HAVE_BCC_PROG_LOAD_XATTR)
+  const char* sym = "ksys_read";
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+  int progfd, linkfd = -1;
+
+  struct bpf_insn insns[] = {
+    BPF_MOV64_IMM(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  opts.kprobe_multi.syms = &sym;
+  opts.kprobe_multi.cnt = 1;
+
+  struct bpf_load_program_attr attr = {};
+
+  attr.prog_type = static_cast<enum ::bpf_prog_type>(
+      libbpf::BPF_PROG_TYPE_KPROBE);
+  attr.expected_attach_type = static_cast<enum ::bpf_attach_type>(
+      BPF_TRACE_KPROBE_MULTI);
+  attr.insns = reinterpret_cast<struct bpf_insn*>(insns);
+  attr.license = "GPL";
+
+  progfd = bcc_prog_load_xattr(
+      &attr, ARRAY_SIZE(insns) * sizeof(insns[0]), nullptr, 0, true);
+
+  if (progfd >= 0)
+  {
+    linkfd = bpf_link_create(progfd,
+                             0,
+                             static_cast<enum ::bpf_attach_type>(
+                                 libbpf::BPF_TRACE_KPROBE_MULTI),
+                             &opts);
+  }
+
+  has_kprobe_multi_ = linkfd >= 0;
+
+  if (linkfd >= 0)
+  {
+    close(linkfd);
+  }
+  if (progfd >= 0)
+  {
+    close(progfd);
+  }
+
+#else
+  has_kprobe_multi_ = false;
+#endif // HAVE_LIBBPF_KPROBE_MULTI
+
+  return *has_kprobe_multi_;
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -381,7 +438,8 @@ std::string BPFfeature::report(void)
       << "  perf_event: " << to_str(has_prog_perf_event())
       << "  kfunc: " << to_str(has_prog_kfunc())
       << "  iter:task: " << to_str(has_prog_iter_task())
-      << "  iter:task_file: " << to_str(has_prog_iter_task_file()) << std::endl;
+      << "  iter:task_file: " << to_str(has_prog_iter_task_file())
+      << "  kprobe_multi: " << to_str(has_kprobe_multi()) << std::endl;
 
   return buf.str();
 }
