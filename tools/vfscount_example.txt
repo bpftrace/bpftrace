@@ -29,7 +29,7 @@ resources that expose a file system interface. Much of VFS maps directly to the
 syscall interface. Tracing VFS calls gives you a high level breakdown of the
 kernel workload, and starting points for further investigation.
 
-Notet that a warning was printed: "Warning: could not attach probe
+Note that a warning was printed: "Warning: could not attach probe
 kprobe:vfs_dedupe_get_page.isra.21": these are not currently instrumentable by
 bpftrace/kprobes, so a warning is printed to let you know that they will be
 missed.
