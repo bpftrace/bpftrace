@@ -52,6 +52,12 @@ TIMEOUT 5
 MAX_KERNEL 5.16
 AFTER dd if=/dev/urandom bs=3 count=1
 
+NAME 32-bit tracepoint arg openat_flags
+PROG tracepoint:syscalls:sys_enter_openat /comm == "syscall"/ { $i = args->flags; printf("openflags: %d\n", $i); if ($i == 64) { exit() } }
+EXPECT openflags: 64
+TIMEOUT 5
+AFTER ./testprogs/syscall openat
+
 NAME tracepoint arg casts in predicates
 RUN {{BPFTRACE}} -e 'tracepoint:syscalls:sys_enter_wait4 /args->ru/ { @ru[tid] = args->ru; } tracepoint:syscalls:sys_exit_wait4 /@ru[tid]/ { @++; exit(); }' -c ./testprogs/wait4_ru
 EXPECT @: 1
