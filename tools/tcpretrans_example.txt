@@ -5,10 +5,10 @@ This tool traces the kernel TCP retransmit function to show details of these
 retransmits. For example:
 
 # ./tcpretrans.bt
-TIME     PID               LADDR:LPORT          RADDR:RPORT  STATE
-00:43:54 0          10.229.20.82:46654    153.2.224.76:443    SYN_SENT
-00:43:55 0           10.232.0.49:57678    10.229.20.99:24231  SYN_SENT
-00:43:57 100       10.229.20.175:54224   10.201.76.122:443    ESTABLISHED
+TIME     PID               LADDR:LPORT           RADDR:RPORT  STATE
+01:55:05 0        10.153.223.157:22       69.53.245.40:34619  ESTABLISHED
+01:55:05 0        10.153.223.157:22       69.53.245.40:34619  ESTABLISHED
+01:55:17 0        10.153.223.157:22       69.53.245.40:22957  ESTABLISHED
 [...]
 
 This output shows three TCP retransmits, the first two were for an IPv4
