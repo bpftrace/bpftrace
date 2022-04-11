@@ -119,7 +119,7 @@ There's now a second mode between 8 and 16 milliseconds, as each thread must
 wait its turn on the one CPU.
 
 
-Now I'l run 10 CPU-bound throuds on one CPU:
+Now I'll run 10 CPU-bound threads on one CPU:
 
 # ./runqlat.bt
 Attaching 5 probes...
