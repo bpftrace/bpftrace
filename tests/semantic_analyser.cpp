@@ -1264,6 +1264,17 @@ TEST(semantic_analyser, printf_bad_format_buf)
   test("kprobe:f { printf(\"%r\", arg0) }", 10);
 }
 
+TEST(semantic_analyser, printf_format_buf_no_ascii)
+{
+  test("kprobe:f { printf(\"%rx\", buf(\"mystr\", 5)) }", 0);
+}
+
+TEST(semantic_analyser, printf_bad_format_buf_no_ascii)
+{
+  test("kprobe:f { printf(\"%rx\", \"mystr\") }", 10);
+  test("kprobe:f { printf(\"%rx\", arg0) }", 10);
+}
+
 TEST(semantic_analyser, printf_format_multi)
 {
   test("kprobe:f { printf(\"%d %d %s\", 1, 2, \"mystr\") }", 0);

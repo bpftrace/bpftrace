@@ -74,15 +74,6 @@ std::string validate_format_string(const std::string &fmt,
 
 void FormatString::split()
 {
-  // Args have been made safe for printing by now, so replace nonstandard format
-  // specifiers with %s
-  size_t start_pos = 0;
-  while ((start_pos = fmt_.find("%r", start_pos)) != std::string::npos)
-  {
-    fmt_.replace(start_pos, 2, "%s");
-    start_pos += 2;
-  }
-
   auto tokens_begin = std::sregex_iterator(fmt_.begin(),
                                            fmt_.end(),
                                            format_specifier_re);
@@ -120,19 +111,41 @@ void FormatString::format(std::ostream &out,
   size_t i = 0;
   for (; i < args.size(); i++)
   {
-    int r = args.at(i)->print(buffer.data(),
-                              buffer.capacity(),
-                              parts_[i].c_str());
-
-    check_snprintf_ret(r);
-    if (static_cast<size_t>(r) >= buffer.capacity())
+    for (int try_ = 0; try_ < 2; try_++)
     {
-      // the buffer is not big enough to hold the string, resize it
-      buffer.resize(r + 1);
+      // find format specified in the string
+      auto last_percent_sign = parts_[i].find_last_of('%');
+      std::string fmt_string = last_percent_sign != std::string::npos
+                                   ? parts_[i].substr(last_percent_sign)
+                                   : "";
+      std::string printf_fmt;
+      if (fmt_string == "%r" || fmt_string == "%rx")
+      {
+        if (fmt_string == "%rx")
+        {
+          auto printable_buffer = dynamic_cast<PrintableBuffer *>(&*args.at(i));
+          // this is checked by semantic analyzer
+          assert(printable_buffer);
+          printable_buffer->keep_ascii(false);
+        }
+        // replace nonstandard format specifier with %s
+        printf_fmt = std::regex_replace(parts_[i], std::regex("%rx?"), "%s");
+      }
+      else
+      {
+        printf_fmt = parts_[i];
+      }
       int r = args.at(i)->print(buffer.data(),
                                 buffer.capacity(),
-                                parts_[i].c_str());
+                                printf_fmt.c_str());
       check_snprintf_ret(r);
+      if (static_cast<size_t>(r) < buffer.capacity())
+        // string fits into buffer, we are done
+        break;
+      else
+        // the buffer is not big enough to hold the string, resize it
+        // and try again
+        buffer.resize(r + 1);
     }
 
     out << buffer.data();

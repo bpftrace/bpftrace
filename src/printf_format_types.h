@@ -21,6 +21,7 @@ namespace bpftrace {
 const std::unordered_map<std::string, Type> printf_format_types = {
   {"s", Type::string},
   {"r", Type::buffer},
+  {"rx", Type::buffer},
   {"c", Type::integer},
   {"d", Type::integer},
   {"u", Type::integer},
