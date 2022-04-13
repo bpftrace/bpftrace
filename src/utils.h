@@ -181,7 +181,9 @@ std::string str_join(const std::vector<std::string> &list,
 bool is_numeric(const std::string &str);
 bool symbol_has_cpp_mangled_signature(const std::string &sym_name);
 pid_t parse_pid(const std::string &str);
-std::string hex_format_buffer(const char *buf, size_t size);
+std::string hex_format_buffer(const char *buf,
+                              size_t size,
+                              bool keep_ascii = true);
 std::optional<std::string> abs_path(const std::string &rel_path);
 bool symbol_has_module(const std::string &symbol);
 std::string strip_symbol_module(const std::string &symbol);

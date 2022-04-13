@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add option for unconditional hex output
+  - [#2200](https://github.com/iovisor/bpftrace/pull/2200)
 - Add builtin function: `cgroup_path`
   - [#2055](https://github.com/iovisor/bpftrace/pull/2055)
 - Limit number of generated BPF programs

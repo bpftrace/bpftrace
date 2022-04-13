@@ -42,6 +42,21 @@ private:
   std::string value_;
 };
 
+class PrintableBuffer : public virtual IPrintable
+{
+public:
+  PrintableBuffer(char* buffer, size_t size)
+      : value_(std::vector<char>(buffer, buffer + size))
+  {
+  }
+  int print(char* buf, size_t size, const char* fmt) override;
+  void keep_ascii(bool value);
+
+private:
+  std::vector<char> value_;
+  bool keep_ascii_ = true;
+};
+
 class PrintableCString : public virtual IPrintable
 {
 public:

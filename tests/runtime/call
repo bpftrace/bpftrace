@@ -86,6 +86,11 @@ PROG i:ms:100 { @ = buf("ok_value", 8); exit(); }
 EXPECT @: ok_value
 TIMEOUT 5
 
+NAME buf_no_ascii
+PROG BEGIN { printf("%rx", buf("Hello\0", 6)); exit(); }
+EXPECT \\x48\\x65\\x6c\\x6c\\x6f\\x00
+TIMEOUT 5
+
 NAME ksym
 PROG kprobe:do_nanosleep { printf("%s\n", ksym(reg("ip"))); exit();}
 EXPECT do_nanosleep
