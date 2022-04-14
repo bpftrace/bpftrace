@@ -648,7 +648,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
   return params;
 #else
   LOG(ERROR) << "Could not get kfunc arguments "
-                "(HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL is not set)" return {};
+                "(HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL is not set)";
   return {};
 #endif
 }
