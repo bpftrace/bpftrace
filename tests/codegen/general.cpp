@@ -35,6 +35,11 @@ public:
   {
     return true;
   }
+
+  bool has_kprobe_multi(void)
+  {
+    return feature_->has_kprobe_multi();
+  }
 };
 
 TEST(codegen, populate_sections)

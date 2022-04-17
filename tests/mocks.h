@@ -79,6 +79,11 @@ public:
     mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
   }
 
+  bool has_kprobe_multi(void)
+  {
+    return feature_->has_kprobe_multi();
+  }
+
   MockProbeMatcher *mock_probe_matcher;
 };
 
@@ -101,6 +106,7 @@ public:
     has_features_ = has_features;
     has_d_path_ = std::make_optional<bool>(has_features);
     has_ktime_get_boot_ns_ = std::make_optional<bool>(has_features);
+    has_kprobe_multi_ = std::make_optional<bool>(has_features);
   };
   bool has_features_;
 };
