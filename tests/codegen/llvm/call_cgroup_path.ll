@@ -29,11 +29,13 @@ entry:
   %7 = getelementptr %print_cgroup_path_16_t, %print_cgroup_path_16_t* %print_cgroup_path_16_t, i32 0, i32 2
   %8 = bitcast [16 x i8]* %7 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %8, i8 0, i64 16, i1 false)
-  %probe_read = call i64 inttoptr (i64 4 to i64 ([16 x i8]*, i32, %cgroup_path_t*)*)([16 x i8]* %7, i32 16, %cgroup_path_t* %cgroup_path_args)
+  %9 = bitcast [16 x i8]* %7 to i8*
+  %10 = bitcast %cgroup_path_t* %cgroup_path_args to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %9, i8* align 1 %10, i64 16, i1 false)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_cgroup_path_16_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %print_cgroup_path_16_t* %print_cgroup_path_16_t, i64 32)
-  %9 = bitcast %print_cgroup_path_16_t* %print_cgroup_path_16_t to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
+  %11 = bitcast %print_cgroup_path_16_t* %print_cgroup_path_16_t to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
   ret i64 0
 }
 
@@ -42,6 +44,9 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn writeonly
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly %0, i8 %1, i64 %2, i1 immarg %3) #2
+
+; Function Attrs: argmemonly nofree nosync nounwind willreturn
+declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly %0, i8* noalias nocapture readonly %1, i64 %2, i1 immarg %3) #1
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
