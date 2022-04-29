@@ -957,6 +957,12 @@ int main(int argc, char* argv[])
   sigaction(SIGINT, &act, NULL);
   sigaction(SIGTERM, &act, NULL);
 
+  // Signal handler that prints all maps when SIGUSR1 was received.
+  static auto sigusr1_handler = [&]() { bpftrace.print_maps(); };
+  struct sigaction sigusr1_act = {};
+  sigusr1_act.sa_handler = [](int) { sigusr1_handler(); };
+  sigaction(SIGUSR1, &sigusr1_act, NULL);
+
   err = bpftrace.run(bytecode);
   if (err)
     return err;

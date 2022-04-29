@@ -1,0 +1,4 @@
+NAME print all maps
+RUN {{BPFTRACE}} -f json -e 'BEGIN { @scalar = 5; } interval:s:3 { exit(); }' & (pid=$!; sleep 2; kill -s USR1 $pid)
+EXPECT @scalar[\s\S]+@scalar
+TIMEOUT 5
