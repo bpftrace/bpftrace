@@ -21,6 +21,8 @@ and this project adheres to
   - [#2034](https://github.com/iovisor/bpftrace/pull/2034)
 - Add builtin function: `bswap`
   - [#2166](https://github.com/iovisor/bpftrace/pull/2166)
+- Print all maps to stdout on `SIGUSR1`
+  - [#2203](https://github.com/iovisor/bpftrace/pull/2203)
 
 #### Changed
 - Use auto-resolution of library paths for tools

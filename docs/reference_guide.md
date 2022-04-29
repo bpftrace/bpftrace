@@ -112,6 +112,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [1. `printf()`: Per-Event Output](#1-printf-per-event-output)
     - [2. `interval`: Interval Output](#2-interval-interval-output)
     - [3. `hist()`, `printf()`: Histogram Printing](#3-hist-print-histogram-printing)
+    - [4. `SIGUSR1`: On-Demand Output](#4-sigusr1-on-demand-output)
 - [BTF Support](#btf-support)
 - [Advanced Tools](#advanced-tools)
 - [Errors](#errors)
@@ -3561,6 +3562,16 @@ Histograms can also be printed on-demand, using the `print()` function. Eg:
 # bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); } interval:s:1 { print(@bytes); clear(@bytes); }'
 
 [...]
+```
+
+## 4. `SIGUSR1`: On-Demand Output
+
+Upon receiving a `SIGUSR1` signal, bpftrace will print all maps to the standard output.
+
+Example:
+```
+# bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); }' &
+# kill -s USR1 $(pidof bpftrace)
 ```
 
 # BTF Support
