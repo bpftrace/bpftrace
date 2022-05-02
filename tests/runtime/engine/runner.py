@@ -230,8 +230,7 @@ class Runner(object):
                 if nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if not after and test.after:
-                        after_call = re.sub("{{BPFTRACE_PID}}", str(p.pid), test.after)
-                        after = subprocess.Popen(after_call, shell=True, preexec_fn=os.setsid)
+                        after = subprocess.Popen(test.after, shell=True, preexec_fn=os.setsid)
                     break
 
             output += p.communicate()[0]
