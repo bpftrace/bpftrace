@@ -147,8 +147,9 @@ public:
 
   std::string cmd_;
   bool finalize_ = false;
-  // Global variable checking if an exit signal was received
+  // Global variables checking if an exit/usr1 signal was received
   static volatile sig_atomic_t exitsig_recv;
+  static volatile sig_atomic_t sigusr1_recv;
 
   RequiredResources resources;
   MapManager maps;

@@ -53,6 +53,7 @@ DebugLevel bt_debug = DebugLevel::kNone;
 bool bt_quiet = false;
 bool bt_verbose = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
+volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
 
 BPFtrace::~BPFtrace()
 {
@@ -1280,6 +1281,13 @@ void BPFtrace::poll_perf_events(bool drain)
     if ((procmon_ && !procmon_->is_alive()) || (child_ && !child_->is_alive()))
     {
       return;
+    }
+
+    // Print all maps if we received a SIGUSR1 signal
+    if (BPFtrace::sigusr1_recv)
+    {
+      BPFtrace::sigusr1_recv = false;
+      print_maps();
     }
   }
   return;
