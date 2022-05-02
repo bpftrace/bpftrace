@@ -22,11 +22,9 @@ namespace ast {
 class ResourceAnalyser : public Visitor
 {
 public:
-  ResourceAnalyser(Node *root);
+  ResourceAnalyser(Node *root, std::ostream &out = std::cerr);
 
-  // Note we don't return errors here b/c we assume we are run after
-  // semantic analysis and AST is well formed.
-  RequiredResources analyse();
+  std::optional<RequiredResources> analyse();
 
 private:
   void visit(Probe &probe) override;
@@ -41,6 +39,8 @@ private:
 
   RequiredResources resources_;
   Node *root_;
+  std::ostream &out_;
+  std::ostringstream err_;
   // Current probe we're analysing
   Probe *probe_;
 };

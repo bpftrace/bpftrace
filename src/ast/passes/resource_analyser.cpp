@@ -1,6 +1,7 @@
 #include "resource_analyser.h"
 
 #include "bpftrace.h"
+#include "log.h"
 #include "struct.h"
 
 namespace bpftrace {
@@ -29,16 +30,23 @@ std::string get_literal_string(Expression &expr)
 
 } // namespace
 
-ResourceAnalyser::ResourceAnalyser(Node *root) : root_(root), probe_(nullptr)
+ResourceAnalyser::ResourceAnalyser(Node *root, std::ostream &out)
+    : root_(root), out_(out), probe_(nullptr)
 {
 }
 
-RequiredResources ResourceAnalyser::analyse()
+std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
   Visit(*root_);
   prepare_seq_printf_ids();
 
-  return std::move(resources_);
+  if (!err_.str().empty())
+  {
+    out_ << err_.str();
+    return std::nullopt;
+  }
+
+  return std::optional{ std::move(resources_) };
 }
 
 void ResourceAnalyser::visit(Probe &probe)
@@ -188,7 +196,11 @@ Pass CreateResourcePass()
 {
   auto fn = [](Node &n, PassContext &ctx) {
     ResourceAnalyser analyser{ &n };
-    ctx.b.resources = analyser.analyse();
+    auto pass_result = analyser.analyse();
+
+    if (!pass_result.has_value())
+      return PassResult::Error("Resource", 1);
+    ctx.b.resources = pass_result.value();
 
     // Create fake maps so that codegen has access to map IDs
     //

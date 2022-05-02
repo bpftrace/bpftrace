@@ -35,7 +35,9 @@ TEST(codegen, call_ustack_mapids)
   ASSERT_EQ(semantics.analyse(), 0);
 
   ast::ResourceAnalyser resource_analyser(driver.root.get());
-  auto resources = resource_analyser.analyse();
+  auto resources_optional = resource_analyser.analyse();
+  ASSERT_TRUE(resources_optional.has_value());
+  auto resources = resources_optional.value();
   ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
   bpftrace->resources = resources;
 
@@ -70,7 +72,9 @@ TEST(codegen, call_ustack_modes_mapids)
   ASSERT_EQ(semantics.analyse(), 0);
 
   ast::ResourceAnalyser resource_analyser(driver.root.get());
-  auto resources = resource_analyser.analyse();
+  auto resources_optional = resource_analyser.analyse();
+  ASSERT_TRUE(resources_optional.has_value());
+  auto resources = resources_optional.value();
   ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
   bpftrace->resources = resources;
 
