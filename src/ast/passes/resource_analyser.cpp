@@ -134,11 +134,25 @@ void ResourceAnalyser::visit(Call &call)
     Integer &max = static_cast<Integer &>(max_arg);
     Integer &step = static_cast<Integer &>(step_arg);
 
-    resources_.lhist_args[call.map->ident] = LinearHistogramArgs{
+    auto args = LinearHistogramArgs{
       .min = min.n,
       .max = max.n,
       .step = step.n,
     };
+
+    if (resources_.lhist_args.find(call.map->ident) !=
+            resources_.lhist_args.end() &&
+        (resources_.lhist_args[call.map->ident].min != args.min ||
+         resources_.lhist_args[call.map->ident].max != args.max ||
+         resources_.lhist_args[call.map->ident].step != args.step))
+    {
+      LOG(ERROR, call.loc, err_)
+          << "Different lhist bounds in a single map unsupported";
+    }
+    else
+    {
+      resources_.lhist_args[call.map->ident] = args;
+    }
   }
   else if (call.func == "time")
   {
