@@ -12,6 +12,9 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Metadata.h>
+#if LLVM_VERSION_MAJOR >= 14
+#include <llvm/Passes/PassBuilder.h>
+#endif
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 
@@ -3107,6 +3110,35 @@ void CodegenLLVM::emit_elf(const std::string &filename)
 void CodegenLLVM::optimize()
 {
   assert(state_ == State::IR);
+
+#if LLVM_VERSION_MAJOR >= 14
+  PipelineTuningOptions pto;
+  pto.LoopUnrolling = false;
+  pto.LoopInterleaving = false;
+  pto.LoopVectorization = false;
+  pto.SLPVectorization = false;
+
+  llvm::PassBuilder pb(&orc_->getTargetMachine(), pto);
+
+  // ModuleAnalysisManager must be destroyed first.
+  llvm::LoopAnalysisManager lam;
+  llvm::FunctionAnalysisManager fam;
+  llvm::CGSCCAnalysisManager cgam;
+  llvm::ModuleAnalysisManager mam;
+
+  // Register all the basic analyses with the managers.
+  pb.registerModuleAnalyses(mam);
+  pb.registerCGSCCAnalyses(cgam);
+  pb.registerFunctionAnalyses(fam);
+  pb.registerLoopAnalyses(lam);
+  pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+  ModulePassManager mpm = pb.buildPerModuleDefaultPipeline(
+      llvm::OptimizationLevel::O3,
+      /*LTOPreLink=*/false);
+  mpm.run(*module_, mam);
+
+#else
   PassManagerBuilder PMB;
   PMB.OptLevel = 3;
   legacy::PassManager PM;
@@ -3122,6 +3154,8 @@ void CodegenLLVM::optimize()
   PMB.populateModulePassManager(PM);
 
   PM.run(*module_.get());
+#endif
+
   state_ = State::OPT;
 }
 
