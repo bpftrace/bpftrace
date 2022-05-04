@@ -13,6 +13,9 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Disallow different lhist bounds in a single map
+  - [#2204](https://github.com/iovisor/bpftrace/pull/2204)
+
 #### Added
 #### Docs
 #### Tools
