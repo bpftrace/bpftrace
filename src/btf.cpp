@@ -263,6 +263,9 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   for (id = 1; id <= max && myset.size(); id++)
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
+    if (!t)
+      continue;
+
     // Allow users to reference enum values by name to pull in entire enum defs
     if (btf_is_enum(t))
     {
@@ -306,6 +309,8 @@ std::string BTF::type_of(const std::string& name, const std::string& field)
     return std::string("");
 
   const struct btf_type *type = btf__type_by_id(btf, type_id);
+  if (!type)
+    return std::string("");
   return type_of(type, field);
 }
 
@@ -334,6 +339,8 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
     if (m_name == "")
     {
       const struct btf_type *type = btf__type_by_id(btf, m[i].type);
+      if (!type)
+        return std::string("");
       std::string type_name = type_of(type, field);
       if (!type_name.empty())
         return type_name;
@@ -354,6 +361,8 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
            BTF_INFO_KIND(f->info) == BTF_KIND_RESTRICT)
     {
       f = btf__type_by_id(btf, f->type);
+      if (!f)
+        return std::string("");
     }
 
     return full_type_str(btf, f);
@@ -387,7 +396,7 @@ static bool btf_type_is_modifier(const struct btf_type *t)
 
 const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t)
 {
-  while (btf_type_is_modifier(t))
+  while (t && btf_type_is_modifier(t))
   {
     t = btf__type_by_id(btf, t->type);
   }
@@ -445,6 +454,9 @@ int BTF::resolve_args(const std::string &func,
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
+    if (!t)
+      continue;
+
     if (!btf_is_func(t))
       continue;
 
@@ -454,7 +466,7 @@ int BTF::resolve_args(const std::string &func,
       continue;
 
     t = btf__type_by_id(btf, t->type);
-    if (!btf_is_func_proto(t))
+    if (!t || !btf_is_func_proto(t))
     {
       throw std::runtime_error("not a function");
     }
@@ -529,6 +541,9 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
+    if (!t)
+      continue;
+
     if (!btf_is_func(t))
       continue;
 
@@ -536,7 +551,7 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
     std::string func_name = str;
 
     t = btf__type_by_id(btf, t->type);
-    if (!btf_is_func_proto(t))
+    if (!t || !btf_is_func_proto(t))
     {
       /* bad.. */
       if (!bt_verbose)
@@ -585,6 +600,9 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
+    if (!t)
+      continue;
+
     if (!btf_is_func(t))
       continue;
 
@@ -595,6 +613,8 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
       continue;
 
     t = btf__type_by_id(btf, t->type);
+    if (!t)
+      continue;
 
     _Pragma("GCC diagnostic push")
         _Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
@@ -675,7 +695,7 @@ std::set<std::string> BTF::get_all_structs() const
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
 
-    if (!(btf_is_struct(t) || btf_is_union(t) || btf_is_enum(t)))
+    if (!t || !(btf_is_struct(t) || btf_is_union(t) || btf_is_enum(t)))
       continue;
 
     const std::string name = full_type_str(btf, t);
