@@ -48,6 +48,10 @@ and this project adheres to
   - [#2217](https://github.com/iovisor/bpftrace/pull/2217)
 
 #### Tools
+
+- Update biosnoop.bt for kernel >=5.17
+  - [#2207](https://github.com/iovisor/bpftrace/pull/2207)
+
 #### Documentation
 
 ## [0.14.1] 2021-12-29

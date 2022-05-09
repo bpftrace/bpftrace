@@ -7,6 +7,8 @@
  *
  * This is a bpftrace version of the bcc tool of the same name.
  *
+ * For Linux <= 5.16.
+ *
  * 15-Nov-2017	Brendan Gregg	Created this.
  */
 
@@ -26,7 +28,7 @@ kprobe:__blk_account_io_start
 	@start[arg0] = nsecs;
 	@iopid[arg0] = pid;
 	@iocomm[arg0] = comm;
-	@disk[arg0] = ((struct request *)arg0)->q->disk->disk_name;
+	@disk[arg0] = ((struct request *)arg0)->rq_disk->disk_name;
 }
 
 kprobe:blk_account_io_done,
