@@ -691,10 +691,19 @@ void AttachedProbe::load_prog()
     if (bt_verbose)
       log_level = 1;
 
-    // Use orig_name for program name so we get proper name for
-    // wildcard probes, replace wildcards with '.'
-    name = probe_.orig_name;
-    std::replace(name.begin(), name.end(), '*', '.');
+    if (probe_.type == ProbeType::kfunc || probe_.type == ProbeType::kretfunc)
+    {
+      // Use attach_point for program name when probe type is kfunc or
+      // kretfunc, otherwise will get a ENOENT when using a wildcard
+      name = probe_.attach_point;
+    }
+    else
+    {
+      // Use orig_name for program name so we get proper name for
+      // wildcard probes, replace wildcards with '.'
+      name = probe_.orig_name;
+      std::replace(name.begin(), name.end(), '*', '.');
+    }
 
     // bpf_prog_load rejects colons in the probe name,
     // so start the name after the probe type, after ':'
