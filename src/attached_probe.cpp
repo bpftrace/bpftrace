@@ -635,9 +635,9 @@ bool AttachedProbe::use_cached_progfd(void)
   if (probe_.type != ProbeType::kprobe && probe_.type != ProbeType::kretprobe)
     return false;
 
-  // Only for the wildcard probe, because we can have multiple
-  // programs attached to single probe
-  if (!has_wildcard(probe_.orig_name))
+  // Only for a wildcard probe which does not need expansion,
+  // because we can have multiple programs attached to a single probe
+  if (!has_wildcard(probe_.orig_name) || probe_.need_expansion)
     return false;
 
   // Keep map of loaded programs based on their 'orig_name',
