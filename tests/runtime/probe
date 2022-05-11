@@ -34,6 +34,12 @@ EXPECT progs: 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 
+NAME kprobe_wildcard probe builtin
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { @ = probe; printf("progs: "); system("/usr/sbin/bpftool prog | grep kprobe | grep ksys_ | wc -l"); exit(); }'
+EXPECT progs: [1-9][0-9]+
+TIMEOUT 5
+REQUIRES /usr/sbin/bpftool
+
 # Note: this test may fail if you've installed a new kernel but not rebooted
 # yet. Reason is b/c bpftrace will look for a vmlinux based on the running kernel's
 # version.

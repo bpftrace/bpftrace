@@ -235,6 +235,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.orig_name = p.name();
       probe.ns = attach_point->ns;
       probe.name = attach_point->name(target, func_id);
+      probe.need_expansion = p.need_expansion;
       probe.freq = attach_point->freq;
       probe.address = attach_point->address;
       probe.func_offset = attach_point->func_offset;
