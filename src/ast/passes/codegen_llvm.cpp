@@ -1026,6 +1026,13 @@ void CodegenLLVM::visit(Call &call)
   {
     expr_ = b_.getInt64(call.vargs->at(0)->type.GetSize());
   }
+  else if (call.func == "offsetof")
+  {
+    auto &element_arg = *call.vargs->at(1);
+    String &element = static_cast<String&>(element_arg);
+    auto &field = call.vargs->at(0)->type.GetField(element.str);
+    expr_ = b_.getInt64(field.offset);
+  }
   else if (call.func == "strncmp") {
     uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs->at(2));
     const auto& left_arg = call.vargs->at(0);

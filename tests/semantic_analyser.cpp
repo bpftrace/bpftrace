@@ -2492,6 +2492,36 @@ TEST(semantic_analyser, string_size)
   ASSERT_EQ(var_assign->var->type.GetField(0).type.GetSize(), 6UL);
 }
 
+TEST(semantic_analyser, call_offsetof)
+{
+  test("struct Foo { int x; long l; char c; } \
+        BEGIN { @x = offsetof(struct Foo, x); }", 0);
+  test("struct Foo { int x; long l; char c; } \
+        BEGIN { @x = offsetof(struct Foo, z); }", 1);
+  test("struct Foo { int x; long l; char c; } \
+        struct Bar { struct Foo foo; int x; } \
+        BEGIN { @x = offsetof(struct Bar, x); }", 0);
+  test("struct Foo { int x; long l; char c; } \
+        union Bar { struct Foo foo; int x; } \
+        BEGIN { @x = offsetof(union Bar, x); }", 0);
+  test("struct Foo { int x; long l; char c; } \
+        struct Fun { struct Foo foo; int (*call)(void); } \
+        BEGIN { @x = offsetof(struct Fun, call); }", 0);
+  test("struct Foo { int x; long l; char c; } \
+        struct Ano { \
+          struct { \
+            struct Foo foo; \
+            int a; \
+          }; \
+          long l; \
+        } \
+        BEGIN { @x = offsetof(struct Ano, a); }", 0);
+  test("struct offsetof { int offsetof; int bswap;} \
+        BEGIN { \
+          @x = offsetof(struct offsetof, offsetof); \
+        }", 0);
+}
+
 #ifdef HAVE_LIBBPF_BTF_DUMP
 
 #include "btf_common.h"

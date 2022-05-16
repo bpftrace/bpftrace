@@ -2222,6 +2222,7 @@ Tracing block I/O sizes > 0 bytes
 - `kptr(void *p)` - Annotate as kernelspace pointer
 - `macaddr(char[6] addr)` - Convert MAC address data
 - `bswap(uint[8|16|32|64] n)` - Reverse byte order
+- `offsetof(struct, element)` - Offset of element in structure
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
@@ -3135,6 +3136,32 @@ Example:
 # bpftrace -e 'BEGIN { $i = (uint32)0x12345678; printf("Reversing byte order of 0x%x ==> 0x%x\n", $i, bswap($i)); }'
 Attaching 1 probe...
 Reversing byte order of 0x12345678 ==> 0x78563412
+```
+
+# 31. `offsetof`: Offset of element in structure
+
+Syntax: `offsetof(struct, element)`
+
+Get the offset of the element in the struct.
+
+Examples:
+
+```
+#!/usr/bin/env bpftrace
+#include <linux/sched.h>
+
+BEGIN
+{
+    printf("Offsetof %ld\n", offsetof(struct task_struct, flags));
+    printf("Offsetof %ld\n", offsetof(struct task_struct, comm));
+    exit();
+}
+```
+
+```
+Attaching 1 probe...
+Offsetof 44
+Offsetof 3216
 ```
 
 # Map Functions

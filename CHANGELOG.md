@@ -23,6 +23,8 @@ and this project adheres to
   - [#2166](https://github.com/iovisor/bpftrace/pull/2166)
 - Print all maps to stdout on `SIGUSR1`
   - [#2203](https://github.com/iovisor/bpftrace/pull/2203)
+- Add new function, `offsetof`, get the offset of the element in the struct
+  - [#2216](https://github.com/iovisor/bpftrace/pull/2216)
 
 #### Changed
 - Use auto-resolution of library paths for tools

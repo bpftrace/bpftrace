@@ -126,6 +126,11 @@ void SemanticAnalyser::visit(Identifier &identifier)
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
   }
+  else if (func_ == "offsetof")
+  {
+    // Handling the second arg of offsetof (a field name)
+    identifier.type = CreateNone();
+  }
   else {
     identifier.type = CreateNone();
     LOG(ERROR, identifier.loc, err_)
@@ -1132,6 +1137,26 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateUInt64();
   }
+  else if (call.func == "offsetof")
+  {
+    check_nargs(call, 2);
+    auto &element_arg = *call.vargs->at(1);
+    String &element = static_cast<String&>(element_arg);
+    auto &arg = *call.vargs->at(0);
+    // check_arg() cannot be applied to offsetof(), because
+    // Type::record is first arg of offsetof(). check_arg()
+    // return true anyway.
+    if (arg.type.type != Type::record) {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports " << Type::record << " arguments ("
+          << arg.type.type << " provided)";
+    }
+    // Only case Type::record can call HasField().
+    else if (!call.vargs->at(0)->type.HasField(element.str))
+      LOG(ERROR, call.loc, err_)
+          << "struct has no this field";
+    call.type = CreateUInt64();
+  }
   else if (call.func == "path")
   {
     if (!bpftrace_.feature_->has_d_path())
@@ -1976,6 +2001,13 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 {
   // A field access must have a field XOR index
   assert((acc.field.size() > 0) != (acc.index >= 0));
+
+  if (func_ == "offsetof")
+  {
+    LOG(ERROR, acc.loc, err_)
+		<< "offsetof not support subfield yet";
+    return;
+  }
 
   acc.expr->accept(*this);
 
