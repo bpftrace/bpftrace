@@ -158,6 +158,7 @@ class TestParser(object):
                     "libpath_resolv",
                     "dwarf",
                     "aot",
+                    "kprobe_multi",
                 }
 
                 for f in line.split(" "):
