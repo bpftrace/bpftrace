@@ -2952,7 +2952,7 @@ Examples:
 Attaching 1 probe...
 8
 
-# bpftrace -e 'struct Foo { int x; char c; } BEGIN { printf("%d\n", sizeof(((struct Foo)0).c)); }'
+# bpftrace -e 'struct Foo { int x; char c; } BEGIN { printf("%d\n", sizeof(((struct Foo*)0)->c)); }'
 Attaching 1 probe...
 1
 
