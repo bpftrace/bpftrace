@@ -1114,6 +1114,42 @@ void CodegenLLVM::visit(Call &call)
       expr_ = b_.CreateCall(swap_fun, { expr_ });
     }
   }
+  else if (call.func == "skboutput")
+  {
+    auto elements = AsyncEvent::SkbOutput().asLLVMType(b_);
+    StructType *hdr_t = b_.GetStructType("hdr_t", elements, false);
+    AllocaInst *data = b_.CreateAllocaBPF(hdr_t, "hdr");
+
+    // The extra 0 here ensures the type of addr_offset will be int64
+    Value *aid_addr = b_.CreateGEP(hdr_t,
+                                   data,
+                                   { b_.getInt64(0), b_.getInt32(0) });
+    Value *id_addr = b_.CreateGEP(hdr_t,
+                                  data,
+                                  { b_.getInt64(0), b_.getInt32(1) });
+    Value *time_addr = b_.CreateGEP(hdr_t,
+                                    data,
+                                    { b_.getInt64(0), b_.getInt32(2) });
+
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::skboutput)),
+                   aid_addr);
+    b_.CreateStore(b_.getInt64(skb_output_id_), id_addr);
+    b_.CreateStore(b_.CreateGetNs(
+                       bpftrace_.feature_->has_helper_ktime_get_boot_ns()),
+                   time_addr);
+
+    auto &arg_skb = *call.vargs->at(1);
+    arg_skb.accept(*this);
+    Value *skb = expr_;
+
+    auto &arg_len = *call.vargs->at(2);
+    arg_len.accept(*this);
+    Value *len = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+
+    Value *ret = b_.CreateSkbOutput(skb, len, data, getStructSize(hdr_t));
+    expr_ = ret;
+    skb_output_id_++;
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
@@ -3415,7 +3451,8 @@ std::function<void()> CodegenLLVM::create_reset_ids()
           starting_join_id = this->join_id_,
           starting_helper_error_id = this->b_.helper_error_id_,
           starting_non_map_print_id = this->non_map_print_id_,
-          starting_seq_printf_id = this->seq_printf_id_] {
+          starting_seq_printf_id = this->seq_printf_id_,
+          starting_skb_output_id = this->skb_output_id_] {
     this->printf_id_ = starting_printf_id;
     this->cat_id_ = starting_cat_id;
     this->system_id_ = starting_system_id;
@@ -3425,6 +3462,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->b_.helper_error_id_ = starting_helper_error_id;
     this->non_map_print_id_ = starting_non_map_print_id;
     this->seq_printf_id_ = starting_seq_printf_id;
+    this->skb_output_id_ = starting_skb_output_id;
   };
 }
 

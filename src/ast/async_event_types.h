@@ -117,5 +117,14 @@ struct CgroupPath
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
+struct SkbOutput
+{
+  uint64_t action_id;
+  uint64_t skb_output_id;
+  uint64_t nsecs_since_boot;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace

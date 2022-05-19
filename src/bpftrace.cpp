@@ -536,6 +536,24 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::skboutput))
+  {
+    struct hdr_t
+    {
+      uint64_t aid;
+      uint64_t id;
+      uint64_t ns;
+      uint8_t pkt[];
+    } __attribute__((packed)) * hdr;
+
+    hdr = static_cast<struct hdr_t *>(data);
+
+    int offset = std::get<1>(bpftrace->resources.skboutput_args_.at(hdr->id));
+
+    bpftrace->write_pcaps(
+        hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
+    return;
+  }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
             printf_id < asyncactionint(AsyncAction::syscall) + RESERVED_IDS_PER_ASYNCACTION)
   {
@@ -2282,6 +2300,52 @@ Dwarf *BPFtrace::get_dwarf(const ast::AttachPoint &attachpoint)
     return nullptr;
 
   return get_dwarf(attachpoint.target);
+}
+
+int BPFtrace::create_pcaps(void)
+{
+  for (auto arg : resources.skboutput_args_)
+  {
+    auto file = std::get<0>(arg);
+
+    if (pcap_writers.count(file) > 0)
+    {
+      return 0;
+    }
+
+    auto writer = std::make_unique<PCAPwriter>();
+
+    if (!writer->open(file))
+      return -1;
+
+    pcap_writers[file] = std::move(writer);
+  }
+
+  return 0;
+}
+
+void BPFtrace::close_pcaps(void)
+{
+  for (auto &writer : pcap_writers)
+  {
+    writer.second->close();
+  }
+}
+
+bool BPFtrace::write_pcaps(uint64_t id,
+                           uint64_t ns,
+                           uint8_t *pkt,
+                           unsigned int size)
+{
+  if (boottime_)
+  {
+    ns = (boottime_->tv_sec * 1e9) + (boottime_->tv_nsec + ns);
+  }
+
+  auto file = std::get<0>(resources.skboutput_args_.at(id));
+  auto &writer = pcap_writers.at(file);
+
+  return writer->write(ns, pkt, size);
 }
 
 } // namespace bpftrace

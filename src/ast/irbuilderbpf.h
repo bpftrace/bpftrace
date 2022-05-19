@@ -137,6 +137,10 @@ public:
   AllocaInst *CreateUSym(llvm::Value *val);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  CallInst *CreateSkbOutput(Value *skb,
+                            Value *len,
+                            AllocaInst *data,
+                            size_t size);
   void CreatePath(Value *ctx,
                   AllocaInst *buf,
                   Value *path,

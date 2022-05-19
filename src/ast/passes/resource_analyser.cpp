@@ -183,6 +183,16 @@ void ResourceAnalyser::visit(Call &call)
     else
       resources_.cgroup_path_args.push_back("*");
   }
+  else if (call.func == "skboutput")
+  {
+    auto &file_arg = *call.vargs->at(0);
+    String &file = static_cast<String &>(file_arg);
+
+    auto &offset_arg = *call.vargs->at(3);
+    Integer &offset = static_cast<Integer &>(offset_arg);
+
+    resources_.skboutput_args_.emplace_back(file.str, offset.n);
+  }
 }
 
 void ResourceAnalyser::visit(Map &map)

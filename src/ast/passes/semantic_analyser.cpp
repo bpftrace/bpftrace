@@ -1275,6 +1275,27 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateUInt(arg->type.GetIntBitWidth());
   }
+  else if (call.func == "skboutput")
+  {
+    check_assignment(call, false, true, false);
+    if (check_nargs(call, 4))
+    {
+      if (is_final_pass())
+      {
+        // pcap file name
+        check_arg(call, Type::string, 0, true);
+        // *skb
+        check_arg(call, Type::pointer, 1, false);
+        // cap length
+        check_arg(call, Type::integer, 2, false);
+        // cap offset, default is 0
+        // some tracepoints like dev_queue_xmit will output ethernet header, set
+        // offset to 14 bytes can exclude this header
+        check_arg(call, Type::integer, 3, false);
+      }
+    }
+    call.type = CreateUInt32();
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";
