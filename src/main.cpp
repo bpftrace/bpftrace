@@ -907,6 +907,13 @@ int main(int argc, char* argv[])
     }
   }
 
+  err = bpftrace.create_pcaps();
+  if (err)
+  {
+    LOG(ERROR) << "Failed to create pcap file";
+    return err;
+  }
+
   ast::CodegenLLVM llvm(&*ast_root, bpftrace);
   BpfBytecode bytecode;
   try
@@ -1007,5 +1014,6 @@ int main(int argc, char* argv[])
   if (err)
     return err;
 
+  bpftrace.close_pcaps();
   return 0;
 }

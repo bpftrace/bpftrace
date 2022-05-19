@@ -94,5 +94,14 @@ std::vector<llvm::Type*> CgroupPath::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
+std::vector<llvm::Type*> SkbOutput::asLLVMType(ast::IRBuilderBPF& b)
+{
+  return {
+    b.getInt64Ty(), // asyncid
+    b.getInt64Ty(), // skb_output id
+    b.getInt64Ty(), // time elapsed since boot
+  };
+}
+
 } // namespace AsyncEvent
 } // namespace bpftrace

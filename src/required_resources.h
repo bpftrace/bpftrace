@@ -84,6 +84,7 @@ public:
   std::vector<std::string> cgroup_path_args;
   std::vector<std::tuple<FormatString, std::vector<Field>>> cat_args;
   std::vector<SizedType> non_map_print_args;
+  std::vector<std::tuple<std::string, long>> skboutput_args_;
 
   // Async argument metadata that codegen creates. Ideally ResourceAnalyser
   // pass should be collecting this, but it's complex to move the logic.

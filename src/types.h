@@ -557,6 +557,7 @@ enum class AsyncAction
   strftime,
   watchpoint_attach,
   watchpoint_detach,
+  skboutput,
   // clang-format on
 };
 

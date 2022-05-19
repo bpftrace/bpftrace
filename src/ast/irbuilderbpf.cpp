@@ -1077,6 +1077,44 @@ void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
   createCall(override_func, { ctx, rc }, "override");
 }
 
+CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
+                                        Value *len,
+                                        AllocaInst *data,
+                                        size_t size)
+{
+  Value *flags, *map_ptr, *size_val;
+
+  map_ptr = CreateBpfPseudoCallId(
+      bpftrace_.maps[MapManager::Type::PerfEvent].value()->id);
+
+  flags = len;
+  flags = CreateShl(flags, 32);
+  flags = CreateOr(flags, getInt64(BPF_F_CURRENT_CPU));
+
+  size_val = getInt64(size);
+
+  // int bpf_skb_output(void *skb, struct bpf_map *map, u64 flags,
+  //                    void *data, u64 size)
+  FunctionType *skb_output_func_type = FunctionType::get(getInt64Ty(),
+                                                         { skb->getType(),
+                                                           map_ptr->getType(),
+                                                           getInt64Ty(),
+                                                           data->getType(),
+                                                           getInt64Ty() },
+                                                         false);
+
+  PointerType *skb_output_func_ptr_type = PointerType::get(skb_output_func_type,
+                                                           0);
+  Constant *skb_output_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_skb_output),
+      skb_output_func_ptr_type);
+  CallInst *call = createCall(skb_output_func,
+                              { skb, map_ptr, flags, data, size_val },
+                              "skb_output");
+  return call;
+}
+
 Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
                                    SizedType &type,
                                    std::string &name)
