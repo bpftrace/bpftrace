@@ -55,6 +55,8 @@ The 0.15.0 release has basic support for LLVM 14 but not all features work yet, 
   - [#2166](https://github.com/iovisor/bpftrace/pull/2166)
 - Print all maps to stdout on `SIGUSR1`
   - [#2203](https://github.com/iovisor/bpftrace/pull/2203)
+- Add builtin function: `skb_output`
+  - [#2223](https://github.com/iovisor/bpftrace/pull/2223)
 
 #### Changed
 - Use auto-resolution of library paths for tools

@@ -97,6 +97,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [27. `kptr()`: Annotate kernelspace pointer](#27-kptr-annotate-kernelspace-pointer)
     - [28. `macaddr()`: Convert MAC address data to text](#28-macaddr-convert-mac-address-data-to-text)
     - [29. `cgroup_path()`: Convert cgroup id to cgroup path](#29-cgroup_path-convert-cgroup-id-to-cgroup-path)
+    - [30. `bswap`: Reverse byte order](#30-bswap-reverse-byte-order)
+    - [31. `skb_output`: Write `skb` 's data section into a PCAP file](#31-skb_output-write-skb-s-data-section-into-a-pcap-file)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -3136,6 +3138,47 @@ Example:
 # bpftrace -e 'BEGIN { $i = (uint32)0x12345678; printf("Reversing byte order of 0x%x ==> 0x%x\n", $i, bswap($i)); }'
 Attaching 1 probe...
 Reversing byte order of 0x12345678 ==> 0x78563412
+```
+
+## 31. `skb_output`: Write `skb` 's data section into a PCAP file
+
+Syntax: `uint32 skboutput(const string path, struct sk_buff *skb, uint64 length, const uint64 offset)`
+
+Write sk_buff `skb` 's data section to a PCAP file in the `path`, starting from `offset` to `offset` + `length`.
+
+The PCAP file is encapsulated in RAW IP, so no ethernet header is included.
+The `data` section in the struct `skb` may contain ethernet header in some kernel contexts, you may set `offset` to 14 bytes to exclude ethernet header.
+
+Each packet's timestamp is determined by adding `nsecs` and boot time, the accuracy varies on different kernels, see `nsecs`.
+
+This function returns 0 on success, or a negative error in case of failure.
+
+Environment variable `BPFTRACE_PERF_RB_PAGES` should be increased in order to capture large packets, or else these packets will be dropped.
+
+Example:
+
+```
+# cat dump.bt
+kfunc:napi_gro_receive {
+$ret = skboutput("receive.pcap", args->skb, args->skb->len, 0);
+}
+
+kfunc:dev_queue_xmit {
+// setting offset to 14, to exclude ethernet header
+$ret = skboutput("output.pcap", args->skb, args->skb->len, 14);
+printf("skboutput returns %d\n", $ret);
+}
+
+# export BPFTRACE_PERF_RB_PAGES=1024
+# bpftrace dump.bt
+...
+
+# tcpdump -n -r ./receive.pcap  | head -3
+reading from file ./receive.pcap, link-type RAW (Raw IP)
+dropped privs to tcpdump
+10:23:44.674087 IP 22.128.74.231.63175 > 192.168.0.23.22: Flags [.], ack 3513221061, win 14009, options [nop,nop,TS val 721277750 ecr 3115333619], length 0
+10:23:45.823194 IP 100.101.2.146.53 > 192.168.0.23.46619: 17273 0/1/0 (130)
+10:23:45.823229 IP 100.101.2.146.53 > 192.168.0.23.46158: 45799 1/0/0 A 100.100.45.106 (60)
 ```
 
 # Map Functions
