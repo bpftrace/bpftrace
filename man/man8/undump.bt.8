@@ -1,0 +1,57 @@
+.TH undump.bt 8  "2022-06-03" "USER COMMANDS"
+.SH NAME
+undump.bt \- Catch UNIX domain socket packages. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B undump.bt
+.SH DESCRIPTION
+undump.bt tracked reception of UNIX domain sockets.
+
+This program is also a basic example of bpftrace and kprobes.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Trace reception of UNIX domain sockets:
+#
+.B undump.bt
+.SH FIELDS
+.TP
+TIME
+A timestamp on the output, in "HH:MM:SS" format.
+.TP
+COMM
+The process COMM.
+.TP
+PID
+The process ID.
+.TP
+SIZE
+The size of the received packet, in bytes.
+.TP
+DATA
+Display received packets in hex or string.
+.SH OVERHEAD
+The overhead of this program mainly comes from the data packets received
+by the terminal output.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc examples/tracing of the same name.
+The bcc tool may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Rong Tao
+.SH SEE ALSO
+opensnoop(8)

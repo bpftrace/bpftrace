@@ -1,0 +1,35 @@
+Demonstrations of undump.py, the Linux eBPF/bpftrace version.
+
+This example trace the kernel function performing receive AP_UNIX socket
+packet. Some example output:
+
+Terminal 1, UNIX Socket Server:
+
+```
+$ nc -lU /var/tmp/unixsocket
+# receive from Client
+Hello, world
+123abc
+```
+
+Terminal 2, UNIX socket Client:
+
+```
+$ nc -U /var/tmp/unixsocket
+# Input some lines
+Hello, world
+123abc
+```
+
+Terminal 3, receive tracing:
+
+```
+$ sudo ./undump.bt
+Attaching 3 probes...
+Dump UNIX socket packages RX. Ctrl-C to end
+TIME     COMM             PID      SIZE     DATA
+20:40:11 nc               139071   13       Hello, world\x0a
+20:40:14 nc               139071   7        123abc\x0a
+^C
+```
+

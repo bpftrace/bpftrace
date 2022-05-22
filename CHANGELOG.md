@@ -28,6 +28,8 @@ and this project adheres to
 #### Tools
 - Add sslsnoop and ssllatency tools
   - [#2117](https://github.com/iovisor/bpftrace/pull/2117)
+- Add undump tool.
+  - [#2225](https://github.com/iovisor/bpftrace/pull/2225)
 
 ## [0.15.0] 2022-05-24
 

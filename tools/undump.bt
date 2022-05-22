@@ -1,0 +1,34 @@
+#!/usr/bin/env bpftrace
+/*
+ * undump	Trace unix domain socket package receive.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Also a basic example of bpftrace.
+ *
+ * This is a bpftrace version of the bcc examples/tracing of the same name.
+ *
+ * USAGE: undump.bt
+ *
+ * Copyright 2022 CESTC, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 22-May-2022	Rong Tao	Created this.
+ */
+#include <linux/skbuff.h>
+
+BEGIN
+{
+	printf("Dump UNIX socket packages RX. Ctrl-C to end\n");
+	printf("%-8s %-16s %-8s %-8s %-s\n", "TIME", "COMM", "PID", "SIZE", "DATA");
+}
+
+kprobe:unix_stream_read_actor
+{
+	$skb = (struct sk_buff *)arg0;
+	time("%H:%M:%S ");
+	printf("%-16s %-8d %-8d %r\n", comm, pid, $skb->len, buf($skb->data, $skb->len));
+}
+
+END
+{
+}
