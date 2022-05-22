@@ -42,6 +42,8 @@ and this project adheres to
   - [#2136](https://github.com/iovisor/bpftrace/pull/2136)
 - Fix uprobe target resolution
   - [#2180](https://github.com/iovisor/bpftrace/pull/2180)
+- Fix using wildcards in kfunc
+  - [#2208](https://github.com/iovisor/bpftrace/pull/2208)
 - Improve handling of format strings
   - [#2164](https://github.com/iovisor/bpftrace/pull/2164)
 - Fix codegen for buf

@@ -1,3 +1,11 @@
+NAME kfunc_wildcard
+PROG kfunc:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
 NAME kprobe
 PROG kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
