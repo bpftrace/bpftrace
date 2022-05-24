@@ -2558,6 +2558,21 @@ TEST_F(semantic_analyser_btf, call_path)
   test("kretfunc:func_1 { $k = path( retval->foo1 ) }", 0);
 }
 
+TEST_F(semantic_analyser_btf, call_skb_output)
+{
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500, 0); }",
+       0);
+  test("kretfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500, 0); "
+       "}",
+       0);
+
+  test("kfunc:func_1 { $ret = skboutput(); }", 1);
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\"); }", 1);
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1); }", 1);
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500); }", 1);
+  test("kfunc:func_1 { skboutput(\"one.pcap\", args->foo1, 1500, 0); }", 1);
+}
+
 TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }", 0);

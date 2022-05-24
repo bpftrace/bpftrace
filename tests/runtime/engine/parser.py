@@ -159,6 +159,7 @@ class TestParser(object):
                     "dwarf",
                     "aot",
                     "kprobe_multi",
+                    "skboutput",
                 }
 
                 for f in line.split(" "):

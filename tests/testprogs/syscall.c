@@ -9,6 +9,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 void usage()
 {
   printf("Usage:\n");
@@ -21,6 +25,7 @@ void usage()
   printf("\t openat\n");
   printf("\t read\n");
   printf("\t execve <path> [<arguments>] (at most 128 arguments)\n");
+  printf("\t connect <host> <port>\n");
 }
 
 int gen_nanosleep(int argc, char *argv[])
@@ -159,6 +164,43 @@ int gen_execve(int argc, char *argv[])
   return 1;
 }
 
+int gen_connect(int argc, char *argv[])
+{
+  if (argc < 3)
+  {
+    printf("Indicate which host and port to connect.\n");
+    return 1;
+  }
+
+  int socket_desc;
+  struct sockaddr_in server_addr;
+
+  socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (socket_desc < 0)
+  {
+    printf("Unable to create socket\n");
+    return 1;
+  }
+
+  int port;
+  sscanf(argv[3], "%d", &port);
+  if (port < 1 || port > 65535)
+  {
+    printf("Argument '%s' is out of range, should be in [1, 65535]\n", argv[3]);
+    return 1;
+  }
+
+  server_addr.sin_family = AF_INET;
+  server_addr.sin_port = htons(port);
+  server_addr.sin_addr.s_addr = inet_addr(argv[2]);
+
+  connect(socket_desc, (struct sockaddr *)&server_addr, sizeof(server_addr));
+  close(socket_desc);
+
+  return 0;
+}
+
 int main(int argc, char *argv[])
 {
   if (argc < 2)
@@ -194,6 +236,10 @@ int main(int argc, char *argv[])
   else if (strcmp("execve", syscall_name) == 0)
   {
     r = gen_execve(argc, argv);
+  }
+  else if (strcmp("connect", syscall_name) == 0)
+  {
+    r = gen_connect(argc, argv);
   }
   else
   {
