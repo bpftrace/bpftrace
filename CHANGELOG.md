@@ -8,7 +8,7 @@ and this project adheres to
 
 ## [0.15.0] 2022-05-24
 
-The 0.15.0 release has basic support for LLVM 14 but not all features work yet, see [#2228](https://github.com/iovisor/bpftrace/pull/2228)
+The 0.15.0 release has basic support for LLVM 14 but not all features work yet, see [#2228](https://github.com/iovisor/bpftrace/issues/2228)
 
 #### Added
 - Add option for unconditional hex output
