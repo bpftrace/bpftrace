@@ -5,7 +5,8 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "utils.h"
-#include <bcc/libbpf.h>
+
+#include <bpf/bpf.h>
 
 #include "map.h"
 #include "mapmanager.h"
@@ -19,7 +20,7 @@ int create_map(enum bpf_map_type map_type,
                int key_size,
                int value_size,
                int max_entries,
-               int flags)
+               unsigned int flags)
 {
   std::string fixed_name;
   const std::string *name_ptr = &name;
@@ -28,12 +29,21 @@ int create_map(enum bpf_map_type map_type,
     fixed_name = "AT_" + name.substr(1);
     name_ptr = &fixed_name;
   }
-#ifdef HAVE_BCC_CREATE_MAP
-  return bcc_create_map(
-      map_type, name_ptr->c_str(), key_size, value_size, max_entries, flags);
+
+#ifdef HAVE_LIBBPF_BPF_MAP_CREATE
+  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  opts.map_flags = flags;
+  return bpf_map_create(
+      map_type, name_ptr->c_str(), key_size, value_size, max_entries, &opts);
 #else
-  return bpf_create_map(
-      map_type, name_ptr->c_str(), key_size, value_size, max_entries, flags);
+  struct bpf_create_map_attr attr = {};
+  attr.name = name_ptr->c_str();
+  attr.map_flags = flags;
+  attr.map_type = static_cast<enum ::bpf_map_type>(map_type);
+  attr.key_size = key_size;
+  attr.value_size = value_size;
+  attr.max_entries = max_entries;
+  return bpf_create_map_xattr(&attr);
 #endif
 }
 

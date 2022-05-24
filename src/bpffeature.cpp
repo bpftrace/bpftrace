@@ -159,17 +159,25 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
       break;
   }
 
-#ifdef HAVE_BCC_CREATE_MAP
-  map_fd = bcc_create_map(
+#ifdef HAVE_LIBBPF_BPF_MAP_CREATE
+  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  opts.map_flags = flags;
+  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(map_type),
+                          nullptr,
+                          key_size,
+                          value_size,
+                          max_entries,
+                          &opts);
 #else
-  map_fd = bpf_create_map(
+  struct bpf_create_map_attr attr = {};
+  attr.name = nullptr;
+  attr.map_flags = flags;
+  attr.map_type = static_cast<enum ::bpf_map_type>(map_type);
+  attr.key_size = key_size;
+  attr.value_size = value_size;
+  attr.max_entries = max_entries;
+  map_fd = bpf_create_map_xattr(&attr);
 #endif
-      static_cast<enum ::bpf_map_type>(map_type),
-      nullptr,
-      key_size,
-      value_size,
-      max_entries,
-      flags);
 
   if (map_fd >= 0)
     close(map_fd);
@@ -267,17 +275,26 @@ bool BPFfeature::has_map_batch()
   if (has_map_batch_.has_value())
     return *has_map_batch_;
 
-#ifdef HAVE_BCC_CREATE_MAP
-  map_fd = bcc_create_map(
+#ifdef HAVE_LIBBPF_BPF_MAP_CREATE
+  LIBBPF_OPTS(bpf_map_create_opts, opts);
+  opts.map_flags = flags;
+  map_fd = bpf_map_create(static_cast<enum ::bpf_map_type>(
+                              libbpf::BPF_MAP_TYPE_HASH),
+                          nullptr,
+                          key_size,
+                          value_size,
+                          max_entries,
+                          &opts);
 #else
-  map_fd = bpf_create_map(
+  struct bpf_create_map_attr attr = {};
+  attr.name = nullptr;
+  attr.map_flags = flags;
+  attr.map_type = static_cast<enum ::bpf_map_type>(libbpf::BPF_MAP_TYPE_HASH);
+  attr.key_size = key_size;
+  attr.value_size = value_size;
+  attr.max_entries = max_entries;
+  map_fd = bpf_create_map_xattr(&attr);
 #endif
-      static_cast<enum ::bpf_map_type>(libbpf::BPF_MAP_TYPE_HASH),
-      nullptr,
-      key_size,
-      value_size,
-      max_entries,
-      flags);
 
   if (map_fd < 0)
     return false;

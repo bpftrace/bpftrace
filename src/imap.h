@@ -5,7 +5,7 @@
 #include "mapkey.h"
 #include "types.h"
 
-#include <bcc/libbpf.h>
+#include <linux/bpf.h>
 
 namespace bpftrace {
 
