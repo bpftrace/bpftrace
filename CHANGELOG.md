@@ -6,7 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.15.0] 2022-05-24
+
+The 0.15.0 release has basic support for LLVM 14 but not all features work yet, see [#2228](https://github.com/iovisor/bpftrace/pull/2228)
 
 #### Added
 - Add option for unconditional hex output
@@ -32,10 +34,7 @@ and this project adheres to
 - Improve handling empty attach points
   - [#2179](https://github.com/iovisor/bpftrace/pull/2179)
 
-#### Deprecated
-#### Removed
 #### Fixed
-
 - Fix precedence of multiplicative operations
   - [#2096](https://github.com/iovisor/bpftrace/pull/2096)
 - Fix probe matching for uprobes with absolute address
@@ -52,11 +51,9 @@ and this project adheres to
   - [#2217](https://github.com/iovisor/bpftrace/pull/2217)
 
 #### Tools
-
 - Update biosnoop.bt for kernel >=5.17
   - [#2207](https://github.com/iovisor/bpftrace/pull/2207)
 
-#### Documentation
 
 ## [0.14.1] 2021-12-29
 
