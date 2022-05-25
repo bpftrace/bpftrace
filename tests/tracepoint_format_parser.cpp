@@ -232,6 +232,7 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
       "	field:unsigned int fd;	offset:16;	size:8;	signed:0;\n"
       "	field:char * buf;	offset:24;	size:8;	signed:0;\n"
       "	field:size_t count;	offset:32;	size:8;	signed:0;\n"
+      "	field:char comm[TASK_COMM_LEN];	offset:40; size:16; signed:1;\n"
       "\n"
       "print fmt: \"fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx\", ((unsigned "
       "long)(REC->fd)), ((unsigned long)(REC->buf)), ((unsigned "
@@ -250,6 +251,8 @@ TEST(tracepoint_format_parser, tracepoint_struct_btf)
   EXPECT_THAT(bpftrace.btf_set_, Contains("u64"));
   EXPECT_THAT(bpftrace.btf_set_, Contains("char *"));
   EXPECT_THAT(bpftrace.btf_set_, Contains("size_t"));
+  EXPECT_THAT(bpftrace.btf_set_, Contains("char"));
+  EXPECT_THAT(bpftrace.btf_set_, Contains("TASK_COMM_LEN"));
 }
 
 TEST(tracepoint_format_parser, args_field_access)

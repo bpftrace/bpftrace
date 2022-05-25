@@ -17,6 +17,8 @@ and this project adheres to
   - [#2204](https://github.com/iovisor/bpftrace/pull/2204)
 - Serialize empty histogram as an empty JSON array
   - [#2250](https://github.com/iovisor/bpftrace/pull/2250)
+- Handle enum values in tracepoint format defs
+  - [#2236](https://github.com/iovisor/bpftrace/pull/2236)
 
 #### Added
 #### Docs
