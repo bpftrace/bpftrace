@@ -98,7 +98,6 @@ jobs:
           LLVM_VERSION: 13
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          GTEST_FILTER: '-clang_parser.nested_struct_no_type'
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON

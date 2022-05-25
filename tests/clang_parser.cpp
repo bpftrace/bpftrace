@@ -202,8 +202,13 @@ TEST(clang_parser, nested_struct_no_type)
   // since they are called bar and baz
   parse("struct Foo { struct { int x; } bar; union { int y; } baz; }", bpftrace);
 
+#if LLVM_VERSION_MAJOR >= 13
+  std::string bar_name = "struct Foo::(unnamed at definitions.h:2:14)";
+  std::string baz_name = "union Foo::(unnamed at definitions.h:2:37)";
+#else
   std::string bar_name = "struct Foo::(anonymous at definitions.h:2:14)";
   std::string baz_name = "union Foo::(anonymous at definitions.h:2:37)";
+#endif
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
   ASSERT_TRUE(bpftrace.structs.Has(bar_name));
