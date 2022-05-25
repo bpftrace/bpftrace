@@ -224,13 +224,23 @@ std::string TracepointFormatParser::parse_field(const std::string &line,
     field_type = R"_(__attribute__((annotate("tp_data_loc"))) int)_";
   }
 
+  auto arr_size_pos = field_name.find('[');
+  auto arr_size_end_pos = field_name.find(']');
   // Only adjust field types for non-arrays
-  if (field_name.find("[") == std::string::npos)
+  if (arr_size_pos == std::string::npos)
     field_type = adjust_integer_types(field_type, size);
 
   // If BTF is available, we try not to use any header files, including
   // <linux/types.h> and request all the types we need from BTF.
   bpftrace.btf_set_.emplace(field_type);
+
+  if (arr_size_pos != std::string::npos)
+  {
+    auto arr_size = field_name.substr(arr_size_pos + 1,
+                                      arr_size_end_pos - arr_size_pos - 1);
+    if (arr_size.find_first_not_of("0123456789") != std::string::npos)
+      bpftrace.btf_set_.emplace(arr_size);
+  }
 
   return extra + "  " + field_type + " " + field_name + ";\n";
 }
