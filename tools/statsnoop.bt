@@ -3,7 +3,7 @@
  * statsnoop	Trace stat() syscalls.
  *		For Linux, uses bpftrace and eBPF.
  *
- * This traces the traecepoints for statfs(), statx(), newstat(), and
+ * This traces the tracepoints for statfs(), statx(), newstat(), and
  * newlstat(). These aren't the only the stat syscalls: if you are missing
  * activity, you may need to add more variants.
  *
