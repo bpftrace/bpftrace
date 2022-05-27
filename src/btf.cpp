@@ -31,7 +31,7 @@ namespace bpftrace {
 static __u32 type_cnt(const struct btf *btf)
 {
 #ifdef HAVE_LIBBPF_BTF_TYPE_CNT
-  return btf__type_cnt(btf);
+  return btf__type_cnt(btf) - 1;
 #else
   return btf__get_nr_types(btf);
 #endif
