@@ -658,7 +658,7 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
   int min_index, max_index, max_value;
   hist_prepare(values, min_index, max_index, max_value);
   if (max_index == -1)
-    return "";
+    return "[]";
 
   std::ostringstream res;
   res << "[";
@@ -702,7 +702,7 @@ std::string JsonOutput::lhist_to_str(const std::vector<uint64_t> &values,
   int max_index, max_value, buckets, start_value, end_value;
   lhist_prepare(values, min, max, step, max_index, max_value, buckets, start_value, end_value);
   if (max_index == -1)
-    return "";
+    return "[]";
 
   std::ostringstream res;
   res << "[";

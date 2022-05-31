@@ -29,6 +29,11 @@ RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @hist = hist(2); @hist = hist(1025); exi
 EXPECT ^True$
 TIMEOUT 5
 
+NAME histogram zero
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @hist = hist(2); zero(@hist); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_zero.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
 NAME multiple histograms
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0); @["curl"] = hist(511); @["curl"] = hist(1024); @["curl"] = hist(1025); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_multiple.json")))'
 EXPECT ^True$
@@ -36,6 +41,11 @@ TIMEOUT 5
 
 NAME linear histogram
 RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist.json")))'
+EXPECT ^True$
+TIMEOUT 5
+
+NAME linear histogram zero
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @h = lhist(2, 0, 100, 10); zero(@h); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/lhist_zero.json")))'
 EXPECT ^True$
 TIMEOUT 5
 
