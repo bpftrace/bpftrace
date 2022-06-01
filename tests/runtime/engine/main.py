@@ -75,7 +75,7 @@ if __name__ == "__main__":
     parser.add_argument('--filter', dest='tests_filter',
                         help='filter runtime tests')
     parser.add_argument('--run-aot-tests', action='store_true',
-                        help='Run ahead-of-time compliation tests. Note this would roughly double test time.')
+                        help='Run ahead-of-time compilation tests. Note this would roughly double test time.')
 
     args = parser.parse_args()
 

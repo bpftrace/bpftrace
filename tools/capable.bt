@@ -1,6 +1,6 @@
 #!/usr/bin/env bpftrace
 /*
- * capable	Trace security capabilitiy checks (cap_capable()).
+ * capable	Trace security capability checks (cap_capable()).
  *		For Linux, uses bpftrace and eBPF.
  *
  * USAGE: capable.bt

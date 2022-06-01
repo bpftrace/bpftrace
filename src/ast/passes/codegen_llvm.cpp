@@ -1219,7 +1219,7 @@ void CodegenLLVM::binop_int(Binop &binop)
   // If left or right is PositionalParameter, that means the syntax is
   // str($1 + num) or str(num + $1). The positional params returns a pointer
   // to a buffer, and the buffer should live untill str() is accepted.
-  // Extend the liftime of the buffer
+  // Extend the lifetime of the buffer
   if (dynamic_cast<PositionalParameter *>(binop.left))
     expr_deleter_ = scoped_del_left.disarm();
   if (dynamic_cast<PositionalParameter *>(binop.right))
@@ -1444,7 +1444,7 @@ void CodegenLLVM::unop_int(Unop &unop)
       expr_ = b_.CreateICmpEQ(expr_, zero_value);
       // CreateICmpEQ() returns 1-bit integer
       // Cast it to the same type of the operand
-      // Use unsigned extention, otherwise !0 becomes -1
+      // Use unsigned extension, otherwise !0 becomes -1
       expr_ = b_.CreateIntCast(expr_, ty, false);
       break;
     }

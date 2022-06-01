@@ -1329,7 +1329,7 @@ Docker images containing a static build are now available on [quay.io](https://q
   - cmake: add BUILD_TESTING support (a56ab12) by Aleksa Sarai <cyphar@cyphar.com>
   - Add --version (61a4650, eab3675) by williangaspar <williangaspar360@gmail.com>
   - Add hint to install docs and normalize format (c0084a2) by Daniel Xu <dxu@dxuuu.xyz>
-  - Make bpftrace -l list sofware and hardware types (#44) (acd9a80) by Augusto Caringi <acaringi@redhat.com>
+  - Make bpftrace -l list software and hardware types (#44) (acd9a80) by Augusto Caringi <acaringi@redhat.com>
   - Print program ID when the verbose option is enabled. (8e8258d) by David Calavera <david.calavera@gmail.com>
 
 ### Changed

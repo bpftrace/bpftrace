@@ -50,7 +50,7 @@ done
 echo "${GREEN}[==========]"
 
 if [ $result -eq 0 ]; then
-    echo "${GREEN}[  PASSED  ]${NC} All tests were succesful"
+    echo "${GREEN}[  PASSED  ]${NC} All tests were successful"
 else
     echo "${RED}[  FAILED  ]${NC} Memory leaks detected"
 fi

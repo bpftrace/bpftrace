@@ -107,7 +107,7 @@ Map::Map(const std::string &name,
 // bpf_get_stack() to write into. Using the stack directly wouldn't work well
 // b/c it would take too much stack space.
 //
-// The temporary fix is to bump the map size to 128K. Any futher bumps should
+// The temporary fix is to bump the map size to 128K. Any further bumps should
 // warrant consideration of the previous paragraph.
 Map::Map(const SizedType &type) : IMap(type)
 {

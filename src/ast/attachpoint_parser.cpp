@@ -244,7 +244,7 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
     }
     else if (!in_quotes && raw[idx] == '$')
     {
-      // There's an assumption that the positional paramter is well
+      // There's an assumption that the positional parameter is well
       // formed. ie we are not expecting a bare `$` or `$nonint`. The
       // bison parser should have guaranteed this.
       size_t i = idx + 1;
