@@ -165,7 +165,7 @@ if(EMBED_BUILD_LLVM)
 
   # Set up build targets and map to embedded paths
   ExternalProject_Get_Property(embedded_llvm INSTALL_DIR)
-  set(EMBEDDED_LLVM_INSTALL_DIR "${INSTALL_DIR}/lib")
+  set(EMBEDDED_LLVM_INSTALL_DIR "${INSTALL_DIR}")
 else()
   set(EMBEDDED_LLVM_INSTALL_DIR "${EMBED_LLVM_PATH}")
 endif()
