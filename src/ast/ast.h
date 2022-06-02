@@ -18,7 +18,7 @@ class VisitorBase;
 #define DEFINE_ACCEPT void accept(VisitorBase &v) override;
 
 /**
- * Copy the node but leave all it's child members uninitialized, effecitvely
+ * Copy the node but leave all it's child members uninitialized, effectively
  * turning it into a leaf node
  */
 #define DEFINE_LEAFCOPY(T)                                                     \

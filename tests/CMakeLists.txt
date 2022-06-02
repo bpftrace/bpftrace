@@ -86,7 +86,7 @@ endif(STATIC_LINKING)
 # Still need to support vendored gtest/gmock b/c old ubuntu versions (< focal)
 # only provide gtest/gmock sources -- no precompiled binaries
 if(VENDOR_GTEST)
-  # Ninja build system needs the byproducts set explicilty so it can
+  # Ninja build system needs the byproducts set explicitly so it can
   # check for missing dependencies.
   # https://cmake.org/pipermail/cmake/2015-April/060234.html
   set(gtest_byproducts

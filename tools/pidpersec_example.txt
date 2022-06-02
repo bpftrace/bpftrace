@@ -1,7 +1,7 @@
 Demonstrations of pidpersec, the Linux bpftrace/eBPF version.
 
 
-Tracing new procesess:
+Tracing new processes:
 
 # ./pidpersec.bt
 Attaching 4 probes...
@@ -21,7 +21,7 @@ Tracing new processes... Hit Ctrl-C to end.
 22:30:02 PIDs/sec:
 ^C
 
-The output begins by showing a rate of new procesess over 120 per second.
+The output begins by showing a rate of new processes over 120 per second.
 That then ends at time 22:29:59, and for the next few seconds there are zero
 new processes per second.
 

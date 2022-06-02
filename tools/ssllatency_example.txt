@@ -93,7 +93,7 @@ can be more than 3x if adding more wrk connections. Keep using same
 workload for comparison.
 
 libcrypto_mb.so is used instead of libcrypto.so, to batch process multiple
-async requets simultaniously by SIMD. As a result, wrk issued 2933 requests
+async requets simultaneously by SIMD. As a result, wrk issued 2933 requests
 in 1s. Failed SSL_do_handshake calls has doubled(5884), and successful
 calls(2941) returned quickly(51us). This is expected from async routines.
 

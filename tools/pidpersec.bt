@@ -1,6 +1,6 @@
 #!/usr/bin/env bpftrace
 /*
- * pidpersec	Count new procesess (via fork).
+ * pidpersec	Count new processes (via fork).
  *		For Linux, uses bpftrace and eBPF.
  *
  * Written as a basic example of counting on an event.

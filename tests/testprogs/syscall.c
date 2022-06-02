@@ -43,7 +43,7 @@ int gen_nanosleep(int argc, char *argv[])
     sscanf(arg, "%le%c", &time, &tail);
     if (tail != '\0')
     {
-      printf("Argument '%s' should only contain numerial charactors\n", arg);
+      printf("Argument '%s' should only contain numerial characters\n", arg);
       return 1;
     }
     // if time is less than 1 nsec, round up to 1 nsec, as with sleep command
