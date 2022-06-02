@@ -3,12 +3,12 @@ on:
   push:
     paths:
       - docker/Dockerfile.llvm
-      - cmake/embedded/*
+      - cmake/embed/*
       - .github/workflows/embedded_llvm.yml
   pull_request:
     paths:
       - docker/Dockerfile.llvm
-      - cmake/embedded/*
+      - cmake/embed/*
       - .github/workflows/embedded_llvm.yml
   schedule:
     - cron: '0 0 1 * *'
