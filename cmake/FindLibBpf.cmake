@@ -85,7 +85,7 @@ CHECK_CXX_SOURCE_COMPILES("
 int main(void) {
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
 
-  opts.kprobe_multi.syms = NULL;
+  opts.kprobe_multi.syms = BPF_F_KPROBE_MULTI_RETURN;
   return 0;
 }
 " HAVE_LIBBPF_KPROBE_MULTI)
