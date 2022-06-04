@@ -1,11 +1,11 @@
-.TH bitesize 8  "2018-09-07" "USER COMMANDS"
+.TH bitesize.bt 8  "2018-09-07" "USER COMMANDS"
 .SH NAME
 bitesize.bt \- Show disk I/O size as a histogram. Uses bpftrace/eBPF.
 .SH SYNOPSIS
 .B bitesize.bt
 .SH DESCRIPTION
 This can be used to characterize the distribution of block device
-(disk) I/O sizes. To study block device I/O in more detail, see biosnoop(8).
+(disk) I/O sizes. To study block device I/O in more detail, see biosnoop.bt(8).
 
 This uses the tracepoint:block:block_rq_issue tracepoint, and is a simple
 example of bpftrace.
