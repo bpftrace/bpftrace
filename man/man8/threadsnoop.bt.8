@@ -1,4 +1,4 @@
-.TH threadsnoop 8  "2019-07-02" "USER COMMANDS"
+.TH threadsnoop.bt 8  "2019-07-02" "USER COMMANDS"
 .SH NAME
 threadsnoop.bt \- Trace thread creation via pthread_create(). Uses bpftrace/eBPF.
 .SH SYNOPSIS
@@ -6,7 +6,7 @@ threadsnoop.bt \- Trace thread creation via pthread_create(). Uses bpftrace/eBPF
 .SH DESCRIPTION
 threadsnoop traces calls to pthread_create(), showing this path of thread
 creation. This can be used for workload characterization and discovery, and is
-a companion to execsnoop(8) which traces execve(2).
+a companion to execsnoop.bt(8) which traces execve(2).
 
 This works by tracing the pthread_create() from libpthread.so.0. The path
 to this library may need adjusting in the tool source to match your system.
@@ -57,4 +57,4 @@ Unstable - in development.
 .SH AUTHOR
 Brendan Gregg
 .SH SEE ALSO
-execsnoop(8)
+execsnoop.bt(8)
