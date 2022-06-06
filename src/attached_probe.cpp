@@ -188,8 +188,9 @@ int AttachedProbe::detach_iter(void)
 AttachedProbe::AttachedProbe(Probe &probe,
                              std::tuple<uint8_t *, uintptr_t> func,
                              bool safe_mode,
-                             BPFfeature &feature)
-    : probe_(probe), func_(func)
+                             BPFfeature &feature,
+                             BTF &btf)
+    : probe_(probe), func_(func), btf_(btf)
 {
   load_prog(feature);
   if (bt_verbose)
@@ -238,8 +239,9 @@ AttachedProbe::AttachedProbe(Probe &probe,
 AttachedProbe::AttachedProbe(Probe &probe,
                              std::tuple<uint8_t *, uintptr_t> func,
                              int pid,
-                             BPFfeature &feature)
-    : probe_(probe), func_(func)
+                             BPFfeature &feature,
+                             BTF &btf)
+    : probe_(probe), func_(func), btf_(btf)
 {
   load_prog(feature);
   switch (probe_.type)
@@ -673,7 +675,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     return;
 
   uint8_t *insns = std::get<0>(func_);
-  int prog_len = std::get<1>(func_);
+  unsigned prog_len = std::get<1>(func_);
   const char *license = "GPL";
   int log_level = 0;
 
@@ -704,23 +706,14 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     else
       name = probe_.name;
 
-    // bpf_prog_load rejects colons in the probe name,
-    // so start the name after the probe type, after ':'
+    // bpf_prog_load rejects some characters in probe names, so we clean them
+    // start the name after the probe type, after ':'
     if (auto last_colon = name.rfind(':'); last_colon != std::string::npos)
       name = name.substr(last_colon + 1);
-
-    // The bcc_prog_load function now recognizes 'kfunc__/kretfunc__'
-    // prefixes and detects and fills in all the necessary BTF related
-    // attributes for loading the kfunc program.
-
-    tracing_type = probetypeName(probe_.type);
-    if (!tracing_type.empty())
-    {
-      if (tracing_type == "iter")
-        tracing_type = "bpf_iter";
-
-      name = tracing_type + "__" + name;
-    }
+    // replace '+' by '.'
+    std::replace(name.begin(), name.end(), '+', '.');
+    // remove quotes
+    name.erase(std::remove(name.begin(), name.end(), '"'), name.end());
 
     for (int attempt = 0; attempt < 3; attempt++)
     {
@@ -728,59 +721,64 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       if (version == 0 && attempt > 0)
       {
         // Recent kernels don't check the version so we should try to call
-        // bcc_prog_load during first iteration even if we failed to determine
+        // bpf_prog_load during first iteration even if we failed to determine
         // the version. We should not do that in subsequent iterations to avoid
         // zeroing of log_buf on systems with older kernels.
         continue;
       }
 
-#ifdef HAVE_BCC_PROG_LOAD_XATTR
-      struct bpf_load_program_attr attr = {};
+#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
+      LIBBPF_OPTS(bpf_prog_load_opts, opts);
+      opts.log_buf = log_buf.get();
+      opts.log_size = log_buf_size;
+#else
+      struct bpf_load_program_attr opts = {};
+#endif
+      opts.log_level = log_level;
 
-      attr.prog_type = progtype(probe_.type);
+      if (probe_.type == ProbeType::kfunc)
+        opts.expected_attach_type = static_cast<::bpf_attach_type>(
+            libbpf::BPF_TRACE_FENTRY);
+      else if (probe_.type == ProbeType::kretfunc)
+        opts.expected_attach_type = static_cast<::bpf_attach_type>(
+            libbpf::BPF_TRACE_FEXIT);
+      else if (probe_.type == ProbeType::iter)
+        opts.expected_attach_type = static_cast<::bpf_attach_type>(
+            libbpf::BPF_TRACE_ITER);
 
       if (feature.has_kprobe_multi() && !probe_.funcs.empty())
-      {
-        attr.expected_attach_type = static_cast<enum ::bpf_attach_type>(
+        opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_KPROBE_MULTI);
+
+      if (probe_.type == ProbeType::kfunc ||
+          probe_.type == ProbeType::kretfunc || probe_.type == ProbeType::iter)
+      {
+        std::string btf_name = name;
+        if (probe_.type == ProbeType::iter)
+          btf_name = "bpf_iter_" + btf_name;
+        opts.attach_btf_id = btf_.get_btf_id(btf_name);
       }
       else
       {
-        attr.name = name.c_str();
+        opts.kern_version = version;
       }
 
-      attr.insns = reinterpret_cast<struct bpf_insn *>(insns);
-      attr.license = license;
-
-      libbpf::bpf_prog_type prog_type = static_cast<libbpf::bpf_prog_type>(
-          progtype(probe_.type));
-
-      if (prog_type != libbpf::BPF_PROG_TYPE_TRACING &&
-          prog_type != libbpf::BPF_PROG_TYPE_EXT)
-        attr.kern_version = version;
-
-      attr.log_level = log_level;
-
-      progfd_ = bcc_prog_load_xattr(
-          &attr, prog_len, log_buf.get(), log_buf_size, true);
-
-#else // HAVE_BCC_PROG_LOAD_XATTR
-#ifdef HAVE_BCC_PROG_LOAD
-      progfd_ = bcc_prog_load(progtype(probe_.type),
-                              name.c_str(),
-#else
+#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
       progfd_ = bpf_prog_load(progtype(probe_.type),
                               name.c_str(),
-#endif
-                              reinterpret_cast<struct bpf_insn *>(insns),
-                              prog_len,
                               license,
-                              version,
-                              log_level,
-                              log_buf.get(),
-                              log_buf_size);
-#endif // HAVE_BCC_PROG_LOAD_XATTR
-
+                              reinterpret_cast<struct bpf_insn *>(insns),
+                              prog_len / sizeof(struct bpf_insn),
+                              &opts);
+#else
+      opts.prog_type = progtype(probe_.type);
+      opts.name = name.c_str();
+      opts.insns = reinterpret_cast<struct bpf_insn *>(insns);
+      opts.insns_cnt = prog_len / sizeof(struct bpf_insn);
+      opts.license = license;
+      opts.attach_prog_fd = 0;
+      progfd_ = bpf_load_program_xattr(&opts, log_buf.get(), log_buf_size);
+#endif
       if (progfd_ >= 0)
         break;
     }

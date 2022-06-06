@@ -46,6 +46,8 @@ public:
                    std::map<std::string, SizedType>& args,
                    bool ret);
 
+  int get_btf_id(const std::string& name) const;
+
 private:
   SizedType get_stype(__u32 id);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t);
