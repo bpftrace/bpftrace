@@ -773,7 +773,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (feature_->has_uprobe_refcnt() || !(file_activation && probe.path.size()))
   {
     ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, func, pid, *feature_));
+        std::make_unique<AttachedProbe>(probe, func, pid, *feature_, btf_));
     return ret;
   }
 
@@ -833,8 +833,8 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
         throw std::runtime_error("failed to parse pid=" + pid_str);
       }
 
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, func, pid_parsed, *feature_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(
+          probe, func, pid_parsed, *feature_, btf_));
       break;
     }
   }
@@ -920,14 +920,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     else if (probe.type == ProbeType::watchpoint ||
              probe.type == ProbeType::asyncwatchpoint)
     {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, *section, pid, *feature_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(
+          probe, *section, pid, *feature_, btf_));
       return ret;
     }
     else
     {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *section, safe_mode_, *feature_));
+          probe, *section, safe_mode_, *feature_, btf_));
       return ret;
     }
   }

@@ -69,6 +69,12 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
+  buf << "  libbpf bpf_prog_load: "
+#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
+      << "yes" << std::endl;
+#else
+      << "no" << std::endl;
+#endif
   buf << "  libbpf bpf_map_create: "
 #ifdef HAVE_LIBBPF_BPF_MAP_CREATE
       << "yes" << std::endl;

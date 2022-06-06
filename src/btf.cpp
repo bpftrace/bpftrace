@@ -746,6 +746,11 @@ std::set<std::string> BTF::get_all_structs() const
   return struct_set;
 }
 
+int BTF::get_btf_id(const std::string &name) const
+{
+  return btf__find_by_name_kind(btf, name.c_str(), BTF_KIND_FUNC);
+}
+
 } // namespace bpftrace
 #else // HAVE_LIBBPF_BTF_DUMP
 
