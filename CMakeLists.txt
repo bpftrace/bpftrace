@@ -130,17 +130,11 @@ endif(STATIC_LINKING)
 get_filename_component(LIBBCC_LIBDIR ${LIBBCC_LIBRARIES} DIRECTORY)
 set(CMAKE_REQUIRED_LINK_OPTIONS -L${LIBBCC_LIBDIR})
 
-check_symbol_exists(bcc_prog_load "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_PROG_LOAD)
 check_symbol_exists(bcc_elf_foreach_sym "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_elf.h" HAVE_BCC_ELF_FOREACH_SYM)
 check_symbol_exists(bpf_attach_kfunc "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_KFUNC)
 check_symbol_exists(bcc_usdt_addsem_probe "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h" HAVE_BCC_USDT_ADDSEM)
 check_symbol_exists(bcc_procutils_which_so "${LIBBCC_INCLUDE_DIRS}/bcc/bcc_proc.h" HAVE_BCC_WHICH_SO)
 
-# bcc_prog_load_xattr needs struct bpf_load_program_attr,
-# which is defined in libbpf
-if (LIBBPF_FOUND)
-  check_symbol_exists(bcc_prog_load_xattr "${LIBBCC_INCLUDE_DIRS}/bcc/libbpf.h" HAVE_BCC_PROG_LOAD_XATTR)
-endif()
 set(CMAKE_REQUIRED_LIBRARIES)
 set(CMAKE_REQUIRED_LINK_OPTIONS)
 
@@ -206,10 +200,6 @@ if(HAVE_NAME_TO_HANDLE_AT)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_NAME_TO_HANDLE_AT=1)
 endif(HAVE_NAME_TO_HANDLE_AT)
 
-if(HAVE_BCC_PROG_LOAD)
-  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BCC_PROG_LOAD)
-endif(HAVE_BCC_PROG_LOAD)
-
 if(HAVE_BCC_ELF_FOREACH_SYM)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BCC_ELF_FOREACH_SYM)
 endif(HAVE_BCC_ELF_FOREACH_SYM)
@@ -240,10 +230,6 @@ endif()
 
 if (HAVE_LIBBPF_LINK_CREATE)
   set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_LIBBPF_LINK_CREATE)
-endif()
-
-if (HAVE_BCC_PROG_LOAD_XATTR)
-  set(BPFTRACE_FLAGS "${BPFTRACE_FLAGS}" HAVE_BCC_PROG_LOAD_XATTR)
 endif()
 
 if(HAVE_BFD_DISASM)
