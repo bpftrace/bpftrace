@@ -2715,15 +2715,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   }
   else if (ap.provider == "kfunc" || ap.provider == "kretfunc")
   {
-#ifndef HAVE_BCC_KFUNC
-    LOG(ERROR, ap.loc, err_)
-        << "kfunc/kretfunc not available for your linked against bcc version.";
-    return;
-#endif
-
-    bool supported = bpftrace_.feature_->has_prog_kfunc() &&
-                     bpftrace_.btf_.has_data();
-    if (!supported)
+    if (!bpftrace_.feature_->has_kfunc())
     {
       LOG(ERROR, ap.loc, err_)
           << "kfunc/kretfunc not available for your kernel version.";

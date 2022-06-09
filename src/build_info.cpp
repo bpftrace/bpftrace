@@ -33,12 +33,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  bpf_attach_kfunc: "
-#ifdef HAVE_BCC_KFUNC
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  bcc_usdt_addsem: "
 #ifdef HAVE_BCC_USDT_ADDSEM
       << "yes" << std::endl;

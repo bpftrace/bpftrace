@@ -312,7 +312,7 @@ TIMEOUT 1
 NAME path
 RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $f = path(args->filp->f_path); if (!strncmp($f, "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
-REQUIRES_FEATURE dpath
+REQUIRES_FEATURE dpath kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 

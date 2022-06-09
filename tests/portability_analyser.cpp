@@ -57,7 +57,7 @@ TEST(portability_analyser, tracepoint_field_access)
   test("tracepoint:sched:sched_* { args->common_field }", 0);
 }
 
-#if defined(HAVE_LIBBPF_BTF_DUMP) && defined(HAVE_BCC_KFUNC)
+#if defined(HAVE_LIBBPF_BTF_DUMP)
 #include "btf_common.h"
 class portability_analyser_btf : public test_btf
 {
