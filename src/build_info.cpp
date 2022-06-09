@@ -57,12 +57,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  libbpf: "
-#ifdef HAVE_LIBBPF
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  libbpf btf dump: "
 #ifdef HAVE_LIBBPF_BTF_DUMP
       << "yes" << std::endl;
