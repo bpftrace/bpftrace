@@ -175,6 +175,7 @@ jobs:
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"
         -e BUILD_LIBBPF="${BUILD_LIBBPF}"
+        -e LIBBPF_VERSION="${LIBBPF_VERSION}"
         -e CC="${CC}"
         -e CXX="${CXX}"
         -e GTEST_FILTER="${GTEST_FILTER:-*}"
