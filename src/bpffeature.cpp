@@ -469,12 +469,17 @@ std::string BPFfeature::report(void)
       << "  kprobe: " << to_str(has_prog_kprobe())
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
-      << "  kfunc: " << to_str(has_prog_kfunc())
+      << "  kfunc: " << to_str(has_kfunc())
       << "  iter:task: " << to_str(has_prog_iter_task())
       << "  iter:task_file: " << to_str(has_prog_iter_task_file())
       << "  kprobe_multi: " << to_str(has_kprobe_multi()) << std::endl;
 
   return buf.str();
+}
+
+bool BPFfeature::has_kfunc()
+{
+  return has_prog_kfunc() && btf_.has_data();
 }
 
 } // namespace bpftrace

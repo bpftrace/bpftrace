@@ -123,10 +123,9 @@ void check_banned_kretprobes(std::string const& kprobe_name) {
   }
 }
 
-#ifdef HAVE_BCC_KFUNC
 void AttachedProbe::attach_kfunc(void)
 {
-  tracing_fd_ = bpf_attach_kfunc(progfd_);
+  tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
 }
@@ -136,20 +135,6 @@ int AttachedProbe::detach_kfunc(void)
   close(tracing_fd_);
   return 0;
 }
-#else
-void AttachedProbe::attach_kfunc(void)
-{
-  throw std::runtime_error(
-      "Error attaching probe: " + probe_.name +
-      ", kfunc not available for your linked against bcc version");
-}
-
-int AttachedProbe::detach_kfunc(void)
-{
-  LOG(ERROR) << "kfunc not available for linked against bcc version";
-  return -1;
-}
-#endif // HAVE_BCC_KFUNC
 
 #ifdef HAVE_LIBBPF_LINK_CREATE
 void AttachedProbe::attach_iter(void)

@@ -2512,8 +2512,6 @@ class semantic_analyser_btf : public test_btf
 {
 };
 
-#ifdef HAVE_BCC_KFUNC
-
 TEST_F(semantic_analyser_btf, kfunc)
 {
   test("kfunc:func_1 { 1 }", 0);
@@ -2559,8 +2557,6 @@ TEST_F(semantic_analyser_btf, call_path)
   test("kfunc:func_1 { $k = path( args->foo1 ) }", 0);
   test("kretfunc:func_1 { $k = path( retval->foo1 ) }", 0);
 }
-
-#endif // HAVE_BCC_KFUNC
 
 TEST_F(semantic_analyser_btf, iter)
 {

@@ -1,3 +1,15 @@
+NAME kfunc
+PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME kretfunc
+PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
 NAME kfunc_wildcard
 PROG kfunc:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*

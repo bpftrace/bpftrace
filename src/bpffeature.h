@@ -80,6 +80,7 @@ public:
   bool has_d_path();
   bool has_uprobe_refcnt();
   bool has_kprobe_multi();
+  bool has_kfunc();
 
   std::string report(void);
 
