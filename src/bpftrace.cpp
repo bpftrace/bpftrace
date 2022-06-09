@@ -28,9 +28,7 @@
 
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
-#ifdef HAVE_LIBBPF_BPF_H
 #include <bpf/bpf.h>
-#endif
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"

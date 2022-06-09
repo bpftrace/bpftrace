@@ -418,8 +418,8 @@ std::string BPFfeature::report(void)
   buf << "Kernel features" << std::endl
       << "  Instruction limit: " << instruction_limit() << std::endl
       << "  Loop support: " << to_str(has_loop())
-      << "  btf (depends on Build:libbpf): " << to_str(has_btf())
-      << "  map batch (depends on Build:libbpf): " << to_str(has_map_batch())
+      << "  btf: " << to_str(has_btf())
+      << "  map batch: " << to_str(has_map_batch())
       << "  uprobe refcount (depends on Build:bcc bpf_attach_uprobe refcount): "
       << to_str(has_uprobe_refcnt()) << std::endl;
 

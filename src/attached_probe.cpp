@@ -20,6 +20,7 @@
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>
+#include <bpf/bpf.h>
 
 #include "attached_probe.h"
 #include "bpftrace.h"
@@ -27,10 +28,6 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "usdt.h"
-#ifdef HAVE_LIBBPF_BPF_H
-#include <bpf/bpf.h>
-#endif
-#include <linux/perf_event.h>
 
 namespace libbpf {
 #undef __BPF_FUNC_MAPPER

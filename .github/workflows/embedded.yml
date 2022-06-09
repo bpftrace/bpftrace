@@ -52,6 +52,7 @@ jobs:
           DISTRO: alpine
           ALPINE_VERSION: 3.11
           VENDOR_GTEST: ON
+          BUILD_LIBBPF: ON
         - TYPE: Release
           NAME: alpine
           LLVM_VERSION: 9
@@ -66,6 +67,7 @@ jobs:
           DISTRO: alpine
           ALPINE_VERSION: 3.11
           VENDOR_GTEST: ON
+          BUILD_LIBBPF: ON
     steps:
     - uses: actions/checkout@v2
     - name: Build docker container
