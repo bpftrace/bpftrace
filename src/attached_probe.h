@@ -90,4 +90,18 @@ private:
   BTF &btf_;
 };
 
+class HelperVerifierError : public std::runtime_error
+{
+public:
+  const libbpf::bpf_func_id func_id_;
+  const std::string helper_name_;
+  explicit HelperVerifierError(libbpf::bpf_func_id func_id,
+                               std::string helper_name)
+      : std::runtime_error("helper invalid in probe"),
+        func_id_(func_id),
+        helper_name_(helper_name)
+  {
+  }
+};
+
 } // namespace bpftrace
