@@ -15,6 +15,7 @@ RUN_MEMLEAK_TEST=${RUN_MEMLEAK_TEST:-0}
 VENDOR_GTEST=${VENDOR_GTEST:-OFF}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
 BUILD_LIBBPF=${BUILD_LIBBPF:-OFF}
+LIBBPF_VERSION=${LIBBPF_VERSION:-0.8.0}
 CC=${CC:cc}
 CXX=${CXX:c++}
 
@@ -26,7 +27,7 @@ if [[ $BUILD_LIBBPF = ON ]]; then
   mkdir -p /src
   git clone https://github.com/libbpf/libbpf.git /src/libbpf
   cd /src/libbpf/src
-  git checkout v0.8.0
+  git checkout v$LIBBPF_VERSION
   CC=gcc make -j$(nproc)
   # libbpf defaults to /usr/lib64 which doesn't work on debian like systems
   # this should work on both
