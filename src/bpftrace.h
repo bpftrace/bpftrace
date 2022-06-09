@@ -162,6 +162,7 @@ public:
   StructManager structs;
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
+  std::map<libbpf::bpf_func_id, location> helper_use_loc_;
   std::unordered_set<std::string> traceable_funcs_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
 

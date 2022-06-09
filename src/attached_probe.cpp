@@ -639,6 +639,11 @@ void AttachedProbe::cache_progfd(void)
   cached_prog_fds_[probe_.orig_name] = progfd_;
 }
 
+namespace {
+const std::regex helper_verifier_error_re(
+    "[0-9]+: \\([0-9]+\\) call ([a-z|A-Z|0-9|_]+)#([0-9]+)");
+}
+
 void AttachedProbe::load_prog(BPFfeature &feature)
 {
   if (use_cached_progfd())
@@ -770,6 +775,21 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         throw std::runtime_error(errmsg.str());
       }
     }
+
+    // try to identify an illegal helper call
+    if (std::string(log_buf.get())
+            .find("helper call is not allowed in probe") != std::string::npos)
+    {
+      // get helper function name and id
+      std::cmatch m;
+      if (std::regex_search(log_buf.get(), m, helper_verifier_error_re))
+      {
+        throw HelperVerifierError(static_cast<libbpf::bpf_func_id>(
+                                      std::stoi(m[2].str())),
+                                  m[1].str());
+      }
+    }
+
     throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
   }
 
