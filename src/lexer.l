@@ -38,7 +38,7 @@ vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#\*])+
 builtin  arg[0-9]|args|cgroup|comm|cpid|numaid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
-call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap
+call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|sizeof|stats|str|strftime|strncmp|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|has_field|get_field
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack
@@ -170,7 +170,7 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 
 struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
 <STRUCT,BRACE>{
-  "*"|")"               {
+  "*"|")"|","           {
                           if (YY_START == STRUCT)
                           {
                             // Finished parsing the typename of a cast

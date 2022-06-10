@@ -1277,6 +1277,56 @@ void SemanticAnalyser::visit(Call &call)
 
     call.type = CreateUInt(arg->type.GetIntBitWidth());
   }
+  else if (call.func == "has_field")
+  {
+    check_nargs(call, 2);
+    auto &arg0 = *call.vargs->at(0);
+    auto &arg1 = *call.vargs->at(1);
+    if (arg0.type.type != Type::record)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports struct first arguments ("
+          << arg0.type.type << " provided)";
+      return;
+    }
+    if (arg1.type.type != Type::string)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports string second arguments ("
+          << arg1.type.type << " provided)";
+      return;
+    }
+    call.type = CreateBool();
+  }
+  else if (call.func == "get_field")
+  {
+    auto &arg0 = *call.vargs->at(0);
+    auto &arg1 = *call.vargs->at(1);
+    if (arg0.type.type != Type::record)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports struct first arguments ("
+          << arg0.type.type << " provided)";
+      return;
+    }
+    if (arg1.type.type != Type::string)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() only supports string second arguments ("
+          << arg1.type.type << " provided)";
+      return;
+    }
+    auto &element_arg = *call.vargs->at(1);
+    String &element = static_cast<String &>(element_arg);
+    if (!call.vargs->at(0)->type.HasField(element.str))
+    {
+      LOG(ERROR, call.loc, err_)
+          << arg0.type.GetName() << " don't has " << element.str << " element";
+      return;
+    }
+    Field field = call.vargs->at(0)->type.GetField(element.str);
+    call.type = field.type;
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

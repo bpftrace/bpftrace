@@ -1114,6 +1114,21 @@ void CodegenLLVM::visit(Call &call)
       expr_ = b_.CreateCall(swap_fun, { expr_ });
     }
   }
+  else if (call.func == "has_field")
+  {
+    auto &element_arg = *call.vargs->at(1);
+    String &element = static_cast<String &>(element_arg);
+    expr_ = b_.getInt32(call.vargs->at(0)->type.HasField(element.str));
+  }
+  else if (call.func == "get_field")
+  {
+    auto &element_arg = *call.vargs->at(1);
+    String &element = static_cast<String &>(element_arg);
+    FieldAccess *acc = new FieldAccess(call.vargs->at(0),
+                                       element.str,
+                                       call.loc);
+    visit(*acc);
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";

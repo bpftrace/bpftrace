@@ -1261,6 +1261,26 @@ Functions that are marked *async* are asynchronous which can lead to unexpected 
 `bswap` reverses the order of the bytes in integer `n`. In case of 8 bit integers, `n` is returned without being modified.
 The return type is an unsigned integer of the same width as `n`.
 
+=== has_field
+
+.variants
+* `has_field(STRUCT, "x")`
+* `has_field(UNION, "x")`
+
+*compile time*
+
+Returns true if field exists in struct/union.
+
+=== get_field
+
+.variants
+* `get_field(STRUCT, "x")`
+* `get_field(UNION, "x")`
+
+*compile time*
+
+Get elements of struct/union.
+
 === buf
 
 .variants

@@ -198,3 +198,8 @@ PROG BEGIN { printf("size=%d\n", sizeof(struct task_struct)); exit(); }
 EXPECT ^size=
 TIMEOUT 5
 REQUIRES_FEATURE btf
+
+NAME has_field
+PROG struct Foo { int x; struct { char c; }; } BEGIN { printf("%d %d %d\n", has_field(struct Foo, "x"), has_field(struct Foo, "c"), has_field(struct Foo, "d")); exit(); }
+EXPECT ^1 1 0$
+TIMEOUT 5

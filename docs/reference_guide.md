@@ -2223,6 +2223,8 @@ Tracing block I/O sizes > 0 bytes
 - `kptr(void *p)` - Annotate as kernelspace pointer
 - `macaddr(char[6] addr)` - Convert MAC address data
 - `bswap(uint[8|16|32|64] n)` - Reverse byte order
+- `has_field(struct/union X, field)` - Returns true if field exists in struct/union
+- `get_field(struct/union X, field)` - Get elements of struct/union
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
@@ -3136,6 +3138,44 @@ Example:
 # bpftrace -e 'BEGIN { $i = (uint32)0x12345678; printf("Reversing byte order of 0x%x ==> 0x%x\n", $i, bswap($i)); }'
 Attaching 1 probe...
 Reversing byte order of 0x12345678 ==> 0x78563412
+```
+
+## 31. `has_field`: Returns true if field exists in struct/union
+
+Syntax: `has_field(struct/union X, field)`
+
+Returns true if field exists in struct/union.
+
+Examples:
+
+```
+$ sudo bpftrace -e 'struct Foo { int x; char c; } BEGIN { @x = has_field(struct Foo, "x"); exit(); }'
+Attaching 1 probe...
+
+@x: 1
+```
+
+## 31. `get_field`: Get elements of struct/union
+
+Syntax: `get_field(struct/union X, field)`
+
+Get elements of struct/union, `get_field()` usually used with `has_field()`.
+This interface adapts to CO-RE.
+For example: since linux-5.14, the process state field of the `task_struct` structure has changed from
+`state` to `__state`, and this interface can adapt to the change of this kernel structure field.
+
+Note that when field does not exist, `get_field` will return `none`, so when __state does not exist,
+`printf("%d.\n", get_field(*$task, "__state"))` will report an error, which should be avoided.
+
+Examples:
+
+```
+$task = (struct task_struct *)curtask;
+if (has_field(struct task_struct, "state")) {
+  $state = get_field(*$task, "state");
+} else if (has_field(struct task_struct, "__state")) {
+  $state = get_field(*$task, "__state");
+}
 ```
 
 # Map Functions

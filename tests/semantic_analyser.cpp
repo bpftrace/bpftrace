@@ -2441,6 +2441,26 @@ TEST(semantic_analyser, call_path)
   test("END { $k = path( 1 ) }", 1);
 }
 
+TEST(semantic_analyser, call_has_field)
+{
+  test("struct Foo { int a; struct { char c; }; }; \
+        BEGIN { $a = has_field(struct Foo, \"a\"); \
+               $c = has_field(struct Foo, \"c\"); }",
+        0);
+}
+
+TEST(semantic_analyser, call_get_field)
+{
+  test("struct Foo { char c; long l; } "
+	   "kprobe:f { $foo = (struct Foo*)arg0; "
+       "if (has_field(struct Foo, \"c\")) {"
+       "  $c = get_field(*$foo, \"c\");"
+       "}"
+       "printf(\"%d\\n\", $c);"
+       "}",
+       0);
+}
+
 TEST(semantic_analyser, int_ident)
 {
   test("BEGIN { sizeof(int32) }", 0);
