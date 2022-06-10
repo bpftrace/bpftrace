@@ -6,8 +6,6 @@
 #include <string>
 #include <sys/stat.h>
 
-#include <bcc/libbpf.h>
-
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/signal_bt.h"
@@ -215,13 +213,13 @@ void SemanticAnalyser::visit(Builtin &builtin)
   if (builtin.ident == "ctx")
   {
     ProbeType pt = probetype((*probe_->attach_points)[0]->provider);
-    bpf_prog_type bt = progtype(pt);
+    libbpf::bpf_prog_type bt = progtype(pt);
     std::string func = (*probe_->attach_points)[0]->func;
 
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType pt = probetype(attach_point->provider);
-      bpf_prog_type bt2 = progtype(pt);
+      libbpf::bpf_prog_type bt2 = progtype(pt);
       if (bt != bt2)
         LOG(ERROR, builtin.loc, err_)
             << "ctx cannot be used in different BPF program types: "

@@ -21,10 +21,10 @@ void FieldAnalyser::visit(Builtin &builtin)
   {
     switch (prog_type_)
     {
-      case BPF_PROG_TYPE_KPROBE:
+      case libbpf::BPF_PROG_TYPE_KPROBE:
         bpftrace_.btf_set_.insert("struct pt_regs");
         break;
-      case BPF_PROG_TYPE_PERF_EVENT:
+      case libbpf::BPF_PROG_TYPE_PERF_EVENT:
         bpftrace_.btf_set_.insert("struct bpf_perf_event_data");
         break;
       default:

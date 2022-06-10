@@ -14,8 +14,8 @@
 namespace bpftrace {
 
 bpf_probe_attach_type attachtype(ProbeType t);
-bpf_prog_type progtype(ProbeType t);
-std::string progtypeName(bpf_prog_type t);
+libbpf::bpf_prog_type progtype(ProbeType t);
+std::string progtypeName(libbpf::bpf_prog_type t);
 
 class AttachedProbe
 {

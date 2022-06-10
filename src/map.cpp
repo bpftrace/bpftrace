@@ -15,7 +15,7 @@ namespace bpftrace {
 
 namespace {
 
-int create_map(enum bpf_map_type map_type,
+int create_map(libbpf::bpf_map_type map_type,
                const std::string &name,
                int key_size,
                int value_size,
@@ -33,13 +33,17 @@ int create_map(enum bpf_map_type map_type,
 #ifdef HAVE_LIBBPF_BPF_MAP_CREATE
   LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
-  return bpf_map_create(
-      map_type, name_ptr->c_str(), key_size, value_size, max_entries, &opts);
+  return bpf_map_create(static_cast<::bpf_map_type>(map_type),
+                        name_ptr->c_str(),
+                        key_size,
+                        value_size,
+                        max_entries,
+                        &opts);
 #else
   struct bpf_create_map_attr attr = {};
   attr.name = name_ptr->c_str();
   attr.map_flags = flags;
-  attr.map_type = static_cast<enum ::bpf_map_type>(map_type);
+  attr.map_type = static_cast<::bpf_map_type>(map_type);
   attr.key_size = key_size;
   attr.value_size = value_size;
   attr.max_entries = max_entries;
@@ -81,7 +85,7 @@ Map::Map(const std::string &name,
 }
 
 Map::Map(const std::string &name,
-         enum bpf_map_type type,
+         libbpf::bpf_map_type type,
          int key_size,
          int value_size,
          int max_entries,
@@ -140,7 +144,7 @@ Map::Map(const SizedType &type) : IMap(type)
   }
 }
 
-Map::Map(enum bpf_map_type map_type) : IMap(map_type)
+Map::Map(libbpf::bpf_map_type map_type) : IMap(map_type)
 {
   std::vector<int> cpus = get_online_cpus();
   int key_size = 4;

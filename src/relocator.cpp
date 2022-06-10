@@ -1,9 +1,11 @@
 #include "relocator.h"
 
-#include <bcc/libbpf.h>
-
 #include "bpftrace.h"
 #include "log.h"
+
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
 
 namespace bpftrace {
 

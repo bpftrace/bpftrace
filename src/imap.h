@@ -7,6 +7,10 @@
 
 #include <linux/bpf.h>
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 
 class IMap
@@ -25,13 +29,13 @@ public:
        int step,
        int max_entries);
   IMap(const std::string &name,
-       enum bpf_map_type type,
+       libbpf::bpf_map_type type,
        int key_size,
        int value_size,
        int max_entries,
        int flags);
   IMap(const SizedType &type);
-  IMap(enum bpf_map_type map_type);
+  IMap(libbpf::bpf_map_type map_type);
   virtual ~IMap() = default;
   IMap(const IMap &) = delete;
   IMap &operator=(const IMap &) = delete;
@@ -43,7 +47,7 @@ public:
   std::string name_;
   SizedType type_;
   MapKey key_;
-  enum bpf_map_type map_type_ = BPF_MAP_TYPE_UNSPEC;
+  enum libbpf::bpf_map_type map_type_ = libbpf::BPF_MAP_TYPE_UNSPEC;
   bool printable_ = true;
 
   // used by lhist(). TODO: move to separate Map object.
@@ -53,13 +57,13 @@ public:
 
   bool is_per_cpu_type()
   {
-    return map_type_ == BPF_MAP_TYPE_PERCPU_HASH ||
-           map_type_ == BPF_MAP_TYPE_PERCPU_ARRAY;
+    return map_type_ == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||
+           map_type_ == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
   }
   bool is_clearable() const
   {
-    return map_type_ != BPF_MAP_TYPE_ARRAY &&
-           map_type_ != BPF_MAP_TYPE_PERCPU_ARRAY;
+    return map_type_ != libbpf::BPF_MAP_TYPE_ARRAY &&
+           map_type_ != libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
   }
   bool is_printable() const
   {

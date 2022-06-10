@@ -14,7 +14,7 @@ FakeMap::FakeMap(const std::string &name,
 }
 
 FakeMap::FakeMap(const std::string &name,
-                 enum bpf_map_type type,
+                 libbpf::bpf_map_type type,
                  int key_size,
                  int value_size,
                  int max_entries,
@@ -27,7 +27,7 @@ FakeMap::FakeMap(const SizedType &type) : IMap(type)
 {
 }
 
-FakeMap::FakeMap(enum bpf_map_type map_type) : IMap(map_type)
+FakeMap::FakeMap(libbpf::bpf_map_type map_type) : IMap(map_type)
 {
 }
 

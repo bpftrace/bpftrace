@@ -14,7 +14,6 @@
 #include "utils.h"
 
 namespace libbpf {
-#undef __BPF_FUNC_MAPPER
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
