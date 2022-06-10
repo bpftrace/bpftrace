@@ -390,7 +390,7 @@ bool BPFfeature::has_kprobe_multi()
   load_opts.expected_attach_type = static_cast<enum ::bpf_attach_type>(
       libbpf::BPF_TRACE_KPROBE_MULTI);
 
-  progfd = bpf_prog_load(static_cast<::bpf_prog_type>(BPF_PROG_TYPE_KPROBE),
+  progfd = bpf_prog_load(::BPF_PROG_TYPE_KPROBE,
                          sym,
                          "GPL",
                          reinterpret_cast<struct bpf_insn*>(insns),

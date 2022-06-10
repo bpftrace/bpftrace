@@ -1,13 +1,13 @@
 #pragma once
 
 #include "btf.h"
-#include <bcc/libbpf.h>
 #include <memory>
 #include <optional>
 #include <string>
 
+#include <linux/bpf.h>
+
 namespace libbpf {
-#undef __BPF_FUNC_MAPPER
 #include "libbpf/bpf.h"
 } // namespace libbpf
 
@@ -125,15 +125,15 @@ protected:
   std::optional<bool> has_kprobe_multi_;
 
 private:
-  bool detect_map(enum libbpf::bpf_map_type map_type);
-  bool detect_helper(enum libbpf::bpf_func_id func_id,
-                     enum libbpf::bpf_prog_type prog_type);
-  bool detect_prog_type(enum libbpf::bpf_prog_type prog_type,
+  bool detect_map(libbpf::bpf_map_type map_type);
+  bool detect_helper(libbpf::bpf_func_id func_id,
+                     libbpf::bpf_prog_type prog_type);
+  bool detect_prog_type(libbpf::bpf_prog_type prog_type,
                         const char* name,
                         std::optional<libbpf::bpf_attach_type> attach_type);
 
   bool try_load(
-      enum libbpf::bpf_prog_type prog_type,
+      libbpf::bpf_prog_type prog_type,
       struct bpf_insn* insns,
       size_t len,
       const char* name = nullptr,

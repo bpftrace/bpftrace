@@ -7,6 +7,10 @@
 #include "ast/visitors.h"
 #include "bpftrace.h"
 
+namespace libbpf {
+#include "libbpf/bpf.h"
+} // namespace libbpf
+
 namespace bpftrace {
 namespace ast {
 
@@ -19,7 +23,7 @@ public:
       : root_(root),
         type_(""),
         bpftrace_(bpftrace),
-        prog_type_(BPF_PROG_TYPE_UNSPEC),
+        prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC),
         out_(out)
   { }
 
@@ -46,7 +50,7 @@ private:
   std::string    type_;
   SizedType sized_type_;
   BPFtrace      &bpftrace_;
-  bpf_prog_type  prog_type_;
+  libbpf::bpf_prog_type prog_type_;
   bool           has_builtin_args_;
   Probe         *probe_;
 

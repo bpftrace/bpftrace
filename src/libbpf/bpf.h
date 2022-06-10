@@ -124,6 +124,9 @@ enum bpf_attach_type {
 	BPF_TRACE_KPROBE_MULTI,
 };
 
+#ifdef __BPF_FUNC_MAPPER
+#undef __BPF_FUNC_MAPPER
+#endif
 #define __BPF_FUNC_MAPPER(FN)		\
 	FN(unspec),			\
 	FN(map_lookup_elem),		\

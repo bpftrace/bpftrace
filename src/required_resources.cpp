@@ -78,7 +78,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     // the BPF stack.
     int value_size = 8 + 8 + bpftrace.join_argnum_ * bpftrace.join_argsize_;
     auto map = std::make_unique<T>(
-        "join", BPF_MAP_TYPE_PERCPU_ARRAY, 4, value_size, 1, 0);
+        "join", libbpf::BPF_MAP_TYPE_PERCPU_ARRAY, 4, value_size, 1, 0);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::Join, std::move(map));
   }
@@ -101,7 +101,8 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     // compute buffer size to hold all the formats and create map with that
     int ptr_size = sizeof(unsigned long);
     size = (size / ptr_size + 1) * ptr_size;
-    auto map = std::make_unique<T>("data", BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
+    auto map = std::make_unique<T>(
+        "data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
 
     // copy all the format strings to buffer, head to tail
     uint32_t idx = 0;
@@ -124,7 +125,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     bpftrace.maps.Set(MapManager::Type::SeqPrintfData, std::move(map));
   }
   {
-    auto map = std::make_unique<T>(BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+    auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::PerfEvent, std::move(map));
   }

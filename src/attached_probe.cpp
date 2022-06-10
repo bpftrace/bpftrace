@@ -29,11 +29,6 @@
 #include "probe_matcher.h"
 #include "usdt.h"
 
-namespace libbpf {
-#undef __BPF_FUNC_MAPPER
-#include "libbpf/bpf.h"
-} // namespace libbpf
-
 namespace bpftrace {
 
 /*
@@ -61,37 +56,27 @@ bpf_probe_attach_type attachtype(ProbeType t)
   // lgtm[cpp/missing-return]
 }
 
-bpf_prog_type progtype(ProbeType t)
+libbpf::bpf_prog_type progtype(ProbeType t)
 {
   switch (t)
   {
-    case ProbeType::kprobe:     return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::kretprobe:  return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uprobe:     return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::uretprobe:  return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::usdt:       return BPF_PROG_TYPE_KPROBE; break;
-    case ProbeType::tracepoint: return BPF_PROG_TYPE_TRACEPOINT; break;
-    case ProbeType::profile:
-      return BPF_PROG_TYPE_PERF_EVENT;
-      break;
-    case ProbeType::interval:
-      return BPF_PROG_TYPE_PERF_EVENT;
-      break;
-    case ProbeType::software:   return BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::watchpoint: return BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::asyncwatchpoint:
-      return BPF_PROG_TYPE_PERF_EVENT;
-      break;
-    case ProbeType::hardware:   return BPF_PROG_TYPE_PERF_EVENT; break;
-    case ProbeType::kfunc:
-      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
-      break;
-    case ProbeType::kretfunc:
-      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
-      break;
-    case ProbeType::iter:
-      return static_cast<enum ::bpf_prog_type>(libbpf::BPF_PROG_TYPE_TRACING);
-      break;
+    // clang-format off
+    case ProbeType::kprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::kretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::uretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::usdt:       return libbpf::BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::tracepoint: return libbpf::BPF_PROG_TYPE_TRACEPOINT; break;
+    case ProbeType::profile:    return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::interval:   return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::software:   return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::watchpoint: return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::asyncwatchpoint: return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::hardware:   return libbpf::BPF_PROG_TYPE_PERF_EVENT; break;
+    case ProbeType::kfunc:      return libbpf::BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::kretfunc:   return libbpf::BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::iter:       return libbpf::BPF_PROG_TYPE_TRACING; break;
+    // clang-format on
     case ProbeType::invalid:
       LOG(FATAL) << "program type invalid";
   }
@@ -99,9 +84,9 @@ bpf_prog_type progtype(ProbeType t)
   return {}; // unreached
 }
 
-std::string progtypeName(bpf_prog_type t)
+std::string progtypeName(libbpf::bpf_prog_type t)
 {
-  switch (static_cast<libbpf::bpf_prog_type>(t))
+  switch (t)
   {
     // clang-format off
     case libbpf::BPF_PROG_TYPE_KPROBE:     return "BPF_PROG_TYPE_KPROBE";     break;
@@ -749,14 +734,15 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       }
 
 #ifdef HAVE_LIBBPF_BPF_PROG_LOAD
-      progfd_ = bpf_prog_load(progtype(probe_.type),
+      progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(
+                                  progtype(probe_.type)),
                               name.c_str(),
                               license,
                               reinterpret_cast<struct bpf_insn *>(insns),
                               prog_len / sizeof(struct bpf_insn),
                               &opts);
 #else
-      opts.prog_type = progtype(probe_.type);
+      opts.prog_type = static_cast<::bpf_prog_type>(progtype(probe_.type));
       opts.name = name.c_str();
       opts.insns = reinterpret_cast<struct bpf_insn *>(insns);
       opts.insns_cnt = prog_len / sizeof(struct bpf_insn);

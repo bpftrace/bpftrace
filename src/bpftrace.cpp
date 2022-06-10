@@ -21,9 +21,8 @@
 #include <unistd.h>
 
 #ifdef HAVE_BCC_ELF_FOREACH_SYM
-#include <elf.h>
-
 #include <bcc/bcc_elf.h>
+#include <elf.h>
 #endif
 
 #include <bcc/bcc_syms.h>
