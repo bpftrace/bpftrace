@@ -1000,11 +1000,28 @@ int BPFtrace::run_special_probe(std::string name,
   {
     if ((*probe).attach_point == name)
     {
+      // This is only necessary for uprobe fallback case but it doesn't hurt
+      // to set for raw_tp
       probe->pid = getpid();
-      auto aps = attach_probe(*probe, bytecode);
 
-      trigger();
-      return aps.size() ? 0 : -1;
+      auto aps = attach_probe(*probe, bytecode);
+      if (aps.size() != 1)
+        return -1;
+
+      if (feature_->has_raw_tp_special())
+      {
+#ifdef HAVE_LIBBPF_PROG_TEST_RUN_OPTS
+        struct bpf_test_run_opts opts = {};
+        opts.sz = sizeof(opts);
+
+        return ::bpf_prog_test_run_opts(aps[0]->progfd(), &opts);
+#endif
+      }
+      else
+      {
+        trigger();
+        return 0;
+      }
     }
   }
 
