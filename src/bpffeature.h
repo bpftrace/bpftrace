@@ -82,6 +82,7 @@ public:
   bool has_kprobe_multi();
   bool has_kfunc();
   bool has_skb_output();
+  bool has_raw_tp_special();
 
   std::string report(void);
 
@@ -116,6 +117,7 @@ public:
                         libbpf::BPF_PROG_TYPE_TRACING,
                         "bpf_iter_task_file",
                         libbpf::BPF_TRACE_ITER);
+  DEFINE_PROG_TEST(raw_tracepoint, libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT);
 
 protected:
   std::optional<bool> has_loop_;
@@ -125,6 +127,7 @@ protected:
   std::optional<bool> has_uprobe_refcnt_;
   std::optional<bool> has_kprobe_multi_;
   std::optional<bool> has_skb_output_;
+  std::optional<bool> has_raw_tp_special_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);

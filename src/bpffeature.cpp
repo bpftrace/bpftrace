@@ -483,6 +483,20 @@ bool BPFfeature::has_skb_output(void)
   return *has_skb_output_;
 }
 
+bool BPFfeature::has_raw_tp_special()
+{
+  if (has_raw_tp_special_.has_value())
+    return *has_raw_tp_special_;
+
+#ifdef HAVE_LIBBPF_PROG_TEST_RUN_OPTS
+  has_raw_tp_special_ = has_prog_raw_tracepoint();
+#else
+  has_raw_tp_special_ = false;
+#endif
+
+  return *has_raw_tp_special_;
+}
+
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
@@ -533,7 +547,8 @@ std::string BPFfeature::report(void)
       << "  kfunc: " << to_str(has_kfunc())
       << "  iter:task: " << to_str(has_prog_iter_task())
       << "  iter:task_file: " << to_str(has_prog_iter_task_file())
-      << "  kprobe_multi: " << to_str(has_kprobe_multi()) << std::endl;
+      << "  kprobe_multi: " << to_str(has_kprobe_multi())
+      << "  raw_tp_special: " << to_str(has_raw_tp_special()) << std::endl;
 
   return buf.str();
 }

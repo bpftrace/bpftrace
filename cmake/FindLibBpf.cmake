@@ -54,6 +54,7 @@ check_symbol_exists(bpf_prog_load "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF
 check_symbol_exists(bpf_map_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_BPF_MAP_CREATE)
 check_symbol_exists(bpf_map_lookup_batch "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_MAP_BATCH)
 check_symbol_exists(bpf_link_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_LINK_CREATE)
+check_symbol_exists(bpf_prog_test_run_opts "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_PROG_TEST_RUN_OPTS)
 SET(CMAKE_REQUIRED_DEFINITIONS)
 SET(CMAKE_REQUIRED_LIBRARIES)
 
