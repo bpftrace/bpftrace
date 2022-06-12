@@ -180,6 +180,9 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
 
   switch (probetype(ap.provider))
   {
+    case ProbeType::invalid:
+      LOG(FATAL) << "Invalid probe type made it to attachpoint parser";
+      return INVALID;
     case ProbeType::kprobe:
       return kprobe_parser();
     case ProbeType::kretprobe:
@@ -209,9 +212,6 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return kfunc_parser();
     case ProbeType::iter:
       return iter_parser();
-    default:
-      errs_ << "Unrecognized probe type: " << ap_->provider << std::endl;
-      return INVALID;
   }
 
   return OK;

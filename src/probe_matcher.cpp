@@ -511,7 +511,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       search_input = target + ":" + ns + ":" + attach_point.func;
       break;
     }
-    default:
+    case ProbeType::invalid:
+    case ProbeType::profile:
+    case ProbeType::interval:
       throw WildcardException(
           "Wildcard matches aren't available on probe type '" +
           attach_point.provider + "'");
