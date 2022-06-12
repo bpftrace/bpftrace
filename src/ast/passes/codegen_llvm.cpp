@@ -2285,6 +2285,7 @@ void CodegenLLVM::createRet(Value *value)
       // programs bad citizens. Return 1 instead.
       b_.CreateRet(b_.getInt64(1));
       break;
+    case ProbeType::special:
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     case ProbeType::uprobe:
