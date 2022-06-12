@@ -196,6 +196,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     // Cannot decide the addrspace. Provide backward compatibility,
     // if addrspace cannot be detected.
     case ProbeType::invalid:
+    case ProbeType::special:
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::software:
@@ -3064,6 +3065,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::asyncwatchpoint:
         return true;
       case ProbeType::invalid:
+      case ProbeType::special:
       case ProbeType::tracepoint:
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
@@ -3080,6 +3082,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::uprobe:
         return true;
       case ProbeType::invalid:
+      case ProbeType::special:
       case ProbeType::kprobe:
       case ProbeType::kretprobe:
       case ProbeType::tracepoint:
@@ -3097,8 +3100,6 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
   }
   else if (func == "signal")
   {
-    if (ap.provider == "BEGIN" || ap.provider == "END")
-      return false;
     switch (type)
     {
       case ProbeType::kprobe:
@@ -3112,6 +3113,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::kretfunc:
         return true;
       case ProbeType::invalid:
+      case ProbeType::special:
       case ProbeType::interval:
       case ProbeType::software:
       case ProbeType::hardware:

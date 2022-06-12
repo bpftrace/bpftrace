@@ -183,6 +183,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     case ProbeType::invalid:
       LOG(FATAL) << "Invalid probe type made it to attachpoint parser";
       return INVALID;
+    case ProbeType::special:
+      return special_parser();
     case ProbeType::kprobe:
       return kprobe_parser();
     case ProbeType::kretprobe:
@@ -286,6 +288,22 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
   return State::OK;
 }
 
+AttachPointParser::State AttachPointParser::special_parser()
+{
+  // Can only have reached here if provider is `BEGIN` or `END`
+  assert(ap_->provider == "BEGIN" || ap_->provider == "END");
+
+  if (parts_.size() == 2 && parts_[1] == "*")
+    parts_.pop_back();
+  if (parts_.size() != 1)
+  {
+    errs_ << ap_->provider << " probe type requires 0 arguments" << std::endl;
+    return INVALID;
+  }
+
+  return OK;
+}
+
 AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 {
   if (parts_.size() != 2)
@@ -352,21 +370,6 @@ AttachPointParser::State AttachPointParser::kretprobe_parser()
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
                                                           bool allow_abs_addr)
 {
-  // Handle special probes implemented as uprobes
-  if (ap_->provider == "BEGIN" || ap_->provider == "END")
-  {
-    if (parts_.size() == 2 && parts_[1] == "*")
-      parts_.pop_back();
-    if (parts_.size() != 1)
-    {
-      errs_ << ap_->provider << " probe type requires 0 arguments" << std::endl;
-      return INVALID;
-    }
-
-    return OK;
-  }
-
-  // Now handle regular uprobes
   if (parts_.size() == 2 && bpftrace_.pid() > 0)
   {
     // For PID, the target may be skipped

@@ -44,6 +44,7 @@ private:
    */
   State lex_attachpoint(const AttachPoint &ap);
 
+  State special_parser();
   State kprobe_parser(bool allow_offset = true);
   State kretprobe_parser();
   State uprobe_parser(bool allow_offset = true, bool allow_abs_addr = true);

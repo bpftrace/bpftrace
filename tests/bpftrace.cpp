@@ -147,7 +147,7 @@ void check_hardware(Probe &p, const std::string &unit, int freq, const std::stri
 
 void check_special_probe(Probe &p, const std::string &attach_point, const std::string &orig_name)
 {
-  EXPECT_EQ(ProbeType::uprobe, p.type);
+  EXPECT_EQ(ProbeType::special, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
   EXPECT_EQ(orig_name, p.name);

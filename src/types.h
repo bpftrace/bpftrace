@@ -432,6 +432,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type);
 enum class ProbeType
 {
   invalid,
+  special,
   kprobe,
   kretprobe,
   uprobe,
@@ -464,8 +465,8 @@ const std::vector<ProbeItem> PROBE_LIST = {
   { "uprobe", "u", ProbeType::uprobe },
   { "uretprobe", "ur", ProbeType::uretprobe },
   { "usdt", "U", ProbeType::usdt },
-  { "BEGIN", "BEGIN", ProbeType::uprobe },
-  { "END", "END", ProbeType::uprobe },
+  { "BEGIN", "BEGIN", ProbeType::special },
+  { "END", "END", ProbeType::special },
   { "tracepoint", "t", ProbeType::tracepoint },
   { "profile", "p", ProbeType::profile },
   { "interval", "i", ProbeType::interval },

@@ -196,9 +196,6 @@ bool FieldAnalyser::resolve_args(Probe &probe)
     if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
         probe_type != ProbeType::uprobe)
       continue;
-    // BEGIN and END are special uprobe cases that do not have args
-    if (ap->provider == "BEGIN" || ap->provider == "END")
-      continue;
 
     if (ap->need_expansion)
     {

@@ -965,6 +965,7 @@ bool attach_reverse(const Probe &p)
 {
   switch(p.type)
   {
+    case ProbeType::special:
     case ProbeType::kprobe:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:

@@ -314,7 +314,8 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
     else if (p.name.find("ret") == std::string::npos &&
              !is_userspace_probe(p.type) && p.type != ProbeType::interval &&
              p.type != ProbeType::profile && p.type != ProbeType::watchpoint &&
-             p.type != ProbeType::asyncwatchpoint)
+             p.type != ProbeType::asyncwatchpoint &&
+             p.type != ProbeType::special)
     {
       probes += p.name + "\n";
     }
@@ -332,8 +333,7 @@ std::unique_ptr<std::istream> ProbeMatcher::userspace_probe_list()
   std::string probes;
   for (auto& p : PROBE_LIST)
   {
-    if (p.name.find("ret") == std::string::npos && is_userspace_probe(p.type) &&
-        p.name != "BEGIN" && p.name != "END")
+    if (p.name.find("ret") == std::string::npos && is_userspace_probe(p.type))
       probes += p.name + "\n";
   }
 
@@ -475,6 +475,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       search_input = attach_point.func;
       break;
     }
+    case ProbeType::special:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::watchpoint:

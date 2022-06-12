@@ -43,16 +43,19 @@ const std::set<std::string> banned_kretprobes = {
 
 bpf_probe_attach_type attachtype(ProbeType t)
 {
+  // clang-format off
   switch (t)
   {
     case ProbeType::kprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::kretprobe: return BPF_PROBE_RETURN; break;
+    case ProbeType::special:   return BPF_PROBE_ENTRY;  break;
     case ProbeType::uprobe:    return BPF_PROBE_ENTRY;  break;
     case ProbeType::uretprobe: return BPF_PROBE_RETURN; break;
     case ProbeType::usdt:      return BPF_PROBE_ENTRY;  break;
     default:
       LOG(FATAL) << "invalid probe attachtype \"" << probetypeName(t) << "\"";
   }
+  // clang-format on
   // lgtm[cpp/missing-return]
 }
 
@@ -61,6 +64,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
   switch (t)
   {
     // clang-format off
+    case ProbeType::special:    return BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
@@ -167,6 +171,9 @@ AttachedProbe::AttachedProbe(Probe &probe,
     std::cerr << "Attaching " << probe_.orig_name << std::endl;
   switch (probe_.type)
   {
+    case ProbeType::special:
+      attach_uprobe(safe_mode);
+      break;
     case ProbeType::kprobe:
       attach_kprobe(safe_mode);
       break;
@@ -266,6 +273,7 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::tracepoint:
       err = bpf_detach_tracepoint(probe_.path.c_str(), eventname().c_str());
       break;
+    case ProbeType::special:
     case ProbeType::profile:
     case ProbeType::interval:
     case ProbeType::software:
@@ -313,6 +321,7 @@ std::string AttachedProbe::eventname() const
       offset_str << std::hex << offset_;
       return eventprefix() + sanitise(probe_.attach_point) + "_" +
              offset_str.str() + index_str;
+    case ProbeType::special:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:

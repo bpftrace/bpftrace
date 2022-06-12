@@ -224,9 +224,11 @@ std::string probetypeName(const std::string &probeName)
 
 std::string probetypeName(ProbeType t)
 {
-   switch (t)
+  // clang-format off
+  switch (t)
   {
     case ProbeType::invalid:     return "invalid";     break;
+    case ProbeType::special:     return "special";     break;
     case ProbeType::kprobe:      return "kprobe";      break;
     case ProbeType::kretprobe:   return "kretprobe";   break;
     case ProbeType::uprobe:      return "uprobe";      break;
@@ -238,15 +240,12 @@ std::string probetypeName(ProbeType t)
     case ProbeType::software:    return "software";    break;
     case ProbeType::hardware:    return "hardware";    break;
     case ProbeType::watchpoint:  return "watchpoint";  break;
-    case ProbeType::asyncwatchpoint:
-      return "asyncwatchpoint";
-      break;
+    case ProbeType::asyncwatchpoint: return "asyncwatchpoint"; break;
     case ProbeType::kfunc:       return "kfunc";       break;
     case ProbeType::kretfunc:    return "kretfunc";    break;
-    case ProbeType::iter:
-      return "iter";
-      break;
+    case ProbeType::iter:        return "iter";        break;
   }
+  // clang-format on
 
   return {}; // unreached
 }
