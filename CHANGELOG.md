@@ -15,6 +15,8 @@ and this project adheres to
 #### Changed
 - Move from BCC to libbpf
   - [#2265](https://github.com/iovisor/bpftrace/pull/2265)
+- Add non-uprobe based BEGIN/END implementation
+  - [#2264](https://github.com/iovisor/bpftrace/pull/2264)
 
 #### Deprecated
 #### Removed
