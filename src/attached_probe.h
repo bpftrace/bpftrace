@@ -35,6 +35,7 @@ public:
   AttachedProbe &operator=(const AttachedProbe &) = delete;
 
   const Probe &probe() const;
+  int progfd() const;
   int linkfd_ = -1;
 
 private:

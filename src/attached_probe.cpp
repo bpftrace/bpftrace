@@ -64,7 +64,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
   switch (t)
   {
     // clang-format off
-    case ProbeType::special:    return BPF_PROG_TYPE_KPROBE; break;
+    case ProbeType::special:    return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     case ProbeType::kprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::kretprobe:  return libbpf::BPF_PROG_TYPE_KPROBE; break;
     case ProbeType::uprobe:     return libbpf::BPF_PROG_TYPE_KPROBE; break;
@@ -172,7 +172,10 @@ AttachedProbe::AttachedProbe(Probe &probe,
   switch (probe_.type)
   {
     case ProbeType::special:
-      attach_uprobe(safe_mode);
+      // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
+      // to anything -- we will simply BPF_PROG_RUN it
+      if (!feature.has_raw_tp_special())
+        attach_uprobe(safe_mode);
       break;
     case ProbeType::kprobe:
       attach_kprobe(safe_mode);
@@ -295,6 +298,11 @@ AttachedProbe::~AttachedProbe()
 const Probe &AttachedProbe::probe() const
 {
   return probe_;
+}
+
+int AttachedProbe::progfd() const
+{
+  return progfd_;
 }
 
 std::string AttachedProbe::eventprefix() const
@@ -695,6 +703,10 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     // remove quotes
     name.erase(std::remove(name.begin(), name.end(), '"'), name.end());
 
+    auto prog_type = progtype(probe_.type);
+    if (probe_.type == ProbeType::special && !feature.has_raw_tp_special())
+      prog_type = progtype(ProbeType::uprobe);
+
     for (int attempt = 0; attempt < 3; attempt++)
     {
       auto version = kernel_version(attempt);
@@ -744,15 +756,14 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       }
 
 #ifdef HAVE_LIBBPF_BPF_PROG_LOAD
-      progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(
-                                  progtype(probe_.type)),
+      progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                               name.c_str(),
                               license,
                               reinterpret_cast<struct bpf_insn *>(insns),
                               prog_len / sizeof(struct bpf_insn),
                               &opts);
 #else
-      opts.prog_type = static_cast<::bpf_prog_type>(progtype(probe_.type));
+      opts.prog_type = static_cast<::bpf_prog_type>(prog_type);
       opts.name = name.c_str();
       opts.insns = reinterpret_cast<struct bpf_insn *>(insns);
       opts.insns_cnt = prog_len / sizeof(struct bpf_insn);
