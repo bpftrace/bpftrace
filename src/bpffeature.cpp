@@ -357,7 +357,7 @@ bool BPFfeature::has_kprobe_multi()
   attr.prog_type = static_cast<enum ::bpf_prog_type>(
       libbpf::BPF_PROG_TYPE_KPROBE);
   attr.expected_attach_type = static_cast<enum ::bpf_attach_type>(
-      BPF_TRACE_KPROBE_MULTI);
+      libbpf::BPF_TRACE_KPROBE_MULTI);
   attr.insns = reinterpret_cast<struct bpf_insn*>(insns);
   attr.license = "GPL";
 
