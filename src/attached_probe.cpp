@@ -844,7 +844,8 @@ void AttachedProbe::attach_multi_kprobe(void)
   opts.kprobe_multi.syms = syms.data();
   opts.kprobe_multi.cnt = syms.size();
   opts.kprobe_multi.flags = probe_.type == ProbeType::kretprobe
-                                ? BPF_F_KPROBE_MULTI_RETURN
+                                ? static_cast<enum ::bpf_attach_type>(
+                                      libbpf::BPF_TRACE_KPROBE_MULTI)
                                 : 0;
 
   if (bt_verbose)
