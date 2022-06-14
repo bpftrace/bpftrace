@@ -19,3 +19,14 @@ extraction:
         - libclang-7-dev
         - clang-7
         - libbpfcc-dev
+    after_prepare:
+      - cd $LGTM_WORKSPACE
+      - mkdir -p local/lib
+      - git clone https://github.com/libbpf/libbpf.git
+      - cd libbpf/src
+      - git checkout v0.8.0
+      - CC=gcc make -j$(nproc)
+      - PREFIX=$LGTM_WORKSPACE/local LIBDIR=$LGTM_WORKSPACE/local/lib make install install_uapi_headers
+      - export CPATH=$LGTM_WORKSPACE/local/include:$CPATH
+      - export LD_LIBRARY_PATH=$LGTM_WORKSPACE/local/lib:$LD_LIBRARY_PATH
+
