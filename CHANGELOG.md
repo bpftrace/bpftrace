@@ -13,6 +13,9 @@ and this project adheres to
   - [#2177](https://github.com/iovisor/bpftrace/pull/2177)
 
 #### Changed
+- Move from BCC to libbpf
+  - [#2265](https://github.com/iovisor/bpftrace/pull/2265)
+
 #### Deprecated
 #### Removed
 #### Fixed
