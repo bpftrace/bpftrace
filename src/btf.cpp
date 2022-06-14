@@ -338,10 +338,10 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
     // anonymous struct/union
     if (m_name == "")
     {
-      const struct btf_type *type = btf__type_by_id(btf, m[i].type);
-      if (!type)
+      const struct btf_type *btf_type = btf__type_by_id(btf, m[i].type);
+      if (!btf_type)
         return std::string("");
-      std::string type_name = type_of(type, field);
+      std::string type_name = type_of(btf_type, field);
       if (!type_name.empty())
         return type_name;
     }
