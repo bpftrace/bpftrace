@@ -114,7 +114,7 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   if (ident == "ustack")
   {
     // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(), 32);
+    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(loc), 32);
     stackid = b_.CreateOr(stackid, pidhigh);
   }
 
@@ -125,7 +125,8 @@ void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
   {
-    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns());
+    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
+                           builtin.loc);
   }
   else if (builtin.ident == "elapsed")
   {
@@ -135,7 +136,8 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto *map = bpftrace_.maps[MapManager::Type::Elapsed].value();
     auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(ctx_, map->id, key, type, builtin.loc);
-    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns());
+    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
+                           builtin.loc);
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
@@ -146,7 +148,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "pid" || builtin.ident == "tid")
   {
-    Value *pidtgid = b_.CreateGetPidTgid();
+    Value *pidtgid = b_.CreateGetPidTgid(builtin.loc);
     if (builtin.ident == "pid")
     {
       expr_ = b_.CreateLShr(pidtgid, 32);
@@ -158,11 +160,11 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "cgroup")
   {
-    expr_ = b_.CreateGetCurrentCgroupId();
+    expr_ = b_.CreateGetCurrentCgroupId(builtin.loc);
   }
   else if (builtin.ident == "uid" || builtin.ident == "gid" || builtin.ident == "username")
   {
-    Value *uidgid = b_.CreateGetUidGid();
+    Value *uidgid = b_.CreateGetUidGid(builtin.loc);
     if (builtin.ident == "uid"  || builtin.ident == "username")
     {
       expr_ = b_.CreateAnd(uidgid, 0xffffffff);
@@ -174,20 +176,20 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "numaid")
   {
-    expr_ = b_.CreateGetNumaId();
+    expr_ = b_.CreateGetNumaId(builtin.loc);
   }
   else if (builtin.ident == "cpu")
   {
-    Value *cpu = b_.CreateGetCpuId();
+    Value *cpu = b_.CreateGetCpuId(builtin.loc);
     expr_ = b_.CreateZExt(cpu, b_.getInt64Ty());
   }
   else if (builtin.ident == "curtask")
   {
-    expr_ = b_.CreateGetCurrentTask();
+    expr_ = b_.CreateGetCurrentTask(builtin.loc);
   }
   else if (builtin.ident == "rand")
   {
-    Value *random = b_.CreateGetRandom();
+    Value *random = b_.CreateGetRandom(builtin.loc);
     expr_ = b_.CreateZExt(random, b_.getInt64Ty());
   }
   else if (builtin.ident == "comm")
@@ -228,7 +230,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     if (builtin.type.IsUsymTy())
     {
-      expr_ = b_.CreateUSym(expr_);
+      expr_ = b_.CreateUSym(expr_, builtin.loc);
       Value *expr = expr_;
       expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
     }
@@ -712,7 +714,8 @@ void CodegenLLVM::visit(Call &call)
     b_.CreatePerfEventOutput(
         ctx_,
         perfdata,
-        8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_);
+        8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
+        &call.loc);
 
     b_.CreateBr(zero);
 
@@ -728,7 +731,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "usym")
   {
     auto scoped_del = accept(call.vargs->front());
-    expr_ = b_.CreateUSym(expr_);
+    expr_ = b_.CreateUSym(expr_, call.loc);
   }
   else if (call.func == "ntop")
   {
@@ -892,7 +895,7 @@ void CodegenLLVM::visit(Call &call)
      */
     AllocaInst *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t));
+    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t), &call.loc);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
     createRet();
@@ -969,7 +972,7 @@ void CodegenLLVM::visit(Call &call)
                                    { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(event_struct));
+    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -991,7 +994,7 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
     time_id_++;
-    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(time_struct));
+    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(time_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -1101,7 +1104,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(
         b_.CreateIntCast(expr_, b_.getInt64Ty(), false /* unsigned */),
         b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    b_.CreatePerfEventOutput(ctx_, buf, struct_size);
+    b_.CreatePerfEventOutput(ctx_, buf, struct_size, &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -1141,9 +1144,10 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::skboutput)),
                    aid_addr);
     b_.CreateStore(b_.getInt64(skb_output_id_), id_addr);
-    b_.CreateStore(b_.CreateGetNs(
-                       bpftrace_.feature_->has_helper_ktime_get_boot_ns()),
-                   time_addr);
+    b_.CreateStore(
+        b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
+                       call.loc),
+        time_addr);
 
     auto &arg_skb = *call.vargs->at(1);
     arg_skb.accept(*this);
@@ -2945,7 +2949,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   }
 
   id++;
-  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size);
+  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size, &call.loc);
   b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
 }
@@ -3049,7 +3053,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
                                 { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
   }
 
-  b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct));
+  b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct), &call.loc);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
@@ -3104,7 +3108,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   }
 
   id++;
-  b_.CreatePerfEventOutput(ctx_, buf, struct_size);
+  b_.CreatePerfEventOutput(ctx_, buf, struct_size, &call.loc);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }

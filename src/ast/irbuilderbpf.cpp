@@ -82,7 +82,7 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
   return fn;
 }
 
-AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
+AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val, const location &loc)
 {
   std::vector<llvm::Type *> elements = {
     getInt64Ty(), // addr
@@ -91,7 +91,7 @@ AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val)
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
-  Value *pid = CreateLShr(CreateGetPidTgid(), 32);
+  Value *pid = CreateLShr(CreateGetPidTgid(loc), 32);
 
   // The extra 0 here ensures the type of addr_offset will be int64
   Value *addr_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(0) });
@@ -273,6 +273,22 @@ llvm::Type *IRBuilderBPF::GetType(const SizedType &stype)
     }
   }
   return ty;
+}
+
+CallInst *IRBuilderBPF::CreateHelperCall(libbpf::bpf_func_id func_id,
+                                         FunctionType *helper_type,
+                                         ArrayRef<Value *> args,
+                                         const Twine &Name,
+                                         const location *loc)
+{
+  if (loc && bpftrace_.helper_use_loc_.find(func_id) ==
+                 bpftrace_.helper_use_loc_.end())
+    bpftrace_.helper_use_loc_[func_id] = *loc;
+  PointerType *helper_ptr_type = PointerType::get(helper_type, 0);
+  Constant *helper_func = ConstantExpr::getCast(Instruction::IntToPtr,
+                                                getInt64(func_id),
+                                                helper_ptr_type);
+  return createCall(helper_func, args, Name);
 }
 
 CallInst *IRBuilderBPF::createCall(Value *callee,
@@ -849,112 +865,98 @@ Value *IRBuilderBPF::CreateStrncmp(Value *val1,
   return result;
 }
 
-CallInst *IRBuilderBPF::CreateGetNs(bool boot_time)
+CallInst *IRBuilderBPF::CreateGetNs(bool boot_time, const location &loc)
 {
   // u64 ktime_get_ns()
   // Return: current ktime
-
   auto fn = boot_time ? libbpf::BPF_FUNC_ktime_get_boot_ns
                       : libbpf::BPF_FUNC_ktime_get_ns;
-
   FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *gettime_func_ptr_type = PointerType::get(gettime_func_type, 0);
-  Constant *gettime_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                 getInt64(fn),
-                                                 gettime_func_ptr_type);
-  return createCall(gettime_func, {}, "get_ns");
+  return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetPidTgid()
+CallInst *IRBuilderBPF::CreateGetPidTgid(const location &loc)
 {
   // u64 bpf_get_current_pid_tgid(void)
   // Return: current->tgid << 32 | current->pid
   FunctionType *getpidtgid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getpidtgid_func_ptr_type = PointerType::get(getpidtgid_func_type, 0);
-  Constant *getpidtgid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_current_pid_tgid),
-      getpidtgid_func_ptr_type);
-  return createCall(getpidtgid_func, {}, "get_pid_tgid");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_current_pid_tgid,
+                          getpidtgid_func_type,
+                          {},
+                          "get_pid_tgid",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetCurrentCgroupId()
+CallInst *IRBuilderBPF::CreateGetCurrentCgroupId(const location &loc)
 {
   // u64 bpf_get_current_cgroup_id(void)
   // Return: 64-bit cgroup-v2 id
   FunctionType *getcgroupid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getcgroupid_func_ptr_type = PointerType::get(
-      getcgroupid_func_type, 0);
-  Constant *getcgroupid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_current_cgroup_id),
-      getcgroupid_func_ptr_type);
-  return createCall(getcgroupid_func, {}, "get_cgroup_id");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_current_cgroup_id,
+                          getcgroupid_func_type,
+                          {},
+                          "get_cgroup_id",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetUidGid()
+CallInst *IRBuilderBPF::CreateGetUidGid(const location &loc)
 {
   // u64 bpf_get_current_uid_gid(void)
   // Return: current_gid << 32 | current_uid
   FunctionType *getuidgid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getuidgid_func_ptr_type = PointerType::get(getuidgid_func_type, 0);
-  Constant *getuidgid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_current_uid_gid),
-      getuidgid_func_ptr_type);
-  return createCall(getuidgid_func, {}, "get_uid_gid");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_current_uid_gid,
+                          getuidgid_func_type,
+                          {},
+                          "get_uid_gid",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetNumaId()
+CallInst *IRBuilderBPF::CreateGetNumaId(const location &loc)
 {
   // long bpf_get_numa_node_id(void)
   // Return: NUMA Node ID
   FunctionType *numaid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *numaid_func_ptr_type = PointerType::get(numaid_func_type, 0);
-  Constant *numaid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_numa_node_id),
-      numaid_func_ptr_type);
-  return createCall(numaid_func, {}, "get_numa_id");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_numa_node_id,
+                          numaid_func_type,
+                          {},
+                          "get_numa_id",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetCpuId()
+CallInst *IRBuilderBPF::CreateGetCpuId(const location &loc)
 {
   // u32 bpf_raw_smp_processor_id(void)
   // Return: SMP processor ID
   FunctionType *getcpuid_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getcpuid_func_ptr_type = PointerType::get(getcpuid_func_type, 0);
-  Constant *getcpuid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_smp_processor_id),
-      getcpuid_func_ptr_type);
-  return createCall(getcpuid_func, {}, "get_cpu_id");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_smp_processor_id,
+                          getcpuid_func_type,
+                          {},
+                          "get_cpu_id",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetCurrentTask()
+CallInst *IRBuilderBPF::CreateGetCurrentTask(const location &loc)
 {
   // u64 bpf_get_current_task(void)
   // Return: current task_struct
   FunctionType *getcurtask_func_type = FunctionType::get(getInt64Ty(), false);
-  PointerType *getcurtask_func_ptr_type = PointerType::get(getcurtask_func_type, 0);
-  Constant *getcurtask_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_current_task),
-      getcurtask_func_ptr_type);
-  return createCall(getcurtask_func, {}, "get_cur_task");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_current_task,
+                          getcurtask_func_type,
+                          {},
+                          "get_cur_task",
+                          &loc);
 }
 
-CallInst *IRBuilderBPF::CreateGetRandom()
+CallInst *IRBuilderBPF::CreateGetRandom(const location &loc)
 {
   // u32 bpf_get_prandom_u32(void)
   // Return: random
   FunctionType *getrandom_func_type = FunctionType::get(getInt32Ty(), false);
-  PointerType *getrandom_func_ptr_type = PointerType::get(getrandom_func_type, 0);
-  Constant *getrandom_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_prandom_u32),
-      getrandom_func_ptr_type);
-  return createCall(getrandom_func, {}, "get_random");
+  return CreateHelperCall(libbpf::BPF_FUNC_get_prandom_u32,
+                          getrandom_func_type,
+                          {},
+                          "get_random",
+                          &loc);
 }
 
 CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
@@ -978,14 +980,11 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
       getInt64Ty(),
       { getInt8PtrTy(), map_ptr->getType(), getInt64Ty() },
       false);
-  PointerType *getstackid_func_ptr_type = PointerType::get(getstackid_func_type, 0);
-  Constant *getstackid_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_stackid),
-      getstackid_func_ptr_type);
-  CallInst *call = createCall(getstackid_func,
-                              { ctx, map_ptr, flags_val },
-                              "get_stackid");
+  CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_stackid,
+                                    getstackid_func_type,
+                                    { ctx, map_ptr, flags_val },
+                                    "get_stackid",
+                                    &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_stackid, loc);
   return call;
 }
@@ -1005,18 +1004,18 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
   // Return: 0 on success or negative error
   FunctionType *getcomm_func_type = FunctionType::get(
       getInt64Ty(), { buf->getType(), getInt64Ty() }, false);
-  PointerType *getcomm_func_ptr_type = PointerType::get(getcomm_func_type, 0);
-  Constant *getcomm_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_get_current_comm),
-      getcomm_func_ptr_type);
-  CallInst *call = createCall(getcomm_func,
-                              { buf, getInt64(size) },
-                              "get_comm");
+  CallInst *call = CreateHelperCall(libbpf::BPF_FUNC_get_current_comm,
+                                    getcomm_func_type,
+                                    { buf, getInt64(size) },
+                                    "get_comm",
+                                    &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_get_current_comm, loc);
 }
 
-void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
+void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
+                                         Value *data,
+                                         size_t size,
+                                         const location *loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(data && data->getType()->isPointerTy());
@@ -1036,15 +1035,11 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
                                                            data->getType(),
                                                            getInt64Ty() },
                                                          false);
-
-  PointerType *perfoutput_func_ptr_type = PointerType::get(perfoutput_func_type, 0);
-  Constant *perfoutput_func = ConstantExpr::getCast(
-      Instruction::IntToPtr,
-      getInt64(libbpf::BPF_FUNC_perf_event_output),
-      perfoutput_func_ptr_type);
-  createCall(perfoutput_func,
-             { ctx, map_ptr, flags_val, data, size_val },
-             "perf_event_output");
+  CreateHelperCall(libbpf::BPF_FUNC_perf_event_output,
+                   perfoutput_func_type,
+                   { ctx, map_ptr, flags_val, data, size_val },
+                   "perf_event_output",
+                   loc);
 }
 
 void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
@@ -1212,7 +1207,7 @@ void IRBuilderBPF::CreateHelperError(Value *ctx,
 
   auto &layout = module_.getDataLayout();
   auto struct_size = layout.getTypeAllocSize(helper_error_struct);
-  CreatePerfEventOutput(ctx, buf, struct_size);
+  CreatePerfEventOutput(ctx, buf, struct_size, &loc);
   CreateLifetimeEnd(buf);
 }
 
@@ -1261,14 +1256,11 @@ void IRBuilderBPF::CreatePath(Value *ctx,
   // Return: 0 or error
   FunctionType *d_path_func_type = FunctionType::get(
       getInt64Ty(), { getInt8PtrTy(), buf->getType(), getInt32Ty() }, false);
-  PointerType *d_path_func_ptr_type = PointerType::get(d_path_func_type, 0);
-  Constant *d_path_func = ConstantExpr::getCast(Instruction::IntToPtr,
-                                                getInt64(
-                                                    libbpf::BPF_FUNC_d_path),
-                                                d_path_func_ptr_type);
-  CallInst *call = createCall(d_path_func,
-                              { path, buf, getInt32(bpftrace_.strlen_) },
-                              "d_path");
+  CallInst *call = CreateHelperCall(libbpf::bpf_func_id::BPF_FUNC_d_path,
+                                    d_path_func_type,
+                                    { path, buf, getInt32(bpftrace_.strlen_) },
+                                    "d_path",
+                                    &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);
 }
 
