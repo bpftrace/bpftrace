@@ -116,25 +116,33 @@ public:
                                 AddrSpace as,
                                 const location &loc);
   Value *CreateStrncmp(Value *val1, Value *val2, uint64_t n, bool inverse);
-  CallInst *CreateGetNs(bool boot_time);
-  CallInst   *CreateGetPidTgid();
-  CallInst   *CreateGetCurrentCgroupId();
-  CallInst   *CreateGetUidGid();
-  CallInst   *CreateGetNumaId();
-  CallInst   *CreateGetCpuId();
-  CallInst   *CreateGetCurrentTask();
-  CallInst   *CreateGetRandom();
+  CallInst *CreateGetNs(bool boot_time, const location &loc);
+  CallInst *CreateGetPidTgid(const location &loc);
+  CallInst *CreateGetCurrentCgroupId(const location &loc);
+  CallInst *CreateGetUidGid(const location &loc);
+  CallInst *CreateGetNumaId(const location &loc);
+  CallInst *CreateGetCpuId(const location &loc);
+  CallInst *CreateGetCurrentTask(const location &loc);
+  CallInst *CreateGetRandom(const location &loc);
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
   CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
+  CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
+                             FunctionType *helper_type,
+                             ArrayRef<Value *> args,
+                             const Twine &Name,
+                             const location *loc = nullptr);
   CallInst   *createCall(Value *callee, ArrayRef<Value *> args, const Twine &Name);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
-  void        CreatePerfEventOutput(Value *ctx, Value *data, size_t size);
+  void CreatePerfEventOutput(Value *ctx,
+                             Value *data,
+                             size_t size,
+                             const location *loc = nullptr);
   void        CreateSignal(Value *ctx, Value *sig, const location &loc);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
   void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);
   void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
-  AllocaInst *CreateUSym(llvm::Value *val);
+  AllocaInst *CreateUSym(llvm::Value *val, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
   CallInst *CreateSkbOutput(Value *skb,
