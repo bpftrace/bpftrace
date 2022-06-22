@@ -332,7 +332,8 @@ static SizedType get_sized_type(CXType clang_type, StructManager &structs)
     {
       auto elem_type = clang_getArrayElementType(clang_type);
       auto size = clang_getNumElements(clang_type);
-      if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U)
+      if (elem_type.kind == CXType_Char_S || elem_type.kind == CXType_Char_U ||
+          elem_type.kind == CXType_SChar || elem_type.kind == CXType_UChar)
       {
         return CreateString(size);
       }

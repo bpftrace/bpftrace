@@ -52,6 +52,7 @@ jobs:
           DISTRO: alpine
           ALPINE_VERSION: 3.11
           VENDOR_GTEST: ON
+          GTEST_FILTER: "-clang_parser.uint8_array"
         - TYPE: Release
           NAME: alpine
           LLVM_VERSION: 9
@@ -66,6 +67,7 @@ jobs:
           DISTRO: alpine
           ALPINE_VERSION: 3.11
           VENDOR_GTEST: ON
+          GTEST_FILTER: "-clang_parser.uint8_array"
     steps:
     - uses: actions/checkout@v2
     - name: Build docker container
@@ -100,6 +102,7 @@ jobs:
         -e BUILD_LIBBPF="${BUILD_LIBBPF}"
         -e TOOLS_TEST_OLDVERSION="$TOOLS_TEST_OLDVERSION"
         -e TOOLS_TEST_DISABLE="$TOOLS_TEST_DISABLE"
+        -e GTEST_FILTER="${GTEST_FILTER:-*}"
         bpftrace-embedded-${{ matrix.env['BASE'] }}
         $(pwd)/build-embedded ${TYPE}
         -j`nproc`

@@ -11,6 +11,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %"@x_key" = alloca i64, align 8
+  %"struct inet.addr" = alloca [16 x i8], align 1
   %inet = alloca %inet_t, align 8
   %1 = bitcast %inet_t* %inet to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -19,16 +20,21 @@ entry:
   %3 = getelementptr %inet_t, %inet_t* %inet, i32 0, i32 1
   %4 = bitcast [16 x i8]* %3 to i8*
   call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 16, i1 false)
-  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([16 x i8]*, i32, i64)*)([16 x i8]* %3, i32 16, i64 0)
-  %5 = bitcast i64* %"@x_key" to i8*
+  %5 = bitcast [16 x i8]* %"struct inet.addr" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 ([16 x i8]*, i32, i64)*)([16 x i8]* %"struct inet.addr", i32 16, i64 0)
+  %probe_read_kernel1 = call i64 inttoptr (i64 113 to i64 ([16 x i8]*, i32, [16 x i8]*)*)([16 x i8]* %3, i32 16, [16 x i8]* %"struct inet.addr")
+  %6 = bitcast [16 x i8]* %"struct inet.addr" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %7 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %inet_t*, i64)*)(i64 %pseudo, i64* %"@x_key", %inet_t* %inet, i64 0)
-  %6 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
-  %7 = bitcast %inet_t* %inet to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
+  %8 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  %9 = bitcast %inet_t* %inet to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
   ret i64 0
 }
 

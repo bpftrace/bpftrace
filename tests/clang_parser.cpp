@@ -154,6 +154,23 @@ TEST(clang_parser, string_array)
   EXPECT_EQ(foo->GetField("str").offset, 0);
 }
 
+TEST(clang_parser, uint8_array)
+{
+  BPFtrace bpftrace;
+  parse("#include <bits/types.h>\nstruct Foo { __uint8_t str[32]; }", bpftrace);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Foo"));
+  auto foo = bpftrace.structs.Lookup("struct Foo").lock();
+
+  EXPECT_EQ(foo->size, 32);
+  ASSERT_EQ(foo->fields.size(), 1U);
+  ASSERT_TRUE(foo->HasField("str"));
+
+  EXPECT_EQ(foo->GetField("str").type.type, Type::string);
+  EXPECT_EQ(foo->GetField("str").type.GetSize(), 32U);
+  EXPECT_EQ(foo->GetField("str").offset, 0);
+}
+
 TEST(clang_parser, nested_struct_named)
 {
   BPFtrace bpftrace;
