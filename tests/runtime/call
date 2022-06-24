@@ -316,6 +316,14 @@ REQUIRES_FEATURE dpath kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+NAME path_in_unsupported_kfunc
+PROG kfunc:vfs_read { print(path(args->file->f_path)); }
+EXPECT \nstdin:1:18-48: ERROR: helper bpf_d_path not supported in probe\n
+REQUIRES_FEATURE dpath
+TIMEOUT 5
+WILL_FAIL
+AFTER ./testprogs/syscall read
+
 NAME macaddr
 RUN {{BPFTRACE}} -e 'struct MyStruct { const char* ignore; char mac[6]; }; u:./testprogs/complex_struct:func { $s = ((struct MyStruct *)arg0); printf("P: %s\n", macaddr($s->mac)); exit(); }' -c ./testprogs/complex_struct
 EXPECT P: 05:04:03:02:01:02
