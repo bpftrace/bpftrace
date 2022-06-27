@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Add builtin: `numaid`
   - [#2177](https://github.com/iovisor/bpftrace/pull/2177)
+- Add helper verifier error handling
+  - [#2279](https://github.com/iovisor/bpftrace/pull/2279)
 
 #### Changed
 - Move from BCC to libbpf
