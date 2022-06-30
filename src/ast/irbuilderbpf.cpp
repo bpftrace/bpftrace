@@ -421,7 +421,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
 
   Value *flags = getInt64(0);
 
-  // int map_update_elem(struct bpf_map * map, void *key, void * value, u64
+  // long map_update_elem(struct bpf_map * map, void *key, void * value, u64
   // flags) Return: 0 on success or negative error
   FunctionType *update_func_type = FunctionType::get(
       getInt64Ty(),
@@ -447,7 +447,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
   assert(key->getType()->isPointerTy());
   Value *map_ptr = CreateBpfPseudoCallId(map);
 
-  // int map_delete_elem(&map, &key)
+  // long map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
   FunctionType *delete_func_type = FunctionType::get(
       getInt64Ty(), { map_ptr->getType(), key->getType() }, false);
@@ -909,7 +909,7 @@ CallInst *IRBuilderBPF::CreateGetNumaId()
 {
   // long bpf_get_numa_node_id(void)
   // Return: NUMA Node ID
-  FunctionType *numaid_func_type = FunctionType::get(getInt32Ty(), false);
+  FunctionType *numaid_func_type = FunctionType::get(getInt64Ty(), false);
   PointerType *numaid_func_ptr_type = PointerType::get(numaid_func_type, 0);
   Constant *numaid_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -946,9 +946,9 @@ CallInst *IRBuilderBPF::CreateGetCurrentTask()
 
 CallInst *IRBuilderBPF::CreateGetRandom()
 {
-  // u64 bpf_get_prandom_u32(void)
+  // u32 bpf_get_prandom_u32(void)
   // Return: random
-  FunctionType *getrandom_func_type = FunctionType::get(getInt64Ty(), false);
+  FunctionType *getrandom_func_type = FunctionType::get(getInt32Ty(), false);
   PointerType *getrandom_func_ptr_type = PointerType::get(getrandom_func_type, 0);
   Constant *getrandom_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
@@ -972,7 +972,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
     flags |= (1<<8);
   Value *flags_val = getInt64(flags);
 
-  // int bpf_get_stackid(struct pt_regs *ctx, struct bpf_map *map, u64 flags)
+  // long bpf_get_stackid(struct pt_regs *ctx, struct bpf_map *map, u64 flags)
   // Return: >= 0 stackid on success or negative error
   FunctionType *getstackid_func_type = FunctionType::get(
       getInt64Ty(),
@@ -1001,7 +1001,7 @@ void IRBuilderBPF::CreateGetCurrentComm(Value *ctx,
          buf->getType()->getPointerElementType()->getArrayElementType() ==
              getInt8Ty());
 
-  // int bpf_get_current_comm(char *buf, int size_of_buf)
+  // long bpf_get_current_comm(char *buf, int size_of_buf)
   // Return: 0 on success or negative error
   FunctionType *getcomm_func_type = FunctionType::get(
       getInt64Ty(), { buf->getType(), getInt64Ty() }, false);
@@ -1027,8 +1027,8 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
   Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
 
-  // int bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,
-  //                           u64 flags, void *data, u64 size)
+  // long bpf_perf_event_output(struct pt_regs *ctx, struct bpf_map *map,
+  //                            u64 flags, void *data, u64 size)
   FunctionType *perfoutput_func_type = FunctionType::get(getInt64Ty(),
                                                          { getInt8PtrTy(),
                                                            map_ptr->getType(),
@@ -1049,7 +1049,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx, Value *data, size_t size)
 
 void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
 {
-  // int bpf_send_signal(u32 sig)
+  // long bpf_send_signal(u32 sig)
   // Return: 0 or error
   FunctionType *signal_func_type = FunctionType::get(
       getInt64Ty(),
@@ -1066,7 +1066,7 @@ void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
 
 void IRBuilderBPF::CreateOverrideReturn(Value *ctx, Value *rc)
 {
-  // int bpf_override_return(struct pt_regs *regs, u64 rc)
+  // long bpf_override_return(struct pt_regs *regs, u64 rc)
   // Return: 0
   FunctionType *override_func_type = FunctionType::get(
       getInt64Ty(), { getInt8PtrTy(), getInt64Ty() }, false);
@@ -1093,8 +1093,8 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 
   size_val = getInt64(size);
 
-  // int bpf_skb_output(void *skb, struct bpf_map *map, u64 flags,
-  //                    void *data, u64 size)
+  // long bpf_skb_output(void *skb, struct bpf_map *map, u64 flags,
+  //                     void *data, u64 size)
   FunctionType *skb_output_func_type = FunctionType::get(getInt64Ty(),
                                                          { skb->getType(),
                                                            map_ptr->getType(),
