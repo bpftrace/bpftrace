@@ -174,12 +174,12 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "numaid")
   {
-    Value *tmp = b_.CreateGetNumaId();
-    expr_ = b_.CreateZExt(tmp, b_.getInt64Ty());
+    expr_ = b_.CreateGetNumaId();
   }
   else if (builtin.ident == "cpu")
   {
-    expr_ = b_.CreateGetCpuId();
+    Value *cpu = b_.CreateGetCpuId();
+    expr_ = b_.CreateZExt(cpu, b_.getInt64Ty());
   }
   else if (builtin.ident == "curtask")
   {
@@ -187,7 +187,8 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "rand")
   {
-    expr_ = b_.CreateGetRandom();
+    Value *random = b_.CreateGetRandom();
+    expr_ = b_.CreateZExt(random, b_.getInt64Ty());
   }
   else if (builtin.ident == "comm")
   {
@@ -1012,7 +1013,7 @@ void CodegenLLVM::visit(Call &call)
     kstack_ustack(call.func, call.type.stack_type, call.loc);
   }
   else if (call.func == "signal") {
-    // int bpf_send_signal(u32 sig)
+    // long bpf_send_signal(u32 sig)
     auto &arg = *call.vargs->at(0);
     if (arg.type.IsStringTy())
     {
@@ -1046,7 +1047,7 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "override")
   {
-    // int bpf_override(struct pt_regs *regs, u64 rc)
+    // long bpf_override(struct pt_regs *regs, u64 rc)
     // returns: 0
     auto &arg = *call.vargs->at(0);
     auto scoped_del = accept(&arg);
