@@ -28,4 +28,5 @@ docker run                                \
   -e BPFTRACE_UPDATE_TESTS=1              \
   -e TEST_ARGS="--gtest_filter=codegen.*" \
   -e VENDOR_GTEST="ON"                    \
+  -e BUILD_LIBBPF="ON"                    \
   bpftrace-builder-focal "$(pwd)/build-codegen-update" Debug "$@"
