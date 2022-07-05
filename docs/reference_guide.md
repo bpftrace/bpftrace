@@ -2212,6 +2212,7 @@ Tracing block I/O sizes > 0 bytes
 - `kstack([StackMode mode, ][int level])` - Kernel stack trace
 - `ustack([StackMode mode, ][int level])` - User stack trace
 - `ntop([int af, ]int|char[4|16] addr)` - Convert IP address data to text
+- `pton(const string *addr)` - Convert text IP address to byte array
 - `cat(char *filename)` - Print file content
 - `signal(char[] signal | u32 signal)` - Send a signal to the current task
 - `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
@@ -3179,6 +3180,36 @@ dropped privs to tcpdump
 10:23:44.674087 IP 22.128.74.231.63175 > 192.168.0.23.22: Flags [.], ack 3513221061, win 14009, options [nop,nop,TS val 721277750 ecr 3115333619], length 0
 10:23:45.823194 IP 100.101.2.146.53 > 192.168.0.23.46619: 17273 0/1/0 (130)
 10:23:45.823229 IP 100.101.2.146.53 > 192.168.0.23.46158: 45799 1/0/0 A 100.100.45.106 (60)
+```
+
+## 32. `pton()`: Convert text IP address to byte array
+
+Syntax: `pton(const string *addr)`
+
+This converts a text representation of an IPv4 or IPv6 address to byte array.
+`pton` infers the address family based on `.` or `:` in the given argument.
+`pton` comes in handy when we need to select packets with certain IP addresses.
+
+Examples:
+
+```
+# bpftrace -e 'tracepoint:tcp:tcp_retransmit_skb {
+  if (args->daddr_v6[0] == pton("::1")[0]) {
+    printf("first octet matched\n");
+  }
+}'
+Attaching 1 probe...
+first octet matched
+^C
+
+# bpftrace -e 'tracepoint:tcp:tcp_retransmit_skb {
+  if (args->daddr[0] == pton("127.0.0.1")[0]) {
+    printf("first octet matched\n");
+  }
+}'
+Attaching 1 probe...
+first octet matched
+^C
 ```
 
 # Map Functions

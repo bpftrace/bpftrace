@@ -1461,6 +1461,18 @@ SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
 If an integer or `char[4]` is given, ntop assumes IPv4, if a `char[16]` is given, ntop assumes IPv6.
 You can also pass the address type (e.g. AF_INET) explicitly as the first parameter.
 
+=== pton
+
+.variants
+* `char addr[4] pton(const string *addr_v4)`
+* `char addr[16] pton(const string *addr_v6)`
+
+*compile time*
+
+`pton` converts a text representation of an IPv4 or IPv6 address to byte array.
+`pton` infers the address family based on `.` or `:` in the given argument.
+`pton` comes in handy when we need to select packets with certain IP addresses.
+
 === override
 
 .variants
