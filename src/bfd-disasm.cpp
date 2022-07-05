@@ -38,6 +38,26 @@ static int fprintf_nop(void *out __attribute__((unused)), const char *fmt __attr
   return 0;
 }
 
+/*
+  taken from https://lkml.org/lkml/2022/7/3/33
+ * Trivial fprintf wrapper to be used as the fprintf_styled_func argument to
+ * init_disassemble_info_compat() when normal fprintf suffices.
+ */
+  static inline int fprintf_styled(void *out, enum disassembler_style style, const char *fmt, ...)
+  {
+    va_list args;
+    int r;
+    
+    (void)style;
+    
+    va_start(args, fmt);
+    r = vfprintf((FILE*)out, fmt, args);
+    va_end(args);
+    
+    return r;
+  }
+
+  
 static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
 {
   disassembler_ftype disassemble;
@@ -55,7 +75,7 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
     return AlignState::Fail;
   }
 
-  init_disassemble_info(&info, stdout, fprintf_nop);
+  init_disassemble_info(&info, stdout, fprintf_nop, fprintf_styled);
 
   info.arch = bfd_get_arch(bfdf);
   info.mach = bfd_get_mach(bfdf);
