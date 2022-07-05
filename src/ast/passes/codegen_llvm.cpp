@@ -790,6 +790,46 @@ void CodegenLLVM::visit(Call &call)
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
+  else if (call.func == "pton")
+  {
+    auto af_type = AF_INET;
+    int addr_size = 4;
+    std::string addr = bpftrace_.get_string_literal(call.vargs->at(0));
+    if (addr.find(":") != std::string::npos)
+    {
+      af_type = AF_INET6;
+      addr_size = 16;
+    }
+
+    llvm::Type *array_t = ArrayType::get(b_.getInt8Ty(), addr_size);
+    AllocaInst *buf;
+    if (af_type == AF_INET6)
+    {
+      buf = b_.CreateAllocaBPF(array_t, "addr6");
+    }
+    else
+    {
+      buf = b_.CreateAllocaBPF(array_t, "addr4");
+    }
+
+    char dst[addr_size];
+    Value *octet;
+    auto ret = inet_pton(af_type, addr.c_str(), &dst);
+    if (ret != 1)
+    {
+      LOG(FATAL) << "inet_pton() call returns " << ret;
+    }
+    for (int i = 0; i < addr_size; i++)
+    {
+      octet = b_.getInt8(dst[i]);
+      b_.CreateStore(
+          octet,
+          b_.CreateGEP(array_t, buf, { b_.getInt64(0), b_.getInt64(i) }));
+    }
+
+    expr_ = buf;
+    expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
+  }
   else if (call.func == "reg")
   {
     auto reg_name = bpftrace_.get_string_literal(call.vargs->at(0));
