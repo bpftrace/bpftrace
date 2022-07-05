@@ -206,6 +206,9 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { kaddr(\"sym\") }", 0);
   test("kprobe:f { ntop(0xffff) }", 0);
   test("kprobe:f { ntop(2, 0xffff) }", 0);
+  test("kprobe:f { pton(\"127.0.0.1\") }", 0);
+  test("kprobe:f { pton(\"::1\") }", 0);
+  test("kprobe:f { pton(\"0000:0000:0000:0000:0000:0000:0000:0001\") }", 0);
 #ifdef ARCH_X86_64
   test("kprobe:f { reg(\"ip\") }", 0);
 #endif
@@ -696,6 +699,33 @@ TEST(semantic_analyser, call_ntop)
   test("kprobe:f { ntop(2, \"hello\"); }", 1);
   test("kprobe:f { ntop(\"hello\"); }", 1);
   test(structs + "kprobe:f { ntop(((struct inet*)0)->invalid); }", 1);
+}
+
+TEST(semantic_analyser, call_pton)
+{
+  test("kprobe:f { $addr_v4 = pton(\"127.0.0.1\"); }", 0);
+  test("kprobe:f { $addr_v4 = pton(\"127.0.0.1\"); $b1 = $addr_v4[0]; }", 0);
+  test("kprobe:f { $addr_v6 = pton(\"::1\"); }", 0);
+  test("kprobe:f { $addr_v6 = pton(\"::1\"); $b1 = $addr_v6[0]; }", 0);
+
+  std::string def = "#define AF_INET 2\n #define AF_INET6 10\n";
+  test("kprobe:f { $addr_v4_text = ntop(pton(\"127.0.0.1\")); }", 0);
+  test(def + "kprobe:f { $addr_v4_text = ntop(AF_INET, pton(\"127.0.0.1\")); }",
+       0);
+  test(def + "kprobe:f { $addr_v6_text = ntop(AF_INET6, pton(\"::1\")); }", 0);
+
+  test("kprobe:f { $addr_v4 = pton(); }", 1);
+  test("kprobe:f { $addr_v4 = pton(\"\"); }", 1);
+  test("kprobe:f { $addr_v4 = pton(\"127.0.1\"); }", 1);
+  test("kprobe:f { $addr_v4 = pton(\"127.0.0.0.1\"); }", 1);
+  test("kprobe:f { $addr_v6 = pton(\":\"); }", 1);
+  test("kprobe:f { $addr_v6 = pton(\"1:1:1:1:1:1:1:1:1\"); }", 1);
+
+  std::string structs = "struct inet { unsigned char non_literal_string[4]; } ";
+  test("kprobe:f { $addr_v4 = pton(1); }", 1);
+  test(structs + "kprobe:f { $addr_v4 = pton(((struct "
+                 "inet*)0)->non_literal_string); }",
+       1);
 }
 
 TEST(semantic_analyser, call_kaddr)
