@@ -1,4 +1,5 @@
 #include "semantic_analyser.h"
+#include <arpa/inet.h>
 
 #include <algorithm>
 #include <cstring>
@@ -817,6 +818,45 @@ void SemanticAnalyser::visit(Call &call)
           << call.func << "() argument must be 4 or 16 bytes in size";
 
     call.type = CreateInet(buffer_size);
+  }
+  else if (call.func == "pton")
+  {
+    if (!check_nargs(call, 1))
+      return;
+    std::string addr = bpftrace_.get_string_literal(call.vargs->at(0));
+    int af_type, addr_size;
+    // use '.' and ':' to determine the address family
+    if (addr.find(".") != std::string::npos)
+    {
+      af_type = AF_INET;
+      addr_size = 4;
+    }
+    else if (addr.find(":") != std::string::npos)
+    {
+      af_type = AF_INET6;
+      addr_size = 16;
+    }
+    else
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func
+          << "() expects an string argument of an IPv4/IPv6 address, got "
+          << addr;
+      return;
+    }
+
+    char dst[addr_size];
+    auto ret = inet_pton(af_type, addr.c_str(), &dst);
+    if (ret != 1)
+    {
+      LOG(ERROR, call.loc, err_)
+          << call.func << "() expects a valid IPv4/IPv6 address, got " << addr;
+      return;
+    }
+
+    auto elem_type = CreateUInt8();
+    call.type = CreateArray(addr_size, elem_type);
+    call.type.SetAS(AddrSpace::kernel);
   }
   else if (call.func == "join") {
     check_assignment(call, false, false, false);
