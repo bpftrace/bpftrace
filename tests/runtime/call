@@ -222,6 +222,16 @@ EXPECT IP: 1.0.0.0, 127.0.0.1, 0.0.255.255, 255.255.0.0
 ARCH s390x|ppc64
 TIMEOUT 5
 
+NAME pton ipv4
+PROG i:ms:100 { printf("IP: %s\n", ntop(2, pton("127.0.0.1"))); exit(); }
+EXPECT IP: 127.0.0.1
+TIMEOUT 5
+
+NAME pton ipv6
+PROG i:ms:100 { printf("IP: %s\n", ntop(10, pton("::1"))); exit(); }
+EXPECT IP: ::1
+TIMEOUT 5
+
 NAME usym
 PROG i:ms:100 { @=usym(1); @a=@; exit(); }
 EXPECT ^@a: 0x1$
