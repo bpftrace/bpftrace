@@ -381,6 +381,23 @@ TEST(semantic_analyser, compound_variable_assignments)
        "    int: 1\n");
 }
 
+TEST(Parser, compound_variable_assignment_binary_expr)
+{
+  test("kprobe:f { $a = 0; $a += 2 - 1 }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   variable: $a\n"
+       "   int: 0\n"
+       "  =\n"
+       "   variable: $a\n"
+       "   +\n"
+       "    variable: $a\n"
+       "    -\n"
+       "     int: 2\n"
+       "     int: 1\n");
+}
+
 TEST(Parser, compound_map_assignments)
 {
   test("kprobe:f { @a <<= 1 }",
@@ -463,6 +480,20 @@ TEST(Parser, compound_map_assignments)
        "   ^\n"
        "    map: @a\n"
        "    int: 1\n");
+}
+
+TEST(Parser, compound_map_assignment_binary_expr)
+{
+  test("kprobe:f { @a += 2 - 1 }",
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @a\n"
+       "   +\n"
+       "    map: @a\n"
+       "    -\n"
+       "     int: 2\n"
+       "     int: 1\n");
 }
 
 TEST(Parser, integer_sizes)

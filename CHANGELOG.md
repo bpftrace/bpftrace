@@ -25,6 +25,8 @@ and this project adheres to
   - [#2250](https://github.com/iovisor/bpftrace/pull/2250)
 - Handle enum values in tracepoint format defs
   - [#2236](https://github.com/iovisor/bpftrace/pull/2236)
+- Fix compound assignments with non-unary expr
+  - [#2291](https://github.com/iovisor/bpftrace/pull/2293)
 
 #### Added
 #### Docs
