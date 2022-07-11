@@ -319,12 +319,12 @@ assign_stmt:
                 }
         |       map ASSIGN expr      { $$ = new ast::AssignMapStatement($1, $3, false, @2); }
         |       var ASSIGN expr      { $$ = new ast::AssignVarStatement($1, $3, false, @2); }
-        |       map compound_op unary_expr
+        |       map compound_op expr
                 {
                   auto b = new ast::Binop($1, $2, $3, @2);
                   $$ = new ast::AssignMapStatement($1, b, true, @$);
                 }
-        |       var compound_op unary_expr
+        |       var compound_op expr
                 {
                   auto b = new ast::Binop($1, $2, $3, @2);
                   $$ = new ast::AssignVarStatement($1, b, true, @$);
