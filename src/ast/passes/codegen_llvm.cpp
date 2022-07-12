@@ -669,18 +669,23 @@ void CodegenLLVM::visit(Call &call)
 
     // arg0
     b_.SetInsertPoint(notzero);
-    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)), perfdata);
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)),
+                   b_.CreatePointerCast(perfdata,
+                                        b_.getInt64Ty()->getPointerTo()));
     b_.CreateStore(b_.getInt64(join_id_),
-                   b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8)));
+                   b_.CreatePointerCast(
+                       b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8)),
+                       b_.getInt64Ty()->getPointerTo()));
     join_id_++;
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
     b_.CreateProbeRead(ctx_, arr, 8, expr_, addrspace, call.loc);
-    b_.CreateProbeReadStr(ctx_,
-                          b_.CreateAdd(perfdata, b_.getInt64(8 + 8)),
-                          bpftrace_.join_argsize_,
-                          b_.CreateLoad(b_.getInt64Ty(), arr),
-                          addrspace,
-                          call.loc);
+    b_.CreateProbeReadStr(
+        ctx_,
+        b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8 + 8)),
+        bpftrace_.join_argsize_,
+        b_.CreateLoad(b_.getInt64Ty(), arr),
+        addrspace,
+        call.loc);
 
     for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
     {
@@ -694,7 +699,8 @@ void CodegenLLVM::visit(Call &call)
                          call.loc);
       b_.CreateProbeReadStr(
           ctx_,
-          b_.CreateAdd(perfdata,
+          b_.CreateGEP(b_.getInt8Ty(),
+                       perfdata,
                        b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
           bpftrace_.join_argsize_,
           b_.CreateLoad(b_.getInt64Ty(), second),

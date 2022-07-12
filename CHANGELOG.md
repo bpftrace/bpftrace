@@ -27,6 +27,8 @@ and this project adheres to
   - [#2236](https://github.com/iovisor/bpftrace/pull/2236)
 - Fix compound assignments with non-unary expr
   - [#2291](https://github.com/iovisor/bpftrace/pull/2293)
+- Fix invalid LLVM IR in join builtin
+  - [#2296](https://github.com/iovisor/bpftrace/pull/2296)
 
 #### Added
 #### Docs

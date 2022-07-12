@@ -114,7 +114,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 14
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,call.join,call.join_delim,intptrcast.Casting ints,json-output.join_delim,variable.32-bit tracepoint arg
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,intptrcast.Casting ints,variable.32-bit tracepoint arg
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
