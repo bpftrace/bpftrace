@@ -46,7 +46,8 @@ Dwarf::~Dwarf()
 static int get_func_die_cb(Dwarf_Die *func_die, void *arg)
 {
   auto *func_info = static_cast<struct FuncInfo *>(arg);
-  if (dwarf_diename(func_die) == func_info->name)
+  if (dwarf_hasattr(func_die, DW_AT_name) &&
+      dwarf_diename(func_die) == func_info->name)
   {
     func_info->die = *func_die;
     return DWARF_CB_ABORT;
@@ -288,9 +289,12 @@ std::vector<std::string> Dwarf::get_function_params(
   std::vector<std::string> result;
   for (auto &param_die : function_param_dies(function))
   {
-    const std::string name = dwarf_diename(&param_die);
     Dwarf_Die type_die = type_of(param_die);
-    result.push_back(get_type_name(type_die) + " " + name);
+    const std::string type_name = get_type_name(type_die);
+    if (dwarf_hasattr(&param_die, DW_AT_name))
+      result.push_back(type_name + " " + dwarf_diename(&param_die));
+    else
+      result.push_back(type_name);
   }
   return result;
 }
@@ -305,7 +309,10 @@ ProbeArgs Dwarf::resolve_args(const std::string &function)
     SizedType arg_type = get_stype(type_die);
     arg_type.is_funcarg = true;
     arg_type.funcarg_idx = i++;
-    result.emplace(dwarf_diename(&param_die), arg_type);
+    const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
+                                 ? dwarf_diename(&param_die)
+                                 : "";
+    result.emplace(name, arg_type);
   }
   return result;
 }

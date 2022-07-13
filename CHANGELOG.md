@@ -43,6 +43,8 @@ and this project adheres to
   - [#2546](https://github.com/iovisor/bpftrace/pull/2546)
 - arm64: define the KASAN_SHADOW_SCALE_SHIFT macro
   - [#2518](https://github.com/iovisor/bpftrace/pull/2518)
+- Fix segfaults in dwarf_parser
+  - [#2587](https://github.com/iovisor/bpftrace/pull/2587)
 #### Docs
 #### Tools
 
