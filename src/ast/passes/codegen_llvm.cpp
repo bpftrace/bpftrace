@@ -12,6 +12,7 @@
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Metadata.h>
+#include <llvm/IR/Verifier.h>
 #if LLVM_VERSION_MAJOR >= 14
 #include <llvm/Passes/PassBuilder.h>
 #endif
@@ -3212,6 +3213,17 @@ void CodegenLLVM::optimize()
 #endif
 
   state_ = State::OPT;
+}
+
+bool CodegenLLVM::verify(void)
+{
+  bool ret = llvm::verifyModule(*module_, &errs());
+  if (ret)
+  {
+    /* verifyModule doesn't end output with end of line of line, print it now */
+    std::cerr << std::endl;
+  }
+  return !ret;
 }
 
 std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)

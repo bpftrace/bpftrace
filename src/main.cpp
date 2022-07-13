@@ -243,7 +243,7 @@ static std::optional<struct timespec> get_boottime()
   return ret;
 }
 
-[[nodiscard]] static bool parse_env(BPFtrace& bpftrace)
+[[nodiscard]] static bool parse_env(BPFtrace& bpftrace, bool& verify_llvm_ir)
 {
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return false;
@@ -267,19 +267,10 @@ static std::optional<struct timespec> get_boottime()
     return false;
   }
 
-  if (const char* env_p = std::getenv("BPFTRACE_NO_CPP_DEMANGLE"))
-  {
-    if (std::string(env_p) == "1")
-      bpftrace.demangle_cpp_symbols_ = false;
-    else if (std::string(env_p) == "0")
-      bpftrace.demangle_cpp_symbols_ = true;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_NO_CPP_DEMANGLE' did not contain a "
-                    "valid value (0 or 1).";
-      return false;
-    }
-  }
+  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE",
+                        bpftrace.demangle_cpp_symbols_,
+                        true))
+    return false;
 
   if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
     return false;
@@ -313,36 +304,16 @@ static std::optional<struct timespec> get_boottime()
     bpftrace.cat_bytes_max_ = proposed;
   }
 
-  if (const char* env_p = std::getenv("BPFTRACE_NO_USER_SYMBOLS"))
-  {
-    std::string s(env_p);
-    if (s == "1")
-      bpftrace.resolve_user_symbols_ = false;
-    else if (s == "0")
-      bpftrace.resolve_user_symbols_ = true;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_NO_USER_SYMBOLS' did not contain a "
-                    "valid value (0 or 1).";
-      return false;
-    }
-  }
+  if (!get_bool_env_var("BPFTRACE_NO_USER_SYMBOLS",
+                        bpftrace.resolve_user_symbols_,
+                        true))
+    return false;
 
-  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
-  {
-    std::string s(env_p);
-    if (s == "1")
-      bpftrace.cache_user_symbols_ = true;
-    else if (s == "0")
-      bpftrace.cache_user_symbols_ = false;
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a "
-                    "valid value (0 or 1).";
-      return false;
-    }
-  }
-  else
+  if (!get_bool_env_var("BPFTRACE_CACHE_USER_SYMBOLS",
+                        bpftrace.cache_user_symbols_))
+    return false;
+
+  if (!std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
   {
     // enable user symbol cache if ASLR is disabled on system or `-c` option is
     // given
@@ -355,6 +326,10 @@ static std::optional<struct timespec> get_boottime()
     return false;
 
   bpftrace.ast_max_nodes_ = node_max;
+
+  if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", verify_llvm_ir))
+    return false;
+
   return true;
 }
 
@@ -737,11 +712,12 @@ int main(int argc, char* argv[])
   }
 
   BPFtrace bpftrace(std::move(output));
+  bool verify_llvm_ir = false;
 
   if (!args.cmd_str.empty())
     bpftrace.cmd_ = args.cmd_str;
 
-  if (!parse_env(bpftrace))
+  if (!parse_env(bpftrace, verify_llvm_ir))
     return 1;
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
@@ -930,6 +906,11 @@ int main(int argc, char* argv[])
     if (!args.output_llvm.empty())
     {
       llvm.DumpIR(args.output_llvm + ".original.ll");
+    }
+    if (verify_llvm_ir && !llvm.verify())
+    {
+      LOG(ERROR) << "Verification of generated LLVM IR failed";
+      return 1;
     }
 
     llvm.optimize();

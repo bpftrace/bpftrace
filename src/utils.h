@@ -138,6 +138,7 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
 static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
 
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
+bool get_bool_env_var(const ::std::string &str, bool &dest, bool neg = false);
 std::string get_pid_exe(pid_t pid);
 std::string get_pid_exe(const std::string &pid);
 bool has_wildcard(const std::string &str);
