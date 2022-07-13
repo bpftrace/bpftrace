@@ -192,6 +192,26 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
   return true;
 }
 
+bool get_bool_env_var(const std::string &str, bool &dest, bool neg)
+{
+  if (const char *env_p = std::getenv(str.c_str()))
+  {
+    std::string s(env_p);
+    if (s == "1")
+      dest = !neg;
+    else if (s == "0")
+      dest = neg;
+    else
+    {
+      LOG(ERROR) << "Env var '" << str
+                 << "' did not contain a "
+                    "valid value (0 or 1).";
+      return false;
+    }
+  }
+  return true;
+}
+
 std::string get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
