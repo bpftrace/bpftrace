@@ -42,9 +42,9 @@ public:
   std::map<std::string, std::vector<std::string>> get_params(
       const std::set<std::string>& funcs) const;
 
-  int resolve_args(const std::string &func,
-                   std::map<std::string, SizedType>& args,
-                   bool ret);
+  void resolve_args(const std::string& func,
+                    std::map<std::string, SizedType>& args,
+                    bool ret);
 
   int get_btf_id(const std::string& name) const;
 
