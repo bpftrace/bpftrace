@@ -33,143 +33,30 @@ static __u32 type_cnt(const struct btf *btf)
   return btf__type_cnt(btf) - 1;
 }
 
-static unsigned char *get_data(const char *file, ssize_t *sizep)
-{
-  struct stat st;
-
-  if (stat(file, &st))
-    return nullptr;
-
-  FILE *f;
-
-  f = fopen(file, "rb");
-  if (!f)
-    return nullptr;
-
-  unsigned char *data;
-  unsigned int size;
-
-  size = st.st_size;
-
-  data = (unsigned char *) malloc(size);
-  if (!data)
-  {
-    fclose(f);
-    return nullptr;
-  }
-
-  ssize_t ret = fread(data, 1, st.st_size, f);
-
-  if (ret != st.st_size)
-  {
-    free(data);
-    fclose(f);
-    return nullptr;
-  }
-
-  fclose(f);
-
-  *sizep = size;
-  return data;
-}
-
-static struct btf* btf_raw(char *file)
-{
-  unsigned char *data;
-  ssize_t size;
-  struct btf *btf;
-
-  data = get_data(file, &size);
-  if (!data)
-  {
-    LOG(ERROR) << "BTF: failed to read data from: " << file;
-    return nullptr;
-  }
-
-  btf = btf__new(data, (__u32) size);
-  free(data);
-  return btf;
-}
-
 static int libbpf_print(enum libbpf_print_level level, const char *msg, va_list ap)
 {
   fprintf(stderr, "BTF: (%d) ", level);
   return vfprintf(stderr, msg, ap);
 }
 
-static struct btf *btf_open(const struct vmlinux_location *locs)
-{
-  struct utsname buf;
-
-  uname(&buf);
-
-  for (int i = 0; locs[i].path; i++)
-  {
-    char path[PATH_MAX + 1];
-
-    snprintf(path, PATH_MAX, locs[i].path, buf.release);
-    if (access(path, R_OK))
-      continue;
-
-    struct btf *btf;
-
-    if (locs[i].raw)
-      btf = btf_raw(path);
-    else
-      btf = btf__parse_elf(path, nullptr);
-
-    int err = libbpf_get_error(btf);
-
-    if (err)
-    {
-      if (bt_debug != DebugLevel::kNone)
-      {
-        char err_buf[256];
-
-        libbpf_strerror(libbpf_get_error(btf), err_buf, sizeof(err_buf));
-        LOG(ERROR) << "BTF: failed to read data (" << err_buf
-                   << ") from: " << path;
-      }
-      continue;
-    }
-
-    if (bt_debug != DebugLevel::kNone)
-    {
-      std::cerr << "BTF: using data from " << path << std::endl;
-    }
-    return btf;
-  }
-
-  return nullptr;
-}
-
 BTF::BTF(void) : btf(nullptr), state(NODATA)
 {
-  struct vmlinux_location locs_env[] = {
-    { nullptr, true },
-    { nullptr, false },
-  };
-
-  const struct vmlinux_location *locs = vmlinux_locs;
-
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
-
   if (path)
-  {
-    locs_env[0].path = path;
-    locs = locs_env;
-  }
+    btf = btf__parse_raw(path);
+  else
+    btf = btf__load_vmlinux_btf();
 
-  btf = btf_open(locs);
   if (btf)
   {
-    libbpf_set_print(libbpf_print);
+    if (bt_verbose)
+      libbpf_set_print(libbpf_print);
     state = OK;
   }
   else if (bt_debug != DebugLevel::kNone)
   {
-    LOG(ERROR) << "BTF: failed to find BTF data ";
+    LOG(ERROR) << "BTF: failed to find BTF data. Run with -v for more details.";
   }
 }
 
@@ -317,7 +204,7 @@ std::string BTF::type_of(const btf_type *type, const std::string &field)
   //
   // More info on struct/union members:
   //  https://www.kernel.org/doc/html/latest/bpf/btf.html#btf-kind-union
-  const struct btf_member *m = reinterpret_cast<const struct btf_member*>(type + 1);
+  const struct btf_member *m = btf_members(type);
 
   for (unsigned int i = 0; i < BTF_INFO_VLEN(type->info); i++)
   {
@@ -428,84 +315,61 @@ SizedType BTF::get_stype(__u32 id)
   return stype;
 }
 
-int BTF::resolve_args(const std::string &func,
-                      std::map<std::string, SizedType> &args,
-                      bool ret)
+void BTF::resolve_args(const std::string &func,
+                       std::map<std::string, SizedType> &args,
+                       bool ret)
 {
   if (!has_data())
     throw std::runtime_error("BTF data not available");
 
-  __s32 id, max = (__s32)type_cnt(btf);
-  std::string name = func;
+  __s32 id = btf__find_by_name_kind(btf, func.c_str(), BTF_KIND_FUNC);
+  if (id < 0)
+    throw std::runtime_error("no BTF data for " + func);
 
-  for (id = 1; id <= max; id++)
+  const struct btf_type *t = btf__type_by_id(btf, (__u32)id);
+  t = btf__type_by_id(btf, t->type);
+  if (!t || !btf_is_func_proto(t))
+    throw std::runtime_error(func + " is not a function");
+
+  if (bpftrace_ && !bpftrace_->is_traceable_func(func))
   {
-    const struct btf_type *t = btf__type_by_id(btf, id);
-
-    if (!t)
-      continue;
-
-    if (!btf_is_func(t))
-      continue;
-
-    const char *str = btf_str(btf, t->name_off);
-
-    if (name != str)
-      continue;
-
-    t = btf__type_by_id(btf, t->type);
-    if (!t || !btf_is_func_proto(t))
-    {
-      throw std::runtime_error("not a function");
-    }
-
-    if (bpftrace_ && !bpftrace_->is_traceable_func(name))
-    {
-      if (bpftrace_->traceable_funcs_.empty())
-        throw std::runtime_error("could not read traceable functions from " +
-                                 tracefs::available_filter_functions() +
-                                 " (is tracefs mounted?)");
-      else
-        throw std::runtime_error("function not traceable (probably it is "
-                                 "inlined or marked as \"notrace\")");
-    }
-
-    const struct btf_param *p = btf_params(t);
-    __u16 vlen = btf_vlen(t);
-    if (vlen > arch::max_arg() + 1)
-    {
-      throw std::runtime_error("functions with more than 6 parameters are "
-                               "not supported.");
-    }
-
-    int j = 0;
-
-    for (; j < vlen; j++, p++)
-    {
-      str = btf_str(btf, p->name_off);
-      if (!str)
-      {
-        throw std::runtime_error("failed to resolve arguments");
-      }
-
-      SizedType stype = get_stype(p->type);
-      stype.funcarg_idx = j;
-      stype.is_funcarg = true;
-      args.insert({ str, stype });
-    }
-
-    if (ret)
-    {
-      SizedType stype = get_stype(t->type);
-      stype.funcarg_idx = j;
-      stype.is_funcarg = true;
-      args.insert({ "$retval", stype });
-    }
-
-    return 0;
+    if (bpftrace_->traceable_funcs_.empty())
+      throw std::runtime_error("could not read traceable functions from " +
+                               tracefs::available_filter_functions() +
+                               " (is tracefs mounted?)");
+    else
+      throw std::runtime_error("function not traceable (probably it is "
+                               "inlined or marked as \"notrace\")");
   }
 
-  throw std::runtime_error("no BTF data for the function");
+  const struct btf_param *p = btf_params(t);
+  __u16 vlen = btf_vlen(t);
+  if (vlen > arch::max_arg() + 1)
+  {
+    throw std::runtime_error("functions with more than 6 parameters are "
+                             "not supported.");
+  }
+
+  int j = 0;
+  for (; j < vlen; j++, p++)
+  {
+    const char *str = btf_str(btf, p->name_off);
+    if (!str)
+      throw std::runtime_error("failed to resolve arguments");
+
+    SizedType stype = get_stype(p->type);
+    stype.funcarg_idx = j;
+    stype.is_funcarg = true;
+    args.insert({ str, stype });
+  }
+
+  if (ret)
+  {
+    SizedType stype = get_stype(t->type);
+    stype.funcarg_idx = j;
+    stype.is_funcarg = true;
+    args.insert({ "$retval", stype });
+  }
 }
 
 std::unique_ptr<std::istream> BTF::get_all_funcs() const
