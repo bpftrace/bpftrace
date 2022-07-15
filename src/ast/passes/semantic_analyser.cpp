@@ -2830,12 +2830,12 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "task")
     {
       supported = bpftrace_.feature_->has_prog_iter_task() &&
-                  bpftrace_.btf_.has_data();
+                  bpftrace_.has_btf_data();
     }
     else if (ap.func == "task_file")
     {
       supported = bpftrace_.feature_->has_prog_iter_task_file() &&
-                  bpftrace_.btf_.has_data();
+                  bpftrace_.has_btf_data();
     }
     else if (listing_)
     {

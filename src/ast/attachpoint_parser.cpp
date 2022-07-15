@@ -700,10 +700,17 @@ AttachPointParser::State AttachPointParser::kfunc_parser()
     return INVALID;
   }
 
-  if (parts_[1].find('*') != std::string::npos)
+  ap_->func = parts_[1];
+  ap_->target = "";
+  if (ap_->func.find('*') == std::string::npos)
+  {
+    auto func_modules = bpftrace_.get_func_modules(ap_->func);
+    if (func_modules.size() == 1)
+      ap_->target = *func_modules.begin();
+  }
+  else
     ap_->need_expansion = true;
 
-  ap_->func = parts_[1];
   return OK;
 }
 

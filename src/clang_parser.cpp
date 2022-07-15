@@ -742,13 +742,13 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
   // The header must be the last file in the vector since the following methods
   // count on it.
   // If BTF is not available, the header is empty.
-  input_files.emplace_back(bpftrace.btf_.has_data()
+  input_files.emplace_back(bpftrace.has_btf_data()
                                ? get_btf_generated_header(bpftrace)
                                : get_empty_btf_generated_header());
 
   bool btf_conflict = false;
   ClangParserHandler handler;
-  if (bpftrace.btf_.has_data())
+  if (bpftrace.has_btf_data())
   {
     // We set these args early because some systems may not have <linux/types.h>
     // (containers) and fully rely on BTF.
@@ -879,7 +879,7 @@ void ClangParser::resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace)
 
 CXUnsavedFile ClangParser::get_btf_generated_header(BPFtrace &bpftrace)
 {
-  btf_cdef = bpftrace.btf_.c_def(bpftrace.btf_set_);
+  btf_cdef = bpftrace.btf_->c_def(bpftrace.btf_set_);
   return CXUnsavedFile{
     .Filename = "/bpftrace/include/__btf_generated_header.h",
     .Contents = btf_cdef.c_str(),

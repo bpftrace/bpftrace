@@ -148,7 +148,17 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
     {
-      symbol_stream = bpftrace_->btf_.get_all_funcs();
+      // If BTF is not parsed, yet, read available_filter_functions instead.
+      // This is useful as we will use the result to extract the list of
+      // potentially used kernel modules and then only parse BTF for them.
+      if (bpftrace_->has_btf_data())
+        symbol_stream = bpftrace_->btf_->get_all_funcs();
+      else
+      {
+        symbol_stream = get_symbols_from_file(
+            tracefs::available_filter_functions());
+        ignore_trailing_module = true;
+      }
       break;
     }
     case ProbeType::iter:
@@ -424,7 +434,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = get_tracepoints_params(matches);
         else if (probe_type == ProbeType::kfunc ||
                  probe_type == ProbeType::kretfunc)
-          param_lists = bpftrace_->btf_.get_params(matches);
+          param_lists = bpftrace_->btf_->get_params(matches);
         else if (probe_type == ProbeType::iter)
           param_lists = get_iters_params(matches);
         else if (probe_type == ProbeType::uprobe)
@@ -529,7 +539,7 @@ std::set<std::string> ProbeMatcher::expand_probetype_userspace(
 
 void ProbeMatcher::list_structs(const std::string& search)
 {
-  auto structs = bpftrace_->btf_.get_all_structs();
+  auto structs = bpftrace_->btf_->get_all_structs();
 
   std::string search_input = search;
   // If verbose is on, structs will contain full definitions

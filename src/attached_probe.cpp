@@ -715,10 +715,13 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       if (probe_.type == ProbeType::kfunc ||
           probe_.type == ProbeType::kretfunc || probe_.type == ProbeType::iter)
       {
-        std::string btf_name = name;
+        std::string mod = probe_.path;
+        std::string fun = probe_.attach_point;
         if (probe_.type == ProbeType::iter)
-          btf_name = "bpf_iter_" + btf_name;
-        opts.attach_btf_id = btf_.get_btf_id(btf_name);
+          fun = "bpf_iter_" + fun;
+        auto btf_id = btf_.get_btf_id_fd(fun, mod);
+        opts.attach_btf_id = btf_id.first;
+        opts.attach_btf_obj_fd = btf_id.second;
       }
       else
       {
@@ -731,6 +734,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
                               reinterpret_cast<struct bpf_insn *>(insns),
                               prog_len / sizeof(struct bpf_insn),
                               &opts);
+
+      if (opts.attach_prog_fd > 0)
+        close(opts.attach_prog_fd);
       if (progfd_ >= 0)
         break;
     }

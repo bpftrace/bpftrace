@@ -78,4 +78,32 @@ void Driver::error(const std::string &m)
   failed_ = true;
 }
 
+// Retrieves the list of kernel modules for all attached-to functions.
+// Currently modules are only important for k(ret)func probes.
+std::set<std::string> Driver::list_modules() const
+{
+  std::set<std::string> modules;
+  for (auto &probe : *root->probes)
+  {
+    for (auto &ap : *probe->attach_points)
+    {
+      auto probe_type = probetype(ap->provider);
+      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
+      {
+        if (ap->need_expansion)
+        {
+          for (auto &match : bpftrace_.probe_matcher_->get_matches_for_ap(*ap))
+          {
+            auto match_modules = bpftrace_.get_func_modules(match);
+            modules.insert(match_modules.begin(), match_modules.end());
+          }
+        }
+        else
+          modules.insert(ap->target);
+      }
+    }
+  }
+  return modules;
+}
+
 } // namespace bpftrace

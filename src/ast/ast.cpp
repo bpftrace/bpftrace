@@ -493,7 +493,7 @@ std::string AttachPoint::name(const std::string &attach_target,
                               const std::string &attach_point) const
 {
   std::string n = provider;
-  if (attach_target != "")
+  if (attach_target != "" && provider != "kfunc" && provider != "kretfunc")
     n += ":" + attach_target;
   if (ns != "")
     n += ":" + ns;

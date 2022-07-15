@@ -25,6 +25,15 @@ class BTF
     OK,
   };
 
+  // BTF object for vmlinux or a kernel module.
+  // We're currently storing its name and BTF id.
+  struct BTFObj
+  {
+    struct btf* btf;
+    __u32 id;
+    std::string name;
+  };
+
   // It is often necessary to store a BTF id along with the BTF data containing
   // its definition.
   struct BTFId
@@ -34,8 +43,8 @@ class BTF
   };
 
 public:
-  BTF();
-  BTF(BPFtrace* bpftrace) : BTF()
+  BTF(const std::set<std::string>& modules);
+  BTF(BPFtrace* bpftrace, const std::set<std::string>& modules) : BTF(modules)
   {
     bpftrace_ = bpftrace;
   };
@@ -55,9 +64,11 @@ public:
                     std::map<std::string, SizedType>& args,
                     bool ret);
 
-  int get_btf_id(const std::string& name) const;
+  std::pair<int, int> get_btf_id_fd(const std::string& func,
+                                    const std::string& mod) const;
 
 private:
+  void load_kernel_btfs(const std::set<std::string>& modules);
   SizedType get_stype(const BTFId& btf_id);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
                                                  const struct btf* btf);
@@ -75,7 +86,12 @@ private:
       const std::set<std::string>& funcs) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
 
-  struct btf* vmlinux_btf;
+  __s32 start_id(const struct btf* btf) const;
+
+  struct btf* vmlinux_btf = nullptr;
+  __s32 vmlinux_btf_size;
+  // BTF objects for vmlinux and modules
+  std::vector<BTFObj> btf_objects;
   enum state state = NODATA;
   BPFtrace* bpftrace_ = nullptr;
 };

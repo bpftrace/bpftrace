@@ -135,8 +135,11 @@ void FieldAnalyser::visit(FieldAccess &acc)
   }
   else if (!type_.empty())
   {
-    type_ = bpftrace_.btf_.type_of(type_, acc.field);
-    bpftrace_.btf_set_.insert(type_);
+    if (bpftrace_.has_btf_data())
+    {
+      type_ = bpftrace_.btf_->type_of(type_, acc.field);
+      bpftrace_.btf_set_.insert(type_);
+    }
 
     if (sized_type_.IsPtrTy())
     {
@@ -227,9 +230,9 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         {
           try
           {
-            bpftrace_.btf_.resolve_args(match,
-                                        first ? ap_args_ : args,
-                                        probe_type == ProbeType::kretfunc);
+            bpftrace_.btf_->resolve_args(match,
+                                         first ? ap_args_ : args,
+                                         probe_type == ProbeType::kretfunc);
           }
           catch (const std::runtime_error &e)
           {
@@ -270,9 +273,9 @@ bool FieldAnalyser::resolve_args(Probe &probe)
       {
         try
         {
-          bpftrace_.btf_.resolve_args(ap->func,
-                                      ap_args_,
-                                      probe_type == ProbeType::kretfunc);
+          bpftrace_.btf_->resolve_args(ap->func,
+                                       ap_args_,
+                                       probe_type == ProbeType::kretfunc);
         }
         catch (const std::runtime_error &e)
         {
