@@ -525,6 +525,7 @@ class clang_parser_btf : public test_btf
 TEST_F(clang_parser_btf, btf)
 {
   BPFtrace bpftrace;
+  bpftrace.parse_btf({});
   parse("", bpftrace, true,
         "kprobe:sys_read {\n"
         "  @x1 = (struct Foo1 *) curtask;\n"
@@ -601,6 +602,7 @@ TEST_F(clang_parser_btf, btf)
 TEST_F(clang_parser_btf, btf_field_struct)
 {
   BPFtrace bpftrace;
+  bpftrace.parse_btf({});
   parse("",
         bpftrace,
         true,
@@ -619,6 +621,7 @@ TEST_F(clang_parser_btf, btf_field_struct)
 TEST_F(clang_parser_btf, btf_variable_field_struct)
 {
   BPFtrace bpftrace;
+  bpftrace.parse_btf({});
   parse("",
         bpftrace,
         true,
@@ -642,7 +645,8 @@ TEST(clang_parser, btf_unresolved_typedef)
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
   // extract it from there
   BPFtrace bpftrace;
-  if (!bpftrace.btf_.has_data())
+  bpftrace.parse_btf({});
+  if (!bpftrace.has_btf_data())
     GTEST_SKIP();
 
   parse("struct Foo { size_t x; };", bpftrace);
@@ -663,6 +667,7 @@ TEST_F(clang_parser_btf, btf_type_override)
 {
   // It should be possible to override types from BTF, ...
   BPFtrace bpftrace;
+  bpftrace.parse_btf({});
   parse("struct Foo1 { int a; };\n",
         bpftrace,
         true,

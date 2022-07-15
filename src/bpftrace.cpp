@@ -787,7 +787,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (feature_->has_uprobe_refcnt() || !(file_activation && probe.path.size()))
   {
     ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, func, pid, *feature_, btf_));
+        std::make_unique<AttachedProbe>(probe, func, pid, *feature_, *btf_));
     return ret;
   }
 
@@ -848,7 +848,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       }
 
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, func, pid_parsed, *feature_, btf_));
+          probe, func, pid_parsed, *feature_, *btf_));
       break;
     }
   }
@@ -935,13 +935,13 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
              probe.type == ProbeType::asyncwatchpoint)
     {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *section, pid, *feature_, btf_));
+          probe, *section, pid, *feature_, *btf_));
       return ret;
     }
     else
     {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *section, safe_mode_, *feature_, btf_));
+          probe, *section, safe_mode_, *feature_, *btf_));
       return ret;
     }
   }
@@ -2347,6 +2347,16 @@ bool BPFtrace::write_pcaps(uint64_t id,
   auto &writer = pcap_writers.at(file);
 
   return writer->write(ns, pkt, size);
+}
+
+void BPFtrace::parse_btf(const std::set<std::string> &modules)
+{
+  btf_ = std::make_unique<BTF>(this, modules);
+}
+
+bool BPFtrace::has_btf_data() const
+{
+  return btf_ && btf_->has_data();
 }
 
 } // namespace bpftrace

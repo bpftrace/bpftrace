@@ -144,7 +144,7 @@ private:
       std::optional<libbpf::bpf_attach_type> attach_type = std::nullopt,
       int* outfd = nullptr);
 
-  BTF btf_;
+  BTF btf_ = BTF({ "vmlinux" });
 };
 
 #undef DEFINE_PROG_TEST

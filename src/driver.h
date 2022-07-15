@@ -28,6 +28,8 @@ public:
     debug_ = true;
   };
 
+  std::set<std::string> list_modules() const;
+
   BPFtrace &bpftrace_;
 
   bool listing_ = false;
