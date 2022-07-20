@@ -152,6 +152,9 @@ jobs:
       if: steps.docker-cache.outputs.cache-hit == 'true'
       run: >
         docker load --input /tmp/docker-save/i.tar
+    - name: Load kernel modules
+      # nf_tables is necessary for testing kernel modules BTF support
+      run: sudo modprobe nf_tables
     - name: Build and test
       env: ${{matrix.env}}
       run: >
