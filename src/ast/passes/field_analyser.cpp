@@ -76,6 +76,8 @@ void FieldAnalyser::visit(Builtin &builtin)
         type_ = it->second.GetPointeeTy()->GetName();
       else
         type_ = "";
+
+      sized_type_ = it->second;
     }
 
     bpftrace_.btf_set_.insert(type_);
@@ -159,9 +161,14 @@ void FieldAnalyser::visit(Cast &cast)
   assert(!type_.empty());
   bpftrace_.btf_set_.insert(type_);
 
+  sized_type_ = CreateNone();
+
   for (auto &ap : *probe_->attach_points)
     if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
       sized_type_ = dwarf->get_stype(cast.cast_type);
+
+  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
+    sized_type_ = bpftrace_.btf_->get_stype(type_);
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
@@ -323,7 +330,10 @@ void FieldAnalyser::resolve_fields(SizedType &type)
 
   for (auto &ap : *probe_->attach_points)
     if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-      dwarf->resolve_fields(sized_type_);
+      dwarf->resolve_fields(type);
+
+  if (type.GetFieldCount() == 0 && bpftrace_.has_btf_data())
+    bpftrace_.btf_->resolve_fields(type);
 }
 
 void FieldAnalyser::visit(Probe &probe)

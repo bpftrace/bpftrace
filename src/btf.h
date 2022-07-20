@@ -54,6 +54,7 @@ public:
   std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const BTFId& type_id, const std::string& field);
+  SizedType get_stype(const std::string& type_name);
 
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_funcs() const;
@@ -63,13 +64,15 @@ public:
   void resolve_args(const std::string& func,
                     std::map<std::string, SizedType>& args,
                     bool ret);
+  void resolve_fields(SizedType& type);
 
   std::pair<int, int> get_btf_id_fd(const std::string& func,
                                     const std::string& mod) const;
 
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
-  SizedType get_stype(const BTFId& btf_id);
+  SizedType get_stype(const BTFId& btf_id, bool resolve_structs = true);
+  void resolve_fields(const BTFId& type_id, Struct* record, __u32 start_offset);
   const struct btf_type* btf_type_skip_modifiers(const struct btf_type* t,
                                                  const struct btf* btf);
   BTF::BTFId find_id(const std::string& name,
