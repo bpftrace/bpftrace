@@ -372,7 +372,7 @@ const struct btf_type *BTF::btf_type_skip_modifiers(const struct btf_type *t,
   return t;
 }
 
-SizedType BTF::get_stype(const BTFId &btf_id)
+SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
 {
   const struct btf_type *t = btf__type_by_id(btf_id.btf, btf_id.id);
 
@@ -394,19 +394,21 @@ SizedType BTF::get_stype(const BTFId &btf_id)
   }
   else if (btf_is_composite(t))
   {
-    const char *cast = btf_str(btf_id.btf, t->name_off);
-    assert(cast);
+    std::string cast = btf_str(btf_id.btf, t->name_off);
+    if (cast.empty() || cast == "(anon)")
+      return CreateNone();
     std::string comp = btf_is_struct(t) ? "struct" : "union";
     std::string name = comp + " " + cast;
-    // We're usually resolving types before running ClangParser, so the struct
-    // definitions are not yet pulled into the struct map. We initialize them
-    // now and fill them later.
+
     stype = CreateRecord(name, bpftrace_->structs.LookupOrAdd(name, t->size));
+    if (resolve_structs)
+      resolve_fields(stype);
   }
   else if (btf_is_ptr(t))
   {
     // t->type is the pointee type
-    stype = CreatePointer(get_stype(BTFId{ .btf = btf_id.btf, .id = t->type }));
+    stype = CreatePointer(
+        get_stype(BTFId{ .btf = btf_id.btf, .id = t->type }, false));
   }
 
   return stype;
@@ -759,6 +761,73 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
       return id;
   }
   return -1;
+}
+
+void BTF::resolve_fields(SizedType &type)
+{
+  if (!type.IsRecordTy())
+    return;
+
+  auto record = bpftrace_->structs.Lookup(type.GetName()).lock();
+  if (record->HasFields())
+    return;
+
+  auto type_name = btf_type_str(type.GetName());
+  auto type_id = find_id(type_name);
+  if (!type_id.btf)
+    return;
+
+  resolve_fields(type_id, record.get(), 0);
+}
+
+void BTF::resolve_fields(const BTFId &type_id,
+                         Struct *record,
+                         __u32 start_offset)
+{
+  auto btf_type = btf__type_by_id(type_id.btf, type_id.id);
+  auto members = btf_members(btf_type);
+  for (__u32 i = 0; i < BTF_INFO_VLEN(btf_type->info); i++)
+  {
+    BTFId field_id{ .btf = type_id.btf, .id = members[i].type };
+    auto field_type = btf__type_by_id(field_id.btf, field_id.id);
+    if (!field_type)
+    {
+      LOG(ERROR) << "Inconsistent BTF data (no type found for id "
+                 << members[i].type << ")";
+      record->ClearFields();
+      break;
+    }
+
+    std::string field_name = btf__name_by_offset(type_id.btf,
+                                                 members[i].name_off);
+    if (members[i].offset % 8 != 0)
+    {
+      // bitfield - not supported yet
+      record->ClearFields();
+      return;
+    }
+    __u32 field_offset = start_offset + members[i].offset / 8;
+
+    if (btf_is_composite(field_type) &&
+        (field_name.empty() || field_name == "(anon)"))
+    {
+      resolve_fields(field_id, record, field_offset);
+      return;
+    }
+
+    record->AddField(
+        field_name, get_stype(field_id), field_offset, false, {}, false);
+  }
+}
+
+SizedType BTF::get_stype(const std::string &type_name)
+{
+  auto btf_name = btf_type_str(type_name);
+  auto type_id = find_id(btf_name);
+  if (type_id.btf)
+    return get_stype(type_id);
+
+  return CreateNone();
 }
 
 } // namespace bpftrace
