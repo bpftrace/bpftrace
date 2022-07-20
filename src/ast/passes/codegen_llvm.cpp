@@ -2657,10 +2657,13 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
     Value *offset_val = b_.CreateGEP(key_type,
                                      key,
                                      { b_.getInt64(0), b_.getInt64(offset) });
+    Value *offset_val_cast = b_.CreatePointerCast(
+        offset_val, extra_key->getType()->getPointerTo());
+
     if (aligned)
-      b_.CreateStore(extra_key, offset_val);
+      b_.CreateStore(extra_key, offset_val_cast);
     else
-      b_.createAlignedStore(extra_key, offset_val, 1);
+      b_.createAlignedStore(extra_key, offset_val_cast, 1);
   }
 
   return key;
