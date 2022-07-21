@@ -900,8 +900,12 @@ void CodegenLLVM::visit(Call &call)
       Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
       // and finally the seq_printf call
-      b_.CreateSeqPrintf(
-          ctx_, fmt, b_.getInt64(size), data, b_.getInt64(data_size), call.loc);
+      b_.CreateSeqPrintf(ctx_,
+                         b_.CreateIntToPtr(fmt, b_.getInt8PtrTy()),
+                         b_.getInt32(size),
+                         b_.CreatePointerCast(data, b_.getInt8PtrTy()),
+                         b_.getInt32(data_size),
+                         call.loc);
 
       seq_printf_id_++;
     }

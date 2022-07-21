@@ -156,7 +156,7 @@ public:
   void CreateSeqPrintf(Value *ctx,
                        Value *fmt,
                        Value *fmt_size,
-                       AllocaInst *data,
+                       Value *data,
                        Value *data_len,
                        const location &loc);
 
