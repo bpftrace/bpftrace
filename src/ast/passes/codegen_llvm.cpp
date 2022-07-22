@@ -612,7 +612,14 @@ void CodegenLLVM::visit(Call &call)
     AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "path");
     b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
     call.vargs->front()->accept(*this);
-    b_.CreatePath(ctx_, buf, expr_, call.loc);
+    b_.CreatePath(ctx_,
+                  buf,
+                  b_.CreateCast(expr_->getType()->isPointerTy()
+                                    ? Instruction::BitCast
+                                    : Instruction::IntToPtr,
+                                expr_,
+                                b_.getInt8PtrTy()),
+                  call.loc);
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
   }
