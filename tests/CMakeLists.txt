@@ -45,12 +45,15 @@ add_executable(bpftrace_test
 )
 
 # Regenerate DWARF data for unit tests
-add_custom_target(testing_debuginfo_data
-        COMMAND
-        ${CMAKE_COMMAND}
-        -DDATA_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/data"
-        -P ${CMAKE_SOURCE_DIR}/tests/data/generate_debuginfo_data.cmake)
-add_dependencies(bpftrace_test testing_debuginfo_data)
+if (LIBDW_FOUND)
+  find_program(XXD xxd REQUIRED)
+  add_custom_target(testing_debuginfo_data
+          COMMAND
+          ${CMAKE_COMMAND}
+          -DDATA_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/data"
+          -P ${CMAKE_SOURCE_DIR}/tests/data/generate_debuginfo_data.cmake)
+  add_dependencies(bpftrace_test testing_debuginfo_data)
+endif()
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_link_libraries(bpftrace_test libbpftrace)
