@@ -204,8 +204,11 @@ static struct btf_dump *dump_new(const struct btf *btf,
   struct btf_dump_opts opts = {
     .ctx = ctx,
   };
-
+#ifdef HAVE_LIBBPF_BTF_DUMP_NEW_DEPRECATED
+  return btf_dump__new_deprecated(btf, nullptr, &opts, dump_printf);
+#else
   return btf_dump__new(btf, nullptr, &opts, dump_printf);
+#endif
 #endif
 }
 

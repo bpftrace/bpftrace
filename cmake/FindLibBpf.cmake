@@ -81,6 +81,15 @@ int main(void) {
 " HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0)
 
 CHECK_CXX_SOURCE_COMPILES("
+#include <bpf/btf.h>
+
+int main(void) {
+  btf_dump__new_deprecated(NULL, NULL, NULL, NULL);
+  return 0;
+}
+" HAVE_LIBBPF_BTF_DUMP_NEW_DEPRECATED)
+
+CHECK_CXX_SOURCE_COMPILES("
 #include <bpf/bpf.h>
 
 int main(void) {
