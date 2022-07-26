@@ -1243,6 +1243,7 @@ TEST(Parser, wildcard_probetype)
        " uprobe:/bin/sh:*\n"
        " usdt:/bin/sh:*\n"
        "  int: 1\n");
+  test_parse_failure("iter:task* { }");
 }
 
 TEST(Parser, wildcard_attach_points)

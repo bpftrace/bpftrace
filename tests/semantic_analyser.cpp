@@ -59,23 +59,17 @@ void test(BPFtrace &bpftrace,
           const std::string &input,
           int expected_result = 0,
           bool safe_mode = true,
-          bool has_child = false,
-          int expected_field_analyser = 0,
-          int expected_parse = 0)
+          bool has_child = false)
 {
   std::stringstream out;
   std::stringstream msg;
   msg << "\nInput:\n" << input << "\n\nOutput:\n";
 
   bpftrace.safe_mode_ = safe_mode;
-  ASSERT_EQ(driver.parse_str(input), expected_parse);
-
-  // Can't continue if parsing failed
-  if (expected_parse)
-    return;
+  EXPECT_EQ(driver.parse_str(input), 0);
 
   ast::FieldAnalyser fields(driver.root.get(), bpftrace, out);
-  EXPECT_EQ(fields.analyse(), expected_field_analyser) << msg.str() + out.str();
+  EXPECT_EQ(fields.analyse(), 0) << msg.str() + out.str();
 
   ClangParser clang;
   clang.parse(driver.root.get(), bpftrace);
@@ -120,21 +114,11 @@ void test(MockBPFfeature &feature,
 void test(const std::string &input,
           int expected_result = 0,
           bool safe_mode = true,
-          bool has_child = false,
-          int expected_field_analyser = 0,
-          int expected_parse = 0)
+          bool has_child = false)
 {
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
-  test(*bpftrace,
-       true,
-       driver,
-       input,
-       expected_result,
-       safe_mode,
-       has_child,
-       expected_field_analyser,
-       expected_parse);
+  test(*bpftrace, true, driver, input, expected_result, safe_mode, has_child);
 }
 
 TEST(semantic_analyser, builtin_variables)
@@ -2593,24 +2577,6 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kretfunc:func_1 { $x = args->foo; }", 1);
   test("kretfunc:func_1 { $x = args; }", 1);
-  // func_1 and func_2 have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test("kfunc:func_1, kfunc:func_2 { }", 0);
-  // func_1 and func_2 have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_1, kfunc:func_2 { $x = args->foo; }", 1, true, false, 1);
-  // func_2 and func_3 have same args -> PASS
-  test("kfunc:func_2, kfunc:func_3 { }", 0);
-  // func_2 and func_3 have same args -> PASS
-  test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
-  // aaa does not exist -> PASS semantic analyser, FAIL field analyser
-  test("kfunc:func_2, kfunc:aaa { $x = args->foo1; }", 0, true, false, 1);
-  // func_* have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test("kfunc:func_* { }", 0);
-  // func_* have different args, one of them
-  // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_* { $x = args->foo1; }", 0, true, false, 1);
   // reg() is not available in kfunc
 #ifdef ARCH_X86_64
   test("kfunc:func_1 { reg(\"ip\") }", 1);
@@ -2653,92 +2619,11 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task_file { $x = ctx->file->ino }", 0);
   test("iter:task { $x = args->foo; }", 1);
   test("iter:task_file { $x = args->foo; }", 1);
-  test("iter:task* { }", 1, true, false, 1, 1);
   test("iter:task { printf(\"%d\", ctx->task->pid); }", 0);
   test("iter:task_file { printf(\"%d\", ctx->file->ino); }", 0);
   test("iter:task,iter:task_file { 1 }", 1);
   test("iter:task,f:func_1 { 1 }", 1);
 }
-
-#ifdef HAVE_LIBDW
-
-#include "dwarf_common.h"
-
-class semantic_analyser_dwarf : public test_dwarf
-{
-};
-
-TEST_F(semantic_analyser_dwarf, uprobe_args)
-{
-  std::string uprobe = "uprobe:" + std::string(bin_);
-  test(uprobe + ":func_1 { $x = args->a; }", 0);
-  test(uprobe + ":func_2 { $x = args->b; }", 0);
-
-  // func_1 and func_2 have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { }", 0);
-  // func_1 and func_2 have different args, one of them
-  // is used in probe code, we can't continue -> FAIL in the field analyser
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args->a; }",
-       0,
-       true,
-       false,
-       1);
-  // func_2 and func_3 have same args -> PASS
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args->a; }", 0);
-
-  // "none" is not an arg -> FAIL in semantic analyser
-  test(uprobe + ":func_1 { $x = args->none; }", 1, true, false, 0);
-
-  // Probes with wildcards (need non-mock BPFtrace)
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
-  // func_* have different args, but none of them
-  // is used in probe code, so we're good -> PASS
-  test(bpftrace, false, driver, uprobe + ":func_* { }", 0);
-  // func_* have different args, one of them
-  // is used in probe code, we can't continue -> FAIL in the field analyser
-  test(bpftrace,
-       false,
-       driver,
-       uprobe + ":func_* { $x = args->a; }",
-       0,
-       true,
-       false,
-       1);
-}
-
-TEST_F(semantic_analyser_dwarf, parse_struct)
-{
-  BPFtrace bpftrace;
-  Driver driver(bpftrace);
-
-  std::string uprobe = "uprobe:" + std::string(bin_);
-  test(bpftrace, false, driver, uprobe + ":func_1 { $x = args->foo1->a; }", 0);
-  ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
-  auto str = bpftrace.structs.Lookup("struct Foo1").lock();
-
-  ASSERT_TRUE(str->HasFields());
-  ASSERT_EQ(str->fields.size(), 3);
-  ASSERT_EQ(str->size, 16);
-
-  ASSERT_TRUE(str->HasField("a"));
-  ASSERT_TRUE(str->GetField("a").type.IsIntTy());
-  ASSERT_EQ(str->GetField("a").type.GetSize(), 4);
-  ASSERT_EQ(str->GetField("a").offset, 0);
-
-  ASSERT_TRUE(str->HasField("b"));
-  ASSERT_TRUE(str->GetField("b").type.IsIntTy());
-  ASSERT_EQ(str->GetField("b").type.GetSize(), 1);
-  ASSERT_EQ(str->GetField("b").offset, 4);
-
-  ASSERT_TRUE(str->HasField("c"));
-  ASSERT_TRUE(str->GetField("c").type.IsIntTy());
-  ASSERT_EQ(str->GetField("c").type.GetSize(), 8);
-}
-
-#endif // HAVE_LIBDW
 
 } // namespace semantic_analyser
 } // namespace test

@@ -526,12 +526,13 @@ TEST_F(clang_parser_btf, btf)
 {
   BPFtrace bpftrace;
   bpftrace.parse_btf({});
-  parse("", bpftrace, true,
-        "kprobe:sys_read {\n"
-        "  @x1 = (struct Foo1 *) curtask;\n"
-        "  @x2 = (struct Foo2 *) curtask;\n"
-        "  @x3 = (struct Foo3 *) curtask;\n"
-        "}");
+  parse("struct Foo { "
+        "  struct Foo1 f1;"
+        "  struct Foo2 f2;"
+        "  struct Foo3 f3;"
+        "  struct task_struct t;"
+        "}",
+        bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo2"));
