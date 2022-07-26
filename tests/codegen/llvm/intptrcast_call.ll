@@ -45,8 +45,8 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %deref)
   %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i8*, i32, i64)*)(i8* %deref, i32 1, i64 %9)
   %10 = load i8, i8* %deref, align 1
-  %11 = sext i8 %10 to i64
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %deref)
+  %11 = sext i8 %10 to i64
   %12 = add i64 %11, %4
   store i64 %12, i64* %"@_val", align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
