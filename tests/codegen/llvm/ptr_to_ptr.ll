@@ -35,11 +35,11 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   %probe_read_kernel2 = call i64 inttoptr (i64 113 to i64 (i32*, i32, i64)*)(i32* %deref1, i32 4, i64 %7)
   %10 = load i32, i32* %deref1, align 4
-  %11 = sext i32 %10 to i64
-  %12 = bitcast i32* %deref1 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
-  store i64 %11, i64* %13, align 8
+  %11 = bitcast i32* %deref1 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 1
+  %13 = sext i32 %10 to i64
+  store i64 %13, i64* %12, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %printf_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %printf_t* %printf_args, i64 16)
   %14 = bitcast %printf_t* %printf_args to i8*

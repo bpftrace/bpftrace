@@ -1590,9 +1590,7 @@ void CodegenLLVM::unop_ptr(Unop &unop)
         int size = unop.type.IsIntegerTy() ? et->GetIntBitWidth() / 8 : 8;
         AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
         b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
-        expr_ = b_.CreateIntCast(b_.CreateLoad(b_.GetType(*et), dst),
-                                 b_.getInt64Ty(),
-                                 unop.type.IsSigned());
+        expr_ = b_.CreateLoad(b_.GetType(*et), dst);
         b_.CreateLifetimeEnd(dst);
       }
       break;

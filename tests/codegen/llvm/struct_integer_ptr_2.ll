@@ -32,15 +32,15 @@ entry:
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   %probe_read_kernel1 = call i64 inttoptr (i64 113 to i64 (i32*, i32, i64)*)(i32* %deref, i32 4, i64 %7)
   %10 = load i32, i32* %deref, align 4
-  %11 = sext i32 %10 to i64
-  %12 = bitcast i32* %deref to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
+  %11 = bitcast i32* %deref to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %12 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
   store i64 0, i64* %"@x_key", align 8
+  %13 = sext i32 %10 to i64
   %14 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
-  store i64 %11, i64* %"@x_val", align 8
+  store i64 %13, i64* %"@x_val", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_val", i64 0)
   %15 = bitcast i64* %"@x_val" to i8*
