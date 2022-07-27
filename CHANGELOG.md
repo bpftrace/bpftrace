@@ -15,6 +15,8 @@ and this project adheres to
   - [#2279](https://github.com/iovisor/bpftrace/pull/2279)
 - Add builtin: `pton`
   - [#2289](https://github.com/iovisor/bpftrace/pull/2289)
+- Add builtin: `debugf`
+  - [#2307](https://github.com/iovisor/bpftrace/pull/2307)
 
 #### Changed
 - Move from BCC to libbpf

@@ -39,6 +39,7 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
   Visit(*root_);
   prepare_seq_printf_ids();
+  prepare_debugf_ids();
 
   if (!err_.str().empty())
   {
@@ -71,7 +72,8 @@ void ResourceAnalyser::visit(Call &call)
 {
   Visitor::visit(call);
 
-  if (call.func == "printf" || call.func == "system" || call.func == "cat")
+  if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
+      call.func == "debugf")
   {
     std::vector<Field> args;
     // NOTE: the same logic can be found in the semantic_analyser pass
@@ -108,6 +110,11 @@ void ResourceAnalyser::visit(Call &call)
       {
         resources_.printf_args.emplace_back(fmtstr, args);
       }
+    }
+    else if (call.func == "debugf")
+    {
+      resources_.debugf_args.emplace_back(fmtstr, args);
+      resources_.needs_data_map = true;
     }
     else if (call.func == "system")
     {
@@ -212,6 +219,19 @@ void ResourceAnalyser::prepare_seq_printf_ids()
     assert(resources_.needs_data_map);
     auto len = std::get<0>(arg).size();
     resources_.seq_printf_ids.push_back({ idx, len + 1 });
+    idx += len + 1;
+  }
+}
+
+void ResourceAnalyser::prepare_debugf_ids()
+{
+  int idx = 0;
+
+  for (auto &arg : resources_.debugf_args)
+  {
+    assert(resources_.needs_data_map);
+    auto len = std::get<0>(arg).size();
+    resources_.debugf_ids.push_back({ idx, len + 1 });
     idx += len + 1;
   }
 }

@@ -955,7 +955,8 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   }
-  else if (call.func == "printf" || call.func == "system" || call.func == "cat")
+  else if (call.func == "printf" || call.func == "system" ||
+           call.func == "cat" || call.func == "debugf")
   {
     check_assignment(call, false, false, false);
     if (check_varargs(call, 1, 128))
@@ -989,12 +990,18 @@ void SemanticAnalyser::visit(Call &call)
                   },
           });
         }
-        std::string msg = validate_format_string(fmt.str, args);
+        std::string msg = validate_format_string(fmt.str, args, call.func);
         if (msg != "")
         {
           LOG(ERROR, call.loc, err_) << msg;
         }
       }
+    }
+    if (call.func == "debugf" && is_final_pass())
+    {
+      LOG(WARNING, call.loc, out_)
+          << "The debugf() builtin is not recommended for production use. For "
+             "more information see bpf_trace_printk in bpf-helpers(7).";
     }
 
     call.type = CreateNone();

@@ -36,6 +36,7 @@ private:
   // map. This method loads `RequiredResources::seq_printf_ids` with the
   // starting indicies and lengths of each format string in the data map.
   void prepare_seq_printf_ids();
+  void prepare_debugf_ids();
 
   RequiredResources resources_;
   Node *root_;

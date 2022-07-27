@@ -137,6 +137,10 @@ public:
                              Value *data,
                              size_t size,
                              const location *loc = nullptr);
+  void CreateTracePrintk(Value *fmt,
+                         Value *fmt_size,
+                         const std::vector<Value *> &values,
+                         const location &loc);
   void        CreateSignal(Value *ctx, Value *sig, const location &loc);
   void        CreateOverrideReturn(Value *ctx, Value *rc);
   void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);

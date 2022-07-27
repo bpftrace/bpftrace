@@ -914,6 +914,28 @@ void CodegenLLVM::visit(Call &call)
                              AsyncAction::printf);
     }
   }
+  else if (call.func == "debugf")
+  {
+    // format string was pre-saved in the map, referenced by debugf_id_
+    auto mapid = bpftrace_.maps[MapManager::Type::DebugfData].value()->id;
+    auto ids = bpftrace_.resources.debugf_ids.at(debugf_id_);
+    auto idx = std::get<0>(ids);
+    auto size = std::get<1>(ids);
+
+    Value *map_data = b_.CreateBpfPseudoCallValue(mapid);
+    Value *fmt_ptr = b_.CreateAdd(map_data, b_.getInt64(idx));
+
+    std::vector<Value *> values;
+    for (size_t i = 1; i < call.vargs->size(); i++)
+    {
+      Expression &arg = *call.vargs->at(i);
+      auto scoped_del = accept(&arg);
+      values.push_back(expr_);
+    }
+
+    b_.CreateTracePrintk(fmt_ptr, b_.getInt32(size), values, call.loc);
+    debugf_id_++;
+  }
   else if (call.func == "system")
   {
     createFormatStringCall(call,
@@ -3516,6 +3538,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
           starting_helper_error_id = this->b_.helper_error_id_,
           starting_non_map_print_id = this->non_map_print_id_,
           starting_seq_printf_id = this->seq_printf_id_,
+          starting_debugf_id = this->debugf_id_,
           starting_skb_output_id = this->skb_output_id_] {
     this->printf_id_ = starting_printf_id;
     this->cat_id_ = starting_cat_id;
@@ -3526,6 +3549,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->b_.helper_error_id_ = starting_helper_error_id;
     this->non_map_print_id_ = starting_non_map_print_id;
     this->seq_printf_id_ = starting_seq_printf_id;
+    this->debugf_id_ = starting_debugf_id;
     this->skb_output_id_ = starting_skb_output_id;
   };
 }
