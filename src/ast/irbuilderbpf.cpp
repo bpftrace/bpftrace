@@ -1042,6 +1042,28 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
                    loc);
 }
 
+void IRBuilderBPF::CreateTracePrintk(Value *fmt_ptr,
+                                     Value *fmt_size,
+                                     const std::vector<Value *> &values,
+                                     const location &loc)
+{
+  std::vector<Value *> args = { fmt_ptr, fmt_size };
+  for (auto val : values)
+  {
+    args.push_back(val);
+  }
+
+  // long bpf_trace_printk(const char *fmt, u32 fmt_size, ...)
+  FunctionType *traceprintk_func_type = FunctionType::get(
+      getInt64Ty(), { getInt8PtrTy(), getInt32Ty() }, true);
+
+  CreateHelperCall(libbpf::BPF_FUNC_trace_printk,
+                   traceprintk_func_type,
+                   args,
+                   "trace_printk",
+                   &loc);
+}
+
 void IRBuilderBPF::CreateSignal(Value *ctx, Value *sig, const location &loc)
 {
   // long bpf_send_signal(u32 sig)

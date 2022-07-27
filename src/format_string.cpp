@@ -5,9 +5,12 @@
 namespace bpftrace {
 
 const int FMT_BUF_SZ = 512;
+// bpf_trace_printk cannot use more than three arguments, see bpf-helpers(7).
+const int PRINTK_MAX_ARGS = 3;
 
 std::string validate_format_string(const std::string &fmt,
-                                   std::vector<Field> args)
+                                   std::vector<Field> args,
+                                   const std::string call_func)
 {
   std::stringstream message;
 
@@ -20,14 +23,22 @@ std::string validate_format_string(const std::string &fmt,
   int num_args = args.size();
   if (num_args < num_tokens)
   {
-    message << "printf: Not enough arguments for format string (" << num_args
-            << " supplied, " << num_tokens << " expected)" << std::endl;
+    message << call_func << ": Not enough arguments for format string ("
+            << num_args << " supplied, " << num_tokens << " expected)"
+            << std::endl;
     return message.str();
   }
   if (num_args > num_tokens)
   {
-    message << "printf: Too many arguments for format string (" << num_args
-            << " supplied, " << num_tokens << " expected)" << std::endl;
+    message << call_func << ": Too many arguments for format string ("
+            << num_args << " supplied, " << num_tokens << " expected)"
+            << std::endl;
+    return message.str();
+  }
+  if (call_func == "debugf" && num_args > PRINTK_MAX_ARGS)
+  {
+    message << call_func << ": Cannot use more than " << PRINTK_MAX_ARGS
+            << " conversion specifiers" << std::endl;
     return message.str();
   }
 
@@ -54,18 +65,23 @@ std::string validate_format_string(const std::string &fmt,
       offset++;
 
     const std::string token = token_iter->str().substr(offset);
-    const auto token_type_iter = printf_format_types.find(token);
-    if (token_type_iter == printf_format_types.end())
+    const auto format_types = call_func == "debugf"
+                                  ? bpf_trace_printk_format_types
+                                  : printf_format_types;
+    const auto token_type_iter = format_types.find(token);
+    if (token_type_iter == format_types.end())
     {
-      message << "printf: Unknown format string token: %" << token << std::endl;
+      message << call_func << ": Unknown format string token: %" << token
+              << std::endl;
       return message.str();
     }
     const Type &token_type = token_type_iter->second;
 
     if (arg_type != token_type)
     {
-      message << "printf: %" << token << " specifier expects a value of type "
-              << token_type << " (" << arg_type << " supplied)" << std::endl;
+      message << call_func << ": %" << token
+              << " specifier expects a value of type " << token_type << " ("
+              << arg_type << " supplied)" << std::endl;
       return message.str();
     }
   }

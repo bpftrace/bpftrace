@@ -93,36 +93,16 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   }
   if (needs_data_map)
   {
-    // get size of all the format strings
-    size_t size = 0;
-    for (auto &it : seq_printf_args)
-      size += std::get<0>(it).size() + 1;
-
-    // compute buffer size to hold all the formats and create map with that
-    int ptr_size = sizeof(unsigned long);
-    size = (size / ptr_size + 1) * ptr_size;
-    auto map = std::make_unique<T>(
-        "data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
-
-    // copy all the format strings to buffer, head to tail
-    uint32_t idx = 0;
-    std::vector<uint8_t> formats(size, 0);
-    for (auto &arg : seq_printf_args)
-    {
-      auto str = std::get<0>(arg).c_str();
-      auto len = std::get<0>(arg).size();
-      memcpy(&formats.data()[idx], str, len);
-      idx += len + 1;
-    }
-
-    // store the data in map
-    uint64_t id = 0;
-    int ret = bpf_update_elem(map->mapfd_, &id, formats.data(), 0);
-
+    int ret;
+    auto map = prepareFormatStringDataMap<T>(seq_printf_args, &ret);
     if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
       failed_maps += 1;
-
     bpftrace.maps.Set(MapManager::Type::SeqPrintfData, std::move(map));
+
+    map = prepareFormatStringDataMap<T>(debugf_args, &ret);
+    if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
+      failed_maps += 1;
+    bpftrace.maps.Set(MapManager::Type::DebugfData, std::move(map));
   }
   {
     auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
@@ -140,6 +120,39 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   }
 
   return failed_maps;
+}
+
+template <typename T>
+std::unique_ptr<T> RequiredResources::prepareFormatStringDataMap(
+    const std::vector<std::tuple<FormatString, std::vector<Field>>> &args,
+    int *ret)
+{
+  // get size of all the format strings
+  size_t size = 0;
+  for (auto &it : args)
+    size += std::get<0>(it).size() + 1;
+
+  // compute buffer size to hold all the formats and create map with that
+  int ptr_size = sizeof(unsigned long);
+  size = (size / ptr_size + 1) * ptr_size;
+  auto map = std::make_unique<T>(
+      "data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
+
+  // copy all the format strings to buffer, head to tail
+  uint32_t idx = 0;
+  std::vector<uint8_t> formats(size, 0);
+  for (auto &arg : args)
+  {
+    auto str = std::get<0>(arg).c_str();
+    auto len = std::get<0>(arg).size();
+    memcpy(&formats.data()[idx], str, len);
+    idx += len + 1;
+  }
+
+  // store the data in map
+  uint64_t id = 0;
+  *ret = bpf_update_elem(map->mapfd_, &id, formats.data(), 0);
+  return map;
 }
 
 void RequiredResources::save_state(std::ostream &out) const

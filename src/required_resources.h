@@ -78,6 +78,8 @@ public:
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
   std::vector<std::tuple<FormatString, std::vector<Field>>> seq_printf_args;
   std::vector<std::tuple<int, int>> seq_printf_ids;
+  std::vector<std::tuple<FormatString, std::vector<Field>>> debugf_args;
+  std::vector<std::tuple<int, int>> debugf_ids;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
@@ -116,6 +118,10 @@ public:
 private:
   template <typename T>
   int create_maps_impl(BPFtrace &bpftrace, bool fake);
+  template <typename T>
+  std::unique_ptr<T> prepareFormatStringDataMap(
+      const std::vector<std::tuple<FormatString, std::vector<Field>>> &args,
+      int *ret);
 
   friend class cereal::access;
   template <typename Archive>
@@ -132,6 +138,8 @@ private:
             // Hard to annotate flex types, so skip
             // helper_error_info,
             printf_args,
+            debugf_args,
+            debugf_ids,
             probe_ids,
             map_vals,
             lhist_args,

@@ -12,7 +12,8 @@ namespace bpftrace {
  * validate_fmt makes sure that the type are valid for the format specifiers
  */
 std::string validate_format_string(const std::string &fmt,
-                                   std::vector<Field> args);
+                                   std::vector<Field> args,
+                                   const std::string call_func);
 
 struct Field;
 /*
