@@ -13,6 +13,8 @@ and this project adheres to
   - [#2177](https://github.com/iovisor/bpftrace/pull/2177)
 - Add helper verifier error handling
   - [#2279](https://github.com/iovisor/bpftrace/pull/2279)
+- Add builtin: `pton`
+  - [#2289](https://github.com/iovisor/bpftrace/pull/2289)
 
 #### Changed
 - Move from BCC to libbpf
