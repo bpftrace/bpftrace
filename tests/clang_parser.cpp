@@ -599,47 +599,6 @@ TEST_F(clang_parser_btf, btf)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
-TEST_F(clang_parser_btf, btf_field_struct)
-{
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
-  parse("",
-        bpftrace,
-        true,
-        "kprobe:sys_read {\n"
-        "  @x3 = ((struct Foo3 *) curtask)->foo2->g;\n"
-        "}");
-
-  /* task_struct->Foo3->Foo2->char */
-  EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
-  EXPECT_NE(bpftrace.btf_set_.find("struct task_struct"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("char"), bpftrace.btf_set_.end());
-}
-
-TEST_F(clang_parser_btf, btf_variable_field_struct)
-{
-  BPFtrace bpftrace;
-  bpftrace.parse_btf({});
-  parse("",
-        bpftrace,
-        true,
-        "kprobe:sys_read {\n"
-        "  @x1 = ((struct Foo3 *) curtask);\n"
-        "  @x2 = ((struct Foo1 *) curtask);\n"
-        "  @x3 = @x1->foo2;\n"
-        "}");
-
-  EXPECT_EQ(bpftrace.btf_set_.size(), 4U);
-  EXPECT_NE(bpftrace.btf_set_.find("struct task_struct"),
-            bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("struct Foo1"), bpftrace.btf_set_.end());
-  // struct Foo2 should be added by @x1->foo2
-  EXPECT_NE(bpftrace.btf_set_.find("struct Foo2"), bpftrace.btf_set_.end());
-  EXPECT_NE(bpftrace.btf_set_.find("struct Foo3"), bpftrace.btf_set_.end());
-}
-
 TEST(clang_parser, btf_unresolved_typedef)
 {
   // size_t is defined in stddef.h, but if we have BTF, it should be possible to
