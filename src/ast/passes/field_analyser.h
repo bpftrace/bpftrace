@@ -21,7 +21,6 @@ public:
                          BPFtrace &bpftrace,
                          std::ostream &out = std::cerr)
       : root_(root),
-        type_(""),
         bpftrace_(bpftrace),
         prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC),
         out_(out)
@@ -47,7 +46,6 @@ private:
   Node *root_;
   ProbeType probe_type_;
   std::string attach_func_;
-  std::string    type_;
   SizedType sized_type_;
   BPFtrace      &bpftrace_;
   libbpf::bpf_prog_type prog_type_;
@@ -58,7 +56,7 @@ private:
   std::ostringstream  err_;
 
   ProbeArgs ap_args_;
-  std::map<std::string, std::pair<std::string, SizedType>> var_types_;
+  std::map<std::string, SizedType> var_types_;
 };
 
 } // namespace ast
