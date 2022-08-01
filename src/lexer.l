@@ -218,7 +218,7 @@ struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct
                             }
                             else
                             {
-                              int leng = yyleng;
+                              int leng = YY_BUF_SIZE;
                               std::string original_s(s);
                               std::string original_yytext(yytext);
                               for (z=strlen(s) - 1; z >= 0; z--){
