@@ -35,6 +35,8 @@ and this project adheres to
   - [#2291](https://github.com/iovisor/bpftrace/pull/2293)
 - Fix invalid LLVM IR in join builtin
   - [#2296](https://github.com/iovisor/bpftrace/pull/2296)
+- Fix lexer buffer size check
+  - [#2313](https://github.com/iovisor/bpftrace/pull/2313)
 
 #### Added
 #### Docs
