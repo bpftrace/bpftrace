@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Support for 32-bit ARM systems
   - [#2360](https://github.com/iovisor/bpftrace/pull/2360)
+- Support BTF for kernel modules
+  - [#2315](https://github.com/iovisor/bpftrace/pull/2315)
 #### Changed
 - Raise minimum versions for libbpf and bcc and vendor them for local builds
   - [#2369](https://github.com/iovisor/bpftrace/pull/2369)
