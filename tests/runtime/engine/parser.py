@@ -105,7 +105,7 @@ class TestParser(object):
         after = ''
         kernel_min = ''
         kernel_max = ''
-        requirement = ''
+        requirement = []
         env = {}
         arch = []
         feature_requirement = set()
@@ -136,7 +136,7 @@ class TestParser(object):
             elif item_name == 'MAX_KERNEL':
                 kernel_max = line
             elif item_name == 'REQUIRES':
-                requirement = line
+                requirement.append(line)
             elif item_name == 'ENV':
                 for e in line.split():
                     k, v = e.split('=')

@@ -72,7 +72,7 @@ class Runner(object):
         if status == Runner.SKIP_KERNEL_VERSION_MAX:
             return "max Kernel: %s" % test.kernel_max
         elif status == Runner.SKIP_REQUIREMENT_UNSATISFIED:
-            return "unmet condition: '%s'" % test.requirement
+            return "unmet condition: '%s'" % ' && '.join(test.requirement)
         elif status == Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED:
             neg_reqs = { "!{}".format(f) for f in test.neg_feature_requirement }
             return "missed feature: '%s'" % ','.join(
@@ -166,16 +166,17 @@ class Runner(object):
 
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
-                with open(devnull, 'w') as dn:
-                    if subprocess.call(
-                        test.requirement,
-                        shell=True,
-                        stdout=dn,
-                        stderr=dn,
-                        env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
-                    ) != 0:
-                        print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
-                        return Runner.SKIP_REQUIREMENT_UNSATISFIED
+                for req in test.requirement:
+                    with open(devnull, 'w') as dn:
+                        if subprocess.call(
+                            req,
+                            shell=True,
+                            stdout=dn,
+                            stderr=dn,
+                            env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
+                        ) != 0:
+                            print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
+                            return Runner.SKIP_REQUIREMENT_UNSATISFIED
 
             if test.feature_requirement or test.neg_feature_requirement:
                 bpffeature = Runner.__get_bpffeature()
