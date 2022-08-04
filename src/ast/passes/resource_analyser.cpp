@@ -38,8 +38,7 @@ ResourceAnalyser::ResourceAnalyser(Node *root, std::ostream &out)
 std::optional<RequiredResources> ResourceAnalyser::analyse()
 {
   Visit(*root_);
-  prepare_seq_printf_ids();
-  prepare_debugf_ids();
+  prepare_mapped_printf_ids();
 
   if (!err_.str().empty())
   {
@@ -103,7 +102,7 @@ void ResourceAnalyser::visit(Call &call)
     {
       if (single_provider_type_postsema(probe_) == ProbeType::iter)
       {
-        resources_.seq_printf_args.emplace_back(fmtstr, args);
+        resources_.mapped_printf_args.emplace_back(fmtstr, args);
         resources_.needs_data_map = true;
       }
       else
@@ -113,7 +112,7 @@ void ResourceAnalyser::visit(Call &call)
     }
     else if (call.func == "debugf")
     {
-      resources_.debugf_args.emplace_back(fmtstr, args);
+      resources_.mapped_printf_args.emplace_back(fmtstr, args);
       resources_.needs_data_map = true;
     }
     else if (call.func == "system")
@@ -210,28 +209,15 @@ void ResourceAnalyser::visit(Map &map)
   resources_.map_keys[map.ident] = map.key_type;
 }
 
-void ResourceAnalyser::prepare_seq_printf_ids()
+void ResourceAnalyser::prepare_mapped_printf_ids()
 {
   int idx = 0;
 
-  for (auto &arg : resources_.seq_printf_args)
+  for (auto &arg : resources_.mapped_printf_args)
   {
     assert(resources_.needs_data_map);
     auto len = std::get<0>(arg).size();
-    resources_.seq_printf_ids.push_back({ idx, len + 1 });
-    idx += len + 1;
-  }
-}
-
-void ResourceAnalyser::prepare_debugf_ids()
-{
-  int idx = 0;
-
-  for (auto &arg : resources_.debugf_args)
-  {
-    assert(resources_.needs_data_map);
-    auto len = std::get<0>(arg).size();
-    resources_.debugf_ids.push_back({ idx, len + 1 });
+    resources_.mapped_printf_ids.push_back({ idx, len + 1 });
     idx += len + 1;
   }
 }

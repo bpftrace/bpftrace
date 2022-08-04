@@ -76,10 +76,11 @@ public:
 
   // Async argument metadata
   std::vector<std::tuple<FormatString, std::vector<Field>>> system_args;
-  std::vector<std::tuple<FormatString, std::vector<Field>>> seq_printf_args;
-  std::vector<std::tuple<int, int>> seq_printf_ids;
-  std::vector<std::tuple<FormatString, std::vector<Field>>> debugf_args;
-  std::vector<std::tuple<int, int>> debugf_ids;
+  // mapped_printf_args stores seq_printf, debugf arguments
+  std::vector<std::tuple<FormatString, std::vector<Field>>> mapped_printf_args;
+  // mapped_printf_ids stores the starting indices and length of each format
+  // string in the data map of MapManager::Type::MappedPrintfData
+  std::vector<std::tuple<int, int>> mapped_printf_ids;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;
   std::vector<std::string> strftime_args;
@@ -128,8 +129,8 @@ private:
   void serialize(Archive &archive)
   {
     archive(system_args,
-            seq_printf_args,
-            seq_printf_ids,
+            mapped_printf_args,
+            mapped_printf_ids,
             join_args,
             time_args,
             strftime_args,
@@ -138,8 +139,6 @@ private:
             // Hard to annotate flex types, so skip
             // helper_error_info,
             printf_args,
-            debugf_args,
-            debugf_ids,
             probe_ids,
             map_vals,
             lhist_args,

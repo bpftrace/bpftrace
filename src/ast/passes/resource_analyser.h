@@ -32,11 +32,10 @@ private:
   void visit(Call &call) override;
   void visit(Map &map) override;
 
-  // All the seq_printf format strings are stored head to tail in a data
-  // map. This method loads `RequiredResources::seq_printf_ids` with the
+  // seq_printf, debugf format strings are stored head to tail in a data
+  // map. This method loads `RequiredResources::mapped_printf_ids` with the
   // starting indicies and lengths of each format string in the data map.
-  void prepare_seq_printf_ids();
-  void prepare_debugf_ids();
+  void prepare_mapped_printf_ids();
 
   RequiredResources resources_;
   Node *root_;

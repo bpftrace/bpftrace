@@ -861,7 +861,8 @@ void CodegenLLVM::visit(Call &call)
     // We overload printf call for iterator probe's seq_printf helper.
     if (probetype(current_attach_point_->provider) == ProbeType::iter)
     {
-      auto mapid = bpftrace_.maps[MapManager::Type::SeqPrintfData].value()->id;
+      auto mapid =
+          bpftrace_.maps[MapManager::Type::MappedPrintfData].value()->id;
       auto nargs = call.vargs->size() - 1;
 
       int ptr_size = sizeof(unsigned long);
@@ -891,7 +892,7 @@ void CodegenLLVM::visit(Call &call)
       }
 
       // pick to current format string
-      auto ids = bpftrace_.resources.seq_printf_ids.at(seq_printf_id_);
+      auto ids = bpftrace_.resources.mapped_printf_ids.at(mapped_printf_id_);
       auto idx = std::get<0>(ids);
       auto size = std::get<1>(ids);
 
@@ -903,7 +904,7 @@ void CodegenLLVM::visit(Call &call)
       b_.CreateSeqPrintf(
           ctx_, fmt, b_.getInt64(size), data, b_.getInt64(data_size), call.loc);
 
-      seq_printf_id_++;
+      mapped_printf_id_++;
     }
     else
     {
@@ -916,9 +917,9 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "debugf")
   {
-    // format string was pre-saved in the map, referenced by debugf_id_
-    auto mapid = bpftrace_.maps[MapManager::Type::DebugfData].value()->id;
-    auto ids = bpftrace_.resources.debugf_ids.at(debugf_id_);
+    // format string was pre-saved in the map, referenced by mapped_printf_id_
+    auto mapid = bpftrace_.maps[MapManager::Type::MappedPrintfData].value()->id;
+    auto ids = bpftrace_.resources.mapped_printf_ids.at(mapped_printf_id_);
     auto idx = std::get<0>(ids);
     auto size = std::get<1>(ids);
 
@@ -934,7 +935,7 @@ void CodegenLLVM::visit(Call &call)
     }
 
     b_.CreateTracePrintk(fmt_ptr, b_.getInt32(size), values, call.loc);
-    debugf_id_++;
+    mapped_printf_id_++;
   }
   else if (call.func == "system")
   {
@@ -3537,8 +3538,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
           starting_join_id = this->join_id_,
           starting_helper_error_id = this->b_.helper_error_id_,
           starting_non_map_print_id = this->non_map_print_id_,
-          starting_seq_printf_id = this->seq_printf_id_,
-          starting_debugf_id = this->debugf_id_,
+          starting_mapped_printf_id = this->mapped_printf_id_,
           starting_skb_output_id = this->skb_output_id_] {
     this->printf_id_ = starting_printf_id;
     this->cat_id_ = starting_cat_id;
@@ -3548,8 +3548,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->join_id_ = starting_join_id;
     this->b_.helper_error_id_ = starting_helper_error_id;
     this->non_map_print_id_ = starting_non_map_print_id;
-    this->seq_printf_id_ = starting_seq_printf_id;
-    this->debugf_id_ = starting_debugf_id;
+    this->mapped_printf_id_ = starting_mapped_printf_id;
     this->skb_output_id_ = starting_skb_output_id;
   };
 }
