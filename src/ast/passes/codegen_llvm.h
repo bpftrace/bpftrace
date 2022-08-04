@@ -194,7 +194,7 @@ private:
   void createIncDec(Unop &unop);
 
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
-  // (ie `printf_id_`, `seq_printf_id_`, etc.).  Running the returned lambda
+  // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
   // will restore `CodegenLLVM`s async id state back to when this function was
   // first called.
   std::function<void()> create_reset_ids();
@@ -224,8 +224,7 @@ private:
 
   std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;
-  int seq_printf_id_ = 0;
-  int debugf_id_ = 0;
+  int mapped_printf_id_ = 0;
   int time_id_ = 0;
   int cat_id_ = 0;
   int strftime_id_ = 0;

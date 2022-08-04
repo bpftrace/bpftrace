@@ -94,15 +94,10 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   if (needs_data_map)
   {
     int ret;
-    auto map = prepareFormatStringDataMap<T>(seq_printf_args, &ret);
+    auto map = prepareFormatStringDataMap<T>(mapped_printf_args, &ret);
     if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
       failed_maps += 1;
-    bpftrace.maps.Set(MapManager::Type::SeqPrintfData, std::move(map));
-
-    map = prepareFormatStringDataMap<T>(debugf_args, &ret);
-    if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
-      failed_maps += 1;
-    bpftrace.maps.Set(MapManager::Type::DebugfData, std::move(map));
+    bpftrace.maps.Set(MapManager::Type::MappedPrintfData, std::move(map));
   }
   {
     auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
