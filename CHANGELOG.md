@@ -37,6 +37,8 @@ and this project adheres to
   - [#2296](https://github.com/iovisor/bpftrace/pull/2296)
 - Fix lexer buffer size check
   - [#2313](https://github.com/iovisor/bpftrace/pull/2313)
+- Fix invalid LLVM IR as detected by tests
+  - [#2316](https://github.com/iovisor/bpftrace/pull/2316)
 
 #### Added
 #### Docs
