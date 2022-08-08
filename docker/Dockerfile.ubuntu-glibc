@@ -51,6 +51,7 @@ RUN mkdir -p /src \
          -DENABLE_LLVM_NATIVECODEGEN=0 \
     && make -j$(nproc) \
     && make install \
+    && make -C ../src/cc/libbpf/src install_headers install_uapi_headers \
     && mkdir -p /usr/local/lib \
     && cp src/cc/libbcc.a /usr/local/lib/libbcc.a \
     && cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a \
