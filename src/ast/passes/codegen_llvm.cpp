@@ -2581,7 +2581,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
     else
     {
       // Two or more values as a map key (e.g, @[comm, pid] = 1;)
-      key = getMultiMapKey(map, {}, 0);
+      key = getMultiMapKey(map, {});
     }
   }
   else
@@ -2599,13 +2599,16 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
 }
 
 AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
-                                        const std::vector<Value *> &extra_keys,
-                                        size_t extra_keys_size)
+                                        const std::vector<Value *> &extra_keys)
 {
-  size_t size = extra_keys_size;
+  size_t size = 0;
   for (auto &key_type : map.key_type.args_)
   {
     size += key_type.GetSize();
+  }
+  for (auto *extra_key : extra_keys)
+  {
+    size += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
   AllocaInst *key = b_.CreateAllocaBPF(size, map.ident + "_key");
   auto *key_type = ArrayType::get(b_.getInt8Ty(), size);
@@ -2673,6 +2676,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
       b_.CreateStore(extra_key, offset_val_cast);
     else
       b_.createAlignedStore(extra_key, offset_val_cast, 1);
+    offset += module_->getDataLayout().getTypeAllocSize(extra_key->getType());
   }
 
   return key;
@@ -2681,7 +2685,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
 AllocaInst *CodegenLLVM::getHistMapKey(Map &map, Value *log2)
 {
   if (map.vargs)
-    return getMultiMapKey(map, { log2 }, 8);
+    return getMultiMapKey(map, { log2 });
 
   AllocaInst *key = b_.CreateAllocaBPF(CreateUInt64(), map.ident + "_key");
   b_.CreateStore(log2, key);
