@@ -1186,6 +1186,36 @@ TEST(semantic_analyser, printf)
   }
 }
 
+TEST(semantic_analyser, debugf)
+{
+  test_for_warning(
+      "kprobe:f { debugf(\"warning\") }",
+      "The debugf() builtin is not recommended for production use.");
+  test("kprobe:f { debugf(\"hi\") }", 0);
+  test("kprobe:f { debugf(1234) }", 1);
+  test("kprobe:f { debugf() }", 1);
+  test("kprobe:f { $fmt = \"mystring\"; debugf($fmt) }", 1);
+  test("kprobe:f { debugf(\"%s\", comm) }", 0);
+  test("kprobe:f { debugf(\"%-16s\", comm) }", 0);
+  test("kprobe:f { debugf(\"%-10.10s\", comm) }", 0);
+  test("kprobe:f { debugf(\"%lluns\", nsecs) }", 0);
+  test("kprobe:f { debugf(\"%A\", comm) }", 10);
+  test("kprobe:f { @x = debugf(\"hi\") }", 1);
+  test("kprobe:f { $x = debugf(\"hi\") }", 1);
+  test("kprobe:f { debugf(\"%d\", 1) }", 0);
+  test("kprobe:f { debugf(\"%d %d\", 1, 1) }", 0);
+  test("kprobe:f { debugf(\"%d %d %d\", 1, 1, 1) }", 0);
+  test("kprobe:f { debugf(\"%d %d %d %d\", 1, 1, 1, 1) }", 10);
+
+  {
+    // Long format string should be ok
+    std::stringstream prog;
+    prog << "i:ms:100 { debugf(\"" << std::string(59, 'a')
+         << "%s\\n\", \"a\"); }";
+    test(prog.str(), 0);
+  }
+}
+
 TEST(semantic_analyser, system)
 {
   test("kprobe:f { system(\"ls\") }", 0, false /* safe_mode */);
