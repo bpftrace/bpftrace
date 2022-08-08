@@ -20,7 +20,6 @@ jobs:
           BASE: bionic
           DISTRO: ubuntu-glibc
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
           BCC_REF: v0.23.0
           ENABLE_SKB_OUTPUT: ON
         - TYPE: Release
@@ -37,7 +36,6 @@ jobs:
           DISTRO: ubuntu-glibc
           CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
           BCC_REF: v0.23.0
           ENABLE_SKB_OUTPUT: OFF
         - TYPE: Debug
