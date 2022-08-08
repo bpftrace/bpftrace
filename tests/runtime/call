@@ -412,3 +412,18 @@ EXPECT OK
 REQUIRES_FEATURE skboutput
 TIMEOUT 5
 MIN_KERNEL 5.5
+
+NAME debugf
+RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf"); exit();}'; cat /sys/kernel/debug/tracing/trace
+EXPECT bpf_trace_printk: debugf
+TIMEOUT 3
+
+NAME debugf_with_arguments
+RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { debugf("debugf %s %d %x", "a", 1, 16); exit();}'; cat /sys/kernel/debug/tracing/trace
+EXPECT bpf_trace_printk: debugf a 1 10
+TIMEOUT 3
+
+NAME debugf_with_seq_printf
+RUN echo > /sys/kernel/debug/tracing/trace; {{BPFTRACE}} -e 'i:ms:1 { printf("printf %d", 0); debugf("debugf %d", 1); exit();}'; cat /sys/kernel/debug/tracing/trace
+EXPECT bpf_trace_printk: debugf 1
+TIMEOUT 3
