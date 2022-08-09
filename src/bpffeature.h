@@ -117,7 +117,6 @@ public:
                         libbpf::BPF_PROG_TYPE_TRACING,
                         "bpf_iter_task_file",
                         libbpf::BPF_TRACE_ITER);
-  DEFINE_PROG_TEST(raw_tracepoint, libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT);
 
 protected:
   std::optional<bool> has_loop_;
@@ -142,7 +141,8 @@ private:
       struct bpf_insn* insns,
       size_t len,
       const char* name = nullptr,
-      std::optional<libbpf::bpf_attach_type> attach_type = std::nullopt);
+      std::optional<libbpf::bpf_attach_type> attach_type = std::nullopt,
+      int* outfd = nullptr);
 
   BTF btf_;
 };

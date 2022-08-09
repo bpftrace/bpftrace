@@ -27,7 +27,8 @@ static bool try_load_(const char* name,
                       size_t insns_cnt,
                       int loglevel,
                       char* logbuf,
-                      size_t logbuf_size)
+                      size_t logbuf_size,
+                      int* outfd = nullptr)
 {
   for (int attempt = 0; attempt < 3; attempt++)
   {
@@ -76,7 +77,11 @@ static bool try_load_(const char* name,
 #endif
     if (ret >= 0)
     {
-      close(ret);
+      if (outfd)
+        *outfd = ret;
+      else
+        close(ret);
+
       return true;
     }
   }
@@ -88,7 +93,8 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
                           struct bpf_insn* insns,
                           size_t len,
                           const char* name,
-                          std::optional<libbpf::bpf_attach_type> attach_type)
+                          std::optional<libbpf::bpf_attach_type> attach_type,
+                          int* outfd)
 {
   constexpr int log_size = 4096;
   char logbuf[log_size] = {};
@@ -105,8 +111,16 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
       return false;
   }
 
-  return try_load_(
-      name, prog_type, attach_type, btf_id, insns, len, 0, logbuf, log_size);
+  return try_load_(name,
+                   prog_type,
+                   attach_type,
+                   btf_id,
+                   insns,
+                   len,
+                   0,
+                   logbuf,
+                   log_size,
+                   outfd);
 }
 
 bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
@@ -489,7 +503,25 @@ bool BPFfeature::has_raw_tp_special()
     return *has_raw_tp_special_;
 
 #ifdef HAVE_LIBBPF_PROG_TEST_RUN_OPTS
-  has_raw_tp_special_ = has_prog_raw_tracepoint();
+  struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
+  int fd;
+
+  // Check that we can both load BPF_PROG_TYPE_RAW_TRACEPOINT and that
+  // BPF_PROG_RUN is supported by the kernel
+  if (try_load(libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT,
+               insns,
+               ARRAY_SIZE(insns),
+               nullptr,
+               std::nullopt,
+               &fd))
+  {
+    struct bpf_test_run_opts opts = {};
+    opts.sz = sizeof(opts);
+    has_raw_tp_special_ = !::bpf_prog_test_run_opts(fd, &opts);
+    close(fd);
+  }
+  else
+    has_raw_tp_special_ = false;
 #else
   has_raw_tp_special_ = false;
 #endif
