@@ -435,13 +435,9 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
-    std::stringstream msg;
-    msg << "Failed to " << libbpf::bpf_func_name[info.func_id] << ": ";
-    if (return_value < 0)
-      msg << strerror(-return_value) << " (" << return_value << ")";
-    else
-      msg << return_value;
-    LOG(WARNING, info.loc, std::cerr) << msg.str();
+    bpftrace->out_->helper_error(libbpf::bpf_func_name[info.func_id],
+                                 return_value,
+                                 info.loc);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach))

@@ -21,6 +21,8 @@ and this project adheres to
   - [#2265](https://github.com/iovisor/bpftrace/pull/2265)
 - Add non-uprobe based BEGIN/END implementation
   - [#2264](https://github.com/iovisor/bpftrace/pull/2264)
+- Helper errors (-k, -kk options) are now emitted to text or json output
+  - [#2326](https://github.com/iovisor/bpftrace/pull/2326)
 
 #### Deprecated
 #### Removed
