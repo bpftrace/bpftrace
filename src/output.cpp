@@ -542,6 +542,19 @@ void TextOutput::attached_probes(uint64_t num_probes) const
     out_ << "Attaching " << num_probes << " probes..." << std::endl;
 }
 
+void TextOutput::helper_error(const std::string &helper,
+                              int retcode,
+                              const location &loc) const
+{
+  std::stringstream msg;
+  msg << "Failed to " << helper << ": ";
+  if (retcode < 0)
+    msg << strerror(-retcode) << " (" << retcode << ")";
+  else
+    msg << retcode;
+  LOG(WARNING, loc, out_) << msg.str();
+}
+
 std::string TextOutput::field_to_str(const std::string &name,
                                      const std::string &value) const
 {
@@ -807,6 +820,15 @@ void JsonOutput::lost_events(uint64_t lost) const
 void JsonOutput::attached_probes(uint64_t num_probes) const
 {
   message(MessageType::attached_probes, "probes", num_probes);
+}
+
+void JsonOutput::helper_error(const std::string &helper,
+                              int retcode,
+                              const location &loc) const
+{
+  out_ << "{\"type\": \"helper_error\", \"helper\": \"" << helper
+       << "\", \"retcode\": " << retcode << ", \"line\": " << loc.begin.line
+       << ", \"col\": " << loc.begin.column << "}" << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "imap.h"
+#include "location.hh"
 
 namespace bpftrace {
 
@@ -23,7 +24,8 @@ enum class MessageType
   join,
   syscall,
   attached_probes,
-  lost_events
+  lost_events,
+  helper_error,
 };
 
 std::ostream& operator<<(std::ostream& out, MessageType type);
@@ -75,6 +77,9 @@ public:
   virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
+  virtual void helper_error(const std::string &helper,
+                            int retcode,
+                            const location &loc) const = 0;
 
 protected:
   std::ostream &out_;
@@ -188,6 +193,9 @@ public:
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
+  void helper_error(const std::string &helper,
+                    int retcode,
+                    const location &loc) const override;
 
 protected:
   static std::string hist_index_label(int power);
@@ -239,6 +247,9 @@ public:
   void message(MessageType type, const std::string& field, uint64_t value) const;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
+  void helper_error(const std::string &helper,
+                    int retcode,
+                    const location &loc) const override;
 
 private:
   std::string json_escape(const std::string &str) const;
