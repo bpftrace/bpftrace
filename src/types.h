@@ -48,7 +48,8 @@ enum class Type
   tuple,
   timestamp,
   mac_address,
-  cgroup_path
+  cgroup_path,
+  strerror
   // clang-format on
 };
 
@@ -367,6 +368,10 @@ public:
   {
     return type == Type::cgroup_path;
   };
+  bool IsStrerrorTy(void) const
+  {
+    return type == Type::strerror;
+  };
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
@@ -426,6 +431,7 @@ SizedType CreateBuffer(size_t size);
 SizedType CreateTimestamp();
 SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
+SizedType CreateStrerror();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 

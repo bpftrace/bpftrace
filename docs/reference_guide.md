@@ -99,6 +99,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [29. `cgroup_path()`: Convert cgroup id to cgroup path](#29-cgroup_path-convert-cgroup-id-to-cgroup-path)
     - [30. `bswap`: Reverse byte order](#30-bswap-reverse-byte-order)
     - [31. `skb_output`: Write `skb` 's data section into a PCAP file](#31-skb_output-write-skb-s-data-section-into-a-pcap-file)
+    - [32. `pton()`: Convert text IP address to byte array](#32-pton-convert-text-ip-address-to-byte-array)
+    - [33. `strerror`: Get error message for errno value](#33-strerror-get-error-message-for-errno-value)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -3210,6 +3212,21 @@ first octet matched
 Attaching 1 probe...
 first octet matched
 ^C
+```
+
+## 33. `strerror`: Get error message for errno code
+
+Syntax: `strerror(uint64 error)`
+
+Converts the given errno code to a string describing the error. The result can be only used for printing, since the conversion is done in userspace.
+
+Example:
+
+```
+# bpftrace -e '#include <errno.h>
+BEGIN { print(strerror(EPERM)); }'
+Attaching 1 probe...
+Operation not permitted
 ```
 
 # Map Functions

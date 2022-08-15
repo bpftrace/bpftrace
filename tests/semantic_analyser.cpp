@@ -932,6 +932,20 @@ TEST(semantic_analyser, call_cgroup_path)
   test("kprobe:f { printf(\"%d\", cgroup_path(1)) }", 10);
 }
 
+TEST(semantic_analyser, call_strerror)
+{
+  test("kprobe:f { strerror(1) }", 0);
+
+  test("kprobe:f { strerror(1, 2) }", 1);
+  test("kprobe:f { strerror(\"1\") }", 10);
+
+  test("kprobe:f { printf(\"%s\", strerror(1)) }", 0);
+  test("kprobe:f { printf(\"%s %s\", strerror(1), strerror(2)) }", 0);
+  test("kprobe:f { $var = strerror(0); printf(\"%s %s\", $var, $var) }", 0);
+
+  test("kprobe:f { printf(\"%d\", strerror(1)) }", 10);
+}
+
 TEST(semantic_analyser, map_reassignment)
 {
   test("kprobe:f { @x = 1; @x = 2; }", 0);

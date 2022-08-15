@@ -184,6 +184,7 @@ std::string typestr(Type t)
     case Type::timestamp:return "timestamp";break;
     case Type::mac_address: return "mac_address"; break;
     case Type::cgroup_path: return "cgroup_path"; break;
+    case Type::strerror: return "strerror"; break;
       // clang-format on
   }
 
@@ -474,6 +475,11 @@ SizedType CreateCgroupPath()
   return SizedType(Type::cgroup_path, 16);
 }
 
+SizedType CreateStrerror()
+{
+  return SizedType(Type::strerror, 8);
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
@@ -621,6 +627,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::timestamp:
     case bpftrace::Type::mac_address:
     case bpftrace::Type::cgroup_path:
+    case bpftrace::Type::strerror:
       break;
   }
 

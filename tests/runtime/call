@@ -375,6 +375,11 @@ REQUIRES grep -q '^cgroup2' /proc/mounts
 TIMEOUT 5
 MIN_KERNEL 4.18
 
+NAME strerror
+RUN {{BPFTRACE}} --include "errno.h" -e 'BEGIN { print(strerror(EPERM)); exit(); }'
+EXPECT Operation not permitted
+TIMEOUT 5
+
 NAME bswap_int64
 RUN {{BPFTRACE}} -e 'BEGIN { printf("%lx", bswap(0x1122334455667788)); exit(); }'
 EXPECT 8877665544332211
