@@ -41,6 +41,8 @@ and this project adheres to
   - [#2313](https://github.com/iovisor/bpftrace/pull/2313)
 - Fix invalid LLVM IR as detected by tests
   - [#2316](https://github.com/iovisor/bpftrace/pull/2316)
+- Fix builds against libbfd(binutils) >=2.39
+  - [#2328](https://github.com/iovisor/bpftrace/pull/2328)
 
 #### Added
 #### Docs
