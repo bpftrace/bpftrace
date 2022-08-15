@@ -75,5 +75,15 @@ int main(void) {
                abfd);
   return 0;
 }" LIBBFD_DISASM_FOUR_ARGS_SIGNATURE)
+CHECK_CXX_SOURCE_COMPILES("
+// See comment in bfd-disasm.cpp for why this needs to exist
+#define PACKAGE \"bpftrace-test\"
+#include <dis-asm.h>
+
+int main(void) {
+  init_disassemble_info(NULL, NULL, NULL, NULL);
+  return 0;
+}
+" LIBBFD_INIT_DISASM_INFO_FOUR_ARGS_SIGNATURE)
 SET(CMAKE_REQUIRED_LIBRARIES)
 endif()
