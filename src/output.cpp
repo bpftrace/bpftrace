@@ -280,6 +280,8 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
         reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())
             ->cgroup_path_id,
         reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())->cgroup_id);
+  else if (type.IsStrerrorTy())
+    return strerror(read_data<uint64_t>(value.data()));
   else
     return std::to_string(read_data<int64_t>(value.data()) / div);
 }

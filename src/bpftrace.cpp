@@ -742,6 +742,10 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
                                     arg_data + arg.offset)
                                     ->cgroup_id)));
         break;
+      case Type::strerror:
+        arg_values.push_back(std::make_unique<PrintableString>(
+            strerror(*reinterpret_cast<uint64_t *>(arg_data + arg.offset))));
+        break;
         // fall through
       default:
         LOG(FATAL) << "invalid argument type";

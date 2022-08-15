@@ -17,6 +17,8 @@ and this project adheres to
   - [#2289](https://github.com/iovisor/bpftrace/pull/2289)
 - Add builtin: `debugf`
   - [#2307](https://github.com/iovisor/bpftrace/pull/2307)
+- Add builtin: `strerror`
+  - [#2329](https://github.com/iovisor/bpftrace/pull/2329)
 
 #### Changed
 - Move from BCC to libbpf

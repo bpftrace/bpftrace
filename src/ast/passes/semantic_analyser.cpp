@@ -1215,6 +1215,12 @@ void SemanticAnalyser::visit(Call &call)
                                    << "'kfunc', 'kretfunc', 'iter' probes";
     }
   }
+  else if (call.func == "strerror")
+  {
+    call.type = CreateStrerror();
+    if (check_nargs(call, 1))
+      check_arg(call, Type::integer, 0, false);
+  }
   else if (call.func == "strncmp") {
     if (check_nargs(call, 3)) {
       check_arg(call, Type::string, 0);

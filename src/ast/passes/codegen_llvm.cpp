@@ -1121,6 +1121,10 @@ void CodegenLLVM::visit(Call &call)
   {
     expr_ = b_.getInt64(call.vargs->at(0)->type.GetSize());
   }
+  else if (call.func == "strerror")
+  {
+    auto scoped_del = accept(call.vargs->front());
+  }
   else if (call.func == "strncmp") {
     uint64_t size = (uint64_t)*bpftrace_.get_int_literal(call.vargs->at(2));
     const auto& left_arg = call.vargs->at(0);
