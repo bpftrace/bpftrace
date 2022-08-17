@@ -302,3 +302,13 @@ add_subdirectory(tools)
 if (ENABLE_MAN)
   add_subdirectory(man)
 endif(ENABLE_MAN)
+
+if(NOT TARGET uninstall)
+  configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CmakeUninstall.cmake.in"
+	"${CMAKE_CURRENT_BINARY_DIR}/CmakeUninstall.cmake"
+    IMMEDIATE @ONLY)
+
+  add_custom_target(uninstall
+	  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CmakeUninstall.cmake)
+endif()
