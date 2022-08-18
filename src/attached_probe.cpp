@@ -586,27 +586,15 @@ void AttachedProbe::resolve_offset_kprobe(bool safe_mode)
   std::string path = find_vmlinux(locs, sym);
   if (path.empty())
   {
-    if (safe_mode)
+    if (bt_verbose)
     {
-      std::stringstream buf;
-      buf << "Could not resolve symbol " << symbol << ".";
-      buf << " Use BPFTRACE_VMLINUX env variable to specify vmlinux path.";
-#ifdef HAVE_UNSAFE_PROBE
-      buf << " Use --unsafe to skip the userspace check.";
-#else
-      buf << " Compile bpftrace with ALLOW_UNSAFE_PROBE option to force skip "
-             "the check.";
-#endif
-      throw std::runtime_error(buf.str());
+      LOG(WARNING) << "Could not resolve symbol " << symbol
+                   << ". Skipping usermode offset checking.";
+      LOG(WARNING) << "The kernel will verify the safety of the location but "
+                      "will also allow the offset to be in a different symbol.";
     }
-    else
-    {
-      // linux kernel checks alignment, but not the function bounds
-      if (bt_verbose)
-        std::cout << "Could not resolve symbol " << symbol
-                  << ". Skip offset checking." << std::endl;
-      return;
-    }
+
+    return;
   }
 
   if (func_offset >= sym.size)
@@ -913,6 +901,9 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
       // as this is normal for some kernel functions (eg, do_debug())
       LOG(WARNING) << "could not attach probe " << probe_.name << ", skipping.";
     } else {
+      if (errno == EILSEQ)
+        LOG(ERROR) << "Possible attachment attempt in the middle of an "
+                      "instruction, try a different offset.";
       // an explicit match failed, so fail as the user must have wanted it
       throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
     }
