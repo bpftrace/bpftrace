@@ -315,15 +315,16 @@ static std::optional<struct timespec> get_boottime()
     return false;
 
   if (!get_bool_env_var("BPFTRACE_CACHE_USER_SYMBOLS",
-                        bpftrace.cache_user_symbols_))
+                        bpftrace.cache_user_symbols_per_program_))
     return false;
 
   if (!std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
   {
-    // enable user symbol cache if ASLR is disabled on system or `-c` option is
-    // given
-    bpftrace.cache_user_symbols_ = !bpftrace.cmd_.empty() ||
-                                   !bpftrace.is_aslr_enabled(-1);
+    // enable user symbol cache per program if ASLR is disabled on system
+    // or `-c` option is given
+    // otherwise, user symbol cache is indexed per process
+    bpftrace.cache_user_symbols_per_program_ = !bpftrace.cmd_.empty() ||
+                                               !bpftrace.is_aslr_enabled(-1);
   }
 
   uint64_t node_max = std::numeric_limits<uint64_t>::max();

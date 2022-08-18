@@ -192,7 +192,7 @@ public:
   uint64_t max_type_res_iterations = 0;
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
-  bool cache_user_symbols_ = true;
+  bool cache_user_symbols_per_program_ = true;
   bool safe_mode_ = true;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
@@ -226,7 +226,9 @@ private:
                         BpfBytecode &bytecode,
                         void (*trigger)(void));
   void* ksyms_{nullptr};
+  // note: exe_sym_ is used when layout is same for all instances of program
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
+  std::map<int, void *> pid_sym_; // pid -> cache
   std::vector<std::string> params_;
 
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;

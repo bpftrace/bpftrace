@@ -60,6 +60,12 @@ BPFtrace::~BPFtrace()
       bcc_free_symcache(pair.second.second, pair.second.first);
   }
 
+  for (const auto& pair : pid_sym_)
+  {
+    if (pair.second)
+      bcc_free_symcache(pair.second, pair.first);
+  }
+
   if (ksyms_)
     bcc_free_symcache(ksyms_, -1);
 }
@@ -2246,7 +2252,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
 
   if (resolve_user_symbols_)
   {
-    if (cache_user_symbols_)
+    if (cache_user_symbols_per_program_)
     {
       std::string pid_exe = get_pid_exe(pid);
       if (exe_sym_.find(pid_exe) == exe_sym_.end())
@@ -2262,7 +2268,17 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
     }
     else
     {
-      psyms = bcc_symcache_new(pid, &symopts);
+      // cache user symbols per pid
+      if (pid_sym_.find(pid) == pid_sym_.end())
+      {
+        // not cached, create new ProcSyms cache
+        psyms = bcc_symcache_new(pid, &symopts);
+        pid_sym_[pid] = psyms;
+      }
+      else
+      {
+        psyms = pid_sym_[pid];
+      }
     }
   }
 
@@ -2283,9 +2299,6 @@ std::string BPFtrace::resolve_usym(uintptr_t addr, int pid, bool show_offset, bo
     if (show_module)
       symbol << " ([unknown])";
   }
-
-  if (psyms && !cache_user_symbols_)
-    bcc_free_symcache(psyms, pid);
 
   return symbol.str();
 }
