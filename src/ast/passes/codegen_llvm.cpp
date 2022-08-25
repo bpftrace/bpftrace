@@ -140,15 +140,50 @@ void CodegenLLVM::kstack_ustack(const std::string &ident,
   // Kernel stacks should not be differentiated by tid, since the kernel
   // address space is the same between pids (and when aggregating you *want*
   // to be able to correlate between pids in most cases). User-space stacks
-  // are special because of ASLR and so we do usym()-style packing.
+  // are special because of ASLR, hence we also store the pid; probe id is
+  // stored for cases when only ELF resolution works (e.g. ASLR disabled and
+  // process exited).
   if (ident == "ustack")
   {
-    // pack uint64_t with: (uint32_t)stack_id, (uint32_t)pid
-    Value *pidhigh = b_.CreateShl(b_.CreateGetPidTgid(loc), 32);
-    stackid = b_.CreateOr(stackid, pidhigh);
-  }
+    std::vector<llvm::Type *> elements = {
+      b_.getInt64Ty(), // stack id
+      b_.getInt32Ty(), // pid
+      b_.getInt32Ty(), // probe id
+    };
+    StructType *stack_struct = b_.GetStructType("stack_t", elements, false);
+    AllocaInst *buf = b_.CreateAllocaBPF(stack_struct, "stack_args");
 
-  expr_ = stackid;
+    // store stack id
+    b_.CreateStore(
+        stackid,
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
+    // store pid
+    b_.CreateStore(
+        b_.CreateTrunc(b_.CreateGetPidTgid(loc), b_.getInt32Ty()),
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+    // store probe id
+    b_.CreateStore(
+        b_.GetIntSameSize(get_probe_id(), elements.at(2)),
+        b_.CreateGEP(stack_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
+
+    expr_ = buf;
+  }
+  else
+  {
+    expr_ = stackid;
+  }
+}
+
+int CodegenLLVM::get_probe_id()
+{
+  auto begin = bpftrace_.resources.probe_ids.begin();
+  auto end = bpftrace_.resources.probe_ids.end();
+  auto found = std::find(begin, end, probefull_);
+  if (found == end)
+  {
+    bpftrace_.resources.probe_ids.push_back(probefull_);
+  }
+  return std::distance(begin, found);
 }
 
 void CodegenLLVM::visit(Builtin &builtin)
@@ -264,7 +299,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     if (builtin.type.IsUsymTy())
     {
-      expr_ = b_.CreateUSym(expr_, builtin.loc);
+      expr_ = b_.CreateUSym(expr_, get_probe_id(), builtin.loc);
       Value *expr = expr_;
       expr_deleter_ = [this, expr]() { b_.CreateLifetimeEnd(expr); };
     }
@@ -299,13 +334,7 @@ void CodegenLLVM::visit(Builtin &builtin)
   }
   else if (builtin.ident == "probe")
   {
-    auto begin = bpftrace_.resources.probe_ids.begin();
-    auto end = bpftrace_.resources.probe_ids.end();
-    auto found = std::find(begin, end, probefull_);
-    builtin.probe_id = std::distance(begin, found);
-    if (found == end) {
-      bpftrace_.resources.probe_ids.push_back(probefull_);
-    }
+    builtin.probe_id = get_probe_id();
     expr_ = b_.getInt64(builtin.probe_id);
   }
   else if (builtin.ident == "args" || builtin.ident == "ctx")
@@ -774,7 +803,7 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "usym")
   {
     auto scoped_del = accept(call.vargs->front());
-    expr_ = b_.CreateUSym(expr_, call.loc);
+    expr_ = b_.CreateUSym(expr_, get_probe_id(), call.loc);
   }
   else if (call.func == "ntop")
   {

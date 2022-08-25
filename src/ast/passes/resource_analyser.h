@@ -37,6 +37,10 @@ private:
   // starting indicies and lengths of each format string in the data map.
   void prepare_mapped_printf_ids();
 
+  // Determines whether the given function uses userspace symbol resolution.
+  // This is used later for loading the symbol table into memory.
+  bool uses_usym_table(const std::string &fun);
+
   RequiredResources resources_;
   Node *root_;
   std::ostream &out_;

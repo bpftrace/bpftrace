@@ -158,15 +158,20 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   uint32_t nvalues = is_per_cpu ? bpftrace.ncpus_ : 1;
   if (type.IsKstackTy())
     return bpftrace.get_stack(
-        read_data<uint64_t>(value.data()), false, type.stack_type, 8);
+        read_data<uint64_t>(value.data()), -1, -1, false, type.stack_type, 8);
   else if (type.IsUstackTy())
-    return bpftrace.get_stack(
-        read_data<uint64_t>(value.data()), true, type.stack_type, 8);
+    return bpftrace.get_stack(read_data<int64_t>(value.data()),
+                              read_data<int32_t>(value.data() + 8),
+                              read_data<int32_t>(value.data() + 12),
+                              true,
+                              type.stack_type,
+                              8);
   else if (type.IsKsymTy())
     return bpftrace.resolve_ksym(read_data<uintptr_t>(value.data()));
   else if (type.IsUsymTy())
     return bpftrace.resolve_usym(read_data<uintptr_t>(value.data()),
-                                 read_data<uintptr_t>(value.data() + 8));
+                                 read_data<uintptr_t>(value.data() + 8),
+                                 read_data<uint64_t>(value.data() + 16));
   else if (type.IsInetTy())
     return bpftrace.resolve_inet(read_data<uint64_t>(value.data()),
                                  (uint8_t *)(value.data() + 8));

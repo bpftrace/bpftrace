@@ -4,6 +4,7 @@
 #include <cstring>
 #include <exception>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -211,6 +212,19 @@ std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol);
 std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     const std::string &symbol);
+
+struct elf_symbol
+{
+  std::string name;
+  uintptr_t start;
+  uintptr_t end;
+};
+// Get all symbols from an ELF module together with their address ranges in
+// the form of a map sorted by start address.
+// Note: the map uses std::greater as comparator to allow resolving of an
+// address inside a range using std::map::lower_bound.
+std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
+    const std::string &elf_file);
 
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(

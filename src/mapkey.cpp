@@ -81,10 +81,14 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       break;
     case Type::kstack:
       return bpftrace.get_stack(
-          read_data<uint64_t>(data), false, arg.stack_type, 4);
+          read_data<int64_t>(data), -1, -1, false, arg.stack_type, 4);
     case Type::ustack:
-      return bpftrace.get_stack(
-          read_data<uint64_t>(data), true, arg.stack_type, 4);
+      return bpftrace.get_stack(read_data<int64_t>(data),
+                                read_data<int32_t>(arg_data + 8),
+                                read_data<int32_t>(arg_data + 12),
+                                true,
+                                arg.stack_type,
+                                4);
     case Type::timestamp:
     {
       auto p = static_cast<const AsyncEvent::Strftime *>(data);
@@ -94,7 +98,8 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
       return bpftrace.resolve_ksym(read_data<uint64_t>(data));
     case Type::usym:
       return bpftrace.resolve_usym(read_data<uint64_t>(data),
-                                   read_data<uint64_t>(arg_data + 8));
+                                   read_data<uint64_t>(arg_data + 8),
+                                   read_data<uint64_t>(arg_data + 16));
     case Type::inet:
       return bpftrace.resolve_inet(read_data<int64_t>(data),
                                    (const uint8_t *)(arg_data + 8));

@@ -5,7 +5,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fstream>
+#include <gelf.h>
 #include <glob.h>
+#include <libelf.h>
 #include <limits>
 #include <link.h>
 #include <map>
@@ -1333,6 +1335,32 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
            symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
            symbol.substr(idx2 + strlen(" ["),
                          symbol.length() - idx2 - strlen(" []")) };
+}
+
+std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
+    const std::string &elf_file)
+{
+  std::map<uintptr_t, elf_symbol, std::greater<>> symbol_table;
+
+  bcc_elf_symcb sym_resolve_callback = [](const char *name,
+                                          uint64_t start,
+                                          uint64_t length,
+                                          void *payload) {
+    auto *symbol_table =
+        static_cast<std::map<uintptr_t, elf_symbol, std::greater<>> *>(payload);
+    symbol_table->insert({ start,
+                           { .name = std::string(name),
+                             .start = start,
+                             .end = start + length } });
+    return 0;
+  };
+  struct bcc_symbol_option option;
+  memset(&option, 0, sizeof(option));
+  option.use_symbol_type = BCC_SYM_ALL_TYPES;
+  bcc_elf_foreach_sym(
+      elf_file.c_str(), sym_resolve_callback, &option, &symbol_table);
+
+  return symbol_table;
 }
 
 } // namespace bpftrace

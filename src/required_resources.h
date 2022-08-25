@@ -117,6 +117,9 @@ public:
   std::vector<Probe> special_probes;
   std::vector<Probe> watchpoint_probes;
 
+  // List of probes using userspace symbol resolution
+  std::unordered_set<ast::Probe *> probes_using_usym;
+
 private:
   template <typename T>
   int create_maps_impl(BPFtrace &bpftrace, bool fake);

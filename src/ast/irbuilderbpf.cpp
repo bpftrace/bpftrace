@@ -82,23 +82,30 @@ libbpf::bpf_func_id IRBuilderBPF::selectProbeReadHelper(AddrSpace as, bool str)
   return fn;
 }
 
-AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val, const location &loc)
+AllocaInst *IRBuilderBPF::CreateUSym(llvm::Value *val,
+                                     int probe_id,
+                                     const location &loc)
 {
   std::vector<llvm::Type *> elements = {
     getInt64Ty(), // addr
     getInt64Ty(), // pid
+    getInt64Ty(), // probe id
   };
   StructType *usym_t = GetStructType("usym_t", elements, false);
   AllocaInst *buf = CreateAllocaBPF(usym_t, "usym");
 
   Value *pid = CreateLShr(CreateGetPidTgid(loc), 32);
+  Value *probe_id_val = Constant::getIntegerValue(getInt64Ty(),
+                                                  APInt(64, probe_id));
 
   // The extra 0 here ensures the type of addr_offset will be int64
   Value *addr_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(0) });
   Value *pid_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(1) });
+  Value *probeid_offset = CreateGEP(usym_t, buf, { getInt64(0), getInt32(2) });
 
   CreateStore(val, addr_offset);
   CreateStore(pid, pid_offset);
+  CreateStore(probe_id_val, probeid_offset);
   return buf;
 }
 
