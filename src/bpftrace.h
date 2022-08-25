@@ -143,6 +143,8 @@ public:
   std::optional<long> get_int_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
   virtual bool is_traceable_func(const std::string &func_name) const;
+  std::unordered_set<std::string> get_func_modules(
+      const std::string &func_name) const;
   int create_pcaps(void);
   void close_pcaps(void);
   bool write_pcaps(uint64_t id, uint64_t ns, uint8_t *pkt, unsigned int size);
@@ -163,7 +165,8 @@ public:
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
   std::map<libbpf::bpf_func_id, location> helper_use_loc_;
-  std::unordered_set<std::string> traceable_funcs_;
+  // mapping traceable functions to modules (or "vmlinux") that they appear in
+  FuncsModulesMap traceable_funcs_;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
 
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers;

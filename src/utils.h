@@ -8,6 +8,7 @@
 #include <string>
 #include <sys/utsname.h>
 #include <tuple>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -125,6 +126,9 @@ struct DeprecatedName
   bool show_warning = true;
 };
 
+typedef std::unordered_map<std::string, std::unordered_set<std::string>>
+    FuncsModulesMap;
+
 static std::vector<DeprecatedName> DEPRECATED_LIST =
 {
 };
@@ -168,7 +172,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots();
 std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
     uint64_t cgroupid,
     std::string filter);
-std::unordered_set<std::string> get_traceable_funcs();
+FuncsModulesMap get_traceable_funcs();
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);
@@ -188,6 +192,8 @@ std::string hex_format_buffer(const char *buf,
 std::optional<std::string> abs_path(const std::string &rel_path);
 bool symbol_has_module(const std::string &symbol);
 std::string strip_symbol_module(const std::string &symbol);
+std::pair<std::string, std::string> split_symbol_module(
+    const std::string &symbol);
 
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(

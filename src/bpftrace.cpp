@@ -2270,6 +2270,19 @@ bool BPFtrace::is_traceable_func(const std::string &func_name) const
 #endif
 }
 
+std::unordered_set<std::string> BPFtrace::get_func_modules(
+    const std::string &func_name) const
+{
+#ifdef FUZZ
+  (void)func_name;
+  return {};
+#else
+  auto mod = traceable_funcs_.find(func_name);
+  return mod != traceable_funcs_.end() ? mod->second
+                                       : std::unordered_set<std::string>();
+#endif
+}
+
 Dwarf *BPFtrace::get_dwarf(const std::string &filename)
 {
   auto dwarf = dwarves_.find(filename);
