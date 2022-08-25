@@ -935,7 +935,7 @@ void CodegenLLVM::visit(Call &call)
     auto size = std::get<1>(ids);
 
     Value *map_data = b_.CreateBpfPseudoCallValue(mapid);
-    Value *fmt_ptr = b_.CreateAdd(map_data, b_.getInt64(idx));
+    Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
     std::vector<Value *> values;
     for (size_t i = 1; i < call.vargs->size(); i++)
@@ -945,7 +945,10 @@ void CodegenLLVM::visit(Call &call)
       values.push_back(expr_);
     }
 
-    b_.CreateTracePrintk(fmt_ptr, b_.getInt32(size), values, call.loc);
+    b_.CreateTracePrintk(b_.CreateIntToPtr(fmt, b_.getInt8PtrTy()),
+                         b_.getInt32(size),
+                         values,
+                         call.loc);
     mapped_printf_id_++;
   }
   else if (call.func == "system")
