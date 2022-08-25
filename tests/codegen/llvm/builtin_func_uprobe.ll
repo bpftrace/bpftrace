@@ -3,7 +3,7 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%usym_t = type { i64, i64 }
+%usym_t = type { i64, i64, i64 }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -21,17 +21,19 @@ entry:
   %4 = lshr i64 %get_pid_tgid, 32
   %5 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 0
   %6 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 1
+  %7 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 2
   store i64 %func, i64* %5, align 8
   store i64 %4, i64* %6, align 8
-  %7 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store i64 0, i64* %7, align 8
+  %8 = bitcast i64* %"@x_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
   store i64 0, i64* %"@x_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %usym_t*, i64)*)(i64 %pseudo, i64* %"@x_key", %usym_t* %usym, i64 0)
-  %8 = bitcast i64* %"@x_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
-  %9 = bitcast %usym_t* %usym to i8*
+  %9 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %9)
+  %10 = bitcast %usym_t* %usym to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   ret i64 0
 }
 

@@ -3,8 +3,8 @@ source_filename = "bpftrace"
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
-%usym_t = type { i64, i64 }
-%"unsigned int8_usym_int64__tuple_t" = type { i8, [16 x i8], i64 }
+%usym_t = type { i64, i64, i64 }
+%"unsigned int8_usym_int64__tuple_t" = type { i8, [24 x i8], i64 }
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
@@ -17,7 +17,7 @@ entry:
   %1 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 32, i1 false)
+  call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 40, i1 false)
   %3 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 0
   store i8 1, i8* %3, align 1
   %4 = bitcast i8* %0 to i64*
@@ -29,23 +29,25 @@ entry:
   %7 = lshr i64 %get_pid_tgid, 32
   %8 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 0
   %9 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 1
+  %10 = getelementptr %usym_t, %usym_t* %usym, i64 0, i32 2
   store i64 %reg_ip, i64* %8, align 8
   store i64 %7, i64* %9, align 8
-  %10 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 1
-  %11 = bitcast [16 x i8]* %10 to i8*
-  %12 = bitcast %usym_t* %usym to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %11, i8* align 1 %12, i64 16, i1 false)
-  %13 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 2
-  store i64 10, i64* %13, align 8
-  %14 = bitcast i64* %"@t_key" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %14)
+  store i64 0, i64* %10, align 8
+  %11 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 1
+  %12 = bitcast [24 x i8]* %11 to i8*
+  %13 = bitcast %usym_t* %usym to i8*
+  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %12, i8* align 1 %13, i64 24, i1 false)
+  %14 = getelementptr %"unsigned int8_usym_int64__tuple_t", %"unsigned int8_usym_int64__tuple_t"* %tuple, i32 0, i32 2
+  store i64 10, i64* %14, align 8
+  %15 = bitcast i64* %"@t_key" to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
   store i64 0, i64* %"@t_key", align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %"unsigned int8_usym_int64__tuple_t"*, i64)*)(i64 %pseudo, i64* %"@t_key", %"unsigned int8_usym_int64__tuple_t"* %tuple, i64 0)
-  %15 = bitcast i64* %"@t_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
+  %16 = bitcast i64* %"@t_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  %17 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
   ret i64 0
 }
 

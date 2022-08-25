@@ -65,6 +65,13 @@ void ResourceAnalyser::visit(Builtin &builtin)
   {
     resources_.stackid_maps.insert(StackType{});
   }
+
+  if (uses_usym_table(builtin.ident))
+  {
+    // mark probe as using usym, so that the symbol table can be pre-loaded
+    // and symbols resolved even when unavailable at resolution time
+    resources_.probes_using_usym.insert(probe_);
+  }
 }
 
 void ResourceAnalyser::visit(Call &call)
@@ -194,6 +201,13 @@ void ResourceAnalyser::visit(Call &call)
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
   }
+
+  if (uses_usym_table(call.func))
+  {
+    // mark probe as using usym, so that the symbol table can be pre-loaded
+    // and symbols resolved even when unavailable at resolution time
+    resources_.probes_using_usym.insert(probe_);
+  }
 }
 
 void ResourceAnalyser::visit(Map &map)
@@ -215,6 +229,11 @@ void ResourceAnalyser::prepare_mapped_printf_ids()
     resources_.mapped_printf_ids.push_back({ idx, len + 1 });
     idx += len + 1;
   }
+}
+
+bool ResourceAnalyser::uses_usym_table(const std::string &fun)
+{
+  return fun == "usym" || fun == "func" || fun == "ustack";
 }
 
 Pass CreateResourcePass()

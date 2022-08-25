@@ -118,10 +118,19 @@ public:
   int clear_map(IMap &map);
   int zero_map(IMap &map);
   int print_map(IMap &map, uint32_t top, uint32_t div);
-  std::string get_stack(uint64_t stackidpid, bool ustack, StackType stack_type, int indent=0);
+  std::string get_stack(int64_t stackid,
+                        int pid,
+                        int probe_id,
+                        bool ustack,
+                        StackType stack_type,
+                        int indent = 0);
   std::string resolve_buf(char *buf, size_t size);
   std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
-  std::string resolve_usym(uintptr_t addr, int pid, bool show_offset=false, bool show_module=false);
+  std::string resolve_usym(uintptr_t addr,
+                           int pid,
+                           int probe_id,
+                           bool show_offset = false,
+                           bool show_module = false);
   std::string resolve_inet(int af, const uint8_t* inet) const;
   std::string resolve_uid(uintptr_t addr) const;
   std::string resolve_timestamp(uint32_t strftime_id, uint64_t nsecs);
@@ -228,7 +237,9 @@ private:
   void* ksyms_{nullptr};
   // note: exe_sym_ is used when layout is same for all instances of program
   std::map<std::string, std::pair<int, void *>> exe_sym_; // exe -> (pid, cache)
-  std::map<int, void *> pid_sym_; // pid -> cache
+  std::map<int, void *> pid_sym_;                         // pid -> cache
+  std::map<std::string, std::map<uintptr_t, elf_symbol, std::greater<>>>
+      symbol_table_cache_;
   std::vector<std::string> params_;
 
   std::vector<std::unique_ptr<void, void (*)(void *)>> open_perf_buffers_;

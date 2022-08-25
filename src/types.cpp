@@ -119,9 +119,10 @@ bool SizedType::operator==(const SizedType &t) const
 
 bool SizedType::IsByteArray() const
 {
-  return type == Type::string || type == Type::usym || type == Type::inet ||
-         type == Type::buffer || type == Type::timestamp ||
-         type == Type::mac_address || type == Type::cgroup_path;
+  return type == Type::string || type == Type::usym || type == Type::ustack ||
+         type == Type::inet || type == Type::buffer ||
+         type == Type::timestamp || type == Type::mac_address ||
+         type == Type::cgroup_path;
 }
 
 bool SizedType::IsAggregate() const
@@ -375,7 +376,7 @@ SizedType CreateRecord(const std::string &name, std::weak_ptr<Struct> record)
 
 SizedType CreateStack(bool kernel, StackType stack)
 {
-  auto st = SizedType(kernel ? Type::kstack : Type::ustack, 8);
+  auto st = SizedType(kernel ? Type::kstack : Type::ustack, kernel ? 8 : 16);
   st.stack_type = stack;
   return st;
 }
@@ -439,7 +440,7 @@ SizedType CreateHist()
 
 SizedType CreateUSym()
 {
-  return SizedType(Type::usym, 16);
+  return SizedType(Type::usym, 24);
 }
 
 SizedType CreateKSym()

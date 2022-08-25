@@ -162,6 +162,8 @@ private:
                      StackType stack_type,
                      const location &loc);
 
+  int get_probe_id();
+
   // Create return instruction
   //
   // If null, return value will depend on current attach point
