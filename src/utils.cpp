@@ -969,7 +969,7 @@ std::string hex_format_buffer(const char *buf, size_t size, bool keep_ascii)
   return std::string(s);
 }
 
-std::unordered_set<std::string> get_traceable_funcs()
+FuncsModulesMap get_traceable_funcs()
 {
 #ifdef FUZZ
   return {};
@@ -991,14 +991,14 @@ std::unordered_set<std::string> get_traceable_funcs()
     return {};
   }
 
-  std::unordered_set<std::string> result;
+  FuncsModulesMap result;
   std::string line;
   while (std::getline(available_funs, line))
   {
-    if (symbol_has_module(line))
-      result.insert(strip_symbol_module(line));
-    else
-      result.insert(line);
+    auto func_mod = split_symbol_module(line);
+    if (func_mod.second.empty())
+      func_mod.second = "vmlinux";
+    result[func_mod.first].insert(func_mod.second);
   }
   return result;
 #endif
@@ -1208,6 +1208,21 @@ int get_kernel_ptr_width()
     return 32;
 
   return 64;
+}
+
+std::pair<std::string, std::string> split_symbol_module(
+    const std::string &symbol)
+{
+  if (!symbol_has_module(symbol))
+    return { symbol, "" };
+
+  size_t idx = symbol.rfind(" [");
+  if (idx == std::string::npos)
+    return { symbol, "" };
+
+  return { symbol.substr(0, idx),
+           symbol.substr(idx + strlen(" ["),
+                         symbol.length() - idx - strlen(" []")) };
 }
 
 } // namespace bpftrace
