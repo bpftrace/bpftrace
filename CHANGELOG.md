@@ -47,6 +47,8 @@ and this project adheres to
   - [#2316](https://github.com/iovisor/bpftrace/pull/2316)
 - Fix builds against libbfd(binutils) >=2.39
   - [#2328](https://github.com/iovisor/bpftrace/pull/2328)
+- Fix access to ctx
+  - [#2343](https://github.com/iovisor/bpftrace/pull/2343)
 
 #### Added
 #### Docs
