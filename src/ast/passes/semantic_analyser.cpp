@@ -232,7 +232,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       case libbpf::BPF_PROG_TYPE_KPROBE:
         builtin.type = CreatePointer(CreateRecord("struct pt_regs",
                                                   bpftrace_.structs.Lookup(
-                                                      "structs pt_regs")),
+                                                      "struct pt_regs")),
                                      AddrSpace::kernel);
         builtin.type.MarkCtxAccess();
         break;
