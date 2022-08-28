@@ -2035,6 +2035,23 @@ TEST(semantic_analyser, strncmp_posparam)
   test(bpftrace, "i:s:1 { strncmp(\"foo\", \"bar\", $2) }", 1);
 }
 
+TEST(semantic_analyser, strconrtains)
+{
+  // Test strcontains builtin
+  test("i:s:1 { $a = \"bar\"; strcontains(\"foo\", $a) }", 0);
+  test("i:s:1 { strcontains(\"foo\", \"bar\") }", 0);
+  test("i:s:1 { strcontains(1) }", 1);
+  test("i:s:1 { strcontains(1,1) }", 10);
+  test("i:s:1 { strcontains(\"a\",1) }", 10);
+}
+
+TEST(semantic_analyser, strcontains_posparam)
+{
+  BPFtrace bpftrace;
+  bpftrace.add_param("hello");
+  test(bpftrace, "i:s:1 { strcontains(\"foo\", str($1)) }", 0);
+}
+
 TEST(semantic_analyser, override)
 {
   // literals

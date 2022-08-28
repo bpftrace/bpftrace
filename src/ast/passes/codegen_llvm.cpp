@@ -1159,6 +1159,20 @@ void CodegenLLVM::visit(Call &call)
                              size,
                              false);
   }
+  else if (call.func == "strcontains")
+  {
+    const auto &left_arg = call.vargs->at(0);
+    const auto &right_arg = call.vargs->at(1);
+
+    auto left_string = getString(left_arg);
+    auto right_string = getString(right_arg);
+
+    expr_ = b_.CreateStrcontains(left_string.first,
+                                 left_string.second,
+                                 right_string.first,
+                                 right_string.second,
+                                 false);
+  }
   else if (call.func == "override")
   {
     // long bpf_override(struct pt_regs *regs, u64 rc)

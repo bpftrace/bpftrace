@@ -704,6 +704,18 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
   return result;
 }
 
+std::optional<std::string> ValToString(Value *val)
+{
+  std::optional<std::string> literal;
+  if (auto constString2 = dyn_cast<ConstantDataArray>(val))
+    literal = constString2->getAsString();
+  else if (isa<ConstantAggregateZero>(val))
+    literal = "";
+  else
+    literal = std::nullopt;
+  return literal;
+}
+
 Value *IRBuilderBPF::CreateStrncmp(Value *str1,
                                    uint64_t str1_size,
                                    Value *str2,
@@ -735,21 +747,8 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
 
   // Check if the compared strings are literals.
   // If so, we can avoid storing the literal in memory.
-  std::optional<std::string> literal1;
-  if (auto constString1 = dyn_cast<ConstantDataArray>(str1))
-    literal1 = constString1->getAsString();
-  else if (isa<ConstantAggregateZero>(str1))
-    literal1 = "";
-  else
-    literal1 = std::nullopt;
-
-  std::optional<std::string> literal2;
-  if (auto constString2 = dyn_cast<ConstantDataArray>(str2))
-    literal2 = constString2->getAsString();
-  else if (isa<ConstantAggregateZero>(str2))
-    literal2 = "";
-  else
-    literal2 = std::nullopt;
+  std::optional<std::string> literal1 = ValToString(str1);
+  std::optional<std::string> literal2 = ValToString(str2);
 
   Function *parent = GetInsertBlock()->getParent();
   AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcmp.result");
@@ -811,6 +810,151 @@ Value *IRBuilderBPF::CreateStrncmp(Value *str1,
 
   CreateBr(str_ne);
   SetInsertPoint(str_ne);
+
+  // store is a pointer to bool (i1 *)
+  Value *result = CreateLoad(getInt1Ty(), store);
+  CreateLifetimeEnd(store);
+  result = CreateIntCast(result, getInt64Ty(), false);
+
+  return result;
+}
+
+Value *IRBuilderBPF::CreateStrcontains(Value *val1,
+                                       uint64_t str1_size,
+                                       Value *val2,
+                                       uint64_t str2_size,
+                                       bool inverse)
+{
+  /*
+  // This function compares whether the string val1 contains the string val2.
+  // It returns true if val2 is contained by val1, false if not contained.
+  // strcontains(String val1, String val2, int str1_size, int str2_size)
+     {
+        for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size -
+  str2_size); j++)
+        {
+          for (size_t i = 0; i < str2_size; i++)
+          {
+            if (val2[i] == NULL)
+            {
+              return true;
+            }
+            if (val1[i + j] != val2[i])
+            {
+              break;
+            }
+          }
+          if (val1[j] == NULL) {
+            return false;
+          }
+        }
+        return false;
+     }
+  */
+  // Check if the compared strings are literals.
+  // If so, we can avoid storing the literal in memory.
+  std::optional<std::string> literal1 = ValToString(val1);
+  std::optional<std::string> literal2 = ValToString(val2);
+
+  if (literal1 && literal2)
+  {
+    std::string s1 = literal1.value();
+    std::string s2 = literal2.value();
+    s2 = s2.substr(0, s2.size() - 1);
+    std::size_t position = s1.find(s2);
+
+    if (position != std::string::npos)
+    {
+      return getInt64(1);
+    }
+    else
+    {
+      return getInt64(0);
+    }
+  }
+
+  Function *parent = GetInsertBlock()->getParent();
+  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "strcontains.result");
+  BasicBlock *done_true = BasicBlock::Create(module_.getContext(),
+                                             "strcontains.true",
+                                             parent);
+  BasicBlock *done_false = BasicBlock::Create(module_.getContext(),
+                                              "strcontains.false",
+                                              parent);
+
+  CreateStore(getInt1(!inverse), store);
+  Value *null_byte = getInt8(0);
+
+  for (size_t j = 0; (str1_size >= str2_size) && (j <= str1_size - str2_size);
+       j++)
+  {
+    BasicBlock *first_loop = BasicBlock::Create(module_.getContext(),
+                                                "strcontains.firstloop",
+                                                parent);
+
+    Value *str_c;
+    if (literal1)
+      str_c = getInt8(literal1->c_str()[j]);
+    else
+    {
+      auto *ptr_str = CreateGEP(ArrayType::get(getInt8Ty(), str1_size),
+                                val1,
+                                { getInt32(0), getInt32(j) });
+      str_c = CreateLoad(getInt8Ty(), ptr_str);
+    }
+
+    for (size_t i = 0; i < str2_size; i++)
+    {
+      BasicBlock *second_loop = BasicBlock::Create(module_.getContext(),
+                                                   "strcontains.secondloop",
+                                                   parent);
+      BasicBlock *cmp_char = BasicBlock::Create(module_.getContext(),
+                                                "strcontains.cmp_char",
+                                                parent);
+
+      Value *l;
+      if (literal1)
+        l = getInt8(literal1->c_str()[i + j]);
+      else
+      {
+        auto *ptr_l = CreateGEP(ArrayType::get(getInt8Ty(), str1_size),
+                                val1,
+                                { getInt32(0), getInt32(i + j) });
+        l = CreateLoad(getInt8Ty(), ptr_l);
+      }
+
+      Value *r;
+      if (literal2)
+        r = getInt8(literal2->c_str()[i]);
+      else
+      {
+        auto *ptr_r = CreateGEP(ArrayType::get(getInt8Ty(), str2_size),
+                                val2,
+                                { getInt32(0), getInt32(i) });
+        r = CreateLoad(getInt8Ty(), ptr_r);
+      }
+
+      Value *cmp_null = CreateICmpEQ(r, null_byte, "strcontains.cmp_null");
+      CreateCondBr(cmp_null, done_true, cmp_char);
+
+      SetInsertPoint(cmp_char);
+
+      Value *cmp = CreateICmpNE(l, r, "strcontains.cmp");
+      CreateCondBr(cmp, first_loop, second_loop);
+
+      SetInsertPoint(second_loop);
+    }
+    Value *cmp_null = CreateICmpEQ(str_c, null_byte, "strcontains.cmp_null");
+    CreateCondBr(cmp_null, done_false, first_loop);
+
+    SetInsertPoint(first_loop);
+  }
+  CreateBr(done_false);
+  SetInsertPoint(done_false);
+  CreateStore(getInt1(inverse), store);
+
+  CreateBr(done_true);
+  SetInsertPoint(done_true);
 
   // store is a pointer to bool (i1 *)
   Value *result = CreateLoad(getInt1Ty(), store);

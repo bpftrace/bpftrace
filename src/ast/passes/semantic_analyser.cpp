@@ -1239,6 +1239,15 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt64();
   }
+  else if (call.func == "strcontains")
+  {
+    if (check_nargs(call, 2))
+    {
+      check_arg(call, Type::string, 0);
+      check_arg(call, Type::string, 1);
+    }
+    call.type = CreateUInt64();
+  }
   else if (call.func == "override")
   {
     if (!bpftrace_.feature_->has_helper_override_return())
