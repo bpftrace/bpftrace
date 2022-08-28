@@ -131,6 +131,11 @@ public:
                        uint64_t str2_size,
                        uint64_t n,
                        bool inverse);
+  Value *CreateStrcontains(Value *val1,
+                           uint64_t str1_size,
+                           Value *val2,
+                           uint64_t str2_size,
+                           bool inverse);
   CallInst *CreateGetNs(bool boot_time, const location &loc);
   CallInst *CreateGetPidTgid(const location &loc);
   CallInst *CreateGetCurrentCgroupId(const location &loc);

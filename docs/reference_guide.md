@@ -87,20 +87,21 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [17. `cat()`: Print file content](#17-cat-print-file-content)
     - [18. `signal()`: Send a signal to the current task](#18-signal-send-a-signal-to-current-task)
     - [19. `strncmp()`: Compare first n characters of two strings](#19-strncmp-compare-first-n-characters-of-two-strings)
-    - [20. `override()`: Override return value](#20-override-override-return-value)
-    - [21. `buf()`: Buffers](#21-buf-buffers)
-    - [22. `sizeof()`: Size of type or expression](#22-sizeof-size-of-type-or-expression)
-    - [23. `print()`: Print Value](#23-print-print-value)
-    - [24. `strftime()`: Formatted timestamp](#24-strftime-formatted-timestamp)
-    - [25. `path()`: Return full path](#25-path-return-full-path)
-    - [26. `uptr()`: Annotate userspace pointer](#26-uptr-annotate-userspace-pointer)
-    - [27. `kptr()`: Annotate kernelspace pointer](#27-kptr-annotate-kernelspace-pointer)
-    - [28. `macaddr()`: Convert MAC address data to text](#28-macaddr-convert-mac-address-data-to-text)
-    - [29. `cgroup_path()`: Convert cgroup id to cgroup path](#29-cgroup_path-convert-cgroup-id-to-cgroup-path)
-    - [30. `bswap`: Reverse byte order](#30-bswap-reverse-byte-order)
-    - [31. `skb_output`: Write `skb` 's data section into a PCAP file](#31-skb_output-write-skb-s-data-section-into-a-pcap-file)
-    - [32. `pton()`: Convert text IP address to byte array](#32-pton-convert-text-ip-address-to-byte-array)
-    - [33. `strerror`: Get error message for errno value](#33-strerror-get-error-message-for-errno-value)
+    - [20. `strcontains()`: Compares whether the string haystack contains the string needle.](#20-Compare-whether-the-string-haystack-contains-the-string-needle)
+    - [21. `override()`: Override return value](#20-override-override-return-value)
+    - [22. `buf()`: Buffers](#21-buf-buffers)
+    - [23. `sizeof()`: Size of type or expression](#22-sizeof-size-of-type-or-expression)
+    - [24. `print()`: Print Value](#23-print-print-value)
+    - [25. `strftime()`: Formatted timestamp](#24-strftime-formatted-timestamp)
+    - [26. `path()`: Return full path](#25-path-return-full-path)
+    - [27. `uptr()`: Annotate userspace pointer](#26-uptr-annotate-userspace-pointer)
+    - [28. `kptr()`: Annotate kernelspace pointer](#27-kptr-annotate-kernelspace-pointer)
+    - [29. `macaddr()`: Convert MAC address data to text](#28-macaddr-convert-mac-address-data-to-text)
+    - [30. `cgroup_path()`: Convert cgroup id to cgroup path](#29-cgroup_path-convert-cgroup-id-to-cgroup-path)
+    - [31. `bswap`: Reverse byte order](#30-bswap-reverse-byte-order)
+    - [32. `skb_output`: Write `skb` 's data section into a PCAP file](#31-skb_output-write-skb-s-data-section-into-a-pcap-file)
+    - [33. `pton()`: Convert text IP address to byte array](#32-pton-convert-text-ip-address-to-byte-array)
+    - [34. `strerror`: Get error message for errno value](#33-strerror-get-error-message-for-errno-value)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2221,6 +2222,7 @@ Tracing block I/O sizes > 0 bytes
 - `cat(char *filename)` - Print file content
 - `signal(char[] signal | u32 signal)` - Send a signal to the current task
 - `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
+- `strcontains(const char *haystack, const char *needle)` - Compares whether the string haystack contains the string needle.
 - `override(u64 rc)` - Override return value
 - `buf(void *d [, int length])` - Returns a hex-formatted string of the data pointed to by d
 - `sizeof(...)` - Return size of a type or expression
@@ -2887,7 +2889,28 @@ Attaching 320 probes...
 @[mpv, tracepoint:syscalls:sys_enter_futex]: 403868
 ```
 
-## 20. `override()`: Override return value
+## 20. `strcontains()`: Compare whether the string haystack contains the string needle.
+
+Syntax: `strcontains(const char *haystack, const char *needle)`
+
+Return true if the string haystack contains the string needle, and zero otherwise.
+
+Examples:
+
+```
+bpftrace -e 't:syscalls:sys_enter_execve /strcontains(str(args->filename),"bin")/ { @[comm, str(args->filename)] = count(); }'  
+Attaching 1 probe...
+
+@[sh, /usr/bin/which]: 2
+@[sh, /home/liuting.0xffff/.vscode-server/bin/3b889b090b5ad5793f524b5]: 2
+@[cpuUsage.sh, /usr/bin/sleep]: 2
+@[sh, /usr/bin/ps]: 2
+@[cpuUsage.sh, /usr/bin/sed]: 4
+@[node, /bin/sh]: 6
+@[cpuUsage.sh, /usr/bin/cat]: 12
+```
+
+## 21. `override()`: Override return value
 
 Syntax: `override(u64 rc)`
 
@@ -2914,7 +2937,7 @@ ioctl(PERF_EVENT_IOC_SET_BPF): Invalid argument
 Error attaching probe: 'kprobe:vfs_read'
 ```
 
-## 21. `buf()`: Buffers
+## 22. `buf()`: Buffers
 
 Syntax: `buf(void *d [, int length])`
 
@@ -2945,7 +2968,7 @@ Datagram bytes: \x08\x00+\xb9\x06b\x00\x01Aen^\x00\x00\x00\x00KM\x0c\x00\x00\x00
 rtt min/avg/max/mdev = 19.426/19.426/19.426/0.000 ms
 ```
 
-## 22. `sizeof()`: Size of type or expression
+## 23. `sizeof()`: Size of type or expression
 
 Syntax:
 - `sizeof(TYPE)`
@@ -2978,7 +3001,7 @@ Attaching 1 probe...
 8
 ```
 
-## 23. `print()`: Print Value
+## 24. `print()`: Print Value
 
 Syntax: ```print(value)```
 
@@ -3002,7 +3025,7 @@ contains the memcopy'd value so the value at `print()` invocation time will be
 printed.  However for maps, only the handle to the map is queued up, so the
 printed map may be different than the map at `print()` invocation.
 
-## 24. `strftime()`: Formatted timestamp
+## 25. `strftime()`: Formatted timestamp
 
 Syntax:
 - `strftime(const char *format, int nsecs)`
@@ -3039,7 +3062,7 @@ Attaching 1 probe...
 ^C
 ```
 
-## 25. `path()`: Return full path
+## 26. `path()`: Return full path
 
 Syntax:
 - `path(struct path *path)`
@@ -3066,7 +3089,7 @@ Attaching 1 probe...
 /dev/pts/1 -> /dev/pts/1
 ```
 
-## 26. `uptr()`: Annotate userspace pointer
+## 27. `uptr()`: Annotate userspace pointer
 
 Syntax:
 - `uptr(void *p)`
@@ -3088,7 +3111,7 @@ state
 ^C
 ```
 
-## 27. `kptr()`: Annotate kernelspace pointer
+## 28. `kptr()`: Annotate kernelspace pointer
 
 Syntax:
 - `kptr(void *p)`
@@ -3098,7 +3121,7 @@ Annotate `p` as a pointer belonging to kernel address space.
 Just like `uptr`, you'll generally only need this if bpftrace has inferred the
 pointer address space incorrectly.
 
-## 28. `macaddr()`: Convert MAC address data to text
+## 29. `macaddr()`: Convert MAC address data to text
 
 Syntax: `macaddr(char[6] addr)`
 
@@ -3112,7 +3135,7 @@ SRC 18:C0:4D:08:2E:BB, DST 74:83:C2:7F:8C:FF
 ^C
 ```
 
-## 29. `cgroup_path`: Convert cgroup id to cgroup path
+## 30. `cgroup_path`: Convert cgroup id to cgroup path
 
 Syntax: `cgroup_path(int cgroupid, string filter)`
 
@@ -3131,7 +3154,7 @@ Attaching 1 probe...
 unified:/user.slice/user-1000.slice/session-3.scope
 ```
 
-## 30. `bswap`: Reverse byte order
+## 31. `bswap`: Reverse byte order
 
 Syntax: `bswap(uint[8|16|32|64] n)`
 
@@ -3146,7 +3169,7 @@ Attaching 1 probe...
 Reversing byte order of 0x12345678 ==> 0x78563412
 ```
 
-## 31. `skb_output`: Write `skb` 's data section into a PCAP file
+## 32. `skb_output`: Write `skb` 's data section into a PCAP file
 
 Syntax: `uint32 skboutput(const string path, struct sk_buff *skb, uint64 length, const uint64 offset)`
 
@@ -3187,7 +3210,7 @@ dropped privs to tcpdump
 10:23:45.823229 IP 100.101.2.146.53 > 192.168.0.23.46158: 45799 1/0/0 A 100.100.45.106 (60)
 ```
 
-## 32. `pton()`: Convert text IP address to byte array
+## 33. `pton()`: Convert text IP address to byte array
 
 Syntax: `pton(const string *addr)`
 
@@ -3217,7 +3240,7 @@ first octet matched
 ^C
 ```
 
-## 33. `strerror`: Get error message for errno code
+## 34. `strerror`: Get error message for errno code
 
 Syntax: `strerror(uint64 error)`
 

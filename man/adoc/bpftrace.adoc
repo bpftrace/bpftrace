@@ -1633,6 +1633,16 @@ bpftrace doesn't read past the length of the shortest string.
 
 The use of the `==` and `!=` operators is recommended over calling `strncmp` directly.
 
+=== strcontains
+
+.variants
+* `int64 strcontains(const char *haystack, const char *needle)`
+
+`strcontains` compares whether the string haystack contains the string needle.
+If needle is contained `1` is returned, else zero is returned.
+
+bpftrace doesn't read past the length of the shortest string.
+
 === system
 
 .variants
