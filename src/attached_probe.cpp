@@ -114,6 +114,9 @@ void check_banned_kretprobes(std::string const& kprobe_name) {
 
 void AttachedProbe::attach_kfunc(void)
 {
+  if (progfd_ < 0)
+    // Errors for kfunc are handled in load_prog, ignore here
+    return;
   tracing_fd_ = bpf_raw_tracepoint_open(nullptr, progfd_);
   if (tracing_fd_ < 0)
     throw std::runtime_error("Error attaching probe: " + probe_.name);
@@ -650,14 +653,8 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   std::string tracing_type;
 
   {
-    // Redirect stderr, so we don't get error messages from BCC
-    StderrSilencer silencer;
-    if (bt_debug == DebugLevel::kNone)
-      silencer.silence();
-
     if (bt_debug != DebugLevel::kNone)
       log_level = 15;
-
     if (bt_verbose)
       log_level = 1;
 
@@ -720,6 +717,21 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         if (probe_.type == ProbeType::iter)
           fun = "bpf_iter_" + fun;
         auto btf_id = btf_.get_btf_id_fd(fun, mod);
+        if (btf_id.first < 0)
+        {
+          std::string msg = "No BTF found for " + fun;
+          if (probe_.orig_name != probe_.name)
+          {
+            // one attachpoint in a multi-attachpoint (wildcard or list) probe
+            // failed, print a warning but continue
+            LOG(WARNING) << msg << ", skipping.";
+            return;
+          }
+          else
+            // explicit match failed, fail hard
+            throw std::runtime_error(msg);
+        }
+
         opts.attach_btf_id = btf_id.first;
         opts.attach_btf_obj_fd = btf_id.second;
       }
@@ -728,12 +740,19 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.kern_version = version;
       }
 
-      progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
-                              name.c_str(),
-                              license,
-                              reinterpret_cast<struct bpf_insn *>(insns),
-                              prog_len / sizeof(struct bpf_insn),
-                              &opts);
+      {
+        // Redirect stderr, so we don't get error messages from libbpf
+        StderrSilencer silencer;
+        if (bt_debug == DebugLevel::kNone)
+          silencer.silence();
+
+        progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
+                                name.c_str(),
+                                license,
+                                reinterpret_cast<struct bpf_insn *>(insns),
+                                prog_len / sizeof(struct bpf_insn),
+                                &opts);
+      }
 
       if (opts.attach_prog_fd > 0)
         close(opts.attach_prog_fd);
