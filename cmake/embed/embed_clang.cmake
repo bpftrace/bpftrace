@@ -11,12 +11,15 @@ else()
   set(EMBEDDED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
-if(${LLVM_VERSION} VERSION_EQUAL "12.0.0")
-  set(CLANG_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/clang-${LLVM_VERSION}.src.tar.xz")
+if(${LLVM_VERSION_MAJOR} VERSION_EQUAL "12")
   set(CLANG_URL_CHECKSUM "SHA256=e26e452e91d4542da3ebbf404f024d3e1cbf103f4cd110c26bf0a19621cca9ed")
+elseif(${LLVM_VERSION_MAJOR} VERSION_EQUAL "14")
+  set(CLANG_URL_CHECKSUM "SHA256=e2b5847b6a63118b9efe5c85548363c81ffe096b66c3b3675e953e26342ae4031")
 else()
-  message(FATAL_ERROR "No supported LLVM version has been specified with LLVM_VERSION (${EMBED_LLVM_VERSION}), aborting")
+  message(FATAL_ERROR "No supported LLVM version has been specified with LLVM_VERSION (${LLVM_VERSION_MAJOR}), aborting")
 endif()
+
+set(CLANG_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/clang-${LLVM_FULL_VERSION}.src.tar.xz")
 
 ProcessorCount(nproc)
 set(LIBCLANG_INSTALL_COMMAND
