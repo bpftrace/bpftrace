@@ -205,6 +205,10 @@ bool FieldAnalyser::resolve_args(Probe &probe)
       for (auto &match : matches)
       {
         ProbeArgs args;
+        // Both uprobes and kfuncs have a target (binary for uprobes, kernel
+        // module for kfuncs).
+        std::string func = match;
+        std::string target = erase_prefix(func);
 
         // Trying to attach to multiple kfuncs. If some of them fails on
         // argument resolution, do not fail hard, just print a warning and
@@ -213,7 +217,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         {
           try
           {
-            bpftrace_.btf_->resolve_args(match,
+            bpftrace_.btf_->resolve_args(func,
                                          first ? ap_args_ : args,
                                          probe_type == ProbeType::kretfunc);
           }
@@ -225,10 +229,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         }
         else // uprobe
         {
-          std::string func = match;
-          std::string file = erase_prefix(func);
-
-          Dwarf *dwarf = bpftrace_.get_dwarf(file);
+          Dwarf *dwarf = bpftrace_.get_dwarf(target);
           if (dwarf)
           {
             args = dwarf->resolve_args(func);
@@ -236,7 +237,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
               ap_args_ = args;
           }
           else
-            LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << file;
+            LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << target;
         }
 
         if (!first && !compare_args(args, ap_args_))

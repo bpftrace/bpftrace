@@ -185,7 +185,9 @@ int BPFtrace::add_probe(ast::Probe &p)
                                ":" + attach_point->func);
       else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
                probetype(attach_point->provider) == ProbeType::uprobe ||
-               probetype(attach_point->provider) == ProbeType::uretprobe)
+               probetype(attach_point->provider) == ProbeType::uretprobe ||
+               probetype(attach_point->provider) == ProbeType::kfunc ||
+               probetype(attach_point->provider) == ProbeType::kretfunc)
         attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
       else
         attach_funcs.push_back(attach_point->func);
@@ -222,9 +224,11 @@ int BPFtrace::add_probe(ast::Probe &p)
       }
       else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
                probetype(attach_point->provider) == ProbeType::uprobe ||
-               probetype(attach_point->provider) == ProbeType::uretprobe)
+               probetype(attach_point->provider) == ProbeType::uretprobe ||
+               probetype(attach_point->provider) == ProbeType::kfunc ||
+               probetype(attach_point->provider) == ProbeType::kretfunc)
       {
-        // tracepoint and uprobe probes must specify both a target and
+        // tracepoint, uprobe, and k(ret)func probes specify both a target and
         // a function name.
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.

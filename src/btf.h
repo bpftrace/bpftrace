@@ -83,9 +83,9 @@ private:
 
   std::string dump_defs_from_btf(const struct btf* btf,
                                  std::unordered_set<std::string>& types) const;
-  std::string get_all_funcs_from_btf(const struct btf* btf) const;
+  std::string get_all_funcs_from_btf(const BTFObj& btf_obj) const;
   std::map<std::string, std::vector<std::string>> get_params_from_btf(
-      const struct btf* btf,
+      const BTFObj& btf_obj,
       const std::set<std::string>& funcs) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
 

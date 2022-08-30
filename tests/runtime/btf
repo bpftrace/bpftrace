@@ -61,3 +61,13 @@ REQUIRES_FEATURE btf
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 AFTER nft delete table bpftrace
+
+# args->ctxt has type 'struct x86_emulate_ctxt' which is forward-defined in
+# 'vmlinux' BTF and fully defined in 'kvm' BTF.
+# This tests checks that the correct BTF definition is pulled from 'kvm'.
+NAME kernel_module_type_fwd
+PROG kfunc:kvm:x86_emulate_insn { printf("%d\n", args->ctxt->mode); exit(); }
+EXPECT Attaching 1 probe...
+TIMEOUT 2
+REQUIRES_FEATURE btf
+REQUIRES lsmod | grep '^kvm'

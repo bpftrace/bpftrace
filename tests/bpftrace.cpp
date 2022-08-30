@@ -982,10 +982,12 @@ TEST_F(bpftrace_btf, add_probes_kfunc)
   ASSERT_EQ(2U, bpftrace.get_probes().size());
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
 
-  check_probe(bpftrace.get_probes().at(0), ProbeType::kfunc, "kfunc:func_1");
+  check_probe(bpftrace.get_probes().at(0),
+              ProbeType::kfunc,
+              "kfunc:vmlinux:func_1");
   check_probe(bpftrace.get_probes().at(1),
               ProbeType::kretfunc,
-              "kretfunc:func_1");
+              "kretfunc:vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_iter_task)

@@ -471,14 +471,14 @@ void BTF::resolve_args(const std::string &func,
   }
 }
 
-std::string BTF::get_all_funcs_from_btf(const struct btf *btf) const
+std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const
 {
   std::string funcs;
-  __s32 id, max = (__s32)type_cnt(btf);
+  __s32 id, max = (__s32)type_cnt(btf_obj.btf);
 
-  for (id = start_id(btf); id <= max; id++)
+  for (id = start_id(btf_obj.btf); id <= max; id++)
   {
-    const struct btf_type *t = btf__type_by_id(btf, id);
+    const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
 
     if (!t)
       continue;
@@ -486,10 +486,10 @@ std::string BTF::get_all_funcs_from_btf(const struct btf *btf) const
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf, t->name_off);
+    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
     std::string func_name = str;
 
-    t = btf__type_by_id(btf, t->type);
+    t = btf__type_by_id(btf_obj.btf, t->type);
     if (!t || !btf_is_func_proto(t))
     {
       /* bad.. */
@@ -504,7 +504,7 @@ std::string BTF::get_all_funcs_from_btf(const struct btf *btf) const
     if (btf_vlen(t) > arch::max_arg() + 1)
       continue;
 
-    funcs += std::string(func_name) + "\n";
+    funcs += btf_obj.name + ":" + std::string(func_name) + "\n";
   }
 
   return funcs;
@@ -514,21 +514,21 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
 {
   auto funcs = std::make_unique<std::stringstream>();
   for (auto &btf_obj : btf_objects)
-    *funcs << get_all_funcs_from_btf(btf_obj.btf);
+    *funcs << get_all_funcs_from_btf(btf_obj);
   return funcs;
 }
 
 std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
-    const struct btf *btf,
+    const BTFObj &btf_obj,
     const std::set<std::string> &funcs) const
 {
-  __s32 id, max = (__s32)type_cnt(btf);
+  __s32 id, max = (__s32)type_cnt(btf_obj.btf);
   std::string type = std::string("");
   struct btf_dump *dump;
   char err_buf[256];
   int err;
 
-  dump = dump_new(btf, dump_printf, &type);
+  dump = dump_new(btf_obj.btf, dump_printf, &type);
   err = libbpf_get_error(dump);
   if (err)
   {
@@ -538,9 +538,9 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
   }
 
   std::map<std::string, std::vector<std::string>> params;
-  for (id = start_id(btf); id <= max; id++)
+  for (id = start_id(btf_obj.btf); id <= max; id++)
   {
-    const struct btf_type *t = btf__type_by_id(btf, id);
+    const struct btf_type *t = btf__type_by_id(btf_obj.btf, id);
 
     if (!t)
       continue;
@@ -548,13 +548,13 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     if (!btf_is_func(t))
       continue;
 
-    const char *str = btf__name_by_offset(btf, t->name_off);
-    std::string func_name = str;
+    const char *str = btf__name_by_offset(btf_obj.btf, t->name_off);
+    std::string func_name = btf_obj.name + ":" + str;
 
     if (funcs.find(func_name) == funcs.end())
       continue;
 
-    t = btf__type_by_id(btf, t->type);
+    t = btf__type_by_id(btf_obj.btf, t->type);
     if (!t)
       continue;
 
@@ -574,7 +574,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params_from_btf(
     {
       // set by dump_printf callback
       type = std::string("");
-      const char *arg_name = btf__name_by_offset(btf, p->name_off);
+      const char *arg_name = btf__name_by_offset(btf_obj.btf, p->name_off);
 
       err = btf_dump__emit_type_decl(dump, p->type, &decl_opts);
       if (err)
@@ -623,7 +623,7 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
     if (std::all_of(funcs.begin(), funcs.end(), all_resolved))
       break;
 
-    auto mod_params = get_params_from_btf(btf_obj.btf, funcs);
+    auto mod_params = get_params_from_btf(btf_obj, funcs);
     params.insert(mod_params.begin(), mod_params.end());
   }
 
@@ -773,7 +773,9 @@ void BTF::resolve_fields(SizedType &type)
     return;
 
   auto type_name = btf_type_str(type.GetName());
-  auto type_id = find_id(type_name);
+  auto type_id = find_id(type_name, BTF_KIND_STRUCT);
+  if (!type_id.btf)
+    type_id = find_id(type_name, BTF_KIND_UNION);
   if (!type_id.btf)
     return;
 

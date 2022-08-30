@@ -1636,18 +1636,21 @@ written.
 Syntax:
 
 ```
-kfunc:function
-kretfunc:function
+kfunc[:module]:function
+kretfunc[:module]:function
 ```
 
 These are kernel function probes implemented via eBPF trampolines which allows
 kernel code to call into BPF programs with practically zero overhead.
+
+If no kernel module is given, all loaded modules are searched for the given function.
 
 Examples:
 
 ```
 # bpftrace -e 'kfunc:x86_pmu_stop { printf("pmu %s stop\n", str(args->event->pmu->name)); }'
 # bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));  }'
+# bpftrace -e 'kfunc:kvm:x86_emulate_insn { @ = count(); }'
 ```
 
 You can get list of available functions via list option:
@@ -1655,13 +1658,13 @@ You can get list of available functions via list option:
 ```
 # bpftrace -l
 ...
-kfunc:ksys_ioperm
-kfunc:ksys_unshare
-kfunc:ksys_setsid
-kfunc:ksys_sync_helper
-kfunc:ksys_fadvise64_64
-kfunc:ksys_readahead
-kfunc:ksys_mmap_pgoff
+kfunc:vmlinux:ksys_ioperm
+kfunc:vmlinux:ksys_unshare
+kfunc:vmlinux:ksys_setsid
+kfunc:vmlinux:ksys_sync_helper
+kfunc:vmlinux:ksys_fadvise64_64
+kfunc:vmlinux:ksys_readahead
+kfunc:vmlinux:ksys_mmap_pgoff
 ...
 ```
 
@@ -1670,8 +1673,8 @@ kfunc:ksys_mmap_pgoff
 Syntax:
 
 ```
-kfunc:function      args->NAME  ...
-kretfunc:function   args->NAME ... retval
+kfunc[:module]:function      args->NAME  ...
+kretfunc[:module]:function   args->NAME ... retval
 ```
 
 Arguments can be accessed via args being dereferenced to argument's `NAME`.
@@ -3672,11 +3675,15 @@ If kernel has BTF, kernel types are automatically available and there is no need
 to use them. To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` 
 is defined if BTF is detected. See tools/ for examples of its usage.
 
-Requirements for using BTF:
+Requirements for using BTF for vmlinux:
 
 - Linux 4.18+ with `CONFIG_DEBUG_INFO_BTF=y`
     - Building requires dwarves with pahole v1.13+
 - bpftrace v0.9.3+ with BTF support (built with libbpf v0.0.4+)
+
+Additional requirements for using BTF for kernel modules:
+- Linux 5.11+ with `CONFIG_DEBUG_INFO_BTF_MODULES=y`
+    - Building requires dwarves with pahole v1.19+
 
 See [kernel documentation](https://www.kernel.org/doc/html/latest/bpf/btf.html) for more information on BTF.
 
