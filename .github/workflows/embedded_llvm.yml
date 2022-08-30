@@ -18,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        llvm_version: [12, 14]
-        base: [xenial, bionic]
+        llvm_version: [14]
+        base: [bionic]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
