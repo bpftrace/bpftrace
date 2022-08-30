@@ -691,24 +691,51 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
 
 AttachPointParser::State AttachPointParser::kfunc_parser()
 {
-  if (parts_.size() != 2)
+  // kfunc[:module]:function
+  if (parts_.size() != 2 && parts_.size() != 3)
   {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
+    errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
+          << std::endl;
     return INVALID;
   }
 
-  ap_->func = parts_[1];
-  ap_->target = "";
-  if (ap_->func.find('*') == std::string::npos)
+  if (parts_.size() == 3)
   {
-    auto func_modules = bpftrace_.get_func_modules(ap_->func);
-    if (func_modules.size() == 1)
-      ap_->target = *func_modules.begin();
+    ap_->target = parts_[1];
+    ap_->func = parts_[2];
   }
   else
+  {
+    ap_->func = parts_[1];
+    if (ap_->func.find('*') == std::string::npos)
+    {
+      auto func_modules = bpftrace_.get_func_modules(ap_->func);
+      if (func_modules.size() == 1)
+        ap_->target = *func_modules.begin();
+      else if (func_modules.size() > 1)
+      {
+        if (listing_)
+          ap_->target = "*";
+        else
+        {
+          // Attaching to multiple functions of the same name is currently
+          // broken, ask the user to specify a module explicitly.
+          errs_ << "ambiguous attach point, please specify module containing "
+                   "the function \'"
+                << ap_->func << "\'";
+          return INVALID;
+        }
+      }
+    }
+    else // leave the module empty for now
+      ap_->target = "*";
+  }
+
+  if (ap_->func.find('*') != std::string::npos ||
+      ap_->target.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
   return OK;

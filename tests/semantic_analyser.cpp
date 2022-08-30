@@ -2575,6 +2575,9 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kfunc:func_1 { $x = args->a; $y = args->foo1; $z = args->foo2->f.a; }",
        0);
   test("kretfunc:func_1 { $x = retval; }", 0);
+  test("kfunc:vmlinux:func_1 { 1 }", 0);
+  test("kfunc:*:func_1 { 1 }", 0);
+
   test("kretfunc:func_1 { $x = args->foo; }", 1);
   test("kretfunc:func_1 { $x = args; }", 1);
   // reg() is not available in kfunc

@@ -157,7 +157,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       {
         symbol_stream = get_symbols_from_file(
             tracefs::available_filter_functions());
-        ignore_trailing_module = true;
+        symbol_stream = adjust_kernel_modules(*symbol_stream);
       }
       break;
     }
@@ -462,8 +462,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
-    case ProbeType::kfunc:
-    case ProbeType::kretfunc:
     case ProbeType::iter:
     {
       search_input = attach_point.func;
@@ -477,6 +475,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::tracepoint:
     case ProbeType::hardware:
     case ProbeType::software:
+    case ProbeType::kfunc:
+    case ProbeType::kretfunc:
     {
       // Do not expand "target:" as that would match all functions in target.
       // This may occur when an absolute address is given instead of a function.
@@ -548,6 +548,26 @@ void ProbeMatcher::list_structs(const std::string& search)
 
   for (auto& match : get_matches_in_set(search_input, structs))
     std::cout << match << std::endl;
+}
+
+// Transform the kernel syntax (function [module]) into bpftrace syntax
+// (module:function).
+std::unique_ptr<std::istream> ProbeMatcher::adjust_kernel_modules(
+    std::istream& symbol_list) const
+{
+  auto new_list = std::make_unique<std::stringstream>();
+  std::string line;
+  while (std::getline(symbol_list, line, '\n'))
+  {
+    if (symbol_has_module(line))
+    {
+      auto sym_mod = split_symbol_module(line);
+      *new_list << sym_mod.second << ":" << sym_mod.first << "\n";
+    }
+    else
+      *new_list << "vmlinux:" << line << "\n";
+  }
+  return new_list;
 }
 
 } // namespace bpftrace

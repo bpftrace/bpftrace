@@ -2179,8 +2179,8 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 === kfunc and kretfunc
 
 .variants
-* `kfunc:fn`
-* `kretfunc:fn`
+* `kfunc[:mod]:fn`
+* `kretfunc[:mod]:fn`
 
 .shortnames
 * `f` (`kfunc`)
@@ -2222,6 +2222,14 @@ fd 3 name ld.so.cache
 fd 3 name libselinux.so.1
 fd 3 name libselinux.so.1
 ...
+----
+
+----
+kfunc:kvm:x86_emulate_insn { @ = count(); }
+----
+
+----
+@ = 347603
 ----
 
 [#probes-kprobe]
