@@ -53,8 +53,8 @@ REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kfunc params
-RUN {{BPFTRACE}} -lv "kfunc:*" | grep kfunc
-EXPECT \s+[a-zA-Z_\*\s]+
+RUN {{BPFTRACE}} -lv "kfunc:*"
+EXPECT [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
