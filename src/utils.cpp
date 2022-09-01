@@ -22,6 +22,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "tracefs.h"
 #include "utils.h"
 #include <bcc/bcc_elf.h>
 #include <bcc/bcc_syms.h>
@@ -968,13 +969,12 @@ std::unordered_set<std::string> get_traceable_funcs()
   return {};
 #else
   // Try to get the list of functions from BPFTRACE_AVAILABLE_FUNCTIONS_TEST env
-  const char *path = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
+  const char *path_env = std::getenv("BPFTRACE_AVAILABLE_FUNCTIONS_TEST");
+  const std::string kprobe_path = path_env
+                                      ? path_env
+                                      : tracefs::available_filter_functions();
 
-  // Use kprobe list as default
-  if (!path)
-    path = kprobe_path.c_str();
-
-  std::ifstream available_funs(path);
+  std::ifstream available_funs(kprobe_path);
   if (available_funs.fail())
   {
     if (bt_debug != DebugLevel::kNone)

@@ -35,6 +35,7 @@ add_library(runtime
   resolve_cgroupid.cpp
   required_resources.cpp
   struct.cpp
+  tracefs.cpp
   types.cpp
   usdt.cpp
   utils.cpp
