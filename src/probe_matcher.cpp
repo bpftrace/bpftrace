@@ -11,6 +11,7 @@
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
+#include "tracefs.h"
 #include "utils.h"
 
 #include <bcc/bcc_syms.h>
@@ -116,7 +117,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     {
-      symbol_stream = get_symbols_from_file(kprobe_path);
+      symbol_stream = get_symbols_from_file(
+          tracefs::available_filter_functions());
       ignore_trailing_module = true;
       break;
     }
@@ -130,7 +132,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::tracepoint:
     {
-      symbol_stream = get_symbols_from_file(tp_avail_path);
+      symbol_stream = get_symbols_from_file(tracefs::available_events());
       break;
     }
     case ProbeType::usdt:
@@ -349,8 +351,7 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     auto event = tracepoint;
     auto category = erase_prefix(event);
 
-    std::string format_file_path = tp_path + "/" + category + "/" + event +
-                                   "/format";
+    std::string format_file_path = tracefs::event_format_file(category, event);
     std::ifstream format_file(format_file_path.c_str());
     std::string line;
 

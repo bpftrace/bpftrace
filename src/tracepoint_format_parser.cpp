@@ -7,6 +7,7 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "struct.h"
+#include "tracefs.h"
 #include "tracepoint_format_parser.h"
 
 namespace bpftrace {
@@ -38,7 +39,8 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
       {
         std::string &category = ap->target;
         std::string &event_name = ap->func;
-        std::string format_file_path = "/sys/kernel/debug/tracing/events/" + category + "/" + event_name + "/format";
+        std::string format_file_path = tracefs::event_format_file(category,
+                                                                  event_name);
         glob_t glob_result;
 
         if (has_wildcard(category) || has_wildcard(event_name))
@@ -78,7 +80,7 @@ bool TracepointFormatParser::parse(ast::Program *program, BPFtrace &bpftrace)
           for (size_t i = 0; i < glob_result.gl_pathc; ++i) {
             std::string filename(glob_result.gl_pathv[i]);
             std::ifstream format_file(filename);
-            std::string prefix("/sys/kernel/debug/tracing/events/");
+            const std::string prefix = tracefs::events() + "/";
             size_t pos = prefix.length();
             std::string real_category = filename.substr(
                 pos, filename.find('/', pos) - pos);

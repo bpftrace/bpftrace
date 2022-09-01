@@ -13,6 +13,7 @@
 
 #include "btf.h"
 #include "probe_matcher.h"
+#include "tracefs.h"
 #include "utils.h"
 
 namespace bpftrace {
@@ -106,7 +107,7 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
   {
     // List of available functions must be readable
-    std::ifstream traceable_funcs(kprobe_path);
+    std::ifstream traceable_funcs(tracefs::available_filter_functions());
     if (!traceable_funcs.good())
       return false;
   }
