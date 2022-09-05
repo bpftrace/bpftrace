@@ -480,7 +480,7 @@ int BTF::resolve_args(const std::string &func,
       if (bpftrace_->traceable_funcs_.empty())
         throw std::runtime_error("could not read traceable functions from " +
                                  tracefs::available_filter_functions() +
-                                 " (is debugfs mounted?)");
+                                 " (is tracefs mounted?)");
       else
         throw std::runtime_error("function not traceable (probably it is "
                                  "inlined or marked as \"notrace\")");
