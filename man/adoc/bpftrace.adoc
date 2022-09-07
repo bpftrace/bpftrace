@@ -2371,6 +2371,7 @@ snmpd /proc/net/dev
 .variants
 * `uprobe:binary:func`
 * `uprobe:binary:func+offset`
+* `uprobe:binary:offset`
 * `uretprobe:binary:func`
 
 .shortnames

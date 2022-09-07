@@ -1029,7 +1029,7 @@ Syntax:
 
 ```
 uprobe:library_name:function_name[+offset]
-uprobe:library_name:address
+uprobe:library_name:offset
 uretprobe:library_name:function_name
 ```
 
