@@ -13,6 +13,13 @@ ARCH aarch64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
+PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
+EXPECT ^@: 3567
+TIMEOUT 5
+ARCH armv7l
+AFTER ./testprogs/intptrcast
+
+NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+96)); exit();}
 EXPECT ^@: 3258
 TIMEOUT 5
@@ -45,6 +52,13 @@ PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+0); printf("%d\n
 EXPECT 3258
 TIMEOUT 5
 ARCH aarch64
+AFTER ./testprogs/intptrcast
+
+NAME Casting ints
+PROG uprobe:./testprogs/intptrcast:fn { $a=*(uint16*)(reg("sp")+4); printf("0x%x\n", $a); exit();}
+EXPECT 0x4321
+TIMEOUT 5
+ARCH armv7l
 AFTER ./testprogs/intptrcast
 
 NAME Casting ints

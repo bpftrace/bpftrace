@@ -83,6 +83,13 @@ ARCH s390x
 TIMEOUT 5
 AFTER ./testprogs/stack_args
 
+NAME sarg
+PROG uprobe:./testprogs/stack_args:too_many_args { printf("SUCCESS %d %d\n", sarg0, sarg1); exit(); }
+EXPECT SUCCESS 8 16
+ARCH armv7l
+TIMEOUT 5
+AFTER ./testprogs/stack_args
+
 NAME retval
 PROG kretprobe:vfs_read { printf("SUCCESS %d\n", retval); exit(); }
 EXPECT SUCCESS .*
