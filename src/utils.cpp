@@ -377,6 +377,12 @@ std::vector<std::string> get_kernel_cflags(
   if (archenv)
     cflags.push_back("-D__TARGET_ARCH_" + arch);
 
+  if (arch == "arm")
+  {
+    // Required by several header files in arch/arm/include
+    cflags.push_back("-D__LINUX_ARM_ARCH__=7");
+  }
+
   return cflags;
 }
 
