@@ -101,7 +101,7 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
   char logbuf[log_size] = {};
 
   std::optional<unsigned> btf_id;
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
+  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf())
     btf_id = btf_.get_btf_id(name);
 
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
