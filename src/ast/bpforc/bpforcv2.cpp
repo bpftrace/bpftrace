@@ -37,8 +37,8 @@ std::unique_ptr<BpfOrc> BpfOrc::Create()
   auto DL = cantFail(JTMB.getDefaultDataLayoutForTarget());
   auto TM = cantFail(JTMB.createTargetMachine());
 #if LLVM_VERSION_MAJOR >= 13
-  auto EPC = SelfExecutorProcessControl::Create();
-  auto ES = std::make_unique<ExecutionSession>(std::move(*EPC));
+  auto EPC = cantFail(SelfExecutorProcessControl::Create());
+  auto ES = std::make_unique<ExecutionSession>(std::move(EPC));
 #else
   auto ES = std::make_unique<ExecutionSession>();
 #endif
