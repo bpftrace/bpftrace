@@ -3319,9 +3319,16 @@ std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
   state_ = State::DONE;
 
 #ifdef LLVM_ORC_V2
-  auto has_sym = [this](const std::string &s) {
+  auto has_sym = [this](const std::string &s) -> bool {
     auto sym = orc_->lookup(s);
-    return (sym && sym->getAddress());
+
+    if (auto E = sym.takeError())
+    {
+      LOG(WARNING) << toString(std::move(E));
+      return false;
+    }
+
+    return sym->getAddress();
   };
   for (const auto &probe : bpftrace_.resources.special_probes)
   {
