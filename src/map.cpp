@@ -126,7 +126,7 @@ Map::Map(const std::string &name,
 Map::Map(const SizedType &type) : IMap(type)
 {
   int key_size = 4;
-  int value_size = sizeof(uintptr_t) * type.stack_type.limit;
+  int value_size = sizeof(uint64_t) * type.stack_type.limit;
   int max_entries = 128 << 10;
   int flags = 0;
 
