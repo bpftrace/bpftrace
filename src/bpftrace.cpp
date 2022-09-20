@@ -51,6 +51,12 @@ bool bt_verbose = false;
 bool bt_verbose2 = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
+struct bcc_symbol_option symopts = {
+  .use_debug_file = 1,
+  .check_debug_file_crc = 1,
+  .lazy_symbolize = 0,
+  .use_symbol_type = BCC_SYM_ALL_TYPES,
+};
 
 BPFtrace::~BPFtrace()
 {
@@ -314,14 +320,24 @@ int BPFtrace::add_probe(ast::Probe &p)
 
     if (resources.probes_using_usym.find(&p) !=
             resources.probes_using_usym.end() &&
-        symbol_table_cache_.find(attach_point->target) ==
-            symbol_table_cache_.end() &&
         bcc_elf_is_exe(attach_point->target.c_str()))
     {
       // preload symbol table for executable to make it available even if the
       // binary is not present at symbol resolution time
-      symbol_table_cache_[attach_point->target] = get_symbol_table_for_elf(
-          attach_point->target);
+      // note: this only makes sense with ASLR disabled, since with ASLR offsets
+      // might be different
+      if (cache_user_symbols_per_program_ &&
+          symbol_table_cache_.find(attach_point->target) ==
+              symbol_table_cache_.end())
+        symbol_table_cache_[attach_point->target] = get_symbol_table_for_elf(
+            attach_point->target);
+
+      // preload symbol tables from running processes
+      // this allows symbol resolution for processes that are running at probe
+      // attach time, but not at symbol resolution time, even with ASLR enabled,
+      // since BCC symcache records the offsets
+      for (int pid : get_pids_for_program(attach_point->target))
+        pid_sym_[pid] = bcc_symcache_new(pid, &symopts);
     }
   }
 
@@ -2264,12 +2280,6 @@ std::string BPFtrace::resolve_usym(uintptr_t addr,
   struct bcc_symbol usym;
   std::ostringstream symbol;
   void *psyms = nullptr;
-  struct bcc_symbol_option symopts;
-
-  memset(&symopts, 0, sizeof(symopts));
-  symopts.use_debug_file = 1;
-  symopts.check_debug_file_crc = 1;
-  symopts.use_symbol_type = BCC_SYM_ALL_TYPES;
 
   if (resolve_user_symbols_)
   {
