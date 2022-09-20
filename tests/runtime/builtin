@@ -118,6 +118,11 @@ EXPECT ^BEGIN-END$
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
+NAME interval probe
+PROG interval:ms:2000 { print(probe); exit(); }
+EXPECT ^interval:ms:2000$
+TIMEOUT 5
+
 NAME curtask
 PROG i:ms:1 { printf("SUCCESS %d\n", curtask); exit(); }
 EXPECT SUCCESS -?[0-9][0-9]*

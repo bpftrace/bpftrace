@@ -408,7 +408,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
   }
   else if (builtin.ident == "probe") {
     builtin.type = CreateProbe();
-    probe_->need_expansion = true;
+    if (has_wildcard(probe_->name()))
+      probe_->need_expansion = true;
   }
   else if (builtin.ident == "username") {
     builtin.type = CreateUsername();

@@ -13,6 +13,9 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix probe builtin probe expansion bug
+  - [#2363](https://github.com/iovisor/bpftrace/pull/2363)
+
 #### Docs
 #### Tools
 

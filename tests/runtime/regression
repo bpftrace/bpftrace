@@ -41,7 +41,7 @@ TIMEOUT 1
 
 # https://github.com/iovisor/bpftrace/issues/1952
 NAME async_id_invalid_probe_expansion
-PROG kprobe:zzzzz { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }
+PROG kprobe:zzzzz* { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }
 EXPECT _success_
 TIMEOUT 1
 
