@@ -19,7 +19,7 @@ jobs:
     strategy:
       matrix:
         llvm_version: [12]
-        base: [xenial, bionic]
+        base: [xenial, bionic, focal]
     steps:
     - name: Checkout repo
       uses: actions/checkout@v2
