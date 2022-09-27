@@ -23,7 +23,7 @@
 BEGIN
 {
 	printf("Tracing md flush events... Hit Ctrl-C to end.\n");
-	printf("%-8s %-6s %-16s %s", "TIME", "PID", "COMM", "DEVICE");
+	printf("%-8s %-6s %-16s %s\n", "TIME", "PID", "COMM", "DEVICE");
 }
 
 kprobe:md_flush_request
