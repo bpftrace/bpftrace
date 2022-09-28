@@ -18,13 +18,18 @@
 #endif
 #include <llvm/Transforms/IPO.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#if LLVM_VERSION_MAJOR >= 14
+#include <llvm/MC/TargetRegistry.h>
+#else
+#include <llvm/Support/TargetRegistry.h>
+#endif
 
 #include "arch/arch.h"
 #include "ast.h"
 #include "ast/async_event_types.h"
-#include "ast/bpforc/bpforc.h"
 #include "ast/codegen_helper.h"
 #include "ast/signal_bt.h"
+#include "elf_parser.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -36,12 +41,25 @@ namespace ast {
 CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     : root_(root),
       bpftrace_(bpftrace),
-      orc_(BpfOrc::Create()),
-      module_(std::make_unique<Module>("bpftrace", orc_->getContext())),
-      b_(orc_->getContext(), *module_.get(), bpftrace)
+      context_(std::make_unique<LLVMContext>()),
+      module_(std::make_unique<Module>("bpftrace", *context_)),
+      b_(*context_, *module_, bpftrace)
 {
-  module_->setDataLayout(datalayout());
+  std::string error_str;
+  auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
+  if (!target)
+    throw std::runtime_error(
+        "Could not find bpf llvm target, does your llvm support it?");
+
+  target_machine_.reset(target->createTargetMachine(LLVMTargetTriple,
+                                                    "generic",
+                                                    "",
+                                                    TargetOptions(),
+                                                    Optional<Reloc::Model>()));
+  target_machine_->setOptLevel(llvm::CodeGenOpt::Aggressive);
+
   module_->setTargetTriple(LLVMTargetTriple);
+  module_->setDataLayout(target_machine_->createDataLayout());
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -2972,7 +2990,7 @@ MDNode *CodegenLLVM::createLoopMetadata()
   //
   // For legacy reasons, the first item of a loop metadata node must be
   // a self-reference. See https://llvm.org/docs/LangRef.html#llvm-loop
-  LLVMContext &context = orc_->getContext();
+  LLVMContext &context = *context_;
   MDNode *unroll_disable = MDNode::get(
       context, MDString::get(context, "llvm.loop.unroll.disable"));
   MDNode *loopid = MDNode::getDistinct(context,
@@ -3210,43 +3228,18 @@ void CodegenLLVM::generate_ir()
 void CodegenLLVM::emit_elf(const std::string &filename)
 {
   assert(state_ == State::OPT);
-  legacy::PassManager PM;
 
-#if LLVM_VERSION_MAJOR >= 10
-  auto type = llvm::CGFT_ObjectFile;
-#else
-  auto type = llvm::TargetMachine::CGFT_ObjectFile;
-#endif
-
-#if LLVM_VERSION_MAJOR >= 7
   std::error_code err;
   raw_fd_ostream out(filename, err);
-
   if (err)
     throw std::system_error(err.value(),
                             std::generic_category(),
                             "Failed to open: " + filename);
-  if (orc_->getTargetMachine().addPassesToEmitFile(PM, out, nullptr, type))
-    throw std::runtime_error("Cannot emit a file of this type");
-  PM.run(*module_.get());
+
+  emit(out);
+  out.flush();
 
   return;
-
-#else
-  std::ofstream file(filename);
-  if (!file.is_open())
-    throw std::system_error(errno,
-                            std::generic_category(),
-                            "Failed to open: " + filename);
-  std::unique_ptr<SmallVectorImpl<char>> buf(new SmallVector<char, 0>());
-  raw_svector_ostream out(*buf);
-
-  if (orc_->getTargetMachine().addPassesToEmitFile(
-          PM, out, type, true, nullptr))
-    throw std::runtime_error("Cannot emit a file of this type");
-
-  file.write(buf->data(), buf->size_in_bytes());
-#endif
 }
 
 void CodegenLLVM::optimize()
@@ -3260,7 +3253,7 @@ void CodegenLLVM::optimize()
   pto.LoopVectorization = false;
   pto.SLPVectorization = false;
 
-  llvm::PassBuilder pb(&orc_->getTargetMachine(), pto);
+  llvm::PassBuilder pb(target_machine_.get(), pto);
 
   // ModuleAnalysisManager must be destroyed first.
   llvm::LoopAnalysisManager lam;
@@ -3312,39 +3305,33 @@ bool CodegenLLVM::verify(void)
   return !ret;
 }
 
+void CodegenLLVM::emit(raw_pwrite_stream &stream)
+{
+  legacy::PassManager PM;
+
+#if LLVM_VERSION_MAJOR >= 10
+  auto type = llvm::CGFT_ObjectFile;
+#else
+  auto type = llvm::TargetMachine::CGFT_ObjectFile;
+#endif
+
+  if (target_machine_->addPassesToEmitFile(PM, stream, nullptr, type))
+    throw std::runtime_error("Cannot emit a file of this type");
+  PM.run(*module_.get());
+}
+
 BpfBytecode CodegenLLVM::emit(void)
 {
   assert(state_ == State::OPT);
-  orc_->compile(move(module_));
+  SmallVector<char, 0> output;
+  raw_svector_ostream os(output);
+
+  emit(os);
+
+  assert(!output.empty());
+
   state_ = State::DONE;
-
-  auto orc = std::move(orc_);
-
-#ifdef LLVM_ORC_V2
-  auto has_sym = [this](const std::string &s) -> bool {
-    auto sym = orc_->lookup(s);
-
-    if (auto E = sym.takeError())
-    {
-      LOG(WARNING) << toString(std::move(E));
-      return false;
-    }
-
-    return sym->getAddress();
-  };
-  for (const auto &probe : bpftrace_.resources.special_probes)
-  {
-    if (has_sym(probe.name) || has_sym(probe.orig_name))
-      return orc->getBytecode();
-  }
-  for (const auto &probe : bpftrace_.resources.probes)
-  {
-    if (has_sym(probe.name) || has_sym(probe.orig_name))
-      return orc->getBytecode();
-  }
-#endif
-
-  return orc->getBytecode();
+  return elf::parseBpfBytecodeFromElfObject(output.data());
 }
 
 BpfBytecode CodegenLLVM::compile(void)
