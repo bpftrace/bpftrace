@@ -29,7 +29,6 @@ target_compile_definitions(ast PRIVATE ${BPFTRACE_FLAGS})
 
 if (STATIC_LINKING)
   set(clang_libs
-      libclang.a
       clangAST
       clangAnalysis
       clangBasic
@@ -59,6 +58,15 @@ if (STATIC_LINKING)
     target_link_libraries(ast "-Wl,--start-group" ${CLANG_EMBEDDED_CMAKE_TARGETS} ${LLVM_EMBEDDED_CMAKE_TARGETS} "-Wl,--end-group")
   else()
     llvm_map_components_to_libnames(llvm_libs ${llvm_lib_names})
+
+    if(TARGET libclang_static)
+      target_link_libraries(ast libclang_static)
+    else()
+      # old LLVM versions don't export libclang_static in ClangTargets.cmake; fall back to
+      # libclang.a in that case
+      target_link_libraries(ast libclang.a)    
+    endif()
+
     target_link_libraries(ast ${clang_libs})
     target_link_libraries(ast ${llvm_libs})
   endif()
