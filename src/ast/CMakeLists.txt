@@ -21,7 +21,7 @@ add_library(ast
 target_include_directories(ast_defs PUBLIC ${CMAKE_SOURCE_DIR}/src)
 target_include_directories(ast_defs PUBLIC ${CMAKE_SOURCE_DIR}/src/ast)
 target_include_directories(ast_defs PUBLIC ${CMAKE_BINARY_DIR})
-target_link_libraries(ast ast_defs arch bpforc parser)
+target_link_libraries(ast ast_defs arch parser)
 
 add_dependencies(ast_defs parser)
 
@@ -78,5 +78,3 @@ else()
   endif()
   target_link_libraries(ast libclang)
 endif()
-
-add_subdirectory(bpforc)

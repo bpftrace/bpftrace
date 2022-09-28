@@ -6,7 +6,6 @@
 #include "gtest/gtest.h"
 
 #include "../mocks.h"
-#include "ast/bpforc/bpforc.h"
 
 #include "ast/passes/codegen_llvm.h"
 #include "ast/passes/resource_analyser.h"

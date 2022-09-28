@@ -13,7 +13,6 @@
 #include <unistd.h>
 
 #include "aot/aot.h"
-#include "ast/bpforc/bpforc.h"
 #include "ast/pass_manager.h"
 
 #include "ast/passes/codegen_llvm.h"
