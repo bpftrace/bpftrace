@@ -894,8 +894,6 @@ int main(int argc, char* argv[])
   BpfBytecode bytecode;
   try
   {
-    std::unique_ptr<BpfOrc> bpforc;
-
     llvm.generate_ir();
     if (bt_debug == DebugLevel::kFullDebug)
     {
@@ -932,16 +930,7 @@ int main(int argc, char* argv[])
       llvm.emit_elf(args.output_elf);
       return 0;
     }
-    bpforc = llvm.emit();
-    if (bt_debug == DebugLevel::kFullDebug)
-    {
-      std::cout << "\nLLVM JITDLib state\n";
-      std::cout << "------------------\n\n";
-      raw_os_ostream os(std::cout);
-      bpforc->dump(os);
-    }
-
-    bytecode = bpforc->getBytecode();
+    bytecode = std::move(llvm.emit());
   }
   catch (const std::system_error& ex)
   {
