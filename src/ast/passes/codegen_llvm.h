@@ -11,7 +11,6 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
 
-#include "ast/bpforc/bpforc.h"
 #include "ast/irbuilderbpf.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
@@ -78,10 +77,12 @@ public:
   bool verify(void);
   BpfBytecode emit(void);
   void emit_elf(const std::string &filename);
+  void emit(raw_pwrite_stream &stream);
   // Combine generate_ir, optimize and emit into one call
   BpfBytecode compile(void);
 
 private:
+  static constexpr char LLVMTargetTriple[] = "bpf-pc-linux";
   class ScopedExprDeleter
   {
   public:
@@ -202,13 +203,14 @@ private:
   Node *root_ = nullptr;
 
   BPFtrace &bpftrace_;
-  std::unique_ptr<BpfOrc> orc_;
+  std::unique_ptr<LLVMContext> context_;
+  std::unique_ptr<TargetMachine> target_machine_;
   std::unique_ptr<Module> module_;
   IRBuilderBPF b_;
 
   const DataLayout &datalayout() const
   {
-    return orc_->getDataLayout();
+    return module_->getDataLayout();
   }
 
   Value *expr_ = nullptr;
@@ -241,7 +243,7 @@ private:
 
   size_t getStructSize(StructType *s)
   {
-    return datalayout().getTypeAllocSize(s);
+    return module_->getDataLayout().getTypeAllocSize(s);
   }
 
   std::vector<std::tuple<BasicBlock *, BasicBlock *>> loops_;
