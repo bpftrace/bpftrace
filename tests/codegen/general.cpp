@@ -53,10 +53,10 @@ TEST(codegen, populate_sections)
   ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
-  auto bpforc = codegen.compile();
+  auto bytecode = codegen.compile();
 
-  EXPECT_TRUE(bpforc->getSection("s_kprobe:foo_1").has_value());
-  EXPECT_TRUE(bpforc->getSection("s_kprobe:bar_1").has_value());
+  EXPECT_NE(bytecode.find("s_kprobe:foo_1"), bytecode.end());
+  EXPECT_NE(bytecode.find("s_kprobe:bar_1"), bytecode.end());
 }
 
 TEST(codegen, printf_offsets)

@@ -76,10 +76,10 @@ public:
   void generate_ir(void);
   void optimize(void);
   bool verify(void);
-  std::unique_ptr<BpfOrc> emit(void);
+  BpfBytecode emit(void);
   void emit_elf(const std::string &filename);
   // Combine generate_ir, optimize and emit into one call
-  std::unique_ptr<BpfOrc> compile(void);
+  BpfBytecode compile(void);
 
 private:
   class ScopedExprDeleter

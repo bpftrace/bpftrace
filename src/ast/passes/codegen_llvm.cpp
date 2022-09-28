@@ -3312,11 +3312,13 @@ bool CodegenLLVM::verify(void)
   return !ret;
 }
 
-std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
+BpfBytecode CodegenLLVM::emit(void)
 {
   assert(state_ == State::OPT);
   orc_->compile(move(module_));
   state_ = State::DONE;
+
+  auto orc = std::move(orc_);
 
 #ifdef LLVM_ORC_V2
   auto has_sym = [this](const std::string &s) -> bool {
@@ -3333,19 +3335,19 @@ std::unique_ptr<BpfOrc> CodegenLLVM::emit(void)
   for (const auto &probe : bpftrace_.resources.special_probes)
   {
     if (has_sym(probe.name) || has_sym(probe.orig_name))
-      return std::move(orc_);
+      return orc->getBytecode();
   }
   for (const auto &probe : bpftrace_.resources.probes)
   {
     if (has_sym(probe.name) || has_sym(probe.orig_name))
-      return std::move(orc_);
+      return orc->getBytecode();
   }
 #endif
 
-  return std::move(orc_);
+  return orc->getBytecode();
 }
 
-std::unique_ptr<BpfOrc> CodegenLLVM::compile(void)
+BpfBytecode CodegenLLVM::compile(void)
 {
   generate_ir();
   optimize();
