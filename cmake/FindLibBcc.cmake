@@ -60,8 +60,15 @@ if(STATIC_LINKING)
   # If we do a static bpftrace build, we must link them in.
   find_package(LibBpf)
   find_package(LibElf)
-  find_package(LibZ)
-  SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
+
+  if(ANDROID)
+    # libz is part of the Android NDK; link against it dynamically
+    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES})
+    SET(CMAKE_REQUIRED_LINK_OPTIONS "-lz")
+  else()
+    find_package(LibZ)
+    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
+  endif()  
 else()
   SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_LIBRARIES} ${LIBBPF_LIBRARIES})
 endif()
