@@ -34,7 +34,7 @@ jobs:
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Release
@@ -42,7 +42,7 @@ jobs:
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 10 Clang Debug
@@ -52,7 +52,7 @@ jobs:
           CXX: clang++-10
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Debug
@@ -60,7 +60,7 @@ jobs:
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 11 Release
@@ -68,7 +68,7 @@ jobs:
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 12 Release
@@ -76,7 +76,7 @@ jobs:
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 13 Release
@@ -84,7 +84,7 @@ jobs:
           LLVM_VERSION: 13
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 14 Release
@@ -92,7 +92,7 @@ jobs:
           LLVM_VERSION: 14
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: LLVM 15 Release
@@ -100,7 +100,7 @@ jobs:
           LLVM_VERSION: 15
           RUN_ALL_TESTS: 1
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
         - NAME: Memleak test (LLVM 11 Debug)
