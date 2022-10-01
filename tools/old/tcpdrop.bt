@@ -9,15 +9,18 @@
  * It is limited to ipv4 addresses, and cannot show tcp flags.
  *
  * This provides information such as packet details, socket state, and kernel
- * stack trace for packets/segments that were dropped via kfree_skb.
+ * stack trace for packets/segments that were dropped via tcp_drop().
+
+ * WARNING: this script attaches to the tcp_drop kprobe which is likely inlined
+ *          on newer kernels and not replaced by anything else, therefore
+ *          the script will stop working
  *
- * For Linux 5.17+ (see tools/old for script for lower versions).
+ * For Linux <= 5.18.
  *
  * Copyright (c) 2018 Dale Hamel.
  * Licensed under the Apache License, Version 2.0 (the "License")
  *
  * 23-Nov-2018	Dale Hamel	created this.
- * 01-Oct-2022	Rong Tao	use tracepoint:skb:kfree_skb
  */
 
 #ifndef BPFTRACE_HAVE_BTF
@@ -47,15 +50,12 @@ BEGIN
   @tcp_states[12] = "NEW_SYN_RECV";
 }
 
-tracepoint:skb:kfree_skb
+kprobe:tcp_drop
 {
-  $reason = args->reason;
-  $skb = (struct sk_buff *)args->skbaddr;
-  $sk = ((struct sock *) $skb->sk);
+  $sk = ((struct sock *) arg0);
   $inet_family = $sk->__sk_common.skc_family;
 
-  if ($reason > SKB_DROP_REASON_NOT_SPECIFIED &&
-      ($inet_family == AF_INET || $inet_family == AF_INET6)) {
+  if ($inet_family == AF_INET || $inet_family == AF_INET6) {
     if ($inet_family == AF_INET) {
       $daddr = ntop($sk->__sk_common.skc_daddr);
       $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
