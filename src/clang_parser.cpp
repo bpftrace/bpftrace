@@ -41,6 +41,11 @@ const std::vector<CXUnsavedFile> &getDefaultHeaders()
         .Length = stdarg_h_len,
     },
     {
+        .Filename = "/bpftrace/include/stdbool.h",
+        .Contents = stdbool_h,
+        .Length = stdbool_h_len,
+    },
+    {
         .Filename = "/bpftrace/include/stddef.h",
         .Contents = stddef_h,
         .Length = stddef_h_len,
