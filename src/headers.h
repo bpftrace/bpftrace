@@ -11,6 +11,8 @@ extern const char limits_h[];
 extern const unsigned limits_h_len;
 extern const char stdarg_h[];
 extern const unsigned stdarg_h_len;
+extern const char stdbool_h[];
+extern const unsigned stdbool_h_len;
 extern const char stddef_h[];
 extern const unsigned stddef_h_len;
 extern const char stdint_h[];
