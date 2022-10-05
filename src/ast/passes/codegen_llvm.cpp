@@ -24,6 +24,8 @@
 #include <llvm/Support/TargetRegistry.h>
 #endif
 
+#include <llvm/Support/TargetSelect.h>
+
 #include "arch/arch.h"
 #include "ast.h"
 #include "ast/async_event_types.h"
@@ -45,6 +47,9 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
       module_(std::make_unique<Module>("bpftrace", *context_)),
       b_(*context_, *module_, bpftrace)
 {
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmPrinters();
   std::string error_str;
   auto target = llvm::TargetRegistry::lookupTarget(LLVMTargetTriple, error_str);
   if (!target)
