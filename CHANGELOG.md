@@ -17,6 +17,9 @@ and this project adheres to
 #### Fixed
 - Fix pointer/register loads on 32-bit architectures
   - [#2361](https://github.com/iovisor/bpftrace/pull/2361)
+- Fix kprobe multi-attachment
+  - [#2381](https://github.com/iovisor/bpftrace/pull/2381)
+
 #### Docs
 #### Tools
 
