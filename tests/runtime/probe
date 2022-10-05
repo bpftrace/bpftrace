@@ -55,7 +55,7 @@ TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 
 NAME kprobe_multi_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep type | grep 8 | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
@@ -124,7 +124,7 @@ TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
 
 NAME kretprobe_multi_wildcard
-RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep type | grep 8 | wc -l"); exit(); }'
+RUN {{BPFTRACE}} --unsafe -e 'kretprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
