@@ -138,7 +138,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
 
       if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
-          attach_funcs.size() &&
+          !p.need_expansion && attach_funcs.size() &&
           (probetype(attach_point->provider) == ProbeType::kprobe ||
            probetype(attach_point->provider) == ProbeType::kretprobe))
       {
