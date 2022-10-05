@@ -41,6 +41,7 @@ RUN apt-get update && apt-get install -y \
       llvm-${LLVM_VERSION}-dev \
       llvm-${LLVM_VERSION}-runtime \
       libllvm${LLVM_VERSION} \
+      linux-tools-$(uname -r) \
       systemtap-sdt-dev \
       python3 \
       xxd \
