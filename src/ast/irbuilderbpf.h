@@ -5,6 +5,8 @@
 #include <llvm/Config/llvm-config.h>
 #include <llvm/IR/IRBuilder.h>
 
+#include <optional>
+
 #include "ast/ast.h"
 #include "bpftrace.h"
 #include "types.h"
@@ -89,6 +91,26 @@ public:
                        Value *src,
                        AddrSpace as,
                        const location &loc);
+  // Emits a bpf_probe_read call in which the size is derived from the SizedType
+  // argument. Has special handling for certain types such as pointers where the
+  // size depends on the host system as well as the probe type.
+  // If provided, the optional AddrSpace argument is used instead of the type's
+  // address space (which may not always be set).
+  void CreateProbeRead(Value *ctx,
+                       Value *dest,
+                       const SizedType &type,
+                       Value *src,
+                       const location &loc,
+                       std::optional<AddrSpace> addrSpace = std::nullopt);
+  // Emits the load instruction the type of which is derived from the provided
+  // SizedType. Used to access elements from structures that ctx points to, or
+  // those that have already been pulled onto the BPF stack. Correctly handles
+  // pointer size differences (see CreateProbeRead).
+  llvm::Value *CreateDatastructElemLoad(
+      const SizedType &type,
+      llvm::Value *ptr,
+      bool isVolatile = false,
+      std::optional<AddrSpace> addrSpace = std::nullopt);
   CallInst *CreateProbeReadStr(Value *ctx,
                                AllocaInst *dst,
                                llvm::Value *size,

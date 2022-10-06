@@ -1355,6 +1355,62 @@ StoreInst *IRBuilderBPF::createAlignedStore(Value *val,
 #endif
 }
 
+void IRBuilderBPF::CreateProbeRead(Value *ctx,
+                                   Value *dst,
+                                   const SizedType &type,
+                                   Value *src,
+                                   const location &loc,
+                                   std::optional<AddrSpace> addrSpace)
+{
+  AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
+
+  if (!type.IsPtrTy())
+    return CreateProbeRead(ctx, dst, type.GetSize(), src, as, loc);
+
+  // Pointers are internally always represented as 64-bit integers, matching the
+  // BPF register size (BPF is a 64-bit ISA). This helps to avoid BPF codegen
+  // issues such as truncating PTR_TO_STACK registers using shift operations,
+  // which is disallowed (see https://github.com/iovisor/bpftrace/pull/2361).
+  // However, when reading pointers from kernel or user memory, we need to use
+  // the appropriate size for the target system.
+  const size_t ptr_size = getPointerStorageTy(as)->getIntegerBitWidth() / 8;
+
+#if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+  // TODO: support 32-bit big-endian systems
+  assert(ptr_size == type.GetSize());
+#endif
+
+  if (ptr_size != type.GetSize())
+    CREATE_MEMSET(dst, getInt8(0), type.GetSize(), 1);
+
+  CreateProbeRead(ctx, dst, ptr_size, src, as, loc);
+}
+
+llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
+    const SizedType &type,
+    llvm::Value *ptr,
+    bool isVolatile,
+    std::optional<AddrSpace> addrSpace)
+{
+  AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
+  llvm::Type *ptr_storage_ty = getPointerStorageTy(as);
+
+  if (!type.IsPtrTy() || ptr_storage_ty == getInt64Ty())
+    return CreateLoad(GetType(type), ptr, isVolatile);
+
+  assert(GetType(type) == getInt64Ty());
+
+  // Pointer size for the given address space doesn't match the BPF-side
+  // representation. Use ptr_storage_ty as the load type and cast the result
+  // back to int64.
+  llvm::Value *expr = CreateLoad(
+      ptr_storage_ty,
+      CreatePointerCast(ptr, ptr_storage_ty->getPointerTo()),
+      isVolatile);
+
+  return CreateIntCast(expr, getInt64Ty(), false);
+}
+
 llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
 {
   switch (as)

@@ -271,10 +271,19 @@ void CodegenLLVM::visit(Builtin &builtin)
     int arg_num = atoi(builtin.ident.substr(4).c_str());
     Value *sp = b_.CreateRegisterRead(ctx_, sp_offset, "reg_sp");
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
-    Value *src = b_.CreateAdd(sp,
-                              b_.getInt64((arg_num + arch::arg_stack_offset()) *
-                                          sizeof(uintptr_t)));
-    b_.CreateProbeRead(ctx_, dst, 8, src, builtin.type.GetAS(), builtin.loc);
+
+    // Pointer width is used when calculating the SP offset and the number of
+    // bytes to read from stack for each argument. We pass a pointer SizedType
+    // to CreateProbeRead to make sure it uses the correct read size while
+    // keeping builtin.type an int64.
+    size_t arg_width =
+        b_.getPointerStorageTy(builtin.type.GetAS())->getIntegerBitWidth() / 8;
+    SizedType arg_type = CreatePointer(CreateInt8(), builtin.type.GetAS());
+    assert(builtin.type.GetSize() == arg_type.GetSize());
+
+    Value *src = b_.CreateAdd(
+        sp, b_.getInt64((arg_num + arch::arg_stack_offset()) * arg_width));
+    b_.CreateProbeRead(ctx_, dst, arg_type, src, builtin.loc);
     expr_ = b_.CreateLoad(b_.GetType(builtin.type), dst);
     b_.CreateLifetimeEnd(dst);
   }
@@ -1629,10 +1638,8 @@ void CodegenLLVM::unop_ptr(Unop &unop)
       if (unop.type.IsIntegerTy() || unop.type.IsPtrTy())
       {
         auto *et = type.GetPointeeTy();
-        // Pointer always 64 bits wide
-        int size = unop.type.IsIntegerTy() ? et->GetIntBitWidth() / 8 : 8;
         AllocaInst *dst = b_.CreateAllocaBPF(*et, "deref");
-        b_.CreateProbeRead(ctx_, dst, size, expr_, type.GetAS(), unop.loc);
+        b_.CreateProbeRead(ctx_, dst, *et, expr_, unop.loc, type.GetAS());
         expr_ = b_.CreateLoad(b_.GetType(*et), dst);
         b_.CreateLifetimeEnd(dst);
       }
@@ -3396,7 +3403,8 @@ void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
   if (elem_type.IsIntegerTy() || elem_type.IsPtrTy())
   {
     // Load the correct type from src
-    expr_ = b_.CreateLoad(b_.GetType(elem_type), src, true);
+    expr_ = b_.CreateDatastructElemLoad(
+        elem_type, src, true, data_type.GetAS());
   }
   else
   {
@@ -3450,9 +3458,11 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
     // Read data onto stack
     if (data_type.IsCtxAccess())
     {
-      expr_ = b_.CreateLoad(dst_type,
-                            b_.CreateIntToPtr(src, dst_type->getPointerTo()),
-                            true);
+      expr_ = b_.CreateDatastructElemLoad(
+          elem_type,
+          b_.CreateIntToPtr(src, dst_type->getPointerTo()),
+          true,
+          data_type.GetAS());
 
       // check context access for iter probes (required by kernel)
       if (probetype(current_attach_point_->provider) == ProbeType::iter)
@@ -3479,8 +3489,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
     else
     {
       AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-      b_.CreateProbeRead(
-          ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
+      b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
       expr_ = b_.CreateLoad(b_.GetType(elem_type), dst);
       b_.CreateLifetimeEnd(dst);
     }
