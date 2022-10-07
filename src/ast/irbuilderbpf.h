@@ -148,6 +148,7 @@ public:
   StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
+  Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
   CallInst *CreateSkbOutput(Value *skb,
                             Value *len,

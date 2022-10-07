@@ -269,12 +269,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
 
     int arg_num = atoi(builtin.ident.substr(4).c_str());
-    Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
-    Value *sp = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(b_.getInt64Ty(), ctx, b_.getInt64(sp_offset)),
-        "reg_sp");
-    dyn_cast<LoadInst>(sp)->setVolatile(true);
+    Value *sp = b_.CreateRegisterRead(ctx_, sp_offset, "reg_sp");
     AllocaInst *dst = b_.CreateAllocaBPF(builtin.type, builtin.ident);
     Value *src = b_.CreateAdd(sp,
                               b_.getInt64((arg_num + arch::arg_stack_offset()) *
@@ -879,12 +874,7 @@ void CodegenLLVM::visit(Call &call)
       LOG(FATAL) << "negative offset on reg() call";
     }
 
-    Value *ctx = b_.CreatePointerCast(ctx_, b_.getInt64Ty()->getPointerTo());
-    expr_ = b_.CreateLoad(
-        b_.getInt64Ty(),
-        b_.CreateGEP(b_.getInt64Ty(), ctx, b_.getInt64(offset)),
-        call.func + "_" + reg_name);
-    dyn_cast<LoadInst>(expr_)->setVolatile(true);
+    expr_ = b_.CreateRegisterRead(ctx_, offset, call.func + "_" + reg_name);
   }
   else if (call.func == "printf")
   {
@@ -3087,12 +3077,9 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   // Pull out function argument
   Value *ctx = func->arg_begin();
   int offset = arch::arg_offset(arg_num);
-  Value *arg = b_.CreateGEP(b_.getInt8Ty(),
-                            ctx,
-                            b_.getInt64(offset * sizeof(uintptr_t)));
-  Value *addr = b_.CreateLoad(b_.getInt64Ty(),
-                              arg,
-                              "arg" + std::to_string(arg_num));
+  Value *addr = b_.CreateRegisterRead(ctx,
+                                      offset,
+                                      "arg" + std::to_string(arg_num));
 
   // Tell userspace to setup the real watchpoint
   auto elements = AsyncEvent::Watchpoint().asLLVMType(b_);
