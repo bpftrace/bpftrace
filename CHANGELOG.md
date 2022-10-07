@@ -15,6 +15,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix pointer/register loads on 32-bit architectures
+  - [#2361](https://github.com/iovisor/bpftrace/pull/2361)
 #### Docs
 #### Tools
 
