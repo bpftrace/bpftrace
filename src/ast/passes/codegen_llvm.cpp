@@ -682,10 +682,6 @@ void CodegenLLVM::visit(Call &call)
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(arg0);
     auto addrspace = arg0->type.GetAS();
-    AllocaInst *first = b_.CreateAllocaBPF(b_.getInt64Ty(),
-                                           call.func + "_first");
-    AllocaInst *second = b_.CreateAllocaBPF(b_.getInt64Ty(),
-                                            call.func + "_second");
     Value *perfdata = b_.CreateGetJoinMap(ctx_, call.loc);
     Function *parent = b_.GetInsertBlock()->getParent();
 
@@ -714,8 +710,14 @@ void CodegenLLVM::visit(Call &call)
                        b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8)),
                        b_.getInt64Ty()->getPointerTo()));
     join_id_++;
+
+    SizedType elem_type = CreatePointer(CreateInt8(), addrspace);
+    size_t ptr_width = b_.getPointerStorageTy(addrspace)->getIntegerBitWidth();
+    assert(b_.GetType(elem_type) == b_.getInt64Ty());
+
+    // temporary that stores the value of arg[i]
     AllocaInst *arr = b_.CreateAllocaBPF(b_.getInt64Ty(), call.func + "_r0");
-    b_.CreateProbeRead(ctx_, arr, 8, expr_, addrspace, call.loc);
+    b_.CreateProbeRead(ctx_, arr, elem_type, expr_, call.loc);
     b_.CreateProbeReadStr(
         ctx_,
         b_.CreateGEP(b_.getInt8Ty(), perfdata, b_.getInt64(8 + 8)),
@@ -726,21 +728,17 @@ void CodegenLLVM::visit(Call &call)
 
     for (unsigned int i = 1; i < bpftrace_.join_argnum_; i++)
     {
-      // argi
-      b_.CreateStore(b_.CreateAdd(expr_, b_.getInt64(8 * i)), first);
-      b_.CreateProbeRead(ctx_,
-                         second,
-                         8,
-                         b_.CreateLoad(b_.getInt64Ty(), first),
-                         addrspace,
-                         call.loc);
+      // advance to the next array element
+      expr_ = b_.CreateAdd(expr_, b_.getInt64(ptr_width / 8));
+
+      b_.CreateProbeRead(ctx_, arr, elem_type, expr_, call.loc);
       b_.CreateProbeReadStr(
           ctx_,
           b_.CreateGEP(b_.getInt8Ty(),
                        perfdata,
                        b_.getInt64(8 + 8 + i * bpftrace_.join_argsize_)),
           bpftrace_.join_argsize_,
-          b_.CreateLoad(b_.getInt64Ty(), second),
+          b_.CreateLoad(b_.getInt64Ty(), arr),
           addrspace,
           call.loc);
     }
