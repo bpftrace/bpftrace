@@ -1340,5 +1340,30 @@ StoreInst *IRBuilderBPF::createAlignedStore(Value *val,
 #endif
 }
 
+llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
+{
+  switch (as)
+  {
+    case AddrSpace::user:
+      return getUserPointerStorageTy();
+    default:
+      return getKernelPointerStorageTy();
+  }
+}
+
+llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
+{
+  static int ptr_width = get_kernel_ptr_width();
+
+  return getIntNTy(ptr_width);
+}
+
+llvm::Type *IRBuilderBPF::getUserPointerStorageTy()
+{
+  // TODO: we don't currently have an easy way of determining the pointer size
+  // of the uprobed process, so assume it's the same as the kernel's for now.
+  return getKernelPointerStorageTy();
+}
+
 } // namespace ast
 } // namespace bpftrace

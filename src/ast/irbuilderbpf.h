@@ -175,6 +175,9 @@ public:
   void hoist(const std::function<void()> &functor);
   int helper_error_id_ = 0;
 
+  // Returns the integer type used to represent pointers in traced code.
+  llvm::Type *getPointerStorageTy(AddrSpace as);
+
 private:
   Module &module_;
   BPFtrace &bpftrace_;
@@ -189,6 +192,9 @@ private:
                                  llvm::Type *src,
                                  AddrSpace as);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
+
+  llvm::Type *getKernelPointerStorageTy();
+  llvm::Type *getUserPointerStorageTy();
 
   std::map<std::string, StructType *> structs_;
 };
