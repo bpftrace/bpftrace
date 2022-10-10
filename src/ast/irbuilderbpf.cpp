@@ -123,9 +123,6 @@ IRBuilderBPF::IRBuilderBPF(LLVMContext &context,
     module_(module),
     bpftrace_(bpftrace)
 {
-#if LLVM_VERSION_MAJOR == 15
-  context.setOpaquePointers(false);
-#endif
   // Declare external LLVM function
   FunctionType *pseudo_func_type = FunctionType::get(
       getInt64Ty(),
