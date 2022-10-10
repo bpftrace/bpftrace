@@ -119,6 +119,15 @@ jobs:
           BASE: focal
           VENDOR_GTEST: ON
           BUILD_LIBBPF: ON
+        - NAME: LLVM 15 Release
+          TYPE: Release
+          LLVM_VERSION: 15
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
+          TOOLS_TEST_OLDVERSION: biosnoop.bt
+          BASE: focal
+          VENDOR_GTEST: ON
+          BUILD_LIBBPF: ON
         - NAME: LLVM 12 Release + old libbpf
           TYPE: Release
           LLVM_VERSION: 12
