@@ -106,14 +106,8 @@ public:
       bool isVolatile = false,
       std::optional<AddrSpace> addrSpace = std::nullopt);
   CallInst *CreateProbeReadStr(Value *ctx,
-                               AllocaInst *dst,
+                               Value *dst,
                                llvm::Value *size,
-                               Value *src,
-                               AddrSpace as,
-                               const location &loc);
-  CallInst *CreateProbeReadStr(Value *ctx,
-                               AllocaInst *dst,
-                               size_t size,
                                Value *src,
                                AddrSpace as,
                                const location &loc);
@@ -131,7 +125,12 @@ public:
                                 pid_t pid,
                                 AddrSpace as,
                                 const location &loc);
-  Value *CreateStrncmp(Value *val1, Value *val2, uint64_t n, bool inverse);
+  Value *CreateStrncmp(Value *str1,
+                       uint64_t str1_size,
+                       Value *str2,
+                       uint64_t str2_size,
+                       uint64_t n,
+                       bool inverse);
   CallInst *CreateGetNs(bool boot_time, const location &loc);
   CallInst *CreateGetPidTgid(const location &loc);
   CallInst *CreateGetCurrentCgroupId(const location &loc);
@@ -147,7 +146,10 @@ public:
                              ArrayRef<Value *> args,
                              const Twine &Name,
                              const location *loc = nullptr);
-  CallInst   *createCall(Value *callee, ArrayRef<Value *> args, const Twine &Name);
+  CallInst *createCall(FunctionType *callee_type,
+                       Value *callee,
+                       ArrayRef<Value *> args,
+                       const Twine &Name);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
   void CreatePerfEventOutput(Value *ctx,
                              Value *data,
@@ -205,9 +207,6 @@ private:
                                 AddrSpace as,
                                 const location &loc);
   CallInst *createMapLookup(int mapid, Value *key);
-  Constant *createProbeReadStrFn(llvm::Type *dst,
-                                 llvm::Type *src,
-                                 AddrSpace as);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   llvm::Type *getKernelPointerStorageTy();
