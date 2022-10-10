@@ -1151,8 +1151,12 @@ void CodegenLLVM::visit(Call &call)
     auto left_string = getString(left_arg);
     auto right_string = getString(right_arg);
 
-    expr_ = b_.CreateStrncmp(
-        left_string.first, right_string.first, size, false);
+    expr_ = b_.CreateStrncmp(left_string.first,
+                             left_string.second,
+                             right_string.first,
+                             right_string.second,
+                             size,
+                             false);
   }
   else if (call.func == "override")
   {
@@ -1287,8 +1291,7 @@ void CodegenLLVM::visit(Variable &var)
   else
   {
     auto *var_alloca = variables_[var.ident];
-    expr_ = b_.CreateLoad(var_alloca->getType()->getPointerElementType(),
-                          var_alloca);
+    expr_ = b_.CreateLoad(var_alloca->getAllocatedType(), var_alloca);
   }
 }
 
@@ -1328,7 +1331,12 @@ void CodegenLLVM::binop_string(Binop &binop)
   auto right_string = getString(binop.right);
 
   size_t len = std::min(left_string.second, right_string.second);
-  expr_ = b_.CreateStrncmp(left_string.first, right_string.first, len, inverse);
+  expr_ = b_.CreateStrncmp(left_string.first,
+                           left_string.second,
+                           right_string.first,
+                           right_string.second,
+                           len,
+                           inverse);
 }
 
 void CodegenLLVM::binop_buf(Binop &binop)
@@ -1352,7 +1360,12 @@ void CodegenLLVM::binop_buf(Binop &binop)
 
   size_t len = std::min(binop.left->type.GetSize(),
                         binop.right->type.GetSize());
-  expr_ = b_.CreateStrncmp(left_string, right_string, len, inverse);
+  expr_ = b_.CreateStrncmp(left_string,
+                           binop.left->type.GetSize(),
+                           right_string,
+                           binop.right->type.GetSize(),
+                           len,
+                           inverse);
 }
 
 void CodegenLLVM::binop_int(Binop &binop)
@@ -3524,9 +3537,8 @@ void CodegenLLVM::createIncDec(Unop &unop)
   else if (unop.expr->is_variable)
   {
     Variable &var = static_cast<Variable &>(*unop.expr);
-    Value *oldval = b_.CreateLoad(
-        variables_[var.ident]->getType()->getPointerElementType(),
-        variables_[var.ident]);
+    Value *oldval = b_.CreateLoad(variables_[var.ident]->getAllocatedType(),
+                                  variables_[var.ident]);
     Value *newval;
     if (is_increment)
       newval = b_.CreateAdd(oldval, b_.GetIntSameSize(step, oldval));
