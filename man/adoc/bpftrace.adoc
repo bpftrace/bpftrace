@@ -1786,8 +1786,9 @@ The pointer type is left unchanged.
 * uretprobes
 
 
-Equal to <<functions_ksym>> but resolves user space symbols
+Equal to <<functions_ksym>> but resolves user space symbols.
 
+If ASLR is enabled, it works only when the process is running at either the time of the symbol resolution or the time of the probe attachment. The latter might not work with older versions of BCC. A similar limitation also applies to dynamically loaded symbols.
 
 ----
 uprobe:/bin/bash:readline
