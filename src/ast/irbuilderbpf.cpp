@@ -481,16 +481,6 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
 
 void IRBuilderBPF::CreateProbeRead(Value *ctx,
                                    Value *dst,
-                                   size_t size,
-                                   Value *src,
-                                   AddrSpace as,
-                                   const location &loc)
-{
-  return CreateProbeRead(ctx, dst, getInt32(size), src, as, loc);
-}
-
-void IRBuilderBPF::CreateProbeRead(Value *ctx,
-                                   Value *dst,
                                    llvm::Value *size,
                                    Value *src,
                                    AddrSpace as,
@@ -672,7 +662,7 @@ Value *IRBuilderBPF::CreateUSDTReadArgument(Value *ctx,
       {
         ptr = CreateAdd(ptr, index_offset);
       }
-      CreateProbeRead(ctx, dst, abs_size, ptr, as, loc);
+      CreateProbeRead(ctx, dst, getInt32(abs_size), ptr, as, loc);
       result = CreateLoad(getIntNTy(abs_size * 8), dst);
     }
     else
@@ -1365,7 +1355,7 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
   AddrSpace as = addrSpace ? addrSpace.value() : type.GetAS();
 
   if (!type.IsPtrTy())
-    return CreateProbeRead(ctx, dst, type.GetSize(), src, as, loc);
+    return CreateProbeRead(ctx, dst, getInt32(type.GetSize()), src, as, loc);
 
   // Pointers are internally always represented as 64-bit integers, matching the
   // BPF register size (BPF is a 64-bit ISA). This helps to avoid BPF codegen
@@ -1383,7 +1373,7 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
   if (ptr_size != type.GetSize())
     CREATE_MEMSET(dst, getInt8(0), type.GetSize(), 1);
 
-  CreateProbeRead(ctx, dst, ptr_size, src, as, loc);
+  CreateProbeRead(ctx, dst, getInt32(ptr_size), src, as, loc);
 }
 
 llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
