@@ -134,13 +134,19 @@ Map::Map(const SizedType &type) : IMap(type)
       map_type_, "stack", key_size, value_size, max_entries, flags);
   if (mapfd_ < 0)
   {
-    LOG(ERROR)
-        << "failed to create stack id map\n"
-        // TODO (mmarchini): Check perf_event_max_stack in the semantic_analyzer
-        << "This might have happened because kernel.perf_event_max_stack "
-        << "is smaller than " << type.stack_type.limit
-        << ". Try to tweak this value with "
-        << "sysctl kernel.perf_event_max_stack=<new value>";
+    LOG(ERROR) << "failed to create stack id map: " << strerror(errno);
+    if (errno == ENOMEM)
+      LOG(ERROR) << "Tried to allocate " << max_entries << " entries of size "
+                 << value_size
+                 << ". Consider limiting the number of stack frames captured.";
+    else
+      LOG(ERROR)
+          // TODO (mmarchini): Check perf_event_max_stack in the
+          // semantic_analyzer
+          << "This might have happened because kernel.perf_event_max_stack "
+          << "is smaller than " << type.stack_type.limit
+          << ". Try to tweak this value with "
+          << "sysctl kernel.perf_event_max_stack=<new value>";
   }
 }
 
