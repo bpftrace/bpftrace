@@ -690,11 +690,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     // start the name after the probe type, after ':'
     if (auto last_colon = name.rfind(':'); last_colon != std::string::npos)
       name = name.substr(last_colon + 1);
-    // replace '+' and ',' by '.'
-    std::replace(name.begin(), name.end(), '+', '.');
-    std::replace(name.begin(), name.end(), ',', '.');
-    // remove quotes
-    name.erase(std::remove(name.begin(), name.end(), '"'), name.end());
+    name = sanitise(name);
 
     auto prog_type = progtype(probe_.type);
     if (probe_.type == ProbeType::special && !feature.has_raw_tp_special())
