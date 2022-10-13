@@ -817,9 +817,8 @@ void CodegenLLVM::visit(Call &call)
     {
       b_.CreateProbeRead(ctx_,
                          static_cast<AllocaInst *>(inet_offset),
-                         inet->type.GetSize(),
+                         inet->type,
                          expr_,
-                         inet->type.GetAS(),
                          call.loc);
     }
     else
@@ -1180,12 +1179,8 @@ void CodegenLLVM::visit(Call &call)
     if (onStack(macaddr->type))
       b_.CREATE_MEMCPY(buf, expr_, macaddr->type.GetSize(), 1);
     else
-      b_.CreateProbeRead(ctx_,
-                         static_cast<AllocaInst *>(buf),
-                         macaddr->type.GetSize(),
-                         expr_,
-                         macaddr->type.GetAS(),
-                         call.loc);
+      b_.CreateProbeRead(
+          ctx_, static_cast<AllocaInst *>(buf), macaddr->type, expr_, call.loc);
 
     expr_ = buf;
     expr_deleter_ = [this, buf]() { b_.CreateLifetimeEnd(buf); };
@@ -1610,12 +1605,9 @@ void CodegenLLVM::unop_int(Unop &unop)
     }
     case Operator::MUL: {
       // When dereferencing a 32-bit integer, only read in 32-bits, etc.
-      int size = type.GetSize();
-      auto as = type.GetAS();
-
-      auto dst_type = SizedType(type.type, size);
+      auto dst_type = SizedType(type.type, type.GetSize());
       AllocaInst *dst = b_.CreateAllocaBPF(dst_type, "deref");
-      b_.CreateProbeRead(ctx_, dst, size, expr_, as, unop.loc);
+      b_.CreateProbeRead(ctx_, dst, type, expr_, unop.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(b_.GetType(dst_type), dst),
                                b_.getInt64Ty(),
                                type.IsSigned());
@@ -1840,8 +1832,12 @@ void CodegenLLVM::visit(FieldAccess &acc)
           // memset so verifier doesn't complain about reading uninitialized
           // stack
           b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.GetSize(), 1);
-          b_.CreateProbeRead(
-              ctx_, dst, field.bitfield.read_bytes, src, type.GetAS(), acc.loc);
+          b_.CreateProbeRead(ctx_,
+                             dst,
+                             b_.getInt32(field.bitfield.read_bytes),
+                             src,
+                             type.GetAS(),
+                             acc.loc);
           raw = b_.CreateLoad(field_type, dst);
           b_.CreateLifetimeEnd(dst);
         }
@@ -1997,12 +1993,7 @@ void CodegenLLVM::visit(Tuple &tuple)
     if (onStack(elem->type))
       b_.CREATE_MEMCPY(dst, expr_, elem->type.GetSize(), 1);
     else if (elem->type.IsArrayTy() || elem->type.IsRecordTy())
-      b_.CreateProbeRead(ctx_,
-                         dst,
-                         elem->type.GetSize(),
-                         expr_,
-                         elem->type.GetAS(),
-                         elem->loc);
+      b_.CreateProbeRead(ctx_, dst, elem->type, expr_, elem->loc);
     else
       b_.CreateStore(expr_, dst);
   }
@@ -2055,10 +2046,10 @@ void CodegenLLVM::visit(AssignMapStatement &assignment)
       AllocaInst *dst = b_.CreateAllocaBPF(map.type, map.ident + "_val");
       b_.CreateProbeRead(ctx_,
                          dst,
-                         map.type.GetSize(),
+                         map.type,
                          expr,
-                         assignment.expr->type.GetAS(),
-                         assignment.loc);
+                         assignment.loc,
+                         assignment.expr->type.GetAS());
       val = dst;
       self_alloca = true;
     }
@@ -2611,12 +2602,7 @@ std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(
         if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
         {
           // We need to read the entire array/struct and save it
-          b_.CreateProbeRead(ctx_,
-                             key,
-                             expr->type.GetSize(),
-                             expr_,
-                             expr->type.GetAS(),
-                             expr->loc);
+          b_.CreateProbeRead(ctx_, key, expr->type, expr_, expr->loc);
         }
         else
         {
@@ -2686,12 +2672,7 @@ AllocaInst *CodegenLLVM::getMultiMapKey(Map &map,
       if (expr->type.IsArrayTy() || expr->type.IsRecordTy())
       {
         // Read the array/struct into the key
-        b_.CreateProbeRead(ctx_,
-                           offset_val,
-                           expr->type.GetSize(),
-                           expr_,
-                           expr->type.GetAS(),
-                           expr->loc);
+        b_.CreateProbeRead(ctx_, offset_val, expr->type, expr_, expr->loc);
         if ((expr->type.GetSize() % 8) != 0)
           aligned = false;
       }
@@ -3195,12 +3176,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
     if (onStack(arg.type))
       b_.CREATE_MEMCPY(content_offset, expr_, arg.type.GetSize(), 1);
     else
-      b_.CreateProbeRead(ctx_,
-                         content_offset,
-                         arg.type.GetSize(),
-                         expr_,
-                         arg.type.GetAS(),
-                         arg.loc);
+      b_.CreateProbeRead(ctx_, content_offset, arg.type, expr_, arg.loc);
   }
   else
   {
@@ -3446,8 +3422,7 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
   {
     // Read data onto stack
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    b_.CreateProbeRead(
-        ctx_, dst, elem_type.GetSize(), src, data_type.GetAS(), loc);
+    b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
     expr_ = dst;
     expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
   }

@@ -81,12 +81,6 @@ public:
                            const location &loc);
   void CreateProbeRead(Value *ctx,
                        Value *dst,
-                       size_t size,
-                       Value *src,
-                       AddrSpace as,
-                       const location &loc);
-  void CreateProbeRead(Value *ctx,
-                       Value *dst,
                        llvm::Value *size,
                        Value *src,
                        AddrSpace as,
