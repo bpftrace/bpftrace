@@ -65,9 +65,8 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
 
   for (StackType stack_type : stackid_maps)
   {
-    // The stack type doesn't matter here, so we use kstack to force SizedType
-    // to set stack_size.
-    auto map = std::make_unique<T>(CreateStack(true, stack_type));
+    auto map = std::make_unique<T>(
+        CreateStack(stack_type.type == StackType::ukstack::kstack, stack_type));
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(stack_type, std::move(map));
   }

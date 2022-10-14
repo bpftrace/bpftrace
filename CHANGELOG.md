@@ -12,6 +12,8 @@ and this project adheres to
 - Support for 32-bit ARM systems
   - [#2360](https://github.com/iovisor/bpftrace/pull/2360)
 #### Changed
+- Output for error stacks has been improved to include the error code and pid
+  - [#2392](https://github.com/iovisor/bpftrace/pull/2392)
 #### Deprecated
 #### Removed
 #### Fixed

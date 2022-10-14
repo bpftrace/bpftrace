@@ -1758,11 +1758,30 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, StackType stac
                             stack_trace.data());
   if (err)
   {
-    // ignore EFAULT errors: eg, kstack used but no kernel stack
-    if (stackid != -EFAULT)
+    if (stackid == -EFAULT && stack_type.type == StackType::ukstack::kstack)
+    {
+      // EFAULT kstacks are expected when the task is in usermode.
+      return "";
+    }
+    else
+    {
       LOG(ERROR) << "failed to look up stack id " << stackid << " (pid " << pid
                  << "): " << err;
-    return "";
+    }
+
+    std::ostringstream errstr;
+    switch (stack_type.mode)
+    {
+      case StackMode::bpftrace:
+        errstr << "\n" << std::string(indent, ' ');
+        break;
+      case StackMode::perf:
+        errstr << "\n\t";
+        break;
+    }
+
+    errstr << "<error: " << stackid << ", pid: " << pid << ">\n";
+    return errstr.str();
   }
 
   std::ostringstream stack;

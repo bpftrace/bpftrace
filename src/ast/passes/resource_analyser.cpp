@@ -61,9 +61,15 @@ void ResourceAnalyser::visit(Builtin &builtin)
   {
     resources_.needs_elapsed_map = true;
   }
-  else if (builtin.ident == "kstack" || builtin.ident == "ustack")
+  else if (builtin.ident == "kstack")
   {
-    resources_.stackid_maps.insert(StackType{});
+    resources_.stackid_maps.insert(
+        StackType{ .type = StackType::ukstack::kstack });
+  }
+  else if (builtin.ident == "ustack")
+  {
+    resources_.stackid_maps.insert(
+        StackType{ .type = StackType::ukstack::ustack });
   }
 }
 

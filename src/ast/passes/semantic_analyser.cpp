@@ -336,10 +336,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
     builtin.type.SetAS(find_addrspace(type));
   }
   else if (builtin.ident == "kstack") {
-    builtin.type = CreateStack(true, StackType());
+    builtin.type = CreateStack(true,
+                               StackType{ .type = StackType::ukstack::kstack });
   }
   else if (builtin.ident == "ustack") {
-    builtin.type = CreateStack(false, StackType());
+    builtin.type = CreateStack(false,
+                               StackType{ .type = StackType::ukstack::ustack });
   }
   else if (builtin.ident == "comm") {
     builtin.type = CreateString(COMM_SIZE);
@@ -1365,7 +1367,8 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
     return;
   }
 
-  StackType stack_type;
+  StackType stack_type{ .type = kernel ? StackType::ukstack::kstack
+                                       : StackType::ukstack::ustack };
   if (call.vargs)
   {
     switch (call.vargs->size())

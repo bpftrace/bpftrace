@@ -71,8 +71,14 @@ enum class StackMode
 
 struct StackType
 {
+  enum class ukstack
+  {
+    ustack = 1,
+    kstack = 2,
+  };
   size_t limit = DEFAULT_STACK_SIZE;
   StackMode mode = StackMode::bpftrace;
+  ukstack type;
 
   bool operator ==(const StackType &obj) const {
     return limit == obj.limit && mode == obj.mode;
