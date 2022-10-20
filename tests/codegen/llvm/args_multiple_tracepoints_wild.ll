@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"tracepoint:sched:sched_one"(i8* %0) section "s_tracepoint:sched:sched_one_1" {
+define i64 @"tracepoint:sched:sched_one"(i8* %0) section "s_tracepoint:sched:sched_one_1" !dbg !3 {
 entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -58,7 +58,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define i64 @"tracepoint:sched:sched_two"(i8* %0) section "s_tracepoint:sched:sched_two_1" {
+define i64 @"tracepoint:sched:sched_two"(i8* %0) section "s_tracepoint:sched:sched_two_1" !dbg !12 {
 entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -106,3 +106,22 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
+
+!llvm.dbg.cu = !{!0}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
+!1 = !DIFile(filename: "bpftrace", directory: ".")
+!2 = !{}
+!3 = distinct !DISubprogram(name: "tracepoint_sched_sched_one", linkageName: "tracepoint_sched_sched_one", scope: !1, file: !1, type: !4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !9)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6, !7}
+!6 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)
+!8 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!9 = !{!10, !11}
+!10 = !DILocalVariable(name: "var0", scope: !3, file: !1, type: !6)
+!11 = !DILocalVariable(name: "var1", arg: 1, scope: !3, file: !1, type: !7)
+!12 = distinct !DISubprogram(name: "tracepoint_sched_sched_two", linkageName: "tracepoint_sched_sched_two", scope: !1, file: !1, type: !4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !13)
+!13 = !{!14, !15}
+!14 = !DILocalVariable(name: "var0", scope: !12, file: !1, type: !6)
+!15 = !DILocalVariable(name: "var1", arg: 1, scope: !12, file: !1, type: !7)

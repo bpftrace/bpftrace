@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"interval:s:1"(i8* %0) section "s_interval:s:1_1" {
+define i64 @"interval:s:1"(i8* %0) section "s_interval:s:1_1" !dbg !3 {
 entry:
   %"@_val" = alloca i64, align 8
   %"@_key" = alloca i64, align 8
@@ -22,7 +22,7 @@ while_cond:                                       ; preds = %while_body, %entry
   %3 = icmp sle i64 %2, 150
   %4 = zext i1 %3 to i64
   %true_cond = icmp ne i64 %4, 0
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !0
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !12
 
 while_body:                                       ; preds = %while_cond
   %5 = load i64, i64* %"$a", align 8
@@ -55,5 +55,19 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.unroll.disable"}
+!llvm.dbg.cu = !{!0}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
+!1 = !DIFile(filename: "bpftrace", directory: ".")
+!2 = !{}
+!3 = distinct !DISubprogram(name: "interval_s_1", linkageName: "interval_s_1", scope: !1, file: !1, type: !4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !9)
+!4 = !DISubroutineType(types: !5)
+!5 = !{!6, !7}
+!6 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!7 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !8, size: 64)
+!8 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!9 = !{!10, !11}
+!10 = !DILocalVariable(name: "var0", scope: !3, file: !1, type: !6)
+!11 = !DILocalVariable(name: "var1", arg: 1, scope: !3, file: !1, type: !7)
+!12 = distinct !{!12, !13}
+!13 = !{!"llvm.loop.unroll.disable"}

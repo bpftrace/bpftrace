@@ -1,4 +1,7 @@
 #include "codegen_llvm.h"
+#include "libbpf/bpf.h"
+#include "location.hh"
+#include "utils.h"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -6,9 +9,16 @@
 #include <csignal>
 #include <ctime>
 #include <fstream>
+#include <string>
 
 #include <llvm-c/Transforms/IPO.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/BinaryFormat/Dwarf.h>
+#include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/DebugInfoMetadata.h>
+#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Function.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Metadata.h>
@@ -23,6 +33,7 @@
 #else
 #include <llvm/Support/TargetRegistry.h>
 #endif
+#include <llvm/Support/SHA1.h>
 
 #include <llvm/Support/TargetSelect.h>
 
@@ -45,7 +56,10 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
       bpftrace_(bpftrace),
       context_(std::make_unique<LLVMContext>()),
       module_(std::make_unique<Module>("bpftrace", *context_)),
-      b_(*context_, *module_, bpftrace)
+      b_(*context_, *module_, bpftrace),
+      debug_types_(),
+      debug_(*module_),
+      debug_file_(nullptr)
 {
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -71,6 +85,21 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
 
   module_->setTargetTriple(LLVMTargetTriple);
   module_->setDataLayout(target_machine_->createDataLayout());
+
+  debug_file_ = debug_.createFile("bpftrace", ".");
+  debug_.createCompileUnit(dwarf::DW_LANG_C,
+                           debug_file_,
+                           "bpftrace",
+                           false,
+                           "",
+                           0,
+                           StringRef(),
+                           DICompileUnit::DebugEmissionKind::LineTablesOnly);
+  debug_types_.int64 = debug_.createBasicType("int64",
+                                              64,
+                                              dwarf::DW_ATE_signed);
+  debug_types_.int8_ptr = debug_.createPointerType(
+      debug_.createBasicType("int8", 8, dwarf::DW_ATE_signed), 64);
 }
 
 void CodegenLLVM::visit(Integer &integer)
@@ -2424,6 +2453,7 @@ void CodegenLLVM::generateProbe(Probe &probe,
       func_type, Function::ExternalLinkage, section_name, module_.get());
   func->setSection(
       get_section_name_for_probe(section_name, index, usdt_location_index));
+  createDebugFunction(*func);
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3149,6 +3179,8 @@ void CodegenLLVM::generateWatchpointSetupProbe(
                                     module_.get());
   func->setSection(
       get_section_name_for_watchpoint_setup(expanded_probe_name, index));
+  createDebugFunction(*func);
+
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -3186,6 +3218,88 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreateLifetimeEnd(buf);
 
   createRet();
+}
+
+std::string CodegenLLVM::sanitizeProgramName(std::string const &name)
+{
+  std::string sanitized_name = name;
+  std::replace_if(
+      sanitized_name.begin(),
+      sanitized_name.end(),
+      [](char c) { return !isalnum(c) && c != '_'; },
+      '_');
+
+  // Kernel KSYM_NAME_LEN is 128 until 6.1
+  // If we'll exceed the limit, hash the string and cap at 128.
+  if (sanitized_name.size() > 128)
+  {
+    auto hasher = llvm::SHA1();
+    hasher.init();
+    hasher.update(sanitized_name);
+    auto hash = hasher.final();
+
+    // sha1 is 20 bytes, so reserve 41 characters
+    std::ostringstream os;
+    os << sanitized_name.substr(0, 128 - 41) << '_' << std::setfill('0')
+       << std::hex;
+
+    for (auto hashbyte : hash)
+      os << std::setw(2) << (static_cast<unsigned>(hashbyte) & 0xff);
+    sanitized_name = os.str();
+  }
+  return sanitized_name;
+}
+
+void CodegenLLVM::createDebugFunction(Function &func)
+{
+  SmallVector<Metadata *, 8> types;
+
+  auto *func_type = func.getFunctionType();
+  if (func_type->getReturnType()->isPointerTy())
+    types.push_back(debug_types_.int8_ptr);
+  else
+    types.push_back(debug_types_.int64);
+
+  for (size_t i = 0; i < func_type->getNumParams(); ++i)
+  {
+    if (func_type->getParamType(i)->isPointerTy())
+      types.push_back(debug_types_.int8_ptr);
+    else
+      types.push_back(debug_types_.int64);
+  }
+
+  DISubroutineType *ditype = debug_.createSubroutineType(
+      debug_.getOrCreateTypeArray(types));
+
+  std::string sanitized_name = sanitizeProgramName(func.getName().str());
+
+  DISubprogram::DISPFlags flags = DISubprogram::SPFlagDefinition;
+  if (func.isLocalLinkage(func.getLinkage()))
+    flags |= DISubprogram::DISPFlags::SPFlagLocalToUnit;
+
+  DISubprogram *subprog = debug_.createFunction(debug_file_,
+                                                sanitized_name,
+                                                sanitized_name,
+                                                debug_file_,
+                                                0,
+                                                ditype,
+                                                0,
+                                                DINode::FlagPrototyped,
+                                                flags);
+
+  std::string prefix("var");
+  for (size_t i = 0; i < types.size(); ++i)
+  {
+    debug_.createParameterVariable(subprog,
+                                   prefix + std::to_string(i),
+                                   i,
+                                   debug_file_,
+                                   0,
+                                   (DIType *)types[i],
+                                   true);
+  }
+
+  func.setSubprogram(subprog);
 }
 
 void CodegenLLVM::createPrintMapCall(Call &call)
@@ -3291,6 +3405,7 @@ void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
   auto scoped_del = accept(root_);
+  debug_.finalize();
   state_ = State::IR;
 }
 
