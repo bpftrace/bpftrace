@@ -447,7 +447,6 @@ bool BPFfeature::has_raw_tp_special()
   if (has_raw_tp_special_.has_value())
     return *has_raw_tp_special_;
 
-#ifdef HAVE_LIBBPF_PROG_TEST_RUN_OPTS
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
   int fd;
 
@@ -467,9 +466,6 @@ bool BPFfeature::has_raw_tp_special()
   }
   else
     has_raw_tp_special_ = false;
-#else
-  has_raw_tp_special_ = false;
-#endif
 
   return *has_raw_tp_special_;
 }
