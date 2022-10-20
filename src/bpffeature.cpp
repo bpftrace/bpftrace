@@ -1,9 +1,7 @@
 #include "bpffeature.h"
 
 #include <bcc/libbpf.h>
-#ifdef HAVE_LIBBPF_MAP_BATCH
 #include <bpf/bpf.h>
-#endif
 #include <cstddef>
 #include <cstdio>
 #include <fcntl.h>
@@ -265,10 +263,6 @@ int BPFfeature::instruction_limit(void)
 
 bool BPFfeature::has_map_batch()
 {
-#ifndef HAVE_LIBBPF_MAP_BATCH
-  return false;
-
-#else
   int key_size = 4;
   int value_size = 4;
   int max_entries = 10;
@@ -300,8 +294,6 @@ bool BPFfeature::has_map_batch()
 
   has_map_batch_ = err >= 0;
   return *has_map_batch_;
-
-#endif
 }
 
 bool BPFfeature::has_d_path(void)
