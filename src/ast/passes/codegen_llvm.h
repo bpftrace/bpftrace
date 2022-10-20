@@ -11,6 +11,7 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
 
+#include "ast/dibuilderbpf.h"
 #include "ast/irbuilderbpf.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
@@ -217,6 +218,8 @@ private:
   std::unique_ptr<TargetMachine> target_machine_;
   std::unique_ptr<Module> module_;
   IRBuilderBPF b_;
+
+  DIBuilderBPF debug_;
 
   const DataLayout &datalayout() const
   {

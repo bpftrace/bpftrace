@@ -265,6 +265,22 @@ TEST(utils, parse_kconfig)
   unlink(path);
 }
 
+TEST(utils, sanitiseBPFProgramName)
+{
+  const std::string name = "uprobe:/bin/bash:main+0x30";
+  const std::string sanitised = sanitise_bpf_program_name(name);
+  ASSERT_EQ(sanitised, "uprobe__bin_bash_main_0x30");
+
+  const std::string long_name =
+      "uretprobe:/this/is/a/very/long/path/to/a/binary/executable:"
+      "this_is_a_very_long_function_name_which_exceeds_the_KSYM_NAME_LEN_"
+      "limit_of_BPF_program_name";
+  const std::string long_sanitised = sanitise_bpf_program_name(long_name);
+  ASSERT_EQ(long_sanitised,
+            "uretprobe__this_is_a_very_long_path_to_a_binary_executable_this_"
+            "is_a_very_long_function_name_which_exceeds_the_ba30ddc67a52bad2");
+}
+
 } // namespace utils
 } // namespace test
 } // namespace bpftrace

@@ -235,6 +235,7 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 std::vector<int> get_pids_for_program(const std::string &program);
 std::vector<int> get_all_running_pids();
 
+std::string sanitise_bpf_program_name(const std::string &name);
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(
     const std::string &probe_name,
