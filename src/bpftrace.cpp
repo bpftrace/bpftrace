@@ -1022,12 +1022,10 @@ int BPFtrace::run_special_probe(std::string name,
 
       if (feature_->has_raw_tp_special())
       {
-#ifdef HAVE_LIBBPF_PROG_TEST_RUN_OPTS
         struct bpf_test_run_opts opts = {};
         opts.sz = sizeof(opts);
 
         return ::bpf_prog_test_run_opts(aps[0]->progfd(), &opts);
-#endif
       }
       else
       {
