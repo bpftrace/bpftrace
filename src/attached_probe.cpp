@@ -698,6 +698,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     return;
 
   auto &insns = prog_.getCode();
+  auto func_infos = prog_.getFuncInfos();
   const char *license = "GPL";
   int log_level = 0;
 
@@ -818,6 +819,13 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         btf_fd_ = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
 
         opts.prog_btf_fd = btf_fd_;
+
+        if (!func_infos.empty())
+        {
+          opts.func_info_rec_size = sizeof(struct bpf_func_info);
+          opts.func_info = func_infos.data();
+          opts.func_info_cnt = func_infos.size() / sizeof(struct bpf_func_info);
+        }
 
         // Don't attempt to load the program if the BTF load failed.
         // This will fall back to the error handling for failed program load,
