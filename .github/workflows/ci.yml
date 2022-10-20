@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Install clang-format
       run: sudo apt-get install clang-format
     - name: Download git-clang-format
@@ -153,9 +155,10 @@ jobs:
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Get date
       id: get-date
       run: echo "::set-output name=date::$(/bin/date -u "+%Y.week%g")"
