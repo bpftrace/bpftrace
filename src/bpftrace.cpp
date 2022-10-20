@@ -29,6 +29,7 @@
 #include <bpf/libbpf.h>
 
 #include "ast/async_event_types.h"
+#include "bpfprogram.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "printf.h"
@@ -925,14 +926,6 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
-  auto get_section = [](BpfBytecode &bytecode, const std::string &name)
-      -> std::optional<std::tuple<uint8_t *, size_t>> {
-    auto sec = bytecode.find(name);
-    if (sec == bytecode.end())
-      return std::nullopt;
-    return std::make_tuple(sec->second.data(), sec->second.size());
-  };
-
   // use the single-probe program if it exists (as is the case with wildcards
   // and the name builtin, which must be expanded into separate programs per
   // probe), else try to find a the program based on the original probe name
@@ -949,13 +942,17 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto section = get_section(bytecode, name);
-  if (!section)
+  auto program = BpfProgram::CreateFromBytecode(bytecode, name.c_str(), *this);
+  if (!program)
   {
-    section = get_section(bytecode, orig_name);
+    auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
+                                                       orig_name.c_str(),
+                                                       *this);
+    if (orig_program)
+      program.emplace(std::move(*orig_program));
   }
 
-  if (!section)
+  if (!program)
   {
     if (probe.name != probe.orig_name)
       LOG(ERROR) << "Code not generated for probe: " << probe.name
@@ -965,18 +962,15 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     return ret;
   }
 
-  // Make a copy of the bytecode and perform relocations
-  //
-  // We choose not to modify the original bytecode to void keeping
-  // track of state when the same bytecode is attached to multiple probes.
-  std::vector<uint8_t> relocated;
-  relocated.reserve(std::get<1>(*section));
-  memcpy(relocated.data(), std::get<0>(*section), std::get<1>(*section));
-  std::get<0>(*section) = relocated.data();
-  auto relocator = Relocator(*section, *this);
-  if (relocator.relocate())
+  std::optional<std::tuple<uint8_t *, uintptr_t>> code = std::nullopt;
+  try
   {
-    LOG(ERROR) << "Failed to relocate insns for probe: " << probe.name;
+    code.emplace((*program).getCode());
+  }
+  catch (std::runtime_error &ex)
+  {
+    LOG(ERROR) << "Failed to assemble program for probe: " << probe.name << ", "
+               << ex.what();
     return ret;
   }
 
@@ -986,7 +980,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
     if (probe.type == ProbeType::usdt)
     {
-      auto aps = attach_usdt_probe(probe, *section, pid, usdt_file_activation_);
+      auto aps = attach_usdt_probe(probe, *code, pid, usdt_file_activation_);
       for (auto &ap : aps)
         ret.emplace_back(std::move(ap));
 
@@ -995,14 +989,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     else if (probe.type == ProbeType::watchpoint ||
              probe.type == ProbeType::asyncwatchpoint)
     {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *section, pid, *feature_, *btf_));
+      ret.emplace_back(
+          std::make_unique<AttachedProbe>(probe, *code, pid, *feature_, *btf_));
       return ret;
     }
     else
     {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *section, safe_mode_, *feature_, *btf_));
+          probe, *code, safe_mode_, *feature_, *btf_));
       return ret;
     }
   }
