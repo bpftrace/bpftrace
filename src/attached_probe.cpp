@@ -842,20 +842,12 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
   }
 
   resolve_offset_kprobe(safe_mode);
-#ifdef LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),
                                         probe_.attach_point.c_str(),
                                         offset_,
                                         0);
-#else
-  int perf_event_fd = bpf_attach_kprobe(progfd_,
-                                        attachtype(probe_.type),
-                                        eventname().c_str(),
-                                        probe_.attach_point.c_str(),
-                                        offset_);
-#endif
 
   if (perf_event_fd < 0) {
     if (probe_.orig_name != probe_.name) {
