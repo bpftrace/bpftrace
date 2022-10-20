@@ -72,6 +72,8 @@ jobs:
           ENABLE_SKB_OUTPUT: OFF
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Build docker container
       run: >
         docker build
