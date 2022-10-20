@@ -16,7 +16,6 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
-#ifdef HAVE_LIBBPF_BTF_DUMP
 #include <linux/bpf.h>
 #include <linux/btf.h>
 #pragma GCC diagnostic push
@@ -31,11 +30,7 @@ namespace bpftrace {
 
 static __u32 type_cnt(const struct btf *btf)
 {
-#ifdef HAVE_LIBBPF_BTF_TYPE_CNT
   return btf__type_cnt(btf) - 1;
-#else
-  return btf__get_nr_types(btf);
-#endif
 }
 
 static unsigned char *get_data(const char *file, ssize_t *sizep)
@@ -199,18 +194,7 @@ static struct btf_dump *dump_new(const struct btf *btf,
                                  btf_dump_printf_fn_t dump_printf,
                                  void *ctx)
 {
-#ifdef HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0
   return btf_dump__new(btf, dump_printf, ctx, nullptr);
-#else
-  struct btf_dump_opts opts = {
-    .ctx = ctx,
-  };
-#ifdef HAVE_LIBBPF_BTF_DUMP_NEW_DEPRECATED
-  return btf_dump__new_deprecated(btf, nullptr, &opts, dump_printf);
-#else
-  return btf_dump__new(btf, nullptr, &opts, dump_printf);
-#endif
-#endif
 }
 
 static const char *btf_str(const struct btf *btf, __u32 off)
@@ -584,7 +568,6 @@ std::unique_ptr<std::istream> BTF::get_all_funcs() const
 std::map<std::string, std::vector<std::string>> BTF::get_params(
     const std::set<std::string> &funcs) const
 {
-#ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
   __s32 id, max = (__s32)type_cnt(btf);
   std::string type = std::string("");
   struct btf_dump *dump;
@@ -671,11 +654,6 @@ std::map<std::string, std::vector<std::string>> BTF::get_params(
   btf_dump__free(dump);
 
   return params;
-#else
-  LOG(ERROR) << "Could not get kfunc arguments "
-                "(HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL is not set)";
-  return {};
-#endif
 }
 
 std::set<std::string> BTF::get_all_structs() const
@@ -757,48 +735,3 @@ int BTF::get_btf_id(const std::string &name) const
 }
 
 } // namespace bpftrace
-#else // HAVE_LIBBPF_BTF_DUMP
-
-namespace bpftrace {
-
-BTF::BTF() { }
-
-BTF::~BTF() { }
-
-std::string BTF::c_def(const std::unordered_set<std::string>& set
-                       __attribute__((__unused__))) const
-{
-  return std::string("");
-}
-
-std::string BTF::type_of(const std::string& name __attribute__((__unused__)),
-                         const std::string& field __attribute__((__unused__))) {
-  return std::string("");
-}
-
-int BTF::resolve_args(const std::string &func __attribute__((__unused__)),
-                      std::map<std::string, SizedType>& args
-                      __attribute__((__unused__)),
-                      bool ret __attribute__((__unused__)))
-{
-  return -1;
-}
-
-std::set<std::string> BTF::get_all_structs() const
-{
-  return {};
-}
-
-std::unique_ptr<std::istream> BTF::get_all_funcs() const
-{
-  return nullptr;
-}
-
-std::map<std::string, std::vector<std::string>> BTF::get_params(
-    const std::set<std::string>& funcs __attribute__((__unused__))) const
-{
-  return {};
-}
-} // namespace bpftrace
-
-#endif // HAVE_LIBBPF_BTF_DUMP

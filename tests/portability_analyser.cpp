@@ -4,6 +4,7 @@
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/portability_analyser.h"
 #include "ast/passes/semantic_analyser.h"
+#include "btf_common.h"
 #include "clang_parser.h"
 #include "driver.h"
 #include "mocks.h"
@@ -57,8 +58,6 @@ TEST(portability_analyser, tracepoint_field_access)
   test("tracepoint:sched:sched_* { args->common_field }", 0);
 }
 
-#if defined(HAVE_LIBBPF_BTF_DUMP)
-#include "btf_common.h"
 class portability_analyser_btf : public test_btf
 {
 };
@@ -70,7 +69,6 @@ TEST_F(portability_analyser_btf, kfunc_field_access)
   test("kfunc:func_2 { args->foo1 }", 0);
   test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
 }
-#endif
 
 TEST(portability_analyser, positional_params_disabled)
 {

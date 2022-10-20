@@ -10,6 +10,8 @@ namespace bpftrace {
 namespace test {
 namespace clang_parser {
 
+#include "btf_common.h"
+
 static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true,
                   const std::string& probe = "kprobe:sys_read { 1 }")
 {
@@ -516,10 +518,6 @@ TEST(clang_parser, parse_fail)
   parse("struct a { int a; struct b b; };", bpftrace, false);
 }
 
-#ifdef HAVE_LIBBPF_BTF_DUMP
-
-#include "btf_common.h"
-
 class clang_parser_btf : public test_btf
 {
 };
@@ -691,7 +689,6 @@ TEST_F(clang_parser_btf, btf_type_override)
         false,
         "kprobe:sys_read { @x1 = ((struct Foo3 *)curtask); }");
 }
-#endif // HAVE_LIBBPF_BTF_DUMP
 
 TEST(clang_parser, struct_typedef)
 {

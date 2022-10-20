@@ -10,6 +10,8 @@ namespace bpftrace {
 namespace test {
 namespace bpftrace {
 
+#include "btf_common.h"
+
 using ::testing::ContainerEq;
 using ::testing::StrictMock;
 
@@ -965,10 +967,6 @@ TEST(bpftrace, sort_by_key_int_str)
   EXPECT_THAT(values_by_key, ContainerEq(expected_values));
 }
 
-#ifdef HAVE_LIBBPF_BTF_DUMP
-
-#include "btf_common.h"
-
 class bpftrace_btf : public test_btf
 {
 };
@@ -1020,8 +1018,6 @@ TEST_F(bpftrace_btf, add_probes_iter_task_file)
 
   check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task_file");
 }
-
-#endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace bpftrace
 } // namespace test

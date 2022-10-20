@@ -12,6 +12,8 @@ namespace bpftrace {
 namespace test {
 namespace semantic_analyser {
 
+#include "btf_common.h"
+
 using ::testing::_;
 using ::testing::HasSubstr;
 
@@ -2578,10 +2580,6 @@ TEST(semantic_analyser, string_size)
   ASSERT_EQ(var_assign->var->type.GetField(0).type.GetSize(), 6UL);
 }
 
-#ifdef HAVE_LIBBPF_BTF_DUMP
-
-#include "btf_common.h"
-
 class semantic_analyser_btf : public test_btf
 {
 };
@@ -2661,8 +2659,6 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task,iter:task_file { 1 }", 1);
   test("iter:task,f:func_1 { 1 }", 1);
 }
-
-#endif // HAVE_LIBBPF_BTF_DUMP
 
 #ifdef HAVE_LIBDW
 
