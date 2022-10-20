@@ -38,7 +38,7 @@ jobs:
           ENABLE_SKB_OUTPUT: OFF
         - TYPE: Debug
           NAME: alpine
-          LLVM_VERSION: 9
+          LLVM_VERSION: 10
           STATIC_LINKING: ON
           STATIC_LIBC: ON
           EMBED_BUILD_LLVM: OFF
@@ -48,12 +48,12 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: alpine
           DISTRO: alpine
-          ALPINE_VERSION: 3.11
+          ALPINE_VERSION: 3.12
           VENDOR_GTEST: ON
           ENABLE_SKB_OUTPUT: OFF
         - TYPE: Release
           NAME: alpine
-          LLVM_VERSION: 9
+          LLVM_VERSION: 10
           STATIC_LINKING: ON
           STATIC_LIBC: ON
           EMBED_BUILD_LLVM: OFF
@@ -63,7 +63,7 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: alpine
           DISTRO: alpine
-          ALPINE_VERSION: 3.11
+          ALPINE_VERSION: 3.12
           VENDOR_GTEST: ON
           ENABLE_SKB_OUTPUT: OFF
     steps:

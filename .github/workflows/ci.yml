@@ -29,22 +29,6 @@ jobs:
     strategy:
       matrix:
         env:
-        - NAME: LLVM 9 Debug
-          TYPE: Debug
-          LLVM_VERSION: 9
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
-        - NAME: LLVM 9 Release
-          TYPE: Release
-          LLVM_VERSION: 9
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 10 Debug
           TYPE: Debug
           LLVM_VERSION: 10

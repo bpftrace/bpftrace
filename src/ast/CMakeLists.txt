@@ -36,16 +36,19 @@ if (STATIC_LINKING)
       clangEdit
       clangFormat
       clangFrontend
+      clangIncludeFixerPlugin
       clangIndex
       clangLex
       clangParse
       clangRewrite
       clangSema
       clangSerialization
+      clangTidyPlugin
       clangToolingCore)
 
   set(llvm_lib_names
       bpfcodegen
+      frontendopenmp
       ipo
       irreader
       mcjit

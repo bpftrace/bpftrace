@@ -10,6 +10,7 @@ RUN apk add --update \
   bison \
   bcc-dev \
   bcc-static \
+  bzip2-static \
   libbpf-dev \
   libpcap-dev \
   build-base \
