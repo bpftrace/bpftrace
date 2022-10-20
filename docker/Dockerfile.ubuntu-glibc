@@ -13,6 +13,7 @@ ENV CMAKE_VER=${CMAKE_VER}
 ENV CMAKE_BUILD="${CMAKE_BUILD}"
 ENV BASE=${BASE}
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y \
         asciidoctor \
