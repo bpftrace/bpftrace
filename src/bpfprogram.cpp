@@ -1,7 +1,7 @@
 #include "bpfprogram.h"
-#include "relocator.h"
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 
 namespace bpftrace {
@@ -43,11 +43,35 @@ void BpfProgram::assemble()
   code_.reserve(section.size());
   code_.assign(section.data(), section.data() + section.size());
 
-  // Perform relocations on the copy of the code for this particular program.
-  auto relocator = Relocator(std::make_tuple(code_.data(), code_.size()),
-                             bpftrace_);
-  if (relocator.relocate())
-    throw std::runtime_error("Could not relocate program, see log");
+  relocateMaps();
+}
+
+void BpfProgram::relocateMaps()
+{
+  struct bpf_insn *insns = reinterpret_cast<struct bpf_insn *>(code_.data());
+  for (uintptr_t i = 0; i < code_.size() / sizeof(struct bpf_insn); ++i)
+  {
+    struct bpf_insn *insn = &insns[i];
+
+    // Relocate mapid -> mapfd
+    //
+    // This relocation keeps codegen independent of runtime state (such as FD
+    // numbers). This helps make codegen tests more reliable and enables
+    // features such as AOT compilation.
+    if (insn->code == BPF_DW && (insn->src_reg == BPF_PSEUDO_MAP_FD ||
+                                 insn->src_reg == BPF_PSEUDO_MAP_VALUE))
+    {
+      auto mapid = insn->imm;
+      auto map = bpftrace_.maps[mapid];
+      if (map)
+        insn->imm = static_cast<int32_t>((*map)->mapfd_);
+      else
+        throw std::runtime_error(std::string("Unknown map id ") +
+                                 std::to_string(mapid));
+
+      ++i; // ldimm64 is 2 insns wide
+    }
+  }
 }
 
 } // namespace bpftrace

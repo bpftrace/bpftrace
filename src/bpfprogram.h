@@ -24,6 +24,7 @@ private:
                       BPFtrace &bpftrace);
 
   void assemble();
+  void relocateMaps();
 
   const BpfBytecode &bytecode_;
   BPFtrace &bpftrace_;
