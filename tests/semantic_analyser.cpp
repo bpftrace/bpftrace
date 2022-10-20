@@ -217,6 +217,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = avg(pid) }", 0);
   test("kprobe:f { @x = stats(pid) }", 0);
   test("kprobe:f { @x = 1; delete(@x) }", 0);
+  test("kprobe:f { @x[1, 10] = 1; delete(@x[1, *]) }", 0);
   test("kprobe:f { @x = 1; print(@x) }", 0);
   test("kprobe:f { @x = 1; clear(@x) }", 0);
   test("kprobe:f { @x = 1; zero(@x) }", 0);
@@ -501,6 +502,32 @@ TEST(semantic_analyser, call_delete)
   test("kprobe:f { @[delete(@x)] = 1; }", 1);
   test("kprobe:f { @x = 1; if(delete(@x)) { 123 } }", 10);
   test("kprobe:f { @x = 1; delete(@x) ? 0 : 1; }", 10);
+}
+
+TEST(semantic_analyser, call_delete_wildcard)
+{
+  test("kprobe:f { @x[0, 1] = 1; delete(@x[*, 1]); }", 0);
+  test("kprobe:f { @x[0, 1] = 1; $y = 1; delete(@x[* ,$y]); }", 0);
+  test("kprobe:f { @x[0, 1] = 1; $y = 0; delete(@x[$y, *]); }", 0);
+  test("kprobe:f { @x[0, 1, 2] = 1; $y = 1; delete(@x[*, $y, *]); }", 0);
+  test("END { delete(@x[*, 1]); } kprobe:f { @x[0, 1] = 1; }", 0);
+  test("kprobe:f { @x[0, 1] = 1; @y = delete(@x[10, *]); }", 1);
+  test("kprobe:f { @x[0, 1] = 1; @[delete(@x[10, *])] = 1; }", 1);
+  test("kprobe:f { @x[0, 1] = 1; if(delete(@x[10, *])) { 123 } }", 10);
+  test("kprobe:f { @x[0, 1] = 1; delete(@x[10, *]) ? 0 : 1; }", 10);
+  test("kprobe:f { delete(@x[10, *]); }", 10);
+  test("kprobe:f { @x[0, 1, 2] = 1; delete(@x[*, 1]); }", 10);
+  test("kprobe:f { @x[0, 1] = 1; delete(@x[*, *]); }", 10);
+  test("kprobe:f { @x[0, 1, 2] = 1; delete(@x[*, 1, 2]); }", 10);
+  test("kprobe:f { @x[0, \"hi\"] = 1; delete(@x[*, \"hi\"]); }", 10);
+}
+
+TEST(semantic_analyser, map_wildcards)
+{
+  test("kprobe:f { @x[0, 1] = 1; @x[*, 1] = 2; }", 1);
+  test("kprobe:f { @x[0, 1] = 1; print(@x[*, 1]); }", 1);
+  test("kprobe:f { @x[0, 1] = 1; $y = @x[*, 1]; }", 10);
+  test("kprobe:f { @x[0, 1] = 1; @x[*, 1]; }", 10);
 }
 
 TEST(semantic_analyser, call_exit)

@@ -24,6 +24,7 @@ MAKE_ACCEPT(Call)
 MAKE_ACCEPT(Sizeof)
 MAKE_ACCEPT(Offsetof)
 MAKE_ACCEPT(Map)
+MAKE_ACCEPT(MapWildcard)
 MAKE_ACCEPT(Variable)
 MAKE_ACCEPT(Binop)
 MAKE_ACCEPT(Unop)
@@ -78,6 +79,7 @@ Map::~Map()
   delete vargs;
   vargs = nullptr;
 }
+
 Binop::~Binop()
 {
   delete left;
@@ -314,6 +316,11 @@ Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
   for (auto expr : *vargs) {
     expr->key_for_map = this;
   }
+}
+
+MapWildcard::MapWildcard(location loc) : Expression(loc)
+{
+  is_literal = true;
 }
 
 Variable::Variable(const std::string &ident, location loc)
@@ -641,6 +648,8 @@ Map::Map(const Map &other) : Expression(other)
 {
   ident = other.ident;
   skip_key_validation = other.skip_key_validation;
+  wildcards = other.wildcards;
+  concrete_idx = other.concrete_idx;
 }
 
 FieldAccess::FieldAccess(const FieldAccess &other)

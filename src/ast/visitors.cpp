@@ -59,6 +59,10 @@ void Visitor::visit(Map &map)
   }
 }
 
+void Visitor::visit(MapWildcard &wildcard __attribute__((__unused__)))
+{
+}
+
 void Visitor::visit(Variable &var __attribute__((__unused__)))
 {
 }
@@ -236,6 +240,7 @@ DEFINE_MUTATOR_LEAF(Identifier)
 DEFINE_MUTATOR_LEAF(Variable)
 DEFINE_MUTATOR_LEAF(Jump)
 DEFINE_MUTATOR_LEAF(AttachPoint)
+DEFINE_MUTATOR_LEAF(MapWildcard)
 
 #undef DEFINE_MUTATOR_LEAF
 

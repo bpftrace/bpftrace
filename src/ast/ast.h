@@ -254,9 +254,22 @@ public:
   MapKey key_type;
   ExpressionList *vargs = nullptr;
   bool skip_key_validation = false;
+  size_t wildcards = 0;
+  size_t concrete_idx = 0; // only makes sense if wildcards != 0
 
 private:
   Map(const Map &other);
+};
+
+class MapWildcard : public Expression {
+public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(MapWildcard)
+
+  explicit MapWildcard(location loc);
+
+private:
+  MapWildcard(const MapWildcard &other) = default;
 };
 
 class Variable : public Expression {

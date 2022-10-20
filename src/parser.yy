@@ -137,6 +137,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Offsetof *> offsetof_expr
 %type <ast::Expression *> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression *> logical_or_expr map_or_var or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
+%type <ast::ExpressionList *> map_vargs
 %type <ast::ExpressionList *> vargs
 %type <ast::Integer *> int
 %type <ast::Map *> map
@@ -605,7 +606,7 @@ call:
 
 map:
                 MAP               { $$ = new ast::Map($1, @$); }
-        |       MAP "[" vargs "]" { $$ = new ast::Map($1, $3, @$); }
+        |       MAP "[" map_vargs "]" { $$ = new ast::Map($1, $3, @$); }
                 ;
 
 var:
@@ -615,6 +616,12 @@ var:
 map_or_var:
                 var { $$ = $1; }
         |       map { $$ = $1; }
+                ;
+map_vargs:
+                map_vargs "," expr { $$ = $1; $1->push_back($3); }
+        |       map_vargs "," "*"  { $$ = $1; $1->push_back(new ast::MapWildcard(@$)); }
+        |       MUL            { $$ = new ast::ExpressionList; $$->push_back(new ast::MapWildcard(@$)); }
+        |       expr           { $$ = new ast::ExpressionList; $$->push_back($1); }
                 ;
 
 vargs:

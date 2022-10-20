@@ -566,6 +566,24 @@ TEST(Parser, map_key)
        "   int: 1\n");
 }
 
+TEST(Parser, map_wildcards)
+{
+  test("kprobe:sys_open { @[0, 1] = 1; delete(@[0, *]); }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @\n"
+       "    int: 0\n"
+       "    int: 1\n"
+       "   int: 1\n"
+       "  call: delete\n"
+       "   map: @\n"
+       "    int: 0\n"
+       "    wildcard\n");
+  test_parse_failure("kprobe:sys_open { @[0, 1] = 1; delete(@[0, \'*\']); }");
+  test_parse_failure("kprobe:sys_open { @[0, 1] = 1; delete(@[0, **]); }");
+}
+
 TEST(Parser, predicate)
 {
   test("kprobe:sys_open / @x / { 1; }",

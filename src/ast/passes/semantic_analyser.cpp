@@ -594,8 +594,48 @@ void SemanticAnalyser::visit(Call &call)
     check_assignment(call, false, false, false);
     if (check_nargs(call, 1)) {
       auto &arg = *call.vargs->at(0);
-      if (!arg.is_map)
+      if (!arg.is_map) {
         LOG(ERROR, call.loc, err_) << "delete() expects a map to be provided";
+        return;
+      }
+
+      auto &map = static_cast<Map &>(arg);
+      // Defer wildcard analysis to final pass, so we have the key structure for
+      // the map.
+      if (map.wildcards && is_final_pass()) {
+        auto key_args = map.key_type.args_.size();
+        auto concrete_values = key_args - map.wildcards;
+        if (key_args == 0)
+          LOG(ERROR, call.loc, err_)
+              << "map " << map.ident
+              << " is only used with wildcards, cannot deduce key structure";
+        else if (map.vargs->size() != key_args)
+          LOG(ERROR, call.loc, err_)
+              << "key with wildcards has unexpected number of levels (expected "
+              << key_args << " but found " << map.vargs->size() << ")";
+        else if (map.wildcards == key_args)
+          LOG(ERROR, call.loc, err_)
+              << "use clear() instead of delete() with all wildcards";
+        else if (concrete_values != 1)
+          LOG(ERROR, call.loc, err_)
+              << "delete() with wildcards needs exactly one concrete value";
+
+        ssize_t concrete_idx = -1;
+        for (size_t idx = 0; idx < map.vargs->size(); idx++) {
+          if (!map.vargs->at(idx)->type.IsMapWildcardTy()) {
+            concrete_idx = idx;
+            break;
+          }
+        }
+        if (concrete_idx >= 0) {
+          auto concrete_varg = map.vargs->at(concrete_idx);
+          if (!concrete_varg->type.IsIntegerTy())
+            LOG(ERROR, call.loc, err_)
+                << "delete() with wildcards only supports "
+                   "integer concrete values";
+          map.concrete_idx = concrete_idx;
+        }
+      }
     }
 
     call.type = CreateNone();
@@ -1337,6 +1377,8 @@ void SemanticAnalyser::visit(Map &map)
   MapKey key;
 
   if (map.vargs) {
+    map.wildcards = 0;
+
     for (unsigned int i = 0; i < map.vargs->size(); i++) {
       Expression *expr = map.vargs->at(i);
       expr->accept(*this);
@@ -1358,10 +1400,16 @@ void SemanticAnalyser::visit(Map &map)
         LOG(ERROR, map.loc, err_)
             << "tuple cannot be used as a map key. Try a multi-key associative"
                " array instead (eg `@map[$1, $2] = ...)`.";
+      } else if (expr->type.IsMapWildcardTy()) {
+        // this Map node cannot be used to deduce the size of the MapKey,
+        // it contains a wildcard. Validity of this usage will be
+        // verified in its parent node.
+        map.skip_key_validation = true;
+        map.wildcards++;
       }
 
       if (is_final_pass() && expr->type.IsNoneTy())
-        LOG(ERROR, expr->loc, err_) << "Invalid expression for assignment: ";
+        LOG(ERROR, expr->loc, err_) << "Invalid expression for map key:";
 
       SizedType keytype = expr->type;
       // Skip.IsSigned() when comparing keys to not break existing scripts
@@ -1377,6 +1425,7 @@ void SemanticAnalyser::visit(Map &map)
     update_key_type(map, key);
 
   auto search_val = map_val_.find(map.ident);
+
   if (search_val != map_val_.end()) {
     map.type = search_val->second;
   } else {
@@ -1386,11 +1435,21 @@ void SemanticAnalyser::visit(Map &map)
     map.type = CreateNone();
   }
 
+  if (is_final_pass() && map.wildcards != 0 && func_ != "delete") {
+    LOG(ERROR, map.loc, err_)
+        << "Cannot use map wildcards outside of delete() function";
+  }
+
   // MapKey default initializes to no args so we don't need to do anything
   // if we don't find a key here
   auto map_key_search_val = map_key_.find(map.ident);
   if (map_key_search_val != map_key_.end())
     map.key_type = map_key_search_val->second;
+}
+
+void SemanticAnalyser::visit(MapWildcard &wildcard)
+{
+  wildcard.type = CreateMapWildcard();
 }
 
 void SemanticAnalyser::visit(Variable &var)
@@ -2142,6 +2201,12 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
 
   const std::string &map_ident = assignment.map->ident;
   auto type = assignment.expr->type;
+
+  if (assignment.map->wildcards) {
+    LOG(ERROR, assignment.loc, err_)
+        << "Wildcards are not valid for map assignments";
+    return;
+  }
 
   if (type.IsRecordTy()) {
     std::string ty = assignment.expr->type.GetName();
