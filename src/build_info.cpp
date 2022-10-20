@@ -24,12 +24,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  bcc library path resolution: "
-#ifdef HAVE_BCC_WHICH_SO
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  libdw (DWARF support): "
 #ifdef HAVE_LIBDW
       << "yes" << std::endl;
