@@ -1040,7 +1040,6 @@ int BPFtrace::run_special_probe(std::string name,
   return 0;
 }
 
-#ifdef HAVE_LIBBPF_LINK_CREATE
 int BPFtrace::run_iter()
 {
   auto probe = resources.probes.begin();
@@ -1101,13 +1100,6 @@ int BPFtrace::run_iter()
 
   return 0;
 }
-#else
-int BPFtrace::run_iter()
-{
-  LOG(ERROR) << "iter is not available for linked bpf version";
-  return 1;
-}
-#endif
 
 int BPFtrace::prerun() const
 {

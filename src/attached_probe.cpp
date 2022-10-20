@@ -125,7 +125,6 @@ int AttachedProbe::detach_kfunc(void)
   return 0;
 }
 
-#ifdef HAVE_LIBBPF_LINK_CREATE
 void AttachedProbe::attach_iter(void)
 {
   linkfd_ = bpf_link_create(progfd_,
@@ -144,20 +143,6 @@ int AttachedProbe::detach_iter(void)
   close(linkfd_);
   return 0;
 }
-#else
-void AttachedProbe::attach_iter(void)
-{
-  throw std::runtime_error(
-      "Error attaching probe: " + probe_.name +
-      ", iter API is not available for linked libbpf version");
-}
-
-int AttachedProbe::detach_iter(void)
-{
-  LOG(ERROR) << "iter is not available for linked bpf version";
-  return 0;
-}
-#endif // HAVE_LIBBPF_LINK_CREATE
 
 AttachedProbe::AttachedProbe(Probe &probe,
                              std::tuple<uint8_t *, uintptr_t> func,
