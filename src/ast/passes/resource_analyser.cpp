@@ -199,6 +199,10 @@ void ResourceAnalyser::visit(Map &map)
 {
   Visitor::visit(map);
 
+  // Wildcard entries do not contribute information.
+  if (map.wildcards)
+    return;
+
   resources_.map_vals[map.ident] = map.type;
   resources_.map_keys[map.ident] = map.key_type;
 }

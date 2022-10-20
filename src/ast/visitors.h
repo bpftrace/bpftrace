@@ -23,6 +23,7 @@ public:
   virtual void visit(StackMode &mode) = 0;
   virtual void visit(Call &call) = 0;
   virtual void visit(Map &map) = 0;
+  virtual void visit(MapWildcard &wildcard) = 0;
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
@@ -85,6 +86,7 @@ public:
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;
+  void visit(MapWildcard &wildcard) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
@@ -146,6 +148,7 @@ public:
   virtual R visit(StackMode &node) DEFAULT_FN;
   virtual R visit(Call &node) DEFAULT_FN;
   virtual R visit(Map &node) DEFAULT_FN;
+  virtual R visit(MapWildcard &node) DEFAULT_FN;
   virtual R visit(Variable &node) DEFAULT_FN;
   virtual R visit(Binop &node) DEFAULT_FN;
   virtual R visit(Unop &node) DEFAULT_FN;
@@ -191,6 +194,7 @@ private:
     DEFINE_DISPATCH(Builtin);
     DEFINE_DISPATCH(Call);
     DEFINE_DISPATCH(Map);
+    DEFINE_DISPATCH(MapWildcard);
     DEFINE_DISPATCH(Variable);
     DEFINE_DISPATCH(Binop);
     DEFINE_DISPATCH(Unop);
@@ -239,6 +243,7 @@ public:
   Node *visit(StackMode &) override;
   Node *visit(Call &) override;
   Node *visit(Map &) override;
+  Node *visit(MapWildcard &) override;
   Node *visit(Variable &) override;
   Node *visit(Binop &) override;
   Node *visit(Unop &) override;

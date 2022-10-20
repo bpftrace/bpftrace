@@ -25,6 +25,7 @@ public:
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
   void visit(Map &map) override;
+  void visit(MapWildcard &wildcard) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;

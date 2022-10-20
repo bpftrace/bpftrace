@@ -79,6 +79,11 @@ public:
                            Map &map,
                            Value *key,
                            const location &loc);
+  void CreateForEachMapElem(Value *ctx,
+                            Map &map,
+                            Value *callback,
+                            Value *callback_ctx,
+                            const location &loc);
   void CreateProbeRead(Value *ctx,
                        Value *dst,
                        llvm::Value *size,
@@ -227,6 +232,8 @@ public:
 private:
   Module &module_;
   BPFtrace &bpftrace_;
+
+  Function *delete_filtered_cb_ = nullptr;
 
   Value *CreateUSDTReadArgument(Value *ctx,
                                 struct bcc_usdt_argument *argument,

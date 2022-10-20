@@ -3298,6 +3298,7 @@ END
 - `hist(int n)` - Produce a log2 histogram of values of n
 - `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of n
 - `delete(@x[key])` - Delete the map element passed in as an argument
+- `delete(@x[*, val])` - Delete all map elements with `val` as the second level
 - `print(@x[, top [, div]])` - Print the map, optionally the top entries only and with a divisor
 - `print(value)` - Print a value
 - `clear(@x)` - Delete all keys from the map
@@ -3603,6 +3604,22 @@ it should.
 
 Note that printing maps is different than printing values. See the explanation
 in [`print()`: Print Value](#23-print-print-value).
+
+## 11. `delete(@x[*, <int>])`: Delete With Wildcards
+
+The `delete` function can accept map wildcard expressions to match on subkey values.
+Wildcard expressions must specify `*` for all but one subkey value. Currently only matching on integer values is supported.
+
+For example, `delete(@x[*, 10, *])` will match `@x[1, 10, 2]` but not `@x[1, 2, 10]`.
+
+In more advanced usages, this allows for stack traces to be part of the key, while also allowing you to delete them at a future time. In the snippet below, we delete stacks that were taken for workqueue items, which finished in less than 10ms, while keeping all stacks for slower workqueue items.
+
+```
+# bpftrace -e 'tracepoint:workqueue:workqueue_execute_start { @work[tid] = nsecs; }
+    profile:ms:1 /@work[tid]/ { @stacks[tid, kstack] = count(); }
+    tracepoint:workqueue:workqueue_execute_end { if (nsecs - @work[tid] <= 10_000_000) {
+        delete(@stacks[tid, *]); } delete(@work[tid]); }'
+```
 
 # Output
 

@@ -133,6 +133,11 @@ void Printer::visit(Map &map)
   }
   --depth_;
 }
+void Printer::visit(MapWildcard &wildcard __attribute__((unused)))
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "wildcard" << std::endl;
+}
 
 void Printer::visit(Variable &var)
 {

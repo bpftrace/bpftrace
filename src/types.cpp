@@ -185,6 +185,7 @@ std::string typestr(Type t)
     case Type::mac_address: return "mac_address"; break;
     case Type::cgroup_path: return "cgroup_path"; break;
     case Type::strerror: return "strerror"; break;
+    case Type::map_wildcard: return "map_wildcard"; break;
       // clang-format on
   }
 
@@ -480,6 +481,11 @@ SizedType CreateStrerror()
   return SizedType(Type::strerror, 8);
 }
 
+SizedType CreateMapWildcard()
+{
+  return SizedType(Type::map_wildcard, 0);
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
@@ -628,6 +634,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::mac_address:
     case bpftrace::Type::cgroup_path:
     case bpftrace::Type::strerror:
+    case bpftrace::Type::map_wildcard:
       break;
   }
 

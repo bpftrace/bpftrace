@@ -198,6 +198,7 @@ private:
                                const std::string &temp_name);
 
   void createIncDec(Unop &unop);
+  Function *createMapDeleteFilteredCallback(location loc);
 
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
   // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
@@ -238,6 +239,7 @@ private:
   int next_probe_index_ = 1;
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
+  Function *map_delete_filtered_cb_ = nullptr;
 
   std::map<std::string, AllocaInst *> variables_;
   int printf_id_ = 0;
