@@ -909,7 +909,6 @@ int AttachedProbe::usdt_sem_up_manual(const std::string &fn_name, void *ctx)
   return err;
 }
 
-#ifdef HAVE_BCC_USDT_ADDSEM
 int AttachedProbe::usdt_sem_up_manual_addsem(int pid,
                                              const std::string &fn_name,
                                              void *ctx)
@@ -952,15 +951,6 @@ int AttachedProbe::usdt_sem_up_manual_addsem(int pid,
 
   return err;
 }
-#else
-int AttachedProbe::usdt_sem_up_manual_addsem(int pid __attribute__((unused)),
-                                             const std::string &fn_name
-                                             __attribute__((unused)),
-                                             void *ctx __attribute__((unused)))
-{
-  return 0;
-}
-#endif // HAVE_BCC_USDT_ADDSEM
 
 int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
                                [[maybe_unused]] int pid,
@@ -976,11 +966,7 @@ int AttachedProbe::usdt_sem_up([[maybe_unused]] BPFfeature &feature,
     return 0;
   }
 
-#if defined(HAVE_BCC_USDT_ADDSEM)
   return usdt_sem_up_manual_addsem(pid, fn_name, ctx);
-#else
-  return usdt_sem_up_manual(fn_name, ctx);
-#endif
 }
 
 void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)

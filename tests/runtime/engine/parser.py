@@ -151,7 +151,6 @@ class TestParser(object):
                     "probe_read_kernel",
                     "dpath",
                     "uprobe_refcount",
-                    "bcc_usdt_addsem",
                     "signal",
                     "iter:task",
                     "iter:task_file",
