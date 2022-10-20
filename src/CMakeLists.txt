@@ -17,6 +17,7 @@ add_library(runtime
   attached_probe.cpp
   bpffeature.cpp
   bpftrace.cpp
+  bpfprogram.cpp
   btf.cpp
   child.cpp
   disasm.cpp

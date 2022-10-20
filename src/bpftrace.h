@@ -13,6 +13,7 @@
 #include "ast/ast.h"
 #include "attached_probe.h"
 #include "bpffeature.h"
+#include "bpfprogram.h"
 #include "btf.h"
 #include "child.h"
 #include "dwarf_parser.h"
@@ -88,8 +89,6 @@ public:
 private:
   std::string msg_;
 };
-
-using BpfBytecode = std::unordered_map<std::string, std::vector<uint8_t>>;
 
 class BPFtrace
 {
@@ -252,7 +251,7 @@ private:
 
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
-      std::tuple<uint8_t *, uintptr_t> func,
+      BpfProgram &&program,
       int pid,
       bool file_activation);
   int setup_output();
