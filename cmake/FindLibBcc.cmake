@@ -7,7 +7,6 @@
 #  LIBBCC_DEFINITIONS - Compiler switches required for using libbcc
 #  LIBBCC_BPF_LIBRARIES - libbcc runtime library
 #  LIBBCC_LOADER_LIBRARY_STATIC - libbcc helper static library (for static compilation)
-#  LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
 #  LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
 #  LIBBCC_BPF_CONTAINS_RUNTIME - whether libbcc_bpf.so has been expanded to contain everything !llvm & !clang
 #
@@ -109,15 +108,6 @@ endif()
 
 INCLUDE(CheckCXXSourceCompiles)
 SET(CMAKE_REQUIRED_INCLUDES ${LIBBCC_INCLUDE_DIRS})
-CHECK_CXX_SOURCE_COMPILES("
-#include <bcc/libbpf.h>
-
-int main(void) {
-  bpf_attach_kprobe(0, BPF_PROBE_ENTRY, \"\", \"\", 0, 0);
-  return 0;
-}
-" LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE)
-
 CHECK_CXX_SOURCE_COMPILES("
 #include <bcc/libbpf.h>
 
