@@ -89,8 +89,6 @@ private:
   std::string msg_;
 };
 
-using BpfBytecode = std::unordered_map<std::string, std::vector<uint8_t>>;
-
 class BPFtrace
 {
 public:
@@ -254,7 +252,7 @@ private:
 
   std::vector<std::unique_ptr<AttachedProbe>> attach_usdt_probe(
       Probe &probe,
-      std::tuple<uint8_t *, uintptr_t> func,
+      BpfProgram &program,
       int pid,
       bool file_activation);
   int setup_output();
