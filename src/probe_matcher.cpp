@@ -15,15 +15,11 @@
 #include "utils.h"
 
 #include <bcc/bcc_syms.h>
-
-#ifdef HAVE_BCC_ELF_FOREACH_SYM
 #include <bcc/bcc_elf.h>
 #include <elf.h>
-#endif
 
 namespace bpftrace {
 
-#ifdef HAVE_BCC_ELF_FOREACH_SYM
 static int add_symbol(const char* symname,
                       uint64_t /*start*/,
                       uint64_t /*size*/,
@@ -33,7 +29,6 @@ static int add_symbol(const char* symname,
   syms->insert(std::string(symname));
   return 0;
 }
-#endif
 
 /*
  * Finds all matches of search_input in the provided input stream.
@@ -214,19 +209,16 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
     real_paths = resolve_binary_path(path);
   else
     real_paths.push_back(path);
-#ifdef HAVE_BCC_ELF_FOREACH_SYM
   struct bcc_symbol_option symbol_option;
   memset(&symbol_option, 0, sizeof(symbol_option));
   symbol_option.use_debug_file = 1;
   symbol_option.check_debug_file_crc = 1;
   symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
-#endif
 
   std::string result;
   for (auto& real_path : real_paths)
   {
     std::set<std::string> syms;
-#ifdef HAVE_BCC_ELF_FOREACH_SYM
     // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
     // it's also found in debug info (#1138), so a std::set is used here (and in
     // the add_symbol callback) to ensure that each symbol will be unique in the
@@ -237,15 +229,6 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
     {
       LOG(WARNING) << "Could not list function symbols: " + real_path;
     }
-#else
-    std::string call_str = std::string("objdump -tT ") + real_path + +" | " +
-                           "grep \"F .text\" | grep -oE '[^[:space:]]+$'";
-    const char* call = call_str.c_str();
-    std::istringstream iss(exec_system(call));
-    std::copy(std::istream_iterator<std::string>(iss),
-              std::istream_iterator<std::string>(),
-              std::inserter(syms, syms.begin()));
-#endif
     for (auto& sym : syms)
       result += real_path + ":" + sym + "\n";
   }
