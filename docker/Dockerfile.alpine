@@ -12,6 +12,7 @@ RUN apk add --update \
   bcc-static \
   bzip2-static \
   libbpf-dev \
+  libelf-static \
   libpcap-dev \
   build-base \
   clang-dev \
@@ -27,6 +28,7 @@ RUN apk add --update \
   llvm${LLVM_VERSION}-static \
   python3 \
   wget \
+  xxd \
   zlib-dev \
   zlib-static \
   openssl-dev
