@@ -23,12 +23,15 @@ private:
                       BPFtrace &bpftrace);
 
   void assemble();
+  void relocateInsns();
   void relocateMaps();
 
   BpfBytecode &bytecode_;
   BPFtrace &bpftrace_;
   std::string name_;
   std::vector<uint8_t> code_;
+  // Offset in code_ where the .text begins (if .text was appended)
+  size_t text_offset_;
 };
 
 } // namespace bpftrace
