@@ -37,7 +37,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 9 Release
           TYPE: Release
           LLVM_VERSION: 9
@@ -46,7 +45,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 10 Debug
           TYPE: Debug
           LLVM_VERSION: 10
@@ -55,7 +53,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 10 Release
           TYPE: Release
           LLVM_VERSION: 10
@@ -64,7 +61,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 10 Clang Debug
           TYPE: Debug
           LLVM_VERSION: 10
@@ -75,7 +71,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 11 Debug
           TYPE: Debug
           LLVM_VERSION: 11
@@ -84,7 +79,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 11 Release
           TYPE: Release
           LLVM_VERSION: 11
@@ -93,7 +87,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 12 Release
           TYPE: Release
           LLVM_VERSION: 12
@@ -102,7 +95,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 13 Release
           TYPE: Release
           LLVM_VERSION: 13
@@ -111,7 +103,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 14 Release
           TYPE: Release
           LLVM_VERSION: 14
@@ -120,7 +111,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: LLVM 15 Release
           TYPE: Release
           LLVM_VERSION: 15
@@ -129,17 +119,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: focal
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
-        - NAME: LLVM 12 Release + old libbpf
-          TYPE: Release
-          LLVM_VERSION: 12
-          RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size
-          TOOLS_TEST_OLDVERSION: biosnoop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
-          LIBBPF_VERSION: 0.5.0
         - NAME: Memleak test (LLVM 11 Debug)
           TYPE: Debug
           LLVM_VERSION: 11
@@ -147,7 +126,6 @@ jobs:
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
           VENDOR_GTEST: ON
-          BUILD_LIBBPF: ON
         - NAME: Memleak test (LLVM 11 Release)
           TYPE: Release
           LLVM_VERSION: 11
@@ -205,8 +183,6 @@ jobs:
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"
-        -e BUILD_LIBBPF="${BUILD_LIBBPF}"
-        -e LIBBPF_VERSION="${LIBBPF_VERSION}"
         -e CC="${CC}"
         -e CXX="${CXX}"
         -e GTEST_FILTER="${GTEST_FILTER:-*}"
