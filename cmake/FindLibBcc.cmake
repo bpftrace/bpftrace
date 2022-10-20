@@ -7,7 +7,6 @@
 #  LIBBCC_DEFINITIONS - Compiler switches required for using libbcc
 #  LIBBCC_BPF_LIBRARIES - libbcc runtime library
 #  LIBBCC_LOADER_LIBRARY_STATIC - libbcc helper static library (for static compilation)
-#  LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
 #  LIBBCC_BPF_CONTAINS_RUNTIME - whether libbcc_bpf.so has been expanded to contain everything !llvm & !clang
 #
 # Note that the shared libbcc binary has libbpf and bcc_loader already compiled in but
@@ -108,16 +107,6 @@ endif()
 
 INCLUDE(CheckCXXSourceCompiles)
 SET(CMAKE_REQUIRED_INCLUDES ${LIBBCC_INCLUDE_DIRS})
-CHECK_CXX_SOURCE_COMPILES("
-#include <bcc/libbpf.h>
-
-int main(void) {
-  bpf_attach_uprobe(0, BPF_PROBE_ENTRY, \"\", \"\", 0, 0, 0);
-  return 0;
-}
-" LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE)
-SET(CMAKE_REQUIRED_INCLUDES)
-
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES})
 include(CheckSymbolExists)
 check_symbol_exists(bcc_usdt_foreach ${LIBBCC_INCLUDE_DIRS}/bcc/bcc_usdt.h LIBBCC_BPF_CONTAINS_RUNTIME)

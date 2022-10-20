@@ -36,12 +36,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  bcc bpf_attach_uprobe refcount: "
-#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  bcc library path resolution: "
 #ifdef HAVE_BCC_WHICH_SO
       << "yes" << std::endl;
