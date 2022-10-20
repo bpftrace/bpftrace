@@ -57,8 +57,6 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBpf ${LIBBPF_ERROR_MESSAGE}
 
 mark_as_advanced(LIBBPF_INCLUDE_DIRS LIBBPF_LIBRARIES)
 
-# We need btf_dump support, set LIBBPF_BTF_DUMP_FOUND
-# when it's found.
 if (KERNEL_INCLUDE_DIRS)
   set(INCLUDE_KERNEL -isystem ${KERNEL_INCLUDE_DIRS})
 endif ()
@@ -67,11 +65,6 @@ include(CheckSymbolExists)
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
 # libbpf quirk, needs upstream fix
 SET(CMAKE_REQUIRED_DEFINITIONS -include stdbool.h -isystem "${LIBBPF_INCLUDE_DIRS}" ${INCLUDE_KERNEL})
-check_symbol_exists(btf_dump__new "${LIBBPF_INCLUDE_DIRS}/bpf/btf.h" HAVE_BTF_DUMP)
-if (HAVE_BTF_DUMP)
-  set(LIBBPF_BTF_DUMP_FOUND TRUE)
-endif ()
-check_symbol_exists(btf_dump__emit_type_decl "${LIBBPF_INCLUDE_DIRS}/bpf/btf.h" HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL)
 
 check_symbol_exists(bpf_prog_load "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_BPF_PROG_LOAD)
 check_symbol_exists(bpf_map_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_BPF_MAP_CREATE)
@@ -84,34 +77,6 @@ SET(CMAKE_REQUIRED_LIBRARIES)
 INCLUDE(CheckCXXSourceCompiles)
 SET(CMAKE_REQUIRED_INCLUDES ${LIBBPF_INCLUDE_DIRS})
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
-CHECK_CXX_SOURCE_COMPILES("
-#include <bpf/btf.h>
-
-int main(void) {
-  btf__type_cnt(NULL);
-  return 0;
-}
-" HAVE_LIBBPF_BTF_TYPE_CNT)
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <bpf/btf.h>
-
-int main(void) {
-  const struct btf_dump_opts *opts = (const struct btf_dump_opts*) 1;
-
-  btf_dump__new(NULL, NULL, NULL, opts);
-  return 0;
-}
-" HAVE_LIBBPF_BTF_DUMP_NEW_V0_6_0)
-
-CHECK_CXX_SOURCE_COMPILES("
-#include <bpf/btf.h>
-
-int main(void) {
-  btf_dump__new_deprecated(NULL, NULL, NULL, NULL);
-  return 0;
-}
-" HAVE_LIBBPF_BTF_DUMP_NEW_DEPRECATED)
 
 CHECK_CXX_SOURCE_COMPILES("
 #include <bpf/bpf.h>

@@ -48,18 +48,6 @@ std::string BuildInfo::report()
 #else
       << "no" << std::endl;
 #endif
-  buf << "  libbpf btf dump: "
-#ifdef HAVE_LIBBPF_BTF_DUMP
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
-  buf << "  libbpf btf dump type decl: "
-#ifdef HAVE_LIBBPF_BTF_DUMP_EMIT_TYPE_DECL
-      << "yes" << std::endl;
-#else
-      << "no" << std::endl;
-#endif
   buf << "  libbpf bpf_prog_load: "
 #ifdef HAVE_LIBBPF_BPF_PROG_LOAD
       << "yes" << std::endl;

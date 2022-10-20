@@ -124,11 +124,8 @@ if(STATIC_LINKING)
 endif(STATIC_LINKING)
 
 
+target_link_libraries(runtime ${LIBBPF_LIBRARIES})
 target_link_libraries(libbpftrace parser resources runtime aot ast arch cxxdemangler_llvm)
-
-if (LIBBPF_BTF_DUMP_FOUND)
-  target_link_libraries(runtime ${LIBBPF_LIBRARIES})
-endif(LIBBPF_BTF_DUMP_FOUND)
 
 if(LIBPCAP_FOUND)
   target_link_libraries(libbpftrace ${LIBPCAP_LIBRARIES})

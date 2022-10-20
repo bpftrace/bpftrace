@@ -16,6 +16,8 @@ namespace bpftrace {
 namespace test {
 namespace probe {
 
+#include "btf_common.h"
+
 using bpftrace::ast::AttachPoint;
 using bpftrace::ast::AttachPointList;
 using bpftrace::ast::Probe;
@@ -73,10 +75,6 @@ TEST(probe, short_name)
   compare_bytecode("interval:s:1 { 1 }", "i:s:1 { 1 }");
 }
 
-#ifdef HAVE_LIBBPF_BTF_DUMP
-
-#include "btf_common.h"
-
 class probe_btf : public test_btf
 {
 };
@@ -88,8 +86,6 @@ TEST_F(probe_btf, short_name)
   compare_bytecode("iter:task { 1 }", "it:task { 1 }");
   compare_bytecode("iter:task_file { 1 }", "it:task_file { 1 }");
 }
-
-#endif // HAVE_LIBBPF_BTF_DUMP
 
 } // namespace probe
 } // namespace test
