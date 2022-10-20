@@ -790,7 +790,7 @@ void perf_event_lost(void *cb_cookie, uint64_t lost)
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
     Probe &probe,
-    std::tuple<uint8_t *, uintptr_t> func,
+    BpfProgram &program,
     int pid,
     bool file_activation)
 {
@@ -799,7 +799,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
   if (feature_->has_uprobe_refcnt() || !(file_activation && probe.path.size()))
   {
     ret.emplace_back(
-        std::make_unique<AttachedProbe>(probe, func, pid, *feature_, *btf_));
+        std::make_unique<AttachedProbe>(probe, program, pid, *feature_, *btf_));
     return ret;
   }
 
@@ -860,7 +860,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
       }
 
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, func, pid_parsed, *feature_, *btf_));
+          probe, program, pid_parsed, *feature_, *btf_));
       break;
     }
   }
@@ -892,12 +892,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto program = BpfProgram::CreateFromBytecode(bytecode, name.c_str(), *this);
+  auto program = BpfProgram::CreateFromBytecode(bytecode, name.c_str(), maps);
   if (!program)
   {
     auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
                                                        orig_name.c_str(),
-                                                       *this);
+                                                       maps);
     if (orig_program)
       program.emplace(std::move(*orig_program));
   }
@@ -912,10 +912,9 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     return ret;
   }
 
-  std::optional<std::tuple<uint8_t *, uintptr_t>> code = std::nullopt;
   try
   {
-    code.emplace((*program).getCode());
+    program->assemble();
   }
   catch (std::runtime_error &ex)
   {
@@ -930,7 +929,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
     if (probe.type == ProbeType::usdt)
     {
-      auto aps = attach_usdt_probe(probe, *code, pid, usdt_file_activation_);
+      auto aps = attach_usdt_probe(probe, *program, pid, usdt_file_activation_);
       for (auto &ap : aps)
         ret.emplace_back(std::move(ap));
 
@@ -939,14 +938,14 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     else if (probe.type == ProbeType::watchpoint ||
              probe.type == ProbeType::asyncwatchpoint)
     {
-      ret.emplace_back(
-          std::make_unique<AttachedProbe>(probe, *code, pid, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(
+          probe, *program, pid, *feature_, *btf_));
       return ret;
     }
     else
     {
       ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, *code, safe_mode_, *feature_, *btf_));
+          probe, *program, safe_mode_, *feature_, *btf_));
       return ret;
     }
   }

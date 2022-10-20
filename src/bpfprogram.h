@@ -1,4 +1,6 @@
-#include "bpftrace.h"
+#pragma once
+
+#include "mapmanager.h"
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -6,23 +8,34 @@
 
 namespace bpftrace {
 
+struct bpf_func_info
+{
+  __u32 insn_off;
+  __u32 type_id;
+};
+
+using BpfBytecode = std::unordered_map<std::string, std::vector<uint8_t>>;
 class BpfProgram
 {
 public:
   static std::optional<BpfProgram> CreateFromBytecode(BpfBytecode &bytecode,
                                                       const char *name,
-                                                      BPFtrace &bpftrace);
+                                                      MapManager &maps);
 
-  std::tuple<uint8_t *, uintptr_t> getCode();
+  void assemble();
+
+  std::vector<uint8_t> getBTF();
+  std::vector<uint8_t> getCode();
+  std::vector<uint8_t> getFuncInfos();
+
   BpfProgram(BpfProgram const &) = default;
   BpfProgram(BpfProgram &&) = default;
 
 private:
   explicit BpfProgram(BpfBytecode &bytecode,
                       const char *name,
-                      BPFtrace &bpftrace);
+                      MapManager &maps);
 
-  void assemble();
   void relocateInsns();
   void relocateMaps();
   void relocateFuncInfos();
@@ -31,7 +44,7 @@ private:
                            size_t insn_offset);
 
   BpfBytecode &bytecode_;
-  BPFtrace &bpftrace_;
+  MapManager &maps_;
   std::string name_;
   std::vector<uint8_t> code_;
   // Offset in code_ where the .text begins (if .text was appended)

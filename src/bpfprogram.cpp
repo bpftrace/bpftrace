@@ -48,33 +48,44 @@ struct btf_ext_info_sec
 
 std::optional<BpfProgram> BpfProgram::CreateFromBytecode(BpfBytecode &bytecode,
                                                          const char *name,
-                                                         BPFtrace &bpftrace)
+                                                         MapManager &maps)
 {
   if (bytecode.find(name) != bytecode.end())
   {
-    return BpfProgram(bytecode, name, bpftrace);
+    return BpfProgram(bytecode, name, maps);
   }
   return std::nullopt;
 }
 
 BpfProgram::BpfProgram(BpfBytecode &bytecode,
                        const char *name,
-                       BPFtrace &bpftrace)
-    : bytecode_(bytecode),
-      bpftrace_(bpftrace),
-      name_(name),
-      code_(),
-      text_offset_(0)
+                       MapManager &maps)
+    : bytecode_(bytecode), maps_(maps), name_(name), code_(), text_offset_(0)
 {
 }
 
-std::tuple<uint8_t *, uintptr_t> BpfProgram::getCode()
+std::vector<uint8_t> BpfProgram::getBTF()
+{
+  auto &btfsec = bytecode_.find(".BTF")->second;
+  return btfsec;
+}
+
+std::vector<uint8_t> BpfProgram::getCode()
 {
   if (code_.empty())
   {
     assemble();
   }
-  return std::make_tuple(code_.data(), (uintptr_t)code_.size());
+  return code_;
+}
+
+std::vector<uint8_t> BpfProgram::getFuncInfos()
+{
+  if (code_.empty())
+  {
+    assemble();
+  }
+  return func_infos_;
 }
 
 void BpfProgram::assemble()
@@ -278,7 +289,7 @@ void BpfProgram::relocateMaps()
                                  insn->src_reg == BPF_PSEUDO_MAP_VALUE))
     {
       auto mapid = insn->imm;
-      auto map = bpftrace_.maps[mapid];
+      auto map = maps_[mapid];
       if (map)
         insn->imm = static_cast<int32_t>((*map)->mapfd_);
       else
