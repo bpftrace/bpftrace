@@ -10,25 +10,44 @@
 #  set (LibBpf_FIND_QUIETLY TRUE)
 #endif (LIBBPF_LIBRARIES AND LIBBPF_INCLUDE_DIRS)
 
-find_path (LIBBPF_INCLUDE_DIRS
-  NAMES
-    bpf/bpf.h
-    bpf/btf.h
-    bpf/libbpf.h
-  PATHS
-    ENV CPATH)
+if (USE_SYSTEM_BPF_BCC)
+  find_path (LIBBPF_INCLUDE_DIRS
+    NAMES
+      bpf/bpf.h
+      bpf/btf.h
+      bpf/libbpf.h
+    PATHS
+      ENV CPATH)
 
-find_library (LIBBPF_LIBRARIES
-  NAMES
-    bpf
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
+  find_library (LIBBPF_LIBRARIES
+    NAMES
+      bpf
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
+  set(LIBBPF_ERROR_MESSAGE "Please install the libbpf development package")
+else()
+  set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+  set(CMAKE_PREFIX_PATH ${BPF_BCC_PREFIX_PATH})
+  find_path (LIBBPF_INCLUDE_DIRS
+    NAMES
+      bpf/bpf.h
+      bpf/btf.h
+      bpf/libbpf.h
+    NO_CMAKE_SYSTEM_PATH)
+
+  find_library (LIBBPF_LIBRARIES
+    NAMES
+      bpf
+    NO_CMAKE_SYSTEM_PATH)
+  set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+  set(LIBBPF_ERROR_MESSAGE "Please run ${CMAKE_SOURCE_DIR}/build-libs.sh from the build folder first")
+endif()
 
 include (FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set LIBBPF_FOUND to TRUE if all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBpf "Please install the libbpf development package"
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBpf ${LIBBPF_ERROR_MESSAGE}
   LIBBPF_LIBRARIES
   LIBBPF_INCLUDE_DIRS)
 
@@ -43,7 +62,7 @@ include(CheckSymbolExists)
 # adding also elf for static build check
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
 # libbpf quirk, needs upstream fix
-SET(CMAKE_REQUIRED_DEFINITIONS -include stdbool.h ${INCLUDE_KERNEL})
+SET(CMAKE_REQUIRED_DEFINITIONS -include stdbool.h -isystem "${LIBBPF_INCLUDE_DIRS}" ${INCLUDE_KERNEL})
 check_symbol_exists(btf_dump__new "${LIBBPF_INCLUDE_DIRS}/bpf/btf.h" HAVE_BTF_DUMP)
 if (HAVE_BTF_DUMP)
   set(LIBBPF_BTF_DUMP_FOUND TRUE)

@@ -240,6 +240,14 @@ ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
 
 # Building bpftrace
 
+## Vendored libraries
+The bpftrace tree include bcc and libbpf submodules. 
+Use `git submodule update --recursive` to initialize them.
+
+By default the build system will look for these libraries as built in the
+bpftrace tree. If you want to use the system ones, pass
+`-DUSE_SYSTEM_BPF_BCC=1` to your `cmake` invocation.
+
 ## Ubuntu
 
 Due to the kernel requirements Ubuntu 18.04 or newer is highly recommended.
@@ -290,6 +298,7 @@ sudo apt-get install -y \
   asciidoctor
 git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
+../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 sudo make install
@@ -325,7 +334,9 @@ sudo dnf install -y bison \
   asciidoctor
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
-mkdir build; cd build; cmake -DCMAKE_BUILD_TYPE=Release ..
+mkdir build; cd build
+../build-libs.sh
+cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 sudo make install
 ```
@@ -373,6 +384,7 @@ cd $builddir
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build
+../build-libs.sh
 cmake3 ..
 make -j8
 make install
@@ -421,6 +433,7 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 git clone https://github.com/iovisor/bpftrace
 mkdir -p bpftrace/build
 cd bpftrace/build
+../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```

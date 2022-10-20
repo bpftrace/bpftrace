@@ -18,38 +18,68 @@ if (LIBBCC_LIBRARIES AND LIBBCC_INCLUDE_DIRS)
   set (LibBcc_FIND_QUIETLY TRUE)
 endif (LIBBCC_LIBRARIES AND LIBBCC_INCLUDE_DIRS)
 
-find_path (LIBBCC_INCLUDE_DIRS
-  NAMES
-    bcc/libbpf.h
-  PATHS
-    ENV CPATH)
+if (USE_SYSTEM_BPF_BCC)
+  find_path (LIBBCC_INCLUDE_DIRS
+    NAMES
+      bcc/libbpf.h
+    PATHS
+      ENV CPATH
+  )
 
-find_library (LIBBCC_LIBRARIES
-  NAMES
-    bcc
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
+  find_library (LIBBCC_LIBRARIES
+    NAMES
+      bcc
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH
+  )
 
-find_library (LIBBCC_BPF_LIBRARIES
-  NAMES
-    bcc_bpf
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
+  find_library (LIBBCC_BPF_LIBRARIES
+    NAMES
+      bcc_bpf
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
 
-find_library (LIBBCC_LOADER_LIBRARY_STATIC
-  NAMES
-    bcc-loader-static
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
+  find_library (LIBBCC_LOADER_LIBRARY_STATIC
+    NAMES
+      bcc-loader-static
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
+  set(LIBBCC_ERROR_MESSAGE "Please install the bcc library package, which is required. Depending on your distro, it may be called bpfcclib or bcclib (Ubuntu), bcc-devel (Fedora), or something else. If unavailable, install bcc from source (github.com/iovisor/bcc).")
+else()
+  set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+  set(CMAKE_PREFIX_PATH ${BPF_BCC_PREFIX_PATH})
+  find_path (LIBBCC_INCLUDE_DIRS
+    NAMES
+      bcc/libbpf.h
+    NO_CMAKE_SYSTEM_PATH)
+
+  find_library (LIBBCC_LIBRARIES
+    NAMES
+      bcc
+    NO_CMAKE_SYSTEM_PATH)
+
+  find_library (LIBBCC_BPF_LIBRARIES
+    NAMES
+      bcc_bpf
+    NO_CMAKE_SYSTEM_PATH)
+
+  find_library (LIBBCC_LOADER_LIBRARY_STATIC
+    NAMES
+      bcc-loader-static
+    NO_CMAKE_SYSTEM_PATH)
+
+  set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+  set(LIBBCC_ERROR_MESSAGE "Please run ${CMAKE_SOURCE_DIR}/build-libs.sh from the build folder first")
+endif()
 
 include (FindPackageHandleStandardArgs)
 
 
 # handle the QUIETLY and REQUIRED arguments and set LIBBCC_FOUND to TRUE if all listed variables are TRUE
-FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc "Please install the bcc library package, which is required. Depending on your distro, it may be called bpfcclib or bcclib (Ubuntu), bcc-devel (Fedora), or something else. If unavailable, install bcc from source (github.com/iovisor/bcc)."
+FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc ${LIBBCC_ERROR_MESSAGE}
   LIBBCC_LIBRARIES
   LIBBCC_INCLUDE_DIRS)
 
