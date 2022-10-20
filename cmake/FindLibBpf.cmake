@@ -66,7 +66,6 @@ SET(CMAKE_REQUIRED_LIBRARIES ${LIBBPF_LIBRARIES} elf z)
 # libbpf quirk, needs upstream fix
 SET(CMAKE_REQUIRED_DEFINITIONS -include stdbool.h -isystem "${LIBBPF_INCLUDE_DIRS}" ${INCLUDE_KERNEL})
 
-check_symbol_exists(bpf_map_lookup_batch "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_MAP_BATCH)
 check_symbol_exists(bpf_link_create "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_LINK_CREATE)
 check_symbol_exists(bpf_prog_test_run_opts "${LIBBPF_INCLUDE_DIRS}/bpf/bpf.h" HAVE_LIBBPF_PROG_TEST_RUN_OPTS)
 SET(CMAKE_REQUIRED_DEFINITIONS)
