@@ -12,21 +12,34 @@ extraction:
         - libgmock-dev
         - zlib1g-dev
         - libfl-dev
+        - libcereal-dev
+        - libdw-dev
+        - libpcap-dev
         - systemtap-sdt-dev
         - binutils-dev
-        - llvm-7-dev
-        - llvm-7-runtime
-        - libclang-7-dev
-        - clang-7
+        - llvm-11
+        - llvm-11-dev
+        - llvm-11-runtime
+        - libllvm11
+        - clang-11
+        - libclang-11-dev
+        - libclang-common-11-dev
+        - libclang1-11
         - libbpfcc-dev
-    after_prepare:
-      - cd $LGTM_WORKSPACE
-      - mkdir -p local/lib
-      - git clone https://github.com/libbpf/libbpf.git
-      - cd libbpf/src
-      - git checkout v0.8.0
-      - CC=gcc make -j$(nproc)
-      - PREFIX=$LGTM_WORKSPACE/local LIBDIR=$LGTM_WORKSPACE/local/lib make install install_uapi_headers
-      - export CPATH=$LGTM_WORKSPACE/local/include:$CPATH
-      - export LD_LIBRARY_PATH=$LGTM_WORKSPACE/local/lib:$LD_LIBRARY_PATH
-
+        - systemtap-sdt-dev
+        - python3
+        - python3-distutils
+        - xxd
+        - libssl-dev
+        - pkg-config
+        - make
+    configure:
+      command:
+      - mkdir $LGTM_SRC/build && cd $LGTM_SRC/build
+      - export LLVM_ROOT=/usr/lib/llvm-11; export LLVM_REQUESTED_VERSION=11;
+      - ../build-libs.sh
+      - cmake ..
+    index:
+      build_command:
+      - cd $LGTM_SRC/build
+      - make -j$(nproc)

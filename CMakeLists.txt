@@ -11,6 +11,7 @@ include(GNUInstallDirs)
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
 set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with musl. Has issues with dlopen.")
+set(USE_SYSTEM_BPF_BCC OFF CACHE BOOL "Use system libbpf and bcc instead of the repository vendored ones.")
 
 set(EMBED_USE_LLVM OFF CACHE BOOL "Use a prebuilt embedded LLVM, speeds up the build process")
 set(EMBED_BUILD_LLVM OFF CACHE BOOL "Build Clang&LLVM static libs as an ExternalProject and link to these instead of system libs.")
@@ -52,6 +53,10 @@ endif()
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
+
+if (NOT USE_SYSTEM_BPF_BCC)
+  set(BPF_BCC_PREFIX_PATH ${CMAKE_BINARY_DIR}/build-libs/)
+endif()
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
