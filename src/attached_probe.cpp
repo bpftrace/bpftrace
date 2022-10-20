@@ -174,11 +174,11 @@ int AttachedProbe::detach_raw_tracepoint(void)
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             std::tuple<uint8_t *, uintptr_t> func,
+                             BpfProgram &&prog,
                              bool safe_mode,
                              BPFfeature &feature,
                              BTF &btf)
-    : probe_(probe), func_(func), btf_(btf)
+    : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
   load_prog(feature);
   if (bt_verbose)
@@ -234,11 +234,11 @@ AttachedProbe::AttachedProbe(Probe &probe,
 }
 
 AttachedProbe::AttachedProbe(Probe &probe,
-                             std::tuple<uint8_t *, uintptr_t> func,
+                             BpfProgram &&prog,
                              int pid,
                              BPFfeature &feature,
                              BTF &btf)
-    : probe_(probe), func_(func), btf_(btf)
+    : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
   load_prog(feature);
   switch (probe_.type)
@@ -699,8 +699,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   if (use_cached_progfd())
     return;
 
-  uint8_t *insns = std::get<0>(func_);
-  unsigned prog_len = std::get<1>(func_);
+  auto &insns = prog_.getCode();
   const char *license = "GPL";
   int log_level = 0;
 
@@ -806,8 +805,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                                 name.c_str(),
                                 license,
-                                reinterpret_cast<struct bpf_insn *>(insns),
-                                prog_len / sizeof(struct bpf_insn),
+                                reinterpret_cast<const struct bpf_insn *>(
+                                    insns.data()),
+                                insns.size() / sizeof(struct bpf_insn),
                                 &opts);
       }
 

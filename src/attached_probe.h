@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "bpffeature.h"
+#include "bpfprogram.h"
 #include "btf.h"
 #include "types.h"
 
@@ -21,12 +22,12 @@ class AttachedProbe
 {
 public:
   AttachedProbe(Probe &probe,
-                std::tuple<uint8_t *, uintptr_t> func,
+                BpfProgram &&prog,
                 bool safe_mode,
                 BPFfeature &feature,
                 BTF &btf);
   AttachedProbe(Probe &probe,
-                std::tuple<uint8_t *, uintptr_t> func,
+                BpfProgram &&prog,
                 int pid,
                 BPFfeature &feature,
                 BTF &btf);
@@ -81,7 +82,7 @@ private:
   void cache_progfd(void);
 
   Probe &probe_;
-  std::tuple<uint8_t *, uintptr_t> func_;
+  BpfProgram prog_;
   std::vector<int> perf_event_fds_;
   bool close_progfd_ = true;
   int progfd_ = -1;
