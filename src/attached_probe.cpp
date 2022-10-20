@@ -708,13 +708,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         continue;
       }
 
-#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
       LIBBPF_OPTS(bpf_prog_load_opts, opts);
       opts.log_buf = log_buf.get();
       opts.log_size = log_buf_size;
-#else
-      struct bpf_load_program_attr opts = {};
-#endif
       opts.log_level = log_level;
 
       if (probe_.type == ProbeType::kfunc)
@@ -744,22 +740,12 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.kern_version = version;
       }
 
-#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
       progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                               name.c_str(),
                               license,
                               reinterpret_cast<struct bpf_insn *>(insns),
                               prog_len / sizeof(struct bpf_insn),
                               &opts);
-#else
-      opts.prog_type = static_cast<::bpf_prog_type>(prog_type);
-      opts.name = name.c_str();
-      opts.insns = reinterpret_cast<struct bpf_insn *>(insns);
-      opts.insns_cnt = prog_len / sizeof(struct bpf_insn);
-      opts.license = license;
-      opts.attach_prog_fd = 0;
-      progfd_ = bpf_load_program_xattr(&opts, log_buf.get(), log_buf_size);
-#endif
       if (progfd_ >= 0)
         break;
     }

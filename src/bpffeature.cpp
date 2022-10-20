@@ -43,13 +43,9 @@ static bool try_load_(const char* name,
       continue;
     }
 
-#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
     LIBBPF_OPTS(bpf_prog_load_opts, opts);
     opts.log_buf = logbuf;
     opts.log_size = logbuf_size;
-#else
-    struct bpf_load_program_attr opts = {};
-#endif
     opts.log_level = loglevel;
     opts.kern_version = version;
     if (attach_type.has_value())
@@ -60,22 +56,12 @@ static bool try_load_(const char* name,
     if (attach_btf_id.has_value())
       opts.attach_btf_id = attach_btf_id.value();
 
-#ifdef HAVE_LIBBPF_BPF_PROG_LOAD
     int ret = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                             name,
                             "GPL",
                             insns,
                             insns_cnt,
                             &opts);
-#else
-    opts.prog_type = static_cast<::bpf_prog_type>(prog_type);
-    opts.name = name;
-    opts.insns = insns;
-    opts.insns_cnt = insns_cnt;
-    opts.license = "GPL";
-    opts.attach_prog_fd = 0;
-    int ret = bpf_load_program_xattr(&opts, logbuf, logbuf_size);
-#endif
     if (ret >= 0)
     {
       if (outfd)
