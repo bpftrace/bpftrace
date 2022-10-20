@@ -344,7 +344,6 @@ bool BPFfeature::has_kprobe_multi()
   if (has_kprobe_multi_.has_value())
     return *has_kprobe_multi_;
 
-#if defined(HAVE_LIBBPF_KPROBE_MULTI)
   const char* sym = "ksys_read";
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   int progfd, linkfd = -1;
@@ -387,11 +386,6 @@ bool BPFfeature::has_kprobe_multi()
   {
     close(progfd);
   }
-
-#else
-  has_kprobe_multi_ = false;
-#endif // HAVE_LIBBPF_KPROBE_MULTI
-
   return *has_kprobe_multi_;
 }
 

@@ -786,7 +786,6 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   cache_progfd();
 }
 
-#ifdef HAVE_LIBBPF_KPROBE_MULTI
 static inline uint64_t ptr_to_u64(const void *ptr)
 {
   return (uint64_t)(unsigned long)ptr;
@@ -833,17 +832,14 @@ void AttachedProbe::attach_multi_kprobe(void)
     throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
   }
 }
-#endif // HAVE_LIBBPF_KPROBE_MULTI
 
 void AttachedProbe::attach_kprobe(bool safe_mode)
 {
-#ifdef HAVE_LIBBPF_KPROBE_MULTI
   if (!probe_.funcs.empty())
   {
     attach_multi_kprobe();
     return;
   }
-#endif
 
   resolve_offset_kprobe(safe_mode);
 #ifdef LIBBCC_ATTACH_KPROBE_SIX_ARGS_SIGNATURE
