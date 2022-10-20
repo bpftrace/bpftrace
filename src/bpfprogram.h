@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mapmanager.h"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -19,7 +21,7 @@ public:
   static std::optional<BpfProgram> CreateFromBytecode(
       const BpfBytecode &bytecode,
       const std::string &name,
-      BPFtrace &bpftrace);
+      MapManager &maps);
 
   void assemble();
 
@@ -33,11 +35,12 @@ public:
 private:
   explicit BpfProgram(const BpfBytecode &bytecode,
                       const std::string &name,
-                      BPFtrace &bpftrace);
+                      MapManager &bpftrace);
 
+  void relocateMaps();
 
   const BpfBytecode &bytecode_;
-  BPFtrace &bpftrace_;
+  MapManager &maps_;
   std::string name_;
   std::vector<uint8_t> code_;
 };

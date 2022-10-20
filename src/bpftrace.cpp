@@ -33,7 +33,6 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "printf.h"
-#include "relocator.h"
 #include "resolve_cgroupid.h"
 #include "triggers.h"
 #include "utils.h"
@@ -942,12 +941,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto program = BpfProgram::CreateFromBytecode(bytecode, name, *this);
+  auto program = BpfProgram::CreateFromBytecode(bytecode, name, maps);
   if (!program)
   {
     auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
                                                        orig_name,
-                                                       *this);
+                                                       maps);
     if (orig_program)
       program.emplace(std::move(*orig_program));
   }
