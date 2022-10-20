@@ -30,7 +30,6 @@ int create_map(libbpf::bpf_map_type map_type,
     name_ptr = &fixed_name;
   }
 
-#ifdef HAVE_LIBBPF_BPF_MAP_CREATE
   LIBBPF_OPTS(bpf_map_create_opts, opts);
   opts.map_flags = flags;
   return bpf_map_create(static_cast<::bpf_map_type>(map_type),
@@ -39,16 +38,6 @@ int create_map(libbpf::bpf_map_type map_type,
                         value_size,
                         max_entries,
                         &opts);
-#else
-  struct bpf_create_map_attr attr = {};
-  attr.name = name_ptr->c_str();
-  attr.map_flags = flags;
-  attr.map_type = static_cast<::bpf_map_type>(map_type);
-  attr.key_size = key_size;
-  attr.value_size = value_size;
-  attr.max_entries = max_entries;
-  return bpf_create_map_xattr(&attr);
-#endif
 }
 
 } // namespace
