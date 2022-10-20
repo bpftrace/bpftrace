@@ -38,12 +38,15 @@ private:
                       const std::string &name,
                       MapManager &bpftrace);
 
+  void relocateInsns();
   void relocateMaps();
 
   const BpfBytecode &bytecode_;
   MapManager &maps_;
   std::string name_;
   std::vector<uint8_t> code_;
+  // Offset in code_ where the .text begins (if .text was appended)
+  size_t text_offset_ = 0;
 };
 
 } // namespace bpftrace
