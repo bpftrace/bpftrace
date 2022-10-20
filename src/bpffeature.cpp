@@ -327,14 +327,10 @@ bool BPFfeature::has_uprobe_refcnt()
   if (has_uprobe_refcnt_.has_value())
     return *has_uprobe_refcnt_;
 
-#ifdef LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
   struct stat sb;
   has_uprobe_refcnt_ =
       ::stat("/sys/bus/event_source/devices/uprobe/format/ref_ctr_offset",
              &sb) == 0;
-#else
-  has_uprobe_refcnt_ = false;
-#endif // LIBBCC_ATTACH_UPROBE_SEVEN_ARGS_SIGNATURE
 
   return *has_uprobe_refcnt_;
 }
