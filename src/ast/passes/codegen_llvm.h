@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include <llvm/ExecutionEngine/MCJIT.h>
+#include <llvm/IR/DIBuilder.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_os_ostream.h>
@@ -147,6 +148,8 @@ private:
   Function *createLinearFunction();
   MDNode *createLoopMetadata();
 
+  void createDebugFunction(Function &func);
+
   std::pair<Value *, uint64_t> getString(Expression *expr);
 
   void binop_string(Binop &binop);
@@ -217,6 +220,14 @@ private:
   std::unique_ptr<TargetMachine> target_machine_;
   std::unique_ptr<Module> module_;
   IRBuilderBPF b_;
+
+  struct
+  {
+    DIType *int64;
+    DIType *int8_ptr;
+  } debug_types_;
+  DIBuilder debug_;
+  DIFile *debug_file_;
 
   const DataLayout &datalayout() const
   {
