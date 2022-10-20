@@ -6,11 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#ifdef HAVE_BCC_WHICH_SO
 #include <bcc/bcc_proc.h>
-#endif
-
 #include "ast/int_parser.h"
 #include "log.h"
 #include "types.h"
@@ -388,7 +384,6 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
 
   ap_->target = "";
 
-#ifdef HAVE_BCC_WHICH_SO
   if (!has_wildcard(parts_[1]) && parts_[1].find("lib") == 0)
   {
     // Automatic resolution of shared library paths.
@@ -400,7 +395,6 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     if (lib_path)
       ap_->target = lib_path;
   }
-#endif
 
   if (ap_->target.empty())
   {
