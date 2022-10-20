@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y \
       linux-tools-$(uname -r) \
       systemtap-sdt-dev \
       python3 \
+      python3-distutils \
       xxd \
       libssl-dev
 RUN if [ "$LLVM_VERSION" -ge 13 ] ; then apt-get install -y libmlir-${LLVM_VERSION}-dev ; fi

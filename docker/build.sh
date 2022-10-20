@@ -14,8 +14,6 @@ RUN_TESTS=${RUN_TESTS:-1}
 RUN_MEMLEAK_TEST=${RUN_MEMLEAK_TEST:-0}
 VENDOR_GTEST=${VENDOR_GTEST:-OFF}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
-BUILD_LIBBPF=${BUILD_LIBBPF:-OFF}
-LIBBPF_VERSION=${LIBBPF_VERSION:-0.8.0}
 CC=${CC:cc}
 CXX=${CXX:c++}
 ENABLE_SKB_OUTPUT=${ENABLE_SKB_OUTPUT:-ON}
@@ -25,20 +23,14 @@ if [[ $LLVM_VERSION -eq 13 ]]; then
   touch /usr/lib/llvm-13/bin/llvm-omp-device-info
 fi
 
-if [[ $BUILD_LIBBPF = ON ]]; then
-  mkdir -p /src
-  git clone https://github.com/libbpf/libbpf.git /src/libbpf
-  cd /src/libbpf/src
-  git checkout v$LIBBPF_VERSION
-  CC=gcc make -j$(nproc)
-  # libbpf defaults to /usr/lib64 which doesn't work on debian like systems
-  # this should work on both
-  PREFIX=/usr/local/ LIBDIR=/usr/local/lib make install install_uapi_headers
-fi
 
-# Build bpftrace
 mkdir -p "$1"
 cd "$1"
+
+# Build vendored libraries first
+../build-libs.sh
+
+# Build bpftrace
 cmake -DCMAKE_BUILD_TYPE="$2" \
       -DWARNINGS_AS_ERRORS:BOOL=$WARNINGS_AS_ERRORS \
       -DSTATIC_LINKING:BOOL=$STATIC_LINKING \

@@ -7,8 +7,6 @@ ARG LLVM_VERSION
 
 ARG CMAKE_VER="3.16"
 ARG CMAKE_BUILD="2"
-ARG bcc_ref="v0.22.0"
-ARG bcc_org="iovisor"
 
 ENV LLVM_VERSION=$LLVM_VERSION
 ENV CMAKE_VER=${CMAKE_VER}
@@ -37,26 +35,6 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         pkg-config
 
-
-RUN mkdir -p /src \
-    && git clone https://github.com/$bcc_org/bcc /src/bcc \
-    && cd /src/bcc \
-    && git checkout $bcc_ref \
-    && git submodule update \
-    && mkdir build \
-    && cd build \
-    && cmake .. \
-         -DCMAKE_INSTALL_PREFIX=/usr/local \
-         -DENABLE_EXAMPLES=0 -DENABLE_MAN=0 -DENABLE_TESTS=0 \
-         -DENABLE_LLVM_NATIVECODEGEN=0 \
-    && make -j$(nproc) \
-    && make install \
-    && make -C ../src/cc/libbpf/src install_headers install_uapi_headers \
-    && mkdir -p /usr/local/lib \
-    && cp src/cc/libbcc.a /usr/local/lib/libbcc.a \
-    && cp src/cc/libbcc-loader-static.a /usr/local/lib/libbcc-loader-static.a \
-    && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbpf.a \
-    && cp ./src/cc/libbcc_bpf.a /usr/local/lib/libbcc_bpf.a
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
