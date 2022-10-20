@@ -33,7 +33,6 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt
           BASE: xenial
           DISTRO: ubuntu-glibc
-          CMAKE_EXTRA_FLAGS: "-DCMAKE_CXX_FLAGS='-include /usr/local/include/bcc/compat/linux/bpf.h -D__LINUX_BPF_H__'"
           VENDOR_GTEST: ON
           ENABLE_SKB_OUTPUT: OFF
         - TYPE: Debug
