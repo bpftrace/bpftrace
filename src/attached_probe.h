@@ -42,7 +42,6 @@ public:
 private:
   std::string eventprefix() const;
   std::string eventname() const;
-  static std::string sanitise(const std::string &str);
   void resolve_offset_kprobe(bool safe_mode);
   bool resolve_offset_uprobe(bool safe_mode);
   void load_prog(BPFfeature &feature);

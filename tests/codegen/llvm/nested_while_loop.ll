@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"interval:s:1"(i8* %0) section "s_interval:s:1_1" {
+define i64 @"interval:s:1"(i8* %0) section "s_interval:s:1_1" !dbg !4 {
 entry:
   %"@_newval" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -27,7 +27,7 @@ while_cond:                                       ; preds = %while_end3, %entry
   %4 = icmp sle i64 %3, 100
   %5 = zext i1 %4 to i64
   %true_cond = icmp ne i64 %5, 0
-  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !0
+  br i1 %true_cond, label %while_body, label %while_end, !llvm.loop !13
 
 while_body:                                       ; preds = %while_cond
   store i64 0, i64* %"$j", align 8
@@ -44,7 +44,7 @@ while_cond1:                                      ; preds = %lookup_merge, %whil
   %9 = icmp sle i64 %8, 100
   %10 = zext i1 %9 to i64
   %true_cond4 = icmp ne i64 %10, 0
-  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !0
+  br i1 %true_cond4, label %while_body2, label %while_end3, !llvm.loop !13
 
 while_body2:                                      ; preds = %while_cond1
   %11 = bitcast i64* %"@_key" to i8*
@@ -99,5 +99,21 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 
-!0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.unroll.disable"}
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!3}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !2)
+!1 = !DIFile(filename: "bpftrace.bpf.o", directory: ".")
+!2 = !{}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "interval_s_1", linkageName: "interval_s_1", scope: !1, file: !1, type: !5, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !10)
+!5 = !DISubroutineType(types: !6)
+!6 = !{!7, !8}
+!7 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
+!8 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !9, size: 64)
+!9 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!10 = !{!11, !12}
+!11 = !DILocalVariable(name: "var0", scope: !4, file: !1, type: !7)
+!12 = !DILocalVariable(name: "var1", arg: 1, scope: !4, file: !1, type: !8)
+!13 = distinct !{!13, !14}
+!14 = !{!"llvm.loop.unroll.disable"}

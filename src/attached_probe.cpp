@@ -350,29 +350,21 @@ std::string AttachedProbe::eventname() const
     case ProbeType::kretprobe:
     case ProbeType::rawtracepoint:
       offset_str << std::hex << offset_;
-      return eventprefix() + sanitise(probe_.attach_point) + "_" +
-             offset_str.str() + index_str;
+      return eventprefix() + sanitise_bpf_program_name(probe_.attach_point) +
+             "_" + offset_str.str() + index_str;
     case ProbeType::special:
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::usdt:
       offset_str << std::hex << offset_;
-      return eventprefix() + sanitise(probe_.path) + "_" + offset_str.str() + index_str;
+      return eventprefix() + sanitise_bpf_program_name(probe_.path) + "_" +
+             offset_str.str() + index_str;
     case ProbeType::tracepoint:
       return probe_.attach_point;
     default:
       LOG(FATAL) << "invalid eventname probe \"" << probetypeName(probe_.type)
                  << "\"";
   }
-}
-
-std::string AttachedProbe::sanitise(const std::string &str)
-{
-  /*
-   * Characters such as "." in event names are rejected by the kernel,
-   * so sanitize:
-   */
-  return std::regex_replace(str, std::regex("[^A-Za-z0-9_]"), "_");
 }
 
 static int sym_name_cb(const char *symname, uint64_t start,
@@ -730,7 +722,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
     // start the name after the probe type, after ':'
     if (auto last_colon = name.rfind(':'); last_colon != std::string::npos)
       name = name.substr(last_colon + 1);
-    name = sanitise(name);
+    name = sanitise_bpf_program_name(name);
 
     auto prog_type = progtype(probe_.type);
     if (probe_.type == ProbeType::special && !feature.has_raw_tp_special())
