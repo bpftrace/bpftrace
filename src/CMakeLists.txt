@@ -32,7 +32,6 @@ add_library(runtime
   probe_matcher.cpp
   procmon.cpp
   printf.cpp
-  relocator.cpp
   resolve_cgroupid.cpp
   required_resources.cpp
   struct.cpp

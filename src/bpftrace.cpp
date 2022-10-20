@@ -31,7 +31,6 @@
 #include "bpftrace.h"
 #include "log.h"
 #include "printf.h"
-#include "relocator.h"
 #include "resolve_cgroupid.h"
 #include "triggers.h"
 #include "utils.h"
