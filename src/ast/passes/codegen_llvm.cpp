@@ -1534,10 +1534,14 @@ void CodegenLLVM::binop_ptr(Binop &binop)
   {
     // Cannot use GEP here as LLVM doesn't know its a pointer
     bool leftptr = binop.left->type.IsPtrTy();
-    auto &ptr = leftptr ? binop.left->type : binop.right->type;
+    auto &ptr_ty = leftptr ? binop.left->type : binop.right->type;
+    auto &other_ty = leftptr ? binop.right->type : binop.left->type;
     Value *ptr_expr = leftptr ? lhs : rhs;
     Value *other_expr = leftptr ? rhs : lhs;
-    auto elem_size = b_.getInt64(ptr.GetPointeeTy()->GetSize());
+
+    if (other_ty.IsIntTy() && other_ty.GetSize() != 8)
+      other_expr = b_.CreateZExt(other_expr, b_.getInt64Ty());
+    auto elem_size = b_.getInt64(ptr_ty.GetPointeeTy()->GetSize());
     expr_ = b_.CreateMul(elem_size, other_expr);
     if (binop.op == Operator::PLUS)
       expr_ = b_.CreateAdd(ptr_expr, expr_);

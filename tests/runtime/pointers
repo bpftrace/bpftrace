@@ -92,3 +92,9 @@ NAME Pointer walk through struct
 RUN {{BPFTRACE}} runtime/scripts/struct_walk.bt -c ./testprogs/struct_walk
 EXPECT ^a: 45 b: 1000
 TIMEOUT 5
+
+NAME Pointer arith with int32
+PROG struct C { uint32_t a; }; uprobe:./testprogs/struct_walk:clear { $c = (struct C *)arg0; printf("ptr: %p\n", $c + $c->a); exit() }
+AFTER ./testprogs/struct_walk
+EXPECT ^ptr: 0x[0-9a-z]+
+TIMEOUT 5
