@@ -19,6 +19,8 @@ and this project adheres to
   - [#2361](https://github.com/iovisor/bpftrace/pull/2361)
 - Fix kprobe multi-attachment
   - [#2381](https://github.com/iovisor/bpftrace/pull/2381)
+- Fix pointer arithmetics codegen
+  - [#2397](https://github.com/iovisor/bpftrace/pull/2397)
 
 #### Docs
 #### Tools
