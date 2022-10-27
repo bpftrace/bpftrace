@@ -285,3 +285,9 @@ PROG k:* { @[probe] = count(); }
 EXPECT BPFTRACE_MAX_BPF_PROGS
 WILL_FAIL
 TIMEOUT 2
+
+NAME sanitise probe name
+PROG uprobe:./testprogs/uprobe_namesan:fn* { printf("ok\n"); exit(); }
+EXPECT ^ok
+AFTER ./testprogs/uprobe_namesan
+TIMEOUT 5
