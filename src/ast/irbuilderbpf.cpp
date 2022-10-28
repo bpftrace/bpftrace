@@ -525,7 +525,7 @@ CallInst *IRBuilderBPF::CreateProbeReadStr(Value *ctx,
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(size && size->getType()->isIntegerTy());
-  if (auto *dst_alloca = dyn_cast<AllocaInst>(dst))
+  if ([[maybe_unused]] auto *dst_alloca = dyn_cast<AllocaInst>(dst))
   {
     assert(dst_alloca->getAllocatedType()->isArrayTy() &&
            dst_alloca->getAllocatedType()->getArrayElementType() ==
