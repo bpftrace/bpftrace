@@ -49,7 +49,10 @@ if (USE_SYSTEM_BPF_BCC)
       ENV LD_LIBRARY_PATH)
   set(LIBBCC_ERROR_MESSAGE "Please install the bcc library package, which is required. Depending on your distro, it may be called bpfcclib or bcclib (Ubuntu), bcc-devel (Fedora), or something else. If unavailable, install bcc from source (github.com/iovisor/bcc).")
 else()
+  # Use static linking with vendored libbcc
+  set(SAVED_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
   set(SAVED_CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
   set(CMAKE_PREFIX_PATH ${BPF_BCC_PREFIX_PATH})
   find_path (LIBBCC_INCLUDE_DIRS
     NAMES
@@ -72,6 +75,7 @@ else()
     NO_CMAKE_SYSTEM_PATH)
 
   set(CMAKE_PREFIX_PATH ${SAVED_CMAKE_PREFIX_PATH})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${SAVED_CMAKE_FIND_LIBRARY_SUFFIXES})
   set(LIBBCC_ERROR_MESSAGE "Please run ${CMAKE_SOURCE_DIR}/build-libs.sh from the build folder first")
 endif()
 
@@ -85,7 +89,7 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc ${LIBBCC_ERROR_MESSAGE}
 
 # Check bpf_attach_kprobe signature
 if(${LIBBCC_FOUND})
-if(STATIC_LINKING)
+if(STATIC_BPF_BCC)
   # libbcc.a is not statically linked with libbpf.a, libelf.a, and libz.a.
   # If we do a static bpftrace build, we must link them in.
   find_package(LibBpf)
