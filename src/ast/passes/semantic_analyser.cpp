@@ -1331,6 +1331,13 @@ void SemanticAnalyser::visit(Call &call)
   }
   else if (call.func == "skboutput")
   {
+    if (!bpftrace_.feature_->has_skb_output())
+    {
+      LOG(ERROR, call.loc, err_)
+          << "BPF_FUNC_skb_output is not available for your kernel "
+             "version";
+    }
+
     check_assignment(call, false, true, false);
     if (check_nargs(call, 4))
     {
