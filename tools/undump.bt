@@ -14,7 +14,9 @@
  *
  * 22-May-2022	Rong Tao	Created this.
  */
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/skbuff.h>
+#endif
 
 BEGIN
 {
