@@ -12,6 +12,9 @@ and this project adheres to
 - Support for 32-bit ARM systems
   - [#2360](https://github.com/iovisor/bpftrace/pull/2360)
 #### Changed
+- Raise minimum versions for libbpf and bcc and vendor them for local builds
+  - [#2369](https://github.com/iovisor/bpftrace/pull/2369)
+  - [#2370](https://github.com/iovisor/bpftrace/pull/2370)
 #### Deprecated
 #### Removed
 #### Fixed

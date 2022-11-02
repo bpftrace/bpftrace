@@ -419,13 +419,19 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - CMake
 - Flex
 - Bison
-- LLVM & Clang 5.0+ development packages
-- BCC development package
+- LLVM & Clang 10.0+ development packages
 - LibElf
 - Binutils development package
 - Libcereal
 - Kernel requirements described earlier
 - Libpcap
+
+The bpftrace repository contains submodules for appropriate libbpf and bcc
+versions, which will be used unless `-DUSE_SYSTEM_BPF_BCC=1` is passed to `cmake`.
+
+If using `USE_SYSTEM_BPF_BCC`, the current required versions are:
+- BCC development package - v0.25.0
+- libbpf - v0.8.1
 
 ### Compilation
 
@@ -438,7 +444,17 @@ cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-By default bpftrace will be built as a dynamically linked executable. If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the alpine Docker image below will result in a statically linked executable, and additional flags allow for compiling and statically linking the dependencies of bpftrace, see [the embedded build docs](./docs/embedded_builds.md) for more about this type of build. A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
+If using system bcc and libbpf libraries, it would look like this:
+
+```
+git clone https://github.com/iovisor/bpftrace
+mkdir -p bpftrace/build
+cd bpftrace/build
+cmake -DUSE_SYSTEM_BPF_BCC=1 -DCMAKE_BUILD_TYPE=Release ../
+make
+```
+
+By default bpftrace will be built as a dynamically linked executable (except for vendored libraries, if used). If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the alpine Docker image below will result in a statically linked executable, and additional flags allow for compiling and statically linking the dependencies of bpftrace, see [the embedded build docs](./docs/embedded_builds.md) for more about this type of build. A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
 
 The latest version of Google Test will be downloaded on each build. To speed up builds and only download its source on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
 
