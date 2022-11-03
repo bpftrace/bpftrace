@@ -247,7 +247,8 @@ NAME "usdt probes - file based semaphore activation multi process"
 RUN {{BPFTRACE}} runtime/scripts/usdt_file_activation_multiprocess.bt --usdt-file-activation
 EXPECT found 2 processes
 TIMEOUT 5
-BEFORE ./testprogs/two_usdt_semaphore_tests
+BEFORE ./testprogs/usdt_semaphore_test
+BEFORE ./testprogs/usdt_semaphore_test
 REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
 
 NAME "usdt probes - list probes by pid in separate mountns"
