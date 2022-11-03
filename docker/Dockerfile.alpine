@@ -29,6 +29,7 @@ RUN apk add --update \
   llvm${LLVM_VERSION}-dev \
   llvm${LLVM_VERSION}-static \
   musl-obstack-dev \
+  procps \
   python3 \
   wget \
   xxd \

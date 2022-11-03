@@ -158,12 +158,14 @@ class Runner(object):
         signal.signal(signal.SIGALRM, Runner.__handler)
 
         p = None
-        before = None
+        befores = []
         bpftrace = None
         after = None
         cleanup = None
         try:
+            result = None
             timeout = False
+            output = ""
 
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
@@ -196,22 +198,45 @@ class Runner(object):
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
 
-            if test.before:
-                before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)
-                waited=0
+            if test.befores:
+                for before in test.befores:
+                    before = subprocess.Popen(before.split(), preexec_fn=os.setsid)
+                    befores.append(before)
+
                 with open(os.devnull, 'w') as dn:
-                    # This might not work for complicated cases, such as if
-                    # a test program needs to accept arguments. It covers the
-                    # current simple calls with no arguments
-                    child_name = os.path.basename(test.before.split()[-1])
-                    while subprocess.call(["pidof", child_name], stdout=dn, stderr=dn) != 0:
+                    child_names = [os.path.basename(x.strip().split()[-1]) for x in test.befores]
+                    child_names = sorted((x[:15] for x in child_names))  # cut to comm length
+                    print(f"child_names: %{child_names}")
+
+                    # Print the names of all of our children and look
+                    # for the ones from BEFORE clauses
+                    waited=0
+                    while waited <= test.timeout:
+                        children = subprocess.run(["ps", "--ppid", str(os.getpid()), "--no-headers", "-o", "comm"],
+                                                  check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        if children.returncode == 0 and children.stdout:
+                            lines = [line.decode('utf-8') for line in children.stdout.splitlines()]
+                            lines = sorted((line.strip() for line in lines if line != 'ps'))
+                            print(f"lines: %{lines}")
+                            if lines == child_names:
+                                break
+                        else:
+                            print(children.stderr)
+
                         time.sleep(0.1)
                         waited+=0.1
-                        if waited > test.timeout:
-                            raise TimeoutError('Timed out waiting for BEFORE %s ', test.before)
+
+                    if waited > test.timeout:
+                        raise TimeoutError(f'Timed out waiting for BEFORE(s) {test.befores}')
 
             bpf_call = Runner.prepare_bpf_call(test)
-            if test.before and '{{BEFORE_PID}}' in bpf_call:
+            if test.befores and '{{BEFORE_PID}}' in bpf_call:
+                if len(test.befores) > 1:
+                    raise ValueError(f"test has {len(test.befores)} BEFORE clauses but BEFORE_PID usage requires exactly one")
+
+                child_name = test.befores[0].strip().split()[-1]
+                child_name = os.path.basename(child_name)
+
                 childpid = subprocess.Popen(["pidof", child_name], stdout=subprocess.PIPE, universal_newlines=True).communicate()[0].split()[0]
                 bpf_call = re.sub("{{BEFORE_PID}}", str(childpid), bpf_call)
             env = {
@@ -234,8 +259,6 @@ class Runner(object):
             bpftrace = p
 
             signal.alarm(ATTACH_TIMEOUT)
-
-            output = ""
 
             while p.poll() is None:
                 nextline = p.stdout.readline()
@@ -269,15 +292,18 @@ class Runner(object):
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)
                 output += p.communicate()[0]
                 result = re.search(test.expect, output)
-            if not result:
-                print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
-                print('\tCommand: %s' % bpf_call)
-                print('\tTimeout: %s' % test.timeout)
-                print('\tCurrent output: %s' % output)
-                return Runner.TIMEOUT
+
+                if not result:
+                    print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
+                    print('\tCommand: %s' % bpf_call)
+                    print('\tTimeout: %s' % test.timeout)
+                    print('\tCurrent output: %s' % output)
+                    return Runner.TIMEOUT
         finally:
-            if before and before.poll() is None:
-                os.killpg(os.getpgid(before.pid), signal.SIGKILL)
+            if befores:
+                for before in befores:
+                    if before.poll() is None:
+                        os.killpg(os.getpgid(before.pid), signal.SIGKILL)
 
             if bpftrace and bpftrace.poll() is None:
                 os.killpg(os.getpgid(p.pid), signal.SIGKILL)
