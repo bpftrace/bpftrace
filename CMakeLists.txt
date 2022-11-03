@@ -135,6 +135,7 @@ check_symbol_exists(name_to_handle_at "sys/types.h;sys/stat.h;fcntl.h" HAVE_NAME
 set(CMAKE_REQUIRED_DEFINITIONS)
 
 find_package(LibBfd)
+find_package(LibDebuginfod)
 find_package(LibOpcodes)
 find_package(LibDw)
 
