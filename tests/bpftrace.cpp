@@ -3,6 +3,7 @@
 #include "bpftrace.h"
 #include "driver.h"
 #include "mocks.h"
+#include "tracefs.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -210,8 +211,7 @@ TEST(bpftrace, add_probes_wildcard)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_filter_functions"))
+              get_symbols_from_file(tracefs::available_filter_functions()))
       .Times(1);
 
   if (bpftrace->has_kprobe_multi())
@@ -248,8 +248,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_filter_functions"))
+              get_symbols_from_file(tracefs::available_filter_functions()))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -279,8 +278,7 @@ TEST(bpftrace, add_probes_kernel_module_wildcard)
   ast::Probe *probe = parse_probe("kprobe:func_in_mo*{}");
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_filter_functions"))
+              get_symbols_from_file(tracefs::available_filter_functions()))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -598,8 +596,7 @@ TEST(bpftrace, add_probes_tracepoint_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   std::set<std::string> matches = { "sched_one", "sched_two" };
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_events"))
+              get_symbols_from_file(tracefs::available_events()))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -616,8 +613,7 @@ TEST(bpftrace, add_probes_tracepoint_category_wildcard)
   auto probe = parse_probe(("tracepoint:sched*:sched_* {}"));
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_events"))
+              get_symbols_from_file(tracefs::available_events()))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -649,8 +645,7 @@ TEST(bpftrace, add_probes_tracepoint_wildcard_no_matches)
 */
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(
-                  "/sys/kernel/debug/tracing/available_events"))
+              get_symbols_from_file(tracefs::available_events()))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));

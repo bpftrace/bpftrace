@@ -1,4 +1,5 @@
 #include "mocks.h"
+#include "tracefs.h"
 
 namespace bpftrace {
 namespace test {
@@ -10,9 +11,7 @@ using ::testing::StrictMock;
 
 void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 {
-  ON_CALL(matcher,
-          get_symbols_from_file(
-              "/sys/kernel/debug/tracing/available_filter_functions"))
+  ON_CALL(matcher, get_symbols_from_file(tracefs::available_filter_functions()))
       .WillByDefault([](const std::string &) {
         std::string ksyms = "SyS_read\n"
                             "sys_read\n"
@@ -24,8 +23,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         return myval;
       });
 
-  ON_CALL(matcher,
-          get_symbols_from_file("/sys/kernel/debug/tracing/available_events"))
+  ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
       .WillByDefault([](const std::string &) {
         std::string tracepoints = "sched:sched_one\n"
                                   "sched:sched_two\n"
