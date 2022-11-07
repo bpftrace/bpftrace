@@ -1,4 +1,5 @@
 #include <array>
+#include <bpf/libbpf.h>
 #include <csignal>
 #include <cstdio>
 #include <cstring>
@@ -665,6 +666,14 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
+static int libbpf_print(enum libbpf_print_level level,
+                        const char* msg,
+                        va_list ap)
+{
+  fprintf(stderr, "libbpf: (%d) ", level);
+  return vfprintf(stderr, msg, ap);
+}
+
 int main(int argc, char* argv[])
 {
   int err;
@@ -712,6 +721,9 @@ int main(int argc, char* argv[])
       std::setvbuf(stdout, NULL, _IONBF, BUFSIZ);
       break;
   }
+
+  if (bt_debug != DebugLevel::kNone)
+    libbpf_set_print(libbpf_print);
 
   BPFtrace bpftrace(std::move(output));
   bool verify_llvm_ir = false;
