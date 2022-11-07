@@ -39,19 +39,8 @@ __s32 BTF::start_id(const struct btf *btf) const
   return btf == vmlinux_btf ? 1 : vmlinux_btf_size + 1;
 }
 
-static int libbpf_print(enum libbpf_print_level level,
-                        const char *msg,
-                        va_list ap)
-{
-  fprintf(stderr, "BTF: (%d) ", level);
-  return vfprintf(stderr, msg, ap);
-}
-
 BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
 {
-  if (bt_debug != DebugLevel::kNone)
-    libbpf_set_print(libbpf_print);
-
   // Try to get BTF file from BPFTRACE_BTF env
   char *path = std::getenv("BPFTRACE_BTF");
   if (path)
