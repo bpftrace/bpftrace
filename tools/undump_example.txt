@@ -1,4 +1,4 @@
-Demonstrations of undump.py, the Linux eBPF/bpftrace version.
+Demonstrations of undump.bt, the Linux eBPF/bpftrace version.
 
 This example trace the kernel function performing receive AP_UNIX socket
 packet. Some example output:
