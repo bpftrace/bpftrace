@@ -2208,6 +2208,11 @@ void SemanticAnalyser::visit(Cast &cast)
     LOG(ERROR, cast.loc, err_)
         << "Cannot cast from struct type \"" << cast.expr->type << "\"";
   }
+  else if (cast.expr->type.IsNoneTy())
+  {
+    LOG(ERROR, cast.loc, err_)
+        << "Cannot cast from \"" << cast.expr->type << "\" type";
+  }
 
   bool is_ctx = cast.expr->type.IsCtxAccess();
   auto &intcasts = getIntcasts();

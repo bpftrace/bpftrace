@@ -24,6 +24,8 @@ and this project adheres to
   - [#2381](https://github.com/iovisor/bpftrace/pull/2381)
 - Fix pointer arithmetics codegen
   - [#2397](https://github.com/iovisor/bpftrace/pull/2397)
+- Fix segfault for invalid AssignVarStatement visit
+  - [#2423](https://github.com/iovisor/bpftrace/pull/2423)
 
 #### Docs
 #### Tools
