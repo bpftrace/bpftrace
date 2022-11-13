@@ -1,0 +1,54 @@
+.TH filelife.bt 8  "2022-11-13" "USER COMMANDS"
+.SH NAME
+filelife \- Tracing the lifespan of short-lived files, Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B filelife.bt
+.SH DESCRIPTION
+filelife.bt tracked the lifespan of short-lived files
+
+This program is also a basic example of bpftrace and kprobes.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Tracing the lifespan of short-lived files:
+#
+.B filelife.bt
+.SH FIELDS
+.TP
+TIME
+A timestamp on the output, in "HH:MM:SS" format.
+.TP
+PID
+The process ID.
+.TP
+COMM
+The process COMM.
+.TP
+AGE(us)
+Display the lifetime of the file (microseconds).
+.TP
+FILE
+The file name.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+
+This is a bpftrace version of the bcc tools of the same name.
+The bcc tool may provide more options and customizations.
+.IP
+https://github.com/iovisor/bcc
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Rong Tao
+.SH SEE ALSO
+undump.bt(8)

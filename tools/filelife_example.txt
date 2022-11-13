@@ -1,0 +1,36 @@
+Demonstrations of filelife.bt, the Linux eBPF/bpftrace version.
+
+This example trace the kernel function performing receive AP_UNIX socket
+packet. Some example output:
+
+Terminal 1, running filelife.bt:
+
+```
+$ sudo ./filelife.bt
+```
+
+Terminal 2, create and remove a file, run the following command line serial
+times:
+
+```
+$ touch a.txt && sleep 0.5 && rm a.txt
+```
+
+Terminal 1 shows:
+
+```
+$ sudo ./filelife.bt 
+Attaching 6 probes...
+Tracing the lifespan of short-lived files, Hit Ctrl-C to end
+TIME     PID      COMM             AGE(us)        FILE    
+19:45:58 106199   rm               507770         a.txt
+19:46:00 4046     kalendarac       7825           kalendaracrc.lock
+19:46:02 106208   rm               507581         a.txt
+19:46:03 106215   rm               507693         a.txt
+19:46:05 106223   rm               507504         a.txt
+19:46:06 106231   rm               507558         a.txt
+19:46:07 106238   rm               507553         a.txt
+```
+
+We can clearly see the life cycle of the A.txt file.
+

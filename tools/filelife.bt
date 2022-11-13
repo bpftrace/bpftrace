@@ -1,0 +1,71 @@
+#!/usr/bin/env bpftrace
+/*
+ * filelife	Tracing the lifespan of short-lived files.
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Also a basic example of bpftrace.
+ *
+ * This is a bpftrace version of the bcc tools of the same name.
+ *
+ * USAGE: filelife.bt
+ *
+ * Copyright 2022 CESTC, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 13-Nov-2022	Rong Tao	Created this.
+ */
+#include <linux/fs.h>
+// linux: include/linux/fs.h
+#define FMODE_CREATED 0x100000
+
+BEGIN
+{
+	printf("Tracing the lifespan of short-lived files, Hit Ctrl-C to end\n");
+	printf("%-8s %-8s %-16s %-14s %-8s\n",
+		"TIME", "PID", "COMM", "AGE(us)", "FILE");
+}
+
+kprobe:vfs_create
+{
+	$dentry = (struct dentry *)arg2;
+	@dentry_map[$dentry] = 1;
+	@start[$dentry] = nsecs;
+}
+
+kprobe:security_inode_create
+{
+	$dentry = (struct dentry *)arg1;
+	@dentry_map[$dentry] = 1;
+	@start[$dentry] = nsecs;
+}
+
+kprobe:vfs_open
+{
+	$path = (struct path *)arg0;
+	$file = (struct file *)arg1;
+
+	if ($file->f_mode & FMODE_CREATED) {
+		$dentry = $path->dentry;
+		@dentry_map[$dentry] = 1;
+		@start[$dentry] = nsecs;
+	}
+}
+
+kprobe:vfs_unlink
+{
+	$dentry = (struct dentry *)arg2;
+	$d_name = $dentry->d_name;
+
+	if (@dentry_map[$dentry] == 1) {
+		$age = (nsecs - @start[$dentry]) / 1000;
+		time("%H:%M:%S ");
+		printf("%-8d %-16s %-14d %s\n", pid, comm, $age, str($d_name.name));
+		delete(@dentry_map[$dentry]);
+	}
+}
+
+END
+{
+	clear(@dentry_map);
+	clear(@start);
+}

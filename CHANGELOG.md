@@ -31,6 +31,8 @@ and this project adheres to
 
 #### Docs
 #### Tools
+- Add filelife tool
+  - [#2424](https://github.com/iovisor/bpftrace/pull/2424)
 
 ## [0.16.0] 2022-08-30
 

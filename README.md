@@ -63,6 +63,7 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
 - tools/[dcsnoop.bt](tools/dcsnoop.bt): Trace directory entry cache (dcache) lookups. [Examples](tools/dcsnoop_example.txt).
 - tools/[execsnoop.bt](tools/execsnoop.bt): Trace new processes via exec() syscalls. [Examples](tools/execsnoop_example.txt).
+- tools/[filelife.bt](tools/filelife.bt): Trace the lifespan of short-lived files. [Examples](tools/filelife_example.txt).
 - tools/[gethostlatency.bt](tools/gethostlatency.bt): Show latency for getaddrinfo/gethostbyname[2] calls. [Examples](tools/gethostlatency_example.txt).
 - tools/[killsnoop.bt](tools/killsnoop.bt): Trace signals issued by the kill() syscall. [Examples](tools/killsnoop_example.txt).
 - tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
