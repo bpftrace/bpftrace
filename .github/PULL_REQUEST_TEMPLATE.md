@@ -2,6 +2,8 @@
 Please provide a description of your change below this comment.
 
 Then please complete the checklist.
+
+Useful contribution guidelines and tips are in docs/developers.md.
 -->
 
 ##### Checklist

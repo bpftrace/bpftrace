@@ -112,6 +112,8 @@ For additional help / discussion, please use our [discussions](https://github.co
 
 * bpftrace development IRC: #bpftrace at irc.oftc.net
 
+* Development guidelines: [developers.md](docs/developers.md)
+
 ## Development
 
 ### Docker
