@@ -634,9 +634,13 @@ std::string JsonOutput::json_escape(const std::string &str) const
         break;
 
       default:
-        if ('\x00' <= c && c <= '\x1f') {
+        // c always >= '\x00'
+        if (c <= '\x1f')
+        {
           escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (int)c;
-        } else {
+        }
+        else
+        {
           escaped << c;
         }
     }
