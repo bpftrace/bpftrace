@@ -95,6 +95,8 @@ private:
 
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
+  virtual std::unique_ptr<std::istream> get_symbols_from_file_safe(
+      const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_usdt(

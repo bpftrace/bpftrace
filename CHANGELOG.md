@@ -28,6 +28,8 @@ and this project adheres to
   - [#2397](https://github.com/iovisor/bpftrace/pull/2397)
 - Fix segfault for invalid AssignVarStatement visit
   - [#2423](https://github.com/iovisor/bpftrace/pull/2423)
+- Better handling of missing function trace support files
+  - [#2433](https://github.com/iovisor/bpftrace/pull/2433)
 
 #### Docs
 #### Tools

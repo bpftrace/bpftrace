@@ -112,7 +112,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     {
-      symbol_stream = get_symbols_from_file(
+      symbol_stream = get_symbols_from_file_safe(
           tracefs::available_filter_functions());
       ignore_trailing_module = true;
       break;
@@ -127,7 +127,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::tracepoint:
     {
-      symbol_stream = get_symbols_from_file(tracefs::available_events());
+      symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
       break;
     }
     case ProbeType::usdt:
@@ -206,6 +206,20 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
   }
 
   return file;
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file_safe(
+    const std::string& path) const
+{
+  try
+  {
+    return get_symbols_from_file(path);
+  }
+  catch (const std::runtime_error& e)
+  {
+    LOG(WARNING) << e.what();
+  }
+  return NULL;
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
