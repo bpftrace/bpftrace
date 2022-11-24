@@ -1,0 +1,52 @@
+.TH numasched.bt 8  "2022-11-24" "USER COMMANDS"
+.SH NAME
+numasched.bt \- Tracing task switch NUMA. Uses bpftrace/eBPF.
+.SH SYNOPSIS
+.B numasched.bt
+.SH DESCRIPTION
+numasched.bt tracked task switch of NUMA.
+
+This program is also a basic example of bpftrace and tracepoint.
+
+Since this uses BPF, only the root user can use this tool.
+.SH REQUIREMENTS
+CONFIG_BPF and bpftrace.
+.SH EXAMPLES
+.TP
+Tracing task switch NUMA:
+#
+.B numasched.bt
+.SH FIELDS
+.TP
+TIME
+A timestamp on the output, in "HH:MM:SS" format.
+.TP
+PID
+The process ID.
+.TP
+TID
+The thread ID.
+.TP
+SRC_NID
+Source NUMA ID.
+.TP
+DST_NID
+Target NUMA ID.
+.TP
+COMM
+The process COMM.
+.SH SOURCE
+This is from bpftrace.
+.IP
+https://github.com/iovisor/bpftrace
+.PP
+Also look in the bpftrace distribution for a companion _examples.txt file
+containing example usage, output, and commentary for this tool.
+.SH OS
+Linux
+.SH STABILITY
+Unstable - in development.
+.SH AUTHOR
+Rong Tao
+.SH SEE ALSO
+opensnoop.bt(8)

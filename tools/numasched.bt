@@ -1,0 +1,47 @@
+#!/bin/env bpftrace
+/*
+ * numasched	Trace task switch numa
+ *		For Linux, uses bpftrace and eBPF.
+ *
+ * Also a basic example of bpftrace.
+ *
+ * USAGE: numasched.bt
+ *
+ * Copyright 2022 CESTC, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License")
+ *
+ * 24-Nov-2022	Rong Tao	Created this.
+ */
+BEGIN
+{
+	printf("Tracing task numa switch.\n");
+	printf("%-8s %-8s %-8s %-8s    %-8s %-8s\n",
+			"TIME", "PID", "TID", "SRC_NID", "DST_NID", "COMM");
+}
+
+tracepoint:sched:sched_switch
+/ pid != 0 /
+{
+	$old_nid = @nid_map[tid];
+	$new_nid = numaid;
+
+	if ($old_nid != $new_nid && @mark_first[tid] == 1) {
+		time("%H:%M:%S ");
+		printf("%-8d %-8d %-8d -> %-8d %s\n",
+			pid, tid, $old_nid, $new_nid, comm);
+	}
+
+	@nid_map[tid] = $new_nid;
+
+	/* If the first time you run the above code, $old_nid equals 0,
+	 * then $old_nid is easily not equal to $new_nid, so we skip the
+	 * first time and want the @nid_map to become a valid numa */
+	@mark_first[tid] = 1;
+}
+
+END
+{
+	clear(@nid_map);
+	clear(@mark_first);
+}
+
