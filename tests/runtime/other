@@ -75,6 +75,11 @@ RUN {{BPFTRACE}} -e 'i:ms:1 {$a = 1; unroll ($1) { $a = $a + 1; } printf("a=%d\n
 EXPECT a=11
 TIMEOUT 5
 
+NAME unroll_printf
+PROG BEGIN { unroll (1) { printf("a"); } printf("b\n"); exit(); }
+EXPECT ab\n
+TIMEOUT 5
+
 NAME if_compare_and_print_string
 PROG BEGIN { if (comm == "bpftrace") { printf("comm: %s\n", comm);} exit();}
 EXPECT comm: bpftrace
