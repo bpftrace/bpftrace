@@ -2207,7 +2207,8 @@ void CodegenLLVM::visit(Unroll &unroll)
       auto scoped_del = accept(stmt);
     }
 
-    reset_ids();
+    if (i != unroll.var - 1)
+      reset_ids();
   }
 }
 
