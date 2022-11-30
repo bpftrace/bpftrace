@@ -183,6 +183,13 @@ public:
                        Value *data_len,
                        const location &loc);
 
+  // For a type T, creates an integer expression representing the byte offset
+  // of the element at the given index in T[]. Used for array dereferences and
+  // pointer arithmetic.
+  llvm::Value *CreatePtrOffset(const SizedType &type,
+                               llvm::Value *index,
+                               AddrSpace as);
+
   StoreInst *createAlignedStore(Value *val, Value *ptr, unsigned align);
   // moves the insertion point to the start of the function you're inside,
   // invokes functor, then moves the insertion point back to its original

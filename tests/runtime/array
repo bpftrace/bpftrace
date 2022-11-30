@@ -142,3 +142,9 @@ RUN {{BPFTRACE}} -e 'struct A { int x[4]; } uprobe:./testprogs/array_access:test
 EXPECT Result: 1
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array of pointers element access
+PROG struct C { int *z[4]; } uprobe:./testprogs/array_access:test_ptr_array { @x = *((struct C*)arg0)->z[1]; exit(); }
+EXPECT @x: 2
+TIMEOUT 5
+AFTER ./testprogs/array_access

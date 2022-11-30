@@ -1541,8 +1541,9 @@ void CodegenLLVM::binop_ptr(Binop &binop)
 
     if (other_ty.IsIntTy() && other_ty.GetSize() != 8)
       other_expr = b_.CreateZExt(other_expr, b_.getInt64Ty());
-    auto elem_size = b_.getInt64(ptr_ty.GetPointeeTy()->GetSize());
-    expr_ = b_.CreateMul(elem_size, other_expr);
+    expr_ = b_.CreatePtrOffset(*ptr_ty.GetPointeeTy(),
+                               other_expr,
+                               ptr_ty.GetAS());
     if (binop.op == Operator::PLUS)
       expr_ = b_.CreateAdd(ptr_expr, expr_);
     else
@@ -1910,7 +1911,6 @@ void CodegenLLVM::visit(ArrayAccess &arr)
   SizedType &type = arr.expr->type;
   auto elem_type = type.IsArrayTy() ? *type.GetElementTy()
                                     : *type.GetPointeeTy();
-  size_t elem_size = elem_type.GetSize();
 
   auto scoped_del_expr = accept(arr.expr);
   Value *array = expr_;
@@ -1925,7 +1925,7 @@ void CodegenLLVM::visit(ArrayAccess &arr)
       array = b_.CreatePtrToInt(array, b_.getInt64Ty());
 
     Value *index = b_.CreateIntCast(expr_, b_.getInt64Ty(), type.IsSigned());
-    Value *offset = b_.CreateMul(index, b_.getInt64(elem_size));
+    Value *offset = b_.CreatePtrOffset(elem_type, index, type.GetAS());
 
     probereadDatastructElem(array,
                             offset,

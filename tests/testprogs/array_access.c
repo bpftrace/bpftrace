@@ -8,12 +8,21 @@ struct B
   int y[2][2];
 };
 
+struct C
+{
+  int *z[4];
+};
+
 void test_array(int *a __attribute__((unused)))
 {
 }
 
 void test_struct(struct A *a __attribute__((unused)),
                  struct B *b __attribute__((unused)))
+{
+}
+
+void test_ptr_array(struct C *c __attribute__((unused)))
 {
 }
 
@@ -32,4 +41,11 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   b.y[1][1] = 8;
   test_struct(&a, &b);
   test_array(a.x);
+
+  struct C c;
+  c.z[0] = &a.x[0];
+  c.z[1] = &a.x[1];
+  c.z[2] = &a.x[2];
+  c.z[3] = &a.x[3];
+  test_ptr_array(&c);
 }
