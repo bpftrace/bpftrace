@@ -1363,6 +1363,17 @@ llvm::Value *IRBuilderBPF::CreateDatastructElemLoad(
   return CreateIntCast(expr, getInt64Ty(), false);
 }
 
+llvm::Value *IRBuilderBPF::CreatePtrOffset(const SizedType &type,
+                                           llvm::Value *index,
+                                           AddrSpace as)
+{
+  size_t elem_size = type.IsPtrTy()
+                         ? getPointerStorageTy(as)->getIntegerBitWidth() / 8
+                         : type.GetSize();
+
+  return CreateMul(index, getInt64(elem_size));
+}
+
 llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
 {
   switch (as)
