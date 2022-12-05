@@ -521,11 +521,14 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       break;
     }
     case ProbeType::invalid:
-    case ProbeType::profile:
-    case ProbeType::interval:
       throw WildcardException(
           "Wildcard matches aren't available on probe type '" +
           attach_point.provider + "'");
+    case ProbeType::profile:
+    case ProbeType::interval:
+      // Wildcard matches are not supported on these probe types, however
+      // expansion can still happen when the probe builtin is used
+      return { "" };
   }
 
   return get_matches_for_probetype(probetype(attach_point.provider),
