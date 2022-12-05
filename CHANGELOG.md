@@ -36,6 +36,8 @@ and this project adheres to
   - [#2439](https://github.com/iovisor/bpftrace/pull/2439)
 - Support profile and interval probes in probe matcher
   - [#2443](https://github.com/iovisor/bpftrace/pull/2443)
+- Fix BTF detection macro in tools/old/mdflush.bt
+  - [#2444](https://github.com/iovisor/bpftrace/pull/2444)
 
 #### Docs
 #### Tools
