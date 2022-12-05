@@ -249,6 +249,11 @@ PROG p:hz:599 { @[tid] = count(); exit();}
 EXPECT \@\[[0-9]*\]\:\s[0-9]
 TIMEOUT 5
 
+NAME profile_probe_builtin
+PROG profile:hz:599 { print(probe); exit();}
+EXPECT profile:hz:599
+TIMEOUT 5
+
 NAME interval
 PROG t:raw_syscalls:sys_enter { @syscalls = count(); } interval:ms:1{ print(@syscalls); clear(@syscalls); exit();}
 EXPECT @syscalls\:\s[0-9]*
@@ -257,6 +262,11 @@ TIMEOUT 5
 NAME interval_short_name
 PROG t:raw_syscalls:sys_enter { @syscalls = count(); } i:ms:1{ print(@syscalls); clear(@syscalls); exit();}
 EXPECT @syscalls\:\s[0-9]*
+TIMEOUT 5
+
+NAME interval_probe_builtin
+PROG interval:ms:1 { print(probe); exit();}
+EXPECT interval:ms:1
 TIMEOUT 5
 
 NAME software

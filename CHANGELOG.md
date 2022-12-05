@@ -32,6 +32,8 @@ and this project adheres to
   - [#2433](https://github.com/iovisor/bpftrace/pull/2433)
 - Fix unroll ID reset
   - [#2439](https://github.com/iovisor/bpftrace/pull/2439)
+- Support profile and interval probes in probe matcher
+  - [#2443](https://github.com/iovisor/bpftrace/pull/2443)
 
 #### Docs
 #### Tools
