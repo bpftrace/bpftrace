@@ -108,6 +108,7 @@ private:
 
   void binop_ptr(Binop &op);
   void binop_int(Binop &op);
+  void binop_array(Binop &op);
 
   bool in_loop(void)
   {
