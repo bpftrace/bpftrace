@@ -19,6 +19,8 @@ and this project adheres to
 - Raise minimum versions for libbpf and bcc and vendor them for local builds
   - [#2369](https://github.com/iovisor/bpftrace/pull/2369)
   - [#2370](https://github.com/iovisor/bpftrace/pull/2370)
+- Support comparison for integer arrays
+  - [#2387](https://github.com/iovisor/bpftrace/pull/2387)
 #### Deprecated
 #### Removed
 #### Fixed
