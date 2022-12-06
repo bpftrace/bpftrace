@@ -1073,6 +1073,42 @@ TEST(semantic_analyser, array_as_map_key)
        2);
 }
 
+TEST(semantic_analyser, array_compare)
+{
+  test("#include <stdint.h>\n"
+       "struct MyStruct { uint8_t x[4]; }"
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x == $s->x); }",
+       0);
+  test("#include <stdint.h>\n"
+       "struct MyStruct { uint64_t x[4]; } "
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x == $s->x); }",
+       0);
+  test("struct MyStruct { int x[4]; } "
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x != $s->x); }",
+       0);
+
+  // unsupported operators
+  test("struct MyStruct { int x[4]; } "
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x > $s->x); }",
+       10);
+
+  // different length
+  test("struct MyStruct { int x[4]; int y[8]; }"
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x == $s->y); }",
+       10);
+
+  // different element type
+  test("#include <stdint.h>\n"
+       "struct MyStruct { uint8_t x[4]; uint16_t y[4]; } "
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x == $s->y); }",
+       10);
+
+  // compare with other type
+  test("struct MyStruct { int x[4]; int y; } "
+       "kprobe:f { $s = (struct MyStruct *) arg0; @ = ($s->x == $s->y); }",
+       10);
+}
+
 TEST(semantic_analyser, variable_type)
 {
   BPFtrace bpftrace;

@@ -17,6 +17,11 @@ void test_array(int *a __attribute__((unused)))
 {
 }
 
+void test_arrays(struct A *a __attribute__((unused)),
+                 struct A *d __attribute__((unused)))
+{
+}
+
 void test_struct(struct A *a __attribute__((unused)),
                  struct B *b __attribute__((unused)))
 {
@@ -48,4 +53,11 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   c.z[2] = &a.x[2];
   c.z[3] = &a.x[3];
   test_ptr_array(&c);
+
+  struct A d;
+  d.x[0] = 4;
+  d.x[1] = 3;
+  d.x[2] = 2;
+  d.x[3] = 1;
+  test_arrays(&a, &d);
 }

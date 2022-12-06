@@ -148,3 +148,15 @@ PROG struct C { int *z[4]; } uprobe:./testprogs/array_access:test_ptr_array { @x
 EXPECT @x: 2
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME array compare eq
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_arrays { $a = (struct A *) arg0; $b = (struct A *) arg0; if ($a->x == $b->x) { printf("two int arrays are equal.\n"); } exit(); }
+EXPECT two int arrays are equal.
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME array compare ne
+PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_arrays { $a = (struct A *) arg0; $b = (struct A *) arg1; if ($a->x != $b->x) { printf("two int arrays are not equal.\n"); } exit(); }
+EXPECT two int arrays are not equal.
+TIMEOUT 5
+AFTER ./testprogs/array_access
