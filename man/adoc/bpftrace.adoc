@@ -534,7 +534,7 @@ The following relational operators are defined for integers and pointers.
 
 |===
 
-The following relation operators are available for comparing strings.
+The following relation operators are available for comparing strings and integer arrays.
 
 [cols="~,~"]
 |===
