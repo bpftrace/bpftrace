@@ -84,6 +84,11 @@ public:
     return feature_->has_kprobe_multi();
   }
 
+  bool has_loop(void)
+  {
+    return feature_->has_loop();
+  }
+
   MockProbeMatcher *mock_probe_matcher;
 };
 
