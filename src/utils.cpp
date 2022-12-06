@@ -952,7 +952,10 @@ pid_t parse_pid(const std::string &str)
   }
 }
 
-std::string hex_format_buffer(const char *buf, size_t size, bool keep_ascii)
+std::string hex_format_buffer(const char *buf,
+                              size_t size,
+                              bool keep_ascii,
+                              bool escape_hex)
 {
   // Allow enough space for every byte to be sanitized in the form "\x00"
   char s[size * 4 + 1];
@@ -961,8 +964,12 @@ std::string hex_format_buffer(const char *buf, size_t size, bool keep_ascii)
   for (size_t i = 0; i < size; i++)
     if (keep_ascii && buf[i] >= 32 && buf[i] <= 126)
       offset += sprintf(s + offset, "%c", ((const uint8_t *)buf)[i]);
-    else
+    else if (escape_hex)
       offset += sprintf(s + offset, "\\x%02x", ((const uint8_t *)buf)[i]);
+    else
+      offset += sprintf(s + offset,
+                        i == size - 1 ? "%02x" : "%02x ",
+                        ((const uint8_t *)buf)[i]);
 
   s[offset] = '\0';
 

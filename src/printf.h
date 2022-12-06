@@ -51,10 +51,12 @@ public:
   }
   int print(char* buf, size_t size, const char* fmt) override;
   void keep_ascii(bool value);
+  void escape_hex(bool value);
 
 private:
   std::vector<char> value_;
   bool keep_ascii_ = true;
+  bool escape_hex_ = true;
 };
 
 class PrintableCString : public virtual IPrintable

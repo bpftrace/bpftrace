@@ -136,17 +136,21 @@ void FormatString::format(std::ostream &out,
                                    ? parts_[i].substr(last_percent_sign)
                                    : "";
       std::string printf_fmt;
-      if (fmt_string == "%r" || fmt_string == "%rx")
+      if (fmt_string == "%r" || fmt_string == "%rx" || fmt_string == "%rh")
       {
-        if (fmt_string == "%rx")
+        if (fmt_string == "%rx" || fmt_string == "%rh")
         {
           auto printable_buffer = dynamic_cast<PrintableBuffer *>(&*args.at(i));
           // this is checked by semantic analyzer
           assert(printable_buffer);
           printable_buffer->keep_ascii(false);
+          if (fmt_string == "%rh")
+            printable_buffer->escape_hex(false);
         }
         // replace nonstandard format specifier with %s
-        printf_fmt = std::regex_replace(parts_[i], std::regex("%rx?"), "%s");
+        printf_fmt = std::regex_replace(parts_[i],
+                                        std::regex("%r[x|h]?"),
+                                        "%s");
       }
       else
       {

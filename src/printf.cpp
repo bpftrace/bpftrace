@@ -15,12 +15,18 @@ int PrintableBuffer::print(char *buf, size_t size, const char *fmt)
       buf,
       size,
       fmt,
-      hex_format_buffer(value_.data(), value_.size(), keep_ascii_).c_str());
+      hex_format_buffer(value_.data(), value_.size(), keep_ascii_, escape_hex_)
+          .c_str());
 }
 
 void PrintableBuffer::keep_ascii(bool value)
 {
   keep_ascii_ = value;
+}
+
+void PrintableBuffer::escape_hex(bool value)
+{
+  escape_hex_ = value;
 }
 
 int PrintableCString::print(char *buf, size_t size, const char *fmt)
