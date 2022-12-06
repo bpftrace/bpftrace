@@ -1274,7 +1274,7 @@ For arrays the `length` is optional, it is automatically inferred from the signa
 
 The `buf_t` object returned by `buf` can safely be printed as a hex encoded string with the `%r` format specifier.
 
-Bytes with values >=32 and \<=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters.
+Bytes with values >=32 and \<=126 are printed using their ASCII character, other bytes are printed in hex form (e.g. `\x00`). The `%rx` format specifier can be used to print everything in hex form, including ASCII characters. The similar `%rh` format specifier prints everything in hex form without `\x` and with spaces between bytes (e.g. `0a fe`).
 
 ----
 i:s:1 {
