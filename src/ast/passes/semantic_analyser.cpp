@@ -857,6 +857,7 @@ void SemanticAnalyser::visit(Call &call)
     auto elem_type = CreateUInt8();
     call.type = CreateArray(addr_size, elem_type);
     call.type.SetAS(AddrSpace::kernel);
+    call.type.is_internal = true;
   }
   else if (call.func == "join") {
     check_assignment(call, false, false, false);
@@ -1691,6 +1692,29 @@ void SemanticAnalyser::binop_int(Binop &binop)
   }
 }
 
+void SemanticAnalyser::binop_array(Binop &binop)
+{
+  auto &lht = binop.left->type;
+  auto &rht = binop.right->type;
+  if (binop.op != Operator::EQ && binop.op != Operator::NE)
+  {
+    LOG(ERROR, binop.loc, err_)
+        << "The " << opstr(binop) << " operator cannot be used on arrays.";
+  }
+
+  if (lht.GetNumElements() != rht.GetNumElements())
+  {
+    LOG(ERROR, binop.loc, err_)
+        << "Only arrays of same size support comparison operators.";
+  }
+
+  if (!lht.GetElementTy()->IsIntegerTy() || lht != rht)
+  {
+    LOG(ERROR, binop.loc, err_)
+        << "Only arrays of same sized integer support comparison operators.";
+  }
+}
+
 void SemanticAnalyser::binop_ptr(Binop &binop)
 {
   auto &lht = binop.left->type;
@@ -1825,6 +1849,10 @@ void SemanticAnalyser::visit(Binop &binop)
   if (lht.IsIntTy() && rht.IsIntTy())
   {
     binop_int(binop);
+  }
+  else if (lht.IsArrayTy() && rht.IsArrayTy())
+  {
+    binop_array(binop);
   }
   else if (lht.IsPtrTy() || rht.IsPtrTy())
   {

@@ -974,6 +974,233 @@ CallInst *IRBuilderBPF::CreateGetNs(bool boot_time, const location &loc)
   return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
 }
 
+Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
+                                                   Value *val1,
+                                                   Value *val2,
+                                                   const SizedType &val1_type,
+                                                   const SizedType &val2_type,
+                                                   const bool inverse,
+                                                   const location &loc)
+{
+  /*
+   // This function compares each character of the two arrays.
+   // It returns true if all are equal and false if any are different
+   // cmp([]char val1, []char val2)
+   {
+      for (size_t i = 0; i < n; i++)
+      {
+        if (val1[i] != val2[i])
+        {
+          return false;
+        }
+      }
+      return true;
+   }
+*/
+  auto elem_type = *val1_type.GetElementTy();
+  const size_t num = val1_type.GetNumElements();
+
+  Value *val1_elem_i, *val2_elem_i, *cmp;
+  AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
+  AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
+
+  Function *parent = GetInsertBlock()->getParent();
+  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
+  CreateStore(getInt1(inverse), store);
+  BasicBlock *arr_ne = BasicBlock::Create(module_.getContext(),
+                                          "arraycmp.false",
+                                          parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "arraycmp.done",
+                                        parent);
+
+  Value *ptr_val1 = CreateIntToPtr(val1, GetType(val1_type)->getPointerTo());
+  Value *ptr_val2 = CreateIntToPtr(val2, GetType(val2_type)->getPointerTo());
+
+  for (size_t i = 0; i < num; i++)
+  {
+    BasicBlock *arr_eq = BasicBlock::Create(module_.getContext(),
+                                            "arraycmp.loop",
+                                            parent);
+    auto *ptr_val1_elem_i = CreateGEP(GetType(val1_type),
+                                      ptr_val1,
+                                      { getInt32(0), getInt32(i) });
+    if (onStack(val1_type))
+    {
+      val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
+    }
+    else
+    {
+      CreateProbeRead(ctx,
+                      v1,
+                      getInt32(elem_type.GetSize()),
+                      ptr_val1_elem_i,
+                      val1_type.GetAS(),
+                      loc);
+      val1_elem_i = CreateLoad(GetType(elem_type), v1);
+    }
+
+    auto *ptr_val2_elem_i = CreateGEP(GetType(val2_type),
+                                      ptr_val2,
+                                      { getInt32(0), getInt32(i) });
+    if (onStack(val2_type))
+    {
+      val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
+    }
+    else
+    {
+      CreateProbeRead(ctx,
+                      v2,
+                      getInt32(elem_type.GetSize()),
+                      ptr_val2_elem_i,
+                      val2_type.GetAS(),
+                      loc);
+      val2_elem_i = CreateLoad(GetType(elem_type), v2);
+    }
+    cmp = CreateICmpNE(val1_elem_i, val2_elem_i, "arraycmp.cmp");
+
+    CreateCondBr(cmp, arr_ne, arr_eq);
+    SetInsertPoint(arr_eq);
+  }
+  CreateBr(done);
+
+  SetInsertPoint(arr_ne);
+  CreateStore(getInt1(!inverse), store);
+  CreateBr(done);
+
+  SetInsertPoint(done);
+  Value *result = CreateLoad(getInt1Ty(), store);
+  CreateLifetimeEnd(store);
+  CreateLifetimeEnd(v1);
+  CreateLifetimeEnd(v2);
+  result = CreateIntCast(result, getInt64Ty(), false);
+  return result;
+}
+
+Value *IRBuilderBPF::CreateIntegerArrayCmp(Value *ctx,
+                                           Value *val1,
+                                           Value *val2,
+                                           const SizedType &val1_type,
+                                           const SizedType &val2_type,
+                                           const bool inverse,
+                                           const location &loc,
+                                           MDNode *metadata)
+{
+  /*
+   // This function compares each character of the two arrays.
+   // It returns true if all are equal and false if any are different
+   // cmp([]char val1, []char val2)
+   {
+      for (size_t i = 0; i < n; i++)
+      {
+        if (val1[i] != val2[i])
+        {
+          return false;
+        }
+      }
+      return true;
+   }
+*/
+  auto elem_type = *val1_type.GetElementTy();
+  const size_t num = val1_type.GetNumElements();
+
+  Value *val1_elem_i, *val2_elem_i, *cmp;
+  AllocaInst *v1 = CreateAllocaBPF(elem_type, "v1");
+  AllocaInst *v2 = CreateAllocaBPF(elem_type, "v2");
+  AllocaInst *store = CreateAllocaBPF(getInt1Ty(), "arraycmp.result");
+  CreateStore(getInt1(inverse), store);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *while_cond = BasicBlock::Create(module_.getContext(),
+                                              "while_cond",
+                                              parent);
+  BasicBlock *while_body = BasicBlock::Create(module_.getContext(),
+                                              "while_body",
+                                              parent);
+  BasicBlock *arr_ne = BasicBlock::Create(module_.getContext(),
+                                          "arraycmp.false",
+                                          parent);
+  BasicBlock *done = BasicBlock::Create(module_.getContext(),
+                                        "arraycmp.done",
+                                        parent);
+
+  Value *ptr_val1 = CreateIntToPtr(val1, GetType(val1_type)->getPointerTo());
+  Value *ptr_val2 = CreateIntToPtr(val2, GetType(val2_type)->getPointerTo());
+  AllocaInst *i = CreateAllocaBPF(getInt32Ty(), "i");
+  AllocaInst *n = CreateAllocaBPF(getInt32Ty(), "n");
+  CreateStore(getInt32(0), i);
+  CreateStore(getInt32(num), n);
+  CreateBr(while_cond);
+
+  SetInsertPoint(while_cond);
+  auto *cond = CreateICmpSLT(CreateLoad(getInt32Ty(), i),
+                             CreateLoad(getInt32Ty(), n),
+                             "size_check");
+  Instruction *loop_hdr = CreateCondBr(cond, while_body, done);
+  loop_hdr->setMetadata(LLVMContext::MD_loop, metadata);
+
+  SetInsertPoint(while_body);
+  BasicBlock *arr_eq = BasicBlock::Create(module_.getContext(),
+                                          "arraycmp.loop",
+                                          parent);
+  auto *ptr_val1_elem_i = CreateGEP(GetType(val1_type),
+                                    ptr_val1,
+                                    { getInt32(0),
+                                      CreateLoad(getInt32Ty(), i) });
+  if (onStack(val1_type))
+  {
+    val1_elem_i = CreateLoad(GetType(elem_type), ptr_val1_elem_i);
+  }
+  else
+  {
+    CreateProbeRead(ctx,
+                    v1,
+                    getInt32(elem_type.GetSize()),
+                    ptr_val1_elem_i,
+                    val1_type.GetAS(),
+                    loc);
+    val1_elem_i = CreateLoad(GetType(elem_type), v1);
+  }
+
+  auto *ptr_val2_elem_i = CreateGEP(GetType(val2_type),
+                                    ptr_val2,
+                                    { getInt32(0),
+                                      CreateLoad(getInt32Ty(), i) });
+  if (onStack(val2_type))
+  {
+    val2_elem_i = CreateLoad(GetType(elem_type), ptr_val2_elem_i);
+  }
+  else
+  {
+    CreateProbeRead(ctx,
+                    v2,
+                    getInt32(elem_type.GetSize()),
+                    ptr_val2_elem_i,
+                    val2_type.GetAS(),
+                    loc);
+    val2_elem_i = CreateLoad(GetType(elem_type), v2);
+  }
+
+  cmp = CreateICmpNE(val1_elem_i, val2_elem_i, "arraycmp.cmp");
+  CreateCondBr(cmp, arr_ne, arr_eq);
+
+  SetInsertPoint(arr_eq);
+  CreateStore(CreateAdd(CreateLoad(getInt32Ty(), i), getInt32(1)), i);
+  CreateBr(while_cond);
+
+  SetInsertPoint(arr_ne);
+  CreateStore(getInt1(!inverse), store);
+  CreateBr(done);
+
+  SetInsertPoint(done);
+  Value *result = CreateLoad(getInt1Ty(), store);
+  CreateLifetimeEnd(store);
+  CreateLifetimeEnd(v1);
+  CreateLifetimeEnd(v2);
+  result = CreateIntCast(result, getInt64Ty(), false);
+  return result;
+}
+
 CallInst *IRBuilderBPF::CreateGetPidTgid(const location &loc)
 {
   // u64 bpf_get_current_pid_tgid(void)
