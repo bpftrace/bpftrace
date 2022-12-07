@@ -1,81 +1,81 @@
 NAME u8 pointer increment
-PROG BEGIN { @=(int8*) 32; @+=1; exit(); }
-EXPECT ^@: 33
+PROG BEGIN { @=(int8*) 0x32; @+=1; exit(); }
+EXPECT ^@: 0x33
 TIMEOUT 5
 
 NAME u16 pointer increment
-PROG BEGIN { @=(int16*) 32; @+=1; exit(); }
-EXPECT ^@: 34
+PROG BEGIN { @=(int16*) 0x32; @+=1; exit(); }
+EXPECT ^@: 0x34
 TIMEOUT 5
 
 NAME u32 pointer increment
-PROG BEGIN { @=(int32*) 32; @+=1; exit(); }
-EXPECT ^@: 36
+PROG BEGIN { @=(int32*) 0x32; @+=1; exit(); }
+EXPECT ^@: 0x36
 TIMEOUT 5
 
 NAME u64 pointer increment
-PROG BEGIN { @=(int64*) 32; @+=1; exit(); }
-EXPECT ^@: 40
+PROG BEGIN { @=(int64*) 0x32; @+=1; exit(); }
+EXPECT ^@: 0x3a
 TIMEOUT 5
 
 NAME u8 pointer unop post increment
-PROG BEGIN { @=(int8*) 32; @++; exit(); }
-EXPECT ^@: 33
+PROG BEGIN { @=(int8*) 0x32; @++; exit(); }
+EXPECT ^@: 0x33
 TIMEOUT 5
 
 NAME u16 pointer unop post increment
-PROG BEGIN { @=(int16*) 32; @++; exit(); }
-EXPECT ^@: 34
+PROG BEGIN { @=(int16*) 0x32; @++; exit(); }
+EXPECT ^@: 0x34
 TIMEOUT 5
 
 NAME u32 pointer unop post increment
-PROG BEGIN { @=(int32*) 32; @++; exit(); }
-EXPECT ^@: 36
+PROG BEGIN { @=(int32*) 0x32; @++; exit(); }
+EXPECT ^@: 0x36
 TIMEOUT 5
 
 NAME u64 pointer unop post increment
-PROG BEGIN { @=(int64*) 32; @++; exit(); }
-EXPECT ^@: 40
+PROG BEGIN { @=(int64*) 0x32; @++; exit(); }
+EXPECT ^@: 0x3a
 TIMEOUT 5
 
 NAME u8 pointer unop pre increment
-PROG BEGIN { @=(int8*) 32; @++; exit(); }
-EXPECT ^@: 33
+PROG BEGIN { @=(int8*) 0x32; @++; exit(); }
+EXPECT ^@: 0x33
 TIMEOUT 5
 
 NAME u16 pointer unop pre increment
-PROG BEGIN { @=(int16*) 32; @++; exit(); }
-EXPECT ^@: 34
+PROG BEGIN { @=(int16*) 0x32; @++; exit(); }
+EXPECT ^@: 0x34
 TIMEOUT 5
 
 NAME u32 pointer unop pre increment
-PROG BEGIN { @=(int32*) 32; @++; exit(); }
-EXPECT ^@: 36
+PROG BEGIN { @=(int32*) 0x32; @++; exit(); }
+EXPECT ^@: 0x36
 TIMEOUT 5
 
 NAME u64 pointer unop pre increment
-PROG BEGIN { @=(int64*) 32; @++; exit(); }
-EXPECT ^@: 40
+PROG BEGIN { @=(int64*) 0x32; @++; exit(); }
+EXPECT ^@: 0x3a
 TIMEOUT 5
 
 NAME Pointer decrement 1
-PROG BEGIN { @=(int32*) 32; @-=1; exit(); }
-EXPECT ^@: 28
+PROG BEGIN { @=(int32*) 0x32; @-=1; exit(); }
+EXPECT ^@: 0x2e
 TIMEOUT 5
 
 NAME Pointer decrement
-PROG BEGIN { @=(int32*) 32; @--; exit(); }
-EXPECT ^@: 28
+PROG BEGIN { @=(int32*) 0x32; @--; exit(); }
+EXPECT ^@: 0x2e
 TIMEOUT 5
 
 NAME Pointer increment 6
-PROG BEGIN { @=(int32*) 32; @+=6; exit(); }
-EXPECT ^@: 56
+PROG BEGIN { @=(int32*) 0x32; @+=6; exit(); }
+EXPECT ^@: 0x4a
 TIMEOUT 5
 
 NAME Pointer decrement 6
-PROG BEGIN { @=(int32*) 32; @-=6; exit(); }
-EXPECT ^@: 8
+PROG BEGIN { @=(int32*) 0x32; @-=6; exit(); }
+EXPECT ^@: 0x1a
 TIMEOUT 5
 
 NAME Struct pointer math
@@ -84,8 +84,8 @@ EXPECT 1024 - 5 x 36 = 844
 TIMEOUT 5
 
 NAME Pointer decrement with map
-PROG BEGIN { @dec = 4; @=(int32*) 32; @-=@dec; exit(); }
-EXPECT ^@: 16
+PROG BEGIN { @dec = 4; @=(int32*) 0x32; @-=@dec; exit(); }
+EXPECT ^@: 0x22
 TIMEOUT 5
 
 NAME Pointer walk through struct
