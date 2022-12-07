@@ -199,8 +199,7 @@ public:
 
   bool IsPrintableTy()
   {
-    return type != Type::none && type != Type::pointer &&
-           type != Type::stack_mode && !IsCtxAccess();
+    return type != Type::none && type != Type::stack_mode && !IsCtxAccess();
   }
 
   bool IsSigned(void) const;
