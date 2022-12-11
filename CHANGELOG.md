@@ -28,6 +28,8 @@ and this project adheres to
   - [#2361](https://github.com/iovisor/bpftrace/pull/2361)
 - Fix kprobe multi-attachment
   - [#2381](https://github.com/iovisor/bpftrace/pull/2381)
+- Fix attaching to multiple USDT probes using the same wildcard
+  - [#2456](https://github.com/iovisor/bpftrace/pull/2456)
 - Fix pointer arithmetics codegen
   - [#2397](https://github.com/iovisor/bpftrace/pull/2397)
 - Fix segfault for invalid AssignVarStatement visit

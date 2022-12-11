@@ -221,6 +221,14 @@ int BPFtrace::add_probe(ast::Probe &p)
         attach_point->target = target;
         attach_point->ns = ns;
         attach_point->func = func_id;
+        // Necessary for correct number of locations if wildcard expands to
+        // multiple probes.
+        std::optional<usdt_probe_entry> usdt;
+        if (attach_point->need_expansion &&
+            (usdt = USDTHelper::find(this->pid(), target, ns, func_id)))
+        {
+          attach_point->usdt = *usdt;
+        }
       }
       else if (probetype(attach_point->provider) == ProbeType::tracepoint ||
                probetype(attach_point->provider) == ProbeType::uprobe ||
