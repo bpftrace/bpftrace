@@ -142,7 +142,7 @@ TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple files by wildcard"
 PROG usdt:./testprogs/usdt*::* { printf("here\n" ); exit(); }
-EXPECT Attaching 41 probes...
+EXPECT Attaching 48 probes...
 TIMEOUT 5
 
 NAME "usdt probes - attach to probe on multiple providers by wildcard and pid"
@@ -151,6 +151,13 @@ EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES ./testprogs/usdt_test should_not_skip
+
+NAME "usdt probes - attach to multiple probes with different number of locations by wildcard"
+PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
+BEFORE ./testprogs/usdt_multiple_locations
+EXPECT Attaching 6 probes...
+TIMEOUT 5
+REQUIRES ./testprogs/usdt_multiple_locations should_not_skip
 
 # TODO(mmarchini): re-enable this test
 # This test relies on the latest version of bcc. Before re-enabling this test,
