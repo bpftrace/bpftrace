@@ -108,6 +108,23 @@ EXPECT SUCCESS .*
 AFTER ./testprogs/uprobe_negative_retval
 TIMEOUT 5
 
+# Disabled, since BCC code it depends on is prone to race condition,
+# (https://github.com/iovisor/bcc/pull/4319#issuecomment-1321731687)
+NAME func_uprobe_symcache_preload
+ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PID
+PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(func); exit(); }
+EXPECT test
+BEFORE ./testprogs/uprobe_symres_exited_process
+TIMEOUT 5
+REQUIRES bash -c "exit 1"
+
+NAME func_uprobe_elf_symtable
+ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
+PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(func); exit(); }
+EXPECT test
+AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+TIMEOUT 5
+
 NAME username
 PROG i:ms:1 { printf("SUCCESS %s\n", username); exit(); }
 EXPECT SUCCESS .*

@@ -241,6 +241,13 @@ EXPECT ^\s+[0-9a-f]+$
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
+NAME ustack_elf_symtable
+ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
+PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
+EXPECT ^\s+test\+0\s+main\+[1-9][0-9]*
+AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+TIMEOUT 5
+
 NAME cat
 PROG i:ms:1 { cat("/proc/uptime"); exit();}
 EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
