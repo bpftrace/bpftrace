@@ -34,6 +34,7 @@ public:
   void visit(Cast &cast) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(Unop &unop) override;
   void visit(Probe &probe) override;
 
   int analyse();

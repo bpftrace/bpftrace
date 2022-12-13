@@ -275,6 +275,13 @@ EXPECT { .m = 2, .n = 3 }
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
+NAME print_non_map_struct_kfunc
+PROG kfunc:vfs_open { print(*args->path); exit(); }
+EXPECT { .mnt = 0x[0-9a-f]+, .dentry = 0x[0-9a-f]+ }
+REQUIRES_FEATURE btf
+TIMEOUT 5
+AFTER ./testprogs/syscall open
+
 NAME strftime
 PROG BEGIN { $ts = strftime("%m/%d/%y", nsecs); printf("%s\n", $ts); exit(); }
 EXPECT [0-9]{2}\/[0-9]{2}\/[0-9]{2}

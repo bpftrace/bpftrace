@@ -105,12 +105,6 @@ void FieldAnalyser::visit(FieldAccess &acc)
   }
   else if (!sized_type_.IsNoneTy())
   {
-    if (sized_type_.IsPtrTy())
-    {
-      sized_type_ = *sized_type_.GetPointeeTy();
-      resolve_fields(sized_type_);
-    }
-
     // If the struct type or the field type has not been resolved, add the type
     // to the BTF set to let ClangParser resolve it
     if (bpftrace_.has_btf_data() && sized_type_.IsRecordTy())
@@ -160,6 +154,16 @@ void FieldAnalyser::visit(AssignVarStatement &assignment)
 {
   Visit(*assignment.expr);
   var_types_.emplace(assignment.var->ident, sized_type_);
+}
+
+void FieldAnalyser::visit(Unop &unop)
+{
+  Visit(*unop.expr);
+  if (unop.op == Operator::MUL && sized_type_.IsPtrTy())
+  {
+    sized_type_ = *sized_type_.GetPointeeTy();
+    resolve_fields(sized_type_);
+  }
 }
 
 bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
