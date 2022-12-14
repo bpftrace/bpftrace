@@ -242,7 +242,7 @@ ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
 
 ## Vendored libraries
 The bpftrace tree include bcc and libbpf submodules. 
-Use `git submodule init && git submodule update --recursive` to initialize them after having cloned the repo or specifying `--recurse-submodules` when first cloning bpftrace repo to have it handled as part of the process `git clone --recurse-submodules https://github.com/iovisor/bpftrace`.
+Use `git submodule init && git submodule update --recursive` to initialize them (after having cloned the repo) or use `git clone --recurse-submodules https://github.com/iovisor/bpftrace` when first cloning the bpftrace repo.
 
 By default the build system will look for these libraries as built in the
 bpftrace tree. If you want to use the system ones, pass
