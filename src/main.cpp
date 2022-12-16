@@ -50,7 +50,6 @@ enum class OutputBufferConfig {
 enum class TestMode
 {
   UNSET = 0,
-  SEMANTIC,
   CODEGEN,
 };
 
@@ -493,13 +492,11 @@ Args parse_args(int argc, char* argv[])
         DISABLE_LOG(WARNING);
         break;
       case Options::TEST: // --test
-        if (std::strcmp(optarg, "semantic") == 0)
-          args.test_mode = TestMode::SEMANTIC;
-        else if (std::strcmp(optarg, "codegen") == 0)
+        if (std::strcmp(optarg, "codegen") == 0)
           args.test_mode = TestMode::CODEGEN;
         else
         {
-          LOG(ERROR) << "USAGE: --test must be either 'semantic' or 'codegen'.";
+          LOG(ERROR) << "USAGE: --test can only be 'codegen'.";
           exit(1);
         }
         break;
