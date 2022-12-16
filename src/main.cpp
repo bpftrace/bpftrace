@@ -413,7 +413,7 @@ ast::PassManager CreateDynamicPM()
   return pm;
 }
 
-ast::PassManager CreateAotPM(std::string __attribute__((unused)))
+ast::PassManager CreateAotPM()
 {
   ast::PassManager pm;
   pm.AddPass(ast::CreateSemanticPass());
@@ -877,7 +877,7 @@ int main(int argc, char* argv[])
       pm = CreateDynamicPM();
       break;
     case BuildMode::AHEAD_OF_TIME:
-      pm = CreateAotPM(args.aot);
+      pm = CreateAotPM();
       break;
   }
 
