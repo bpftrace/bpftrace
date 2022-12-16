@@ -36,7 +36,7 @@ cd $TMPDIR
 set +e
 
 TESTMODE=${4:-codegen}
-if [[ $TESTMODE != "codegen" && $TESTMODE != "semantic" ]]; then
+if [[ $TESTMODE != "codegen" ]]; then
     echo invalid testmode: $TESTMODE
     exit 20
 fi
