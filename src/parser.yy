@@ -120,7 +120,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 
 
 %type <ast::Operator> unary_op compound_op
-%type <std::string> attach_point_def c_definitions ident
+%type <std::string> attach_point_def c_definitions ident string_literal
 
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList *> attach_points
@@ -331,10 +331,15 @@ assign_stmt:
                 }
         ;
 
+string_literal:
+                STRING                { $$ = std::string($1); }
+        |       string_literal STRING { $$ = $1 + std::string($2); }
+        ;
+
 primary_expr:
                 IDENT              { $$ = new ast::Identifier($1, @$); }
         |       int                { $$ = $1; }
-        |       STRING             { $$ = new ast::String($1, @$); }
+        |       string_literal     { $$ = new ast::String($1, @$); }
         |       STACK_MODE         { $$ = new ast::StackMode($1, @$); }
         |       BUILTIN            { $$ = new ast::Builtin($1, @$); }
         |       CALL_BUILTIN       { $$ = new ast::Builtin($1, @$); }

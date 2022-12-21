@@ -1640,6 +1640,21 @@ i:s:1 { < }
   EXPECT_EQ(out.str(), expected);
 }
 
+TEST(Parser, string_literal_concat)
+{
+  test("k:f { \"ab\" \"cd\" \"ef\" }",
+       "Program\n"
+       " kprobe:f\n"
+       "  string: abcdef\n"
+       );
+  test("k:f /\"foo\" \"bar\"/ {}",
+       "Program\n"
+       " kprobe:f\n"
+       "  pred\n"
+       "   string: foobar\n"
+       );
+}
+
 TEST(Parser, string_with_tab)
 {
   BPFtrace bpftrace;
