@@ -332,7 +332,7 @@ sudo dnf install -y bison \
   gmock-devel \
   cereal-devel \
   asciidoctor
-git clone https://github.com/iovisor/bpftrace
+git clone https://github.com/iovisor/bpftrace --recurse-submodules
 cd bpftrace
 mkdir build; cd build
 ../build-libs.sh
