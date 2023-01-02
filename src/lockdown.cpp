@@ -26,22 +26,6 @@ static LockdownState from_string(const std::string &s)
   return LockdownState::Unknown;
 }
 
-static bool is_ubuntu(void)
-{
-  // If ubuntu is somewhere in uname it is probably ubuntu
-  struct utsname name = {};
-  uname(&name);
-
-  std::string version(name.version);
-
-  std::transform(version.begin(),
-                 version.end(),
-                 version.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-
-  return (version.find("ubuntu") != std::string::npos);
-}
-
 static LockdownState read_security_lockdown(void)
 {
   std::ifstream file("/sys/kernel/security/lockdown");
@@ -73,14 +57,6 @@ void emit_warning(std::ostream &out)
 
 LockdownState detect(std::unique_ptr<BPFfeature> &feature)
 {
-  // Ubuntu (19.10 at least) ships a lockdown version that fully blocks the bpf
-  // syscall
-  if (is_ubuntu() && !feature->has_map_array() &&
-      !feature->has_helper_probe_read())
-  {
-    return LockdownState::Confidentiality;
-  }
-
   return read_security_lockdown();
 }
 

@@ -23,6 +23,8 @@ and this project adheres to
   - [#2387](https://github.com/iovisor/bpftrace/pull/2387)
 #### Deprecated
 #### Removed
+- Drop Ubuntu 19.10 lockdown detection
+  - [#2467](https://github.com/iovisor/bpftrace/pull/2467)
 #### Fixed
 - Fix pointer/register loads on 32-bit architectures
   - [#2361](https://github.com/iovisor/bpftrace/pull/2361)
