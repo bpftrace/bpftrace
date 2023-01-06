@@ -746,7 +746,7 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 
     if (!btf_conflict)
     {
-      resolve_unknown_typedefs_from_btf(bpftrace);
+      resolve_unknown_types_from_btf(bpftrace);
 
       if (handler.parse_file(
               "definitions.h", input, args, input_files, false) &&
@@ -785,24 +785,29 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 }
 
 /*
- * Parse the given Clang diagnostics message and if it has the form:
- *   unknown type name 'type_t'
- * return type_t.
+ * Parse the given Clang diagnostics message and if it has one of the forms:
+ * - unknown type name 'X'
+ * - use of undeclared identifier 'X',
+ * return X.
  */
 std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
     const std::string &diagnostic_msg)
 {
-  const std::string unknown_type_msg = "unknown type name \'";
-  if (diagnostic_msg.find(unknown_type_msg) == 0)
+  const std::vector<std::string> messages = {
+    "unknown type name \'", "use of undeclared identifier \'"
+  };
+  for (auto &msg : messages)
   {
-    return diagnostic_msg.substr(unknown_type_msg.length(),
-                                 diagnostic_msg.length() -
-                                     unknown_type_msg.length() - 1);
+    if (diagnostic_msg.find(msg) == 0)
+    {
+      return diagnostic_msg.substr(msg.length(),
+                                   diagnostic_msg.length() - msg.length() - 1);
+    }
   }
   return {};
 }
 
-std::unordered_set<std::string> ClangParser::get_unknown_typedefs()
+std::unordered_set<std::string> ClangParser::get_unknown_types()
 {
   // Parse without failing on compilation errors (ie unknown types) because
   // our goal is to enumerate and analyse all such errors
@@ -810,7 +815,7 @@ std::unordered_set<std::string> ClangParser::get_unknown_typedefs()
   if (!handler.parse_file("definitions.h", input, args, input_files, false))
     return {};
 
-  std::unordered_set<std::string> unknown_typedefs;
+  std::unordered_set<std::string> unknown_types;
   // Search for error messages of the form:
   //   unknown type name 'type_t'
   // that imply an unresolved typedef of type_t. This cannot be done in
@@ -819,20 +824,20 @@ std::unordered_set<std::string> ClangParser::get_unknown_typedefs()
   {
     auto unknown_type = get_unknown_type(msg);
     if (unknown_type)
-      unknown_typedefs.emplace(unknown_type.value());
+      unknown_types.emplace(unknown_type.value());
   }
-  return unknown_typedefs;
+  return unknown_types;
 }
 
-void ClangParser::resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace)
+void ClangParser::resolve_unknown_types_from_btf(BPFtrace &bpftrace)
 {
   bool check_unknown_types = true;
   while (check_unknown_types)
   {
-    // Collect unknown typedefs and retrieve their definitions from BTF.
-    // These must be resolved completely since any unknown typedef will cause
+    // Collect unknown types and retrieve their definitions from BTF.
+    // These must be resolved completely since any unknown type will cause
     // the parser to fail (even if that type is not used in the program).
-    auto incomplete_types = get_unknown_typedefs();
+    auto incomplete_types = get_unknown_types();
     size_t types_cnt = bpftrace.btf_set_.size();
     bpftrace.btf_set_.insert(incomplete_types.cbegin(),
                              incomplete_types.cend());

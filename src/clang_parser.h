@@ -45,12 +45,12 @@ private:
    * Collect names of types defined by typedefs that are in non-included
    * headers as they may pose problems for clang parser.
    */
-  std::unordered_set<std::string> get_unknown_typedefs();
+  std::unordered_set<std::string> get_unknown_types();
   /*
    * Iteratively check for unknown typedefs, pull their definitions from BTF,
    * and update the input files with the definitions.
    */
-  void resolve_unknown_typedefs_from_btf(BPFtrace &bpftrace);
+  void resolve_unknown_types_from_btf(BPFtrace &bpftrace);
 
   static std::optional<std::string> get_unknown_type(
       const std::string &diagnostic_msg);

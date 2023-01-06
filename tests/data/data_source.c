@@ -24,6 +24,12 @@ struct Foo3
   const volatile struct Foo2 *restrict foo2;
 };
 
+enum FooBar
+{
+  FOO = 0,
+  BAR
+};
+
 struct Foo3 foo3;
 
 struct Foo3 *func_1(int a, struct Foo1 *foo1, struct Foo2 *foo2)
@@ -85,6 +91,7 @@ int main(void)
   struct bpf_iter__task iter_task;
   struct bpf_iter__task_file iter_task_file;
   struct bpf_iter__task_vma iter_task_vma;
+  enum FooBar foobar;
 
   func_1(0, 0, 0);
   return 0;

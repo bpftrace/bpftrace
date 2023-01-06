@@ -659,6 +659,28 @@ TEST_F(clang_parser_btf, btf_type_override)
         "kprobe:sys_read { @x1 = ((struct Foo3 *)curtask); }");
 }
 
+TEST_F(clang_parser_btf, btf_unresolved_enum)
+{
+  // Create a custom header file that uses an enum identifier defined in BTF
+  // (FOO) and let ClangParser parse it. Clang will complain that the identifier
+  // cannot be found, ClangParser will extract the identifier name from the
+  // error message, and pull the definition from BTF.
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+
+  char *header_path = strdup("/tmp/headerXXXXXX");
+  const char header_data[] = "int x = FOO;";
+
+  int fd = mkstemp(header_path);
+  ASSERT_GE(fd, 0);
+  ASSERT_EQ(write(fd, header_data, sizeof(header_data)), sizeof(header_data));
+  close(fd);
+
+  parse(std::string("#include \"") + header_path + "\"\n", bpftrace);
+
+  remove(header_path);
+}
+
 TEST(clang_parser, struct_typedef)
 {
   // Make sure we can differentiate between "struct max_align_t {}" and
