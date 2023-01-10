@@ -599,6 +599,7 @@ public:
   StatementList *stmts = nullptr;
 
   std::string name() const;
+  std::string args_typename() const;
   bool need_expansion = false;        // must build a BPF program per wildcard match
   int tp_args_structs_level = -1;     // number of levels of structs that must
                                       // be imported/resolved for tracepoints

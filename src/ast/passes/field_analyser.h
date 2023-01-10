@@ -43,7 +43,6 @@ public:
 
 private:
   bool resolve_args(Probe &probe);
-  bool compare_args(const ProbeArgs &args1, const ProbeArgs &args2);
   void resolve_fields(SizedType &type);
   void resolve_type(SizedType &type);
 
@@ -59,7 +58,6 @@ private:
   std::ostream       &out_;
   std::ostringstream  err_;
 
-  ProbeArgs ap_args_;
   std::map<std::string, SizedType> var_types_;
 };
 

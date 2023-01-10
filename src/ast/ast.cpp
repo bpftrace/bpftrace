@@ -580,6 +580,11 @@ std::string Probe::name() const
   return n;
 }
 
+std::string Probe::args_typename() const
+{
+  return "struct " + name() + "_args";
+}
+
 int Probe::index() const
 {
   return index_;

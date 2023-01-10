@@ -6,6 +6,7 @@
 
 #include <cereal/access.hpp>
 
+#include "ast/ast.h"
 #include "types.h"
 #include "utils.h"
 
@@ -107,6 +108,10 @@ struct Struct
     return size == rhs.size && align == rhs.align && padded == rhs.padded &&
            fields == rhs.fields;
   }
+  bool operator!=(const Struct &rhs) const
+  {
+    return !(*this == rhs);
+  }
 
 private:
   friend class cereal::access;
@@ -161,6 +166,7 @@ class StructManager
 public:
   // struct map manipulation
   void Add(const std::string &name, size_t size, bool allow_override = true);
+  void Add(const std::string &name, Struct &&record);
   std::weak_ptr<Struct> Lookup(const std::string &name) const;
   std::weak_ptr<Struct> LookupOrAdd(const std::string &name,
                                     size_t size,
@@ -170,6 +176,10 @@ public:
   // tuples set manipulation
   std::weak_ptr<Struct> AddTuple(std::vector<SizedType> fields);
   size_t GetTuplesCnt() const;
+
+  // probe args lookup
+  const Field *GetProbeArg(const ast::Probe &probe,
+                           const std::string &arg_name);
 
 private:
   std::map<std::string, std::shared_ptr<Struct>> struct_map_;

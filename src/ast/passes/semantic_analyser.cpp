@@ -329,11 +329,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
-      auto it = ap_args_.find("$retval");
-
-      if (it != ap_args_.end())
+      auto arg = bpftrace_.structs.GetProbeArg(*probe_, "$retval");
+      if (arg)
       {
-        builtin.type = it->second;
+        builtin.type = arg->type;
         builtin.type.is_btftype = true;
       }
       else
@@ -456,9 +455,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     }
     else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
     {
-      builtin.type = CreatePointer(CreateRecord("struct kfunc",
+      builtin.type = CreatePointer(CreateRecord(probe_->args_typename(),
                                                 bpftrace_.structs.Lookup(
-                                                    "struct kfunc")),
+                                                    probe_->args_typename())),
                                    AddrSpace::kernel);
       builtin.type.MarkCtxAccess();
       builtin.type.is_funcarg = true;
@@ -467,9 +466,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
     {
       // Add a dummy "placeholder" type here to satisfy semantic analyser.
       // An eventual FieldAccess is then resolved as an argument lookup.
-      builtin.type = CreatePointer(CreateRecord("struct uprobe_args",
+      builtin.type = CreatePointer(CreateRecord(probe_->args_typename(),
                                                 bpftrace_.structs.Lookup(
-                                                    "struct uprobe_args")),
+                                                    probe_->args_typename())),
                                    AddrSpace::user);
       builtin.type.MarkCtxAccess();
       builtin.type.is_funcarg = true;
@@ -2173,11 +2172,10 @@ void SemanticAnalyser::visit(FieldAccess &acc)
 
   if (type.is_funcarg)
   {
-    auto it = ap_args_.find(acc.field);
-
-    if (it != ap_args_.end())
+    auto arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
+    if (arg)
     {
-      acc.type = it->second;
+      acc.type = arg->type;
       acc.type.SetAS(acc.expr->type.GetAS());
 
       if (is_final_pass())
@@ -2635,13 +2633,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         ap.target = paths.front();
       }
     }
-    // Check if there were some arguments resolved for the probe
-    auto args_it = bpftrace_.ap_args_.find(probe_->name());
-    if (args_it != bpftrace_.ap_args_.end())
-    {
-      ap_args_.clear();
-      ap_args_.insert(args_it->second.begin(), args_it->second.end());
-    }
   }
   else if (ap.provider == "usdt") {
     bpftrace_.has_usdt_ = true;
@@ -2862,19 +2853,6 @@ void SemanticAnalyser::visit(AttachPoint &ap)
 
     if (ap.func == "")
       LOG(ERROR, ap.loc, err_) << "kfunc should specify a function";
-
-    if (!listing_)
-    {
-      const auto &ap_map = bpftrace_.ap_args_;
-      auto it = ap_map.find(probe_->name());
-
-      if (it != ap_map.end())
-      {
-        auto args = it->second;
-        ap_args_.clear();
-        ap_args_.insert(args.begin(), args.end());
-      }
-    }
   }
   else if (ap.provider == "iter")
   {

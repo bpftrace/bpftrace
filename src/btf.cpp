@@ -10,6 +10,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <linux/limits.h>
+#include <optional>
 #include <regex>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -414,9 +415,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
   return stype;
 }
 
-void BTF::resolve_args(const std::string &func,
-                       std::map<std::string, SizedType> &args,
-                       bool ret)
+Struct BTF::resolve_args(const std::string &func, bool ret)
 {
   if (!has_data())
     throw std::runtime_error("BTF data not available");
@@ -449,6 +448,7 @@ void BTF::resolve_args(const std::string &func,
                              "not supported.");
   }
 
+  Struct args(0, false);
   int j = 0;
   for (; j < vlen; j++, p++)
   {
@@ -459,7 +459,11 @@ void BTF::resolve_args(const std::string &func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
     stype.funcarg_idx = j;
     stype.is_funcarg = true;
-    args.insert({ str, stype });
+    args.AddField(str, stype, args.size, std::nullopt, false);
+    // kfunc (fentry/fexit) args are stored in a u64 array.
+    // Note that it's ok to represent them by a struct as we will use GEP with
+    // funcarg_idx to access them in codegen.
+    args.size += 8;
   }
 
   if (ret)
@@ -467,8 +471,11 @@ void BTF::resolve_args(const std::string &func,
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
     stype.funcarg_idx = j;
     stype.is_funcarg = true;
-    args.insert({ "$retval", stype });
+    args.AddField("$retval", stype, args.size, std::nullopt, false);
+    // kfunc (fentry/fexit) args (incl. retval) are stored in a u64 array
+    args.size += 8;
   }
+  return args;
 }
 
 std::string BTF::get_all_funcs_from_btf(const BTFObj &btf_obj) const

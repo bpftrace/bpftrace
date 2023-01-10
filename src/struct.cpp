@@ -173,6 +173,11 @@ void StructManager::Add(const std::string &name,
   struct_map_[name] = std::make_unique<Struct>(size, allow_override);
 }
 
+void StructManager::Add(const std::string &name, Struct &&record)
+{
+  struct_map_[name] = std::make_shared<Struct>(std::move(record));
+}
+
 std::weak_ptr<Struct> StructManager::Lookup(const std::string &name) const
 {
   auto s = struct_map_.find(name);
@@ -202,6 +207,16 @@ std::weak_ptr<Struct> StructManager::AddTuple(std::vector<SizedType> fields)
 size_t StructManager::GetTuplesCnt() const
 {
   return tuples_.size();
+}
+
+const Field *StructManager::GetProbeArg(const ast::Probe &probe,
+                                        const std::string &arg_name)
+{
+  auto args = Lookup(probe.args_typename()).lock();
+  if (!args || !args->HasField(arg_name))
+    return nullptr;
+
+  return &args->GetField(arg_name);
 }
 
 } // namespace bpftrace
