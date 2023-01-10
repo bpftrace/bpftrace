@@ -27,7 +27,7 @@ public:
 
   std::vector<std::string> get_function_params(
       const std::string &function) const;
-  ProbeArgs resolve_args(const std::string &function);
+  Struct resolve_args(const std::string &function);
 
   SizedType get_stype(const std::string &type_name) const;
   void resolve_fields(const SizedType &type) const;
@@ -93,7 +93,7 @@ public:
     return {};
   }
 
-  ProbeArgs resolve_args(const std::string &function __attribute__((unused)))
+  Struct resolve_args(const std::string &function __attribute__((unused)))
   {
     return {};
   }

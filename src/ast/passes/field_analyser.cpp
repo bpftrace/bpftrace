@@ -58,9 +58,9 @@ void FieldAnalyser::visit(Builtin &builtin)
   {
     resolve_args(*probe_);
 
-    auto it = ap_args_.find("$retval");
-    if (it != ap_args_.end())
-      sized_type_ = it->second;
+    auto arg = bpftrace_.structs.GetProbeArg(*probe_, "$retval");
+    if (arg)
+      sized_type_ = arg->type;
     return;
   }
 
@@ -97,9 +97,9 @@ void FieldAnalyser::visit(FieldAccess &acc)
 
   if (has_builtin_args_)
   {
-    auto it = ap_args_.find(acc.field);
-    if (it != ap_args_.end())
-      sized_type_ = it->second;
+    auto arg = bpftrace_.structs.GetProbeArg(*probe_, acc.field);
+    if (arg)
+      sized_type_ = arg->type;
 
     has_builtin_args_ = false;
   }
@@ -169,22 +169,10 @@ void FieldAnalyser::visit(Unop &unop)
   }
 }
 
-bool FieldAnalyser::compare_args(const ProbeArgs &args1, const ProbeArgs &args2)
-{
-  using ProbeArgsValue = ProbeArgs::value_type;
-  auto pred = [](const ProbeArgsValue &a, const ProbeArgsValue &b) {
-    return a.first == b.first;
-  };
-
-  return args1.size() == args2.size() &&
-         std::equal(args1.begin(), args1.end(), args2.begin(), pred);
-}
-
 bool FieldAnalyser::resolve_args(Probe &probe)
 {
-  // load AP arguments into ap_args_
-  ap_args_.clear();
-
+  // load probe arguments into a special record type "struct <probename>_args"
+  Struct probe_args;
   for (auto *ap : *probe.attach_points)
   {
     auto probe_type = probetype(ap->provider);
@@ -209,11 +197,9 @@ bool FieldAnalyser::resolve_args(Probe &probe)
 
       // ... and check if they share same arguments.
 
-      bool first = true;
-
+      Struct ap_args;
       for (auto &match : matches)
       {
-        ProbeArgs args;
         // Both uprobes and kfuncs have a target (binary for uprobes, kernel
         // module for kfuncs).
         std::string func = match;
@@ -226,9 +212,9 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         {
           try
           {
-            bpftrace_.btf_->resolve_args(func,
-                                         first ? ap_args_ : args,
-                                         probe_type == ProbeType::kretfunc);
+            ap_args = bpftrace_.btf_->resolve_args(func,
+                                                   probe_type ==
+                                                       ProbeType::kretfunc);
           }
           catch (const std::runtime_error &e)
           {
@@ -240,23 +226,19 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         {
           Dwarf *dwarf = bpftrace_.get_dwarf(target);
           if (dwarf)
-          {
-            args = dwarf->resolve_args(func);
-            if (first)
-              ap_args_ = args;
-          }
+            ap_args = dwarf->resolve_args(func);
           else
             LOG(WARNING, ap->loc, err_) << "No debuginfo found for " << target;
         }
 
-        if (!first && !compare_args(args, ap_args_))
+        if (probe_args.size == -1)
+          probe_args = ap_args;
+        else if (ap_args != probe_args)
         {
           LOG(ERROR, ap->loc, err_)
               << "Probe has attach points with mixed arguments";
           break;
         }
-
-        first = false;
       }
     }
     else
@@ -266,9 +248,9 @@ bool FieldAnalyser::resolve_args(Probe &probe)
       {
         try
         {
-          bpftrace_.btf_->resolve_args(ap->func,
-                                       ap_args_,
-                                       probe_type == ProbeType::kretfunc);
+          probe_args = bpftrace_.btf_->resolve_args(ap->func,
+                                                    probe_type ==
+                                                        ProbeType::kretfunc);
         }
         catch (const std::runtime_error &e)
         {
@@ -280,7 +262,7 @@ bool FieldAnalyser::resolve_args(Probe &probe)
       {
         Dwarf *dwarf = bpftrace_.get_dwarf(ap->target);
         if (dwarf)
-          ap_args_ = dwarf->resolve_args(ap->func);
+          probe_args = dwarf->resolve_args(ap->func);
         else
         {
           LOG(ERROR, ap->loc, err_) << "No debuginfo found for " << ap->target;
@@ -289,21 +271,17 @@ bool FieldAnalyser::resolve_args(Probe &probe)
     }
 
     // check if we already stored arguments for this probe
-    auto it = bpftrace_.ap_args_.find(probe_->name());
-
-    if (it != bpftrace_.ap_args_.end())
+    auto args = bpftrace_.structs.Lookup(probe.args_typename()).lock();
+    if (args && *args != probe_args)
     {
       // we did, and it's different...trigger the error
-      if (!compare_args(it->second, ap_args_))
-      {
-        LOG(ERROR, ap->loc, err_)
-            << "Probe has attach points with mixed arguments";
-      }
+      LOG(ERROR, ap->loc, err_)
+          << "Probe has attach points with mixed arguments";
     }
     else
     {
       // store/save args for each ap for later processing
-      bpftrace_.ap_args_.insert({ probe_->name(), ap_args_ });
+      bpftrace_.structs.Add(probe.args_typename(), std::move(probe_args));
     }
   }
   return true;

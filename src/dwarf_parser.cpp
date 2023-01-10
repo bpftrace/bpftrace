@@ -299,9 +299,9 @@ std::vector<std::string> Dwarf::get_function_params(
   return result;
 }
 
-ProbeArgs Dwarf::resolve_args(const std::string &function)
+Struct Dwarf::resolve_args(const std::string &function)
 {
-  std::map<std::string, SizedType> result;
+  Struct result(0, false);
   int i = 0;
   for (auto &param_die : function_param_dies(function))
   {
@@ -312,7 +312,8 @@ ProbeArgs Dwarf::resolve_args(const std::string &function)
     const std::string name = dwarf_hasattr(&param_die, DW_AT_name)
                                  ? dwarf_diename(&param_die)
                                  : "";
-    result.emplace(name, arg_type);
+    result.AddField(name, arg_type, result.size, std::nullopt, false);
+    result.size += arg_type.GetSize();
   }
   return result;
 }
