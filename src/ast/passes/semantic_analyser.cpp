@@ -1483,7 +1483,7 @@ void SemanticAnalyser::visit(Map &map)
         map.vargs->at(i) = cast;
         expr = cast;
       }
-      else if (expr->type.IsCtxAccess())
+      else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess())
       {
         // map functions only accepts a pointer to a element in the stack
         LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
@@ -3204,8 +3204,11 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 {
   const std::string &map_ident = map.ident;
 
-  if (type.IsRecordTy() && (type.is_funcarg || type.is_tparg))
-    LOG(ERROR, map.loc, err_) << "Storing args in maps is not supported";
+  if (type.IsRecordTy() && type.is_tparg)
+  {
+    LOG(ERROR, map.loc, err_)
+        << "Storing tracepoint args in maps is not supported";
+  }
 
   auto *maptype = get_map_type(map);
   if (maptype)
