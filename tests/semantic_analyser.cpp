@@ -2728,6 +2728,8 @@ TEST_F(semantic_analyser_btf, kfunc)
 
   test("kretfunc:func_1 { $x = args.foo; }", 1);
   test("kretfunc:func_1 { $x = args; }", 0);
+  test("kfunc:func_1 { @ = args; }", 0);
+  test("kfunc:func_1 { @[args] = 1; }", 0);
   // reg() is not available in kfunc
 #ifdef ARCH_X86_64
   test("kfunc:func_1 { reg(\"ip\") }", 1);
