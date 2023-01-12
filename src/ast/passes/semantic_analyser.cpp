@@ -2445,12 +2445,6 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
 
   auto &assignTy = assignment.expr->type;
 
-  auto *builtin = dynamic_cast<Builtin *>(assignment.expr);
-  if (builtin && builtin->ident == "args" && builtin->type.is_funcarg)
-  {
-    LOG(ERROR, assignment.loc, err_) << "args cannot be assigned to a variable";
-  }
-
   if (search != variable_val_[probe_].end())
   {
     if (search->second.IsNoneTy())
