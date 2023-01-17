@@ -1596,6 +1596,40 @@ Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
   return expr;
 }
 
+Value *IRBuilderBPF::CreateUprobeArgsRecord(Value *ctx,
+                                            const SizedType &args_type)
+{
+  assert(args_type.IsRecordTy());
+
+  auto *args_t = UprobeArgsType(args_type);
+  AllocaInst *result = CreateAllocaBPF(args_t, "args");
+
+  for (auto &arg : args_type.GetFields())
+  {
+    assert(arg.type.is_funcarg);
+    Value *arg_read = CreateRegisterRead(
+        ctx, "arg" + std::to_string(arg.type.funcarg_idx));
+    if (arg.type.GetSize() != 8)
+      arg_read = CreateTrunc(arg_read, GetType(arg.type));
+    CreateStore(arg_read,
+                CreateGEP(args_t,
+                          result,
+                          { getInt64(0), getInt32(arg.type.funcarg_idx) }));
+  }
+  return result;
+}
+
+llvm::Type *IRBuilderBPF::UprobeArgsType(const SizedType &args_type)
+{
+  auto type_name = args_type.GetName();
+  type_name.erase(0, strlen("struct "));
+
+  std::vector<llvm::Type *> arg_types;
+  for (auto &arg : args_type.GetFields())
+    arg_types.push_back(GetType(arg.type));
+  return GetStructType(type_name, arg_types, false);
+}
+
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
 {
   int offset;

@@ -199,6 +199,8 @@ public:
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
+  Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
+  llvm::Type *UprobeArgsType(const SizedType &args_type);
   CallInst *CreateSkbOutput(Value *skb,
                             Value *len,
                             AllocaInst *data,

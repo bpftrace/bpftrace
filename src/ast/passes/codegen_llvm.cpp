@@ -337,6 +337,12 @@ void CodegenLLVM::visit(Builtin &builtin)
     builtin.probe_id = get_probe_id();
     expr_ = b_.getInt64(builtin.probe_id);
   }
+  else if (builtin.ident == "args" &&
+           probetype(current_attach_point_->provider) == ProbeType::uprobe)
+  {
+    // uprobe args record is built on stack
+    expr_ = b_.CreateUprobeArgsRecord(ctx_, builtin.type);
+  }
   else if (builtin.ident == "args" || builtin.ident == "ctx")
   {
     // ctx is undocumented builtin: for debugging
@@ -1913,10 +1919,25 @@ void CodegenLLVM::visit(FieldAccess &acc)
     auto probe_type = probetype(current_attach_point_->provider);
     if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
       expr_ = b_.CreatKFuncArg(ctx_, acc.type, acc.field);
-    else
-      expr_ = b_.CreateRegisterRead(ctx_,
-                                    "arg" +
-                                        std::to_string(acc.type.funcarg_idx));
+    else if (probe_type == ProbeType::uprobe)
+    {
+      Value *args = expr_;
+      llvm::Type *args_type = b_.UprobeArgsType(type);
+#if LLVM_VERSION_MAJOR <= 14
+      // LLVM <= 14 doesn't have opaque pointers, so we need to cast args to the
+      // correct pointer type
+      if (auto *ptr_ty = dyn_cast<PointerType>(args->getType()))
+      {
+        if (ptr_ty->getPointerElementType() != args_type->getPointerTo())
+          args = b_.CreatePointerCast(args, args_type->getPointerTo());
+      }
+#endif
+      readDatastructElemFromStack(args,
+                                  b_.getInt32(acc.type.funcarg_idx),
+                                  args_type,
+                                  acc.type,
+                                  scoped_del);
+    }
     return;
   }
   else if (type.IsTupleTy())
@@ -3517,19 +3538,16 @@ CodegenLLVM::ScopedExprDeleter CodegenLLVM::accept(Node *node)
 //   scoped_del scope deleter for the data structure
 void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
                                               Value *index,
-                                              const SizedType &data_type,
+                                              llvm::Type *data_type,
                                               const SizedType &elem_type,
                                               ScopedExprDeleter &scoped_del)
 {
   // src_data should contain a pointer to the data structure, but it may be
   // internally represented as an integer and then we need to cast it
   if (src_data->getType()->isIntegerTy())
-    src_data = b_.CreateIntToPtr(src_data,
-                                 b_.GetType(data_type)->getPointerTo());
+    src_data = b_.CreateIntToPtr(src_data, data_type->getPointerTo());
 
-  Value *src = b_.CreateGEP(b_.GetType(data_type),
-                            src_data,
-                            { b_.getInt32(0), index });
+  Value *src = b_.CreateGEP(data_type, src_data, { b_.getInt32(0), index });
 
   // It may happen that the result pointer type is not correct, in such case
   // do a typecast
@@ -3541,7 +3559,7 @@ void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
   {
     // Load the correct type from src
     expr_ = b_.CreateDatastructElemLoad(
-        elem_type, src, true, data_type.GetAS());
+        elem_type, src, true, elem_type.GetAS());
   }
   else
   {
@@ -3550,6 +3568,16 @@ void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
     expr_ = src;
     expr_deleter_ = scoped_del.disarm();
   }
+}
+
+void CodegenLLVM::readDatastructElemFromStack(Value *src_data,
+                                              Value *index,
+                                              const SizedType &data_type,
+                                              const SizedType &elem_type,
+                                              ScopedExprDeleter &scoped_del)
+{
+  return readDatastructElemFromStack(
+      src_data, index, b_.GetType(data_type), elem_type, scoped_del);
 }
 
 // Read a single element from a compound data structure (i.e. an array or

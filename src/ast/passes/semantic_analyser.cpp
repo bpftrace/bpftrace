@@ -464,6 +464,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
       builtin.type.is_funcarg = true;
       builtin.type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
                                                    : AddrSpace::kernel);
+      // We'll build uprobe args struct on stack
+      if (type == ProbeType::uprobe)
+        builtin.type.is_internal = true;
     }
     else if (type != ProbeType::tracepoint) // no special action for tracepoint
     {
@@ -2011,6 +2014,7 @@ void SemanticAnalyser::visit(Unop &unop)
       if (type.IsCtxAccess())
         unop.type.MarkCtxAccess();
       unop.type.is_btftype = type.is_btftype;
+      unop.type.is_internal = type.is_internal;
       unop.type.SetAS(type.GetAS());
     }
     else if (type.IsRecordTy())
