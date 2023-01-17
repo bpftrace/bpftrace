@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 
+#include "arch/arch.h"
 #include "dwarf_parser.h"
 #include "log.h"
 #include "probe_matcher.h"
@@ -259,6 +260,11 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         else
         {
           LOG(ERROR, ap->loc, err_) << "No debuginfo found for " << ap->target;
+        }
+        if ((int)probe_args.fields.size() > (arch::max_arg() + 1))
+        {
+          LOG(ERROR, ap->loc, err_) << "\'args\' builtin is not supported for "
+                                       "probes with stack-passed arguments.";
         }
       }
     }

@@ -189,6 +189,11 @@ private:
                                    const SizedType &data_type,
                                    const SizedType &elem_type,
                                    ScopedExprDeleter &scoped_del);
+  void readDatastructElemFromStack(Value *src_data,
+                                   Value *index,
+                                   llvm::Type *data_type,
+                                   const SizedType &elem_type,
+                                   ScopedExprDeleter &scoped_del);
   void probereadDatastructElem(Value *src_data,
                                Value *offset,
                                const SizedType &data_type,
