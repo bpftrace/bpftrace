@@ -13,6 +13,8 @@ and this project adheres to
   - [#2588](https://github.com/iovisor/bpftrace/pull/2588)
 - Support all iterators
   - [#2630](https://github.com/iovisor/bpftrace/pull/2630)
+- Improve working with all probe params (kfunc, uprobe)
+  - [#2477](https://github.com/iovisor/bpftrace/pull/2477)
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)
