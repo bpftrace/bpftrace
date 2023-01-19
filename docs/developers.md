@@ -76,7 +76,7 @@ The CI checks this too, if the changes don't adhere to our style the job will fa
 
 ### Using clang-format
 
-[git clang-format](https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-format/git-clang-format)
+[git clang-format](https://github.com/llvm/llvm-project/blob/main/clang/tools/clang-format/git-clang-format)
 can be used to easily format commits, e.g. `git clang-format upstream/master`
 
 ### Avoid 'fix formatting' commits
