@@ -1904,6 +1904,9 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 - `sarg0`, `sarg1`, ..., `sargN`. - Arguments to the traced function (for programs that store arguments
   on the stack); assumed to be 64 bits wide
 - `retval` - Return value from traced function
+- `args` - The struct with all arguments of the traced function.
+  Available in `tracepoint`, `kfunc`, and `uprobe` (with DWARF) probes. Use
+  `args.x` to access argument `x` or `args` to get a record with all arguments.
 - `func` - Name of the traced function
 - `probe` - Full name of the probe
 - `curtask` - Current task struct as a u64
