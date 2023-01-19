@@ -8,30 +8,20 @@ class test_dwarf : public ::testing::Test
 protected:
   void SetUp() override
   {
-    char *bin = strdup("/tmp/dwarf_dataXXXXXX");
-    int fd = mkstemp(bin);
-    if (fd < 0)
-      return;
+    std::string bin = "/tmp/bpftrace-test-dwarf-data";
+    std::ofstream file(bin, std::ios::trunc | std::ios::binary);
+    file.write(reinterpret_cast<const char *>(dwarf_data), dwarf_data_len);
+    file.close();
 
-    fchmod(fd, S_IRUSR | S_IWUSR | S_IXUSR);
-
-    if (write(fd, dwarf_data, dwarf_data_len) != dwarf_data_len)
-    {
-      close(fd);
-      std::remove(bin);
-      return;
-    }
-
-    close(fd);
-    bin_ = bin;
+    if (file)
+      bin_ = bin;
   }
 
   void TearDown() override
   {
-    if (bin_)
-      std::remove(bin_);
+    bin_.clear();
   }
 
 public:
-  char *bin_ = nullptr;
+  std::string bin_;
 };

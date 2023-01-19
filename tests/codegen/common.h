@@ -8,6 +8,7 @@
 #include "../mocks.h"
 
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/field_analyser.h"
 #include "ast/passes/resource_analyser.h"
 #include "ast/passes/semantic_analyser.h"
 
@@ -43,6 +44,9 @@ static void test(BPFtrace &bpftrace,
 {
   Driver driver(bpftrace);
   ASSERT_EQ(driver.parse_str(input), 0);
+
+  ast::FieldAnalyser fields(driver.root.get(), bpftrace);
+  ASSERT_EQ(fields.analyse(), 0);
 
   ClangParser clang;
   clang.parse(driver.root.get(), bpftrace);
