@@ -932,6 +932,12 @@ For string arguments use the `str()` call to retrieve the value.
 | n/a
 | nth argument passed to the function being traced. These are extracted from the CPU registers. The amount of args passed in registers depends on the CPU architecture. (kprobes, uprobes, usdt).
 
+| `args`
+| struct args
+| n/a
+| n/a
+| The struct of all arguments of the traced function. Available in `tracepoint`, `kfunc`, and `uprobe` (with DWARF) probes. Use `args.x` to access argument `x` or `args` to get a record with all arguments.
+
 | cgroup
 | uint64
 | 4.18
