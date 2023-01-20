@@ -78,8 +78,9 @@ void Driver::error(const std::string &m)
   failed_ = true;
 }
 
-// Retrieves the list of kernel modules for all attached-to functions.
-// Currently modules are only important for k(ret)func probes.
+// Retrieves the list of kernel modules for all attachpoints. Will be used to
+// identify modules whose BTF we need to parse.
+// Currently, this is useful for k(ret)func and tracepoint probes.
 std::set<std::string> Driver::list_modules() const
 {
   std::set<std::string> modules;
@@ -101,6 +102,13 @@ std::set<std::string> Driver::list_modules() const
         }
         else
           modules.insert(ap->target);
+      }
+      else if (probe_type == ProbeType::tracepoint)
+      {
+        // For now, we support this for a single target only since tracepoints
+        // need dumping of C definitions BTF and that is not available for
+        // multiple modules at once.
+        modules.insert(ap->target);
       }
     }
   }

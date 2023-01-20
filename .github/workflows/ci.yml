@@ -153,8 +153,10 @@ jobs:
       run: >
         docker load --input /tmp/docker-save/i.tar
     - name: Load kernel modules
-      # nf_tables is necessary for testing kernel modules BTF support
-      run: sudo modprobe nf_tables
+      # nf_tables and xfs are necessary for testing kernel modules BTF support
+      run: |
+        sudo modprobe nf_tables
+        sudo modprobe xfs
     - name: Build and test
       env: ${{matrix.env}}
       run: >
