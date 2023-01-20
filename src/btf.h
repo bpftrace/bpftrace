@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include <cstddef>
 #include <linux/types.h>
 #include <map>
 #include <optional>
@@ -51,6 +52,10 @@ public:
   ~BTF();
 
   bool has_data(void) const;
+  size_t objects_cnt() const
+  {
+    return btf_objects.size();
+  }
   std::string c_def(const std::unordered_set<std::string>& set) const;
   std::string type_of(const std::string& name, const std::string& field);
   std::string type_of(const BTFId& type_id, const std::string& field);
