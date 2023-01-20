@@ -62,6 +62,13 @@ REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 AFTER nft delete table bpftrace
 
+NAME kernel_module_tracepoint
+PROG tracepoint:xfs:xfs_setfilesize { print(args->offset) } i:ms:1 { exit(); }
+EXPECT Attaching 2 probes...
+TIMEOUT 5
+REQUIRES_FEATURE btf
+REQUIRES lsmod | grep "^xfs"
+
 # args->ctxt has type 'struct x86_emulate_ctxt' which is forward-defined in
 # 'vmlinux' BTF and fully defined in 'kvm' BTF.
 # This tests checks that the correct BTF definition is pulled from 'kvm'.

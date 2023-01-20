@@ -15,6 +15,8 @@ and this project adheres to
   - [#2505](https://github.com/iovisor/bpftrace/pull/2505)
 - Support printing entire structs
   - [#2557](https://github.com/iovisor/bpftrace/pull/2557)
+- BTF support for tracepoints defined in modules
+  - [#2479](https://github.com/iovisor/bpftrace/pull/2479)
 #### Changed
 #### Deprecated
 #### Removed
