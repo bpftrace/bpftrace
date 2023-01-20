@@ -251,9 +251,16 @@ std::string BTF::c_def(const std::unordered_set<std::string> &set) const
   if (!has_data())
     return std::string("");
 
-  // Definition dumping from modules would require to resolve type conflicts,
-  // so we dump from vmlinux only for now.
+  // Definition dumping from multiple modules would require to resolve type
+  // conflicts, so we allow dumping from a single module or from vmlinux only.
   std::unordered_set<std::string> to_dump(set);
+  if (btf_objects.size() == 2)
+  {
+    auto *mod_btf = btf_objects[0].btf == vmlinux_btf ? btf_objects[1].btf
+                                                      : btf_objects[0].btf;
+    return dump_defs_from_btf(mod_btf, to_dump);
+  }
+
   return dump_defs_from_btf(vmlinux_btf, to_dump);
 }
 

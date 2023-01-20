@@ -776,6 +776,13 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
     {
       LOG(ERROR) << "Include headers with missing type definitions or install "
                     "BTF information to your system.";
+      if (bpftrace.btf_->objects_cnt() > 2)
+      {
+        LOG(WARNING)
+            << "Trying to dump BTF from multiple kernel modules at once. "
+            << "This is currently not possible, use probes from a single module"
+            << " (and/or vmlinux) only.";
+      }
     }
     return false;
   }
