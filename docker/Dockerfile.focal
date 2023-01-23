@@ -57,6 +57,11 @@ RUN /sbin/bpftool &>/dev/null || (rm -f /sbin/bpftool && ln -s /usr/lib/linux-to
 
 RUN if [ "$LLVM_VERSION" -ge 13 ] ; then apt-get install -y libmlir-${LLVM_VERSION}-dev ; fi
 
+RUN if [ "$LLVM_VERSION" -ge 14 ] ; then \
+      apt download libpolly-${LLVM_VERSION}-dev && \
+      dpkg --force-all -i libpolly-${LLVM_VERSION}-dev*.deb ; \
+    fi
+
 RUN ln -s /usr/bin/python3 /usr/bin/python
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh
