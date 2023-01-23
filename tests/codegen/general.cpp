@@ -61,7 +61,7 @@ TEST(codegen, populate_sections)
   auto bytecode = codegen.compile();
 
   EXPECT_NE(bytecode.find("s_kprobe:foo_1"), bytecode.end());
-  EXPECT_NE(bytecode.find("s_kprobe:bar_1"), bytecode.end());
+  EXPECT_NE(bytecode.find("s_kprobe:bar_2"), bytecode.end());
 }
 
 TEST(codegen, printf_offsets)

@@ -2397,11 +2397,21 @@ void CodegenLLVM::generateProbe(Probe &probe,
   // by args builtin.
   if (probetype(current_attach_point_->provider) == ProbeType::tracepoint)
     tracepoint_struct_ = TracepointFormatParser::get_struct_name(full_func_id);
-  int index = getNextIndexForProbe(probe.name());
+  int index;
   if (expansion)
-    current_attach_point_->set_index(full_func_id, index);
+  {
+    if (current_attach_point_->index() != 0)
+      index = current_attach_point_->index();
+    else
+      current_attach_point_->set_index(index = getNextIndexForProbe());
+  }
   else
-    probe.set_index(index);
+  {
+    if (probe.index() != 0)
+      index = probe.index();
+    else
+      probe.set_index(index = getNextIndexForProbe());
+  }
   Function *func = Function::Create(
       func_type, Function::ExternalLinkage, section_name, module_.get());
   func->setSection(
@@ -2642,12 +2652,9 @@ void CodegenLLVM::visit(Program &program)
     auto scoped_del = accept(probe);
 }
 
-int CodegenLLVM::getNextIndexForProbe(const std::string &probe_name) {
-  if (next_probe_index_.count(probe_name) == 0)
-    next_probe_index_[probe_name] = 1;
-  int index = next_probe_index_[probe_name];
-  next_probe_index_[probe_name] += 1;
-  return index;
+int CodegenLLVM::getNextIndexForProbe()
+{
+  return next_probe_index_++;
 }
 
 std::tuple<Value *, CodegenLLVM::ScopedExprDeleter> CodegenLLVM::getMapKey(

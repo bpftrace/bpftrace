@@ -72,7 +72,7 @@ Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
   setup_probe.path = ap.target;
   setup_probe.attach_point = func;
   setup_probe.orig_name = get_watchpoint_setup_probe_name(probe.name());
-  setup_probe.index = ap.index(func) > 0 ? ap.index(func) : probe.index();
+  setup_probe.index = ap.index() > 0 ? ap.index() : probe.index();
 
   return setup_probe;
 }
@@ -91,8 +91,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
-      probe.index = attach_point->index(probe.name) > 0 ?
-          attach_point->index(probe.name) : p.index();
+      probe.index = attach_point->index() > 0 ? attach_point->index()
+                                              : p.index();
       resources.special_probes.push_back(probe);
       continue;
     }
@@ -266,8 +266,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.address = attach_point->address;
       probe.func_offset = attach_point->func_offset;
       probe.loc = 0;
-      probe.index = attach_point->index(func) > 0 ? attach_point->index(func)
-                                                  : p.index();
+      probe.index = attach_point->index() > 0 ? attach_point->index()
+                                              : p.index();
       probe.len = attach_point->len;
       probe.mode = attach_point->mode;
       probe.async = attach_point->async;
@@ -282,8 +282,8 @@ int BPFtrace::add_probe(ast::Probe &p)
         {
           Probe probe_copy = probe;
           probe_copy.usdt_location_idx = i;
-          probe_copy.index = attach_point->index(func + "_loc" +
-                                                 std::to_string(i));
+          probe_copy.index = attach_point->index() > 0 ? attach_point->index()
+                                                       : p.index();
 
           resources.probes.emplace_back(std::move(probe_copy));
         }
