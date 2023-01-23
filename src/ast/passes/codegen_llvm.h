@@ -58,7 +58,7 @@ public:
   void visit(Probe &probe) override;
   void visit(Program &program) override;
   AllocaInst *getHistMapKey(Map &map, Value *log2);
-  int         getNextIndexForProbe(const std::string &probe_name);
+  int getNextIndexForProbe();
   Value      *createLogicalAnd(Binop &binop);
   Value      *createLogicalOr(Binop &binop);
 
@@ -221,7 +221,9 @@ private:
   std::string probefull_;
   std::string tracepoint_struct_;
   uint64_t probe_count_ = 0;
-  std::map<std::string, int> next_probe_index_;
+  // Probes and attach points are indexed from 1, 0 means no index
+  // (no index is used for probes whose attach points are indexed individually)
+  int next_probe_index_ = 1;
   // Used if there are duplicate USDT entries
   int current_usdt_location_index_{ 0 };
 

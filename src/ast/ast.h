@@ -551,13 +551,13 @@ public:
   std::string name(const std::string &attach_target,
                    const std::string &attach_point) const;
 
-  int index(const std::string &name) const;
-  void set_index(const std::string &name, int index);
+  int index() const;
+  void set_index(int index);
 
 private:
   AttachPoint(const AttachPoint &other) = default;
 
-  std::map<std::string, int> index_;
+  int index_ = 0;
 };
 using AttachPointList = std::vector<AttachPoint *>;
 

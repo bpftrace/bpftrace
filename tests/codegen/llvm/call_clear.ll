@@ -33,7 +33,7 @@ declare void @llvm.lifetime.start.p0i8(i64 immarg %0, i8* nocapture %1) #1
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
 declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
-define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_2" {
 entry:
   %"clear_@x" = alloca %clear_t, align 8
   %1 = bitcast %clear_t* %"clear_@x" to i8*

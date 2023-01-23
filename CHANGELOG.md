@@ -13,6 +13,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Simplify and fix probe index assignment
+  - [#2482](https://github.com/iovisor/bpftrace/pull/2482)
 #### Docs
 #### Tools
 
