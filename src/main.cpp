@@ -309,22 +309,45 @@ static std::optional<struct timespec> get_boottime()
     bpftrace.cat_bytes_max_ = proposed;
   }
 
-  if (!get_bool_env_var("BPFTRACE_NO_USER_SYMBOLS",
-                        bpftrace.resolve_user_symbols_,
-                        true))
-    return false;
-
-  if (!get_bool_env_var("BPFTRACE_CACHE_USER_SYMBOLS",
-                        bpftrace.cache_user_symbols_per_program_))
-    return false;
-
-  if (!std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
+  // by default, cache user symbols per program if ASLR is disabled on system
+  // or `-c` option is given, otherwise cache per PID
+  auto default_usym_cache_type =
+      (!bpftrace.cmd_.empty() || !bpftrace.is_aslr_enabled(-1))
+          ? BPFtrace::UserSymbolCacheType::per_program
+          : BPFtrace::UserSymbolCacheType::per_pid;
+  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
   {
-    // enable user symbol cache per program if ASLR is disabled on system
-    // or `-c` option is given
-    // otherwise, user symbol cache is indexed per process
-    bpftrace.cache_user_symbols_per_program_ = !bpftrace.cmd_.empty() ||
-                                               !bpftrace.is_aslr_enabled(-1);
+    std::string s(env_p);
+    // Note: options 0 and 1 are for compatibility with older versions of
+    // bpftrace
+    if (s == "PER_PID")
+    {
+      bpftrace.user_symbol_cache_type_ = BPFtrace::UserSymbolCacheType::per_pid;
+    }
+    else if (s == "PER_PROGRAM")
+    {
+      bpftrace.user_symbol_cache_type_ =
+          BPFtrace::UserSymbolCacheType::per_program;
+    }
+    else if (s == "1")
+    {
+      bpftrace.user_symbol_cache_type_ = default_usym_cache_type;
+    }
+    else if (s == "NONE" || s == "0")
+    {
+      bpftrace.user_symbol_cache_type_ = BPFtrace::UserSymbolCacheType::none;
+    }
+    else
+    {
+      LOG(ERROR)
+          << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a valid "
+             "value: valid values are PER_PID, PER_PROGRAM, and NONE.";
+      return false;
+    }
+  }
+  else
+  {
+    bpftrace.user_symbol_cache_type_ = default_usym_cache_type;
   }
 
   uint64_t node_max = std::numeric_limits<uint64_t>::max();

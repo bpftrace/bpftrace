@@ -201,7 +201,12 @@ public:
   uint64_t max_type_res_iterations = 0;
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
-  bool cache_user_symbols_per_program_ = true;
+  enum class UserSymbolCacheType
+  {
+    per_pid,
+    per_program,
+    none,
+  } user_symbol_cache_type_;
   bool safe_mode_ = true;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;

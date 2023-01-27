@@ -210,12 +210,13 @@ Increasing the value will consume more memory, increase startup times and can in
 
 === BPFTRACE_CACHE_USER_SYMBOLS
 
-Default: 0 if ASLR is enabled on system and `-c` option is not given; otherwise 1
+Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 
-By default, bpftrace caches the results of symbols resolutions only when ASLR (Address Space Layout Randomization) is disabled.
-This is because the symbol addresses change with each execution with ASLR.
-However, disabling caching may incur some performance penalty.
-Set this env variable to 1 to force bpftrace to cache.
+Caching strategy for user symbols. Valid values are:
+
+* PER_PROGRAM - each program has its own cache. If there are more processes with enabled ASLR for a single program, this might produce incorrect results.
+* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachement time. If there are many processes running, it will consume a lot of a memory.
+* NONE - caching disabled. This saves the most memory, but at the cost of speed.
 
 === BPFTRACE_VMLINUX
 
@@ -1788,7 +1789,7 @@ The pointer type is left unchanged.
 
 Equal to <<functions_ksym>> but resolves user space symbols.
 
-If ASLR is enabled, it works only when the process is running at either the time of the symbol resolution or the time of the probe attachment. The latter might not work with older versions of BCC. A similar limitation also applies to dynamically loaded symbols.
+If ASLR is enabled, user space symbolication only works when the process is running at either the time of the symbol resolution or the time of the probe attachment. The latter requires `BPFTRACE_CACHE_USER_SYMBOLS` to be set to `PER_PID`, and might not work with older versions of BCC. A similar limitation also applies to dynamically loaded symbols.
 
 ----
 uprobe:/bin/bash:readline
