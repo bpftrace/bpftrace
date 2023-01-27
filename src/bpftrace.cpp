@@ -326,18 +326,19 @@ int BPFtrace::add_probe(ast::Probe &p)
       // binary is not present at symbol resolution time
       // note: this only makes sense with ASLR disabled, since with ASLR offsets
       // might be different
-      if (cache_user_symbols_per_program_ &&
+      if (user_symbol_cache_type_ == UserSymbolCacheType::per_program &&
           symbol_table_cache_.find(attach_point->target) ==
               symbol_table_cache_.end())
         symbol_table_cache_[attach_point->target] = get_symbol_table_for_elf(
             attach_point->target);
 
-      // preload symbol tables from running processes
-      // this allows symbol resolution for processes that are running at probe
-      // attach time, but not at symbol resolution time, even with ASLR enabled,
-      // since BCC symcache records the offsets
-      for (int pid : get_pids_for_program(attach_point->target))
-        pid_sym_[pid] = bcc_symcache_new(pid, &symopts);
+      if (user_symbol_cache_type_ == UserSymbolCacheType::per_pid)
+        // preload symbol tables from running processes
+        // this allows symbol resolution for processes that are running at probe
+        // attach time, but not at symbol resolution time, even with ASLR
+        // enabled, since BCC symcache records the offsets
+        for (int pid : get_pids_for_program(attach_point->target))
+          pid_sym_[pid] = bcc_symcache_new(pid, &symopts);
     }
   }
 
@@ -2302,7 +2303,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr,
         pid_exe = probe_full.substr(start, end - start);
       }
     }
-    if (cache_user_symbols_per_program_)
+    if (user_symbol_cache_type_ == UserSymbolCacheType::per_program)
     {
       if (!pid_exe.empty())
       {
@@ -2340,7 +2341,7 @@ std::string BPFtrace::resolve_usym(uintptr_t addr,
         psyms = exe_sym_[pid_exe].second;
       }
     }
-    else
+    else if (user_symbol_cache_type_ == UserSymbolCacheType::per_pid)
     {
       // cache user symbols per pid
       if (pid_sym_.find(pid) == pid_sym_.end())
@@ -2353,6 +2354,11 @@ std::string BPFtrace::resolve_usym(uintptr_t addr,
       {
         psyms = pid_sym_[pid];
       }
+    }
+    else
+    {
+      // no user symbol caching, create new bcc cache
+      psyms = bcc_symcache_new(pid, &symopts);
     }
   }
 
@@ -2373,6 +2379,10 @@ std::string BPFtrace::resolve_usym(uintptr_t addr,
     if (show_module)
       symbol << " ([unknown])";
   }
+
+  if (resolve_user_symbols_ &&
+      user_symbol_cache_type_ == UserSymbolCacheType::none)
+    bcc_free_symcache(psyms, pid);
 
   return symbol.str();
 }
