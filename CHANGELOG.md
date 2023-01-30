@@ -9,6 +9,16 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Docs
+#### Tools
+
+## [0.17.0] 2023-01-30
+
+#### Added
 - Support for 32-bit ARM systems
   - [#2360](https://github.com/iovisor/bpftrace/pull/2360)
 - Support BTF for kernel modules
