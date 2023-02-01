@@ -1436,7 +1436,7 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 
   // long bpf_skb_output(void *skb, struct bpf_map *map, u64 flags,
   //                     void *data, u64 size)
-  FunctionType *skb_output_func_type = FunctionType::get(getInt64Ty(),
+  FunctionType *skb_output_func_type = FunctionType::get(getInt32Ty(),
                                                          { skb->getType(),
                                                            map_ptr->getType(),
                                                            getInt64Ty(),
