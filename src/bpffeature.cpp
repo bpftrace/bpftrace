@@ -426,7 +426,8 @@ bool BPFfeature::has_skb_output(void)
       try_load(libbpf::BPF_PROG_TYPE_TRACING,
                insns,
                ARRAY_SIZE(insns),
-               "kfunc__kfree_skb"));
+               "__kfree_skb",
+               libbpf::BPF_TRACE_FENTRY));
 
   close(map_fd);
   return *has_skb_output_;
