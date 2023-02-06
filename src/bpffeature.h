@@ -83,6 +83,7 @@ public:
   bool has_kfunc();
   bool has_skb_output();
   bool has_raw_tp_special();
+  bool has_prog_kfunc();
 
   std::string report(void);
 
@@ -105,10 +106,6 @@ public:
   DEFINE_PROG_TEST(kprobe, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
-  DEFINE_PROG_TEST_FUNC(kfunc,
-                        libbpf::BPF_PROG_TYPE_TRACING,
-                        "sched_fork",
-                        libbpf::BPF_TRACE_FENTRY);
   DEFINE_PROG_TEST_FUNC(iter_task,
                         libbpf::BPF_PROG_TYPE_TRACING,
                         "bpf_iter_task",
@@ -127,6 +124,7 @@ protected:
   std::optional<bool> has_kprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_raw_tp_special_;
+  std::optional<bool> has_prog_kfunc_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);
@@ -134,7 +132,8 @@ private:
                      libbpf::bpf_prog_type prog_type);
   bool detect_prog_type(libbpf::bpf_prog_type prog_type,
                         const char* name,
-                        std::optional<libbpf::bpf_attach_type> attach_type);
+                        std::optional<libbpf::bpf_attach_type> attach_type,
+                        int* outfd = nullptr);
 
   bool try_load(
       libbpf::bpf_prog_type prog_type,
