@@ -150,10 +150,12 @@ bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
 bool BPFfeature::detect_prog_type(
     enum libbpf::bpf_prog_type prog_type,
     const char* name,
-    std::optional<libbpf::bpf_attach_type> attach_type)
+    std::optional<libbpf::bpf_attach_type> attach_type,
+    int* outfd)
 {
   struct bpf_insn insns[] = { BPF_MOV64_IMM(BPF_REG_0, 0), BPF_EXIT_INSN() };
-  return try_load(prog_type, insns, ARRAY_SIZE(insns), name, attach_type);
+  return try_load(
+      prog_type, insns, ARRAY_SIZE(insns), name, attach_type, outfd);
 }
 
 bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
@@ -515,6 +517,29 @@ std::string BPFfeature::report(void)
       << "  raw_tp_special: " << to_str(has_raw_tp_special()) << std::endl;
 
   return buf.str();
+}
+
+bool BPFfeature::has_prog_kfunc()
+{
+  if (!has_prog_kfunc_.has_value())
+  {
+    int progfd;
+    if (!detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
+                          "sched_fork",
+                          libbpf::BPF_TRACE_FENTRY,
+                          &progfd))
+      goto out_false;
+    int tracing_fd = bpf_raw_tracepoint_open(nullptr, progfd);
+    close(progfd);
+    if (tracing_fd < 0)
+      goto out_false;
+    close(tracing_fd);
+    has_prog_kfunc_ = std::make_optional<bool>(true);
+  }
+  return *(has_prog_kfunc_);
+out_false:
+  has_prog_kfunc_ = std::make_optional<bool>(false);
+  return *(has_prog_kfunc_);
 }
 
 bool BPFfeature::has_kfunc()
