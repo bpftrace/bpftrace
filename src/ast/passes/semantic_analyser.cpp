@@ -696,7 +696,7 @@ void SemanticAnalyser::visit(Call &call)
       }
 
       // Required for cases like strncmp(str($1), str(2), 4))
-      call.type.SetAS(t.GetAS());
+      call.type.SetAS(AddrSpace::kernel);
     }
     has_pos_param_ = false;
   }
