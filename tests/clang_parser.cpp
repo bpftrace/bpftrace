@@ -358,26 +358,26 @@ TEST(clang_parser, bitfields)
   EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
-  EXPECT_TRUE(foo->GetField("a").is_bitfield);
-  EXPECT_EQ(foo->GetField("a").bitfield.read_bytes, 0x1U);
-  EXPECT_EQ(foo->GetField("a").bitfield.access_rshift, 0U);
-  EXPECT_EQ(foo->GetField("a").bitfield.mask, 0xFFU);
+  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFU);
 
   EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 1);
-  EXPECT_TRUE(foo->GetField("b").is_bitfield);
-  EXPECT_EQ(foo->GetField("b").bitfield.read_bytes, 0x1U);
-  EXPECT_EQ(foo->GetField("b").bitfield.access_rshift, 0U);
-  EXPECT_EQ(foo->GetField("b").bitfield.mask, 0xFFU);
+  EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo->GetField("b").bitfield->mask, 0xFFU);
 
   EXPECT_EQ(foo->GetField("c").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("c").offset, 2);
-  EXPECT_TRUE(foo->GetField("c").is_bitfield);
-  EXPECT_EQ(foo->GetField("c").bitfield.read_bytes, 0x2U);
-  EXPECT_EQ(foo->GetField("c").bitfield.access_rshift, 0U);
-  EXPECT_EQ(foo->GetField("c").bitfield.mask, 0xFFFFU);
+  EXPECT_TRUE(foo->GetField("c").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("c").bitfield->read_bytes, 0x2U);
+  EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo->GetField("c").bitfield->mask, 0xFFFFU);
 }
 
 TEST(clang_parser, bitfields_uneven_fields)
@@ -399,42 +399,42 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
-  EXPECT_TRUE(foo->GetField("a").is_bitfield);
-  EXPECT_EQ(foo->GetField("a").bitfield.read_bytes, 1U);
-  EXPECT_EQ(foo->GetField("a").bitfield.access_rshift, 0U);
-  EXPECT_EQ(foo->GetField("a").bitfield.mask, 0x1U);
+  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 1U);
+  EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo->GetField("a").bitfield->mask, 0x1U);
 
   EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 0);
-  EXPECT_TRUE(foo->GetField("b").is_bitfield);
-  EXPECT_EQ(foo->GetField("b").bitfield.read_bytes, 1U);
-  EXPECT_EQ(foo->GetField("b").bitfield.access_rshift, 1U);
-  EXPECT_EQ(foo->GetField("b").bitfield.mask, 0x1U);
+  EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
+  EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 1U);
+  EXPECT_EQ(foo->GetField("b").bitfield->mask, 0x1U);
 
   EXPECT_EQ(foo->GetField("c").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("c").offset, 0);
-  EXPECT_TRUE(foo->GetField("c").is_bitfield);
-  EXPECT_EQ(foo->GetField("c").bitfield.read_bytes, 1U);
-  EXPECT_EQ(foo->GetField("c").bitfield.access_rshift, 2U);
-  EXPECT_EQ(foo->GetField("c").bitfield.mask, 0x7U);
+  EXPECT_TRUE(foo->GetField("c").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("c").bitfield->read_bytes, 1U);
+  EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 2U);
+  EXPECT_EQ(foo->GetField("c").bitfield->mask, 0x7U);
 
   EXPECT_EQ(foo->GetField("d").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("d").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("d").offset, 0);
-  EXPECT_TRUE(foo->GetField("d").is_bitfield);
-  EXPECT_EQ(foo->GetField("d").bitfield.read_bytes, 4U);
-  EXPECT_EQ(foo->GetField("d").bitfield.access_rshift, 5U);
-  EXPECT_EQ(foo->GetField("d").bitfield.mask, 0xFFFFFU);
+  EXPECT_TRUE(foo->GetField("d").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("d").bitfield->read_bytes, 4U);
+  EXPECT_EQ(foo->GetField("d").bitfield->access_rshift, 5U);
+  EXPECT_EQ(foo->GetField("d").bitfield->mask, 0xFFFFFU);
 
   EXPECT_EQ(foo->GetField("e").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 3);
-  EXPECT_TRUE(foo->GetField("e").is_bitfield);
-  EXPECT_EQ(foo->GetField("e").bitfield.read_bytes, 1U);
-  EXPECT_EQ(foo->GetField("e").bitfield.access_rshift, 1U);
-  EXPECT_EQ(foo->GetField("e").bitfield.mask, 0x7FU);
+  EXPECT_TRUE(foo->GetField("e").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("e").bitfield->read_bytes, 1U);
+  EXPECT_EQ(foo->GetField("e").bitfield->access_rshift, 1U);
+  EXPECT_EQ(foo->GetField("e").bitfield->mask, 0x7FU);
 }
 
 TEST(clang_parser, bitfields_with_padding)
@@ -455,18 +455,18 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 4);
-  EXPECT_TRUE(foo->GetField("a").is_bitfield);
-  EXPECT_EQ(foo->GetField("a").bitfield.read_bytes, 4U);
-  EXPECT_EQ(foo->GetField("a").bitfield.access_rshift, 0U);
-  EXPECT_EQ(foo->GetField("a").bitfield.mask, 0xFFFFFFFU);
+  EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("a").bitfield->read_bytes, 4U);
+  EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
+  EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFFFFFFU);
 
   EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 7);
-  EXPECT_TRUE(foo->GetField("b").is_bitfield);
-  EXPECT_EQ(foo->GetField("b").bitfield.read_bytes, 1U);
-  EXPECT_EQ(foo->GetField("b").bitfield.access_rshift, 4U);
-  EXPECT_EQ(foo->GetField("b").bitfield.mask, 0xFU);
+  EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
+  EXPECT_EQ(foo->GetField("b").bitfield->read_bytes, 1U);
+  EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 4U);
+  EXPECT_EQ(foo->GetField("b").bitfield->mask, 0xFU);
 }
 
 TEST(clang_parser, builtin_headers)

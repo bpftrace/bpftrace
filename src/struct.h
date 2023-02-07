@@ -2,6 +2,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 
 #include <cereal/access.hpp>
 
@@ -12,6 +13,15 @@ namespace bpftrace {
 
 struct Bitfield
 {
+  Bitfield(size_t byte_offset, size_t bit_width);
+  Bitfield(size_t read_bytes, size_t access_rshift, uint64_t mask)
+      : read_bytes(read_bytes), access_rshift(access_rshift), mask(mask)
+  {
+  }
+  Bitfield() // necessary for serialization
+  {
+  }
+
   bool operator==(const Bitfield &other) const;
   bool operator!=(const Bitfield &other) const;
 
@@ -37,8 +47,7 @@ struct Field
   SizedType type;
   ssize_t offset;
 
-  bool is_bitfield;
-  Bitfield bitfield;
+  std::optional<Bitfield> bitfield;
 
   // Used for tracepoint __data_loc's
   //
@@ -51,8 +60,7 @@ struct Field
   bool operator==(const Field &rhs) const
   {
     return name == rhs.name && type == rhs.type && offset == rhs.offset &&
-           is_bitfield == rhs.is_bitfield && bitfield == rhs.bitfield &&
-           is_data_loc == rhs.is_data_loc;
+           bitfield == rhs.bitfield && is_data_loc == rhs.is_data_loc;
   }
 
 private:
@@ -60,7 +68,7 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(name, type, offset, is_bitfield, bitfield, is_data_loc);
+    archive(name, type, offset, bitfield, is_data_loc);
   }
 };
 
@@ -86,8 +94,7 @@ struct Struct
   void AddField(const std::string &field_name,
                 const SizedType &type,
                 ssize_t offset,
-                bool is_bitfield,
-                const Bitfield &bitfield,
+                const std::optional<Bitfield> &bitfield,
                 bool is_data_loc);
   bool HasFields() const;
   void ClearFields();

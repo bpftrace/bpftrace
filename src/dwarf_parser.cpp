@@ -254,8 +254,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
     str->AddField(dwarf_diename(&field_die),
                   get_stype(field_type),
                   get_field_offset(field_die),
-                  false,
-                  {},
+                  std::nullopt,
                   false);
   }
 }

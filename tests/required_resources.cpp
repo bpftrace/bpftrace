@@ -45,13 +45,7 @@ TEST(required_resources, round_trip_field_sized_type)
                                    .name = "myfield",
                                    .type = CreateInt32(),
                                    .offset = 123,
-                                   .is_bitfield = false,
-                                   .bitfield =
-                                       Bitfield{
-                                           .read_bytes = 1,
-                                           .access_rshift = 2,
-                                           .mask = 0xFF,
-                                       },
+                                   .bitfield = Bitfield(1, 2, 0xFF),
                                } });
     r.save_state(serialized);
   }
@@ -71,10 +65,10 @@ TEST(required_resources, round_trip_field_sized_type)
     EXPECT_TRUE(field.type.IsIntTy());
     EXPECT_EQ(field.type.GetSize(), 4ul);
     EXPECT_EQ(field.offset, 123);
-    EXPECT_EQ(field.is_bitfield, false);
-    EXPECT_EQ(field.bitfield.read_bytes, 1ul);
-    EXPECT_EQ(field.bitfield.access_rshift, 2ul);
-    EXPECT_EQ(field.bitfield.mask, 0xFFul);
+    EXPECT_TRUE(field.bitfield.has_value());
+    EXPECT_EQ(field.bitfield->read_bytes, 1ul);
+    EXPECT_EQ(field.bitfield->access_rshift, 2ul);
+    EXPECT_EQ(field.bitfield->mask, 0xFFul);
   }
 }
 
