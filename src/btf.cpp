@@ -811,7 +811,7 @@ void BTF::resolve_fields(const BTFId &type_id,
     }
 
     record->AddField(
-        field_name, get_stype(field_id), field_offset, false, {}, false);
+        field_name, get_stype(field_id), field_offset, std::nullopt, false);
   }
 }
 

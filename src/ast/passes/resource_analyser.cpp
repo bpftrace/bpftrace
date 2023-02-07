@@ -87,13 +87,7 @@ void ResourceAnalyser::visit(Call &call)
           .name = "",
           .type = ty,
           .offset = 0,
-          .is_bitfield = false,
-          .bitfield =
-              Bitfield{
-                  .read_bytes = 0,
-                  .access_rshift = 0,
-                  .mask = 0,
-              },
+          .bitfield = std::nullopt,
       });
     }
 

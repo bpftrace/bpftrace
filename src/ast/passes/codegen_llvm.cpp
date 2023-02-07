@@ -1896,11 +1896,12 @@ void CodegenLLVM::visit(FieldAccess &acc)
   {
     // Structs may contain two kinds of fields that must be handled separately
     // (bitfields and _data_loc)
-    if (field.type.IsIntTy() && (field.is_bitfield || field.is_data_loc))
+    if (field.type.IsIntTy() &&
+        (field.bitfield.has_value() || field.is_data_loc))
     {
       Value *src = b_.CreateAdd(expr_, b_.getInt64(field.offset));
 
-      if (field.is_bitfield)
+      if (field.bitfield.has_value())
       {
         Value *raw;
         auto field_type = b_.GetType(field.type);
@@ -1919,7 +1920,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
           b_.CREATE_MEMSET(dst, b_.getInt8(0), field.type.GetSize(), 1);
           b_.CreateProbeRead(ctx_,
                              dst,
-                             b_.getInt32(field.bitfield.read_bytes),
+                             b_.getInt32(field.bitfield->read_bytes),
                              src,
                              type.GetAS(),
                              acc.loc);
@@ -1928,13 +1929,13 @@ void CodegenLLVM::visit(FieldAccess &acc)
         }
         size_t rshiftbits;
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        rshiftbits = field.bitfield.access_rshift;
+        rshiftbits = field.bitfield->access_rshift;
 #else
-        rshiftbits = (field.type.GetSize() - field.bitfield.read_bytes) * 8;
-        rshiftbits += field.bitfield.access_rshift;
+        rshiftbits = (field.type.GetSize() - field.bitfield->read_bytes) * 8;
+        rshiftbits += field.bitfield->access_rshift;
 #endif
         Value *shifted = b_.CreateLShr(raw, rshiftbits);
-        Value *masked = b_.CreateAnd(shifted, field.bitfield.mask);
+        Value *masked = b_.CreateAnd(shifted, field.bitfield->mask);
         expr_ = masked;
       }
       else

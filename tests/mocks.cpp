@@ -77,7 +77,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
   bpftrace.structs.Add("struct _tracepoint_sched_sched_one", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_one")
       .lock()
-      ->AddField("common_field", CreateUInt64(), 8, false, {}, false);
+      ->AddField("common_field", CreateUInt64(), 8, std::nullopt, false);
 
   bpftrace.structs.Add("struct _tracepoint_sched_sched_two", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_sched_two")
@@ -86,8 +86,7 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                  CreateUInt64(),
                  16, // different offset than
                      // sched_one.common_field
-                 false,
-                 {},
+                 std::nullopt,
                  false);
   bpftrace.structs.Add("struct _tracepoint_sched_extra_sched_extra", 8);
   bpftrace.structs.Lookup("struct _tracepoint_sched_extra_sched_extra")
@@ -96,23 +95,22 @@ void setup_mock_bpftrace(MockBPFtrace &bpftrace)
                  CreateUInt64(),
                  24, // different offset than
                      // sched_(one|two).common_field
-                 false,
-                 {},
+                 std::nullopt,
                  false);
   bpftrace.structs.Add("struct _tracepoint_tcp_some_tcp_tp", 16);
   bpftrace.structs.Lookup("struct _tracepoint_tcp_some_tcp_tp")
       .lock()
       ->AddField(
-          "saddr_v6", CreateArray(16, CreateUInt(8)), 8, false, {}, false);
+          "saddr_v6", CreateArray(16, CreateUInt(8)), 8, std::nullopt, false);
 
   auto ptr_type = CreatePointer(CreateInt8());
   bpftrace.structs.Add("struct _tracepoint_file_filename", 8);
   bpftrace.structs.Lookup("struct _tracepoint_file_filename")
       .lock()
-      ->AddField("common_field", CreateUInt64(), 0, false, {}, false);
+      ->AddField("common_field", CreateUInt64(), 0, std::nullopt, false);
   bpftrace.structs.Lookup("struct _tracepoint_file_filename")
       .lock()
-      ->AddField("filename", ptr_type, 8, false, {}, false);
+      ->AddField("filename", ptr_type, 8, std::nullopt, false);
 }
 
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace()

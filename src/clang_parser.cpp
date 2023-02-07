@@ -202,54 +202,14 @@ static CXCursor get_named_parent(CXCursor c)
   return parent;
 }
 
-// @returns true on success, false otherwise
-static bool getBitfield(CXCursor c, Bitfield &bitfield)
+static std::optional<Bitfield> getBitfield(CXCursor c)
 {
   if (!clang_Cursor_isBitField(c)) {
-    return false;
+    return std::nullopt;
   }
 
-  // Algorithm description:
-  // To handle bitfields, we need to give codegen 3 additional pieces
-  // of information: `read_bytes`, `access_rshift`, and `mask`.
-  //
-  // `read_bytes` tells codegen how many bytes to read starting at `Field::offset`.
-  // This information is necessary because we can't always issue, for example, a
-  // 1 byte read, as the bitfield could be the last 4 bits of the struct. Reading
-  // past the end of the struct could cause a page fault. Therefore, we compute the
-  // minimum number of bytes necessary to fully read the bitfield. This will always
-  // keep the read within the bounds of the struct.
-  //
-  // `access_rshift` tells codegen how much to shift the masked value so that the
-  // LSB of the bitfield is the LSB of the interpreted integer.
-  //
-  // `mask` tells codegen how to mask out the surrounding bitfields.
-
-  size_t bitfield_offset = clang_Cursor_getOffsetOfField(c) % 8;
-  size_t bitfield_bitwidth = clang_getFieldDeclBitWidth(c);
-  size_t bitfield_bitdidth_max = sizeof(uint64_t) * 8;
-
-  if (bitfield_bitwidth > bitfield_bitdidth_max)
-  {
-    LOG(WARNING) << "bitfiled bitwidth " << bitfield_bitwidth
-                 << "is not supporeted."
-                 << " Use bitwidth " << bitfield_bitdidth_max;
-    bitfield_bitwidth = bitfield_bitdidth_max;
-  }
-  if (bitfield_bitwidth == bitfield_bitdidth_max)
-    bitfield.mask = std::numeric_limits<uint64_t>::max();
-  else
-    bitfield.mask = (1ULL << bitfield_bitwidth) - 1;
-  // Round up to nearest byte
-  bitfield.read_bytes = (bitfield_offset + bitfield_bitwidth + 7) / 8;
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-  bitfield.access_rshift = bitfield_offset;
-#else
-  bitfield.access_rshift = (bitfield.read_bytes * 8 - bitfield_offset -
-                            bitfield_bitwidth);
-#endif
-
-  return true;
+  return Bitfield(clang_Cursor_getOffsetOfField(c) % 8,
+                  clang_getFieldDeclBitWidth(c));
 }
 
 // NOTE(mmarchini): as suggested in http://clang-developers.42468.n3.nabble.com/Extracting-macro-information-using-libclang-the-C-Interface-to-Clang-td4042648.html#message4042666
@@ -547,8 +507,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           auto offset = clang_Type_getOffsetOf(ptype, ident.c_str()) / 8;
           auto type = clang_getCanonicalType(clang_getCursorType(c));
           auto sized_type = get_sized_type(type, structs);
-          Bitfield bitfield;
-          bool is_bitfield = getBitfield(c, bitfield);
+          auto bitfield = getBitfield(c);
           bool is_data_loc = false;
 
           // Process field annotations
@@ -583,7 +542,7 @@ bool ClangParser::visit_children(CXCursor &cursor, BPFtrace &bpftrace)
           // checked clang diagnostics. The diagnostics will tell us if we have
           // duplicated types.
           structs.Lookup(ptypestr).lock()->AddField(
-              ident, sized_type, offset, is_bitfield, bitfield, is_data_loc);
+              ident, sized_type, offset, bitfield, is_data_loc);
         }
 
         return CXChildVisit_Recurse;
