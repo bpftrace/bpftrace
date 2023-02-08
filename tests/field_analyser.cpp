@@ -153,6 +153,52 @@ TEST_F(field_analyser_btf, btf_types_struct_ptr)
   ASSERT_EQ(foo3->fields.size(), 2U); // fields are resolved
 }
 
+TEST_F(field_analyser_btf, btf_types_bitfields)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace, "kprobe:sys_read { @ = curtask->pid; }");
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct task_struct"));
+  auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
+
+  ASSERT_TRUE(task_struct->HasField("a"));
+  EXPECT_EQ(task_struct->GetField("a").type.type, Type::integer);
+  EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
+  EXPECT_EQ(task_struct->GetField("a").offset, 9);
+  EXPECT_TRUE(task_struct->GetField("a").bitfield.has_value());
+  EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x2U);
+  EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 4U);
+  EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
+
+  ASSERT_TRUE(task_struct->HasField("b"));
+  EXPECT_EQ(task_struct->GetField("b").type.type, Type::integer);
+  EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
+  EXPECT_EQ(task_struct->GetField("b").offset, 10);
+  EXPECT_TRUE(task_struct->GetField("b").bitfield.has_value());
+  EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 4U);
+  EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
+
+  ASSERT_TRUE(task_struct->HasField("c"));
+  EXPECT_EQ(task_struct->GetField("c").type.type, Type::integer);
+  EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
+  EXPECT_EQ(task_struct->GetField("c").offset, 10);
+  EXPECT_TRUE(task_struct->GetField("c").bitfield.has_value());
+  EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x1U);
+  EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 5U);
+  EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
+
+  ASSERT_TRUE(task_struct->HasField("d"));
+  EXPECT_EQ(task_struct->GetField("d").type.type, Type::integer);
+  EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
+  EXPECT_EQ(task_struct->GetField("d").offset, 12);
+  EXPECT_TRUE(task_struct->GetField("d").bitfield.has_value());
+  EXPECT_EQ(task_struct->GetField("d").bitfield->read_bytes, 0x3U);
+  EXPECT_EQ(task_struct->GetField("d").bitfield->access_rshift, 0U);
+  EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
+}
+
 #ifdef HAVE_LIBDW
 
 #include "dwarf_common.h"

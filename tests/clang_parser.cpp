@@ -584,10 +584,14 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_TRUE(foo3->HasField("foo1"));
   ASSERT_TRUE(foo3->HasField("foo2"));
 
-  EXPECT_EQ(task_struct->size, 8);
-  ASSERT_EQ(task_struct->fields.size(), 2U);
+  EXPECT_EQ(task_struct->size, 16);
+  ASSERT_EQ(task_struct->fields.size(), 7U);
   ASSERT_TRUE(task_struct->HasField("pid"));
   ASSERT_TRUE(task_struct->HasField("pgid"));
+  ASSERT_TRUE(task_struct->HasField("a"));
+  ASSERT_TRUE(task_struct->HasField("b"));
+  ASSERT_TRUE(task_struct->HasField("c"));
+  ASSERT_TRUE(task_struct->HasField("d"));
 
   auto foo1_field = foo3->GetField("foo1");
   auto foo2_field = foo3->GetField("foo2");
