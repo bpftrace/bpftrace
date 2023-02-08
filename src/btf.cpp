@@ -773,6 +773,18 @@ void BTF::resolve_fields(SizedType &type)
   resolve_fields(type_id, record.get(), 0);
 }
 
+static std::optional<Bitfield> resolve_bitfield(
+    const struct btf_type *record_type,
+    __u32 member_idx)
+{
+  __u32 bitfield_width = btf_member_bitfield_size(record_type, member_idx);
+  if (bitfield_width <= 0)
+    return std::nullopt;
+
+  return Bitfield(btf_member_bit_offset(record_type, member_idx) % 8,
+                  bitfield_width);
+}
+
 void BTF::resolve_fields(const BTFId &type_id,
                          Struct *record,
                          __u32 start_offset)
@@ -795,13 +807,8 @@ void BTF::resolve_fields(const BTFId &type_id,
 
     std::string field_name = btf__name_by_offset(type_id.btf,
                                                  members[i].name_off);
-    if (members[i].offset % 8 != 0)
-    {
-      // bitfield - not supported yet
-      record->ClearFields();
-      return;
-    }
-    __u32 field_offset = start_offset + members[i].offset / 8;
+
+    __u32 field_offset = start_offset + btf_member_bit_offset(btf_type, i) / 8;
 
     if (btf_is_composite(field_type) &&
         (field_name.empty() || field_name == "(anon)"))
@@ -810,8 +817,11 @@ void BTF::resolve_fields(const BTFId &type_id,
       return;
     }
 
-    record->AddField(
-        field_name, get_stype(field_id), field_offset, std::nullopt, false);
+    record->AddField(field_name,
+                     get_stype(field_id),
+                     field_offset,
+                     resolve_bitfield(btf_type, i),
+                     false);
   }
 }
 

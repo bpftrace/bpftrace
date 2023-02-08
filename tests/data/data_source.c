@@ -45,6 +45,11 @@ struct task_struct
 {
   int pid;
   int pgid;
+  int : 12; // padding
+  int a : 8;
+  int b : 1;
+  int c : 3;
+  int d : 20;
 };
 
 struct file
