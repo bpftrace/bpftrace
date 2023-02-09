@@ -19,6 +19,7 @@ RUN apt-get update \
         asciidoctor \
         bison \
         binutils-dev \
+        dwarves \
         flex \
         git \
         libelf-dev \
@@ -33,6 +34,7 @@ RUN apt-get update \
         python3-setuptools \
         quilt \
         libssl-dev \
+        xxd \
     && apt-get install --no-install-recommends -y \
         pkg-config
 

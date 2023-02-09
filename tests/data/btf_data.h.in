@@ -1,0 +1,7 @@
+#pragma once
+
+${BTF_DATA}
+
+unsigned char func_list[] = "${FUNC_LIST}";
+
+unsigned int func_list_len = sizeof(func_list) / sizeof(func_list[0]);
