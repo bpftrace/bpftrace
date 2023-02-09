@@ -3,9 +3,11 @@ FROM alpine:${ALPINE_VERSION}
 
 ARG LLVM_VERSION="10"
 ARG CEREAL_VERSION=1.3.0
+ARG PAHOLE_VERSION=1.24
 
 RUN apk add --update \
   asciidoctor \
+  argp-standalone \
   bash \
   bison \
   bcc-dev \
@@ -26,6 +28,7 @@ RUN apk add --update \
   linux-headers \
   llvm${LLVM_VERSION}-dev \
   llvm${LLVM_VERSION}-static \
+  musl-obstack-dev \
   python3 \
   wget \
   xxd \
@@ -41,6 +44,17 @@ RUN ln -s $(which python3) /usr/bin/python && \
 RUN wget https://github.com/USCiLab/cereal/archive/refs/tags/v${CEREAL_VERSION}.tar.gz && \
     tar xf v${CEREAL_VERSION}.tar.gz && \
     cp -r cereal-${CEREAL_VERSION}/include/cereal /usr/include
+
+# bpftrace needs pahole to build BTF data for tests.
+# Since pahole is not packaged in Alpine 3.12, we build it from source.
+# An alternative would be to bump the Alpine version, but I wasn't able to make
+# work any version that would have pahole.
+RUN git clone --recurse-submodules https://github.com/acmel/dwarves/ && \
+    cd dwarves && \
+    git checkout v${PAHOLE_VERSION} && \
+    mkdir build && cd build && \
+    cmake -D__LIB=lib -DBUILD_SHARED_LIBS=OFF .. && \
+    make install
 
 COPY build.sh /build.sh
 RUN chmod 755 /build.sh

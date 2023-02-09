@@ -41,8 +41,46 @@ struct Foo3 *func_3(int a, int *b, struct Foo1 *foo1)
   return 0;
 }
 
+struct task_struct
+{
+  int pid;
+  int pgid;
+};
+
+struct file
+{
+  int ino;
+};
+
+struct vm_area_struct
+{
+  unsigned long vm_start;
+  unsigned long vm_end;
+};
+
+struct bpf_iter__task
+{
+  struct task_struct *task;
+};
+
+struct bpf_iter__task_file
+{
+  struct task_struct *task;
+  struct file *file;
+};
+
+struct bpf_iter__task_vma
+{
+  struct task_struct *task;
+  struct vm_area_struct *vma;
+};
+
 int main(void)
 {
+  struct bpf_iter__task iter_task;
+  struct bpf_iter__task_file iter_task_file;
+  struct bpf_iter__task_vma iter_task_vma;
+
   func_1(0, 0, 0);
   return 0;
 }
