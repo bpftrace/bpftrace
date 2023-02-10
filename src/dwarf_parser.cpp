@@ -224,6 +224,36 @@ SizedType Dwarf::get_stype(const std::string &type_name) const
   return get_stype(type_die.value());
 }
 
+std::optional<Bitfield> Dwarf::resolve_bitfield(Dwarf_Die &field_die) const
+{
+  ssize_t bitfield_width = get_bitfield_size(field_die);
+  if (bitfield_width == 0)
+    return std::nullopt;
+
+  ssize_t bit_offset = get_field_bit_offset(field_die);
+  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset))
+  {
+    // DWARF >= 4
+    // DW_AT_data_bit_offset is the offset in bits from the beginning of the
+    // containing entity to the beginning of field. In this case, the byte
+    // offset of the field is determined by (bit_offset / 8) so the bit offset
+    // within the byte is given by (bit_offset % 8).
+    return Bitfield(bit_offset % 8, bitfield_width);
+  }
+  else
+  {
+    // DWARF < 4 (some implementations of DWARF 4 use this, too)
+    // Bit offset is given by DW_AT_bit_offset which is the offset in bits of
+    // the high order bit of the container type to the high order bit of the
+    // storage unit actually containing the bitfield. This representation was
+    // designed for big-endian systems, so we must use the same approach to
+    // determine the actual bit offset:
+    // (size of the container field - DW_AT_bit_offset - bitfield size)
+    auto field_size = dwarf_bytesize(&field_die) * 8;
+    return Bitfield(field_size - bit_offset - bitfield_width, bitfield_width);
+  }
+}
+
 void Dwarf::resolve_fields(const SizedType &type) const
 {
   if (!type.IsRecordTy())
@@ -243,18 +273,11 @@ void Dwarf::resolve_fields(const SizedType &type) const
   for (auto &field_die :
        get_all_children_with_tag(&type_die.value(), DW_TAG_member))
   {
-    if (dwarf_hasattr(&field_die, DW_AT_bit_size))
-    {
-      // Parsing bitfields from DWARF is not supported, yet -> clear the struct
-      // and let Clang parser resolve the fields.
-      str->ClearFields();
-      break;
-    }
     Dwarf_Die field_type = type_of(field_die);
     str->AddField(dwarf_diename(&field_die),
                   get_stype(field_type),
-                  get_field_offset(field_die),
-                  std::nullopt,
+                  get_field_byte_offset(field_die),
+                  resolve_bitfield(field_die),
                   false);
   }
 }
@@ -357,25 +380,52 @@ ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
   return 0;
 }
 
-ssize_t Dwarf::get_field_offset(Dwarf_Die &field_die)
+ssize_t Dwarf::get_field_byte_offset(Dwarf_Die &field_die)
 {
-  Dwarf_Attribute attr;
-  Dwarf_Word value;
   if (dwarf_hasattr(&field_die, DW_AT_data_member_location))
   {
+    Dwarf_Attribute attr;
+    Dwarf_Word value;
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_data_member_location, &attr),
             &value) >= 0)
       return (ssize_t)value;
   }
+  return get_field_bit_offset(field_die) / 8;
+}
+
+ssize_t Dwarf::get_field_bit_offset(Dwarf_Die &field_die)
+{
+  Dwarf_Attribute attr;
+  Dwarf_Word value;
   if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset))
-  {
+  { // DWARF >= 4
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_data_bit_offset, &attr),
             &value) >= 0)
       return (ssize_t)value;
   }
+  if (dwarf_hasattr(&field_die, DW_AT_bit_offset))
+  { // DWARF < 4
+    if (dwarf_formudata(
+            dwarf_attr_integrate(&field_die, DW_AT_bit_offset, &attr),
+            &value) >= 0)
+      return (ssize_t)value;
+  }
 
+  return 0;
+}
+
+ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
+{
+  Dwarf_Attribute attr;
+  Dwarf_Word value;
+  if (dwarf_hasattr(&field_die, DW_AT_bit_size))
+  {
+    if (dwarf_formudata(dwarf_attr_integrate(&field_die, DW_AT_bit_size, &attr),
+                        &value) >= 0)
+      return (ssize_t)value;
+  }
   return 0;
 }
 
