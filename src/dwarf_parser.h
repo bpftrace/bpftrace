@@ -1,8 +1,10 @@
 #pragma once
 
+#include "struct.h"
 #include "types.h"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -39,7 +41,10 @@ private:
   Dwarf_Word get_type_encoding(Dwarf_Die &type_die) const;
   std::optional<Dwarf_Die> find_type(const std::string &name) const;
   static ssize_t get_array_size(Dwarf_Die &subrange_die);
-  static ssize_t get_field_offset(Dwarf_Die &field_die);
+  static ssize_t get_field_byte_offset(Dwarf_Die &field_die);
+  static ssize_t get_field_bit_offset(Dwarf_Die &field_die);
+  static ssize_t get_bitfield_size(Dwarf_Die &field_die);
+  std::optional<Bitfield> resolve_bitfield(Dwarf_Die &field_die) const;
 
   SizedType get_stype(Dwarf_Die &type_die, bool resolve_structs = true) const;
 
