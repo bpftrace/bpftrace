@@ -1052,11 +1052,12 @@ void AttachedProbe::attach_usdt(int pid, BPFfeature &feature)
 
   if (err)
   {
-    std::string err;
-    err += "Error finding or enabling probe: " + probe_.name;
-    err += '\n';
-    err += "Try using -p or --usdt-file-activation if there's USDT semaphores";
-    throw std::runtime_error(err);
+    std::string errstr;
+    errstr += "Error finding or enabling probe: " + probe_.name;
+    errstr += '\n';
+    errstr +=
+        "Try using -p or --usdt-file-activation if there's USDT semaphores";
+    throw std::runtime_error(errstr);
   }
 
   int perf_event_fd =

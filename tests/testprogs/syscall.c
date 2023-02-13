@@ -44,9 +44,9 @@ int gen_nanosleep(int argc, char *argv[])
       return 1;
     }
     double time;
-    char tail = '\0';
-    sscanf(arg, "%le%c", &time, &tail);
-    if (tail != '\0')
+    char *endptr;
+    time = strtod(arg, &endptr);
+    if (endptr != arg + strlen(arg))
     {
       printf("Argument '%s' should only contain numerial characters\n", arg);
       return 1;
@@ -118,7 +118,7 @@ int gen_read()
 {
   char *file_path = get_tmp_file_path(
       "/bpftrace_runtime_test_syscall_gen_read_temp");
-  int fd = open(file_path, O_CREAT);
+  int fd = open(file_path, O_CREAT, 0644);
   if (fd < 0)
   {
     perror("Error in syscall read when creating temp file");
@@ -184,7 +184,11 @@ int gen_connect(int argc, char *argv[])
   }
 
   int port;
-  sscanf(argv[3], "%d", &port);
+  if (sscanf(argv[3], "%d", &port) <= 0)
+  {
+    printf("Argument invalid\n");
+    return 1;
+  }
   if (port < 1 || port > 65535)
   {
     printf("Argument '%s' is out of range, should be in [1, 65535]\n", argv[3]);
