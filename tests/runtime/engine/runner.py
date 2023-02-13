@@ -5,15 +5,14 @@ import signal
 import sys
 import os
 import time
-from os import environ, uname, devnull
 from distutils.version import LooseVersion
 import re
 from functools import lru_cache
 
 import cmake_vars
 
-BPF_PATH = environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
-ENV_PATH = environ["PATH"]
+BPF_PATH = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
+ENV_PATH = os.environ["PATH"]
 ATTACH_TIMEOUT = 5
 DEFAULT_TIMEOUT = 5
 
@@ -141,7 +140,7 @@ class Runner(object):
 
     @staticmethod
     def run_test(test):
-        current_kernel = LooseVersion(uname()[2])
+        current_kernel = LooseVersion(os.uname()[2])
         if test.kernel_min and LooseVersion(test.kernel_min) > current_kernel:
             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
             return Runner.SKIP_KERNEL_VERSION_MIN
@@ -167,7 +166,7 @@ class Runner(object):
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
                 for req in test.requirement:
-                    with open(devnull, 'w') as dn:
+                    with open(os.devnull, 'w') as dn:
                         if subprocess.call(
                             req,
                             shell=True,
@@ -198,7 +197,7 @@ class Runner(object):
             if test.before:
                 before = subprocess.Popen(test.before, shell=True, preexec_fn=os.setsid)
                 waited=0
-                with open(devnull, 'w') as dn:
+                with open(os.devnull, 'w') as dn:
                     # This might not work for complicated cases, such as if
                     # a test program needs to accept arguments. It covers the
                     # current simple calls with no arguments

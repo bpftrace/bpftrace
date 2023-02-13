@@ -742,6 +742,8 @@ __s32 BTF::find_id_in_btf(struct btf *btf,
   for (__s32 id = start_id(btf), max = (__s32)type_cnt(btf); id <= max; ++id)
   {
     const struct btf_type *t = btf__type_by_id(btf, id);
+    if (!t)
+      continue;
     if (kind && btf_kind(t) != *kind)
       continue;
 
@@ -776,6 +778,8 @@ void BTF::resolve_fields(const BTFId &type_id,
                          __u32 start_offset)
 {
   auto btf_type = btf__type_by_id(type_id.btf, type_id.id);
+  if (!btf_type)
+    return;
   auto members = btf_members(btf_type);
   for (__u32 i = 0; i < BTF_INFO_VLEN(btf_type->info); i++)
   {
