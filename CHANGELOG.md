@@ -37,6 +37,8 @@ and this project adheres to
 #### Changed
 - Improve attaching to uprobes with size 0
   - [#2562](https://github.com/iovisor/bpftrace/pull/2562)
+- Support ringbuf output
+  - [#2475](https://github.com/iovisor/bpftrace/pull/2475)
 #### Deprecated
 #### Removed
 #### Fixed
