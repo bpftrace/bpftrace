@@ -25,6 +25,7 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/perf_reader.h>
 #include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 
 #include "ast/async_event_types.h"
 #include "bpftrace.h"
@@ -603,6 +604,12 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                           false);
 }
 
+int ringbuf_printer(void *cb_cookie, void *data, size_t size)
+{
+  perf_event_printer(cb_cookie, data, size);
+  return 0;
+}
+
 std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vector<Field> &args, uint8_t* arg_data)
 {
   std::vector<std::unique_ptr<IPrintable>> arg_values;
@@ -1151,7 +1158,7 @@ int BPFtrace::run(BpfBytecode bytecode)
 
   bytecode_ = std::move(bytecode);
 
-  err = setup_perf_events();
+  err = setup_output();
   if (err)
     return err;
 
@@ -1252,7 +1259,7 @@ int BPFtrace::run(BpfBytecode bytecode)
   }
   else
   {
-    poll_perf_events();
+    poll_output();
   }
 
   attached_probes_.clear();
@@ -1264,11 +1271,25 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (run_special_probe("END_trigger", bytecode_, END_trigger))
     return -1;
 
-  poll_perf_events(/* drain */ true);
+  poll_output(/* drain */ true);
 
-  // Calls perf_reader_free() on all open perf buffers.
-  open_perf_buffers_.clear();
+  teardown_output();
 
+  return 0;
+}
+
+int BPFtrace::setup_output()
+{
+  if (is_ringbuf_enabled())
+  {
+    int err = setup_ringbuf();
+    if (err)
+      return err;
+  }
+  if (is_perf_event_enabled())
+  {
+    return setup_perf_events();
+  }
   return 0;
 }
 
@@ -1313,37 +1334,96 @@ int BPFtrace::setup_perf_events()
   return 0;
 }
 
-void BPFtrace::poll_perf_events(bool drain)
+int BPFtrace::setup_ringbuf()
 {
-  const int timeout_ms = 100;
+  ringbuf_ = static_cast<struct ring_buffer *>(
+      ring_buffer__new(maps[MapManager::Type::Ringbuf].value()->mapfd_,
+                       ringbuf_printer,
+                       this,
+                       nullptr));
+  if (bpf_update_elem(
+          maps[MapManager::Type::RingbufLossCounter].value()->mapfd_,
+          const_cast<uint32_t *>(&rb_loss_cnt_key_),
+          const_cast<uint64_t *>(&rb_loss_cnt_val_),
+          0))
+  {
+    LOG(ERROR) << "fail to init ringbuf loss counter";
+    return -1;
+  }
+  return 0;
+}
 
-  if (epollfd_ < 0)
+void BPFtrace::teardown_output()
+{
+  if (is_ringbuf_enabled())
+    ring_buffer__free(ringbuf_);
+
+  if (is_perf_event_enabled())
+    // Calls perf_reader_free() on all open perf buffers.
+    open_perf_buffers_.clear();
+}
+
+void BPFtrace::poll_output(bool drain)
+{
+  int ready;
+  bool do_poll_perf_event = is_perf_event_enabled();
+  bool do_poll_ringbuf = is_ringbuf_enabled();
+  auto should_retry = [](int ready) {
+    // epoll_wait will set errno to EINTR if an interrupt received, it is
+    // retryable if not caused by SIGINT. ring_buffer__poll does not set errno,
+    // we will keep retrying till SIGINT.
+    return ready < 0 && (errno == 0 || errno == EINTR) &&
+           !BPFtrace::exitsig_recv;
+  };
+  auto should_stop = [this, drain](int ready) {
+    // Stop if either
+    //   * an exit signal is received
+    //   * epoll_wait has encountered an error (eg signal delivery)
+    //   * there's no events left and we've been instructed to drain or
+    //     finalization has been requested through exit() builtin.
+    return BPFtrace::exitsig_recv || ready < 0 ||
+           (ready == 0 && (drain || finalize_));
+  };
+
+  if (do_poll_perf_event && epollfd_ < 0)
   {
     LOG(ERROR) << "Invalid epollfd " << epollfd_;
     return;
   }
 
-  auto events = std::vector<struct epoll_event>(online_cpus_);
   while (true)
   {
-    int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);
-    if (ready < 0 && errno == EINTR && !BPFtrace::exitsig_recv) {
-      // We received an interrupt not caused by SIGINT, skip and run again
-      continue;
+    if (do_poll_perf_event)
+    {
+      ready = poll_perf_events();
+      if (should_retry(ready))
+      {
+        if (!do_poll_ringbuf)
+          continue;
+      }
+      if (should_stop(ready))
+      {
+        do_poll_perf_event = false;
+      }
     }
 
-    // Return if either
-    //   * epoll_wait has encountered an error (eg signal delivery)
-    //   * There's no events left and we've been instructed to drain or
-    //     finalization has been requested through exit() builtin.
-    if (ready < 0 || (ready == 0 && (drain || finalize_)))
+    if (do_poll_ringbuf)
+    {
+      // print loss events
+      handle_ringbuf_loss();
+      ready = ring_buffer__poll(ringbuf_, timeout_ms);
+      if (should_retry(ready))
+      {
+        continue;
+      }
+      if (should_stop(ready))
+      {
+        do_poll_ringbuf = false;
+      }
+    }
+    if (!do_poll_perf_event && !do_poll_ringbuf)
     {
       return;
-    }
-
-    for (int i=0; i<ready; i++)
-    {
-      perf_reader_event_read((perf_reader*)events[i].data.ptr);
     }
 
     // If we are tracing a specific pid and it has exited, we should exit
@@ -1361,6 +1441,46 @@ void BPFtrace::poll_perf_events(bool drain)
     }
   }
   return;
+}
+
+int BPFtrace::poll_perf_events()
+{
+  auto events = std::vector<struct epoll_event>(online_cpus_);
+  int ready = epoll_wait(epollfd_, events.data(), online_cpus_, timeout_ms);
+  if (ready <= 0)
+  {
+    return ready;
+  }
+  for (int i = 0; i < ready; i++)
+  {
+    perf_reader_event_read((perf_reader *)events[i].data.ptr);
+  }
+  return ready;
+}
+
+void BPFtrace::handle_ringbuf_loss()
+{
+  uint64_t current_value = 0;
+  if (bpf_lookup_elem(
+          maps[MapManager::Type::RingbufLossCounter].value()->mapfd_,
+          const_cast<uint32_t *>(&rb_loss_cnt_key_),
+          &current_value))
+  {
+    LOG(ERROR) << "fail to get ringbuf loss counter";
+  }
+  if (current_value)
+  {
+    if (current_value > ringbuf_loss_count_)
+    {
+      out_->lost_events(current_value - ringbuf_loss_count_);
+      ringbuf_loss_count_ = current_value;
+    }
+    else if (current_value < ringbuf_loss_count_)
+    {
+      LOG(ERROR) << "Invalid ringbuf loss count value: " << current_value
+                 << ", last seen: " << ringbuf_loss_count_;
+    }
+  }
 }
 
 int BPFtrace::print_maps()

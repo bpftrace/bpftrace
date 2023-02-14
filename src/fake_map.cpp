@@ -30,5 +30,10 @@ FakeMap::FakeMap(const SizedType &type) : IMap(type)
 FakeMap::FakeMap(libbpf::bpf_map_type map_type) : IMap(map_type)
 {
 }
+FakeMap::FakeMap(libbpf::bpf_map_type map_type,
+                 uint64_t perf_rb_pages __attribute__((unused)))
+    : IMap(map_type)
+{
+}
 
 } // namespace bpftrace

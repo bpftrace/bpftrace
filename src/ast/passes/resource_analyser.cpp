@@ -192,6 +192,7 @@ void ResourceAnalyser::visit(Call &call)
     Integer &offset = static_cast<Integer &>(offset_arg);
 
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
+    resources_.needs_perf_event_map = true;
   }
 }
 

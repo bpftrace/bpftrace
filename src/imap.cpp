@@ -50,7 +50,8 @@ IMap::IMap(const SizedType &type)
 IMap::IMap(libbpf::bpf_map_type map_type) : map_type_(map_type)
 {
   // This constructor should only be called for perf events
-  assert(map_type == libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+  assert(map_type == libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY ||
+         map_type == libbpf::BPF_MAP_TYPE_RINGBUF);
 }
 
 } // namespace bpftrace
