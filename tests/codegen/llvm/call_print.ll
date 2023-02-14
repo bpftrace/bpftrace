@@ -35,6 +35,7 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_2" {
 entry:
+  %key = alloca i32, align 4
   %"print_@x" = alloca %print_t, align 8
   %1 = bitcast %print_t* %"print_@x" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -47,10 +48,36 @@ entry:
   %5 = getelementptr %print_t, %print_t* %"print_@x", i64 0, i32 3
   store i32 0, i32* %5, align 4
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, %print_t*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, %print_t* %"print_@x", i64 20)
-  %6 = bitcast %print_t* %"print_@x" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %6)
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (i64, %print_t*, i64, i64)*)(i64 %pseudo, %print_t* %"print_@x", i64 20, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
+
+event_loss_counter:                               ; preds = %entry
+  %6 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
+  store i32 0, i32* %key, align 4
+  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i32*)*)(i64 %pseudo1, i32* %key)
+  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
+
+counter_merge:                                    ; preds = %lookup_merge, %entry
+  %7 = bitcast %print_t* %"print_@x" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
   ret i64 0
+
+lookup_success:                                   ; preds = %event_loss_counter
+  %8 = bitcast i8* %lookup_elem to i64*
+  %9 = atomicrmw add i64* %8, i64 1 seq_cst
+  br label %lookup_merge
+
+lookup_failure:                                   ; preds = %event_loss_counter
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %10 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+  br label %counter_merge
 }
 
 attributes #0 = { nounwind }

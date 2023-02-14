@@ -8,6 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
+  %key = alloca i32, align 4
   %perfdata = alloca i64, align 8
   %n = alloca i32, align 4
   %i = alloca i32, align 4
@@ -56,30 +57,29 @@ if_body:                                          ; preds = %arraycmp.done
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %18)
   store i64 30000, i64* %perfdata, align 8
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i64, i64, i64*, i64)*)(i8* %0, i64 %pseudo, i64 4294967295, i64* %perfdata, i64 8)
-  %19 = bitcast i64* %perfdata to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %19)
-  ret i64 0
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (i64, i64*, i64, i64)*)(i64 %pseudo, i64* %perfdata, i64 8, i64 0)
+  %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
+  br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
 if_end:                                           ; preds = %deadcode, %arraycmp.done
   ret i64 0
 
 while_cond:                                       ; preds = %arraycmp.loop, %entry
-  %20 = load i32, i32* %n, align 4
-  %21 = load i32, i32* %i, align 4
-  %size_check = icmp slt i32 %21, %20
+  %19 = load i32, i32* %n, align 4
+  %20 = load i32, i32* %i, align 4
+  %size_check = icmp slt i32 %20, %19
   br i1 %size_check, label %while_body, label %arraycmp.done, !llvm.loop !0
 
 while_body:                                       ; preds = %while_cond
-  %22 = load i32, i32* %i, align 4
-  %23 = getelementptr [4 x i32], [4 x i32]* %14, i32 0, i32 %22
-  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i32*, i32, i32*)*)(i32* %v1, i32 4, i32* %23)
-  %24 = load i32, i32* %v1, align 4
-  %25 = load i32, i32* %i, align 4
-  %26 = getelementptr [4 x i32], [4 x i32]* %15, i32 0, i32 %25
-  %probe_read_kernel2 = call i64 inttoptr (i64 113 to i64 (i32*, i32, i32*)*)(i32* %v2, i32 4, i32* %26)
-  %27 = load i32, i32* %v2, align 4
-  %arraycmp.cmp = icmp ne i32 %24, %27
+  %21 = load i32, i32* %i, align 4
+  %22 = getelementptr [4 x i32], [4 x i32]* %14, i32 0, i32 %21
+  %probe_read_kernel = call i64 inttoptr (i64 113 to i64 (i32*, i32, i32*)*)(i32* %v1, i32 4, i32* %22)
+  %23 = load i32, i32* %v1, align 4
+  %24 = load i32, i32* %i, align 4
+  %25 = getelementptr [4 x i32], [4 x i32]* %15, i32 0, i32 %24
+  %probe_read_kernel2 = call i64 inttoptr (i64 113 to i64 (i32*, i32, i32*)*)(i32* %v2, i32 4, i32* %25)
+  %26 = load i32, i32* %v2, align 4
+  %arraycmp.cmp = icmp ne i32 %23, %26
   br i1 %arraycmp.cmp, label %arraycmp.false, label %arraycmp.loop
 
 arraycmp.false:                                   ; preds = %while_body
@@ -87,22 +87,49 @@ arraycmp.false:                                   ; preds = %while_body
   br label %arraycmp.done
 
 arraycmp.done:                                    ; preds = %arraycmp.false, %while_cond
-  %28 = load i1, i1* %arraycmp.result, align 1
-  %29 = bitcast i1* %arraycmp.result to i8*
+  %27 = load i1, i1* %arraycmp.result, align 1
+  %28 = bitcast i1* %arraycmp.result to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %28)
+  %29 = bitcast i32* %v1 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %29)
-  %30 = bitcast i32* %v1 to i8*
+  %30 = bitcast i32* %v2 to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %30)
-  %31 = bitcast i32* %v2 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %31)
-  %32 = zext i1 %28 to i64
-  %true_cond = icmp ne i64 %32, 0
+  %31 = zext i1 %27 to i64
+  %true_cond = icmp ne i64 %31, 0
   br i1 %true_cond, label %if_body, label %if_end
 
 arraycmp.loop:                                    ; preds = %while_body
-  %33 = load i32, i32* %i, align 4
-  %34 = add i32 %33, 1
-  store i32 %34, i32* %i, align 4
+  %32 = load i32, i32* %i, align 4
+  %33 = add i32 %32, 1
+  store i32 %33, i32* %i, align 4
   br label %while_cond
+
+event_loss_counter:                               ; preds = %if_body
+  %34 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %34)
+  store i32 0, i32* %key, align 4
+  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i32*)*)(i64 %pseudo3, i32* %key)
+  %map_lookup_cond = icmp ne i8* %lookup_elem, null
+  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
+
+counter_merge:                                    ; preds = %lookup_merge, %if_body
+  %35 = bitcast i64* %perfdata to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %35)
+  ret i64 0
+
+lookup_success:                                   ; preds = %event_loss_counter
+  %36 = bitcast i8* %lookup_elem to i64*
+  %37 = atomicrmw add i64* %36, i64 1 seq_cst
+  br label %lookup_merge
+
+lookup_failure:                                   ; preds = %event_loss_counter
+  br label %lookup_merge
+
+lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
+  %38 = bitcast i32* %key to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %38)
+  br label %counter_merge
 
 deadcode:                                         ; No predecessors!
   br label %if_end
