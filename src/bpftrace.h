@@ -30,6 +30,8 @@
 
 namespace bpftrace {
 
+const int timeout_ms = 100;
+
 struct symbol
 {
   std::string name;
@@ -198,6 +200,8 @@ public:
   uint64_t ast_max_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
   std::optional<StackMode> stack_mode_;
   std::optional<struct timespec> boottime_;
+  static constexpr uint32_t rb_loss_cnt_key_ = 0;
+  static constexpr uint64_t rb_loss_cnt_val_ = 0;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,
@@ -233,14 +237,33 @@ private:
       std::tuple<uint8_t *, uintptr_t> func,
       int pid,
       bool file_activation);
+  int setup_output();
   int setup_perf_events();
-  void poll_perf_events(bool drain = false);
+  int setup_ringbuf();
+  // when the ringbuf feature is available, enable ringbuf for built-ins like
+  // printf, cat.
+  bool is_ringbuf_enabled(void) const
+  {
+    return feature_->has_map_ringbuf();
+  }
+  // when the ringbuf feature is unavailable or built-in skboutput is used,
+  // enable perf_event
+  bool is_perf_event_enabled(void) const
+  {
+    return !feature_->has_map_ringbuf() || resources.needs_perf_event_map;
+  }
+  void teardown_output();
+  void poll_output(bool drain = false);
+  int poll_perf_events();
+  void handle_ringbuf_loss();
   int print_map_hist(IMap &map, uint32_t top, uint32_t div);
   int print_map_stats(IMap &map, uint32_t top, uint32_t div);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
   bool has_iter_ = false;
   int epollfd_ = -1;
+  struct ring_buffer *ringbuf_ = nullptr;
+  uint64_t ringbuf_loss_count_ = 0;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };

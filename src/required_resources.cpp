@@ -100,10 +100,34 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       failed_maps += 1;
     bpftrace.maps.Set(MapManager::Type::MappedPrintfData, std::move(map));
   }
+  /*
+   * PERF_EVENT_ARRAY map is needed when:
+   * 1. ringbuf is unavailable for built-ins like printf, cat.
+   * 2. Or, built-in skboutput is used.
+   */
+  if (!bpftrace.feature_->has_map_ringbuf() || needs_perf_event_map)
   {
     auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::PerfEvent, std::move(map));
+  }
+  // When available, ringbuf is used for built-ins like printf, cat.
+  if (bpftrace.feature_->has_map_ringbuf())
+  {
+    auto rb = std::make_unique<T>(libbpf::BPF_MAP_TYPE_RINGBUF,
+                                  bpftrace.perf_rb_pages_);
+    failed_maps += is_invalid_map(rb->mapfd_);
+    bpftrace.maps.Set(MapManager::Type::Ringbuf, std::move(rb));
+
+    auto rb_loss_cnt = std::make_unique<T>("ringbuf_loss_counter",
+                                           libbpf::BPF_MAP_TYPE_ARRAY,
+                                           sizeof(bpftrace.rb_loss_cnt_key_),
+                                           sizeof(bpftrace.rb_loss_cnt_val_),
+                                           1,
+                                           0);
+    failed_maps += is_invalid_map(rb_loss_cnt->mapfd_);
+    bpftrace.maps.Set(MapManager::Type::RingbufLossCounter,
+                      std::move(rb_loss_cnt));
   }
 
   if (failed_maps > 0)

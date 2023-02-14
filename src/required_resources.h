@@ -107,6 +107,7 @@ public:
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
   bool needs_data_map = false;
+  bool needs_perf_event_map = false;
 
   // Probe metadata
   //
@@ -147,6 +148,7 @@ private:
             needs_join_map,
             needs_elapsed_map,
             needs_data_map,
+            needs_perf_event_map,
             probes,
             special_probes);
   }

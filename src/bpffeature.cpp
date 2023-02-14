@@ -177,6 +177,14 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
     case libbpf::BPF_MAP_TYPE_STACK_TRACE:
       value_size = 8;
       break;
+    case libbpf::BPF_MAP_TYPE_RINGBUF:
+      // values from libbpf/src/libbpf_probes.c
+      // default pagesize 4KB
+      // default perf_rb_pages 64
+      key_size = 0;
+      value_size = 0;
+      max_entries = sysconf(_SC_PAGE_SIZE);
+      break;
     default:
       break;
   }
@@ -511,7 +519,7 @@ std::string BPFfeature::report(void)
       << "  percpu array: " << to_str(has_map_percpu_array())
       << "  stack_trace: " << to_str(has_map_stack_trace())
       << "  perf_event_array: " << to_str(has_map_perf_event_array())
-      << std::endl;
+      << "  ringbuf: " << to_str(has_map_ringbuf()) << std::endl;
 
   buf << "Probe types" << std::endl
       << "  kprobe: " << to_str(has_prog_kprobe())

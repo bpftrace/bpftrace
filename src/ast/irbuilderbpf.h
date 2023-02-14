@@ -38,6 +38,14 @@
   CreateMemSet((ptr), (val), (size), (align))
 #endif
 
+#if LLVM_VERSION_MAJOR >= 13
+#define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
+  CreateAtomicRMW((op), (ptr), (val), MaybeAlign((align)), (order))
+#else
+#define CREATE_ATOMIC_RMW(op, ptr, val, align, order)                          \
+  CreateAtomicRMW((op), (ptr), (val), (order))
+#endif
+
 namespace bpftrace {
 namespace ast {
 
@@ -171,10 +179,11 @@ public:
                        ArrayRef<Value *> args,
                        const Twine &Name);
   void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
-  void CreatePerfEventOutput(Value *ctx,
-                             Value *data,
-                             size_t size,
-                             const location *loc = nullptr);
+  void CreateOutput(Value *ctx,
+                    Value *data,
+                    size_t size,
+                    const location *loc = nullptr);
+  void CreateAtomicIncCounter(int mapfd, uint32_t idx);
   void CreateTracePrintk(Value *fmt,
                          Value *fmt_size,
                          const std::vector<Value *> &values,
@@ -239,6 +248,13 @@ private:
 
   llvm::Type *getKernelPointerStorageTy();
   llvm::Type *getUserPointerStorageTy();
+  void CreateRingbufOutput(Value *data,
+                           size_t size,
+                           const location *loc = nullptr);
+  void CreatePerfEventOutput(Value *ctx,
+                             Value *data,
+                             size_t size,
+                             const location *loc = nullptr);
 
   std::map<std::string, StructType *> structs_;
 };

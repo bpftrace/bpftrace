@@ -755,11 +755,10 @@ void CodegenLLVM::visit(Call &call)
     }
 
     // emit
-    b_.CreatePerfEventOutput(
-        ctx_,
-        perfdata,
-        8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
-        &call.loc);
+    b_.CreateOutput(ctx_,
+                    perfdata,
+                    8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
+                    &call.loc);
 
     b_.CreateBr(zero);
 
@@ -1003,7 +1002,7 @@ void CodegenLLVM::visit(Call &call)
      */
     AllocaInst *perfdata = b_.CreateAllocaBPF(b_.getInt64Ty(), "perfdata");
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::exit)), perfdata);
-    b_.CreatePerfEventOutput(ctx_, perfdata, sizeof(uint64_t), &call.loc);
+    b_.CreateOutput(ctx_, perfdata, sizeof(uint64_t), &call.loc);
     b_.CreateLifetimeEnd(perfdata);
     expr_ = nullptr;
     createRet();
@@ -1080,7 +1079,7 @@ void CodegenLLVM::visit(Call &call)
                                    { b_.getInt64(0), b_.getInt32(1) });
     b_.CreateStore(b_.GetIntSameSize(id, elements.at(1)), ident_ptr);
 
-    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
+    b_.CreateOutput(ctx_, buf, getStructSize(event_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -1102,7 +1101,7 @@ void CodegenLLVM::visit(Call &call)
         b_.CreateGEP(time_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
 
     time_id_++;
-    b_.CreatePerfEventOutput(ctx_, buf, getStructSize(time_struct), &call.loc);
+    b_.CreateOutput(ctx_, buf, getStructSize(time_struct), &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -1226,7 +1225,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(
         b_.CreateIntCast(expr_, b_.getInt64Ty(), false /* unsigned */),
         b_.CreateGEP(unwatch_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
-    b_.CreatePerfEventOutput(ctx_, buf, struct_size, &call.loc);
+    b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
@@ -3145,7 +3144,7 @@ void CodegenLLVM::createFormatStringCall(Call &call, int &id, CallArgs &call_arg
   }
 
   id++;
-  b_.CreatePerfEventOutput(ctx_, fmt_args, struct_size, &call.loc);
+  b_.CreateOutput(ctx_, fmt_args, struct_size, &call.loc);
   b_.CreateLifetimeEnd(fmt_args);
   expr_ = nullptr;
 }
@@ -3196,7 +3195,7 @@ void CodegenLLVM::generateWatchpointSetupProbe(
   b_.CreateStore(
       addr,
       b_.CreateGEP(watchpoint_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
-  b_.CreatePerfEventOutput(ctx, buf, struct_size);
+  b_.CreateOutput(ctx, buf, struct_size);
   b_.CreateLifetimeEnd(buf);
 
   createRet();
@@ -3246,7 +3245,7 @@ void CodegenLLVM::createPrintMapCall(Call &call)
                                 { b_.getInt64(0), b_.getInt32(arg_idx + 1) }));
   }
 
-  b_.CreatePerfEventOutput(ctx_, buf, getStructSize(print_struct), &call.loc);
+  b_.CreateOutput(ctx_, buf, getStructSize(print_struct), &call.loc);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
@@ -3296,7 +3295,7 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   }
 
   id++;
-  b_.CreatePerfEventOutput(ctx_, buf, struct_size, &call.loc);
+  b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
 }
