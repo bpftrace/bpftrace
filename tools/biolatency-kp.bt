@@ -16,17 +16,18 @@ BEGIN
 	printf("Tracing block device I/O... Hit Ctrl-C to end.\n");
 }
 
-tracepoint:block:block_bio_queue
+kprobe:blk_account_io_start,
+kprobe:__blk_account_io_start
 {
-	@start[args->sector] = nsecs;
+	@start[arg0] = nsecs;
 }
 
-tracepoint:block:block_rq_complete,
-tracepoint:block:block_bio_complete
-/@start[args->sector]/
+kprobe:blk_account_io_done,
+kprobe:__blk_account_io_done
+/@start[arg0]/
 {
-	@usecs = hist((nsecs - @start[args->sector]) / 1000);
-	delete(@start[args->sector]);
+	@usecs = hist((nsecs - @start[arg0]) / 1000);
+	delete(@start[arg0]);
 }
 
 END
