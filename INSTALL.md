@@ -296,7 +296,7 @@ sudo apt-get install -y \
   libgtest-dev \
   libgmock-dev \
   asciidoctor
-git clone https://github.com/iovisor/bpftrace
+git clone https://github.com/iovisor/bpftrace --recurse-submodules
 mkdir bpftrace/build; cd bpftrace/build;
 ../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ..
