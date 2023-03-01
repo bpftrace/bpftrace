@@ -8,6 +8,10 @@
 #define BPF_PSEUDO_MAP_VALUE 2
 #endif
 
+#ifndef BPF_F_KPROBE_MULTI_RETURN
+#define BPF_F_KPROBE_MULTI_RETURN (1U << 0)
+#endif
+
 // clang-format off
 enum bpf_map_type {
 	BPF_MAP_TYPE_UNSPEC,
