@@ -15,6 +15,8 @@ and this project adheres to
 #### Fixed
 - Simplify and fix probe index assignment
   - [#2482](https://github.com/iovisor/bpftrace/pull/2482)
+- Handle colon in positional param used in attachpoint
+  - [#2514](https://github.com/iovisor/bpftrace/pull/2514)
 #### Docs
 #### Tools
 

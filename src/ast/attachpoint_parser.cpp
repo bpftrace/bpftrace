@@ -218,7 +218,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
 AttachPointParser::State AttachPointParser::lex_attachpoint(
     const AttachPoint &ap)
 {
-  const auto &raw = ap.raw_input;
+  std::string raw = ap.raw_input;
   std::vector<std::string> ret;
   bool in_quotes = false;
   std::string argument;
@@ -266,10 +266,11 @@ AttachPointParser::State AttachPointParser::lex_attachpoint(
         return State::INVALID;
       }
 
-      argument += bpftrace_.get_param(param_idx, true);
-      // NB the for loop will then do idx++ so while we consumed
-      // (len + 1) characters, we only increment by (len).
-      idx += len;
+      // Expand the positional param in-place and decrement idx so that the next
+      // iteration takes the first char of the expansion
+      raw = raw.substr(0, idx) + bpftrace_.get_param(param_idx, true) +
+            raw.substr(i);
+      idx--;
     }
     else
       argument += raw[idx];
