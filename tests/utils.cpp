@@ -222,6 +222,28 @@ TEST(utils, get_cgroup_path_in_hierarchy)
   }
 }
 
+TEST(utils, parse_kconfig)
+{
+  char path[] = "/tmp/configXXXXXX";
+  int fd = mkstemp(path);
+  const std::string config = "# Intro comment\n"
+                             "CONFIG_YES=y\n"
+                             "CONFIG_MOD=m\n"
+                             "CONFIG_VAL=42\n"
+                             "# CONFIG_NO is not set";
+  EXPECT_EQ(write(fd, config.c_str(), config.length()), config.length());
+  setenv("BPFTRACE_KCONFIG_TEST", path, true);
+  close(fd);
+
+  KConfig kconfig;
+  ASSERT_TRUE(kconfig.has_value("CONFIG_YES", "y"));
+  ASSERT_TRUE(kconfig.has_value("CONFIG_MOD", "m"));
+  ASSERT_TRUE(kconfig.has_value("CONFIG_VAL", "42"));
+  ASSERT_EQ(kconfig.config.find("CONFIG_NO"), kconfig.config.end());
+
+  unlink(path);
+}
+
 } // namespace utils
 } // namespace test
 } // namespace bpftrace

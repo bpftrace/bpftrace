@@ -130,6 +130,18 @@ struct DeprecatedName
 typedef std::unordered_map<std::string, std::unordered_set<std::string>>
     FuncsModulesMap;
 
+struct KConfig
+{
+  KConfig();
+  bool has_value(const std::string &name, const std::string &value) const
+  {
+    auto c = config.find(name);
+    return c != config.end() && c->second == value;
+  }
+
+  std::unordered_map<std::string, std::string> config;
+};
+
 static std::vector<DeprecatedName> DEPRECATED_LIST =
 {
 };
