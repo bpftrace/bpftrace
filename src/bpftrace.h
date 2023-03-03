@@ -168,6 +168,7 @@ public:
   std::map<libbpf::bpf_func_id, location> helper_use_loc_;
   // mapping traceable functions to modules (or "vmlinux") that they appear in
   FuncsModulesMap traceable_funcs_;
+  KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
 
   std::map<std::string, std::unique_ptr<PCAPwriter>> pcap_writers;
