@@ -228,7 +228,6 @@ KConfig::KConfig()
   }
 }
 
-
 bool get_uint64_env_var(const std::string &str, uint64_t &dest)
 {
   if (const char* env_p = std::getenv(str.c_str()))
@@ -365,10 +364,10 @@ std::vector<int> get_possible_cpus()
   return read_cpu_range("/sys/devices/system/cpu/possible");
 }
 
-std::vector<std::string> get_kernel_cflags(
-    const char* uname_machine,
-    const std::string& ksrc,
-    const std::string& kobj)
+std::vector<std::string> get_kernel_cflags(const char *uname_machine,
+                                           const std::string &ksrc,
+                                           const std::string &kobj,
+                                           const KConfig &kconfig)
 {
   std::vector<std::string> cflags;
   std::string arch = uname_machine;
@@ -432,6 +431,20 @@ std::vector<std::string> get_kernel_cflags(
   {
     // Required by several header files in arch/arm/include
     cflags.push_back("-D__LINUX_ARM_ARCH__=7");
+  }
+
+  if (arch == "arm64")
+  {
+    // arm64 defines KASAN_SHADOW_SCALE_SHIFT in a Makefile instead of defining
+    // it in a header file. Since we're not executing make, we need to set the
+    // value manually (values are taken from arch/arm64/Makefile).
+    if (kconfig.has_value("CONFIG_KASAN", "y"))
+    {
+      if (kconfig.has_value("CONFIG_KASAN_SW_TAGS", "y"))
+        cflags.push_back("-DKASAN_SHADOW_SCALE_SHIFT=4");
+      else
+        cflags.push_back("-DKASAN_SHADOW_SCALE_SHIFT=3");
+    }
   }
 
   return cflags;

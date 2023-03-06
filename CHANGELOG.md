@@ -27,6 +27,8 @@ and this project adheres to
   - [#2545](https://github.com/iovisor/bpftrace/pull/2545)
 - Treat str() builtin's len parameter as int64
   - [#2546](https://github.com/iovisor/bpftrace/pull/2546)
+- arm64: define the KASAN_SHADOW_SCALE_SHIFT macro
+  - [#2518](https://github.com/iovisor/bpftrace/pull/2518)
 #### Docs
 #### Tools
 
