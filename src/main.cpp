@@ -369,7 +369,8 @@ static std::optional<struct timespec> get_boottime()
     kobj = std::get<1>(kdirs);
 
     if (ksrc != "")
-      extra_flags = get_kernel_cflags(utsname.machine, ksrc, kobj);
+      extra_flags = get_kernel_cflags(
+          utsname.machine, ksrc, kobj, bpftrace.kconfig);
   }
   extra_flags.push_back("-include");
   extra_flags.push_back(CLANG_WORKAROUNDS_H);
