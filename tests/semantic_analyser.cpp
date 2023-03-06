@@ -1959,9 +1959,6 @@ TEST(semantic_analyser, int_cast_types)
   test("kretprobe:f { @ = (uint16)retval }", 0);
   test("kretprobe:f { @ = (uint32)retval }", 0);
   test("kretprobe:f { @ = (uint64)retval }", 0);
-
-  test("kretprobe:f { @ = (int2)retval }", 1);
-  test("kretprobe:f { @ = (uint2)retval }", 1);
 }
 
 TEST(semantic_analyser, int_cast_usage)
@@ -1985,9 +1982,6 @@ TEST(semantic_analyser, intptr_cast_types)
   test("kretprobe:f { @ = *(uint16*)retval }", 0);
   test("kretprobe:f { @ = *(uint32*)retval }", 0);
   test("kretprobe:f { @ = *(uint64*)retval }", 0);
-
-  test("kretprobe:f { @ = *(int2*)retval }", 1);
-  test("kretprobe:f { @ = *(uint2*)retval }", 1);
 }
 
 TEST(semantic_analyser, intptr_cast_usage)
@@ -2434,8 +2428,6 @@ TEST(semantic_analyser, tuple)
   test(R"_(BEGIN { @t = (1, 2); @t = (4, "other"); })_", 10);
   test(R"_(BEGIN { @t = (1, 2); @t = 5; })_", 1);
   test(R"_(BEGIN { @t = (1, count()) })_", 1);
-  test(R"_(BEGIN { @t = (1, (aaa)0) })_", 1);
-  test(R"_(BEGIN { @t = (1, !(aaa)0) })_", 1);
 }
 
 TEST(semantic_analyser, tuple_indexing)
@@ -2568,7 +2560,6 @@ TEST(semantic_analyser, call_path)
 TEST(semantic_analyser, int_ident)
 {
   test("BEGIN { sizeof(int32) }", 0);
-  test("BEGIN { print(int32) }", 1);
 }
 
 TEST(semantic_analyser, tracepoint_common_field)

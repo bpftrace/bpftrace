@@ -210,6 +210,23 @@ private:
   Call(const Call &other);
 };
 
+class Sizeof : public Expression
+{
+public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Sizeof)
+
+  Sizeof(SizedType type, location loc);
+  Sizeof(Expression *expr, location loc);
+  ~Sizeof();
+
+  Expression *expr;
+  SizedType argtype;
+
+private:
+  Sizeof(const Sizeof &other);
+};
+
 class Map : public Expression {
 public:
   DEFINE_ACCEPT
@@ -319,20 +336,9 @@ public:
   DEFINE_LEAFCOPY(Cast)
   DEFINE_ACCEPT
 
-  Cast(const std::string &type,
-       bool is_pointer,
-       bool is_double_pointer,
-       Expression *expr);
-  Cast(const std::string &type,
-       bool is_pointer,
-       bool is_double_pointer,
-       Expression *expr,
-       location loc);
+  Cast(SizedType type, Expression *expr, location loc);
   ~Cast();
 
-  std::string cast_type;
-  bool is_pointer;
-  bool is_double_pointer;
   Expression *expr = nullptr;
 
 private:

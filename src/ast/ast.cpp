@@ -21,6 +21,7 @@ MAKE_ACCEPT(Builtin)
 MAKE_ACCEPT(Identifier)
 MAKE_ACCEPT(PositionalParameter)
 MAKE_ACCEPT(Call)
+MAKE_ACCEPT(Sizeof)
 MAKE_ACCEPT(Map)
 MAKE_ACCEPT(Variable)
 MAKE_ACCEPT(Binop)
@@ -52,6 +53,12 @@ Call::~Call()
 
   delete vargs;
   vargs = nullptr;
+}
+Sizeof::~Sizeof()
+{
+  if (expr)
+    delete expr;
+  expr = nullptr;
 }
 Map::~Map()
 {
@@ -256,6 +263,15 @@ Call::Call(const std::string &func, ExpressionList *vargs, location loc)
 {
 }
 
+Sizeof::Sizeof(SizedType type, location loc)
+    : Expression(loc), expr(nullptr), argtype(type)
+{
+}
+
+Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
+{
+}
+
 Map::Map(const std::string &ident, location loc)
     : Expression(loc), ident(ident), vargs(nullptr)
 {
@@ -321,18 +337,10 @@ ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
 {
 }
 
-
-Cast::Cast(const std::string &type,
-           bool is_pointer,
-           bool is_double_pointer,
-           Expression *expr,
-           location loc)
-    : Expression(loc),
-      cast_type(type),
-      is_pointer(is_pointer),
-      is_double_pointer(is_double_pointer),
-      expr(expr)
+Cast::Cast(SizedType cast_type, Expression *expr, location loc)
+    : Expression(loc), expr(expr)
 {
+  type = cast_type;
 }
 
 
@@ -577,6 +585,10 @@ Call::Call(const Call &other) : Expression(other)
   func = other.func;
 }
 
+Sizeof::Sizeof(const Sizeof &other) : Expression(other)
+{
+}
+
 Binop::Binop(const Binop &other) : Expression(other)
 {
   op = other.op;
@@ -613,9 +625,6 @@ Program::Program(const Program &other) : Node(other)
 
 Cast::Cast(const Cast &other) : Expression(other)
 {
-  cast_type = other.cast_type;
-  is_pointer = other.is_pointer;
-  is_double_pointer = other.is_double_pointer;
 }
 
 Probe::Probe(const Probe &other) : Node(other)

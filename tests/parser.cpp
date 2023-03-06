@@ -1438,43 +1438,43 @@ TEST(Parser, cast)
 TEST(Parser, cast_ptr)
 {
   test("kprobe:sys_read { (struct mytype*)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (struct mytype*)\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype *)\n"
+       "   builtin: arg0\n");
   test("kprobe:sys_read { (union mytype*)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (union mytype*)\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (union mytype *)\n"
+       "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_typedef)
 {
-  test("kprobe:sys_read { (mytype)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (mytype)\n"
-      "   builtin: arg0\n");
+  test("kprobe:sys_read { (struct mytype)arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype)\n"
+       "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_ptr_typedef)
 {
-  test("kprobe:sys_read { (mytype*)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (mytype*)\n"
-      "   builtin: arg0\n");
+  test("kprobe:sys_read { (struct mytype*)arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype *)\n"
+       "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_or_expr1)
 {
-  test("kprobe:sys_read { (mytype)*arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (mytype)\n"
-      "   dereference\n"
-      "    builtin: arg0\n");
+  test("kprobe:sys_read { (struct mytype)*arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype)\n"
+       "   dereference\n"
+       "    builtin: arg0\n");
 }
 
 TEST(Parser, cast_or_expr2)
@@ -1489,30 +1489,30 @@ TEST(Parser, cast_or_expr2)
 
 TEST(Parser, cast_precedence)
 {
-  test("kprobe:sys_read { (mytype)arg0.field; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (mytype)\n"
-      "   .\n"
-      "    builtin: arg0\n"
-      "    field\n");
+  test("kprobe:sys_read { (struct mytype)arg0.field; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype)\n"
+       "   .\n"
+       "    builtin: arg0\n"
+       "    field\n");
 
-  test("kprobe:sys_read { (mytype*)arg0->field; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (mytype*)\n"
-      "   .\n"
-      "    dereference\n"
-      "     builtin: arg0\n"
-      "    field\n");
+  test("kprobe:sys_read { (struct mytype*)arg0->field; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype *)\n"
+       "   .\n"
+       "    dereference\n"
+       "     builtin: arg0\n"
+       "    field\n");
 
-  test("kprobe:sys_read { (mytype)arg0+123; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  +\n"
-      "   (mytype)\n"
-      "    builtin: arg0\n"
-      "   int: 123\n");
+  test("kprobe:sys_read { (struct mytype)arg0+123; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  +\n"
+       "   (struct mytype)\n"
+       "    builtin: arg0\n"
+       "   int: 123\n");
 }
 
 TEST(Parser, dereference_precedence)
