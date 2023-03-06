@@ -10,15 +10,14 @@
 #if LLVM_VERSION_MAJOR <= 16
 #include <llvm-c/Transforms/IPO.h>
 #endif
+#include <llvm/CodeGen/UnreachableBlockElim.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Metadata.h>
 #include <llvm/IR/Verifier.h>
-#if LLVM_VERSION_MAJOR >= 14
 #include <llvm/Passes/PassBuilder.h>
-#endif
 #include <llvm/Transforms/IPO.h>
 #if LLVM_VERSION_MAJOR <= 16
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
@@ -884,7 +883,8 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateRegisterRead(ctx_, offset, call.func + "_" + reg_name);
   } else if (call.func == "printf") {
     // We overload printf call for iterator probe's seq_printf helper.
-    if (probetype(current_attach_point_->provider) == ProbeType::iter) {
+    if (!inside_subprog_ &&
+        probetype(current_attach_point_->provider) == ProbeType::iter) {
       auto nargs = call.vargs->size() - 1;
 
       int ptr_size = sizeof(unsigned long);
@@ -2225,7 +2225,11 @@ void CodegenLLVM::visit(Jump &jump)
   switch (jump.ident) {
     case JumpType::RETURN:
       // return can be used outside of loops
-      createRet();
+      if (jump.return_value) {
+        auto scoped_del = accept(jump.return_value);
+        createRet(expr_);
+      } else
+        createRet();
       break;
     case JumpType::BREAK:
       b_.CreateBr(std::get<1>(loops_.back()));
@@ -2383,11 +2387,59 @@ void CodegenLLVM::generateProbe(Probe &probe,
         func_type, section_name, current_attach_point_->address, index);
 }
 
+void CodegenLLVM::visit(Subprog &subprog)
+{
+  std::vector<llvm::Type *> arg_types;
+  // First argument is for passing ctx pointer for output, rest are proper
+  // arguments to the function
+  arg_types.push_back(b_.getInt8PtrTy());
+  std::transform(subprog.args->begin(),
+                 subprog.args->end(),
+                 std::back_inserter(arg_types),
+                 [this](SubprogArg *arg) { return b_.GetType(arg->type); });
+  FunctionType *func_type = FunctionType::get(b_.GetType(subprog.return_type),
+                                              arg_types,
+                                              0);
+
+  Function *func = Function::Create(
+      func_type, Function::InternalLinkage, subprog.name(), module_.get());
+  BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
+  b_.SetInsertPoint(entry);
+
+  variables_.clear();
+  ctx_ = func->arg_begin();
+  inside_subprog_ = true;
+
+  int arg_index = 0;
+  for (SubprogArg *arg : *subprog.args) {
+    auto alloca = b_.CreateAllocaBPF(b_.GetType(arg->type), arg->name());
+    b_.CreateStore(func->getArg(arg_index + 1), alloca);
+    variables_.insert({ arg->name(), alloca });
+    ++arg_index;
+  }
+
+  for (Statement *stmt : *subprog.stmts) {
+    auto scoped_del = accept(stmt);
+  }
+  if (subprog.return_type.IsVoidTy())
+    createRet();
+
+  FunctionPassManager fpm;
+  FunctionAnalysisManager fam;
+  llvm::PassBuilder pb;
+  pb.registerFunctionAnalyses(fam);
+  fpm.addPass(UnreachableBlockElimPass());
+  fpm.run(*func, fam);
+}
+
 void CodegenLLVM::createRet(Value *value)
 {
   // If value is explicitly provided, use it
   if (value) {
     b_.CreateRet(value);
+    return;
+  } else if (inside_subprog_) {
+    b_.CreateRetVoid();
     return;
   }
 
@@ -2441,6 +2493,7 @@ void CodegenLLVM::visit(Probe &probe)
 
   bool generated = false;
   current_attach_point_ = attach_point;
+  inside_subprog_ = false;
 
   /*
    * Most of the time, we can take a probe like kprobe:do_f* and build a
@@ -2590,6 +2643,9 @@ void CodegenLLVM::visit(Probe &probe)
 
 void CodegenLLVM::visit(Program &program)
 {
+  if (program.functions)
+    for (Subprog *subprog : *program.functions)
+      auto scoped_del = accept(subprog);
   for (Probe *probe : *program.probes)
     auto scoped_del = accept(probe);
 }

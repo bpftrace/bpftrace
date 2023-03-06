@@ -367,6 +367,11 @@ void Printer::visit(Jump &jump)
 {
   std::string indent(depth_, ' ');
   out_ << indent << opstr(jump) << std::endl;
+  if (jump.return_value) {
+    ++depth_;
+    jump.return_value->accept(*this);
+    --depth_;
+  }
 }
 
 void Printer::visit(Predicate &pred)
@@ -401,6 +406,27 @@ void Printer::visit(Probe &probe)
   --depth_;
 }
 
+void Printer::visit(Subprog &subprog)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << subprog.name() << ": " << subprog.return_type;
+
+  out_ << "(";
+  for (size_t i = 0; i < subprog.args->size(); i++) {
+    auto &arg = subprog.args->at(i);
+    out_ << arg->name() << " : " << arg->type;
+    if (i < subprog.args->size() - 1)
+      out_ << ", ";
+  }
+  out_ << ")" << std::endl;
+
+  ++depth_;
+  for (Statement *stmt : *subprog.stmts) {
+    stmt->accept(*this);
+  }
+  --depth_;
+}
+
 void Printer::visit(Program &program)
 {
   if (program.c_definitions.size() > 0)
@@ -416,6 +442,8 @@ void Printer::visit(Program &program)
   }
 
   ++depth_;
+  for (Subprog *subprog : *program.functions)
+    subprog->accept(*this);
   for (Probe *probe : *program.probes)
     probe->accept(*this);
   --depth_;

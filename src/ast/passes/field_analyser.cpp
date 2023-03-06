@@ -21,6 +21,8 @@ void FieldAnalyser::visit(Builtin &builtin)
   std::string builtin_type;
   sized_type_ = CreateNone();
   if (builtin.ident == "ctx") {
+    if (!probe_)
+      return;
     switch (prog_type_) {
       case libbpf::BPF_PROG_TYPE_KPROBE:
         builtin_type = "struct pt_regs";
@@ -38,10 +40,14 @@ void FieldAnalyser::visit(Builtin &builtin)
   } else if (builtin.ident == "curtask") {
     builtin_type = "struct task_struct";
   } else if (builtin.ident == "args") {
+    if (!probe_)
+      return;
     resolve_args(*probe_);
     has_builtin_args_ = true;
     return;
   } else if (builtin.ident == "retval") {
+    if (!probe_)
+      return;
     resolve_args(*probe_);
 
     auto arg = bpftrace_.structs.GetProbeArg(*probe_, "$retval");
@@ -254,9 +260,11 @@ void FieldAnalyser::resolve_fields(SizedType &type)
   if (!type.IsRecordTy())
     return;
 
-  for (auto &ap : *probe_->attach_points)
-    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-      dwarf->resolve_fields(type);
+  if (probe_) {
+    for (auto &ap : *probe_->attach_points)
+      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+        dwarf->resolve_fields(type);
+  }
 
   if (type.GetFieldCount() == 0 && bpftrace_.has_btf_data())
     bpftrace_.btf_->resolve_fields(type);
@@ -273,9 +281,11 @@ void FieldAnalyser::resolve_type(SizedType &type)
     return;
   auto name = inner_type->GetName();
 
-  for (auto &ap : *probe_->attach_points)
-    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-      sized_type_ = dwarf->get_stype(name);
+  if (probe_) {
+    for (auto &ap : *probe_->attach_points)
+      if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+        sized_type_ = dwarf->get_stype(name);
+  }
 
   if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
     sized_type_ = bpftrace_.btf_->get_stype(name);
@@ -298,6 +308,15 @@ void FieldAnalyser::visit(Probe &probe)
     Visit(*probe.pred);
   }
   for (Statement *stmt : *probe.stmts) {
+    Visit(*stmt);
+  }
+}
+
+void FieldAnalyser::visit(Subprog &subprog)
+{
+  probe_ = nullptr;
+
+  for (Statement *stmt : *subprog.stmts) {
     Visit(*stmt);
   }
 }

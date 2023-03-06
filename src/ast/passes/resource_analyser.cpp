@@ -53,6 +53,12 @@ void ResourceAnalyser::visit(Probe &probe)
   Visitor::visit(probe);
 }
 
+void ResourceAnalyser::visit(Subprog &subprog)
+{
+  probe_ = nullptr;
+  Visitor::visit(subprog);
+}
+
 void ResourceAnalyser::visit(Builtin &builtin)
 {
   if (builtin.ident == "elapsed") {
@@ -92,7 +98,8 @@ void ResourceAnalyser::visit(Call &call)
 
     auto fmtstr = get_literal_string(*call.vargs->at(0));
     if (call.func == "printf") {
-      if (single_provider_type_postsema(probe_) == ProbeType::iter) {
+      if (probe_ != nullptr &&
+          single_provider_type_postsema(probe_) == ProbeType::iter) {
         resources_.mapped_printf_args.emplace_back(fmtstr, args);
         resources_.needs_data_map = true;
       } else {
