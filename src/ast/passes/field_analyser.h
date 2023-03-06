@@ -32,6 +32,7 @@ public:
   void visit(Variable &var) override;
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
+  void visit(Sizeof &szof) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(Unop &unop) override;
@@ -43,6 +44,7 @@ private:
   bool resolve_args(Probe &probe);
   bool compare_args(const ProbeArgs &args1, const ProbeArgs &args2);
   void resolve_fields(SizedType &type);
+  void resolve_type(SizedType &type);
 
   Node *root_;
   ProbeType probe_type_;

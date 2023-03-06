@@ -1147,10 +1147,6 @@ void CodegenLLVM::visit(Call &call)
     expr_ = b_.CreateIntCast(expr_, b_.getInt32Ty(), arg.type.IsSigned());
     b_.CreateSignal(ctx_, expr_, call.loc);
   }
-  else if (call.func == "sizeof")
-  {
-    expr_ = b_.getInt64(call.vargs->at(0)->type.GetSize());
-  }
   else if (call.func == "strerror")
   {
     auto scoped_del = accept(call.vargs->front());
@@ -1291,6 +1287,11 @@ void CodegenLLVM::visit(Call &call)
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
   }
+}
+
+void CodegenLLVM::visit(Sizeof &szof)
+{
+  expr_ = b_.getInt64(szof.argtype.GetSize());
 }
 
 void CodegenLLVM::visit(Map &map)

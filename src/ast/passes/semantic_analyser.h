@@ -50,6 +50,7 @@ public:
   void visit(Identifier &identifier) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
+  void visit(Sizeof &szof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
@@ -101,6 +102,7 @@ private:
   void assign_map_type(const Map &map, const SizedType &type);
   void update_key_type(const Map &map, const MapKey &new_key);
   bool update_string_size(SizedType &type, const SizedType &new_type);
+  void resolve_struct_type(SizedType &type, const location &loc);
 
   void builtin_args_tracepoint(AttachPoint *attach_point, Builtin &builtin);
   ProbeType single_provider_type(void);

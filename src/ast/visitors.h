@@ -22,6 +22,7 @@ public:
   virtual void visit(Identifier &identifier) = 0;
   virtual void visit(StackMode &mode) = 0;
   virtual void visit(Call &call) = 0;
+  virtual void visit(Sizeof &szof) = 0;
   virtual void visit(Map &map) = 0;
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
@@ -84,6 +85,7 @@ public:
   void visit(Identifier &identifier) override;
   void visit(Builtin &builtin) override;
   void visit(Call &call) override;
+  void visit(Sizeof &szof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
@@ -145,6 +147,7 @@ public:
   virtual R visit(Identifier &node) DEFAULT_FN;
   virtual R visit(StackMode &node) DEFAULT_FN;
   virtual R visit(Call &node) DEFAULT_FN;
+  virtual R visit(Sizeof &node) DEFAULT_FN;
   virtual R visit(Map &node) DEFAULT_FN;
   virtual R visit(Variable &node) DEFAULT_FN;
   virtual R visit(Binop &node) DEFAULT_FN;
@@ -190,6 +193,7 @@ private:
     DEFINE_DISPATCH(Identifier);
     DEFINE_DISPATCH(Builtin);
     DEFINE_DISPATCH(Call);
+    DEFINE_DISPATCH(Sizeof);
     DEFINE_DISPATCH(Map);
     DEFINE_DISPATCH(Variable);
     DEFINE_DISPATCH(Binop);
@@ -238,6 +242,7 @@ public:
   Node *visit(Identifier &) override;
   Node *visit(StackMode &) override;
   Node *visit(Call &) override;
+  Node *visit(Sizeof &) override;
   Node *visit(Map &) override;
   Node *visit(Variable &) override;
   Node *visit(Binop &) override;

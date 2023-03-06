@@ -40,6 +40,12 @@ void Visitor::visit(Call &call)
   }
 }
 
+void Visitor::visit(Sizeof &szof)
+{
+  if (szof.expr)
+    Visit(*szof.expr);
+}
+
 void Visitor::visit(Map &map)
 {
   if (map.vargs)
@@ -231,6 +237,14 @@ Node *Mutator::visit(Call &call)
   if (call.vargs)
     c->vargs = mutateExprList(call.vargs);
   return c;
+}
+
+Node *Mutator::visit(Sizeof &szof)
+{
+  auto s = szof.leafcopy();
+  if (szof.expr)
+    s->expr = Value<Expression>(szof.expr);
+  return s;
 }
 
 Node *Mutator::visit(Map &map)

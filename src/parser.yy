@@ -9,7 +9,7 @@
 %define api.value.type variant
 %define parse.assert
 %define parse.trace
-%expect 5
+%expect 3
 
 %define parse.error verbose
 
@@ -102,11 +102,14 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   RETURN     "return"
   CONTINUE   "continue"
   BREAK      "break"
+  SIZEOF     "sizeof"
 ;
 
 %token <std::string> BUILTIN "builtin"
 %token <std::string> CALL "call"
 %token <std::string> CALL_BUILTIN "call_builtin"
+%token <std::string> SIMPLE_TYPE "simple type"
+%token <std::string> SIZED_TYPE "sized type"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
 %token <std::string> CPREPROC "preprocessor directive"
@@ -126,6 +129,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::AttachPoint *> attach_point
 %type <ast::AttachPointList *> attach_points
 %type <ast::Call *> call
+%type <ast::Sizeof *> sizeof_expr
 %type <ast::Expression *> and_expr addi_expr primary_expr cast_expr conditional_expr equality_expr expr logical_and_expr muli_expr
 %type <ast::Expression *> logical_or_expr map_or_var or_expr postfix_expr relational_expr shift_expr tuple_access_expr unary_expr xor_expr
 %type <ast::ExpressionList *> vargs
@@ -137,6 +141,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ProbeList *> probes
 %type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt
 %type <ast::StatementList *> block block_or_if stmt_list
+%type <SizedType> type pointer_type struct_type
 %type <ast::Variable *> var
 
 %left COMMA
@@ -164,10 +169,61 @@ program:
                 ;
 
 c_definitions:
-                CPREPROC c_definitions    { $$ = $1 + "\n" + $2; }
-        |       STRUCT_DEFN c_definitions { $$ = $1 + ";\n" + $2; }
-        |       ENUM c_definitions        { $$ = $1 + ";\n" + $2; }
-        |       %empty                    { $$ = std::string(); }
+                CPREPROC c_definitions           { $$ = $1 + "\n" + $2; }
+        |       STRUCT STRUCT_DEFN c_definitions { $$ = $2 + ";\n" + $3; }
+        |       STRUCT ENUM c_definitions        { $$ = $2 + ";\n" + $3; }
+        |       %empty                           { $$ = std::string(); }
+                ;
+
+type:
+                SIMPLE_TYPE {
+                    static std::unordered_map<std::string, SizedType> type_map = {
+                        {"bool", CreateBool()},
+                        {"uint8", CreateUInt(8)},
+                        {"uint16", CreateUInt(16)},
+                        {"uint32", CreateUInt(32)},
+                        {"uint64", CreateUInt(64)},
+                        {"int8", CreateInt(8)},
+                        {"int16", CreateInt(16)},
+                        {"int32", CreateInt(32)},
+                        {"int64", CreateInt(64)},
+                        {"min_t", CreateMin(true)},
+                        {"max_t", CreateMax(true)},
+                        {"sum_t", CreateSum(true)},
+                        {"count_t", CreateCount(true)},
+                        {"avg_t", CreateAvg(true)},
+                        {"stats_t", CreateStats(true)},
+                        {"umin_t", CreateMin(false)},
+                        {"umax_t", CreateMax(false)},
+                        {"usum_t", CreateSum(false)},
+                        {"ucount_t", CreateCount(false)},
+                        {"uavg_t", CreateAvg(false)},
+                        {"ustats_t", CreateStats(false)},
+                        {"timestamp_t", CreateTimestamp()},
+                        {"macaddr_t", CreateMacAddress()},
+                        {"cgroup_path_t", CreateCgroupPath()},
+                        {"strerror_t", CreateStrerror()},
+                    };
+                    $$ = type_map[$1];
+                }
+        |       SIZED_TYPE "[" INT "]" {
+                    if ($1 == "str_t") {
+                        $$ = CreateString($3);
+                    } else if ($1 == "inet_t") {
+                        $$ = CreateInet($3);
+                    } else if ($1 == "buf_t") {
+                        $$ = CreateBuffer($3);
+                    }
+                }
+        |       pointer_type { $$ = $1; }
+        |       struct_type { $$ = $1; }
+                ;
+
+pointer_type:
+                type "*" { $$ = CreatePointer($1); }
+                ;
+struct_type:
+                STRUCT IDENT { $$ = CreateRecord($2, std::weak_ptr<Struct>()); }
                 ;
 
 probes:
@@ -361,6 +417,7 @@ postfix_expr:
 /* array  */
         |       postfix_expr "[" expr "]" { $$ = new ast::ArrayAccess($1, $3, @2 + @4); }
         |       call                      { $$ = $1; }
+        |       sizeof_expr               { $$ = $1; }
         |       map_or_var INCREMENT      { $$ = new ast::Unop(ast::Operator::INCREMENT, $1, true, @2); }
         |       map_or_var DECREMENT      { $$ = new ast::Unop(ast::Operator::DECREMENT, $1, true, @2); }
 /* errors */
@@ -462,10 +519,13 @@ addi_expr:
                 ;
 
 cast_expr:
-                unary_expr                            { $$ = $1; }
-        |       LPAREN IDENT RPAREN cast_expr         { $$ = new ast::Cast($2, false, false, $4, @1 + @3); }
-        |       LPAREN IDENT MUL RPAREN cast_expr     { $$ = new ast::Cast($2, true, false, $5, @1 + @3); }
-        |       LPAREN IDENT MUL MUL RPAREN cast_expr { $$ = new ast::Cast($2, true, true, $6, @1 + @3); }
+                unary_expr                                  { $$ = $1; }
+        |       LPAREN type RPAREN cast_expr                { $$ = new ast::Cast($2, $4, @1 + @3); }
+                ;
+
+sizeof_expr:
+                SIZEOF "(" type ")"                         { $$ = new ast::Sizeof($3, @$); }
+        |       SIZEOF "(" expr ")"                         { $$ = new ast::Sizeof($3, @$); }
                 ;
 
 int:

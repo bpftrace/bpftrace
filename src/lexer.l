@@ -38,7 +38,10 @@ vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#\*])+
 builtin  arg[0-9]|args|cgroup|comm|cpid|numaid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
-call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|sizeof|stats|str|strerror|strftime|strncmp|strcontains|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|skboutput|pton|debugf
+call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|stats|str|strerror|strftime|strncmp|strcontains|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|skboutput|pton|debugf
+
+simple_type     bool|(u)?int(8|16|32|64)|(u)?(min|max|sum|count|avg|stats)_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp_t|macaddr_t|cgroup_path_t|strerror_t
+sized_type      str_t|inet_t|buf_t
 
 /* Don't add to this! Use builtin OR call not both */
 call_and_builtin kstack|ustack
@@ -143,6 +146,11 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
 "return"                { return Parser::make_RETURN(loc); }
 "continue"              { return Parser::make_CONTINUE(loc); }
 "break"                 { return Parser::make_BREAK(loc); }
+"sizeof"                { return Parser::make_SIZEOF(loc); }
+
+{simple_type}           { return Parser::make_SIMPLE_TYPE(yytext, loc); }
+{sized_type}            { return Parser::make_SIZED_TYPE(yytext, loc); }
+
 
 \"                      { yy_push_state(STR, yyscanner); buffer.clear(); }
 <STR>{
@@ -168,7 +176,12 @@ bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
   .                     driver.error(loc, "invalid character"); yy_pop_state(yyscanner);
 }
 
-struct|union|enum       yy_push_state(STRUCT, yyscanner); buffer.clear(); struct_type = yytext;
+struct|union|enum       {
+                            yy_push_state(STRUCT, yyscanner);
+                            buffer.clear();
+                            struct_type = yytext;
+                            return Parser::make_STRUCT(loc);
+                        }
 <STRUCT,BRACE>{
   "*"|")"               {
                           if (YY_START == STRUCT)

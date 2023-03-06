@@ -129,18 +129,14 @@ void FieldAnalyser::visit(FieldAccess &acc)
 void FieldAnalyser::visit(Cast &cast)
 {
   Visit(*cast.expr);
-  sized_type_ = CreateNone();
+  resolve_type(cast.type);
+}
 
-  for (auto &ap : *probe_->attach_points)
-    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
-      sized_type_ = dwarf->get_stype(cast.cast_type);
-
-  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
-    sized_type_ = bpftrace_.btf_->get_stype(cast.cast_type);
-
-  // Could not resolve destination type - let ClangParser do it
-  if (sized_type_.IsNoneTy())
-    bpftrace_.btf_set_.insert(cast.cast_type);
+void FieldAnalyser::visit(Sizeof &szof)
+{
+  if (szof.expr)
+    Visit(*szof.expr);
+  resolve_type(szof.argtype);
 }
 
 void FieldAnalyser::visit(AssignMapStatement &assignment)
@@ -317,6 +313,29 @@ void FieldAnalyser::resolve_fields(SizedType &type)
 
   if (type.GetFieldCount() == 0 && bpftrace_.has_btf_data())
     bpftrace_.btf_->resolve_fields(type);
+}
+
+void FieldAnalyser::resolve_type(SizedType &type)
+{
+  sized_type_ = CreateNone();
+
+  const SizedType *inner_type = &type;
+  while (inner_type->IsPtrTy())
+    inner_type = inner_type->GetPointeeTy();
+  if (!inner_type->IsRecordTy())
+    return;
+  auto name = inner_type->GetName();
+
+  for (auto &ap : *probe_->attach_points)
+    if (Dwarf *dwarf = bpftrace_.get_dwarf(*ap))
+      sized_type_ = dwarf->get_stype(name);
+
+  if (sized_type_.IsNoneTy() && bpftrace_.has_btf_data())
+    sized_type_ = bpftrace_.btf_->get_stype(name);
+
+  // Could not resolve destination type - let ClangParser do it
+  if (sized_type_.IsNoneTy())
+    bpftrace_.btf_set_.insert(name);
 }
 
 void FieldAnalyser::visit(Probe &probe)

@@ -120,6 +120,17 @@ void Printer::visit(Call &call)
   --depth_;
 }
 
+void Printer::visit(Sizeof &szof)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "sizeof: " << type(szof.type) << std::endl;
+
+  ++depth_;
+  if (szof.expr)
+    szof.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(Map &map)
 {
   std::string indent(depth_, ' ');
@@ -213,10 +224,7 @@ void Printer::visit(ArrayAccess &arr)
 void Printer::visit(Cast &cast)
 {
   std::string indent(depth_, ' ');
-  if (cast.is_pointer)
-    out_ << indent << "(" << cast.cast_type << "*)" << std::endl;
-  else
-    out_ << indent << "(" << cast.cast_type << ")" << std::endl;
+  out_ << indent << "(" << cast.type << ")" << std::endl;
 
   ++depth_;
   cast.expr->accept(*this);

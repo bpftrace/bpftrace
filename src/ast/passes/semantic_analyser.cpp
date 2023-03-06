@@ -1169,15 +1169,6 @@ void SemanticAnalyser::visit(Call &call)
           << "signal only accepts string literals or integers";
     }
   }
-  else if (call.func == "sizeof")
-  {
-    // sizeof() is a interesting builtin because the arguments can be either
-    // an expression or a type. As a result, the only thing we'll check here
-    // is that we have a single argument.
-    check_nargs(call, 1);
-
-    call.type = CreateUInt64();
-  }
   else if (call.func == "path")
   {
     if (!bpftrace_.feature_->has_d_path())
@@ -1373,6 +1364,17 @@ void SemanticAnalyser::visit(Call &call)
   }
 }
 
+void SemanticAnalyser::visit(Sizeof &szof)
+{
+  szof.type = CreateUInt64();
+  if (szof.expr)
+  {
+    szof.expr->accept(*this);
+    szof.argtype = szof.expr->type;
+  }
+  resolve_struct_type(szof.argtype, szof.loc);
+}
+
 void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
 {
   call.type = CreateStack(kernel);
@@ -1460,8 +1462,10 @@ void SemanticAnalyser::visit(Map &map)
       // a cast into the ast.
       if (expr->type.IsIntTy() && expr->type.GetSize() < 8)
       {
-        std::string type = expr->type.IsSigned() ? "int64" : "uint64";
-        Expression *cast = new ast::Cast(type, false, false, expr, map.loc);
+        Expression *cast = new ast::Cast(expr->type.IsSigned() ? CreateInt64()
+                                                               : CreateUInt64(),
+                                         expr,
+                                         map.loc);
         cast->accept(*this);
         map.vargs->at(i) = cast;
         expr = cast;
@@ -2240,82 +2244,36 @@ void SemanticAnalyser::visit(Cast &cast)
 {
   cast.expr->accept(*this);
 
-  if (cast.expr->type.IsRecordTy())
+  // cast type is synthesised in parser, if it is a struct, it needs resolving
+  resolve_struct_type(cast.type, cast.loc);
+
+  auto rhs = cast.expr->type;
+  if (rhs.IsRecordTy())
   {
     LOG(ERROR, cast.loc, err_)
         << "Cannot cast from struct type \"" << cast.expr->type << "\"";
   }
-  else if (cast.expr->type.IsNoneTy())
+  else if (rhs.IsNoneTy())
   {
     LOG(ERROR, cast.loc, err_)
         << "Cannot cast from \"" << cast.expr->type << "\" type";
   }
 
-  bool is_ctx = cast.expr->type.IsCtxAccess();
-  auto &intcasts = getIntcasts();
-  auto k_v = intcasts.find(cast.cast_type);
-
-  // Built-in int types
-  if (k_v != intcasts.end())
+  if (!cast.type.IsIntTy() && !cast.type.IsPtrTy() &&
+      !(cast.type.IsPtrTy() && !cast.type.GetElementTy()->IsIntTy() &&
+        !cast.type.GetElementTy()->IsRecordTy()))
   {
-    auto &v = k_v->second;
-    if (cast.is_pointer)
-    {
-      cast.type = CreatePointer(CreateInteger(std::get<0>(v), std::get<1>(v)));
-      if (is_ctx)
-      {
-        LOG(ERROR, cast.loc, err_)
-            << "Integer pointer casts are not supported for type: ctx";
-      }
-
-      if (cast.is_double_pointer)
-        cast.type = CreatePointer(cast.type);
-    }
-    else
-    {
-      cast.type = CreateInteger(std::get<0>(v), std::get<1>(v));
-
-      auto rhs = cast.expr->type;
-      // Casting Type::ctx to Type::integer is supported to access a
-      // tracepoint's __data_loc field. See #990 and #770
-      // In this case, the context information will be lost
-      if (!rhs.IsIntTy() && !rhs.IsRecordTy() && !rhs.IsPtrTy() &&
-          !rhs.IsCtxAccess())
-      {
-        LOG(ERROR, cast.loc, err_)
-            << "Casts are not supported for type: \"" << rhs << "\"";
-      }
-    }
-    // Consider both case *(int8)(retval) and *(int8*)retval
-    cast.type.SetAS(cast.expr->type.GetAS());
-    return;
+    LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
   }
-
-  if (!bpftrace_.structs.Has(cast.cast_type))
+  if (cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
+      !rhs.IsCtxAccess())
   {
     LOG(ERROR, cast.loc, err_)
-        << "Unknown struct/union: '" << cast.cast_type << "'";
-    return;
+        << "Cannot cast from \"" << rhs << "\" to \"" << cast.type << "\"";
   }
 
-  SizedType struct_type = CreateRecord(
-      cast.cast_type, bpftrace_.structs.Lookup(cast.cast_type));
-
-  if (cast.is_pointer)
-  {
-    cast.type = CreatePointer(struct_type);
-
-    if (cast.is_double_pointer)
-      cast.type = CreatePointer(cast.type);
-  }
-  else
-  {
-    LOG(ERROR, cast.loc, err_)
-        << "Cannot cast to struct type \"" << cast.cast_type << "\"";
-  }
-  if (is_ctx)
+  if (cast.expr->type.IsCtxAccess() && !cast.type.IsIntTy())
     cast.type.MarkCtxAccess();
-
   cast.type.SetAS(cast.expr->type.GetAS());
   // case : BEGIN { @foo = (struct Foo)0; }
   // case : profile:hz:99 $task = (struct task_struct *)curtask.
@@ -3384,6 +3342,30 @@ bool SemanticAnalyser::update_string_size(SizedType &type,
   }
 
   return false;
+}
+
+void SemanticAnalyser::resolve_struct_type(SizedType &type, const location &loc)
+{
+  const SizedType *inner_type = &type;
+  int pointer_level = 0;
+  while (inner_type->IsPtrTy())
+  {
+    inner_type = inner_type->GetPointeeTy();
+    pointer_level++;
+  }
+  if (inner_type->IsRecordTy() && inner_type->GetStruct().expired())
+  {
+    auto struct_type = bpftrace_.structs.Lookup(inner_type->GetName());
+    if (struct_type.expired())
+      LOG(ERROR, loc, err_) << "Cannot resolve unknown type \""
+                            << inner_type->GetName() << "\"\n";
+    type = CreateRecord(inner_type->GetName(), struct_type);
+    while (pointer_level > 0)
+    {
+      type = CreatePointer(type);
+      pointer_level--;
+    }
+  }
 }
 
 Pass CreateSemanticPass()
