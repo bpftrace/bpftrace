@@ -762,12 +762,13 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   }
 
   if (progfd_ < 0) {
+    std::stringstream errmsg;
     if (bt_verbose) {
       std::cerr << std::endl
                 << "Error log: " << std::endl
                 << log_buf.get() << std::endl;
-      if (errno == ENOSPC) {
-        std::stringstream errmsg;
+      if (errno == ENOSPC)
+      {
         errmsg << "Error: Failed to load program, verification log buffer "
                << "not big enough, try increasing the BPFTRACE_LOG_SIZE "
                << "environment variable beyond the current value of "
@@ -791,7 +792,18 @@ void AttachedProbe::load_prog(BPFfeature &feature)
       }
     }
 
-    throw std::runtime_error("Error loading program: " + probe_.name + (bt_verbose ? "" : " (try -v)"));
+    errmsg << "Error loading program: " << probe_.name
+           << (bt_verbose ? "" : " (try -v)");
+    if (probe_.orig_name != probe_.name)
+    {
+      // one attachpoint in a multi-attachpoint (wildcard or list) probe failed,
+      // print a warning but continue
+      LOG(WARNING) << errmsg.str() << ", skipping.";
+      return;
+    }
+    else
+      // explicit match failed, fail hard
+      throw std::runtime_error(errmsg.str());
   }
 
   if (bt_verbose) {

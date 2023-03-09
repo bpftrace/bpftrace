@@ -17,6 +17,8 @@ and this project adheres to
   - [#2482](https://github.com/iovisor/bpftrace/pull/2482)
 - Handle colon in positional param used in attachpoint
   - [#2514](https://github.com/iovisor/bpftrace/pull/2514)
+- Handle BPF load errors for multi-attachpoints
+  - [#2521](https://github.com/iovisor/bpftrace/pull/2521)
 #### Docs
 #### Tools
 
