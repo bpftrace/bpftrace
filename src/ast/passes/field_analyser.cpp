@@ -40,6 +40,8 @@ void FieldAnalyser::visit(Builtin &builtin)
         builtin_type = "struct bpf_iter__task";
       else if (attach_func_ == "task_file")
         builtin_type = "struct bpf_iter__task_file";
+      else if (attach_func_ == "task_vma")
+        builtin_type = "struct bpf_iter__task_vma";
     }
   }
   else if (builtin.ident == "curtask")

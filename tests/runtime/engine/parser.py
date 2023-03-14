@@ -154,6 +154,7 @@ class TestParser(object):
                     "signal",
                     "iter:task",
                     "iter:task_file",
+                    "iter:task_vma",
                     "libpath_resolv",
                     "dwarf",
                     "aot",

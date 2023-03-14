@@ -1016,6 +1016,19 @@ TEST_F(bpftrace_btf, add_probes_iter_task_file)
   check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task_file");
 }
 
+TEST_F(bpftrace_btf, add_probes_iter_task_vma)
+{
+  ast::Probe *probe = parse_probe("iter:task_vma {}");
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task_vma");
+}
+
 } // namespace bpftrace
 } // namespace test
 } // namespace bpftrace

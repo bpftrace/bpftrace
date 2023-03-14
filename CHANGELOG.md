@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add `iter:task_vma` iterators detection
+  - [#2524](https://github.com/iovisor/bpftrace/pull/2524)
 #### Changed
 #### Deprecated
 #### Removed

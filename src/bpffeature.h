@@ -114,6 +114,10 @@ public:
                         libbpf::BPF_PROG_TYPE_TRACING,
                         "bpf_iter_task_file",
                         libbpf::BPF_TRACE_ITER);
+  DEFINE_PROG_TEST_FUNC(iter_task_vma,
+                        libbpf::BPF_PROG_TYPE_TRACING,
+                        "bpf_iter_task_vma",
+                        libbpf::BPF_TRACE_ITER);
 
 protected:
   std::optional<bool> has_loop_;
