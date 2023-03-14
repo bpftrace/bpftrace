@@ -261,6 +261,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
           {
             type = "struct bpf_iter__task_file";
           }
+          else if (func == "task_vma")
+          {
+            type = "struct bpf_iter__task_vma";
+          }
           else
           {
             LOG(ERROR, builtin.loc, err_) << "unsupported iter type: " << func;
@@ -2872,6 +2876,11 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else if (ap.func == "task_file")
     {
       supported = bpftrace_.feature_->has_prog_iter_task_file() &&
+                  bpftrace_.has_btf_data();
+    }
+    else if (ap.func == "task_vma")
+    {
+      supported = bpftrace_.feature_->has_prog_iter_task_vma() &&
                   bpftrace_.has_btf_data();
     }
     else if (listing_)

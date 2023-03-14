@@ -91,7 +91,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
 
 std::unique_ptr<std::istream> ProbeMatcher::get_iter_symbols(void) const
 {
-  return std::make_unique<std::istringstream>("task\ntask_file");
+  return std::make_unique<std::istringstream>("task\ntask_file\ntask_vma");
 }
 
 /*
@@ -403,6 +403,11 @@ FuncParamLists ProbeMatcher::get_iters_params(
       params[iter].push_back("struct task_struct * task");
       params[iter].push_back("int fd");
       params[iter].push_back("struct file * file");
+    }
+    else if (iter == "task_vma")
+    {
+      params[iter].push_back("struct task_struct * task");
+      params[iter].push_back("struct vm_area_struct * vma");
     }
   }
 

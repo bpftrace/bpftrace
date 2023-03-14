@@ -2682,13 +2682,18 @@ TEST_F(semantic_analyser_btf, iter)
 {
   test("iter:task { 1 }", 0);
   test("iter:task_file { 1 }", 0);
+  test("iter:task_vma { 1 }", 0);
   test("iter:task { $x = ctx->task->pid }", 0);
   test("iter:task_file { $x = ctx->file->ino }", 0);
+  test("iter:task_vma { $x = ctx->vma->vm_start }", 0);
   test("iter:task { $x = args->foo; }", 1);
   test("iter:task_file { $x = args->foo; }", 1);
+  test("iter:task_vma { $x = args->foo; }", 1);
   test("iter:task { printf(\"%d\", ctx->task->pid); }", 0);
   test("iter:task_file { printf(\"%d\", ctx->file->ino); }", 0);
+  test("iter:task_vma { printf(\"%lx\", ctx->vma->vm_start); }", 0);
   test("iter:task,iter:task_file { 1 }", 1);
+  test("iter:task,iter:task_vma { 1 }", 1);
   test("iter:task,f:func_1 { 1 }", 1);
 }
 

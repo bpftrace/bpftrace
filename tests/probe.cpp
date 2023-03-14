@@ -85,6 +85,7 @@ TEST_F(probe_btf, short_name)
   compare_bytecode("kretfunc:func_1 { 1 }", "fr:func_1 { 1 }");
   compare_bytecode("iter:task { 1 }", "it:task { 1 }");
   compare_bytecode("iter:task_file { 1 }", "it:task_file { 1 }");
+  compare_bytecode("iter:task_vma { 1 }", "it:task_vma { 1 }");
 }
 
 } // namespace probe

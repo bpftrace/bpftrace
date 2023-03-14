@@ -2093,6 +2093,8 @@ Interval fire on one CPU at the time, unlike <<profile>> probes.
 * `iter:task:pin`
 * `iter:task_file`
 * `iter:task_file:pin`
+* `iter:task_vma`
+* `iter:task_vma:pin`
 
 .shortnames
 * `it`
@@ -2135,6 +2137,18 @@ bpftrace:1892 4:anon_inode:bpf-map
 bpftrace:1892 5:anon_inode:bpf_link
 bpftrace:1892 6:anon_inode:bpf-prog
 bpftrace:1892 7:anon_inode:bpf_iter
+
+# bpftrace -e 'iter:task_vma {printf("%s %d %lx-%lx\n", comm, pid, ctx->vma->vm_start, ctx->vma->vm_end);}'
+Attaching 1 probe...
+bpftrace 119480 55b92c380000-55b92c386000
+bpftrace 119480 55b92c386000-55b92c391000
+bpftrace 119480 55b92c391000-55b92c397000
+bpftrace 119480 55b92c398000-55b92c399000
+bpftrace 119480 55b92c399000-55b92c39a000
+bpftrace 119480 55b92cce3000-55b92d010000
+...
+bpftrace 119480 7ffd55dde000-7ffd55de2000
+bpftrace 119480 7ffd55de2000-7ffd55de4000
 ```
 
 It's possible to pin iterator with specifying optional probe ':pin' part, that defines the pin file.

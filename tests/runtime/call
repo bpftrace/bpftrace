@@ -378,6 +378,12 @@ EXPECT OK
 REQUIRES_FEATURE iter:task_file
 TIMEOUT 5
 
+NAME iter:task_vma
+PROG iter:task_vma { printf("OK"); }
+EXPECT OK
+REQUIRES_FEATURE iter:task_vma
+TIMEOUT 5
+
 NAME cgroup_path
 PROG BEGIN { print(cgroup_path(cgroup & ((1 << 32) - 1))); exit(); }
 EXPECT ([a-z]*:\/.*;)*[a-z]*:\/.*
