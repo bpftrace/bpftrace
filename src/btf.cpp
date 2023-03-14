@@ -72,6 +72,16 @@ BTF::~BTF()
 
 void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 {
+  vmlinux_btf = btf__load_vmlinux_btf();
+  if (libbpf_get_error(vmlinux_btf))
+  {
+    if (bt_debug != DebugLevel::kNone)
+      LOG(ERROR) << "BTF: failed to find BTF data for vmlinux, errno " << errno;
+    return;
+  }
+  btf_objects.push_back(
+      BTFObj{ .btf = vmlinux_btf, .id = 0, .name = "vmlinux" });
+
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
   // IDs, so the only way is to iterate through all loaded BTF objects
   __u32 id = 0;
@@ -116,19 +126,10 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
 
     if (mod_name == "vmlinux")
     {
-      btf_objects.push_back(BTFObj{ .btf = btf__load_from_kernel_by_id(id),
-                                    .id = id,
-                                    .name = "vmlinux" });
-      vmlinux_btf = btf_objects.back().btf;
+      btf_objects.front().id = id;
     }
-    else if (modules.empty() || modules.find(mod_name) != modules.end())
+    else if (modules.find(mod_name) != modules.end())
     {
-      if (!vmlinux_btf)
-      {
-        if (bt_debug != DebugLevel::kNone)
-          LOG(ERROR) << "BTF: failed to find BTF data for vmlinux";
-        return;
-      }
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),
                   .id = id,
