@@ -56,11 +56,17 @@ CodegenLLVM::CodegenLLVM(Node *root, BPFtrace &bpftrace)
     throw std::runtime_error(
         "Could not find bpf llvm target, does your llvm support it?");
 
-  target_machine_.reset(target->createTargetMachine(LLVMTargetTriple,
-                                                    "generic",
-                                                    "",
-                                                    TargetOptions(),
-                                                    Optional<Reloc::Model>()));
+  target_machine_.reset(
+      target->createTargetMachine(LLVMTargetTriple,
+                                  "generic",
+                                  "",
+                                  TargetOptions(),
+#if LLVM_VERSION_MAJOR >= 16
+                                  std::optional<Reloc::Model>()
+#else
+                                  Optional<Reloc::Model>()
+#endif
+                                      ));
   target_machine_->setOptLevel(llvm::CodeGenOpt::Aggressive);
 
   module_->setTargetTriple(LLVMTargetTriple);
