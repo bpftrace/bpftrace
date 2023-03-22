@@ -2,7 +2,7 @@
 %require "3.0.4"
 %defines
 %define api.namespace { bpftrace }
-%define parser_class_name { Parser }
+%define api.parser.class { Parser }
 
 %define api.token.constructor
 %define api.value.type variant
