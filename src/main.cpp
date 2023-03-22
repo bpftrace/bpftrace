@@ -853,7 +853,7 @@ int main(int argc, char* argv[])
   if (!is_root())
     return 1;
 
-  auto lockdown_state = lockdown::detect(bpftrace.feature_);
+  auto lockdown_state = lockdown::detect();
   if (lockdown_state == lockdown::LockdownState::Confidentiality)
   {
     lockdown::emit_warning(std::cerr);
