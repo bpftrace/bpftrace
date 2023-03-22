@@ -15,7 +15,7 @@ enum class LockdownState
   Unknown, // Could not determine whether lockdown is enabled or not
 };
 
-LockdownState detect(std::unique_ptr<BPFfeature> &feature);
+LockdownState detect();
 void emit_warning(std::ostream &out);
 
 } //  namespace lockdown

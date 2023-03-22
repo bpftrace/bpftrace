@@ -55,7 +55,7 @@ void emit_warning(std::ostream &out)
   // clang-format on
 }
 
-LockdownState detect(std::unique_ptr<BPFfeature> &feature)
+LockdownState detect()
 {
   return read_security_lockdown();
 }
