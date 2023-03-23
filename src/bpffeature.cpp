@@ -86,7 +86,12 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
 
   std::optional<unsigned> btf_id;
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf())
-    btf_id = btf_.get_btf_id_fd(name, "vmlinux").first;
+  {
+    auto id_fd = btf_.get_btf_id_fd(name, "vmlinux");
+    btf_id = id_fd.first;
+    if (id_fd.second >= 0)
+      close(id_fd.second);
+  }
 
   if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
   {
