@@ -172,7 +172,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
     return NEW_APS;
   }
 
-  ap_->provider = probetypeName(*probe_types.begin());
+  ap.provider = expand_probe_name(*probe_types.begin());
 
   switch (probetype(ap.provider))
   {
@@ -212,7 +212,7 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return INVALID;
   }
 
-  return OK;
+  __builtin_unreachable();
 }
 
 AttachPointParser::State AttachPointParser::lex_attachpoint(
