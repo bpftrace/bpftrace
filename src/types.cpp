@@ -207,20 +207,20 @@ ProbeType probetype(const std::string &probeName)
   return retType;
 }
 
-std::string probetypeName(const std::string &probeName)
+std::string expand_probe_name(const std::string &orig_name)
 {
-  std::string res = probeName;
+  std::string expanded_name = orig_name;
 
-  auto v = std::find_if(PROBE_LIST.begin(), PROBE_LIST.end(),
-                          [&probeName] (const ProbeItem& p) {
-                            return (p.name == probeName ||
-                                    p.abbr == probeName);
-                          });
+  auto v = std::find_if(PROBE_LIST.begin(),
+                        PROBE_LIST.end(),
+                        [&orig_name](const ProbeItem &p) {
+                          return (p.name == orig_name || p.abbr == orig_name);
+                        });
 
   if (v != PROBE_LIST.end())
-    res = v->name;
+    expanded_name = v->name;
 
-  return res;
+  return expanded_name;
 }
 
 std::string probetypeName(ProbeType t)
