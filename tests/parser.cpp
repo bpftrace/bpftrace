@@ -1857,6 +1857,13 @@ TEST(Parser, abs_knl_address)
   test(std::string(in_cstr), std::string(out_cstr));
 }
 
+TEST(Parser, invalid_provider)
+{
+  test_parse_failure("asdf { }");
+  test_parse_failure("asdf:xyz { }");
+  test_parse_failure("asdf:xyz:www { }");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace
