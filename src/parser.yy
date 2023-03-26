@@ -2,8 +2,9 @@
 %require "3.0.4"
 %defines
 %define api.namespace { bpftrace }
-%define parser_class_name { Parser }
-
+// Pretend like the following %define is uncommented. We set the actual
+// definition from cmake to handle older versions of bison.
+// %define api.parser.class { Parser }
 %define api.token.constructor
 %define api.value.type variant
 %define parse.assert
