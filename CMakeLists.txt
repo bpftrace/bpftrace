@@ -122,7 +122,15 @@ include_directories(SYSTEM ${LIBCEREAL_INCLUDE_DIRS})
 
 find_package(BISON REQUIRED)
 find_package(FLEX REQUIRED)
-bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc VERBOSE)
+# `parser_class_name` is deprecated and generates warnings in bison >= 3.3.
+# But `api.parser.class` is not supported in bison < 3.3. So we must inject
+# the %define based on the bison version here.
+if(${BISON_VERSION} VERSION_GREATER_EQUAL 3.3)
+  set(BISON_FLAGS "-Dapi.parser.class={Parser}")
+else()
+  set(BISON_FLAGS "-Dparser_class_name={Parser}")
+endif()
+bison_target(bison_parser src/parser.yy ${CMAKE_BINARY_DIR}/parser.tab.cc COMPILE_FLAGS ${BISON_FLAGS} VERBOSE)
 flex_target(flex_lexer src/lexer.l ${CMAKE_BINARY_DIR}/lex.yy.cc)
 add_flex_bison_dependency(flex_lexer bison_parser)
 add_library(parser ${BISON_bison_parser_OUTPUTS} ${FLEX_flex_lexer_OUTPUTS})
