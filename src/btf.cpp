@@ -52,6 +52,13 @@ BTF::BTF(const std::set<std::string> &modules) : state(NODATA)
   else
     load_kernel_btfs(modules);
 
+  if (!vmlinux_btf)
+  {
+    btf_objects.push_back(
+        BTFObj{ .btf = btf__load_vmlinux_btf(), .id = 0, .name = "vmlinux" });
+    vmlinux_btf = btf_objects.back().btf;
+  }
+
   if (btf_objects.empty())
   {
     if (bt_debug != DebugLevel::kNone)
