@@ -80,6 +80,7 @@ libbpf::bpf_prog_type progtype(ProbeType t)
     case ProbeType::kfunc:      return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::kretfunc:   return libbpf::BPF_PROG_TYPE_TRACING; break;
     case ProbeType::iter:       return libbpf::BPF_PROG_TYPE_TRACING; break;
+    case ProbeType::rawtracepoint: return libbpf::BPF_PROG_TYPE_RAW_TRACEPOINT; break;
     // clang-format on
     case ProbeType::invalid:
       LOG(FATAL) << "program type invalid";
@@ -147,6 +148,27 @@ int AttachedProbe::detach_iter(void)
   return 0;
 }
 
+void AttachedProbe::attach_raw_tracepoint(void)
+{
+  if (progfd_ < 0)
+    // Errors for raw_tracepoint are handled in load_prog, ignore here
+    return;
+  tracing_fd_ = bpf_raw_tracepoint_open(probe_.attach_point.c_str(), progfd_);
+  if (tracing_fd_ < 0)
+  {
+    if (tracing_fd_ == -ENOENT)
+      throw std::runtime_error("Probe does not exist: " + probe_.name);
+    else
+      throw std::runtime_error("Error attaching probe: " + probe_.name);
+  }
+}
+
+int AttachedProbe::detach_raw_tracepoint(void)
+{
+  close(tracing_fd_);
+  return 0;
+}
+
 AttachedProbe::AttachedProbe(Probe &probe,
                              std::tuple<uint8_t *, uintptr_t> func,
                              bool safe_mode,
@@ -197,6 +219,9 @@ AttachedProbe::AttachedProbe(Probe &probe,
       break;
     case ProbeType::iter:
       attach_iter();
+      break;
+    case ProbeType::rawtracepoint:
+      attach_raw_tracepoint();
       break;
     default:
       LOG(FATAL) << "invalid attached probe type \""
@@ -272,6 +297,9 @@ AttachedProbe::~AttachedProbe()
     case ProbeType::asyncwatchpoint:
     case ProbeType::hardware:
       break;
+    case ProbeType::rawtracepoint:
+      err = detach_raw_tracepoint();
+      break;
     case ProbeType::invalid:
       LOG(FATAL) << "invalid attached probe type \""
                  << probetypeName(probe_.type) << "\" at destructor";
@@ -314,6 +342,7 @@ std::string AttachedProbe::eventname() const
   {
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
+    case ProbeType::rawtracepoint:
       offset_str << std::hex << offset_;
       return eventprefix() + sanitise(probe_.attach_point) + "_" +
              offset_str.str() + index_str;

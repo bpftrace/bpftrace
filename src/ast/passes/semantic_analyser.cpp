@@ -189,6 +189,7 @@ AddrSpace SemanticAnalyser::find_addrspace(ProbeType pt)
     case ProbeType::kretfunc:
     case ProbeType::tracepoint:
     case ProbeType::iter:
+    case ProbeType::rawtracepoint:
       return AddrSpace::kernel;
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
@@ -374,9 +375,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
     for (auto &attach_point : *probe_->attach_points)
     {
       ProbeType type = probetype(attach_point->provider);
-      if (type != ProbeType::kprobe &&
-          type != ProbeType::uprobe &&
-          type != ProbeType::usdt)
+      if (type != ProbeType::kprobe && type != ProbeType::uprobe &&
+          type != ProbeType::usdt && type != ProbeType::rawtracepoint)
         LOG(ERROR, builtin.loc, err_)
             << "The " << builtin.ident << " builtin can only be used with "
             << "'kprobes', 'uprobes' and 'usdt' probes";
@@ -2685,6 +2685,14 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.target == "" || ap.func == "")
       LOG(ERROR, ap.loc, err_) << "tracepoint probe must have a target";
   }
+  else if (ap.provider == "rawtracepoint")
+  {
+    if (ap.target != "")
+      LOG(ERROR, ap.loc, err_) << "rawtracepoint should not have a target";
+    if (ap.func == "")
+      LOG(ERROR, ap.loc, err_)
+          << "rawtracepoint should be attached to a function";
+  }
   else if (ap.provider == "profile") {
     if (ap.target == "")
       LOG(ERROR, ap.loc, err_) << "profile probe must have unit of time";
@@ -3175,6 +3183,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
       case ProbeType::iter:
+      case ProbeType::rawtracepoint:
         return false;
     }
   }
@@ -3200,6 +3209,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
       case ProbeType::iter:
+      case ProbeType::rawtracepoint:
         return false;
     }
   }
@@ -3216,6 +3226,7 @@ bool SemanticAnalyser::check_available(const Call &call, const AttachPoint &ap)
       case ProbeType::profile:
       case ProbeType::kfunc:
       case ProbeType::kretfunc:
+      case ProbeType::rawtracepoint:
         return true;
       case ProbeType::invalid:
       case ProbeType::special:

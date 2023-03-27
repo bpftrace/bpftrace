@@ -58,6 +58,7 @@ private:
   State watchpoint_parser(bool async = false);
   State kfunc_parser();
   State iter_parser();
+  State raw_tracepoint_parser();
 
   std::optional<uint64_t> stoull(const std::string &str);
   std::optional<int64_t> stoll(const std::string &str);

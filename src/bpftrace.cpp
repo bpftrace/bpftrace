@@ -187,7 +187,8 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::uprobe ||
                probetype(attach_point->provider) == ProbeType::uretprobe ||
                probetype(attach_point->provider) == ProbeType::kfunc ||
-               probetype(attach_point->provider) == ProbeType::kretfunc)
+               probetype(attach_point->provider) == ProbeType::kretfunc ||
+               probetype(attach_point->provider) == ProbeType::rawtracepoint)
         attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
       else
         attach_funcs.push_back(attach_point->func);
@@ -234,7 +235,8 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::uprobe ||
                probetype(attach_point->provider) == ProbeType::uretprobe ||
                probetype(attach_point->provider) == ProbeType::kfunc ||
-               probetype(attach_point->provider) == ProbeType::kretfunc)
+               probetype(attach_point->provider) == ProbeType::kretfunc ||
+               probetype(attach_point->provider) == ProbeType::rawtracepoint)
       {
         // tracepoint, uprobe, and k(ret)func probes specify both a target and
         // a function name.
@@ -996,6 +998,7 @@ bool attach_reverse(const Probe &p)
     case ProbeType::software:
     case ProbeType::kfunc:
     case ProbeType::iter:
+    case ProbeType::rawtracepoint:
       return true;
     case ProbeType::kretfunc:
     case ProbeType::kretprobe:

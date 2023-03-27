@@ -452,6 +452,7 @@ enum class ProbeType
   kfunc,
   kretfunc,
   iter,
+  rawtracepoint,
 };
 
 std::ostream &operator<<(std::ostream &os, ProbeType type);
@@ -481,6 +482,7 @@ const std::vector<ProbeItem> PROBE_LIST = {
   { "kfunc", "f", ProbeType::kfunc },
   { "kretfunc", "fr", ProbeType::kretfunc },
   { "iter", "it", ProbeType::iter },
+  { "rawtracepoint", "rt", ProbeType::rawtracepoint },
 };
 
 ProbeType probetype(const std::string &type);

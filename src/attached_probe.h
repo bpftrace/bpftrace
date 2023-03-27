@@ -73,6 +73,8 @@ private:
   int detach_kfunc(void);
   void attach_iter(void);
   int detach_iter(void);
+  void attach_raw_tracepoint(void);
+  int detach_raw_tracepoint(void);
 
   static std::map<std::string, int> cached_prog_fds_;
   bool use_cached_progfd(void);

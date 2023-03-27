@@ -496,7 +496,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::software:
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
-    {
+    case ProbeType::rawtracepoint: {
       // Do not expand "target:" as that would match all functions in target.
       // This may occur when an absolute address is given instead of a function.
       if (attach_point.func.empty())
