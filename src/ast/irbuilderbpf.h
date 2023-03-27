@@ -188,6 +188,7 @@ public:
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
   Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   CallInst *CreateSkbOutput(Value *skb,
                             Value *len,
                             AllocaInst *data,

@@ -1,15 +1,16 @@
 #include "ast/attachpoint_parser.h"
 
-#include <algorithm>
-#include <exception>
-#include <functional>
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include <bcc/bcc_proc.h>
 #include "ast/int_parser.h"
 #include "log.h"
 #include "types.h"
+#include <algorithm>
+#include <bcc/bcc_proc.h>
+#include <exception>
+#include <functional>
+#include <iostream>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 namespace bpftrace {
 namespace ast {
@@ -207,6 +208,8 @@ AttachPointParser::State AttachPointParser::parse_attachpoint(AttachPoint &ap)
       return kfunc_parser();
     case ProbeType::iter:
       return iter_parser();
+    case ProbeType::rawtracepoint:
+      return raw_tracepoint_parser();
     case ProbeType::invalid:
       errs_ << "Invalid probe type: " << ap.provider << std::endl;
       return INVALID;
@@ -775,6 +778,31 @@ AttachPointParser::State AttachPointParser::iter_parser()
 
   if (parts_.size() == 3)
     ap_->pin = parts_[2];
+  return OK;
+}
+
+AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
+{
+  if (parts_.size() != 2)
+  {
+    if (ap_->ignore_invalid)
+      return SKIP;
+
+    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
+    return INVALID;
+  }
+
+  ap_->func = parts_[1];
+
+  if (has_wildcard(ap_->func))
+  {
+    if (ap_->ignore_invalid)
+      return SKIP;
+    errs_ << ap_->provider << " probe type does not support wildcards"
+          << std::endl;
+    return INVALID;
+  }
+
   return OK;
 }
 

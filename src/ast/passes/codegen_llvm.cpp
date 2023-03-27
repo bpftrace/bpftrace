@@ -256,7 +256,11 @@ void CodegenLLVM::visit(Builtin &builtin)
       return;
     }
 
-    expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
+    if (!builtin.ident.compare(0, 3, "arg") &&
+        probetype(current_attach_point_->provider) == ProbeType::rawtracepoint)
+      expr_ = b_.CreateRawTracepointArg(ctx_, builtin.ident);
+    else
+      expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
 
     if (builtin.type.IsUsymTy())
     {
@@ -2490,6 +2494,7 @@ void CodegenLLVM::createRet(Value *value)
     case ProbeType::kfunc:
     case ProbeType::kretfunc:
     case ProbeType::iter:
+    case ProbeType::rawtracepoint:
       b_.CreateRet(b_.getInt64(0));
       break;
   }

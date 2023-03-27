@@ -1474,6 +1474,21 @@ Value *IRBuilderBPF::CreatKFuncArg(Value *ctx,
   return expr;
 }
 
+Value *IRBuilderBPF::CreateRawTracepointArg(Value *ctx,
+                                            const std::string &builtin)
+{
+  // argX
+  int offset = atoi(builtin.substr(3).c_str());
+  llvm::Type *type = getInt64Ty();
+
+  ctx = CreatePointerCast(ctx, type->getPointerTo());
+  Value *expr = CreateLoad(type,
+                           CreateGEP(type, ctx, getInt64(offset)),
+                           builtin);
+
+  return expr;
+}
+
 Value *IRBuilderBPF::CreateRegisterRead(Value *ctx, const std::string &builtin)
 {
   int offset;
