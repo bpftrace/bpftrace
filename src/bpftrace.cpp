@@ -403,7 +403,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
   else if (printf_id == asyncactionint(AsyncAction::time))
   {
-    char timestr[STRING_SIZE];
+    char timestr[64]; // not respecting strlen_ here...
     time_t t;
     struct tm tmp;
     t = time(NULL);
@@ -1851,7 +1851,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
   snprintf(usecs_buf, sizeof(usecs_buf), "%06lu", us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
-  char timestr[STRING_SIZE];
+  char timestr[strlen_];
   if (strftime(timestr, sizeof(timestr), fmt.c_str(), &tmp) == 0)
   {
     LOG(ERROR) << "strftime returned 0";
