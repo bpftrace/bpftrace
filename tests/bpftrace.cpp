@@ -16,6 +16,8 @@ namespace bpftrace {
 using ::testing::ContainerEq;
 using ::testing::StrictMock;
 
+static const int STRING_SIZE = 64;
+
 static const std::string kprobe_name(const std::string &attach_point,
                                      uint64_t func_offset)
 {

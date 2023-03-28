@@ -88,10 +88,11 @@ void SemanticAnalyser::visit(String &string)
   if (func_ == "printf" && func_arg_idx_ == 0)
     return;
 
-  if (!is_compile_time_func(func_) && string.str.size() > STRING_SIZE - 1)
+  if (!is_compile_time_func(func_) && string.str.size() > bpftrace_.strlen_ - 1)
   {
-    LOG(ERROR, string.loc, err_) << "String is too long (over " << STRING_SIZE
-                                 << " bytes): " << string.str;
+    LOG(ERROR, string.loc, err_)
+        << "String is too long (over " << bpftrace_.strlen_
+        << " bytes): " << string.str;
   }
   // @a = buf("hi", 2). String allocated on bpf stack. See codegen
   string.type.SetAS(AddrSpace::kernel);
@@ -2008,7 +2009,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
   }
   if (lhs == Type::string)
-    ternary.type = CreateString(STRING_SIZE);
+    ternary.type = CreateString(bpftrace_.strlen_);
   else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else if (lhs == Type::none)

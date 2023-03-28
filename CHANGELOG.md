@@ -21,6 +21,8 @@ and this project adheres to
   - [#2514](https://github.com/iovisor/bpftrace/pull/2514)
 - Handle BPF load errors for multi-attachpoints
   - [#2521](https://github.com/iovisor/bpftrace/pull/2521)
+- Respect BPFTRACE_STRLEN environment variable for all strings
+  - [#2545](https://github.com/iovisor/bpftrace/pull/2545)
 #### Docs
 #### Tools
 
