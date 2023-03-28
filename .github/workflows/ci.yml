@@ -103,6 +103,14 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
+        - NAME: LLVM 16 Release
+          TYPE: Release
+          LLVM_VERSION: 16
+          RUN_ALL_TESTS: 1
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          BASE: focal
+          VENDOR_GTEST: ON
         - NAME: Memleak test (LLVM 11 Debug)
           TYPE: Debug
           LLVM_VERSION: 11
