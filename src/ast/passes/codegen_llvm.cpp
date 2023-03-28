@@ -540,6 +540,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CREATE_MEMSET(strlen, b_.getInt8(0), sizeof(uint64_t), 1);
     if (call.vargs->size() > 1) {
       auto scoped_del = accept(call.vargs->at(1));
+      expr_ = b_.CreateIntCast(expr_, b_.getInt64Ty(), true);
       Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
 
       // largest read we'll allow = our global string buffer size
