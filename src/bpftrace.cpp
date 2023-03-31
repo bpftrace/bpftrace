@@ -167,6 +167,26 @@ int BPFtrace::add_probe(ast::Probe &p)
         resources.probes.push_back(probe);
         continue;
       }
+
+      if ((probetype(attach_point->provider) == ProbeType::uprobe ||
+           probetype(attach_point->provider) == ProbeType::uretprobe) &&
+          feature_->has_uprobe_multi() && has_wildcard(attach_point->func) &&
+          !p.need_expansion && attach_funcs.size())
+      {
+        Probe probe;
+        probe.attach_point = attach_point->func;
+        probe.path = attach_point->target;
+        probe.type = probetype(attach_point->provider);
+        probe.log_size = log_size_;
+        probe.orig_name = p.name();
+        probe.name = attach_point->name(attach_point->target,
+                                        attach_point->func);
+        probe.index = p.index();
+        probe.funcs = attach_funcs;
+
+        resources.probes.push_back(probe);
+        continue;
+      }
     }
     else if ((probetype(attach_point->provider) == ProbeType::uprobe ||
               probetype(attach_point->provider) == ProbeType::uretprobe ||
