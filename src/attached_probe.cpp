@@ -2,6 +2,7 @@
 #define _GNU_SOURCE
 #endif
 
+#include <algorithm>
 #include <cstring>
 #include <elf.h>
 #include <fcntl.h>
@@ -21,6 +22,7 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/bcc_usdt.h>
 #include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 
 #include "attached_probe.h"
 #include "bpftrace.h"
@@ -761,9 +763,17 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_ITER);
 
-      if (feature.has_kprobe_multi() && !probe_.funcs.empty())
+      if ((probe_.type == ProbeType::kprobe ||
+           probe_.type == ProbeType::kretprobe) &&
+          feature.has_kprobe_multi() && !probe_.funcs.empty())
         opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_KPROBE_MULTI);
+
+      if ((probe_.type == ProbeType::uprobe ||
+           probe_.type == ProbeType::uretprobe) &&
+          feature.has_uprobe_multi() && !probe_.funcs.empty())
+        opts.expected_attach_type = static_cast<::bpf_attach_type>(
+            libbpf::BPF_TRACE_UPROBE_MULTI);
 
       if (probe_.type == ProbeType::kfunc ||
           probe_.type == ProbeType::kretfunc || probe_.type == ProbeType::iter)
@@ -960,8 +970,174 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
   perf_event_fds_.push_back(perf_event_fd);
 }
 
+#ifdef HAVE_LIBBPF_UPROBE_MULTI
+struct bcc_sym_cb_data
+{
+  std::vector<std::string> &syms;
+  std::set<uint64_t> &offsets;
+};
+
+static int bcc_sym_cb(const char *symname, uint64_t start, uint64_t, void *p)
+{
+  struct bcc_sym_cb_data *data = static_cast<struct bcc_sym_cb_data *>(p);
+  std::vector<std::string> &syms = data->syms;
+
+  if (std::binary_search(syms.begin(), syms.end(), symname))
+  {
+    data->offsets.insert(start);
+  }
+
+  return 0;
+}
+
+struct addr_offset
+{
+  uint64_t addr;
+  uint64_t offset;
+};
+
+static int bcc_load_cb(uint64_t v_addr,
+                       uint64_t mem_sz,
+                       uint64_t file_offset,
+                       void *p)
+{
+  std::vector<struct addr_offset> *addrs =
+      static_cast<std::vector<struct addr_offset> *>(p);
+
+  for (auto &a : *addrs)
+  {
+    if (a.addr >= v_addr && a.addr < (v_addr + mem_sz))
+    {
+      a.offset = a.addr - v_addr + file_offset;
+    }
+  }
+
+  return 0;
+}
+
+static void resolve_offset_uprobe_multi(const std::string &path,
+                                        const std::string &probe_name,
+                                        const std::vector<std::string> &funcs,
+                                        std::vector<std::string> &syms,
+                                        std::vector<uint64_t> &offsets)
+{
+  struct bcc_symbol_option option = {};
+  int err;
+
+  // Parse symbols names into syms vector
+  for (const std::string &func : funcs)
+  {
+    auto pos = func.find(':');
+
+    if (pos == std::string::npos)
+    {
+      throw std::runtime_error("Error resolving probe: '" + probe_name + "'");
+    }
+
+    syms.push_back(func.substr(pos + 1));
+  }
+
+  std::sort(std::begin(syms), std::end(syms));
+
+  option.use_debug_file = 1;
+  option.use_symbol_type = 0xffffffff;
+
+  std::vector<struct addr_offset> addrs;
+  std::set<uint64_t> set;
+  struct bcc_sym_cb_data data = {
+    .syms = syms,
+    .offsets = set,
+  };
+
+  // Resolve symbols into addresses
+  err = bcc_elf_foreach_sym(path.c_str(), bcc_sym_cb, &option, &data);
+  if (err)
+  {
+    throw std::runtime_error("Failed to list symbols for probe: '" +
+                             probe_name + "'");
+  }
+
+  for (auto a : set)
+  {
+    struct addr_offset addr = {
+      .addr = a,
+      .offset = 0x0,
+    };
+
+    addrs.push_back(addr);
+  }
+
+  // Translate addresses into offsets
+  err = bcc_elf_foreach_load_section(path.c_str(), bcc_load_cb, &addrs);
+  if (err)
+  {
+    throw std::runtime_error("Failed to resolve symbols offsets for probe: '" +
+                             probe_name + "'");
+  }
+
+  for (auto a : addrs)
+  {
+    offsets.push_back(a.offset);
+  }
+}
+
+void AttachedProbe::attach_multi_uprobe(void)
+{
+  std::vector<std::string> syms;
+  std::vector<uint64_t> offsets;
+  unsigned int i;
+
+  // Resolve probe_.funcs into offsets and syms vector
+  resolve_offset_uprobe_multi(
+      probe_.path, probe_.name, probe_.funcs, syms, offsets);
+
+  // Attach uprobe through uprobe_multi link
+  DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
+
+  opts.uprobe_multi.path = probe_.path.c_str();
+  opts.uprobe_multi.offsets = offsets.data();
+  opts.uprobe_multi.cnt = offsets.size();
+  opts.uprobe_multi.flags = probe_.type == ProbeType::uretprobe
+                                ? BPF_F_UPROBE_MULTI_RETURN
+                                : 0;
+  if (bt_verbose)
+  {
+    std::cout << "Attaching to " << probe_.funcs.size() << " functions"
+              << std::endl;
+
+    if (bt_verbose2)
+    {
+      for (i = 0; i < syms.size(); i++)
+      {
+        std::cout << probe_.path << ":" << syms[i] << std::endl;
+      }
+    }
+  }
+
+  linkfd_ = bpf_link_create(progfd_,
+                            0,
+                            static_cast<enum ::bpf_attach_type>(
+                                libbpf::BPF_TRACE_UPROBE_MULTI),
+                            &opts);
+  if (linkfd_ < 0)
+  {
+    throw std::runtime_error("Error attaching probe: '" + probe_.name + "'");
+  }
+}
+#else
+void AttachedProbe::attach_multi_uprobe(void)
+{
+}
+#endif // HAVE_LIBBPF_UPROBE_MULTI
+
 void AttachedProbe::attach_uprobe(bool safe_mode)
 {
+  if (!probe_.funcs.empty())
+  {
+    attach_multi_uprobe();
+    return;
+  }
+
   if (!resolve_offset_uprobe(safe_mode))
     return;
 
