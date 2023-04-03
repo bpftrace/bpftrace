@@ -46,17 +46,19 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments](#4-uprobeuretprobe-dynamic-tracing-user-level-arguments)
     - [5. `tracepoint`: Static Tracing, Kernel-Level](#5-tracepoint-static-tracing-kernel-level)
     - [6. `tracepoint`: Static Tracing, Kernel-Level Arguments](#6-tracepoint-static-tracing-kernel-level-arguments)
-    - [7. `usdt`: Static Tracing, User-Level](#7-usdt-static-tracing-user-level)
-    - [8. `usdt`: Static Tracing, User-Level Arguments](#8-usdt-static-tracing-user-level-arguments)
-    - [9. `profile`: Timed Sampling Events](#9-profile-timed-sampling-events)
-    - [10. `interval`: Timed Output](#10-interval-timed-output)
-    - [11. `software`: Pre-defined Software Events](#11-software-pre-defined-software-events)
-    - [12. `hardware`: Pre-defined Hardware Events](#12-hardware-pre-defined-hardware-events)
-    - [13. `BEGIN`/`END`: Built-in events](#13-beginend-built-in-events)
-    - [14. `watchpoint`/`asyncwatchpoint`: Memory watchpoints](#14-watchpointasyncwatchpoint-memory-watchpoints)
-    - [15. `kfunc`/`kretfunc`: Kernel Functions Tracing](#15-kfunckretfunc-kernel-functions-tracing)
-    - [16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#16-kfunckretfunc-kernel-functions-tracing-arguments)
-    - [17. `iter`: Iterators Tracing ](#17-iter-iterators-tracing)
+    - [7. `rawtracepoint`: Static Tracing, Kernel-Level](#7-rawtracepoint-static-tracing-kernel-level)
+    - [8. `rawtracepoint`: Static Tracing, Kernel-Level Arguments](#8-rawtracepoint-static-tracing-kernel-level-arguments)
+    - [9. `usdt`: Static Tracing, User-Level](#9-usdt-static-tracing-user-level)
+    - [10. `usdt`: Static Tracing, User-Level Arguments](#10-usdt-static-tracing-user-level-arguments)
+    - [11. `profile`: Timed Sampling Events](#11-profile-timed-sampling-events)
+    - [12. `interval`: Timed Output](#12-interval-timed-output)
+    - [13. `software`: Pre-defined Software Events](#13-software-pre-defined-software-events)
+    - [14. `hardware`: Pre-defined Hardware Events](#14-hardware-pre-defined-hardware-events)
+    - [15. `BEGIN`/`END`: Built-in events](#15-beginend-built-in-events)
+    - [16. `watchpoint`/`asyncwatchpoint`: Memory watchpoints](#16-watchpointasyncwatchpoint-memory-watchpoints)
+    - [17. `kfunc`/`kretfunc`: Kernel Functions Tracing](#17-kfunckretfunc-kernel-functions-tracing)
+    - [18. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments](#18-kfunckretfunc-kernel-functions-tracing-arguments)
+    - [19. `iter`: Iterators Tracing ](#19-iter-iterators-tracing)
 - [Variables](#variables)
     - [1. Builtins](#1-builtins)
     - [2. `@`, `$`: Basic Variables](#2---basic-variables)
@@ -1291,7 +1293,45 @@ listed first, the members are specific to the tracepoint.
 Examples in situ:
 [search /tools](https://github.com/iovisor/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
 
-## 7. `usdt`: Static Tracing, User-Level
+## 7. `rawtracepoint`: Static Tracing, Kernel-Level
+
+The hook point triggered by `tracepoint` and `rawtracepoint` is the same. The difference is that raw tracepoints are faster since no argument processing is done (see below).
+
+Syntax: `rawtracepoint:name`
+
+These use tracepoints (a Linux kernel capability).
+
+```
+# bpftrace -e 'rawtracepoint:block_rq_insert { printf("block I/O created by %d\n", tid); }'
+Attaching 1 probe...
+block I/O created by 189126
+[...]
+```
+
+## 8. `rawtracepoint`: Static Tracing, Kernel-Level Arguments
+
+`tracepoint` and `rawtracepoint` are nearly identical in terms of functionality. The only difference is in the program context. `rawtracepoint` offers raw arguments to the tracepoint while `tracepoint` applies further processing to the raw arguments. The additional processing is defined inside the kernel.
+
+Example:
+
+```
+# bpftrace -e 'rawtracepoint:block_rq_insert { printf("%llx %llx\n", arg0, arg1); }'
+Attaching 1 probe...
+ffff88810977d6f8 ffff8881097e8e80
+[...]
+```
+
+The available arguments for each tracepoint can be found in the relative path of the kernel source code include/trace/events/. For example:
+```
+include/trace/events/block.h
+DEFINE_EVENT(block_rq, block_rq_insert,
+	TP_PROTO(struct request_queue *q, struct request *rq),
+	TP_ARGS(q, rq)
+);
+```
+The individual args are accessed by their order via `argN` builtins. Each arg is a 64-bit integer.
+
+## 9. `usdt`: Static Tracing, User-Level
 
 Syntax:
 
@@ -1363,7 +1403,7 @@ matches based on file path. This means that if bpftrace runs from the root host,
 as expected if there are processes `execve`d from private mount namespaces or bind mounted directories.
 One workaround is to run bpftrace inside the appropriate namespaces (ie the container).
 
-## 8. `usdt`: Static Tracing, User-Level Arguments
+## 10. `usdt`: Static Tracing, User-Level Arguments
 
 Examples:
 
@@ -1386,7 +1426,7 @@ my string: 6
 ^C
 ```
 
-## 9. `profile`: Timed Sampling Events
+## 11. `profile`: Timed Sampling Events
 
 Syntax:
 
@@ -1410,7 +1450,7 @@ Attaching 1 probe...
 @[0]: 579
 ```
 
-## 10. `interval`: Timed Output
+## 12. `interval`: Timed Output
 
 Syntax:
 
@@ -1444,7 +1484,7 @@ This prints the rate of syscalls per second.
 Examples in situ:
 [search /tools](https://github.com/iovisor/bpftrace/search?q=interval+extension%3Abt+path%3Atools&type=Code)
 
-## 11. `software`: Pre-defined Software Events
+## 13. `software`: Pre-defined Software Events
 
 Syntax:
 
@@ -1497,7 +1537,7 @@ Attaching 1 probe...
 This roughly counts who is causing page faults, by sampling the process name for every one in one hundred
 faults.
 
-## 12. `hardware`: Pre-defined Hardware Events
+## 14. `hardware`: Pre-defined Hardware Events
 
 Syntax:
 
@@ -1533,7 +1573,7 @@ bpftrace -e 'hardware:cache-misses:1000000 { @[pid] = count(); }'
 
 That would fire once for every 1000000 cache misses. This usually indicates the last level cache (LLC).
 
-## 13. `BEGIN`/`END`: Built-in events
+## 15. `BEGIN`/`END`: Built-in events
 
 Syntax:
 
@@ -1549,7 +1589,7 @@ Examples in situ:
 [(BEGIN) search /tools](https://github.com/iovisor/bpftrace/search?q=BEGIN+extension%3Abt+path%3Atools&type=Code)
 [(END) search /tools](https://github.com/iovisor/bpftrace/search?q=END+extension%3Abt+path%3Atools&type=Code)
 
-## 14. `watchpoint`/`asyncwatchpoint`: Memory watchpoints
+## 16. `watchpoint`/`asyncwatchpoint`: Memory watchpoints
 
 **WARNING**: this feature is experimental and may be subject to interface changes. Memory watchpoints are
 also architecture dependant
@@ -1639,7 +1679,7 @@ int main()
 bpftrace will output "hit" and exit when the memory pointed to by `arg1` of `increment` is
 written.
 
-## 15. `kfunc`/`kretfunc`: Kernel Functions Tracing
+## 17. `kfunc`/`kretfunc`: Kernel Functions Tracing
 
 Syntax:
 
@@ -1676,7 +1716,7 @@ kfunc:vmlinux:ksys_mmap_pgoff
 ...
 ```
 
-## 16. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments
+## 18. `kfunc`/`kretfunc`: Kernel Functions Tracing Arguments
 
 Syntax:
 
@@ -1722,7 +1762,7 @@ fd 3 name libselinux.so.1
 ```
 And as you can see in above example it's also possible to access function arguments on `kretfunc` probes.
 
-## 17. `iter`: Iterators Tracing
+## 19. `iter`: Iterators Tracing
 
 **WARNING**: this feature is experimental and may be subject to interface changes.
 

@@ -2403,6 +2403,32 @@ snmpd /proc/net/dev
 .Additional information
 * https://www.kernel.org/doc/html/latest/trace/tracepoints.html
 
+[#probes-rawtracepoint]
+=== rawtracepoint
+
+.variants
+* `rawtracepoint:event`
+
+.shortnames
+* `rt`
+
+The hook point triggered by `tracepoint` and `rawtracepoint` is the same.
+`tracepoint` and `rawtracepoint` are nearly identical in terms of functionality. The only difference is in the program context. `rawtracepoint` offers raw arguments to the tracepoint while `tracepoint` applies further processing to the raw arguments. The additional processing is defined inside the kernel.
+
+Tracepoint arguments are available via the `argN` builtins. The available arguments can be found in the relative path of the kernel source code `include/trace/events/`.
+Each arg is a 64-bit integer.
+
+----
+rawtracepoint:block_rq_insert {
+  printf("%llx %llx\n", arg0, arg1);
+}
+----
+
+----
+ffff88810977d6f8 ffff8881097e8e80
+[...]
+----
+
 [#probes-uprobe]
 === uprobe, uretprobe
 
