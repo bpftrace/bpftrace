@@ -1466,6 +1466,12 @@ TEST(semantic_analyser, tracepoint)
   test("tracepoint:category:event { 1 }", 0);
 }
 
+TEST(semantic_analyser, rawtracepoint)
+{
+  test("rawtracepoint:event { 1 }", 0);
+  test("rawtracepoint:event { args }", 1);
+}
+
 #if defined(ARCH_X86_64) || defined(ARCH_AARCH64)
 TEST(semantic_analyser, watchpoint_invalid_modes)
 {

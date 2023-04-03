@@ -260,6 +260,24 @@ PROG tracepoint:irq:irq_handler_entry { print(str(args->name)); exit(); }
 EXPECT ..+
 TIMEOUT 5
 
+NAME rawtracepoint
+PROG rawtracepoint:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+AFTER ./testprogs/syscall nanosleep 1e8
+TIMEOUT 5
+
+NAME rawtracepoint_short_name
+PROG rt:sys_exit { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+AFTER ./testprogs/syscall nanosleep 1e8
+TIMEOUT 5
+
+NAME rawtracepoint_missing
+PROG rawtracepoint:nonsense { printf("hit"); exit(); }
+EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
+TIMEOUT 5
+WILL_FAIL
+
 NAME profile
 PROG profile:hz:599 { @[tid] = count(); exit();}
 EXPECT \@\[[0-9]*\]\:\s[0-9]

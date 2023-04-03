@@ -118,6 +118,16 @@ void check_tracepoint(Probe &p, const std::string &target, const std::string &fu
   EXPECT_EQ("tracepoint:" + target + ":" + func, p.name);
 }
 
+void check_rawtracepoint(Probe &p,
+                         const std::string &func,
+                         const std::string &orig_name)
+{
+  EXPECT_EQ(ProbeType::rawtracepoint, p.type);
+  EXPECT_EQ(func, p.attach_point);
+  EXPECT_EQ(orig_name, p.orig_name);
+  EXPECT_EQ("rawtracepoint:" + func, p.name);
+}
+
 void check_profile(Probe &p, const std::string &unit, int freq, const std::string &orig_name)
 {
   EXPECT_EQ(ProbeType::profile, p.type);
@@ -1029,6 +1039,21 @@ TEST_F(bpftrace_btf, add_probes_iter_task_vma)
   ASSERT_EQ(0U, bpftrace.get_special_probes().size());
 
   check_probe(bpftrace.get_probes().at(0), ProbeType::iter, "iter:task_vma");
+}
+
+TEST(bpftrace, add_probes_rawtracepoint)
+{
+  auto probe = parse_probe(("rawtracepoint:sched_switch {}"));
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  std::string probe_orig_name = "rawtracepoint:sched_switch";
+  check_rawtracepoint(bpftrace.get_probes().at(0),
+                      "sched_switch",
+                      probe_orig_name);
 }
 
 } // namespace bpftrace
