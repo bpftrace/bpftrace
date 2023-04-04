@@ -41,6 +41,9 @@ and this project adheres to
   - [#2445](https://github.com/iovisor/bpftrace/pull/2445)
 - Add stdbool.h to built-in headers
   - [#2380](https://github.com/iovisor/bpftrace/pull/2380)
+- Add `strcontains` builtin function, find a substring in a string
+  - [#2393](https://github.com/iovisor/bpftrace/pull/2393)
+
 #### Changed
 - Raise minimum versions for libbpf and bcc and vendor them for local builds
   - [#2369](https://github.com/iovisor/bpftrace/pull/2369)
