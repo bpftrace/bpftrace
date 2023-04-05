@@ -8,6 +8,8 @@ bpftrace is a high-level tracing language for Linux enhanced Berkeley Packet Fil
 
 To learn more about bpftrace, see the [Manual](man/adoc/bpftrace.adoc) the [Reference Guide](docs/reference_guide.md) and [One-Liner Tutorial](docs/tutorial_one_liners.md).
 
+We are also holding regular [office hours](https://docs.google.com/document/d/1nt010RfL4s4gydhCPSJ-Z5mnFMFuD4NrcpVmUcyvu2E/edit?usp=sharing) open to the public.
+
 ## One-Liners
 
 The following one-liners demonstrate different capabilities:
