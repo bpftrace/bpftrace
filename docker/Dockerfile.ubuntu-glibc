@@ -27,6 +27,8 @@ RUN apt-get update \
         zlib1g-dev \
         libiberty-dev \
         libbfd-dev \
+        libbz2-dev \
+        libdw-dev \
         libedit-dev \
         libpcap-dev \
         systemtap-sdt-dev \
