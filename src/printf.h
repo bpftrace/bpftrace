@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <regex>
 #include <sstream>
 
@@ -35,7 +36,8 @@ public:
 class PrintableString : public virtual IPrintable
 {
 public:
-  PrintableString(std::string value) : value_(std::move(value)) { }
+  PrintableString(std::string value,
+                  std::optional<size_t> buffer_size = std::nullopt);
   int print(char* buf, size_t size, const char* fmt) override;
 
 private:
