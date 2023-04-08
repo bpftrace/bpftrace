@@ -4,6 +4,20 @@
 
 namespace bpftrace {
 
+PrintableString::PrintableString(std::string value,
+                                 std::optional<size_t> buffer_size)
+    : value_(std::move(value))
+{
+  // Add a trailer if string is truncated
+  //
+  // The heuristic we use is to check if the string exactly fits inside
+  // the buffer (NUL included). If it does, we assume it was truncated.
+  // This is obviously not a perfect heuristic, but it solves the majority
+  // case well enough and is simple to implement.
+  if (buffer_size && (value_.size() + 1 == *buffer_size))
+    value_ += "..";
+}
+
 int PrintableString::print(char *buf, size_t size, const char *fmt)
 {
   return snprintf(buf, size, fmt, value_.c_str());
