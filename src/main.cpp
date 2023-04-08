@@ -127,6 +127,7 @@ void usage()
   std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache" << std::endl;
   std::cerr << "    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
   std::cerr << "    BPFTRACE_BTF                [default: none] BTF file" << std::endl;
+  std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER  [default: '..'] string truncation trailer" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -247,6 +248,9 @@ static std::optional<struct timespec> get_boottime()
 {
   if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
     return false;
+
+  if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
+    bpftrace.str_trunc_trailer_ = env_p;
 
   // in practice, the largest buffer I've seen fit into the BPF stack was 240
   // bytes. I've set the bar lower, in case your program has a deeper stack than

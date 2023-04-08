@@ -545,6 +545,13 @@ This is the maximum number of BPF programs (functions) that bpftrace can generat
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
 takes a lot of resources (and it should not happen often).
 
+### 9.10 `BPFTRACE_STR_TRUNC_TRAILER`
+
+Default: `..`
+
+Trailer to add to strings that were truncated. Set to empty string to disable truncation trailers.
+
+
 ## 10. Clang Environment Variables
 
 bpftrace parses header files using libclang, the C interface to Clang. Thus environment variables

@@ -179,6 +179,7 @@ public:
   std::unique_ptr<BPFfeature> feature_;
 
   uint64_t strlen_ = 64;
+  const char *str_trunc_trailer_ = "..";
   uint64_t mapmax_ = 4096;
   size_t cat_bytes_max_ = 10240;
   uint64_t max_probes_ = 512;
