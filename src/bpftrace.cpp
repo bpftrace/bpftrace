@@ -669,7 +669,9 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
       {
         auto p = reinterpret_cast<char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
-            std::string(p, strnlen(p, arg.type.GetSize())), strlen_));
+            std::string(p, strnlen(p, arg.type.GetSize())),
+            strlen_,
+            str_trunc_trailer_));
         break;
       }
       case Type::buffer:

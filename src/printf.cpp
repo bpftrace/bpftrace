@@ -5,7 +5,8 @@
 namespace bpftrace {
 
 PrintableString::PrintableString(std::string value,
-                                 std::optional<size_t> buffer_size)
+                                 std::optional<size_t> buffer_size,
+                                 const char *trunc_trailer)
     : value_(std::move(value))
 {
   // Add a trailer if string is truncated
@@ -15,7 +16,7 @@ PrintableString::PrintableString(std::string value,
   // This is obviously not a perfect heuristic, but it solves the majority
   // case well enough and is simple to implement.
   if (buffer_size && (value_.size() + 1 == *buffer_size))
-    value_ += "..";
+    value_ += trunc_trailer;
 }
 
 int PrintableString::print(char *buf, size_t size, const char *fmt)
