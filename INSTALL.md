@@ -295,7 +295,8 @@ sudo apt-get install -y \
   libpcap-dev \
   libgtest-dev \
   libgmock-dev \
-  asciidoctor
+  asciidoctor \
+  pahole
 git clone https://github.com/iovisor/bpftrace --recurse-submodules
 mkdir bpftrace/build; cd bpftrace/build;
 ../build-libs.sh
@@ -331,7 +332,8 @@ sudo dnf install -y bison \
   gtest-devel \
   gmock-devel \
   cereal-devel \
-  asciidoctor
+  asciidoctor \
+  dwarves
 git clone https://github.com/iovisor/bpftrace --recurse-submodules
 cd bpftrace
 mkdir build; cd build
