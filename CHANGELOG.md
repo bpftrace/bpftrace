@@ -16,6 +16,8 @@ and this project adheres to
 - Support printing entire structs
   - [#2557](https://github.com/iovisor/bpftrace/pull/2557)
 #### Changed
+- Improve attaching to uprobes with size 0
+  - [#2562](https://github.com/iovisor/bpftrace/pull/2562)
 #### Deprecated
 #### Removed
 #### Fixed

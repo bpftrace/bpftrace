@@ -194,6 +194,18 @@ EXPECT first second
 TIMEOUT 5
 AFTER /bin/bash -c "echo lala"; /bin/bash -c "echo lala"
 
+NAME uprobe_zero_size
+PROG uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}
+EXPECT Could not determine boundary for _init
+TIMEOUT 5
+WILL_FAIL
+
+NAME uprobe_zero_size_unsafe
+RUN {{BPFTRACE}} --unsafe -e 'uprobe:./testprogs/uprobe_test:_init { printf("arg0: %d\n", arg0); exit();}'
+EXPECT arg0: [0-9]*
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test
+
 NAME uretprobe
 PROG uretprobe:/bin/bash:echo_builtin { printf("readline: %d\n", retval); exit();}
 EXPECT readline: [0-9]*
