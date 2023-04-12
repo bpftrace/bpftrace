@@ -1556,10 +1556,11 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
         auto index = bpftrace_.get_int_literal(arr.indexpr);
         if (index.has_value())
         {
-          if ((size_t)*index >= type.GetNumElements())
-            LOG(ERROR, arr.loc, err_) << "the index " << *index
-                                      << " is out of bounds for array of size "
-                                      << type.GetNumElements();
+          size_t num = type.GetNumElements();
+          if (num != 0 && (size_t)*index >= num)
+            LOG(ERROR, arr.loc, err_)
+                << "the index " << *index
+                << " is out of bounds for array of size " << num;
         }
         else
           LOG(ERROR, arr.loc, err_) << "invalid index expression";
