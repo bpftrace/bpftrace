@@ -18,6 +18,8 @@ and this project adheres to
 - BTF support for tracepoints defined in modules
   - [#2479](https://github.com/iovisor/bpftrace/pull/2479)
 #### Changed
+- Improve attaching to uprobes with size 0
+  - [#2562](https://github.com/iovisor/bpftrace/pull/2562)
 #### Deprecated
 #### Removed
 #### Fixed

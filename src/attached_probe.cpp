@@ -440,7 +440,7 @@ static void check_alignment(std::string &path,
   }
 }
 
-void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
+bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
 {
   struct bcc_symbol_option option = { };
   struct symbol sym = { };
@@ -472,7 +472,7 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
                      << " (binary appears stripped). Misaligned probes "
                         "can lead to tracee crashes!";
         offset_ = probe_.address;
-        return;
+        return true;
       }
     }
 
@@ -495,10 +495,33 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
     throw std::runtime_error(msg.str());
   }
 
-  if (func_offset >= sym.size) {
+  if (sym.size == 0 && func_offset == 0)
+  {
+    if (safe_mode)
+    {
+      std::stringstream msg;
+      msg << "Could not determine boundary for " << sym.name
+          << " (symbol has size 0).";
+      if (probe_.orig_name == probe_.name)
+      {
+        msg << " Use --unsafe to force attachment.";
+        throw std::runtime_error(msg.str());
+      }
+      else
+      {
+        LOG(WARNING)
+            << msg.str()
+            << " Skipping attachment (use --unsafe to force attachement).";
+      }
+      return false;
+    }
+  }
+  else if (func_offset >= sym.size)
+  {
     std::stringstream ss;
     ss << sym.size;
-    throw std::runtime_error("Offset outside the function bounds ('" + symbol + "' size is " + ss.str() + ")");
+    throw std::runtime_error("Offset outside the function bounds ('" + symbol +
+                             "' size is " + ss.str() + ")");
   }
 
   uint64_t sym_offset = resolve_offset(probe_.path, probe_.attach_point, probe_.loc);
@@ -507,10 +530,11 @@ void AttachedProbe::resolve_offset_uprobe(bool safe_mode)
   // If we are not aligned to the start of the symbol,
   // check if we are on the instruction boundary.
   if (func_offset == 0)
-    return;
+    return true;
 
   check_alignment(
       probe_.path, symbol, sym_offset, func_offset, safe_mode, probe_.type);
+  return true;
 }
 
 // find vmlinux file containing the given symbol information
@@ -905,7 +929,8 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
 
 void AttachedProbe::attach_uprobe(bool safe_mode)
 {
-  resolve_offset_uprobe(safe_mode);
+  if (!resolve_offset_uprobe(safe_mode))
+    return;
 
   int perf_event_fd = bpf_attach_uprobe(progfd_,
                                         attachtype(probe_.type),
