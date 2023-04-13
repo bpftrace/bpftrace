@@ -1027,6 +1027,12 @@ TEST(semantic_analyser, array_access) {
        "struct MyStruct { int y[4]; } "
        "kprobe:f { $s = ((struct MyStruct *)arg0)->y[$2]; }",
        10);
+
+  test(bpftrace,
+       "struct MyStruct { int x; int y[]; } "
+       "kprobe:f { $s = (struct MyStruct *) "
+       "arg0; @y = $s->y[0];}",
+       0);
 }
 
 TEST(semantic_analyser, array_in_map)

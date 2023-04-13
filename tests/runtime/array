@@ -160,3 +160,9 @@ PROG struct A { int x[4]; } uprobe:./testprogs/array_access:test_arrays { $a = (
 EXPECT two int arrays are not equal.
 TIMEOUT 5
 AFTER ./testprogs/array_access
+
+NAME variable array element access - assign to map
+PROG struct D { int x; int y[0]; } uprobe:./testprogs/array_access:test_variable_array { $a = (struct D *) arg0; @y = $a->y[0]; exit(); }
+EXPECT @y: 1
+TIMEOUT 5
+AFTER ./testprogs/array_access

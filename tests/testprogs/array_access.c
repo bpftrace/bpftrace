@@ -13,6 +13,13 @@ struct C
   int *z[4];
 };
 
+struct D
+{
+  int x;
+  int y[0];
+  int z;
+};
+
 void test_array(int *a __attribute__((unused)))
 {
 }
@@ -28,6 +35,10 @@ void test_struct(struct A *a __attribute__((unused)),
 }
 
 void test_ptr_array(struct C *c __attribute__((unused)))
+{
+}
+
+void test_variable_array(struct D *d __attribute__((unused)))
 {
 }
 
@@ -60,4 +71,8 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   d.x[2] = 2;
   d.x[3] = 1;
   test_arrays(&a, &d);
+
+  struct D e;
+  e.z = 1;
+  test_variable_array(&e);
 }
