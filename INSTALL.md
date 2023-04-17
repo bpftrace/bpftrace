@@ -288,10 +288,10 @@ sudo apt-get install -y \
   systemtap-sdt-dev \
   binutils-dev \
   libcereal-dev \
-  llvm-12-dev \
-  llvm-12-runtime \
-  libclang-12-dev \
-  clang-12 \
+  llvm-dev \
+  llvm-runtime \
+  libclang-dev \
+  clang \
   libpcap-dev \
   libgtest-dev \
   libgmock-dev \
