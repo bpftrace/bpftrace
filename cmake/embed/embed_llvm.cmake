@@ -173,7 +173,11 @@ endif()
 
 set(LLVM_EMBEDDED_CMAKE_TARGETS "")
 
-include_directories(SYSTEM ${EMBEDDED_LLVM_INSTALL_DIR}/include)
+# The below .. is needed otherwise the Demangle header is not found:
+#0 81.26 /bpftrace/src/cxxdemangler/cxxdemangler_llvm.cpp:3:10: fatal error: llvm/Demangle/Demangle.h: No such file or directory
+#0 81.26     3 | #include <llvm/Demangle/Demangle.h>
+#0 81.26       |
+include_directories(SYSTEM ${EMBEDDED_LLVM_INSTALL_DIR}/../include)
 
 foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
   list(APPEND LLVM_EMBEDDED_CMAKE_TARGETS ${llvm_target})
