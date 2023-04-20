@@ -16,6 +16,12 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.17.1] 2023-04-20
+
+Backport of [#2527](https://github.com/iovisor/bpftrace/pull/2527) to fix Fedora
+37 build error, see [#2567](https://github.com/iovisor/bpftrace/issues/25670) for
+details
+
 ## [0.17.0] 2023-01-30
 
 #### Added
