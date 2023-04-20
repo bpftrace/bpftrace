@@ -31,21 +31,11 @@ find_library (LIBDW_LIBRARIES
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
-find_library (LIBEBL_LIBRARIES
-  NAMES
-    ebl
-  PATH_SUFFIXES
-    libebl
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
-
 include (FindPackageHandleStandardArgs)
 
 # handle the QUIETLY and REQUIRED arguments and set LIBDW_FOUND to TRUE if all listed variables are TRUE
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibDw "Please install the libdw development package"
   LIBDW_LIBRARIES
-  LIBEBL_LIBRARIES
   LIBDW_INCLUDE_DIRS)
 
-mark_as_advanced(LIBDW_INCLUDE_DIRS LIBEBL_LIBRARIES LIBDW_LIBRARIES)
+mark_as_advanced(LIBDW_INCLUDE_DIRS LIBDW_LIBRARIES)

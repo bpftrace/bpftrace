@@ -171,19 +171,28 @@ endif(STATIC_BPF_BCC)
 if (LIBDW_FOUND)
   if(STATIC_LINKING)
     find_package(LibBz2)
+    find_package(LibLzma)
+    find_package(LibEbl)
+
     add_library(LIBBZ2 STATIC IMPORTED)
     set_property(TARGET LIBBZ2 PROPERTY IMPORTED_LOCATION ${LIBBZ2_LIBRARIES})
 
-    find_package(LibLzma)
     add_library(LIBLZMA STATIC IMPORTED)
     set_property(TARGET LIBLZMA PROPERTY IMPORTED_LOCATION ${LIBLZMA_LIBRARIES})
 
-    add_library(LIBEBL STATIC IMPORTED)
-    set_property(TARGET LIBEBL PROPERTY IMPORTED_LOCATION ${LIBEBL_LIBRARIES})
-
     add_library(LIBDW STATIC IMPORTED)
     set_property(TARGET LIBDW PROPERTY IMPORTED_LOCATION ${LIBDW_LIBRARIES})
-    target_link_libraries(LIBDW INTERFACE LIBBZ2 LIBELF LIBLZMA LIBEBL)
+
+    set(LIBDW_LIBS LIBBZ2 LIBELF LIBLZMA)
+
+    if (${LIBEBL_FOUND})
+      # libebl is not necessary on some systems (e.g. Alpine)
+      add_library(LIBEBL STATIC IMPORTED)
+      set_property(TARGET LIBEBL PROPERTY IMPORTED_LOCATION ${LIBEBL_LIBRARIES})
+      set(LIBDW_LIBS ${LIBDW_LIBS} LIBEBL)
+    endif()
+
+    target_link_libraries(LIBDW INTERFACE ${LIBDW_LIBS})
 
     target_link_libraries(runtime LIBDW)
   else()
@@ -221,7 +230,7 @@ if (STATIC_LINKING)
     target_link_libraries(libbpftrace "-Wl,-Bdynamic" "-lrt" "-lpthread" "-ldl" "-lm")
     target_link_libraries(libbpftrace "-Wl,-Bstatic" "-lz")
     target_link_libraries(runtime "-Wl,-Bdynamic" "-lrt" "-lpthread" "-ldl" "-lm")
-    target_link_libraries(runtime "-Wl,-Bstatic" "-lz")  
+    target_link_libraries(runtime "-Wl,-Bstatic" "-lz")
   endif()
 elseif(STATIC_BPF_BCC)
   # partial static build, libbpf needs zlib
