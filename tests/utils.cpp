@@ -46,6 +46,24 @@ TEST(utils, split_string)
   EXPECT_EQ(split_string("foo-bar", '-'), tokens_foo_bar);
 }
 
+TEST(utils, split_addrrange_symbol_module)
+{
+  std::tuple<std::string, std::string, std::string> tokens_ar_sym = {
+    "0xffffffff85201511-0xffffffff8520152f", "first_nmi", ""
+  };
+  std::tuple<std::string, std::string, std::string> tokens_ar_sym_mod = {
+    "0xffffffffc17e9373-0xffffffffc17e94ff", "vmx_vmexit", "kvm_intel"
+  };
+
+  EXPECT_EQ(split_addrrange_symbol_module(
+                "0xffffffff85201511-0xffffffff8520152f	first_nmi"),
+            tokens_ar_sym);
+  EXPECT_EQ(split_addrrange_symbol_module(
+                "0xffffffffc17e9373-0xffffffffc17e94ff	vmx_vmexit "
+                "[kvm_intel]"),
+            tokens_ar_sym_mod);
+}
+
 TEST(utils, wildcard_match)
 {
   std::vector<std::string> tokens_not = {"not"};

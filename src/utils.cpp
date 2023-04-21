@@ -20,6 +20,7 @@
 #include <unistd.h>
 
 #include "bpftrace.h"
+#include "debugfs.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "tracefs.h"
@@ -1071,6 +1072,19 @@ FuncsModulesMap get_traceable_funcs()
       func_mod.second = "vmlinux";
     result[func_mod.first].insert(func_mod.second);
   }
+
+  // Filter out functions from the kprobe blacklist.
+  const std::string kprobes_blacklist_path = debugfs::kprobes_blacklist();
+  std::ifstream kprobes_blacklist_funs(kprobes_blacklist_path);
+  while (std::getline(kprobes_blacklist_funs, line))
+  {
+    auto addr_func_mod = split_addrrange_symbol_module(line);
+    if (result.find(std::get<1>(addr_func_mod)) != result.end())
+    {
+      result.erase(std::get<1>(addr_func_mod));
+    }
+  }
+
   return result;
 #endif
 }
@@ -1294,6 +1308,31 @@ std::pair<std::string, std::string> split_symbol_module(
   return { symbol.substr(0, idx),
            symbol.substr(idx + strlen(" ["),
                          symbol.length() - idx - strlen(" []")) };
+}
+
+// Usually the /sys/kernel/debug/kprobes/blacklist file.
+// Format example:
+// 0xffffffff85201511-0xffffffff8520152f	first_nmi
+// 0xffffffffc17e9373-0xffffffffc17e94ff	vmx_vmexit [kvm_intel]
+// The outputs are:
+// { "0xffffffff85201511-0xffffffff8520152f", "first_nmi", "" }
+// { "0xffffffffc17e9373-0xffffffffc17e94ff", "vmx_vmexit", "kvm_intel" }
+std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
+    const std::string &symbol)
+{
+  size_t idx1 = symbol.rfind("\t");
+  size_t idx2 = symbol.rfind(" [");
+
+  if (idx2 == std::string::npos)
+    return { symbol.substr(0, idx1),
+             symbol.substr(idx1 + strlen("\t"),
+                           symbol.length() - idx1 - strlen("\t")),
+             "" };
+
+  return { symbol.substr(0, idx1),
+           symbol.substr(idx1 + strlen("\t"), idx2 - idx1 - strlen("\t")),
+           symbol.substr(idx2 + strlen(" ["),
+                         symbol.length() - idx2 - strlen(" []")) };
 }
 
 } // namespace bpftrace
