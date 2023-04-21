@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "btf.h"
+#include "debugfs.h"
 #include "probe_matcher.h"
 #include "tracefs.h"
 #include "utils.h"

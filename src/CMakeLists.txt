@@ -36,6 +36,7 @@ add_library(runtime
   required_resources.cpp
   struct.cpp
   tracefs.cpp
+  debugfs.cpp
   types.cpp
   usdt.cpp
   utils.cpp

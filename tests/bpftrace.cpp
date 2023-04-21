@@ -222,8 +222,7 @@ TEST(bpftrace, add_probes_wildcard)
       "kprobe:sys_read,kprobe:my_*,kprobe:sys_write{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(tracefs::available_filter_functions()))
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
       .Times(1);
 
   if (bpftrace->has_kprobe_multi())
@@ -259,8 +258,7 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
       "kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(tracefs::available_filter_functions()))
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -289,8 +287,7 @@ TEST(bpftrace, add_probes_kernel_module_wildcard)
 {
   ast::Probe *probe = parse_probe("kprobe:func_in_mo*{}");
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_symbols_from_file(tracefs::available_filter_functions()))
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));

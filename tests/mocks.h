@@ -23,6 +23,8 @@ public:
 #endif
   MOCK_CONST_METHOD1(get_symbols_from_file,
                      std::unique_ptr<std::istream>(const std::string &path));
+  MOCK_CONST_METHOD0(get_symbols_from_traceable_funcs,
+                     std::unique_ptr<std::istream>(void));
   MOCK_CONST_METHOD2(get_symbols_from_usdt,
                      std::unique_ptr<std::istream>(int pid,
                                                    const std::string &target));

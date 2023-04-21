@@ -209,6 +209,8 @@ bool symbol_has_module(const std::string &symbol);
 std::string strip_symbol_module(const std::string &symbol);
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol);
+std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
+    const std::string &symbol);
 
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(
