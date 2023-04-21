@@ -15,6 +15,7 @@
 #include "printf.h"
 #include "probe_matcher.h"
 #include "tracepoint_format_parser.h"
+#include "types.h"
 #include "usdt.h"
 
 namespace bpftrace {
@@ -156,12 +157,10 @@ void SemanticAnalyser::builtin_args_tracepoint(AttachPoint *attach_point,
     auto &match = *matches.begin();
     std::string tracepoint_struct = TracepointFormatParser::get_struct_name(
         match);
-    AddrSpace as = (attach_point->target == "syscalls") ? AddrSpace::user
-                                                        : AddrSpace::kernel;
-    builtin.type = CreatePointer(CreateRecord(tracepoint_struct,
-                                              bpftrace_.structs.Lookup(
-                                                  tracepoint_struct)),
-                                 as);
+    builtin.type = CreateRecord(tracepoint_struct,
+                                bpftrace_.structs.Lookup(tracepoint_struct));
+    builtin.type.SetAS(attach_point->target == "syscalls" ? AddrSpace::user
+                                                          : AddrSpace::kernel);
     builtin.type.MarkCtxAccess();
     builtin.type.is_tparg = true;
   }
@@ -343,7 +342,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       LOG(ERROR, builtin.loc, err_)
           << "The retval builtin can only be used with 'kretprobe' and "
           << "'uretprobe' and 'kfunc' probes"
-          << (type == ProbeType::tracepoint ? " (try to use args->ret instead)"
+          << (type == ProbeType::tracepoint ? " (try to use args.ret instead)"
                                             : "");
     }
     // For kretprobe, kfunc, kretfunc -> AddrSpace::kernel
@@ -449,31 +448,18 @@ void SemanticAnalyser::visit(Builtin &builtin)
 
     ProbeType type = single_provider_type();
 
-    if (type == ProbeType::tracepoint)
+    if (type == ProbeType::kfunc || type == ProbeType::kretfunc ||
+        type == ProbeType::uprobe)
     {
-      // no special action in here
-    }
-    else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
-    {
-      builtin.type = CreatePointer(CreateRecord(probe_->args_typename(),
-                                                bpftrace_.structs.Lookup(
-                                                    probe_->args_typename())),
-                                   AddrSpace::kernel);
+      auto type_name = probe_->args_typename();
+      builtin.type = CreateRecord(type_name,
+                                  bpftrace_.structs.Lookup(type_name));
       builtin.type.MarkCtxAccess();
       builtin.type.is_funcarg = true;
+      builtin.type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
+                                                   : AddrSpace::kernel);
     }
-    else if (type == ProbeType::uprobe)
-    {
-      // Add a dummy "placeholder" type here to satisfy semantic analyser.
-      // An eventual FieldAccess is then resolved as an argument lookup.
-      builtin.type = CreatePointer(CreateRecord(probe_->args_typename(),
-                                                bpftrace_.structs.Lookup(
-                                                    probe_->args_typename())),
-                                   AddrSpace::user);
-      builtin.type.MarkCtxAccess();
-      builtin.type.is_funcarg = true;
-    }
-    else
+    else if (type != ProbeType::tracepoint) // no special action for tracepoint
     {
       LOG(ERROR, builtin.loc, err_)
           << "The args builtin can only be used with tracepoint/kfunc/uprobe"
@@ -1190,9 +1176,9 @@ void SemanticAnalyser::visit(Call &call)
     {
       // Argument for path can be both record and pointer.
       // It's pointer when it's passed directly from the probe
-      // argument, like: path(args->path))
+      // argument, like: path(args.path))
       // It's record when it's referenced as object pointer
-      // member, like: path(args->filp->f_path))
+      // member, like: path(args.filp->f_path))
       if (!check_arg(call, Type::record, 0, false, false) &&
           !check_arg(call, Type::pointer, 0, false, false))
       {
@@ -1976,7 +1962,9 @@ void SemanticAnalyser::visit(Unop &unop)
   if (is_final_pass())
   {
     // Unops are only allowed on ints (e.g. ~$x), dereference only on pointers
-    if (!type.IsIntegerTy() && !(type.IsPtrTy() && valid_ptr_op))
+    // and context (we allow args->field for backwards compatibility)
+    if (!type.IsIntegerTy() &&
+        !((type.IsPtrTy() || type.IsCtxAccess()) && valid_ptr_op))
     {
       LOG(ERROR, unop.loc, err_)
           << "The " << opstr(unop)
@@ -1991,18 +1979,21 @@ void SemanticAnalyser::visit(Unop &unop)
     {
       unop.type = SizedType(*type.GetPointeeTy());
       if (type.IsCtxAccess())
-      {
         unop.type.MarkCtxAccess();
-        unop.type.is_funcarg = type.is_funcarg;
-        unop.type.is_tparg = type.is_tparg;
-      }
       unop.type.is_btftype = type.is_btftype;
       unop.type.SetAS(type.GetAS());
     }
     else if (type.IsRecordTy())
     {
-      LOG(ERROR, unop.loc, err_) << "Can not dereference struct/union of type '"
-                                 << type.GetName() << "'. It is not a pointer.";
+      // We allow dereferencing "args" with no effect (for backwards compat)
+      if (type.IsCtxAccess())
+        unop.type = type;
+      else
+      {
+        LOG(ERROR, unop.loc, err_)
+            << "Can not dereference struct/union of type '" << type.GetName()
+            << "'. It is not a pointer.";
+      }
     }
     else if (type.IsIntTy())
     {
@@ -3252,6 +3243,9 @@ SizedType *SemanticAnalyser::get_map_type(const Map &map)
 void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
 {
   const std::string &map_ident = map.ident;
+
+  if (type.IsRecordTy() && (type.is_funcarg || type.is_tparg))
+    LOG(ERROR, map.loc, err_) << "Storing args in maps is not supported";
 
   auto *maptype = get_map_type(map);
   if (maptype)

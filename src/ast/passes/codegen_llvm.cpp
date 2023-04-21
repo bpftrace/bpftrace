@@ -1751,7 +1751,7 @@ void CodegenLLVM::visit(Unop &unop)
   {
     unop_int(unop);
   }
-  else if (type.IsPtrTy())
+  else if (type.IsPtrTy() || type.IsCtxAccess()) // allow dereferencing args
   {
     unop_ptr(unop);
   }
