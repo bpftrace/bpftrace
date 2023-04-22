@@ -126,6 +126,11 @@ void SemanticAnalyser::visit(Identifier &identifier)
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
   }
+  else if (func_ == "offsetof")
+  {
+    // Handling the second arg of offsetof(): (field name)
+    identifier.type = CreateNone();
+  }
   else {
     identifier.type = CreateNone();
     LOG(ERROR, identifier.loc, err_)
@@ -514,7 +519,39 @@ void SemanticAnalyser::visit(Call &call)
       auto &expr = (*call.vargs)[i];
       func_arg_idx_ = i;
 
-      expr->accept(*this);
+      // Handling offsetof() 2nd argument
+      // Handle the second parameter offsetof(record, field), this parameter
+      // is treated as an Identifier, of course, it may be call or builtin, we
+      // convert them all to Identifiers. For example:
+      //
+      //  struct foo {
+      //    int offsetof;   > offsetof(struct foo, offsetof)
+      //    int kstack;     > offsetof(struct foo, kstack)
+      //    int ctx;        > offsetof(struct foo, ctx)
+      //    int comm;       > offsetof(struct foo, comm)
+      //  }
+      if (func_ == "offsetof" && func_arg_idx_ == 1)
+      {
+        auto _builtin = dynamic_cast<Builtin *>(call.vargs->at(1));
+        auto _call = dynamic_cast<Call *>(call.vargs->at(1));
+
+        if (_builtin)
+        {
+          delete expr;
+          expr = new Identifier(_builtin->ident, call.loc);
+        }
+        else if (_call)
+        {
+          delete expr;
+          expr = new Identifier(_call->func, call.loc);
+        }
+
+        expr->accept(*this);
+      }
+      else
+      {
+        expr->accept(*this);
+      }
     }
   }
 
@@ -1177,6 +1214,33 @@ void SemanticAnalyser::visit(Call &call)
     check_nargs(call, 1);
 
     call.type = CreateUInt64();
+  }
+  else if (call.func == "offsetof")
+  {
+    if (check_nargs(call, 2))
+    {
+      // Handle Identifier only, see earlier in this function where we accept()
+      // call arguments.
+      auto element = dynamic_cast<Identifier *>(call.vargs->at(1));
+      assert(element && "offsetof() 2nd argument not an identifier");
+
+      auto &arg = *call.vargs->at(0);
+
+      if (arg.type.type != Type::record)
+      {
+        LOG(ERROR, call.loc, err_)
+            << "The first argument of " << call.func << "() only supports "
+            << Type::record << " (" << arg.type.type << " provided)";
+      }
+      else if (!arg.type.HasField(element->ident))
+      {
+        LOG(ERROR, call.loc, err_)
+            << "struct \'" << arg.type.GetName() << "\' has no field \'"
+            << element->ident << "\'";
+      }
+
+      call.type = CreateUInt64();
+    }
   }
   else if (call.func == "path")
   {

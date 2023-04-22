@@ -337,6 +337,7 @@ primary_expr:
         |       int                { $$ = $1; }
         |       STRING             { $$ = new ast::String($1, @$); }
         |       STACK_MODE         { $$ = new ast::StackMode($1, @$); }
+        |       CALL               { $$ = new ast::Call($1, @$); }
         |       BUILTIN            { $$ = new ast::Builtin($1, @$); }
         |       CALL_BUILTIN       { $$ = new ast::Builtin($1, @$); }
         |       LPAREN expr RPAREN { $$ = $2; }

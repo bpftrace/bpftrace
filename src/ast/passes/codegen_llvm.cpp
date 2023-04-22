@@ -1147,6 +1147,14 @@ void CodegenLLVM::visit(Call &call)
   {
     expr_ = b_.getInt64(call.vargs->at(0)->type.GetSize());
   }
+  else if (call.func == "offsetof")
+  {
+    auto identifier = dynamic_cast<Identifier *>(call.vargs->at(1));
+    assert(identifier && "offsetof() 2nd argument not an identifier");
+
+    auto &field = call.vargs->at(0)->type.GetField(identifier->ident);
+    expr_ = b_.getInt64(field.offset);
+  }
   else if (call.func == "strerror")
   {
     auto scoped_del = accept(call.vargs->front());

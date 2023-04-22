@@ -19,6 +19,8 @@ and this project adheres to
   - [#2479](https://github.com/iovisor/bpftrace/pull/2479)
 - Add trailer to truncated strings
   - [#2559](https://github.com/iovisor/bpftrace/pull/2559)
+- Add new function, `offsetof`, get the offset of the element in the struct
+  - [#2565](https://github.com/iovisor/bpftrace/pull/2565)
 #### Changed
 - Improve attaching to uprobes with size 0
   - [#2562](https://github.com/iovisor/bpftrace/pull/2562)
