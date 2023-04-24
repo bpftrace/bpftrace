@@ -22,6 +22,7 @@ MAKE_ACCEPT(Identifier)
 MAKE_ACCEPT(PositionalParameter)
 MAKE_ACCEPT(Call)
 MAKE_ACCEPT(Sizeof)
+MAKE_ACCEPT(Offsetof)
 MAKE_ACCEPT(Map)
 MAKE_ACCEPT(Variable)
 MAKE_ACCEPT(Binop)
@@ -55,6 +56,12 @@ Call::~Call()
   vargs = nullptr;
 }
 Sizeof::~Sizeof()
+{
+  if (expr)
+    delete expr;
+  expr = nullptr;
+}
+Offsetof::~Offsetof()
 {
   if (expr)
     delete expr;
@@ -269,6 +276,16 @@ Sizeof::Sizeof(SizedType type, location loc)
 }
 
 Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
+{
+}
+
+Offsetof::Offsetof(SizedType record, std::string &field, location loc)
+    : Expression(loc), record(record), expr(nullptr), field(field)
+{
+}
+
+Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
+    : Expression(loc), expr(expr), field(field)
 {
 }
 
@@ -586,6 +603,10 @@ Call::Call(const Call &other) : Expression(other)
 }
 
 Sizeof::Sizeof(const Sizeof &other) : Expression(other)
+{
+}
+
+Offsetof::Offsetof(const Offsetof &other) : Expression(other)
 {
 }
 

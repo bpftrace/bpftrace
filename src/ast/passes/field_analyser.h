@@ -33,6 +33,7 @@ public:
   void visit(FieldAccess &acc) override;
   void visit(Cast &cast) override;
   void visit(Sizeof &szof) override;
+  void visit(Offsetof &ofof) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
   void visit(Unop &unop) override;

@@ -1294,6 +1294,12 @@ void CodegenLLVM::visit(Sizeof &szof)
   expr_ = b_.getInt64(szof.argtype.GetSize());
 }
 
+void CodegenLLVM::visit(Offsetof &ofof)
+{
+  auto &field = ofof.record.GetField(ofof.field);
+  expr_ = b_.getInt64(field.offset);
+}
+
 void CodegenLLVM::visit(Map &map)
 {
   auto [key, scoped_key_deleter] = getMapKey(map);

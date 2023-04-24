@@ -131,6 +131,17 @@ void Printer::visit(Sizeof &szof)
   --depth_;
 }
 
+void Printer::visit(Offsetof &ofof)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "offsetof: " << type(ofof.type) << std::endl;
+
+  ++depth_;
+  if (ofof.expr)
+    ofof.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(Map &map)
 {
   std::string indent(depth_, ' ');

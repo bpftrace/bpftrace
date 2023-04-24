@@ -38,6 +38,7 @@ public:
   void visit(StackMode &) override { };
   void visit(Call &call) override;
   void visit(Sizeof &szof) override;
+  void visit(Offsetof &ofof) override;
   void visit(Map &map) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;

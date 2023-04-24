@@ -1559,6 +1559,33 @@ TEST(Parser, sizeof_type)
        "  sizeof: \n");
 }
 
+TEST(Parser, offsetof_type)
+{
+  test("struct Foo { int x; } BEGIN { offsetof(struct Foo, x); }",
+       "struct Foo { int x; };\n"
+       "\n"
+       "Program\n"
+       " BEGIN\n"
+       "  offsetof: \n");
+}
+
+TEST(Parser, offsetof_expression)
+{
+  test("struct Foo { int x; }; "
+       "BEGIN { $foo = (struct Foo *)0; offsetof(*$foo, x); }",
+       "struct Foo { int x; };;\n"
+       "\n"
+       "Program\n"
+       " BEGIN\n"
+       "  =\n"
+       "   variable: $foo\n"
+       "   (struct Foo *)\n"
+       "    int: 0\n"
+       "  offsetof: \n"
+       "   dereference\n"
+       "    variable: $foo\n");
+}
+
 TEST(Parser, dereference_precedence)
 {
   test("kprobe:sys_read { *@x+1 }",
