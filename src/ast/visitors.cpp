@@ -46,6 +46,12 @@ void Visitor::visit(Sizeof &szof)
     Visit(*szof.expr);
 }
 
+void Visitor::visit(Offsetof &ofof)
+{
+  if (ofof.expr)
+    Visit(*ofof.expr);
+}
+
 void Visitor::visit(Map &map)
 {
   if (map.vargs)
@@ -244,6 +250,14 @@ Node *Mutator::visit(Sizeof &szof)
   auto s = szof.leafcopy();
   if (szof.expr)
     s->expr = Value<Expression>(szof.expr);
+  return s;
+}
+
+Node *Mutator::visit(Offsetof &ofof)
+{
+  auto s = ofof.leafcopy();
+  if (ofof.expr)
+    s->expr = Value<Expression>(ofof.expr);
   return s;
 }
 

@@ -2569,6 +2569,53 @@ TEST(semantic_analyser, call_path)
   test("END { $k = path( 1 ) }", 1);
 }
 
+TEST(semantic_analyser, call_offsetof)
+{
+  test("struct Foo { int x; long l; char c; } \
+        BEGIN { @x = offsetof(struct Foo, x); }",
+       0);
+  test("struct Foo { int comm; } \
+        BEGIN { @x = offsetof(struct Foo, comm); }",
+       0);
+  test("struct Foo { int ctx; } \
+        BEGIN { @x = offsetof(struct Foo, ctx); }",
+       0);
+  test("struct Foo { int args; } \
+        BEGIN { @x = offsetof(struct Foo, args); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        struct Bar { struct Foo foo; int x; } \
+        BEGIN { @x = offsetof(struct Bar, x); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        union Bar { struct Foo foo; int x; } \
+        BEGIN { @x = offsetof(union Bar, x); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        struct Fun { struct Foo foo; int (*call)(void); } \
+        BEGIN { @x = offsetof(struct Fun, call); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        BEGIN { $foo = (struct Foo *)0; \
+        @x = offsetof(*$foo, x); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        struct Ano { \
+          struct { \
+            struct Foo foo; \
+            int a; \
+          }; \
+          long l; \
+        } \
+        BEGIN { @x = offsetof(struct Ano, a); }",
+       0);
+  test("struct Foo { int x; long l; char c; } \
+        BEGIN { @x = offsetof(struct Foo, __notexistfield__); }",
+       1);
+  test("BEGIN { @x = offsetof(__passident__, x); }", 1);
+  test("BEGIN { @x = offsetof(struct __notexiststruct__, x); }", 1);
+}
+
 TEST(semantic_analyser, int_ident)
 {
   test("BEGIN { sizeof(int32) }", 0);

@@ -1569,6 +1569,18 @@ Returns size of the argument in bytes.
 Similar to C/C++ `sizeof` operator.
 Note that the expression does not get evaluated.
 
+=== offsetof
+
+.variants
+* `offsetof(STRUCT, FIELD)`
+* `offsetof(EXPRESSION, FIELD)`
+
+*compile time*
+
+Returns offset of the field offset bytes in struct.
+Similar to kernel `offsetof` operator.
+Note that subfields are not yet supported.
+
 === str
 
 .variants
