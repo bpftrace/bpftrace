@@ -129,8 +129,13 @@ std::string name()
 
 std::vector<std::string> invalid_watchpoint_modes()
 {
-  throw std::runtime_error(
-      "Watchpoints are not supported on this architecture");
+  // See PowerISA Book III v3.1B, Section 5.4.4 and 10.4
+  return std::vector<std::string>{
+    "x",
+    "rx",
+    "wx",
+    "rwx",
+  };
 }
 
 } // namespace arch

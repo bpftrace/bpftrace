@@ -19,6 +19,8 @@ and this project adheres to
   - [#2479](https://github.com/iovisor/bpftrace/pull/2479)
 - Add trailer to truncated strings
   - [#2559](https://github.com/iovisor/bpftrace/pull/2559)
+- Enable watchpoint support for PowerPC
+  - [#2577](https://github.com/iovisor/bpftrace/pull/2577)
 #### Changed
 - Improve attaching to uprobes with size 0
   - [#2562](https://github.com/iovisor/bpftrace/pull/2562)
