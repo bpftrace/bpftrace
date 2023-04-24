@@ -24,16 +24,16 @@ tracepoint:syscalls:sys_enter_setuid,
 tracepoint:syscalls:sys_enter_setfsuid
 {
 	@uid[tid] = uid;
-	@setuid[tid] = args->uid;
+	@setuid[tid] = args.uid;
 	@seen[tid] = 1;
 }
 
 tracepoint:syscalls:sys_enter_setresuid
 {
 	@uid[tid] = uid;
-	@ruid[tid] = args->ruid;
-	@euid[tid] = args->euid;
-	@suid[tid] = args->suid;
+	@ruid[tid] = args.ruid;
+	@euid[tid] = args.euid;
+	@suid[tid] = args.suid;
 	@seen[tid] = 1;
 }
 
@@ -42,7 +42,7 @@ tracepoint:syscalls:sys_exit_setuid
 {
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %-6d setuid    uid=%d (%d)\n", pid, comm,
-	    @uid[tid], @setuid[tid], args->ret);
+	    @uid[tid], @setuid[tid], args.ret);
 	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
 }
 
@@ -51,7 +51,7 @@ tracepoint:syscalls:sys_exit_setfsuid
 {
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %-6d setfsuid  uid=%d (prevuid=%d)\n", pid, comm,
-	    @uid[tid], @setuid[tid], args->ret);
+	    @uid[tid], @setuid[tid], args.ret);
 	delete(@seen[tid]); delete(@uid[tid]); delete(@setuid[tid]);
 }
 
@@ -61,7 +61,7 @@ tracepoint:syscalls:sys_exit_setresuid
 	time("%H:%M:%S ");
 	printf("%-6d %-16s %-6d setresuid ", pid, comm, @uid[tid]);
 	printf("ruid=%d euid=%d suid=%d (%d)\n", @ruid[tid], @euid[tid],
-	    @suid[tid], args->ret);
+	    @suid[tid], args.ret);
 	delete(@seen[tid]); delete(@uid[tid]); delete(@ruid[tid]);
 	delete(@euid[tid]); delete(@suid[tid]);
 }

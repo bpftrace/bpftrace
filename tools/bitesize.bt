@@ -20,7 +20,7 @@ BEGIN
 
 tracepoint:block:block_rq_issue
 {
-	@[args->comm] = hist(args->bytes);
+	@[args.comm] = hist(args.bytes);
 }
 
 END

@@ -24,14 +24,14 @@ BEGIN
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat
 {
-	@filename[tid] = args->filename;
+	@filename[tid] = args.filename;
 }
 
 tracepoint:syscalls:sys_exit_open,
 tracepoint:syscalls:sys_exit_openat
 /@filename[tid]/
 {
-	$ret = args->ret;
+	$ret = args.ret;
 	$fd = $ret >= 0 ? $ret : -1;
 	$errno = $ret >= 0 ? 0 : - $ret;
 
