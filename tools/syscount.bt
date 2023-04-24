@@ -21,7 +21,7 @@ BEGIN
 
 tracepoint:raw_syscalls:sys_enter
 {
-	@syscall[args->id] = count();
+	@syscall[args.id] = count();
 	@process[comm] = count();
 }
 

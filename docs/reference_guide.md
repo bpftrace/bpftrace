@@ -663,7 +663,7 @@ Attaching 1 probe...
 tracepoint example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 snmpd /proc/diskstats
 snmpd /proc/stat
@@ -720,7 +720,7 @@ member to dereference).
 Examples:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_exit_read { @error[args->ret < 0 ? - args->ret : 0] = count(); }'
+# bpftrace -e 'tracepoint:syscalls:sys_exit_read { @error[args.ret < 0 ? - args.ret : 0] = count(); }'
 Attaching 1 probe...
 ^C
 
@@ -740,7 +740,7 @@ Example:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_read { @reads = count();
-    if (args->count > 1024) { @large = count(); } }'
+    if (args.count > 1024) { @large = count(); } }'
 Attaching 1 probe...
 ^C
 @large: 72
@@ -1212,10 +1212,10 @@ If the traced binary has DWARF available, it is possible to access `uprobe` argu
 
 Syntax:
 ```
-uprobe: args->NAME
+uprobe: args.NAME
 ```
 
-The arguments can be accessed by dereferencing `args` and accessing the argument's `NAME`.
+The arguments can be accessed as the fields of the builtin `args` structure.
 
 The list of function's arguments can be retrieved using the verbose list option:
 ```
@@ -1226,7 +1226,7 @@ uprobe:/bin/bash:rl_set_prompt
 
 Example (requires debuginfo for `/bin/bash` installed):
 ```
-# bpftrace -e 'uprobe:/bin/bash:rl_set_prompt { printf("prompt: %s\n", str(args->prompt)); }'
+# bpftrace -e 'uprobe:/bin/bash:rl_set_prompt { printf("prompt: %s\n", str(args.prompt)); }'
 Attaching 1 probe...
 prompt: [user@localhost ~]$
 ^C
@@ -1262,7 +1262,7 @@ Examples in situ:
 Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 irqbalance /proc/interrupts
 irqbalance /proc/stat
@@ -1703,8 +1703,8 @@ If no kernel module is given, all loaded modules are searched for the given func
 Examples:
 
 ```
-# bpftrace -e 'kfunc:x86_pmu_stop { printf("pmu %s stop\n", str(args->event->pmu->name)); }'
-# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));  }'
+# bpftrace -e 'kfunc:x86_pmu_stop { printf("pmu %s stop\n", str(args.event->pmu->name)); }'
+# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));  }'
 # bpftrace -e 'kfunc:kvm:x86_emulate_insn { @ = count(); }'
 ```
 
@@ -1728,11 +1728,11 @@ kfunc:vmlinux:ksys_mmap_pgoff
 Syntax:
 
 ```
-kfunc[:module]:function      args->NAME  ...
-kretfunc[:module]:function   args->NAME ... retval
+kfunc[:module]:function      args.NAME  ...
+kretfunc[:module]:function   args.NAME ... retval
 ```
 
-Arguments can be accessed via args being dereferenced to argument's `NAME`.
+Arguments can be accessed as the fields of the builtin `args` structure.
 Return value can be referenced by `retval` builtin, see the [1. Builtins](#1-builtins).
 
 It's possible to get available argument names for function via verbose list option:
@@ -1747,10 +1747,10 @@ kfunc:fget
 ```
 
 The `fget` function takes one argument as file descriptor and
-you can access it via `args->fd` in `kfunc:fget` probe:
+you can access it via `args.fd` in `kfunc:fget` probe:
 
 ```
-# bpftrace -e 'kfunc:fget { printf("fd %d\n", args->fd);  }'
+# bpftrace -e 'kfunc:fget { printf("fd %d\n", args.fd);  }'
 Attaching 1 probe...
 fd 3
 fd 3
@@ -1760,7 +1760,7 @@ fd 3
 The return value of `fget` function probe is accessible via `retval`:
 
 ```
-# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));  }'
+# bpftrace -e 'kretfunc:fget { printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));  }'
 Attaching 1 probe...
 fd 3 name ld.so.cache
 fd 3 name libselinux.so.1
@@ -2213,9 +2213,9 @@ BEGIN
 }
 
 tracepoint:block:block_rq_issue
-/args->bytes > $1/
+/args.bytes > $1/
 {
-	@ = hist(args->bytes);
+	@ = hist(args.bytes);
 }
 ```
 
@@ -2303,7 +2303,7 @@ Syntax: `printf(fmt, args)`
 This behaves like printf() from C and other languages, with a limited set of format characters. Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 bash called /bin/ls
 bash called /usr/bin/man
@@ -2345,7 +2345,7 @@ default delimiter, if none is provided, is the space character. This current ver
 string, so it cannot be used as an argument in printf(). Example:
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args.argv); }'
 Attaching 1 probe...
 ls --color=auto
 man ls
@@ -2358,7 +2358,7 @@ tbl
 [...]
 ```
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args->argv, ","); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { join(args.argv, ","); }'
 Attaching 1 probe...
 ls,--color=auto
 man,ls
@@ -2381,11 +2381,11 @@ a null-terminator. By default, the string will have size 64 bytes (tuneable usin
 
 Examples:
 
-We can take the `args->filename` of `sys_enter_execve` (a `const char *filename`), and read the string to
+We can take the `args.filename` of `sys_enter_execve` (a `const char *filename`), and read the string to
 which it points. This string can be provided as an argument to printf():
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_execve { printf("%s called %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 bash called /bin/ls
 bash called /usr/bin/man
@@ -2400,14 +2400,14 @@ man called /apps/nflx-bash-utils/bin/tbl
 
 We can trace strings that are displayed in a bash shell. Some length tuning is employed, because:
 
-- sys_enter_write()'s `args->buf` does not point to null-terminated strings
+- sys_enter_write()'s `args.buf` does not point to null-terminated strings
   - we use the length parameter to limit how many bytes to read of the pointed-to string
-- sys_enter_write()'s `args->buf` contains messages larger than 64 bytes
+- sys_enter_write()'s `args.buf` contains messages larger than 64 bytes
   - we increase BPFTRACE_STRLEN to accommodate the large messages
 
 ```
 # BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/
-    { printf("<%s>\n", str(args->buf, args->count)); }'
+    { printf("<%s>\n", str(args.buf, args.count)); }'
 # type pwd into terminal 23506
 <p>
 <w>
@@ -2565,7 +2565,7 @@ the tasks that belong to the specific cgroup, for example:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_openat /cgroup == cgroupid("/sys/fs/cgroup/unified/mycg")/
-    { printf("%s\n", str(args->filename)); }':
+    { printf("%s\n", str(args.filename)); }':
 Attaching 1 probe...
 /etc/ld.so.cache
 /lib64/libc.so.6
@@ -2613,7 +2613,7 @@ A less trivial example of this usage, tracing tcp state changes, and printing th
 address:
 
 ```
-bpftrace -e 'tracepoint:tcp:tcp_set_state { printf("%s\n", ntop(args->daddr_v6)) }'
+bpftrace -e 'tracepoint:tcp:tcp_set_state { printf("%s\n", ntop(args.daddr_v6)) }'
 Attaching 1 probe...
 ::ffff:216.58.194.164
 ::ffff:216.58.194.164
@@ -2880,7 +2880,7 @@ Syntax: `cat(filename)`
 This prints the file content. For example:
 
 ```
-# bpftrace -e 't:syscalls:sys_enter_execve { printf("%s ", str(args->filename)); cat("/proc/loadavg"); }'
+# bpftrace -e 't:syscalls:sys_enter_execve { printf("%s ", str(args.filename)); cat("/proc/loadavg"); }'
 Attaching 1 probe...
 /usr/libexec/grepconf.sh 3.18 2.90 2.94 2/977 30138
 /usr/bin/grep 3.18 2.90 2.94 4/978 30139
@@ -2976,7 +2976,7 @@ Return true if the string haystack contains the string needle, and zero otherwis
 Examples:
 
 ```
-bpftrace -e 't:syscalls:sys_enter_execve /strcontains(str(args->filename),"bin")/ { @[comm, str(args->filename)] = count(); }'  
+bpftrace -e 't:syscalls:sys_enter_execve /strcontains(str(args.filename),"bin")/ { @[comm, str(args.filename)] = count(); }'  
 Attaching 1 probe...
 
 @[sh, /usr/bin/which]: 2
@@ -3034,7 +3034,7 @@ printf() using the `%r` format specifier:
 
 ```
 # bpftrace -e 'tracepoint:syscalls:sys_enter_sendto
-    { printf("Datagram bytes: %r\n", buf(args->buff, args->len)); }' -c 'ping 8.8.8.8 -c1'
+    { printf("Datagram bytes: %r\n", buf(args.buff, args.len)); }' -c 'ping 8.8.8.8 -c1'
 Attaching 1 probe...
 PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
 Datagram bytes: \x08\x00+\xb9\x06b\x00\x01Aen^\x00\x00\x00\x00KM\x0c\x00\x00\x00\x00\x00\x10\x11
@@ -3151,7 +3151,7 @@ helper in probe.
 
 Examples:
 ```
-# bpftrace  -e 'kfunc:filp_close { printf("%s\n", path(args->filp->f_path)); }'
+# bpftrace  -e 'kfunc:filp_close { printf("%s\n", path(args.filp->f_path)); }'
 Attaching 1 probe...
 /proc/sys/net/ipv6/conf/eno2/disable_ipv6
 /proc/sys/net/ipv6/conf/eno2/use_tempaddr
@@ -3267,12 +3267,12 @@ Example:
 ```
 # cat dump.bt
 kfunc:napi_gro_receive {
-$ret = skboutput("receive.pcap", args->skb, args->skb->len, 0);
+$ret = skboutput("receive.pcap", args.skb, args.skb->len, 0);
 }
 
 kfunc:dev_queue_xmit {
 // setting offset to 14, to exclude ethernet header
-$ret = skboutput("output.pcap", args->skb, args->skb->len, 14);
+$ret = skboutput("output.pcap", args.skb, args.skb->len, 14);
 printf("skboutput returns %d\n", $ret);
 }
 
@@ -3300,7 +3300,7 @@ Examples:
 
 ```
 # bpftrace -e 'tracepoint:tcp:tcp_retransmit_skb {
-  if (args->daddr_v6[0] == pton("::1")[0]) {
+  if (args.daddr_v6[0] == pton("::1")[0]) {
     printf("first octet matched\n");
   }
 }'
@@ -3309,7 +3309,7 @@ first octet matched
 ^C
 
 # bpftrace -e 'tracepoint:tcp:tcp_retransmit_skb {
-  if (args->daddr[0] == pton("127.0.0.1")[0]) {
+  if (args.daddr[0] == pton("127.0.0.1")[0]) {
     printf("first octet matched\n");
   }
 }'

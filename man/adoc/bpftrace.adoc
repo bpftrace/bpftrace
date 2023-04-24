@@ -337,7 +337,7 @@ BEGIN
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat
 {
-	printf("%-6d %-16s %s\n", pid, comm, str(args->filename));
+	printf("%-6d %-16s %s\n", pid, comm, str(args.filename));
 }
 ----
 
@@ -1393,7 +1393,7 @@ The concatenation of the array members is done in BPF and the printing happens i
 
 ----
 tracepoint:syscalls:sys_enter_execve {
-  join(args->argv);
+  join(args.argv);
 }
 ----
 
@@ -1849,12 +1849,12 @@ Usage
 ----
 # cat dump.bt
 kfunc:napi_gro_receive {
-  $ret = skboutput("receive.pcap", args->skb, args->skb->len, 0);
+  $ret = skboutput("receive.pcap", args.skb, args.skb->len, 0);
 }
 
 kfunc:dev_queue_xmit {
   // setting offset to 14, to exclude ethernet header
-  $ret = skboutput("output.pcap", args->skb, args->skb->len, 14);
+  $ret = skboutput("output.pcap", args.skb, args.skb->len, 14);
   printf("skboutput returns %d\n", $ret);
 }
 
@@ -2256,13 +2256,13 @@ kfunc:tcp_reset
 
 ----
 kfunc:x86_pmu_stop {
-  printf("pmu %s stop\n", str(args->event->pmu->name));
+  printf("pmu %s stop\n", str(args.event->pmu->name));
 }
 ----
 
 ----
 kretfunc:fget {
-  printf("fd %d name %s\n", args->fd, str(retval->f_path.dentry->d_name.name));
+  printf("fd %d name %s\n", args.fd, str(retval->f_path.dentry->d_name.name));
 }
 ----
 
@@ -2405,7 +2405,7 @@ Tracepoint arguments are available in the `args` struct which can be inspected w
 
 ----
 tracepoint:syscalls:sys_enter_openat {
-  printf("%s %s\n", comm, str(args->filename));
+  printf("%s %s\n", comm, str(args.filename));
 }
 ----
 

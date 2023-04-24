@@ -24,8 +24,8 @@ BEGIN
 
 tracepoint:syscalls:sys_enter_kill
 {
-	@tpid[tid] = args->pid;
-	@tsig[tid] = args->sig;
+	@tpid[tid] = args.pid;
+	@tsig[tid] = args.sig;
 }
 
 tracepoint:syscalls:sys_exit_kill
@@ -33,7 +33,7 @@ tracepoint:syscalls:sys_exit_kill
 {
 	time("%H:%M:%S  ");
 	printf("%-6d %-16s %-4d %-6d %d\n", pid, comm, @tsig[tid], @tpid[tid],
-	    args->ret);
+	    args.ret);
 	delete(@tpid[tid]);
 	delete(@tsig[tid]);
 }

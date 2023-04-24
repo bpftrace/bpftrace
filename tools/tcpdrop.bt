@@ -49,8 +49,8 @@ BEGIN
 
 tracepoint:skb:kfree_skb
 {
-  $reason = args->reason;
-  $skb = (struct sk_buff *)args->skbaddr;
+  $reason = args.reason;
+  $skb = (struct sk_buff *)args.skbaddr;
   $sk = ((struct sock *) $skb->sk);
   $inet_family = $sk->__sk_common.skc_family;
 
