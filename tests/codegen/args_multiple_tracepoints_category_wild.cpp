@@ -13,7 +13,7 @@ TEST(codegen, args_multiple_tracepoints_category_wild)
   auto bpftrace = get_mock_bpftrace();
 
   test(*bpftrace,
-       "tracepoint:sched*:sched_* { @[args->common_field] = count(); }",
+       "tracepoint:sched*:sched_* { @[args.common_field] = count(); }",
        NAME);
 }
 

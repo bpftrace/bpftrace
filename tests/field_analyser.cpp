@@ -41,19 +41,19 @@ TEST_F(field_analyser_btf, kfunc_args)
   test("kfunc:func_1, kfunc:func_2 { }", 0);
   // func_1 and func_2 have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_1, kfunc:func_2 { $x = args->foo; }", 1);
+  test("kfunc:func_1, kfunc:func_2 { $x = args.foo; }", 1);
   // func_2 and func_3 have same args -> PASS
   test("kfunc:func_2, kfunc:func_3 { }", 0);
   // func_2 and func_3 have same args -> PASS
-  test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
+  test("kfunc:func_2, kfunc:func_3 { $x = args.foo1; }", 0);
   // aaa does not exist -> FAIL
-  test("kfunc:func_2, kfunc:aaa { $x = args->foo1; }", 1);
+  test("kfunc:func_2, kfunc:aaa { $x = args.foo1; }", 1);
   // func_* have different args, but none of them
   // is used in probe code, so we're good -> PASS
   test("kfunc:func_* { }", 0);
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test("kfunc:func_* { $x = args->foo1; }", 1);
+  test("kfunc:func_* { $x = args.foo1; }", 1);
 }
 
 TEST_F(field_analyser_btf, btf_types)
@@ -210,18 +210,20 @@ class field_analyser_dwarf : public test_dwarf
 TEST_F(field_analyser_dwarf, uprobe_args)
 {
   std::string uprobe = "uprobe:" + bin_;
+  test(uprobe + ":func_1 { $x = args.a; }", 0);
+  test(uprobe + ":func_2 { $x = args.b; }", 0);
+  // Backwards compatibility
   test(uprobe + ":func_1 { $x = args->a; }", 0);
-  test(uprobe + ":func_2 { $x = args->b; }", 0);
 
   // func_1 and func_2 have different args, but none of them
   // is used in probe code, so we're good -> PASS
   test(uprobe + ":func_1, " + uprobe + ":func_2 { }", 0);
   // func_1 and func_2 have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args->a; }", 1);
+  test(uprobe + ":func_1, " + uprobe + ":func_2 { $x = args.a; }", 1);
   // func_2 and func_3 have same args -> PASS
   test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
-  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args->a; }", 0);
+  test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", 0);
 
   // Probes with wildcards (need non-mock BPFtrace)
   BPFtrace bpftrace;
@@ -230,14 +232,14 @@ TEST_F(field_analyser_dwarf, uprobe_args)
   test(bpftrace, uprobe + ":func_* { }", 0);
   // func_* have different args, one of them
   // is used in probe code, we can't continue -> FAIL
-  test(bpftrace, uprobe + ":func_* { $x = args->a; }", 1);
+  test(bpftrace, uprobe + ":func_* { $x = args.a; }", 1);
 }
 
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   BPFtrace bpftrace;
   std::string uprobe = "uprobe:" + bin_;
-  test(bpftrace, uprobe + ":func_1 { $x = args->foo1->a; }", 0);
+  test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", 0);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));
   auto str = bpftrace.structs.Lookup("struct Foo1").lock();

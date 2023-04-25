@@ -5,13 +5,13 @@ TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME tracepoint_pointer_type_resolution
-PROG tracepoint:syscalls:sys_enter_nanosleep { args->rqtp->tv_sec; exit(); }
+PROG tracepoint:syscalls:sys_enter_nanosleep { args.rqtp->tv_sec; exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME tracepoint_nested_pointer_type_resolution
-PROG tracepoint:napi:napi_poll { args->napi->dev->name; exit(); }
+PROG tracepoint:napi:napi_poll { args.napi->dev->name; exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 5
 REQUIRES_FEATURE btf
@@ -46,7 +46,7 @@ REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_args
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args->size); exit(); }'
+RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args.size); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT size: [0-9]+
 TIMEOUT 5
@@ -56,7 +56,7 @@ REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_types
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args->ctx->portid); exit(); }'
+RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args.ctx->portid); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT portid: [0-9]+
 TIMEOUT 5
@@ -66,17 +66,17 @@ REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
 NAME kernel_module_tracepoint
-PROG tracepoint:xfs:xfs_setfilesize { print(args->offset) } i:ms:1 { exit(); }
+PROG tracepoint:xfs:xfs_setfilesize { print(args.offset) } i:ms:1 { exit(); }
 EXPECT Attaching 2 probes...
 TIMEOUT 5
 REQUIRES_FEATURE btf
 REQUIRES lsmod | grep "^xfs"
 
-# args->ctxt has type 'struct x86_emulate_ctxt' which is forward-defined in
+# args.ctxt has type 'struct x86_emulate_ctxt' which is forward-defined in
 # 'vmlinux' BTF and fully defined in 'kvm' BTF.
 # This tests checks that the correct BTF definition is pulled from 'kvm'.
 NAME kernel_module_type_fwd
-PROG kfunc:kvm:x86_emulate_insn { printf("%d\n", args->ctxt->mode); exit(); }
+PROG kfunc:kvm:x86_emulate_insn { printf("%d\n", args.ctxt->mode); exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 2
 REQUIRES_FEATURE kfunc

@@ -50,6 +50,15 @@ REQUIRES_FEATURE btf
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+# Checking backwards compatibility
+NAME kfunc args as a pointer
+PROG kfunc:vfs_read { printf("%d\n", args->count); exit(); }
+EXPECT [0-9][0-9]*
+REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE btf
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
 NAME kprobe
 PROG kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
@@ -282,9 +291,16 @@ EXPECT [0-9][0-9]*
 AFTER ./testprogs/syscall read
 TIMEOUT 5
 
+# Checking backwards compatibility
+NAME tracepoint args as pointer
+PROG tracepoint:syscalls:sys_enter_read { printf("%d\n", args->count); exit(); }
+EXPECT [0-9][0-9]*
+AFTER ./testprogs/syscall read
+TIMEOUT 5
+
 # Test that we get at least two characters out
 NAME tracepoint_data_loc
-PROG tracepoint:irq:irq_handler_entry { print(str(args->name)); exit(); }
+PROG tracepoint:irq:irq_handler_entry { print(str(args.name)); exit(); }
 EXPECT ..+
 TIMEOUT 5
 

@@ -262,12 +262,12 @@ TEST(tracepoint_format_parser, args_field_access)
   Driver driver(bpftrace);
   ast::TracepointArgsVisitor visitor;
 
-  EXPECT_EQ(driver.parse_str("BEGIN { args->f1->f2->f3 }"), 0);
+  EXPECT_EQ(driver.parse_str("BEGIN { args.f1->f2->f3 }"), 0);
   visitor.visit(*driver.root->probes->at(0));
   EXPECT_EQ(driver.root->probes->at(0)->tp_args_structs_level, 3);
 
   // Should work via intermediary variable, too
-  EXPECT_EQ(driver.parse_str("BEGIN { $x = args->f1; $x->f2->f3 }"), 0);
+  EXPECT_EQ(driver.parse_str("BEGIN { $x = args.f1; $x->f2->f3 }"), 0);
   visitor.visit(*driver.root->probes->at(0));
   EXPECT_EQ(driver.root->probes->at(0)->tp_args_structs_level, 3);
 
