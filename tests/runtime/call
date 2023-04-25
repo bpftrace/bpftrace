@@ -39,30 +39,30 @@ EXPECT [0-9]*-[0-9]*
 TIMEOUT 5
 
 NAME join
-RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args->argv); exit();}'
+RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args.argv); exit();}'
 EXPECT _A_
 TIMEOUT 5
 
 NAME join_delim
-RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args->argv, ","); exit();}'
+RUN {{BPFTRACE}} --unsafe -e 'i:ms:1 { system("echo '_A_'"); } t:syscalls:sys_enter_execve { join(args.argv, ","); exit();}'
 EXPECT _A_
 TIMEOUT 5
 
 NAME str
-PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}
+PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 AFTER ./testprogs/syscall execve /bin/ls
 EXPECT P: /*.
 TIMEOUT 5
 
 NAME str_truncated
-PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}
+PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_STRLEN=5
 AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
 EXPECT P: /bin\.\.
 TIMEOUT 5
 
 NAME str_truncated_custom
-PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args->filename)); exit();}
+PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
 ENV BPFTRACE_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
 AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
 EXPECT P: /bin_xxx
@@ -317,7 +317,7 @@ TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
 NAME print_non_map_struct_kfunc
-PROG kfunc:vfs_open { print(*args->path); exit(); }
+PROG kfunc:vfs_open { print(*args.path); exit(); }
 EXPECT { .mnt = 0x[0-9a-f]+, .dentry = 0x[0-9a-f]+ }
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
@@ -373,14 +373,14 @@ EXPECT BEGIN\n@\[1\]:(.*\n)+@\[2\]:(.*\n)+@\[3\]:(.*\n)+END
 TIMEOUT 1
 
 NAME path
-RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $f = path(args->filp->f_path); if (!strncmp($f, "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $f = path(args.filp->f_path); if (!strncmp($f, "/tmp/bpftrace_runtime_test_syscall_gen_read_temp", 49)) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME strcontains
-RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $f = path(args->filp->f_path); if (strcontains($f, "tmp")) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -ve 'kfunc:filp_close { $f = path(args.filp->f_path); if (strcontains($f, "tmp")) { printf("OK\n"); exit(); } }'
 EXPECT OK
 REQUIRES_FEATURE dpath kfunc
 TIMEOUT 5
@@ -392,8 +392,8 @@ EXPECT OK
 TIMEOUT 1
 
 NAME path_in_unsupported_kfunc
-PROG kfunc:vfs_read { print(path(args->file->f_path)); }
-EXPECT \nstdin:1:18-48: ERROR: helper bpf_d_path not supported in probe\n
+PROG kfunc:vfs_read { print(path(args.file->f_path)); }
+EXPECT \nstdin:1:18-47: ERROR: helper bpf_d_path not supported in probe\n
 REQUIRES_FEATURE dpath
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
@@ -483,7 +483,7 @@ EXPECT 1234
 TIMEOUT 1
 
 NAME skboutput
-RUN {{BPFTRACE}} -e 'kfunc:dev_queue_xmit { $ret = skboutput("skb.pcap", args->skb, args->skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
+RUN {{BPFTRACE}} -e 'kfunc:dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
 AFTER ./testprogs/syscall 127.0.0.1 80
 EXPECT OK
 REQUIRES_FEATURE skboutput

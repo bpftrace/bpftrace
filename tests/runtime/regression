@@ -73,7 +73,7 @@ TIMEOUT 3
 # The issue this test catches is the verifier doesn't allow multiple ALU ops on ctx pointer.
 # ctx+const is ok, but ctx+const+const is not ok.
 NAME access ctx struct field twice
-PROG tracepoint:sched:sched_wakeup { if (args->comm == "asdf") { print(args->comm) } exit(); }
+PROG tracepoint:sched:sched_wakeup { if (args.comm == "asdf") { print(args.comm) } exit(); }
 EXPECT Attaching 1 probe
 TIMEOUT 1
 

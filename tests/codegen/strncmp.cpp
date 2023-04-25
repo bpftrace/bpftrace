@@ -11,9 +11,7 @@ namespace codegen {
 TEST(codegen, strncmp)
 {
   auto bpftrace = get_mock_bpftrace();
-  test(*bpftrace,
-       "t:file:filename /str(args->filename) == comm/ { @=1 }",
-       NAME);
+  test(*bpftrace, "t:file:filename /str(args.filename) == comm/ { @=1 }", NAME);
 }
 
 } // namespace codegen

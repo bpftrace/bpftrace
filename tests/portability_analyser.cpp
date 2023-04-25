@@ -54,8 +54,10 @@ TEST(portability_analyser, generic_field_access_disabled)
 TEST(portability_analyser, tracepoint_field_access)
 {
   test("tracepoint:sched:sched_one { args }", 0);
+  test("tracepoint:sched:sched_one { args.common_field }", 0);
+  test("tracepoint:sched:sched_* { args.common_field }", 0);
+  // Backwards compatibility
   test("tracepoint:sched:sched_one { args->common_field }", 0);
-  test("tracepoint:sched:sched_* { args->common_field }", 0);
 }
 
 class portability_analyser_btf : public test_btf
@@ -64,10 +66,11 @@ class portability_analyser_btf : public test_btf
 
 TEST_F(portability_analyser_btf, kfunc_field_access)
 {
-  test("kfunc:func_1 { $x = args->a; $y = args->foo1; $z = args->foo2->f.a; }",
-       0);
+  test("kfunc:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }", 0);
+  test("kfunc:func_2 { args.foo1 }", 0);
+  test("kfunc:func_2, kfunc:func_3 { $x = args.foo1; }", 0);
+  // Backwards compatibility
   test("kfunc:func_2 { args->foo1 }", 0);
-  test("kfunc:func_2, kfunc:func_3 { $x = args->foo1; }", 0);
 }
 
 TEST(portability_analyser, positional_params_disabled)

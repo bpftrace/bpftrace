@@ -14,7 +14,7 @@ TEST(codegen, args_multiple_tracepoints)
 
   test(*bpftrace,
        "tracepoint:sched:sched_one,tracepoint:sched:sched_two { "
-       "@[args->common_field] = count(); }",
+       "@[args.common_field] = count(); }",
        NAME);
 }
 

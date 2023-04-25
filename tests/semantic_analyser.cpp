@@ -679,7 +679,7 @@ TEST(semantic_analyser, call_ntop)
   test(structs + "kprobe:f { @x = ntop(((struct inet*)0)->ipv6); }", 0);
 
   // Regression test that ntop can use arguments from the prog context
-  test("tracepoint:tcp:some_tcp_tp { ntop(args->saddr_v6); }", 0);
+  test("tracepoint:tcp:some_tcp_tp { ntop(args.saddr_v6); }", 0);
 
   test("kprobe:f { ntop(); }", 1);
   test("kprobe:f { ntop(2, \"hello\"); }", 1);
@@ -1537,17 +1537,17 @@ TEST(semantic_analyser, asyncwatchpoint)
 
 TEST(semantic_analyser, args_builtin_wrong_use)
 {
-  test("BEGIN { args->foo }", 1);
-  test("END { args->foo }", 1);
-  test("kprobe:f { args->foo }", 1);
-  test("kretprobe:f { args->foo }", 1);
-  test("uretprobe:/bin/sh/:f { args->foo }", 1);
-  test("profile:ms:1 { args->foo }", 1);
-  test("usdt:sh:probe { args->foo }", 1);
-  test("profile:ms:100 { args->foo }", 1);
-  test("hardware:cache-references:1000000 { args->foo }", 1);
-  test("software:faults:1000 { args->foo }", 1);
-  test("interval:s:1 { args->foo }", 1);
+  test("BEGIN { args.foo }", 1);
+  test("END { args.foo }", 1);
+  test("kprobe:f { args.foo }", 1);
+  test("kretprobe:f { args.foo }", 1);
+  test("uretprobe:/bin/sh/:f { args.foo }", 1);
+  test("profile:ms:1 { args.foo }", 1);
+  test("usdt:sh:probe { args.foo }", 1);
+  test("profile:ms:100 { args.foo }", 1);
+  test("hardware:cache-references:1000000 { args.foo }", 1);
+  test("software:faults:1000 { args.foo }", 1);
+  test("interval:s:1 { args.foo }", 1);
 }
 
 TEST(semantic_analyser, profile)
@@ -2197,12 +2197,16 @@ i:s:1 {
 TEST(semantic_analyser, builtin_args)
 {
   auto bpftrace = get_mock_bpftrace();
+  test(*bpftrace, "t:sched:sched_one { args.common_field }", 0);
+  test(*bpftrace, "t:sched:sched_two { args.common_field }", 0);
+  test(*bpftrace,
+       "t:sched:sched_one,"
+       "t:sched:sched_two { args.common_field }",
+       0);
+  test(*bpftrace, "t:sched:sched_* { args.common_field }", 0);
+  test(*bpftrace, "t:sched:sched_one { args.not_a_field }", 1);
+  // Backwards compatibility
   test(*bpftrace, "t:sched:sched_one { args->common_field }", 0);
-  test(*bpftrace, "t:sched:sched_two { args->common_field }", 0);
-  test(*bpftrace, "t:sched:sched_one,"
-                  "t:sched:sched_two { args->common_field }", 0);
-  test(*bpftrace, "t:sched:sched_* { args->common_field }", 0);
-  test(*bpftrace, "t:sched:sched_one { args->not_a_field }", 1);
 }
 
 TEST(semantic_analyser, type_ctx)
@@ -2643,8 +2647,8 @@ TEST(semantic_analyser, int_ident)
 
 TEST(semantic_analyser, tracepoint_common_field)
 {
-  test("tracepoint:file:filename { args->filename }", 0);
-  test("tracepoint:file:filename { args->common_field }", 1);
+  test("tracepoint:file:filename { args.filename }", 0);
+  test("tracepoint:file:filename { args.common_field }", 1);
 }
 
 TEST(semantic_analyser, string_size)
@@ -2706,19 +2710,20 @@ TEST_F(semantic_analyser_btf, kfunc)
 {
   test("kfunc:func_1 { 1 }", 0);
   test("kretfunc:func_1 { 1 }", 0);
-  test("kfunc:func_1 { $x = args->a; $y = args->foo1; $z = args->foo2->f.a; }",
-       0);
+  test("kfunc:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }", 0);
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kfunc:vmlinux:func_1 { 1 }", 0);
   test("kfunc:*:func_1 { 1 }", 0);
 
-  test("kretfunc:func_1 { $x = args->foo; }", 1);
+  test("kretfunc:func_1 { $x = args.foo; }", 1);
   test("kretfunc:func_1 { $x = args; }", 1);
   // reg() is not available in kfunc
 #ifdef ARCH_X86_64
   test("kfunc:func_1 { reg(\"ip\") }", 1);
   test("kretfunc:func_1 { reg(\"ip\") }", 1);
 #endif
+  // Backwards compatibility
+  test("kfunc:func_1 { $x = args->a; }", 0);
 }
 
 TEST_F(semantic_analyser_btf, short_name)
@@ -2729,23 +2734,23 @@ TEST_F(semantic_analyser_btf, short_name)
 
 TEST_F(semantic_analyser_btf, call_path)
 {
-  test("kfunc:func_1 { $k = path( args->foo1 ) }", 0);
+  test("kfunc:func_1 { $k = path( args.foo1 ) }", 0);
   test("kretfunc:func_1 { $k = path( retval->foo1 ) }", 0);
 }
 
 TEST_F(semantic_analyser_btf, call_skb_output)
 {
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500, 0); }",
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); }",
        0);
-  test("kretfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500, 0); "
+  test("kretfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500, 0); "
        "}",
        0);
 
   test("kfunc:func_1 { $ret = skboutput(); }", 1);
   test("kfunc:func_1 { $ret = skboutput(\"one.pcap\"); }", 1);
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1); }", 1);
-  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args->foo1, 1500); }", 1);
-  test("kfunc:func_1 { skboutput(\"one.pcap\", args->foo1, 1500, 0); }", 1);
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1); }", 1);
+  test("kfunc:func_1 { $ret = skboutput(\"one.pcap\", args.foo1, 1500); }", 1);
+  test("kfunc:func_1 { skboutput(\"one.pcap\", args.foo1, 1500, 0); }", 1);
 }
 
 TEST_F(semantic_analyser_btf, iter)
@@ -2756,9 +2761,9 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task { $x = ctx->task->pid }", 0);
   test("iter:task_file { $x = ctx->file->ino }", 0);
   test("iter:task_vma { $x = ctx->vma->vm_start }", 0);
-  test("iter:task { $x = args->foo; }", 1);
-  test("iter:task_file { $x = args->foo; }", 1);
-  test("iter:task_vma { $x = args->foo; }", 1);
+  test("iter:task { $x = args.foo; }", 1);
+  test("iter:task_file { $x = args.foo; }", 1);
+  test("iter:task_vma { $x = args.foo; }", 1);
   test("iter:task { printf(\"%d\", ctx->task->pid); }", 0);
   test("iter:task_file { printf(\"%d\", ctx->file->ino); }", 0);
   test("iter:task_vma { printf(\"%lx\", ctx->vma->vm_start); }", 0);
