@@ -105,7 +105,13 @@ void SemanticAnalyser::visit(StackMode &mode)
     mode.type.stack_type.mode = bpftrace::StackMode::bpftrace;
   } else if (mode.mode == "perf") {
     mode.type.stack_type.mode = bpftrace::StackMode::perf;
-  } else {
+  }
+  else if (mode.mode == "raw")
+  {
+    mode.type.stack_type.mode = bpftrace::StackMode::raw;
+  }
+  else
+  {
     mode.type = CreateNone();
     LOG(ERROR, mode.loc, err_) << "Unknown stack mode: '" + mode.mode + "'";
   }

@@ -14,6 +14,7 @@ TEST(codegen, call_ustack)
   // program
   test("kprobe:f { @x = ustack(); @y = ustack(6) }", result);
   test("kprobe:f { @x = ustack(perf); @y = ustack(perf, 6) }", result);
+  test("kprobe:f { @x = ustack(raw); @y = ustack(raw, 6) }", result);
   test("kprobe:f { @x = ustack(perf); @y = ustack(bpftrace) }", result);
 }
 
@@ -59,8 +60,9 @@ TEST(codegen, call_ustack_modes_mapids)
   auto bpftrace = get_mock_bpftrace();
   Driver driver(*bpftrace);
 
-  ASSERT_EQ(driver.parse_str("kprobe:f { @x = ustack(perf); @y = "
-                             "ustack(bpftrace); @z = ustack() }"),
+  ASSERT_EQ(driver.parse_str(
+                "kprobe:f { @w = ustack(raw); @x = ustack(perf); @y = "
+                "ustack(bpftrace); @z = ustack() }"),
             0);
 
   ClangParser clang;
@@ -81,13 +83,15 @@ TEST(codegen, call_ustack_modes_mapids)
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   codegen.compile();
 
-  ASSERT_EQ(std::distance(bpftrace->maps.begin(), bpftrace->maps.end()), 6);
-  ASSERT_EQ(bpftrace->maps.CountStackTypes(), 2U);
+  ASSERT_EQ(std::distance(bpftrace->maps.begin(), bpftrace->maps.end()), 8);
+  ASSERT_EQ(bpftrace->maps.CountStackTypes(), 3U);
 
   StackType stack_type;
   stack_type.mode = StackMode::perf;
   ASSERT_TRUE(bpftrace->maps.Has(stack_type));
   stack_type.mode = StackMode::bpftrace;
+  ASSERT_TRUE(bpftrace->maps.Has(stack_type));
+  stack_type.mode = StackMode::raw;
   ASSERT_TRUE(bpftrace->maps.Has(stack_type));
 }
 

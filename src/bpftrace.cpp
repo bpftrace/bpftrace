@@ -1777,6 +1777,11 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, StackType stac
   {
     if (addr == 0)
       break;
+    if (stack_type.mode == StackMode::raw)
+    {
+      stack << std::hex << addr << std::endl;
+      continue;
+    }
     std::string sym;
     if (!ustack)
       sym = resolve_ksym(addr, true);
@@ -1789,6 +1794,10 @@ std::string BPFtrace::get_stack(uint64_t stackidpid, bool ustack, StackType stac
         break;
       case StackMode::perf:
         stack << "\t" << std::hex << addr << std::dec << " " << sym << std::endl;
+        break;
+      case StackMode::raw:
+        LOG(BUG) << "StackMode::raw should have been processed before "
+                    "symbolication.";
         break;
     }
   }
