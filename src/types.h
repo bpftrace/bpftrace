@@ -66,6 +66,7 @@ enum class StackMode
 {
   bpftrace,
   perf,
+  raw,
 };
 
 struct StackType
@@ -592,6 +593,8 @@ struct hash<bpftrace::StackType>
         return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
       case bpftrace::StackMode::perf:
         return std::hash<std::string>()("perf#" + to_string(obj.limit));
+      case bpftrace::StackMode::raw:
+        return std::hash<std::string>()("raw#" + to_string(obj.limit));
     }
 
     return {}; // unreached

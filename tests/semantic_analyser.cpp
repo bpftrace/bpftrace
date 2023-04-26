@@ -825,6 +825,8 @@ TEST(semantic_analyser, call_stack)
   test("kprobe:f { ustack(3) }", 0);
   test("kprobe:f { kstack(perf, 3) }", 0);
   test("kprobe:f { ustack(perf, 3) }", 0);
+  test("kprobe:f { kstack(raw, 3) }", 0);
+  test("kprobe:f { ustack(raw, 3) }", 0);
 
   // Wrong arguments
   test("kprobe:f { kstack(3, perf) }", 1);
@@ -2125,9 +2127,27 @@ TEST(semantic_analyser, unwatch)
 TEST(semantic_analyser, struct_member_keywords)
 {
   std::string keywords[] = {
-    "arg0", "args", "curtask", "func", "gid" "rand", "uid",
-    "avg", "cat", "exit", "kaddr", "min", "printf", "usym",
-    "kstack", "ustack", "bpftrace", "perf", "uprobe", "kprobe",
+    "arg0",
+    "args",
+    "curtask",
+    "func",
+    "gid"
+    "rand",
+    "uid",
+    "avg",
+    "cat",
+    "exit",
+    "kaddr",
+    "min",
+    "printf",
+    "usym",
+    "kstack",
+    "ustack",
+    "bpftrace",
+    "perf",
+    "raw",
+    "uprobe",
+    "kprobe",
   };
   for(auto kw : keywords)
   {

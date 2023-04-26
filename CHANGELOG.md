@@ -23,6 +23,8 @@ and this project adheres to
   - [#2577](https://github.com/iovisor/bpftrace/pull/2577)
 - Add new function, `offsetof`, get the offset of the element in the struct
   - [#2579](https://github.com/iovisor/bpftrace/pull/2579)
+- Add 'StackMode::raw' for ustack and kstack formatting
+  - [#2581](https://github.com/iovisor/bpftrace/pull/2581)
 #### Changed
 - Improve attaching to uprobes with size 0
   - [#2562](https://github.com/iovisor/bpftrace/pull/2562)

@@ -71,7 +71,7 @@ oct_esc  [0-7]{1,3}
   <<EOF>>               yy_pop_state(yyscanner); driver.error(loc, "end of file during comment");
 }
 
-bpftrace|perf           { return Parser::make_STACK_MODE(yytext, loc); }
+bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 {builtin}               { return Parser::make_BUILTIN(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }

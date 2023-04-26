@@ -2693,7 +2693,7 @@ Attaching 1 probe...
 ]: 22186
 ```
 
-You can also choose a different output format. Available formats are `bpftrace` and `perf`:
+You can also choose a different output format. Available formats are `bpftrace`, `perf`, and `raw` (no symbolization):
 
 ```
 # bpftrace -e 'kprobe:do_mmap { @[kstack(perf)] = count(); }'
@@ -2705,6 +2705,20 @@ Attaching 1 probe...
 	ffffffffb3e334eb sys_mmap+27
 	ffffffffb3e03ae3 do_syscall_64+115
 	ffffffffb4800081 entry_SYSCALL_64_after_hwframe+61
+
+]: 22186
+```
+
+```
+# bpftrace -e 'kprobe:do_mmap { @[kstack(raw)] = count(); }'
+Attaching 1 probe...
+[...]
+@[
+	ffffffffb4019501
+	ffffffffb401700a
+	ffffffffb3e334eb
+	ffffffffb3e03ae3
+	ffffffffb4800081
 
 ]: 22186
 ```
@@ -2813,7 +2827,7 @@ Attaching 1 probe...
 ]: 27
 ```
 
-You can also choose a different output format. Available formats are `bpftrace` and `perf`:
+You can also choose a different output format. Available formats are `bpftrace`, `perf`, and `raw` (no symbolization):
 
 ```
 # bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(perf)); }'
@@ -2839,6 +2853,15 @@ Attaching 1 probe...
 	5649feec4090 readline+0 (/home/mmarchini/bash/bash/bash)
 	5649fee2bfa6 yy_readline_get+451 (/home/mmarchini/bash/bash/bash)
 	5649fee2bdc6 yy_getc+13 (/home/mmarchini/bash/bash/bash)
+```
+
+```
+# bpftrace -e 'uprobe:bash:readline { printf("%s\n", ustack(raw, 3)); }'
+Attaching 1 probe...
+
+	5649feec4090
+	5649fee2bfa6
+	5649fee2bdc6
 ```
 
 Note that for these examples to work, bash had to be recompiled with frame pointers.

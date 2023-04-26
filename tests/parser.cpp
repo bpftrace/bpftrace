@@ -1346,9 +1346,27 @@ TEST(Parser, wildcard_func)
        "  int: 1\n");
 
   std::string keywords[] = {
-    "arg0", "args", "curtask", "func", "gid" "rand", "uid",
-    "avg", "cat", "exit", "kaddr", "min", "printf", "usym",
-    "kstack", "ustack", "bpftrace", "perf", "uprobe", "kprobe",
+    "arg0",
+    "args",
+    "curtask",
+    "func",
+    "gid"
+    "rand",
+    "uid",
+    "avg",
+    "cat",
+    "exit",
+    "kaddr",
+    "min",
+    "printf",
+    "usym",
+    "kstack",
+    "ustack",
+    "bpftrace",
+    "perf",
+    "raw",
+    "uprobe",
+    "kprobe",
   };
   for(auto kw : keywords)
   {
