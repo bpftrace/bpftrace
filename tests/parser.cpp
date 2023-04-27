@@ -1485,6 +1485,24 @@ TEST(Parser, cast_struct_ptr)
        "   builtin: arg0\n");
 }
 
+TEST(Parser, cast_typedef)
+{
+  test("kprobe:sys_read { (mytype)arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (mytype)\n"
+       "   builtin: arg0\n");
+}
+
+TEST(Parser, cast_ptr_typedef)
+{
+  test("kprobe:sys_read { (mytype*)arg0; }",
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (mytype *)\n"
+       "   builtin: arg0\n");
+}
+
 TEST(Parser, cast_multiple_pointer)
 {
   test("kprobe:sys_read { (int32 *****)arg0; }",
