@@ -84,6 +84,7 @@ public:
   bool has_skb_output();
   bool has_raw_tp_special();
   bool has_prog_kfunc();
+  bool has_module_btf();
 
   std::string report(void);
 
@@ -129,6 +130,7 @@ protected:
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_raw_tp_special_;
   std::optional<bool> has_prog_kfunc_;
+  std::optional<bool> has_module_btf_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);
