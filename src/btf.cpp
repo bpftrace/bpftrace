@@ -82,6 +82,9 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
   btf_objects.push_back(
       BTFObj{ .btf = vmlinux_btf, .id = 0, .name = "vmlinux" });
 
+  if (bpftrace_ && !bpftrace_->feature_->has_module_btf())
+    return;
+
   // Note that we cannot parse BTFs from /sys/kernel/btf/ as we need BTF object
   // IDs, so the only way is to iterate through all loaded BTF objects
   __u32 id = 0;
@@ -723,7 +726,7 @@ std::pair<int, int> BTF::get_btf_id_fd(const std::string &func,
 
     auto id = find_id_in_btf(btf_obj.btf, func, BTF_KIND_FUNC);
     if (id >= 0)
-      return { id, bpf_btf_get_fd_by_id(btf_obj.id) };
+      return { id, btf_obj.id ? bpf_btf_get_fd_by_id(btf_obj.id) : 0 };
   }
 
   return { -1, -1 };
