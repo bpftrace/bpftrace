@@ -615,6 +615,8 @@ std::string opstr(Binop &binop);
 std::string opstr(Unop &unop);
 std::string opstr(Jump &jump);
 
+SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
+
 #undef DEFINE_ACCEPT
 
 } // namespace ast
