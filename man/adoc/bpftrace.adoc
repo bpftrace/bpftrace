@@ -258,6 +258,13 @@ Default: `..`
 
 Trailer to add to strings that were truncated. Set to empty string to disable truncation trailers.
 
+=== BPFTRACE_STACK_MODE
+
+Default: bpftrace
+
+Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
+This can be overwritten at the call site.
+
 ////
 !
 !

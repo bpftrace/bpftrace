@@ -25,6 +25,8 @@ and this project adheres to
   - [#2579](https://github.com/iovisor/bpftrace/pull/2579)
 - Add 'StackMode::raw' for ustack and kstack formatting
   - [#2581](https://github.com/iovisor/bpftrace/pull/2581)
+- Add 'BPFTRACE_STACK_MODE' env variable
+  - [#2586](https://github.com/iovisor/bpftrace/pull/2586)
 #### Changed
 - Improve attaching to uprobes with size 0
   - [#2562](https://github.com/iovisor/bpftrace/pull/2562)

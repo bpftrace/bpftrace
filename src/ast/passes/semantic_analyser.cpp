@@ -1417,6 +1417,12 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   }
 
   StackType stack_type;
+
+  if (bpftrace_.stack_mode_.has_value())
+  {
+    stack_type.mode = *bpftrace_.stack_mode_;
+  }
+
   if (call.vargs)
   {
     switch (call.vargs->size())

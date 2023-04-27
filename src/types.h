@@ -69,6 +69,12 @@ enum class StackMode
   raw,
 };
 
+const std::map<std::string, StackMode> STACK_MODE_MAP = {
+  { "bpftrace", StackMode::bpftrace },
+  { "perf", StackMode::perf },
+  { "raw", StackMode::raw },
+};
+
 struct StackType
 {
   size_t limit = DEFAULT_STACK_SIZE;

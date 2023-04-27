@@ -176,6 +176,7 @@ ENVIRONMENT:
     BPFTRACE_CACHE_USER_SYMBOLS [default: auto] enable user symbol cache
     BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution
     BPFTRACE_BTF                [default: none] BTF file
+    BPFTRACE_STACK_MODE         [default: bpftrace] Output format for ustack and kstack builtins
 
 EXAMPLES:
 bpftrace -l '*sleep*'
@@ -553,6 +554,12 @@ Default: `..`
 
 Trailer to add to strings that were truncated. Set to empty string to disable truncation trailers.
 
+### 9.11 `BPFTRACE_STACK_MODE`
+
+Default: bpftrace
+
+Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
+This can be overwritten at the call site.
 
 ## 10. Clang Environment Variables
 
