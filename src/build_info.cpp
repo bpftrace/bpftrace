@@ -12,8 +12,8 @@ std::string BuildInfo::report()
       << "  version: " << BPFTRACE_VERSION << std::endl
       << "  LLVM: " << LLVM_VERSION_MAJOR << "." << LLVM_VERSION_MINOR << "."
       << LLVM_VERSION_PATCH << std::endl
-      << "  unsafe uprobe: "
-#ifdef HAVE_UNSAFE_UPROBE
+      << "  unsafe probe: "
+#ifdef HAVE_UNSAFE_PROBE
       << "yes" << std::endl;
 #else
       << "no" << std::endl;
