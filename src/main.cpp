@@ -128,6 +128,7 @@ void usage()
   std::cerr << "    BPFTRACE_VMLINUX            [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
   std::cerr << "    BPFTRACE_BTF                [default: none] BTF file" << std::endl;
   std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER  [default: '..'] string truncation trailer" << std::endl;
+  std::cerr << "    BPFTRACE_STACK_MODE         [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -333,6 +334,21 @@ static std::optional<struct timespec> get_boottime()
 
   if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", verify_llvm_ir))
     return false;
+
+  if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE"))
+  {
+    auto found = STACK_MODE_MAP.find(stack_mode);
+    if (found != STACK_MODE_MAP.end())
+    {
+      bpftrace.stack_mode_ = found->second;
+    }
+    else
+    {
+      LOG(ERROR) << "Env var 'BPFTRACE_STACK_MODE' did not contain a valid "
+                    "StackMode: "
+                 << stack_mode;
+    }
+  }
 
   return true;
 }

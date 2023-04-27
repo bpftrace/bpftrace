@@ -207,10 +207,37 @@ EXPECT Attaching 1 probe
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
-
 NAME ustack
 PROG k:do_nanosleep { printf("%s\n%s\n", ustack(), ustack(1)); exit(); }
 EXPECT Attaching 1 probe
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME ustack_stack_mode_env_bpftrace
+PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+ENV BPFTRACE_STACK_MODE=bpftrace
+EXPECT ^\s+[a-zA-Z0-9_]+
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME ustack_stack_mode_env_perf
+PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+ENV BPFTRACE_STACK_MODE=perf
+EXPECT ^\s+[0-9a-f]+ [a-zA-Z0-9_]+
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME ustack_stack_mode_env_raw
+PROG k:do_nanosleep { printf("%s", ustack(1)); exit(); }
+ENV BPFTRACE_STACK_MODE=raw
+EXPECT ^\s+[0-9a-f]+$
+TIMEOUT 5
+AFTER ./testprogs/syscall nanosleep  1e8
+
+NAME ustack_stack_mode_env_override
+PROG k:do_nanosleep { printf("%s", ustack(raw, 1)); exit(); }
+ENV BPFTRACE_STACK_MODE=perf
+EXPECT ^\s+[0-9a-f]+$
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep  1e8
 
