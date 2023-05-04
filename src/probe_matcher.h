@@ -110,6 +110,9 @@ private:
   virtual std::unique_ptr<std::istream> adjust_kernel_modules(
       std::istream &symbol_list) const;
 
+  virtual std::unique_ptr<std::istream> adjust_rawtracepoint(
+      std::istream &symbol_list) const;
+
   std::unique_ptr<std::istream> get_iter_symbols(void) const;
 
   std::unique_ptr<std::istream> kernel_probe_list();

@@ -795,13 +795,7 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
   ap_->func = parts_[1];
 
   if (has_wildcard(ap_->func))
-  {
-    if (ap_->ignore_invalid)
-      return SKIP;
-    errs_ << ap_->provider << " probe type does not support wildcards"
-          << std::endl;
-    return INVALID;
-  }
+    ap_->need_expansion = true;
 
   return OK;
 }
