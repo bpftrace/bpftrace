@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Rawtracepoint support wildcards and list show
+  - [#2588](https://github.com/iovisor/bpftrace/pull/2588)
 #### Changed
 #### Fixed
 

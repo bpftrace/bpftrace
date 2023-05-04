@@ -129,6 +129,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
       break;
     }
+    case ProbeType::rawtracepoint: {
+      symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
+      symbol_stream = adjust_rawtracepoint(*symbol_stream);
+      break;
+    }
     case ProbeType::usdt:
     {
       symbol_stream = get_symbols_from_usdt(bpftrace_->pid(), target);
@@ -499,7 +504,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     case ProbeType::iter:
-    {
+    case ProbeType::rawtracepoint: {
       search_input = attach_point.func;
       break;
     }
@@ -512,8 +517,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::hardware:
     case ProbeType::software:
     case ProbeType::kfunc:
-    case ProbeType::kretfunc:
-    case ProbeType::rawtracepoint: {
+    case ProbeType::kretfunc: {
       // Do not expand "target:" as that would match all functions in target.
       // This may occur when an absolute address is given instead of a function.
       if (attach_point.func.empty())
@@ -605,6 +609,22 @@ std::unique_ptr<std::istream> ProbeMatcher::adjust_kernel_modules(
     }
     else
       *new_list << "vmlinux:" << line << "\n";
+  }
+  return new_list;
+}
+
+std::unique_ptr<std::istream> ProbeMatcher::adjust_rawtracepoint(
+    std::istream& symbol_list) const
+{
+  auto new_list = std::make_unique<std::stringstream>();
+  std::string line;
+  while (std::getline(symbol_list, line, '\n'))
+  {
+    if ((line.find("syscalls:sys_enter_") != std::string::npos) ||
+        (line.find("syscalls:sys_exit_") != std::string::npos))
+      continue;
+    erase_prefix(line);
+    *new_list << line << "\n";
   }
   return new_list;
 }
