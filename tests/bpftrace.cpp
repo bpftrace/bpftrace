@@ -1053,6 +1053,32 @@ TEST(bpftrace, add_probes_rawtracepoint)
                       probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_rawtracepoint_wildcard)
+{
+  auto probe = parse_probe(("rawtracepoint:sched_* {}"));
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_file(tracefs::available_events()))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+}
+
+TEST(bpftrace, add_probes_rawtracepoint_wildcard_no_matches)
+{
+  auto probe = parse_probe("rawtracepoint:typo_* {}");
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_file(tracefs::available_events()))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(0U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+}
+
 } // namespace bpftrace
 } // namespace test
 } // namespace bpftrace

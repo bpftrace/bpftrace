@@ -281,6 +281,12 @@ EXPECT ERROR: Probe does not exist: rawtracepoint:nonsense
 TIMEOUT 5
 WILL_FAIL
 
+NAME rawtracepoint_wildcard
+PROG rawtracepoint:sys_* { printf("SUCCESS %d\n", gid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+AFTER ./testprogs/syscall nanosleep
+TIMEOUT 5
+
 NAME profile
 PROG profile:hz:599 { @[tid] = count(); exit();}
 EXPECT \@\[[0-9]*\]\:\s[0-9]

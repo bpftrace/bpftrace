@@ -52,6 +52,11 @@ REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
+NAME it lists rawtracepoints
+RUN {{BPFTRACE}} -l | grep rawtracepoint
+EXPECT rawtracepoint
+TIMEOUT 1
+
 NAME it lists kfunc params
 RUN {{BPFTRACE}} -lv "kfunc:*"
 EXPECT [ ]+[a-zA-Z_\*\s]+
@@ -112,6 +117,11 @@ NAME listing with wildcarded probe type
 RUN {{BPFTRACE}} -l "*ware:*"
 EXPECT hardware:
 EXPECT software:
+TIMEOUT 1
+
+NAME it lists rawtracepoint with regex filter
+RUN {{BPFTRACE}} -l "rawtracepoint:*"
+EXPECT rawtracepoint:
 TIMEOUT 1
 
 NAME errors on invalid character in search expression
