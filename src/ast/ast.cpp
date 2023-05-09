@@ -221,7 +221,7 @@ Program::~Program()
   probes = nullptr;
 }
 
-Integer::Integer(long n, location loc) : Expression(loc), n(n)
+Integer::Integer(int64_t n, location loc) : Expression(loc), n(n)
 {
   is_literal = true;
 }

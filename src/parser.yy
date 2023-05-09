@@ -20,6 +20,7 @@
 // Forward declarations of classes referenced in the parser
 %code requires
 {
+#include <cstdint>
 #include <limits>
 #include <regex>
 
@@ -120,7 +121,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> MAP "map"
 %token <std::string> VAR "variable"
 %token <std::string> PARAM "positional parameter"
-%token <long> INT "integer"
+%token <int64_t> INT "integer"
 %token <std::string> STACK_MODE "stack_mode"
 
 
@@ -542,7 +543,7 @@ offsetof_expr:
                 ;
 
 int:
-                MINUS INT    { $$ = new ast::Integer((long)(~(unsigned long)($2) + 1), @$); }
+                MINUS INT    { $$ = new ast::Integer((int64_t)(~(uint64_t)($2) + 1), @$); }
         |       INT          { $$ = new ast::Integer($1, @$); }
                 ;
 
