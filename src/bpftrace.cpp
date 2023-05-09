@@ -2256,7 +2256,8 @@ std::string BPFtrace::get_string_literal(const ast::Expression *expr) const
   return "";
 }
 
-std::optional<long> BPFtrace::get_int_literal(const ast::Expression *expr) const
+std::optional<int64_t> BPFtrace::get_int_literal(
+    const ast::Expression *expr) const
 {
   if (expr->is_literal)
   {
@@ -2269,7 +2270,7 @@ std::optional<long> BPFtrace::get_int_literal(const ast::Expression *expr) const
       {
         auto param_str = get_param(pos_param->n, false);
         if (is_numeric(param_str))
-          return std::stol(param_str);
+          return std::stoll(param_str);
         else
         {
           LOG(ERROR, pos_param->loc)
@@ -2279,7 +2280,7 @@ std::optional<long> BPFtrace::get_int_literal(const ast::Expression *expr) const
         }
       }
       else
-        return (long)num_params();
+        return (int64_t)num_params();
     }
   }
 

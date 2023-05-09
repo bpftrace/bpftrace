@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -111,9 +112,9 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Integer)
 
-  explicit Integer(long n, location loc);
+  explicit Integer(int64_t n, location loc);
 
-  long n;
+  int64_t n;
 
 private:
   Integer(const Integer &other) = default;

@@ -452,7 +452,7 @@ EXPECT Operation not permitted
 TIMEOUT 5
 
 NAME bswap_int64
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%lx", bswap(0x1122334455667788)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%llx", bswap(0x1122334455667788)); exit(); }'
 EXPECT 8877665544332211
 TIMEOUT 1
 
@@ -472,7 +472,7 @@ EXPECT 12
 TIMEOUT 1
 
 NAME bswap_int64_op
-RUN {{BPFTRACE}} -e 'BEGIN { printf("%lx", bswap(0x12340000 + 0x5678)); exit(); }'
+RUN {{BPFTRACE}} -e 'BEGIN { printf("%llx", bswap(0x12340000 + 0x5678)); exit(); }'
 EXPECT 7856341200000000
 TIMEOUT 1
 
