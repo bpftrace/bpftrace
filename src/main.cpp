@@ -668,11 +668,27 @@ Args parse_args(int argc, char* argv[])
   return args;
 }
 
+static const char* libbpf_print_level_string(enum libbpf_print_level level)
+{
+  switch (level)
+  {
+    case LIBBPF_WARN:
+      return "WARN";
+    case LIBBPF_INFO:
+      return "INFO";
+    default:
+      return "DEBUG";
+  }
+}
+
 static int libbpf_print(enum libbpf_print_level level,
                         const char* msg,
                         va_list ap)
 {
-  fprintf(stderr, "libbpf: (%d) ", level);
+  if (bt_debug == DebugLevel::kNone)
+    return 0;
+
+  fprintf(stderr, "[%s] ", libbpf_print_level_string(level));
   return vfprintf(stderr, msg, ap);
 }
 
@@ -724,8 +740,7 @@ int main(int argc, char* argv[])
       break;
   }
 
-  if (bt_debug != DebugLevel::kNone)
-    libbpf_set_print(libbpf_print);
+  libbpf_set_print(libbpf_print);
 
   BPFtrace bpftrace(std::move(output));
   bool verify_llvm_ir = false;
