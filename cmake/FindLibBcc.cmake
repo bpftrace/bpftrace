@@ -88,19 +88,20 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(LibBcc ${LIBBCC_ERROR_MESSAGE}
 # Check bpf_attach_kprobe signature
 if(${LIBBCC_FOUND})
 if(STATIC_BPF_BCC)
-  # libbcc.a is not statically linked with libbpf.a, libelf.a, and libz.a.
+  # libbcc.a is not statically linked with libbpf.a, libelf.a, libz.a, and liblzma.a.
   # If we do a static bpftrace build, we must link them in.
   find_package(LibBpf)
   find_package(LibElf)
+  find_package(LibLzma)
 
   if(ANDROID)
     # libz is part of the Android NDK; link against it dynamically
-    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES})
+    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBLZMA_LIBRARIES})
     SET(CMAKE_REQUIRED_LINK_OPTIONS "-lz")
   else()
     find_package(LibZ)
-    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBZ_LIBRARIES})
-  endif()  
+    SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_BPF_LIBRARIES} ${LIBBPF_LIBRARIES} ${LIBELF_LIBRARIES} ${LIBLZMA_LIBRARIES} ${LIBZ_LIBRARIES})
+  endif()
 else()
   SET(CMAKE_REQUIRED_LIBRARIES ${LIBBCC_LIBRARIES} ${LIBBPF_LIBRARIES})
 endif()
