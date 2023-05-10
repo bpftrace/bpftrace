@@ -234,8 +234,8 @@ if (STATIC_LINKING)
     target_link_libraries(runtime "-Wl,-Bstatic" "-lz")
   endif()
 elseif(STATIC_BPF_BCC)
-  # partial static build, libbpf needs zlib
-  target_link_libraries(runtime "-lz")
+  # partial static build, libbpf needs zlib, bcc needs liblzma
+  target_link_libraries(runtime "-lz" "-llzma")
 endif()
 
 unset(MAIN_SRC)
