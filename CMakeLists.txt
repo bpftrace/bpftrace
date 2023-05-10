@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.13.0)
 project(bpftrace)
 
+cmake_policy(SET CMP0057 NEW)
+
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
 set(bpftrace_VERSION_MINOR 17)
