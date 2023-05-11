@@ -1,0 +1,74 @@
+ARG BUILDER_IMAGE=debian:bullseye
+ARG BASE_IMAGE=debian:bullseye
+FROM --platform=${BUILDPLATFORM} ${BUILDER_IMAGE} as builder
+ARG LLVM_VERSION=12
+ARG BUILD_TYPE=Release
+ARG TARGETARCH
+ARG BUILDARCH
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ENV TARGETARCH=${TARGETARCH}
+ENV BUILDARCH=${BUILDARCH}
+
+RUN if [ "${TARGETARCH}" != "${BUILDARCH}" ]; then \
+    PACKAGEARCH="${TARGETARCH}"; \
+    if [ "${TARGETARCH}" = 'ppc64le' ]; then \
+      PACKAGEARCH='ppc64el'; \
+    fi; \
+    dpkg --add-architecture ${PACKAGEARCH}; \
+  fi \
+  && apt-get update \
+  && apt-get install -y \
+    binutils-dev:${PACKAGEARCH} \
+    cmake \
+    libelf-dev:${PACKAGEARCH} \
+    make \
+    pkg-config \
+    python3 \
+    rsync \
+  && if [ "${TARGETARCH}" == "${BUILDARCH}" ]; then \
+    apt-get install -y gcc g++; \
+  elif [ "${TARGETARCH}" = 'arm64' ]; then \
+    cp /usr/include/plugin-api.h /tmp; \
+    apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu; \
+    cp /tmp/plugin-api.h /usr/include; \
+  elif [ "${TARGETARCH}" = 'ppc64le' ]; then \
+    cp /usr/include/plugin-api.h /tmp; \
+    apt-get install -y gcc-powerpc64le-linux-gnu g++-powerpc64le-linux-gnu; \
+    cp /tmp/plugin-api.h /usr/include; \
+  elif [ "${TARGETARCH}" = 'amd64' ]; then \
+    apt-get install -y gcc-x86-64-linux-gnu g++-x86-64-linux-gnu; \
+  else \
+    echo "${TARGETARCH} is not supported" 1>&2; \
+    exit 1;\
+  fi
+
+COPY ./ /bpftrace
+
+RUN mkdir /bpftrace/build \
+  && mkdir /bpftrace/build/llvm \
+  && cp -r /bpftrace/cmake /bpftrace/build/llvm \
+  && cp /bpftrace/CMakeLists-LLVM.txt /bpftrace/build/llvm/CMakeLists.txt \
+  && cd /bpftrace/build/llvm \
+  && if [ "${TARGETARCH}" = 'arm64' -a "${BUILDARCH}" != 'arm64' ]; then \
+    export CC=aarch64-linux-gnu-gcc; \
+    export AR=aarch64-linux-gnu-ar; \
+    export CXX=aarch64-linux-gnu-g++; \
+  elif [ "${TARGETARCH}" = 'ppc64le' -a "${BUILDARCH}" != 'ppc64le' ]; then \
+    export CC=powerpc64le-linux-gnu-gcc; \
+    export AR=powerpc64le-linux-gnu-ar; \
+    export CXX=powerpc64le-linux-gnu-g++; \
+  elif [ "${TARGETARCH}" = 'amd64' -a "${BUILDARCH}" != 'amd64' ]; then \
+    export CC=x86_64-linux-gnu-gcc; \
+    export AR=x86_64-linux-gnu-ar; \
+    export CXX=x86_64-linux-gnu-g++; \
+  fi \
+  && cmake . -DLLVM_VERSION=${LLVM_VERSION} \
+    -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+  && make embedded_llvm -j$(nproc) \
+  && make embedded_clang -j$(nproc) \
+  && rm -rf embedded_llvm-prefix/src embedded_clang-prefix/src \
+  && rm -rf embedded_llvm-prefix/tmp embedded_clang-prefix/tmp \
+  && rsync -a embedded_clang-prefix/ embedded_llvm-prefix/ /usr/local \
+  && rm -rf /bpftrace/build/llvm
