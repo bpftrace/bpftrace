@@ -1,0 +1,69 @@
+#!/usr/bin/env bpftrace
+/*
+ * tcpnat.bt     TCP NAT tracking tool that displays SNAT and DNAT records, attempt to reduce duplicate NAT records.
+ *               For Linux, uses bpftrace, eBPF.
+ *
+ * 12-May-2023   Weiyang Wang	Created this.
+ */
+
+#include <net/netfilter/nf_nat.h>
+#include <linux/socket.h>
+#include <linux/skbuff.h>
+#include <linux/tcp.h>
+#include <linux/ip.h>
+
+BEGIN
+{
+    printf("Tracing TCP NAT... Hit Ctrl-C to end.\n");
+}
+
+kprobe:nf_nat_ipv4_manip_pkt
+{
+    $skb = (struct sk_buff *)arg0;
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+
+    if ($iph->protocol == IPPROTO_TCP) {
+        $th = (struct tcphdr *)($skb->head + $skb->transport_header);
+        // before nat
+        $saddr = ntop($iph->saddr);
+        $sport = (uint16)($th->source << 8) | ($th->source >> 8);
+        $daddr = ntop($iph->daddr);
+        $dport = (uint16)($th->dest << 8) | ($th->dest >> 8);
+
+        if (@nat[$saddr, $sport, $daddr, $dport] == 0) {
+            $type = arg3;
+            $tuple = (struct nf_conntrack_tuple *)arg2;
+
+            if ($type == NF_NAT_MANIP_SRC) {
+                // after nat
+                $nat_saddr = ntop(AF_INET, $tuple->src.u3.ip);
+                $nat_sport = $tuple->src.u.tcp.port;
+                $nat_sport = ($nat_sport >> 8) | (($nat_sport << 8) & 0xff00);
+                printf("[snat] saddr=%s sport=%d daddr=%s dport=%d -> saddr=%s sport=%d daddr=%s dport=%d\n", 
+                    $saddr, $sport, $daddr, $dport,
+                    $nat_saddr, $nat_sport, $daddr, $dport);
+            } else {
+                // after nat
+                $nat_daddr = ntop(AF_INET, $tuple->dst.u3.ip);
+                $nat_dport = $tuple->dst.u.tcp.port;
+                $nat_dport = ($nat_dport >> 8) | (($nat_dport << 8) & 0xff00);
+                printf("[dnat] saddr=%s sport=%d daddr=%s dport=%d -> saddr=%s sport=%d daddr=%s dport=%d\n", 
+                    $saddr, $sport, $daddr, $dport,
+                    $saddr, $sport, $nat_daddr, $nat_dport);
+            }
+
+            @nat[$saddr, $sport, $daddr, $dport] = 1;
+            @count++;
+        }
+    }
+
+    if (@count > 1000) {
+        clear(@nat);
+        @count = 0;
+    }
+}
+
+END
+{
+    clear(@nat); clear(@count);
+}

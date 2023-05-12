@@ -1,0 +1,27 @@
+Trace TCP NAT, the Linux BPF/bpftrace version.
+
+TCP NAT tracking tool that displays SNAT and DNAT records, attempt to reduce duplicate NAT records. For Linux, uses bpftrace, eBPF. For example:
+
+# tcpnat.bt 
+Attaching 3 probes...
+Tracing TCP NAT... Hit Ctrl-C to end.
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=49702 -> saddr=10.206.65.152 sport=6443 daddr=10.233.69.23 dport=51298
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=9389 -> saddr=10.206.65.152 sport=6443 daddr=10.233.0.1 dport=58024
+[snat] saddr=10.233.69.23 sport=51298 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=49702 daddr=10.206.65.152 dport=6443
+[snat] saddr=10.233.0.1 sport=58024 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=9389 daddr=10.206.65.152 dport=6443
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=9358 -> saddr=10.206.65.152 sport=6443 daddr=10.233.0.1 dport=50472
+[snat] saddr=10.233.0.1 sport=50472 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=9358 daddr=10.206.65.152 dport=6443
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=59590 -> saddr=10.206.65.152 sport=6443 daddr=10.233.0.1 dport=57974
+[snat] saddr=10.233.0.1 sport=57974 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=59590 daddr=10.206.65.152 dport=6443
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=37230 -> saddr=10.206.65.152 sport=6443 daddr=10.233.0.1 dport=57980
+[snat] saddr=10.233.0.1 sport=57980 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=37230 daddr=10.206.65.152 dport=6443
+[dnat] saddr=10.206.65.152 sport=6443 daddr=10.206.65.155 dport=1751 -> saddr=10.206.65.152 sport=6443 daddr=10.233.0.1 dport=58058
+[snat] saddr=10.233.0.1 sport=58058 daddr=10.206.65.152 dport=6443 -> saddr=10.206.65.155 sport=1751 daddr=10.206.65.152 dport=6443
+[dnat] saddr=10.233.80.233 sport=4222 daddr=10.206.65.155 dport=41551 -> saddr=10.233.80.233 sport=4222 daddr=10.233.57.43 dport=55362
+[snat] saddr=10.233.57.43 sport=55362 daddr=10.233.80.233 dport=4222 -> saddr=10.206.65.155 sport=41551 daddr=10.233.80.233 dport=4222
+^C
+
+While tracing, this shows many DNAT and SNAT behaviors in Linux, The content before the -> symbol is the pre-translation address information, 
+and the content after is the post-translation address information.
+This tool can be used as a Linux system TCP NAT tracker, similar to `tcplife.bt`, to record operating system NAT behavior.
+For example, on a Kubernetes data node, this tool can be used to record access to pods via nodeport.
