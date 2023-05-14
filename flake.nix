@@ -52,18 +52,10 @@
 
           # We need to use two overlays so that bcc inherits the our pinned libbpf
           pkgs = import nixpkgs { inherit system; overlays = [ libbpfOverlay bccOverlay ]; };
-        in
-        {
-          # Set formatter for `nix fmt` command
-          formatter = pkgs.nixpkgs-fmt;
 
-          # Define package set
-          packages = rec {
-            # Default package is bpftrace binary
-            default = bpftrace;
-
-            # Derivation for bpftrace binary
-            bpftrace =
+          # Define lambda that returns a derivation for bpftrace given llvm package as input
+          mkBpftrace =
+            llvmPackages:
               with pkgs;
               pkgs.stdenv.mkDerivation rec {
                 name = "bpftrace";
@@ -72,7 +64,7 @@
 
                 nativeBuildInputs = [ cmake ninja bison flex gcc12 ];
 
-                buildInputs = with llvmPackages_15;
+                buildInputs = with llvmPackages;
                   [
                     asciidoctor
                     bcc
@@ -99,6 +91,24 @@
                   "-DUSE_SYSTEM_BPF_BCC=ON"
                 ];
               };
+        in
+        {
+          # Set formatter for `nix fmt` command
+          formatter = pkgs.nixpkgs-fmt;
+
+          # Define package set
+          packages = rec {
+            # Default package is latest supported LLVM release
+            default = bpftrace-llvm16;
+
+            # Support matrix of llvm versions
+            bpftrace-llvm16 = mkBpftrace pkgs.llvmPackages_16;
+            bpftrace-llvm15 = mkBpftrace pkgs.llvmPackages_15;
+            bpftrace-llvm14 = mkBpftrace pkgs.llvmPackages_14;
+            bpftrace-llvm13 = mkBpftrace pkgs.llvmPackages_13;
+            bpftrace-llvm12 = mkBpftrace pkgs.llvmPackages_12;
+            bpftrace-llvm11 = mkBpftrace pkgs.llvmPackages_11;
+            bpftrace-llvm10 = mkBpftrace pkgs.llvmPackages_10;
           };
 
           # Define apps that can be run with `nix run`
