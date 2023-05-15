@@ -9,6 +9,13 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+#### Changed
+#### Fixed
+
+
+## [0.18.0] 2023-05-15
+
+#### Added
 - Add `iter:task_vma` iterators detection
   - [#2524](https://github.com/iovisor/bpftrace/pull/2524)
 - Support parsing bitfields from BTF/DWARF
