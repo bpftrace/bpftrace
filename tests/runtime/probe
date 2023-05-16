@@ -1,19 +1,20 @@
 NAME kfunc
 PROG kfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kretfunc
 PROG kretfunc:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc_wildcard
 PROG kfunc:vfs_re*ad { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
-REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
@@ -21,12 +22,14 @@ AFTER ./testprogs/syscall read
 NAME kfunc_module
 PROG kfunc:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME kfunc_module_wildcard
 PROG kfunc:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
@@ -35,7 +38,7 @@ NAME kfunc_multiple_attach_point_multiple_functions
 PROG BEGIN { @a = 2; @b = 1; @c = 1 } i:s:1 { exit() } kfunc:vfs_read, kfunc:vfs_open /@a != 0/ { @a -= 1 } kfunc:vfs_read /@b == 1/ { @b = 0 } kfunc:vfs_open /@c == 1/ { @c = 0 }
 EXPECT @a: 0\n@b: 0\n@c: 0
 TIMEOUT 5
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 # Note: this calls both vfs_read and vfs_open
 AFTER ./testprogs/syscall read
 
