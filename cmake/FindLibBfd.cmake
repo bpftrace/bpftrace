@@ -52,7 +52,7 @@ SET(CMAKE_REQUIRED_LIBRARIES ${LIBBFD_LIBRARIES} ${LIBOPCODES_LIBRARIES})
 # do it. Furthermore, libbfd uses some libc symbols that we must manually
 # link against if we're not using static libc (which includes such symbols).
 if(STATIC_LINKING)
-  find_package(LibZ)
+  find_package(ZLIB)
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBIBERTY_LIBRARIES} ${LIBZ_LIBRARIES})
   if(NOT STATIC_LIBC)
     set(CMAKE_REQUIRED_FLAGS
