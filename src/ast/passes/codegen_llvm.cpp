@@ -1852,6 +1852,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   bool is_tparg = type.is_tparg;
   bool is_internal = type.is_internal;
   bool is_funcarg = type.is_funcarg;
+  bool is_btftype = type.is_btftype;
   assert(type.IsRecordTy() || type.IsTupleTy());
 
   if (type.is_funcarg)
@@ -1893,6 +1894,7 @@ void CodegenLLVM::visit(FieldAccess &acc)
   type.is_tparg = is_tparg;
   type.is_internal = is_internal;
   type.is_funcarg = is_funcarg;
+  type.is_btftype = is_btftype;
   // Restore the addrspace info
   // struct MyStruct { const int* a; };  $s = (struct MyStruct *)arg0;  $s->a
   type.SetAS(addrspace);
@@ -3530,23 +3532,30 @@ void CodegenLLVM::probereadDatastructElem(Value *src_data,
   {
     // Read data onto stack
     AllocaInst *dst = b_.CreateAllocaBPF(elem_type, temp_name);
-    b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
+    if (elem_type.IsStringTy() && data_type.is_btftype)
+    {
+      b_.CREATE_MEMCPY(dst, src, elem_type.GetSize(), 1);
+    }
+    else
+    {
+      b_.CreateProbeRead(ctx_, dst, elem_type, src, loc, data_type.GetAS());
+    }
     expr_ = dst;
     expr_deleter_ = [this, dst]() { b_.CreateLifetimeEnd(dst); };
   }
   else
   {
     // Read data onto stack
-    if (data_type.IsCtxAccess())
+    if (data_type.IsCtxAccess() || data_type.is_btftype)
     {
       expr_ = b_.CreateDatastructElemLoad(
           elem_type,
           b_.CreateIntToPtr(src, dst_type->getPointerTo()),
           true,
           data_type.GetAS());
-
       // check context access for iter probes (required by kernel)
-      if (probetype(current_attach_point_->provider) == ProbeType::iter)
+      if (data_type.IsCtxAccess() &&
+          probetype(current_attach_point_->provider) == ProbeType::iter)
       {
         Function *parent = b_.GetInsertBlock()->getParent();
         BasicBlock *pred_false_block = BasicBlock::Create(module_->getContext(),

@@ -282,6 +282,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
               CreateRecord(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
           builtin.type.MarkCtxAccess();
+          builtin.type.is_btftype = true;
         }
         else
         {
@@ -331,7 +332,10 @@ void SemanticAnalyser::visit(Builtin &builtin)
       auto it = ap_args_.find("$retval");
 
       if (it != ap_args_.end())
+      {
         builtin.type = it->second;
+        builtin.type.is_btftype = true;
+      }
       else
         LOG(ERROR, builtin.loc, err_) << "Can't find a field $retval";
     }
@@ -1622,6 +1626,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
   else
     arr.type = CreateNone();
   arr.type.is_internal = type.is_internal;
+  arr.type.is_btftype = type.is_btftype;
   arr.type.SetAS(type.GetAS());
 }
 
@@ -1992,6 +1997,7 @@ void SemanticAnalyser::visit(Unop &unop)
         unop.type.is_funcarg = type.is_funcarg;
         unop.type.is_tparg = type.is_tparg;
       }
+      unop.type.is_btftype = type.is_btftype;
       unop.type.SetAS(type.GetAS());
     }
     else if (type.IsRecordTy())
@@ -2178,6 +2184,12 @@ void SemanticAnalyser::visit(FieldAccess &acc)
       {
         if (acc.type.IsNoneTy())
           LOG(ERROR, acc.loc, err_) << acc.field << " has unsupported type";
+
+        ProbeType probetype = single_provider_type();
+        if (probetype == ProbeType::kfunc || probetype == ProbeType::kretfunc)
+        {
+          acc.type.is_btftype = true;
+        }
       }
     }
     else
@@ -2268,6 +2280,7 @@ void SemanticAnalyser::visit(FieldAccess &acc)
         acc.type.MarkCtxAccess();
       }
       acc.type.is_internal = type.is_internal;
+      acc.type.is_btftype = type.is_btftype;
       acc.type.SetAS(acc.expr->type.GetAS());
 
       // The kernel uses the first 8 bytes to store `struct pt_regs`. Any
