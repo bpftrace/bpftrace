@@ -319,7 +319,7 @@ AFTER ./testprogs/simple_struct
 NAME print_non_map_struct_kfunc
 PROG kfunc:vfs_open { print(*args->path); exit(); }
 EXPECT { .mnt = 0x[0-9a-f]+, .dentry = 0x[0-9a-f]+ }
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
@@ -395,6 +395,7 @@ NAME path_in_unsupported_kfunc
 PROG kfunc:vfs_read { print(path(args->file->f_path)); }
 EXPECT \nstdin:1:18-48: ERROR: helper bpf_d_path not supported in probe\n
 REQUIRES_FEATURE dpath
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 WILL_FAIL
 AFTER ./testprogs/syscall read

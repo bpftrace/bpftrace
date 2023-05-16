@@ -39,7 +39,7 @@ NAME kernel_module_attach
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("hit\n"); exit(); }' -c '/usr/sbin/nft add table bpftrace'
 EXPECT hit
 TIMEOUT 5
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 AFTER nft delete table bpftrace
@@ -48,7 +48,7 @@ NAME kernel_module_args
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args->size); exit(); }' -c '/usr/sbin/nft add table bpftrace'
 EXPECT size: [0-9]+
 TIMEOUT 5
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 AFTER nft delete table bpftrace
@@ -57,7 +57,7 @@ NAME kernel_module_types
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args->ctx->portid); exit(); }' -c '/usr/sbin/nft add table bpftrace'
 EXPECT portid: [0-9]+
 TIMEOUT 5
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 AFTER nft delete table bpftrace
@@ -76,5 +76,5 @@ NAME kernel_module_type_fwd
 PROG kfunc:kvm:x86_emulate_insn { printf("%d\n", args->ctxt->mode); exit(); }
 EXPECT Attaching 1 probe...
 TIMEOUT 2
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^kvm'
