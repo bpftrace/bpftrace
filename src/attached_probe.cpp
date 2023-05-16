@@ -158,6 +158,10 @@ void AttachedProbe::attach_raw_tracepoint(void)
   {
     if (tracing_fd_ == -ENOENT)
       throw std::runtime_error("Probe does not exist: " + probe_.name);
+    else if (tracing_fd_ == -EINVAL)
+      throw std::runtime_error("Error attaching probe: " + probe_.name +
+                               ", maybe trying to access arguments beyond "
+                               "what's available in this tracepoint");
     else
       throw std::runtime_error("Error attaching probe: " + probe_.name);
   }
