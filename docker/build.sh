@@ -9,7 +9,6 @@ LLVM_VERSION=${LLVM_VERSION:-8} # default llvm to latest version
 EMBED_USE_LLVM=${EMBED_USE_LLVM:-OFF}
 EMBED_BUILD_LLVM=${EMBED_BUILD_LLVM:-OFF}
 ALLOW_UNSAFE_PROBE=${ALLOW_UNSAFE_PROBE:-OFF}
-DEPS_ONLY=${DEPS_ONLY:-OFF}
 BUILD_TESTING=${BUILD_TESTING:-ON}
 RUN_TESTS=${RUN_TESTS:-1}
 RUN_MEMLEAK_TEST=${RUN_MEMLEAK_TEST:-0}
@@ -50,9 +49,6 @@ cmake -DCMAKE_BUILD_TYPE="$2" \
       ../
 shift 2
 
-# It is necessary to build embedded llvm and clang targets first,
-# so that their headers can be referenced
-[[ $DEPS_ONLY == "ON" ]] && exit 0
 make "$@" -j $(nproc)
 
 if [ $RUN_TESTS = 1 ]; then
