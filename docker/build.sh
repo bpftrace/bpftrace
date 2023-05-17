@@ -16,51 +16,58 @@ VENDOR_GTEST=${VENDOR_GTEST:-OFF}
 CI_TIMEOUT=${CI_TIMEOUT:-0}
 CC=${CC:cc}
 CXX=${CXX:c++}
+CMAKE_BUILD_TYPE="$2"
 ENABLE_SKB_OUTPUT=${ENABLE_SKB_OUTPUT:-ON}
 USE_SYSTEM_BPF_BCC=${USE_SYSTEM_BPF_BCC:-OFF}
 
-if [[ $LLVM_VERSION -eq 13 ]]; then
-  touch /usr/lib/llvm-13/bin/llvm-omp-device-info
-fi
+function build() {
+  if [[ $LLVM_VERSION -eq 13 ]]; then
+    touch /usr/lib/llvm-13/bin/llvm-omp-device-info
+  fi
 
+  # Build vendored libraries first
+  ../build-libs.sh
+
+  # Build bpftrace
+  cmake -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
+        -DWARNINGS_AS_ERRORS:BOOL=$WARNINGS_AS_ERRORS \
+        -DSTATIC_LINKING:BOOL=$STATIC_LINKING \
+        -DSTATIC_LIBC:BOOL=$STATIC_LIBC \
+        -DEMBED_USE_LLVM:BOOL=$EMBED_USE_LLVM \
+        -DEMBED_BUILD_LLVM:BOOL=$EMBED_BUILD_LLVM \
+        -DEMBED_LLVM_VERSION=$LLVM_VERSION \
+        -DALLOW_UNSAFE_PROBE:BOOL=$ALLOW_UNSAFE_PROBE \
+        -DVENDOR_GTEST=$VENDOR_GTEST \
+        -DBUILD_ASAN:BOOL=$RUN_MEMLEAK_TEST \
+        -DBUILD_TESTING:BOOL=$BUILD_TESTING \
+        -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
+        -DENABLE_SKB_OUTPUT:BOOL=$ENABLE_SKB_OUTPUT \
+        -DUSE_SYSTEM_BPF_BCC:BOOL=$USE_SYSTEM_BPF_BCC \
+        "${CMAKE_EXTRA_FLAGS}" \
+        ../
+
+  make "$@" -j $(nproc)
+}
+
+function test() {
+  if [ "$RUN_TESTS" = "1" ]; then
+    if [ "$RUN_ALL_TESTS" = "1" ]; then
+      ctest -V --exclude-regex "$TEST_GROUPS_DISABLE"
+    else
+      ./tests/bpftrace_test $TEST_ARGS;
+    fi
+  fi
+
+  # Memleak tests require bpftrace built with -fsanitize=address so it cannot be
+  # usually run with unit/runtime tests (RUN_TESTS should be set to 0).
+  if [ "$RUN_MEMLEAK_TEST" = "1" ]; then
+    ./tests/memleak-tests.sh
+  fi
+}
 
 mkdir -p "$1"
 cd "$1"
-
-# Build vendored libraries first
-../build-libs.sh
-
-# Build bpftrace
-cmake -DCMAKE_BUILD_TYPE="$2" \
-      -DWARNINGS_AS_ERRORS:BOOL=$WARNINGS_AS_ERRORS \
-      -DSTATIC_LINKING:BOOL=$STATIC_LINKING \
-      -DSTATIC_LIBC:BOOL=$STATIC_LIBC \
-      -DEMBED_USE_LLVM:BOOL=$EMBED_USE_LLVM \
-      -DEMBED_BUILD_LLVM:BOOL=$EMBED_BUILD_LLVM \
-      -DEMBED_LLVM_VERSION=$LLVM_VERSION \
-      -DALLOW_UNSAFE_PROBE:BOOL=$ALLOW_UNSAFE_PROBE \
-      -DVENDOR_GTEST=$VENDOR_GTEST \
-      -DBUILD_ASAN:BOOL=$RUN_MEMLEAK_TEST \
-      -DBUILD_TESTING:BOOL=$BUILD_TESTING \
-      -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON \
-      -DENABLE_SKB_OUTPUT:BOOL=$ENABLE_SKB_OUTPUT \
-      -DUSE_SYSTEM_BPF_BCC:BOOL=$USE_SYSTEM_BPF_BCC \
-      "${CMAKE_EXTRA_FLAGS}" \
-      ../
 shift 2
 
-make "$@" -j $(nproc)
-
-if [ $RUN_TESTS = 1 ]; then
-  if [ "$RUN_ALL_TESTS" = "1" ]; then
-    ctest -V --exclude-regex "$TEST_GROUPS_DISABLE"
-  else
-    ./tests/bpftrace_test $TEST_ARGS;
-  fi
-fi
-
-# Memleak tests require bpftrace built with -fsanitize=address so it cannot be
-# usually run with unit/runtime tests (RUN_TESTS should be set to 0).
-if [ $RUN_MEMLEAK_TEST = 1 ]; then
-  ./tests/memleak-tests.sh
-fi
+build "$@"
+test
