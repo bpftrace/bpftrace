@@ -111,6 +111,17 @@ jobs:
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
+        - NAME: Latest LLVM + Upstream kernel
+          TYPE: Release
+          LLVM_VERSION: 16
+          RUN_RUNTIME_TESTS: 1
+          RUN_ALL_TESTS: 0
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          BASE: focal
+          VENDOR_GTEST: ON
+          VMTEST_VERSION: 0.5.4
+          KERNEL: https://github.com/danobi/vmtest/releases/download/test_assets/bzImage-v6.2-archlinux
         - NAME: Memleak test (LLVM 11 Debug)
           TYPE: Debug
           LLVM_VERSION: 11
@@ -151,6 +162,7 @@ jobs:
       run: >
         docker build
         --build-arg LLVM_VERSION=$LLVM_VERSION
+        --build-arg VMTEST_VERSION=$VMTEST_VERSION
         -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION
         -f docker/Dockerfile.$BASE
         docker/ &&
@@ -175,8 +187,10 @@ jobs:
         -v /lib/modules:/lib/modules:ro
         -v /usr/src:/usr/src:ro
         -e RUN_TESTS=${RUN_TESTS}
+        -e RUN_RUNTIME_TESTS=${RUN_RUNTIME_TESTS}
         -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
         -e RUN_MEMLEAK_TEST="${RUN_MEMLEAK_TEST}"
+        -e KERNEL="${KERNEL}"
         -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
         -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
         -e VENDOR_GTEST="${VENDOR_GTEST}"

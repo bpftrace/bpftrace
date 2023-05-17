@@ -2,6 +2,7 @@ FROM ubuntu:focal
 
 ARG LLVM_VERSION
 ENV LLVM_VERSION=$LLVM_VERSION
+ARG VMTEST_VERSION=0.5.4
 
 RUN apt-get update && apt-get install -y curl gnupg &&\
     llvmRepository="\n\
@@ -47,6 +48,8 @@ RUN apt-get update && apt-get install -y \
       systemtap-sdt-dev \
       python3 \
       python3-distutils \
+      qemu-system-x86 \
+      qemu-guest-agent \
       xxd \
       libssl-dev
 
@@ -62,6 +65,10 @@ RUN if [ "$LLVM_VERSION" -ge 14 ] ; then \
       apt download libpolly-${LLVM_VERSION}-dev && \
       dpkg --force-all -i libpolly-${LLVM_VERSION}-dev*.deb ; \
     fi
+
+# Install statically linked vmtest binary
+RUN curl -L https://github.com/danobi/vmtest/releases/download/v${VMTEST_VERSION}/vmtest-amd64 -o /usr/local/bin/vmtest
+RUN chmod +x /usr/local/bin/vmtest
 
 RUN ln -s /usr/bin/python3 /usr/bin/python
 COPY build.sh /build.sh

@@ -19,6 +19,7 @@ CXX=${CXX:c++}
 CMAKE_BUILD_TYPE="$2"
 ENABLE_SKB_OUTPUT=${ENABLE_SKB_OUTPUT:-ON}
 USE_SYSTEM_BPF_BCC=${USE_SYSTEM_BPF_BCC:-OFF}
+KERNEL=${KERNEL:-""}
 
 function build() {
   if [[ $LLVM_VERSION -eq 13 ]]; then
@@ -49,19 +50,35 @@ function build() {
   make "$@" -j $(nproc)
 }
 
+function run() {
+  if [[ -z "$KERNEL" ]]; then
+    $@
+  else
+    # Download specfied kernel if necessary
+    [[ -f bzImage ]] ||  curl -L "$KERNEL" -o bzImage
+
+    # Tell vmtest to mount rootfs as read/write b/c cmake will write to
+    # previously stored absolute paths during configuration step rather than
+    # relative paths.
+    vmtest -k ./bzImage --kargs rw -- "cd /mnt/vmtest && $@"
+  fi
+}
+
 function test() {
   if [ "$RUN_TESTS" = "1" ]; then
     if [ "$RUN_ALL_TESTS" = "1" ]; then
-      ctest -V --exclude-regex "$TEST_GROUPS_DISABLE"
+      run ctest -V --exclude-regex "$TEST_GROUPS_DISABLE"
+    elif [ "$RUN_RUNTIME_TESTS" = "1" ]; then
+      run ./tests/runtime-tests.sh $TEST_ARGS;
     else
-      ./tests/bpftrace_test $TEST_ARGS;
+      run ./tests/bpftrace_test $TEST_ARGS;
     fi
   fi
 
   # Memleak tests require bpftrace built with -fsanitize=address so it cannot be
   # usually run with unit/runtime tests (RUN_TESTS should be set to 0).
   if [ "$RUN_MEMLEAK_TEST" = "1" ]; then
-    ./tests/memleak-tests.sh
+    run ./tests/memleak-tests.sh
   fi
 }
 
