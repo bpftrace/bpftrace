@@ -20,7 +20,7 @@ CXX=${CXX:c++}
 ENABLE_SKB_OUTPUT=${ENABLE_SKB_OUTPUT:-ON}
 USE_SYSTEM_BPF_BCC=${USE_SYSTEM_BPF_BCC:-OFF}
 
-if [[ $LLVM_VERSION -eq 13 ]]; then 
+if [[ $LLVM_VERSION -eq 13 ]]; then
   touch /usr/lib/llvm-13/bin/llvm-omp-device-info
 fi
 
@@ -64,7 +64,7 @@ if [ $RUN_TESTS = 1 ]; then
 fi
 
 # Memleak tests require bpftrace built with -fsanitize=address so it cannot be
-# usually run with unit/runtime tests (RUN_TESTS should be set to 0). 
+# usually run with unit/runtime tests (RUN_TESTS should be set to 0).
 if [ $RUN_MEMLEAK_TEST = 1 ]; then
   ./tests/memleak-tests.sh
 fi
