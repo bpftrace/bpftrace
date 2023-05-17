@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 int main() {
@@ -17,9 +18,22 @@ int main() {
     return 1;
   }
 
+  mode_t old_umask = umask(S_IWGRP | S_IROTH | S_IWOTH);
+  FILE* addr_fp = fopen("/tmp/watchpoint_mem", "w");
+
+  if (!addr_fp)
+    perror("failed to open file in /tmp");
+
+  fprintf(addr_fp, "%p", addr);
+  fclose(addr_fp);
 
   uint8_t i = 0;
-  while (1) {
+  while (i < 10)
+  {
     *((volatile uint8_t*)addr) = i++;
+    // 250ms*10 sleep, enough for watchpoint trigger
+    usleep(250 * 1000);
   }
+
+  umask(old_umask);
 }
