@@ -61,6 +61,8 @@ Each runtime testcase consists of multiple directives. In no particular order:
   will be terminated after testcase is over.
 * `AFTER`: Run the command in a shell after running bpftrace. The command will
   be terminated after the testcase is over.
+* `CLEANUP`: Run the command in a shell after test is over. This holds any
+  cleanup command to free resources after test completes.
 * `MIN_KERNEL`: Skip the test unless the host's kernel version is >= the
   provided kernel version. Try not to use this directive as kernel versions may
   be misleading (backported kernel features, for example)
