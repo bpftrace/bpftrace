@@ -1,3 +1,6 @@
 #pragma once
 
+unsigned char dwarf_data[] = {
 ${DWARF_DATA}
+};
+unsigned int dwarf_data_len = sizeof(dwarf_data) / sizeof(dwarf_data[0]);
