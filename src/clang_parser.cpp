@@ -22,43 +22,43 @@ const std::vector<CXUnsavedFile> &getDefaultHeaders()
   static std::vector<CXUnsavedFile> unsaved_files = {
     {
         .Filename = "/bpftrace/include/__stddef_max_align_t.h",
-        .Contents = __stddef_max_align_t_h,
-        .Length = __stddef_max_align_t_h_len,
+        .Contents = __stddef_max_align_t_h.data(),
+        .Length = __stddef_max_align_t_h.length(),
     },
     {
         .Filename = "/bpftrace/include/float.h",
-        .Contents = float_h,
-        .Length = float_h_len,
+        .Contents = float_h.data(),
+        .Length = float_h.length(),
     },
     {
         .Filename = "/bpftrace/include/limits.h",
-        .Contents = limits_h,
-        .Length = limits_h_len,
+        .Contents = limits_h.data(),
+        .Length = limits_h.length(),
     },
     {
         .Filename = "/bpftrace/include/stdarg.h",
-        .Contents = stdarg_h,
-        .Length = stdarg_h_len,
+        .Contents = stdarg_h.data(),
+        .Length = stdarg_h.length(),
     },
     {
         .Filename = "/bpftrace/include/stdbool.h",
-        .Contents = stdbool_h,
-        .Length = stdbool_h_len,
+        .Contents = stdbool_h.data(),
+        .Length = stdbool_h.length(),
     },
     {
         .Filename = "/bpftrace/include/stddef.h",
-        .Contents = stddef_h,
-        .Length = stddef_h_len,
+        .Contents = stddef_h.data(),
+        .Length = stddef_h.length(),
     },
     {
         .Filename = "/bpftrace/include/stdint.h",
-        .Contents = stdint_h,
-        .Length = stdint_h_len,
+        .Contents = stdint_h.data(),
+        .Length = stdint_h.length(),
     },
     {
         .Filename = "/bpftrace/include/" CLANG_WORKAROUNDS_H,
-        .Contents = clang_workarounds_h,
-        .Length = clang_workarounds_h_len,
+        .Contents = clang_workarounds_h.data(),
+        .Length = clang_workarounds_h.length(),
     },
   };
 
