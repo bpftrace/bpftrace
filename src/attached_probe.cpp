@@ -935,11 +935,15 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
     return;
   }
 
+  std::string funcname = probe_.attach_point;
+  if (probe_.path.length() > 0)
+    funcname = probe_.path + ":" + funcname;
+
   resolve_offset_kprobe(safe_mode);
   int perf_event_fd = bpf_attach_kprobe(progfd_,
                                         attachtype(probe_.type),
                                         eventname().c_str(),
-                                        probe_.attach_point.c_str(),
+                                        funcname.c_str(),
                                         offset_,
                                         0);
 
