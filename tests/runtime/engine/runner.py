@@ -161,6 +161,7 @@ class Runner(object):
         before = None
         bpftrace = None
         after = None
+        cleanup = None
         try:
             timeout = False
 
@@ -283,6 +284,15 @@ class Runner(object):
 
             if after and after.poll() is None:
                 os.killpg(os.getpgid(after.pid), signal.SIGKILL)
+
+        if test.cleanup:
+            try:
+                cleanup = subprocess.run(test.cleanup.split(), shell=True, capture_output=True, text=True)
+                cleanup.check_returncode()
+            except subprocess.CalledProcessError as e:
+                print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
+                print('\tCLEANUP error: %s' % e.stderr)
+                return Runner.FAIL
 
         if p and p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
