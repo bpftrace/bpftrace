@@ -45,23 +45,9 @@ add_executable(bpftrace_test
   ${CODEGEN_SRC}
 )
 
-# Regenerate debuginfo data for unit tests
-find_program(XXD xxd REQUIRED)
-find_program(PAHOLE pahole REQUIRED)
-find_program(LLVM_OBJCOPY
-  NAMES llvm-objcopy llvm-objcopy-${LLVM_VERSION_MAJOR} llvm${LLVM_VERSION_MAJOR}-objcopy
-  REQUIRED)
-find_program(NM nm REQUIRED)
-find_program(AWK awk REQUIRED)
-find_program(STRIP strip REQUIRED)
-add_custom_target(testing_debuginfo_data
-        COMMAND
-        ${CMAKE_COMMAND}
-        -DDATA_SOURCE_DIR="${CMAKE_SOURCE_DIR}/tests/data"
-        -DLIBDW_FOUND="${LIBDW_FOUND}"
-        -DLLVM_OBJCOPY="${LLVM_OBJCOPY}"
-        -P ${CMAKE_SOURCE_DIR}/tests/data/generate_debuginfo_data.cmake)
-add_dependencies(bpftrace_test testing_debuginfo_data)
+add_subdirectory(data)
+add_dependencies(bpftrace_test debuginfo_data)
+target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
 target_link_libraries(bpftrace_test libbpftrace)
