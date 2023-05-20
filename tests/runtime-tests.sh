@@ -17,4 +17,4 @@ echo "bpftrace --info:"
 echo "===================="
 "${BPFTRACE_RUNTIME_TEST_EXECUTABLE}/bpftrace" --info
 
-python3 runtime/engine/main.py $@
+python3 runtime/engine/main.py "$@"

@@ -59,8 +59,8 @@ override it (`--entrypoint=`) and build bpftrace manually in the container.
 
 Some tests are known to be flaky and sometimes fail in the CI environment. The
 list of known such tests:
-- runtime test `usdt."usdt probes - file based semaphore activation multi
-  process"` ([#2410](https://github.com/iovisor/bpftrace/issues/2402))
+- runtime test `usdt.usdt probes - file based semaphore activation multi
+  process` ([#2410](https://github.com/iovisor/bpftrace/issues/2402))
 
 What usually helps, is restarting the CI. This is simple on your own fork but
 requires one of the maintainers for pull requests.

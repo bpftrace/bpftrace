@@ -72,11 +72,11 @@ def main(test_filter, run_aot_tests):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Runtime tests for bpftrace.')
-    parser.add_argument('--filter', dest='tests_filter',
-                        help='filter runtime tests')
+    parser.add_argument('--filter', type=str, dest='test_filter',
+                        help='Run only specified runtime test. Format should be "<test feature/test group>.<testcase name>"')
     parser.add_argument('--run-aot-tests', action='store_true',
                         help='Run ahead-of-time compilation tests. Note this would roughly double test time.')
 
     args = parser.parse_args()
 
-    main(args.tests_filter, args.run_aot_tests)
+    main(args.test_filter, args.run_aot_tests)
