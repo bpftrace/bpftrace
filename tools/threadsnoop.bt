@@ -18,7 +18,8 @@ BEGIN
 	printf("%-10s %-6s %-16s %s\n", "TIME(ms)", "PID", "COMM", "FUNC");
 }
 
-uprobe:libpthread:pthread_create
+uprobe:libpthread:pthread_create,
+uprobe:libc:pthread_create
 {
 	printf("%-10u %-6d %-16s %s\n", elapsed / 1e6, pid, comm,
 	    usym(arg2));
