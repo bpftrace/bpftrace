@@ -33,7 +33,7 @@ jobs:
           TYPE: Debug
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -41,7 +41,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 10
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -51,7 +51,7 @@ jobs:
           CC: clang-10
           CXX: clang++-10
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -59,7 +59,7 @@ jobs:
           TYPE: Debug
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -67,7 +67,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 11
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -75,7 +75,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 12
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -83,7 +83,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 13
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -91,7 +91,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 14
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -99,7 +99,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 15
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
@@ -107,7 +107,7 @@ jobs:
           TYPE: Release
           LLVM_VERSION: 16
           RUN_ALL_TESTS: 1
-          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt."usdt probes - file based semaphore activation multi process"
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
           BASE: focal
           VENDOR_GTEST: ON
