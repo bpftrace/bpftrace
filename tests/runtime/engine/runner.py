@@ -287,7 +287,7 @@ class Runner(object):
 
         if test.cleanup:
             try:
-                cleanup = subprocess.run(test.cleanup.split(), shell=True, capture_output=True, text=True)
+                cleanup = subprocess.run(test.cleanup, shell=True, capture_output=True, text=True)
                 cleanup.check_returncode()
             except subprocess.CalledProcessError as e:
                 print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
