@@ -36,31 +36,34 @@ REQUIRES_FEATURE btf
 WILL_FAIL
 
 NAME kernel_module_attach
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("hit\n"); exit(); }' -c '/usr/sbin/nft add table bpftrace'
+RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
+AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
-AFTER nft delete table bpftrace
+CLEANUP nft delete table bpftrace
 
 NAME kernel_module_args
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args->size); exit(); }' -c '/usr/sbin/nft add table bpftrace'
+RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args->size); exit(); }'
+AFTER /usr/sbin/nft add table bpftrace
 EXPECT size: [0-9]+
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
-AFTER nft delete table bpftrace
+CLEANUP nft delete table bpftrace
 
 NAME kernel_module_types
-RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args->ctx->portid); exit(); }' -c '/usr/sbin/nft add table bpftrace'
+RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args->ctx->portid); exit(); }'
+AFTER /usr/sbin/nft add table bpftrace
 EXPECT portid: [0-9]+
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
-AFTER nft delete table bpftrace
+CLEANUP nft delete table bpftrace
 
 NAME kernel_module_tracepoint
 PROG tracepoint:xfs:xfs_setfilesize { print(args->offset) } i:ms:1 { exit(); }

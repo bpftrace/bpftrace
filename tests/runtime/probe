@@ -101,20 +101,20 @@ TIMEOUT 5
 WILL_FAIL
 
 NAME kprobe_offset_module
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }' -c '/usr/sbin/nft add table bpftrace'
+RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
+AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
 TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
-AFTER nft delete table bpftrace
+CLEANUP nft delete table bpftrace
 
 NAME kprobe_offset_module_error
-RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }' -c '/usr/sbin/nft add table bpftrace'
+RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT Possible attachment attempt in the middle of an instruction, try a different offset.
 TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
-AFTER nft delete table bpftrace
 WILL_FAIL
 
 NAME kretprobe
