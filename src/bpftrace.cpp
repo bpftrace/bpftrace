@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <cassert>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -1531,7 +1532,7 @@ int BPFtrace::clear_map(IMap &map)
   for (auto &key : keys)
   {
     int err = bpf_delete_elem(map.mapfd_, key.data());
-    if (err)
+    if (err && err != -ENOENT)
     {
       LOG(ERROR) << "failed to look up elem: " << err;
       return -1;
@@ -1577,7 +1578,7 @@ int BPFtrace::zero_map(IMap &map)
   {
     int err = bpf_update_elem(map.mapfd_, key.data(), zero.data(), BPF_EXIST);
 
-    if (err)
+    if (err && err != -ENOENT)
     {
       LOG(ERROR) << "failed to look up elem: " << err;
       return -1;
@@ -1616,7 +1617,7 @@ int BPFtrace::print_map(IMap &map, uint32_t top, uint32_t div)
     value_size *= nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err == -1)
+    if (err == -ENOENT)
     {
       // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
       // let's skip this key
@@ -1702,7 +1703,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     int value_size = map.type_.GetSize() * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err == -1)
+    if (err == -ENOENT)
     {
       // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
       // let's skip this key
@@ -1781,7 +1782,7 @@ int BPFtrace::print_map_stats(IMap &map, uint32_t top, uint32_t div)
     int value_size = map.type_.GetSize() * nvalues;
     auto value = std::vector<uint8_t>(value_size);
     int err = bpf_lookup_elem(map.mapfd_, key.data(), value.data());
-    if (err == -1)
+    if (err == -ENOENT)
     {
       // key was removed by the eBPF program during bpf_get_next_key() and bpf_lookup_elem(),
       // let's skip this key
