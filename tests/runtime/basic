@@ -196,6 +196,11 @@ PROG BEGIN { @x = 10; printf("%d", @x++); printf(" %d", ++@x); printf(" %d", @x-
 EXPECT 10 12 12 10
 TIMEOUT 1
 
+NAME parallel map access
+RUN {{BPFTRACE}} runtime/scripts/parallel_map_access.bt
+EXPECT SUCCESS
+TIMEOUT 2
+
 NAME increment/decrement variable
 PROG BEGIN { $x = 10; printf("%d", $x++); printf(" %d", ++$x); printf(" %d", $x--); printf(" %d\n", --$x); exit(); }
 EXPECT 10 12 12 10
