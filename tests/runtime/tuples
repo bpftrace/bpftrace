@@ -88,3 +88,9 @@ NAME tuple strftime type is packed
 PROG BEGIN { @ = (nsecs, strftime("%M:%S", nsecs)); exit(); }
 EXPECT ^@: \(\d+, \d+:\d+\)$
 TIMEOUT 5
+
+NAME bytearray in tuple
+PROG uprobe:./testprogs/uprobe_test:function1 { @ = ((int8)1, usym(reg("ip")), 10); exit(); }
+EXPECT ^@: \(1, 0x[0-9a-f]+, 10\)$
+TIMEOUT 5
+AFTER ./testprogs/uprobe_test

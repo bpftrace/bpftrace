@@ -516,9 +516,9 @@ void SizedType::DumpStructure(std::ostream &os)
   return inner_struct_.lock()->Dump(os);
 }
 
-ssize_t SizedType::GetAlignment() const
+ssize_t SizedType::GetInTupleAlignment() const
 {
-  if (IsStringTy())
+  if (IsByteArray())
     return 1;
 
   if (IsTupleTy() || IsRecordTy())
@@ -527,8 +527,8 @@ ssize_t SizedType::GetAlignment() const
   if (GetSize() <= 2)
     return GetSize();
   else if (IsArrayTy())
-    return element_type_->GetAlignment();
-  else if (IsByteArray() || GetSize() <= 4)
+    return element_type_->GetInTupleAlignment();
+  else if (GetSize() <= 4)
     return 4;
   else
     return 8;
