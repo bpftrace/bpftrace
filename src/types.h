@@ -167,9 +167,9 @@ public:
   std::weak_ptr<const Struct> GetStruct() const;
 
   /**
-     Required alignment for this type
+     Required alignment for this type when used inside a tuple
    */
-  ssize_t GetAlignment() const;
+  ssize_t GetInTupleAlignment() const;
 
   /**
      Dump the underlying structure for debug purposes

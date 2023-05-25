@@ -19,6 +19,8 @@ and this project adheres to
   - [#2631](https://github.com/iovisor/bpftrace/pull/2631)
 - Fix crashes when maps are concurrently modified
   - [#2623](https://github.com/iovisor/bpftrace/pull/2623)
+- Fix alignment of byte arrays inside tuples
+  - [#2625](https://github.com/iovisor/bpftrace/pull/2625)
 
 
 ## [0.18.0] 2023-05-15

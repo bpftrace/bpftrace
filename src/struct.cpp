@@ -65,7 +65,7 @@ std::unique_ptr<Struct> Struct::CreateTuple(std::vector<SizedType> fields)
 
   for (auto &field : fields)
   {
-    auto align = field.GetAlignment();
+    auto align = field.GetInTupleAlignment();
     struct_align = std::max(align, struct_align);
     auto size = field.GetSize();
 
