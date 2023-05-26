@@ -9,9 +9,11 @@ from parser import TestParser, UnknownFieldError, RequiredFieldError
 from runner import Runner, ok, fail, warn
 
 
-def main(test_filter, run_aot_tests):
-    if not test_filter:
-        test_filter = "*"
+def main(tests_filter, run_aot_tests, suite_filter):
+    if not tests_filter:
+        tests_filter = "*"
+    if not suite_filter:
+        suite_filter = "*"
 
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
@@ -20,20 +22,27 @@ def main(test_filter, run_aot_tests):
         print(fail(str(error)))
         exit(1)
 
-    # Apply filter
+    # Apply --suite-filter
     filtered_suites = []
     for fname, tests in test_suite:
-        filtered_tests = [t for t in tests if fnmatch("{}.{}".format(fname, t.name), test_filter)]
-        if len(filtered_tests) != 0:
-            filtered_suites.append((fname, filtered_tests))
-    test_suite = filtered_suites
+        filtered_suite = [t for t in tests if fnmatch("{}".format(fname), suite_filter)]
+        if len(filtered_suite) != 0:
+            filtered_suites.append((fname, filtered_suite))
+
+    # Apply --filter
+    filtered_tests = []
+    for fname, tests in filtered_suites:
+        filtered_test = [t for t in tests if fnmatch("{}.{}".format(fname, t.name), tests_filter)]
+        if len(filtered_test) != 0:
+            filtered_tests.append((fname, filtered_test))
+
+    test_suite = filtered_tests
 
     total_tests = 0
     for fname, suite_tests in test_suite:
         total_tests += len(suite_tests)
 
     failed_tests = []
-
 
     print(ok("[==========]") + " Running %d tests from %d test cases.\n" % (total_tests, len(test_suite)))
 
@@ -76,7 +85,9 @@ if __name__ == "__main__":
                         help='filter runtime tests')
     parser.add_argument('--run-aot-tests', action='store_true',
                         help='Run ahead-of-time compilation tests. Note this would roughly double test time.')
+    parser.add_argument('--filter-suite', dest='suite_filter',
+                        help='Run all tests from provided suite only')
 
     args = parser.parse_args()
 
-    main(args.tests_filter, args.run_aot_tests)
+    main(args.tests_filter, args.run_aot_tests, args.suite_filter)
