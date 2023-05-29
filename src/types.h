@@ -48,7 +48,8 @@ enum class Type : uint8_t
   timestamp,
   mac_address,
   cgroup_path,
-  strerror
+  strerror,
+  timestamp_mode,
   // clang-format on
 };
 
@@ -93,6 +94,11 @@ private:
   }
 };
 
+enum class TimestampMode : uint8_t
+{
+  boot = 0,
+};
+
 struct Struct;
 struct Field;
 
@@ -117,6 +123,7 @@ public:
   bool is_tparg = false;
   bool is_funcarg = false;
   bool is_btftype = false;
+  TimestampMode ts_mode = TimestampMode::boot;
 
 private:
   size_t size_bits_ = 0;                    // size in bits
@@ -204,6 +211,7 @@ public:
   bool IsPrintableTy()
   {
     return type != Type::none && type != Type::stack_mode &&
+           type != Type::timestamp_mode &&
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
 
@@ -374,6 +382,10 @@ public:
   {
     return type == Type::strerror;
   };
+  bool IsTimestampModeTy(void) const
+  {
+    return type == Type::timestamp_mode;
+  }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
@@ -434,6 +446,7 @@ SizedType CreateTimestamp();
 SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateStrerror();
+SizedType CreateTimestampMode();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 

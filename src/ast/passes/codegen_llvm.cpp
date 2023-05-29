@@ -1311,6 +1311,14 @@ void CodegenLLVM::visit(Call &call)
     expr_ = ret;
     skb_output_id_++;
   }
+  else if (call.func == "nsecs")
+  {
+    if (call.type.ts_mode == TimestampMode::boot)
+    {
+      expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
+                             call.loc);
+    }
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";

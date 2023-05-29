@@ -133,7 +133,20 @@ void SemanticAnalyser::visit(Identifier &identifier)
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
   }
+  else if (func_ == "nsecs")
+  {
+    identifier.type = CreateTimestampMode();
+    if (identifier.ident == "boot")
+    {
+      identifier.type.ts_mode = TimestampMode::boot;
+    }
+    else
+    {
+      goto err;
+    }
+  }
   else {
+  err:
     identifier.type = CreateNone();
     LOG(ERROR, identifier.loc, err_)
         << "Unknown identifier: '" + identifier.ident + "'";
@@ -1333,6 +1346,19 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateUInt32();
+  }
+  else if (call.func == "nsecs")
+  {
+    if (check_varargs(call, 0, 1))
+    {
+      call.type = CreateUInt64();
+      call.type.ts_mode = TimestampMode::boot;
+      if (call.vargs && call.vargs->size() == 1 &&
+          check_arg(call, Type::timestamp_mode, 0))
+      {
+        call.type.ts_mode = call.vargs->at(0)->type.ts_mode;
+      }
+    }
   }
   else
   {
