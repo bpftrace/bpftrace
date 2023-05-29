@@ -1113,9 +1113,13 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "strftime")
   {
     call.type = CreateTimestamp();
-    check_varargs(call, 2, 2) && is_final_pass() &&
+    if (check_varargs(call, 2, 2) && is_final_pass() &&
         check_arg(call, Type::string, 0, true) &&
-        check_arg(call, Type::integer, 1, false);
+        check_arg(call, Type::integer, 1, false))
+    {
+      auto &arg = *call.vargs->at(1);
+      call.type.ts_mode = arg.type.ts_mode;
+    }
   }
   else if (call.func == "kstack") {
     check_stack_call(call, true);

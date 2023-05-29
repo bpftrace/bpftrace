@@ -1146,11 +1146,17 @@ void CodegenLLVM::visit(Call &call)
         b_.GetIntSameSize(strftime_id_, elements.at(0)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     strftime_id_++;
+    b_.CreateStore(
+        b_.GetIntSameSize(
+            static_cast<std::underlying_type<TimestampMode>::type>(
+                call.type.ts_mode),
+            elements.at(1)),
+        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     Expression *arg = call.vargs->at(1);
     auto scoped_del = accept(arg);
     b_.CreateStore(
         expr_,
-        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     expr_ = buf;
   }
   else if (call.func == "kstack" || call.func == "ustack")

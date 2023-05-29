@@ -65,8 +65,9 @@ struct Time
 
 struct Strftime
 {
-  uint64_t strftime_id;
-  uint64_t nsecs_since_boot;
+  uint32_t strftime_id;
+  uint32_t mode;
+  uint64_t nsecs;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));

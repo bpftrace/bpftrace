@@ -275,9 +275,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     return bpftrace.resolve_probe(read_data<uint64_t>(value.data()));
   else if (type.IsTimestampTy())
     return bpftrace.resolve_timestamp(
+        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->mode,
         reinterpret_cast<AsyncEvent::Strftime *>(value.data())->strftime_id,
-        reinterpret_cast<AsyncEvent::Strftime *>(value.data())
-            ->nsecs_since_boot);
+        reinterpret_cast<AsyncEvent::Strftime *>(value.data())->nsecs);
   else if (type.IsMacAddressTy())
     return bpftrace.resolve_mac_address(value.data());
   else if (type.IsCgroupPathTy())
