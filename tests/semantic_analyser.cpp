@@ -2950,6 +2950,40 @@ TEST(semantic_analyser, config)
        0);
 }
 
+TEST(semantic_analyser, subprog_return)
+{
+  test("fn f(): void { return; }", 0);
+  test("fn f(): void { return 1; }", 1);
+  test("fn f(): int64 { return; }", 1);
+  test("fn f(): int64 { return 1; }", 0);
+}
+
+TEST(semantic_analyser, subprog_arguments)
+{
+  test("fn f($a : int64): int64 { return $a; }", 0);
+  test("fn f($a : int64): str_t[16] { return $a; }", 1);
+}
+
+TEST(semantic_analyser, subprog_map)
+{
+  test("fn f(): void { @a = 0; }", 0);
+  test("fn f(): int64 { @a = 0; return @a + 1; }", 0);
+  test("fn f(): void { @a[0] = 0; }", 0);
+  test("fn f(): int64 { @a[0] = 0; return @a[0] + 1; }", 0);
+}
+
+TEST(semantic_analyser, subprog_builtin)
+{
+  test("fn f(): void { print(\"Hello world\"); }", 0);
+  test("fn f(): uint64 { return sizeof(int64); }", 0);
+  test("fn f(): uint64 { return nsecs; }", 0);
+}
+
+TEST(semantic_analyser, subprog_buildin_disallowed)
+{
+  test("fn f(): int64 { return func; }", 1);
+}
+
 class semantic_analyser_btf : public test_btf {};
 
 TEST_F(semantic_analyser_btf, kfunc)

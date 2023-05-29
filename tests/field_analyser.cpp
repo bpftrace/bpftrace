@@ -415,6 +415,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
 }
 
+TEST(field_analyser_subprog, struct_cast)
+{
+  test("struct x { int a; } fn f(): void { $s = (struct x *)0; }", 0);
+}
+
 #endif // HAVE_LIBDW
 
 } // namespace field_analyser
