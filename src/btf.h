@@ -63,6 +63,7 @@ public:
 
   std::set<std::string> get_all_structs() const;
   std::unique_ptr<std::istream> get_all_funcs() const;
+  std::unordered_set<std::string> get_all_iters() const;
   std::map<std::string, std::vector<std::string>> get_params(
       const std::set<std::string>& funcs) const;
 
@@ -91,6 +92,8 @@ private:
       const BTFObj& btf_obj,
       const std::set<std::string>& funcs) const;
   std::set<std::string> get_all_structs_from_btf(const struct btf* btf) const;
+  std::unordered_set<std::string> get_all_iters_from_btf(
+      const struct btf* btf) const;
 
   __s32 start_id(const struct btf* btf) const;
 
