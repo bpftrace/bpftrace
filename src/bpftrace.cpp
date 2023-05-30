@@ -1943,7 +1943,7 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
   {
     auto fields = split_string(line, ':');
 
-    if (fields[2] == uid)
+    if (fields.size() >= 3 && fields[2] == uid)
     {
       found = true;
       username = fields[0];
