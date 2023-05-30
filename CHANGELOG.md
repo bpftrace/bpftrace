@@ -13,6 +13,8 @@ and this project adheres to
   - [#2588](https://github.com/iovisor/bpftrace/pull/2588)
 #### Changed
 #### Fixed
+- Fix resolving username for malformed /etc/passwd
+  - [#2631](https://github.com/iovisor/bpftrace/pull/2631)
 
 
 ## [0.18.0] 2023-05-15
