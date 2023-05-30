@@ -54,9 +54,6 @@ public:                                                                        \
 #define DEFINE_PROG_TEST(var, progtype)                                        \
   __DEFINE_PROG_TEST(var, progtype, NULL, std::nullopt)
 
-#define DEFINE_PROG_TEST_FUNC(var, progtype, name, attach_type)                \
-  __DEFINE_PROG_TEST(var, progtype, name, attach_type)
-
 class BPFfeature
 {
 public:
@@ -109,18 +106,6 @@ public:
   DEFINE_PROG_TEST(kprobe, libbpf::BPF_PROG_TYPE_KPROBE);
   DEFINE_PROG_TEST(tracepoint, libbpf::BPF_PROG_TYPE_TRACEPOINT);
   DEFINE_PROG_TEST(perf_event, libbpf::BPF_PROG_TYPE_PERF_EVENT);
-  DEFINE_PROG_TEST_FUNC(iter_task,
-                        libbpf::BPF_PROG_TYPE_TRACING,
-                        "bpf_iter_task",
-                        libbpf::BPF_TRACE_ITER);
-  DEFINE_PROG_TEST_FUNC(iter_task_file,
-                        libbpf::BPF_PROG_TYPE_TRACING,
-                        "bpf_iter_task_file",
-                        libbpf::BPF_TRACE_ITER);
-  DEFINE_PROG_TEST_FUNC(iter_task_vma,
-                        libbpf::BPF_PROG_TYPE_TRACING,
-                        "bpf_iter_task_vma",
-                        libbpf::BPF_TRACE_ITER);
 
 protected:
   std::optional<bool> has_loop_;

@@ -258,25 +258,7 @@ void SemanticAnalyser::visit(Builtin &builtin)
       case libbpf::BPF_PROG_TYPE_TRACING:
         if (pt == ProbeType::iter)
         {
-          std::string type;
-
-          if (func == "task")
-          {
-            type = "struct bpf_iter__task";
-          }
-          else if (func == "task_file")
-          {
-            type = "struct bpf_iter__task_file";
-          }
-          else if (func == "task_vma")
-          {
-            type = "struct bpf_iter__task_vma";
-          }
-          else
-          {
-            LOG(ERROR, builtin.loc, err_) << "unsupported iter type: " << func;
-          }
-
+          std::string type = "struct bpf_iter__" + func;
           builtin.type = CreatePointer(
               CreateRecord(type, bpftrace_.structs.Lookup(type)),
               AddrSpace::kernel);
@@ -2847,29 +2829,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   }
   else if (ap.provider == "iter")
   {
-    bool supported = false;
-
-    if (ap.func == "task")
-    {
-      supported = bpftrace_.feature_->has_prog_iter_task() &&
-                  bpftrace_.has_btf_data();
-    }
-    else if (ap.func == "task_file")
-    {
-      supported = bpftrace_.feature_->has_prog_iter_task_file() &&
-                  bpftrace_.has_btf_data();
-    }
-    else if (ap.func == "task_vma")
-    {
-      supported = bpftrace_.feature_->has_prog_iter_task_vma() &&
-                  bpftrace_.has_btf_data();
-    }
-    else if (listing_)
-    {
-      supported = true;
-    }
-
-    if (!supported)
+    if (!listing_ && bpftrace_.btf_->get_all_iters().count(ap.func) <= 0)
     {
       LOG(ERROR, ap.loc, err_)
           << "iter " << ap.func << " not available for your kernel version.";

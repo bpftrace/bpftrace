@@ -35,14 +35,7 @@ void FieldAnalyser::visit(Builtin &builtin)
     // For each iterator probe, the context is pointing to specific struct,
     // make them resolved and available
     if (probe_type_ == ProbeType::iter)
-    {
-      if (attach_func_ == "task")
-        builtin_type = "struct bpf_iter__task";
-      else if (attach_func_ == "task_file")
-        builtin_type = "struct bpf_iter__task_file";
-      else if (attach_func_ == "task_vma")
-        builtin_type = "struct bpf_iter__task_vma";
-    }
+      builtin_type = "struct bpf_iter__" + attach_func_;
   }
   else if (builtin.ident == "curtask")
   {

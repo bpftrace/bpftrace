@@ -80,6 +80,21 @@ struct bpf_iter__task_vma
   struct vm_area_struct *vma;
 };
 
+int bpf_iter_task()
+{
+  return 0;
+}
+
+int bpf_iter_task_file()
+{
+  return 0;
+}
+
+int bpf_iter_task_vma()
+{
+  return 0;
+}
+
 int main(void)
 {
   struct bpf_iter__task iter_task;
@@ -87,5 +102,9 @@ int main(void)
   struct bpf_iter__task_vma iter_task_vma;
 
   func_1(0, 0, 0);
+
+  bpf_iter_task();
+  bpf_iter_task_file();
+  bpf_iter_task_vma();
   return 0;
 }
