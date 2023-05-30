@@ -85,6 +85,7 @@ public:
   bool has_raw_tp_special();
   bool has_prog_kfunc();
   bool has_module_btf();
+  bool has_iter(std::string name);
 
   std::string report(void);
 

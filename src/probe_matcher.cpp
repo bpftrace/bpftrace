@@ -89,11 +89,6 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
   return matches;
 }
 
-std::unique_ptr<std::istream> ProbeMatcher::get_iter_symbols(void) const
-{
-  return std::make_unique<std::istringstream>("task\ntask_file\ntask_vma");
-}
-
 /*
  * Get matches of search_input (containing a wildcard) for a given probe_type.
  * probe_type determines where to take the candidate matches from.
@@ -167,7 +162,22 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     }
     case ProbeType::iter:
     {
-      symbol_stream = get_iter_symbols();
+      if (!bpftrace_->has_btf_data())
+        break;
+
+      std::string ret;
+      auto iters = bpftrace_->btf_->get_all_iters();
+      for (auto& iter : iters)
+      {
+        // second check
+        if (bpftrace_->feature_->has_iter(iter))
+          ret += iter + "\n";
+        else
+          LOG(WARNING) << "The kernel contains bpf_iter__$ITER struct but "
+                          "does not support loading an iterator program "
+                          "against it. Please report this bug.";
+      }
+      symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
     }
     default:
