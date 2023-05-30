@@ -526,11 +526,9 @@ std::string BPFfeature::report(void)
       << "  tracepoint: " << to_str(has_prog_tracepoint())
       << "  perf_event: " << to_str(has_prog_perf_event())
       << "  kfunc: " << to_str(has_kfunc())
-      << "  iter:task: " << to_str(has_prog_iter_task())
-      << "  iter:task_file: " << to_str(has_prog_iter_task_file())
-      << "  iter:task_vma: " << to_str(has_prog_iter_task_vma())
       << "  kprobe_multi: " << to_str(has_kprobe_multi())
-      << "  raw_tp_special: " << to_str(has_raw_tp_special()) << std::endl;
+      << "  raw_tp_special: " << to_str(has_raw_tp_special())
+      << "  iter: " << to_str(has_iter("task")) << std::endl;
 
   return buf.str();
 }
