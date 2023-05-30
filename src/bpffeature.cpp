@@ -596,4 +596,12 @@ not_support:
   return *has_module_btf_;
 }
 
+bool BPFfeature::has_iter(std::string name)
+{
+  auto tracing_name = "bpf_iter_" + name;
+  return detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
+                          tracing_name.c_str(),
+                          libbpf::BPF_TRACE_ITER);
+}
+
 } // namespace bpftrace
