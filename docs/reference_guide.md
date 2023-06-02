@@ -104,6 +104,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [32. `skb_output`: Write `skb` 's data section into a PCAP file](#32-skb_output-write-skb-s-data-section-into-a-pcap-file)
     - [33. `pton()`: Convert text IP address to byte array](#33-pton-convert-text-ip-address-to-byte-array)
     - [34. `strerror`: Get error message for errno value](#34-strerror-get-error-message-for-errno-code)
+    - [35. `offsetof`: Offset of element in structure](#35-offsetof-offset-of-element-in-structure)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -3333,7 +3334,7 @@ Attaching 1 probe...
 Operation not permitted
 ```
 
-# 35. `offsetof`: Offset of element in structure
+## 35. `offsetof`: Offset of element in structure
 
 Syntax:
 - `offsetof(struct, element)`
