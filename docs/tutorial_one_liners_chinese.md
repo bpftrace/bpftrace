@@ -33,7 +33,7 @@ hello world
 # 3. 文件打开
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
 Attaching 1 probe...
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
@@ -46,8 +46,8 @@ snmpd /proc/net/if_inet6
 
 - 该命令以`tracepoint:syscalls:sys_enter_openat`开始: 这是tracepoint探针类型(内核静态跟踪)，当进入`openat()`系统调用时执行该探针。相比kprobes探针(内核动态跟踪，在第6节介绍)，我们更加喜欢用tracepoints探针，因为tracepoints有稳定的应用程序编程接口。注意：现代linux系统(glibc >= 2.26)，`open`总是调用`openat`系统调用。
 - `comm`是内建变量，代表当前进程的名字。其它类似的变量还有pid和tid，分别表示进程标识和线程标识。
-- `args`是一个指针，指向该tracepoint的参数。这个结构是由bpftrace根据tracepoint信息自动生成的。这个结构的成员可以通过命令`bpftrace -vl tracepoint:syscalls:sys_enter_openat`找到。
-- `args->filename`用来获取args的成员变量`filename`的值。
+- `args`是一个包含所有tracepoint参数的结构。这个结构是由bpftrace根据tracepoint信息自动生成的。这个结构的成员可以通过命令`bpftrace -vl tracepoint:syscalls:sys_enter_openat`找到。
+- `args.filename`用来获取args的成员变量`filename`的值。
 - `str()`用来把字符串指针转换成字符串。
 
 # 4. 进程级系统调用记数
@@ -74,7 +74,7 @@ Maps会在bpftrace结束(如按Ctrl-C)时自动打印出来。
 # 5. read()返回值分布统计
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args->ret); }'
+# bpftrace -e 'tracepoint:syscalls:sys_exit_read /pid == 18644/ { @bytes = hist(args.ret); }'
 Attaching 1 probe...
 ^C
 
@@ -253,7 +253,7 @@ secondary_startup_64+165
 # 11. 块级I/O跟踪
 
 ```
-# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args->bytes); }'
+# bpftrace -e 'tracepoint:block:block_rq_issue { @ = hist(args.bytes); }'
 Attaching 1 probe...
 ^C
 
@@ -283,7 +283,7 @@ Attaching 1 probe...
 
 - tracepoint:block: 块类别的跟踪点跟踪块级I/O事件。
 - block_rq_issue: 当I/O提交到块设备时触发。
-- args->bytes: 跟踪点block_rq_issue的参数成员bytes，表示提交I/O请求的字节数。
+- args.bytes: 跟踪点block_rq_issue的参数成员bytes，表示提交I/O请求的字节数。
 
 该探针的上下文是非常重要的: 它在I/O请求被提交给块设备时触发。这通常发生在进程上下文，此时通过内核的comm可以得到进程名；也可能发生在内核上下文，(如readahead)，此时不能显示预期的进程号和进程名信息。
 
