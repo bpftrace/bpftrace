@@ -216,6 +216,7 @@ public:
   uint64_t ast_max_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
   std::optional<StackMode> stack_mode_;
   std::optional<struct timespec> boottime_;
+  std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
   static constexpr uint64_t rb_loss_cnt_val_ = 0;
 

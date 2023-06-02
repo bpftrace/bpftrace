@@ -2017,7 +2017,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
     }
     else
     {
-      basetime = boottime_.operator->();
+      basetime = &boottime_.value();
     }
   }
 

@@ -144,6 +144,10 @@ void SemanticAnalyser::visit(Identifier &identifier)
     {
       identifier.type.ts_mode = TimestampMode::tai;
     }
+    else if (identifier.ident == "sw_tai")
+    {
+      identifier.type.ts_mode = TimestampMode::sw_tai;
+    }
     else
     {
       goto err;
