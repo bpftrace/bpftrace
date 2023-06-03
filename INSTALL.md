@@ -321,6 +321,7 @@ sudo dnf install -y bison \
   git \
   gcc-c++ \
   xxd \
+  libffi-devel \
   elfutils-libelf-devel \
   elfutils-devel \
   zlib-devel \
