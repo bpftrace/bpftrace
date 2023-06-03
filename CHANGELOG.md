@@ -17,6 +17,8 @@ and this project adheres to
 #### Fixed
 - Fix resolving username for malformed /etc/passwd
   - [#2631](https://github.com/iovisor/bpftrace/pull/2631)
+- Fix crashes when maps are concurrently modified
+  - [#2623](https://github.com/iovisor/bpftrace/pull/2623)
 
 
 ## [0.18.0] 2023-05-15
