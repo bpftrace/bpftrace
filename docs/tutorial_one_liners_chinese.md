@@ -50,7 +50,7 @@ snmpd /proc/net/if_inet6
 - `args.filename`用来获取args的成员变量`filename`的值。
 - `str()`用来把字符串指针转换成字符串。
 
-# 4. 进程级系统调用记数
+# 4. 进程级系统调用计数
 
 ```
 bpftrace -e 'tracepoint:raw_syscalls:sys_enter { @[comm] = count(); }'
