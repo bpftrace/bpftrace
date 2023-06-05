@@ -422,27 +422,25 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
 FuncParamLists ProbeMatcher::get_iters_params(
     const std::set<std::string>& iters)
 {
+  const std::string prefix = "vmlinux:bpf_iter_";
   FuncParamLists params;
+  std::set<std::string> funcs;
 
   for (auto& iter : iters)
-  {
-    if (iter == "task")
-    {
-      params[iter].push_back("struct task_struct * task");
-    }
-    else if (iter == "task_file")
-    {
-      params[iter].push_back("struct task_struct * task");
-      params[iter].push_back("int fd");
-      params[iter].push_back("struct file * file");
-    }
-    else if (iter == "task_vma")
-    {
-      params[iter].push_back("struct task_struct * task");
-      params[iter].push_back("struct vm_area_struct * vma");
-    }
-  }
+    funcs.insert(prefix + iter);
 
+  params = bpftrace_->btf_->get_params(funcs);
+  for (auto func : funcs)
+  {
+    // delete `int retval`
+    params[func].pop_back();
+    // delete `struct bpf_iter_meta * meta`
+    params[func].erase(params[func].begin());
+    // restore key value
+    auto param = params.extract(func);
+    param.key() = func.substr(prefix.size());
+    params.insert(std::move(param));
+  }
   return params;
 }
 
