@@ -2834,6 +2834,9 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "iter " << ap.func << " not available for your kernel version.";
     }
+
+    if (ap.func == "")
+      LOG(ERROR, ap.loc, err_) << "iter should specify a iterator's name";
   }
   else {
     LOG(ERROR, ap.loc, err_) << "Invalid provider: '" << ap.provider << "'";
