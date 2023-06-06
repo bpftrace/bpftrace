@@ -457,6 +457,9 @@ void SemanticAnalyser::visit(Builtin &builtin)
       auto type_name = probe_->args_typename();
       builtin.type = CreateRecord(type_name,
                                   bpftrace_.structs.Lookup(type_name));
+      if (builtin.type.GetFieldCount() == 0)
+        LOG(ERROR, builtin.loc, err_) << "Cannot read function parameters";
+
       builtin.type.MarkCtxAccess();
       builtin.type.is_funcarg = true;
       builtin.type.SetAS(type == ProbeType::uprobe ? AddrSpace::user
