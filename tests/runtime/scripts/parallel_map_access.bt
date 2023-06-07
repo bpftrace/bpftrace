@@ -6,13 +6,11 @@
 // https://github.com/iovisor/bpftrace/pull/2623
 
 i:us:1 {
-    @data[rand % 100] = count();
-    if (rand % 5 == 0) {
-        delete(@data[rand % 10]);
-    }
+    @data[rand % 10] = count();
+    delete(@data[rand % 10]);
 }
 
-i:ms:1 {
+i:us:1 {
     print(@data);
     clear(@data);
     zero(@data);
