@@ -14,6 +14,8 @@ and this project adheres to
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)
+- Improve user symbol resolution
+  - [#2386](https://github.com/iovisor/bpftrace/pull/2386)
 #### Fixed
 - Fix resolving username for malformed /etc/passwd
   - [#2631](https://github.com/iovisor/bpftrace/pull/2631)
