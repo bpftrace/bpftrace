@@ -397,6 +397,10 @@ std::vector<std::string> get_kernel_cflags(const char *uname_machine,
   } else if (!strncmp(uname_machine, "aarch64", 7)) {
     arch = "arm64";
   }
+  else if (!strncmp(uname_machine, "loongarch", 9))
+  {
+    arch = "loongarch";
+  }
 
   // If ARCH env is defined, use it over uname
   archenv = getenv("ARCH");
