@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Rawtracepoint support wildcards and list show
   - [#2588](https://github.com/iovisor/bpftrace/pull/2588)
+- Support all iterators
+  - [#2630](https://github.com/iovisor/bpftrace/pull/2630)
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)
