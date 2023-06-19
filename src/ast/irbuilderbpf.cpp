@@ -981,6 +981,13 @@ CallInst *IRBuilderBPF::CreateGetNs(bool boot_time, const location &loc)
   return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
 }
 
+CallInst *IRBuilderBPF::CreateGetTaiNs(const location &loc)
+{
+  auto fn = libbpf::BPF_FUNC_ktime_get_tai_ns;
+  FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
+  return CreateHelperCall(fn, gettime_func_type, {}, "get_tai_ns", &loc);
+}
+
 Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
                                                    Value *val1,
                                                    Value *val2,

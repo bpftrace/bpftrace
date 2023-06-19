@@ -140,6 +140,10 @@ void SemanticAnalyser::visit(Identifier &identifier)
     {
       identifier.type.ts_mode = TimestampMode::boot;
     }
+    else if (identifier.ident == "tai")
+    {
+      identifier.type.ts_mode = TimestampMode::tai;
+    }
     else
     {
       goto err;
@@ -1361,6 +1365,13 @@ void SemanticAnalyser::visit(Call &call)
           check_arg(call, Type::timestamp_mode, 0))
       {
         call.type.ts_mode = call.vargs->at(0)->type.ts_mode;
+      }
+
+      if (call.type.ts_mode == TimestampMode::tai &&
+          !bpftrace_.feature_->has_helper_ktime_get_tai_ns())
+      {
+        LOG(ERROR, call.loc, err_)
+            << "Kernel does not support tai timestamp, please try sw_tai";
       }
     }
   }

@@ -97,6 +97,7 @@ private:
 enum class TimestampMode : uint8_t
 {
   boot = 0,
+  tai,
 };
 
 struct Struct;

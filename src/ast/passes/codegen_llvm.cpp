@@ -1324,6 +1324,10 @@ void CodegenLLVM::visit(Call &call)
       expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
                              call.loc);
     }
+    else if (call.type.ts_mode == TimestampMode::tai)
+    {
+      expr_ = b_.CreateGetTaiNs(call.loc);
+    }
   }
   else
   {
