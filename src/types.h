@@ -48,7 +48,8 @@ enum class Type
   timestamp,
   mac_address,
   cgroup_path,
-  strerror
+  strerror,
+  printb,
   // clang-format on
 };
 
@@ -93,6 +94,21 @@ private:
   }
 };
 
+struct PrintBTF
+{
+  int dump_id = -1;
+  int type_id = -1;
+  size_t size = 0;
+
+private:
+  friend class cereal::access;
+  template <typename Archive>
+  void serialize(Archive &archive)
+  {
+    archive(dump_id, type_id, size);
+  }
+};
+
 struct Struct;
 struct Field;
 
@@ -117,6 +133,7 @@ public:
   bool is_funcarg = false;
   bool is_btftype = false;
   int funcarg_idx = -1;
+  PrintBTF printb;
 
 private:
   size_t size_ = -1; // in bytes
@@ -440,6 +457,7 @@ SizedType CreateTimestamp();
 SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateStrerror();
+SizedType CreatePrintBTF(int dump_id, int type_id, size_t size);
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
