@@ -216,6 +216,7 @@ public:
   std::optional<struct timespec> boottime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
   static constexpr uint64_t rb_loss_cnt_val_ = 0;
+  size_t max_printb_map_size_ = 0;
 
   static void sort_by_key(
       std::vector<SizedType> key_args,
