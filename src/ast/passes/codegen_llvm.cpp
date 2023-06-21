@@ -1311,6 +1311,64 @@ void CodegenLLVM::visit(Call &call)
     expr_ = ret;
     skb_output_id_++;
   }
+  else if (call.func == "printb")
+  {
+    auto arg = call.vargs->at(0);
+    auto scoped_del = accept(arg);
+    auto printb_type = bpftrace_.resources.printb_args.at(printb_id_);
+    Value *perfdata = b_.CreateGetPrintBTFMap(ctx_, call.loc);
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *zero = BasicBlock::Create(module_->getContext(),
+                                          "printb_zero",
+                                          parent);
+    BasicBlock *notzero = BasicBlock::Create(module_->getContext(),
+                                             "printb_notzero",
+                                             parent);
+
+    b_.CreateCondBr(b_.CreateICmpNE(perfdata,
+                                    ConstantExpr::getCast(Instruction::IntToPtr,
+                                                          b_.getInt64(0),
+                                                          b_.getInt8PtrTy()),
+                                    "printb_zerocond"),
+                    notzero,
+                    zero);
+    b_.SetInsertPoint(notzero);
+    auto elements = AsyncEvent::PrintBTF().asLLVMType(b_,
+                                                      printb_type.printb.size);
+    StructType *printb_struct = b_.GetStructType("printb", elements, false);
+    size_t struct_size = datalayout().getTypeAllocSize(printb_struct);
+    Value *typed_perfdata = b_.CreatePointerCast(perfdata,
+                                                 printb_struct->getPointerTo());
+
+    // Store asyncactionid:
+    b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::printbtf)),
+                   b_.CreateGEP(printb_struct,
+                                typed_perfdata,
+                                { b_.getInt64(0), b_.getInt32(0) }));
+
+    // Store printb id
+    b_.CreateStore(b_.getInt64(printb_id_),
+                   b_.CreateGEP(printb_struct,
+                                typed_perfdata,
+                                { b_.getInt64(0), b_.getInt32(1) }));
+
+    // Store content
+    Value *content_offset = b_.CreateGEP(printb_struct,
+                                         typed_perfdata,
+                                         { b_.getInt32(0), b_.getInt32(2) });
+    b_.CreateProbeRead(ctx_,
+                       content_offset,
+                       *arg->type.GetPointeeTy(),
+                       expr_,
+                       arg->loc,
+                       arg->type.GetAS());
+    printb_id_++;
+    b_.CreateOutput(ctx_, typed_perfdata, struct_size, &call.loc);
+    b_.CreateBr(zero);
+    // done
+    b_.SetInsertPoint(zero);
+    expr_ = nullptr;
+  }
   else
   {
     LOG(FATAL) << "missing codegen for function \"" << call.func << "\"";
@@ -3675,7 +3733,8 @@ std::function<void()> CodegenLLVM::create_reset_ids()
           starting_helper_error_id = this->b_.helper_error_id_,
           starting_non_map_print_id = this->non_map_print_id_,
           starting_mapped_printf_id = this->mapped_printf_id_,
-          starting_skb_output_id = this->skb_output_id_] {
+          starting_skb_output_id = this->skb_output_id_,
+          starting_printb_id = this->printb_id_] {
     this->printf_id_ = starting_printf_id;
     this->cat_id_ = starting_cat_id;
     this->system_id_ = starting_system_id;
@@ -3686,6 +3745,7 @@ std::function<void()> CodegenLLVM::create_reset_ids()
     this->non_map_print_id_ = starting_non_map_print_id;
     this->mapped_printf_id_ = starting_mapped_printf_id;
     this->skb_output_id_ = starting_skb_output_id;
+    this->printb_id_ = starting_printb_id;
   };
 }
 

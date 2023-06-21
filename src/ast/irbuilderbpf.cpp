@@ -367,6 +367,17 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx, const location &loc)
   return call;
 }
 
+CallInst *IRBuilderBPF::CreateGetPrintBTFMap(Value *ctx, const location &loc)
+{
+  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
+  CreateStore(getInt32(0), key);
+
+  CallInst *call = createMapLookup(
+      bpftrace_.maps[MapManager::Type::PrintBTF].value()->id, key);
+  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_lookup_elem, loc, true);
+  return call;
+}
+
 Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          Map &map,
                                          Value *key,

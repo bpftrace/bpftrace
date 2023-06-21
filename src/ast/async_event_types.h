@@ -126,5 +126,14 @@ struct SkbOutput
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
+// BTF-based pretty printing
+struct PrintBTF
+{
+  uint64_t action_id;
+  uint64_t printb_id;
+  uint8_t content[0];
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t size);
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace

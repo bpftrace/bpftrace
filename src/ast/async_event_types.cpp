@@ -103,5 +103,14 @@ std::vector<llvm::Type*> SkbOutput::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
+std::vector<llvm::Type*> PrintBTF::asLLVMType(ast::IRBuilderBPF& b, size_t size)
+{
+  return {
+    b.getInt64Ty(),                            // asyncid
+    b.getInt64Ty(),                            // printb_id
+    llvm::ArrayType::get(b.getInt8Ty(), size), // content
+  };
+}
+
 } // namespace AsyncEvent
 } // namespace bpftrace

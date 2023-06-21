@@ -243,6 +243,7 @@ private:
   uint64_t watchpoint_id_ = 0;
   int cgroup_path_id_ = 0;
   int skb_output_id_ = 0;
+  int printb_id_ = 0;
 
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;

@@ -591,6 +591,7 @@ enum class AsyncAction
   watchpoint_attach,
   watchpoint_detach,
   skboutput,
+  printbtf,
   // clang-format on
 };
 
