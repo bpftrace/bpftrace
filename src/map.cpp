@@ -283,6 +283,8 @@ std::string to_string(MapManager::Type t)
       return "ringbuf";
     case MapManager::Type::RingbufLossCounter:
       return "ringbuf_loss_counter";
+    case MapManager::Type::PrintBTF:
+      return "printb";
   }
   return {}; // unreached
 }

@@ -201,6 +201,12 @@ void ResourceAnalyser::visit(Call &call)
     resources_.skboutput_args_.emplace_back(file.str, offset.n);
     resources_.needs_perf_event_map = true;
   }
+  else if (call.func == "printb")
+  {
+    resources_.printb_args.push_back(call.type);
+    resources_.needs_printb_map = true;
+    resources_.needs_perf_event_map = true;
+  }
 
   if (uses_usym_table(call.func))
   {

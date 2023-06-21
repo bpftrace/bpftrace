@@ -10,6 +10,7 @@
 
 #include <cereal/access.hpp>
 
+#include "btf.h"
 #include "format_string.h"
 #include "location.hh"
 #include "mapkey.h"
@@ -104,10 +105,12 @@ public:
   std::map<std::string, LinearHistogramArgs> lhist_args;
   std::map<std::string, MapKey> map_keys;
   std::unordered_set<StackType> stackid_maps;
+  std::vector<SizedType> printb_args;
   bool needs_join_map = false;
   bool needs_elapsed_map = false;
   bool needs_data_map = false;
   bool needs_perf_event_map = false;
+  bool needs_printb_map = false;
 
   // Probe metadata
   //
@@ -148,10 +151,12 @@ private:
             lhist_args,
             map_keys,
             stackid_maps,
+            printb_args,
             needs_join_map,
             needs_elapsed_map,
             needs_data_map,
             needs_perf_event_map,
+            needs_printb_map,
             probes,
             special_probes);
   }
