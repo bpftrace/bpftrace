@@ -39,8 +39,9 @@ static int add_symbol(const char* symname,
  */
 std::set<std::string> ProbeMatcher::get_matches_in_stream(
     const std::string& search_input,
-    bool ignore_trailing_module,
     std::istream& symbol_stream,
+    bool ignore_trailing_module,
+    bool demangle_symbols,
     const char delim)
 {
   bool start_wildcard, end_wildcard;
@@ -57,23 +58,26 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
 
     if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
     {
-      auto fun_line = line;
-      auto prefix = fun_line.find(':') != std::string::npos
-                        ? erase_prefix(fun_line) + ":"
-                        : "";
-      if (symbol_has_cpp_mangled_signature(fun_line))
+      if (demangle_symbols)
       {
-        char* demangled_name = cxxdemangle(fun_line.c_str());
-        if (demangled_name)
+        auto fun_line = line;
+        auto prefix = fun_line.find(':') != std::string::npos
+                          ? erase_prefix(fun_line) + ":"
+                          : "";
+        if (symbol_has_cpp_mangled_signature(fun_line))
         {
-          if (!wildcard_match(prefix + demangled_name, tokens, true, true))
+          char* demangled_name = cxxdemangle(fun_line.c_str());
+          if (demangled_name)
           {
-            free(demangled_name);
-          }
-          else
-          {
-            free(demangled_name);
-            goto out;
+            if (!wildcard_match(prefix + demangled_name, tokens, true, true))
+            {
+              free(demangled_name);
+            }
+            else
+            {
+              free(demangled_name);
+              goto out;
+            }
           }
         }
       }
@@ -186,8 +190,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
 
   if (symbol_stream)
     return get_matches_in_stream(search_input,
-                                 ignore_trailing_module,
-                                 *symbol_stream);
+                                 *symbol_stream,
+                                 ignore_trailing_module);
   else
     return {};
 }
@@ -206,7 +210,7 @@ std::set<std::string> ProbeMatcher::get_matches_in_set(
     stream_in.append(str + "$");
 
   std::istringstream stream(stream_in);
-  return get_matches_in_stream(search_input, false, stream, '$');
+  return get_matches_in_stream(search_input, stream, false, false, '$');
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
@@ -574,7 +578,7 @@ std::set<std::string> ProbeMatcher::expand_probetype_kernel(
     const std::string& probe_type)
 {
   if (has_wildcard(probe_type))
-    return get_matches_in_stream(probe_type, false, *kernel_probe_list());
+    return get_matches_in_stream(probe_type, *kernel_probe_list());
   else
     return { probe_type };
 }
@@ -583,7 +587,7 @@ std::set<std::string> ProbeMatcher::expand_probetype_userspace(
     const std::string& probe_type)
 {
   if (has_wildcard(probe_type))
-    return get_matches_in_stream(probe_type, false, *userspace_probe_list());
+    return get_matches_in_stream(probe_type, *userspace_probe_list());
   else
     return { probe_type };
 }
