@@ -155,6 +155,8 @@ static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
 
 static std::vector<std::string> COMPILE_TIME_FUNCS = { "cgroupid" };
 
+static std::vector<std::string> UPROBE_LANGS = { "cpp" };
+
 bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
 bool get_bool_env_var(const ::std::string &str, bool &dest, bool neg = false);
 std::string get_pid_exe(pid_t pid);
@@ -191,6 +193,7 @@ FuncsModulesMap get_traceable_funcs();
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);
+bool is_supported_lang(const std::string &lang);
 std::string exec_system(const char *cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);

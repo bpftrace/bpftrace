@@ -559,6 +559,7 @@ public:
 
   std::string provider;
   std::string target;
+  std::string lang; // for userspace probes, enable language-specific features
   std::string ns;
   std::string func;
   std::string pin;

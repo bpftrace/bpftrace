@@ -520,6 +520,8 @@ std::string AttachPoint::name(const std::string &attach_target,
   std::string n = provider;
   if (attach_target != "")
     n += ":" + attach_target;
+  if (lang != "")
+    n += ":" + lang;
   if (ns != "")
     n += ":" + ns;
   if (attach_point != "")

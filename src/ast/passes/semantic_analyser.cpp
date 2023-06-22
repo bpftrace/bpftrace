@@ -2625,6 +2625,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "" && ap.address == 0)
       LOG(ERROR, ap.loc, err_)
           << ap.provider << " should be attached to a function and/or address";
+    if (ap.lang != "" && !is_supported_lang(ap.lang))
+      LOG(ERROR, ap.loc, err_) << "unsupported language type: " << ap.lang;
 
     if (ap.provider == "uretprobe" && ap.func_offset != 0)
       LOG(ERROR, ap.loc, err_)

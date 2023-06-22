@@ -1433,8 +1433,10 @@ TEST(semantic_analyser, uprobe)
   test("uprobe:/bin/sh:f+0x10 { 1 }", 0);
   test("u:/bin/sh:f+0x10 { 1 }", 0);
   test("uprobe:sh:f { 1 }", 0);
+  test("uprobe:/bin/sh:cpp:f { 1 }", 0);
   test("uprobe:/notexistfile:f { 1 }", 1);
   test("uprobe:notexistfile:f { 1 }", 1);
+  test("uprobe:/bin/sh:nolang:f { 1 }", 1);
 
   test("uretprobe:/bin/sh:f { 1 }", 0);
   test("ur:/bin/sh:f { 1 }", 0);
@@ -1442,8 +1444,10 @@ TEST(semantic_analyser, uprobe)
   test("ur:sh:f { 1 }", 0);
   test("uretprobe:/bin/sh:0x10 { 1 }", 0);
   test("ur:/bin/sh:0x10 { 1 }", 0);
+  test("uretprobe:/bin/sh:cpp:f { 1 }", 0);
   test("uretprobe:/notexistfile:f { 1 }", 1);
   test("uretprobe:notexistfile:f { 1 }", 1);
+  test("uretprobe:/bin/sh:nolang:f { 1 }", 1);
 }
 
 TEST(semantic_analyser, usdt)
