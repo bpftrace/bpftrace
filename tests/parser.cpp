@@ -11,17 +11,27 @@ namespace parser {
 
 using Printer = ast::Printer;
 
-void test_parse_failure(BPFtrace &bpftrace, const std::string &input)
+void test_parse_failure(BPFtrace &bpftrace,
+                        const std::string &input,
+                        std::string_view expected_error = {})
 {
   std::stringstream out;
   Driver driver(bpftrace, out);
   ASSERT_EQ(driver.parse_str(input), 1);
+
+  if (expected_error.data())
+  {
+    if (!expected_error.empty() && expected_error[0] == '\n')
+      expected_error.remove_prefix(1); // Remove initial '\n'
+    EXPECT_EQ(out.str(), expected_error);
+  }
 }
 
-void test_parse_failure(const std::string &input)
+void test_parse_failure(const std::string &input,
+                        std::string_view expected_error = {})
 {
   BPFtrace bpftrace;
-  test_parse_failure(bpftrace, input);
+  test_parse_failure(bpftrace, input, expected_error);
 }
 
 void test(BPFtrace &bpftrace,
@@ -1969,6 +1979,18 @@ TEST(Parser, invalid_provider)
   test_parse_failure("asdf { }");
   test_parse_failure("asdf:xyz { }");
   test_parse_failure("asdf:xyz:www { }");
+}
+
+TEST(Parser, non_fatal_errors)
+{
+  // The non-fatal error from parsing "Stream" as an integer should not be
+  // displayed
+  test_parse_failure("uprobe:asdf:Stream {} tracepoint:only_one_arg {}",
+                     R"(
+stdin:1:22-46: ERROR: tracepoint probe type requires 2 arguments
+uprobe:asdf:Stream {} tracepoint:only_one_arg {}
+                     ~~~~~~~~~~~~~~~~~~~~~~~~
+)");
 }
 
 } // namespace parser
