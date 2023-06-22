@@ -368,21 +368,30 @@ AttachPointParser::State AttachPointParser::kretprobe_parser()
 AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
                                                           bool allow_abs_addr)
 {
-  if (parts_.size() == 2 && bpftrace_.pid() > 0)
+  if (bpftrace_.pid() > 0 &&
+      (parts_.size() == 2 ||
+       (parts_.size() == 3 && is_supported_lang(parts_[1]))))
   {
     // For PID, the target may be skipped
-    parts_.push_back(parts_[1]);
+    if (parts_.size() == 2)
+      parts_.insert(parts_.begin() + 1, "");
+
     auto target = get_pid_exe(bpftrace_.pid());
     parts_[1] = path_for_pid_mountns(bpftrace_.pid(), target);
   }
-  if (parts_.size() != 3)
+
+  if (parts_.size() != 3 && parts_.size() != 4)
   {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
+    errs_ << ap_->provider << " probe type requires 2 or 3 arguments"
+          << std::endl;
     return INVALID;
   }
+
+  if (parts_.size() == 4)
+    ap_->lang = parts_[2];
 
   ap_->target = "";
 
@@ -403,8 +412,9 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     ap_->target = parts_[1];
   }
 
+  const std::string &func = parts_.back();
   // Handle uprobe:/lib/asdf:func+0x100 case
-  auto plus_count = std::count(parts_[2].cbegin(), parts_[2].cend(), '+');
+  auto plus_count = std::count(func.cbegin(), func.cend(), '+');
   if (plus_count)
   {
     if (!allow_offset)
@@ -419,7 +429,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       return INVALID;
     }
 
-    auto offset_parts = split_string(parts_[2], '+', true);
+    auto offset_parts = split_string(func, '+', true);
     if (offset_parts.size() != 2)
     {
       errs_ << "Invalid offset" << std::endl;
@@ -438,7 +448,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
   {
     if (allow_abs_addr)
     {
-      auto res = stoll(parts_[2]);
+      auto res = stoll(func);
       if (res)
       {
         if (has_wildcard(ap_->target))
@@ -451,11 +461,11 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
       else
       {
         ap_->address = 0;
-        ap_->func = parts_[2];
+        ap_->func = func;
       }
     }
     else
-      ap_->func = parts_[2];
+      ap_->func = func;
   }
 
   if (ap_->target.find('*') != std::string::npos ||

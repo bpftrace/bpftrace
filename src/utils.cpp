@@ -768,7 +768,14 @@ bool is_compile_time_func(const std::string &func_name)
                      [&](const auto &cand) { return func_name == cand; });
 }
 
-std::string exec_system(const char* cmd)
+bool is_supported_lang(const std::string &lang)
+{
+  return std::any_of(UPROBE_LANGS.begin(),
+                     UPROBE_LANGS.end(),
+                     [&](const auto &cand) { return lang == cand; });
+}
+
+std::string exec_system(const char *cmd)
 {
   std::array<char, 128> buffer;
   std::string result;
