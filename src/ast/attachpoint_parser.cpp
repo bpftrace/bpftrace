@@ -23,7 +23,7 @@ std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
   }
   catch (const std::exception &e)
   {
-    errs_ << e.what();
+    errs_ << e.what() << std::endl;
     return std::nullopt;
   }
 }
@@ -32,11 +32,11 @@ std::optional<int64_t> AttachPointParser::stoll(const std::string &str)
 {
   try
   {
-    return int_parser::to_uint(str, 0);
+    return int_parser::to_int(str, 0);
   }
   catch (const std::exception &e)
   {
-    errs_ << e.what();
+    errs_ << e.what() << std::endl;
     return std::nullopt;
   }
 }
@@ -67,7 +67,6 @@ int AttachPointParser::parse()
       {
         ++failed;
         LOG(ERROR, ap.loc, sink_) << errs_.str();
-        errs_.str({}); // clear buffer
       }
       else if (s == SKIP || s == NEW_APS)
       {
@@ -82,6 +81,10 @@ int AttachPointParser::parse()
                                        new_attach_points.end());
         }
       }
+
+      // clear error buffer between attach points to prevent non-fatal errors
+      // from being carried over and printed on the next fatal error
+      errs_.str({});
     }
 
     auto new_end = std::remove_if(probe->attach_points->begin(),
@@ -341,14 +344,9 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
     ap_->func = offset_parts[0];
 
     auto res = stoll(offset_parts[1]);
-    if (res)
-    {
-      ap_->func_offset = *res;
-    }
-    else
-    {
+    if (!res)
       return INVALID;
-    }
+    ap_->func_offset = *res;
   }
   // Default case (eg kprobe:func)
   else
@@ -431,14 +429,9 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     ap_->func = offset_parts[0];
 
     auto res = stoll(offset_parts[1]);
-    if (res)
-    {
-      ap_->func_offset = *res;
-    }
-    else
-    {
+    if (!res)
       return INVALID;
-    }
+    ap_->func_offset = *res;
   }
   // Default case (eg uprobe:[addr][func])
   else
@@ -556,11 +549,10 @@ AttachPointParser::State AttachPointParser::profile_parser()
   ap_->target = parts_[1];
 
   auto res = stoull(parts_[2]);
-  if (res)
-    ap_->freq = *res;
-  else
+  if (!res)
     return INVALID;
 
+  ap_->freq = *res;
   return OK;
 }
 
@@ -574,11 +566,10 @@ AttachPointParser::State AttachPointParser::interval_parser()
 
   ap_->target = parts_[1];
   auto res = stoull(parts_[2]);
-  if (res)
-    ap_->freq = *res;
-  else
+  if (!res)
     return INVALID;
 
+  ap_->freq = *res;
   return OK;
 }
 
@@ -599,10 +590,9 @@ AttachPointParser::State AttachPointParser::software_parser()
   if (parts_.size() == 3 && parts_[2] != "*")
   {
     auto res = stoull(parts_[2]);
-    if (res)
-      ap_->freq = *res;
-    else
+    if (!res)
       return INVALID;
+    ap_->freq = *res;
   }
 
   return OK;
@@ -625,10 +615,9 @@ AttachPointParser::State AttachPointParser::hardware_parser()
   if (parts_.size() == 3 && parts_[2] != "*")
   {
     auto res = stoull(parts_[2]);
-    if (res)
-      ap_->freq = *res;
-    else
+    if (!res)
       return INVALID;
+    ap_->freq = *res;
   }
 
   return OK;
@@ -646,10 +635,9 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
   if (parts_[1].find('+') == std::string::npos)
   {
     auto parsed = stoull(parts_[1]);
-    if (parsed)
-      ap_->address = *parsed;
-    else
+    if (!parsed)
       return INVALID;
+    ap_->address = *parsed;
   }
   else
   {
@@ -671,17 +659,15 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
     }
 
     auto parsed = stoull(func_arg_parts[1].substr(3));
-    if (parsed)
-      ap_->address = *parsed;
-    else
+    if (!parsed)
       return INVALID;
+    ap_->address = *parsed;
   }
 
   auto len_parsed = stoull(parts_[2]);
-  if (len_parsed)
-    ap_->len = *len_parsed;
-  else
+  if (!len_parsed)
     return INVALID;
+  ap_->len = *len_parsed;
 
   // Semantic analyser will ensure a cmd/pid was provided
   ap_->target = bpftrace_.get_watchpoint_binary_path().value_or("");
