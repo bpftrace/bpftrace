@@ -51,7 +51,7 @@ public:
   {
     (void)path;
     sym->name = name;
-    if (name == "cpp_mangled" || name == "cpp_mangled(int)")
+    if (name == "cpp_mangled(int)")
     {
       return -1;
     }

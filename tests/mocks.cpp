@@ -38,6 +38,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                          "/bin/sh:second_open\n"
                          "/bin/sh:open_as_well\n"
                          "/bin/sh:something_else\n"
+                         "/bin/sh:cpp_mangled\n"
                          "/bin/sh:_Z11cpp_mangledi\n"
                          "/bin/sh:_Z11cpp_mangledv\n";
   std::string bash_usyms = "/bin/bash:first_open\n";
