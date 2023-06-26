@@ -154,6 +154,18 @@ static void dump_printf(void *ctx, const char *fmt, va_list args)
   free(str);
 }
 
+static void dump_typed_data_printf(void *ctx, const char *fmt, va_list args)
+{
+  BPFtrace *bt = static_cast<BPFtrace *>(ctx);
+  char *str;
+
+  if (vasprintf(&str, fmt, args) < 0)
+    return;
+
+  bt->out_->message(MessageType::printb, str, false);
+  free(str);
+}
+
 static struct btf_dump *dump_new(const struct btf *btf,
                                  btf_dump_printf_fn_t dump_printf,
                                  void *ctx)
@@ -771,6 +783,49 @@ std::pair<int, int> BTF::get_btf_id_fd(const std::string &func,
   }
 
   return { -1, -1 };
+}
+
+std::pair<int, int> BTF::get_dumpid_typeid(const std::string &type_name)
+{
+  __u32 kind = BTF_KIND_UNKN;
+  const std::string struct_prefix = "struct ";
+  const std::string union_prefix = "union ";
+  if (type_name.compare(0, struct_prefix.size(), struct_prefix) == 0)
+    kind = BTF_KIND_STRUCT;
+  else if (type_name.compare(0, union_prefix.size(), union_prefix) == 0)
+    kind = BTF_KIND_UNION;
+  else
+    return { -1, -1 };
+
+  auto btf_name = btf_type_str(type_name);
+  auto id = find_id(btf_name, kind);
+  if (!id.btf)
+    return { -1, -1 };
+
+  for (size_t i = 0; i < btf_dumps.size(); i++)
+    if (btf_dumps[i].btf == id.btf)
+      return { i, id.id };
+
+  // create new dump
+  struct btf_dump *dump;
+  dump = dump_new(id.btf, dump_typed_data_printf, bpftrace_);
+  btf_dumps.push_back(BTFDump{ .btf = id.btf, .dump = dump });
+  return { btf_dumps.size() - 1, id.id };
+}
+
+void BTF::dump_typed_data(uint32_t dump_id,
+                          uint32_t type_id,
+                          uint8_t *data,
+                          int data_size)
+{
+  DECLARE_LIBBPF_OPTS(btf_dump_type_data_opts, opts);
+  opts.emit_zeroes = true;
+  btf_dump__dump_type_data(static_cast<struct btf_dump *>(
+                               btf_dumps[dump_id].dump),
+                           type_id,
+                           data,
+                           data_size,
+                           &opts);
 }
 
 BTF::BTFId BTF::find_id(const std::string &name,

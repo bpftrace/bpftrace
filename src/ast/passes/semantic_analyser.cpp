@@ -1334,6 +1334,40 @@ void SemanticAnalyser::visit(Call &call)
     }
     call.type = CreateUInt32();
   }
+  else if (call.func == "printb")
+  {
+    // only support one arguement
+    if (!check_nargs(call, 1))
+      return;
+
+    Expression *arg = call.vargs->at(0);
+    if (arg->type.type == Type::pointer)
+    {
+      auto ty = arg->type.GetPointeeTy();
+      if (ty->IsRecordTy())
+      {
+        call.type = CreateNone();
+        if (is_final_pass())
+        {
+          auto ids = bpftrace_.btf_->get_dumpid_typeid(ty->GetName());
+          if (ids.first < 0 || ids.second < 0)
+          {
+            LOG(ERROR, call.loc, err_)
+                << "Failed to get BTFDump for " << ty->GetName();
+            return;
+          }
+          // extra space for async event header, see `struct PrintBTF`'s
+          // definition in async_event_types.h
+          bpftrace_.max_printb_map_size_ = std::max(
+              bpftrace_.max_printb_map_size_, ty->GetSize() + 8 + 8);
+          call.type = CreatePrintBTF(ids.first, ids.second, ty->GetSize());
+        }
+        return;
+      }
+    }
+    LOG(ERROR, call.loc, err_)
+        << "printb() only supports pointer argument to record type";
+  }
   else
   {
     LOG(ERROR, call.loc, err_) << "Unknown function: '" << call.func << "'";

@@ -13,6 +13,7 @@
 
 struct btf;
 struct btf_type;
+struct btf_dump;
 
 namespace bpftrace {
 
@@ -41,6 +42,12 @@ class BTF
   {
     struct btf* btf;
     __u32 id;
+  };
+
+  struct BTFDump
+  {
+    struct btf* btf;
+    struct btf_dump* dump;
   };
 
 public:
@@ -72,6 +79,12 @@ public:
 
   std::pair<int, int> get_btf_id_fd(const std::string& func,
                                     const std::string& mod) const;
+  // get dump id and type id
+  std::pair<int, int> get_dumpid_typeid(const std::string& type_name);
+  void dump_typed_data(uint32_t dump_id,
+                       uint32_t type_id,
+                       uint8_t* data,
+                       int data_size);
 
 private:
   void load_kernel_btfs(const std::set<std::string>& modules);
@@ -103,6 +116,7 @@ private:
   std::vector<BTFObj> btf_objects;
   enum state state = NODATA;
   BPFtrace* bpftrace_ = nullptr;
+  std::vector<BTFDump> btf_dumps;
 };
 
 inline bool BTF::has_data(void) const

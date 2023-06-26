@@ -30,6 +30,9 @@ std::ostream& operator<<(std::ostream& out, MessageType type) {
     case MessageType::syscall: out << "syscall"; break;
     case MessageType::attached_probes: out << "attached_probes"; break;
     case MessageType::lost_events: out << "lost_events"; break;
+    case MessageType::printb:
+      out << "printb";
+      break;
     default: out << "?";
   }
   return out;

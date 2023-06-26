@@ -63,6 +63,7 @@ public:
     MappedPrintfData,
     Ringbuf,
     RingbufLossCounter,
+    PrintBTF,
   };
 
   void Set(Type t, std::unique_ptr<IMap> map);

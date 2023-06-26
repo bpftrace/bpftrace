@@ -596,6 +596,17 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
         hdr->id, hdr->ns, hdr->pkt + offset, size - sizeof(*hdr));
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::printbtf))
+  {
+    auto printb = static_cast<AsyncEvent::PrintBTF *>(data);
+    const auto &info =
+        bpftrace->resources.printb_args.at(printb->printb_id).printb;
+
+    bpftrace->btf_->dump_typed_data(
+        info.dump_id, info.type_id, printb->content, info.size);
+
+    return;
+  }
   else if ( printf_id >= asyncactionint(AsyncAction::syscall) &&
             printf_id < asyncactionint(AsyncAction::syscall) + RESERVED_IDS_PER_ASYNCACTION)
   {

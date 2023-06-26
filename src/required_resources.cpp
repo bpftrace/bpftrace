@@ -130,6 +130,18 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
                       std::move(rb_loss_cnt));
   }
 
+  if (needs_printb_map)
+  {
+    auto map = std::make_unique<T>("printb",
+                                   libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                                   4,
+                                   bpftrace.max_printb_map_size_,
+                                   1,
+                                   0);
+    failed_maps += is_invalid_map(map->mapfd_);
+    bpftrace.maps.Set(MapManager::Type::PrintBTF, std::move(map));
+  }
+
   if (failed_maps > 0)
   {
     std::cerr << "Creation of the required BPF maps has failed." << std::endl;

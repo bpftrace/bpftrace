@@ -186,6 +186,7 @@ std::string typestr(Type t)
     case Type::mac_address: return "mac_address"; break;
     case Type::cgroup_path: return "cgroup_path"; break;
     case Type::strerror: return "strerror"; break;
+    case Type::printb: return "printb"; break;
       // clang-format on
   }
 
@@ -482,6 +483,13 @@ SizedType CreateStrerror()
   return SizedType(Type::strerror, 8);
 }
 
+SizedType CreatePrintBTF(int dump_id, int type_id, size_t size)
+{
+  auto st = SizedType(Type::printb, 0);
+  st.printb = PrintBTF{ .dump_id = dump_id, .type_id = type_id, .size = size };
+  return st;
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
@@ -630,6 +638,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::mac_address:
     case bpftrace::Type::cgroup_path:
     case bpftrace::Type::strerror:
+    case bpftrace::Type::printb:
       break;
   }
 

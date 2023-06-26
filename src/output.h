@@ -26,6 +26,7 @@ enum class MessageType
   attached_probes,
   lost_events,
   helper_error,
+  printb,
 };
 
 std::ostream& operator<<(std::ostream& out, MessageType type);
