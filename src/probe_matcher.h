@@ -91,7 +91,8 @@ private:
   std::set<std::string> get_matches_for_probetype(
       const ProbeType &probe_type,
       const std::string &target,
-      const std::string &search_input);
+      const std::string &search_input,
+      bool demangle_symbols);
   std::set<std::string> get_matches_in_set(const std::string &search_input,
                                            const std::set<std::string> &set);
 

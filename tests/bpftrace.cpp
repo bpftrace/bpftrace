@@ -423,7 +423,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
   for (auto &provider : { "uprobe", "uretprobe" })
   {
     std::stringstream prog;
-    prog << provider << ":/bin/sh:cpp_mangled{}";
+    prog << provider << ":/bin/sh:cpp:cpp_mangled{}";
     ast::Probe *probe = parse_probe(prog.str());
 
     auto bpftrace = get_strict_mock_bpftrace();
@@ -432,19 +432,25 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
         .Times(1);
 
     ASSERT_EQ(0, bpftrace->add_probe(*probe));
-    ASSERT_EQ(2U, bpftrace->get_probes().size());
+    ASSERT_EQ(3U, bpftrace->get_probes().size());
     ASSERT_EQ(0U, bpftrace->get_special_probes().size());
     auto orig_name = std::string(provider) + ":/bin/sh:cpp_mangled";
+    check_uprobe(bpftrace->get_probes().at(0),
+                 "/bin/sh:cpp",
+                 "_Z11cpp_mangledi",
+                 orig_name);
+    check_uprobe(bpftrace->get_probes().at(1),
+                 "/bin/sh:cpp",
+                 "_Z11cpp_mangledv",
+                 orig_name);
     check_uprobe(
-        bpftrace->get_probes().at(0), "/bin/sh", "_Z11cpp_mangledi", orig_name);
-    check_uprobe(
-        bpftrace->get_probes().at(1), "/bin/sh", "_Z11cpp_mangledv", orig_name);
+        bpftrace->get_probes().at(2), "/bin/sh:cpp", "cpp_mangled", orig_name);
   }
 }
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
 {
-  auto probe = parse_probe("uprobe:/bin/sh:\"cpp_mangled(int)\"{}");
+  auto probe = parse_probe("uprobe:/bin/sh:cpp:\"cpp_mangled(int)\"{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
@@ -455,14 +461,14 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
   ASSERT_EQ(1U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
   check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
+               "/bin/sh:cpp",
                "_Z11cpp_mangledi",
                "uprobe:/bin/sh:cpp_mangled(int)");
 }
 
 TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
 {
-  auto probe = parse_probe("uprobe:/bin/sh:cpp_man*{}");
+  auto probe = parse_probe("uprobe:/bin/sh:cpp:cpp_man*{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
@@ -470,16 +476,39 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
-  ASSERT_EQ(2U, bpftrace->get_probes().size());
+  ASSERT_EQ(3U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
   check_uprobe(bpftrace->get_probes().at(0),
-               "/bin/sh",
+               "/bin/sh:cpp",
                "_Z11cpp_mangledi",
                "uprobe:/bin/sh:cpp_man*");
   check_uprobe(bpftrace->get_probes().at(1),
-               "/bin/sh",
+               "/bin/sh:cpp",
                "_Z11cpp_mangledv",
                "uprobe:/bin/sh:cpp_man*");
+  check_uprobe(bpftrace->get_probes().at(2),
+               "/bin/sh:cpp",
+               "cpp_mangled",
+               "uprobe:/bin/sh:cpp_man*");
+}
+
+TEST(bpftrace, add_probes_uprobe_no_demangling)
+{
+  // Without the :cpp prefix, only look for non-mangled "cpp_mangled" symbol
+  auto probe = parse_probe("uprobe:/bin/sh:cpp_mangled {}");
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_func_symbols_from_file("/bin/sh"))
+      .Times(0);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  check_uprobe(bpftrace->get_probes().at(0),
+               "/bin/sh",
+               "cpp_mangled",
+               "uprobe:/bin/sh:cpp_mangled");
 }
 
 TEST(bpftrace, add_probes_usdt)

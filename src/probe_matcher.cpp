@@ -101,7 +101,8 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
 std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     const ProbeType& probe_type,
     const std::string& target,
-    const std::string& search_input)
+    const std::string& search_input,
+    bool demangle_symbols)
 {
   std::unique_ptr<std::istream> symbol_stream;
   bool ignore_trailing_module = false;
@@ -189,9 +190,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
   }
 
   if (symbol_stream)
-    return get_matches_in_stream(search_input,
-                                 *symbol_stream,
-                                 ignore_trailing_module);
+    return get_matches_in_stream(
+        search_input, *symbol_stream, ignore_trailing_module, demangle_symbols);
   else
     return {};
 }
@@ -571,7 +571,8 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
 
   return get_matches_for_probetype(probetype(attach_point.provider),
                                    attach_point.target,
-                                   search_input);
+                                   search_input,
+                                   attach_point.lang == "cpp");
 }
 
 std::set<std::string> ProbeMatcher::expand_probetype_kernel(
