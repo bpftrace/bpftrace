@@ -1150,6 +1150,14 @@ Allocated 4 bytes
 ...
 ```
 
+When tracing C++ programs, it is possible to turn on automatic symbol demangling
+by using the `:cpp` prefix:
+```
+# bpftrace -e 'u:src/bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { print("adding probe\n"); }'
+Attaching 1 probe...
+adding probe
+```
+
 Examples in situ:
 [(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
 [(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)

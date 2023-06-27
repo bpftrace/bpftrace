@@ -2483,6 +2483,15 @@ Allocated 4 bytes
 
 If the traced binary has DWARF included, function arguments are available in the `args` struct which can be inspected with verbose listing, see the <<Listing Probes>> section for more details.
 
+When tracing C{plus}{plus} programs, it is possible to turn on automatic symbol demangling
+by using the `:cpp` prefix:
+
+----
+# bpftrace -e 'u:src/bpftrace:cpp:"bpftrace::BPFtrace::add_probe" { print("adding probe\n"); }'
+Attaching 1 probe...
+adding probe
+----
+
 It is important to note that for `uretprobe` s to work the kernel runs a special helper on user-space function entry which overrides the return address on the stack.
 This can cause issues with languages that have their own runtime like Golang:
 
