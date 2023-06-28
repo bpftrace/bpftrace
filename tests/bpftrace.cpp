@@ -476,7 +476,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
-  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(4U, bpftrace->get_probes().size());
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
   check_uprobe(bpftrace->get_probes().at(0),
                "/bin/sh:cpp",
@@ -487,6 +487,10 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
                "_Z11cpp_mangledv",
                "uprobe:/bin/sh:cpp_man*");
   check_uprobe(bpftrace->get_probes().at(2),
+               "/bin/sh:cpp",
+               "_Z18cpp_mangled_suffixv",
+               "uprobe:/bin/sh:cpp_man*");
+  check_uprobe(bpftrace->get_probes().at(3),
                "/bin/sh:cpp",
                "cpp_mangled",
                "uprobe:/bin/sh:cpp_man*");
