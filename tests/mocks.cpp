@@ -40,7 +40,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                          "/bin/sh:something_else\n"
                          "/bin/sh:cpp_mangled\n"
                          "/bin/sh:_Z11cpp_mangledi\n"
-                         "/bin/sh:_Z11cpp_mangledv\n";
+                         "/bin/sh:_Z11cpp_mangledv\n"
+                         "/bin/sh:_Z18cpp_mangled_suffixv\n";
   std::string bash_usyms = "/bin/bash:first_open\n";
   ON_CALL(matcher, get_func_symbols_from_file("/bin/sh"))
       .WillByDefault([sh_usyms](const std::string &) {

@@ -67,17 +67,31 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
         if (symbol_has_cpp_mangled_signature(fun_line))
         {
           char* demangled_name = cxxdemangle(fun_line.c_str());
-          if (demangled_name)
+          if (!demangled_name)
+            continue;
+
+          // Match against the demanled name.
+          // Since demangled_name contains function arguments, we need to remove
+          // them unless the user specified '(' in the search input (i.e. wants
+          // to match against the arguments explicitly).
+          std::string match_line = prefix + demangled_name;
+          if (std::all_of(tokens.begin(),
+                          tokens.end(),
+                          [&](const std::string& token) {
+                            return token.find("(") == std::string::npos;
+                          }))
           {
-            if (!wildcard_match(prefix + demangled_name, tokens, true, true))
-            {
-              free(demangled_name);
-            }
-            else
-            {
-              free(demangled_name);
-              goto out;
-            }
+            match_line = match_line.substr(0, match_line.find_last_of("("));
+          }
+
+          if (!wildcard_match(match_line, tokens, start_wildcard, end_wildcard))
+          {
+            free(demangled_name);
+          }
+          else
+          {
+            free(demangled_name);
+            goto out;
           }
         }
       }
