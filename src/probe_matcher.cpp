@@ -518,7 +518,23 @@ void ProbeMatcher::list_probes(ast::Program* prog)
 
       for (auto& match : matches)
       {
-        std::cout << probetypeName(probe_type) << ":" << match << std::endl;
+        std::string match_print = match;
+        if (ap->lang == "cpp")
+        {
+          std::string target = erase_prefix(match_print);
+          char* demangled_name = cxxdemangle(match_print.c_str());
+
+          // demangled name may contain symbols not accepted by the attach point
+          // parser, so surround it with quotes to make the entry directly
+          // usable as an attach point
+          auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
+                                     : match_print;
+
+          match_print = target + ":" + ap->lang + ":" + func;
+        }
+
+        std::cout << probetypeName(probe_type) << ":" << match_print
+                  << std::endl;
         if (bt_verbose)
         {
           for (auto& param : param_lists[match])
