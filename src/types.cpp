@@ -273,7 +273,7 @@ SizedType CreateInteger(size_t bits, bool is_signed)
   // passes infer the exact size.
   assert(bits == 0 || bits == 1 || bits == 8 || bits == 16 || bits == 32 ||
          bits == 64);
-  auto t = SizedType(Type::integer, bits / 8, is_signed);
+  auto t = SizedType(Type::integer, 0, is_signed);
   t.size_bits_ = bits;
   return t;
 }
@@ -352,7 +352,6 @@ SizedType CreateArray(size_t num_elements, const SizedType &element_type)
 {
   size_t size = num_elements * element_type.GetSize();
   auto ty = SizedType(Type::array, size);
-  ty.num_elements_ = num_elements;
   ty.element_type_ = std::make_shared<SizedType>(element_type);
   return ty;
 }
