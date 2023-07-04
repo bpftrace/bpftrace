@@ -72,5 +72,5 @@ int main(int argc, char *argv[])
   snprintf(exe, PATH_MAX, "%s/%s", private_mount, argv[1]);
   char *args[] = { exe, NULL };
 
-  return execvp(args[0], args);
+  return execv(args[0], args);
 }

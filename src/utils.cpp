@@ -1467,8 +1467,21 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 
 std::vector<int> get_pids_for_program(const std::string &program)
 {
+  std::error_code ec;
+  auto program_abs = std_filesystem::canonical(program, ec);
+  if (ec)
+  {
+    // std::filesystem::canonical will fail if we are attaching to a uprobe that
+    // lives in another filesystem namespace. For example,
+    // uprobe:/proc/12345/root/my_program:function1
+    // This shouldn't be a fatal condition as this function is only used to
+    // attach to all running processes for a given binary, and the above uprobe
+    // is targetting a specific process. So if this happens, just return no
+    // pids. The probe will still attach directly to the targeted process.
+    return {};
+  }
+
   std::vector<int> pids;
-  auto program_abs = std_filesystem::canonical(program);
   for (const auto &process : std_filesystem::directory_iterator("/proc"))
   {
     std::string filename = process.path().filename().string();

@@ -52,6 +52,16 @@ EXPECT Attaching 1 probe...
 TIMEOUT 5
 BEFORE ./testprogs/mountns_wrapper uprobe_test
 
+# Note that we don't expect the exact uprobeFunction1 name because CI runs in a docker
+# container and symbols don't currently get resolved correctly in this scenario
+# as the event received by bpftrace contains the pid of the process in the root
+# pid namespace, not that of the docker container's namespace.
+NAME uprobes - attach to probe for executable in a pivot_root'd mount namespace
+RUN {{BPFTRACE}} -e 'uprobe:/proc/{{BEFORE_PID}}/root/uprobe_test:uprobeFunction1 { printf("func %s\n", func); exit(); }'
+EXPECT ^func (0x[0-9a-f]+|function1)$
+TIMEOUT 5
+BEFORE ./testprogs/mountns_pivot_wrapper uprobe_test
+
 NAME uprobes - attach to probe by pid with only wildcard
 RUN {{BPFTRACE}} -e 'uprobe:*:uprobeFunction1 { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
 EXPECT Attaching 1 probe...
