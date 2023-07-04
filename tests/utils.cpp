@@ -352,6 +352,17 @@ TEST(utils, find_in_path)
   EXPECT_TRUE(std_filesystem::remove_all(path));
 }
 
+TEST(utils, get_pids_for_program)
+{
+  auto pids = get_pids_for_program("/proc/self/exe");
+
+  ASSERT_EQ(pids.size(), 1);
+  ASSERT_EQ(pids[0], getpid());
+
+  pids = get_pids_for_program("/proc/12345/root/usr/bin/bash");
+  ASSERT_EQ(pids.size(), 0);
+}
+
 } // namespace utils
 } // namespace test
 } // namespace bpftrace
