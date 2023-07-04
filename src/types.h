@@ -18,7 +18,7 @@ const int MAX_STACK_SIZE = 1024;
 const int DEFAULT_STACK_SIZE = 127;
 const int COMM_SIZE = 16;
 
-enum class Type
+enum class Type : uint8_t
 {
   // clang-format off
   none,
@@ -52,7 +52,7 @@ enum class Type
   // clang-format on
 };
 
-enum class AddrSpace
+enum class AddrSpace : uint8_t
 {
   none,
   kernel,
@@ -62,7 +62,7 @@ enum class AddrSpace
 std::ostream &operator<<(std::ostream &os, Type type);
 std::ostream &operator<<(std::ostream &os, AddrSpace as);
 
-enum class StackMode
+enum class StackMode : uint8_t
 {
   bpftrace,
   perf,
@@ -77,7 +77,7 @@ const std::map<std::string, StackMode> STACK_MODE_MAP = {
 
 struct StackType
 {
-  size_t limit = DEFAULT_STACK_SIZE;
+  uint16_t limit = DEFAULT_STACK_SIZE;
   StackMode mode = StackMode::bpftrace;
 
   bool operator ==(const StackType &obj) const {
@@ -99,39 +99,36 @@ struct Field;
 class SizedType
 {
 public:
-  SizedType() : type(Type::none), size_(0)
+  SizedType() : type(Type::none)
   {
   }
   SizedType(Type type, size_t size_, bool is_signed)
-      : type(type), size_(size_), is_signed_(is_signed)
+      : type(type), size_bits_(size_ * 8), is_signed_(is_signed)
   {
   }
-  SizedType(Type type, size_t size_) : type(type), size_(size_)
+  SizedType(Type type, size_t size_) : type(type), size_bits_(size_ * 8)
   {
   }
 
-  Type type;
   StackType stack_type;
+  int funcarg_idx = -1;
+  Type type;
   bool is_internal = false;
   bool is_tparg = false;
   bool is_funcarg = false;
   bool is_btftype = false;
-  int funcarg_idx = -1;
 
 private:
-  size_t size_ = -1; // in bytes
-  bool is_signed_ = false;
+  size_t size_bits_ = 0;                    // size in bits
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
-  size_t num_elements_ = -1;                // for array like types
   std::string name_; // name of this type, for named types like struct
-  bool ctx_ = false; // Is bpf program context
-  AddrSpace as_ = AddrSpace::none;
-  ssize_t size_bits_ = -1; // size in bits for integer types
-
   std::weak_ptr<Struct> inner_struct_; // inner struct for records and tuples
                                        // the actual Struct object is owned by
                                        // StructManager
+  AddrSpace as_ = AddrSpace::none;
+  bool is_signed_ = false;
+  bool ctx_ = false; // Is bpf program context
 
   friend class cereal::access;
   template <typename Archive>
@@ -144,10 +141,8 @@ private:
             is_funcarg,
             is_btftype,
             funcarg_idx,
-            size_,
             is_signed_,
             element_type_,
-            num_elements_,
             name_,
             ctx_,
             as_,
@@ -216,17 +211,16 @@ public:
 
   size_t GetSize() const
   {
-    return size_;
+    return size_bits_ / 8;
   }
 
   void SetSize(size_t size)
   {
-    size_ = size;
+    size_bits_ = size * 8;
     if (IsIntTy())
     {
       assert(size == 0 || size == 1 || size == 8 || size == 16 || size == 32 ||
              size == 64);
-      size_bits_ = size * 8;
     }
   }
 
@@ -239,7 +233,7 @@ public:
   size_t GetNumElements() const
   {
     assert(IsArrayTy() || IsStringTy());
-    return IsStringTy() ? size_ : size_ / element_type_->size_;
+    return IsStringTy() ? size_bits_ : size_bits_ / element_type_->size_bits_;
   };
 
   const std::string GetName() const
