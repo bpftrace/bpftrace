@@ -226,14 +226,14 @@ Integer::Integer(int64_t n, location loc) : Expression(loc), n(n)
   is_literal = true;
 }
 
-String::String(const std::string &str, location loc) : Expression(loc), str(str)
+String::String(std::string str, location loc)
+    : Expression(loc), str(std::move(str))
 {
   is_literal = true;
 }
 
-
-StackMode::StackMode(const std::string &mode, location loc)
-    : Expression(loc), mode(mode)
+StackMode::StackMode(std::string mode, location loc)
+    : Expression(loc), mode(std::move(mode))
 {
   is_literal = true;
 }
@@ -244,9 +244,8 @@ Builtin::Builtin(const std::string &ident, location loc)
 {
 }
 
-
-Identifier::Identifier(const std::string &ident, location loc)
-    : Expression(loc), ident(ident)
+Identifier::Identifier(std::string ident, location loc)
+    : Expression(loc), ident(std::move(ident))
 {
 }
 
@@ -259,9 +258,8 @@ PositionalParameter::PositionalParameter(PositionalParameterType ptype,
   is_literal = true;
 }
 
-
 Call::Call(const std::string &func, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
+    : Expression(loc), func(is_deprecated(func))
 {
 }
 
@@ -271,7 +269,7 @@ Call::Call(const std::string &func, ExpressionList *vargs, location loc)
 }
 
 Sizeof::Sizeof(SizedType type, location loc)
-    : Expression(loc), expr(nullptr), argtype(type)
+    : Expression(loc), argtype(std::move(type))
 {
 }
 
@@ -279,24 +277,24 @@ Sizeof::Sizeof(Expression *expr, location loc) : Expression(loc), expr(expr)
 {
 }
 
-Offsetof::Offsetof(SizedType record, std::string &field, location loc)
-    : Expression(loc), record(record), expr(nullptr), field(field)
+Offsetof::Offsetof(SizedType record, std::string field, location loc)
+    : Expression(loc), record(std::move(record)), field(std::move(field))
 {
 }
 
-Offsetof::Offsetof(Expression *expr, std::string &field, location loc)
-    : Expression(loc), expr(expr), field(field)
+Offsetof::Offsetof(Expression *expr, std::string field, location loc)
+    : Expression(loc), expr(expr), field(std::move(field))
 {
 }
 
-Map::Map(const std::string &ident, location loc)
-    : Expression(loc), ident(ident), vargs(nullptr)
+Map::Map(std::string ident, location loc)
+    : Expression(loc), ident(std::move(ident))
 {
   is_map = true;
 }
 
-Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
-    : Expression(loc), ident(ident), vargs(vargs)
+Map::Map(std::string ident, ExpressionList *vargs, location loc)
+    : Expression(loc), ident(std::move(ident)), vargs(vargs)
 {
   is_map = true;
   for (auto expr : *vargs)
@@ -305,8 +303,8 @@ Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
   }
 }
 
-Variable::Variable(const std::string &ident, location loc)
-    : Expression(loc), ident(ident)
+Variable::Variable(std::string ident, location loc)
+    : Expression(loc), ident(std::move(ident))
 {
   is_variable = true;
 }
@@ -335,11 +333,8 @@ Ternary::Ternary(Expression *cond,
 {
 }
 
-
-FieldAccess::FieldAccess(Expression *expr,
-                         const std::string &field,
-                         location loc)
-    : Expression(loc), expr(expr), field(field)
+FieldAccess::FieldAccess(Expression *expr, std::string field, location loc)
+    : Expression(loc), expr(expr), field(std::move(field))
 {
 }
 
@@ -357,7 +352,7 @@ ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
 Cast::Cast(SizedType cast_type, Expression *expr, location loc)
     : Expression(loc), expr(expr)
 {
-  type = cast_type;
+  type = std::move(cast_type);
 }
 
 
@@ -394,9 +389,8 @@ Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
 {
 }
 
-
-AttachPoint::AttachPoint(const std::string &raw_input, location loc)
-    : Node(loc), raw_input(raw_input)
+AttachPoint::AttachPoint(std::string raw_input, location loc)
+    : Node(loc), raw_input(std::move(raw_input))
 {
 }
 
@@ -423,9 +417,8 @@ Probe::Probe(AttachPointList *attach_points,
 {
 }
 
-
-Program::Program(const std::string &c_definitions, ProbeList *probes)
-    : c_definitions(c_definitions), probes(probes)
+Program::Program(std::string c_definitions, ProbeList *probes)
+    : c_definitions(std::move(c_definitions)), probes(probes)
 {
 }
 
@@ -607,14 +600,6 @@ Call::Call(const Call &other) : Expression(other)
   func = other.func;
 }
 
-Sizeof::Sizeof(const Sizeof &other) : Expression(other)
-{
-}
-
-Offsetof::Offsetof(const Offsetof &other) : Expression(other)
-{
-}
-
 Binop::Binop(const Binop &other) : Expression(other)
 {
   op = other.op;
@@ -633,7 +618,7 @@ Map::Map(const Map &other) : Expression(other)
 }
 
 FieldAccess::FieldAccess(const FieldAccess &other)
-    : Expression(other), expr(nullptr)
+    : Expression(other) // TODO why not copy expr??
 {
   field = other.field;
   index = other.index;
@@ -649,7 +634,7 @@ Program::Program(const Program &other) : Node(other)
   c_definitions = other.c_definitions;
 }
 
-Cast::Cast(const Cast &other) : Expression(other)
+Cast::Cast(const Cast &other) : Expression(other) // TODO expr isn't copied??
 {
 }
 

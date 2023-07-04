@@ -112,7 +112,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Integer)
 
-  explicit Integer(int64_t n, location loc);
+  Integer(int64_t n, location loc);
 
   int64_t n;
 
@@ -125,9 +125,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(PositionalParameter)
 
-  explicit PositionalParameter(PositionalParameterType ptype,
-                               long n,
-                               location loc);
+  PositionalParameter(PositionalParameterType ptype, long n, location loc);
   ~PositionalParameter() = default;
 
   PositionalParameterType ptype;
@@ -143,7 +141,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(String)
 
-  explicit String(const std::string &str, location loc);
+  String(std::string str, location loc);
   ~String() = default;
 
   std::string str;
@@ -157,7 +155,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(StackMode)
 
-  explicit StackMode(const std::string &mode, location loc);
+  StackMode(std::string mode, location loc);
   ~StackMode() = default;
 
   std::string mode;
@@ -171,7 +169,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Identifier)
 
-  explicit Identifier(const std::string &ident, location loc);
+  Identifier(std::string ident, location loc);
   ~Identifier() = default;
 
   std::string ident;
@@ -185,7 +183,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Builtin)
 
-  explicit Builtin(const std::string &ident, location loc);
+  Builtin(const std::string &ident, location loc);
   ~Builtin() = default;
 
   std::string ident;
@@ -200,7 +198,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Call)
 
-  explicit Call(const std::string &func, location loc);
+  Call(const std::string &func, location loc);
   Call(const std::string &func, ExpressionList *vargs, location loc);
   ~Call();
 
@@ -221,11 +219,11 @@ public:
   Sizeof(Expression *expr, location loc);
   ~Sizeof();
 
-  Expression *expr;
+  Expression *expr = nullptr;
   SizedType argtype;
 
 private:
-  Sizeof(const Sizeof &other);
+  Sizeof(const Sizeof &other) = default;
 };
 
 class Offsetof : public Expression
@@ -234,16 +232,16 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Offsetof)
 
-  Offsetof(SizedType record, std::string &field, location loc);
-  Offsetof(Expression *expr, std::string &field, location loc);
+  Offsetof(SizedType record, std::string field, location loc);
+  Offsetof(Expression *expr, std::string field, location loc);
   ~Offsetof();
 
   SizedType record;
-  Expression *expr;
+  Expression *expr = nullptr;
   std::string field;
 
 private:
-  Offsetof(const Offsetof &other);
+  Offsetof(const Offsetof &other) = default;
 };
 
 class Map : public Expression {
@@ -251,8 +249,8 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Map)
 
-  explicit Map(const std::string &ident, location loc);
-  Map(const std::string &ident, ExpressionList *vargs, location loc);
+  Map(std::string ident, location loc);
+  Map(std::string ident, ExpressionList *vargs, location loc);
   ~Map();
 
   std::string ident;
@@ -269,7 +267,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Variable)
 
-  explicit Variable(const std::string &ident, location loc);
+  Variable(std::string ident, location loc);
   ~Variable() = default;
 
   std::string ident;
@@ -321,8 +319,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(FieldAccess)
 
-  FieldAccess(Expression *expr, const std::string &field);
-  FieldAccess(Expression *expr, const std::string &field, location loc);
+  FieldAccess(Expression *expr, std::string field, location loc);
   FieldAccess(Expression *expr, ssize_t index, location loc);
   ~FieldAccess();
 
@@ -398,7 +395,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(ExprStatement)
 
-  explicit ExprStatement(Expression *expr, location loc);
+  ExprStatement(Expression *expr, location loc);
   ~ExprStatement();
 
   Expression *expr = nullptr;
@@ -500,7 +497,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Predicate)
 
-  explicit Predicate(Expression *expr, location loc);
+  Predicate(Expression *expr, location loc);
   ~Predicate();
 
   Expression *expr = nullptr;
@@ -546,7 +543,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(AttachPoint)
 
-  explicit AttachPoint(const std::string &raw_input, location loc = location());
+  explicit AttachPoint(std::string raw_input, location loc = location());
   AttachPoint(const std::string &raw_input, bool ignore_invalid)
       : AttachPoint(raw_input)
   {
@@ -620,7 +617,7 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Program)
 
-  Program(const std::string &c_definitions, ProbeList *probes);
+  Program(std::string c_definitions, ProbeList *probes);
 
   ~Program();
 
