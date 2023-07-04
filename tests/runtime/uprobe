@@ -52,6 +52,12 @@ EXPECT Attaching 1 probe...
 TIMEOUT 5
 BEFORE ./testprogs/mountns_wrapper uprobe_test
 
+NAME uprobes - attach to probe for executable in a pivot_root'd mount namespace
+RUN {{BPFTRACE}} -e 'uprobe:/proc/{{BEFORE_PID}}/root/uprobe_test_static:function1 { printf("%s\n", func); exit(); }'
+EXPECT function1
+TIMEOUT 5
+BEFORE ./testprogs/mountns_pivot_wrapper uprobe_test_static
+
 NAME uprobes - list probes in non-executable library
 RUN {{BPFTRACE}} -l 'uprobe:./testlibs/libsimple.so:fun'
 EXPECT uprobe:./testlibs/libsimple.so:fun

@@ -1370,17 +1370,29 @@ std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
 std::vector<int> get_pids_for_program(const std::string &program)
 {
   std::vector<int> pids;
-  auto program_abs = std_filesystem::canonical(program);
-  for (const auto &process : std_filesystem::directory_iterator("/proc"))
+
+  std::regex proc_root_regex("/proc/([0-9]+)/root/.*");
+  std::smatch match;
+
+  if (std::regex_search(program, match, proc_root_regex) && match.size() > 1)
   {
-    std::string filename = process.path().filename().string();
-    if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
-      continue;
-    std::error_code ec;
-    std_filesystem::path pid_program = std_filesystem::read_symlink(
-        process.path() / "exe", ec);
-    if (!ec && program_abs == pid_program)
-      pids.emplace_back(std::stoi(filename));
+    pids.emplace_back(std::stoi(match.str(1)));
+  }
+  else
+  {
+    auto program_abs = std_filesystem::canonical(program);
+
+    for (const auto &process : std_filesystem::directory_iterator("/proc"))
+    {
+      std::string filename = process.path().filename().string();
+      if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
+        continue;
+      std::error_code ec;
+      std_filesystem::path pid_program = std_filesystem::read_symlink(
+          process.path() / "exe", ec);
+      if (!ec && program_abs == pid_program)
+        pids.emplace_back(std::stoi(filename));
+    }
   }
   return pids;
 }

@@ -124,7 +124,13 @@ endif(NOT STATIC_LINKING)
 # Compile all testprograms, one per .c file for runtime testing
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
 file(GLOB testprogs testprogs/*.c)
+list(FILTER testprogs EXCLUDE REGEX "uprobe_test_static\\.c")
 set(compiled_testprogs "")
+
+add_executable (uprobe_test_static testprogs/uprobe_test_static.c)
+set_target_properties(uprobe_test_static PROPERTIES LINK_SEARCH_START_STATIC FALSE LINK_SEARCH_END_STATIC FALSE RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0" LINK_FLAGS "-no-pie -static")
+list(APPEND compiled_testprogs ${CMAKE_CURRENT_BINARY_DIR}/testprogs/uprobe_test_static)
+
 foreach(testprog ${testprogs})
   get_filename_component(bin_name ${testprog} NAME_WE)
   add_executable (${bin_name} ${testprog})

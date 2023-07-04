@@ -262,6 +262,17 @@ TEST(utils, parse_kconfig)
   unlink(path);
 }
 
+TEST(utils, get_pids_for_program)
+{
+  auto pids = get_pids_for_program("/sbin/init");
+
+  ASSERT_TRUE(pids.size() > 0);
+
+  pids = get_pids_for_program("/proc/12345/root/usr/bin/bash");
+  ASSERT_EQ(pids.size(), 1);
+  ASSERT_EQ(pids[0], 12345);
+}
+
 } // namespace utils
 } // namespace test
 } // namespace bpftrace
