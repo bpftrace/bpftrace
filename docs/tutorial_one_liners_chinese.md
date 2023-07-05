@@ -33,7 +33,7 @@ hello world
 # 3. 文件打开
 
 ```
-# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args.filename)); }'
+# bpftrace -e 'tracepoint:syscalls:sys_enter_openat { printf("%s %s\n", comm, str(args->filename)); }'
 Attaching 1 probe...
 snmp-pass /proc/cpuinfo
 snmp-pass /proc/stat
@@ -47,7 +47,7 @@ snmpd /proc/net/if_inet6
 - 该命令以`tracepoint:syscalls:sys_enter_openat`开始: 这是tracepoint探针类型(内核静态跟踪)，当进入`openat()`系统调用时执行该探针。相比kprobes探针(内核动态跟踪，在第6节介绍)，我们更加喜欢用tracepoints探针，因为tracepoints有稳定的应用程序编程接口。注意：现代linux系统(glibc >= 2.26)，`open`总是调用`openat`系统调用。
 - `comm`是内建变量，代表当前进程的名字。其它类似的变量还有pid和tid，分别表示进程标识和线程标识。
 - `args`是一个包含所有tracepoint参数的结构。这个结构是由bpftrace根据tracepoint信息自动生成的。这个结构的成员可以通过命令`bpftrace -vl tracepoint:syscalls:sys_enter_openat`找到。
-- `args.filename`用来获取args的成员变量`filename`的值。
+- `args->filename`用来获取args的成员变量`filename`的值。
 - `str()`用来把字符串指针转换成字符串。
 
 # 4. 进程级系统调用计数
