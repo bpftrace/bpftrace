@@ -1,6 +1,4 @@
-if(CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
-    add_library(arch aarch64.cpp)
-elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "armv7-a")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch64)")
     add_library(arch arm.cpp)
 elseif(CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64" OR
        CMAKE_SYSTEM_PROCESSOR STREQUAL "ppc64le")
