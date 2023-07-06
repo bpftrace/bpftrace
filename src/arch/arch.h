@@ -17,6 +17,8 @@ int arg_stack_offset();
 std::string name();
 // Each string is lexicographically sorted by character
 std::vector<std::string> invalid_watchpoint_modes();
+// Returns the width in bits of kernel pointers.
+int get_kernel_ptr_width();
 
 } // namespace arch
 } // namespace bpftrace

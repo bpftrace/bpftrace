@@ -1873,7 +1873,7 @@ llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
 
 llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
 {
-  static int ptr_width = get_kernel_ptr_width();
+  static int ptr_width = arch::get_kernel_ptr_width();
 
   return getIntNTy(ptr_width);
 }

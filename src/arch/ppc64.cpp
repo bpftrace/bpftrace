@@ -138,5 +138,10 @@ std::vector<std::string> invalid_watchpoint_modes()
   };
 }
 
+int get_kernel_ptr_width()
+{
+  return 64;
+}
+
 } // namespace arch
 } // namespace bpftrace
