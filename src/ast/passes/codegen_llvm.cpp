@@ -7,7 +7,9 @@
 #include <ctime>
 #include <fstream>
 
+#if LLVM_VERSION_MAJOR <= 16
 #include <llvm-c/Transforms/IPO.h>
+#endif
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -17,7 +19,9 @@
 #include <llvm/Passes/PassBuilder.h>
 #endif
 #include <llvm/Transforms/IPO.h>
+#if LLVM_VERSION_MAJOR <= 16
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#endif
 #if LLVM_VERSION_MAJOR >= 14
 #include <llvm/MC/TargetRegistry.h>
 #else
