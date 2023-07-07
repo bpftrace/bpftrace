@@ -1060,7 +1060,7 @@ bool attach_reverse(const Probe &p)
 
 int BPFtrace::run_special_probe(std::string name,
                                 BpfBytecode &bytecode,
-                                void (*trigger)(void))
+                                trigger_fn_t trigger)
 {
   for (auto probe = resources.special_probes.rbegin();
        probe != resources.special_probes.rend();
@@ -1214,7 +1214,12 @@ int BPFtrace::run(BpfBytecode bytecode)
     }
   }
 
-  if (run_special_probe("BEGIN_trigger", bytecode_, BEGIN_trigger))
+  // XXX: cast is a workaround for a gcc bug that causes an "invalid conversion"
+  // error here in case the trigger function has the `target` attribute set (see
+  // triggers.h): https://gcc.godbolt.org/z/44b5MjdbT
+  if (run_special_probe("BEGIN_trigger",
+                        bytecode_,
+                        reinterpret_cast<trigger_fn_t>(BEGIN_trigger)))
     return -1;
 
   if (child_ && has_usdt_)
@@ -1303,7 +1308,9 @@ int BPFtrace::run(BpfBytecode bytecode)
   finalize_ = false;
   exitsig_recv = false;
 
-  if (run_special_probe("END_trigger", bytecode_, END_trigger))
+  if (run_special_probe("END_trigger",
+                        bytecode_,
+                        reinterpret_cast<trigger_fn_t>(END_trigger)))
     return -1;
 
   poll_output(/* drain */ true);
