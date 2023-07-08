@@ -91,6 +91,24 @@
                   "-DUSE_SYSTEM_BPF_BCC=ON"
                 ];
               };
+
+          # Define lambda that returns a devShell derivation with extra test-required packages
+          # given the bpftrace package derivation as input
+          mkBpftraceDevShell =
+            pkg:
+              with pkgs;
+              pkgs.mkShell {
+                buildInputs = pkg.nativeBuildInputs ++ pkg.buildInputs ++ [
+                  binutils
+                  coreutils
+                  findutils
+                  gawk
+                  gnugrep
+                  procps
+                  python3
+                  strace
+                ];
+              };
         in
         {
           # Set formatter for `nix fmt` command
@@ -115,6 +133,18 @@
           apps.default = {
             type = "app";
             program = "${self.packages.${system}.default}/bin/bpftrace";
+          };
+
+          devShells = rec {
+            default = bpftrace-llvm16;
+
+            bpftrace-llvm16 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm16;
+            bpftrace-llvm15 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm15;
+            bpftrace-llvm14 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm14;
+            bpftrace-llvm13 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm13;
+            bpftrace-llvm12 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm12;
+            bpftrace-llvm11 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm11;
+            bpftrace-llvm10 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm10;
           };
         });
 }
