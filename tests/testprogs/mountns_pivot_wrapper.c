@@ -42,7 +42,7 @@ will not have access to shared libraries.
 int main(int argc, char *argv[])
 {
 
-  const char *private_mount = "/tmp/bpftrace-unshare-mountns-pivot-test";
+  const char *private_mount = "/tmp1/bpftrace-unshare-mountns-pivot-test";
   char dpath[PATH_MAX];
   char exe[PATH_MAX];
   char oldroot[PATH_MAX];
@@ -62,9 +62,6 @@ int main(int argc, char *argv[])
   if (mkdir(private_mount, 0770) != 0 && (errno != EEXIST))
     errExit("Failed to make private mount dir");
 
-  snprintf(oldroot, PATH_MAX, "%s/%s", private_mount, "old");
-  if (mkdir(oldroot, 0770) != 0 && (errno != EEXIST))
-    errExit("Failed to make old root directory for pivot_root");
 
   int idx = readlink("/proc/self/exe", dpath, sizeof(dpath) - 1);
   dpath[idx] = '\0';
@@ -73,6 +70,10 @@ int main(int argc, char *argv[])
   if (mount(dname, private_mount, NULL, MS_BIND, NULL) != 0)
     errExit("Failed to set up private bind mount");
 
+  snprintf(oldroot, PATH_MAX, "%s/%s", private_mount, "old");
+  if (mkdir(oldroot, 0770) != 0 && (errno != EEXIST))
+    errExit("Failed to make old root directory for pivot_root");
+
   if (syscall(SYS_pivot_root, private_mount, oldroot) != 0) {
     errExit("Couldn't pivot to new root");
   }
@@ -80,5 +81,8 @@ int main(int argc, char *argv[])
   snprintf(exe, PATH_MAX, "/%s", argv[1]);
   char *args[] = { exe, NULL };
 
+  if (chroot("/") != 0) {
+    errExit("Couldn't chroot to new root");
+  }
   return execvp(args[0], args);
 }
