@@ -42,7 +42,7 @@ will not have access to shared libraries.
 int main(int argc, char *argv[])
 {
 
-  const char *private_mount = "/tmp1/bpftrace-unshare-mountns-pivot-test";
+  const char *private_mount = "/tmp/bpftrace-unshare-mountns-pivot-test";
   char dpath[PATH_MAX];
   char exe[PATH_MAX];
   char oldroot[PATH_MAX];
