@@ -264,9 +264,10 @@ TEST(utils, parse_kconfig)
 
 TEST(utils, get_pids_for_program)
 {
-  auto pids = get_pids_for_program("/sbin/init");
+  auto pids = get_pids_for_program("/proc/self/exe");
 
-  ASSERT_TRUE(pids.size() > 0);
+  ASSERT_EQ(pids.size(), 1);
+  ASSERT_EQ(pids[0], getpid());
 
   pids = get_pids_for_program("/proc/12345/root/usr/bin/bash");
   ASSERT_EQ(pids.size(), 1);
