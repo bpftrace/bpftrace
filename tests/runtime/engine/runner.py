@@ -162,11 +162,12 @@ class Runner(object):
         bpftrace = None
         after = None
         cleanup = None
+        bpf_call = None
         try:
             result = None
             timeout = False
             output = ""
-
+            
             print(ok("[ RUN      ] ") + "%s.%s" % (test.suite, test.name))
             if test.requirement:
                 for req in test.requirement:
@@ -200,7 +201,8 @@ class Runner(object):
 
             if test.befores:
                 for before in test.befores:
-                    before = subprocess.Popen(before.split(), preexec_fn=os.setsid)
+                    before = subprocess.Popen(before.split(), preexec_fn=os.setsid,
+                                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     befores.append(before)
 
                 with open(os.devnull, 'w') as dn:
@@ -302,6 +304,11 @@ class Runner(object):
         finally:
             if befores:
                 for before in befores:
+                    try:
+                        out, err = before.communicate(timeout=5)
+                        print(f"before out:{out} err:{err}")
+                    except:
+                        pass
                     if before.poll() is None:
                         os.killpg(os.getpgid(before.pid), signal.SIGKILL)
 
@@ -322,7 +329,7 @@ class Runner(object):
 
         if p and p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
-            print('\tCommand: ' + bpf_call)
+            print('\tCommand: ' + (bpf_call or "unset"))
             print('\tUnclean exit code: ' + str(p.returncode))
             print('\tOutput: ' + output.encode("unicode_escape").decode("utf-8"))
             return Runner.FAIL
@@ -335,7 +342,7 @@ class Runner(object):
             return Runner.SKIP_AOT_NOT_SUPPORTED
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
-            print('\tCommand: ' + bpf_call)
+            print('\tCommand: ' + (bpf_call or "unset"))
             print('\tExpected: ' + test.expect)
             print('\tFound: ' + output.encode("unicode_escape").decode("utf-8"))
             return Runner.FAIL
