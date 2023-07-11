@@ -25,15 +25,11 @@ find_library (LIBBFD_LIBRARIES
     ENV LIBRARY_PATH
     ENV LD_LIBRARY_PATH)
 
-# libbfd.so is statically linked with libiberty.a but libbfd.a
-# is not. So if we do a static bpftrace build, we must link in
-# libiberty.a
-find_library (LIBIBERTY_LIBRARIES
-  NAMES
-    libiberty.a
-  PATHS
-    ENV LIBRARY_PATH
-    ENV LD_LIBRARY_PATH)
+if (${LIBBFD_LIBRARIES} MATCHES ".*libbfd.a$")
+  set(LIBBFD_STATIC TRUE)
+else()
+  set(LIBBFD_STATIC FALSE)
+endif()
 
 include (FindPackageHandleStandardArgs)
 
@@ -48,12 +44,41 @@ mark_as_advanced(LIBBFD_INCLUDE_DIRS LIBBFD_LIBRARIES)
 if(${LIBBFD_FOUND})
 find_package(LibOpcodes)
 SET(CMAKE_REQUIRED_LIBRARIES ${LIBBFD_LIBRARIES} ${LIBOPCODES_LIBRARIES})
-# libbfd.a is not statically linked with libiberty.a or libz.a so we must manually
-# do it. Furthermore, libbfd uses some libc symbols that we must manually
-# link against if we're not using static libc (which includes such symbols).
-if(STATIC_LINKING)
+if(STATIC_LINKING OR LIBBFD_STATIC)
+  # libbfd.so is linked with the required libraries but libbfd.a is not.
+  # So if we do a static bpftrace build or libbfd.so is not available (e.g. on
+  # openSUSE), we must link them manually.
+  # Furthermore, libbfd uses some libc symbols that we must manually link
+  # against if we're not using static libc (which includes such symbols).
+  message(STATUS "Using static libbfd, need to link additional libraries.")
   find_package(ZLIB)
-  list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBIBERTY_LIBRARIES} ${LIBZ_LIBRARIES})
+  find_library (LIBIBERTY_LIBRARIES
+    NAMES
+      iberty
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
+  find_library (LIBSFRAME_LIBRARIES
+    NAMES
+      sframe
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
+  find_library (LIBZSTD_LIBRARIES
+    NAMES
+      zstd
+    PATHS
+      ENV LIBRARY_PATH
+      ENV LD_LIBRARY_PATH)
+
+  list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBIBERTY_LIBRARIES} ${ZLIB_LIBRARIES})
+  if (LIBSFRAME_FOUND)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBSFRAME_LIBRARIES})
+  endif(LIBSFRAME_FOUND)
+  if (LIBZSTD_FOUND)
+    list(APPEND CMAKE_REQUIRED_LIBRARIES ${LIBZSTD_LIBRARIES})
+  endif(LIBZSTD_FOUND)
+
   if(NOT STATIC_LIBC)
     set(CMAKE_REQUIRED_FLAGS
       "-Wl,--start-group -Wl,-Bdynamic -Wl,-Bdynamic -lpthread -Wl,-Bdynamic -ldl")
