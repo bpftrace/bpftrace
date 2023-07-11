@@ -2,11 +2,42 @@
 #include "log.h"
 #include "struct.h"
 
+#include <cassert>
+#include <cinttypes>
+#include <regex>
+#include <unordered_map>
+
 namespace bpftrace {
 
 const int FMT_BUF_SZ = 512;
 // bpf_trace_printk cannot use more than three arguments, see bpf-helpers(7).
 const int PRINTK_MAX_ARGS = 3;
+
+namespace {
+
+// Matches conversion specifiers without explicit length modifiers.
+const std::regex int_format_re("%(-?[0-9.]*)([diuoxX])");
+const std::unordered_map<std::string, std::string> int_format_replacement = {
+  { "d", PRId64 }, { "i", PRIi64 }, { "u", PRIu64 },
+  { "o", PRIo64 }, { "x", PRIx64 }, { "X", PRIX64 },
+};
+
+// Performs in-place replacement of int specifiers with their 8-byte versions.
+std::string rewrite_int_specifiers(std::string &fmt)
+{
+  std::smatch match;
+
+  if (std::regex_search(fmt, match, int_format_re))
+  {
+    auto it = int_format_replacement.find(match[2]);
+    assert(it != int_format_replacement.end());
+
+    fmt = match.prefix().str() + "%" + match[1].str() + it->second;
+  }
+  return fmt;
+}
+
+} // anonymous namespace
 
 std::string validate_format_string(const std::string &fmt,
                                    std::vector<Field> args,
@@ -154,7 +185,12 @@ void FormatString::format(std::ostream &out,
       }
       else
       {
-        printf_fmt = parts_[i];
+        // The value passed to snprintf for integer arguments is always a 64-bit
+        // int (see PrintableInt), which means that we have to use appropriate
+        // length modifiers in the format string (e.g. "%lld" instead of "%d" --
+        // the latter may at best print the lower 4 bytes, or could print random
+        // garbage).
+        printf_fmt = rewrite_int_specifiers(parts_[i]);
       }
       int r = args.at(i)->print(buffer.data(),
                                 buffer.capacity(),

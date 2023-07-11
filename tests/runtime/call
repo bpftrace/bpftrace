@@ -28,6 +28,11 @@ PROG BEGIN { printf("%dst: %sa; %dnd: %sb;; %drd: %sc;;; %dth: %sd;;;;\\n", 1, "
 EXPECT 1st: aa; 2nd: abb;; 3rd: abcc;;; 4th: abcdd;;;;
 TIMEOUT 5
 
+NAME printf_int64
+PROG BEGIN { printf("%.16x\n", 0x12345678abcdef); exit(); }
+EXPECT 0012345678abcdef
+TIMEOUT 5
+
 NAME time
 PROG i:ms:1 { time("%H:%M:%S\n"); exit();}
 EXPECT [0-9]*:[0-9]*:[0-9]*
