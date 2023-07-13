@@ -296,6 +296,7 @@ sudo apt-get install -y \
   libgtest-dev \
   libgmock-dev \
   asciidoctor \
+  libdw-dev \
   pahole
 git clone https://github.com/iovisor/bpftrace --recurse-submodules
 mkdir bpftrace/build; cd bpftrace/build;
