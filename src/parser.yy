@@ -110,7 +110,8 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %token <std::string> BUILTIN "builtin"
 %token <std::string> CALL "call"
 %token <std::string> CALL_BUILTIN "call_builtin"
-%token <std::string> SIMPLE_TYPE "simple type"
+%token <std::string> INT_TYPE "integer type"
+%token <std::string> BUILTIN_TYPE "builtin type"
 %token <std::string> SIZED_TYPE "sized type"
 %token <std::string> IDENT "identifier"
 %token <std::string> PATH "path"
@@ -144,7 +145,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::ProbeList *> probes
 %type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt
 %type <ast::StatementList *> block block_or_if stmt_list
-%type <SizedType> type pointer_type struct_type
+%type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
 
 %left COMMA
@@ -179,17 +180,9 @@ c_definitions:
                 ;
 
 type:
-                SIMPLE_TYPE {
+                int_type { $$ = $1; }
+        |       BUILTIN_TYPE {
                     static std::unordered_map<std::string, SizedType> type_map = {
-                        {"bool", CreateBool()},
-                        {"uint8", CreateUInt(8)},
-                        {"uint16", CreateUInt(16)},
-                        {"uint32", CreateUInt(32)},
-                        {"uint64", CreateUInt(64)},
-                        {"int8", CreateInt(8)},
-                        {"int16", CreateInt(16)},
-                        {"int32", CreateInt(32)},
-                        {"int64", CreateInt(64)},
                         {"min_t", CreateMin(true)},
                         {"max_t", CreateMax(true)},
                         {"sum_t", CreateSum(true)},
@@ -220,6 +213,23 @@ type:
                 }
         |       pointer_type { $$ = $1; }
         |       struct_type { $$ = $1; }
+                ;
+
+int_type:
+                INT_TYPE {
+                    static std::unordered_map<std::string, SizedType> type_map = {
+                        {"bool", CreateBool()},
+                        {"uint8", CreateUInt(8)},
+                        {"uint16", CreateUInt(16)},
+                        {"uint32", CreateUInt(32)},
+                        {"uint64", CreateUInt(64)},
+                        {"int8", CreateInt(8)},
+                        {"int16", CreateInt(16)},
+                        {"int32", CreateInt(32)},
+                        {"int64", CreateInt(64)},
+                    };
+                    $$ = type_map[$1];
+                }
                 ;
 
 pointer_type:
