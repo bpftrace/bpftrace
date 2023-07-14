@@ -204,6 +204,7 @@ TEST(semantic_analyser, builtin_functions)
   test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\") }", 0);
   test("kprobe:f { cgroupid(\"/sys/fs/cgroup/unified/mycg\"); }", 0);
   test("kprobe:f { macaddr(0xffff) }", 0);
+  test("kprobe:f { nsecs() }", 0);
 }
 
 TEST(semantic_analyser, undefined_map)
@@ -2700,6 +2701,16 @@ TEST(semantic_analyser, string_size)
   ASSERT_TRUE(var_assign->var->type.GetField(0).type.IsStringTy());
   ASSERT_EQ(var_assign->var->type.GetSize(), 16UL); // tuples are not packed
   ASSERT_EQ(var_assign->var->type.GetField(0).type.GetSize(), 6UL);
+}
+
+TEST(semantic_analyser, call_nsecs)
+{
+  test("BEGIN { $ns = nsecs(); }", 0);
+  test("BEGIN { $ns = nsecs(boot); }", 0);
+  MockBPFfeature hasfeature(true);
+  test(hasfeature, "BEGIN { $ns = nsecs(tai); }", 0);
+  test("BEGIN { $ns = nsecs(sw_tai); }", 0);
+  test("BEGIN { $ns = nsecs(xxx); }", 1);
 }
 
 class semantic_analyser_btf : public test_btf

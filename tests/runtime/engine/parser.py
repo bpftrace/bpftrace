@@ -164,6 +164,7 @@ class TestParser(object):
                     "aot",
                     "kprobe_multi",
                     "skboutput",
+                    "get_tai_ns",
                 }
 
                 for f in line.split(" "):

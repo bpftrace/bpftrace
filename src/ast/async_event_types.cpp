@@ -47,8 +47,9 @@ std::vector<llvm::Type*> Time::asLLVMType(ast::IRBuilderBPF& b)
 std::vector<llvm::Type*> Strftime::asLLVMType(ast::IRBuilderBPF& b)
 {
   return {
-    b.getInt64Ty(), // strftime id
-    b.getInt64Ty(), // strftime arg, time elapsed since boot
+    b.getInt32Ty(), // strftime id
+    b.getInt32Ty(), // timestamp mode
+    b.getInt64Ty(), // strftime arg, nanoseconds
   };
 }
 

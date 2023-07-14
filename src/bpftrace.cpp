@@ -775,9 +775,11 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         arg_values.push_back(
             std::make_unique<PrintableString>(resolve_timestamp(
                 reinterpret_cast<AsyncEvent::Strftime *>(arg_data + arg.offset)
+                    ->mode,
+                reinterpret_cast<AsyncEvent::Strftime *>(arg_data + arg.offset)
                     ->strftime_id,
                 reinterpret_cast<AsyncEvent::Strftime *>(arg_data + arg.offset)
-                    ->nsecs_since_boot)));
+                    ->nsecs)));
         break;
       case Type::pointer:
         arg_values.push_back(std::make_unique<PrintableInt>(
@@ -2003,21 +2005,32 @@ std::string BPFtrace::resolve_uid(uintptr_t addr) const
   return username;
 }
 
-std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
-                                        uint64_t nsecs_since_boot)
+std::string BPFtrace::resolve_timestamp(uint32_t mode,
+                                        uint32_t strftime_id,
+                                        uint64_t nsecs)
 {
   static const auto usec_regex = std::regex("%f");
+  TimestampMode ts_mode = static_cast<TimestampMode>(mode);
+  struct timespec zero = {};
+  struct timespec *basetime = &zero;
 
-  if (!boottime_)
+  if (ts_mode == TimestampMode::boot)
   {
-    LOG(ERROR) << "Cannot resolve timestamp due to failed boot time calcuation";
-    return "(?)";
+    if (!boottime_)
+    {
+      LOG(ERROR)
+          << "Cannot resolve timestamp due to failed boot time calcuation";
+      return "(?)";
+    }
+    else
+    {
+      basetime = &boottime_.value();
+    }
   }
 
   // Calculate and localize timestamp
   struct tm tmp;
-  time_t time = boottime_->tv_sec +
-                ((boottime_->tv_nsec + nsecs_since_boot) / 1e9);
+  time_t time = basetime->tv_sec + ((basetime->tv_nsec + nsecs) / 1e9);
   if (!localtime_r(&time, &tmp))
   {
     LOG(ERROR) << "localtime_r: " << strerror(errno);
@@ -2026,7 +2039,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t strftime_id,
 
   // Process strftime() format string extensions
   const auto &raw_fmt = resources.strftime_args[strftime_id];
-  uint64_t us = ((boottime_->tv_nsec + nsecs_since_boot) % 1000000000) / 1000;
+  uint64_t us = ((basetime->tv_nsec + nsecs) % 1000000000) / 1000;
   char usecs_buf[7];
   snprintf(usecs_buf, sizeof(usecs_buf), "%06lu", us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);

@@ -181,7 +181,7 @@ static void info()
   std::cerr << BPFfeature().report();
 }
 
-static std::optional<struct timespec> get_boottime()
+static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
 {
   std::optional<struct timespec> ret = std::nullopt;
   long lowest_delta = std::numeric_limits<long>::max();
@@ -194,13 +194,13 @@ static std::optional<struct timespec> get_boottime()
     struct timespec before, after, boottime;
     long delta;
 
-    if (::clock_gettime(CLOCK_REALTIME, &before))
+    if (::clock_gettime(clock_type, &before))
       continue;
 
     if (::clock_gettime(CLOCK_BOOTTIME, &boottime))
       continue;
 
-    if (::clock_gettime(CLOCK_REALTIME, &after))
+    if (::clock_gettime(clock_type, &after))
       continue;
 
     // There's no way 3 VDSO calls should take more than 1s. We'll
@@ -219,21 +219,21 @@ static std::optional<struct timespec> get_boottime()
     // Lowest delta seen so far, compute boot realtime and store it
     if (delta < lowest_delta)
     {
-      struct timespec boottime_realtime;
+      struct timespec delta_with_boottime;
       long nsec_avg = (before.tv_nsec + after.tv_nsec) / 2;
       if (nsec_avg - boottime.tv_nsec < 0)
       {
-        boottime_realtime.tv_sec = after.tv_sec - boottime.tv_sec - 1;
-        boottime_realtime.tv_nsec = nsec_avg - boottime.tv_nsec + 1e9;
+        delta_with_boottime.tv_sec = after.tv_sec - boottime.tv_sec - 1;
+        delta_with_boottime.tv_nsec = nsec_avg - boottime.tv_nsec + 1e9;
       }
       else
       {
-        boottime_realtime.tv_sec = after.tv_sec - boottime.tv_sec;
-        boottime_realtime.tv_nsec = nsec_avg - boottime.tv_nsec;
+        delta_with_boottime.tv_sec = after.tv_sec - boottime.tv_sec;
+        delta_with_boottime.tv_nsec = nsec_avg - boottime.tv_nsec;
       }
 
       lowest_delta = delta;
-      ret = boottime_realtime;
+      ret = delta_with_boottime;
     }
   }
 
@@ -243,6 +243,16 @@ static std::optional<struct timespec> get_boottime()
                     "builtin may be inaccurate";
 
   return ret;
+}
+
+static std::optional<struct timespec> get_boottime()
+{
+  return get_delta_with_boottime(CLOCK_REALTIME);
+}
+
+static std::optional<struct timespec> get_delta_taitime()
+{
+  return get_delta_with_boottime(CLOCK_TAI);
 }
 
 [[nodiscard]] static bool parse_env(BPFtrace& bpftrace, bool& verify_llvm_ir)
@@ -795,6 +805,7 @@ int main(int argc, char* argv[])
   bpftrace.safe_mode_ = args.safe_mode;
   bpftrace.helper_check_level_ = args.helper_check_level;
   bpftrace.boottime_ = get_boottime();
+  bpftrace.delta_taitime_ = get_delta_taitime();
 
   if (!args.pid_str.empty())
   {

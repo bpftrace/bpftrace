@@ -37,14 +37,14 @@ hspace   [ \t]
 vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#\*])+
-builtin  arg[0-9]|args|cgroup|comm|cpid|numaid|cpu|ctx|curtask|elapsed|func|gid|nsecs|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
+builtin  arg[0-9]|args|cgroup|comm|cpid|numaid|cpu|ctx|curtask|elapsed|func|gid|pid|probe|rand|retval|sarg[0-9]|tid|uid|username
 call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|stats|str|strerror|strftime|strncmp|strcontains|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|skboutput|pton|debugf
 
 simple_type     bool|(u)?int(8|16|32|64)|(u)?(min|max|sum|count|avg|stats)_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp_t|macaddr_t|cgroup_path_t|strerror_t
 sized_type      str_t|inet_t|buf_t
 
 /* Don't add to this! Use builtin OR call not both */
-call_and_builtin kstack|ustack
+call_and_builtin kstack|ustack|nsecs
 
 /* escape sequences in strings */
 hex_esc  (x|X)[0-9a-fA-F]{1,2}
