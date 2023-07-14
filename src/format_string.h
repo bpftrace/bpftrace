@@ -82,6 +82,7 @@ public:
 private:
   std::string fmt_;
   std::vector<std::string> parts_;
+  std::vector<ArgumentType> expected_types_;
 
   friend class cereal::access;
 

@@ -26,11 +26,28 @@ const std::regex format_specifier_re(generate_pattern_string());
 
 struct Field;
 
+enum class ArgumentType
+{
+  UNKNOWN = 0,
+  CHAR,
+  SHORT,
+  INT,
+  LONG,
+  LONG_LONG,
+  INTMAX_T,
+  SIZE_T,
+  PTRDIFF_T,
+  POINTER,
+};
+
 class IPrintable
 {
 public:
   virtual ~IPrintable() { };
-  virtual int print(char* buf, size_t size, const char* fmt) = 0;
+  virtual int print(char* buf,
+                    size_t size,
+                    const char* fmt,
+                    ArgumentType expected_type = ArgumentType::UNKNOWN) = 0;
 };
 
 class PrintableString : public virtual IPrintable
@@ -39,7 +56,7 @@ public:
   PrintableString(std::string value,
                   std::optional<size_t> buffer_size = std::nullopt,
                   const char* trunc_trailer = nullptr);
-  int print(char* buf, size_t size, const char* fmt) override;
+  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
 
 private:
   std::string value_;
@@ -52,7 +69,7 @@ public:
       : value_(std::vector<char>(buffer, buffer + size))
   {
   }
-  int print(char* buf, size_t size, const char* fmt) override;
+  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
   void keep_ascii(bool value);
   void escape_hex(bool value);
 
@@ -66,7 +83,7 @@ class PrintableCString : public virtual IPrintable
 {
 public:
   PrintableCString(char* value) : value_(value) { }
-  int print(char* buf, size_t size, const char* fmt) override;
+  int print(char* buf, size_t size, const char* fmt, ArgumentType) override;
 
 private:
   char* value_;
@@ -76,7 +93,10 @@ class PrintableInt : public virtual IPrintable
 {
 public:
   PrintableInt(uint64_t value) : value_(value) { }
-  int print(char* buf, size_t size, const char* fmt) override;
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            ArgumentType expected_type) override;
 
 private:
   uint64_t value_;
@@ -88,7 +108,10 @@ public:
   PrintableSInt(int64_t value) : value_(value)
   {
   }
-  int print(char* buf, size_t size, const char* fmt) override;
+  int print(char* buf,
+            size_t size,
+            const char* fmt,
+            ArgumentType expected_type) override;
 
 private:
   int64_t value_;

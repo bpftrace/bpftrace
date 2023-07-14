@@ -2,11 +2,44 @@
 #include "log.h"
 #include "struct.h"
 
+#include <unordered_map>
+
 namespace bpftrace {
 
 const int FMT_BUF_SZ = 512;
 // bpf_trace_printk cannot use more than three arguments, see bpf-helpers(7).
 const int PRINTK_MAX_ARGS = 3;
+
+namespace {
+
+const std::regex length_modifier_re("%-?[0-9.]*(hh|h|l|ll|j|z|t)?([cduoxXp])");
+const std::unordered_map<std::string, ArgumentType> length_modifier_type = {
+  { "hh", ArgumentType::CHAR },      { "h", ArgumentType::SHORT },
+  { "", ArgumentType::INT },         { "l", ArgumentType::LONG },
+  { "ll", ArgumentType::LONG_LONG }, { "j", ArgumentType::INTMAX_T },
+  { "z", ArgumentType::SIZE_T },     { "t", ArgumentType::PTRDIFF_T },
+};
+
+ArgumentType get_expected_argument_type(const std::string &fmt)
+{
+  std::smatch match;
+
+  if (std::regex_search(fmt, match, length_modifier_re))
+  {
+    if (match[2] == "p")
+      return ArgumentType::POINTER;
+    else if (match[2] == "c")
+      return ArgumentType::CHAR;
+
+    auto it = length_modifier_type.find(match[1]);
+    if (it != length_modifier_type.end())
+      return it->second;
+  }
+
+  return ArgumentType::UNKNOWN;
+}
+
+} // anonymous namespace
 
 std::string validate_format_string(const std::string &fmt,
                                    std::vector<Field> args,
@@ -116,6 +149,11 @@ void FormatString::format(std::ostream &out,
   if (parts_.size() < 1)
   {
     split();
+
+    // figure out the argument type for each format specifier
+    expected_types_.resize(parts_.size());
+    for (size_t i = 0; i < parts_.size(); i++)
+      expected_types_[i] = get_expected_argument_type(parts_[i]);
   }
   auto buffer = std::vector<char>(FMT_BUF_SZ);
   auto check_snprintf_ret = [](int r) {
@@ -158,7 +196,8 @@ void FormatString::format(std::ostream &out,
       }
       int r = args.at(i)->print(buffer.data(),
                                 buffer.capacity(),
-                                printf_fmt.c_str());
+                                printf_fmt.c_str(),
+                                expected_types_[i]);
       check_snprintf_ret(r);
       if (static_cast<size_t>(r) < buffer.capacity())
         // string fits into buffer, we are done
