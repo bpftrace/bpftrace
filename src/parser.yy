@@ -214,6 +214,9 @@ type:
         |       int_type "[" INT "]" {
                   $$ = CreateArray($3, $1);
                 }
+        |       int_type "[" "]" {
+                  $$ = CreateArray(0, $1);
+                }
         |       pointer_type { $$ = $1; }
         |       struct_type { $$ = $1; }
                 ;

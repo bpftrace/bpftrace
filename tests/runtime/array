@@ -171,3 +171,8 @@ NAME cast literal to int array
 PROG BEGIN { printf("first byte: %x\n", ((int8[8])12345)[0]); exit(); }
 EXPECT first byte: 39
 TIMEOUT 1
+
+NAME cast to int array with automatic size
+PROG BEGIN { printf("byte: %x\n", ((int8[])12345)[0]); exit(); }
+EXPECT byte: 39
+TIMEOUT 1
