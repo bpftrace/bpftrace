@@ -12,7 +12,6 @@ from functools import lru_cache
 import cmake_vars
 
 BPF_PATH = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
-ENV_PATH = os.environ["PATH"]
 ATTACH_TIMEOUT = 5
 DEFAULT_TIMEOUT = 5
 
@@ -108,13 +107,10 @@ class Runner(object):
     @staticmethod
     @lru_cache(maxsize=1)
     def __get_bpffeature():
-        cmd = "bpftrace --info"
         p = subprocess.Popen(
-            cmd,
-            shell=True,
+            [f"{BPF_PATH}/bpftrace", "--info"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
             preexec_fn=os.setsid,
             universal_newlines=True,
             bufsize=1
@@ -177,7 +173,6 @@ class Runner(object):
                             shell=True,
                             stdout=dn,
                             stderr=dn,
-                            env={'PATH': "{}:{}".format(BPF_PATH, ENV_PATH)},
                         ) != 0:
                             print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                             return Runner.SKIP_REQUIREMENT_UNSATISFIED
