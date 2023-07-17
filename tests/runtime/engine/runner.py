@@ -240,6 +240,7 @@ class Runner(object):
                 '__BPFTRACE_NOTIFY_PROBES_ATTACHED': '1',
                 '__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED': '1',
                 'BPFTRACE_VERIFY_LLVM_IR': '1',
+                'PATH': os.environ.get('PATH', ''),
             }
             env.update(test.env)
             p = subprocess.Popen(
