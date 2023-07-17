@@ -1371,18 +1371,21 @@ std::vector<int> get_pids_for_program(const std::string &program)
 {
   std::vector<int> pids;
 
-  std::regex proc_root_regex("/proc/([0-9]+)/root/.*");
-  std::smatch match;
-
-  if (std::regex_search(program, match, proc_root_regex) && match.size() > 1)
-  {
-    pids.emplace_back(std::stoi(match.str(1)));
+  std::error_code ec;
+  auto program_abs = std_filesystem::canonical(program, ec);
+  if (ec) {
+    // std::filesystem::canonical will fail if the we are attaching to
+    // a uprobe that lives in another filesystem namespace. For example,
+    // uprobe:/proc/12345/root/my_program:function1
+    // This shouldn't be a fatal condition as this function is only
+    // used to attach to all running processes for a given binary,
+    // and the above uprobe is targetting a specific process.
+    // So if this happens, just return no pids.
+    // The probe will still attach directly to the targetted process.
+    return pids;
   }
-  else
-  {
-    auto program_abs = std_filesystem::canonical(program);
 
-    for (const auto &process : std_filesystem::directory_iterator("/proc"))
+  for (const auto &process : std_filesystem::directory_iterator("/proc"))
     {
       std::string filename = process.path().filename().string();
       if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
@@ -1393,7 +1396,6 @@ std::vector<int> get_pids_for_program(const std::string &program)
       if (!ec && program_abs == pid_program)
         pids.emplace_back(std::stoi(filename));
     }
-  }
   return pids;
 }
 

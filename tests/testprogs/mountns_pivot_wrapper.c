@@ -62,7 +62,6 @@ int main(int argc, char *argv[])
   if (mkdir(private_mount, 0770) != 0 && (errno != EEXIST))
     errExit("Failed to make private mount dir");
 
-
   int idx = readlink("/proc/self/exe", dpath, sizeof(dpath) - 1);
   dpath[idx] = '\0';
 
