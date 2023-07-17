@@ -2106,6 +2106,14 @@ void CodegenLLVM::visit(Cast &cast)
                              cast.type.IsSigned(),
                              "cast");
   }
+  else if (cast.type.IsArrayTy() && cast.expr->type.IsIntTy())
+  {
+    // We need to store the cast integer on stack and reinterpret the pointer to
+    // it to an array pointer.
+    auto v = b_.CreateAllocaBPF(expr_->getType());
+    b_.CreateStore(expr_, v);
+    expr_ = b_.CreatePointerCast(v, b_.GetType(cast.type)->getPointerTo());
+  }
 }
 
 void CodegenLLVM::compareStructure(SizedType &our_type, llvm::Type *llvm_type)

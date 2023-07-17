@@ -2355,12 +2355,30 @@ void SemanticAnalyser::visit(Cast &cast)
 
   if (!cast.type.IsIntTy() && !cast.type.IsPtrTy() &&
       !(cast.type.IsPtrTy() && !cast.type.GetElementTy()->IsIntTy() &&
-        !cast.type.GetElementTy()->IsRecordTy()))
+        !cast.type.GetElementTy()->IsRecordTy()) &&
+      // we support casting integers to int arrays
+      !(cast.type.IsArrayTy() && cast.type.GetElementTy()->IsIntTy()))
   {
     LOG(ERROR, cast.loc, err_) << "Cannot cast to \"" << cast.type << "\"";
   }
-  if (cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
-      !rhs.IsCtxAccess())
+
+  if (cast.type.IsArrayTy())
+  {
+    if (cast.type.GetElementTy()->IsBoolTy())
+    {
+      LOG(ERROR, cast.loc, err_) << "Bit arrays are not supported";
+      return;
+    }
+
+    if (rhs.IsIntTy())
+      cast.type.is_internal = true;
+  }
+
+  if ((cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
+       !rhs.IsCtxAccess()) ||
+      // casting to int arrays must respect the size
+      (cast.type.IsArrayTy() &&
+       (!rhs.IsIntTy() || cast.type.GetSize() != rhs.GetSize())))
   {
     LOG(ERROR, cast.loc, err_)
         << "Cannot cast from \"" << rhs << "\" to \"" << cast.type << "\"";
