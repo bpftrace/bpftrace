@@ -2,31 +2,22 @@
 
 # Updates codegen tests' expected LLVM IR
 #
+# Example usage:
+#
+#     ./scripts/update_codegen_tests.sh
+#
 
 set -eu
 
+BUILD_DIR=build-codegen-update
+
+function run() {
+  nix develop .#bpftrace-llvm12 --command "$@"
+}
+
 # Change dir to project root
-cd "$(dirname "${BASH_SOURCE[0]}")"
-cd ..
+cd "$(git rev-parse --show-toplevel)"
 
-# Build docker image
-pushd docker
-docker build                  \
-  --network host              \
-  --build-arg LLVM_VERSION=12 \
-  -t bpftrace-builder-focal   \
-  -f Dockerfile.focal         \
-  .
-popd
-
-# Update IR
-docker run                                \
-  --network host                          \
-  --rm                                    \
-  -it                                     \
-  -v $(pwd):$(pwd)                        \
-  -e BPFTRACE_UPDATE_TESTS=1              \
-  -e TEST_ARGS="--gtest_filter=codegen*" \
-  -e VENDOR_GTEST="ON"                    \
-  -e BUILD_LIBBPF="ON"                    \
-  bpftrace-builder-focal "$(pwd)/build-codegen-update" Debug "$@"
+run cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Debug -DUSE_SYSTEM_BPF_BCC=1
+run make -C "$BUILD_DIR" -j $(nproc)
+BPFTRACE_UPDATE_TESTS=1 run ./"$BUILD_DIR"/tests/bpftrace_test --gtest_filter="codegen*"
