@@ -30,136 +30,73 @@ jobs:
       matrix:
         env:
         - NAME: LLVM 10 Debug
-          TYPE: Debug
-          LLVM_VERSION: 10
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm10
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 10 Release
-          TYPE: Release
-          LLVM_VERSION: 10
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm10
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 10 Clang Debug
-          TYPE: Debug
-          LLVM_VERSION: 10
-          CC: clang-10
-          CXX: clang++-10
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm10
+          CC: clang
+          CXX: clang++
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 11 Debug
-          TYPE: Debug
-          LLVM_VERSION: 11
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm11
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 11 Release
-          TYPE: Release
-          LLVM_VERSION: 11
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm11
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 12 Release
-          TYPE: Release
-          LLVM_VERSION: 12
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm12
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 13 Release
-          TYPE: Release
-          LLVM_VERSION: 13
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm13
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 14 Release
-          TYPE: Release
-          LLVM_VERSION: 14
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm14
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 15 Release
-          TYPE: Release
-          LLVM_VERSION: 15
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm15
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: LLVM 16 Release
-          TYPE: Release
-          LLVM_VERSION: 16
-          RUN_ALL_TESTS: 1
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm16
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
-          BASE: focal
-          VENDOR_GTEST: ON
         - NAME: Memleak test (LLVM 11 Debug)
-          TYPE: Debug
-          LLVM_VERSION: 11
-          BASE: focal
+          CMAKE_BUILD_TYPE: Debug
+          NIX_TARGET: .#bpftrace-llvm11
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
-          VENDOR_GTEST: ON
         - NAME: Memleak test (LLVM 11 Release)
-          TYPE: Release
-          LLVM_VERSION: 11
-          BASE: focal
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm11
           RUN_MEMLEAK_TEST: 1
           RUN_TESTS: 0
-          VENDOR_GTEST: ON
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: recursive
-    - name: Get date
-      id: get-date
-      run: echo "::set-output name=date::$(/bin/date -u "+%Y.week%g")"
-      shell: bash
-    - name: Cache docker image
-      env: ${{matrix.env}}
-      id: docker-cache
-      uses: actions/cache@v2
-      with:
-        path: /tmp/docker-save
-        # Key the cache entry by:
-        #   * the operating system
-        #   * the week (so cache gets invalidated every week)
-        #   * the image configuration (ie llvm version & distro)
-        #   * the hash of all the files in docker/
-        key: ${{ runner.os }}-docker-cache-${{ steps.get-date.outputs.date }}-${{ env.NAME }}-${{ hashFiles('docker/**') }}
-    - name: Build docker container
-      if: steps.docker-cache.outputs.cache-hit != 'true'
-      env: ${{matrix.env}}
-      run: >
-        docker build
-        --build-arg LLVM_VERSION=$LLVM_VERSION
-        -t bpftrace-builder-$BASE-llvm-$LLVM_VERSION
-        -f docker/Dockerfile.$BASE
-        docker/ &&
-        mkdir -p /tmp/docker-save &&
-        docker save bpftrace-builder-$BASE-llvm-$LLVM_VERSION -o /tmp/docker-save/i.tar
-    - name: Load the cached docker image (if available)
-      if: steps.docker-cache.outputs.cache-hit == 'true'
-      run: >
-        docker load --input /tmp/docker-save/i.tar
+    - uses: DeterminateSystems/nix-installer-action@v4
+    - uses: DeterminateSystems/magic-nix-cache-action@v2
     - name: Load kernel modules
       # nf_tables and xfs are necessary for testing kernel modules BTF support
       run: |
@@ -167,28 +104,7 @@ jobs:
         sudo modprobe xfs
     - name: Build and test
       env: ${{matrix.env}}
-      run: >
-        docker run --privileged
-        -v $(pwd):$(pwd)
-        -w $(pwd)
-        -v /sys/kernel/debug:/sys/kernel/debug:rw
-        -v /lib/modules:/lib/modules:ro
-        -v /usr/src:/usr/src:ro
-        -e RUN_TESTS=${RUN_TESTS}
-        -e RUN_ALL_TESTS=${RUN_ALL_TESTS}
-        -e RUN_MEMLEAK_TEST="${RUN_MEMLEAK_TEST}"
-        -e CMAKE_EXTRA_FLAGS="${CMAKE_EXTRA_FLAGS}"
-        -e RUNTIME_TEST_DISABLE="${RUNTIME_TEST_DISABLE}"
-        -e VENDOR_GTEST="${VENDOR_GTEST}"
-        -e CC="${CC}"
-        -e CXX="${CXX}"
-        -e GTEST_FILTER="${GTEST_FILTER:-*}"
-        -e TOOLS_TEST_DISABLE="$TOOLS_TEST_DISABLE"
-        -e TOOLS_TEST_OLDVERSION="$TOOLS_TEST_OLDVERSION"
-        bpftrace-builder-$BASE-llvm-$LLVM_VERSION
-        ${PWD}/build-$TYPE-$BASE
-        $TYPE
-        -j$(nproc)
+      run: ./.github/include/ci.py
 
   irc:
     # Notify IRC of build failures on pushes only if we are running from

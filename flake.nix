@@ -62,7 +62,7 @@
 
                 src = self;
 
-                nativeBuildInputs = [ cmake ninja bison flex gcc12 ];
+                nativeBuildInputs = [ cmake ninja bison flex gcc12 clang ];
 
                 buildInputs = with llvmPackages;
                   [
