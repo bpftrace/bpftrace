@@ -25,6 +25,8 @@ and this project adheres to
   - [#2623](https://github.com/iovisor/bpftrace/pull/2623)
 - Fix alignment of byte arrays inside tuples
   - [#2625](https://github.com/iovisor/bpftrace/pull/2625)
+- cmake: fix linking libbfd
+  - [#2673](https://github.com/iovisor/bpftrace/pull/2673)
 - Fix uprobe attachment across container boundary
   - [#2662](https://github.com/iovisor/bpftrace/pull/2662)
 

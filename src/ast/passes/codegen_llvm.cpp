@@ -1146,11 +1146,17 @@ void CodegenLLVM::visit(Call &call)
         b_.GetIntSameSize(strftime_id_, elements.at(0)),
         b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
     strftime_id_++;
+    b_.CreateStore(
+        b_.GetIntSameSize(
+            static_cast<std::underlying_type<TimestampMode>::type>(
+                call.type.ts_mode),
+            elements.at(1)),
+        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
     Expression *arg = call.vargs->at(1);
     auto scoped_del = accept(arg);
     b_.CreateStore(
         expr_,
-        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(1) }));
+        b_.CreateGEP(strftime_struct, buf, { b_.getInt64(0), b_.getInt32(2) }));
     expr_ = buf;
   }
   else if (call.func == "kstack" || call.func == "ustack")
@@ -1310,6 +1316,25 @@ void CodegenLLVM::visit(Call &call)
     Value *ret = b_.CreateSkbOutput(skb, len, data, getStructSize(hdr_t));
     expr_ = ret;
     skb_output_id_++;
+  }
+  else if (call.func == "nsecs")
+  {
+    if (call.type.ts_mode == TimestampMode::boot ||
+        call.type.ts_mode == TimestampMode::sw_tai)
+    {
+      expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
+                             call.loc);
+      if (call.type.ts_mode == TimestampMode::sw_tai)
+      {
+        uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
+                         bpftrace_.delta_taitime_->tv_nsec;
+        expr_ = b_.CreateAdd(expr_, b_.getInt64(delta));
+      }
+    }
+    else if (call.type.ts_mode == TimestampMode::tai)
+    {
+      expr_ = b_.CreateGetTaiNs(call.loc);
+    }
   }
   else
   {

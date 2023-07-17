@@ -92,7 +92,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
     case Type::timestamp:
     {
       auto p = static_cast<const AsyncEvent::Strftime *>(data);
-      return bpftrace.resolve_timestamp(p->strftime_id, p->nsecs_since_boot);
+      return bpftrace.resolve_timestamp(p->mode, p->strftime_id, p->nsecs);
     }
     case Type::ksym:
       return bpftrace.resolve_ksym(read_data<uint64_t>(data));

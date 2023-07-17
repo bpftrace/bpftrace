@@ -133,7 +133,9 @@ public:
                            bool show_module = false);
   std::string resolve_inet(int af, const uint8_t* inet) const;
   std::string resolve_uid(uintptr_t addr) const;
-  std::string resolve_timestamp(uint32_t strftime_id, uint64_t nsecs);
+  std::string resolve_timestamp(uint32_t mode,
+                                uint32_t strftime_id,
+                                uint64_t nsecs);
   uint64_t resolve_kname(const std::string &name) const;
   virtual int resolve_uname(const std::string &name,
                             struct symbol *sym,
@@ -214,6 +216,7 @@ public:
   uint64_t ast_max_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
   std::optional<StackMode> stack_mode_;
   std::optional<struct timespec> boottime_;
+  std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
   static constexpr uint64_t rb_loss_cnt_val_ = 0;
 

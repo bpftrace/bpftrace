@@ -104,6 +104,8 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [32. `skb_output`: Write `skb` 's data section into a PCAP file](#32-skb_output-write-skb-s-data-section-into-a-pcap-file)
     - [33. `pton()`: Convert text IP address to byte array](#33-pton-convert-text-ip-address-to-byte-array)
     - [34. `strerror`: Get error message for errno value](#34-strerror-get-error-message-for-errno-code)
+    - [35. `offsetof`: Offset of element in structure](#35-offsetof-offset-of-element-in-structure)
+    - [36. `nsecs()`: Timestamps and Time Deltas](#36-nsecs-timestamps-and-time-deltas)
 - [Map Functions](#map-functions)
     - [1. Builtins](#1-builtins-2)
     - [2. `count()`: Count](#2-count-count)
@@ -2288,6 +2290,7 @@ Tracing block I/O sizes > 0 bytes
 - `macaddr(char[6] addr)` - Convert MAC address data
 - `bswap(uint[8|16|32|64] n)` - Reverse byte order
 - `offsetof(struct, element)` - Offset of element in structure
+- `nsecs([TimestampMode mode])` - Timestamps and Time Deltas
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
@@ -3333,7 +3336,7 @@ Attaching 1 probe...
 Operation not permitted
 ```
 
-# 35. `offsetof`: Offset of element in structure
+## 35. `offsetof`: Offset of element in structure
 
 Syntax:
 - `offsetof(struct, element)`
@@ -3358,6 +3361,39 @@ BEGIN
 Attaching 1 probe...
 Offset of flags: 44
 Offset of comm: 3216
+```
+
+## 36. `nsecs()`: Timestamps and Time Deltas
+
+Syntax: `nsecs([TimestampMode mode])`
+
+Get the nanoseconds of the specified clock. Three time types are currently supported, namely
+- boot: nsecs() or nsecs(boot) is to get nanoseconds since the system boot
+- tai: nsecs(tai) is to get nanoseconds of CLOCK_TAI through bpf_ktime_get_tai_ns helper function
+- sw_tai: nsecs(sw_tai) is to get nanoseconds of CLOCK_TAI, but it is obtained through the "triple vdso sandwich" method
+
+Examples:
+
+```
+# cat -n example.bt
+#!/usr/bin/env bpftrace
+i:s:1 {
+        $sw_tai1 = nsecs(sw_tai);
+        $tai = nsecs(tai);
+        $sw_tai2 = nsecs(sw_tai);
+
+        printf("sw_tai precision: %lldns\n", ($sw_tai1 + $sw_tai2)/2 - $tai);
+}
+```
+
+Running example.bt:
+
+```
+Attaching 1 probe...
+sw_tai precision: -98ns
+sw_tai precision: -92ns
+sw_tai precision: -99ns
+sw_tai precision: -99ns
 ```
 
 # Map Functions

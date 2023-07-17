@@ -981,6 +981,13 @@ CallInst *IRBuilderBPF::CreateGetNs(bool boot_time, const location &loc)
   return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
 }
 
+CallInst *IRBuilderBPF::CreateGetTaiNs(const location &loc)
+{
+  auto fn = libbpf::BPF_FUNC_ktime_get_tai_ns;
+  FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
+  return CreateHelperCall(fn, gettime_func_type, {}, "get_tai_ns", &loc);
+}
+
 Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
                                                    Value *val1,
                                                    Value *val2,
@@ -1873,7 +1880,7 @@ llvm::Type *IRBuilderBPF::getPointerStorageTy(AddrSpace as)
 
 llvm::Type *IRBuilderBPF::getKernelPointerStorageTy()
 {
-  static int ptr_width = get_kernel_ptr_width();
+  static int ptr_width = arch::get_kernel_ptr_width();
 
   return getIntNTy(ptr_width);
 }

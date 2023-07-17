@@ -970,11 +970,6 @@ TEST(Parser, call_unknown_function)
 TEST(Parser, call_builtin)
 {
   // Builtins should not be usable as function
-  test_parse_failure("k:f { nsecs(); }");
-  test_parse_failure("k:f { nsecs  (); }");
-  test_parse_failure("k:f { nsecs(\"abc\"); }");
-  test_parse_failure("k:f { nsecs(123); }");
-
   test_parse_failure("k:f { probe(\"blah\"); }");
   test_parse_failure("k:f { probe(); }");
   test_parse_failure("k:f { probe(123); }");

@@ -133,7 +133,28 @@ void SemanticAnalyser::visit(Identifier &identifier)
     identifier.type = CreateInt(
         std::get<0>(getIntcasts().at(identifier.ident)));
   }
+  else if (func_ == "nsecs")
+  {
+    identifier.type = CreateTimestampMode();
+    if (identifier.ident == "boot")
+    {
+      identifier.type.ts_mode = TimestampMode::boot;
+    }
+    else if (identifier.ident == "tai")
+    {
+      identifier.type.ts_mode = TimestampMode::tai;
+    }
+    else if (identifier.ident == "sw_tai")
+    {
+      identifier.type.ts_mode = TimestampMode::sw_tai;
+    }
+    else
+    {
+      goto err;
+    }
+  }
   else {
+  err:
     identifier.type = CreateNone();
     LOG(ERROR, identifier.loc, err_)
         << "Unknown identifier: '" + identifier.ident + "'";
@@ -1100,9 +1121,13 @@ void SemanticAnalyser::visit(Call &call)
   else if (call.func == "strftime")
   {
     call.type = CreateTimestamp();
-    check_varargs(call, 2, 2) && is_final_pass() &&
+    if (check_varargs(call, 2, 2) && is_final_pass() &&
         check_arg(call, Type::string, 0, true) &&
-        check_arg(call, Type::integer, 1, false);
+        check_arg(call, Type::integer, 1, false))
+    {
+      auto &arg = *call.vargs->at(1);
+      call.type.ts_mode = arg.type.ts_mode;
+    }
   }
   else if (call.func == "kstack") {
     check_stack_call(call, true);
@@ -1333,6 +1358,26 @@ void SemanticAnalyser::visit(Call &call)
       }
     }
     call.type = CreateUInt32();
+  }
+  else if (call.func == "nsecs")
+  {
+    if (check_varargs(call, 0, 1))
+    {
+      call.type = CreateUInt64();
+      call.type.ts_mode = TimestampMode::boot;
+      if (call.vargs && call.vargs->size() == 1 &&
+          check_arg(call, Type::timestamp_mode, 0))
+      {
+        call.type.ts_mode = call.vargs->at(0)->type.ts_mode;
+      }
+
+      if (call.type.ts_mode == TimestampMode::tai &&
+          !bpftrace_.feature_->has_helper_ktime_get_tai_ns())
+      {
+        LOG(ERROR, call.loc, err_)
+            << "Kernel does not support tai timestamp, please try sw_tai";
+      }
+    }
   }
   else
   {

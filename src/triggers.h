@@ -9,6 +9,8 @@
 #define __target_attr
 #endif
 
+using trigger_fn_t = void (*)();
+
 extern "C"
 {
   void __attribute__((noinline)) __target_attr BEGIN_trigger()

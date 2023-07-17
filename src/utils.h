@@ -309,7 +309,4 @@ inline void hash_combine(std::size_t &seed, const T &value)
   seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 
-// Returns the width in bits of kernel pointers.
-int get_kernel_ptr_width();
-
 } // namespace bpftrace

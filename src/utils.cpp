@@ -1282,25 +1282,6 @@ std::string strip_symbol_module(const std::string &symbol)
   return idx != std::string::npos ? symbol.substr(0, idx) : symbol;
 }
 
-int get_kernel_ptr_width()
-{
-  // We can't assume that sizeof(void*) in bpftrace is the same as the kernel
-  // pointer size (bpftrace can be compiled as a 32-bit binary and run on a
-  // 64-bit kernel), so we guess based on the machine field of struct utsname.
-  // Note that the uname() syscall can return different values for compat mode
-  // processes (e.g. "armv8l" instead of "aarch64"; see COMPAT_UTS_MACHINE), so
-  // make sure this is taken into account.
-  struct utsname utsname;
-  if (uname(&utsname) != 0)
-    LOG(FATAL) << "uname failed: " << strerror(errno);
-
-  const char *machine = utsname.machine;
-  if (!strncmp(machine, "armv7", 5))
-    return 32;
-
-  return 64;
-}
-
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol)
 {

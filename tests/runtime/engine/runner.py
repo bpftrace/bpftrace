@@ -137,6 +137,7 @@ class Runner(object):
         bpffeature["kprobe_multi"] = output.find("kprobe_multi: yes") != -1
         bpffeature["aot"] = cmake_vars.LIBBCC_BPF_CONTAINS_RUNTIME
         bpffeature["skboutput"] = output.find("skboutput: yes") != -1
+        bpffeature["get_tai_ns"] = output.find("get_ktime_ns: yes") != -1
         return bpffeature
 
     @staticmethod
