@@ -2370,6 +2370,25 @@ void SemanticAnalyser::visit(Cast &cast)
       return;
     }
 
+    if (cast.type.GetNumElements() == 0)
+    {
+      if (cast.type.GetElementTy()->GetSize() == 0)
+        LOG(ERROR, cast.loc, err_) << "Could not determine size of the array";
+      else
+      {
+        if (rhs.GetSize() % cast.type.GetElementTy()->GetSize() != 0)
+        {
+          LOG(ERROR, cast.loc, err_)
+              << "Cannot determine array size: the element size is "
+                 "incompatible with the cast integer size";
+        }
+
+        // cast to unsized array (e.g. int8[]), determine size from RHS
+        auto num_elems = rhs.GetSize() / cast.type.GetElementTy()->GetSize();
+        cast.type = CreateArray(num_elems, *cast.type.GetElementTy());
+      }
+    }
+
     if (rhs.IsIntTy())
       cast.type.is_internal = true;
   }
