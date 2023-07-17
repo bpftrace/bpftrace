@@ -2063,6 +2063,32 @@ TEST(semantic_analyser, intptr_cast_usage)
   test("kprobe:f { @=avg(*(int32*)123) }", 0);
 }
 
+TEST(semantic_analyser, intarray_cast_types)
+{
+  test("kprobe:f { @ = (int8[8])1 }", 0);
+  test("kprobe:f { @ = (int16[4])1 }", 0);
+  test("kprobe:f { @ = (int32[2])1 }", 0);
+  test("kprobe:f { @ = (int64[1])1 }", 0);
+  test("kprobe:f { @ = (int8[4])(int32)1 }", 0);
+  test("kprobe:f { @ = (int8[2])(int16)1 }", 0);
+  test("kprobe:f { @ = (int8[1])(int8)1 }", 0);
+  test("kprobe:f { @ = (uint8[8])1 }", 0);
+  test("kretprobe:f { @ = (int8[8])retval }", 0);
+
+  test("kprobe:f { @ = (int8[4])1 }", 1);
+  test("kprobe:f { @ = (bool[64])1 }", 1);
+  test("kprobe:f { @ = (int8[6])\"hello\" }", 1);
+  test("struct Foo { int x; } kprobe:f { @ = (struct Foo [2])1 }", 1);
+}
+
+TEST(semantic_analyser, intarray_cast_usage)
+{
+  test("kprobe:f { $a=(int8[8])1; }", 0);
+  test("kprobe:f { @=(int8[8])1; }", 0);
+  test("kprobe:f { @[(int8[8])1] = 0; }", 0);
+  test("kprobe:f { if (((int8[8])1)[0] == 1) {} }", 0);
+}
+
 TEST(semantic_analyser, signal)
 {
   // int literals
