@@ -156,9 +156,12 @@ class Runner(object):
 
         p = None
         befores = []
+        befores_output = []
         bpftrace = None
         after = None
+        after_output = None
         cleanup = None
+        bpf_call = "[unknown]"
         try:
             result = None
             timeout = False
@@ -196,7 +199,11 @@ class Runner(object):
 
             if test.befores:
                 for before in test.befores:
-                    before = subprocess.Popen(before.split(), start_new_session=True)
+                    before = subprocess.Popen(before.split(),
+                                              start_new_session=True,
+                                              universal_newlines=True,
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.STDOUT)
                     befores.append(before)
 
                 with open(os.devnull, 'w') as dn:
@@ -264,7 +271,11 @@ class Runner(object):
                     attached = True
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
-                        after = subprocess.Popen(test.after, shell=True, start_new_session=True)
+                        after = subprocess.Popen(test.after, shell=True,
+                                                 start_new_session=True,
+                                                 universal_newlines=True,
+                                                 stdout=subprocess.PIPE,
+                                                 stderr=subprocess.STDOUT)
 
             signal.alarm(0)
             output += p.stdout.read()
@@ -298,14 +309,23 @@ class Runner(object):
         finally:
             if befores:
                 for before in befores:
+                    try:
+                        befores_output.append(before.communicate(timeout=1)[0])
+                    except subprocess.TimeoutExpired:
+                        pass # if timed out getting output, there is effectively no output
                     if before.poll() is None:
                         os.killpg(os.getpgid(before.pid), signal.SIGKILL)
 
             if bpftrace and bpftrace.poll() is None:
                 os.killpg(os.getpgid(p.pid), signal.SIGKILL)
 
-            if after and after.poll() is None:
-                os.killpg(os.getpgid(after.pid), signal.SIGKILL)
+            if after:
+                try:
+                    after_output = after.communicate(timeout=1)[0]
+                except subprocess.TimeoutExpired:
+                        pass # if timed out getting output, there is effectively no output
+                if after.poll() is None:
+                    os.killpg(os.getpgid(after.pid), signal.SIGKILL)
 
         if test.cleanup:
             try:
@@ -317,11 +337,21 @@ class Runner(object):
                 print('\tCLEANUP error: %s' % e.stderr)
                 return Runner.FAIL
 
+        def print_befores_and_after_output():
+            if len(befores_output) > 0:
+                for out in befores_output:
+                    out = out.encode("unicode_escape").decode("utf-8")
+                    print(f"\tBefore cmd output: {out}")
+            if after_output is not None:
+                out = after_output.encode("unicode_escape").decode("utf-8")
+                print(f"\tAfter cmd output: {out}")
+
         if p and p.returncode != 0 and not test.will_fail and not timeout:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             print('\tUnclean exit code: ' + str(p.returncode))
             print('\tOutput: ' + output.encode("unicode_escape").decode("utf-8"))
+            print_befores_and_after_output()
             return Runner.FAIL
 
         if result:
@@ -335,4 +365,5 @@ class Runner(object):
             print('\tCommand: ' + bpf_call)
             print('\tExpected: ' + test.expect)
             print('\tFound: ' + output.encode("unicode_escape").decode("utf-8"))
+            print_befores_and_after_output()
             return Runner.FAIL
