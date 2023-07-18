@@ -308,6 +308,16 @@ std::vector<std::string> split_string(const std::string &str,
   return elems;
 }
 
+std::string realpath(std::string const &path)
+{
+  int exist = ::access(path.c_str(), F_OK);
+  if (exist == -1)
+  {
+    return path;
+  }
+  return std::filesystem::canonical(path);
+}
+
 /// Erase prefix up to the first colon (:) from str and return the prefix
 std::string erase_prefix(std::string &str)
 {
@@ -842,6 +852,7 @@ resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
   if (cmd.find("*") != std::string::npos)
     candidate_paths = ::expand_wildcard_paths(candidate_paths);
 
+  std::unordered_set<std::string> abs_path;
   std::vector<std::string> valid_executable_paths;
   for (const auto &path : candidate_paths)
   {
@@ -849,12 +860,16 @@ resolve_binary_path(const std::string &cmd, const char *env_paths, int pid)
     if (pid > 0 && pid_in_different_mountns(pid))
       rel_path = path_for_pid_mountns(pid, path);
     else
-      rel_path = path;
+      rel_path = realpath(path);
+
     if (bcc_elf_is_exe(rel_path.c_str()) ||
         bcc_elf_is_shared_obj(rel_path.c_str()))
-      valid_executable_paths.push_back(rel_path);
+      abs_path.insert(rel_path);
   }
 
+  std::copy(abs_path.begin(),
+            abs_path.end(),
+            std::back_inserter(valid_executable_paths));
   return valid_executable_paths;
 }
 
