@@ -254,20 +254,20 @@ class Runner(object):
             )
             bpftrace = p
 
+            attached = False
             signal.alarm(ATTACH_TIMEOUT)
 
             while p.poll() is None:
                 nextline = p.stdout.readline()
                 output += nextline
-                if nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
+                if not attached and nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
+                    attached = True
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
-                    if not after and test.after:
+                    if test.after:
                         after = subprocess.Popen(test.after, shell=True, preexec_fn=os.setsid)
-                    break
-
-            output += p.communicate()[0]
 
             signal.alarm(0)
+            output += p.stdout.read()
             result = re.search(test.expect, output, re.M)
 
         except (TimeoutError):
@@ -286,7 +286,7 @@ class Runner(object):
             if p:
                 if p.poll() is None:
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)
-                output += p.communicate()[0]
+                output += p.stdout.read()
                 result = re.search(test.expect, output)
 
                 if not result:
