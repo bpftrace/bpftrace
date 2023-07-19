@@ -36,9 +36,10 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [10. `++ and --`: increment operators](#10--and----increment-operators)
     - [11. `[]`: Array access](#11--array-access)
     - [12. Integer casts](#12-integer-casts)
-    - [13. Looping constructs](#13-looping-constructs)
-    - [14. `return`: Terminate Early](#14-return-terminate-early)
-    - [15. `( , )`: Tuples](#15----tuples)
+    - [13. Array casts](#13-array-casts)
+    - [14. Looping constructs](#14-looping-constructs)
+    - [15. `return`: Terminate Early](#15-return-terminate-early)
+    - [16. `( , )`: Tuples](#16----tuples)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -839,7 +840,40 @@ Attaching 1 probe...
 ^C
 ```
 
-## 13. Looping Constructs
+## 13. Array casts
+
+It is possible to cast between integer arrays and integers. Both the source and
+the destination type must have the same size. The main purpose of this is to
+allow casts from/to byte arrays.
+
+Example:
+
+```
+# bpftrace -e 'BEGIN { $a = (int8[8])12345; printf("%x %x\n", $a[0], $a[1]); printf("%d\n", (uint64)$a); }'
+Attaching 1 probe...
+39 30
+12345
+^C
+```
+
+When casting to an array, it is possible to omit the size which will be
+determined automatically from the size of the cast value.
+
+This feature is especially useful when working with IP addresses since various
+libraries, builtins, and parts of the kernel use different approaches to
+represent addresses (usually byte arrays vs. integers). Array casting allows
+seamless comparison of such representations:
+
+```
+# cat ip_cmp.bt
+kfunc:tcp_connect
+{
+    if (args->sk->__sk_common.skc_daddr == (uint32)pton("127.0.0.1"))
+        ...
+}
+```
+
+## 14. Looping Constructs
 
 **Experimental**
 
@@ -853,12 +887,12 @@ bpftrace supports C style while loops:
 
 Loops can be short circuited by using the `continue` and `break` keywords.
 
-## 14. `return`: Terminate Early
+## 15. `return`: Terminate Early
 
 The `return` keyword is used to exit the current probe. This differs from
 `exit()` in that it doesn't exit bpftrace.
 
-## 15. `( , )`: Tuples
+## 16. `( , )`: Tuples
 
 N-tuples are supported, where N is any integer greater than 1.
 
