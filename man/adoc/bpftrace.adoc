@@ -459,6 +459,18 @@ $py = (int16 *) $pz;
 Integer casts to a higher rank are sign extended.
 Conversion to a lower rank is done by zeroing leading bits.
 
+It is also possible to cast between integers and integer arrays using the same
+syntax:
+
+----
+$a = (uint8[8]) 12345;
+$x = (uint64) $a;
+----
+
+Both the cast and the destination type must have the same size. When casting to
+an array, it is possible to omit the size which will be determined automatically
+from the size of the cast value.
+
 === Operators and Expressions
 
 ==== Arithmetic Operators
