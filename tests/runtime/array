@@ -176,3 +176,15 @@ NAME cast to int array with automatic size
 PROG BEGIN { printf("byte: %x\n", ((int8[])12345)[0]); exit(); }
 EXPECT byte: 39
 TIMEOUT 1
+
+NAME cast int array to int internal
+PROG BEGIN { printf("ip: %x\n", (uint32)pton("127.0.0.1")); exit(); }
+EXPECT ip: 100007f
+TIMEOUT 5
+AFTER ./testprogs/array_access
+
+NAME cast int array to int proberead
+RUN {{BPFTRACE}} --include "stdint.h" -e 'struct A { int x[4]; uint8_t y[4]; } uprobe:./testprogs/array_access:test_arrays { $y = (int32)((struct A *)arg0)->y; printf("y: %x\n", $y); exit()}'
+EXPECT y: ddccbbaa
+TIMEOUT 5
+AFTER ./testprogs/array_access

@@ -2394,10 +2394,12 @@ void SemanticAnalyser::visit(Cast &cast)
   }
 
   if ((cast.type.IsIntTy() && !rhs.IsIntTy() && !rhs.IsPtrTy() &&
-       !rhs.IsCtxAccess()) ||
-      // casting to int arrays must respect the size
+       !rhs.IsCtxAccess() && !(rhs.IsArrayTy())) ||
+      // casting from/to int arrays must respect the size
       (cast.type.IsArrayTy() &&
-       (!rhs.IsIntTy() || cast.type.GetSize() != rhs.GetSize())))
+       (!rhs.IsIntTy() || cast.type.GetSize() != rhs.GetSize())) ||
+      (rhs.IsArrayTy() &&
+       (!cast.type.IsIntTy() || cast.type.GetSize() != rhs.GetSize())))
   {
     LOG(ERROR, cast.loc, err_)
         << "Cannot cast from \"" << rhs << "\" to \"" << cast.type << "\"";

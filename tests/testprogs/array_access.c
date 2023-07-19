@@ -1,6 +1,9 @@
+#include <stdint.h>
+
 struct A
 {
   int x[4];
+  uint8_t y[4];
 };
 
 struct B
@@ -49,6 +52,10 @@ int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
   a.x[1] = 2;
   a.x[2] = 3;
   a.x[3] = 4;
+  a.y[0] = 0xaa;
+  a.y[1] = 0xbb;
+  a.y[2] = 0xcc;
+  a.y[3] = 0xdd;
 
   struct B b;
   b.y[0][0] = 5;

@@ -2091,6 +2091,31 @@ TEST(semantic_analyser, intarray_cast_usage)
   test("kprobe:f { if (((int8[8])1)[0] == 1) {} }", 0);
 }
 
+TEST(semantic_analyser, intarray_to_int_cast)
+{
+  test("#include <stdint.h>\n"
+       "struct Foo { uint8_t x[8]; } "
+       "kprobe:f { @ = (int64)((struct Foo *)arg0)->x; }",
+       0);
+  test("#include <stdint.h>\n"
+       "struct Foo { uint32_t x[2]; } "
+       "kprobe:f { @ = (int64)((struct Foo *)arg0)->x; }",
+       0);
+  test("#include <stdint.h>\n"
+       "struct Foo { uint8_t x[4]; } "
+       "kprobe:f { @ = (int32)((struct Foo *)arg0)->x; }",
+       0);
+
+  test("#include <stdint.h>\n"
+       "struct Foo { uint8_t x[8]; } "
+       "kprobe:f { @ = (int32)((struct Foo *)arg0)->x; }",
+       1);
+  test("#include <stdint.h>\n"
+       "struct Foo { uint8_t x[8]; } "
+       "kprobe:f { @ = (int32 *)((struct Foo *)arg0)->x; }",
+       1);
+}
+
 TEST(semantic_analyser, signal)
 {
   // int literals
