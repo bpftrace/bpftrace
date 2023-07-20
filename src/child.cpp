@@ -95,18 +95,26 @@ static int childfn(void* arg)
 static void validate_cmd(std::vector<std::string>& cmd)
 {
   auto paths = resolve_binary_path(cmd[0]);
-  switch (paths.size())
+
+  // /usr/bin/ls and /bin/ls may be the same file.
+  std::unordered_set<std::string> abs_path;
+  for (const auto& str : paths)
+  {
+    abs_path.insert(get_absolute_path(str.c_str()));
+  }
+
+  switch (abs_path.size())
   {
     case 0:
       throw std::runtime_error("path '" + cmd[0] +
                                "' does not exist or is not executable");
     case 1:
-      cmd[0] = paths.front().c_str();
+      cmd[0] = *(abs_path.begin());
       break;
     default:
       throw std::runtime_error("path '" + cmd[0] +
                                "' must refer to a unique binary but matched " +
-                               std::to_string(paths.size()) + " binaries");
+                               std::to_string(abs_path.size()) + " binaries");
       return;
   }
 

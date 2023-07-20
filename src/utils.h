@@ -195,6 +195,7 @@ bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);
 bool is_supported_lang(const std::string &lang);
 std::string exec_system(const char *cmd);
+std::string get_absolute_path(std::string const &path);
 std::vector<std::string> resolve_binary_path(const std::string &cmd);
 std::vector<std::string> resolve_binary_path(const std::string &cmd, int pid);
 std::string path_for_pid_mountns(int pid, const std::string &path);

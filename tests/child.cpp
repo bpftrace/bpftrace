@@ -129,7 +129,8 @@ TEST(childproc, stop_cont)
   int status = 0;
 
   child->run();
-  msleep(25);
+  // Give children enough time to spawn.
+  msleep(250);
   EXPECT_TRUE(child->is_alive());
 
   if (kill(child->pid(), SIGSTOP))
