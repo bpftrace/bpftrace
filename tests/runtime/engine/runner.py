@@ -111,7 +111,7 @@ class Runner(object):
             [f"{BPF_PATH}/bpftrace", "--info"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            preexec_fn=os.setsid,
+            start_new_session=True,
             universal_newlines=True,
             bufsize=1
         )
@@ -196,7 +196,7 @@ class Runner(object):
 
             if test.befores:
                 for before in test.befores:
-                    before = subprocess.Popen(before.split(), preexec_fn=os.setsid)
+                    before = subprocess.Popen(before.split(), start_new_session=True)
                     befores.append(before)
 
                 with open(os.devnull, 'w') as dn:
@@ -248,7 +248,7 @@ class Runner(object):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 env=env,
-                preexec_fn=os.setsid,
+                start_new_session=True,
                 universal_newlines=True,
                 bufsize=1
             )
@@ -264,7 +264,7 @@ class Runner(object):
                     attached = True
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
-                        after = subprocess.Popen(test.after, shell=True, preexec_fn=os.setsid)
+                        after = subprocess.Popen(test.after, shell=True, start_new_session=True)
 
             signal.alarm(0)
             output += p.stdout.read()
