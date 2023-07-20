@@ -113,7 +113,6 @@ class Runner(object):
             stderr=subprocess.STDOUT,
             start_new_session=True,
             universal_newlines=True,
-            bufsize=1
         )
         output = p.communicate()[0]
         bpffeature = {}
@@ -250,7 +249,6 @@ class Runner(object):
                 env=env,
                 start_new_session=True,
                 universal_newlines=True,
-                bufsize=1
             )
             bpftrace = p
 
