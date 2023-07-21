@@ -552,7 +552,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     }
     case ProbeType::hardware:
     case ProbeType::software: {
-      search_input = attach_point.target;
+      search_input = attach_point.target + ":";
       break;
     }
     case ProbeType::usdt:

@@ -2724,6 +2724,14 @@ void CodegenLLVM::visit(Probe &probe)
             erase_prefix(match);
             probefull_ = attach_point->name(match);
           }
+          else if (probetype(attach_point->provider) == ProbeType::software ||
+                   probetype(attach_point->provider) == ProbeType::hardware)
+          {
+            // Hardware and software probes do not support wildcards but they
+            // still may need expansion when the 'probe' builtin is used. Just
+            // use the name stored in the probe in such a case.
+            probefull_ = attach_point->name("");
+          }
           else
             probefull_ = attach_point->name(match);
 
