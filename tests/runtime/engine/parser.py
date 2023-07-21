@@ -165,6 +165,7 @@ class TestParser(object):
                     "kprobe_multi",
                     "skboutput",
                     "get_tai_ns",
+                    "get_func_ip",
                 }
 
                 for f in line.split(" "):

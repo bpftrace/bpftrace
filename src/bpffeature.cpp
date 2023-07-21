@@ -501,6 +501,7 @@ std::string BPFfeature::report(void)
       << "  dpath: " << to_str(has_d_path())
       << "  skboutput: " << to_str(has_skb_output())
       << "  get_tai_ns: " << to_str(has_helper_ktime_get_tai_ns())
+      << "  get_func_ip: " << to_str(has_helper_get_func_ip())
 
       << std::endl;
 

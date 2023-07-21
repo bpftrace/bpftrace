@@ -373,6 +373,15 @@ void SemanticAnalyser::visit(Builtin &builtin)
         builtin.type = CreateKSym();
       else if (type == ProbeType::uprobe || type == ProbeType::uretprobe)
         builtin.type = CreateUSym();
+      else if (type == ProbeType::kfunc || type == ProbeType::kretfunc)
+      {
+        if (!bpftrace_.feature_->has_helper_get_func_ip())
+        {
+          LOG(ERROR, builtin.loc, err_)
+              << "BPF_FUNC_get_func_ip not available for your kernel version";
+        }
+        builtin.type = CreateKSym();
+      }
       else
         LOG(ERROR, builtin.loc, err_)
             << "The func builtin can not be used with '"

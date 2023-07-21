@@ -15,6 +15,8 @@ and this project adheres to
   - [#2630](https://github.com/iovisor/bpftrace/pull/2630)
 - Improve working with all probe params (kfunc, uprobe)
   - [#2477](https://github.com/iovisor/bpftrace/pull/2477)
+- Support func builtin for k(ret)func probes
+  - [#2692](https://github.com/iovisor/bpftrace/pull/2692)
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)

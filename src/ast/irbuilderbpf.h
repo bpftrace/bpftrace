@@ -169,6 +169,7 @@ public:
   CallInst *CreateGetCurrentTask(const location &loc);
   CallInst *CreateGetRandom(const location &loc);
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
+  CallInst *CreateGetFuncIp(const location &loc);
   CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
