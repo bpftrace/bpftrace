@@ -91,12 +91,12 @@ TIMEOUT 1
 
 NAME it lists software events with regex filter
 RUN {{BPFTRACE}} -l "software:*"
-EXPECT software
+EXPECT software:cpu
 TIMEOUT 1
 
 NAME it lists hardware events with regex filter
 RUN {{BPFTRACE}} -l "hardware:*"
-EXPECT hardware
+EXPECT hardware:cpu
 TIMEOUT 1
 
 NAME it lists kfuncs events with regex filter
