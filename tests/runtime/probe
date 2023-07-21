@@ -368,10 +368,21 @@ RUN {{BPFTRACE}} runtime/scripts/software_order.bt
 EXPECT first second
 TIMEOUT 5
 
+NAME software_probe_builtin
+PROG software:page-faults:1 { print(probe); exit();}
+EXPECT software:page-faults:1
+TIMEOUT 5
+
 NAME hardware
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { @[pid] = count(); exit(); }
 EXPECT @\[.*\]\:\s[0-9]*
+TIMEOUT 5
+
+NAME hardware_probe_builtin
+REQUIRES ls /sys/devices/cpu/events/cache-misses
+PROG hardware:cache-misses:10 { print(probe); exit();}
+EXPECT hardware:cache-misses:10
 TIMEOUT 5
 
 NAME BEGIN
