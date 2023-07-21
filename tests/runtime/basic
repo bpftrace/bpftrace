@@ -113,6 +113,16 @@ REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
+NAME it lists interval probes with regex filter
+RUN {{BPFTRACE}} -l "interval:*"
+EXPECT interval:s
+TIMEOUT 1
+
+NAME it lists profile probes with regex filter
+RUN {{BPFTRACE}} -l "profile:*"
+EXPECT profile:*
+TIMEOUT 1
+
 NAME listing with wildcarded probe type
 RUN {{BPFTRACE}} -l "*ware:*"
 EXPECT hardware:

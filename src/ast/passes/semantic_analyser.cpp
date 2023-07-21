@@ -2718,29 +2718,34 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "profile") {
     if (ap.target == "")
       LOG(ERROR, ap.loc, err_) << "profile probe must have unit of time";
-    else if (ap.target != "hz" &&
-             ap.target != "us" &&
-             ap.target != "ms" &&
-             ap.target != "s")
-      LOG(ERROR, ap.loc, err_)
-          << ap.target << " is not an accepted unit of time";
-    if (ap.func != "")
-      LOG(ERROR, ap.loc, err_)
-          << "profile probe must have an integer frequency";
-    else if (ap.freq <= 0)
-      LOG(ERROR, ap.loc, err_)
-          << "profile frequency should be a positive integer";
+    else if (!listing_)
+    {
+      if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
+        LOG(ERROR, ap.loc, err_)
+            << ap.target << " is not an accepted unit of time";
+      if (ap.func != "")
+        LOG(ERROR, ap.loc, err_)
+            << "profile probe must have an integer frequency";
+      else if (ap.freq <= 0)
+        LOG(ERROR, ap.loc, err_)
+            << "profile frequency should be a positive integer";
+    }
   }
   else if (ap.provider == "interval") {
     if (ap.target == "")
       LOG(ERROR, ap.loc, err_) << "interval probe must have unit of time";
-    else if (ap.target != "ms" && ap.target != "s" && ap.target != "us" &&
-             ap.target != "hz")
-      LOG(ERROR, ap.loc, err_)
-          << ap.target << " is not an accepted unit of time";
-    if (ap.func != "")
-      LOG(ERROR, ap.loc, err_)
-          << "interval probe must have an integer frequency";
+    else if (!listing_)
+    {
+      if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
+        LOG(ERROR, ap.loc, err_)
+            << ap.target << " is not an accepted unit of time";
+      if (ap.func != "")
+        LOG(ERROR, ap.loc, err_)
+            << "interval probe must have an integer frequency";
+      else if (ap.freq <= 0)
+        LOG(ERROR, ap.loc, err_)
+            << "interval frequency should be a positive integer";
+    }
   }
   else if (ap.provider == "software") {
     if (ap.target == "")
