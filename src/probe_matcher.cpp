@@ -199,6 +199,14 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
     }
+    case ProbeType::interval:
+    case ProbeType::profile: {
+      std::string ret;
+      for (auto& unit : TIME_UNITS)
+        ret += unit + ":\n";
+      symbol_stream = std::make_unique<std::istringstream>(ret);
+      break;
+    }
     default:
       return {};
   }
@@ -551,7 +559,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       break;
     }
     case ProbeType::hardware:
-    case ProbeType::software: {
+    case ProbeType::software:
+    case ProbeType::profile:
+    case ProbeType::interval: {
       search_input = attach_point.target + ":";
       break;
     }
@@ -579,11 +589,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       throw WildcardException(
           "Wildcard matches aren't available on probe type '" +
           attach_point.provider + "'");
-    case ProbeType::profile:
-    case ProbeType::interval:
-      // Wildcard matches are not supported on these probe types, however
-      // expansion can still happen when the probe builtin is used
-      return { "" };
   }
 
   return get_matches_for_probetype(probetype(attach_point.provider),

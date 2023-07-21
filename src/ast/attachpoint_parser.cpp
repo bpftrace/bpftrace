@@ -556,6 +556,14 @@ AttachPointParser::State AttachPointParser::tracepoint_parser()
 
 AttachPointParser::State AttachPointParser::profile_parser()
 {
+  if (parts_.size() == 2 && has_wildcard(parts_[1]))
+  {
+    // Wildcards are allowed for listing
+    ap_->target = parts_[1];
+    ap_->freq = 0;
+    return OK;
+  }
+
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
@@ -577,6 +585,14 @@ AttachPointParser::State AttachPointParser::profile_parser()
 
 AttachPointParser::State AttachPointParser::interval_parser()
 {
+  if (parts_.size() == 2 && has_wildcard(parts_[1]))
+  {
+    // Wildcards are allowed for listing
+    ap_->target = parts_[1];
+    ap_->freq = 0;
+    return OK;
+  }
+
   if (parts_.size() != 3)
   {
     errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;

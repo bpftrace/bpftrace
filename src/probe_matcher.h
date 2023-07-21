@@ -46,6 +46,8 @@ const std::vector<ProbeListItem> HW_PROBE_LIST = {
 };
 // clang-format on
 
+const std::unordered_set<std::string> TIME_UNITS = { "s", "ms", "us", "hz" };
+
 class BPFtrace;
 
 typedef std::map<std::string, std::vector<std::string>> FuncParamLists;
