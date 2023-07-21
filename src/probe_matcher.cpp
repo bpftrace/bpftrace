@@ -540,8 +540,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
     case ProbeType::tracepoint:
-    case ProbeType::hardware:
-    case ProbeType::software:
     case ProbeType::kfunc:
     case ProbeType::kretfunc: {
       // Do not expand "target:" as that would match all functions in target.
@@ -550,6 +548,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
         return { attach_point.target + ":" };
 
       search_input = attach_point.target + ":" + attach_point.func;
+      break;
+    }
+    case ProbeType::hardware:
+    case ProbeType::software: {
+      search_input = attach_point.target;
       break;
     }
     case ProbeType::usdt:
