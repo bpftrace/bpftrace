@@ -15,6 +15,11 @@ TEST(codegen, builtin_func_uprobe)
   test(*bpftrace, "uprobe:/bin/sh:f { @x = func }", NAME);
 }
 
+TEST(codegen, builtin_func_kfunc)
+{
+  test("kfunc:f { @x = func }", NAME);
+}
+
 } // namespace codegen
 } // namespace test
 } // namespace bpftrace

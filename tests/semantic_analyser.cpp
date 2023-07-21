@@ -2729,6 +2729,7 @@ TEST_F(semantic_analyser_btf, kfunc)
   test("kretfunc:func_1 { $x = retval; }", 0);
   test("kfunc:vmlinux:func_1 { 1 }", 0);
   test("kfunc:*:func_1 { 1 }", 0);
+  test("kfunc:func_1 { @[func] = 1; }", 0);
 
   test("kretfunc:func_1 { $x = args.foo; }", 1);
   test("kretfunc:func_1 { $x = args; }", 0);

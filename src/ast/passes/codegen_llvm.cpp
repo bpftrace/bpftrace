@@ -271,6 +271,8 @@ void CodegenLLVM::visit(Builtin &builtin)
       builtin.ident == "retval" ||
       builtin.ident == "func")
   {
+    auto probe_type = probetype(current_attach_point_->provider);
+
     if (builtin.type.is_funcarg)
     {
       expr_ = b_.CreatKFuncArg(ctx_, builtin.type, builtin.ident);
@@ -278,7 +280,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
 
     if (builtin.ident.find("arg") != std::string::npos &&
-        probetype(current_attach_point_->provider) == ProbeType::usdt)
+        probe_type == ProbeType::usdt)
     {
       expr_ = b_.CreateUSDTReadArgument(ctx_,
                                         current_attach_point_,
@@ -291,8 +293,15 @@ void CodegenLLVM::visit(Builtin &builtin)
       return;
     }
 
+    if (builtin.ident == "func" &&
+        (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc))
+    {
+      expr_ = b_.CreateGetFuncIp(builtin.loc);
+      return;
+    }
+
     if (!builtin.ident.compare(0, 3, "arg") &&
-        probetype(current_attach_point_->provider) == ProbeType::rawtracepoint)
+        probe_type == ProbeType::rawtracepoint)
       expr_ = b_.CreateRawTracepointArg(ctx_, builtin.ident);
     else
       expr_ = b_.CreateRegisterRead(ctx_, builtin.ident);
