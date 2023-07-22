@@ -209,7 +209,7 @@ class field_analyser_dwarf : public test_dwarf
 
 TEST_F(field_analyser_dwarf, uprobe_args)
 {
-  std::string uprobe = "uprobe:" + bin_;
+  std::string uprobe = "uprobe:" + std::string(bin_);
   test(uprobe + ":func_1 { $x = args.a; }", 0);
   test(uprobe + ":func_2 { $x = args.b; }", 0);
   // Backwards compatibility
@@ -238,7 +238,7 @@ TEST_F(field_analyser_dwarf, uprobe_args)
 TEST_F(field_analyser_dwarf, parse_struct)
 {
   BPFtrace bpftrace;
-  std::string uprobe = "uprobe:" + bin_;
+  std::string uprobe = "uprobe:" + std::string(bin_);
   test(bpftrace, uprobe + ":func_1 { $x = args.foo1->a; }", 0);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct Foo1"));

@@ -1,27 +1,36 @@
 #pragma once
 
-#include "data/dwarf_data.h"
+#include <sys/stat.h>
+
+#include <cstdio>
 #include <fcntl.h>
+#include <stdexcept>
+
+#include "data/dwarf_data.h"
 
 class test_dwarf : public ::testing::Test
 {
 protected:
-  void SetUp() override
+  static void SetUpTestSuite()
   {
-    std::string bin = "/tmp/bpftrace-test-dwarf-data";
-    std::ofstream file(bin, std::ios::trunc | std::ios::binary);
+    std::ofstream file(bin_, std::ios::trunc | std::ios::binary);
     file.write(reinterpret_cast<const char *>(dwarf_data), dwarf_data_len);
     file.close();
 
-    if (file)
-      bin_ = bin;
+    if (!file)
+      throw std::runtime_error("Failed to create dwarf data file");
+
+    // Give executable permissions to everyone
+    int err = chmod(bin_, 0755);
+    if (err)
+      throw std::runtime_error("Failed to chmod dwarf data file: " +
+                               std::to_string(err));
   }
 
-  void TearDown() override
+  static void TearDownTestSuite()
   {
-    bin_.clear();
+    std::remove(bin_);
   }
 
-public:
-  std::string bin_;
+  static constexpr const char *bin_ = "/tmp/bpftrace-test-dwarf-data";
 };
