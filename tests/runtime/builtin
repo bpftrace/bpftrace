@@ -231,7 +231,7 @@ TIMEOUT 5
 NAME print args in kfunc
 PROG kfunc:vfs_open { print(args); exit(); }
 EXPECT { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
