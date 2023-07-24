@@ -1031,6 +1031,11 @@ TEST(Parser, uprobe)
        " uprobe:/my/program:cpp:func\n"
        "  int: 1\n");
 
+  test("uprobe:/my/dir+/program:1234abc { 1; }",
+       "Program\n"
+       " uprobe:/my/dir+/program:1234abc\n"
+       "  int: 1\n");
+
   test_parse_failure("uprobe:f { 1 }");
   test_parse_failure("uprobe { 1 }");
   test_parse_failure("uprobe:/my/program*:0x1234 { 1 }");
