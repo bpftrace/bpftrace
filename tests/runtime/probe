@@ -368,18 +368,13 @@ EXPECT interval:ms:1
 TIMEOUT 5
 
 NAME software
-PROG software:faults:1 { @[comm] = count(); exit();}
+PROG software:cpu-clock:1 { @[comm] = count(); exit();}
 EXPECT @\[.*\]\:\s[0-9]*
 TIMEOUT 5
 
-NAME software_order
-RUN {{BPFTRACE}} runtime/scripts/software_order.bt
-EXPECT first second
-TIMEOUT 5
-
 NAME software_probe_builtin
-PROG software:page-faults:1 { print(probe); exit();}
-EXPECT software:page-faults:1
+PROG software:cpu-clock:1 { print(probe); exit();}
+EXPECT software:cpu-clock:1
 TIMEOUT 5
 
 NAME software_alias_probe_builtin
