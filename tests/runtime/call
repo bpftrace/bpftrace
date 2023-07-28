@@ -246,6 +246,15 @@ ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
 PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
 EXPECT ^\s+test\+0\s+main\+[1-9][0-9]*
 AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+ARCH x86_64
+TIMEOUT 5
+
+NAME ustack_elf_symtable
+ENV BPFTRACE_CACHE_USER_SYMBOLS=PER_PROGRAM
+PROG uprobe:./testprogs/uprobe_symres_exited_process:test { print(ustack); exit(); }
+EXPECT ^\s+test\+0\s+test2\+[1-9][0-9]*\s+main\+[1-9][0-9]*
+AFTER ./testprogs/disable_aslr ./testprogs/uprobe_symres_exited_process
+ARCH ppc64le
 TIMEOUT 5
 
 NAME cat
