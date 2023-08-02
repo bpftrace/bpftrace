@@ -28,8 +28,8 @@ static std::unique_ptr<ChildProc> getChild(std::string cmd)
   {
     StderrSilencer es;
     StdoutSilencer os;
-    os.silence();
-    es.silence();
+    // os.silence();
+    // es.silence();
     child = std::make_unique<ChildProc>(cmd);
   }
   EXPECT_NE(child->pid(), -1);
