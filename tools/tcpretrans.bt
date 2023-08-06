@@ -6,7 +6,7 @@
  * USAGE: tcpretrans.bt
  *
  * This is a bpftrace version of the bcc tool of the same name.
- * It is limited to ipv4 addresses, and doesn't support tracking TLPs.
+ * It doesn't support tracking TLPs.
  *
  * This uses dynamic tracing of kernel functions, and will need to be updated
  * to match kernel changes.
