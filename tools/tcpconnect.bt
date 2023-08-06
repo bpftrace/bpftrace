@@ -6,7 +6,6 @@
  * USAGE: tcpconnect.bt
  *
  * This is a bpftrace version of the bcc tool of the same name.
- * It is limited to ipv4 addresses.
  *
  * All connection attempts are traced, even if they ultimately fail.
  *

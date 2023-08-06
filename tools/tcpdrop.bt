@@ -6,10 +6,10 @@
  * USAGE: tcpdrop.bt
  *
  * This is a bpftrace version of the bcc tool of the same name.
- * It is limited to ipv4 addresses, and cannot show tcp flags.
  *
  * This provides information such as packet details, socket state, and kernel
  * stack trace for packets/segments that were dropped via kfree_skb.
+ * It cannot show tcp flags.
  *
  * For Linux 5.17+ (see tools/old for script for lower versions).
  *
