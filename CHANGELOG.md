@@ -37,6 +37,8 @@ and this project adheres to
   - [#2734](https://github.com/iovisor/bpftrace/pull/2734)
 - Support targeting all running processes for uprobes/uretprobes
   - [#2757](https://github.com/iovisor/bpftrace/pull/2757)
+- Prepare to use subprograms (emit BTF)
+  - [#2710](https://github.com/iovisor/bpftrace/pull/2710)
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)
