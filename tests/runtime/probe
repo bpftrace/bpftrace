@@ -382,6 +382,11 @@ PROG software:page-faults:1 { print(probe); exit();}
 EXPECT software:page-faults:1
 TIMEOUT 5
 
+NAME software_alias_probe_builtin
+PROG software:cpu:1 { print(probe); exit();}
+EXPECT software:cpu:1
+TIMEOUT 5
+
 NAME hardware
 REQUIRES ls /sys/devices/cpu/events/cache-misses
 PROG hardware:cache-misses:10 { @[pid] = count(); exit(); }
