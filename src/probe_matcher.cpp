@@ -359,7 +359,11 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
 {
   std::string symbols;
   for (auto& probe : probes_list)
+  {
     symbols += probe.path + ":\n";
+    if (!probe.alias.empty())
+      symbols += probe.alias + ":\n";
+  }
   return std::make_unique<std::istringstream>(symbols);
 }
 
