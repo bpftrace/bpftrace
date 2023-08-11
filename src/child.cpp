@@ -120,7 +120,7 @@ static void validate_cmd(std::vector<std::string>& cmd)
       if (uniq_abs_path.size() == 1)
       {
         cmd[0] = paths.front().c_str();
-        return;
+        break;
       }
       else
       {
@@ -128,7 +128,6 @@ static void validate_cmd(std::vector<std::string>& cmd)
             "path '" + cmd[0] + "' must refer to a unique binary but matched " +
             std::to_string(paths.size()) + " binaries");
       }
-      return;
   }
 
   if (cmd.size() >= (maxargs - 1))
