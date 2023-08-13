@@ -115,6 +115,7 @@ public:
     has_skb_output_ = std::make_optional<bool>(has_features);
     map_ringbuf_ = std::make_optional<bool>(has_features);
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
+    has_get_func_ip_ = std::make_optional<bool>(has_features);
   };
   bool has_features_;
 };
