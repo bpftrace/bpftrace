@@ -1026,10 +1026,10 @@ TEST_F(bpftrace_btf, add_probes_kfunc)
 
   check_probe(bpftrace.get_probes().at(0),
               ProbeType::kfunc,
-              "kfunc:vmlinux:func_1");
+              "kfunc:mock_vmlinux:func_1");
   check_probe(bpftrace.get_probes().at(1),
               ProbeType::kretfunc,
-              "kretfunc:vmlinux:func_1");
+              "kretfunc:mock_vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_iter_task)

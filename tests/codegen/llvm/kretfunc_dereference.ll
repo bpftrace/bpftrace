@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kretfunc:vmlinux:sk_alloc"(i8* %0) section "s_kretfunc:vmlinux:sk_alloc_1" {
+define i64 @"kretfunc:mock_vmlinux:sk_alloc"(i8* %0) section "s_kretfunc:mock_vmlinux:sk_alloc_1" {
 entry:
   %"@_val" = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
