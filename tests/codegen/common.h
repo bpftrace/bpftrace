@@ -38,6 +38,11 @@ static std::string get_expected(const std::string &name)
   throw std::runtime_error("Could not find codegen result for test: " + name);
 }
 
+// This is the lower level codegen test entrypoint.
+//
+// The contract is that the `bpftrace` must be completely initialized and ready
+// to go (eg. members replaced with mocks as necessary) before calling into
+// here.
 static void test(BPFtrace &bpftrace,
                  const std::string &input,
                  const std::string &name)
@@ -53,8 +58,6 @@ static void test(BPFtrace &bpftrace,
 
   ASSERT_EQ(driver.parse_str(input), 0);
 
-  // Override to mockbpffeature.
-  bpftrace.feature_ = std::make_unique<MockBPFfeature>(true);
   ast::SemanticAnalyser semantics(driver.root.get(), bpftrace);
   ASSERT_EQ(semantics.analyse(), 0);
 
@@ -89,12 +92,17 @@ static void test(BPFtrace &bpftrace,
       << "the following program failed: '" << input << "'";
 }
 
+// This is the common case codegen test entrypoint.
+//
+// Please prefer to use this interface.
 static void test(const std::string &input,
                  const std::string &name,
                  bool safe_mode = true)
 {
   auto bpftrace = get_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
   bpftrace->safe_mode_ = safe_mode;
+
   test(*bpftrace, input, name);
 }
 
