@@ -9,12 +9,7 @@ using ::testing::Return;
 
 TEST(codegen, builtin_func_wild)
 {
-  auto bpftrace = get_mock_bpftrace();
-
-  test(*bpftrace,
-       "kprobe:do_execve* { @x = func }",
-
-       NAME);
+  test("kprobe:do_execve* { @x = func }", NAME);
 }
 
 } // namespace codegen

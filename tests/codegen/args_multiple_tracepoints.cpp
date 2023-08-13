@@ -10,10 +10,7 @@ namespace codegen {
 
 TEST(codegen, args_multiple_tracepoints)
 {
-  auto bpftrace = get_mock_bpftrace();
-
-  test(*bpftrace,
-       "tracepoint:sched:sched_one,tracepoint:sched:sched_two { "
+  test("tracepoint:sched:sched_one,tracepoint:sched:sched_two { "
        "@[args.common_field] = count(); }",
        NAME);
 }

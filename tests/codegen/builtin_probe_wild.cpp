@@ -9,12 +9,7 @@ using ::testing::Return;
 
 TEST(codegen, builtin_probe_wild)
 {
-  auto bpftrace = get_mock_bpftrace();
-
-  test(*bpftrace,
-       "tracepoint:sched:sched_on* { @x = probe }",
-
-       NAME);
+  test("tracepoint:sched:sched_on* { @x = probe }", NAME);
 }
 
 } // namespace codegen

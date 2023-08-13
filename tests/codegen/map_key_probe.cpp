@@ -7,10 +7,7 @@ namespace codegen {
 
 TEST(codegen, map_key_probe)
 {
-  auto bpftrace = get_mock_bpftrace();
-
-  test(*bpftrace,
-       "tracepoint:sched:sched_one,tracepoint:sched:sched_two { @x[probe] = "
+  test("tracepoint:sched:sched_one,tracepoint:sched:sched_two { @x[probe] = "
        "@x[probe] + 1 }",
 
        NAME);
