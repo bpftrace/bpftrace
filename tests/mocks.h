@@ -86,11 +86,6 @@ public:
     return feature_->has_kprobe_multi();
   }
 
-  bool has_loop(void)
-  {
-    return feature_->has_loop();
-  }
-
   MockProbeMatcher *mock_probe_matcher;
 };
 
@@ -117,6 +112,12 @@ public:
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
     has_get_func_ip_ = std::make_optional<bool>(has_features);
   };
+
+  void has_loop(bool has)
+  {
+    has_loop_ = std::make_optional<bool>(has);
+  }
+
   bool has_features_;
 };
 
