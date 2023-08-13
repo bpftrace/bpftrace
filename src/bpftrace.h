@@ -156,7 +156,7 @@ public:
   std::optional<int64_t> get_int_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
   virtual bool is_traceable_func(const std::string &func_name) const;
-  std::unordered_set<std::string> get_func_modules(
+  virtual std::unordered_set<std::string> get_func_modules(
       const std::string &func_name) const;
   int create_pcaps(void);
   void close_pcaps(void);

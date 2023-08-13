@@ -75,6 +75,12 @@ public:
     return true;
   }
 
+  std::unordered_set<std::string> get_func_modules(
+      const std::string &__attribute__((unused))) const override
+  {
+    return { "mock_vmlinux" };
+  }
+
   void set_mock_probe_matcher(std::unique_ptr<MockProbeMatcher> probe_matcher)
   {
     probe_matcher_ = std::move(probe_matcher);

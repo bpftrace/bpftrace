@@ -6,7 +6,7 @@ target triple = "bpf-pc-linux"
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kfunc:f"(i8* %0) section "s_kfunc:f_1" {
+define i64 @"kfunc:mock_vmlinux:f"(i8* %0) section "s_kfunc:mock_vmlinux:f_1" {
 entry:
   %"@x_val" = alloca i64, align 8
   %"@x_key" = alloca i64, align 8
