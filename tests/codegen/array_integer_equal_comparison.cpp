@@ -4,26 +4,41 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
+namespace {
+constexpr auto PROG = "struct Foo { int arr[4]; }"
+                      "kprobe:f"
+                      "{"
+                      "  $a = ((struct Foo *)arg0)->arr;"
+                      "  $b = ((struct Foo *)arg0)->arr;"
+                      "  if ($a == $b)"
+                      "  {"
+                      "    exit();"
+                      "  }"
+                      "}";
+}
+
 TEST(codegen, array_integer_equal_comparison)
 {
   auto bpftrace = get_mock_bpftrace();
-  if (bpftrace->has_loop())
-  {
-    return;
-  }
 
-  test("struct Foo { int arr[4]; }"
-       "kprobe:f"
-       "{"
-       "  $a = ((struct Foo *)arg0)->arr;"
-       "  $b = ((struct Foo *)arg0)->arr;"
-       "  if ($a == $b)"
-       "  {"
-       "    exit();"
-       "  }"
-       "}",
+  // Force unroll fallback
+  auto feature = std::make_unique<MockBPFfeature>(true);
+  feature->has_loop(false);
+  bpftrace->feature_ = std::move(feature);
 
-       NAME);
+  test(*bpftrace, PROG, NAME);
+}
+
+TEST(codegen, array_integer_equal_comparison_no_unroll)
+{
+  auto bpftrace = get_mock_bpftrace();
+
+  // Force loop generation
+  auto feature = std::make_unique<MockBPFfeature>(true);
+  feature->has_loop(true);
+  bpftrace->feature_ = std::move(feature);
+
+  test(*bpftrace, PROG, NAME);
 }
 
 } // namespace codegen
