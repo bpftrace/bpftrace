@@ -878,16 +878,22 @@ Attaching 1 probe...
 
 # Probes
 
-- `kprobe` - kernel function start
-- `kretprobe` - kernel function return
-- `uprobe` - user-level function start
-- `uretprobe` - user-level function return
-- `tracepoint` - kernel static tracepoints
-- `usdt` - user-level static tracepoints
-- `profile` - timed sampling
-- `interval` - timed output
-- `software` - kernel software events
-- `hardware` - processor-level events
+| Probe Name                   | Description                                  | Kernel/User Level |
+|------------------------------|----------------------------------------------|-------------------|
+| `kprobe/kretprobe`           | Kernel function start/return                 | Kernel            |
+| `uprobe/uretprobe`           | User-level function start/return             | User              |
+| `tracepoint`                 | Kernel static tracepoints                    | Kernel            |
+| `rawtracepoint`              | Kernel static tracepoints with raw arguments | Kernel            |
+| `usdt`                       | User-level static tracepoints                | User              |
+| `profile`                    | Timed sampling                               | Kernel/User       |
+| `interval`                   | Timed output                                 | Kernel/User       |
+| `software`                   | Kernel software events                       | Kernel            |
+| `hardware`                   | Processor-level events                       | Kernel            |
+| `BEGIN/END`                  | Built-in events                              | Kernel/User       |
+| `watchpoint/asyncwatchpoint` | Memory watchpoints                           | Kernel            |
+| `kfunc/kretfunc`             | Kernel functions tracing with BTF support    | Kernel            |
+| `iter`                       | Iterators tracing                            | Kernel            |
+
 
 Some probe types allow wildcards to match multiple probes, eg, `kprobe:vfs_*`. You may also specify
 multiple attach points for an action block using a comma separated list.
@@ -2270,43 +2276,48 @@ Tracing block I/O sizes > 0 bytes
 
 ## 1. Builtins
 
-- `printf(char *fmt, ...)` - Print formatted
-- `time(char *fmt)` - Print formatted time
-- `join(char *arr[] [, char *delim])` - Print the array
-- `str(char *s [, int length])` - Returns the string pointed to by s
-- `ksym(void *p)` - Resolve kernel address
-- `usym(void *p)` - Resolve user space address
-- `kaddr(char *name)` - Resolve kernel symbol name
-- `uaddr(char *name)` - Resolve user-level symbol name
-- `reg(char *name)` - Returns the value stored in the named register
-- `system(char *fmt)` - Execute shell command
-- `exit()` - Quit bpftrace
-- `cgroupid(char *path)` - Resolve cgroup ID
-- `kstack([StackMode mode, ][int level])` - Kernel stack trace
-- `ustack([StackMode mode, ][int level])` - User stack trace
-- `ntop([int af, ]int|char[4|16] addr)` - Convert IP address data to text
-- `pton(const string *addr)` - Convert text IP address to byte array
-- `cat(char *filename)` - Print file content
-- `signal(char[] signal | u32 signal)` - Send a signal to the current task
-- `strncmp(char *s1, char *s2, int length)` - Compare first n characters of two strings
-- `strcontains(const char *haystack, const char *needle)` - Compares whether the string haystack contains the string needle.
-- `override(u64 rc)` - Override return value
-- `buf(void *d [, int length])` - Returns a hex-formatted string of the data pointed to by d
-- `sizeof(...)` - Return size of a type or expression
-- `print(...)` - Print a non-map value with default formatting
-- `strftime(char *format, int nsecs)` - Return a formatted timestamp
-- `path(struct path *path)` - Return full path
-- `uptr(void *p)` - Annotate as userspace pointer
-- `kptr(void *p)` - Annotate as kernelspace pointer
-- `macaddr(char[6] addr)` - Convert MAC address data
-- `bswap(uint[8|16|32|64] n)` - Reverse byte order
-- `offsetof(struct, element)` - Offset of element in structure
-- `nsecs([TimestampMode mode])` - Timestamps and Time Deltas
+| Function Name                                           | Description                                                      | Sync/Async/Compile Time |
+|---------------------------------------------------------|------------------------------------------------------------------|-------------------------|
+| `printf(char *fmt, ...)`                                | Print formatted                                                  | Async                   |
+| `time(char *fmt)`                                       | Print formatted time                                             | Async                   |
+| `join(char *arr[] [, char *delim])`                     | Print the array                                                  | Async                   |
+| `str(char *s [, int length])`                           | Returns the string pointed to by s                               | Sync                    |
+| `ksym(void *p)`                                         | Resolve kernel address                                           | Async                   |
+| `usym(void *p)`                                         | Resolve user space address                                       | Async                   |
+| `kaddr(char *name)`                                     | Resolve kernel symbol name                                       | Compile Time            |
+| `uaddr(char *name)`                                     | Resolve user-level symbol name                                   | Compile Time            |
+| `reg(char *name)`                                       | Returns the value stored in the named register                   | Sync                    |
+| `system(char *fmt)`                                     | Execute shell command                                            | Async                   |
+| `exit()`                                                | Quit bpftrace                                                    | Async                   |
+| `cgroupid(char *path)`                                  | Resolve cgroup ID                                                | Compile Time            |
+| `ntop([int af, ]int\|char[4\|16] addr)`                 | Convert IP address data to text                                  | Sync                    |
+| `kstack([StackMode mode, ][int level])`                 | Kernel stack trace                                               | Sync                    |
+| `ustack([StackMode mode, ][int level])`                 | User stack trace                                                 | Sync                    |
+| `cat(char *filename)`                                   | Print file content                                               | Async                   |
+| `signal(char[] signal \| u32 signal)`                   | Send a signal to the current task                                | Sync                    |
+| `strncmp(char *s1, char *s2, int length)`               | Compare first n characters of two strings                        | Sync                    |
+| `strcontains(const char *haystack, const char *needle)` | Compares whether the string haystack contains the string needle. | Sync                    |
+| `override(u64 rc)`                                      | Override return value                                            | Sync                    |
+| `buf(void *d [, int length])`                           | Returns a hex-formatted string of the data pointed to by d       | Sync                    |
+| `sizeof(...)`                                           | Return size of a type or expression                              | Sync                    |
+| `print(...)`                                            | Print a non-map value with default formatting                    | Async                   |
+| `strftime(char *format, int nsecs)`                     | Return a formatted timestamp                                     | Async                   |
+| `path(struct path *path)`                               | Return full path                                                 | Sync                    |
+| `uptr(void *p)`                                         | Annotate as userspace pointer                                    | Sync                    |
+| `kptr(void *p)`                                         | Annotate as kernelspace pointer                                  | Sync                    |
+| `macaddr(char[6] addr)`                                 | Convert MAC address data                                         | Sync                    |
+| `cgroup_path(int cgroupid, string filter)`              | Convert cgroup id to cgroup path                                 | Sync                    |
+| `bswap(uint[8\|\16\|32\|64] n)`                         | Reverse byte order                                               | Sync                    |
+| `skboutput(const string p, struct sk_buff *s, ...)`     | Write skb 's data section into a PCAP file                       | Async                   |
+| `pton(const string *addr)`                              | Convert text IP address to byte array                            | Compile Time            |
+| `strerror(uint64 error)`                                | Get error message for errno code                                 | Sync                    |
+| `offsetof(struct, element)`                             | Offset of element in structure                                   | Compile Time            |
+| `nsecs([TimestampMode mode])`                           | Timestamps and Time Deltas                                       | Sync                    |
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `printf()`, `time()`, and `join()`. Both `ksym()`
 and `usym()`, as well as the variables `kstack` and `ustack`, record addresses synchronously, but then do
-symbol translation asynchronously.
+symbol translation asynchronously. See the *Invocation Mode* section in the bpftrace(8) manpage for more information.
 
 A selection of these is discussed in the following sections.
 
@@ -3457,6 +3468,7 @@ END
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `print()` on maps, `clear()`, and `zero()`.
+See the *Invocation Mode* section in the bpftrace(8) manpage for more information.
 
 ## 2. `count()`: Count
 
