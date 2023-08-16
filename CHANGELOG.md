@@ -41,6 +41,8 @@ and this project adheres to
   - [#2691](https://github.com/iovisor/bpftrace/pull/2691)
 - Allow probe builtin with aliased software/hardware probes
   - [#2711](https://github.com/iovisor/bpftrace/pull/2711)
+- Support executing symlinked binaries with `-c`
+  - [#2708](https://github.com/iovisor/bpftrace/pull/2708)
 
 
 ## [0.18.0] 2023-05-15
