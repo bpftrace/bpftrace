@@ -155,7 +155,7 @@ TEST(utils, resolve_binary_path)
   EXPECT_EQ(resolve_binary_path(path + "/executable*"), paths_all_executables);
   EXPECT_EQ(resolve_binary_path(path + "/*executable*"), paths_all_executables);
 
-  exec_system(("rm -rf " + path).c_str());
+  EXPECT_GT(std_filesystem::remove_all(path), 0);
 }
 
 TEST(utils, abs_path)
@@ -184,7 +184,8 @@ TEST(utils, abs_path)
   EXPECT_EQ(abs_path(std::string("/proc/1/root/usr/local/bin/usdt_test.so")),
             std::string("/proc/1/root/usr/local/bin/usdt_test.so"));
 
-  remove(rel_file.c_str());
+  EXPECT_TRUE(std_filesystem::remove(rel_file));
+  EXPECT_GT(std_filesystem::remove_all(path), 0);
 }
 
 TEST(utils, get_cgroup_hierarchy_roots)
@@ -238,6 +239,8 @@ TEST(utils, get_cgroup_path_in_hierarchy)
     EXPECT_EQ(get_cgroup_path_in_hierarchy(file_2_st.st_ino, tmpdir),
               "/subdir/file2");
   }
+
+  EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
 }
 
 TEST(utils, parse_kconfig)

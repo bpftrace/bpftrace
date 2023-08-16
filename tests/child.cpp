@@ -278,6 +278,8 @@ TEST(childproc, multi_exec_match)
   EXPECT_FALSE(child->is_alive());
   EXPECT_EQ(child->term_signal(), SIGTERM);
   ::setenv("PATH", OLD_PATH, 1);
+
+  EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
 }
 
 } // namespace child
