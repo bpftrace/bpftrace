@@ -43,6 +43,8 @@ and this project adheres to
   - [#2711](https://github.com/iovisor/bpftrace/pull/2711)
 - Support executing symlinked binaries with `-c`
   - [#2708](https://github.com/iovisor/bpftrace/pull/2708)
+- Add access to `CLOCK_MONOTONIC` with `nsecs(monotonic)`
+  - [#2718](https://github.com/iovisor/bpftrace/pull/2718)
 
 
 ## [0.18.0] 2023-05-15
