@@ -3378,10 +3378,12 @@ Offset of comm: 3216
 
 Syntax: `nsecs([TimestampMode mode])`
 
-Get the nanoseconds of the specified clock. Three time types are currently supported, namely
-- boot: nsecs() or nsecs(boot) is to get nanoseconds since the system boot
-- tai: nsecs(tai) is to get nanoseconds of CLOCK_TAI through bpf_ktime_get_tai_ns helper function
-- sw_tai: nsecs(sw_tai) is to get nanoseconds of CLOCK_TAI, but it is obtained through the "triple vdso sandwich" method
+Returns a timestamp in nanoseconds, as given by the requested kernel clock. Defaults to `boot` if no clock is explicitly requested.
+
+- `nsecs(monotonic)` - nanosecond timestamp since boot, exclusive of time the system spent suspended (CLOCK_MONOTONIC)
+- `nsecs(boot)` - nanoseconds since boot, inclusive of time the system spent suspended (CLOCK_BOOTTIME)
+- `nsecs(tai)` - TAI timestamp in nanoseconds (CLOCK_TAI)
+- `nsecs(sw_tai)` - approximation of TAI timestamp in nanoseconds, is obtained through the "triple vdso sandwich" method. For older kernels without direct TAI timestamp access in BPF.
 
 Examples:
 

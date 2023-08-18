@@ -136,7 +136,11 @@ void SemanticAnalyser::visit(Identifier &identifier)
   else if (func_ == "nsecs")
   {
     identifier.type = CreateTimestampMode();
-    if (identifier.ident == "boot")
+    if (identifier.ident == "monotonic")
+    {
+      identifier.type.ts_mode = TimestampMode::monotonic;
+    }
+    else if (identifier.ident == "boot")
     {
       identifier.type.ts_mode = TimestampMode::boot;
     }
@@ -150,11 +154,12 @@ void SemanticAnalyser::visit(Identifier &identifier)
     }
     else
     {
-      goto err;
+      LOG(ERROR, identifier.loc, err_)
+          << "Invalid timestamp mode: " << identifier.ident;
     }
   }
-  else {
-  err:
+  else
+  {
     identifier.type = CreateNone();
     LOG(ERROR, identifier.loc, err_)
         << "Unknown identifier: '" + identifier.ident + "'";
@@ -1142,6 +1147,11 @@ void SemanticAnalyser::visit(Call &call)
     {
       auto &arg = *call.vargs->at(1);
       call.type.ts_mode = arg.type.ts_mode;
+      if (call.type.ts_mode == TimestampMode::monotonic)
+      {
+        LOG(ERROR, call.loc, err_)
+            << "strftime() can not take a monotonic timestamp";
+      }
     }
   }
   else if (call.func == "kstack") {

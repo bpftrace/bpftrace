@@ -190,8 +190,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 {
   if (builtin.ident == "nsecs")
   {
-    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
-                           builtin.loc);
+    expr_ = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
   }
   else if (builtin.ident == "elapsed")
   {
@@ -201,8 +200,7 @@ void CodegenLLVM::visit(Builtin &builtin)
     auto *map = bpftrace_.maps[MapManager::Type::Elapsed].value();
     auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(ctx_, map->id, key, type, builtin.loc);
-    expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
-                           builtin.loc);
+    expr_ = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
     b_.CreateLifetimeEnd(key);
@@ -1315,10 +1313,7 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::skboutput)),
                    aid_addr);
     b_.CreateStore(b_.getInt64(skb_output_id_), id_addr);
-    b_.CreateStore(
-        b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
-                       call.loc),
-        time_addr);
+    b_.CreateStore(b_.CreateGetNs(TimestampMode::boot, call.loc), time_addr);
 
     auto &arg_skb = *call.vargs->at(1);
     arg_skb.accept(*this);
@@ -1337,8 +1332,7 @@ void CodegenLLVM::visit(Call &call)
     if (call.type.ts_mode == TimestampMode::boot ||
         call.type.ts_mode == TimestampMode::sw_tai)
     {
-      expr_ = b_.CreateGetNs(bpftrace_.feature_->has_helper_ktime_get_boot_ns(),
-                             call.loc);
+      expr_ = b_.CreateGetNs(TimestampMode::boot, call.loc);
       if (call.type.ts_mode == TimestampMode::sw_tai)
       {
         uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
@@ -1346,9 +1340,9 @@ void CodegenLLVM::visit(Call &call)
         expr_ = b_.CreateAdd(expr_, b_.getInt64(delta));
       }
     }
-    else if (call.type.ts_mode == TimestampMode::tai)
+    else
     {
-      expr_ = b_.CreateGetTaiNs(call.loc);
+      expr_ = b_.CreateGetNs(call.type.ts_mode, call.loc);
     }
   }
   else

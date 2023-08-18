@@ -25,7 +25,7 @@ entry:
   %5 = getelementptr %strftime_t, %strftime_t* %strftime_args, i64 0, i32 0
   store i32 0, i32* %5, align 4
   %6 = getelementptr %strftime_t, %strftime_t* %strftime_args, i64 0, i32 1
-  store i32 0, i32* %6, align 4
+  store i32 1, i32* %6, align 4
   %get_ns = call i64 inttoptr (i64 125 to i64 ()*)()
   %7 = getelementptr %strftime_t, %strftime_t* %strftime_args, i64 0, i32 2
   store i64 %get_ns, i64* %7, align 8

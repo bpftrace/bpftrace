@@ -96,7 +96,8 @@ private:
 
 enum class TimestampMode : uint8_t
 {
-  boot = 0,
+  monotonic,
+  boot,
   tai,
   sw_tai,
 };

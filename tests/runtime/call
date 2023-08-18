@@ -536,6 +536,11 @@ PROG i:ms:1 { printf("SUCCESS %d\n", nsecs()); exit(); }
 EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
+NAME nsecs_monotonic
+PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(monotonic)); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
+TIMEOUT 5
+
 NAME nsecs_boot
 PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(boot)); exit(); }
 EXPECT SUCCESS -?[0-9][0-9]*

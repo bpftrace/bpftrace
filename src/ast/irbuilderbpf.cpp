@@ -971,21 +971,32 @@ Value *IRBuilderBPF::CreateStrcontains(Value *val1,
   return result;
 }
 
-CallInst *IRBuilderBPF::CreateGetNs(bool boot_time, const location &loc)
+CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
 {
-  // u64 ktime_get_ns()
+  libbpf::bpf_func_id fn;
+  switch (ts)
+  {
+    case TimestampMode::monotonic:
+      fn = libbpf::BPF_FUNC_ktime_get_ns;
+      break;
+    case TimestampMode::boot:
+      fn = bpftrace_.feature_->has_helper_ktime_get_boot_ns()
+               ? libbpf::BPF_FUNC_ktime_get_boot_ns
+               : libbpf::BPF_FUNC_ktime_get_ns;
+      break;
+    case TimestampMode::tai:
+      fn = libbpf::BPF_FUNC_ktime_get_tai_ns;
+      break;
+    case TimestampMode::sw_tai:
+      LOG(BUG) << "Invalid timestamp mode: "
+               << std::to_string(
+                      static_cast<std::underlying_type_t<TimestampMode>>(ts));
+  }
+
+  // u64 ktime_get_*ns()
   // Return: current ktime
-  auto fn = boot_time ? libbpf::BPF_FUNC_ktime_get_boot_ns
-                      : libbpf::BPF_FUNC_ktime_get_ns;
   FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
   return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
-}
-
-CallInst *IRBuilderBPF::CreateGetTaiNs(const location &loc)
-{
-  auto fn = libbpf::BPF_FUNC_ktime_get_tai_ns;
-  FunctionType *gettime_func_type = FunctionType::get(getInt64Ty(), false);
-  return CreateHelperCall(fn, gettime_func_type, {}, "get_tai_ns", &loc);
 }
 
 Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,

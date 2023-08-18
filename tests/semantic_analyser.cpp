@@ -619,6 +619,10 @@ TEST(semantic_analyser, call_strftime)
   test("kprobe:f { @[strftime(\"%M:%S\", nsecs)] = 1; }", 0);
   test("kprobe:f { printf(\"%s\", strftime(\"%M:%S\", nsecs)); }", 0);
   test("kprobe:f { strncmp(\"str\", strftime(\"%M:%S\", nsecs), 10); }", 10);
+
+  test("kprobe:f { strftime(\"%M:%S\", nsecs(monotonic)); }", 10);
+  test("kprobe:f { strftime(\"%M:%S\", nsecs(boot)); }", 0);
+  test("kprobe:f { strftime(\"%M:%S\", nsecs(tai)); }", 0);
 }
 
 TEST(semantic_analyser, call_str)
@@ -2753,11 +2757,16 @@ TEST(semantic_analyser, string_size)
 TEST(semantic_analyser, call_nsecs)
 {
   test("BEGIN { $ns = nsecs(); }", 0);
+  test("BEGIN { $ns = nsecs(monotonic); }", 0);
   test("BEGIN { $ns = nsecs(boot); }", 0);
   MockBPFfeature hasfeature(true);
   test(hasfeature, "BEGIN { $ns = nsecs(tai); }", 0);
   test("BEGIN { $ns = nsecs(sw_tai); }", 0);
-  test("BEGIN { $ns = nsecs(xxx); }", 1);
+  test("BEGIN { $ns = nsecs(xxx); }", 1, R"(
+stdin:1:15-24: ERROR: Invalid timestamp mode: xxx
+BEGIN { nsecs(xxx); }
+        ~~~~~~~~~~
+)");
 }
 
 class semantic_analyser_btf : public test_btf
