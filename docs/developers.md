@@ -27,13 +27,14 @@ tests if relevant. See existing tests for inspiration on how to write new ones.
 ## Continuous integration
 
 CI executes the above tests in a matrix of different environments:
-- Standard (dynamically linked) bpftrace built on Ubuntu 20.04 LTS with
-  different versions of LLVM.
+
+- Standard (dynamically linked) bpftrace built on NixOS with different versions
+  of LLVM.
 - bpftrace with all dependencies, except for libc, statically linked. Uses
   Ubuntu 20.04, LLVM 12, and is linked dynamically to two different versions of
   libc.
-- bpftrace with all dependencies, including libc, statically linked. Uses Alpine
-  and LLVM 10.
+- bpftrace with all dependencies, including libc, statically linked. Uses
+  Alpine and LLVM 10.
 
 The first matrix is defined in `.github/workflows/ci.yml` and the latter two in
 `.github/workflows/embedded.yml`.
@@ -50,10 +51,30 @@ It may often happen that tests pass on your local setup but fail in one of the
 CI environments (especially the embedded ones). In such a case, it is useful to
 reproduce the environment to debug the issue.
 
-All CI tests run in Docker containers created from our custom images. See
-`.github/workflows/*.yml` for exact `docker build` and `docker run` commands.
-Note: the images use `docker/build.sh` as the entrypoint so you may want to
-override it (`--entrypoint=`) and build bpftrace manually in the container.
+To reproduce the NixOS jobs (from `.github/workflows/ci.yml`):
+
+1. Acquire the job environment from the GHA UI: ![](../images/ci_job_env.png)
+1. Run `.github/include/ci.py` with the relevant environment variables set
+
+Example `ci.py` invocations:
+
+```
+$ NIX_TARGET=.#bpftrace-llvm10  ./.github/include/ci.py
+```
+
+```
+$ NIX_TARGET=.#bpftrace-llvm11  \
+  CMAKE_BUILD_TYPE=Release \
+  RUNTIME_TEST_DISABLE="probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process" \
+  ./.github/include/ci.py
+```
+
+To reproduce the embedded jobs (from `.github/workflows/embedded.yml`):
+
+See the job file (`.github/workflows/*.yml`) for exact `docker build` and
+`docker run` commands.  Note: the images use `docker/build.sh` as the
+entrypoint so you may want to override it (`--entrypoint=`) and build bpftrace
+manually in the container.
 
 ### Known issues
 
