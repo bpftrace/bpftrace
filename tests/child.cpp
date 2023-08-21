@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <system_error>
 
 #include <fcntl.h>
 #include <signal.h>
@@ -218,28 +219,25 @@ TEST(childproc, ptrace_child_term_before_execve)
 
 TEST(childproc, multi_exec_match)
 {
-  std::string tmpdir = "/tmp/bpftrace-test-child-XXXXXX";
+  std::error_code ec;
 
   // Create directory for test
-  EXPECT_NE(::mkdtemp(&tmpdir[0]), nullptr);
+  std::string tmpdir = "/tmp/bpftrace-test-child-XXXXXX";
+  ASSERT_NE(::mkdtemp(&tmpdir[0]), nullptr);
 
-  const std_filesystem::path path(tmpdir);
-  const std_filesystem::path usr = path / "usr";
-  const std_filesystem::path usr_bin = usr / "bin";
-  const std_filesystem::path symlnk_bin = path / "bin";
-  const std_filesystem::path binary = usr_bin / "mysleep";
+  // Create fixture directories
+  const auto path = std_filesystem::path(tmpdir);
+  const auto usr_bin = path / "usr" / "bin";
+  ASSERT_TRUE(std_filesystem::create_directories(usr_bin, ec));
+  ASSERT_FALSE(ec);
 
-  EXPECT_TRUE(std_filesystem::create_directory(usr));
-  EXPECT_TRUE(std_filesystem::create_directory(usr_bin));
-
-  // Create symbol link: bin -> usr/bin
-  char cwd[512];
-  EXPECT_NE(::getcwd(cwd, sizeof(cwd)), nullptr);
-  EXPECT_EQ(::chdir(path.c_str()), 0);
-  std_filesystem::create_directory_symlink("usr/bin", "bin");
-  EXPECT_EQ(::chdir(cwd), 0);
+  // Create symbolic link: bin -> usr/bin
+  const auto symlink_bin = path / "bin";
+  std_filesystem::create_directory_symlink(usr_bin, symlink_bin, ec);
+  ASSERT_FALSE(ec);
 
   // Copy a 'mysleep' binary and add x permission
+  const auto binary = usr_bin / "mysleep";
   {
     std::ifstream src;
     std::ofstream dst;
@@ -249,24 +247,16 @@ TEST(childproc, multi_exec_match)
     dst << src.rdbuf();
     src.close();
     dst.close();
-    int err = chmod(binary.c_str(), 0755);
-    if (err)
-      throw std::runtime_error("Failed to chmod dwarf data file: " +
-                               std::to_string(err));
+
+    EXPECT_EQ(::chmod(binary.c_str(), 0755), 0);
   }
 
   // Set ENV
-  char ENV_PATH[2048], OLD_PATH[2048];
-  char *env = ::getenv("PATH");
-  snprintf(OLD_PATH, sizeof(ENV_PATH), "%s", env);
-  snprintf(ENV_PATH,
-           sizeof(ENV_PATH),
-           "PATH=%s:%s:%s",
-           env,
-           usr_bin.c_str(),
-           symlnk_bin.c_str());
-
-  ::putenv(ENV_PATH);
+  auto old_path = ::getenv("PATH");
+  auto new_path = usr_bin.native(); // copy
+  new_path += ":";
+  new_path += symlink_bin.c_str();
+  EXPECT_EQ(::setenv("PATH", new_path.c_str(), 1), 0);
 
   // 'mysleep' will match /bin/mysleep and /usr/bin/mysleep, but they are
   // actually the same file.
@@ -277,8 +267,9 @@ TEST(childproc, multi_exec_match)
   wait_for(child.get(), 100);
   EXPECT_FALSE(child->is_alive());
   EXPECT_EQ(child->term_signal(), SIGTERM);
-  ::setenv("PATH", OLD_PATH, 1);
 
+  // Cleanup
+  EXPECT_EQ(::setenv("PATH", old_path, 1), 0);
   EXPECT_GT(std_filesystem::remove_all(tmpdir), 0);
 }
 
