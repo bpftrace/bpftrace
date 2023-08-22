@@ -26,6 +26,7 @@ enum class MessageType
   attached_probes,
   lost_events,
   helper_error,
+  map_error,
 };
 
 std::ostream& operator<<(std::ostream& out, MessageType type);
@@ -80,6 +81,7 @@ public:
   virtual void helper_error(const std::string &helper,
                             int retcode,
                             const location &loc) const = 0;
+  virtual void map_error(IMap &map) const = 0;
 
 protected:
   std::ostream &out_;
@@ -196,6 +198,7 @@ public:
   void helper_error(const std::string &helper,
                     int retcode,
                     const location &loc) const override;
+  void map_error(IMap &map) const override;
 
 protected:
   static std::string hist_index_label(int power);
@@ -250,6 +253,7 @@ public:
   void helper_error(const std::string &helper,
                     int retcode,
                     const location &loc) const override;
+  void map_error(IMap &map) const override;
 
 private:
   std::string json_escape(const std::string &str) const;

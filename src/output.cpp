@@ -568,6 +568,11 @@ void TextOutput::helper_error(const std::string &helper,
   LOG(WARNING, loc, out_) << msg.str();
 }
 
+void TextOutput::map_error(IMap &map) const
+{
+  LOG(WARNING, out_) << "Failed to lookup map " << map.name_;
+}
+
 std::string TextOutput::field_to_str(const std::string &name,
                                      const std::string &value) const
 {
@@ -846,6 +851,12 @@ void JsonOutput::helper_error(const std::string &helper,
   out_ << "{\"type\": \"helper_error\", \"helper\": \"" << helper
        << "\", \"retcode\": " << retcode << ", \"line\": " << loc.begin.line
        << ", \"col\": " << loc.begin.column << "}" << std::endl;
+}
+
+void JsonOutput::map_error(IMap &map) const
+{
+  out_ << "{\"type\": \"map_error\", \"map_name\": \"" << map.name_ << "\"}"
+       << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

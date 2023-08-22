@@ -104,5 +104,13 @@ std::vector<llvm::Type*> SkbOutput::asLLVMType(ast::IRBuilderBPF& b)
   };
 }
 
+std::vector<llvm::Type*> MapError::asLLVMType(ast::IRBuilderBPF& b)
+{
+  return {
+    b.getInt64Ty(), // asyncid
+    b.getInt32Ty(), // map id
+  };
+}
+
 } // namespace AsyncEvent
 } // namespace bpftrace

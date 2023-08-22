@@ -582,6 +582,7 @@ enum class AsyncAction
   watchpoint_attach,
   watchpoint_detach,
   skboutput,
+  map_error,
   // clang-format on
 };
 

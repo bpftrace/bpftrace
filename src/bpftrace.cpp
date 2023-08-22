@@ -487,6 +487,14 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
                                  info.loc);
     return;
   }
+  else if (printf_id == asyncactionint(AsyncAction::map_error))
+  {
+    auto map_error = static_cast<AsyncEvent::MapError *>(data);
+    bpftrace->request_finalize();
+    IMap *map = *bpftrace->maps[map_error->map_id];
+    bpftrace->out_->map_error(*map);
+    return;
+  }
   else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach))
   {
     bool abort = false;

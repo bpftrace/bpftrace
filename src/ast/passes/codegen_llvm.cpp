@@ -738,25 +738,8 @@ void CodegenLLVM::visit(Call &call)
     auto scoped_del = accept(arg0);
     auto addrspace = arg0->type.GetAS();
     Value *perfdata = b_.CreateGetJoinMap(ctx_, call.loc);
-    Function *parent = b_.GetInsertBlock()->getParent();
-
-    BasicBlock *zero = BasicBlock::Create(module_->getContext(),
-                                          "joinzero",
-                                          parent);
-    BasicBlock *notzero = BasicBlock::Create(module_->getContext(),
-                                             "joinnotzero",
-                                             parent);
-
-    b_.CreateCondBr(b_.CreateICmpNE(perfdata,
-                                    ConstantExpr::getCast(Instruction::IntToPtr,
-                                                          b_.getInt64(0),
-                                                          b_.getInt8PtrTy()),
-                                    "joinzerocond"),
-                    notzero,
-                    zero);
 
     // arg0
-    b_.SetInsertPoint(notzero);
     b_.CreateStore(b_.getInt64(asyncactionint(AsyncAction::join)),
                    b_.CreatePointerCast(perfdata,
                                         b_.getInt64Ty()->getPointerTo()));
@@ -804,10 +787,6 @@ void CodegenLLVM::visit(Call &call)
                     8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_,
                     &call.loc);
 
-    b_.CreateBr(zero);
-
-    // done
-    b_.SetInsertPoint(zero);
     expr_ = nullptr;
   }
   else if (call.func == "ksym")

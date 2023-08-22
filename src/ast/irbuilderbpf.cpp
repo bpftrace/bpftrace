@@ -338,7 +338,17 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(Map &map)
   return CreateBpfPseudoCallValue(mapid);
 }
 
-CallInst *IRBuilderBPF::createMapLookup(int mapid, Value *key)
+CallInst *IRBuilderBPF::createMapLookup(int mapid,
+                                        Value *key,
+                                        const std::string &name)
+{
+  return createMapLookup(mapid, key, getInt8PtrTy(), name);
+}
+
+CallInst *IRBuilderBPF::createMapLookup(int mapid,
+                                        Value *key,
+                                        PointerType *val_ptr_ty,
+                                        const std::string &name)
 {
   Value *map_ptr = CreateBpfPseudoCallId(mapid);
   // void *map_lookup_elem(struct bpf_map * map, void * key)
@@ -346,23 +356,96 @@ CallInst *IRBuilderBPF::createMapLookup(int mapid, Value *key)
 
   assert(key->getType()->isPointerTy());
   FunctionType *lookup_func_type = FunctionType::get(
-      getInt8PtrTy(), { map_ptr->getType(), key->getType() }, false);
+      val_ptr_ty, { map_ptr->getType(), key->getType() }, false);
   PointerType *lookup_func_ptr_type = PointerType::get(lookup_func_type, 0);
   Constant *lookup_func = ConstantExpr::getCast(
       Instruction::IntToPtr,
       getInt64(libbpf::BPF_FUNC_map_lookup_elem),
       lookup_func_ptr_type);
-  return createCall(
-      lookup_func_type, lookup_func, { map_ptr, key }, "lookup_elem");
+  return createCall(lookup_func_type, lookup_func, { map_ptr, key }, name);
+}
+
+void IRBuilderBPF::createMapError(Value *ctx, int mapid, const location &loc)
+{
+  auto elements = AsyncEvent::MapError().asLLVMType(*this);
+  StructType *map_error_struct = GetStructType("map_error_t", elements, true);
+  AllocaInst *buf = CreateAllocaBPF(map_error_struct, "map_error_t");
+  CreateStore(GetIntSameSize(asyncactionint(AsyncAction::map_error),
+                             elements.at(0)),
+              CreateGEP(map_error_struct, buf, { getInt64(0), getInt32(0) }));
+  CreateStore(GetIntSameSize(mapid, elements.at(1)),
+              CreateGEP(map_error_struct, buf, { getInt64(0), getInt32(1) }));
+
+  auto &layout = module_.getDataLayout();
+  auto struct_size = layout.getTypeAllocSize(map_error_struct);
+  CreateOutput(ctx, buf, struct_size, &loc);
+}
+
+void IRBuilderBPF::createMapErrorCond(Value *ctx,
+                                      int mapid,
+                                      CallInst *call,
+                                      const location &loc,
+                                      bool must_exists)
+{
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
+                                                      "lookup_merge",
+                                                      parent);
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, getInt8PtrTy(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+  // when must_exists is set, send an async fatal error
+  if (must_exists)
+  {
+    createMapError(ctx, mapid, loc);
+    CreateRet(ConstantInt::get(module_.getContext(), APInt(64, 0)));
+  }
+  else
+  {
+    CreateBr(lookup_merge_block);
+  }
+
+  SetInsertPoint(lookup_merge_block);
 }
 
 CallInst *IRBuilderBPF::CreateGetJoinMap(Value *ctx, const location &loc)
 {
-  AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
-  CreateStore(getInt32(0), key);
+  return createGetScratchMap(ctx,
+                             bpftrace_.maps[MapManager::Type::Join].value()->id,
+                             "join",
+                             getInt8PtrTy(),
+                             loc);
+}
+
+CallInst *IRBuilderBPF::createGetScratchMap(Value *ctx,
+                                            int mapid,
+                                            const std::string &name,
+                                            PointerType *val_ptr_ty,
+                                            const location &loc,
+                                            int key)
+{
+  AllocaInst *keyAlloca = CreateAllocaBPF(getInt32Ty(),
+                                          nullptr,
+                                          "lookup_" + name + "_key");
+  CreateStore(getInt32(key), keyAlloca);
 
   CallInst *call = createMapLookup(
-      bpftrace_.maps[MapManager::Type::Join].value()->id, key);
+      mapid, keyAlloca, val_ptr_ty, "lookup_" + name + "_map");
+  createMapErrorCond(ctx, mapid, call, loc, true);
+  CreateLifetimeEnd(keyAlloca);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_lookup_elem, loc, true);
   return call;
 }

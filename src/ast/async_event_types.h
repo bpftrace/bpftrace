@@ -127,5 +127,13 @@ struct SkbOutput
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
+struct MapError
+{
+  uint64_t action_id;
+  uint32_t map_id;
+
+  std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
+} __attribute__((packed));
+
 } // namespace AsyncEvent
 } // namespace bpftrace
