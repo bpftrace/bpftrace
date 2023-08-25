@@ -59,7 +59,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                          "/bin/sh:prov2:tp\n"
                          "/bin/sh:prov2:notatp\n"
                          "/bin/sh:nahprov:tp\n";
-  std::string bash_usdts = "/bin/bash:prov1:tp3";
+  std::string bash_usdts = "/bin/bash:prov1:tp3\n";
+  std::string proc_usdts = "/proc/1234/exe:prov2:tp4\n";
   ON_CALL(matcher, get_symbols_from_usdt(_, "/bin/sh"))
       .WillByDefault([sh_usdts](int, const std::string &) {
         return std::unique_ptr<std::istream>(new std::istringstream(sh_usdts));
@@ -69,6 +70,12 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
         return std::unique_ptr<std::istream>(
             new std::istringstream(sh_usdts + bash_usdts));
       });
+  ON_CALL(matcher, get_symbols_from_usdt(_, "*"))
+      .WillByDefault(
+          [sh_usdts, bash_usdts, proc_usdts](int, const std::string &) {
+            return std::unique_ptr<std::istream>(
+                new std::istringstream(sh_usdts + bash_usdts + proc_usdts));
+          });
 }
 
 void setup_mock_bpftrace(MockBPFtrace &bpftrace)

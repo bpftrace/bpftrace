@@ -25,10 +25,11 @@ public:
                                               const std::string &target,
                                               const std::string &provider,
                                               const std::string &name);
-  static usdt_probe_list probes_for_pid(int pid);
+  static usdt_probe_list probes_for_pid(int pid, bool print_error = true);
+  static usdt_probe_list probes_for_all_pids();
   static usdt_probe_list probes_for_path(const std::string &path);
 
 private:
-  static void read_probes_for_pid(int pid);
+  static void read_probes_for_pid(int pid, bool print_error = true);
   static void read_probes_for_path(const std::string &path);
 };

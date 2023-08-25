@@ -563,6 +563,44 @@ TEST(bpftrace, add_probes_usdt_wildcard)
              "usdt:/bin/sh:prov2:tp");
 }
 
+TEST(bpftrace, add_probes_usdt_wildcard_for_target)
+{
+  auto probe = make_usdt_probe("*", "prov*", "tp*", true, 1);
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_usdt(0, "*"))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(5U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  check_usdt(bpftrace->get_probes().at(0),
+             "/bin/bash",
+             "prov1",
+             "tp3",
+             "usdt:/bin/bash:prov1:tp3");
+  check_usdt(bpftrace->get_probes().at(1),
+             "/bin/sh",
+             "prov1",
+             "tp1",
+             "usdt:/bin/sh:prov1:tp1");
+  check_usdt(bpftrace->get_probes().at(2),
+             "/bin/sh",
+             "prov1",
+             "tp2",
+             "usdt:/bin/sh:prov1:tp2");
+  check_usdt(bpftrace->get_probes().at(3),
+             "/bin/sh",
+             "prov2",
+             "tp",
+             "usdt:/bin/sh:prov2:tp");
+  check_usdt(bpftrace->get_probes().at(4),
+             "/proc/1234/exe",
+             "prov2",
+             "tp4",
+             "usdt:/proc/1234/exe:prov2:tp4");
+}
+
 TEST(bpftrace, add_probes_usdt_empty_namespace)
 {
   auto probe = make_usdt_probe("/bin/sh", "", "tp1", true, 1);

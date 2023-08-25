@@ -1398,6 +1398,8 @@ usdt:library_path:[probe_namespace]:probe_name
 
 Where `probe_namespace` is optional if `probe_name` is unique within the binary.
 
+You can target the entire host (or an entire process's address space by using the `-p` arg) by using a single wildcard `*` in place of the `binary_path`/`library_path` e.g. `bpftrace -e 'usdt:*:loop { printf("hi\n"); }'`. Please note that if you use wildcards for the `probe_name` or `probe_namespace` and end up targeting multiple USDTs for the same probe you might get errors if you also utilize the USDT argument builtins (e.g. `arg0`) as they could be of different types.
+
 Examples:
 
 ```

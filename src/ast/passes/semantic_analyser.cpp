@@ -2750,6 +2750,10 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     {
       USDTHelper::probes_for_pid(bpftrace_.pid());
     }
+    else if (ap.target == "*")
+    {
+      USDTHelper::probes_for_all_pids();
+    }
     else if (ap.target != "")
     {
       for (auto &path : resolve_binary_path(ap.target))
@@ -2758,7 +2762,8 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     else
     {
       LOG(ERROR, ap.loc, err_)
-          << "usdt probe must specify at least path or pid to probe";
+          << "usdt probe must specify at least path or pid to probe. To target "
+             "all paths/pids set the path to '*'.";
     }
   }
   else if (ap.provider == "tracepoint") {

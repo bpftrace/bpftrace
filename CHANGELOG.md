@@ -19,6 +19,8 @@ and this project adheres to
   - [#2692](https://github.com/iovisor/bpftrace/pull/2692)
 - Support casting int <-> int array
   - [#2686](https://github.com/iovisor/bpftrace/pull/2686)
+- Support targeting all running processes for USDTs
+  - [#2734](https://github.com/iovisor/bpftrace/pull/2734)
 #### Changed
 - Make `args` a structure (instead of a pointer)
   - [#2578](https://github.com/iovisor/bpftrace/pull/2578)

@@ -326,6 +326,8 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
 
   if (pid > 0)
     usdt_probes = USDTHelper::probes_for_pid(pid);
+  else if (target == "*")
+    usdt_probes = USDTHelper::probes_for_all_pids();
   else if (!target.empty())
   {
     std::vector<std::string> real_paths;

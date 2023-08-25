@@ -1373,4 +1373,17 @@ std::vector<int> get_pids_for_program(const std::string &program)
   return pids;
 }
 
+std::vector<int> get_all_running_pids()
+{
+  std::vector<int> pids;
+  for (const auto &process : std_filesystem::directory_iterator("/proc"))
+  {
+    std::string filename = process.path().filename().string();
+    if (!std::all_of(filename.begin(), filename.end(), ::isdigit))
+      continue;
+    pids.emplace_back(std::stoi(filename));
+  }
+  return pids;
+}
+
 } // namespace bpftrace

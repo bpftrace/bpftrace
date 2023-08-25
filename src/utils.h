@@ -229,6 +229,7 @@ struct elf_symbol
 std::map<uintptr_t, elf_symbol, std::greater<>> get_symbol_table_for_elf(
     const std::string &elf_file);
 std::vector<int> get_pids_for_program(const std::string &program);
+std::vector<int> get_all_running_pids();
 
 // Generate object file section name for a given probe
 inline std::string get_section_name_for_probe(
