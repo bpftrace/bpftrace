@@ -1,5 +1,6 @@
 #include "usdt.h"
 #include "log.h"
+#include "utils.h"
 
 #include <signal.h>
 
@@ -88,9 +89,9 @@ std::optional<usdt_probe_entry> USDTHelper::find(int pid,
   }
 }
 
-usdt_probe_list USDTHelper::probes_for_pid(int pid)
+usdt_probe_list USDTHelper::probes_for_pid(int pid, bool print_error)
 {
-  read_probes_for_pid(pid);
+  read_probes_for_pid(pid, print_error);
 
   usdt_probe_list probes;
   for (auto const &path : usdt_pid_to_paths_cache[pid])
@@ -100,6 +101,19 @@ usdt_probe_list USDTHelper::probes_for_pid(int pid)
       probes.insert(probes.end(),
                     usdt_probes.second.begin(),
                     usdt_probes.second.end());
+    }
+  }
+  return probes;
+}
+
+usdt_probe_list USDTHelper::probes_for_all_pids()
+{
+  usdt_probe_list probes;
+  for (int pid : bpftrace::get_all_running_pids())
+  {
+    for (auto &probe : probes_for_pid(pid, false))
+    {
+      probes.push_back(std::move(probe));
     }
   }
   return probes;
@@ -119,7 +133,7 @@ usdt_probe_list USDTHelper::probes_for_path(const std::string &path)
   return probes;
 }
 
-void USDTHelper::read_probes_for_pid(int pid)
+void USDTHelper::read_probes_for_pid(int pid, bool print_error)
 {
   if (pid_cache.count(pid))
     return;
@@ -129,10 +143,13 @@ void USDTHelper::read_probes_for_pid(int pid)
     void *ctx = bcc_usdt_new_frompid(pid, nullptr);
     if (ctx == nullptr)
     {
-      LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
+      if (print_error)
+      {
+        LOG(ERROR) << "failed to initialize usdt context for pid: " << pid;
 
-      if (kill(pid, 0) == -1 && errno == ESRCH)
-        LOG(ERROR) << "hint: process not running";
+        if (kill(pid, 0) == -1 && errno == ESRCH)
+          LOG(ERROR) << "hint: process not running";
+      }
 
       return;
     }
