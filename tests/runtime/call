@@ -512,6 +512,7 @@ NAME skboutput
 RUN {{BPFTRACE}} -e 'kfunc:dev_queue_xmit { $ret = skboutput("skb.pcap", args.skb, args.skb->len, 14); if ($ret == 0) { printf("OK\n"); exit(); } }'
 AFTER ./testprogs/syscall 127.0.0.1 80
 EXPECT OK
+REQUIRES_FEATURE kfunc
 REQUIRES_FEATURE skboutput
 TIMEOUT 5
 MIN_KERNEL 5.5
