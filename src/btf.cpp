@@ -132,7 +132,7 @@ void BTF::load_kernel_btfs(const std::set<std::string> &modules)
     {
       btf_objects.front().id = id;
     }
-    else if (modules.find(mod_name) != modules.end())
+    else
     {
       btf_objects.push_back(
           BTFObj{ .btf = btf__load_from_kernel_by_id_split(id, vmlinux_btf),

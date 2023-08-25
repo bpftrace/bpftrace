@@ -45,6 +45,8 @@ and this project adheres to
   - [#2708](https://github.com/iovisor/bpftrace/pull/2708)
 - Add access to `CLOCK_MONOTONIC` with `nsecs(monotonic)`
   - [#2718](https://github.com/iovisor/bpftrace/pull/2718)
+- Fix loading BTF from kernel modules
+  - [#2723](https://github.com/iovisor/bpftrace/pull/2723)
 
 
 ## [0.18.0] 2023-05-15
