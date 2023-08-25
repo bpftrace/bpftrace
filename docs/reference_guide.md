@@ -1359,7 +1359,7 @@ usdt:library_path:probe_name
 usdt:library_path:[probe_namespace]:probe_name
 ```
 
-Where `probe_namespace` is optional if `probe_name` is unique within the binary.
+Where `probe_namespace` is optional if `probe_name` is unique within the binary. You can also target all shared libraries and the main executable in a process's address space if you use the `*` wildcard in place of the `binary_path`/`library_path` AND pass in a pid command line argument e.g. `bpftrace -e 'usdt:*:loop { printf("hi\n"); }' -p 1234`.
 
 Examples:
 
@@ -2990,7 +2990,7 @@ Return true if the string haystack contains the string needle, and zero otherwis
 Examples:
 
 ```
-bpftrace -e 't:syscalls:sys_enter_execve /strcontains(str(args.filename),"bin")/ { @[comm, str(args.filename)] = count(); }'  
+bpftrace -e 't:syscalls:sys_enter_execve /strcontains(str(args.filename),"bin")/ { @[comm, str(args.filename)] = count(); }'
 Attaching 1 probe...
 
 @[sh, /usr/bin/which]: 2
@@ -3847,7 +3847,7 @@ Example:
 # BTF Support
 
 If kernel has BTF, kernel types are automatically available and there is no need to include additional headers
-to use them. To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF` 
+to use them. To allow users to detect this situation in scripts, the preprocessor macro `BPFTRACE_HAVE_BTF`
 is defined if BTF is detected. See tools/ for examples of its usage.
 
 Requirements for using BTF for vmlinux:
