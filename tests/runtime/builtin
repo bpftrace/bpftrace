@@ -238,14 +238,14 @@ AFTER ./testprogs/syscall open
 NAME args in kfunc store in map
 PROG kfunc:vfs_open { @= args; exit(); }
 EXPECT @: { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
 NAME args in kfunc as a map key
 PROG kfunc:vfs_open { @[args] = 1; exit(); }
 EXPECT @[{.path=0x[0-9a-f]+,.file=0x[0-9a-f]+}]: 1
-REQUIRES_FEATURE btf
+REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
