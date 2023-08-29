@@ -209,7 +209,6 @@ class Runner(object):
                 with open(os.devnull, 'w') as dn:
                     child_names = [os.path.basename(x.strip().split()[-1]) for x in test.befores]
                     child_names = sorted((x[:15] for x in child_names))  # cut to comm length
-                    print(f"child_names: %{child_names}")
 
                     # Print the names of all of our children and look
                     # for the ones from BEFORE clauses
@@ -220,7 +219,6 @@ class Runner(object):
                         if children.returncode == 0 and children.stdout:
                             lines = [line.decode('utf-8') for line in children.stdout.splitlines()]
                             lines = sorted((line.strip() for line in lines if line != 'ps'))
-                            print(f"lines: %{lines}")
                             if lines == child_names:
                                 break
                         else:
