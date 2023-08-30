@@ -726,6 +726,9 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
 {
   std::unordered_set<std::string> iter_set;
   const std::string prefix = "bpf_iter__";
+  // kernel commit 6fcd486b3a0a("bpf: Refactor RCU enforcement in the
+  // verifier.") add 'struct bpf_iter__task__safe_trusted'
+  const std::string suffix___safe_trusted = "__safe_trusted";
   __s32 id, max = (__s32)type_cnt(btf);
   for (id = start_id(btf); id <= max; id++)
   {
@@ -735,6 +738,12 @@ std::unordered_set<std::string> BTF::get_all_iters_from_btf(
       continue;
 
     const std::string name = btf_str(btf, t->name_off);
+
+    // skip __safe_trusted suffix struct
+    if (suffix___safe_trusted.length() < name.length() &&
+        name.rfind(suffix___safe_trusted) ==
+            (name.length() - suffix___safe_trusted.length()))
+      continue;
     if (name.size() > prefix.size() &&
         name.compare(0, prefix.size(), prefix) == 0)
     {

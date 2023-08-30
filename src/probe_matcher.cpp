@@ -192,9 +192,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
         if (bpftrace_->feature_->has_iter(iter))
           ret += iter + "\n";
         else
-          LOG(WARNING) << "The kernel contains bpf_iter__$ITER struct but "
-                          "does not support loading an iterator program "
-                          "against it. Please report this bug.";
+          LOG(WARNING) << "The kernel contains bpf_iter__" << iter
+                       << " struct but does not support loading an iterator"
+                          " program against it. Please report this bug.";
       }
       symbol_stream = std::make_unique<std::istringstream>(ret);
       break;
