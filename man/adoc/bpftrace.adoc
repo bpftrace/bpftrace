@@ -2563,7 +2563,10 @@ fatal error: unknown caller pc
 === usdt
 
 .variants
-* `usdt:binary:name`
+* `usdt:binary_path:probe_name`
+* `usdt:binary_path:[probe_namespace]:probe_name`
+* `usdt:library_path:probe_name`
+* `usdt:library_path:[probe_namespace]:probe_name`
 
 .shortnames
 * `U`
