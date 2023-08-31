@@ -1,6 +1,0 @@
-[submodule "libbpf"]
-  path = libbpf
-  url = https://github.com/libbpf/libbpf.git
-[submodule "bcc"]
-  path = bcc
-  url = https://github.com/iovisor/bcc

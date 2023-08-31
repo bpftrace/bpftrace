@@ -109,8 +109,6 @@ jobs:
           RUN_TESTS: 0
     steps:
     - uses: actions/checkout@v2
-      with:
-        submodules: recursive
     - uses: DeterminateSystems/nix-installer-action@v4
     - uses: DeterminateSystems/magic-nix-cache-action@v2
     - name: Load kernel modules
