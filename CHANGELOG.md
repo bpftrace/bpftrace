@@ -12,6 +12,14 @@ and this project adheres to
 #### Changed
 #### Fixed
 
+## [0.18.1] 2023-08-31
+
+#### Added
+#### Changed
+#### Fixed
+- Directly link bpftrace against zlib
+  - [#2600](https://github.com/iovisor/bpftrace/pull/2600)
+
 
 ## [0.18.0] 2023-05-15
 
