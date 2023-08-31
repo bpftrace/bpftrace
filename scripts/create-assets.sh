@@ -45,7 +45,7 @@ asciidoctor man/adoc/bpftrace.adoc  -b manpage -o - | gzip - > "$TMP/share/man/m
 tar --xz -cf "$OUT/man.tar.xz" -C "$TMP/share" man
 
 info "Creating bundle"
-ln bpftrace "$TMP/bin/bpftrace"
+cp bpftrace "$TMP/bin/bpftrace"
 tar -cf "$OUT/binary_tools_man-bundle.tar" -C "$TMP" bin share
 zstd $ZSTDFLAGS -q -k "$OUT/binary_tools_man-bundle.tar"
 xz "$OUT/binary_tools_man-bundle.tar"
