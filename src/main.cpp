@@ -109,6 +109,7 @@ void usage()
   std::cerr << std::endl;
   std::cerr << "TROUBLESHOOTING OPTIONS:" << std::endl;
   std::cerr << "    -v                      verbose messages" << std::endl;
+  std::cerr << "    -vv                     more verbose messages (max 2)" << std::endl;
   std::cerr << "    -d                      (dry run) debug info" << std::endl;
   std::cerr << "    -dd                     (dry run) verbose debug info" << std::endl;
   std::cerr << "    --emit-elf FILE         (dry run) generate ELF file with bpf programs and write to FILE" << std::endl;
