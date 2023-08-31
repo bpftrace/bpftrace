@@ -46,6 +46,17 @@ $ sudo ./result/bin/bpftrace --info 2>&1 | grep LLVM
   LLVM: 13.0.1
 ```
 
+### Build bpftrace as a statically linked binary
+
+```
+$ nix build .#appimage
+$ ldd ./result
+        not a dynamic executable
+$ sudo ./result -e 'BEGIN { print("static!"); exit() }'
+Attaching 1 probe...
+static!
+```
+
 ### Don't use Nix to build, but rather only manage dependencies
 
 ```

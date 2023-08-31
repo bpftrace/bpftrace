@@ -4,9 +4,16 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/release-22.11";
     flake-utils.url = "github:numtide/flake-utils";
+    nix-appimage = {
+      # Use fork until https://github.com/ralismark/nix-appimage/pull/8 is in
+      url = "github:danobi/nix-appimage/5d5093111a1ec4f116c1c57b7a807d41404bfa5e";
+      # Avoid multiple copies of the same dependency
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, ... }:
+  outputs = { self, nixpkgs, flake-utils, nix-appimage, ... }:
     # This flake only supports 64-bit linux systems.
     # Note bpftrace support aarch32 but for simplicity we'll omit it for now.
     flake-utils.lib.eachSystem [ "x86_64-linux" "aarch64-linux" ]
@@ -127,6 +134,14 @@
             bpftrace-llvm12 = mkBpftrace pkgs.llvmPackages_12;
             bpftrace-llvm11 = mkBpftrace pkgs.llvmPackages_11;
             bpftrace-llvm10 = mkBpftrace pkgs.llvmPackages_10;
+
+            # Self-contained static binary with all dependencies
+            appimage = nix-appimage.mkappimage.${system} {
+              drv = default;
+              entrypoint = pkgs.lib.getExe default;
+              name = default.name;
+            };
+
           };
 
           # Define apps that can be run with `nix run`
