@@ -170,7 +170,7 @@ public:
   CallInst *CreateGetRandom(const location &loc);
   CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
   CallInst *CreateGetFuncIp(const location &loc);
-  CallInst   *CreateGetJoinMap(Value *ctx, const location& loc);
+  CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
                              FunctionType *helper_type,
                              ArrayRef<Value *> args,
@@ -252,7 +252,19 @@ private:
                                 Builtin &builtin,
                                 AddrSpace as,
                                 const location &loc);
-  CallInst *createMapLookup(int mapid, Value *key);
+  CallInst *createMapLookup(int mapid,
+                            Value *key,
+                            const std::string &name = "lookup_elem");
+  CallInst *createMapLookup(int mapid,
+                            Value *key,
+                            PointerType *val_ptr_ty,
+                            const std::string &name = "lookup_elem");
+  CallInst *createGetScratchMap(int mapid,
+                                const std::string &name,
+                                PointerType *val_ptr_ty,
+                                const location &loc,
+                                BasicBlock *failure_callback,
+                                int key = 0);
   libbpf::bpf_func_id selectProbeReadHelper(AddrSpace as, bool str);
 
   llvm::Type *getKernelPointerStorageTy();
