@@ -56,6 +56,9 @@ and this project adheres to
   - [#2657](https://github.com/iovisor/bpftrace/pull/2657)
 - uprobe: improve C++ probes listing
   - [#2693](https://github.com/iovisor/bpftrace/pull/2693)
+#### Removed
+- Delete embedded build support and surrounding infra
+  - [#2742](https://github.com/iovisor/bpftrace/pull/2742)
 #### Fixed
 - Fix resolving username for malformed /etc/passwd
   - [#2631](https://github.com/iovisor/bpftrace/pull/2631)
