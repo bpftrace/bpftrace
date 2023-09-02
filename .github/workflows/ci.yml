@@ -1,6 +1,12 @@
 name: CI
 
 on: [push, pull_request]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   clang-format:
     # Only run clang-format on pull requests. We want to allow people to

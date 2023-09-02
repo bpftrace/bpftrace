@@ -1,6 +1,12 @@
 name: Embedded Builds
 
 on: [push, pull_request]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   llvm_clang:
     runs-on: ubuntu-latest
