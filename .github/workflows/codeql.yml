@@ -28,20 +28,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Packages (cpp)
-        if: ${{ matrix.language == 'cpp' }}
-        run: |
-          sudo apt-get update
-          sudo apt-get remove 'llvm-*' 'clang-*' 'libclang-*'
-          sudo apt-get install --yes bison cmake flex g++ git libelf-dev libgtest-dev libgmock-dev zlib1g-dev libfl-dev libcereal-dev libdw-dev libpcap-dev systemtap-sdt-dev binutils-dev llvm-11 llvm-11-dev llvm-11-runtime libllvm11 clang-11 libclang-11-dev libclang-common-11-dev libclang1-11 libbpfcc-dev systemtap-sdt-dev python3 python3-distutils xxd libssl-dev pkg-config make dwarves
+      - uses: DeterminateSystems/nix-installer-action@v4
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
 
       - name: Configure (cpp)
         if: ${{ matrix.language == 'cpp' }}
         run: |
           mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
-          export LLVM_ROOT=/usr/lib/llvm-11; export LLVM_REQUESTED_VERSION=11;
-          ../build-libs.sh
-          cmake ..
+          nix develop --command cmake -DUSE_SYSTEM_BPF_BCC=1 ..
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
@@ -58,7 +52,7 @@ jobs:
         if: ${{ matrix.language == 'cpp' }}
         run: |
           cd $GITHUB_WORKSPACE/build
-          make -j$(nproc)
+          nix develop --command make -j$(nproc)
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v2
