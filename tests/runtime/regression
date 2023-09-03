@@ -24,7 +24,7 @@ EXPECT 0
 TIMEOUT 5
 
 NAME c_array_indexing
-RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; printf("%c %c %c %c %c\n", $foo->b[0], $foo->b[1], $foo->b[2], $foo->b[3], $foo->b[4]) }' -c ./testprogs/uprobe_test
 EXPECT h e l l o
 TIMEOUT 5
 
@@ -79,6 +79,6 @@ TIMEOUT 1
 
 # https://github.com/iovisor/bpftrace/issues/2135
 NAME address_probe_invalid_expansion
-RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "function1" {print $1}') { @[probe] = count(); exit() }"
+RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "uprobeFunction1" {print $1}') { @[probe] = count(); exit() }"
 EXPECT Attaching 1 probe
 TIMEOUT 1

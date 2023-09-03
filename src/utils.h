@@ -161,6 +161,8 @@ bool get_uint64_env_var(const ::std::string &str, uint64_t &dest);
 bool get_bool_env_var(const ::std::string &str, bool &dest, bool neg = false);
 std::string get_pid_exe(pid_t pid);
 std::string get_pid_exe(const std::string &pid);
+std::string get_proc_maps(const std::string &pid);
+std::string get_proc_maps(pid_t pid);
 bool has_wildcard(const std::string &str);
 std::vector<std::string> split_string(const std::string &str,
                                       char delimiter,
@@ -216,6 +218,8 @@ std::pair<std::string, std::string> split_symbol_module(
 std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
     const std::string &symbol);
 
+std::vector<std::string> get_mapped_paths_for_pid(pid_t pid);
+std::vector<std::string> get_mapped_paths_for_running_pids();
 struct elf_symbol
 {
   std::string name;

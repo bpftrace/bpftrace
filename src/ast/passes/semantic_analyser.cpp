@@ -2690,7 +2690,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       LOG(ERROR, ap.loc, err_)
           << "uretprobes can not be attached to a function offset";
 
-    auto paths = resolve_binary_path(ap.target, bpftrace_.pid());
+    std::vector<std::string> paths;
+    if (ap.target == "*")
+    {
+      if (bpftrace_.pid() > 0)
+        paths = get_mapped_paths_for_pid(bpftrace_.pid());
+      else
+        paths = get_mapped_paths_for_running_pids();
+    }
+    else
+    {
+      paths = resolve_binary_path(ap.target, bpftrace_.pid());
+    }
     switch (paths.size())
     {
     case 0:

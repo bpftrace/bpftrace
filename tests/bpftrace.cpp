@@ -336,7 +336,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/sh"))
+              get_func_symbols_from_file(0, "/bin/sh"))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -353,7 +353,7 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file)
   ast::Probe *probe = parse_probe("uprobe:/bin/*sh:first_open {}");
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/*sh"))
+              get_func_symbols_from_file(0, "/bin/*sh"))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -367,12 +367,37 @@ TEST(bpftrace, add_probes_uprobe_wildcard_file)
       bpftrace->get_probes().at(1), "/bin/sh", "first_open", probe_orig_name);
 }
 
+TEST(bpftrace, add_probes_uprobe_wildcard_for_target)
+{
+  ast::Probe *probe = parse_probe("uprobe:*:*open {}");
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_func_symbols_from_file(0, "*"))
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(4U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "uprobe:*:*open";
+  check_uprobe(
+      bpftrace->get_probes().at(0), "/bin/bash", "first_open", probe_orig_name);
+  check_uprobe(
+      bpftrace->get_probes().at(1), "/bin/sh", "first_open", probe_orig_name);
+  check_uprobe(
+      bpftrace->get_probes().at(2), "/bin/sh", "second_open", probe_orig_name);
+  check_uprobe(bpftrace->get_probes().at(3),
+               "/proc/1234/exe",
+               "third_open",
+               probe_orig_name);
+}
+
 TEST(bpftrace, add_probes_uprobe_wildcard_no_matches)
 {
   ast::Probe *probe = parse_probe("uprobe:/bin/sh:foo* {}");
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/sh"))
+              get_func_symbols_from_file(0, "/bin/sh"))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -428,7 +453,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol)
 
     auto bpftrace = get_strict_mock_bpftrace();
     EXPECT_CALL(*bpftrace->mock_probe_matcher,
-                get_func_symbols_from_file("/bin/sh"))
+                get_func_symbols_from_file(0, "/bin/sh"))
         .Times(1);
 
     ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -454,7 +479,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_full)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/sh"))
+              get_func_symbols_from_file(0, "/bin/sh"))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -472,7 +497,7 @@ TEST(bpftrace, add_probes_uprobe_cpp_symbol_wildcard)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/sh"))
+              get_func_symbols_from_file(0, "/bin/sh"))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -503,7 +528,7 @@ TEST(bpftrace, add_probes_uprobe_no_demangling)
 
   auto bpftrace = get_strict_mock_bpftrace();
   EXPECT_CALL(*bpftrace->mock_probe_matcher,
-              get_func_symbols_from_file("/bin/sh"))
+              get_func_symbols_from_file(0, "/bin/sh"))
       .Times(0);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));

@@ -12,12 +12,13 @@ struct Foo
   int c[3];
 };
 
-int function1(int *n, char c __attribute__((unused)))
+int uprobeFunction1(int *n, char c __attribute__((unused)))
 {
   return *n;
 }
 
-struct Foo *function2(struct Foo *foo1, struct Foo *foo2 __attribute__((unused)))
+struct Foo *uprobeFunction2(struct Foo *foo1,
+                            struct Foo *foo2 __attribute__((unused)))
 {
   return foo1;
 }
@@ -28,11 +29,11 @@ int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 
   int n = 13;
   char c = 'x';
-  function1(&n, c);
+  uprobeFunction1(&n, c);
 
   struct Foo foo1 = { .a = 123, .b = "hello", .c = { 1, 2, 3 } };
   struct Foo foo2 = { .a = 456, .b = "world", .c = { 4, 5, 6 } };
-  function2(&foo1, &foo2);
+  uprobeFunction2(&foo1, &foo2);
 
   return 0;
 }
