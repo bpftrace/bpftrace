@@ -5,8 +5,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/release-22.11";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
-      # Use fork until https://github.com/ralismark/nix-appimage/pull/8 is in
-      url = "github:danobi/nix-appimage/5d5093111a1ec4f116c1c57b7a807d41404bfa5e";
+      # Use fork until following PRs are in:
+      #   https://github.com/ralismark/nix-appimage/pull/8
+      #   https://github.com/ralismark/nix-appimage/pull/9
+      url = "github:danobi/nix-appimage/83c61d93ee96d4d530f5382edca51ee30ce2769f";
       # Avoid multiple copies of the same dependency
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
@@ -140,8 +142,29 @@
               drv = default;
               entrypoint = pkgs.lib.getExe default;
               name = default.name;
-            };
 
+              # Exclude the following groups to reduce appimage size:
+              #
+              # *.a: Static archives are not necessary at runtime
+              # *.pyc, *.py, *.whl: bpftrace does not use python at runtime
+              # libLLVM-11.so: Appimage uses the latest llvm we support, so not llvm11
+              #
+              # The basic process to identify large and useless files is to:
+              #
+              # ```
+              # $ nix build .#appimage
+              # $ ./result --appimage-mount
+              # $ cd /tmp/.mount_resultXXXX    # in new terminal
+              # $ fd -S +1m -l
+              # ```
+              exclude = [
+                "... *.a"
+                "... *.pyc"
+                "... *.py"
+                "... *.whl"
+                "... libLLVM-11.so"
+              ];
+            };
           };
 
           # Define apps that can be run with `nix run`

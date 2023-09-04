@@ -63,17 +63,17 @@
         "squashfuse": "squashfuse"
       },
       "locked": {
-        "lastModified": 1693585308,
-        "narHash": "sha256-ic7iw7zmJ3D34b/7MYz/iEQaWQVYN2IPA+su21QwRqY=",
+        "lastModified": 1693845781,
+        "narHash": "sha256-E7jJuRU5ntWARmIWhFJfvpXEvxyDwWBtqPWx++4fhtc=",
         "owner": "danobi",
         "repo": "nix-appimage",
-        "rev": "5d5093111a1ec4f116c1c57b7a807d41404bfa5e",
+        "rev": "83c61d93ee96d4d530f5382edca51ee30ce2769f",
         "type": "github"
       },
       "original": {
         "owner": "danobi",
         "repo": "nix-appimage",
-        "rev": "5d5093111a1ec4f116c1c57b7a807d41404bfa5e",
+        "rev": "83c61d93ee96d4d530f5382edca51ee30ce2769f",
         "type": "github"
       }
     },
