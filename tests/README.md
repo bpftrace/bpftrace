@@ -1,10 +1,12 @@
 # bpftrace Tests
 
+There are three different types of tests: [unit](#unit-tests), [runtime](#runtime-tests), and [tool parsing](#tool-parsing-tests).
+
+Every contribution should (1) not break the existing tests and (2) introduce new tests if relevant.
+
 ## Unit tests
 
-These tests can be run with the `bpftrace_test` executable.
-Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER`
-environment variable, see `--help` for more information.
+Unit tests for individual components (semantic analyser, codegen, etc.) are based on the GoogleTest framework. These tests can be run with the `bpftrace_test` executable. Tests can be selected with the `--gtest_filter` flag or the `GTEST_FILTER` environment variable, see `--help` for more information. These are located in `tests/*.cpp` and are executed by `<builddir>/tests/bpftrace_test`.
 
 ### Codegen tests
 
@@ -36,9 +38,9 @@ instead of running the tests.
 
 ## Runtime tests
 
-Runtime tests will call the bpftrace executable.
+Runtime tests will call the bpftrace executable. These are located in `tests/runtime` and are managed by a custom framework.
 
-* Run: `sudo make runtime-tests` inside your build folder
+* Run: `sudo make runtime-tests` inside your build folder or `sudo <builddir>/tests/runtime-tests.sh`
 * By default, runtime-tests will look for the executable in the build folder. You can set a value to the environment variable `BPFTRACE_RUNTIME_TEST_EXECUTABLE` to customize it
 
 Runtime tests are grouped into "suites". A suite is usually a single file. The
@@ -115,10 +117,9 @@ be used to tightly control what code paths are triggered in the system.
 
 ## Tool parsing tests
 
-`./tests/tools-parsing-test.sh`
+Tools parsing tests run every tool in the `tools/` directory and ensure that the tools shipped with bpftrace are valid and can run. The validity of tools outputs is not checked at the moment.
 
-The tool parsing tests ensure that the tools shipped with bpftrace are valid and
-can run. The actual output is not validated.
+Tests can be executed by: `sudo <builddir>/tests/tools-parsing-test.sh`
 
 ### Flags and variables
 

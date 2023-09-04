@@ -4,25 +4,10 @@ This document features basic guidelines and recommendations on how to do
 bpftrace development. Please read it carefully before submitting pull requests
 to simplify reviewing and to speed up the merge process.
 
-## Tests
-
-There are 3 basic kinds of tests in bpftrace:
-
-- Unit tests for individual components (semantic analyser, codegen, etc.) based
-  on the GoogleTest framework. These are located in `tests/*.cpp` and are
-  executed by `<builddir>/tests/bpftrace_test`.
-
-- Runtime tests that execute bpftrace in various scenarios. These are located in
-  `tests/runtime` and can be executed using `<builddir>/tests/runtime-tests.sh`.
-  The tests are managed by a custom framework.
-
-- Tools parsing tests that run every tool in the `tools/` directory and check
-  whether it executes without issues. The validity of tools outputs is not
-  checked at the moment. Tests can be executed by
-  `<builddir>/tests/tools-parsing-test.sh`.
+## [Tests](../tests/README.md)
 
 Every contribution should (1) not break the existing tests and (2) introduce new
-tests if relevant. See existing tests for inspiration on how to write new ones.
+tests if relevant. See existing tests for inspiration on how to write new ones. [Read more on the different kinds and how to run them](../tests/README.md).
 
 ## Continuous integration
 
