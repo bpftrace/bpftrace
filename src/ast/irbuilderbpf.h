@@ -160,7 +160,6 @@ public:
                                const location &loc,
                                MDNode *metadata);
   CallInst *CreateGetNs(TimestampMode ts, const location &loc);
-  CallInst *CreateGetTaiNs(const location &loc);
   CallInst *CreateGetPidTgid(const location &loc);
   CallInst *CreateGetCurrentCgroupId(const location &loc);
   CallInst *CreateGetUidGid(const location &loc);
