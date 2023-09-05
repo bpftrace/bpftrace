@@ -1329,16 +1329,12 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "nsecs")
   {
-    if (call.type.ts_mode == TimestampMode::boot ||
-        call.type.ts_mode == TimestampMode::sw_tai)
+    if (call.type.ts_mode == TimestampMode::sw_tai)
     {
+      uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
+                       bpftrace_.delta_taitime_->tv_nsec;
       expr_ = b_.CreateGetNs(TimestampMode::boot, call.loc);
-      if (call.type.ts_mode == TimestampMode::sw_tai)
-      {
-        uint64_t delta = bpftrace_.delta_taitime_->tv_sec * 1e9 +
-                         bpftrace_.delta_taitime_->tv_nsec;
-        expr_ = b_.CreateAdd(expr_, b_.getInt64(delta));
-      }
+      expr_ = b_.CreateAdd(expr_, b_.getInt64(delta));
     }
     else
     {
