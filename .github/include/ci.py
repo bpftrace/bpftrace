@@ -157,7 +157,6 @@ def configure():
         f"-DBUILD_ASAN={RUN_MEMLEAK_TEST}",
 
         # Static configs
-        f"-DUSE_SYSTEM_BPF_BCC=1",
         f"-DCMAKE_VERBOSE_MAKEFILE=1",
         f"-DBUILD_TESTING=1",
         f"-DENABLE_SKB_OUTPUT=1",

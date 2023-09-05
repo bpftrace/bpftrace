@@ -97,7 +97,6 @@
                 # Release flags
                 cmakeFlags = [
                   "-DCMAKE_BUILD_TYPE=Release"
-                  "-DUSE_SYSTEM_BPF_BCC=ON"
                 ];
               };
 
