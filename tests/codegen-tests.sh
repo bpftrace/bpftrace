@@ -47,6 +47,6 @@ done
 # Change dir to project root
 cd "$(git rev-parse --show-toplevel)"
 
-run cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Debug -DUSE_SYSTEM_BPF_BCC=1
+run cmake -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Debug
 run make -C "$BUILD_DIR" -j $(nproc)
 BPFTRACE_UPDATE_TESTS=${UPDATE_TESTS} run ./"$BUILD_DIR"/tests/bpftrace_test --gtest_filter="codegen*"

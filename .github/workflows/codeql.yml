@@ -40,7 +40,7 @@ jobs:
         if: ${{ matrix.language == 'cpp' }}
         run: |
           mkdir $GITHUB_WORKSPACE/build && cd $GITHUB_WORKSPACE/build
-          nix develop --command cmake -DUSE_SYSTEM_BPF_BCC=1 ..
+          nix develop --command cmake ..
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v2
