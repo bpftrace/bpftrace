@@ -12,7 +12,6 @@ function info() {
 
 [[ -d tools ]] || err "'tools' directory not found, run script from bpftrace root dir"
 [[ -d man ]] || err "'man' directory not found, run script from bpftrace root dir"
-[[ -f bpftrace ]] || err "bpftrace binary not found, download the build artifact"
 command -v zstd >/dev/null 2>&1 || err "zstd command not found, required for release"
 command -v asciidoctor >/dev/null 2>&1 || err "asciidoctor not found, required for manpage"
 
@@ -44,16 +43,15 @@ gzip "$TMP/share/man/man8/"*
 asciidoctor man/adoc/bpftrace.adoc  -b manpage -o - | gzip - > "$TMP/share/man/man8/bpftrace.8.gz"
 tar --xz -cf "$OUT/man.tar.xz" -C "$TMP/share" man
 
+info "Building bpftrace appimage"
+nix build .#appimage
+
 info "Creating bundle"
-cp bpftrace "$TMP/bin/bpftrace"
+cp ./result "$OUT/bpftrace"
+cp ./result "$TMP/bin/bpftrace"
 tar -cf "$OUT/binary_tools_man-bundle.tar" -C "$TMP" bin share
 zstd $ZSTDFLAGS -q -k "$OUT/binary_tools_man-bundle.tar"
 xz "$OUT/binary_tools_man-bundle.tar"
-
-info "Compressing binary"
-cp bpftrace "$OUT/"
-xz -k "$OUT/bpftrace"
-zstd $ZSTDFLAGS -q -k "$OUT/bpftrace"
 
 echo "All assets created in $OUT"
 [[ -d "$TMP" ]] && rm -rf "$TMP"
