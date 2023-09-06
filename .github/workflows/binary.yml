@@ -1,0 +1,29 @@
+# This workflow builds and uploads the bpftrace appimage as a build artifact.
+#
+# This is useful for users who want to download the latest and greatest bpftrace
+# binary without going through a local build.
+
+name: Binary
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: DeterminateSystems/nix-installer-action@v4
+    - uses: DeterminateSystems/magic-nix-cache-action@v2
+
+    - name: Build appimage
+      run: nix build .#appimage
+
+    - name: Upload appimage
+      uses: actions/upload-artifact@v3
+      with:
+        name: bpftrace
+        path: ./result
