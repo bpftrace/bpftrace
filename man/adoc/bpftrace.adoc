@@ -105,7 +105,7 @@ Custom prefix to easily link section
 
 === Output format
 
-*-B* _MODE_::
+==== *-B* _MODE_
   Set the buffer mode for stdout. Valid values are::
 
     *none* No buffering. Each I/O is written as soon as possible +
@@ -113,96 +113,217 @@ Custom prefix to easily link section
     This is the default mode. +
     *full* Data is written once the buffer is full.
 
-*-f* _FORMAT_::
+==== *-f* _FORMAT_
   Set the output format. Valid values are::
 
     *json* +
     *text*
 
-*-o* _FILENAME_::
-  Write bpftrace tracing output to _FILENAME_ instead of stdout.
-  This doesn't include child process (*-c* option) output.
-  Errors are still written to stderr.
+==== *-o* _FILENAME_
+Write bpftrace tracing output to _FILENAME_ instead of stdout.
+This doesn't include child process (*-c* option) output.
+Errors are still written to stderr.
 
-*--no-warnings*::
-  Suppress all warning messages created by bpftrace.
+==== *--no-warnings*
+Suppress all warning messages created by bpftrace.
 
 === Tracing
 
-*-e* _PROGRAM_::
-  Execute _PROGRAM_ instead of reading the program from a file
+==== *-e* _PROGRAM_
+Execute _PROGRAM_ instead of reading the program from a file
 
-*-I* _DIR_::
-  Add the directory _DIR_ to the search path for C headers.
-  This option can be used multiple times.
+==== *-I* _DIR_
+The `-I` option can be used to add directories _DIR_ to the list of directories that bpftrace uses to look for
+headers. Can be defined multiple times.
 
-*--include* _FILENAME_::
-  Add _FILENAME_ as an include for the pre-processor.
-  This is equal to adding '#include _FILENAME_' to the start bpftrace program.
-  This option can be used multiple times.
-
-*-l* [_SEARCH_]::
-  List all probes that match the _SEARCH_ pattern.
-  If the pattern is omitted all probes will be listed.
-  This pattern supports wildcards in the same way that probes do.
-  E.g. '-l kprobe:*file*' to list all 'kprobes' with 'file' in the
-  name. For more details see the <<Listing Probes>> section.
-
-*--unsafe*::
-  Some calls, like 'system', are marked as unsafe as they can have dangerous side effects ('system("rm -rf")') and are disabled by default.
-  This flag allows their use.
-
-*-k*::
-  Errors from bpf-helpers(7) are silently ignored by default which can lead to strange results.
-  This flag enables the detection of errors (except for errors from 'probe_read_*').
-  When errors occurs bpftrace will log an error containing the source location and the error code:
 ----
-stdin:48-57: WARNING: Failed to probe_read_user_str: Bad address (-14)
-u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
+  # cat program.bt
+  #include <foo.h>
+
+  BEGIN { @ = FOO }
+
+  # bpftrace program.bt
+  definitions.h:1:10: fatal error: 'foo.h' file not found
+
+  # /tmp/include
+  foo.h
+
+  # bpftrace -I /tmp/include program.bt
+  Attaching 1 probe...
+----
+
+The `--include` option can be used to include headers by default. Can be defined multiple times. Headers
+are included in the order they are defined, and they are included before any other include in the program
+being executed.
+
+----
+  # bpftrace --include linux/path.h --include linux/dcache.h \
+      -e 'kprobe:vfs_open { printf("open path: %s\n", str(((struct path *)arg0)->dentry->d_name.name)); }'
+  Attaching 1 probe...
+  open path: .com.google.Chrome.ASsbu2
+  open path: .com.google.Chrome.gimc10
+  open path: .com.google.Chrome.R1234s
+----
+
+==== *--include* _FILENAME_
+Add _FILENAME_ as an include for the pre-processor.
+This is equal to adding '#include _FILENAME_' to the start bpftrace program.
+This option can be used multiple times.
+
+==== *-l* [_SEARCH_]
+List all probes that match the _SEARCH_ pattern.
+If the pattern is omitted all probes will be listed.
+This pattern supports wildcards in the same way that probes do.
+E.g. '-l kprobe:*file*' to list all 'kprobes' with 'file' in the
+name. For more details see the <<Listing Probes>> section.
+
+==== *--unsafe*
+Some calls, like 'system', are marked as unsafe as they can have dangerous side effects ('system("rm -rf")') and are disabled by default.
+This flag allows their use.
+
+==== *-k*
+Errors from bpf-helpers(7) are silently ignored by default which can lead to strange results.
+This flag enables the detection of errors (except for errors from 'probe_read_*').
+When errors occurs bpftrace will log an error containing the source location and the error code:
+----
+  stdin:48-57: WARNING: Failed to probe_read_user_str: Bad address (-14)
+  u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
                                                  ~~~~~~~~~
 ----
 
-*-kk*::
-  Same as '-k' but also includes the errors from 'probe_read_*' helpers.
+==== *-kk*
+Same as '-k' but also includes the errors from 'probe_read_*' helpers.
 
 
 === Process management
 
-*-p* _PID_::
-  Attach to the process with _PID_. If the process terminates, bpftrace will also terminate.
-  When using USDT probes they will be attached to only this process.
+==== *-p* _PID_
+Attach to the process with _PID_. If the process terminates, bpftrace will also terminate.
+When using USDT probes they will be attached to only this process.
 
-*-c* _COMMAND_::
-  Run _COMMAND_ as a child process.
-  When the child terminates bpftrace stops as well, as if 'exit()' has been called.
-  If bpftrace terminates before the child process does the child process will be terminated with a SIGTERM.
-  If used, 'USDT' probes these will only be attached to the child process.
-  To avoid a race condition when using 'USDTs' the child is stopped after 'execve' using 'ptrace(2)' and continued when all 'USDT' probes are attached. +
-  The child PID is available to programs as the 'cpid' builtin. +
-  The child process runs with the same privileges as bpftrace itself (usually root).
+==== *-c* _COMMAND_
+Run _COMMAND_ as a child process.
+When the child terminates bpftrace stops as well, as if 'exit()' has been called.
+If bpftrace terminates before the child process does the child process will be terminated with a SIGTERM.
+If used, 'USDT' probes these will only be attached to the child process.
+To avoid a race condition when using 'USDTs' the child is stopped after 'execve' using 'ptrace(2)' and continued when all 'USDT' probes are attached. +
+The child PID is available to programs as the 'cpid' builtin. +
+The child process runs with the same privileges as bpftrace itself (usually root).
 
-*--usdt-file-activation*::
-  activate usdt semaphores based on file path
+==== *--usdt-file-activation*
+activate usdt semaphores based on file path
 
 === Miscellaneous
 
-*--info*::
-  Print detailed information about features supported by the kernel and the bpftrace build.
+==== *--info*
+Print detailed information about features supported by the kernel and the bpftrace build.
 
-*-h, --help*::
-  Print the help summary
+==== *-h, --help*
+Print the help summary
 
-*-V, --version*::
-  Print bpftrace version information
+==== *-V, --version*
+Print bpftrace version information
+----
+  # bpftrace --version
+  bpftrace v0.8-90-g585e-dirty
+----
 
-*-v*::
-  verbose messages
+==== *-v*
+The `-v` option prints more information about the program as it is run:
 
-*-d*::
-  debug mode
+----
+  # bpftrace -v -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+  Attaching 1 probe...
 
-*-dd*::
-  verbose debug mode
+  The verifier log:
+  0: (bf) r6 = r1
+  1: (b7) r1 = 0
+  2: (7b) *(u64 *)(r10 -24) = r1
+  3: (7b) *(u64 *)(r10 -32) = r1
+  4: (7b) *(u64 *)(r10 -40) = r1
+  5: (7b) *(u64 *)(r10 -8) = r1
+  6: (7b) *(u64 *)(r10 -16) = r1
+  7: (bf) r1 = r10
+  8: (07) r1 += -16
+  9: (b7) r2 = 16
+  10: (85) call bpf_get_current_comm#16
+  11: (79) r1 = *(u64 *)(r10 -16)
+  12: (7b) *(u64 *)(r10 -32) = r1
+  13: (79) r1 = *(u64 *)(r10 -8)
+  14: (7b) *(u64 *)(r10 -24) = r1
+  15: (18) r7 = 0xffff9044e65f1000
+  17: (85) call bpf_get_smp_processor_id#8
+  18: (bf) r4 = r10
+  19: (07) r4 += -40
+  20: (bf) r1 = r6
+  21: (bf) r2 = r7
+  22: (bf) r3 = r0
+  23: (b7) r5 = 24
+  24: (85) call bpf_perf_event_output#25
+  25: (b7) r0 = 0
+  26: (95) exit
+  processed 26 insns (limit 131072), stack depth 40
+
+  Attaching tracepoint:syscalls:sys_enter_nanosleep
+  iscsid is sleeping.
+  iscsid is sleeping.
+  [...]
+----
+
+This includes `The verifier log:` and then the log message from the in-kernel verifier.
+
+==== *-d*
+The `-d` option produces debug output, and does not run the program. This is mostly useful for debugging
+issues with bpftrace itself. You can also use `-dd` to produce a more verbose debug output, which will
+also print unoptimized IR.
+
+**If you are an end-user of bpftrace, you should not normally need the `-d` or `-v` options, and you can
+skip to the [Language](#language) section.**
+
+----
+  # bpftrace -d -e 'tracepoint:syscalls:sys_enter_nanosleep { printf("%s is sleeping.\n", comm); }'
+  Program
+   tracepoint:syscalls:sys_enter_nanosleep
+    call: printf
+     string: %s is sleeping.\n
+     builtin: comm
+  [...]
+----
+
+The output begins with `Program` and then an abstract syntax tree (AST) representation of the program.
+
+Continued:
+
+----
+  [...]
+  %printf_t = type { i64, [16 x i8] }
+  [...]
+  define i64 @"tracepoint:syscalls:sys_enter_nanosleep"(i8*) local_unnamed_addr section "s_tracepoint:syscalls:sys_enter_nanosleep" {
+  entry:
+    %comm = alloca [16 x i8], align 1
+    %printf_args = alloca %printf_t, align 8
+    %1 = bitcast %printf_t* %printf_args to i8*
+    call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %1)
+    %2 = getelementptr inbounds [16 x i8], [16 x i8]* %comm, i64 0, i64 0
+    %3 = bitcast %printf_t* %printf_args to i8*
+    call void @llvm.memset.p0i8.i64(i8* nonnull %3, i8 0, i64 24, i32 8, i1 false)
+    call void @llvm.lifetime.start.p0i8(i64 -1, i8* nonnull %2)
+    call void @llvm.memset.p0i8.i64(i8* nonnull %2, i8 0, i64 16, i32 1, i1 false)
+    %get_comm = call i64 inttoptr (i64 16 to i64 (i8*, i64)*)([16 x i8]* nonnull %comm, i64 16)
+    %4 = getelementptr inbounds %printf_t, %printf_t* %printf_args, i64 0, i32 1, i64 0
+    call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull %4, i8* nonnull %2, i64 16, i32 1, i1 false)
+    %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
+    %get_cpu_id = call i64 inttoptr (i64 8 to i64 ()*)()
+    %perf_event_output = call i64 inttoptr (i64 25 to i64 (i8*, i8*, i64, i8*, i64)*)(i8* %0, i64 %pseudo, i64 %get_cpu_id, %printf_t* nonnull %printf_args, i64 24)
+    call void @llvm.lifetime.end.p0i8(i64 -1, i8* nonnull %1)
+    ret i64 0
+  [...]
+----
+
+This section shows the llvm intermediate representation (IR) assembly, which is then compiled into BPF.
+
+==== *-dd*
+verbose debug mode
 
 ////
 !
