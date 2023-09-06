@@ -118,21 +118,27 @@ For additional help / discussion, please use our [discussions](https://github.co
 
 ## Development
 
-### Docker
+### Nix
 
-For build & test directly in docker
+bpftrace supports building and testing with [Nix flakes](https://nixos.wiki/wiki/Flakes).
+The quickstart follows but more detailed documentation can be found in [nix.md](docs/nix.md).
 
-```
-$ ./build.sh
-```
-
-For build in docker then test directly on host
+First, install `nix`: https://nixos.org/download.html. Then enable Nix flake
+support:
 
 ```
-$ ./build-static.sh
-$ ./build-static/src/bpftrace
-$ ./build-static/tests/bpftrace_test
+$ mkdir -p ~/.config/nix
+$ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 ```
+
+Now build and run:
+
+```
+$ nix build
+$ sudo ./result/bin/bpftrace --info
+```
+
+The above steps are theoretically guaranteed to work on any linux x86-64/arm system.
 
 ### Vagrant
 
@@ -152,28 +158,6 @@ $ vagrant status
 $ vagrant up $YOUR_CHOICE
 $ vagrant ssh $YOUR_CHOICE
 ```
-
-### Nix
-
-There is experimental support for building and testing with [Nix flakes](https://nixos.wiki/wiki/Flakes).
-The quickstart follows but more detailed documentation can be found in [nix.md](docs/nix.md).
-
-First, install `nix`: https://nixos.org/download.html. Then enable Nix flake
-support:
-
-```
-$ mkdir -p ~/.config/nix
-$ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-```
-
-Now build and run:
-
-```
-$ nix build
-$ sudo ./result/bin/bpftrace --info
-```
-
-The above steps are theoretically guaranteed to work on any linux x86-64/arm system.
 
 ## License
 

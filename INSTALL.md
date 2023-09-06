@@ -1,6 +1,7 @@
 # bpftrace Install
 
 - [Linux Kernel Requirements](#linux-kernel-requirements)
+- [Kernel headers install](#kernel-headers-install)
 - [Package install](#package-install)
   - [Ubuntu](#ubuntu-packages)
   - [Fedora](#fedora-package)
@@ -10,15 +11,11 @@
   - [CentOS](#CentOS-package)
   - [Arch](#arch-package)
   - [Alpine](#alpine-package)
-- [Docker images](#docker-images)
-  - [Copying bpftrace binary docker](#copying-bpftrace-binary-from-docker)
-  - [Kernel headers install](#kernel-headers-install)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
   - [Amazon Linux](#amazon-linux)
   - (*please add sections for other OSes)*
-  - [Using Docker](#using-docker)
   - [Generic build](#generic-build-process)
 - [Disable Lockdown](#disable-lockdown)
 
@@ -57,6 +54,42 @@ CONFIG_DEBUG_FS=y
 
 This can be verified by running the `check_kernel_features` script from the
 `scripts` directory.
+
+# Kernel headers install
+
+Usually kernels headers can be installed from a system package manager. In some
+cases though, this may not be an option, and headers aren't easily available.
+For instance, the default `docker desktop` (as of writing ships with kernel
+4.19 which supports bpf), benefits from this, as does Chromium OS and other
+lightweight Linux distributions.
+
+Newer kernels may have the IKHEADERS option, or support btf - in which case
+there is no need to build these headers as the kernel provides this.
+For older kernels, and on distributions where headers may not be available,
+this script provides a generic means to get bpftrace kernel headers:
+
+```bash
+#!/bin/bash
+
+set -e
+
+KERNEL_VERSION="${KERNEL_VERSION:-$(uname -r)}"
+kernel_version="$(echo "${KERNEL_VERSION}" | awk -vFS=- '{ print $1 }')"
+major_version="$(echo "${KERNEL_VERSION}" | awk -vFS=. '{ print $1 }')"
+
+apt-get install -y build-essential bc curl flex bison libelf-dev
+
+mkdir -p /usr/src/linux
+curl -sL "https://www.kernel.org/pub/linux/kernel/v${major_version}.x/linux-$kernel_version.tar.gz" \
+  | tar --strip-components=1 -xzf - -C /usr/src/linux
+cd /usr/src/linux
+zcat /proc/config.gz > .config
+make ARCH=x86 oldconfig
+make ARCH=x86 prepare
+mkdir -p /lib/modules/$(uname -r)
+ln -sf /usr/src/linux /lib/modules/$(uname -r)/source
+ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
+```
 
 # Package install
 
@@ -126,127 +159,7 @@ To install tools and documentation:
 sudo apk add bpftrace-doc bpftrace-tools bpftrace-tools-doc
 ```
 
-# Docker images
-
-Each push to master will result in a docker image being built and pushed to
-the quay.io container hosting service. This publishes the docker embedded build
-linked to glibc, packaged in a minimal ubuntu container.
-
-This allows for such an invocation of bpftrace:
-
-```
-$ docker run -ti -v /usr/src:/usr/src:ro \
-       -v /lib/modules/:/lib/modules:ro \
-       -v /sys/kernel/debug/:/sys/kernel/debug:rw \
-       --net=host --pid=host --privileged \
-       quay.io/iovisor/bpftrace:latest \
-       tcplife.bt
-Attaching 3 probes...
-PID   COMM       LADDR           LPORT RADDR           RPORT TX_KB RX_KB MS
-```
-
-The following tags are published for all builds:
-
-- `quay.io/iovisor/bpftrace:${GIT_SHA}-${TYPE_TAG}`- eg `69149e94952db2eea579ad40e15fbc67c7b810d5-vanilla_llvm_clang_glibc2.27`
-- `quay.io/iovisor/bpftrace:${GIT_REF}-${TYPE_TAG}`- eg `master-vanilla_llvm_clang_glibc2.23` or `v0.9.5-vanilla_llvm_clang_glibc2.23`
-
-If the build is on the master branch, it also publishes these additional tags:
-
-- `quay.io/iovisor/bpftrace:${GIT_REF}`- eg `master` or `v0.9.5`
-- `quay.io/iovisor/bpftrace:${GIT_SHA}`- eg `69149e94952db2eea579ad40e15fbc67c7b810d5`
-- `quay.io/iovisor/bpftrace:latest`
-
-If the build type name ends with `_edge`, and `EDGE=ON` is set, and the build
-is on master, these tags are not pushed, and instead the `edge` tag is pushed:
-
-- `quay.io/iovisor/bpftrace:edge`
-
-This `:edge` build is likely less stable than `:latest` or tagged revisions,
-but builds against bcc master and the latest LLVM supported by bpftrace. The
-principal goal of the `:edge` build is to help detect integration issues early,
-and make all latest features available, but that may also make it less stable
-for day-to-day or production use.
-
-If using floating tagged images, such as branch tags, `:latest`, or `:edge` or
-`:master`, it may be necessary to run `docker pull` explicitly, to ensure that
-the tag is updated.
-
-The [full list of tags](https://quay.io/repository/iovisor/bpftrace?tab=tags) can
-be used to search for tags, and the history of all tags is recorded on
-[quay.io](https://quay.io/repository/iovisor/bpftrace?tab=history), and the
-distributed images are regularly scanned by a vulnerability scanner.
-
-## Copying bpftrace binary from docker
-
-As docker builds produce a bpftrace binary on every push to master, they also
-allow for a convenient way to distribute bpftrace binaries. The only software
-requirement to run bpftrace  is a version of glibc that is the same or newer as
-what it was built at.
-
-For this reason, an older glibc - 2.23 is provided for all builds, it can be
-pulled with:
-
-```
-docker pull quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23
-```
-
-To copy the binary out of bpftrace in the current directory:
-
-```
-$ docker run -v $(pwd):/output quay.io/iovisor/bpftrace:master-vanilla_llvm_clang_glibc2.23 \
-  /bin/bash -c "cp /usr/bin/bpftrace /output"
-$ ./bpftrace -V
-v0.9.4
-```
-
-bpftrace currently links to glibc 2.27 from Ubuntu Bionic by default, though
-this should be portably to any glibc-based OS, such as Fedora, Chromium OS, etc.
-
-## Kernel headers install
-
-Usually kernels headers can be installed from a system package manager. In some
-cases though, this may not be an option, and headers aren't easily available.
-For instance, the default `docker desktop` (as of writing ships with kernel
-4.19 which supports bpf), benefits from this, as does Chromium OS and other
-lightweight Linux distributions.
-
-Newer kernels may have the IKHEADERS option, or support btf - in which case
-there is no need to build these headers as the kernel provides this.
-For older kernels, and on distributions where headers may not be available,
-this script provides a generic means to get bpftrace kernel headers:
-
-```bash
-#!/bin/bash
-
-set -e
-
-KERNEL_VERSION="${KERNEL_VERSION:-$(uname -r)}"
-kernel_version="$(echo "${KERNEL_VERSION}" | awk -vFS=- '{ print $1 }')"
-major_version="$(echo "${KERNEL_VERSION}" | awk -vFS=. '{ print $1 }')"
-
-apt-get install -y build-essential bc curl flex bison libelf-dev
-
-mkdir -p /usr/src/linux
-curl -sL "https://www.kernel.org/pub/linux/kernel/v${major_version}.x/linux-$kernel_version.tar.gz" \
-  | tar --strip-components=1 -xzf - -C /usr/src/linux
-cd /usr/src/linux
-zcat /proc/config.gz > .config
-make ARCH=x86 oldconfig
-make ARCH=x86 prepare
-mkdir -p /lib/modules/$(uname -r)
-ln -sf /usr/src/linux /lib/modules/$(uname -r)/source
-ln -sf /usr/src/linux /lib/modules/$(uname -r)/build
-```
-
 # Building bpftrace
-
-## Vendored libraries
-The bpftrace tree include bcc and libbpf submodules. 
-Use `git submodule init && git submodule update --recursive` to initialize them (after having cloned the repo) or use `git clone --recurse-submodules https://github.com/iovisor/bpftrace` when first cloning the bpftrace repo.
-
-By default the build system will look for these libraries as built in the
-bpftrace tree. If you want to use the system ones, pass
-`-DUSE_SYSTEM_BPF_BCC=1` to your `cmake` invocation.
 
 ## Ubuntu
 
@@ -298,9 +211,8 @@ sudo apt-get install -y \
   asciidoctor \
   libdw-dev \
   pahole
-git clone https://github.com/iovisor/bpftrace --recurse-submodules
+git clone https://github.com/iovisor/bpftrace
 mkdir bpftrace/build; cd bpftrace/build;
-../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 sudo make install
@@ -339,10 +251,9 @@ sudo dnf install -y bison \
   cereal-devel \
   asciidoctor \
   dwarves
-git clone https://github.com/iovisor/bpftrace --recurse-submodules
+git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build
-../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j8
 sudo make install
@@ -391,7 +302,6 @@ cd $builddir
 git clone https://github.com/iovisor/bpftrace
 cd bpftrace
 mkdir build; cd build
-../build-libs.sh
 cmake3 ..
 make -j8
 make install
@@ -401,28 +311,15 @@ ldconfig -v
 
 The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You may need to add /usr/local/bin to your $PATH. You can also change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
-## Using Docker
-
-There are currently problems with bpftrace string comparisons when using the Docker build. The regular build is recommended for now.
-
-Building inside a Docker container will produce a statically linked bpftrace executable.
-
-`./build.sh`
-
-There are some more fine-grained options if you find yourself building bpftrace a lot:
-- `./build-docker-image.sh` - builds just the `bpftrace-builder` Docker image
-- `./build-debug.sh` - builds bpftrace with debugging information (requires `./build-docker-image.sh` to have already been run)
-- `./build-release.sh` - builds bpftrace in a release configuration (requires `./build-docker-image.sh` to have already been run)
-
-`./build.sh` is equivalent to `./build-docker-image.sh && ./build-release.sh`
-
 ## Generic build process
 
-Use specific OS build sections listed earlier if available (Ubuntu, Docker).
+Use specific OS build sections listed earlier if available (Ubuntu).
 
 ### Requirements
 
 - A C++ compiler
+- Libbpf
+- Libbcc
 - CMake
 - Flex
 - Bison
@@ -433,43 +330,25 @@ Use specific OS build sections listed earlier if available (Ubuntu, Docker).
 - Kernel requirements described earlier
 - Libpcap
 
-The bpftrace repository contains submodules for appropriate libbpf and bcc
-versions, which will be used unless `-DUSE_SYSTEM_BPF_BCC=1` is passed to `cmake`.
-
-If using `USE_SYSTEM_BPF_BCC`, the current required versions are:
-- BCC development package - v0.25.0
-- libbpf - v0.8.1
-
 ### Compilation
 
 ```
 git clone https://github.com/iovisor/bpftrace
 mkdir -p bpftrace/build
 cd bpftrace/build
-../build-libs.sh
 cmake -DCMAKE_BUILD_TYPE=Release ../
 make
 ```
 
-If using system bcc and libbpf libraries, it would look like this:
-
-```
-git clone https://github.com/iovisor/bpftrace
-mkdir -p bpftrace/build
-cd bpftrace/build
-cmake -DUSE_SYSTEM_BPF_BCC=1 -DCMAKE_BUILD_TYPE=Release ../
-make
-```
-
-By default bpftrace will be built as a dynamically linked executable (except for vendored libraries, if used). If a statically linked executable would be preferred and your system has the required libraries installed, the CMake option `-DSTATIC_LINKING:BOOL=ON` can be used. Building bpftrace using the alpine Docker image below will result in a statically linked executable, and additional flags allow for compiling and statically linking the dependencies of bpftrace, see [the embedded build docs](./docs/embedded_builds.md) for more about this type of build. A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
+A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
 
 The latest version of Google Test will be downloaded on each build. To speed up builds and only download its source on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
 
-To test that the build works, you can try running the test suite, and a one-liner:
+To test that the build works, you can try running the unit tests and a one-liner:
 
 ```
-./tests/bpftrace_test
-./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
+$ ./tests/bpftrace_test
+# ./src/bpftrace -e 'kprobe:do_nanosleep { printf("sleep by %s\n", comm); }'
 ```
 
 # Disable Lockdown

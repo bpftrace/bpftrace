@@ -11,18 +11,8 @@ tests if relevant. See existing tests for inspiration on how to write new ones. 
 
 ## Continuous integration
 
-CI executes the above tests in a matrix of different environments:
-
-- Standard (dynamically linked) bpftrace built on NixOS with different versions
-  of LLVM.
-- bpftrace with all dependencies, except for libc, statically linked. Uses
-  Ubuntu 20.04, LLVM 12, and is linked dynamically to two different versions of
-  libc.
-- bpftrace with all dependencies, including libc, statically linked. Uses
-  Alpine and LLVM 10.
-
-The first matrix is defined in `.github/workflows/ci.yml` and the latter two in
-`.github/workflows/embedded.yml`.
+CI executes the above tests in a matrix of different LLVM versions on NixOS.
+The jobs are defined in `.github/workflows/ci.yml`.
 
 ### Running the CI
 
@@ -33,8 +23,8 @@ allow you to run the CI against your testing branches.
 ### Debugging CI failures
 
 It may often happen that tests pass on your local setup but fail in one of the
-CI environments (especially the embedded ones). In such a case, it is useful to
-reproduce the environment to debug the issue.
+CI environments. In such a case, it is useful to reproduce the environment to
+debug the issue.
 
 To reproduce the NixOS jobs (from `.github/workflows/ci.yml`):
 
@@ -53,13 +43,6 @@ $ NIX_TARGET=.#bpftrace-llvm11  \
   RUNTIME_TEST_DISABLE="probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process" \
   ./.github/include/ci.py
 ```
-
-To reproduce the embedded jobs (from `.github/workflows/embedded.yml`):
-
-See the job file (`.github/workflows/*.yml`) for exact `docker build` and
-`docker run` commands.  Note: the images use `docker/build.sh` as the
-entrypoint so you may want to override it (`--entrypoint=`) and build bpftrace
-manually in the container.
 
 ### Known issues
 
