@@ -118,46 +118,7 @@ For additional help / discussion, please use our [discussions](https://github.co
 
 ## Development
 
-### Nix
-
-bpftrace supports building and testing with [Nix flakes](https://nixos.wiki/wiki/Flakes).
-The quickstart follows but more detailed documentation can be found in [nix.md](docs/nix.md).
-
-First, install `nix`: https://nixos.org/download.html. Then enable Nix flake
-support:
-
-```
-$ mkdir -p ~/.config/nix
-$ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-```
-
-Now build and run:
-
-```
-$ nix build
-$ sudo ./result/bin/bpftrace --info
-```
-
-The above steps are theoretically guaranteed to work on any linux x86-64/arm system.
-
-### Vagrant
-
-For development and testing a [Vagrantfile](Vagrantfile) is available.
-
-Make sure you have the `vbguest` plugin installed, it is required to correctly
-install the shared file system driver on the ubuntu boxes:
-
-```
-$ vagrant plugin install vagrant-vbguest
-```
-
-Start VM:
-
-```
-$ vagrant status
-$ vagrant up $YOUR_CHOICE
-$ vagrant ssh $YOUR_CHOICE
-```
+Please see [developers.md](docs/developers.md) for all development related topics.
 
 ## License
 
