@@ -21,21 +21,73 @@ bpftrace - a high-level tracing language
 bpftrace is a high-level tracing language and runtime for Linux based on BPF.
 It supports static and dynamic tracing for both the kernel and user-space.
 
-When _FILENAME_ is "_-_", read from stdin.
+When _FILENAME_ is "_-_", bpftrace will read program code from stdin.
+
+This manpage contains numerous terms. See the *Terminology* section for more information about these terms.
 
 == Examples
 
-List all probes with "sleep" in their name::
+=== Running a one-liner program
 ----
-  # bpftrace -l '*sleep*'
+  # bpftrace -e 'BEGIN { printf("Hello, World!\n"); }'
+  Attaching 1 probe...
+  Hello, World!
+  ^C
+----
+The *-e* option allows a program to be specified, and is a way to construct one-liners.
+See the *Options* section for more information on the command line options.
+
+The syntax of the one-liner program will be explained in the *bpftrace Language* section.
+
+A program will continue running until Ctrl-C is hit, or an exit() function is called.
+
+=== Running a bpftrace script
+Programs saved as files are often called scripts, and can be executed by specifying their file name.
+We'll often use a `.bt` file extension, short for bpftrace, but the extension is ignored.
+----
+  # cat -n sleepers.bt
+  1 tracepoint:syscalls:sys_enter_nanosleep
+  2 {
+  3   printf("%s is sleeping.\n", comm);
+  4 }
+  # bpftrace sleepers.bt
+----
+It can also be made executable to run stand-alone.
+Start by adding an interpreter line at the top (`#!`) with either the path to your installed bpftrace (/usr/local/bin is the default) or the path to `env`
+(usually just `/usr/bin/env`) followed by `bpftrace` (so it will find bpftrace in your `$PATH`):
+----
+  # cat -n sleepers.bt
+  1 #!/usr/local/bin/bpftrace
+  2
+  3 tracepoint:syscalls:sys_enter_nanosleep
+  4 {
+  5   printf("%s is sleeping.\n", comm);
+  6 }
+  # chmod 755 sleepers.bt
+  # ./sleepers.bt
 ----
 
-Trace processes calling sleep::
+=== List available probes
+Probes from the tracepoint and kprobe libraries can be listed with `-l`.
+----
+  # bpftrace -l
+  tracepoint:xfs:xfs_attr_list_sf
+  tracepoint:xfs:xfs_attr_list_sf_all
+  [...]
+----
+The *-v* option allows more details to be printed, see the *Listing Probes* section for more information.
+
+=== Trace processes calling sleep
+This example is printing when processes call the nanosleep syscall.
 ----
   # bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }'
+  Attaching 1 probe...
+  iscsid is sleeping.
+  iscsid is sleeping.
+  [...]
 ----
 
-Trace processes calling sleep while spawning `sleep 5` as a child process::
+We can also trace processes calling sleep while spawning `sleep 5` as a child process:
 ----
   # bpftrace -e 'kprobe:do_nanosleep { printf("%d sleeping\n", pid); }' -c 'sleep 5'
 ----
@@ -2668,26 +2720,55 @@ Probe listing is the method to discover which probes are supported by the curren
 Listing supports the same syntax as normal attachment does:
 
 ----
-# bpftrace -l 'kprobe:*'
-# bpftrace -l 't:syscalls:*openat*
-# bpftrace -l 'kprobe:tcp*,trace
-# bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
+  # bpftrace -l
+  tracepoint:xfs:xfs_attr_list_sf
+  tracepoint:xfs:xfs_attr_list_sf_all
+  [...]
+  # bpftrace -l | wc -l
+  46260
+  # bpftrace -l 'kprobe:*'
+  # bpftrace -l 't:syscalls:*openat*
+  # bpftrace -l 'kprobe:tcp*,trace
+  # bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
 ----
 
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:
 
 ----
-# bpftrace -l 'fr:tcp_reset,t:syscalls:sys_enter_openat' -v
-kretfunc:tcp_reset
-    struct sock * sk
-    struct sk_buff * skb
-tracepoint:syscalls:sys_enter_openat
-    int __syscall_nr
-    int dfd
-    const char * filename
-    int flags
-    umode_t mode
-# bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
-uprobe:/bin/bash:rl_set_prompt
-    const char *prompt
+  # bpftrace -l 'fr:tcp_reset,t:syscalls:sys_enter_openat' -v
+  kretfunc:tcp_reset
+      struct sock * sk
+      struct sk_buff * skb
+  tracepoint:syscalls:sys_enter_openat
+      int __syscall_nr
+      int dfd
+      const char * filename
+      int flags
+      umode_t mode
+  # bpftrace -l 'uprobe:/bin/bash:rl_set_prompt' -v    # works only if /bin/bash has DWARF
+  uprobe:/bin/bash:rl_set_prompt
+      const char *prompt
 ----
+
+If BTF is available, it is also possible to list struct/union/enum definitions. For example:
+----
+  # bpftrace -lv "struct path"
+  struct path {
+          struct vfsmount *mnt;
+          struct dentry *dentry;
+  };
+----
+
+== Terminology
+
+*BPF*:: Berkeley Packet Filter: a kernel technology originally developed for optimizing the processing of packet filters (eg, tcpdump expressions).
+*eBPF*:: Enhanced BPF: a kernel technology that extends BPF so that it can execute more generic programs on any events, such as the bpftrace programs listed below. It makes use of the BPF sandboxed virtual machine environment. Also note that eBPF is often just referred to as BPF.
+*probe*:: An instrumentation point in software or hardware, that generates events that can execute bpftrace programs.
+*static tracing*:: Hard-coded instrumentation points in code. Since these are fixed, they may be provided as part of a stable API, and documented.
+*dynamic tracing*:: Also known as dynamic instrumentation, this is a technology that can instrument any software event, such as function calls and returns, by live modification of instruction text. Target software usually does not need special capabilities to support dynamic tracing, other than a symbol table that bpftrace can read. Since this instruments all software text, it is not considered a stable API, and the target functions may not be documented outside of their source code.
+*tracepoints*:: A Linux kernel technology for providing static tracing.
+*kprobes*:: A Linux kernel technology for providing dynamic tracing of kernel functions.
+*uprobes*:: A Linux kernel technology for providing dynamic tracing of user-level functions.
+*USDT*:: User Statically-Defined Tracing: static tracing points for user-level software. Some applications support USDT.
+*BPF map*:: A BPF memory object, which is used by bpftrace to create many higher-level objects.
+*BTF*:: BPF Type Format: the metadata format which encodes the debug info related to BPF program/map.
