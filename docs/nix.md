@@ -61,7 +61,7 @@ static!
 
 ```
 $ nix develop
-[dxu@kashmir bpftrace]$ cmake -B build-nix -GNinja -DUSE_SYSTEM_BPF_BCC=1
+[dxu@kashmir bpftrace]$ cmake -B build-nix -GNinja
 [...]
 
 [dxu@kashmir bpftrace]$ ninja -C build-nix
@@ -81,7 +81,7 @@ few more tools available.
 
 ```
 $ nix develop .#bpftrace-llvm12
-dxu@kashmir bpftrace]$ cmake -B build-nix -GNinja -DUSE_SYSTEM_BPF_BCC=1
+dxu@kashmir bpftrace]$ cmake -B build-nix -GNinja
 [...]
 -- Found LLVM 12.0.1: ///nix/store/xs06qigbqln7piypm7dfj5wqd38ndgcz-llvm-12.0.1-dev/lib/cmake/llvm/
 [...]
