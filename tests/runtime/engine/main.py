@@ -2,16 +2,18 @@
 
 import argparse
 from datetime import timedelta
-from fnmatch import fnmatch
+import os
+import re
 import time
 
 from parser import TestParser, UnknownFieldError, RequiredFieldError
 from runner import Runner, ok, fail, warn
 
+TEST_FILTER = os.getenv("TEST_FILTER")
 
 def main(test_filter, run_aot_tests):
     if not test_filter:
-        test_filter = "*"
+        test_filter = ".*"
 
     try:
         test_suite = sorted(TestParser.read_all(run_aot_tests))
@@ -23,7 +25,7 @@ def main(test_filter, run_aot_tests):
     # Apply filter
     filtered_suites = []
     for fname, tests in test_suite:
-        filtered_tests = [t for t in tests if fnmatch("{}.{}".format(fname, t.name), test_filter)]
+        filtered_tests = [t for t in tests if re.search(test_filter, "{}.{}".format(fname, t.name))]
         if len(filtered_tests) != 0:
             filtered_suites.append((fname, filtered_tests))
     test_suite = filtered_suites
@@ -79,4 +81,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    main(args.test_filter, args.run_aot_tests)
+    main(args.test_filter or TEST_FILTER, args.run_aot_tests)
