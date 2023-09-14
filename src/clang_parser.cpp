@@ -792,19 +792,25 @@ bool ClangParser::parse(ast::Program *program, BPFtrace &bpftrace, std::vector<s
 }
 
 /*
- * Parse the given Clang diagnostics message and if it has the form:
+ * Parse the given Clang diagnostics message and if it has one of the forms:
  *   unknown type name 'type_t'
+ *   use of undeclared identifier 'type_t'
  * return type_t.
  */
 std::optional<std::string> ClangParser::ClangParser::get_unknown_type(
     const std::string &diagnostic_msg)
 {
-  const std::string unknown_type_msg = "unknown type name \'";
-  if (diagnostic_msg.find(unknown_type_msg) == 0)
+  const std::vector<std::string> unknown_type_msgs = {
+    "unknown type name \'", "use of undeclared identifier \'"
+  };
+  for (auto &unknown_type_msg : unknown_type_msgs)
   {
-    return diagnostic_msg.substr(unknown_type_msg.length(),
-                                 diagnostic_msg.length() -
-                                     unknown_type_msg.length() - 1);
+    if (diagnostic_msg.find(unknown_type_msg) == 0)
+    {
+      return diagnostic_msg.substr(unknown_type_msg.length(),
+                                   diagnostic_msg.length() -
+                                       unknown_type_msg.length() - 1);
+    }
   }
   return {};
 }
