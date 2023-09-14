@@ -51,6 +51,8 @@ and this project adheres to
   - [#2718](https://github.com/iovisor/bpftrace/pull/2718)
 - iter: Skip structures with '__safe_trusted' suffix
   - [#2732](https://github.com/iovisor/bpftrace/pull/2732)
+- Improve detection of unknown typedefs in ClangParser
+  - [#2763](https://github.com/iovisor/bpftrace/pull/2763)
 
 
 ## [0.18.0] 2023-05-15
