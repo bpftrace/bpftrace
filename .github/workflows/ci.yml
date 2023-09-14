@@ -39,54 +39,64 @@ jobs:
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm10
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 10 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm10
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 10 Clang Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm10
           CC: clang
           CXX: clang++
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 11 Debug
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm11
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 11 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm11
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 12 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm12
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 13 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm13
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 14 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm14
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 15 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm15
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: LLVM 16 Release
           CMAKE_BUILD_TYPE: Release
           NIX_TARGET: .#bpftrace-llvm16
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
-          TOOLS_TEST_OLDVERSION: biosnoop.bt tcpdrop.bt
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: Memleak test (LLVM 11 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm11
