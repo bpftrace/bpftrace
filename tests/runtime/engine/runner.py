@@ -12,7 +12,7 @@ from functools import lru_cache
 import cmake_vars
 
 BPF_PATH = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
-ATTACH_TIMEOUT = 5
+ATTACH_TIMEOUT = 10
 DEFAULT_TIMEOUT = 5
 
 
@@ -83,22 +83,24 @@ class Runner(object):
             raise ValueError("Invalid skip reason: %d" % status)
 
     @staticmethod
-    def prepare_bpf_call(test):
-        bpftrace_path = "{}/bpftrace".format(BPF_PATH)
-        bpftrace_aotrt_path = "{}/aot/bpftrace-aotrt".format(BPF_PATH)
+    def prepare_bpf_call(test, nsenter=[]):
+        bpftrace_path = os.path.abspath(f"{BPF_PATH}/bpftrace")
+        bpftrace_aotrt_path = os.path.abspath(f"{BPF_PATH}/aot/bpftrace-aotrt")
+
+        nsenter_prefix = (" ".join(nsenter) + " ") if len(nsenter) > 0 else ""
 
         if test.run:
             ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
             ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
 
-            return ret
+            return nsenter_prefix + ret
         else:  # PROG
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
-                return "{} -e '{}' --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(
+                return nsenter_prefix + "{} -e '{}' --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(
                     bpftrace_path, test.prog, bpftrace_aotrt_path)
             else:
-                return "{} -e '{}'".format(bpftrace_path, test.prog)
+                return nsenter_prefix + "{} -e '{}'".format(bpftrace_path, test.prog)
 
     @staticmethod
     def __handler(signum, frame):
@@ -108,7 +110,7 @@ class Runner(object):
     @lru_cache(maxsize=1)
     def __get_bpffeature():
         p = subprocess.Popen(
-            [f"{BPF_PATH}/bpftrace", "--info"],
+            [os.path.abspath(f"{BPF_PATH}/bpftrace"), "--info"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
@@ -137,6 +139,29 @@ class Runner(object):
         bpffeature["jiffies64"] = output.find("jiffies64: yes") != -1
         return bpffeature
 
+    
+    @staticmethod
+    def __wait_for_children(parent_pid, timeout, ps_format, condition):
+        with open(os.devnull, 'w') as dn:
+            waited=0
+            while waited <= timeout:
+                run_cmd = ["ps", "--ppid", str(parent_pid), "--no-headers", "-o", ps_format]
+                children = subprocess.run(run_cmd,
+                                          check=False,
+                                          stdout=subprocess.PIPE,
+                                          stderr=subprocess.PIPE)
+                if children.returncode == 0 and children.stdout:
+                    lines = [line.decode('utf-8') for line in children.stdout.splitlines()]
+                    if (condition(lines)):
+                        return lines
+                else:
+                    print(f"__wait_for_children error: {children.stderr}. Return code: {children.returncode}")
+
+                time.sleep(0.1)
+                waited+=0.1
+        return None
+
+
     @staticmethod
     def run_test(test):
         current_kernel = LooseVersion(os.uname()[2])
@@ -162,7 +187,15 @@ class Runner(object):
         after = None
         after_output = None
         cleanup = None
+        # This is only populated if the NEW_PIDNS directive is set
+        # and is used to enter the newly created pid namespace for all BEFOREs,
+        # the primary RUN or PROG command, and the AFTER.
+        nsenter = []
         bpf_call = "[unknown]"
+
+        def get_pid_ns_cmd(cmd):
+            return nsenter + [os.path.abspath(x) for x in cmd.split()]
+
         try:
             result = None
             timeout = False
@@ -197,42 +230,61 @@ class Runner(object):
                     elif bpffeature[feature]:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
+            
+            if test.new_pidns and not test.befores:
+                raise ValueError("`NEW_PIDNS` requires at least one `BEFORE` directive as something needs to run in the new pid namespace")
 
             if test.befores:
-                for before in test.befores:
-                    before = subprocess.Popen(before.split(),
-                                              start_new_session=True,
-                                              universal_newlines=True,
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.STDOUT)
-                    befores.append(before)
+                if test.new_pidns:
+                    # Use the first BEFORE as the first process in the new pid namespace
+                    unshare_out = subprocess.Popen(["unshare", "--fork", "--pid", "--mount-proc", "-r", "--kill-child"] + ["--"] + test.befores[0].split(),
+                                                   start_new_session=True, universal_newlines=True,
+                                                   stdout=subprocess.PIPE,
+                                                   stderr=subprocess.STDOUT)
 
-                with open(os.devnull, 'w') as dn:
+                    lines = Runner.__wait_for_children(unshare_out.pid, test.timeout, "pid", lambda lines : len(lines) > 0)
+
+                    if not lines:
+                        raise TimeoutError(f'Timed out waiting create a new PID namespace')
+
+                    nsenter.extend(["nsenter", "-p", "-m", "-t", lines[0].strip()])
+
+                    # This is the only one we need to add to befores as killing the
+                    # unshare process will kill the whole process subtree with "--kill-child"
+                    befores.append(unshare_out)
+                    for before in test.befores[1:]:
+                        child_name = os.path.basename(before.strip().split()[0])[:15]
+                        before = subprocess.Popen(get_pid_ns_cmd(before),
+                                                start_new_session=True,
+                                                universal_newlines=True,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT)
+                        # wait for the child of nsenter
+                        if not Runner.__wait_for_children(before.pid, test.timeout, "comm", lambda lines : child_name in lines):
+                            raise TimeoutError(f'Timed out waiting for BEFORE {before}')
+                else:
+                    for before in test.befores:
+                        before = subprocess.Popen(before.split(),
+                                                start_new_session=True,
+                                                universal_newlines=True,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.STDOUT)
+                        befores.append(before)
+
                     child_names = [os.path.basename(x.strip().split()[-1]) for x in test.befores]
                     child_names = sorted((x[:15] for x in child_names))  # cut to comm length
 
-                    # Print the names of all of our children and look
-                    # for the ones from BEFORE clauses
-                    waited=0
-                    while waited <= test.timeout:
-                        children = subprocess.run(["ps", "--ppid", str(os.getpid()), "--no-headers", "-o", "comm"],
-                                                  check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        if children.returncode == 0 and children.stdout:
-                            lines = [line.decode('utf-8') for line in children.stdout.splitlines()]
-                            lines = sorted((line.strip() for line in lines if line != 'ps'))
-                            if lines == child_names:
-                                break
-                        else:
-                            print(children.stderr)
+                    def found_all_children(lines):
+                        return sorted((line.strip() for line in lines if line != 'ps')) == child_names
 
-                        time.sleep(0.1)
-                        waited+=0.1
-
-                    if waited > test.timeout:
+                    if not Runner.__wait_for_children(os.getpid(), test.timeout, "comm", found_all_children):
                         raise TimeoutError(f'Timed out waiting for BEFORE(s) {test.befores}')
 
-            bpf_call = Runner.prepare_bpf_call(test)
+            bpf_call = Runner.prepare_bpf_call(test, nsenter)
             if test.befores and '{{BEFORE_PID}}' in bpf_call:
+                if test.new_pidns:
+                    # This can be fixed in the future if needed
+                    raise ValueError(f"BEFORE_PID cannot be used with NEW_PIDNS")
                 if len(test.befores) > 1:
                     raise ValueError(f"test has {len(test.befores)} BEFORE clauses but BEFORE_PID usage requires exactly one")
 
@@ -270,7 +322,8 @@ class Runner(object):
                     attached = True
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
-                        after = subprocess.Popen(test.after, shell=True,
+                        after_cmd = get_pid_ns_cmd(test.after) if test.new_pidns else test.after
+                        after = subprocess.Popen(after_cmd, shell=True,
                                                  start_new_session=True,
                                                  universal_newlines=True,
                                                  stdout=subprocess.PIPE,

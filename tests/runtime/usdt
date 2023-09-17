@@ -85,9 +85,8 @@ NAME usdt probes - attach to fully specified probe all pids
 RUN {{BPFTRACE}} -e 'usdt:*:tracetest:testprobe { printf("here\n" ); exit(); }'
 EXPECT here
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
-TIMEOUT 20
-# USDT discovery on the whole host might take longer
+TIMEOUT 5
+NEW_PIDNS
 
 NAME usdt probes - attach to fully specified library probe by pid
 RUN {{BPFTRACE}} -e 'usdt:./testlibs/libusdt_tp.so:tracetestlib:lib_probe_1 { printf("here\n" ); exit(); }' -p $(pidof usdt_lib)
