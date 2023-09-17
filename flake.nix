@@ -116,6 +116,7 @@
                   procps
                   python3
                   strace
+                  util-linux
                 ];
               };
         in

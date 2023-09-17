@@ -80,6 +80,9 @@ Each runtime testcase consists of multiple directives. In no particular order:
   built in. See `bpftrace --info` and `runtime/engine/runner.py` for more
   details. Also supports negative features (by prefixing `!` before feature).
 * `WILL_FAIL`: Mark that this test case will exit uncleanly (ie exit code != 0)
+* `NEW_PIDNS`: This will excute the `BEFORE`, the bpftrace (`RUN` or `PROG`),
+  and the `AFTER` commands in a new pid namespace that mounts proc. At least one
+  `BEFORE` is required.
 
 If you need to run a test program to probe (eg, uprobe/USDT), you can use the
 `BEFORE` clause. The test scripts will wait for the test program to have a pid.
