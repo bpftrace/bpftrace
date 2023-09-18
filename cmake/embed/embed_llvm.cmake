@@ -19,6 +19,7 @@ else()
   set(EMBEDDED_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+set(LLVM_CMAKE_MODULES false)
 if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
   set(LLVM_FULL_VERSION "12.0.0")
   set(LLVM_VERSION ${LLVM_FULL_VERSION})
@@ -26,11 +27,24 @@ if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
   set(LLVM_VERSION_MINOR "0")
   set(LLVM_VERSION_PATCH "0")
   set(LLVM_URL_CHECKSUM "SHA256=49dc47c8697a1a0abd4ee51629a696d7bfe803662f2a7252a3b16fc75f3a8b50")
+elseif(${EMBED_LLVM_VERSION} VERSION_EQUAL "15")
+  set(LLVM_FULL_VERSION "15.0.7")
+  set(LLVM_VERSION ${LLVM_FULL_VERSION})
+  set(LLVM_VERSION_MAJOR "15")
+  set(LLVM_VERSION_MINOR "0")
+  set(LLVM_VERSION_PATCH "7")
+  set(LLVM_URL_CHECKSUM "SHA256=4ad8b2cc8003c86d0078d15d987d84e3a739f24aae9033865c027abae93ee7a4")
+
+  set(LLVM_CMAKE_MODULES true)
+  set(LLVM_CMAKE_MODULES_CHECKSUM "SHA256=8986f29b634fdaa9862eedda78513969fe9788301c9f2d938f4c10a3e7a3e7ea")
 else()
   message(FATAL_ERROR "No supported LLVM version has been specified with LLVM_VERSION (${EMBED_LLVM_VERSION}), aborting")
 endif()
 
 set(LLVM_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/llvm-${LLVM_FULL_VERSION}.src.tar.xz")
+if(LLVM_CMAKE_MODULES)
+  set(LLVM_CMAKE_MODULES_DOWNLOAD_URL "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_FULL_VERSION}/cmake-${LLVM_FULL_VERSION}.src.tar.xz")
+endif()
 
 # Default to building almost all targets, + BPF specific ones
 set(LLVM_LIBRARY_TARGETS
@@ -98,6 +112,12 @@ set(LLVM_LIBRARY_TARGETS
 
 if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
   set(LLVM_LIBRARY_TARGETS ${LLVM_LIBRARY_TARGETS}
+      LLVMHelloNew
+    )
+endif()
+
+if(${EMBED_LLVM_VERSION} VERSION_GREATER_EQUAL "12")
+  set(LLVM_LIBRARY_TARGETS ${LLVM_LIBRARY_TARGETS}
     LLVMBitstreamReader
     LLVMCFGuard
     LLVMDWARFLinker
@@ -106,12 +126,18 @@ if(${EMBED_LLVM_VERSION} VERSION_EQUAL "12")
     LLVMFileCheck
     LLVMFrontendOpenACC
     LLVMFrontendOpenMP
-    LLVMHelloNew
     LLVMInterfaceStub
     LLVMJITLink
     LLVMOrcShared
     LLVMOrcTargetProcess
     LLVMRemarks
+    )
+endif()
+
+
+if(${EMBED_LLVM_VERSION} VERSION_GREATER_EQUAL "15")
+  set(LLVM_LIBRARY_TARGETS ${LLVM_LIBRARY_TARGETS}
+      LLVMWindowsDriver
     )
 endif()
 
@@ -143,6 +169,7 @@ set(LLVM_CONFIGURE_FLAGS
     -DLLVM_ENABLE_ZLIB=ON
     -DLLVM_HOST_TRIPLE=${CHOST}
     -DLLVM_INCLUDE_EXAMPLES=OFF
+    -DLLVM_INCLUDE_BENCHMARKS=OFF
     -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_APPEND_VC_REV=OFF
     )
@@ -153,6 +180,19 @@ if(EMBED_BUILD_LLVM)
   foreach(llvm_target IN LISTS LLVM_LIBRARY_TARGETS)
     list(APPEND LLVM_TARGET_LIBS "<INSTALL_DIR>/lib/lib${llvm_target}.a")
   endforeach(llvm_target)
+
+  if(LLVM_CMAKE_MODULES)
+    include(FetchContent)
+
+    FetchContent_Declare(embedded_llvm_cmake_modules
+      URL "${LLVM_CMAKE_MODULES_DOWNLOAD_URL}"
+      URL_HASH "${LLVM_CMAKE_MODULES_CHECKSUM}"
+    )
+    FetchContent_Populate(embedded_llvm_cmake_modules)
+
+    list(APPEND LLVM_CONFIGURE_FLAGS
+         -DCMAKE_MODULE_PATH=${embedded_llvm_cmake_modules_SOURCE_DIR}/Modules)
+  endif()
 
   ExternalProject_Add(embedded_llvm
     URL "${LLVM_DOWNLOAD_URL}"

@@ -1,7 +1,6 @@
 ARG BASE=bionic
 FROM ubuntu:${BASE}
 
-ARG BASE
 ARG LLVM_VERSION
 ARG BUILD_TYPE="Release"
 
