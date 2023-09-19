@@ -999,6 +999,15 @@ CallInst *IRBuilderBPF::CreateGetNs(TimestampMode ts, const location &loc)
   return CreateHelperCall(fn, gettime_func_type, {}, "get_ns", &loc);
 }
 
+CallInst *IRBuilderBPF::CreateJiffies64(const location &loc)
+{
+  // u64 bpf_jiffies64()
+  // Return: jiffies (BITS_PER_LONG == 64) or jiffies_64 (otherwise)
+  FunctionType *jiffies64_func_type = FunctionType::get(getInt64Ty(), false);
+  return CreateHelperCall(
+      libbpf::BPF_FUNC_jiffies64, jiffies64_func_type, {}, "jiffies64", &loc);
+}
+
 Value *IRBuilderBPF::CreateIntegerArrayCmpUnrolled(Value *ctx,
                                                    Value *val1,
                                                    Value *val2,

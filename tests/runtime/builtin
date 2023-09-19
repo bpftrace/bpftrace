@@ -276,3 +276,10 @@ EXPECT @[{.n=0x[0-9a-f]+,.c=120}]: 1
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
+
+NAME jiffies
+PROG i:ms:1 { printf("SUCCESS %d\n", jiffies); exit(); }
+EXPECT SUCCESS -?[0-9][0-9]*
+REQUIRES_FEATURE jiffies64
+TIMEOUT 5
+MIN_KERNEL 5.9

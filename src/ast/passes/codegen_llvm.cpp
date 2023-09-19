@@ -365,6 +365,10 @@ void CodegenLLVM::visit(Builtin &builtin)
     }
     expr_ = b_.getInt64(cpid);
   }
+  else if (builtin.ident == "jiffies")
+  {
+    expr_ = b_.CreateJiffies64(builtin.loc);
+  }
   else
   {
     LOG(FATAL) << "unknown builtin \"" << builtin.ident << "\"";
