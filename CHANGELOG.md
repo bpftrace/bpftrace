@@ -9,6 +9,16 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Docs
+#### Tools
+
+## [0.19.0] 2023-09-19
+
+#### Added
 - Rawtracepoint support wildcards and list show
   - [#2588](https://github.com/iovisor/bpftrace/pull/2588)
 - Support all iterators
