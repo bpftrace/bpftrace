@@ -135,7 +135,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
     {
-      symbol_stream = get_func_symbols_from_file(target);
+      symbol_stream = get_func_symbols_from_file(bpftrace_->pid(), target);
       break;
     }
     case ProbeType::tracepoint:
@@ -281,14 +281,22 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file_safe(
 }
 
 std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
+    int pid,
     const std::string& path) const
 {
   if (path.empty())
     return std::make_unique<std::istringstream>("");
 
   std::vector<std::string> real_paths;
-  if (path.find('*') != std::string::npos)
-    real_paths = resolve_binary_path(path);
+  if (path == "*")
+  {
+    if (pid > 0)
+      real_paths = get_mapped_paths_for_pid(pid);
+    else
+      real_paths = get_mapped_paths_for_running_pids();
+  }
+  else if (path.find('*') != std::string::npos)
+    real_paths = resolve_binary_path(path, pid);
   else
     real_paths.push_back(path);
   struct bcc_symbol_option symbol_option;

@@ -159,7 +159,7 @@ OPTIONS:
     -I DIR         add the specified DIR to the search path for include files.
     --include FILE adds an implicit #include which is read before the source file is preprocessed.
     -l [search]    list probes
-    -p PID         enable USDT probes on PID
+    -p PID         enable USDT probes or search for uprobes/uretprobes in PID address space
     -c 'CMD'       run CMD and enable USDT probes on resulting process
     -q             keep messages quiet
     -v             verbose messages
@@ -1091,6 +1091,8 @@ uretprobe:library_name:function_name
 
 These use uprobes (a Linux kernel capability). `uprobe` instruments the beginning of a user-level
 function's execution, and `uretprobe` instruments the end (its return).
+
+You can search the entire host (or an entire process's address space by using the `-p` arg) by using a single wildcard `*` in place of the `library_path` e.g. `bpftrace -e 'uprobe:*:loop { printf("hi\n"); }'`. But looking through the **entire host** for matching symbols is expensive and can take a while so either supply a PID or use with caution.
 
 To list available uprobes, you can use any program to list the text segment symbols from a binary, such
 as `objdump` and `nm`. For example:

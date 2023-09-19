@@ -19,7 +19,7 @@ EXPECT Elapsed time: 1s
 TIMEOUT 5
 
 NAME printf_argument_alignment
-RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:function2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo->a, $foo->b, $foo2->a, $foo2->b) }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'struct Foo { int a; char b[10]; } uprobe:testprogs/uprobe_test:uprobeFunction2 { $foo = (struct Foo *)arg0; $foo2 = (struct Foo *)arg1; printf("%d %s %d %s\n", $foo->a, $foo->b, $foo2->a, $foo2->b) }' -c ./testprogs/uprobe_test
 EXPECT 123 hello 456 world
 TIMEOUT 5
 
@@ -278,7 +278,7 @@ EXPECT [0-9]*.[0-9]* [0-9]*.[0-9]*
 TIMEOUT 5
 
 NAME uaddr
-RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:function1 { printf("0x%lx -- 0x%lx\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
+RUN {{BPFTRACE}} -e 'uprobe:testprogs/uprobe_test:uprobeFunction1 { printf("0x%lx -- 0x%lx\n", *uaddr("GLOBAL_A"), *uaddr("GLOBAL_C")); exit(); }' -c ./testprogs/uprobe_test
 EXPECT 0x55555555 -- 0x33333333
 TIMEOUT 5
 

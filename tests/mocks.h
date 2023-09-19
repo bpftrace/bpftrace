@@ -28,8 +28,9 @@ public:
   MOCK_CONST_METHOD2(get_symbols_from_usdt,
                      std::unique_ptr<std::istream>(int pid,
                                                    const std::string &target));
-  MOCK_CONST_METHOD1(get_func_symbols_from_file,
-                     std::unique_ptr<std::istream>(const std::string &path));
+  MOCK_CONST_METHOD2(get_func_symbols_from_file,
+                     std::unique_ptr<std::istream>(int pid,
+                                                   const std::string &path));
 #pragma GCC diagnostic pop
 };
 

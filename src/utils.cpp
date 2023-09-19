@@ -20,6 +20,7 @@
 #include <system_error>
 #include <tuple>
 #include <unistd.h>
+#include <unordered_set>
 
 #include "bpftrace.h"
 #include "debugfs.h"
@@ -283,6 +284,101 @@ std::string get_pid_exe(const std::string &pid)
 std::string get_pid_exe(pid_t pid)
 {
   return get_pid_exe(std::to_string(pid));
+}
+
+std::string get_proc_maps(const std::string &pid)
+{
+  std::error_code ec;
+  std_filesystem::path proc_path{ "/proc" };
+  proc_path /= pid;
+  proc_path /= "maps";
+
+  if (!std_filesystem::exists(proc_path, ec))
+    return "";
+
+  return proc_path.string();
+}
+
+std::string get_proc_maps(pid_t pid)
+{
+  return get_proc_maps(std::to_string(pid));
+}
+
+std::vector<std::string> get_mapped_paths_for_pid(pid_t pid)
+{
+  static std::map<pid_t, std::vector<std::string>> paths_cache;
+
+  auto it = paths_cache.find(pid);
+  if (it != paths_cache.end())
+  {
+    return it->second;
+  }
+
+  std::vector<std::string> paths;
+
+  // start with the exe
+  std::string pid_exe = get_pid_exe(pid);
+  if (!pid_exe.empty() && pid_exe.find("(deleted)") == std::string::npos)
+    paths.push_back(get_pid_exe(pid));
+
+  // get all the mapped libraries
+  std::string maps_path = get_proc_maps(pid);
+  if (maps_path.empty())
+  {
+    LOG(WARNING) << "Maps path is empty";
+    return paths;
+  }
+
+  std::fstream fs(maps_path, std::ios_base::in);
+  if (!fs.is_open())
+  {
+    LOG(WARNING) << "Unable to open procfs mapfile: " << maps_path;
+    return paths;
+  }
+
+  std::unordered_set<std::string> seen_mappings;
+
+  std::string line;
+  // Example mapping:
+  // 7fc8ee4fa000-7fc8ee4fb000 r--p 00000000 00:1f 27168296 /usr/libc.so.6
+  while (std::getline(fs, line))
+  {
+    char buf[PATH_MAX + 1];
+    buf[0] = '\0';
+    auto res = std::sscanf(line.c_str(), "%*s %*s %*x %*s %*u %[^\n]", buf);
+    // skip [heap], [vdso], and non file paths etc...
+    if (res == 1 && buf[0] == '/')
+    {
+      std::string name = buf;
+      if (name.find("(deleted)") == std::string::npos &&
+          seen_mappings.count(name) == 0)
+      {
+        seen_mappings.emplace(name);
+        paths.push_back(std::move(name));
+      }
+    }
+  }
+
+  paths_cache.emplace(pid, paths);
+  return paths;
+}
+
+std::vector<std::string> get_mapped_paths_for_running_pids()
+{
+  std::unordered_set<std::string> unique_paths;
+  for (auto pid : get_all_running_pids())
+  {
+    for (auto &path : get_mapped_paths_for_pid(pid))
+    {
+      unique_paths.insert(std::move(path));
+    }
+  }
+  std::vector<std::string> paths;
+  for (auto &path : unique_paths)
+  {
+    paths.emplace_back(std::move(path));
+  }
+  return paths;
 }
 
 bool has_wildcard(const std::string &str)

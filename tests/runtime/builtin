@@ -250,28 +250,28 @@ TIMEOUT 5
 AFTER ./testprogs/syscall open
 
 NAME args in uprobe print
-PROG uprobe:./testprogs/uprobe_test:function1 { print(args); exit(); }
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { print(args); exit(); }
 EXPECT { .n = 0x[0-9a-f]+, .c = 120 }
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe store in map
-PROG uprobe:./testprogs/uprobe_test:function1 { @ = args; exit(); }
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; exit(); }
 EXPECT @: { .n = 0x[0-9a-f]+, .c = 120 }
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe store in map and access field
-PROG uprobe:./testprogs/uprobe_test:function1 { @ = args; print(@.c); exit(); }
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; print(@.c); exit(); }
 EXPECT 120
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe as a map key
-PROG uprobe:./testprogs/uprobe_test:function1 { @[args] = 1; exit(); }
+PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @[args] = 1; exit(); }
 EXPECT @[{.n=0x[0-9a-f]+,.c=120}]: 1
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
