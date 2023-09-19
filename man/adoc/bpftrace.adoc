@@ -1045,6 +1045,12 @@ For string arguments use the `str()` call to retrieve the value.
 | ktime_get_ns / ktime_get_boot_ns
 | nanoseconds since kernel boot. On kernels that support `ktime_get_boot_ns` this includes the time spent suspended, on older kernels it does not.
 
+| jiffies
+| uint64
+| 5.9
+| get_jiffies_64
+| Jiffies of the kernel. In 32-bit system, using this builtin might be slower.
+
 | pid
 | uint64
 | 4.2

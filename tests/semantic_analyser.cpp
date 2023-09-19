@@ -189,9 +189,11 @@ TEST(semantic_analyser, builtin_variables)
   test("kprobe:f { probe }", 0);
   test("tracepoint:a:b { args }", 0);
   test("kprobe:f { fake }", 1);
+  test("kprobe:f { jiffies }", 0);
 
   MockBPFfeature feature(false);
   test(feature, "k:f { cgroup }", 1);
+  test(feature, "k:f { jiffies }", 1);
 }
 
 TEST(semantic_analyser, builtin_cpid)

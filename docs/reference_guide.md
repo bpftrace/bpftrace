@@ -1943,6 +1943,7 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 - `uid` - User ID
 - `gid` - Group ID
 - `nsecs` - Nanosecond timestamp. Alias of [`nsecs()`](#36-nsecs-timestamps-and-time-deltas)
+- `jiffies` - Jiffies of the kernel. In 32-bit system, using this builtin might be slower.
 - `elapsed` - Nanoseconds since bpftrace initialization
 - `numaid` - NUMA Node ID
 - `cpu` - Processor ID

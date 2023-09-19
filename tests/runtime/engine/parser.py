@@ -166,6 +166,7 @@ class TestParser(object):
                     "skboutput",
                     "get_tai_ns",
                     "get_func_ip",
+                    "jiffies64",
                 }
 
                 for f in line.split(" "):

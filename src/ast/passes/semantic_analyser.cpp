@@ -305,7 +305,8 @@ void SemanticAnalyser::visit(Builtin &builtin)
            builtin.ident == "pid" || builtin.ident == "tid" ||
            builtin.ident == "cgroup" || builtin.ident == "uid" ||
            builtin.ident == "gid" || builtin.ident == "cpu" ||
-           builtin.ident == "rand" || builtin.ident == "numaid")
+           builtin.ident == "rand" || builtin.ident == "numaid" ||
+           builtin.ident == "jiffies")
   {
     builtin.type = CreateUInt64();
     if (builtin.ident == "cgroup" &&
@@ -314,6 +315,12 @@ void SemanticAnalyser::visit(Builtin &builtin)
       LOG(ERROR, builtin.loc, err_)
           << "BPF_FUNC_get_current_cgroup_id is not available for your kernel "
              "version";
+    }
+    else if (builtin.ident == "jiffies" &&
+             !bpftrace_.feature_->has_helper_jiffies64())
+    {
+      LOG(ERROR, builtin.loc, err_)
+          << "BPF_FUNC_jiffies64 is not available for your kernel version";
     }
   }
   else if (builtin.ident == "curtask")

@@ -118,6 +118,7 @@ public:
     map_ringbuf_ = std::make_optional<bool>(has_features);
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
     has_get_func_ip_ = std::make_optional<bool>(has_features);
+    has_jiffies64_ = std::make_optional<bool>(has_features);
   };
 
   void has_loop(bool has)

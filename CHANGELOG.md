@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add a `jiffies` builtin for advanced usages
+  - [#2769](https://github.com/iovisor/bpftrace/pull/2769)
 #### Changed
 #### Deprecated
 #### Removed
