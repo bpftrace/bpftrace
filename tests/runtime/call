@@ -533,28 +533,28 @@ EXPECT bpf_trace_printk: debugf 1
 TIMEOUT 3
 
 NAME nsecs
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs()); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs()); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME nsecs_monotonic
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(monotonic)); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(monotonic)); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME nsecs_boot
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(boot)); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(boot)); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME nsecs_tai
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(tai)); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(tai)); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 REQUIRES_FEATURE get_tai_ns
 MIN_KERNEL 6.1
 
 NAME nsecs_sw_tai
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs(sw_tai)); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(sw_tai)); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
