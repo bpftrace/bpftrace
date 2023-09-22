@@ -19,23 +19,23 @@ EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME nsecs
-PROG i:ms:1 { printf("SUCCESS %d\n", nsecs); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME elapsed
-PROG i:ms:1 { printf("SUCCESS %d\n", elapsed); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", elapsed); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME numaid
-PROG i:ms:1 { printf("SUCCESS %d\n", numaid); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %lu\n", numaid); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cpu
-PROG i:ms:1 { printf("SUCCESS %d\n", cpu); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %lu\n", cpu); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME comm
@@ -57,8 +57,8 @@ TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME arg
-PROG k:vfs_read { printf("SUCCESS %d\n", arg0); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG k:vfs_read { printf("SUCCESS %p\n", arg0); exit(); }
+EXPECT SUCCESS 0x[0-9a-f]+
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
@@ -143,8 +143,8 @@ TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
-PROG i:ms:1 { printf("SUCCESS %d\n", curtask); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %p\n", curtask); exit(); }
+EXPECT SUCCESS 0x[0-9a-f]+
 TIMEOUT 5
 
 NAME curtask_field
@@ -153,19 +153,19 @@ EXPECT SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME rand
-PROG i:ms:1 { printf("SUCCESS %d\n", rand); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %lu\n", rand); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cgroup
-PROG i:ms:1 { printf("SUCCESS %d\n", cgroup); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", cgroup); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 MIN_KERNEL 4.18
 
 NAME ctx
-PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %d\n", ((struct x*)ctx)->x); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %lu\n", ((struct x*)ctx)->x); exit(); }
+EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cat
@@ -278,8 +278,8 @@ TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME jiffies
-PROG i:ms:1 { printf("SUCCESS %d\n", jiffies); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+PROG i:ms:1 { printf("SUCCESS %llu\n", jiffies); exit(); }
+EXPECT SUCCESS [0-9]+
 REQUIRES_FEATURE jiffies64
 TIMEOUT 5
 MIN_KERNEL 5.9

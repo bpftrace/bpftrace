@@ -257,8 +257,8 @@ EXPECT @: 1
 TIMEOUT 1
 
 NAME map_assign_map_ptr
-PROG i:ms:100 { @ = curtask; @a = @; printf("%d\n", @a); exit(); }
-EXPECT -?[0-9]+
+PROG i:ms:100 { @ = curtask; @a = @; printf("%p\n", @a); exit(); }
+EXPECT 0x[0-9a-f]+
 TIMEOUT 1
 
 NAME runtime_error_check_delete
