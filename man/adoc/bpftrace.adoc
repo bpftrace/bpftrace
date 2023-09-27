@@ -1650,7 +1650,7 @@ Note that subfields are not yet supported.
 *Helper* `probe_read_str, probe_read_{kernel,user}_str`
 
 `str` reads a NULL terminated (`\0`) string from `data`.
-The maximum string length is limited by the `BPFTRACE_STR_LEN` env variable, unless `length` is specified and shorter than the maximum.
+The maximum string length is limited by the `BPFTRACE_STRLEN` env variable, unless `length` is specified and shorter than the maximum.
 In case the string is longer than the specified length only `length - 1` bytes are copied and a NULL byte is appended at the end.
 
 When available (starting from kernel 5.5, see the `--info` flag) bpftrace will automatically use the `kernel` or `user` variant of `probe_read_{kernel,user}_str` based on the address space of `data`, see <<Address-spaces>> for more information.
