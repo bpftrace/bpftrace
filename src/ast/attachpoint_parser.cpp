@@ -15,6 +15,23 @@
 namespace bpftrace {
 namespace ast {
 
+AttachPointParser::State AttachPointParser::argument_count_error(
+    int expected,
+    std::optional<int> expected2)
+{
+  // Subtract one for the probe type (eg kprobe)
+  int found = parts_.size() - 1;
+
+  errs_ << ap_->provider << " probe type requires " << expected;
+  if (expected2.has_value())
+  {
+    errs_ << " or " << *expected2;
+  }
+  errs_ << " arguments, found " << found << std::endl;
+
+  return INVALID;
+}
+
 std::optional<uint64_t> AttachPointParser::stoull(const std::string &str)
 {
   try
@@ -300,8 +317,7 @@ AttachPointParser::State AttachPointParser::special_parser()
     parts_.pop_back();
   if (parts_.size() != 1)
   {
-    errs_ << ap_->provider << " probe type requires 0 arguments" << std::endl;
-    return INVALID;
+    return argument_count_error(0);
   }
 
   return OK;
@@ -314,8 +330,7 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
-    return INVALID;
+    return argument_count_error(1);
   }
 
   // Handle kprobe:func+0x100 case
@@ -388,9 +403,7 @@ AttachPointParser::State AttachPointParser::uprobe_parser(bool allow_offset,
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 2 or 3 arguments"
-          << std::endl;
-    return INVALID;
+    return argument_count_error(2, 3);
   }
 
   if (parts_.size() == 4)
@@ -502,9 +515,7 @@ AttachPointParser::State AttachPointParser::usdt_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 2 or 3 arguments"
-          << std::endl;
-    return INVALID;
+    return argument_count_error(2, 3);
   }
 
   if (parts_.size() == 3)
@@ -540,8 +551,7 @@ AttachPointParser::State AttachPointParser::tracepoint_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return INVALID;
+    return argument_count_error(2);
   }
 
   ap_->target = parts_[1];
@@ -566,8 +576,7 @@ AttachPointParser::State AttachPointParser::profile_parser()
 
   if (parts_.size() != 3)
   {
-    errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return INVALID;
+    return argument_count_error(2);
   }
 
   ap_->target = parts_[1];
@@ -595,8 +604,7 @@ AttachPointParser::State AttachPointParser::interval_parser()
 
   if (parts_.size() != 3)
   {
-    errs_ << ap_->provider << " probe type requires 2 arguments" << std::endl;
-    return INVALID;
+    return argument_count_error(2);
   }
 
   ap_->target = parts_[1];
@@ -618,9 +626,7 @@ AttachPointParser::State AttachPointParser::software_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
-          << std::endl;
-    return INVALID;
+    return argument_count_error(1, 2);
   }
 
   ap_->target = parts_[1];
@@ -646,9 +652,7 @@ AttachPointParser::State AttachPointParser::hardware_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
-          << std::endl;
-    return INVALID;
+    return argument_count_error(1, 2);
   }
 
   ap_->target = parts_[1];
@@ -672,8 +676,7 @@ AttachPointParser::State AttachPointParser::watchpoint_parser(bool async)
 {
   if (parts_.size() != 4)
   {
-    errs_ << ap_->provider << " probe type requires 3 arguments" << std::endl;
-    return INVALID;
+    return argument_count_error(3);
   }
 
   if (parts_[1].find('+') == std::string::npos)
@@ -740,9 +743,7 @@ AttachPointParser::State AttachPointParser::kfunc_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 or 2 arguments"
-          << std::endl;
-    return INVALID;
+    return argument_count_error(1, 2);
   }
 
   if (parts_.size() == 3)
@@ -827,8 +828,7 @@ AttachPointParser::State AttachPointParser::raw_tracepoint_parser()
     if (ap_->ignore_invalid)
       return SKIP;
 
-    errs_ << ap_->provider << " probe type requires 1 argument" << std::endl;
-    return INVALID;
+    return argument_count_error(1);
   }
 
   ap_->func = parts_[1];
