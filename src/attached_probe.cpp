@@ -776,7 +776,7 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         auto btf_id = btf_.get_btf_id_fd(fun, mod);
         if (btf_id.first < 0)
         {
-          std::string msg = "No BTF found for " + fun;
+          std::string msg = "No BTF found for " + mod + ":" + fun;
           if (probe_.orig_name != probe_.name)
           {
             // one attachpoint in a multi-attachpoint (wildcard or list) probe
