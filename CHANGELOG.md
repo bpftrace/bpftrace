@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Add a `jiffies` builtin for advanced usages
   - [#2769](https://github.com/iovisor/bpftrace/pull/2769)
+- Emit better errors messages for invalid attachpoints
+  - [#2781](https://github.com/iovisor/bpftrace/pull/2781)
 #### Changed
 #### Deprecated
 #### Removed
