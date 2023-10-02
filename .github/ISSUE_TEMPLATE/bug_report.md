@@ -11,14 +11,7 @@ recent version yet. Please make sure the bug reproduces on the latest release
 or master.
 -->
 
-### What reproduces the bug?
-<!--
-Enter details about your bug, preferably with a small code snippet.
+### What reproduces the bug? Provide code if possible.
 
-Also describe what you expect to happen.
--->
 
-### bpftrace --info
-<!--
-Place output here.
--->
+### `bpftrace --info` output
