@@ -659,12 +659,11 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   // Sort paths lexically by name (with the exception of unified, which always
   // comes first)
   std::sort(result.begin(), result.end(), [](auto &pair1, auto &pair2) {
+    if (pair2.first == "unified")
+      return false;
     if (pair1.first == "unified")
       return true;
-    else if (pair2.first == "unified")
-      return false;
-    else
-      return pair1.first < pair2.first;
+    return pair1.first < pair2.first;
   });
 
   return result;
