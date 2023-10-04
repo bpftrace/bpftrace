@@ -16,6 +16,10 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.19.1] 2023-10-04
+
+Adds support for LLVM 17.
+
 ## [0.19.0] 2023-09-19
 
 #### Added
