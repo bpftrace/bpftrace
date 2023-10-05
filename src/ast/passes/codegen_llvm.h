@@ -18,6 +18,7 @@
 #include "format_string.h"
 #include "location.hh"
 #include "map.h"
+#include "required_resources.h"
 
 namespace bpftrace {
 namespace ast {
@@ -77,7 +78,14 @@ public:
   void createPrintMapCall(Call &call);
   void createPrintNonMapCall(Call &call, int &id);
 
+  void createMapDefinition(const std::string &name,
+                           libbpf::bpf_map_type map_type,
+                           uint64_t max_entries,
+                           const MapKey &key,
+                           const SizedType &value_type);
+
   void generate_ir(void);
+  void generate_maps(const RequiredResources &resources);
   void optimize(void);
   bool verify(void);
   BpfBytecode emit(void);
