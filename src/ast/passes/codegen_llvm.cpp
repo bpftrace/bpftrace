@@ -11,6 +11,7 @@
 #include <llvm-c/Transforms/IPO.h>
 #endif
 #include <llvm/IR/Constants.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/IR/Metadata.h>
@@ -3268,9 +3269,90 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
 void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
+  generate_maps(bpftrace_.resources);
   auto scoped_del = accept(root_);
   debug_.finalize();
   state_ = State::IR;
+}
+
+void CodegenLLVM::createMapDefinition(const std::string &name,
+                                      libbpf::bpf_map_type map_type,
+                                      uint64_t max_entries,
+                                      const MapKey &key,
+                                      const SizedType &value_type)
+{
+  const std::string var_name = "AT_" + name.substr(1);
+
+  auto debuginfo = debug_.createMapEntry(
+      var_name, map_type, max_entries, key, value_type);
+
+  // It's sufficient that the global variable has correct size (a struct with
+  // four pointers). The actual inner types must be defined in debug info.
+  auto type = StructType::create({ b_.getInt8Ty()->getPointerTo(),
+                                   b_.getInt8Ty()->getPointerTo(),
+                                   b_.getInt8Ty()->getPointerTo(),
+                                   b_.getInt8Ty()->getPointerTo() },
+                                 "struct map_t",
+                                 false);
+  auto var = llvm::dyn_cast<GlobalVariable>(
+      module_->getOrInsertGlobal(var_name, type));
+  var->setInitializer(ConstantAggregateZero::get(type));
+  var->setSection(".maps");
+  var->setDSOLocal(true);
+  var->addDebugInfo(debuginfo);
+}
+
+// Emit maps in libbpf format so that Clang can create BTF info for them which
+// can be read and used by libbpf.
+//
+// Each map should be defined by a global variable of a struct type with the
+// following fields:
+// - "type"        map type (e.g. BPF_MAP_TYPE_HASH)
+// - "max_entries" maximum number of entries
+// - "key"         key type
+// - "value"       value type
+//
+// "type" and "max_entries" are integers but they must be represented as
+// pointers to an array of ints whose dimension defines the specified value.
+//
+// "key" and "value" are pointers to the corresponding types.
+//
+// The most important part is to generate BTF with the above information. This
+// is done by emitting DWARF which LLVM will convert into BTF. The LLVM type of
+// the global variable itself is not important, it can simply be a struct with 4
+// pointers.
+//
+// Note that LLVM will generate BTF which misses some information. This is
+// normally set by libbpf's linker but since we load BTF directly, we must do
+// the fixing ourselves, until we start loading BPF programs via bpf_object.
+// See BpfBytecode::fixupBTF for details.
+void CodegenLLVM::generate_maps(const RequiredResources &resources)
+{
+  for (auto &map_val : resources.map_vals) {
+    const std::string &name = map_val.first;
+
+    const SizedType &val_type = map_val.second;
+    auto key = resources.map_keys.find(name);
+    if (key == resources.map_keys.end())
+      LOG(FATAL) << "map key for \"" << name << "\" not found";
+
+    auto max_entries = bpftrace_.config_.get(ConfigKeyInt::max_map_keys);
+    auto map_type = libbpf::BPF_MAP_TYPE_UNSPEC;
+    if (val_type.IsCountTy() && key->second.args_.empty()) {
+      max_entries = 1;
+      map_type = libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+    } else if (bpftrace_.feature_->has_map_percpu_hash() &&
+               (val_type.IsHistTy() || val_type.IsLhistTy() ||
+                val_type.IsCountTy() || val_type.IsSumTy() ||
+                val_type.IsMinTy() || val_type.IsMaxTy() ||
+                val_type.IsAvgTy() || val_type.IsStatsTy())) {
+      map_type = libbpf::BPF_MAP_TYPE_PERCPU_HASH;
+    } else {
+      map_type = libbpf::BPF_MAP_TYPE_HASH;
+    }
+
+    createMapDefinition(name, map_type, max_entries, key->second, val_type);
+  }
 }
 
 void CodegenLLVM::emit_elf(const std::string &filename)
