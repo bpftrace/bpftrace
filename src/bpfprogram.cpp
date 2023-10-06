@@ -30,6 +30,11 @@ const std::vector<uint8_t> &BpfProgram::getCode()
   return code_;
 }
 
+const std::vector<uint8_t> &BpfProgram::getBTF()
+{
+  return bytecode_.at(".BTF");
+}
+
 void BpfProgram::assemble()
 {
   if (!code_.empty())
