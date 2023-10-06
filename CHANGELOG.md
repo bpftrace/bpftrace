@@ -17,6 +17,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix JSON output for cgroup_path
+  - [#2793](https://github.com/iovisor/bpftrace/pull/2793)
 #### Docs
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
