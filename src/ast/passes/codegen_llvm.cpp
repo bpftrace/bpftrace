@@ -3281,19 +3281,23 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
                                       const MapKey &key,
                                       const SizedType &value_type)
 {
-  const std::string var_name = "AT_" + name.substr(1);
+  std::string var_name = name;
+  if (var_name[0] == '@')
+    var_name = "AT_" + var_name.substr(1);
 
   auto debuginfo = debug_.createMapEntry(
       var_name, map_type, max_entries, key, value_type);
 
-  // It's sufficient that the global variable has correct size (a struct with
-  // four pointers). The actual inner types must be defined in debug info.
-  auto type = StructType::create({ b_.getInt8Ty()->getPointerTo(),
-                                   b_.getInt8Ty()->getPointerTo(),
-                                   b_.getInt8Ty()->getPointerTo(),
-                                   b_.getInt8Ty()->getPointerTo() },
-                                 "struct map_t",
-                                 false);
+  // It's sufficient that the global variable has the correct size (struct with
+  // one pointer per field). The actual inner types are defined in debug info.
+  SmallVector<llvm::Type *, 4> elems = { b_.getInt8Ty()->getPointerTo(),
+                                         b_.getInt8Ty()->getPointerTo() };
+  if (!value_type.IsNoneTy()) {
+    elems.push_back(b_.getInt8Ty()->getPointerTo());
+    elems.push_back(b_.getInt8Ty()->getPointerTo());
+  }
+  auto type = StructType::create(elems, "struct map_t", false);
+
   auto var = llvm::dyn_cast<GlobalVariable>(
       module_->getOrInsertGlobal(var_name, type));
   var->setInitializer(ConstantAggregateZero::get(type));
@@ -3315,7 +3319,8 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 // "type" and "max_entries" are integers but they must be represented as
 // pointers to an array of ints whose dimension defines the specified value.
 //
-// "key" and "value" are pointers to the corresponding types.
+// "key" and "value" are pointers to the corresponding types. Note that these
+// are not used for the BPF_MAP_TYPE_RINGBUF map type.
 //
 // The most important part is to generate BTF with the above information. This
 // is done by emitting DWARF which LLVM will convert into BTF. The LLVM type of
@@ -3328,6 +3333,7 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
 // See BpfBytecode::fixupBTF for details.
 void CodegenLLVM::generate_maps(const RequiredResources &resources)
 {
+  // User-defined maps
   for (auto &map_val : resources.map_vals) {
     const std::string &name = map_val.first;
 
@@ -3352,6 +3358,96 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
     }
 
     createMapDefinition(name, map_type, max_entries, key->second, val_type);
+  }
+
+  // bpftrace internal maps
+  for (const StackType &stack_type : resources.stackid_maps) {
+    // bpf_get_stackid() is kind of broken by design.
+    //
+    // First, stacks can suffer from hash collisions and we can lose stacks. We
+    // receive collision errors in userspace b/c we do not set
+    // BPF_F_REUSE_STACKID. Note that we should **NEVER** set this flag b/c then
+    // we can silently receive unrelated stacks in userspace.
+    //
+    // Second, there is not a great way to reduce the frequency of collision
+    // (other than increasing map size) b/c multiple probes can be sharing the
+    // same stack (remember they are hashed). As a result, we cannot delete
+    // entries in this map b/c we don't know when all the sharers are gone.
+    //
+    // Fortunately, we haven't seen many bug reports about missing stacks (or
+    // maybe people don't care that much). The proper solution would be to use
+    // bpf_get_stack() to get the actual stack trace and pass it to userspace
+    // through the ring buffer.  However, there is additional complexity with
+    // this b/c we need to set up a percpu map to use as scratch space for
+    // bpf_get_stack() to write into. Using the stack directly wouldn't work
+    // well b/c it would take too much stack space.
+    //
+    // The temporary fix is to bump the map size to 128K. Any further bumps
+    // should warrant consideration of the previous paragraph.
+    createMapDefinition(stack_type.name(),
+                        libbpf::BPF_MAP_TYPE_STACK_TRACE,
+                        128 << 10,
+                        MapKey({ CreateInt32() }),
+                        CreateArray(stack_type.limit, CreateUInt64()));
+  }
+
+  if (resources.needs_join_map) {
+    auto value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
+    SizedType value_type = CreateArray(value_size, CreateInt8());
+    createMapDefinition(to_string(MapManager::Type::Join),
+                        libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
+                        1,
+                        MapKey({ CreateInt32() }),
+                        value_type);
+  }
+
+  if (resources.needs_elapsed_map) {
+    createMapDefinition(to_string(MapManager::Type::Elapsed),
+                        libbpf::BPF_MAP_TYPE_HASH,
+                        1,
+                        MapKey(),
+                        CreateUInt64());
+  }
+
+  if (resources.needs_data_map) {
+    size_t value_size = 0;
+    for (auto &arg : resources.mapped_printf_args)
+      value_size += std::get<0>(arg).size() + 1;
+    int ptr_size = sizeof(unsigned long);
+    value_size = (value_size / ptr_size + 1) * ptr_size;
+    SizedType value_type = CreateArray(value_size, CreateInt8());
+
+    createMapDefinition(to_string(MapManager::Type::MappedPrintfData),
+                        libbpf::BPF_MAP_TYPE_ARRAY,
+                        1,
+                        MapKey({ CreateInt32() }),
+                        value_type);
+  }
+
+  if (!bpftrace_.feature_->has_map_ringbuf() ||
+      resources.needs_perf_event_map) {
+    createMapDefinition(to_string(MapManager::Type::PerfEvent),
+                        libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
+                        get_online_cpus().size(),
+                        MapKey({ CreateInt32() }),
+                        CreateInt32());
+  }
+
+  if (bpftrace_.feature_->has_map_ringbuf()) {
+    auto entries = bpftrace_.config_.get(ConfigKeyInt::perf_rb_pages) * 4096;
+    createMapDefinition(to_string(MapManager::Type::Ringbuf),
+                        libbpf::BPF_MAP_TYPE_RINGBUF,
+                        entries,
+                        MapKey(),
+                        CreateNone());
+
+    int loss_cnt_key_size = sizeof(bpftrace_.rb_loss_cnt_key_) * 8;
+    int loss_cnt_val_size = sizeof(bpftrace_.rb_loss_cnt_val_) * 8;
+    createMapDefinition(to_string(MapManager::Type::RingbufLossCounter),
+                        libbpf::BPF_MAP_TYPE_ARRAY,
+                        1,
+                        MapKey({ CreateInt(loss_cnt_key_size) }),
+                        CreateInt(loss_cnt_val_size));
   }
 }
 

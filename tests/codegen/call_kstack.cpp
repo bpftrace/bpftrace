@@ -10,12 +10,7 @@ TEST(codegen, call_kstack)
 {
   auto result = NAME;
 
-  // Mode doesn't directly affect codegen, so the programs below should
-  // generate the same IR
-  test("kprobe:f { @x = kstack(); @y = kstack(6) }", result);
-  test("kprobe:f { @x = kstack(perf); @y = kstack(perf, 6) }", result);
-  test("kprobe:f { @x = kstack(raw); @y = kstack(raw, 6) }", result);
-  test("kprobe:f { @x = kstack(perf); @y = kstack(bpftrace) }", result);
+  test("kprobe:f { @x = kstack(); @y = kstack(6); @z = kstack(perf) }", result);
 }
 
 TEST(codegen, call_kstack_mapids)

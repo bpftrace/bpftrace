@@ -162,7 +162,7 @@ std::unique_ptr<T> RequiredResources::prepareFormatStringDataMap(
   int ptr_size = sizeof(unsigned long);
   size = (size / ptr_size + 1) * ptr_size;
   auto map = std::make_unique<T>(
-      "data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
+      "mapped_printf_data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
 
   // copy all the format strings to buffer, head to tail
   uint32_t idx = 0;

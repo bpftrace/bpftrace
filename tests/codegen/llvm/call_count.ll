@@ -4,13 +4,17 @@ target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "bpf-pc-linux"
 
 %"struct map_t" = type { i8*, i8*, i8*, i8* }
+%"struct map_t.0" = type { i8*, i8* }
+%"struct map_t.1" = type { i8*, i8*, i8*, i8* }
 
 @AT_x = dso_local global %"struct map_t" zeroinitializer, section ".maps", !dbg !0
+@ringbuf = dso_local global %"struct map_t.0" zeroinitializer, section ".maps", !dbg !22
+@ringbuf_loss_counter = dso_local global %"struct map_t.1" zeroinitializer, section ".maps", !dbg !36
 
 ; Function Attrs: nounwind
 declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
-define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !26 {
+define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !49 {
 entry:
   %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
@@ -59,8 +63,8 @@ declare void @llvm.lifetime.end.p0i8(i64 immarg %0, i8* nocapture %1) #1
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 
-!llvm.dbg.cu = !{!22}
-!llvm.module.flags = !{!25}
+!llvm.dbg.cu = !{!45}
+!llvm.module.flags = !{!48}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = distinct !DIGlobalVariable(name: "AT_x", linkageName: "global", scope: !2, file: !2, type: !3, isLocal: false, isDefinition: true)
@@ -84,15 +88,38 @@ attributes #1 = { argmemonly nofree nosync nounwind willreturn }
 !19 = !DIDerivedType(tag: DW_TAG_member, name: "value", scope: !2, file: !2, baseType: !20, size: 64, offset: 192)
 !20 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !21, size: 64)
 !21 = !DIBasicType(name: "int64", size: 64, encoding: DW_ATE_signed)
-!22 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !23, globals: !24)
-!23 = !{}
-!24 = !{!0}
-!25 = !{i32 2, !"Debug Info Version", i32 3}
-!26 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !27, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !22, retainedNodes: !31)
-!27 = !DISubroutineType(types: !28)
-!28 = !{!21, !29}
-!29 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !30, size: 64)
-!30 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
-!31 = !{!32, !33}
-!32 = !DILocalVariable(name: "var0", scope: !26, file: !2, type: !21)
-!33 = !DILocalVariable(name: "var1", arg: 1, scope: !26, file: !2, type: !29)
+!22 = !DIGlobalVariableExpression(var: !23, expr: !DIExpression())
+!23 = distinct !DIGlobalVariable(name: "ringbuf", linkageName: "global", scope: !2, file: !2, type: !24, isLocal: false, isDefinition: true)
+!24 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 128, elements: !25)
+!25 = !{!26, !31}
+!26 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !27, size: 64)
+!27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !28, size: 64)
+!28 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 864, elements: !29)
+!29 = !{!30}
+!30 = !DISubrange(count: 27, lowerBound: 0)
+!31 = !DIDerivedType(tag: DW_TAG_member, name: "max_entries", scope: !2, file: !2, baseType: !32, size: 64, offset: 64)
+!32 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !33, size: 64)
+!33 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 8388608, elements: !34)
+!34 = !{!35}
+!35 = !DISubrange(count: 262144, lowerBound: 0)
+!36 = !DIGlobalVariableExpression(var: !37, expr: !DIExpression())
+!37 = distinct !DIGlobalVariable(name: "ringbuf_loss_counter", linkageName: "global", scope: !2, file: !2, type: !38, isLocal: false, isDefinition: true)
+!38 = !DICompositeType(tag: DW_TAG_structure_type, scope: !2, file: !2, size: 256, elements: !39)
+!39 = !{!40, !11, !16, !19}
+!40 = !DIDerivedType(tag: DW_TAG_member, name: "type", scope: !2, file: !2, baseType: !41, size: 64)
+!41 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !42, size: 64)
+!42 = !DICompositeType(tag: DW_TAG_array_type, baseType: !8, size: 64, elements: !43)
+!43 = !{!44}
+!44 = !DISubrange(count: 2, lowerBound: 0)
+!45 = distinct !DICompileUnit(language: DW_LANG_C, file: !2, producer: "bpftrace", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly, enums: !46, globals: !47)
+!46 = !{}
+!47 = !{!0, !22, !36}
+!48 = !{i32 2, !"Debug Info Version", i32 3}
+!49 = distinct !DISubprogram(name: "kprobe_f", linkageName: "kprobe_f", scope: !2, file: !2, type: !50, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !45, retainedNodes: !54)
+!50 = !DISubroutineType(types: !51)
+!51 = !{!21, !52}
+!52 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !53, size: 64)
+!53 = !DIBasicType(name: "int8", size: 8, encoding: DW_ATE_signed)
+!54 = !{!55, !56}
+!55 = !DILocalVariable(name: "var0", scope: !49, file: !2, type: !21)
+!56 = !DILocalVariable(name: "var1", arg: 1, scope: !49, file: !2, type: !52)
