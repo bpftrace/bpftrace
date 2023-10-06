@@ -26,6 +26,7 @@ public:
   void assemble();
 
   const std::vector<uint8_t> &getCode();
+  const std::vector<uint8_t> &getBTF();
 
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;

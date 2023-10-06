@@ -15,6 +15,8 @@ and this project adheres to
   - [#2781](https://github.com/iovisor/bpftrace/pull/2781)
 - Add support for uprobe_multi link
   - [#2810](https://github.com/iovisor/bpftrace/pull/2810)
+- Attach BTF to generated BPF programs
+  - [#2804](https://github.com/iovisor/bpftrace/pull/2804)
 #### Changed
 #### Deprecated
 #### Removed
