@@ -225,18 +225,22 @@ DIGlobalVariableExpression *DIBuilderBPF::createMapEntry(
   SmallVector<Metadata *, 4> fields = {
     createPointerMemberType("type", 0, GetMapFieldInt(map_type)),
     createPointerMemberType("max_entries", 64, GetMapFieldInt(max_entries)),
-    createPointerMemberType(
-        "key", 128, createPointerType(GetMapKeyType(key, value_type), 64)),
-    createPointerMemberType("value",
-                            192,
-                            createPointerType(GetType(value_type), 64))
   };
+
+  uint64_t size = 128;
+  if (!value_type.IsNoneTy()) {
+    fields.push_back(createPointerMemberType(
+        "key", size, createPointerType(GetMapKeyType(key, value_type), 64)));
+    fields.push_back(createPointerMemberType(
+        "value", size + 64, createPointerType(GetType(value_type), 64)));
+    size += 128;
+  }
 
   DIType *map_entry_type = createStructType(file,
                                             "",
                                             file,
                                             0,
-                                            256,
+                                            size,
                                             0,
                                             DINode::FlagZero,
                                             nullptr,

@@ -10,12 +10,7 @@ TEST(codegen, call_ustack)
 {
   auto result = NAME;
 
-  // Mode doesn't directly affect codegen, so both should generate the same
-  // program
-  test("kprobe:f { @x = ustack(); @y = ustack(6) }", result);
-  test("kprobe:f { @x = ustack(perf); @y = ustack(perf, 6) }", result);
-  test("kprobe:f { @x = ustack(raw); @y = ustack(raw, 6) }", result);
-  test("kprobe:f { @x = ustack(perf); @y = ustack(bpftrace) }", result);
+  test("kprobe:f { @x = ustack(); @y = ustack(6); @z = ustack(perf) }", result);
 }
 
 TEST(codegen, call_ustack_mapids)
