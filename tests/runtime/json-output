@@ -163,3 +163,8 @@ NAME helper_error
 RUN {{BPFTRACE}} -kk -q -f json -e 'struct foo {int a;}; BEGIN { $tmp = ((struct foo*) 0)->a; exit(); }'
 EXPECT {"type": "helper_error", "helper": "probe_read", "retcode": -14, "line": 1, "col": 37}
 TIMEOUT 1
+
+NAME cgroup_path
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { print(cgroup_path(cgroup)); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin))'
+EXPECT ^{'type': 'value', 'data': '.*'}$
+TIMEOUT 5
