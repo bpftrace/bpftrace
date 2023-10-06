@@ -50,7 +50,11 @@ class Runner(object):
 
     @staticmethod
     def failed(status):
-        return status in [Runner.FAIL, Runner.TIMEOUT]
+        return status == Runner.FAIL
+
+    @staticmethod
+    def timeouted(status):
+        return status == Runner.TIMEOUT
 
     @staticmethod
     def skipped(status):
