@@ -8,7 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"rawtracepoint:sched_switch"(i8* %0) section "s_rawtracepoint:sched_switch_1" {
 entry:
-  %"@_val" = alloca i64, align 8
+  %one = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %1 = bitcast i8* %0 to i64*
@@ -27,27 +27,21 @@ entry:
 lookup_success:                                   ; preds = %entry
   %cast = bitcast i8* %lookup_elem to i64*
   %5 = load i64, i64* %cast, align 8
-  store i64 %5, i64* %lookup_elem_val, align 8
+  %6 = add i64 %5, 1
+  store i64 %6, i64* %cast, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  store i64 0, i64* %lookup_elem_val, align 8
+  %7 = bitcast i64* %one to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store i64 1, i64* %one, align 8
+  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@_key", i64* %one, i64 0)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %6 = load i64, i64* %lookup_elem_val, align 8
-  %7 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  %8 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %9 = add i64 %6, 1
-  store i64 %9, i64* %"@_val", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@_key", i64* %"@_val", i64 0)
-  %10 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
-  %11 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %11)
+  %8 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
   ret i64 0
 }
 

@@ -8,7 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kretprobe:vfs_read"(i8* %0) section "s_kretprobe:vfs_read_1" {
 entry:
-  %"@_val" = alloca i64, align 8
+  %one = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %comm17 = alloca [16 x i8], align 1
   %strcmp.result = alloca i1, align 1
@@ -106,27 +106,21 @@ strcmp.loop_null_cmp14:                           ; preds = %strcmp.loop9
 lookup_success:                                   ; preds = %pred_true
   %cast = bitcast i8* %lookup_elem to i64*
   %21 = load i64, i64* %cast, align 8
-  store i64 %21, i64* %lookup_elem_val, align 8
+  %22 = add i64 %21, 1
+  store i64 %22, i64* %cast, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %pred_true
-  store i64 0, i64* %lookup_elem_val, align 8
+  %23 = bitcast i64* %one to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
+  store i64 1, i64* %one, align 8
+  %pseudo19 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo19, [16 x i8]* %comm17, i64* %one, i64 0)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %22 = load i64, i64* %lookup_elem_val, align 8
-  %23 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %23)
-  %24 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %24)
-  %25 = add i64 %22, 1
-  store i64 %25, i64* %"@_val", align 8
-  %pseudo19 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo19, [16 x i8]* %comm17, i64* %"@_val", i64 0)
-  %26 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %26)
-  %27 = bitcast [16 x i8]* %comm17 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %27)
+  %24 = bitcast [16 x i8]* %comm17 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
   ret i64 0
 }
 

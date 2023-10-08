@@ -385,13 +385,7 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
-
-    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
-    b_.CreateLifetimeEnd(newval);
+    b_.CreateMapElemInc(ctx_, map, key, call.loc);
     expr_ = nullptr;
   }
   else if (call.func == "sum")

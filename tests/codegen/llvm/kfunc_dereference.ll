@@ -8,7 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kfunc:mock_vmlinux:tcp_sendmsg"(i8* %0) section "s_kfunc:mock_vmlinux:tcp_sendmsg_1" {
 entry:
-  %"@_val" = alloca i64, align 8
+  %one = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %1 = ptrtoint i8* %0 to i64
@@ -33,27 +33,21 @@ entry:
 lookup_success:                                   ; preds = %entry
   %cast1 = bitcast i8* %lookup_elem to i64*
   %10 = load i64, i64* %cast1, align 8
-  store i64 %10, i64* %lookup_elem_val, align 8
+  %11 = add i64 %10, 1
+  store i64 %11, i64* %cast1, align 8
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  store i64 0, i64* %lookup_elem_val, align 8
+  %12 = bitcast i64* %one to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
+  store i64 1, i64* %one, align 8
+  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@_key", i64* %one, i64 0)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %11 = load i64, i64* %lookup_elem_val, align 8
-  %12 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
-  %13 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
-  %14 = add i64 %11, 1
-  store i64 %14, i64* %"@_val", align 8
-  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@_key", i64* %"@_val", i64 0)
-  %15 = bitcast i64* %"@_val" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %15)
-  %16 = bitcast i64* %"@_key" to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  %13 = bitcast i64* %"@_key" to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0
 }
 

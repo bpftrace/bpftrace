@@ -1478,6 +1478,53 @@ void IRBuilderBPF::CreateAtomicIncCounter(int mapid, uint32_t idx)
   CreateLifetimeEnd(key);
 }
 
+void IRBuilderBPF::CreateMapElemInc(Value *ctx,
+                                    Map &map,
+                                    Value *key,
+                                    const location &loc)
+{
+  int mapid = bpftrace_.maps[map.ident].value()->id;
+  CallInst *call = createMapLookup(mapid, key);
+  SizedType &type = map.type;
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_success",
+                                                        parent);
+  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
+                                                        "lookup_failure",
+                                                        parent);
+  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
+                                                      "lookup_merge",
+                                                      parent);
+
+  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
+  Value *condition = CreateICmpNE(
+      CreateIntCast(call, getInt8PtrTy(), true),
+      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
+      "map_lookup_cond");
+  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+  SetInsertPoint(lookup_success_block);
+
+  // createMapLookup  returns an u8*
+  auto *cast = CreatePointerCast(call, value->getType(), "cast");
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), getInt64(1)), cast);
+
+  CreateBr(lookup_merge_block);
+
+  SetInsertPoint(lookup_failure_block);
+
+  // map item is not found, create one with value 1
+  AllocaInst *one = CreateAllocaBPF(getInt64Ty(), "one");
+  CreateStore(getInt64(1), one);
+  CreateMapUpdateElem(ctx, map, key, one, loc);
+
+  CreateBr(lookup_merge_block);
+  SetInsertPoint(lookup_merge_block);
+  return;
+}
+
 void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
                                          Value *data,
                                          size_t size,
