@@ -431,7 +431,7 @@ Struct BTF::resolve_args(const std::string &func, bool ret)
 
   if (bpftrace_ && !bpftrace_->is_traceable_func(func))
   {
-    if (bpftrace_->traceable_funcs_.empty())
+    if (bpftrace_->get_traceable_funcs().empty())
       throw std::runtime_error("could not read traceable functions from " +
                                tracefs::available_filter_functions() +
                                " (is tracefs mounted?)");
