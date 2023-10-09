@@ -252,7 +252,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     void) const
 {
   std::string funcs;
-  for (auto& func_mod : bpftrace_->traceable_funcs_)
+  for (auto& func_mod : bpftrace_->get_traceable_funcs())
   {
     if (func_mod.second.empty() || *func_mod.second.begin() == "vmlinux")
     {

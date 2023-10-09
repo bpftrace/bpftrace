@@ -191,7 +191,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_hierarchy_roots();
 std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
     uint64_t cgroupid,
     std::string filter);
-FuncsModulesMap get_traceable_funcs();
+FuncsModulesMap parse_traceable_funcs();
 const std::string &is_deprecated(const std::string &str);
 bool is_unsafe_func(const std::string &func_name);
 bool is_compile_time_func(const std::string &func_name);

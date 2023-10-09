@@ -1149,7 +1149,7 @@ std::string hex_format_buffer(const char *buf,
   return std::string(s);
 }
 
-FuncsModulesMap get_traceable_funcs()
+FuncsModulesMap parse_traceable_funcs()
 {
 #ifdef FUZZ
   return {};

@@ -95,8 +95,7 @@ class BPFtrace
 {
 public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout))
-      : traceable_funcs_(get_traceable_funcs()),
-        out_(std::move(o)),
+      : out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>()),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size())
@@ -180,8 +179,7 @@ public:
   std::map<std::string, std::string> macros_;
   std::map<std::string, uint64_t> enums_;
   std::map<libbpf::bpf_func_id, location> helper_use_loc_;
-  // mapping traceable functions to modules (or "vmlinux") that they appear in
-  FuncsModulesMap traceable_funcs_;
+  const FuncsModulesMap &get_traceable_funcs() const;
   KConfig kconfig;
   std::vector<std::unique_ptr<AttachedProbe>> attached_probes_;
 
@@ -284,6 +282,11 @@ private:
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;
   uint64_t ringbuf_loss_count_ = 0;
+
+  // Mapping traceable functions to modules (or "vmlinux") they appear in.
+  // Needs to be mutable to allow lazy loading of the mapping from const lookup
+  // functions.
+  mutable FuncsModulesMap traceable_funcs_;
 
   std::unordered_map<std::string, std::unique_ptr<Dwarf>> dwarves_;
 };

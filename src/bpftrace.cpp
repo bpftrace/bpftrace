@@ -2525,13 +2525,22 @@ std::optional<int64_t> BPFtrace::get_int_literal(
   return std::nullopt;
 }
 
+const FuncsModulesMap &BPFtrace::get_traceable_funcs() const
+{
+  if (traceable_funcs_.empty())
+    traceable_funcs_ = parse_traceable_funcs();
+
+  return traceable_funcs_;
+}
+
 bool BPFtrace::is_traceable_func(const std::string &func_name) const
 {
 #ifdef FUZZ
   (void)func_name;
   return true;
 #else
-  return traceable_funcs_.find(func_name) != traceable_funcs_.end();
+  auto &funcs = get_traceable_funcs();
+  return funcs.find(func_name) != funcs.end();
 #endif
 }
 
@@ -2542,9 +2551,9 @@ std::unordered_set<std::string> BPFtrace::get_func_modules(
   (void)func_name;
   return {};
 #else
-  auto mod = traceable_funcs_.find(func_name);
-  return mod != traceable_funcs_.end() ? mod->second
-                                       : std::unordered_set<std::string>();
+  auto &funcs = get_traceable_funcs();
+  auto mod = funcs.find(func_name);
+  return mod != funcs.end() ? mod->second : std::unordered_set<std::string>();
 #endif
 }
 
