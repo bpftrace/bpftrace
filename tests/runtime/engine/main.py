@@ -2,6 +2,7 @@
 
 import argparse
 from datetime import timedelta
+import math
 import os
 import re
 import time
@@ -57,8 +58,7 @@ def main(test_filter, run_aot_tests):
     elapsed = time.time() - start_time
     total_tests -= len(skipped_tests)
 
-    # TODO(mmarchini) pretty print time
-    print(ok("[==========]") + " %d tests from %d test cases ran. (%s total)" % (total_tests, len(test_suite), elapsed))
+    print(ok("[==========]") + " %d tests from %d test cases ran. (%s ms total)" % (total_tests, len(test_suite), math.ceil(elapsed * 1000)))
     print(ok("[  PASSED  ]") + " %d tests." % (total_tests - len(failed_tests)))
 
     if skipped_tests:
