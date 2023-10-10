@@ -77,6 +77,7 @@ public:
   bool has_d_path();
   bool has_uprobe_refcnt();
   bool has_kprobe_multi();
+  bool has_uprobe_multi();
   bool has_kfunc();
   bool has_skb_output();
   bool has_raw_tp_special();
@@ -117,6 +118,7 @@ protected:
   std::optional<bool> has_map_batch_;
   std::optional<bool> has_uprobe_refcnt_;
   std::optional<bool> has_kprobe_multi_;
+  std::optional<bool> has_uprobe_multi_;
   std::optional<bool> has_skb_output_;
   std::optional<bool> has_raw_tp_special_;
   std::optional<bool> has_prog_kfunc_;
