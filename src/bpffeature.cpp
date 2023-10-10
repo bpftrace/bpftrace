@@ -1,7 +1,9 @@
 #include "bpffeature.h"
 
+#include <bcc/bcc_syms.h>
 #include <bcc/libbpf.h>
 #include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 #include <cstddef>
 #include <cstdio>
 #include <fcntl.h>
@@ -372,7 +374,8 @@ bool BPFfeature::has_kprobe_multi()
   load_opts.expected_attach_type = static_cast<enum ::bpf_attach_type>(
       libbpf::BPF_TRACE_KPROBE_MULTI);
 
-  progfd = bpf_prog_load(::BPF_PROG_TYPE_KPROBE,
+  progfd = bpf_prog_load(static_cast<::bpf_prog_type>(
+                             libbpf::BPF_PROG_TYPE_KPROBE),
                          sym,
                          "GPL",
                          reinterpret_cast<struct bpf_insn*>(insns),
@@ -399,6 +402,65 @@ bool BPFfeature::has_kprobe_multi()
     close(progfd);
   }
   return *has_kprobe_multi_;
+}
+
+bool BPFfeature::has_uprobe_multi()
+{
+  if (has_uprobe_multi_.has_value())
+    return *has_uprobe_multi_;
+
+#if defined(HAVE_LIBBPF_UPROBE_MULTI)
+  LIBBPF_OPTS(bpf_prog_load_opts,
+              load_opts,
+              .expected_attach_type = static_cast<enum ::bpf_attach_type>(
+                  libbpf::BPF_TRACE_UPROBE_MULTI), );
+
+  int err = 0, progfd, linkfd = -1;
+
+  struct bpf_insn insns[] = {
+    BPF_MOV64_IMM(BPF_REG_0, 0),
+    BPF_EXIT_INSN(),
+  };
+
+  progfd = bpf_prog_load(static_cast<::bpf_prog_type>(
+                             libbpf::BPF_PROG_TYPE_KPROBE),
+                         "uprobe_multi",
+                         "GPL",
+                         reinterpret_cast<struct bpf_insn*>(insns),
+                         ARRAY_SIZE(insns),
+                         &load_opts);
+
+  if (progfd >= 0)
+  {
+    LIBBPF_OPTS(bpf_link_create_opts, link_opts);
+    const unsigned long offset = 0;
+
+    link_opts.uprobe_multi.path = "/";
+    link_opts.uprobe_multi.offsets = &offset;
+    link_opts.uprobe_multi.cnt = 1;
+
+    linkfd = bpf_link_create(progfd,
+                             0,
+                             static_cast<enum ::bpf_attach_type>(
+                                 libbpf::BPF_TRACE_UPROBE_MULTI),
+                             &link_opts);
+    err = -errno;
+  }
+
+  has_uprobe_multi_ = linkfd < 0 && err == -EBADF;
+
+  if (linkfd >= 0)
+  {
+    close(linkfd);
+  }
+  if (progfd >= 0)
+  {
+    close(progfd);
+  }
+#else
+  has_uprobe_multi_ = false;
+#endif // HAVE_LIBBPF_UPROBE_MULTI
+  return *has_uprobe_multi_;
 }
 
 bool BPFfeature::has_skb_output(void)
@@ -530,6 +592,7 @@ std::string BPFfeature::report(void)
       << "  perf_event: " << to_str(has_prog_perf_event())
       << "  kfunc: " << to_str(has_kfunc())
       << "  kprobe_multi: " << to_str(has_kprobe_multi())
+      << "  uprobe_multi: " << to_str(has_uprobe_multi())
       << "  raw_tp_special: " << to_str(has_raw_tp_special())
       << "  iter: " << to_str(has_iter("task")) << std::endl;
 
