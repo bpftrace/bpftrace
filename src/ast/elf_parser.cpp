@@ -38,7 +38,7 @@ BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
     std::vector<uint8_t> data;
     data.resize(shdr->sh_size);
 
-    if (shdr->sh_type != SHT_NOBITS)
+    if (shdr->sh_size && shdr->sh_type != SHT_NOBITS)
     {
       // NOBITS sections occupy no size on disk but take up size in
       // memory. Copy the file data for all other sections.
