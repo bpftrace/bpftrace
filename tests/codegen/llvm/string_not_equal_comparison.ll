@@ -8,7 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kretprobe:vfs_read"(i8* %0) section "s_kretprobe:vfs_read_1" {
 entry:
-  %one = alloca i64, align 8
+  %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %comm17 = alloca [16 x i8], align 1
   %strcmp.result = alloca i1, align 1
@@ -111,11 +111,11 @@ lookup_success:                                   ; preds = %pred_true
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %pred_true
-  %23 = bitcast i64* %one to i8*
+  %23 = bitcast i64* %initial_value to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %23)
-  store i64 1, i64* %one, align 8
+  store i64 1, i64* %initial_value, align 8
   %pseudo19 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo19, [16 x i8]* %comm17, i64* %one, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo19, [16 x i8]* %comm17, i64* %initial_value, i64 0)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
