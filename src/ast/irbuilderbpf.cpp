@@ -1478,9 +1478,10 @@ void IRBuilderBPF::CreateAtomicIncCounter(int mapid, uint32_t idx)
   CreateLifetimeEnd(key);
 }
 
-void IRBuilderBPF::CreateMapElemInc(Value *ctx,
+void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     Map &map,
                                     Value *key,
+                                    Value *val,
                                     const location &loc)
 {
   int mapid = bpftrace_.maps[map.ident].value()->id;
@@ -1509,16 +1510,15 @@ void IRBuilderBPF::CreateMapElemInc(Value *ctx,
 
   // createMapLookup  returns an u8*
   auto *cast = CreatePointerCast(call, value->getType(), "cast");
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), getInt64(1)), cast);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), val), cast);
 
   CreateBr(lookup_merge_block);
 
   SetInsertPoint(lookup_failure_block);
 
-  // map item is not found, create one with value 1
-  AllocaInst *one = CreateAllocaBPF(getInt64Ty(), "one");
-  CreateStore(getInt64(1), one);
-  CreateMapUpdateElem(ctx, map, key, one, loc);
+  AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
+  CreateStore(val, initValue);
+  CreateMapUpdateElem(ctx, map, key, initValue, loc);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);

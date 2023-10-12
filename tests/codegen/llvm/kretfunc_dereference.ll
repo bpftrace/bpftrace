@@ -8,7 +8,7 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 
 define i64 @"kretfunc:mock_vmlinux:sk_alloc"(i8* %0) section "s_kretfunc:mock_vmlinux:sk_alloc_1" {
 entry:
-  %one = alloca i64, align 8
+  %initial_value = alloca i64, align 8
   %lookup_elem_val = alloca i64, align 8
   %"@_key" = alloca i64, align 8
   %1 = bitcast i8* %0 to i64*
@@ -37,11 +37,11 @@ lookup_success:                                   ; preds = %entry
   br label %lookup_merge
 
 lookup_failure:                                   ; preds = %entry
-  %11 = bitcast i64* %one to i8*
+  %11 = bitcast i64* %initial_value to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %11)
-  store i64 1, i64* %one, align 8
+  store i64 1, i64* %initial_value, align 8
   %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@_key", i64* %one, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo2, i64* %"@_key", i64* %initial_value, i64 0)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
