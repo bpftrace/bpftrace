@@ -27,14 +27,21 @@ compares it (string compare) with the expected result, a file named by the
 second argument. The `NAME` macro holds the test name,  which is `call_avg` in
 this case.
 
+These tests run as part of the normal suite of unit tests if you are running LLVM 12.
+If not, you need to install 'nix' and run these tests via this script:
+`./tests/codegen-tests.sh`.
+
 #### Updating
 
-Run `./scripts/update_codegen_tests.sh` after making codegen changes up update
-the expected LLVM IR.
+**LLVM 12**
 
-Alternatively (if you need more control over which tests are updated), if the
-test is run with `BPFTRACE_UPDATE_TESTS=1` the `test` helper will update the IR
-instead of running the tests.
+If you are running LLVM 12 or want to only update specific tests with `--gtest_filter`
+run `<builddir>/tests/bpftrace_test` with `BPFTRACE_UPDATE_TESTS=1` and the `test`
+helper will update the IR instead of running the tests.
+
+**Not LLVM 12**
+
+Run `./tests/codegen-tests.sh -u`. This updates all the codegen tests.
 
 ## Runtime tests
 
