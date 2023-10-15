@@ -404,8 +404,21 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    Value *ptr = b_.CreateMapGetElemPtr(ctx_, map, key, call.loc);
+
+    Function *grand_parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *not_null_block = BasicBlock::Create(module_->getContext(),
+                                                    "ptr_not_null",
+                                                    grand_parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "ptr_merge",
+                                                 grand_parent);
+
+    Value *condition = b_.CreateICmpNE(ptr,
+                                       Constant::getNullValue(ptr->getType()));
+    b_.CreateCondBr(condition, not_null_block, merge_block);
+
+    b_.SetInsertPoint(not_null_block);
 
     // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
     // elements will always store on the first occurrence. Revent this later when printing.
@@ -418,24 +431,42 @@ void CodegenLLVM::visit(Call &call)
     Value *inverted = b_.CreateSub(b_.getInt64(0xffffffff), expr_);
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(inverted, oldval), ge, lt);
-
+    b_.CreateCondBr(b_.CreateICmpSGE(inverted,
+                                     b_.CreateLoad(b_.getInt64Ty(), ptr)),
+                    ge,
+                    lt);
     b_.SetInsertPoint(ge);
-    b_.CreateStore(inverted, newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
+    b_.CreateStore(inverted, ptr);
     b_.CreateBr(lt);
-
     b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(newval);
+    b_.CreateBr(merge_block);
+    b_.SetInsertPoint(merge_block);
+
     expr_ = nullptr;
   }
   else if (call.func == "max")
   {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    Value *ptr = b_.CreateMapGetElemPtr(ctx_, map, key, call.loc);
 
+    Function *grand_parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *not_null_block = BasicBlock::Create(module_->getContext(),
+                                                    "ptr_not_null",
+                                                    grand_parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "ptr_merge",
+                                                 grand_parent);
+
+    Value *condition = b_.CreateICmpNE(ptr,
+                                       Constant::getNullValue(ptr->getType()));
+    b_.CreateCondBr(condition, not_null_block, merge_block);
+
+    b_.SetInsertPoint(not_null_block);
+
+    // Store the max of (0xffffffff - val), so that our SGE comparison with
+    // uninitialized elements will always store on the first occurrence. Revent
+    // this later when printing.
     Function *parent = b_.GetInsertBlock()->getParent();
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
@@ -444,15 +475,15 @@ void CodegenLLVM::visit(Call &call)
                              call.vargs->front()->type.IsSigned());
     BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(expr_, oldval), ge, lt);
-
+    b_.CreateCondBr(
+        b_.CreateICmpSGE(expr_, b_.CreateLoad(b_.getInt64Ty(), ptr)), ge, lt);
     b_.SetInsertPoint(ge);
-    b_.CreateStore(expr_, newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
+    b_.CreateStore(expr_, ptr);
     b_.CreateBr(lt);
-
     b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(newval);
+    b_.CreateBr(merge_block);
+    b_.SetInsertPoint(merge_block);
+
     expr_ = nullptr;
   }
   else if (call.func == "avg" || call.func == "stats")
@@ -462,26 +493,58 @@ void CodegenLLVM::visit(Call &call)
     Map &map = *call.map;
 
     AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-    Value *count_old = b_.CreateMapLookupElem(ctx_, map, count_key, call.loc);
-    AllocaInst *count_new = b_.CreateAllocaBPF(map.type, map.ident + "_num");
-    b_.CreateStore(b_.CreateAdd(count_old, b_.getInt64(1)), count_new);
-    b_.CreateMapUpdateElem(ctx_, map, count_key, count_new, call.loc);
-    b_.CreateLifetimeEnd(count_key);
-    b_.CreateLifetimeEnd(count_new);
+
+    Value *count_ptr = b_.CreateMapGetElemPtr(ctx_, map, count_key, call.loc);
+
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *count_not_null_block = BasicBlock::Create(module_->getContext(),
+                                                          "count_ptr_not_null",
+                                                          parent);
+    BasicBlock *count_merge_block = BasicBlock::Create(module_->getContext(),
+                                                       "count_ptr_merge",
+                                                       parent);
+
+    Value *condition = b_.CreateICmpNE(
+        count_ptr, Constant::getNullValue(count_ptr->getType()));
+    b_.CreateCondBr(condition, count_not_null_block, count_merge_block);
+
+    b_.SetInsertPoint(count_not_null_block);
+    b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), count_ptr),
+                                b_.getInt64(1)),
+                   count_ptr);
 
     AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
-    Value *total_old = b_.CreateMapLookupElem(ctx_, map, total_key, call.loc);
-    AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    Value *total_ptr = b_.CreateMapGetElemPtr(ctx_, map, total_key, call.loc);
+
+    Function *total_parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *total_not_null_block = BasicBlock::Create(module_->getContext(),
+                                                          "total_ptr_not_null",
+                                                          total_parent);
+    BasicBlock *total_merge_block = BasicBlock::Create(module_->getContext(),
+                                                       "total_ptr_merge",
+                                                       total_parent);
+
+    Value *total_condition = b_.CreateICmpNE(
+        total_ptr, Constant::getNullValue(total_ptr->getType()));
+    b_.CreateCondBr(total_condition, total_not_null_block, total_merge_block);
+
+    b_.SetInsertPoint(total_not_null_block);
+
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    b_.CreateStore(b_.CreateAdd(expr_, total_old), total_new);
-    b_.CreateMapUpdateElem(ctx_, map, total_key, total_new, call.loc);
-    b_.CreateLifetimeEnd(total_key);
-    b_.CreateLifetimeEnd(total_new);
+    b_.CreateStore(b_.CreateAdd(expr_,
+                                b_.CreateLoad(b_.getInt64Ty(), total_ptr)),
+                   total_ptr);
 
+    b_.CreateBr(total_merge_block);
+    b_.SetInsertPoint(total_merge_block);
+    b_.CreateLifetimeEnd(total_key);
+    b_.CreateBr(count_merge_block);
+    b_.SetInsertPoint(count_merge_block);
+    b_.CreateLifetimeEnd(count_key);
     expr_ = nullptr;
   }
   else if (call.func == "hist")
@@ -498,14 +561,27 @@ void CodegenLLVM::visit(Call &call)
     Value *log2 = b_.CreateCall(log2_func_, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
 
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
+    Value *ptr = b_.CreateMapGetElemPtr(ctx_, map, key, call.loc);
 
-    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *not_null_block = BasicBlock::Create(module_->getContext(),
+                                                    "ptr_not_null",
+                                                    parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "ptr_merge",
+                                                 parent);
+
+    Value *condition = b_.CreateICmpNE(ptr,
+                                       Constant::getNullValue(ptr->getType()));
+    b_.CreateCondBr(condition, not_null_block, merge_block);
+
+    b_.SetInsertPoint(not_null_block);
+    b_.CreateStore(
+        b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), ptr), b_.getInt64(1)), ptr);
+
+    b_.CreateBr(merge_block);
+    b_.SetInsertPoint(merge_block);
     b_.CreateLifetimeEnd(key);
-    b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "lhist")
@@ -545,14 +621,27 @@ void CodegenLLVM::visit(Call &call)
 
     AllocaInst *key = getHistMapKey(map, linear);
 
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
+    Value *ptr = b_.CreateMapGetElemPtr(ctx_, map, key, call.loc);
 
-    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *not_null_block = BasicBlock::Create(module_->getContext(),
+                                                    "ptr_not_null",
+                                                    parent);
+    BasicBlock *merge_block = BasicBlock::Create(module_->getContext(),
+                                                 "ptr_merge",
+                                                 parent);
+
+    Value *condition = b_.CreateICmpNE(ptr,
+                                       Constant::getNullValue(ptr->getType()));
+    b_.CreateCondBr(condition, not_null_block, merge_block);
+
+    b_.SetInsertPoint(not_null_block);
+    b_.CreateStore(
+        b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), ptr), b_.getInt64(1)), ptr);
+
+    b_.CreateBr(merge_block);
+    b_.SetInsertPoint(merge_block);
     b_.CreateLifetimeEnd(key);
-    b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "delete")

@@ -11,7 +11,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" {
 entry:
   %initial_value = alloca i64, align 8
-  %lookup_elem_val = alloca i64, align 8
   %inet = alloca %inet_t, align 8
   %1 = bitcast %inet_t* %inet to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
@@ -24,29 +23,36 @@ entry:
   store i32 -1, i32* %5, align 4
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* %inet)
-  %6 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
-  %map_lookup_cond = icmp ne i8* %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
-
-lookup_success:                                   ; preds = %entry
   %cast = bitcast i8* %lookup_elem to i64*
-  %7 = load i64, i64* %cast, align 8
-  %8 = add i64 %7, 1
-  store i64 %8, i64* %cast, align 8
-  br label %lookup_merge
+  %6 = icmp eq i64* %cast, null
+  br i1 %6, label %ptr_null, label %ptr_merge
 
-lookup_failure:                                   ; preds = %entry
-  %9 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
-  store i64 1, i64* %initial_value, align 8
+ptr_null:                                         ; preds = %entry
+  %7 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %7)
+  store i64 0, i64* %initial_value, align 8
   %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, %inet_t*, i64*, i64)*)(i64 %pseudo1, %inet_t* %inet, i64* %initial_value, i64 0)
-  br label %lookup_merge
+  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
+  %lookup_elem3 = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo2, %inet_t* %inet)
+  %cast4 = bitcast i8* %lookup_elem3 to i64*
+  %8 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %8)
+  br label %ptr_merge
 
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %10 = bitcast %inet_t* %inet to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
+ptr_merge:                                        ; preds = %ptr_null, %entry
+  %9 = icmp ne i64* %cast4, null
+  br i1 %9, label %ptr_not_null, label %merge
+
+ptr_not_null:                                     ; preds = %ptr_merge
+  %10 = load i64, i64* %cast4, align 8
+  %11 = add i64 %10, 1
+  store i64 %11, i64* %cast4, align 8
+  br label %merge
+
+merge:                                            ; preds = %ptr_not_null, %ptr_merge
+  %12 = bitcast %inet_t* %inet to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %12)
   ret i64 0
 }
 

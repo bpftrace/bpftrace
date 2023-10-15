@@ -429,6 +429,43 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
   return ret;
 }
 
+Value *IRBuilderBPF::CreateMapGetElemPtr(Value *ctx,
+                                         Map &map,
+                                         Value *key,
+                                         const location &loc)
+{
+  int mapid = bpftrace_.maps[map.ident].value()->id;
+  CallInst *call = createMapLookup(mapid, key);
+  SizedType &type = map.type;
+  llvm::Type *ty = GetType(type);
+
+  Function *parent = GetInsertBlock()->getParent();
+  BasicBlock *ptr_null_block = BasicBlock::Create(module_.getContext(),
+                                                  "ptr_null",
+                                                  parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "ptr_merge",
+                                               parent);
+  Value *ret = CreatePointerCast(call, ty->getPointerTo(), "cast");
+  Value *condition = CreateICmpEQ(ret, Constant::getNullValue(ret->getType()));
+  CreateCondBr(condition, ptr_null_block, merge_block);
+
+  SetInsertPoint(ptr_null_block);
+
+  // map item is not found, create one with value 0
+  AllocaInst *initValue = CreateAllocaBPF(ty, "initial_value");
+  CreateStore(ConstantInt::get(ty, 0), initValue);
+  CreateMapUpdateElem(ctx, map, key, initValue, loc);
+  ret = CreatePointerCast(createMapLookup(mapid, key),
+                          ty->getPointerTo(),
+                          "cast");
+  CreateLifetimeEnd(initValue);
+
+  CreateBr(merge_block);
+  SetInsertPoint(merge_block);
+  return ret;
+}
+
 void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
                                        Map &map,
                                        Value *key,
@@ -1484,44 +1521,24 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     Value *val,
                                     const location &loc)
 {
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  CallInst *call = createMapLookup(mapid, key);
-  SizedType &type = map.type;
+  Value *ptr = CreateMapGetElemPtr(ctx, map, key, loc);
 
   Function *parent = GetInsertBlock()->getParent();
-  BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
-                                                        "lookup_success",
-                                                        parent);
-  BasicBlock *lookup_failure_block = BasicBlock::Create(module_.getContext(),
-                                                        "lookup_failure",
-                                                        parent);
-  BasicBlock *lookup_merge_block = BasicBlock::Create(module_.getContext(),
-                                                      "lookup_merge",
-                                                      parent);
+  BasicBlock *not_null_block = BasicBlock::Create(module_.getContext(),
+                                                  "ptr_not_null",
+                                                  parent);
+  BasicBlock *merge_block = BasicBlock::Create(module_.getContext(),
+                                               "merge",
+                                               parent);
 
-  AllocaInst *value = CreateAllocaBPF(type, "lookup_elem_val");
-  Value *condition = CreateICmpNE(
-      CreateIntCast(call, getInt8PtrTy(), true),
-      ConstantExpr::getCast(Instruction::IntToPtr, getInt64(0), getInt8PtrTy()),
-      "map_lookup_cond");
-  CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+  Value *condition = CreateICmpNE(ptr, Constant::getNullValue(ptr->getType()));
+  CreateCondBr(condition, not_null_block, merge_block);
 
-  SetInsertPoint(lookup_success_block);
+  SetInsertPoint(not_null_block);
+  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), ptr), val), ptr);
 
-  // createMapLookup  returns an u8*
-  auto *cast = CreatePointerCast(call, value->getType(), "cast");
-  CreateStore(CreateAdd(CreateLoad(getInt64Ty(), cast), val), cast);
-
-  CreateBr(lookup_merge_block);
-
-  SetInsertPoint(lookup_failure_block);
-
-  AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
-  CreateStore(val, initValue);
-  CreateMapUpdateElem(ctx, map, key, initValue, loc);
-
-  CreateBr(lookup_merge_block);
-  SetInsertPoint(lookup_merge_block);
+  CreateBr(merge_block);
+  SetInsertPoint(merge_block);
   return;
 }
 

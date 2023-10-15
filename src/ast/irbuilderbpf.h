@@ -78,6 +78,10 @@ public:
                              Value *key,
                              SizedType &type,
                              const location &loc);
+  Value *CreateMapGetElemPtr(Value *ctx,
+                             Map &map,
+                             Value *key,
+                             const location &loc);
   void CreateMapUpdateElem(Value *ctx,
                            Map &map,
                            Value *key,

@@ -9,7 +9,6 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kretprobe:vfs_read"(i8* %0) section "s_kretprobe:vfs_read_1" {
 entry:
   %initial_value = alloca i64, align 8
-  %lookup_elem_val = alloca i64, align 8
   %comm5 = alloca [16 x i8], align 1
   %strcmp.result = alloca i1, align 1
   %comm = alloca [16 x i8], align 1
@@ -39,10 +38,9 @@ pred_true:                                        ; preds = %strcmp.false
   %get_comm6 = call i64 inttoptr (i64 16 to i64 ([16 x i8]*, i64)*)([16 x i8]* %comm5, i64 16)
   %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo, [16 x i8]* %comm5)
-  %9 = bitcast i64* %lookup_elem_val to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
-  %map_lookup_cond = icmp ne i8* %lookup_elem, null
-  br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
+  %cast = bitcast i8* %lookup_elem to i64*
+  %9 = icmp eq i64* %cast, null
+  br i1 %9, label %ptr_null, label %ptr_merge
 
 strcmp.false:                                     ; preds = %strcmp.done, %strcmp.loop, %entry
   %10 = load i1, i1* %strcmp.result, align 1
@@ -73,24 +71,32 @@ strcmp.loop_null_cmp2:                            ; preds = %strcmp.loop
   %strcmp.cmp_null4 = icmp eq i8 %14, 0
   br i1 %strcmp.cmp_null4, label %strcmp.done, label %strcmp.loop1
 
-lookup_success:                                   ; preds = %pred_true
-  %cast = bitcast i8* %lookup_elem to i64*
-  %15 = load i64, i64* %cast, align 8
-  %16 = add i64 %15, 1
-  store i64 %16, i64* %cast, align 8
-  br label %lookup_merge
-
-lookup_failure:                                   ; preds = %pred_true
-  %17 = bitcast i64* %initial_value to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %17)
-  store i64 1, i64* %initial_value, align 8
+ptr_null:                                         ; preds = %pred_true
+  %15 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
+  store i64 0, i64* %initial_value, align 8
   %pseudo7 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo7, [16 x i8]* %comm5, i64* %initial_value, i64 0)
-  br label %lookup_merge
+  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
+  %lookup_elem9 = call i8* inttoptr (i64 1 to i8* (i64, [16 x i8]*)*)(i64 %pseudo8, [16 x i8]* %comm5)
+  %cast10 = bitcast i8* %lookup_elem9 to i64*
+  %16 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
+  br label %ptr_merge
 
-lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %18 = bitcast [16 x i8]* %comm5 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %18)
+ptr_merge:                                        ; preds = %ptr_null, %pred_true
+  %17 = icmp ne i64* %cast10, null
+  br i1 %17, label %ptr_not_null, label %merge
+
+ptr_not_null:                                     ; preds = %ptr_merge
+  %18 = load i64, i64* %cast10, align 8
+  %19 = add i64 %18, 1
+  store i64 %19, i64* %cast10, align 8
+  br label %merge
+
+merge:                                            ; preds = %ptr_not_null, %ptr_merge
+  %20 = bitcast [16 x i8]* %comm5 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
   ret i64 0
 }
 
