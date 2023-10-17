@@ -69,6 +69,9 @@ public:
   CallInst *CreateBpfPseudoCallId(Map &map);
   CallInst *CreateBpfPseudoCallValue(int mapid);
   CallInst *CreateBpfPseudoCallValue(Map &map);
+  CallInst *CreateMapLookup(Map &map,
+                            Value *key,
+                            const std::string &name = "lookup_elem");
   Value *CreateMapLookupElem(Value *ctx,
                              Map &map,
                              Value *key,
@@ -82,7 +85,8 @@ public:
                            Map &map,
                            Value *key,
                            Value *val,
-                           const location &loc);
+                           const location &loc,
+                           int64_t flags = 0);
   void CreateMapDeleteElem(Value *ctx,
                            Map &map,
                            Value *key,
@@ -186,6 +190,11 @@ public:
                     size_t size,
                     const location *loc = nullptr);
   void CreateAtomicIncCounter(int mapfd, uint32_t idx);
+  void CreateMapElemInit(Value *ctx,
+                         Map &map,
+                         Value *key,
+                         Value *val,
+                         const location &loc);
   void CreateMapElemAdd(Value *ctx,
                         Map &map,
                         Value *key,

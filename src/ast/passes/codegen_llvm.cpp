@@ -404,29 +404,57 @@ void CodegenLLVM::visit(Call &call)
   {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
+    CallInst *lookup = b_.CreateMapLookup(map, key);
+    SizedType &type = map.type;
 
-    // Store the max of (0xffffffff - val), so that our SGE comparison with uninitialized
-    // elements will always store on the first occurrence. Revent this later when printing.
-    Function *parent = b_.GetInsertBlock()->getParent();
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    Value *inverted = b_.CreateSub(b_.getInt64(0xffffffff), expr_);
-    BasicBlock *lt = BasicBlock::Create(module_->getContext(), "min.lt", parent);
+
+    Function *parent = b_.GetInsertBlock()->getParent();
+    BasicBlock *lookup_success_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_success",
+                                                          parent);
+    BasicBlock *lookup_failure_block = BasicBlock::Create(module_->getContext(),
+                                                          "lookup_failure",
+                                                          parent);
+    BasicBlock *lookup_merge_block = BasicBlock::Create(module_->getContext(),
+                                                        "lookup_merge",
+                                                        parent);
+
+    AllocaInst *value = b_.CreateAllocaBPF(type, "lookup_elem_val");
+    Value *condition = b_.CreateICmpNE(
+        b_.CreateIntCast(lookup, b_.getInt8PtrTy(), true),
+        ConstantExpr::getCast(Instruction::IntToPtr,
+                              b_.getInt64(0),
+                              b_.getInt8PtrTy()),
+        "map_lookup_cond");
+    b_.CreateCondBr(condition, lookup_success_block, lookup_failure_block);
+
+    b_.SetInsertPoint(lookup_success_block);
+
+    auto *cast = b_.CreatePointerCast(lookup, value->getType(), "cast");
     BasicBlock *ge = BasicBlock::Create(module_->getContext(), "min.ge", parent);
-    b_.CreateCondBr(b_.CreateICmpSGE(inverted, oldval), ge, lt);
+    b_.CreateCondBr(b_.CreateICmpSGE(b_.CreateLoad(b_.getInt64Ty(), cast),
+                                     expr_),
+                    ge,
+                    lookup_merge_block);
 
     b_.SetInsertPoint(ge);
-    b_.CreateStore(inverted, newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
-    b_.CreateBr(lt);
+    b_.CreateStore(expr_, cast);
 
-    b_.SetInsertPoint(lt);
-    b_.CreateLifetimeEnd(newval);
+    b_.CreateBr(lookup_merge_block);
+
+    b_.SetInsertPoint(lookup_failure_block);
+
+    b_.CreateMapElemInit(ctx_, map, key, expr_, call.loc);
+
+    b_.CreateBr(lookup_merge_block);
+    b_.SetInsertPoint(lookup_merge_block);
+    b_.CreateLifetimeEnd(value);
+
     expr_ = nullptr;
   }
   else if (call.func == "max")

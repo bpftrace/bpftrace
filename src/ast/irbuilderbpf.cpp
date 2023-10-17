@@ -338,6 +338,14 @@ CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(Map &map)
   return CreateBpfPseudoCallValue(mapid);
 }
 
+CallInst *IRBuilderBPF::CreateMapLookup(Map &map,
+                                        Value *key,
+                                        const std::string &name)
+{
+  int mapid = bpftrace_.maps[map.ident].value()->id;
+  return createMapLookup(mapid, key, name);
+}
+
 CallInst *IRBuilderBPF::createMapLookup(int mapid,
                                         Value *key,
                                         const std::string &name)
@@ -481,7 +489,8 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
                                        Map &map,
                                        Value *key,
                                        Value *val,
-                                       const location &loc)
+                                       const location &loc,
+                                       int64_t flags)
 {
   Value *map_ptr = CreateBpfPseudoCallId(map);
 
@@ -489,7 +498,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
   assert(key->getType()->isPointerTy());
   assert(val->getType()->isPointerTy());
 
-  Value *flags = getInt64(0);
+  Value *flags_val = getInt64(flags);
 
   // long map_update_elem(struct bpf_map * map, void *key, void * value, u64
   // flags) Return: 0 on success or negative error
@@ -504,7 +513,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
       update_func_ptr_type);
   CallInst *call = createCall(update_func_type,
                               update_func,
-                              { map_ptr, key, val, flags },
+                              { map_ptr, key, val, flags_val },
                               "update_elem");
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_update_elem, loc);
 }
@@ -1526,6 +1535,19 @@ void IRBuilderBPF::CreateAtomicIncCounter(int mapid, uint32_t idx)
   CreateLifetimeEnd(key);
 }
 
+void IRBuilderBPF::CreateMapElemInit(Value *ctx,
+                                     Map &map,
+                                     Value *key,
+                                     Value *val,
+                                     const location &loc)
+{
+  AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
+  CreateStore(val, initValue);
+  CreateMapUpdateElem(ctx, map, key, initValue, loc, BPF_NOEXIST);
+  CreateLifetimeEnd(initValue);
+  return;
+}
+
 void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     Map &map,
                                     Value *key,
@@ -1564,10 +1586,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
 
   SetInsertPoint(lookup_failure_block);
 
-  AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
-  CreateStore(val, initValue);
-  CreateMapUpdateElem(ctx, map, key, initValue, loc);
-  CreateLifetimeEnd(initValue);
+  CreateMapElemInit(ctx, map, key, val, loc);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);

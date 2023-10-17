@@ -1337,7 +1337,7 @@ std::optional<std::string> abs_path(const std::string &rel_path)
 
 int64_t min_value(const std::vector<uint8_t> &value, int nvalues)
 {
-  int64_t val, max = 0, retval;
+  int64_t val, max = 0;
   for (int i = 0; i < nvalues; i++)
   {
     val = read_data<int64_t>(value.data() + i * sizeof(int64_t));
@@ -1345,20 +1345,7 @@ int64_t min_value(const std::vector<uint8_t> &value, int nvalues)
       max = val;
   }
 
-  /*
-   * This is a hack really until the code generation for the min() function
-   * is sorted out. The way it is currently implemented doesn't allow >
-   * 32 bit quantities and also means we have to do gymnastics with the return
-   * value owing to the way it is stored (i.e., 0xffffffff - val).
-   */
-  if (max == 0) /* If we have applied the zero() function */
-    retval = max;
-  else if ((0xffffffff - max) <= 0) /* A negative 32 bit value */
-    retval = 0 - (max - 0xffffffff);
-  else
-    retval = 0xffffffff - max; /* A positive 32 bit value */
-
-  return retval;
+  return max;
 }
 
 uint64_t max_value(const std::vector<uint8_t> &value, int nvalues)
