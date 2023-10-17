@@ -191,6 +191,9 @@ public:
                         Value *key,
                         Value *val,
                         const location &loc);
+  void CreateDebugOutput(std::string fmt_str,
+                         const std::vector<Value *> &values,
+                         const location &loc);
   void CreateTracePrintk(Value *fmt,
                          Value *fmt_size,
                          const std::vector<Value *> &values,

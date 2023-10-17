@@ -405,7 +405,10 @@ CallInst *IRBuilderBPF::createGetScratchMap(int mapid,
   CreateCondBr(condition, lookup_merge_block, lookup_failure_block);
 
   SetInsertPoint(lookup_failure_block);
-  // TODO: should we return a loud error?
+  if (bpftrace_.debug_output_)
+    CreateDebugOutput("unable to find the scratch map value for " + name,
+                      std::vector<Value *>{},
+                      loc);
   CreateBr(failure_callback);
 
   SetInsertPoint(lookup_merge_block);
