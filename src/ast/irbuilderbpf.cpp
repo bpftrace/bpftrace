@@ -1519,9 +1519,11 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
   AllocaInst *initValue = CreateAllocaBPF(getInt64Ty(), "initial_value");
   CreateStore(val, initValue);
   CreateMapUpdateElem(ctx, map, key, initValue, loc);
+  CreateLifetimeEnd(initValue);
 
   CreateBr(lookup_merge_block);
   SetInsertPoint(lookup_merge_block);
+  CreateLifetimeEnd(value);
   return;
 }
 
