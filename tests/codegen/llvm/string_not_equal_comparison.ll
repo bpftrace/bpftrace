@@ -116,11 +116,15 @@ lookup_failure:                                   ; preds = %pred_true
   store i64 1, i64* %initial_value, align 8
   %pseudo19 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %update_elem = call i64 inttoptr (i64 2 to i64 (i64, [16 x i8]*, i64*, i64)*)(i64 %pseudo19, [16 x i8]* %comm17, i64* %initial_value, i64 0)
+  %24 = bitcast i64* %initial_value to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
   br label %lookup_merge
 
 lookup_merge:                                     ; preds = %lookup_failure, %lookup_success
-  %24 = bitcast [16 x i8]* %comm17 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %24)
+  %25 = bitcast i64* %lookup_elem_val to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %25)
+  %26 = bitcast [16 x i8]* %comm17 to i8*
+  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %26)
   ret i64 0
 }
 
