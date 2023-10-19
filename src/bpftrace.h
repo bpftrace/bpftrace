@@ -200,6 +200,7 @@ public:
   uint64_t max_type_res_iterations = 0;
   bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
+  bool debug_output_ = false;
   enum class UserSymbolCacheType
   {
     per_pid,

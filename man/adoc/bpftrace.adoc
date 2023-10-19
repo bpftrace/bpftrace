@@ -266,6 +266,13 @@ Default: bpftrace
 Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
 This can be overwritten at the call site.
 
+=== BPFTRACE_DEBUG_OUTPUT
+
+Default: 0
+
+Outputs bpftrace's runtime debug messages to the trace_pipe.
+This feature can be turned on by setting the value of this environment variable to `1`.
+
 ////
 !
 !

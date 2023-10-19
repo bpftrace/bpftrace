@@ -130,6 +130,7 @@ void usage()
   std::cerr << "    BPFTRACE_BTF                [default: none] BTF file" << std::endl;
   std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER  [default: '..'] string truncation trailer" << std::endl;
   std::cerr << "    BPFTRACE_STACK_MODE         [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
+  std::cerr << "    BPFTRACE_DEBUG_OUTPUT       [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
   std::cerr << std::endl;
   std::cerr << "EXAMPLES:" << std::endl;
   std::cerr << "bpftrace -l '*sleep*'" << std::endl;
@@ -286,6 +287,9 @@ static std::optional<struct timespec> get_delta_taitime()
   if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE",
                         bpftrace.demangle_cpp_symbols_,
                         true))
+    return false;
+
+  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT", bpftrace.debug_output_, false))
     return false;
 
   if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
