@@ -1,6 +1,7 @@
 #include <arpa/inet.h>
 #include <cassert>
 #include <cerrno>
+#include <cinttypes>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -2035,7 +2036,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   const auto &raw_fmt = resources.strftime_args[strftime_id];
   uint64_t us = ((basetime->tv_nsec + nsecs) % 1000000000) / 1000;
   char usecs_buf[7];
-  snprintf(usecs_buf, sizeof(usecs_buf), "%06lu", us);
+  snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
   char timestr[strlen_];
