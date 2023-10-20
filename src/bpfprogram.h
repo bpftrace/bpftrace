@@ -30,7 +30,7 @@ public:
   BpfProgram(const BpfProgram &) = delete;
   BpfProgram &operator=(const BpfProgram &) = delete;
   BpfProgram(BpfProgram &&) = default;
-  BpfProgram &operator=(BpfProgram &&) = default;
+  BpfProgram &operator=(BpfProgram &&) = delete;
 
 private:
   explicit BpfProgram(const BpfBytecode &bytecode,

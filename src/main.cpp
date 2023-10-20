@@ -1020,7 +1020,7 @@ int main(int argc, char* argv[])
       llvm.emit_elf(args.output_elf);
       return 0;
     }
-    bytecode = std::move(llvm.emit());
+    bytecode = llvm.emit();
   }
   catch (const std::system_error& ex)
   {
