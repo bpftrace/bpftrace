@@ -54,9 +54,28 @@ public:                                                                        \
 #define DEFINE_PROG_TEST(var, progtype)                                        \
   __DEFINE_PROG_TEST(var, progtype, NULL, std::nullopt)
 
+class BPFfeature;
+
+class BPFnofeature
+{
+public:
+  BPFnofeature() : kprobe_multi_(false), uprobe_multi_(false)
+  {
+  }
+  int parse(const char* optarg);
+
+protected:
+  bool kprobe_multi_;
+  bool uprobe_multi_;
+  friend class BPFfeature;
+};
+
 class BPFfeature
 {
 public:
+  BPFfeature(BPFnofeature& no_feature) : no_feature_(no_feature)
+  {
+  }
   BPFfeature() = default;
   virtual ~BPFfeature() = default;
 
@@ -142,6 +161,8 @@ private:
       int* outfd = nullptr);
 
   BTF btf_ = BTF({ "vmlinux" });
+
+  BPFnofeature no_feature_;
 };
 
 #undef DEFINE_PROG_TEST

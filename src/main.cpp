@@ -75,6 +75,7 @@ enum Options
   INCLUDE,
   EMIT_ELF,
   EMIT_LLVM,
+  NO_FEATURE,
 };
 } // namespace
 
@@ -168,7 +169,7 @@ bool is_root()
     return true;
 }
 
-static void info()
+static void info(BPFnofeature no_feature)
 {
   struct utsname utsname;
   uname(&utsname);
@@ -182,7 +183,7 @@ static void info()
   std::cerr << BuildInfo::report();
 
   std::cerr << std::endl;
-  std::cerr << BPFfeature().report();
+  std::cerr << BPFfeature(no_feature).report();
 }
 
 static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
@@ -501,6 +502,7 @@ struct Args
   std::string output_elf;
   std::string output_llvm;
   std::string aot;
+  BPFnofeature no_feature;
   OutputBufferConfig obc = OutputBufferConfig::UNSET;
   BuildMode build_mode = BuildMode::DYNAMIC;
   std::vector<std::string> include_dirs;
@@ -527,6 +529,7 @@ Args parse_args(int argc, char* argv[])
     option{ "no-warnings", no_argument, nullptr, Options::NO_WARNING },
     option{ "test", required_argument, nullptr, Options::TEST },
     option{ "aot", required_argument, nullptr, Options::AOT },
+    option{ "no-feature", required_argument, nullptr, Options::NO_FEATURE },
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
@@ -539,7 +542,7 @@ Args parse_args(int argc, char* argv[])
       case Options::INFO: // --info
         if (is_root())
         {
-          info();
+          info(args.no_feature);
           exit(0);
         }
         exit(1);
@@ -565,6 +568,14 @@ Args parse_args(int argc, char* argv[])
       case Options::AOT: // --aot
         args.aot = optarg;
         args.build_mode = BuildMode::AHEAD_OF_TIME;
+        break;
+      case Options::NO_FEATURE: // --no-feature
+        if (args.no_feature.parse(optarg))
+        {
+          LOG(ERROR) << "USAGE: --no-feature can only have values "
+                        "'kprobe_multi,uprobe_multi'.";
+          exit(1);
+        }
         break;
       case 'o':
         args.output_file = optarg;
@@ -799,7 +810,7 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  BPFtrace bpftrace(std::move(output));
+  BPFtrace bpftrace(std::move(output), args.no_feature);
   bool verify_llvm_ir = false;
 
   if (!args.cmd_str.empty())

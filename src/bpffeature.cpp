@@ -21,6 +21,26 @@ namespace bpftrace {
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 
+int BPFnofeature::parse(const char* str)
+{
+  for (auto feat : split_string(str, ','))
+  {
+    if (feat == "kprobe_multi")
+    {
+      kprobe_multi_ = true;
+    }
+    else if (feat == "uprobe_multi")
+    {
+      uprobe_multi_ = true;
+    }
+    else
+    {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 static bool try_load_(const char* name,
                       enum libbpf::bpf_prog_type prog_type,
                       std::optional<libbpf::bpf_attach_type> attach_type,
@@ -358,6 +378,12 @@ bool BPFfeature::has_kprobe_multi()
   if (has_kprobe_multi_.has_value())
     return *has_kprobe_multi_;
 
+  if (no_feature_.kprobe_multi_)
+  {
+    has_kprobe_multi_ = false;
+    return *has_kprobe_multi_;
+  }
+
   const char* sym = "ksys_read";
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, link_opts);
   int progfd, linkfd = -1;
@@ -410,6 +436,12 @@ bool BPFfeature::has_uprobe_multi()
     return *has_uprobe_multi_;
 
 #if defined(HAVE_LIBBPF_UPROBE_MULTI)
+  if (no_feature_.uprobe_multi_)
+  {
+    has_uprobe_multi_ = false;
+    return *has_uprobe_multi_;
+  }
+
   LIBBPF_OPTS(bpf_prog_load_opts,
               load_opts,
               .expected_attach_type = static_cast<enum ::bpf_attach_type>(
