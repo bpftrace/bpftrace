@@ -93,9 +93,10 @@ private:
 class BPFtrace
 {
 public:
-  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout))
+  BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout),
+           BPFnofeature no_feature = BPFnofeature())
       : out_(std::move(o)),
-        feature_(std::make_unique<BPFfeature>()),
+        feature_(std::make_unique<BPFfeature>(no_feature)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
         ncpus_(get_possible_cpus().size())
   {

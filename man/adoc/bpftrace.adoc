@@ -137,6 +137,12 @@ u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
 *--info*::
   Print detailed information about features supported by the kernel and the bpftrace build.
 
+*--no-feature* _feature,feature,..._::
+  Disable detected features, valid values are::
+
+  *uprobe_multi* to disable uprobe_multi link +
+  *kprobe_multi* to disable kprobe_multi link
+
 *-h, --help*::
   Print the help summary
 
