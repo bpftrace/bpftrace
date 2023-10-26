@@ -165,6 +165,7 @@ class TestParser(object):
                     "dwarf",
                     "aot",
                     "kprobe_multi",
+                    "uprobe_multi",
                     "skboutput",
                     "get_tai_ns",
                     "get_func_ip",
