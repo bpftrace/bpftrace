@@ -13,6 +13,8 @@ and this project adheres to
   - [#2769](https://github.com/iovisor/bpftrace/pull/2769)
 - Emit better errors messages for invalid attachpoints
   - [#2781](https://github.com/iovisor/bpftrace/pull/2781)
+- Add support for uprobe_multi link
+  - [#2810](https://github.com/iovisor/bpftrace/pull/2810)
 #### Changed
 #### Deprecated
 #### Removed
