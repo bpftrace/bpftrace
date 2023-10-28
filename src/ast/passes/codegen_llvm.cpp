@@ -550,15 +550,8 @@ void CodegenLLVM::visit(Call &call)
                              call.vargs->front()->type.IsSigned());
     Value *log2 = b_.CreateCall(log2_func_, expr_, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
-
-    Value *oldval = b_.CreateMapLookupElem(ctx_, map, key, call.loc);
-    AllocaInst *newval = b_.CreateAllocaBPF(map.type, map.ident + "_val");
-    b_.CreateStore(b_.CreateAdd(oldval, b_.getInt64(1)), newval);
-    b_.CreateMapUpdateElem(ctx_, map, key, newval, call.loc);
-
-    // oldval can only be an integer so won't be in memory and doesn't need lifetime end
+    b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
     b_.CreateLifetimeEnd(key);
-    b_.CreateLifetimeEnd(newval);
     expr_ = nullptr;
   }
   else if (call.func == "lhist")
