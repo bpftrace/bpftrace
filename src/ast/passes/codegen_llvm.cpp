@@ -523,25 +523,17 @@ void CodegenLLVM::visit(Call &call)
     Map &map = *call.map;
 
     AllocaInst *count_key = getHistMapKey(map, b_.getInt64(0));
-    Value *count_old = b_.CreateMapLookupElem(ctx_, map, count_key, call.loc);
-    AllocaInst *count_new = b_.CreateAllocaBPF(map.type, map.ident + "_num");
-    b_.CreateStore(b_.CreateAdd(count_old, b_.getInt64(1)), count_new);
-    b_.CreateMapUpdateElem(ctx_, map, count_key, count_new, call.loc);
+    b_.CreateMapElemAdd(ctx_, map, count_key, b_.getInt64(1), call.loc);
     b_.CreateLifetimeEnd(count_key);
-    b_.CreateLifetimeEnd(count_new);
 
     AllocaInst *total_key = getHistMapKey(map, b_.getInt64(1));
-    Value *total_old = b_.CreateMapLookupElem(ctx_, map, total_key, call.loc);
-    AllocaInst *total_new = b_.CreateAllocaBPF(map.type, map.ident + "_val");
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    b_.CreateStore(b_.CreateAdd(expr_, total_old), total_new);
-    b_.CreateMapUpdateElem(ctx_, map, total_key, total_new, call.loc);
+    b_.CreateMapElemAdd(ctx_, map, total_key, expr_, call.loc);
     b_.CreateLifetimeEnd(total_key);
-    b_.CreateLifetimeEnd(total_new);
 
     expr_ = nullptr;
   }
