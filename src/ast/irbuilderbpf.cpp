@@ -541,6 +541,44 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_map_delete_elem, loc);
 }
 
+void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
+                                        Map &map,
+                                        Value *callback,
+                                        Value *callback_ctx,
+                                        const location &loc)
+{
+  Value *map_ptr = CreateBpfPseudoCallId(map);
+
+  // long bpf_for_each_map_elem(struct bpf_map *map, void *callback_fn, void
+  // *callback_ctx, u64 flags)
+  //
+  // Return: 0 on success or negative error
+  //
+  // callback is long (*callback_fn)(struct bpf_map *map, const void *key, void
+  // *value, void *ctx);
+
+  auto *int8_ptr = getInt8Ty()->getPointerTo();
+
+  FunctionType *for_each_map_type = FunctionType::get(
+      getInt64Ty(),
+      { map_ptr->getType(), callback->getType(), int8_ptr, getInt64Ty() },
+      false);
+  PointerType *for_each_map_ptr_type = PointerType::get(for_each_map_type, 0);
+
+  Constant *for_each_map_func = ConstantExpr::getCast(
+      Instruction::IntToPtr,
+      getInt64(libbpf::BPF_FUNC_for_each_map_elem),
+      for_each_map_ptr_type);
+  CallInst *call = createCall(for_each_map_type,
+                              for_each_map_func,
+                              { map_ptr,
+                                callback,
+                                CreateBitCast(callback_ctx, int8_ptr),
+                                /*flags=*/getInt64(0) },
+                              "for_each_map_elem");
+  CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_for_each_map_elem, loc);
+}
+
 void IRBuilderBPF::CreateProbeRead(Value *ctx,
                                    Value *dst,
                                    llvm::Value *size,

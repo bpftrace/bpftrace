@@ -568,3 +568,8 @@ NAME nsecs_sw_tai
 PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs(sw_tai)); exit(); }
 EXPECT SUCCESS [0-9]+
 TIMEOUT 5
+
+NAME map len
+PROG BEGIN { @[0] = 0; @[1] = 1; printf("map len: %d\n", len(@)); exit(); }
+EXPECT map len: 2
+TIMEOUT 3

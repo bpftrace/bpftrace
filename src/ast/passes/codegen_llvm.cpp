@@ -1161,6 +1161,19 @@ void CodegenLLVM::visit(Call &call)
     b_.CreateLifetimeEnd(buf);
     expr_ = nullptr;
   }
+  else if (call.func == "len")
+  {
+    auto &arg = *call.vargs->at(0);
+    auto &map = static_cast<Map &>(arg);
+
+    AllocaInst *len = b_.CreateAllocaBPF(b_.getInt64Ty(), "len");
+    b_.CreateStore(b_.getInt64(0), len);
+
+    b_.CreateForEachMapElem(ctx_, map, createMapLenCallback(), len, call.loc);
+
+    expr_ = b_.CreateLoad(b_.getInt64Ty(), len);
+    b_.CreateLifetimeEnd(len);
+  }
   else if (call.func == "time")
   {
     auto elements = AsyncEvent::Time().asLLVMType(b_);
@@ -3805,6 +3818,49 @@ void CodegenLLVM::createIncDec(Unop &unop)
   {
     LOG(FATAL) << "invalid expression passed to " << opstr(unop);
   }
+}
+
+Function *CodegenLLVM::createMapLenCallback()
+{
+  // The goal is to produce the following code:
+  //
+  // static int cb(struct map *map, void *key, void *value, void *ctx)
+  // {
+  //   int *len = (int *)ctx;
+  //   (*len)++;
+  //   return 0;
+  // }
+  auto saved_ip = b_.saveIP();
+
+  std::array<llvm::Type *, 4> args = {
+    b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy()
+  };
+
+  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(), args, false);
+
+  Function *callback = Function::Create(callback_type,
+                                        Function::LinkageTypes::InternalLinkage,
+                                        "map_len_cb",
+                                        module_.get());
+
+  callback->setDSOLocal(true);
+  callback->setVisibility(llvm::GlobalValue::DefaultVisibility);
+  callback->setSection(".text");
+  debug_.createFunctionDebugInfo(*callback);
+
+  auto *bb = BasicBlock::Create(module_->getContext(), "", callback);
+  b_.SetInsertPoint(bb);
+
+  Value *ctx = callback->getArg(3);
+  auto len = b_.CreateBitCast(ctx, b_.getInt64Ty()->getPointerTo());
+  b_.CreateStore(
+      b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), len), b_.getInt64(1)), len);
+
+  b_.CreateRet(b_.getInt64(0));
+
+  b_.restoreIP(saved_ip);
+
+  return callback;
 }
 
 std::function<void()> CodegenLLVM::create_reset_ids()

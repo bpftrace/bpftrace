@@ -21,6 +21,8 @@ and this project adheres to
   - [#2844](https://github.com/iovisor/bpftrace/pull/2844)
 - Add support for uprobe pid targeting
   - [#2830](https://github.com/iovisor/bpftrace/pull/2830)
+- New builtin for getting the number of map elements
+  - [#2840](https://github.com/iovisor/bpftrace/pull/2840)
 #### Changed
 #### Deprecated
 #### Removed
