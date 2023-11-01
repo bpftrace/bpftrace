@@ -205,6 +205,8 @@ private:
 
   void createIncDec(Unop &unop);
 
+  Function *createMapLenCallback();
+
   // Return a lambda that has captured-by-value CodegenLLVM's async id state
   // (ie `printf_id_`, `mapped_printf_id_`, etc.).  Running the returned lambda
   // will restore `CodegenLLVM`s async id state back to when this function was

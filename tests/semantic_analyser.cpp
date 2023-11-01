@@ -223,6 +223,7 @@ TEST(semantic_analyser, builtin_functions)
   test("kprobe:f { @x = 1; print(@x) }", 0);
   test("kprobe:f { @x = 1; clear(@x) }", 0);
   test("kprobe:f { @x = 1; zero(@x) }", 0);
+  test("kprobe:f { @x = 1; @s = len(@x) }", 0);
   test("kprobe:f { time() }", 0);
   test("kprobe:f { exit() }", 0);
   test("kprobe:f { str(0xffff) }", 0);
@@ -588,6 +589,15 @@ TEST(semantic_analyser, call_zero)
   test("kprobe:f { @x = count(); @[zero(@x)] = 1; }", 1);
   test("kprobe:f { @x = count(); if(zero(@x)) { 123 } }", 10);
   test("kprobe:f { @x = count(); zero(@x) ? 0 : 1; }", 10);
+}
+
+TEST(semantic_analyser, call_len)
+{
+  test("kprobe:f { @x[0] = 0; len(@x); }", 0);
+  test("kprobe:f { @x[0] = 0; len(); }", 1);
+  test("kprobe:f { @x[0] = 0; len(@x, 1); }", 1);
+  test("kprobe:f { @x[0] = 0; len(@x[2]); }", 1);
+  test("kprobe:f { $x = 0; len($x); }", 1);
 }
 
 TEST(semantic_analyser, call_time)

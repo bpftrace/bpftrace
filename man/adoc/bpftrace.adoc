@@ -1350,6 +1350,13 @@ Calculate the sum of all `n` passed.
 
 Set all values for all keys to zero.
 
+=== len
+
+.variants
+* `len(map m)`
+
+Return the number of elements in the map.
+
 == Functions
 
 Functions that are marked *async* are asynchronous which can lead to unexpected behaviour, see the <<sync and async>> section for more information.

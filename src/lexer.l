@@ -38,7 +38,7 @@ vspace   [\n\r]
 space    {hspace}|{vspace}
 path     :(\\.|[_\-\./a-zA-Z0-9#+\*])+
 builtin  arg[0-9]|args|cgroup|comm|cpid|numaid|cpu|ctx|curtask|elapsed|func|gid|pid|probe|rand|retval|sarg[0-9]|tid|uid|username|jiffies
-call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|stats|str|strerror|strftime|strncmp|strcontains|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|skboutput|pton|debugf
+call     avg|buf|cat|cgroupid|clear|count|delete|exit|hist|join|kaddr|kptr|ksym|len|lhist|macaddr|max|min|ntop|override|print|printf|cgroup_path|reg|signal|stats|str|strerror|strftime|strncmp|strcontains|sum|system|time|uaddr|uptr|usym|zero|path|unwatch|bswap|skboutput|pton|debugf
 
 int_type        bool|(u)?int(8|16|32|64)
 builtin_type    (u)?(min|max|sum|count|avg|stats)_t|probe_t|username_t|lhist_t|hist_t|usym_t|ksym_t|timestamp_t|macaddr_t|cgroup_path_t|strerror_t

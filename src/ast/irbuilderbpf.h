@@ -91,6 +91,11 @@ public:
                            Map &map,
                            Value *key,
                            const location &loc);
+  void CreateForEachMapElem(Value *ctx,
+                            Map &map,
+                            Value *callback,
+                            Value *callback_ctx,
+                            const location &loc);
   void CreateProbeRead(Value *ctx,
                        Value *dst,
                        llvm::Value *size,

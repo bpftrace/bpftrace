@@ -3400,6 +3400,7 @@ END
 - `print(value)` - Print a value
 - `clear(@x)` - Delete all keys from the map
 - `zero(@x)` - Set all map values to zero
+- `len(@x)` - Return the number of elements in the map
 
 Some of these are asynchronous: the kernel queues the event, but some time later (milliseconds) it is
 processed in user-space. The asynchronous actions are: `print()` on maps, `clear()`, and `zero()`.
