@@ -119,8 +119,12 @@ Map::Map(const SizedType &type) : IMap(type)
   int max_entries = 128 << 10;
   int flags = 0;
 
-  mapfd_ = create_map(
-      map_type_, "stack", key_size, value_size, max_entries, flags);
+  mapfd_ = create_map(map_type_,
+                      type.stack_type.name(),
+                      key_size,
+                      value_size,
+                      max_entries,
+                      flags);
   if (mapfd_ < 0)
   {
     LOG(ERROR) << "failed to create stack id map: " << strerror(errno);
