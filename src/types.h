@@ -78,6 +78,12 @@ enum class StackMode : uint8_t
   raw,
 };
 
+const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
+  { StackMode::bpftrace, "bpftrace" },
+  { StackMode::perf, "perf" },
+  { StackMode::raw, "raw" },
+};
+
 struct StackType
 {
   uint16_t limit = DEFAULT_STACK_SIZE;
@@ -85,6 +91,12 @@ struct StackType
 
   bool operator ==(const StackType &obj) const {
     return limit == obj.limit && mode == obj.mode;
+  }
+
+  std::string name() const
+  {
+    return "stack_" + STACK_MODE_NAME_MAP.at(mode) + "_" +
+           std::to_string(limit);
   }
 
 private:
