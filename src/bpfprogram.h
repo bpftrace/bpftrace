@@ -1,17 +1,15 @@
 #pragma once
 
+#include "bpfbytecode.h"
 #include "mapmanager.h"
 
 #include <cstdint>
 #include <optional>
 #include <string>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
 
 namespace bpftrace {
-
-using BpfBytecode = std::unordered_map<std::string, std::vector<uint8_t>>;
 
 class BPFtrace;
 

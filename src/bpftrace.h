@@ -12,6 +12,7 @@
 
 #include "ast/ast.h"
 #include "attached_probe.h"
+#include "bpfbytecode.h"
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
@@ -114,7 +115,7 @@ public:
   int run(BpfBytecode bytecode);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
-      BpfBytecode &bytecode);
+      const BpfBytecode &bytecode);
   int run_iter();
   int print_maps();
   int clear_map(IMap &map);
@@ -223,7 +224,7 @@ public:
 
 private:
   int run_special_probe(std::string name,
-                        BpfBytecode &bytecode,
+                        const BpfBytecode &bytecode,
                         void (*trigger)(void));
   void* ksyms_{nullptr};
   // note: exe_sym_ is used when layout is same for all instances of program

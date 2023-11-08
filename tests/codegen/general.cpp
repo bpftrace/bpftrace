@@ -60,8 +60,8 @@ TEST(codegen, populate_sections)
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   auto bytecode = codegen.compile();
 
-  EXPECT_NE(bytecode.find("s_kprobe:foo_1"), bytecode.end());
-  EXPECT_NE(bytecode.find("s_kprobe:bar_2"), bytecode.end());
+  EXPECT_TRUE(bytecode.hasSection("s_kprobe:foo_1"));
+  EXPECT_TRUE(bytecode.hasSection("s_kprobe:bar_2"));
 }
 
 TEST(codegen, printf_offsets)

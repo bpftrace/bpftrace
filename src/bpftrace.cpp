@@ -976,7 +976,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
-    BpfBytecode &bytecode)
+    const BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
   // use the single-probe program if it exists (as is the case with wildcards
@@ -1116,7 +1116,7 @@ bool attach_reverse(const Probe &p)
 }
 
 int BPFtrace::run_special_probe(std::string name,
-                                BpfBytecode &bytecode,
+                                const BpfBytecode &bytecode,
                                 trigger_fn_t trigger)
 {
   for (auto probe = resources.special_probes.rbegin();
