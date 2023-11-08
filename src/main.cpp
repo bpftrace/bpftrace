@@ -1032,7 +1032,7 @@ int main(int argc, char* argv[])
   act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
   sigaction(SIGUSR1, &act, NULL);
 
-  err = bpftrace.run(bytecode);
+  err = bpftrace.run(std::move(bytecode));
   if (err)
     return err;
 
