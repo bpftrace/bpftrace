@@ -199,6 +199,11 @@ EXPECT @bytes: *\n[\[(].*
 AFTER ./testprogs/syscall read
 TIMEOUT 5
 
+NAME hist_10g
+RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = hist(10 * 1024 * 1024 * 1024); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_10g.json")))'
+EXPECT ^True$
+TIMEOUT 1
+
 NAME lhist
 PROG kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}
 EXPECT @bytes: *\n[\[(].*

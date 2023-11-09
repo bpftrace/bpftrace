@@ -712,8 +712,8 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
     }
     else
     {
-      long low = 1 << (i-2);
-      long high = (1 << (i-2+1)) - 1;
+      long low = 1ULL << (i - 2);
+      long high = (1ULL << (i - 2 + 1)) - 1;
       res << "\"min\": " << low << ", \"max\": " << high << ", ";
     }
     res << "\"count\": " << values.at(i) / div;

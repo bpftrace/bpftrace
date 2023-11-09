@@ -3066,7 +3066,7 @@ Function *CodegenLLVM::createLog2Function()
   //   result++;
   //   if (n == 0) return result;
   //   result++;
-  //   for (int i = 4; i >= 0; i--)
+  //   for (int i = 5; i >= 0; i--)
   //   {
   //     shift = (n >= (1<<(1<<i))) << i;
   //     n >>= shift;
@@ -3114,10 +3114,16 @@ Function *CodegenLLVM::createLog2Function()
 
   // power-of-2 index, offset by +2
   b_.CreateStore(b_.getInt64(2), result);
-  for (int i = 4; i >= 0; i--)
+  for (int i = 5; i >= 0; i--)
   {
     Value *n = b_.CreateLoad(b_.getInt64Ty(), n_alloc);
-    Value *shift = b_.CreateShl(b_.CreateIntCast(b_.CreateICmpSGE(b_.CreateIntCast(n, b_.getInt64Ty(), false), b_.getInt64(1 << (1<<i))), b_.getInt64Ty(), false), i);
+    Value *shift = b_.CreateShl(
+        b_.CreateIntCast(
+            b_.CreateICmpSGE(b_.CreateIntCast(n, b_.getInt64Ty(), false),
+                             b_.getInt64(1ULL << (1 << i))),
+            b_.getInt64Ty(),
+            false),
+        i);
     b_.CreateStore(b_.CreateLShr(n, shift), n_alloc);
     b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), result), shift),
                    result);
