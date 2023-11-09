@@ -21,6 +21,8 @@ and this project adheres to
 #### Fixed
 - Fix JSON output for cgroup_path
   - [#2793](https://github.com/iovisor/bpftrace/pull/2793)
+- Fix silent truncation of 64-bit values in hist()
+  - [#2822](https://github.com/iovisor/bpftrace/pull/2822)
 #### Docs
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
