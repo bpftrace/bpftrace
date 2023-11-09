@@ -3068,8 +3068,8 @@ Function *CodegenLLVM::createLog2Function()
   //   result++;
   //   for (int i = 4; i >= 0; i--)
   //   {
-  //     shift = (v >= (1<<(1<<i))) << i;
-  //     n >> = shift;
+  //     shift = (n >= (1<<(1<<i))) << i;
+  //     n >>= shift;
   //     result += shift;
   //   }
   //   return result;
