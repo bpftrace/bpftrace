@@ -81,52 +81,61 @@ hist.is_zero:                                     ; preds = %hist.is_not_less_th
 hist.is_not_zero:                                 ; preds = %hist.is_not_less_than_zero
   store i64 2, i64* %1, align 8
   %11 = load i64, i64* %2, align 8
-  %12 = icmp sge i64 %11, 65536
+  %12 = icmp sge i64 %11, 4294967296
   %13 = zext i1 %12 to i64
-  %14 = shl i64 %13, 4
+  %14 = shl i64 %13, 5
   %15 = lshr i64 %11, %14
   store i64 %15, i64* %2, align 8
   %16 = load i64, i64* %1, align 8
   %17 = add i64 %16, %14
   store i64 %17, i64* %1, align 8
   %18 = load i64, i64* %2, align 8
-  %19 = icmp sge i64 %18, 256
+  %19 = icmp sge i64 %18, 65536
   %20 = zext i1 %19 to i64
-  %21 = shl i64 %20, 3
+  %21 = shl i64 %20, 4
   %22 = lshr i64 %18, %21
   store i64 %22, i64* %2, align 8
   %23 = load i64, i64* %1, align 8
   %24 = add i64 %23, %21
   store i64 %24, i64* %1, align 8
   %25 = load i64, i64* %2, align 8
-  %26 = icmp sge i64 %25, 16
+  %26 = icmp sge i64 %25, 256
   %27 = zext i1 %26 to i64
-  %28 = shl i64 %27, 2
+  %28 = shl i64 %27, 3
   %29 = lshr i64 %25, %28
   store i64 %29, i64* %2, align 8
   %30 = load i64, i64* %1, align 8
   %31 = add i64 %30, %28
   store i64 %31, i64* %1, align 8
   %32 = load i64, i64* %2, align 8
-  %33 = icmp sge i64 %32, 4
+  %33 = icmp sge i64 %32, 16
   %34 = zext i1 %33 to i64
-  %35 = shl i64 %34, 1
+  %35 = shl i64 %34, 2
   %36 = lshr i64 %32, %35
   store i64 %36, i64* %2, align 8
   %37 = load i64, i64* %1, align 8
   %38 = add i64 %37, %35
   store i64 %38, i64* %1, align 8
   %39 = load i64, i64* %2, align 8
-  %40 = icmp sge i64 %39, 2
+  %40 = icmp sge i64 %39, 4
   %41 = zext i1 %40 to i64
-  %42 = shl i64 %41, 0
+  %42 = shl i64 %41, 1
   %43 = lshr i64 %39, %42
   store i64 %43, i64* %2, align 8
   %44 = load i64, i64* %1, align 8
   %45 = add i64 %44, %42
   store i64 %45, i64* %1, align 8
-  %46 = load i64, i64* %1, align 8
-  ret i64 %46
+  %46 = load i64, i64* %2, align 8
+  %47 = icmp sge i64 %46, 2
+  %48 = zext i1 %47 to i64
+  %49 = shl i64 %48, 0
+  %50 = lshr i64 %46, %49
+  store i64 %50, i64* %2, align 8
+  %51 = load i64, i64* %1, align 8
+  %52 = add i64 %51, %49
+  store i64 %52, i64* %1, align 8
+  %53 = load i64, i64* %1, align 8
+  ret i64 %53
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
