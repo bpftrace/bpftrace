@@ -40,7 +40,7 @@ RUN apk add --update \
 WORKDIR /
 
 RUN ln -s $(which python3) /usr/bin/python && \
-    ln -s /lib /lib/x86_64-linux-gnu
+    ln -s /lib /lib/$(uname -m)-linux-gnu
 
 RUN wget https://github.com/USCiLab/cereal/archive/refs/tags/v${CEREAL_VERSION}.tar.gz && \
     tar xf v${CEREAL_VERSION}.tar.gz && \
