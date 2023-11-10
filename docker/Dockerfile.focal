@@ -13,8 +13,10 @@ deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-${LLVM_VERSION} main\n" 
     curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4052245BD4284CDD
 
-RUN curl -L --output /tmp/cmake.tar.gz \
-  https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.tar.gz \
+ARG ARCH
+RUN ARCH=$(uname -m) \
+  && curl -L --output /tmp/cmake.tar.gz \
+  https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-${ARCH}.tar.gz \
   && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
 
 ARG DEBIAN_FRONTEND=noninteractive

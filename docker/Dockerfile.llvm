@@ -34,7 +34,9 @@ RUN apt update \
                          --slave /usr/bin/g++ g++ /usr/bin/g++-8      \
   && cp /usr/lib/gcc/x86_64-linux-gnu/8/plugin/include/plugin-api.h /usr/local/include
 
-RUN curl -L --output /tmp/cmake.tar.gz \
+ARG ARCH
+RUN ARCH=$(uname -m) \
+  && curl -L --output /tmp/cmake.tar.gz \
   https://github.com/Kitware/CMake/releases/download/v3.20.0/cmake-3.20.0-linux-x86_64.tar.gz \
   && tar -xf /tmp/cmake.tar.gz -C /usr/local/ --strip-components=1
 
