@@ -53,37 +53,27 @@ if (STATIC_LINKING)
       irreader
       mcjit
       option
-      orcjit
-      ${LLVM_TARGETS_TO_BUILD})
+      orcjit)
 
 
-  if(EMBED_USE_LLVM)
-    target_link_libraries(ast "-Wl,--start-group" ${CLANG_EMBEDDED_CMAKE_TARGETS} ${LLVM_EMBEDDED_CMAKE_TARGETS} "-Wl,--end-group")
+  llvm_map_components_to_libnames(llvm_libs ${llvm_lib_names})
+
+  if(TARGET libclang_static)
+    target_link_libraries(ast libclang_static)
   else()
-    llvm_map_components_to_libnames(llvm_libs ${llvm_lib_names})
-
-    if(TARGET libclang_static)
-      target_link_libraries(ast libclang_static)
-    else()
-      # old LLVM versions don't export libclang_static in ClangTargets.cmake; fall back to
-      # libclang.a in that case
-      target_link_libraries(ast libclang.a)    
-    endif()
-
-    target_link_libraries(ast ${clang_libs})
-    target_link_libraries(ast ${llvm_libs})
+    # old LLVM versions don't export libclang_static in ClangTargets.cmake; fall back to
+    # libclang.a in that case
+    target_link_libraries(ast libclang.a)
   endif()
 
-  if(STATIC_LIBC)
-    unlink_transitive_dependency("${CLANG_EXPORTED_TARGETS}" "LLVM")
-  endif()
-
+  target_link_libraries(ast ${clang_libs})
+  target_link_libraries(ast ${llvm_libs})
 else()
   find_library(found_LLVM LLVM HINTS ${LLVM_LIBRARY_DIRS})
   if(found_LLVM)
     target_link_libraries(ast LLVM)
   else()
-    llvm_map_components_to_libnames(_llvm_libs bpfcodegen ipo irreader mcjit orcjit ${LLVM_TARGETS_TO_BUILD})
+    llvm_map_components_to_libnames(_llvm_libs bpfcodegen ipo irreader mcjit orcjit)
     llvm_expand_dependencies(llvm_libs ${_llvm_libs})
     target_link_libraries(ast ${llvm_libs})
   endif()

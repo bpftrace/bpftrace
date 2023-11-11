@@ -1,11 +1,5 @@
 add_compile_options("-Wno-undef")
 
-if (STATIC_LIBC)
-  # STATIC_LIBC will set linker flags to -static. We don't want this for
-  # testprogs linking, so we clear the flags.
-  unset(CMAKE_EXE_LINKER_FLAGS)
-endif()
-
 # Regenerate codegen_includes.cpp whenever anything in the tests/codegen
 # directory changes
 file(GLOB_RECURSE CODEGEN_SOURCES codegen/*.cpp codegen/*.h)
@@ -70,15 +64,6 @@ if(BUILD_ASAN)
   target_compile_options(bpftrace_test PUBLIC "-fsanitize=address")
   target_link_options(bpftrace_test PUBLIC "-fsanitize=address")
 endif()
-
-if(STATIC_LINKING)
-  if(EMBED_USE_LLVM)
-    target_link_options(bpftrace_test BEFORE PRIVATE "-static-libgcc" "-static-libstdc++")
-  endif()
-  if(STATIC_LIBC)
-    set_target_properties(bpftrace_test PROPERTIES LINK_FLAGS "-static")
-  endif()
-endif(STATIC_LINKING)
 
 # Still need to support vendored gtest/gmock b/c old ubuntu versions (< focal)
 # only provide gtest/gmock sources -- no precompiled binaries
