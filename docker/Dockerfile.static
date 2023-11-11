@@ -1,0 +1,44 @@
+# This Dockerfile is used to test STATIC_LINKING=ON builds in the CI
+
+FROM alpine:3.18
+
+RUN apk add --update \
+  asciidoctor \
+  argp-standalone \
+  bash \
+  bcc-dev \
+  bcc-static \
+  bison \
+  bzip2-static \
+  build-base \
+  cereal \
+  clang-dev \
+  clang-static \
+  cmake \
+  elfutils-dev \
+  flex-dev \
+  git \
+  gtest-dev \
+  libbpf-dev \
+  libelf-static \
+  libpcap-dev \
+  libc6-compat \
+  linux-headers \
+  llvm16-dev \
+  llvm16-static \
+  musl-obstack-dev \
+  openssl-dev \
+  pahole \
+  procps \
+  python3 \
+  wget \
+  xxd \
+  xz-static \
+  zlib-dev \
+  zlib-static \
+  zstd-dev \
+  zstd-static
+
+# It looks like llvm16 prefers to dynamically link against zstd. Extremely
+# unclear why.  Work around it by modifying LLVMExports.cmake.
+RUN sed -i 's/libzstd_shared/libzstd_static/g' /usr/lib/llvm16/lib/cmake/llvm/LLVMExports.cmake

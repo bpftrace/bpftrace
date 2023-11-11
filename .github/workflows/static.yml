@@ -1,0 +1,16 @@
+name: Static
+
+on: [push, pull_request]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build static bpftrace
+      run: ./.github/include/static.sh
