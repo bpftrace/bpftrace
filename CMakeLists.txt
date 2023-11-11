@@ -12,12 +12,6 @@ include(GNUInstallDirs)
 
 set(WARNINGS_AS_ERRORS OFF CACHE BOOL "Build with -Werror")
 set(STATIC_LINKING OFF CACHE BOOL "Build bpftrace as a statically linked executable")
-set(STATIC_LIBC OFF CACHE BOOL "Attempt to embed libc, only known to work with musl. Has issues with dlopen.")
-set(USE_SYSTEM_BPF_BCC OFF CACHE BOOL "Use system libbpf and bcc instead of the repository vendored ones.")
-
-set(EMBED_USE_LLVM OFF CACHE BOOL "Use a prebuilt embedded LLVM, speeds up the build process")
-set(EMBED_BUILD_LLVM OFF CACHE BOOL "Build Clang&LLVM static libs as an ExternalProject and link to these instead of system libs.")
-set(EMBED_LLVM_VERSION "12" CACHE STRING "Embedded LLVM/Clang version to build and link against.")
 
 set(BUILD_ASAN OFF CACHE BOOL "Build bpftrace with -fsanitize=address")
 set(ENABLE_MAN ON CACHE BOOL "Build man pages")
@@ -32,33 +26,9 @@ set(ENABLE_SKB_OUTPUT ON CACHE BOOL "Enable skb_output, will include libpcap")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-if(EMBED_BUILD_LLVM)
-  set(EMBED_USE_LLVM ON)
-endif()
-
-if(EMBED_USE_LLVM AND NOT EMBED_BUILD_LLVM)
-  set(EMBED_LLVM_PATH "/usr/local/lib")
-endif()
-
-if(EMBED_USE_LLVM OR STATIC_LIBC)
-  set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed)
-  include(embed_helpers)
-  if (NOT STATIC_LINKING)
-    set(CONFIG_ERROR "Dependencies can only be embedded for a static build.\n"
-                     "Enable STATIC_LINKING=ON to embed static libs.")
-    message(FATAL_ERROR ${CONFIG_ERROR})
-  elseif(STATIC_LIBC)
-    message(WARNING "static libc is known to cause problems, consider STATIC_LIBC=OFF. Proceed at your own risk") #iovisor/bpftrace/issues/266
-  endif()
-endif()
-
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
-
-if (NOT USE_SYSTEM_BPF_BCC)
-  set(BPF_BCC_PREFIX_PATH ${CMAKE_BINARY_DIR}/build-libs/)
-endif()
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
@@ -93,12 +63,6 @@ if("${CMAKE_GENERATOR}" STREQUAL "Ninja")
 endif()
 
 include(CTest)
-
-if(STATIC_LINKING OR NOT USE_SYSTEM_BPF_BCC)
-  set(STATIC_BPF_BCC TRUE)
-else()
-  set(STATIC_BPF_BCC FALSE)
-endif()
 
 if(STATIC_LINKING)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
@@ -166,41 +130,33 @@ endif()
 include(CheckIncludeFile)
 check_include_file("sys/sdt.h" HAVE_SYSTEMTAP_SYS_SDT_H)
 
-if (EMBED_USE_LLVM)
-  include(embed_llvm)
+# Some users have multiple versions of llvm installed and would like to specify
+# a specific llvm version.
+if(${LLVM_REQUESTED_VERSION})
+  find_package(LLVM ${LLVM_REQUESTED_VERSION} REQUIRED)
 else()
-  # Some users have multiple versions of llvm installed and would like to specify
-  # a specific llvm version.
-  if(${LLVM_REQUESTED_VERSION})
-    find_package(LLVM ${LLVM_REQUESTED_VERSION} REQUIRED)
-  else()
-    find_package(LLVM REQUIRED)
-  endif()
-
-  set(MIN_LLVM_MAJOR 6)
-  set(MAX_LLVM_MAJOR 17)
-
-  if((${LLVM_VERSION_MAJOR} VERSION_LESS ${MIN_LLVM_MAJOR}) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER ${MAX_LLVM_MAJOR}))
-    message(SEND_ERROR "Unsupported LLVM version found via ${LLVM_INCLUDE_DIRS}: ${LLVM_VERSION_MAJOR}")
-    message(SEND_ERROR "Only versions between ${MIN_LLVM_MAJOR} and ${MAX_LLVM_MAJOR} are supported")
-    message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
-  endif()
-
-  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}: ${LLVM_CMAKE_DIR}")
-  include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
-  add_definitions(${LLVM_DEFINITIONS})
+  find_package(LLVM REQUIRED)
 endif()
+
+set(MIN_LLVM_MAJOR 6)
+set(MAX_LLVM_MAJOR 17)
+
+if((${LLVM_VERSION_MAJOR} VERSION_LESS ${MIN_LLVM_MAJOR}) OR (${LLVM_VERSION_MAJOR} VERSION_GREATER ${MAX_LLVM_MAJOR}))
+  message(SEND_ERROR "Unsupported LLVM version found via ${LLVM_INCLUDE_DIRS}: ${LLVM_VERSION_MAJOR}")
+  message(SEND_ERROR "Only versions between ${MIN_LLVM_MAJOR} and ${MAX_LLVM_MAJOR} are supported")
+  message(SEND_ERROR "Specify an LLVM major version using LLVM_REQUESTED_VERSION=<major version>")
+endif()
+
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}: ${LLVM_CMAKE_DIR}")
+include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
 
 add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
 add_definitions(-DLLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
 add_definitions(-DLLVM_VERSION_PATCH=${LLVM_VERSION_PATCH})
 
-if(EMBED_USE_LLVM)
-  include(embed_clang)
-else()
-  find_package(Clang REQUIRED)
-  include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
-endif()
+find_package(Clang REQUIRED)
+include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
 # BPFtrace compile definitions
 
