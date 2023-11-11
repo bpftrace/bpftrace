@@ -22,22 +22,22 @@
       (system:
         let
           # Overlay to specify build should use the specific libbpf we want
-          libbpfVersion = "1.2.0";
           libbpfOverlay =
             (self: super: {
               libbpf_1 = super.libbpf_1.overrideAttrs (old: {
-                version = libbpfVersion;
+                # 1.3 is the next release as of (11/11/23)
+                version = "1.3.0";
                 src = super.fetchFromGitHub {
                   owner = "libbpf";
                   repo = "libbpf";
-                  rev = "v${libbpfVersion}";
+                  rev = "3189f70538b50fe3d2fd63f77351991a224e435b";
                   # If you don't know the hash the first time, set:
                   # hash = "";
                   # then nix will fail the build with such an error message:
                   # hash mismatch in fixed-output derivation '/nix/store/m1ga09c0z1a6n7rj8ky3s31dpgalsn0n-source':
                   # specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
                   # got:    sha256-173gxk0ymiw94glyjzjizp8bv8g72gwkjhacigd1an09jshdrjb4
-                  sha256 = "sha256-NimK4pdYcai21hZHdP1mBX1MOlNY61iDJ+PDYwpRuVE=";
+                  sha256 = "sha256-nh1xs4jT/YCBq6uT4WbSJc6/BfMg1Ussd11aY1Nmlq4=";
                 };
               });
             });
