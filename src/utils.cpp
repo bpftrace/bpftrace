@@ -274,11 +274,18 @@ std::string get_pid_exe(const std::string &pid)
   proc_path /= pid;
   proc_path /= "exe";
 
-  if (!std_filesystem::exists(proc_path, ec) ||
-      !std_filesystem::is_symlink(proc_path, ec))
-    return "";
-
-  return std_filesystem::read_symlink(proc_path).string();
+  try
+  {
+    return std_filesystem::read_symlink(proc_path).string();
+  }
+  catch (const std_filesystem::filesystem_error &e)
+  {
+    auto err = e.code().value();
+    if (err == ENOENT || err == EINVAL)
+      return {};
+    else
+      throw e;
+  }
 }
 
 std::string get_pid_exe(pid_t pid)
