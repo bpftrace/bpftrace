@@ -714,7 +714,11 @@ namespace {
   std::string unpack_kheaders_tar_xz(const struct utsname& utsname)
   {
     std::error_code ec;
+#if defined(__ANDROID__)
+    std_filesystem::path path_prefix{ "/data/local/tmp" };
+#else
     std_filesystem::path path_prefix{ "/tmp" };
+#endif
     std_filesystem::path path_kheaders{ "/sys/kernel/kheaders.tar.xz" };
     if (const char* tmpdir = ::getenv("TMPDIR")) {
       path_prefix = tmpdir;
