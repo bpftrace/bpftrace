@@ -23,6 +23,8 @@ and this project adheres to
   - [#2793](https://github.com/iovisor/bpftrace/pull/2793)
 - Fix silent truncation of 64-bit values in hist()
   - [#2822](https://github.com/iovisor/bpftrace/pull/2822)
+- utils: use /data/local/tmp as temprary dir on Android
+  - [#2828](https://github.com/iovisor/bpftrace/pull/2828)
 #### Docs
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
