@@ -30,7 +30,8 @@ public:
                 BpfProgram &&prog,
                 int pid,
                 BPFfeature &feature,
-                BTF &btf);
+                BTF &btf,
+                bool safe_mode = true);
   ~AttachedProbe();
   AttachedProbe(const AttachedProbe &) = delete;
   AttachedProbe &operator=(const AttachedProbe &) = delete;
@@ -46,9 +47,9 @@ private:
   bool resolve_offset_uprobe(bool safe_mode);
   void load_prog(BPFfeature &feature);
   void attach_multi_kprobe(void);
-  void attach_multi_uprobe(void);
+  void attach_multi_uprobe(int pid);
   void attach_kprobe(bool safe_mode);
-  void attach_uprobe(bool safe_mode);
+  void attach_uprobe(int pid, bool safe_mode);
 
   // Note: the following usdt attachment functions will only activate a
   // semaphore if one exists.

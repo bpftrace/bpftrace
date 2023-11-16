@@ -73,3 +73,9 @@ NAME uprobes - probe function in non-executable library
 PROG uprobe:./testlibs/libsimple.so:fun {}
 EXPECT Attaching 1 probe...
 TIMEOUT 5
+
+NAME uprobes - attach to single process with pid arg
+RUN {{BPFTRACE}} runtime/scripts/uprobe_pid_check.bt -p {{BEFORE_PID}} {{BEFORE_PID}}
+EXPECT hello
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_fork_loop

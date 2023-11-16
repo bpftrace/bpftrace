@@ -118,7 +118,8 @@ u:lib.so:"fn(char const*)" { printf("arg0:%s\n", str(arg0));}
 
 *-p* _PID_::
   Attach to the process with _PID_. If the process terminates, bpftrace will also terminate.
-  When using USDT probes they will be attached to only this process. For uprobes/uretprobes if you also set the target to '*' the process's address space will be searched for the symbols.
+  When using USDT probes, uprobes, and uretprobes they will be attached to only this process.
+  For listing uprobes/uretprobes if you set the target to '*' the process's address space will be searched for the symbols.
 
 *-c* _COMMAND_::
   Run _COMMAND_ as a child process.
