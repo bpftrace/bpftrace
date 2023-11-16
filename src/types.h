@@ -532,7 +532,6 @@ struct Probe
   uint64_t log_size = 1000000;
   int index = 0;
   int freq = 0;
-  pid_t pid = -1;
   uint64_t len = 0;             // for watchpoint probes, size of region
   std::string mode;             // for watchpoint probes, watch mode (rwx)
   bool async = false; // for watchpoint probes, if it's an async watchpoint
@@ -557,7 +556,6 @@ private:
             log_size,
             index,
             freq,
-            pid,
             len,
             mode,
             async,

@@ -1006,6 +1006,13 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
 
       return ret;
     }
+    else if (probe.type == ProbeType::uprobe ||
+             probe.type == ProbeType::uretprobe)
+    {
+      ret.emplace_back(std::make_unique<AttachedProbe>(
+          probe, std::move(*program), pid, *feature_, *btf_, safe_mode_));
+      return ret;
+    }
     else if (probe.type == ProbeType::watchpoint ||
              probe.type == ProbeType::asyncwatchpoint)
     {
@@ -1085,10 +1092,6 @@ int BPFtrace::run_special_probe(std::string name,
   {
     if ((*probe).attach_point == name)
     {
-      // This is only necessary for uprobe fallback case but it doesn't hurt
-      // to set for raw_tp
-      probe->pid = getpid();
-
       auto aps = attach_probe(*probe, bytecode);
       if (aps.size() != 1)
         return -1;

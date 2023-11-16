@@ -19,6 +19,8 @@ and this project adheres to
   - [#2804](https://github.com/iovisor/bpftrace/pull/2804)
 - Add fentry/fexit aliases for kfunc/kretfunc
   - [#2844](https://github.com/iovisor/bpftrace/pull/2844)
+- Add support for uprobe pid targeting
+  - [#2830](https://github.com/iovisor/bpftrace/pull/2830)
 #### Changed
 #### Deprecated
 #### Removed

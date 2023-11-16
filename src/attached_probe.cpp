@@ -191,7 +191,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
       // If BPF_PROG_TYPE_RAW_TRACEPOINT is available, no need to attach prog
       // to anything -- we will simply BPF_PROG_RUN it
       if (!feature.has_raw_tp_special())
-        attach_uprobe(safe_mode);
+        attach_uprobe(getpid(), safe_mode);
       break;
     case ProbeType::kprobe:
       attach_kprobe(safe_mode);
@@ -199,10 +199,6 @@ AttachedProbe::AttachedProbe(Probe &probe,
     case ProbeType::kretprobe:
       check_banned_kretprobes(probe_.attach_point);
       attach_kprobe(safe_mode);
-      break;
-    case ProbeType::uprobe:
-    case ProbeType::uretprobe:
-      attach_uprobe(safe_mode);
       break;
     case ProbeType::tracepoint:
       attach_tracepoint();
@@ -239,7 +235,8 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              int pid,
                              BPFfeature &feature,
-                             BTF &btf)
+                             BTF &btf,
+                             bool safe_mode)
     : probe_(probe), prog_(std::move(prog)), btf_(btf)
 {
   load_prog(feature);
@@ -251,6 +248,10 @@ AttachedProbe::AttachedProbe(Probe &probe,
     case ProbeType::watchpoint:
     case ProbeType::asyncwatchpoint:
       attach_watchpoint(pid, probe.mode);
+      break;
+    case ProbeType::uprobe:
+    case ProbeType::uretprobe:
+      attach_uprobe(pid, safe_mode);
       break;
     default:
       LOG(FATAL) << "invalid attached probe type \""
@@ -1091,7 +1092,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
   }
 }
 
-void AttachedProbe::attach_multi_uprobe(void)
+void AttachedProbe::attach_multi_uprobe(int pid)
 {
   std::vector<std::string> syms;
   std::vector<uint64_t> offsets;
@@ -1110,6 +1111,11 @@ void AttachedProbe::attach_multi_uprobe(void)
   opts.uprobe_multi.flags = probe_.type == ProbeType::uretprobe
                                 ? BPF_F_UPROBE_MULTI_RETURN
                                 : 0;
+  if (pid != 0)
+  {
+    opts.uprobe_multi.pid = pid;
+  }
+
   if (bt_verbose)
   {
     std::cout << "Attaching to " << probe_.funcs.size() << " functions"
@@ -1135,16 +1141,16 @@ void AttachedProbe::attach_multi_uprobe(void)
   }
 }
 #else
-void AttachedProbe::attach_multi_uprobe(void)
+void AttachedProbe::attach_multi_uprobe(int)
 {
 }
 #endif // HAVE_LIBBPF_UPROBE_MULTI
 
-void AttachedProbe::attach_uprobe(bool safe_mode)
+void AttachedProbe::attach_uprobe(int pid, bool safe_mode)
 {
   if (!probe_.funcs.empty())
   {
-    attach_multi_uprobe();
+    attach_multi_uprobe(pid);
     return;
   }
 
@@ -1156,7 +1162,7 @@ void AttachedProbe::attach_uprobe(bool safe_mode)
                                         eventname().c_str(),
                                         probe_.path.c_str(),
                                         offset_,
-                                        probe_.pid,
+                                        pid == 0 ? -1 : pid,
                                         0);
 
   if (perf_event_fd < 0)

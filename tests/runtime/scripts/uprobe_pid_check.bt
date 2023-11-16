@@ -1,0 +1,20 @@
+BEGIN {
+    @count = 0;
+}
+
+uprobe:./testprogs/uprobe_fork_loop:uprobeFunction1 {
+    if (pid == $1) {
+        // counting 10 instances of the expected pid
+        // is similar to a delay to ensure we never get
+        // an unexpected pid
+        if (@count == 10) {
+            print("hello");
+            exit();
+        } else {
+            @count++;
+        }
+    } else {
+        // pid should always be the first positional param
+        exit();
+    }
+}
