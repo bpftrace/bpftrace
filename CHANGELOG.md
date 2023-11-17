@@ -18,6 +18,8 @@ and this project adheres to
 #### Changed
 #### Deprecated
 #### Removed
+- Remove snapcraft support
+  - [#2832](https://github.com/iovisor/bpftrace/pull/2832)
 #### Fixed
 - Fix JSON output for cgroup_path
   - [#2793](https://github.com/iovisor/bpftrace/pull/2793)
