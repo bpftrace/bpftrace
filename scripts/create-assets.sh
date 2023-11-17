@@ -1,4 +1,11 @@
 #!/bin/bash
+#
+# This script creates builds the official release artifacts.
+#
+# Usage examples:
+#         ./scripts/create-assets.sh
+#         OUT=../out-dir ./scripts/create-assets.sh
+#
 
 ZSTDFLAGS="-19"
 
@@ -15,7 +22,8 @@ function info() {
 command -v zstd >/dev/null 2>&1 || err "zstd command not found, required for release"
 command -v asciidoctor >/dev/null 2>&1 || err "asciidoctor not found, required for manpage"
 
-OUT=$(mktemp -d) || err "Failed to create temp dir"
+# Take value from environment if set, otherwise use a tempdir
+: ${OUT:=$(mktemp -d)} || err "Failed to create temp dir"
 TMP="${OUT}/tmp"
 
 echo "Using '$OUT' as assert dir"
