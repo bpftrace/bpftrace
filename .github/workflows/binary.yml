@@ -20,10 +20,12 @@ jobs:
     - uses: DeterminateSystems/magic-nix-cache-action@v2
 
     - name: Build appimage
-      run: nix build .#appimage
+      run: |
+        nix build .#appimage
+        cp ./result bpftrace
 
     - name: Upload appimage
       uses: actions/upload-artifact@v3
       with:
         name: bpftrace
-        path: ./result
+        path: ./bpftrace
