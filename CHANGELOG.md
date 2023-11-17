@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add log2 histograms with finer granularity
+  - [#2831](https://github.com/iovisor/bpftrace/pull/2831)
 - Add a `jiffies` builtin for advanced usages
   - [#2769](https://github.com/iovisor/bpftrace/pull/2769)
 - Emit better errors messages for invalid attachpoints

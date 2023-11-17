@@ -554,7 +554,23 @@ void SemanticAnalyser::visit(Call &call)
 
   if (call.func == "hist") {
     check_assignment(call, true, false, false);
-    check_nargs(call, 1);
+    if (!check_varargs(call, 1, 2))
+      return;
+    if (call.vargs->size() == 1)
+    {
+      call.vargs->push_back(new Integer(0, call.loc)); // default bits is 0
+    }
+    else
+    {
+      if (!check_arg(call, Type::integer, 1, true))
+        return;
+      const auto bits = bpftrace_.get_int_literal(call.vargs->at(1));
+      if (bits < 0 || bits > 5)
+      {
+        LOG(ERROR, call.loc, err_)
+            << call.func << ": bits " << *bits << " must be 0..5";
+      }
+    }
     check_arg(call, Type::integer, 0);
 
     call.type = CreateHist();

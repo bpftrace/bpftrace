@@ -132,6 +132,21 @@ void ResourceAnalyser::visit(Call &call)
     resources_.join_args.push_back(delim);
     resources_.needs_join_map = true;
   }
+  else if (call.func == "hist")
+  {
+    auto &r = resources_.hist_bits_arg;
+    int old, bits = static_cast<Integer *>(call.vargs->at(1))->n;
+    if (r.find(call.map->ident) != r.end() &&
+        (old = r[call.map->ident]) != bits)
+    {
+      LOG(ERROR, call.loc, err_)
+          << "Different bits in a single hist, had " << old << " now " << bits;
+    }
+    else
+    {
+      r[call.map->ident] = bits;
+    }
+  }
   else if (call.func == "lhist")
   {
     Expression &min_arg = *call.vargs->at(1);

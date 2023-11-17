@@ -102,6 +102,7 @@ public:
   // Map metadata
   std::map<std::string, SizedType> map_vals;
   std::map<std::string, LinearHistogramArgs> lhist_args;
+  std::map<std::string, int> hist_bits_arg;
   std::map<std::string, MapKey> map_keys;
   std::unordered_set<StackType> stackid_maps;
   bool needs_join_map = false;
@@ -146,6 +147,7 @@ private:
             probe_ids,
             map_vals,
             lhist_args,
+            hist_bits_arg,
             map_keys,
             stackid_maps,
             needs_join_map,

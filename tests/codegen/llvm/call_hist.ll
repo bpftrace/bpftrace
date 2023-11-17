@@ -13,7 +13,7 @@ entry:
   %"@x_key" = alloca i64, align 8
   %get_pid_tgid = call i64 inttoptr (i64 14 to i64 ()*)()
   %1 = lshr i64 %get_pid_tgid, 32
-  %log2 = call i64 @log2(i64 %1)
+  %log2 = call i64 @log2(i64 %1, i64 0)
   %2 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store i64 %log2, i64* %"@x_key", align 8
@@ -50,92 +50,74 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
 }
 
 ; Function Attrs: alwaysinline
-define internal i64 @log2(i64 %0) #1 section "helpers" {
+define internal i64 @log2(i64 %0, i64 %1) #1 section "helpers" {
 entry:
-  %1 = alloca i64, align 8
   %2 = alloca i64, align 8
-  %3 = bitcast i64* %2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %3)
-  store i64 %0, i64* %2, align 8
-  %4 = bitcast i64* %1 to i8*
+  %3 = alloca i64, align 8
+  %4 = bitcast i64* %3 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
-  store i64 0, i64* %1, align 8
-  %5 = load i64, i64* %2, align 8
-  %6 = icmp slt i64 %5, 0
-  br i1 %6, label %hist.is_less_than_zero, label %hist.is_not_less_than_zero
+  store i64 %0, i64* %3, align 8
+  %5 = bitcast i64* %2 to i8*
+  call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
+  store i64 %1, i64* %2, align 8
+  %6 = load i64, i64* %3, align 8
+  %7 = icmp slt i64 %6, 0
+  br i1 %7, label %hist.is_less_than_zero, label %hist.is_not_less_than_zero
 
 hist.is_less_than_zero:                           ; preds = %entry
-  %7 = load i64, i64* %1, align 8
-  ret i64 %7
+  ret i64 0
 
 hist.is_not_less_than_zero:                       ; preds = %entry
   %8 = load i64, i64* %2, align 8
-  %9 = icmp eq i64 %8, 0
-  br i1 %9, label %hist.is_zero, label %hist.is_not_zero
+  %9 = shl i64 1, %8
+  %10 = sub i64 %9, 1
+  %11 = icmp ule i64 %6, %10
+  br i1 %11, label %hist.is_zero, label %hist.is_not_zero
 
 hist.is_zero:                                     ; preds = %hist.is_not_less_than_zero
-  store i64 1, i64* %1, align 8
-  %10 = load i64, i64* %1, align 8
-  ret i64 %10
+  %12 = add i64 %6, 1
+  ret i64 %12
 
 hist.is_not_zero:                                 ; preds = %hist.is_not_less_than_zero
-  store i64 2, i64* %1, align 8
-  %11 = load i64, i64* %2, align 8
-  %12 = icmp sge i64 %11, 4294967296
-  %13 = zext i1 %12 to i64
-  %14 = shl i64 %13, 5
-  %15 = lshr i64 %11, %14
-  store i64 %15, i64* %2, align 8
-  %16 = load i64, i64* %1, align 8
-  %17 = add i64 %16, %14
-  store i64 %17, i64* %1, align 8
-  %18 = load i64, i64* %2, align 8
-  %19 = icmp sge i64 %18, 65536
-  %20 = zext i1 %19 to i64
-  %21 = shl i64 %20, 4
-  %22 = lshr i64 %18, %21
-  store i64 %22, i64* %2, align 8
-  %23 = load i64, i64* %1, align 8
-  %24 = add i64 %23, %21
-  store i64 %24, i64* %1, align 8
-  %25 = load i64, i64* %2, align 8
-  %26 = icmp sge i64 %25, 256
-  %27 = zext i1 %26 to i64
-  %28 = shl i64 %27, 3
-  %29 = lshr i64 %25, %28
-  store i64 %29, i64* %2, align 8
-  %30 = load i64, i64* %1, align 8
-  %31 = add i64 %30, %28
-  store i64 %31, i64* %1, align 8
-  %32 = load i64, i64* %2, align 8
-  %33 = icmp sge i64 %32, 16
+  %13 = icmp sge i64 %6, 4294967296
+  %14 = zext i1 %13 to i64
+  %15 = shl i64 %14, 5
+  %16 = lshr i64 %6, %15
+  %17 = add i64 0, %15
+  %18 = icmp sge i64 %16, 65536
+  %19 = zext i1 %18 to i64
+  %20 = shl i64 %19, 4
+  %21 = lshr i64 %16, %20
+  %22 = add i64 %17, %20
+  %23 = icmp sge i64 %21, 256
+  %24 = zext i1 %23 to i64
+  %25 = shl i64 %24, 3
+  %26 = lshr i64 %21, %25
+  %27 = add i64 %22, %25
+  %28 = icmp sge i64 %26, 16
+  %29 = zext i1 %28 to i64
+  %30 = shl i64 %29, 2
+  %31 = lshr i64 %26, %30
+  %32 = add i64 %27, %30
+  %33 = icmp sge i64 %31, 4
   %34 = zext i1 %33 to i64
-  %35 = shl i64 %34, 2
-  %36 = lshr i64 %32, %35
-  store i64 %36, i64* %2, align 8
-  %37 = load i64, i64* %1, align 8
-  %38 = add i64 %37, %35
-  store i64 %38, i64* %1, align 8
-  %39 = load i64, i64* %2, align 8
-  %40 = icmp sge i64 %39, 4
-  %41 = zext i1 %40 to i64
-  %42 = shl i64 %41, 1
-  %43 = lshr i64 %39, %42
-  store i64 %43, i64* %2, align 8
-  %44 = load i64, i64* %1, align 8
-  %45 = add i64 %44, %42
-  store i64 %45, i64* %1, align 8
-  %46 = load i64, i64* %2, align 8
-  %47 = icmp sge i64 %46, 2
-  %48 = zext i1 %47 to i64
-  %49 = shl i64 %48, 0
-  %50 = lshr i64 %46, %49
-  store i64 %50, i64* %2, align 8
-  %51 = load i64, i64* %1, align 8
-  %52 = add i64 %51, %49
-  store i64 %52, i64* %1, align 8
-  %53 = load i64, i64* %1, align 8
-  ret i64 %53
+  %35 = shl i64 %34, 1
+  %36 = lshr i64 %31, %35
+  %37 = add i64 %32, %35
+  %38 = icmp sge i64 %36, 2
+  %39 = zext i1 %38 to i64
+  %40 = shl i64 %39, 0
+  %41 = lshr i64 %36, %40
+  %42 = add i64 %37, %40
+  %43 = sub i64 %42, %8
+  %44 = load i64, i64* %3, align 8
+  %45 = lshr i64 %44, %43
+  %46 = and i64 %45, %10
+  %47 = add i64 %43, 1
+  %48 = shl i64 %47, %8
+  %49 = add i64 %48, %46
+  %50 = add i64 %49, 1
+  ret i64 %50
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
