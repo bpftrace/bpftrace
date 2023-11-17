@@ -1,0 +1,27 @@
+# This job listens for new releases and will build the appropriate artifacts
+# and upload them to the release.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-upload:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: DeterminateSystems/nix-installer-action@v4
+    - uses: DeterminateSystems/magic-nix-cache-action@v2
+
+    - name: Build artifacts
+      run: nix develop --command bash -c "OUT=./assets ./scripts/create-assets.sh"
+
+    - name: Upload artifacts
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: gh release upload ${{ github.ref_name }} ./assets/*
