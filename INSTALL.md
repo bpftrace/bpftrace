@@ -11,6 +11,7 @@
   - [CentOS](#CentOS-package)
   - [Arch](#arch-package)
   - [Alpine](#alpine-package)
+- [AppImage install](#appimage-install)
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
@@ -158,6 +159,29 @@ To install tools and documentation:
 ```
 sudo apk add bpftrace-doc bpftrace-tools bpftrace-tools-doc
 ```
+
+# AppImage install
+
+[AppImages](https://appimage.org/) are a portable way to distribute Linux
+applications. To the user, they are functionally equivalent to statically
+linked binaries.
+
+bpftrace currently ships AppImages in two locations:
+
+* in artifacts on official releases
+* as a CI artifact for every build on master
+
+To download the official release artifacts, see the
+[latest release](https://github.com/iovisor/bpftrace/releases/latest).
+
+To download the bleeding edge AppImage, go to the
+[workflow page](https://github.com/iovisor/bpftrace/actions/workflows/binary.yml)
+and select the latest run. You should find an uploaded artifact like below:
+
+<img src="./images/ci_appimage_artifact.png" width="40%" height="40%">
+
+Note that Github will automatically place all build artifacts in a .zip (it's
+out of our control) so remember to unzip it first.
 
 # Building bpftrace
 
