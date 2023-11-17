@@ -102,15 +102,6 @@ sudo apt-get install -y bpftrace
 
 Should work on Ubuntu 19.04 and later.
 
-On Ubuntu 16.04 and later, bpftrace is also available as a snap package (https://snapcraft.io/bpftrace), however, the snap provides extremely limited file permissions so the --devmode option should be specified on installation in order avoid file access issues.
-
-```
-sudo snap install --devmode bpftrace
-sudo snap connect bpftrace:system-trace
-```
-
-The snap package also currently has issues with uprobes ([#829](https://github.com/iovisor/bpftrace/issues/829)).
-
 ## Fedora package
 
 For Fedora 28 (and later), bpftrace is already included in the official repo. Just install the package with dnf.
