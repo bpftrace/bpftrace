@@ -35,32 +35,30 @@ std::ostream& operator<<(std::ostream& out, MessageType type) {
   return out;
 }
 
-std::string TextOutput::hist_index_label(int power)
+// Translate the index into the starting value for the corresponding interval.
+// Each power of 2 is mapped into N = 2**k intervals, each of size
+// S = 1 << ((index >> k) - 1), and starting at S * N.
+// The last k bits of index indicate which interval we want.
+//
+// For example, if k = 2 and index = 0b11011 (27) we have:
+// - N = 2**2 = 4;
+// - interval size S is 1 << ((0b11011 >> 2) - 1) = 1 << (6 - 1) = 32
+// - starting value is S * N = 128
+// - the last 2 bits 11 indicate the third interval so the
+//   starting value is 128 + 32*3 = 224
+
+std::string TextOutput::hist_index_label(int index, int k)
 {
-  char suffix = '\0';
-  if (power >= 40)
-  {
-    suffix = 'T';
-    power -= 40;
-  }
-  else if (power >= 30)
-  {
-    suffix = 'G';
-    power -= 30;
-  }
-  else if (power >= 20)
-  {
-    suffix = 'M';
-    power -= 20;
-  }
-  else if (power >= 10)
-  {
-    suffix = 'K';
-    power -= 10;
-  }
+  const uint32_t n = (1 << k), interval = index & (n - 1);
+  assert(index >= n); // Smaller indexes are converted directly.
+  uint32_t power = (index >> k) - 1;
+  // Choose the suffix for the largest power of 2^10
+  const uint32_t decade = power / 10;
+  const char suffix = "\0KMGTPE"[decade];
+  power -= 10 * decade;
 
   std::ostringstream label;
-  label << (1<<power);
+  label << (1 << power) * (n + interval);
   if (suffix)
     label << suffix;
   return label.str();
@@ -359,7 +357,7 @@ std::string Output::map_hist_to_str(
 
     auto key_str = map_key_to_str(bpftrace, map, key);
     auto val_str = map.type_.IsHistTy()
-                       ? hist_to_str(value, div)
+                       ? hist_to_str(value, div, map.bits())
                        : lhist_to_str(value, map.lqmin, map.lqmax, map.lqstep);
 
     elems.push_back(map_keyval_to_str(map, key_str, val_str));
@@ -426,7 +424,8 @@ void TextOutput::map(
 }
 
 std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
-                                    uint32_t div) const
+                                    uint32_t div,
+                                    int k) const
 {
   int min_index, max_index, max_value;
   hist_prepare(values, min_index, max_index, max_value);
@@ -437,22 +436,33 @@ std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
   for (int i = min_index; i <= max_index; i++)
   {
     std::ostringstream header;
+
+    // Index 0 is for negative values. Following that, each sequence
+    // of N = 1 << k indexes represents one power of 2.
+    // In particular:
+    // - the first set of N indexes is for values 0..N-1
+    //   (one value per index)
+    // - the second and following sets of N indexes each contain
+    //   <1, 2, 4 .. and subsequent powers of 2> values per index.
+    //
+    // Since the first and second set are closed intervals and the value
+    // of each interval equals "index - 1", we print it directly.
+    // Higher indexes contain multiple values and we use helpers to print
+    // the range as open intervals.
+
     if (i == 0)
     {
       header << "(..., 0)";
     }
-    else if (i == 1)
+    else if (i <= (2 << k))
     {
-      header << "[0]";
-    }
-    else if (i == 2)
-    {
-      header << "[1]";
+      header << "[" << (i - 1) << "]";
     }
     else
     {
-      header << "[" << hist_index_label(i-2);
-      header << ", " << hist_index_label(i-2+1) << ")";
+      // Use a helper function to print the interval boundaries.
+      header << "[" << hist_index_label(i - 1, k);
+      header << ", " << hist_index_label(i, k) << ")";
     }
 
     int max_width = 52;
@@ -683,7 +693,8 @@ void JsonOutput::map(
 }
 
 std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
-                                    uint32_t div) const
+                                    uint32_t div,
+                                    int k) const
 {
   int min_index, max_index, max_value;
   hist_prepare(values, min_index, max_index, max_value);
@@ -698,22 +709,27 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
       res << ", ";
 
     res << "{";
+    // See description in TextOutput::hist_to_str():
+    // first index is for negative values, the next 2 sets of
+    // N = 2^k indexes have one value each (equal to i -1)
+    // and remaining sets of N indexes each cover one power of 2,
+    // whose ranges are computed as described in hist_index_label()
     if (i == 0)
     {
       res << "\"max\": -1, ";
     }
-    else if (i == 1)
+    else if (i <= (2 << k))
     {
-      res << "\"min\": 0, \"max\": 0, ";
-    }
-    else if (i == 2)
-    {
-      res << "\"min\": 1, \"max\": 1, ";
+      res << "\"min\": " << i - 1 << ", \"max\": " << i - 1 << ", ";
     }
     else
     {
-      long low = 1ULL << (i - 2);
-      long high = (1ULL << (i - 2 + 1)) - 1;
+      const uint32_t n = 1 << k;
+      uint32_t power = ((i - 1) >> k) - 1, bucket = (i - 1) & (n - 1);
+      const long low = (1ULL << power) * (n + bucket);
+      power = (i >> k) - 1;
+      bucket = i & (n - 1);
+      const long high = (1ULL << power) * (n + bucket) - 1;
       res << "\"min\": " << low << ", \"max\": " << high << ", ";
     }
     res << "\"count\": " << values.at(i) / div;

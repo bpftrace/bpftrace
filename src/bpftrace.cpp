@@ -1820,7 +1820,7 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
     {
       // New key - create a list of buckets for it
       if (map.type_.IsHistTy())
-        values_by_key[key_prefix] = std::vector<uint64_t>(65);
+        values_by_key[key_prefix] = std::vector<uint64_t>(65 * 32);
       else
         values_by_key[key_prefix] = std::vector<uint64_t>(1002);
     }

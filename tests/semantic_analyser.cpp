@@ -388,6 +388,10 @@ TEST(semantic_analyser, compound_bxor)
 TEST(semantic_analyser, call_hist)
 {
   test("kprobe:f { @x = hist(1); }", 0);
+  test("kprobe:f { @x = hist(1, 0); }", 0);
+  test("kprobe:f { @x = hist(1, 5); }", 0);
+  test("kprobe:f { @x = hist(1, 10); }", 1);
+  test("kprobe:f { $n = 3; @x = hist(1, $n); }", 1);
   test("kprobe:f { @x = hist(); }", 1);
   test("kprobe:f { hist(1); }", 1);
   test("kprobe:f { $x = hist(1); }", 1);

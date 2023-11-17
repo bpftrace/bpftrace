@@ -3393,7 +3393,7 @@ END
 - `min(int n)` - Record the minimum value seen
 - `max(int n)` - Record the maximum value seen
 - `stats(int n)` - Return the count, average, and total for this value
-- `hist(int n)` - Produce a log2 histogram of values of n
+- `hist(int n[, int k])` - Produce a log2 histogram of values of n with 2^k buckets per power of 2
 - `lhist(int n, int min, int max, int step)` - Produce a linear histogram of values of n
 - `delete(@x[key])` - Delete the map element passed in as an argument
 - `print(@x[, top [, div]])` - Print the map, optionally the top entries only and with a divisor
@@ -3582,10 +3582,14 @@ and the total of the argument value. This is similar to using count(), avg(), an
 Syntax:
 
 ```
-@histogram_name[optional_key] = hist(value)
+@histogram_name[optional_key] = hist(value[, k])
 ```
 
 This is implemented using a BPF map.
+
+Values are accumulated in 2^k buckets for each power of 2,
+with negative values in their own bucket.
+k can be 0..5, defaults to 0.
 
 Examples:
 
@@ -3639,6 +3643,69 @@ Attaching 1 probe... ^C
 [2, 4)                 0 |                                                    |
 [4, 8)                21 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
+
+### 8.3 Fine-grained Power-Of-2
+
+Using a second argument $k=3$ we create $2^3 = 8$ buckets for each power of 2.
+This results in a finer grained subdivision such as the one below:
+
+```
+# bpftrace -e 'i:us:100 { @ = hist(@n++, 3); if (@n == 256) { delete(@n); exit(); }}'
+Attaching 1 probe...
+
+
+@:
+[0]                    1 |@@@                                                 |
+[1]                    1 |@@@                                                 |
+[2]                    1 |@@@                                                 |
+[3]                    1 |@@@                                                 |
+[4]                    1 |@@@                                                 |
+[5]                    1 |@@@                                                 |
+[6]                    1 |@@@                                                 |
+[7]                    1 |@@@                                                 |
+[8]                    1 |@@@                                                 |
+[9]                    1 |@@@                                                 |
+[10]                   1 |@@@                                                 |
+[11]                   1 |@@@                                                 |
+[12]                   1 |@@@                                                 |
+[13]                   1 |@@@                                                 |
+[14]                   1 |@@@                                                 |
+[15]                   1 |@@@                                                 |
+[16, 18)               2 |@@@@@@                                              |
+[18, 20)               2 |@@@@@@                                              |
+[20, 22)               2 |@@@@@@                                              |
+[22, 24)               2 |@@@@@@                                              |
+[24, 26)               2 |@@@@@@                                              |
+[26, 28)               2 |@@@@@@                                              |
+[28, 30)               2 |@@@@@@                                              |
+[30, 32)               2 |@@@@@@                                              |
+[32, 36)               4 |@@@@@@@@@@@@@                                       |
+[36, 40)               4 |@@@@@@@@@@@@@                                       |
+[40, 44)               4 |@@@@@@@@@@@@@                                       |
+[44, 48)               4 |@@@@@@@@@@@@@                                       |
+[48, 52)               4 |@@@@@@@@@@@@@                                       |
+[52, 56)               4 |@@@@@@@@@@@@@                                       |
+[56, 60)               4 |@@@@@@@@@@@@@                                       |
+[60, 64)               4 |@@@@@@@@@@@@@                                       |
+[64, 72)               8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[72, 80)               8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[80, 88)               8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[88, 96)               8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[96, 104)              8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[104, 112)             8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[112, 120)             8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[120, 128)             8 |@@@@@@@@@@@@@@@@@@@@@@@@@@                          |
+[128, 144)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[144, 160)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[160, 176)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[176, 192)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[192, 208)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[208, 224)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[224, 240)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[240, 256)            16 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+
+```
+
 
 ## 9. `lhist()`: Linear Histogram
 

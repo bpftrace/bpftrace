@@ -556,12 +556,19 @@ void CodegenLLVM::visit(Call &call)
       log2_func_ = createLog2Function();
 
     Map &map = *call.map;
+    // There is only one log2_func_ so the second argument must be passed
+    // as an argument even though it is a constant 0..5
+    // Possible optimization is create one function per different value
+    // of the second argument.
+    auto scoped_del_arg2 = accept(call.vargs->at(1));
+    Value *k = b_.CreateIntCast(expr_, b_.getInt64Ty(), false);
+
     auto scoped_del = accept(call.vargs->front());
     // promote int to 64-bit
     expr_ = b_.CreateIntCast(expr_,
                              b_.getInt64Ty(),
                              call.vargs->front()->type.IsSigned());
-    Value *log2 = b_.CreateCall(log2_func_, expr_, "log2");
+    Value *log2 = b_.CreateCall(log2_func_, { expr_, k }, "log2");
     AllocaInst *key = getHistMapKey(map, log2);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
     b_.CreateLifetimeEnd(key);
@@ -3081,81 +3088,112 @@ Value *CodegenLLVM::createLogicalOr(Binop &binop)
 Function *CodegenLLVM::createLog2Function()
 {
   auto ip = b_.saveIP();
-  // log2() returns a bucket index for the given value. Index 0 is for
-  // values less than 0, index 1 is for 0, and indexes 2 onwards is the
-  // power-of-2 histogram index.
+  // Arguments: VAL (int64), K (0..5)
+  // Maps each power of 2 into N = 2^K buckets, so we can build fine-grained
+  // histograms with low runtime cost.
   //
-  // log2(int n)
+  // Returns:
+  //   0               for      VAL < 0
+  //   1 + VAL         for 0 <= VAL < 2^K
+  //   1 + concat(A,B) for      VAL >= 2^K,
+  // where
+  //   A is the position of the leftmost "1" in VAL, minus K
+  //   B are the K bits following the leftmost "1" in VAL
+  //
+  // As an example, if VAL = 225 (0b11100001) and K = 2:
+  // - the leftmost "1" in VAL is at position 8, so A is 8-2=6 (0b110)
+  // - the following bits are "11" so B is 0b11
+  // and the returned value is 1 + concat(0b110, 0b11) = 1 + 0b11011 = 28
+  //
+  // log2(int n, int k)
   // {
-  //   int result = 0;
-  //   int shift;
-  //   if (n < 0) return result;
-  //   result++;
-  //   if (n == 0) return result;
-  //   result++;
-  //   for (int i = 5; i >= 0; i--)
-  //   {
-  //     shift = (n >= (1<<(1<<i))) << i;
+  //   if (n < 0) return 0;
+  //   mask = (1ul << k) - 1;
+  //   if (n <= mask) return n + 1;
+  //   n0 = n;
+  //   // find leftmost 1
+  //   l = 0;
+  //   for (int i = 5; i >= 0; i--) {
+  //     threshold = 1ul << (1<<i)
+  //     shift = (n >= threshold) << i;
   //     n >>= shift;
-  //     result += shift;
+  //     l += shift;
   //   }
-  //   return result;
+  //   l -= k;
+  //   // mask K bits after leftmost 1
+  //   x = (n0 >> l) & mask;
+  //   return ((l + 1) << k) + x + 1;
   // }
 
-  FunctionType *log2_func_type = FunctionType::get(b_.getInt64Ty(), {b_.getInt64Ty()}, false);
+  FunctionType *log2_func_type = FunctionType::get(
+      b_.getInt64Ty(), { b_.getInt64Ty(), b_.getInt64Ty() }, false);
   Function *log2_func = Function::Create(log2_func_type, Function::InternalLinkage, "log2", module_.get());
   log2_func->addFnAttr(Attribute::AlwaysInline);
   log2_func->setSection("helpers");
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", log2_func);
   b_.SetInsertPoint(entry);
 
-  // setup n and result registers
-  Value *arg = log2_func->arg_begin();
+  // storage for arguments
   Value *n_alloc = b_.CreateAllocaBPF(CreateUInt64());
-  b_.CreateStore(arg, n_alloc);
-  Value *result = b_.CreateAllocaBPF(CreateUInt64());
-  b_.CreateStore(b_.getInt64(0), result);
+  b_.CreateStore(log2_func->arg_begin(), n_alloc);
+  Value *k_alloc = b_.CreateAllocaBPF(CreateUInt64());
+  b_.CreateStore(log2_func->arg_begin() + 1, k_alloc);
 
   // test for less than zero
   BasicBlock *is_less_than_zero = BasicBlock::Create(module_->getContext(), "hist.is_less_than_zero", log2_func);
   BasicBlock *is_not_less_than_zero = BasicBlock::Create(module_->getContext(), "hist.is_not_less_than_zero", log2_func);
-  b_.CreateCondBr(b_.CreateICmpSLT(b_.CreateLoad(b_.getInt64Ty(), n_alloc),
-                                   b_.getInt64(0)),
+
+  Value *n = b_.CreateLoad(b_.getInt64Ty(), n_alloc);
+  Value *zero = b_.getInt64(0);
+  b_.CreateCondBr(b_.CreateICmpSLT(n, zero),
                   is_less_than_zero,
                   is_not_less_than_zero);
+
   b_.SetInsertPoint(is_less_than_zero);
-  createRet(b_.CreateLoad(b_.getInt64Ty(), result));
+  createRet(zero);
+
   b_.SetInsertPoint(is_not_less_than_zero);
 
-  // test for equal to zero
+  // first set of buckets (<= mask)
+  Value *one = b_.getInt64(1);
+  Value *k = b_.CreateLoad(b_.getInt64Ty(), k_alloc);
+  Value *mask = b_.CreateSub(b_.CreateShl(one, k), one);
+
   BasicBlock *is_zero = BasicBlock::Create(module_->getContext(), "hist.is_zero", log2_func);
   BasicBlock *is_not_zero = BasicBlock::Create(module_->getContext(), "hist.is_not_zero", log2_func);
-  b_.CreateCondBr(b_.CreateICmpEQ(b_.CreateLoad(b_.getInt64Ty(), n_alloc),
-                                  b_.getInt64(0)),
-                  is_zero,
-                  is_not_zero);
+  b_.CreateCondBr(b_.CreateICmpULE(n, mask), is_zero, is_not_zero);
+
   b_.SetInsertPoint(is_zero);
-  b_.CreateStore(b_.getInt64(1), result);
-  createRet(b_.CreateLoad(b_.getInt64Ty(), result));
+  createRet(b_.CreateAdd(n, one));
+
   b_.SetInsertPoint(is_not_zero);
 
-  // power-of-2 index, offset by +2
-  b_.CreateStore(b_.getInt64(2), result);
+  // index of first bit set in n, 1 means bit 0, guaranteed to be >= k
+  Value *l = zero;
   for (int i = 5; i >= 0; i--)
   {
-    Value *n = b_.CreateLoad(b_.getInt64Ty(), n_alloc);
-    Value *shift = b_.CreateShl(
-        b_.CreateIntCast(
-            b_.CreateICmpSGE(b_.CreateIntCast(n, b_.getInt64Ty(), false),
-                             b_.getInt64(1ULL << (1 << i))),
-            b_.getInt64Ty(),
-            false),
-        i);
-    b_.CreateStore(b_.CreateLShr(n, shift), n_alloc);
-    b_.CreateStore(b_.CreateAdd(b_.CreateLoad(b_.getInt64Ty(), result), shift),
-                   result);
+    Value *threshold = b_.getInt64(1ul << (1ul << i));
+    Value *is_ge = b_.CreateICmpSGE(n, threshold);
+    // cast is important.
+    is_ge = b_.CreateIntCast(is_ge, b_.getInt64Ty(), false);
+    Value *shift = b_.CreateShl(is_ge, i);
+    n = b_.CreateLShr(n, shift);
+    l = b_.CreateAdd(l, shift);
   }
-  createRet(b_.CreateLoad(b_.getInt64Ty(), result));
+
+  // see algorithm for next steps:
+  // subtract k, so we can move the next k bits of N to position 0
+  l = b_.CreateSub(l, k);
+  // now find the k bits in n after the first '1'
+  Value *x = b_.CreateAnd(
+      b_.CreateLShr(b_.CreateLoad(b_.getInt64Ty(), n_alloc), l), mask);
+
+  Value *ret = b_.CreateAdd(l, one);
+  ret = b_.CreateShl(ret, k); // make room for the extra slots
+  ret = b_.CreateAdd(ret, x);
+  ret = b_.CreateAdd(ret, one);
+  createRet(ret);
+
   b_.restoreIP(ip);
   return module_->getFunction("log2");
 }

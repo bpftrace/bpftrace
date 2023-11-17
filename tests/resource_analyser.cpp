@@ -49,6 +49,11 @@ void test(const std::string &input, bool expected_result = true)
   test(*bpftrace, input, expected_result);
 }
 
+TEST(resource_analyser, multiple_hist_bits_in_single_map)
+{
+  test("BEGIN { @ = hist(1, 1); @ = hist(1, 2); exit()}", false);
+}
+
 TEST(resource_analyser, multiple_lhist_bounds_in_single_map)
 {
   test("BEGIN { @[0] = lhist(0, 0, 100000, 1000); @[1] = lhist(0, 0, 100000, "

@@ -56,6 +56,17 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
+    else if (type.IsHistTy())
+    {
+      auto args = hist_bits_arg.find(map_name);
+      if (args == hist_bits_arg.end())
+        LOG(FATAL) << "map arg \"" << map_name << "\" not found";
+      // the 'step' argument is used to pass 'bits'
+      auto map = std::make_unique<T>(
+          map_name, type, key, 0, 0, args->second, bpftrace.mapmax_);
+      failed_maps += is_invalid_map(map->mapfd_);
+      bpftrace.maps.Add(std::move(map));
+    }
     else
     {
       auto map = std::make_unique<T>(map_name, type, key, bpftrace.mapmax_);
