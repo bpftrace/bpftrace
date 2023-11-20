@@ -10,8 +10,8 @@
 #include "ast/passes/field_analyser.h"
 #include "btf.h"
 #include "clang_parser.h"
-#include "headers.h"
 #include "log.h"
+#include "resources/headers.h"
 #include "types.h"
 #include "utils.h"
 
