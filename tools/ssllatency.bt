@@ -1,4 +1,4 @@
-#!/usr/bin/bpftrace
+#!/usr/bin/env bpftrace
 /*
  * ssllatency	Trace SSL/TLS handshake for OpenSSL.
  * 		For Linux, uses bpftrace and eBPF.
