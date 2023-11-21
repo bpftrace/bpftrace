@@ -17,6 +17,8 @@ and this project adheres to
   - [#2810](https://github.com/iovisor/bpftrace/pull/2810)
 - Attach BTF to generated BPF programs
   - [#2804](https://github.com/iovisor/bpftrace/pull/2804)
+- Add fentry/fexit aliases for kfunc/kretfunc
+  - [#2844](https://github.com/iovisor/bpftrace/pull/2844)
 #### Changed
 #### Deprecated
 #### Removed

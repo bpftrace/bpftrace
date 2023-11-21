@@ -501,6 +501,10 @@ const std::vector<ProbeItem> PROBE_LIST = {
   { "asyncwatchpoint", "aw", ProbeType::asyncwatchpoint },
   { "kfunc", "f", ProbeType::kfunc },
   { "kretfunc", "fr", ProbeType::kretfunc },
+  // aliases for kfunc and kretfunc because kfunc was "borrowed"
+  // by the kernel to mean kernel functions exposed to bpf programs
+  { "fentry", "f", ProbeType::kfunc },
+  { "fexit", "fr", ProbeType::kretfunc },
   { "iter", "it", ProbeType::iter },
   { "rawtracepoint", "rt", ProbeType::rawtracepoint },
 };
