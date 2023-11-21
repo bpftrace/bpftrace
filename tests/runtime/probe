@@ -68,6 +68,21 @@ REQUIRES_FEATURE get_func_ip
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+# Sanity check for fentry/fexit alias
+NAME fentry
+PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME fexit
+PROG fexit:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
 NAME kprobe
 PROG kprobe:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*

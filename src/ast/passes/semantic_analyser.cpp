@@ -2961,6 +2961,18 @@ void SemanticAnalyser::visit(AttachPoint &ap)
     if (ap.func == "")
       LOG(ERROR, ap.loc, err_) << "kfunc should specify a function";
   }
+  else if (ap.provider == "fentry" || ap.provider == "fexit")
+  {
+    if (!bpftrace_.feature_->has_kfunc())
+    {
+      LOG(ERROR, ap.loc, err_)
+          << "fentry/fexit not available for your kernel version.";
+      return;
+    }
+
+    if (ap.func == "")
+      LOG(ERROR, ap.loc, err_) << "fentry/fexit should specify a function";
+  }
   else if (ap.provider == "iter")
   {
     if (!listing_ && bpftrace_.btf_->get_all_iters().count(ap.func) <= 0)

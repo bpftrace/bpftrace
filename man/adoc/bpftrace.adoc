@@ -2324,7 +2324,9 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 
 .variants
 * `kfunc[:mod]:fn`
+* `fentry[:mod]:fn`
 * `kretfunc[:mod]:fn`
+* `fexit[:mod]:fn`
 
 .shortnames
 * `f` (`kfunc`)
@@ -2336,6 +2338,7 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 
 ``kfunc``s attach to kernel function similar to <<probes-kprobe>>.
 They make use of eBPF trampolines which allows kernel code to call into BPF programs with near zero overhead.
+`kfunc` and `kretfunc` are aliased as `fentry` and `fexit` to match how these are referenced in the kernel.
 
 `kfunc` s make use of BTF type information to derive the type of function arguments at compile time.
 This removes the need for manual type casting and makes the code more resilient against small signature changes in the kernel.

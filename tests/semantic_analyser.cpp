@@ -2897,6 +2897,31 @@ TEST_F(semantic_analyser_btf, iter)
   test("iter:task,f:func_1 { 1 }", 1);
 }
 
+// Sanity check for fentry/fexit aliases
+TEST_F(semantic_analyser_btf, fentry)
+{
+  test("fentry:func_1 { 1 }", 0);
+  test("fexit:func_1 { 1 }", 0);
+  test("fentry:func_1 { $x = args.a; $y = args.foo1; $z = args.foo2->f.a; }",
+       0);
+  test("fexit:func_1 { $x = retval; }", 0);
+  test("fentry:vmlinux:func_1 { 1 }", 0);
+  test("fentry:*:func_1 { 1 }", 0);
+  test("fentry:func_1 { @[func] = 1; }", 0);
+
+  test("fexit:func_1 { $x = args.foo; }", 1);
+  test("fexit:func_1 { $x = args; }", 0);
+  test("fentry:func_1 { @ = args; }", 0);
+  test("fentry:func_1 { @[args] = 1; }", 0);
+  // reg() is not available in fentry
+#ifdef ARCH_X86_64
+  test("fentry:func_1 { reg(\"ip\") }", 1);
+  test("fexit:func_1 { reg(\"ip\") }", 1);
+#endif
+  // Backwards compatibility
+  test("fentry:func_1 { $x = args->a; }", 0);
+}
+
 } // namespace semantic_analyser
 } // namespace test
 } // namespace bpftrace
