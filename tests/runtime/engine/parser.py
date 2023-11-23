@@ -24,6 +24,7 @@ TestStruct = namedtuple(
         'run',
         'prog',
         'expect',
+        'expect_mode', # regex, text, json ...
         'timeout',
         'befores',
         'after',
@@ -102,6 +103,7 @@ class TestParser(object):
         run = ''
         prog = ''
         expect = ''
+        expect_mode = ''
         timeout = ''
         befores = []
         after = ''
@@ -129,6 +131,13 @@ class TestParser(object):
                 prog = line
             elif item_name == 'EXPECT':
                 expect = line
+                expect_mode = 'regex'
+            elif item_name == 'EXPECT_FILE':
+                expect = line
+                expect_mode = 'file'
+            elif item_name == 'EXPECT_JSON':
+                expect = line
+                expect_mode = 'json'
             elif item_name == 'TIMEOUT':
                 timeout = int(line.strip(' '))
             elif item_name == 'BEFORE':
@@ -205,6 +214,7 @@ class TestParser(object):
             run,
             prog,
             expect,
+            expect_mode,
             timeout,
             befores,
             after,

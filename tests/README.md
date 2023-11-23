@@ -64,8 +64,12 @@ Each runtime testcase consists of multiple directives. In no particular order:
 * `PROG`: Run the provided bpftrace program. This directive is preferred over
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
   `RUN` field is required
-* `EXPECT`: The expected output. Python regular expressions are supported. This
-  field is required.
+* `EXPECT`: The expected output. Python regular expressions are supported.
+   One of EXPECT, EXPECT_FILE or EXPECT_JSON is required.
+* `EXPECT_FILE`: A file containing the expected output, matched as plain
+   text after stripping initial and final empty lines
+* `EXPECT_JSON`: A json file containing the expected output, matched after
+   converting the output and the file to a dict (thus ignoring field order).
 * `TIMEOUT`: The timeout for the testcase (in seconds). This field is required.
 * `BEFORE`: Run the command in a shell before running bpftrace. The command
   will be terminated after testcase is over. Can be used multiple times,
