@@ -146,7 +146,7 @@ class Runner(object):
         bpffeature["jiffies64"] = output.find("jiffies64: yes") != -1
         return bpffeature
 
-    
+
     @staticmethod
     def __wait_for_children(parent_pid, timeout, ps_format, condition):
         with open(os.devnull, 'w') as dn:
@@ -250,7 +250,7 @@ class Runner(object):
                     elif bpffeature[feature]:
                         print(warn("[   SKIP   ] ") + "%s.%s" % (test.suite, test.name))
                         return Runner.SKIP_FEATURE_REQUIREMENT_UNSATISFIED
-            
+
             if test.new_pidns and not test.befores:
                 raise ValueError("`NEW_PIDNS` requires at least one `BEFORE` directive as something needs to run in the new pid namespace")
 
@@ -445,8 +445,8 @@ class Runner(object):
                 print('\tExpected REGEX: ' + test.expect)
                 print('\tFound:\n' + to_utf8(output))
             elif test.expect_mode == "json":
-                print('\tExpected JSON:\n' + open(test.expect).read())
-                print('\tFound:\n\t\t' + json.dumps(json.loads(output), 2))
+                print('\tExpected JSON:\n' + json.dumps(json.loads(open(test.expect).read()), indent=2))
+                print('\tFound:\n' + json.dumps(json.loads(output), indent=2))
             else:
                 print('\tExpected FILE:\n\t\t' + to_utf8(open(test.expect).read()))
                 print('\tFound:\n\t\t' + to_utf8(output))
