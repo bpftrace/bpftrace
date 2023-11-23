@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 import subprocess
 import signal
 import sys
@@ -99,12 +100,13 @@ class Runner(object):
 
             return nsenter_prefix + ret
         else:  # PROG
+            use_json = "-q -f json" if test.expect_mode == "json" else ""
+            cmd = nsenter_prefix + "{} {} -e '{}'".format(bpftrace_path, use_json, test.prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
-                return nsenter_prefix + "{} -e '{}' --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(
-                    bpftrace_path, test.prog, bpftrace_aotrt_path)
+                return cmd + " --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(bpftrace_aotrt_path)
             else:
-                return nsenter_prefix + "{} -e '{}'".format(bpftrace_path, test.prog)
+                return cmd
 
     @staticmethod
     def __handler(signum, frame):
@@ -200,6 +202,19 @@ class Runner(object):
 
         def get_pid_ns_cmd(cmd):
             return nsenter + [os.path.abspath(x) for x in cmd.split()]
+
+        def check_result(output):
+            try:
+                if test.expect_mode == "regex":
+                    return re.search(test.expect, output, re.M)
+                elif test.expect_mode == "file":
+                    # remove leading and trailing empty lines
+                    return output.strip() == open(test.expect).read().strip()
+                else:
+                    return json.loads(output) == json.load(open(test.expect))
+            except Exception as err:
+                print("ERROR in check_result: ", err)
+                return False
 
         try:
             result = None
@@ -325,6 +340,8 @@ class Runner(object):
                 output += nextline
                 if not attached and nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
                     attached = True
+                    if test.expect_mode != "regex":
+                        output = ""  # ignore earlier ouput
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
                         after_cmd = get_pid_ns_cmd(test.after) if test.new_pidns else test.after
@@ -336,7 +353,7 @@ class Runner(object):
 
             signal.alarm(0)
             output += p.stdout.read()
-            result = re.search(test.expect, output, re.M)
+            result = check_result(output)
 
         except (TimeoutError):
             # If bpftrace timed out (probably b/c the test case didn't explicitly
@@ -355,7 +372,7 @@ class Runner(object):
                 if p.poll() is None:
                     os.killpg(os.getpgid(p.pid), signal.SIGTERM)
                 output += p.stdout.read()
-                result = re.search(test.expect, output)
+                result = check_result(output)
 
                 if not result:
                     print(fail("[  TIMEOUT ] ") + "%s.%s" % (test.suite, test.name))
@@ -394,6 +411,10 @@ class Runner(object):
                 print('\tCLEANUP error: %s' % e.stderr)
                 return Runner.FAIL
 
+        @staticmethod
+        def to_utf8(s):
+            return s.encode("unicode_escape").decode("utf-8")
+
         def print_befores_and_after_output():
             if len(befores_output) > 0:
                 for out in befores_output:
@@ -420,7 +441,14 @@ class Runner(object):
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
-            print('\tExpected: ' + test.expect)
-            print('\tFound: ' + output.encode("unicode_escape").decode("utf-8"))
+            if test.expect_mode == "regex":
+                print('\tExpected REGEX: ' + test.expect)
+                print('\tFound:\n' + to_utf8(output))
+            elif test.expect_mode == "json":
+                print('\tExpected JSON:\n' + open(test.expect).read())
+                print('\tFound:\n\t\t' + json.dumps(json.loads(output), 2))
+            else:
+                print('\tExpected FILE:\n\t\t' + to_utf8(open(test.expect).read()))
+                print('\tFound:\n\t\t' + to_utf8(output))
             print_befores_and_after_output()
             return Runner.FAIL

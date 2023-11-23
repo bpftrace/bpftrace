@@ -199,9 +199,14 @@ EXPECT @bytes: *\n[\[(].*
 AFTER ./testprogs/syscall read
 TIMEOUT 5
 
+NAME hist_2_values
+PROG BEGIN { @=hist(3);@=hist(20);exit();}
+EXPECT_FILE runtime/outputs/hist_2_values.txt
+TIMEOUT 1
+
 NAME hist_10g
-RUN {{BPFTRACE}} -q -f json -e 'BEGIN { @ = hist(10 * 1024 * 1024 * 1024); exit(); }' | python3 -c 'import sys,json; print(json.load(sys.stdin) == json.load(open("runtime/outputs/hist_10g.json")))'
-EXPECT ^True$
+PROG BEGIN { @ = hist(10 * 1024 * 1024 * 1024); exit(); }
+EXPECT_JSON runtime/outputs/hist_10g.json
 TIMEOUT 1
 
 NAME lhist
