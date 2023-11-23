@@ -112,6 +112,8 @@
                   findutils
                   gawk
                   gnugrep
+                  kmod
+                  nftables
                   procps
                   python3
                   strace
