@@ -15,6 +15,7 @@
 - [Building bpftrace](#building-bpftrace)
   - [Ubuntu](#ubuntu)
   - [Fedora](#fedora)
+  - [Debian](#debian)
   - [Amazon Linux](#amazon-linux)
   - (*please add sections for other OSes)*
   - [Generic build](#generic-build-process)
@@ -193,88 +194,21 @@ might be required to `ldconfig` to update the linker.
 
 ### 19.04 and newer
 
-The version of `bcc` available in Ubuntu 19.04 (Disco) is new enough so
-compilation is not required, install with:
-
-```
-sudo apt-get install -y libbpfcc-dev
-```
-
-### Building `bpftrace`
-
-```
-sudo apt-get update
-sudo apt-get install -y \
-  bison \
-  cmake \
-  flex \
-  g++ \
-  git \
-  libelf-dev \
-  zlib1g-dev \
-  libfl-dev \
-  systemtap-sdt-dev \
-  binutils-dev \
-  libcereal-dev \
-  llvm-dev \
-  llvm-runtime \
-  libclang-dev \
-  clang \
-  libpcap-dev \
-  libgtest-dev \
-  libgmock-dev \
-  asciidoctor \
-  libdw-dev \
-  pahole
-git clone https://github.com/iovisor/bpftrace
-mkdir bpftrace/build; cd bpftrace/build;
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j8
-sudo make install
-```
-
-The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools
-in /usr/local/share/bpftrace/tools. You can change the install location using an
-argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
+For 19.04 and newer, please see the [regularly exercised Dockerfile](./docker/Dockerfile.ubuntu)
+for documentation on how to build bpftrace on Ubuntu.
 
 ## Fedora
 
-You'll want the newest kernel possible (see kernel requirements), eg, by using Fedora 28 or newer.
+You'll want the newest kernel possible (see kernel requirements), eg, by using
+Fedora 28 or newer.
 
-```
-sudo dnf install -y bison \
-  flex \
-  cmake \
-  make \
-  git \
-  gcc-c++ \
-  xxd \
-  libffi-devel \
-  elfutils-libelf-devel \
-  elfutils-devel \
-  zlib-devel \
-  xz-devel \
-  llvm-devel \
-  clang-devel \
-  bcc-devel \
-  systemtap-sdt-devel \
-  binutils-devel \
-  libbpf-devel \
-  libpcap-devel \
-  gtest-devel \
-  gmock-devel \
-  cereal-devel \
-  asciidoctor \
-  dwarves
-git clone https://github.com/iovisor/bpftrace
-cd bpftrace
-mkdir build; cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j8
-sudo make install
-```
+Please see the [regularly exercised Dockerfile](./docker/Dockerfile.fedora)
+for documentation on how to build bpftrace on Fedora.
 
-The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools in /usr/local/share/bpftrace/tools. You can change the install location using an argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
+## Debian
+
+Please see the [regularly exercised Dockerfile](./docker/Dockerfile.debian)
+for documentation on how to build bpftrace on Debian.
 
 ## Amazon Linux
 
@@ -328,7 +262,7 @@ The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools i
 
 ## Generic build process
 
-Use specific OS build sections listed earlier if available (Ubuntu).
+Use specific OS build sections listed earlier if available.
 
 ### Requirements
 
@@ -338,12 +272,16 @@ Use specific OS build sections listed earlier if available (Ubuntu).
 - CMake
 - Flex
 - Bison
+- Asciidoctor
 - LLVM & Clang 10.0+ development packages
 - LibElf
+- LibDw
 - Binutils development package
 - Libcereal
 - Kernel requirements described earlier
 - Libpcap
+- Systemtap SDT headers
+- Zlib development package
 
 ### Compilation
 
@@ -353,11 +291,14 @@ mkdir -p bpftrace/build
 cd bpftrace/build
 cmake -DCMAKE_BUILD_TYPE=Release ../
 make
+sudo make install
 ```
 
 A debug build of bpftrace can be set up with `cmake -DCMAKE_BUILD_TYPE=Debug ../`.
 
-The latest version of Google Test will be downloaded on each build. To speed up builds and only download its source on the first run, use the CMake option `-DOFFLINE_BUILDS:BOOL=ON`.
+The bpftrace binary will be in installed in /usr/local/bin/bpftrace, and tools
+in /usr/local/share/bpftrace/tools. You can change the install location using an
+argument to cmake, where the default is `-DCMAKE_INSTALL_PREFIX=/usr/local`.
 
 To test that the build works, you can try running the unit tests and a one-liner:
 
