@@ -3552,7 +3552,7 @@ BpfBytecode CodegenLLVM::emit(void)
   assert(!output.empty());
 
   state_ = State::DONE;
-  return elf::parseBpfBytecodeFromElfObject(output.data());
+  return elf::parseBpfBytecodeFromElfObject(output.data(), output.size());
 }
 
 BpfBytecode CodegenLLVM::compile(void)

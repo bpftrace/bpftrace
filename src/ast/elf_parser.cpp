@@ -4,7 +4,7 @@
 namespace bpftrace {
 namespace elf {
 
-BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
+BpfBytecode parseBpfBytecodeFromElfObject(void *const elf, size_t elf_size)
 {
   char *fileptr = (char *)elf;
   Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf;
@@ -28,7 +28,7 @@ BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
   assert(strtable_shdr->sh_type == SHT_STRTAB);
   char *strtable = fileptr + strtable_shdr->sh_offset;
 
-  BpfBytecode result;
+  BpfBytecode result(elf, elf_size);
 
   for (int i = 0; i < ehdr->e_shnum; ++i) {
     Elf64_Shdr *shdr = &shdrs[i];

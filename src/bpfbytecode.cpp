@@ -6,6 +6,14 @@
 
 namespace bpftrace {
 
+BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
+{
+  bpf_object_ = std::unique_ptr<struct bpf_object, bpf_object_deleter>(
+      bpf_object__open_mem(elf, elf_size, nullptr));
+  if (!bpf_object_)
+    throw std::runtime_error("The produced ELF is not a valid BPF object");
+}
+
 void BpfBytecode::addSection(const std::string &name,
                              std::vector<uint8_t> &&data)
 {
