@@ -703,7 +703,7 @@ Attaching 1 probe...
  String literals are enclosed in double quotes, e.g. `"a string"`.
 
 
-## 5. `.`: C Struct Navigation
+## 5. `.`, `->`: C Struct Navigation
 
 tracepoint example:
 
