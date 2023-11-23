@@ -1,0 +1,33 @@
+# This Dockerfile is used to both document and test building bpftrace on the
+# upcoming debian release. We attempt to catch bugs as early as possible which
+# is why we are using sid/unstable.
+
+FROM debian:sid
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    asciidoctor \
+    binutils-dev \
+    bison \
+    build-essential \
+    clang \
+    cmake \
+    flex \
+    libbpf-dev \
+    libbpfcc-dev \
+    libcereal-dev \
+    libdw-dev \
+    libelf-dev \
+    libiberty-dev \
+    libpcap-dev \
+    llvm-dev \
+    libclang-dev \
+    systemtap-sdt-dev \
+    zlib1g-dev
+
+COPY . /src
+WORKDIR /src
+RUN cmake -B /build -DBUILD_TESTING=OFF
+RUN make -C /build -j$(nproc)
+
+ENTRYPOINT ["/build/src/bpftrace"]
