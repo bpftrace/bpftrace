@@ -6,7 +6,7 @@
 namespace bpftrace {
 namespace elf {
 
-BpfBytecode parseBpfBytecodeFromElfObject(void* const elf);
+BpfBytecode parseBpfBytecodeFromElfObject(void* const elf, size_t elf_size);
 
 } // namespace elf
 } // namespace bpftrace

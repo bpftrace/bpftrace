@@ -1,6 +1,8 @@
 #pragma once
 
 #include "bpffeature.h"
+
+#include <bpf/libbpf.h>
 #include <cereal/access.hpp>
 #include <cstdint>
 #include <string>
@@ -16,6 +18,7 @@ public:
   BpfBytecode()
   {
   }
+  BpfBytecode(const void *elf, size_t elf_size);
 
   BpfBytecode(const BpfBytecode &) = delete;
   BpfBytecode &operator=(const BpfBytecode &) = delete;
@@ -30,6 +33,17 @@ public:
 
 private:
   SectionMap sections_;
+
+  // We need a custom deleter for bpf_object which will call bpf_object__close.
+  // Note that it is not possible to run bpf_object__close in ~BpfBytecode
+  // as the desctuctor may be called upon move assignment.
+  struct bpf_object_deleter {
+    void operator()(struct bpf_object *object)
+    {
+      bpf_object__close(object);
+    }
+  };
+  std::unique_ptr<struct bpf_object, bpf_object_deleter> bpf_object_;
 
   friend class cereal::access;
   template <typename Archive>
