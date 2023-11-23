@@ -1,0 +1,30 @@
+# This Dockerfile is used to both document and test building bpftrace on the
+# development version of fedora. We attempt to catch bugs as early as possible
+# which is why we are using rawhide.
+
+FROM fedora:rawhide
+
+RUN dnf -y groupinstall "Development Tools" && \
+    dnf install -y \
+        asciidoctor \
+        bison \
+        binutils-devel \
+        bcc-devel \
+        cereal-devel \
+        clang-devel \
+        cmake \
+        elfutils-libelf-devel \
+        elfutils-libs \
+        flex \
+        libpcap-devel \
+        libbpf-devel \
+        llvm-devel \
+        systemtap-sdt-devel \
+        zlib-devel
+
+COPY . /src
+WORKDIR /src
+RUN cmake -B /build -DBUILD_TESTING=OFF
+RUN make -C /build -j$(nproc)
+
+ENTRYPOINT ["/build/src/bpftrace"]
