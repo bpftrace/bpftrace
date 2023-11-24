@@ -33,6 +33,8 @@ and this project adheres to
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
+- Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.
+  - [#2849](https://github.com/iovisor/bpftrace/pull/2849)
 
 ## [0.19.0] 2023-09-19
 
