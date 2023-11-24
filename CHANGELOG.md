@@ -33,6 +33,8 @@ and this project adheres to
   - [#2822](https://github.com/iovisor/bpftrace/pull/2822)
 - utils: use /data/local/tmp as temprary dir on Android
   - [#2828](https://github.com/iovisor/bpftrace/pull/2828)
+- Fix uprobe multi probe for targets with wildcards
+  - [#2851](https://github.com/iovisor/bpftrace/pull/2851)
 #### Docs
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.

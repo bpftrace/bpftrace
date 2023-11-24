@@ -222,6 +222,14 @@ REQUIRES /usr/sbin/bpftool
 REQUIRES_FEATURE uprobe_multi
 AFTER ./testprogs/uprobe_test
 
+NAME uprobe_multi_wildcard_target_wildcard
+RUN {{BPFTRACE}} --unsafe -e 'uretprobe:*:uprobeFunction* { printf("link: "); system("/usr/sbin/bpftool link | grep -E \"uprobe_multi|type 12\" | wc -l"); exit(); }' -p {{BEFORE_PID}}
+EXPECT link: 1
+TIMEOUT 5
+REQUIRES /usr/sbin/bpftool
+REQUIRES_FEATURE uprobe_multi
+BEFORE ./testprogs/uprobe_test
+
 NAME uprobe
 PROG uprobe:/bin/bash:echo_builtin { printf("arg0: %d\n", arg0); exit();}
 EXPECT arg0: [0-9]*
