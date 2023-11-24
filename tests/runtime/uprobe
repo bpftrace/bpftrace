@@ -60,7 +60,7 @@ BEFORE ./testprogs/uprobe_test
 
 NAME uprobes - attach to multiple probes by pid with only wildcard
 RUN {{BPFTRACE}} -e 'uprobe:*:uprobeFunc* { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
-EXPECT Attaching 2 probes...
+EXPECT here
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
