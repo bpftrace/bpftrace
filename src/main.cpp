@@ -878,12 +878,23 @@ int main(int argc, char* argv[])
 
     bpftrace.parse_btf(driver.list_modules());
 
-    ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, false, true);
-    err = semantics.analyse();
-    if (err)
-      return err;
+    ast::Program* prog = driver.root.get();
 
-    bpftrace.probe_matcher_->list_probes(driver.root.get());
+    ast::SemanticAnalyser semantics(prog, bpftrace, false);
+
+    std::vector<ast::AttachPoint*> attach_points;
+    for (auto* probe : *prog->probes)
+    {
+      for (auto* ap : *probe->attach_points)
+      {
+        if (semantics.attach_point_supported(*ap, true))
+        {
+          attach_points.push_back(ap);
+        }
+      }
+    }
+
+    bpftrace.probe_matcher_->list_probes(attach_points);
     return 0;
   }
 

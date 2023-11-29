@@ -75,7 +75,7 @@ public:
   /*
    * Match all probes in prog and print them to stdout.
    */
-  void list_probes(ast::Program *prog);
+  void list_probes(std::vector<ast::AttachPoint *> attach_points);
   /*
    * Print definitions of structures matching search.
    */

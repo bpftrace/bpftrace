@@ -20,26 +20,13 @@ public:
   explicit SemanticAnalyser(Node *root,
                             BPFtrace &bpftrace,
                             std::ostream &out = std::cerr,
-                            bool has_child = true,
-                            bool listing = false)
-      : root_(root),
-        bpftrace_(bpftrace),
-        out_(out),
-        listing_(listing),
-        has_child_(has_child)
+                            bool has_child = true)
+      : root_(root), bpftrace_(bpftrace), out_(out), has_child_(has_child)
   {
   }
 
   explicit SemanticAnalyser(Node *root, BPFtrace &bpftrace, bool has_child)
       : SemanticAnalyser(root, bpftrace, std::cerr, has_child)
-  {
-  }
-
-  explicit SemanticAnalyser(Node *root,
-                            BPFtrace &bpftrace,
-                            bool has_child,
-                            bool listing)
-      : SemanticAnalyser(root, bpftrace, std::cerr, has_child, listing)
   {
   }
 
@@ -74,6 +61,7 @@ public:
   void visit(Program &program) override;
 
   int analyse();
+  bool attach_point_supported(AttachPoint &ap, bool output_err = false);
 
 private:
   Node *root_ = nullptr;
@@ -82,7 +70,6 @@ private:
   std::ostringstream err_;
   int pass_;
   const int num_passes_ = 10;
-  bool listing_;
 
   bool is_final_pass() const;
 

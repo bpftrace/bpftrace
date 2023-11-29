@@ -508,52 +508,48 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   return params;
 }
 
-void ProbeMatcher::list_probes(ast::Program* prog)
+void ProbeMatcher::list_probes(std::vector<ast::AttachPoint*> attach_points)
 {
-  for (auto* probe : *prog->probes)
+  for (auto* ap : attach_points)
   {
-    for (auto* ap : *probe->attach_points)
+    auto matches = get_matches_for_ap(*ap);
+    auto probe_type = probetype(ap->provider);
+    FuncParamLists param_lists;
+    if (bt_verbose)
     {
-      auto matches = get_matches_for_ap(*ap);
-      auto probe_type = probetype(ap->provider);
-      FuncParamLists param_lists;
-      if (bt_verbose)
+      if (probe_type == ProbeType::tracepoint)
+        param_lists = get_tracepoints_params(matches);
+      else if (probe_type == ProbeType::kfunc ||
+               probe_type == ProbeType::kretfunc)
+        param_lists = bpftrace_->btf_->get_params(matches);
+      else if (probe_type == ProbeType::iter)
+        param_lists = get_iters_params(matches);
+      else if (probe_type == ProbeType::uprobe)
+        param_lists = get_uprobe_params(matches);
+    }
+
+    for (auto& match : matches)
+    {
+      std::string match_print = match;
+      if (ap->lang == "cpp")
       {
-        if (probe_type == ProbeType::tracepoint)
-          param_lists = get_tracepoints_params(matches);
-        else if (probe_type == ProbeType::kfunc ||
-                 probe_type == ProbeType::kretfunc)
-          param_lists = bpftrace_->btf_->get_params(matches);
-        else if (probe_type == ProbeType::iter)
-          param_lists = get_iters_params(matches);
-        else if (probe_type == ProbeType::uprobe)
-          param_lists = get_uprobe_params(matches);
+        std::string target = erase_prefix(match_print);
+        char* demangled_name = cxxdemangle(match_print.c_str());
+
+        // demangled name may contain symbols not accepted by the attach point
+        // parser, so surround it with quotes to make the entry directly
+        // usable as an attach point
+        auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
+                                   : match_print;
+
+        match_print = target + ":" + ap->lang + ":" + func;
       }
 
-      for (auto& match : matches)
+      std::cout << probetypeName(probe_type) << ":" << match_print << std::endl;
+      if (bt_verbose)
       {
-        std::string match_print = match;
-        if (ap->lang == "cpp")
-        {
-          std::string target = erase_prefix(match_print);
-          char* demangled_name = cxxdemangle(match_print.c_str());
-
-          // demangled name may contain symbols not accepted by the attach point
-          // parser, so surround it with quotes to make the entry directly
-          // usable as an attach point
-          auto func = demangled_name ? "\"" + std::string(demangled_name) + "\""
-                                     : match_print;
-
-          match_print = target + ":" + ap->lang + ":" + func;
-        }
-
-        std::cout << probetypeName(probe_type) << ":" << match_print
-                  << std::endl;
-        if (bt_verbose)
-        {
-          for (auto& param : param_lists[match])
-            std::cout << "    " << param << std::endl;
-        }
+        for (auto& param : param_lists[match])
+          std::cout << "    " << param << std::endl;
       }
     }
   }

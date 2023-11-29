@@ -2667,6 +2667,11 @@ void SemanticAnalyser::visit(Predicate &pred)
 
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
+  if (!attach_point_supported(ap))
+  {
+    return;
+  }
+
   if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
     if (ap.target != "")
       LOG(ERROR, ap.loc, err_) << "kprobes should not have a target";
@@ -2799,7 +2804,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "profile") {
     if (ap.target == "")
       LOG(ERROR, ap.loc, err_) << "profile probe must have unit of time";
-    else if (!listing_)
+    else
     {
       if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
         LOG(ERROR, ap.loc, err_)
@@ -2815,7 +2820,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
   else if (ap.provider == "interval") {
     if (ap.target == "")
       LOG(ERROR, ap.loc, err_) << "interval probe must have unit of time";
-    else if (!listing_)
+    else
     {
       if (TIME_UNITS.find(ap.target) == TIME_UNITS.end())
         LOG(ERROR, ap.loc, err_)
@@ -2849,7 +2854,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         if (!found)
           LOG(ERROR, ap.loc, err_) << ap.target << " is not a software probe";
       }
-      else if (!listing_)
+      else
       {
         LOG(ERROR, ap.loc, err_)
             << "wildcards are not allowed for hardware probe type";
@@ -2920,7 +2925,7 @@ void SemanticAnalyser::visit(AttachPoint &ap)
         if (!found)
           LOG(ERROR, ap.loc, err_) << ap.target + " is not a hardware probe";
       }
-      else if (!listing_)
+      else
       {
         LOG(ERROR, ap.loc, err_)
             << "wildcards are not allowed for hardware probe type";
@@ -2949,33 +2954,16 @@ void SemanticAnalyser::visit(AttachPoint &ap)
       }
     }
   }
-  else if (ap.provider == "kfunc" || ap.provider == "kretfunc")
+  else if (ap.provider == "kfunc" || ap.provider == "kretfunc" ||
+           ap.provider == "fentry" || ap.provider == "fexit")
   {
-    if (!bpftrace_.feature_->has_kfunc())
-    {
-      LOG(ERROR, ap.loc, err_)
-          << "kfunc/kretfunc not available for your kernel version.";
-      return;
-    }
-
     if (ap.func == "")
-      LOG(ERROR, ap.loc, err_) << "kfunc should specify a function";
-  }
-  else if (ap.provider == "fentry" || ap.provider == "fexit")
-  {
-    if (!bpftrace_.feature_->has_kfunc())
-    {
       LOG(ERROR, ap.loc, err_)
-          << "fentry/fexit not available for your kernel version.";
-      return;
-    }
-
-    if (ap.func == "")
-      LOG(ERROR, ap.loc, err_) << "fentry/fexit should specify a function";
+          << "kfunc/kretfunc/fentry/fexit should specify a function";
   }
   else if (ap.provider == "iter")
   {
-    if (!listing_ && bpftrace_.btf_->get_all_iters().count(ap.func) <= 0)
+    if (bpftrace_.btf_->get_all_iters().count(ap.func) <= 0)
     {
       LOG(ERROR, ap.loc, err_)
           << "iter " << ap.func << " not available for your kernel version.";
@@ -2996,7 +2984,7 @@ void SemanticAnalyser::visit(Probe &probe)
   probe_ = &probe;
 
   for (AttachPoint *ap : *probe.attach_points) {
-    if (!listing_ && aps > 1 && ap->provider == "iter")
+    if (aps > 1 && ap->provider == "iter")
     {
       LOG(ERROR, ap->loc, err_) << "Only single iter attach point is allowed.";
       return;
@@ -3026,8 +3014,7 @@ int SemanticAnalyser::analyse()
   // Multiple passes to handle variables being used before they are defined
   std::string errors;
 
-  int num_passes = listing_ ? 1 : num_passes_;
-  for (pass_ = 1; pass_ <= num_passes; pass_++)
+  for (pass_ = 1; pass_ <= num_passes_; pass_++)
   {
     root_->accept(*this);
     errors = err_.str();
@@ -3502,6 +3489,29 @@ void SemanticAnalyser::resolve_struct_type(SizedType &type, const location &loc)
       pointer_level--;
     }
   }
+}
+
+bool SemanticAnalyser::attach_point_supported(AttachPoint &ap, bool output_err)
+{
+  if (ap.provider == "kfunc" || ap.provider == "kretfunc" ||
+      ap.provider == "fentry" || ap.provider == "fexit")
+  {
+    if (!bpftrace_.feature_->has_kfunc())
+    {
+      static std::string error = "kfunc/kretfunc (fentry/fexit) not available "
+                                 "for your kernel version.";
+      if (output_err)
+      {
+        LOG(ERROR) << error;
+      }
+      else
+      {
+        LOG(ERROR, ap.loc, err_) << error;
+      }
+      return false;
+    }
+  }
+  return true;
 }
 
 Pass CreateSemanticPass()
