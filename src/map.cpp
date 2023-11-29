@@ -22,6 +22,7 @@ int create_map(libbpf::bpf_map_type map_type,
                int max_entries,
                unsigned int flags)
 {
+  return 0;
   std::string fixed_name;
   const std::string *name_ptr = &name;
   if (!name.empty() && name[0] == '@') {
@@ -216,10 +217,12 @@ std::optional<IMap *> MapManager::Lookup(ssize_t id)
 void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
 {
   auto id = maps_by_id_.size();
+  auto name = to_string(t);
   map->id = id;
   map->printable_ = false;
+  map->name_ = name;
   maps_by_type_[t] = map.get();
-  maps_by_name_[to_string(t)] = map.get();
+  maps_by_name_[name] = map.get();
   maps_by_id_.emplace_back(std::move(map));
 }
 
@@ -241,10 +244,12 @@ bool MapManager::Has(Type t)
 void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
 {
   auto id = maps_by_id_.size();
+  auto name = t.name();
   map->id = id;
   map->printable_ = false;
+  map->name_ = name;
   stackid_maps_[t] = map.get();
-  maps_by_name_[t.name()] = map.get();
+  maps_by_name_[name] = map.get();
   maps_by_id_.emplace_back(std::move(map));
 }
 
