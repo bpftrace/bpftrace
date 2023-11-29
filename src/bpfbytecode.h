@@ -1,10 +1,13 @@
 #pragma once
 
 #include "bpffeature.h"
+#include "bpfmap.h"
+#include "mapmanager.h"
 
 #include <bpf/libbpf.h>
 #include <cereal/access.hpp>
 #include <cstdint>
+#include <map>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -29,6 +32,11 @@ public:
   bool hasSection(const std::string &name) const;
   const std::vector<uint8_t> &getSection(const std::string &name) const;
 
+  int create_maps();
+  bool hasMap(MapManager::Type internal_type) const;
+  const BpfMap &getMap(const std::string &name) const;
+  const BpfMap &getMap(MapManager::Type internal_type) const;
+
   void fixupBTF(BPFfeature &feature);
 
 private:
@@ -44,6 +52,8 @@ private:
     }
   };
   std::unique_ptr<struct bpf_object, bpf_object_deleter> bpf_object_;
+
+  std::map<std::string, BpfMap> maps_;
 
   friend class cereal::access;
   template <typename Archive>

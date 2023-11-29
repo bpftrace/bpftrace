@@ -18,6 +18,7 @@ add_library(runtime
   bpffeature.cpp
   bpftrace.cpp
   bpfbytecode.cpp
+  bpfmap.cpp
   bpfprogram.cpp
   btf.cpp
   child.cpp

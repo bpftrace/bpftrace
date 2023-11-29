@@ -904,11 +904,9 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
                                               probe.index,
                                               usdt_location_idx);
 
-  auto program = BpfProgram::CreateFromBytecode(bytecode, name, maps);
+  auto program = BpfProgram::CreateFromBytecode(bytecode, name);
   if (!program) {
-    auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
-                                                       orig_name,
-                                                       maps);
+    auto orig_program = BpfProgram::CreateFromBytecode(bytecode, orig_name);
     if (orig_program)
       program.emplace(std::move(*orig_program));
   }
@@ -1109,10 +1107,38 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (err)
     return err;
 
+  if (bytecode.create_maps())
+    return 1;
+
   // Clear fake maps and replace with real maps
   maps = {};
   if (resources.create_maps(*this, false))
     return 1;
+  // BPF maps are now created by BpfBytecode::create_maps and therefore
+  // we copy FDs to MapManager for compatibility. This code will go away once
+  // we get rid of MapManager.
+  for (auto &map : maps) {
+    map->mapfd_ = bytecode.getMap(map->name_).fd;
+  }
+
+  if (bytecode.hasMap(MapManager::Type::MappedPrintfData)) {
+    auto map = bytecode.getMap(MapManager::Type::MappedPrintfData);
+    uint32_t idx = 0;
+    std::vector<uint8_t> formats(map.value_size(), 0);
+    for (auto &arg : resources.mapped_printf_args) {
+      auto str = std::get<0>(arg).c_str();
+      auto len = std::get<0>(arg).size();
+      memcpy(&formats.data()[idx], str, len);
+      idx += len + 1;
+    }
+
+    // store the data in map
+    uint32_t id = 0;
+    if (bpf_update_elem(map.fd, &id, formats.data(), 0) < 0) {
+      perror("Failed to write printf data to data map");
+      return -1;
+    }
+  }
 
   bytecode_ = std::move(bytecode);
   bytecode_.fixupBTF(*feature_);

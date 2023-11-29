@@ -46,19 +46,16 @@ struct btf_ext_info_sec {
 
 std::optional<BpfProgram> BpfProgram::CreateFromBytecode(
     const BpfBytecode &bytecode,
-    const std::string &name,
-    MapManager &maps)
+    const std::string &name)
 {
   if (bytecode.hasSection(name)) {
-    return BpfProgram(bytecode, name, maps);
+    return BpfProgram(bytecode, name);
   }
   return std::nullopt;
 }
 
-BpfProgram::BpfProgram(const BpfBytecode &bytecode,
-                       const std::string &name,
-                       MapManager &maps)
-    : bytecode_(bytecode), maps_(maps), name_(name)
+BpfProgram::BpfProgram(const BpfBytecode &bytecode, const std::string &name)
+    : bytecode_(bytecode), name_(name)
 {
 }
 
@@ -187,19 +184,15 @@ void BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
       insn->src_reg = BPF_PSEUDO_FUNC;
       insn->imm = (target_insn - insn_offset - 1); // jump offset
     } else if (symtype == STT_OBJECT) {
-      std::string map_name = reinterpret_cast<const char *>(strtab.data() +
-                                                            sym->st_name);
+      std::string map_name = bpftrace_map_name(
+          reinterpret_cast<const char *>(strtab.data() + sym->st_name));
 
-      auto map = maps_[bpftrace_map_name(map_name)];
-      if (map) {
-        insn->src_reg = map.value()->name_ ==
-                                to_string(MapManager::Type::MappedPrintfData)
-                            ? BPF_PSEUDO_MAP_VALUE
-                            : BPF_PSEUDO_MAP_FD;
-        insn->imm = static_cast<int32_t>((*map)->mapfd_);
-      } else {
-        throw std::runtime_error(std::string("Unknown map ") + map_name);
-      }
+      const auto &map = bytecode_.getMap(map_name);
+      insn->src_reg = map.bpf_name() ==
+                              to_string(MapManager::Type::MappedPrintfData)
+                          ? BPF_PSEUDO_MAP_VALUE
+                          : BPF_PSEUDO_MAP_FD;
+      insn->imm = static_cast<int32_t>(map.fd);
     } else {
       LOG(ERROR) << "Relocation in " << relsecname << " type " << reltype
                  << " sym " << relsym << " type " << symtype;

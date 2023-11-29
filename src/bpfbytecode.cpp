@@ -1,5 +1,8 @@
 #include "bpfbytecode.h"
 
+#include "log.h"
+
+#include <bpf/bpf.h>
 #include <bpf/btf.h>
 #include <elf.h>
 #include <stdexcept>
@@ -12,6 +15,13 @@ BpfBytecode::BpfBytecode(const void *elf, size_t elf_size)
       bpf_object__open_mem(elf, elf_size, nullptr));
   if (!bpf_object_)
     throw std::runtime_error("The produced ELF is not a valid BPF object");
+
+  struct bpf_map *m;
+  bpf_map__for_each (m, bpf_object_.get()) {
+    auto name = bpftrace_map_name(bpf_map__name(m));
+    auto map = BpfMap(m);
+    maps_.emplace(name, map);
+  }
 }
 
 void BpfBytecode::addSection(const std::string &name,
@@ -32,6 +42,55 @@ const std::vector<uint8_t> &BpfBytecode::getSection(
     throw std::runtime_error("Bytecode is missing section " + name);
   }
   return sections_.at(name);
+}
+
+int BpfBytecode::create_maps()
+{
+  int failed_maps = 0;
+  for (auto &map : maps_) {
+    LIBBPF_OPTS(bpf_map_create_opts, opts);
+    map.second.fd = bpf_map_create(static_cast<::bpf_map_type>(
+                                       map.second.type()),
+                                   map.second.bpf_name().c_str(),
+                                   map.second.key_size(),
+                                   map.second.value_size(),
+                                   map.second.max_entries(),
+                                   &opts);
+    if (map.second.fd < 0) {
+      failed_maps++;
+      LOG(ERROR) << "failed to create map: '" << map.first
+                 << "': " << strerror(errno);
+    }
+  }
+
+  if (failed_maps > 0) {
+    std::cerr << "Creation of the required BPF maps has failed." << std::endl;
+    std::cerr << "Make sure you have all the required permissions and are not";
+    std::cerr << " confined (e.g. like" << std::endl;
+    std::cerr << "snapcraft does). `dmesg` will likely have useful output for";
+    std::cerr << " further troubleshooting" << std::endl;
+  }
+
+  return failed_maps;
+}
+
+bool BpfBytecode::hasMap(MapManager::Type internal_type) const
+{
+  return maps_.find(to_string(internal_type)) != maps_.end();
+}
+
+const BpfMap &BpfBytecode::getMap(const std::string &name) const
+{
+  auto map = maps_.find(name);
+  if (map == maps_.end()) {
+    throw std::runtime_error("Unknown map: " + name);
+  }
+  return map->second;
+}
+
+const BpfMap &BpfBytecode::getMap(MapManager::Type internal_type) const
+{
+  return getMap(to_string(internal_type));
 }
 
 // This is taken from libbpf (btf.c) and we need it to manually iterate BTF

@@ -164,19 +164,6 @@ std::unique_ptr<T> RequiredResources::prepareFormatStringDataMap(
   auto map = std::make_unique<T>(
       "mapped_printf_data", libbpf::BPF_MAP_TYPE_ARRAY, 4, size, 1, 0);
 
-  // copy all the format strings to buffer, head to tail
-  uint32_t idx = 0;
-  std::vector<uint8_t> formats(size, 0);
-  for (auto &arg : args) {
-    auto str = std::get<0>(arg).c_str();
-    auto len = std::get<0>(arg).size();
-    memcpy(&formats.data()[idx], str, len);
-    idx += len + 1;
-  }
-
-  // store the data in map
-  uint64_t id = 0;
-  *ret = bpf_update_elem(map->mapfd_, &id, formats.data(), 0);
   return map;
 }
 

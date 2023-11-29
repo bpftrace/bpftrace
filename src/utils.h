@@ -261,22 +261,6 @@ inline std::string get_section_name_for_watchpoint_setup(
                                     index);
 }
 
-inline std::string bpf_map_name(const std::string &bpftrace_map_name)
-{
-  std::string name = bpftrace_map_name;
-  if (name[0] == '@')
-    name = "AT_" + name.substr(1);
-  return name;
-}
-
-inline std::string bpftrace_map_name(const std::string &bpf_map_name)
-{
-  std::string name = bpf_map_name;
-  if (name.compare(0, 3, "AT_") == 0)
-    name = "@" + name.substr(3);
-  return name;
-}
-
 // trim from end of string (right)
 inline std::string &rtrim(std::string &s)
 {
