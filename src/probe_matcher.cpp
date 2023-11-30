@@ -379,24 +379,24 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
 
 /*
  * Get list of kernel probe types for the purpose of listing.
- * Ignore return probes.
+ * Ignore return probes and aliases.
  */
 std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
 {
   std::string probes;
   for (auto& p : PROBE_LIST)
   {
+    if (!p.show_in_kernel_list)
+    {
+      continue;
+    }
     if (p.type == ProbeType::kfunc)
     {
       // kfunc must be available
       if (bpftrace_->feature_->has_kfunc())
         probes += p.name + "\n";
     }
-    else if (p.name.find("ret") == std::string::npos &&
-             !is_userspace_probe(p.type) && p.type != ProbeType::interval &&
-             p.type != ProbeType::profile && p.type != ProbeType::watchpoint &&
-             p.type != ProbeType::asyncwatchpoint &&
-             p.type != ProbeType::special)
+    else
     {
       probes += p.name + "\n";
     }
@@ -414,8 +414,10 @@ std::unique_ptr<std::istream> ProbeMatcher::userspace_probe_list()
   std::string probes;
   for (auto& p : PROBE_LIST)
   {
-    if (p.name.find("ret") == std::string::npos && is_userspace_probe(p.type))
+    if (p.show_in_userspace_list)
+    {
       probes += p.name + "\n";
+    }
   }
 
   return std::make_unique<std::istringstream>(probes);
