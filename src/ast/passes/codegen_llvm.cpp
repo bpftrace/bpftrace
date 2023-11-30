@@ -616,7 +616,7 @@ void CodegenLLVM::visit(Call &call)
     auto imap = *bpftrace_.maps.Lookup(map.ident);
     if (!imap->is_clearable())
     {
-      // store zero insted of calling bpf_map_delete_elem()
+      // store zero instead of calling bpf_map_delete_elem()
       AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
       b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
       b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
@@ -1544,7 +1544,7 @@ void CodegenLLVM::binop_int(Binop &binop)
 
   // If left or right is PositionalParameter, that means the syntax is
   // str($1 + num) or str(num + $1). The positional params returns a pointer
-  // to a buffer, and the buffer should live untill str() is accepted.
+  // to a buffer, and the buffer should live until str() is accepted.
   // Extend the lifetime of the buffer
   if (dynamic_cast<PositionalParameter *>(binop.left))
     expr_deleter_ = scoped_del_left.disarm();
@@ -2675,7 +2675,7 @@ void CodegenLLVM::visit(Probe &probe)
    * Most of the time, we can take a probe like kprobe:do_f* and build a
    * single BPF program for that, called "s_kprobe:do_f*", and attach it to
    * each wildcard match. An exception is the "probe" builtin, where we need
-   * to build different BPF programs for each wildcard match that cantains an
+   * to build different BPF programs for each wildcard match that contains an
    * ID for the match. Those programs will be called "s_kprobe:do_fcntl" etc.
    */
   if (probe.need_expansion == false) {

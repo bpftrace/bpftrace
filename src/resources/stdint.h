@@ -284,7 +284,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
  *
  * These macros are defined using the same successive-shrinking approach as
  * the type definitions above. It is likewise important that macros are defined
- * in order of decending width.
+ * in order of descending width.
  *
  * Note that C++ should not check __STDC_CONSTANT_MACROS here, contrary to the
  * claims of the C standard (see C++ 18.3.1p2, [cstdint.syn]).
@@ -461,7 +461,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
  * As in the type definitions, this section takes an approach of
  * successive-shrinking to determine which limits to use for the standard (8,
  * 16, 32, 64) bit widths when they don't have exact representations. It is
- * therefore important that the definitions be kept in order of decending
+ * therefore important that the definitions be kept in order of descending
  * widths.
  *
  * Note that C++ should not check __STDC_LIMIT_MACROS here, contrary to the

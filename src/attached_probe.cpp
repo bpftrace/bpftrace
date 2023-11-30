@@ -542,7 +542,7 @@ bool AttachedProbe::resolve_offset_uprobe(bool safe_mode)
       {
         LOG(WARNING)
             << msg.str()
-            << " Skipping attachment (use --unsafe to force attachement).";
+            << " Skipping attachment (use --unsafe to force attachment).";
       }
       return false;
     }
