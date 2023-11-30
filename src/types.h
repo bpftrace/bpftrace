@@ -8,6 +8,7 @@
 #include <string>
 #include <sys/types.h>
 #include <unistd.h>
+#include <unordered_set>
 #include <vector>
 
 #include <cereal/access.hpp>
@@ -480,37 +481,39 @@ std::ostream &operator<<(std::ostream &os, ProbeType type);
 struct ProbeItem
 {
   std::string name;
-  std::string abbr;
+  std::unordered_set<std::string> aliases;
   ProbeType type;
+  // these are used in bpftrace -l
+  // to show which probes are available to attach to
+  bool show_in_kernel_list = false;
+  bool show_in_userspace_list = false;
 };
 
 const std::vector<ProbeItem> PROBE_LIST = {
-  { "kprobe", "k", ProbeType::kprobe },
-  { "kretprobe", "kr", ProbeType::kretprobe },
-  { "uprobe", "u", ProbeType::uprobe },
-  { "uretprobe", "ur", ProbeType::uretprobe },
-  { "usdt", "U", ProbeType::usdt },
-  { "BEGIN", "BEGIN", ProbeType::special },
-  { "END", "END", ProbeType::special },
-  { "tracepoint", "t", ProbeType::tracepoint },
-  { "profile", "p", ProbeType::profile },
-  { "interval", "i", ProbeType::interval },
-  { "software", "s", ProbeType::software },
-  { "hardware", "h", ProbeType::hardware },
-  { "watchpoint", "w", ProbeType::watchpoint },
-  { "asyncwatchpoint", "aw", ProbeType::asyncwatchpoint },
-  { "kfunc", "f", ProbeType::kfunc },
-  { "kretfunc", "fr", ProbeType::kretfunc },
-  // aliases for kfunc and kretfunc because kfunc was "borrowed"
-  // by the kernel to mean kernel functions exposed to bpf programs
-  { "fentry", "f", ProbeType::kfunc },
-  { "fexit", "fr", ProbeType::kretfunc },
-  { "iter", "it", ProbeType::iter },
-  { "rawtracepoint", "rt", ProbeType::rawtracepoint },
+  { "kprobe", { "k" }, ProbeType::kprobe, .show_in_kernel_list = true },
+  { "kretprobe", { "kr" }, ProbeType::kretprobe },
+  { "uprobe", { "u" }, ProbeType::uprobe, .show_in_userspace_list = true },
+  { "uretprobe", { "ur" }, ProbeType::uretprobe },
+  { "usdt", { "U" }, ProbeType::usdt, .show_in_userspace_list = true },
+  { "BEGIN", { "BEGIN" }, ProbeType::special },
+  { "END", { "END" }, ProbeType::special },
+  { "tracepoint", { "t" }, ProbeType::tracepoint, .show_in_kernel_list = true },
+  { "profile", { "p" }, ProbeType::profile },
+  { "interval", { "i" }, ProbeType::interval },
+  { "software", { "s" }, ProbeType::software, .show_in_kernel_list = true },
+  { "hardware", { "h" }, ProbeType::hardware, .show_in_kernel_list = true },
+  { "watchpoint", { "w" }, ProbeType::watchpoint },
+  { "asyncwatchpoint", { "aw" }, ProbeType::asyncwatchpoint },
+  { "kfunc", { "f", "fentry" }, ProbeType::kfunc, .show_in_kernel_list = true },
+  { "kretfunc", { "fr", "fexit" }, ProbeType::kretfunc },
+  { "iter", { "it" }, ProbeType::iter, .show_in_kernel_list = true },
+  { "rawtracepoint",
+    { "rt" },
+    ProbeType::rawtracepoint,
+    .show_in_kernel_list = true },
 };
 
 ProbeType probetype(const std::string &type);
-bool is_userspace_probe(const ProbeType &probe_type);
 std::string addrspacestr(AddrSpace as);
 std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);

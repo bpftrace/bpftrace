@@ -197,11 +197,12 @@ ProbeType probetype(const std::string &probeName)
 {
   ProbeType retType = ProbeType::invalid;
 
-  auto v = std::find_if(PROBE_LIST.begin(), PROBE_LIST.end(),
-                          [&probeName] (const ProbeItem& p) {
-                            return (p.name == probeName ||
-                                   p.abbr == probeName);
-                         });
+  auto v = std::find_if(PROBE_LIST.begin(),
+                        PROBE_LIST.end(),
+                        [&probeName](const ProbeItem &p) {
+                          return (p.name == probeName ||
+                                  p.aliases.find(probeName) != p.aliases.end());
+                        });
 
   if (v != PROBE_LIST.end())
     retType =  v->type;
@@ -216,7 +217,8 @@ std::string expand_probe_name(const std::string &orig_name)
   auto v = std::find_if(PROBE_LIST.begin(),
                         PROBE_LIST.end(),
                         [&orig_name](const ProbeItem &p) {
-                          return (p.name == orig_name || p.abbr == orig_name);
+                          return (p.name == orig_name ||
+                                  p.aliases.find(orig_name) != p.aliases.end());
                         });
 
   if (v != PROBE_LIST.end())
@@ -252,12 +254,6 @@ std::string probetypeName(ProbeType t)
   // clang-format on
 
   return {}; // unreached
-}
-
-bool is_userspace_probe(const ProbeType &probe_type)
-{
-  return probe_type == ProbeType::uprobe ||
-         probe_type == ProbeType::uretprobe || probe_type == ProbeType::usdt;
 }
 
 uint64_t asyncactionint(AsyncAction a)
