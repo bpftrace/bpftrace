@@ -471,7 +471,7 @@ TEST(clang_parser, bitfields_with_padding)
 
 TEST(clang_parser, builtin_headers)
 {
-  // size_t is definied in stddef.h
+  // size_t is defined in stddef.h
   BPFtrace bpftrace;
   parse("#include <stddef.h>\nstruct Foo { size_t x, y, z; }", bpftrace);
 

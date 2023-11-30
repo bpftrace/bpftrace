@@ -2075,7 +2075,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
     if (!boottime_)
     {
       LOG(ERROR)
-          << "Cannot resolve timestamp due to failed boot time calcuation";
+          << "Cannot resolve timestamp due to failed boot time calculation";
       return "(?)";
     }
     else

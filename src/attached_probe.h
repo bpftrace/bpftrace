@@ -55,7 +55,7 @@ private:
   // semaphore if one exists.
   //
   // Increment semaphore count manually with memory hogging API (least
-  // preferrable)
+  // preferable)
   int usdt_sem_up_manual(const std::string &fn_name, void *ctx);
   // Increment semaphore count manually with BCC addsem API
   int usdt_sem_up_manual_addsem(int pid, const std::string &fn_name, void *ctx);

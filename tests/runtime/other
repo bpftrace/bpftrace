@@ -180,7 +180,7 @@ RUN {{BPFTRACE}} -e 'BEGIN { printf("got: %d %o 0x%x\n", $1, $2, $3); exit() }' 
 EXPECT got: 123 775 0x123
 TIMEOUT 5
 
-NAME positional pointer arithmetics
+NAME positional pointer arithmetic
 RUN {{BPFTRACE}} -e 'BEGIN { printf("%s", str($1 + 1)); exit(); }' hello
 EXPECT ello
 TIMEOUT 1
