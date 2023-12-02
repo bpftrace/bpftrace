@@ -181,7 +181,9 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
     }
     case DW_TAG_structure_type:
     case DW_TAG_union_type: {
-      std::string name = dwarf_diename(&type_die);
+      std::string name = dwarf_hasattr(&type_die, DW_AT_name)
+                             ? dwarf_diename(&type_die)
+                             : "<anonymous>";
       name = (tag == DW_TAG_structure_type ? "struct " : "union ") + name;
       auto result = CreateRecord(
           name, bpftrace_->structs.LookupOrAdd(name, bit_size / 8));
