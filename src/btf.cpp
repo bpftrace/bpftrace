@@ -6,6 +6,7 @@
 #include "tracefs.h"
 #include "types.h"
 #include "utils.h"
+#include <cmath>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
@@ -450,6 +451,8 @@ Struct BTF::resolve_args(const std::string &func, bool ret)
 
   Struct args(0, false);
   int j = 0;
+  int arg_idx = 0;
+  __u32 type_size = 0;
   for (; j < vlen; j++, p++)
   {
     const char *str = btf_str(func_id.btf, p->name_off);
@@ -457,23 +460,25 @@ Struct BTF::resolve_args(const std::string &func, bool ret)
       throw std::runtime_error("failed to resolve arguments");
 
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = p->type });
-    stype.funcarg_idx = j;
+    stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
     args.AddField(str, stype, args.size, std::nullopt, false);
     // kfunc (fentry/fexit) args are stored in a u64 array.
     // Note that it's ok to represent them by a struct as we will use GEP with
     // funcarg_idx to access them in codegen.
-    args.size += 8;
+    type_size = btf__resolve_size(func_id.btf, p->type);
+    args.size += type_size;
+    arg_idx += std::ceil((float)type_size / (float)8);
   }
 
   if (ret)
   {
     SizedType stype = get_stype(BTFId{ .btf = func_id.btf, .id = t->type });
-    stype.funcarg_idx = j;
+    stype.funcarg_idx = arg_idx;
     stype.is_funcarg = true;
     args.AddField("$retval", stype, args.size, std::nullopt, false);
     // kfunc (fentry/fexit) args (incl. retval) are stored in a u64 array
-    args.size += 8;
+    args.size += btf__resolve_size(func_id.btf, t->type);
   }
   return args;
 }
