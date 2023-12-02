@@ -68,6 +68,14 @@ REQUIRES_FEATURE get_func_ip
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+NAME kretfunc large args
+PROG kretfunc:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
+EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE btf
+TIMEOUT 5
+AFTER ./testprogs/kfunc_args 1111 2222
+
 # Sanity check for fentry/fexit alias
 NAME fentry
 PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }

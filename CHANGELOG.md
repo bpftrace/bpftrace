@@ -39,6 +39,8 @@ and this project adheres to
   - [#2851](https://github.com/iovisor/bpftrace/pull/2851)
 - Fix symbolication on for 32-bit userspcae and 64-bit kernel
   - [#2869](https://github.com/iovisor/bpftrace/pull/2869)
+- Fix retval for kretfunc/fexit
+  - [#2864](https://github.com/iovisor/bpftrace/pull/2864)
 #### Docs
 #### Tools
 - Add PPID field to `execsnoop.bt`
