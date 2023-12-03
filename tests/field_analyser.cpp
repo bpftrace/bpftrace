@@ -224,6 +224,8 @@ TEST_F(field_analyser_dwarf, uprobe_args)
   // func_2 and func_3 have same args -> PASS
   test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
   test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", 0);
+  // func_4 has a parameter with a const qualifier
+  test(uprobe + ":func_4 { $x = args.p; }", 0);
 
   // Probes with wildcards (need non-mock BPFtrace)
   BPFtrace bpftrace;

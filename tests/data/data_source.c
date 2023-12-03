@@ -41,6 +41,11 @@ struct Foo3 *func_3(int a, int *b, struct Foo1 *foo1)
   return 0;
 }
 
+void *func_4(const struct Foo2 *p)
+{
+  return 0;
+}
+
 struct task_struct
 {
   int pid;
