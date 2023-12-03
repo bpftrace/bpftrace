@@ -225,6 +225,12 @@ TEST_F(field_analyser_dwarf, uprobe_args)
   test(uprobe + ":func_2, " + uprobe + ":func_3 { }", 0);
   test(uprobe + ":func_2, " + uprobe + ":func_3 { $x = args.a; }", 0);
 
+  // func_1 has a parameter that contains an anonymous struct
+  // test(uprobe + ":func_1 { $x = args.foo2->a; }", 0);
+  // test(uprobe + ":func_1 { $x = args.foo2->g; }", 0);
+  // func_4 has a parameter with a const qualifier
+  test(uprobe + ":func_4 { $x = args.p->a; }", 0);
+
   // Probes with wildcards (need non-mock BPFtrace)
   BPFtrace bpftrace;
   // func_* have different args, but none of them
