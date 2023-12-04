@@ -57,10 +57,6 @@ For build and install instructions, see [INSTALL.md](INSTALL.md).
 bpftrace contains various tools, which also serve as examples of programming in the bpftrace language.
 
 - tools/[bashreadline.bt](tools/bashreadline.bt): Print entered bash commands system wide. [Examples](tools/bashreadline_example.txt).
-- tools/[biolatency.bt](tools/biolatency.bt): Block I/O latency as a histogram. [Examples](tools/biolatency_example.txt).
-- tools/[biosnoop.bt](tools/biosnoop.bt): Block I/O tracing tool, showing per I/O latency. [Examples](tools/biosnoop_example.txt).
-- tools/[biostacks.bt](tools/biostacks.bt): Show disk I/O latency with initialization stacks. [Examples](tools/biostacks_example.txt).
-- tools/[bitesize.bt](tools/bitesize.bt): Show disk I/O size as a histogram. [Examples](tools/bitesize_example.txt).
 - tools/[capable.bt](tools/capable.bt): Trace security capability checks. [Examples](tools/capable_example.txt).
 - tools/[cpuwalk.bt](tools/cpuwalk.bt): Sample which CPUs are executing processes. [Examples](tools/cpuwalk_example.txt).
 - tools/[dcsnoop.bt](tools/dcsnoop.bt): Trace directory entry cache (dcache) lookups. [Examples](tools/dcsnoop_example.txt).
@@ -70,7 +66,6 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[loads.bt](tools/loads.bt): Print load averages. [Examples](tools/loads_example.txt).
 - tools/[mdflush.bt](tools/mdflush.bt): Trace md flush events. [Examples](tools/mdflush_example.txt).
 - tools/[naptime.bt](tools/naptime.bt): Show voluntary sleep calls. [Examples](tools/naptime_example.txt).
-- tools/[opensnoop.bt](tools/opensnoop.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
 - tools/[oomkill.bt](tools/oomkill.bt): Trace OOM killer. [Examples](tools/oomkill_example.txt).
 - tools/[pidpersec.bt](tools/pidpersec.bt): Count new processes (via fork). [Examples](tools/pidpersec_example.txt).
 - tools/[runqlat.bt](tools/runqlat.bt): CPU scheduler run queue latency as a histogram. [Examples](tools/runqlat_example.txt).
@@ -90,6 +85,14 @@ bpftrace contains various tools, which also serve as examples of programming in 
 - tools/[tcpsynbl.bt](tools/tcpsynbl.bt): Show TCP SYN backlog as a histogram. [Examples](tools/tcpsynbl_example.txt).
 - tools/[threadsnoop.bt](tools/threadsnoop.bt): List new thread creation. [Examples](tools/threadsnoop_example.txt).
 - tools/[undump.bt](tools/undump.bt): Capture UNIX domain socket packages. [Examples](tools/undump_example.txt).
+
+### Storage and Filesystems Tools
+
+- tools/[biolatency.bt](tools/biolatency.bt): Block I/O latency as a histogram. [Examples](tools/biolatency_example.txt).
+- tools/[biosnoop.bt](tools/biosnoop.bt): Block I/O tracing tool, showing per I/O latency. [Examples](tools/biosnoop_example.txt).
+- tools/[biostacks.bt](tools/biostacks.bt): Show disk I/O latency with initialization stacks. [Examples](tools/biostacks_example.txt).
+- tools/[bitesize.bt](tools/bitesize.bt): Show disk I/O size as a histogram. [Examples](tools/bitesize_example.txt).
+- tools/[opensnoop.bt](tools/opensnoop.bt): Trace open() syscalls showing filenames. [Examples](tools/opensnoop_example.txt).
 - tools/[vfscount.bt](tools/vfscount.bt): Count VFS calls. [Examples](tools/vfscount_example.txt).
 - tools/[vfsstat.bt](tools/vfsstat.bt): Count some VFS calls, with per-second summaries. [Examples](tools/vfsstat_example.txt).
 - tools/[writeback.bt](tools/writeback.bt): Trace file system writeback events with details. [Examples](tools/writeback_example.txt).
