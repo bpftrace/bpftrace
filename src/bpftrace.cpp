@@ -2029,7 +2029,7 @@ std::string BPFtrace::get_stack(int64_t stackid,
   return stack.str();
 }
 
-std::string BPFtrace::resolve_uid(uintptr_t addr) const
+std::string BPFtrace::resolve_uid(uint64_t addr) const
 {
   std::string file_name = "/etc/passwd";
   std::string uid = std::to_string(addr);
@@ -2114,7 +2114,7 @@ std::string BPFtrace::resolve_buf(char *buf, size_t size)
   return hex_format_buffer(buf, size);
 }
 
-std::string BPFtrace::resolve_ksym(uintptr_t addr, bool show_offset)
+std::string BPFtrace::resolve_ksym(uint64_t addr, bool show_offset)
 {
   struct bcc_symbol ksym;
   std::ostringstream symbol;
@@ -2349,7 +2349,7 @@ bool BPFtrace::is_aslr_enabled(int pid)
   return false;
 }
 
-std::string BPFtrace::resolve_usym(uintptr_t addr,
+std::string BPFtrace::resolve_usym(uint64_t addr,
                                    int pid,
                                    int probe_id,
                                    bool show_offset,
