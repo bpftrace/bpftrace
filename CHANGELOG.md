@@ -35,6 +35,8 @@ and this project adheres to
   - [#2828](https://github.com/iovisor/bpftrace/pull/2828)
 - Fix uprobe multi probe for targets with wildcards
   - [#2851](https://github.com/iovisor/bpftrace/pull/2851)
+- Fix symbolication on for 32-bit userspcae and 64-bit kernel
+  - [#2869](https://github.com/iovisor/bpftrace/pull/2869)
 #### Docs
 #### Tools
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
