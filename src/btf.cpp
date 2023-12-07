@@ -412,6 +412,20 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     stype = CreatePointer(
         get_stype(BTFId{ .btf = btf_id.btf, .id = t->type }, false));
   }
+  else if (btf_is_array(t))
+  {
+    auto *array = btf_array(t);
+    const auto &elem_type = get_stype(
+        BTFId{ .btf = btf_id.btf, .id = array->type });
+    if (elem_type.type == Type::integer && elem_type.GetSize() == 1)
+    {
+      stype = CreateString(array->nelems);
+    }
+    else
+    {
+      stype = CreateArray(array->nelems, elem_type);
+    }
+  }
 
   return stype;
 }

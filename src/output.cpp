@@ -356,7 +356,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     return res.str();
   }
   else
-    return std::to_string(read_data<int64_t>(value.data()) / div);
+  {
+    assert(type.IsNoneTy());
+    return "";
+  }
 }
 
 std::string Output::array_to_str(const std::vector<std::string> &elems) const
