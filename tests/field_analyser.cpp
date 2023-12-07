@@ -127,6 +127,65 @@ TEST_F(field_analyser_btf, btf_types)
   EXPECT_EQ(foo2_field.offset, 8);
 }
 
+TEST_F(field_analyser_btf, btf_arrays)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace,
+       "BEGIN {\n"
+       "  @ = (struct Arrays *) 0;\n"
+       "}",
+       0);
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct Arrays"));
+  auto arrs = bpftrace.structs.Lookup("struct Arrays").lock();
+
+  EXPECT_EQ(arrs->size, 64);
+  ASSERT_EQ(arrs->fields.size(), 6U);
+  ASSERT_TRUE(arrs->HasField("int_arr"));
+  ASSERT_TRUE(arrs->HasField("char_arr"));
+  ASSERT_TRUE(arrs->HasField("ptr_arr"));
+  ASSERT_TRUE(arrs->HasField("multi_dim"));
+  ASSERT_TRUE(arrs->HasField("zero"));
+  ASSERT_TRUE(arrs->HasField("flexible"));
+
+  EXPECT_EQ(arrs->GetField("int_arr").type.type, Type::array);
+  EXPECT_EQ(arrs->GetField("int_arr").type.GetNumElements(), 4);
+  EXPECT_EQ(arrs->GetField("int_arr").type.GetElementTy()->type, Type::integer);
+  EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
+  EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
+
+  EXPECT_EQ(arrs->GetField("char_arr").type.type, Type::string);
+  EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U);
+  EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
+
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.type, Type::array);
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetNumElements(), 2);
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetElementTy()->type, Type::pointer);
+  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
+  EXPECT_EQ(arrs->GetField("ptr_arr").offset, 24);
+
+  EXPECT_EQ(arrs->GetField("multi_dim").type.type, Type::array);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->type,
+            Type::integer);
+  EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
+  EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
+
+  EXPECT_EQ(arrs->GetField("zero").type.type, Type::array);
+  EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
+  EXPECT_EQ(arrs->GetField("zero").type.GetElementTy()->type, Type::integer);
+  EXPECT_EQ(arrs->GetField("zero").type.GetSize(), 0U);
+  EXPECT_EQ(arrs->GetField("zero").offset, 64);
+
+  EXPECT_EQ(arrs->GetField("flexible").type.type, Type::array);
+  EXPECT_EQ(arrs->GetField("flexible").type.GetNumElements(), 0);
+  EXPECT_EQ(arrs->GetField("flexible").type.GetElementTy()->type,
+            Type::integer);
+  EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
+  EXPECT_EQ(arrs->GetField("flexible").offset, 64);
+}
+
 TEST_F(field_analyser_btf, btf_types_struct_ptr)
 {
   BPFtrace bpftrace;

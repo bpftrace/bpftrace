@@ -41,6 +41,17 @@ struct Foo3 *func_3(int a, int *b, struct Foo1 *foo1)
   return 0;
 }
 
+struct Arrays
+{
+  int int_arr[4];
+  char char_arr[8];
+  void *ptr_arr[2];
+  int multi_dim[3][2];
+  int zero[0];
+  int flexible[];
+};
+struct Arrays arrays;
+
 struct task_struct
 {
   int pid;
