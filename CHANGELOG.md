@@ -86,6 +86,10 @@ and this project adheres to
   - [#2849](https://github.com/iovisor/bpftrace/pull/2849)
 - Add milliseconds to timestamp and align numbers to the right in `killsnoop.bt`
   - [#2936](https://github.com/iovisor/bpftrace/pull/2936)
+- Update biosnoop.bt for kernels >=5.17 and >=4.18
+  - [#2875](https://github.com/iovisor/bpftrace/pull/2875)
+- biosnoop.bt: replace disk name field with major:minor.
+  - [#2875](https://github.com/iovisor/bpftrace/pull/2875)
 
 ## [0.19.0] 2023-09-19
 
