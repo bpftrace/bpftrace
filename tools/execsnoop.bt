@@ -17,11 +17,12 @@
 
 BEGIN
 {
-	printf("%-10s %-5s %s\n", "TIME(ms)", "PID", "ARGS");
+	printf("%-10s %-7s %-7s %s\n", "TIME(ms)", "PID", "PPID", "ARGS");
 }
 
 tracepoint:syscalls:sys_enter_exec*
 {
-	printf("%-10u %-5d ", elapsed / 1e6, pid);
+	$task = (struct task_struct *)curtask;
+	printf("%-10u %-7d %-7d ", elapsed / 1e6, pid, $task->real_parent->pid);
 	join(args.argv);
 }
