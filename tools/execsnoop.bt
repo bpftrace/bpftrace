@@ -15,7 +15,9 @@
  * 11-Sep-2018	   "     "	Switched to use join().
  */
 
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/sched.h>
+#endif
 
 BEGIN
 {
