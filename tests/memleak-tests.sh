@@ -28,15 +28,16 @@ fi
 
 # Add new testcases here
 tests=(
-    '"BEGIN { exit(); }"'
-    $'"#include <linux/skbuff.h>\n BEGIN { \$x = ((struct sk_buff *)curtask)->data_len; exit(); }"'
+    'bpftrace -e "BEGIN { exit(); }"'
+    $'bpftrace -e "#include <linux/skbuff.h>\n BEGIN { \$x = ((struct sk_buff *)curtask)->data_len; exit(); }"'
+    'bpftrace -l "kprobe_seq_*"'
     )
 
 echo "${GREEN}[==========]${NC} Running ${#tests[@]} tests"
 
 result=0
 for tst in "${tests[@]}"; do
-    echo "${GREEN}[ RUN      ]${NC} bpftrace -e $tst"
+    echo "${GREEN}[ RUN      ]${NC} $tst"
 
     export ASAN_OPTIONS="alloc_dealloc_mismatch=0"
     if eval $BPFTRACE_ASAN -e "$tst" > /dev/null 2>&1 ; then
@@ -56,4 +57,3 @@ else
 fi
 
 exit $result
-
