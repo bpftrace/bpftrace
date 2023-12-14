@@ -909,11 +909,6 @@ void AttachedProbe::load_prog(BPFfeature &feature)
   cache_progfd();
 }
 
-static inline uint64_t ptr_to_u64(const void *ptr)
-{
-  return (uint64_t)(unsigned long)ptr;
-}
-
 void AttachedProbe::attach_multi_kprobe(void)
 {
   DECLARE_LIBBPF_OPTS(bpf_link_create_opts, opts);
