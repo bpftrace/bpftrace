@@ -645,7 +645,7 @@ void CodegenLLVM::visit(Call &call)
       Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
 
       // largest read we'll allow = our global string buffer size
-      Value *max = b_.getInt64(bpftrace_.strlen_);
+      Value *max = b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::strlen));
       // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
       // check whether proposed_strlen is less-than-or-equal-to maximum
@@ -654,10 +654,13 @@ void CodegenLLVM::visit(Call &call)
       Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
       b_.CreateStore(Select, strlen);
     } else {
-      b_.CreateStore(b_.getInt64(bpftrace_.strlen_), strlen);
+      b_.CreateStore(b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::strlen)),
+                     strlen);
     }
-    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "str");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+    AllocaInst *buf = b_.CreateAllocaBPF(
+        bpftrace_.config_.get(ConfigKeyInt::strlen), "str");
+    b_.CREATE_MEMSET(
+        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::strlen), 1);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
     b_.CreateProbeReadStr(ctx_,
@@ -673,8 +676,9 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "buf")
   {
-    Value *max_length = b_.getInt64(bpftrace_.strlen_);
-    size_t fixed_buffer_length = bpftrace_.strlen_;
+    Value *max_length = b_.getInt64(
+        bpftrace_.config_.get(ConfigKeyInt::strlen));
+    size_t fixed_buffer_length = bpftrace_.config_.get(ConfigKeyInt::strlen);
     Value *length;
 
     if (call.vargs->size() > 1)
@@ -744,8 +748,10 @@ void CodegenLLVM::visit(Call &call)
   }
   else if (call.func == "path")
   {
-    AllocaInst *buf = b_.CreateAllocaBPF(bpftrace_.strlen_, "path");
-    b_.CREATE_MEMSET(buf, b_.getInt8(0), bpftrace_.strlen_, 1);
+    AllocaInst *buf = b_.CreateAllocaBPF(
+        bpftrace_.config_.get(ConfigKeyInt::strlen), "path");
+    b_.CREATE_MEMSET(
+        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::strlen), 1);
     call.vargs->front()->accept(*this);
     b_.CreatePath(ctx_,
                   buf,
@@ -2722,13 +2728,15 @@ void CodegenLLVM::visit(Probe &probe)
       }
 
       probe_count_ += matches.size();
-      if (probe_count_ > bpftrace_.max_programs_)
+      uint64_t max_bpf_progs = bpftrace_.config_.get(
+          ConfigKeyInt::max_bpf_progs);
+      if (probe_count_ > max_bpf_progs)
       {
         throw std::runtime_error(
             "Your program is trying to generate more than " +
             std::to_string(probe_count_) +
             " BPF programs, which exceeds the current limit of " +
-            std::to_string(bpftrace_.max_programs_) +
+            std::to_string(max_bpf_progs) +
             ".\nYou can increase the limit through the BPFTRACE_MAX_BPF_PROGS "
             "environment variable.");
       }

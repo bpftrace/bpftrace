@@ -20,6 +20,7 @@ add_library(runtime
   bpfprogram.cpp
   btf.cpp
   child.cpp
+  config.cpp
   disasm.cpp
   dwarf_parser.cpp
   fake_map.cpp

@@ -16,6 +16,7 @@
 #include "bpfprogram.h"
 #include "btf.h"
 #include "child.h"
+#include "config.h"
 #include "dwarf_parser.h"
 #include "map.h"
 #include "mapmanager.h"
@@ -94,11 +95,13 @@ class BPFtrace
 {
 public:
   BPFtrace(std::unique_ptr<Output> o = std::make_unique<TextOutput>(std::cout),
-           BPFnofeature no_feature = BPFnofeature())
+           BPFnofeature no_feature = BPFnofeature(),
+           Config config = Config())
       : out_(std::move(o)),
         feature_(std::make_unique<BPFfeature>(no_feature)),
         probe_matcher_(std::make_unique<ProbeMatcher>(this)),
-        ncpus_(get_possible_cpus().size())
+        ncpus_(get_possible_cpus().size()),
+        config_(config)
   {
   }
   virtual ~BPFtrace();
@@ -150,7 +153,6 @@ public:
   std::string get_param(size_t index, bool is_str) const;
   size_t num_params() const;
   void request_finalize();
-  bool is_aslr_enabled(int pid);
   std::string get_string_literal(const ast::Expression *expr) const;
   std::optional<int64_t> get_int_literal(const ast::Expression *expr) const;
   std::optional<std::string> get_watchpoint_binary_path() const;
@@ -190,30 +192,11 @@ public:
   std::unique_ptr<Output> out_;
   std::unique_ptr<BPFfeature> feature_;
 
-  uint64_t strlen_ = 64;
-  const char *str_trunc_trailer_ = "..";
-  uint64_t mapmax_ = 4096;
-  size_t cat_bytes_max_ = 10240;
-  uint64_t max_probes_ = 512;
-  uint64_t max_programs_ = 512;
-  uint64_t log_size_ = 1000000;
-  uint64_t perf_rb_pages_ = 64;
-  uint64_t max_type_res_iterations = 0;
-  bool demangle_cpp_symbols_ = true;
   bool resolve_user_symbols_ = true;
-  bool debug_output_ = false;
-  enum class UserSymbolCacheType
-  {
-    per_pid,
-    per_program,
-    none,
-  } user_symbol_cache_type_;
   bool safe_mode_ = true;
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
-  uint64_t ast_max_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
-  std::optional<StackMode> stack_mode_;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
@@ -236,6 +219,7 @@ public:
   }
   int ncpus_;
   int online_cpus_;
+  Config config_;
 
 private:
   int run_special_probe(std::string name,

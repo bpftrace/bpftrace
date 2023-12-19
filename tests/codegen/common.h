@@ -77,7 +77,8 @@ static void test(BPFtrace &bpftrace,
   codegen.emit();
 
   uint64_t update_tests = 0;
-  if (get_uint64_env_var("BPFTRACE_UPDATE_TESTS", update_tests) &&
+  if (get_uint64_env_var("BPFTRACE_UPDATE_TESTS",
+                         [&](uint64_t x) { update_tests = x; }) &&
       update_tests >= 1)
   {
     std::cerr << "Running in update mode, test is skipped" << std::endl;
