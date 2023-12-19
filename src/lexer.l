@@ -143,6 +143,7 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 "?"                     { return Parser::make_QUES(loc); }
 "unroll"                { return Parser::make_UNROLL(loc); }
 "while"                 { return Parser::make_WHILE(loc); }
+"config"                { return Parser::make_CONFIG(loc); }
 "for"                   { return Parser::make_FOR(loc); }
 "return"                { return Parser::make_RETURN(loc); }
 "continue"              { return Parser::make_CONTINUE(loc); }

@@ -32,6 +32,7 @@ add_executable(bpftrace_test
   portability_analyser.cpp
   procmon.cpp
   probe.cpp
+  config_analyser.cpp
   resource_analyser.cpp
   required_resources.cpp
   semantic_analyser.cpp

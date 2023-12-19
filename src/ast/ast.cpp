@@ -35,11 +35,13 @@ MAKE_ACCEPT(Tuple)
 MAKE_ACCEPT(ExprStatement)
 MAKE_ACCEPT(AssignMapStatement)
 MAKE_ACCEPT(AssignVarStatement)
+MAKE_ACCEPT(AssignConfigVarStatement)
 MAKE_ACCEPT(Predicate)
 MAKE_ACCEPT(AttachPoint)
 MAKE_ACCEPT(If)
 MAKE_ACCEPT(Unroll)
 MAKE_ACCEPT(While)
+MAKE_ACCEPT(Config)
 MAKE_ACCEPT(Jump)
 MAKE_ACCEPT(Probe)
 MAKE_ACCEPT(Program)
@@ -145,6 +147,12 @@ AssignVarStatement::~AssignVarStatement()
   expr = nullptr;
 }
 
+AssignConfigVarStatement::~AssignConfigVarStatement()
+{
+  delete expr;
+  expr = nullptr;
+}
+
 If::~If()
 {
   delete cond;
@@ -194,6 +202,13 @@ While::~While()
   delete stmts;
 }
 
+Config::~Config()
+{
+  for (auto *stmt : *stmts)
+    delete stmt;
+  delete stmts;
+}
+
 Probe::~Probe()
 {
   if (attach_points)
@@ -219,6 +234,8 @@ Program::~Program()
       delete p;
   delete probes;
   probes = nullptr;
+  delete config;
+  config = nullptr;
 }
 
 Integer::Integer(int64_t n, location loc) : Expression(loc), n(n)
@@ -390,6 +407,14 @@ AssignVarStatement::AssignVarStatement(Variable *var,
   expr->var = var;
 }
 
+AssignConfigVarStatement::AssignConfigVarStatement(
+    const std::string &config_var,
+    Expression *expr,
+    location loc)
+    : Statement(loc), config_var(config_var), expr(expr)
+{
+}
+
 Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
 {
 }
@@ -423,9 +448,10 @@ Probe::Probe(AttachPointList *attach_points,
 {
 }
 
-
-Program::Program(const std::string &c_definitions, ProbeList *probes)
-    : c_definitions(c_definitions), probes(probes)
+Program::Program(const std::string &c_definitions,
+                 Config *config,
+                 ProbeList *probes)
+    : c_definitions(c_definitions), config(config), probes(probes)
 {
 }
 
@@ -649,6 +675,11 @@ Unroll::Unroll(const Unroll &other) : Statement(other)
 Program::Program(const Program &other) : Node(other)
 {
   c_definitions = other.c_definitions;
+  config = other.config;
+}
+
+Config::Config(const Config &other) : Statement(other)
+{
 }
 
 Cast::Cast(const Cast &other) : Expression(other)
@@ -697,6 +728,10 @@ AssignMapStatement::AssignMapStatement(const AssignMapStatement &other)
 {
   compound = other.compound;
 };
+
+AssignConfigVarStatement::AssignConfigVarStatement(
+    const AssignConfigVarStatement &other)
+    : Statement(other){};
 
 SizedType ident_to_record(const std::string &ident, int pointer_level)
 {

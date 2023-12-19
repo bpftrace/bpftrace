@@ -17,6 +17,7 @@
 #include "ast/pass_manager.h"
 
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/node_counter.h"
 #include "ast/passes/portability_analyser.h"
@@ -438,6 +439,7 @@ static std::optional<struct timespec> get_delta_taitime()
 ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateConfigPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());

@@ -280,6 +280,18 @@ void Printer::visit(AssignVarStatement &assignment)
   --depth_;
 }
 
+void Printer::visit(AssignConfigVarStatement &assignment)
+{
+  std::string indent(depth_, ' ');
+  out_ << indent << "=" << std::endl;
+
+  ++depth_;
+  std::string indentVar(depth_, ' ');
+  out_ << indentVar << "config var: " << assignment.config_var << std::endl;
+  assignment.expr->accept(*this);
+  --depth_;
+}
+
 void Printer::visit(If &if_block)
 {
   std::string indent(depth_, ' ');
@@ -339,6 +351,20 @@ void Printer::visit(While &while_block)
   }
 }
 
+void Printer::visit(Config &config)
+{
+  std::string indent(depth_, ' ');
+
+  out_ << indent << "config" << std::endl;
+
+  ++depth_;
+  for (Statement *stmt : *config.stmts)
+  {
+    stmt->accept(*this);
+  }
+  --depth_;
+}
+
 void Printer::visit(Jump &jump)
 {
   std::string indent(depth_, ' ');
@@ -384,6 +410,13 @@ void Printer::visit(Program &program)
 
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
+
+  if (program.config)
+  {
+    ++depth_;
+    program.config->accept(*this);
+    --depth_;
+  }
 
   ++depth_;
   for (Probe *probe : *program.probes)

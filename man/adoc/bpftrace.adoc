@@ -171,6 +171,7 @@ This prefix reset must be at the end of the section, else cross references break
 == Environment Variables
 
 Some behavior can only be controlled through environment variables.
+Most of these can also be set via the config block directly in a script (before any probes).
 This section lists all those variables.
 
 ////
@@ -408,6 +409,29 @@ i:s:1 { // can also be used to comment inline
   print(/* inline comment block */ 1);
 }
 ----
+
+=== Config Block
+
+To improve script portability, you can set bpftrace configs via the config block, 
+which can only be placed at the top of the script before any probes (even `BEGIN`).
+
+----
+config = {
+    stack_mode=perf;
+    max_probes=2
+}
+
+BEGIN { ... }
+
+uprobe:./testprogs/uprobe_test:uprobeFunction1 { ... }
+----
+
+The names of the config variables can be in the format of environment variables 
+or their lowercase equivalent without the `BPFTRACE_` prefix. For example, 
+`BPFTRACE_STACK_MODE`, `STACK_MODE`, and `stack_mode` are equivalent.
+
+**Note**: Environment variables for the same config take precedence over those set 
+inside a script config block.
 
 === Data Types
 

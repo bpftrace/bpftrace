@@ -10,6 +10,7 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/signal_bt.h"
+#include "config.h"
 #include "fake_map.h"
 #include "log.h"
 #include "printf.h"
@@ -101,15 +102,11 @@ void SemanticAnalyser::visit(String &string)
 
 void SemanticAnalyser::visit(StackMode &mode)
 {
-  mode.type = CreateStackMode();
-  if (mode.mode == "bpftrace") {
-    mode.type.stack_type.mode = bpftrace::StackMode::bpftrace;
-  } else if (mode.mode == "perf") {
-    mode.type.stack_type.mode = bpftrace::StackMode::perf;
-  }
-  else if (mode.mode == "raw")
+  auto stack_mode = bpftrace::Config::get_stack_mode(mode.mode);
+  if (stack_mode.has_value())
   {
-    mode.type.stack_type.mode = bpftrace::StackMode::raw;
+    mode.type = CreateStackMode();
+    mode.type.stack_type.mode = stack_mode.value();
   }
   else
   {
@@ -2685,6 +2682,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 }
 
+void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
+{
+  assignment.expr->accept(*this);
+}
+
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
@@ -3049,10 +3051,18 @@ void SemanticAnalyser::visit(Probe &probe)
   }
 }
 
+void SemanticAnalyser::visit(Config &config)
+{
+  accept_statements(config.stmts);
+}
+
 void SemanticAnalyser::visit(Program &program)
 {
   for (Probe *probe : *program.probes)
     probe->accept(*this);
+
+  if (program.config)
+    program.config->accept(*this);
 }
 
 int SemanticAnalyser::analyse()
