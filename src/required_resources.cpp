@@ -41,6 +41,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       LOG(FATAL) << "map key \"" << map_name << "\" not found";
 
     auto &key = search_args->second;
+    auto map_keys_max = bpftrace.config_.get(ConfigKeyInt::map_keys_max);
 
     if (type.IsLhistTy())
     {
@@ -52,7 +53,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       auto max = args->second.max;
       auto step = args->second.step;
       auto map = std::make_unique<T>(
-          map_name, type, key, min, max, step, bpftrace.mapmax_);
+          map_name, type, key, min, max, step, map_keys_max);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
@@ -62,14 +63,20 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       if (args == hist_bits_arg.end())
         LOG(FATAL) << "map arg \"" << map_name << "\" not found";
       // the 'step' argument is used to pass 'bits'
-      auto map = std::make_unique<T>(
-          map_name, type, key, 0, 0, args->second, bpftrace.mapmax_);
+      auto map = std::make_unique<T>(map_name,
+                                     type,
+                                     key,
+                                     0,
+                                     0,
+                                     args->second,
+                                     bpftrace.config_.get(
+                                         ConfigKeyInt::map_keys_max));
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
     else
     {
-      auto map = std::make_unique<T>(map_name, type, key, bpftrace.mapmax_);
+      auto map = std::make_unique<T>(map_name, type, key, map_keys_max);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
@@ -126,7 +133,8 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   if (bpftrace.feature_->has_map_ringbuf())
   {
     auto rb = std::make_unique<T>(libbpf::BPF_MAP_TYPE_RINGBUF,
-                                  bpftrace.perf_rb_pages_);
+                                  bpftrace.config_.get(
+                                      ConfigKeyInt::perf_rb_pages));
     failed_maps += is_invalid_map(rb->mapfd_);
     bpftrace.maps.Set(MapManager::Type::Ringbuf, std::move(rb));
 

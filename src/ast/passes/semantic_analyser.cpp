@@ -89,11 +89,11 @@ void SemanticAnalyser::visit(String &string)
   if (func_ == "printf" && func_arg_idx_ == 0)
     return;
 
-  if (!is_compile_time_func(func_) && string.str.size() > bpftrace_.strlen_ - 1)
+  auto str_len = bpftrace_.config_.get(ConfigKeyInt::strlen);
+  if (!is_compile_time_func(func_) && string.str.size() > str_len - 1)
   {
     LOG(ERROR, string.loc, err_)
-        << "String is too long (over " << bpftrace_.strlen_
-        << " bytes): " << string.str;
+        << "String is too long (over " << str_len << " bytes): " << string.str;
   }
   // @a = buf("hi", 2). String allocated on bpf stack. See codegen
   string.type.SetAS(AddrSpace::kernel);
@@ -708,7 +708,7 @@ void SemanticAnalyser::visit(Call &call)
             << call.func << "() expects an integer or a pointer type as first "
             << "argument (" << t << " provided)";
       }
-      call.type = CreateString(bpftrace_.strlen_);
+      call.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::strlen));
       if (has_pos_param_)
       {
         if (dynamic_cast<PositionalParameter *>(arg))
@@ -761,7 +761,7 @@ void SemanticAnalyser::visit(Call &call)
           << typestr(arg.type.type);
     }
 
-    size_t max_buffer_size = bpftrace_.strlen_;
+    size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::strlen);
     size_t buffer_size = max_buffer_size;
 
     if (call.vargs->size() == 1)
@@ -803,7 +803,7 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass())
         LOG(WARNING, call.loc, out_)
             << call.func << "() length is too long and will be shortened to "
-            << std::to_string(bpftrace_.strlen_)
+            << std::to_string(bpftrace_.config_.get(ConfigKeyInt::strlen))
             << " bytes (see BPFTRACE_STRLEN)";
 
       buffer_size = max_buffer_size;
@@ -1265,7 +1265,8 @@ void SemanticAnalyser::visit(Call &call)
             << arg.type.type << " provided)";
       }
 
-      call.type = SizedType(Type::string, bpftrace_.strlen_);
+      call.type = SizedType(Type::string,
+                            bpftrace_.config_.get(ConfigKeyInt::strlen));
     }
 
     for (auto &attach_point : *probe_->attach_points)
@@ -1502,11 +1503,7 @@ void SemanticAnalyser::check_stack_call(Call &call, bool kernel)
   }
 
   StackType stack_type;
-
-  if (bpftrace_.stack_mode_.has_value())
-  {
-    stack_type.mode = *bpftrace_.stack_mode_;
-  }
+  stack_type.mode = bpftrace_.config_.get(ConfigKeyStackMode::default_);
 
   if (call.vargs)
   {
@@ -2140,7 +2137,7 @@ void SemanticAnalyser::visit(Ternary &ternary)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
   }
   if (lhs == Type::string)
-    ternary.type = CreateString(bpftrace_.strlen_);
+    ternary.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::strlen));
   else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else if (lhs == Type::none)

@@ -3,6 +3,7 @@
 #include "ast/pass_manager.h"
 #include "ast/visitors.h"
 #include "bpftrace.h"
+#include "config.h"
 #include "log.h"
 
 namespace bpftrace {
@@ -32,7 +33,7 @@ inline Pass CreateCounterPass()
     NodeCounter c;
     c.Visit(n);
     auto node_count = c.get_count();
-    auto max = ctx.b.ast_max_nodes_;
+    auto max = ctx.b.config_.get(ConfigKeyInt::ast_max_nodes);
     if (bt_verbose)
     {
       LOG(INFO) << "node count: " << node_count;

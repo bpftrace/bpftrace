@@ -24,6 +24,7 @@
 #include <unordered_set>
 
 #include "bpftrace.h"
+#include "config.h"
 #include "debugfs.h"
 #include "log.h"
 #include "probe_matcher.h"
@@ -233,9 +234,11 @@ KConfig::KConfig()
   }
 }
 
-bool get_uint64_env_var(const std::string &str, uint64_t &dest)
+bool get_uint64_env_var(const ::std::string &str,
+                        const std::function<void(uint64_t)> &cb)
 {
-  if (const char* env_p = std::getenv(str.c_str()))
+  uint64_t dest;
+  if (const char *env_p = std::getenv(str.c_str()))
   {
     std::istringstream stringstream(env_p);
     if (!(stringstream >> dest))
@@ -244,19 +247,22 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
                  << "' did not contain a valid uint64_t, or was zero-valued.";
       return false;
     }
+    cb(dest);
   }
   return true;
 }
 
-bool get_bool_env_var(const std::string &str, bool &dest, bool neg)
+bool get_bool_env_var(const ::std::string &str,
+                      const std::function<void(bool)> &cb)
 {
   if (const char *env_p = std::getenv(str.c_str()))
   {
+    bool dest;
     std::string s(env_p);
     if (s == "1")
-      dest = !neg;
+      dest = true;
     else if (s == "0")
-      dest = neg;
+      dest = false;
     else
     {
       LOG(ERROR) << "Env var '" << str
@@ -264,6 +270,7 @@ bool get_bool_env_var(const std::string &str, bool &dest, bool neg)
                     "valid value (0 or 1).";
       return false;
     }
+    cb(dest);
   }
   return true;
 }

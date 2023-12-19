@@ -22,6 +22,7 @@ add_executable(bpftrace_test
   bpftrace.cpp
   child.cpp
   clang_parser.cpp
+  config.cpp
   field_analyser.cpp
   log.cpp
   main.cpp

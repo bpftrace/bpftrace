@@ -102,7 +102,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = "/proc/self/exe";
       probe.attach_point = attach_point->provider + "_trigger";
       probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
+      probe.log_size = config_.get(ConfigKeyInt::log_size);
       probe.orig_name = p.name();
       probe.name = p.name();
       probe.loc = 0;
@@ -157,7 +157,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         Probe probe;
         probe.attach_point = attach_point->func;
         probe.type = probetype(attach_point->provider);
-        probe.log_size = log_size_;
+        probe.log_size = config_.get(ConfigKeyInt::log_size);
         probe.orig_name = p.name();
         probe.name = attach_point->name(attach_point->target,
                                         attach_point->func);
@@ -179,7 +179,7 @@ int BPFtrace::add_probe(ast::Probe &p)
           probe.attach_point = attach_point->func;
           probe.path = attach_point->target;
           probe.type = probetype(attach_point->provider);
-          probe.log_size = log_size_;
+          probe.log_size = config_.get(ConfigKeyInt::log_size);
           probe.orig_name = p.name();
           probe.name = attach_point->name(attach_point->target,
                                           attach_point->func);
@@ -209,7 +209,7 @@ int BPFtrace::add_probe(ast::Probe &p)
               probe.attach_point = attach_point->func;
               probe.path = target;
               probe.type = probetype(attach_point->provider);
-              probe.log_size = log_size_;
+              probe.log_size = config_.get(ConfigKeyInt::log_size);
               probe.orig_name = p.name();
               probe.name = attach_point->name(target, attach_point->func);
               probe.index = p.index();
@@ -330,7 +330,7 @@ int BPFtrace::add_probe(ast::Probe &p)
       probe.path = target;
       probe.attach_point = func_id;
       probe.type = probetype(attach_point->provider);
-      probe.log_size = log_size_;
+      probe.log_size = config_.get(ConfigKeyInt::log_size);
       probe.orig_name = p.name();
       probe.ns = attach_point->ns;
       probe.name = attach_point->name(target, func_id);
@@ -381,17 +381,19 @@ int BPFtrace::add_probe(ast::Probe &p)
             resources.probes_using_usym.end() &&
         bcc_elf_is_exe(attach_point->target.c_str()))
     {
+      auto user_symbol_cache_type = config_.get(
+          ConfigKeyUserSymbolCacheType::default_);
       // preload symbol table for executable to make it available even if the
       // binary is not present at symbol resolution time
       // note: this only makes sense with ASLR disabled, since with ASLR offsets
       // might be different
-      if (user_symbol_cache_type_ == UserSymbolCacheType::per_program &&
+      if (user_symbol_cache_type == UserSymbolCacheType::per_program &&
           symbol_table_cache_.find(attach_point->target) ==
               symbol_table_cache_.end())
         symbol_table_cache_[attach_point->target] = get_symbol_table_for_elf(
             attach_point->target);
 
-      if (user_symbol_cache_type_ == UserSymbolCacheType::per_pid)
+      if (user_symbol_cache_type == UserSymbolCacheType::per_pid)
         // preload symbol tables from running processes
         // this allows symbol resolution for processes that are running at probe
         // attach time, but not at symbol resolution time, even with ASLR
@@ -499,7 +501,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
   else if (printf_id == asyncactionint(AsyncAction::time))
   {
-    char timestr[64]; // not respecting strlen_ here...
+    char timestr[64]; // not respecting config_.get(ConfigKeyInt::strlen)
     time_t t;
     struct tm tmp;
     t = time(NULL);
@@ -681,7 +683,9 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto arg_values = bpftrace->get_arg_values(args, arg_data);
 
     std::stringstream buf;
-    cat_file(fmt.format_str(arg_values).c_str(), bpftrace->cat_bytes_max_, buf);
+    cat_file(fmt.format_str(arg_values).c_str(),
+             bpftrace->config_.get(ConfigKeyInt::cat_bytes_max),
+             buf);
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
     return;
@@ -772,8 +776,8 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         auto p = reinterpret_cast<char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
             std::string(p, strnlen(p, arg.type.GetSize())),
-            strlen_,
-            str_trunc_trailer_));
+            config_.get(ConfigKeyInt::strlen),
+            config_.get(ConfigKeyString::str_trunc_trailer).c_str()));
         break;
       }
       case Type::buffer:
@@ -1215,17 +1219,18 @@ int BPFtrace::run_iter()
 int BPFtrace::prerun() const
 {
   uint64_t num_probes = this->num_probes();
+  uint64_t max_probes = config_.get(ConfigKeyInt::max_probes);
   if (num_probes == 0)
   {
     if (!bt_quiet)
       std::cout << "No probes to attach" << std::endl;
     return 1;
   }
-  else if (num_probes > max_probes_)
+  else if (num_probes > max_probes)
   {
     LOG(ERROR)
         << "Can't attach to " << num_probes << " probes because it "
-        << "exceeds the current limit of " << max_probes_ << " probes.\n"
+        << "exceeds the current limit of " << max_probes << " probes.\n"
         << "You can increase the limit through the BPFTRACE_MAX_PROBES "
         << "environment variable, but BE CAREFUL since a high number of probes "
         << "attached can cause your system to crash.";
@@ -1405,8 +1410,13 @@ int BPFtrace::setup_perf_events()
   online_cpus_ = cpus.size();
   for (int cpu : cpus)
   {
-    void *reader = bpf_open_perf_buffer(
-        &perf_event_printer, &perf_event_lost, this, -1, cpu, perf_rb_pages_);
+    void *reader = bpf_open_perf_buffer(&perf_event_printer,
+                                        &perf_event_lost,
+                                        this,
+                                        -1,
+                                        cpu,
+                                        config_.get(
+                                            ConfigKeyInt::perf_rb_pages));
     if (reader == nullptr)
     {
       LOG(ERROR) << "Failed to open perf buffer";
@@ -2099,7 +2109,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
-  char timestr[strlen_];
+  char timestr[config_.get(ConfigKeyInt::strlen)];
   if (strftime(timestr, sizeof(timestr), fmt.c_str(), &tmp) == 0)
   {
     LOG(ERROR) << "strftime returned 0";
@@ -2304,50 +2314,6 @@ std::string BPFtrace::resolve_inet(int af, const uint8_t* inet) const
   return addrstr;
 }
 
-// /proc/sys/kernel/randomize_va_space >= 1 and        // system-wide
-// (/proc/<pid>/personality & ADDR_NO_RNDOMIZE) == 0   // this pid
-// if pid == -1, then only check system-wide setting
-bool BPFtrace::is_aslr_enabled(int pid)
-{
-  std::string randomize_va_space_file = "/proc/sys/kernel/randomize_va_space";
-  std::string personality_file = "/proc/" + std::to_string(pid) +
-                                 "/personality";
-
-  {
-    std::ifstream file(randomize_va_space_file);
-    if (file.fail())
-    {
-      if (bt_verbose)
-        LOG(ERROR) << strerror(errno) << ": " << randomize_va_space_file;
-      // conservatively return true
-      return true;
-    }
-
-    std::string line;
-    if (std::getline(file, line) && std::stoi(line) < 1)
-      return false;
-  }
-
-  if (pid == -1)
-    return true;
-
-  {
-    std::ifstream file(personality_file);
-    if (file.fail())
-    {
-      if (bt_verbose)
-        LOG(ERROR) << strerror(errno) << ": " << personality_file;
-      return true;
-    }
-    std::string line;
-    if (std::getline(file, line) &&
-        ((std::stoi(line) & ADDR_NO_RANDOMIZE) == 0))
-      return true;
-  }
-
-  return false;
-}
-
 std::string BPFtrace::resolve_usym(uint64_t addr,
                                    int pid,
                                    int probe_id,
@@ -2357,6 +2323,8 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
   struct bcc_symbol usym;
   std::ostringstream symbol;
   void *psyms = nullptr;
+  auto user_symbol_cache_type = config_.get(
+      ConfigKeyUserSymbolCacheType::default_);
 
   if (resolve_user_symbols_)
   {
@@ -2379,7 +2347,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
         pid_exe = probe_full.substr(start, end - start);
       }
     }
-    if (user_symbol_cache_type_ == UserSymbolCacheType::per_program)
+    if (user_symbol_cache_type == UserSymbolCacheType::per_program)
     {
       if (!pid_exe.empty())
       {
@@ -2417,7 +2385,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
         psyms = exe_sym_[pid_exe].second;
       }
     }
-    else if (user_symbol_cache_type_ == UserSymbolCacheType::per_pid)
+    else if (user_symbol_cache_type == UserSymbolCacheType::per_pid)
     {
       // cache user symbols per pid
       if (pid_sym_.find(pid) == pid_sym_.end())
@@ -2440,10 +2408,10 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
 
   if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    if (demangle_cpp_symbols_)
-      symbol << usym.demangle_name;
-    else
+    if (config_.get(ConfigKeyBool::no_cpp_demangle))
       symbol << usym.name;
+    else
+      symbol << usym.demangle_name;
     if (show_offset)
       symbol << "+" << usym.offset;
     if (show_module)
@@ -2457,7 +2425,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
   }
 
   if (resolve_user_symbols_ &&
-      user_symbol_cache_type_ == UserSymbolCacheType::none)
+      user_symbol_cache_type == UserSymbolCacheType::none)
     bcc_free_symcache(psyms, pid);
 
   return symbol.str();
