@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <optional>
+#include <set>
 #include <variant>
 
 #include "types.h"
@@ -17,6 +19,8 @@ enum class ConfigSource
   default_,
   // config set via environment variable
   env_var,
+  // config set via config script syntax
+  script,
 };
 
 enum class ConfigKeyBool
@@ -61,6 +65,31 @@ typedef std::variant<ConfigKeyBool,
                      ConfigKeyUserSymbolCacheType>
     ConfigKey;
 
+// These strings match the env variables (minus the 'BPFTRACE_' prefix)
+const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
+  { "node_max", ConfigKeyInt::ast_max_nodes },
+  { "cat_bytes_max", ConfigKeyInt::cat_bytes_max },
+  { "debug_output", ConfigKeyBool::debug_output },
+  { "log_size", ConfigKeyInt::log_size },
+  { "map_keys_max", ConfigKeyInt::map_keys_max },
+  { "max_probes", ConfigKeyInt::max_probes },
+  { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
+  { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
+  { "no_cpp_demangle", ConfigKeyBool::no_cpp_demangle },
+  { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
+  { "stack_mode", ConfigKeyStackMode::default_ },
+  { "strlen", ConfigKeyInt::strlen },
+  { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
+  { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
+  { "verify_llvm_ir", ConfigKeyBool::verify_llvm_ir },
+};
+
+const std::set<ConfigKey> ENV_ONLY_CONFIGS = {
+  ConfigKeyInt::ast_max_nodes,
+  ConfigKeyBool::debug_output,
+  ConfigKeyBool::verify_llvm_ir,
+};
+
 struct ConfigValue
 {
   ConfigSource source = ConfigSource::default_;
@@ -97,6 +126,9 @@ public:
   {
     return get<UserSymbolCacheType>(key);
   }
+
+  static std::optional<StackMode> get_stack_mode(const std::string &s);
+  std::optional<ConfigKey> get_config_key(const std::string &str);
 
   friend class ConfigSetter;
 
@@ -138,6 +170,7 @@ private:
     }
   }
 
+private:
   bool can_set(ConfigSource prevSource, ConfigSource);
   bool is_aslr_enabled();
   bool bt_verbose_ = false;
@@ -178,6 +211,7 @@ public:
 
   bool set_stack_mode(const std::string &s);
   bool set_user_symbol_cache_type(const std::string &s);
+  bool valid_source(ConfigKey key);
 
   Config &config_;
 

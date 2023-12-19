@@ -124,6 +124,11 @@ void Visitor::visit(AssignVarStatement &assignment)
   Visit(*assignment.expr);
 }
 
+void Visitor::visit(AssignConfigVarStatement &assignment)
+{
+  Visit(*assignment.expr);
+}
+
 void Visitor::visit(If &if_block)
 {
   Visit(*if_block.cond);
@@ -191,10 +196,20 @@ void Visitor::visit(Probe &probe)
   }
 }
 
+void Visitor::visit(Config &config)
+{
+  for (Statement *stmt : *config.stmts)
+  {
+    Visit(*stmt);
+  }
+}
+
 void Visitor::visit(Program &program)
 {
   for (Probe *probe : *program.probes)
     Visit(*probe);
+  if (program.config)
+    Visit(*program.config);
 }
 
 template <typename T>
@@ -351,6 +366,14 @@ Node *Mutator::visit(AssignVarStatement &assignment)
   return a;
 }
 
+Node *Mutator::visit(AssignConfigVarStatement &assignment)
+{
+  auto a = assignment.leafcopy();
+  a->config_var = assignment.config_var;
+  a->expr = Value<Expression>(assignment.expr);
+  return a;
+}
+
 Node *Mutator::visit(If &if_block)
 {
   auto i = if_block.leafcopy();
@@ -396,12 +419,21 @@ Node *Mutator::visit(Probe &probe)
   return p;
 }
 
+Node *Mutator::visit(Config &config)
+{
+  auto c = config.leafcopy();
+  c->stmts = mutateStmtList(config.stmts);
+  return c;
+}
+
 Node *Mutator::visit(Program &program)
 {
   auto p = program.leafcopy();
   p->probes = new ProbeList;
   for (Probe *probe : *program.probes)
     p->probes->push_back(Value<Probe>(probe));
+  if (program.config)
+    p->config = Value<Config>(program.config);
   return p;
 }
 

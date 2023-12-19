@@ -40,6 +40,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [14. Looping constructs](#14-looping-constructs)
     - [15. `return`: Terminate Early](#15-return-terminate-early)
     - [16. `( , )`: Tuples](#16----tuples)
+    - [17. `config = {}`: Config Block](#17-config---config-block)
 - [Probes](#probes)
     - [1. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level](#1-kprobekretprobe-dynamic-tracing-kernel-level)
     - [2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments](#2-kprobekretprobe-dynamic-tracing-kernel-level-arguments)
@@ -476,6 +477,9 @@ bpftrace v0.8-90-g585e-dirty
 - The `--no-warnings` option disables warnings.
 
 ## 9. Environment Variables
+
+Most of these can also be set via the [config block](#17-config---config-block) directly in a script 
+(before any probes).
 
 ### 9.1 `BPFTRACE_BTF`
 
@@ -950,6 +954,30 @@ Attaching 1 probe...
 2 string
 ^C
 ```
+
+## 17. `config = {}`: Config Block
+
+To improve script portability, you can set bpftrace configs via the config block, 
+which can only be placed at the top of the script before any probes (even `BEGIN`).
+
+Example:
+```
+config = {
+    stack_mode=perf;
+    max_probes=2
+}
+
+BEGIN { ... }
+
+uprobe:./testprogs/uprobe_test:uprobeFunction1 { ... }
+```
+
+The names of the config variables can be in the format of environment variables 
+or their lowercase equivalent without the `BPFTRACE_` prefix. For example, 
+`BPFTRACE_STACK_MODE`, `STACK_MODE`, and `stack_mode` are equivalent.
+
+**Note**: Environment variables for the same config take precedence over those set 
+inside a script config block.
 
 # Probes
 

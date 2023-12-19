@@ -34,15 +34,12 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
   };
 }
 
-bool Config::can_set(ConfigSource prevSource, ConfigSource)
+bool Config::can_set(ConfigSource prevSource, ConfigSource source)
 {
-  if (prevSource == ConfigSource::default_)
+  if (prevSource == ConfigSource::default_ ||
+      (prevSource == ConfigSource::script && source == ConfigSource::env_var))
   {
     return true;
-  }
-  else if (prevSource == ConfigSource::env_var)
-  {
-    return false;
   }
   return false;
 }
@@ -80,19 +77,46 @@ std::map<std::string, StackMode> get_stack_mode_map()
   return result;
 }
 
-bool ConfigSetter::set_stack_mode(const std::string &s)
+std::optional<StackMode> Config::get_stack_mode(const std::string &s)
 {
   static auto stack_mode_map = get_stack_mode_map();
   auto found = stack_mode_map.find(s);
   if (found != stack_mode_map.end())
   {
-    return config_.set(ConfigKeyStackMode::default_, found->second, source_);
+    return std::make_optional(found->second);
   }
-  else
+  return std::nullopt;
+}
+
+std::optional<ConfigKey> Config::get_config_key(const std::string &str)
+{
+  std::string maybe_key = str;
+  static const std::string prefix = "bpftrace_";
+  std::transform(maybe_key.begin(),
+                 maybe_key.end(),
+                 maybe_key.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+
+  if (maybe_key.rfind(prefix, 0) == 0)
   {
-    LOG(ERROR) << s << " is not a valid StackMode";
-    return false;
+    maybe_key = maybe_key.substr(prefix.length());
   }
+  auto found = CONFIG_KEY_MAP.find(maybe_key);
+  return found != CONFIG_KEY_MAP.end()
+             ? std::make_optional<ConfigKey>(found->second)
+             : std::nullopt;
+}
+
+bool ConfigSetter::set_stack_mode(const std::string &s)
+{
+  auto stack_mode = Config::get_stack_mode(s);
+  if (stack_mode.has_value())
+    return config_.set(ConfigKeyStackMode::default_,
+                       stack_mode.value(),
+                       source_);
+
+  LOG(ERROR) << s << " is not a valid StackMode";
+  return false;
 }
 
 // Note: options 0 and 1 are for compatibility with older versions of bpftrace
@@ -118,12 +142,17 @@ bool ConfigSetter::set_user_symbol_cache_type(const std::string &s)
   }
   else
   {
-    LOG(ERROR)
-        << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a valid "
-           "value: valid values are PER_PID, PER_PROGRAM, and NONE.";
+    LOG(ERROR) << "Invalid value for cache_user_symbols: valid values are "
+                  "PER_PID, PER_PROGRAM, and NONE.";
     return false;
   }
   return config_.set(ConfigKeyUserSymbolCacheType::default_, usct, source_);
+}
+
+bool ConfigSetter::valid_source(ConfigKey key)
+{
+  return source_ == ConfigSource::env_var ||
+         ENV_ONLY_CONFIGS.find(key) == ENV_ONLY_CONFIGS.end();
 }
 
 } // namespace bpftrace

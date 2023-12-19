@@ -36,6 +36,7 @@ public:
   virtual void visit(ExprStatement &expr) = 0;
   virtual void visit(AssignMapStatement &assignment) = 0;
   virtual void visit(AssignVarStatement &assignment) = 0;
+  virtual void visit(AssignConfigVarStatement &assignment) = 0;
   virtual void visit(If &if_block) = 0;
   virtual void visit(Jump &jump) = 0;
   virtual void visit(Unroll &unroll) = 0;
@@ -43,6 +44,7 @@ public:
   virtual void visit(Predicate &pred) = 0;
   virtual void visit(AttachPoint &ap) = 0;
   virtual void visit(Probe &probe) = 0;
+  virtual void visit(Config &config) = 0;
   virtual void visit(Program &program) = 0;
 };
 
@@ -100,6 +102,7 @@ public:
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(AssignConfigVarStatement &assignment) override;
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(While &while_block) override;
@@ -107,6 +110,7 @@ public:
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
+  void visit(Config &config) override;
   void visit(Program &program) override;
 };
 
@@ -163,6 +167,7 @@ public:
   virtual R visit(ExprStatement &node) DEFAULT_FN;
   virtual R visit(AssignMapStatement &node) DEFAULT_FN;
   virtual R visit(AssignVarStatement &node) DEFAULT_FN;
+  virtual R visit(AssignConfigVarStatement &node) DEFAULT_FN;
   virtual R visit(If &node) DEFAULT_FN;
   virtual R visit(Jump &node) DEFAULT_FN;
   virtual R visit(Unroll &node) DEFAULT_FN;
@@ -170,6 +175,7 @@ public:
   virtual R visit(Predicate &node) DEFAULT_FN;
   virtual R visit(AttachPoint &node) DEFAULT_FN;
   virtual R visit(Probe &node) DEFAULT_FN;
+  virtual R visit(Config &node) DEFAULT_FN;
   virtual R visit(Program &node) DEFAULT_FN;
 
   virtual R default_visitor(Node &node)
@@ -209,6 +215,7 @@ private:
     DEFINE_DISPATCH(ExprStatement);
     DEFINE_DISPATCH(AssignMapStatement);
     DEFINE_DISPATCH(AssignVarStatement);
+    DEFINE_DISPATCH(AssignConfigVarStatement);
     DEFINE_DISPATCH(If);
     DEFINE_DISPATCH(Unroll);
     DEFINE_DISPATCH(Jump);
@@ -217,6 +224,7 @@ private:
     DEFINE_DISPATCH(While);
     DEFINE_DISPATCH(AttachPoint);
     DEFINE_DISPATCH(Probe);
+    DEFINE_DISPATCH(Config);
     DEFINE_DISPATCH(Program);
 
     return table;
@@ -260,6 +268,7 @@ public:
   Node *visit(ExprStatement &) override;
   Node *visit(AssignMapStatement &) override;
   Node *visit(AssignVarStatement &) override;
+  Node *visit(AssignConfigVarStatement &) override;
   Node *visit(If &) override;
   Node *visit(Jump &) override;
   Node *visit(Unroll &) override;
@@ -267,6 +276,7 @@ public:
   Node *visit(Predicate &) override;
   Node *visit(AttachPoint &) override;
   Node *visit(Probe &) override;
+  Node *visit(Config &) override;
   Node *visit(Program &) override;
 
 protected:

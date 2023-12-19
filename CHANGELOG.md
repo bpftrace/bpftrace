@@ -27,6 +27,8 @@ and this project adheres to
   - [#2840](https://github.com/iovisor/bpftrace/pull/2840)
 - Add more helpful error messages for map operations
   - [#2905](https://github.com/iovisor/bpftrace/pull/2905)
+- New config block syntax
+  - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
 #### Changed
 #### Deprecated
 #### Removed

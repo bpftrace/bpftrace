@@ -60,6 +60,16 @@ TEST(Config, get_and_set)
             UserSymbolCacheType::per_program);
 }
 
+TEST(Config, get_config_key)
+{
+  auto config = Config();
+  EXPECT_TRUE(config.get_config_key("debug_output").has_value());
+  EXPECT_TRUE(config.get_config_key("Debug_OutPut").has_value());
+  EXPECT_TRUE(config.get_config_key("bpftrace_Debug_OutPut").has_value());
+  EXPECT_TRUE(config.get_config_key("BPFTRACE_DEBUG_OUTPUT").has_value());
+  EXPECT_FALSE(config.get_config_key("debugoutput").has_value());
+}
+
 TEST(ConfigSetter, set_stack_mode)
 {
   auto config = Config();
@@ -81,12 +91,41 @@ TEST(ConfigSetter, set_user_symbol_cache_type)
             UserSymbolCacheType::none);
 }
 
+TEST(ConfigSetter, source_precedence)
+{
+  auto config = Config();
+  auto config_setter_env = ConfigSetter(config, ConfigSource::env_var);
+  auto config_setter_script = ConfigSetter(config, ConfigSource::script);
+
+  // env var takes precedence over script
+  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::ast_max_nodes, 10));
+  EXPECT_FALSE(config_setter_script.set(ConfigKeyInt::ast_max_nodes, 11));
+  EXPECT_EQ(config.get(ConfigKeyInt::ast_max_nodes), 10);
+
+  EXPECT_TRUE(config_setter_script.set(ConfigKeyInt::cat_bytes_max, 19));
+  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::cat_bytes_max, 20));
+  EXPECT_EQ(config.get(ConfigKeyInt::cat_bytes_max), 20);
+}
+
 TEST(ConfigSetter, same_source_cannot_set_twice)
 {
   auto config = Config();
   auto config_setter = ConfigSetter(config, ConfigSource::env_var);
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::ast_max_nodes, 10));
   EXPECT_FALSE(config_setter.set(ConfigKeyInt::ast_max_nodes, 11));
+}
+
+TEST(ConfigSetter, valid_source)
+{
+  auto config = Config();
+  auto config_setter_env = ConfigSetter(config, ConfigSource::env_var);
+  auto config_setter_script = ConfigSetter(config, ConfigSource::script);
+
+  EXPECT_TRUE(config_setter_env.valid_source(ConfigKeyInt::ast_max_nodes));
+  EXPECT_FALSE(config_setter_script.valid_source(ConfigKeyInt::ast_max_nodes));
+
+  EXPECT_TRUE(config_setter_env.valid_source(ConfigKeyInt::map_keys_max));
+  EXPECT_TRUE(config_setter_script.valid_source(ConfigKeyInt::map_keys_max));
 }
 
 } // namespace test

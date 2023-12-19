@@ -2838,6 +2838,14 @@ BEGIN { nsecs(xxx); }
 )");
 }
 
+TEST(semantic_analyser, config)
+{
+  test("config = { BPFTRACE_NODE_MAX=1 } BEGIN { $ns = nsecs(); }", 0);
+  test("config = { BPFTRACE_NODE_MAX=1; stack_mode=raw } BEGIN { $ns = "
+       "nsecs(); }",
+       0);
+}
+
 class semantic_analyser_btf : public test_btf
 {
 };
