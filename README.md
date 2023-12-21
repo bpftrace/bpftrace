@@ -102,6 +102,15 @@ For more eBPF observability tools, see [bcc tools](https://github.com/iovisor/bc
 
 See the [Reference Guide](docs/reference_guide.md) for more detail.
 
+## Plugins
+
+bpftrace has several plugins/definitions, integrating the syntax into your editor.
+<!--- Feel free to add your own plugins below, in alphabetical order -->
+
+- [Emacs](https://gitlab.com/jgkamat/bpftrace-mode)
+- [Vim](https://github.com/mmarchini/bpftrace.vim)
+- [VS Code](https://github.com/bolinfest/bpftrace-vscode)
+
 ## Support
 
 For additional help / discussion, please use our [discussions](https://github.com/iovisor/bpftrace/discussions) page.
