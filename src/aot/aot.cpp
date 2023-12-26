@@ -232,83 +232,20 @@ int generate(const RequiredResources &resources,
              const BpfBytecode &bytecode,
              const std::string &out)
 {
-  // Serialize RuntimeResources
-  std::string serialized_metadata;
-  try
+  auto section = generate_btaot_section(resources, bytecode);
+  if (!section)
+    return 1;
+
+  auto shim = find_in_path(AOT_SHIM_NAME);
+  if (!shim)
   {
-    std::ostringstream serialized(std::ios::binary);
-    resources.save_state(serialized);
-    serialized_metadata = serialized.str();
-  }
-  catch (const std::exception &ex)
-  {
-    LOG(ERROR) << "Failed to serialize runtime metadata: " << ex.what();
+    LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
+               << " shim binary. Is it in $PATH?";
     return 1;
   }
 
-  // Serialize bytecode
-  std::string serialized_bytecode;
-  try
-  {
-    std::ostringstream serialized(std::ios::binary);
-    serialize_bytecode(bytecode, serialized);
-    serialized_bytecode = serialized.str();
-  }
-  catch (const std::exception &ex)
-  {
-    LOG(ERROR) << "Failed to serialize bytecode: " << ex.what();
-    return 1;
-  }
-
-  auto hdr_len = sizeof(Header);
-  Header hdr = {
-    .magic = AOT_MAGIC,
-    .unused = 0,
-    .header_len = sizeof(Header),
-    .version = rs_hash(BPFTRACE_VERSION),
-    .rr_off = hdr_len,
-    .rr_len = serialized_metadata.size(),
-    .bc_off = hdr_len + serialized_metadata.size(),
-    .bc_len = serialized_bytecode.size(),
-  };
-
-  std::ofstream outf(out, std::ios::binary | std::ios::out | std::ios::trunc);
-  if (outf.fail())
-  {
-    LOG(ERROR) << "Failed to open: " << out;
-    return 1;
-  }
-
-  // Write out header
-  outf.write(reinterpret_cast<const char *>(&hdr), sizeof(hdr));
-  if (outf.fail())
-  {
-    LOG(ERROR) << "Failed to write header to: " << out;
-    return 1;
-  }
-
-  // Write out metadata
-  outf << serialized_metadata;
-  if (outf.fail())
-  {
-    LOG(ERROR) << "Failed to write metadata to:" << out;
-    return 1;
-  }
-
-  // Write out bytecode
-  outf << serialized_bytecode;
-  if (outf.fail())
-  {
-    LOG(ERROR) << "Failed to write bytecode to:" << out;
-    return 1;
-  }
-
-  outf.flush();
-  if (outf.fail())
-  {
-    LOG(ERROR) << "Failed to flush: " << out;
-    return 1;
-  }
+  if (auto err = build_binary(*shim, out, *section))
+    return err;
 
   return 0;
 }
