@@ -89,7 +89,7 @@ protected:
   // Convert a log2 histogram into string
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,
-                                  int k) const = 0;
+                                  uint32_t k) const = 0;
   // Convert a linear histogram into string
   virtual std::string lhist_to_str(const std::vector<uint64_t> &values,
                                    int min,
@@ -199,11 +199,11 @@ public:
                     const location &loc) const override;
 
 protected:
-  static std::string hist_index_label(int index, int bits);
+  static std::string hist_index_label(uint32_t index, uint32_t bits);
   static std::string lhist_index_label(int number);
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,
-                                  int k) const override;
+                                  uint32_t k) const override;
   virtual std::string lhist_to_str(const std::vector<uint64_t> &values,
                                    int min,
                                    int max,
@@ -264,7 +264,7 @@ protected:
                            uint32_t div) const override;
   std::string hist_to_str(const std::vector<uint64_t> &values,
                           uint32_t div,
-                          int k) const override;
+                          uint32_t k) const override;
   std::string lhist_to_str(const std::vector<uint64_t> &values,
                            int min,
                            int max,
