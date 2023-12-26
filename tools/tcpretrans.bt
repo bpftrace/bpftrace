@@ -27,8 +27,8 @@
 BEGIN
 {
 	printf("Tracing tcp retransmits. Hit Ctrl-C to end.\n");
-	printf("%-8s %-8s %20s %21s %6s\n", "TIME", "PID", "LADDR:LPORT",
-	    "RADDR:RPORT", "STATE");
+	printf("%-8s %-8s %-10s %20s %21s %6s\n", "TIME", "PID", "NETNS",
+		"LADDR:LPORT", "RADDR:RPORT", "STATE");
 
 	// See include/net/tcp_states.h:
 	@tcp_states[1] = "ESTABLISHED";
@@ -71,10 +71,11 @@ kprobe:tcp_retransmit_skb
 
 		$state = $sk->__sk_common.skc_state;
 		$statestr = @tcp_states[$state];
+		$netns = $sk->__sk_common.skc_net.net->ns.inum;
 
 		time("%H:%M:%S ");
-		printf("%-8d %14s:%-6d %14s:%-6d %6s\n", pid, $saddr, $lport,
-		    $daddr, $dport, $statestr);
+		printf("%-8d %-10u %14s:%-6d %14s:%-6d %6s\n", pid, $netns, $saddr,
+			$lport, $daddr, $dport, $statestr);
 	}
 }
 
