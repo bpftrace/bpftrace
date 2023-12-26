@@ -135,12 +135,12 @@ void ResourceAnalyser::visit(Call &call)
   else if (call.func == "hist")
   {
     auto &r = resources_.hist_bits_arg;
-    int old, bits = static_cast<Integer *>(call.vargs->at(1))->n;
-    if (r.find(call.map->ident) != r.end() &&
-        (old = r[call.map->ident]) != bits)
+
+    int bits = static_cast<Integer *>(call.vargs->at(1))->n;
+    if (r.find(call.map->ident) != r.end() && (r[call.map->ident]) != bits)
     {
-      LOG(ERROR, call.loc, err_)
-          << "Different bits in a single hist, had " << old << " now " << bits;
+      LOG(ERROR, call.loc, err_) << "Different bits in a single hist, had "
+                                 << r[call.map->ident] << " now " << bits;
     }
     else
     {

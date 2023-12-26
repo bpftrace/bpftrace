@@ -47,10 +47,10 @@ std::ostream& operator<<(std::ostream& out, MessageType type) {
 // - the last 2 bits 11 indicate the third interval so the
 //   starting value is 128 + 32*3 = 224
 
-std::string TextOutput::hist_index_label(int index, int k)
+std::string TextOutput::hist_index_label(uint32_t index, uint32_t k)
 {
   const uint32_t n = (1 << k), interval = index & (n - 1);
-  assert(index >= n); // Smaller indexes are converted directly.
+  assert(index >= n);
   uint32_t power = (index >> k) - 1;
   // Choose the suffix for the largest power of 2^10
   const uint32_t decade = power / 10;
@@ -425,7 +425,7 @@ void TextOutput::map(
 
 std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
                                     uint32_t div,
-                                    int k) const
+                                    uint32_t k) const
 {
   int min_index, max_index, max_value;
   hist_prepare(values, min_index, max_index, max_value);
@@ -694,7 +694,7 @@ void JsonOutput::map(
 
 std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
                                     uint32_t div,
-                                    int k) const
+                                    uint32_t k) const
 {
   int min_index, max_index, max_value;
   hist_prepare(values, min_index, max_index, max_value);
