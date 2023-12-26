@@ -63,7 +63,6 @@ uint32_t rs_hash(const std::string &str)
 void serialize_bytecode(const BpfBytecode &bytecode, std::ostream &out)
 {
   cereal::BinaryOutputArchive archive(out);
-  // cereal::JSONOutputArchive archive(out);
   archive(bytecode);
 }
 
