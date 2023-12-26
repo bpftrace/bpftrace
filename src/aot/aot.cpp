@@ -99,6 +99,71 @@ int load_bytecode(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
   return 0;
 }
 
+std::optional<std::vector<uint8_t>> generate_btaot_section(
+    const RequiredResources &resources,
+    const BpfBytecode &bytecode)
+{
+  // Serialize RuntimeResources
+  std::string serialized_metadata;
+  try
+  {
+    std::ostringstream serialized(std::ios::binary);
+    resources.save_state(serialized);
+    serialized_metadata = serialized.str();
+  }
+  catch (const std::exception &ex)
+  {
+    LOG(ERROR) << "Failed to serialize runtime metadata: " << ex.what();
+    return std::nullopt;
+  }
+
+  // Serialize bytecode
+  std::string serialized_bytecode;
+  try
+  {
+    std::ostringstream serialized(std::ios::binary);
+    serialize_bytecode(bytecode, serialized);
+    serialized_bytecode = serialized.str();
+  }
+  catch (const std::exception &ex)
+  {
+    LOG(ERROR) << "Failed to serialize bytecode: " << ex.what();
+    return std::nullopt;
+  }
+
+  // Construct the header
+  auto hdr_len = sizeof(Header);
+  Header hdr = {
+    .magic = AOT_MAGIC,
+    .unused = 0,
+    .header_len = sizeof(Header),
+    .version = rs_hash(BPFTRACE_VERSION),
+    .rr_off = hdr_len,
+    .rr_len = serialized_metadata.size(),
+    .bc_off = hdr_len + serialized_metadata.size(),
+    .bc_len = serialized_bytecode.size(),
+  };
+
+  // Resize the output buffer appropriately
+  std::vector<uint8_t> out;
+  out.resize(sizeof(Header) + hdr.rr_len + hdr.bc_len);
+  uint8_t *p = out.data();
+
+  // Write out header
+  memcpy(p, &hdr, sizeof(Header));
+  p += sizeof(Header);
+
+  // Write out metadata
+  memcpy(p, serialized_metadata.data(), hdr.rr_len);
+  p += hdr.rr_len;
+
+  // Write out bytecode
+  memcpy(p, serialized_bytecode.data(), hdr.bc_len);
+  p += hdr.bc_len;
+
+  return out;
+}
+
 } // namespace
 
 int generate(const RequiredResources &resources,
