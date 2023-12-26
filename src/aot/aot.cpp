@@ -1,11 +1,14 @@
 #include "aot.h"
 
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <fcntl.h>
 #include <fstream>
 #include <istream>
+#include <optional>
+#include <ostream>
 #include <streambuf>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -16,10 +19,14 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/vector.hpp>
 
+#include "filesystem.h"
 #include "log.h"
 #include "utils.h"
 
+#define AOT_ELF_SECTION ".btaot"
 static constexpr auto AOT_MAGIC = 0xA07;
+static constexpr auto AOT_SHIM_NAME = "bpftrace-aotrt";
+static constexpr auto AOT_SECDATA_TEMPFILE = ".temp_btaot";
 
 // AOT payload will have this header at the beginning. We don't worry about
 // versioning the header b/c we enforce that an AOT compiled script may only
@@ -162,6 +169,61 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
   p += hdr.bc_len;
 
   return out;
+}
+
+// Clones the shim to final destination while also injecting
+// the custom .btaot section.
+bool build_binary(const std_filesystem::path &shim,
+                  const std::string &out,
+                  const std::vector<uint8_t> &section)
+{
+  std::error_code ec;
+  bool ret = false;
+  char cmd[1024];
+  int written;
+
+  // Write out section data in a temporary file
+  std::ofstream secdata(AOT_SECDATA_TEMPFILE, std::ios_base::binary);
+  secdata.write(reinterpret_cast<const char *>(section.data()), section.size());
+  secdata.close();
+
+  // Respect user provided BPFTRACE_OBJCOPY if present
+  std::string objcopy = "objcopy";
+  if (auto c = std::getenv("BPFTRACE_OBJCOPY"))
+    objcopy = c;
+
+  // Resolve objcopy binary to full path
+  auto objcopy_full = find_in_path(objcopy);
+  if (!objcopy_full)
+  {
+    LOG(ERROR) << "Failed to find " << objcopy << " in $PATH";
+    goto out;
+  }
+
+  written = snprintf(cmd,
+                     sizeof(cmd),
+                     "%s --add-section .btaot=%s %s %s",
+                     objcopy_full->c_str(),
+                     AOT_SECDATA_TEMPFILE,
+                     shim.c_str(),
+                     out.c_str());
+  if (written < 0 || written == sizeof(cmd))
+  {
+    LOG(ERROR) << "Failed to construct objcopy command";
+    goto out;
+  }
+
+  if (std::system(cmd))
+  {
+    LOG(ERROR) << "Failed to execute: " << cmd;
+    goto out;
+  }
+
+  ret = true;
+out:
+  if (!std_filesystem::remove(AOT_SECDATA_TEMPFILE, ec) || ec)
+    LOG(ERROR) << "Failed to remove " << AOT_SECDATA_TEMPFILE << ": " << ec;
+  return ret;
 }
 
 } // namespace
