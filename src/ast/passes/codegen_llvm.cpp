@@ -344,7 +344,12 @@ void CodegenLLVM::visit(Builtin &builtin)
 
 void CodegenLLVM::visit(Call &call)
 {
-  if (call.func == "count") {
+  if (subprogs_.find(call.func) != subprogs_.end())
+  {
+    createSubprogCall(call);
+  }
+  else if (call.func == "count")
+  {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
@@ -2435,7 +2440,7 @@ void CodegenLLVM::visit(Subprog &subprog)
                                               0);
 
   Function *func = Function::Create(
-      func_type, Function::InternalLinkage, subprog.name(), module_.get());
+      func_type, Function::ExternalLinkage, subprog.name(), module_.get());
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -2456,6 +2461,13 @@ void CodegenLLVM::visit(Subprog &subprog)
   }
   if (subprog.return_type.IsVoidTy())
     createRet();
+
+  // Replace dummy function
+  if (auto dummy_func = b_.GetInsertBlock()->getModule()->getFunction(
+          subprog.name() + ":dummy"))
+  {
+    dummy_func->replaceAllUsesWith(func);
+  }
 
   FunctionPassManager fpm;
   FunctionAnalysisManager fam;
@@ -2677,8 +2689,16 @@ void CodegenLLVM::visit(Probe &probe)
 void CodegenLLVM::visit(Program &program)
 {
   if (program.functions)
+  {
+    // first collect subprog names into set to allow them to override builtins
+    std::transform(program.functions->cbegin(),
+                   program.functions->cend(),
+                   std::inserter(subprogs_, subprogs_.begin()),
+                   [](Subprog *subprog) { return subprog->name(); });
+
     for (Subprog *subprog : *program.functions)
       auto scoped_del = accept(subprog);
+  }
   for (Probe *probe : *program.probes)
     auto scoped_del = accept(probe);
 }
@@ -3366,6 +3386,46 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   b_.CreateOutput(ctx_, buf, struct_size, &call.loc);
   b_.CreateLifetimeEnd(buf);
   expr_ = nullptr;
+}
+
+void CodegenLLVM::createSubprogCall(Call &call)
+{
+  std::vector<llvm::Type *> arg_types;
+  std::vector<Value *> arg_values;
+  arg_values.push_back(ctx_);
+  if (call.vargs)
+  {
+    for (Expression *arg : *call.vargs)
+    {
+      auto scoped_del = accept(arg);
+      arg_values.push_back(expr_);
+    }
+    std::transform(call.vargs->begin(),
+                   call.vargs->end(),
+                   std::back_inserter(arg_types),
+                   [this](Expression *expr) { return b_.GetType(expr->type); });
+  }
+  FunctionType *func_type = FunctionType::get(b_.GetType(call.type),
+                                              arg_types,
+                                              0);
+
+  if (auto func = b_.GetInsertBlock()->getModule()->getFunction(call.func))
+  {
+    expr_ = b_.CreateCall(func_type, func, arg_values);
+  }
+  else if (auto dummy_func = b_.GetInsertBlock()->getModule()->getFunction(
+               call.func + ":dummy"))
+  {
+    expr_ = b_.CreateCall(func_type, dummy_func, arg_values);
+  }
+  else
+  {
+    // create dummy function
+    Function *func = Function::Create(func_type,
+                                      Function::ExternalLinkage,
+                                      call.func + ":dummy");
+    expr_ = b_.CreateCall(func_type, func, arg_values);
+  }
 }
 
 void CodegenLLVM::generate_ir()

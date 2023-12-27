@@ -197,12 +197,16 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Call)
 
-  explicit Call(const std::string &func, location loc);
-  Call(const std::string &func, ExpressionList *vargs, location loc);
+  explicit Call(const std::string &func, bool builtin, location loc);
+  Call(const std::string &func,
+       ExpressionList *vargs,
+       bool builtin,
+       location loc);
   ~Call();
 
   std::string func;
   ExpressionList *vargs = nullptr;
+  bool builtin;
 
 private:
   Call(const Call &other);
