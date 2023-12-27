@@ -22,6 +22,10 @@ namespace bpftrace {
 #define R_BPF_64_64 1
 #endif
 
+#ifndef R_BPF_64_32
+#define R_BPF_64_32 10
+#endif
+
 #ifndef BPF_PSEUDO_FUNC
 #define BPF_PSEUDO_FUNC 4
 #endif
@@ -123,8 +127,10 @@ void BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
 
   // There's a relocation section for our program.
   //
-  // Relocation support is incomplete, only ld_imm64 + R_BPF_64_64 is
-  // supported to make pointers to subprog callbacks possible.
+  // Relocation support is incomplete; ld_imm64 + R_BPF_64_64 is supported to
+  // make pointers to subprog callbacks possible, and call + R_BPF_64_32 is
+  // supported to make subprog calls possible. Other relocation types are
+  // unsupported.
   //
   // In practice, we append the entire .text section and relocate against it.
 
@@ -142,14 +148,15 @@ void BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
     uint32_t reltype = rel->r_info & 0xFFFFFFFF;
     uint32_t relsym = rel->r_info >> 32;
 
-    if (reltype != R_BPF_64_64)
+    if (reltype != R_BPF_64_64 && reltype != R_BPF_64_32)
       throw std::invalid_argument("Unsupported relocation type");
 
     auto rel_offset = rel->r_offset;
     auto insn_offset = rel_offset / sizeof(struct bpf_insn);
     auto *insn = &insns[insn_offset];
-    if (insn->code != (BPF_LD | BPF_DW | BPF_IMM)) {
-      LOG(ERROR) << "Cannot relocate insn code " << insn->code << " ld "
+    if ((reltype == R_BPF_64_64 && insn->code != (BPF_LD | BPF_DW | BPF_IMM)) ||
+        (reltype == R_BPF_64_32 && insn->code != (BPF_JMP | BPF_CALL))) {
+      LOG(ERROR) << "Cannot relocate insn code " << (int)insn->code << " ld "
                  << (insn->code & BPF_LD) << " dw " << (insn->code & BPF_DW)
                  << " imm " << (insn->code & BPF_IMM);
       throw std::invalid_argument("Unsupported relocated instruction");
@@ -179,9 +186,12 @@ void BpfProgram::relocateSection(const std::string &relsecname, bpf_insn *insns)
                                             ? 0
                                             : text_offset_;
 
-      auto target_insn = (text_relative_offset + sym->st_value + insn->imm) /
+      auto addend = reltype == R_BPF_64_64 ? insn->imm : 0;
+      auto target_insn = (text_relative_offset + sym->st_value + addend) /
                          sizeof(struct bpf_insn);
-      insn->src_reg = BPF_PSEUDO_FUNC;
+
+      if (reltype == R_BPF_64_64)
+        insn->src_reg = BPF_PSEUDO_FUNC;
       insn->imm = (target_insn - insn_offset - 1); // jump offset
     } else if (symtype == STT_OBJECT) {
       std::string map_name = bpftrace_map_name(

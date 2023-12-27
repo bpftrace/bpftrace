@@ -208,7 +208,7 @@ struct|union|enum       {
   .                     { unput(yytext[0]); yy_pop_state(yyscanner); }
 }
 <STRUCT_AFTER_COLON>{
-  "{"|","|")"           {
+  "{"|","|")"|"*"       {
                           yy_pop_state(yyscanner);
                           unput(yytext[0]);
                           return Parser::make_IDENT(struct_type + " " + trim(buffer), loc);

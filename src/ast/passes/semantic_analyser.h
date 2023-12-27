@@ -104,6 +104,7 @@ private:
   bool check_available(const Call &call, const AttachPoint &ap);
 
   void check_stack_call(Call &call, bool kernel);
+  bool check_subprog_call(Call &call);
 
   Probe *get_probe_from_scope(Scope *scope,
                               const location &loc,
@@ -138,6 +139,8 @@ private:
   // Holds the function argument index currently being visited by this
   // SemanticAnalyser.
   int func_arg_idx_ = -1;
+  // Holds the list of processed subprogs used for checking subprog calls.
+  std::unordered_map<std::string, Subprog *> subprogs_;
 
   std::map<Scope *, std::map<std::string, SizedType>> variable_val_;
   std::map<std::string, SizedType> map_val_;

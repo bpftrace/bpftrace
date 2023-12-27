@@ -472,7 +472,9 @@ void CodegenLLVM::visit(Builtin &builtin)
 
 void CodegenLLVM::visit(Call &call)
 {
-  if (call.func == "count") {
+  if (subprogs_.find(call.func) != subprogs_.end()) {
+    createSubprogCall(call);
+  } else if (call.func == "count") {
     Map &map = *call.map;
     auto [key, scoped_key_deleter] = getMapKey(map);
     b_.CreateMapElemAdd(ctx_, map, key, b_.getInt64(1), call.loc);
@@ -2553,7 +2555,20 @@ void CodegenLLVM::visit(Subprog &subprog)
                                               0);
 
   Function *func = Function::Create(
-      func_type, Function::InternalLinkage, subprog.name(), module_.get());
+      func_type, Function::ExternalLinkage, subprog.name(), module_.get());
+
+  // Mark function as NoInline. This has several reasons:
+  // - inlining takes up BPF instructions
+  // - LLVM sometimes inlines recursive calls into loops, which can be then
+  //   rejected by the BPF verifier for code where a recursive call would
+  //   not
+  AttributeList attrs;
+  attrs = attrs.addFnAttribute(b_.getContext(), Attribute::NoInline);
+  func->setAttributes(attrs);
+
+  // Create BTF information needed for program loading
+  debug_.createFunctionDebugInfo(*func);
+
   BasicBlock *entry = BasicBlock::Create(module_->getContext(), "entry", func);
   b_.SetInsertPoint(entry);
 
@@ -2574,6 +2589,11 @@ void CodegenLLVM::visit(Subprog &subprog)
   }
   if (subprog.return_type.IsVoidTy())
     createRet();
+
+  // Replace dummy function
+  if (auto dummy_func = module_->getFunction(subprog.name() + ":dummy")) {
+    dummy_func->replaceAllUsesWith(func);
+  }
 
   FunctionPassManager fpm;
   FunctionAnalysisManager fam;
@@ -2745,9 +2765,16 @@ void CodegenLLVM::visit(Probe &probe)
 
 void CodegenLLVM::visit(Program &program)
 {
-  if (program.functions)
+  if (program.functions) {
+    // first collect subprog names into set to allow them to override builtins
+    std::transform(program.functions->cbegin(),
+                   program.functions->cend(),
+                   std::inserter(subprogs_, subprogs_.begin()),
+                   [](Subprog *subprog) { return subprog->name(); });
+
     for (Subprog *subprog : *program.functions)
       auto scoped_del = accept(subprog);
+  }
   for (Probe *probe : *program.probes)
     auto scoped_del = accept(probe);
 }
@@ -3437,6 +3464,40 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
   expr_ = nullptr;
 }
 
+void CodegenLLVM::createSubprogCall(Call &call)
+{
+  std::vector<llvm::Type *> arg_types;
+  std::vector<Value *> arg_values;
+  arg_types.push_back(ctx_->getType());
+  arg_values.push_back(ctx_);
+  if (call.vargs) {
+    for (Expression *arg : *call.vargs) {
+      auto scoped_del = accept(arg);
+      arg_values.push_back(expr_);
+    }
+    std::transform(call.vargs->begin(),
+                   call.vargs->end(),
+                   std::back_inserter(arg_types),
+                   [this](Expression *expr) { return b_.GetType(expr->type); });
+  }
+  FunctionType *func_type = FunctionType::get(b_.GetType(call.type),
+                                              arg_types,
+                                              0);
+
+  if (auto func = module_->getFunction(call.func)) {
+    expr_ = b_.CreateCall(func_type, func, arg_values);
+  } else if (auto dummy_func = module_->getFunction(call.func + ":dummy")) {
+    expr_ = b_.CreateCall(func_type, dummy_func, arg_values);
+  } else {
+    // create dummy function
+    Function *func = Function::Create(func_type,
+                                      Function::ExternalLinkage,
+                                      call.func + ":dummy",
+                                      module_.get());
+    expr_ = b_.CreateCall(func_type, func, arg_values);
+  }
+}
+
 void CodegenLLVM::generate_ir()
 {
   assert(state_ == State::INIT);
@@ -3676,7 +3737,11 @@ void CodegenLLVM::optimize()
 
 bool CodegenLLVM::verify(void)
 {
-  bool ret = llvm::verifyModule(*module_, &errs());
+  bool brokenDebugInfo;
+  // Allow broken debug info, since debug info checks require calls to functions
+  // with debug info to have a DILocation, even when set as NoInline, which
+  // is currently not implemented
+  bool ret = llvm::verifyModule(*module_, &errs(), &brokenDebugInfo);
   if (ret) {
     /* verifyModule doesn't end output with end of line of line, print it now */
     std::cerr << std::endl;

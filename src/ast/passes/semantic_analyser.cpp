@@ -475,12 +475,9 @@ bool skip_key_validation(const Call &call)
 
 void SemanticAnalyser::visit(Call &call)
 {
-  // Check for unsafe-ness first. It is likely the most pertinent issue
-  // (and should be at the top) for any function call.
-  if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
-    LOG(ERROR, call.loc, err_)
-        << call.func << "() is an unsafe function being used in safe mode";
-  }
+  if (pass_ == 1)
+    // We want all subprogs to be known, since they can override builtins
+    return;
 
   struct func_setter {
     func_setter(SemanticAnalyser &analyser, const std::string &s)
@@ -516,6 +513,20 @@ void SemanticAnalyser::visit(Call &call)
 
       expr.accept(*this);
     }
+  }
+
+  if (check_subprog_call(call)) {
+    if (call.builtin)
+      LOG(WARNING, call.loc, err_)
+          << call.func << " builtin overshadowed by subprog of same name";
+    call.type = subprogs_[call.func]->return_type;
+    return;
+  }
+
+  // Check for unsafe-ness
+  if (bpftrace_.safe_mode_ && is_unsafe_func(call.func)) {
+    LOG(ERROR, call.loc, err_)
+        << call.func << "() is an unsafe function being used in safe mode";
   }
 
   if (auto probe = dynamic_cast<Probe *>(scope_)) {
@@ -1414,6 +1425,22 @@ Probe *SemanticAnalyser::get_probe_from_scope(Scope *scope,
   }
 
   return probe;
+}
+
+bool SemanticAnalyser::check_subprog_call(Call &call)
+{
+  auto subprog = subprogs_.find(call.func);
+  if (subprog == subprogs_.end())
+    return false;
+
+  check_nargs(call, subprog->second->args->size());
+  int i = 0;
+  for (SubprogArg *arg : *subprog->second->args) {
+    check_arg(call, arg->type.GetTy(), i, false, true);
+    ++i;
+  }
+
+  return true;
 }
 
 void SemanticAnalyser::visit(Map &map)
@@ -2425,6 +2452,9 @@ void SemanticAnalyser::visit(AssignMapStatement &assignment)
       LOG(ERROR, assignment.loc, err_)
           << "Array type mismatch: " << map_type << " != " << expr_type << ".";
     }
+  } else if (type.IsVoidTy()) {
+    LOG(ERROR, assignment.loc, err_) << "Type mismatch for " << map_ident
+                                     << ": trying to assign value of type void";
   }
 
   if (is_final_pass()) {
@@ -2453,7 +2483,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
     } else if ((search->second.IsStringTy() && assignTy.IsStringTy()) ||
                (search->second.IsTupleTy() && assignTy.IsTupleTy())) {
       update_string_size(search->second, assignTy);
-    } else if (!search->second.IsSameType(assignTy)) {
+    } else if (!search->second.IsSameType(assignTy) && is_final_pass()) {
       LOG(ERROR, assignment.loc, err_)
           << "Type mismatch for " << var_ident << ": "
           << "trying to assign value of type '" << assignTy
@@ -2504,6 +2534,9 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
                                          << " != " << expr_type << ".";
       }
     }
+  } else if (assignTy.IsVoidTy()) {
+    LOG(ERROR, assignment.loc, err_) << "Type mismatch for " << var_ident
+                                     << ": trying to assign value of type void";
   }
 
   if (is_final_pass()) {
@@ -2830,8 +2863,14 @@ void SemanticAnalyser::visit(Config &config)
 
 void SemanticAnalyser::visit(Subprog &subprog)
 {
+  subprogs_.insert({ subprog.name(), &subprog });
   scope_ = &subprog;
   for (SubprogArg *arg : *subprog.args) {
+    if (arg->type.IsVoidTy()) {
+      LOG(ERROR, subprog.loc, err_)
+          << "Invalid type void for function parameter " << arg->name();
+      return;
+    }
     variable_val_[scope_].insert({ arg->name(), arg->type });
   }
   Visitor::visit(subprog);
@@ -3166,7 +3205,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       else
         *maptype = type;
-    } else if (maptype->GetTy() != type.GetTy()) {
+    } else if (maptype->GetTy() != type.GetTy() && is_final_pass()) {
       LOG(ERROR, map.loc, err_)
           << "Type mismatch for " << map_ident << ": "
           << "trying to assign value of type '" << type

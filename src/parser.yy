@@ -153,6 +153,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::StatementList *> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
+%type <std::string> ident_or_builtin
 
 
 %left COMMA
@@ -260,11 +261,18 @@ config:
         |        %empty                        { $$ = nullptr; }
                 ;
 
+ident_or_builtin:
+                IDENT        { $$ = $1; }
+        |       CALL         { $$ = $1; }
+        |       CALL_BUILTIN { $$ = $1; }
+        |       BUILTIN      { $$ = $1; }
+                ;
+
 subprog:
-                SUBPROG IDENT "(" subprog_args ")" ":" type block {
+                SUBPROG ident_or_builtin "(" subprog_args ")" ":" type block {
                     $$ = new ast::Subprog($2, $7, $4, $8);
                 }
-        |       SUBPROG IDENT "(" ")" ":" type block {
+        |       SUBPROG ident_or_builtin "(" ")" ":" type block {
                     $$ = new ast::Subprog($2, $6, new ast::SubprogArgList, $7);
                 }
                 ;
@@ -644,14 +652,14 @@ external_name:
         ;
 
 call:
-                CALL "(" ")"                 { $$ = new ast::Call($1, @$); }
-        |       CALL "(" vargs ")"           { $$ = new ast::Call($1, $3, @$); }
-        |       CALL_BUILTIN  "(" ")"        { $$ = new ast::Call($1, @$); }
-        |       CALL_BUILTIN "(" vargs ")"   { $$ = new ast::Call($1, $3, @$); }
-        |       IDENT "(" ")"                { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       IDENT "(" vargs ")"          { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       BUILTIN "(" ")"              { error(@1, "Unknown function: " + $1); YYERROR;  }
-        |       BUILTIN "(" vargs ")"        { error(@1, "Unknown function: " + $1); YYERROR;  }
+                CALL "(" ")"                 { $$ = new ast::Call($1, true, @$); }
+        |       CALL "(" vargs ")"           { $$ = new ast::Call($1, $3, true, @$); }
+        |       CALL_BUILTIN  "(" ")"        { $$ = new ast::Call($1, true, @$); }
+        |       CALL_BUILTIN "(" vargs ")"   { $$ = new ast::Call($1, $3, true, @$); }
+        |       IDENT "(" ")"                { $$ = new ast::Call($1, false, @$);  }
+        |       IDENT "(" vargs ")"          { $$ = new ast::Call($1, $3, false, @$); }
+        |       BUILTIN "(" ")"              { $$ = new ast::Call($1, false, @$); }
+        |       BUILTIN "(" vargs ")"        { $$ = new ast::Call($1, $3, false, @$); }
         |       STACK_MODE "(" ")"           { error(@1, "Unknown function: " + $1); YYERROR;  }
         |       STACK_MODE "(" vargs ")"     { error(@1, "Unknown function: " + $1); YYERROR;  }
                 ;

@@ -229,7 +229,7 @@ public:
   bool IsPrintableTy()
   {
     return type_ != Type::none && type_ != Type::stack_mode &&
-           type_ != Type::timestamp_mode &&
+           type_ != Type::timestamp_mode && type_ != Type::voidtype &&
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
 

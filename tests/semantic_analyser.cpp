@@ -3211,6 +3211,15 @@ fn f($a : int64): str_t[16] { return $a; }
 )");
 }
 
+TEST(semantic_analyser, subprog_void_argument)
+{
+  test_error("fn f($x: void): void {}", R"(
+stdin:1:1-1: ERROR: Invalid type void for function parameter $x
+fn f($x: void): void {}
+
+)");
+}
+
 TEST(semantic_analyser, subprog_map)
 {
   test("fn f(): void { @a = 0; }");
@@ -3236,6 +3245,108 @@ fn f(): int64 { return func; }
 stdin:1:18-29: ERROR: Function f is of type int64, cannot return none
 fn f(): int64 { return func; }
                  ~~~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_void)
+{
+  test("fn f(): void { print(\"Hello\"); } BEGIN { f(); }");
+}
+
+TEST(semantic_analyser, subprog_call_assign_new_var)
+{
+  test("fn f(): int64 { return 1; } BEGIN { $x = f(); }");
+}
+
+TEST(semantic_analyser, subprog_call_assign_new_map)
+{
+  test("fn f(): int64 { return 1; } BEGIN { @x = f(); }");
+}
+
+TEST(semantic_analyser, subprog_call_assign_old_var)
+{
+  test("fn f(): int64 { return 1; } BEGIN { $x = 0; $x = f(); }");
+}
+
+TEST(semantic_analyser, subprog_call_assign_old_map)
+{
+  test("fn f(): int64 { return 1; } BEGIN { @x = 0; @x = f(); }");
+}
+
+TEST(semantic_analyser, subprog_call_assign_var_type_mismatch)
+{
+  test_error("fn f(): int64 { return 1; } BEGIN { $x = \"\"; $x = f(); }", R"(
+stdin:1:47-55: ERROR: Type mismatch for $x: trying to assign value of type 'int64' when variable already contains a value of type 'string[1]'
+fn f(): int64 { return 1; } BEGIN { $x = ""; $x = f(); }
+                                              ~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_assign_map_type_mismatch)
+{
+  test_error("fn f(): int64 { return 1; } BEGIN { @x = \"\"; @x = f(); }", R"(
+stdin:1:47-49: ERROR: Type mismatch for @x: trying to assign value of type 'int64' when map already contains a value of type 'string[1]
+fn f(): int64 { return 1; } BEGIN { @x = ""; @x = f(); }
+                                              ~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_assign_void_new_var)
+{
+  test_error("fn f(): void { print(\"Hello\"); } BEGIN { $x = f(); }", R"(
+stdin:1:43-51: ERROR: Type mismatch for $x: trying to assign value of type void
+fn f(): void { print("Hello"); } BEGIN { $x = f(); }
+                                          ~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_assign_void_new_map)
+{
+  test_error("fn f(): void { print(\"Hello\"); } BEGIN { @x = f(); }", R"(
+stdin:1:43-51: ERROR: Type mismatch for @x: trying to assign value of type void
+fn f(): void { print("Hello"); } BEGIN { @x = f(); }
+                                          ~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_assign_void_old_var)
+{
+  test_error("fn f(): void { print(\"Hello\"); } BEGIN { $x = 1; $x = f(); }",
+             R"(
+stdin:1:51-59: ERROR: Type mismatch for $x: trying to assign value of type void
+fn f(): void { print("Hello"); } BEGIN { $x = 1; $x = f(); }
+                                                  ~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_assign_void_old_map)
+{
+  test_error("fn f(): void { print(\"Hello\"); } BEGIN { @x = 1; @x = f(); }",
+             R"(
+stdin:1:51-59: ERROR: Type mismatch for @x: trying to assign value of type void
+fn f(): void { print("Hello"); } BEGIN { @x = 1; @x = f(); }
+                                                  ~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_print_void_value)
+{
+  test_error("fn f(): void { print(\"Hello\"); } BEGIN { print(f()); }", R"(
+stdin:1:43-53: ERROR: void type passed to print() is not printable
+fn f(): void { print("Hello"); } BEGIN { print(f()); }
+                                          ~~~~~~~~~~
+)");
+}
+
+TEST(semantic_analyser, subprog_call_argument)
+{
+  test("fn add($x: int64): int64 { return $x + 1; } BEGIN { print(add(1)); }");
+  test_error("fn add($x: int64): int64 { return $x + 1; } BEGIN { "
+             "print(add(\"1\")); }",
+             R"(
+stdin:1:55-69: ERROR: add() only supports integer arguments (string provided)
+fn add($x: int64): int64 { return $x + 1; } BEGIN { print(add("1")); }
+                                                      ~~~~~~~~~~~~~~
 )");
 }
 

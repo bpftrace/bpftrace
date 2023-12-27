@@ -305,13 +305,19 @@ PositionalParameter::PositionalParameter(PositionalParameterType ptype,
   is_literal = true;
 }
 
-Call::Call(const std::string &func, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
+Call::Call(const std::string &func, bool builtin, location loc)
+    : Expression(loc),
+      func(is_deprecated(func)),
+      vargs(nullptr),
+      builtin(builtin)
 {
 }
 
-Call::Call(const std::string &func, ExpressionList *vargs, location loc)
-    : Expression(loc), func(is_deprecated(func)), vargs(vargs)
+Call::Call(const std::string &func,
+           ExpressionList *vargs,
+           bool builtin,
+           location loc)
+    : Expression(loc), func(is_deprecated(func)), vargs(vargs), builtin(builtin)
 {
 }
 
