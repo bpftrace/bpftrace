@@ -8,12 +8,7 @@ This tool shows disk I/O latency histograms for each block I/O initialization
 path. This can help reveal the reason for different latencies, as some may
 be created by log flushing, others by application reads, etc.
 
-This works by tracing the blk_account_io_start() and the
-blk_start_request() or blk_mq_start_request() functions using dynamic
-instrumentation.
-Linux 5.0 removed the classic I/O scheduler, so the blk_start_request()
-probe can be removed from the tool (just delete it). This tool may need other
-maintenance to keep working if these functions change in later kernels.
+This works by attaching to block_io_start and block_rq_issue tracepoints.
 
 Since this uses BPF, only the root user can use this tool.
 .SH REQUIREMENTS

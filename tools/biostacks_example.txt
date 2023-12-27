@@ -6,58 +6,53 @@ that initiated the I/O. This can help explain disk I/O that is not directly
 requested by applications (eg, metadata reads on writes, resilvering, etc).
 For example:
 
-# ./biostacks.bt 
-Attaching 5 probes...
+# ./biostacks.bt
+Attaching 4 probes...
 Tracing block I/O with init stacks. Hit Ctrl-C to end.
 ^C
 
 @usecs[
-    blk_account_io_start+1
-    blk_mq_make_request+1102
-    generic_make_request+292
-    submit_bio+115
-    _xfs_buf_ioapply+798
-    xfs_buf_submit+101
-    xlog_bdstrat+43
-    xlog_sync+705
-    xlog_state_release_iclog+108
-    _xfs_log_force+542
-    xfs_log_force+44
-    xfsaild+428
-    kthread+289
-    ret_from_fork+53
-]: 
-[64K, 128K)            1 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-
-[...]
+    blk_mq_submit_bio+1166
+    blk_mq_submit_bio+1166
+    __submit_bio+139
+    submit_bio_noacct_nocheck+345
+    iomap_readahead+510
+    read_pages+133
+    page_cache_ra_order+665
+    filemap_get_pages+266
+    filemap_read+217
+    xfs_file_buffered_read+82
+    xfs_file_read_iter+119
+    vfs_read+510
+    __x64_sys_pread64+152
+    do_syscall_64+93
+    entry_SYSCALL_64_after_hwframe+110
+]:
+[2K, 4K)               1 |@@@@@@@@@@@@@                                       |
+[4K, 8K)               4 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 
 @usecs[
-    blk_account_io_start+1
-    blk_mq_make_request+707
-    generic_make_request+292
-    submit_bio+115
-    xfs_add_to_ioend+455
-    xfs_do_writepage+758
-    write_cache_pages+524
-    xfs_vm_writepages+190
-    do_writepages+75
-    __writeback_single_inode+69
-    writeback_sb_inodes+481
-    __writeback_inodes_wb+103
-    wb_writeback+625
-    wb_workfn+384
-    process_one_work+478
-    worker_thread+50
-    kthread+289
-    ret_from_fork+53
-]: 
-[8K, 16K)            560 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
-[16K, 32K)           218 |@@@@@@@@@@@@@@@@@@@@                                |
-[32K, 64K)            26 |@@                                                  |
-[64K, 128K)            2 |                                                    |
-[128K, 256K)          53 |@@@@                                                |
-[256K, 512K)          60 |@@@@@                                               |
+    blk_mq_submit_bio+1166
+    blk_mq_submit_bio+1166
+    __submit_bio+139
+    submit_bio_noacct_nocheck+653
+    dmcrypt_write+282
+    kthread+229
+    ret_from_fork+49
+    ret_from_fork_asm+27
+]:
+[256, 512)             1 |                                                    |
+[512, 1K)             10 |@@@@@@@                                             |
+[1K, 2K)              16 |@@@@@@@@@@@@                                        |
+[2K, 4K)              20 |@@@@@@@@@@@@@@@                                     |
+[4K, 8K)              46 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                |
+[8K, 16K)             48 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               |
+[16K, 32K)            63 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@   |
+[32K, 64K)            66 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
+[64K, 128K)           51 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@            |
+[128K, 256K)          47 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@               |
+[256K, 512K)           1 |                                                    |
 
-This output shows the most frequent stack was XFS writeback, with latencies
-between 8 and 512 microseconds. The other stack included here shows an XFS
-log sync.
+This output shows the most frequent stack was dmcrypt_write,
+with latencies between 256 nanoseconds and 512 microseconds.
+The other stack included here shows a pread system call.
