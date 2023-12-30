@@ -50,7 +50,7 @@ std::ostream& operator<<(std::ostream& out, MessageType type) {
 std::string TextOutput::hist_index_label(int index, int k)
 {
   const uint32_t n = (1 << k), interval = index & (n - 1);
-  assert(index >= n); // Smaller indexes are converted directly.
+  assert(index >= (int)n); // Smaller indexes are converted directly.
   uint32_t power = (index >> k) - 1;
   // Choose the suffix for the largest power of 2^10
   const uint32_t decade = power / 10;
