@@ -13,11 +13,14 @@ RUN apt-get update && apt-get install -y \
     clang \
     cmake \
     flex \
+    xxd \
     libbpf-dev \
     libbpfcc-dev \
     libcereal-dev \
     libdw-dev \
     libelf-dev \
+    libgmock-dev \
+    libgtest-dev \
     libiberty-dev \
     libpcap-dev \
     llvm-dev \
