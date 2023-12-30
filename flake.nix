@@ -98,6 +98,10 @@
                 cmakeFlags = [
                   "-DCMAKE_BUILD_TYPE=Release"
                 ];
+
+                # Technically not needed cuz package name matches mainProgram, but
+                # explicit is fine too.
+                meta.mainProgram = "bpftrace";
               };
 
           # Define lambda that returns a devShell derivation with extra test-required packages
