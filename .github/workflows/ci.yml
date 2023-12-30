@@ -97,6 +97,12 @@ jobs:
           RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
           TOOLS_TEST_OLDVERSION: tcpdrop.bt
           TOOLS_TEST_DISABLE: biosnoop.bt
+        - NAME: LLVM 17 Release
+          CMAKE_BUILD_TYPE: Release
+          NIX_TARGET: .#bpftrace-llvm17
+          RUNTIME_TEST_DISABLE: probe.kprobe_offset_fail_size,usdt.usdt probes - file based semaphore activation multi process
+          TOOLS_TEST_OLDVERSION: tcpdrop.bt
+          TOOLS_TEST_DISABLE: biosnoop.bt
         - NAME: Memleak test (LLVM 11 Debug)
           CMAKE_BUILD_TYPE: Debug
           NIX_TARGET: .#bpftrace-llvm11
