@@ -266,6 +266,25 @@ bool get_bool_env_var(const ::std::string &str,
   return true;
 }
 
+std::optional<std_filesystem::path> find_in_path(const std::string &name)
+{
+  std::error_code ec;
+
+  const char *path_env = std::getenv("PATH");
+  if (!path_env)
+    return std::nullopt;
+
+  auto paths = split_string(path_env, ':', true);
+  for (const auto &path : paths)
+  {
+    auto fpath = std_filesystem::path(path) / name;
+    if (std_filesystem::exists(fpath, ec))
+      return fpath;
+  }
+
+  return std::nullopt;
+}
+
 std::string get_pid_exe(const std::string &pid)
 {
   std::error_code ec;
