@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "config.h"
+#include "filesystem.h"
 
 namespace bpftrace {
 
@@ -164,6 +165,8 @@ bool get_uint64_env_var(const ::std::string &str,
                         const std::function<void(uint64_t)> &cb);
 bool get_bool_env_var(const ::std::string &str,
                       const std::function<void(bool)> &cb);
+// Tries to find a file in $PATH
+std::optional<std_filesystem::path> find_in_path(const std::string &name);
 std::string get_pid_exe(pid_t pid);
 std::string get_pid_exe(const std::string &pid);
 std::string get_proc_maps(const std::string &pid);
