@@ -2688,9 +2688,8 @@ void SemanticAnalyser::visit(Predicate &pred)
 
 void SemanticAnalyser::visit(AttachPoint &ap)
 {
-  if (ap.provider == "kprobe" || ap.provider == "kretprobe") {
-    if (ap.target != "")
-      LOG(ERROR, ap.loc, err_) << "kprobes should not have a target";
+  if (ap.provider == "kprobe" || ap.provider == "kretprobe")
+  {
     if (ap.func == "")
       LOG(ERROR, ap.loc, err_) << "kprobes should be attached to a function";
     if (is_final_pass())
