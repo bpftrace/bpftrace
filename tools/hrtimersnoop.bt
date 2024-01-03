@@ -1,0 +1,52 @@
+#!/usr/bin/env bpftrace
+/*
+ * hrtimersnoop.bt   High-resolution timer latency tracing tool.
+ *
+ * USAGE: hrtimersnoop.bt [delay threshold in microseconds] [duration in microseconds]
+ *
+ * Copyright 2024 Red Hat, Inc.
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ *
+ * 3-Jan-2024 	Costa Shulyupin		Created this.
+ */
+
+BEGIN
+{
+	printf("Tracing high-resolution timer delay and duration in microseconds. Ctrl-C to end.\n");
+	printf("%-15s %-30s %8s %8s\n", "TIME", "HANDLER", "DELAY", "DURATION");
+}
+
+tracepoint:timer:hrtimer_expire_entry
+{
+	$expires = ((struct hrtimer*)args.hrtimer)->_softexpires;
+	if ($expires > 1 && args.now >= $expires) {
+		@delay[args.hrtimer] = ((uint64)args.now - (uint64)$expires) / 1000;
+	}
+	@start[args.hrtimer] = nsecs;
+	@function[args.hrtimer] = args.function;
+}
+
+tracepoint:timer:hrtimer_expire_exit
+/@function[args.hrtimer]/
+{
+	if (@start[args.hrtimer]) {
+		$duration = (nsecs - @start[args.hrtimer]) / 1000;
+	}
+	if (@delay[args.hrtimer] >= (uint64)$1 || $duration >= (uint64)$2) {
+		printf("%-15s %-30s %8ld %8ld\n",
+			strftime("%H:%M:%S.%f", nsecs),
+			ksym(@function[args.hrtimer]),
+			@delay[args.hrtimer],
+			$duration);
+	}
+	delete(@start[args.hrtimer]);
+	delete(@function[args.hrtimer]);
+	delete(@delay[args.hrtimer]);
+}
+
+END
+{
+	clear(@start);
+	clear(@function);
+	clear(@delay);
+}
