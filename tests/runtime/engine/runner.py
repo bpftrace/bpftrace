@@ -445,8 +445,16 @@ class Runner(object):
                 print('\tExpected REGEX: ' + test.expect)
                 print('\tFound:\n' + to_utf8(output))
             elif test.expect_mode == "json":
-                print('\tExpected JSON:\n' + json.dumps(json.loads(open(test.expect).read()), indent=2))
-                print('\tFound:\n' + json.dumps(json.loads(output), indent=2))
+                try:
+                    expected = json.dumps(json.loads(open(test.expect).read()), indent=2)
+                except json.decoder.JSONDecodeError as err:
+                    expected = "Could not parse JSON: " + str(err)
+                try:
+                    found = json.dumps(json.loads(output), indent=2)
+                except json.decoder.JSONDecodeError as err:
+                    found = "Could not parse JSON: " + str(err)
+                print('\tExpected JSON:\n' + expected)
+                print('\tFound:\n' + found)
             else:
                 print('\tExpected FILE:\n\t\t' + to_utf8(open(test.expect).read()))
                 print('\tFound:\n\t\t' + to_utf8(output))
