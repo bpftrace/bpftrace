@@ -109,6 +109,7 @@ public:
     has_d_path_ = std::make_optional<bool>(has_features);
     has_ktime_get_boot_ns_ = std::make_optional<bool>(has_features);
     has_kprobe_multi_ = std::make_optional<bool>(has_features);
+    has_uprobe_multi_ = std::make_optional<bool>(has_features);
     has_skb_output_ = std::make_optional<bool>(has_features);
     map_ringbuf_ = std::make_optional<bool>(has_features);
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
