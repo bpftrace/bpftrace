@@ -211,8 +211,7 @@ int BPFtrace::add_probe(ast::Probe &p)
               probe.type = probetype(attach_point->provider);
               probe.log_size = log_size_;
               probe.orig_name = p.name();
-              probe.name = attach_point->name(attach_point->target,
-                                              attach_point->func);
+              probe.name = attach_point->name(target, attach_point->func);
               probe.index = p.index();
               probe.funcs.push_back(func);
               target_map.insert({ { target, probe } });
