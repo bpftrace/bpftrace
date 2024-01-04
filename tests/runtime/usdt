@@ -2,7 +2,7 @@ NAME usdt probes - list probes by file
 RUN {{BPFTRACE}} -l 'usdt:./testprogs/usdt_test:*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt - list probes by file with wildcarded probe type
 RUN {{BPFTRACE}} -l '*:./testprogs/usdt_test:*' | grep -e '^usdt:'
@@ -14,59 +14,59 @@ RUN {{BPFTRACE}} -l -p {{BEFORE_PID}} | grep -e '^usdt:'
 EXPECT usdt:.*/testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - list probes by pid; usdt only
 RUN {{BPFTRACE}} -l 'usdt:*' -p {{BEFORE_PID}}
 EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - lists linked library probes by pid
 RUN {{BPFTRACE}} -l 'usdt:*' -p $(pidof usdt_lib)
 EXPECT libusdt_tp.so:tracetestlib:lib_probe_1
 TIMEOUT 5
 BEFORE ./testprogs/usdt_lib
-REQUIRES ./testprogs/usdt_lib should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - filter probes by file on provider
 RUN {{BPFTRACE}} -l 'usdt:./testprogs/usdt_test:tracetest2:*'
 EXPECT usdt:./testprogs/usdt_test:tracetest2:testprobe2
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - filter probes by pid on provider
 RUN {{BPFTRACE}} -l 'usdt:*:tracetest2:*' -p {{BEFORE_PID}}
 EXPECT usdt_test:tracetest2:testprobe2
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - filter probes by wildcard file and wildcard probe name
 RUN {{BPFTRACE}} -l 'usdt:./testprogs/usdt_test*:tracetest:test*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe2
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - filter probes by file and wildcard probe name
 RUN {{BPFTRACE}} -l 'usdt:./testprogs/usdt_test:tracetest:test*'
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe2
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - filter probes by pid and wildcard probe name
 RUN {{BPFTRACE}} -l 'usdt:*:tracetest:test*' -p {{BEFORE_PID}}
 EXPECT usdt_test:tracetest:testprobe2
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to fully specified probe by file
 PROG usdt:./testprogs/usdt_test:tracetest:testprobe { printf("here\n" ); exit(); }
 EXPECT here
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 TIMEOUT 5
 
 NAME usdt probes - attach to fully specified probe of child
@@ -78,7 +78,7 @@ NAME usdt probes - attach to fully specified probe by pid
 RUN {{BPFTRACE}} -e 'usdt::tracetest:testprobe { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
 EXPECT here
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 TIMEOUT 5
 
 NAME usdt probes - attach to fully specified probe all pids
@@ -93,14 +93,14 @@ RUN {{BPFTRACE}} -e 'usdt:./testlibs/libusdt_tp.so:tracetestlib:lib_probe_1 { pr
 BEFORE ./testprogs/usdt_lib
 EXPECT here
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_lib should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - all probes by wildcard and file
 PROG usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }
 EXPECT Attaching 3 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - all probes by wildcard and file with child
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
@@ -121,14 +121,14 @@ EXPECT Attaching 3 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES bash -c "exit 1"
-# REQUIRES ./testprogs/usdt_test should_not_skip
+# REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to probe by wildcard and file
 PROG usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }
 EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to probe by wildcard and file with child
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test::*probe2 { printf("here\n" ); exit(); }' -c ./testprogs/usdt_test
@@ -139,7 +139,7 @@ NAME usdt probes - attach to probes by wildcard file
 PROG usdt:./testprogs/usdt_test*::* { printf("here\n" ); exit(); }
 EXPECT Attaching 3 probes...
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 TIMEOUT 5
 
 NAME usdt probes - attach to probes by wildcard file with child
@@ -157,14 +157,14 @@ RUN {{BPFTRACE}} -e 'usdt:::*probe2 { printf("here\n" ); exit(); }' -p {{BEFORE_
 EXPECT Attaching 2 probes...
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to multiple probes with different number of locations by wildcard
 PROG usdt:./testprogs/usdt_multiple_locations:tracetest:testprobe* { printf("here\n" ); exit(); }
 BEFORE ./testprogs/usdt_multiple_locations
 EXPECT Attaching 6 probes...
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_multiple_locations should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 # TODO(mmarchini): re-enable this test
 # This test relies on the latest version of bcc. Before re-enabling this test,
@@ -176,7 +176,7 @@ EXPECT Hello world
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES bash -c "exit 1"
-# REQUIRES ./testprogs/usdt_test should_not_skip
+# REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 # TODO(mmarchini): re-enable this test
 # This test relies on the latest version of bcc. Before re-enabling this test,
@@ -188,14 +188,14 @@ EXPECT Hello world
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
 REQUIRES bash -c "exit 1"
-# REQUIRES ./testprogs/usdt_test should_not_skip
+# REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to probe with probe builtin and args by file
 PROG usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }
 EXPECT usdt:./testprogs/usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to probe with probe builtin and args by file with child
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, probe ); exit(); }' -c ./testprogs/usdt_test
@@ -207,27 +207,27 @@ RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_test:* { printf("%lld %s\n", arg0, pr
 EXPECT usdt_test:tracetest:testprobe
 TIMEOUT 5
 BEFORE ./testprogs/usdt_test
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - attach to probe with semaphore
 RUN {{BPFTRACE}} -e 'usdt::tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' -p {{BEFORE_PID}}
 EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - file based semaphore activation
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", str(arg1) ); exit(); }' --usdt-file-activation
 EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - file based semaphore activation no process
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit(); }' --usdt-file-activation
 EXPECT Failed to find processes running
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 REQUIRES_FEATURE !uprobe_refcount
 WILL_FAIL
 
@@ -237,7 +237,7 @@ NAME usdt probes - file based semaphore activation no process, kernel usdt semap
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { exit(); }' --usdt-file-activation
 EXPECT Attaching 1 probe
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 REQUIRES_FEATURE uprobe_refcount
 
 # We should be able to activate a semaphore without specifying a PID or
@@ -247,7 +247,7 @@ PROG usdt:./testprogs/usdt_semaphore_test:tracetest:testprobe { printf("%s\n", s
 EXPECT tracetest_testprobe_semaphore: [1-9]
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 REQUIRES_FEATURE uprobe_refcount
 
 NAME usdt probes - file based semaphore activation multi process
@@ -256,7 +256,7 @@ EXPECT found 2 processes
 TIMEOUT 5
 BEFORE ./testprogs/usdt_semaphore_test
 BEFORE ./testprogs/usdt_semaphore_test
-REQUIRES ./testprogs/usdt_semaphore_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes - list probes by pid in separate mountns
 RUN {{BPFTRACE}} -l 'usdt:*' -p {{BEFORE_PID}}
@@ -279,7 +279,7 @@ RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_quoted_probe:test:"\"probe1\"" { prin
 EXPECT 1
 TIMEOUT 5
 BEFORE ./testprogs/usdt_quoted_probe
-REQUIRES ./testprogs/usdt_quoted_probe should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt sized arguments
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_sized_args:test:probe2 { printf("%ld\n", arg0); exit(); }' -p {{BEFORE_PID}}
@@ -293,25 +293,25 @@ EXPECT 4092785136 -202182160 61936 -3600 240 -16
 #EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
 # Bug in bcc, constants are stored in a 32-bit int, so 64-bit values are truncated
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_args should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt reg arguments
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_args:usdt_args:reg_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
 EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_args should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt addr arguments
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_args:usdt_args:addr_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
 EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_args should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt addr+index arguments
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_args:usdt_args:index_* { printf("%lld ", arg0); }' -c ./testprogs/usdt_args
 EXPECT -579005069656919568 -579005069656919568 4092785136 -202182160 61936 -3600 240 -16
 TIMEOUT 5
-REQUIRES ./testprogs/usdt_args should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 # USDT probes can be inlined which creates duplicate identical probes. We must
 # attach to all of them
@@ -319,10 +319,10 @@ NAME usdt duplicated markers
 RUN {{BPFTRACE}} -e 'usdt:./testprogs/usdt_inlined:tracetest:testprobe { printf("%d\n", arg1); @a += 1; if (@a >= 2) {exit();} }' -c ./testprogs/usdt_inlined
 EXPECT Attaching 2 probes.*\n.*\s999\s*100
 TIMEOUT 1
-REQUIRES ./testprogs/usdt_inlined should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
 
 NAME usdt probes in multiple modules
 RUN {{BPFTRACE}} runtime/scripts/usdt_multi_modules.bt
 EXPECT Attaching 2 probes
 TIMEOUT 1
-REQUIRES ./testprogs/usdt_test should_not_skip
+REQUIRES ./testprogs/systemtap_sys_sdt_check
