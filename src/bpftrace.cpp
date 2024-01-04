@@ -263,8 +263,16 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::kfunc ||
                probetype(attach_point->provider) == ProbeType::kretfunc)
         attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
+      else if ((probetype(attach_point->provider) == ProbeType::kprobe ||
+                probetype(attach_point->provider) == ProbeType::kretprobe) &&
+               !attach_point->target.empty())
+      {
+        attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
+      }
       else
+      {
         attach_funcs.push_back(attach_point->func);
+      }
     }
 
     // You may notice that the below loop is somewhat duplicated in
@@ -314,6 +322,12 @@ int BPFtrace::add_probe(ast::Probe &p)
         // a function name.
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.
+        target = erase_prefix(func_id);
+      }
+      else if ((probetype(attach_point->provider) == ProbeType::kprobe ||
+                probetype(attach_point->provider) == ProbeType::kretprobe) &&
+               !attach_point->target.empty())
+      {
         target = erase_prefix(func_id);
       }
       else if (probetype(attach_point->provider) == ProbeType::watchpoint ||
