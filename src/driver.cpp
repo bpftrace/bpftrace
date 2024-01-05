@@ -89,7 +89,8 @@ std::set<std::string> Driver::list_modules() const
     for (auto &ap : *probe->attach_points)
     {
       auto probe_type = probetype(ap->provider);
-      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc)
+      if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
+          probe_type == ProbeType::kprobe || probe_type == ProbeType::kretprobe)
       {
         if (ap->need_expansion)
         {
