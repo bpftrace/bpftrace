@@ -23,6 +23,8 @@ and this project adheres to
   - [#2830](https://github.com/iovisor/bpftrace/pull/2830)
 - New builtin for getting the number of map elements
   - [#2840](https://github.com/iovisor/bpftrace/pull/2840)
+- Add support for kprobe:module:function
+  - [#2897](https://github.com/iovisor/bpftrace/pull/2897)
 #### Changed
 #### Deprecated
 #### Removed

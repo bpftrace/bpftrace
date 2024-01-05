@@ -2391,9 +2391,9 @@ kfunc:kvm:x86_emulate_insn { @ = count(); }
 === kprobe and kretprobe
 
 .variants
-* `kprobe:fn`
-* `kprobe:fn+offset`
-* `kretprobe:fn`
+* `kprobe[:mod]:fn`
+* `kprobe[:mod]:fn+offset`
+* `kretprobe[:mod]:fn`
 
 .shortnames
 * `k`
