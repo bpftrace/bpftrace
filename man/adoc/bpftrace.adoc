@@ -2331,10 +2331,10 @@ NetworkManager:1155 /var/lib/sss/mc/passwd (deleted)
 === kfunc and kretfunc
 
 .variants
-* `kfunc[:mod]:fn`
-* `fentry[:mod]:fn`
-* `kretfunc[:mod]:fn`
-* `fexit[:mod]:fn`
+* `kfunc[:module]:fn`
+* `fentry[:module]:fn`
+* `kretfunc[:module]:fn`
+* `fexit[:module]:fn`
 
 .shortnames
 * `f` (`kfunc`)
@@ -2391,9 +2391,9 @@ kfunc:kvm:x86_emulate_insn { @ = count(); }
 === kprobe and kretprobe
 
 .variants
-* `kprobe[:mod]:fn`
-* `kprobe[:mod]:fn+offset`
-* `kretprobe[:mod]:fn`
+* `kprobe[:module]:fn`
+* `kprobe[:module]:fn+offset`
+* `kretprobe[:module]:fn`
 
 .shortnames
 * `k`

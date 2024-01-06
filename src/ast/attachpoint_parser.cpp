@@ -325,7 +325,8 @@ AttachPointParser::State AttachPointParser::special_parser()
 
 AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 {
-  if (parts_.size() != 2 && parts_.size() != 3)
+  auto num_parts = parts_.size();
+  if (num_parts != 2 && num_parts != 3)
   {
     if (ap_->ignore_invalid)
       return SKIP;
@@ -334,7 +335,7 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
   }
 
   auto func_idx = 1;
-  if (parts_.size() == 3)
+  if (num_parts == 3)
   {
     ap_->target = parts_[1];
     func_idx = 2;
