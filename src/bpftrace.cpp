@@ -38,12 +38,6 @@
 #include "triggers.h"
 #include "utils.h"
 
-namespace libbpf {
-#define __BPF_NAME_FN(x) #x
-const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
-#undef __BPF_NAME_FN
-} // namespace libbpf
-
 namespace bpftrace {
 
 DebugLevel bt_debug = DebugLevel::kNone;
@@ -542,9 +536,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     auto error_id = helpererror->error_id;
     auto return_value = helpererror->return_value;
     auto &info = bpftrace->resources.helper_error_info[error_id];
-    bpftrace->out_->helper_error(libbpf::bpf_func_name[info.func_id],
-                                 return_value,
-                                 info.loc);
+    bpftrace->out_->helper_error(info.func_id, return_value, info.loc);
     return;
   }
   else if (printf_id == asyncactionint(AsyncAction::watchpoint_attach))

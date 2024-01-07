@@ -172,7 +172,7 @@ TIMEOUT 1
 
 NAME helper_error
 RUN {{BPFTRACE}} -kk -q -f json -e 'struct foo {int a;}; BEGIN { $tmp = ((struct foo*) 0)->a; exit(); }'
-EXPECT {"type": "helper_error", "helper": "probe_read", "retcode": -14, "line": 1, "col": 37}
+EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "retcode": -14, "line": 1, "col": 37}
 TIMEOUT 1
 
 NAME cgroup_path
