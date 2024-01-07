@@ -47,6 +47,8 @@ and this project adheres to
 #### Tools
 - Add PPID field to `execsnoop.bt`
   - [#2876](https://github.com/iovisor/bpftrace/pull/2876)
+- Use `strftime` instead of `elapsed` in `execsnoop.bt`
+  - [#2904](https://github.com/iovisor/bpftrace/pull/2904)
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.
