@@ -5,32 +5,24 @@ Tracing all new process execution (via exec()):
 
 # ./execsnoop.bt
 Attaching 3 probes...
-TIME(ms)   PID     PPID    ARGS
-2460       3466    3441    ls --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
-3996       3467    3441    man ls
-4005       3473    3441    preconv -e UTF-8
-4005       3473    3441    preconv -e UTF-8
-4005       3473    3441    preconv -e UTF-8
-4005       3473    3441    preconv -e UTF-8
-4005       3473    3441    preconv -e UTF-8
-4005       3474    3441    tbl
-4005       3474    3441    tbl
-4005       3474    3441    tbl
-4005       3474    3441    tbl
-4005       3474    3441    tbl
-4005       3476    3441    nroff -mandoc -rLL=193n -rLT=193n -Tutf8
-4005       3476    3441    nroff -mandoc -rLL=193n -rLT=193n -Tutf8
-4005       3476    3441    nroff -mandoc -rLL=193n -rLT=193n -Tutf8
-4005       3476    3441    nroff -mandoc -rLL=193n -rLT=193n -Tutf8
-4005       3476    3441    nroff -mandoc -rLL=193n -rLT=193n -Tutf8
-4006       3479    3441    pager  -rLL=193n
-4006       3479    3441    pager  -rLL=193n
-4006       3479    3441    pager  -rLL=193n
-4006       3479    3441    pager  -rLL=193n
-4006       3479    3441    pager  -rLL=193n
-4007       3481    3441    locale charmap
-4008       3482    3441    groff -mtty-char -Tutf8 -mandoc -rLL=193n -rLT=193n
-4009       3483    3441    troff -mtty-char -mandoc -rLL=193n -rLT=193n -Tutf8
+TIME            PID     PPID    ARGS
+08:57:52.430193 3187374 1971701 ls --color --color=auto -lh execsnoop.bt execsnoop.bt.0 execsnoop.bt.1
+08:57:52.441868 3187378 3187375 man ls
+08:57:52.473565 3187384 3187378 preconv -e UTF-8
+08:57:52.473620 3187384 3187378 preconv -e UTF-8
+08:57:52.473658 3187384 3187378 preconv -e UTF-8
+08:57:52.473839 3187385 3187378 tbl
+08:57:52.473897 3187385 3187378 tbl
+08:57:52.473944 3187385 3187378 tbl
+08:57:52.474055 3187386 3187378 nroff -mandoc -Tutf8
+08:57:52.474107 3187386 3187378 nroff -mandoc -Tutf8
+08:57:52.474145 3187386 3187378 nroff -mandoc -Tutf8
+08:57:52.474684 3187388 3187378 less
+08:57:52.474739 3187388 3187378 less
+08:57:52.474780 3187388 3187378 less
+08:57:52.475502 3187389 3187386 groff -Tutf8 -mtty-char -mandoc
+08:57:52.476717 3187390 3187389 troff -mtty-char -mandoc -Tutf8
+08:57:52.476811 3187391 3187389 grotty
 
 The output begins by showing an "ls" command, and then the process execution
 to serve "man ls". The same exec arguments appear multiple times: in this case
