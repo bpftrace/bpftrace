@@ -263,10 +263,10 @@ TIMEOUT 1
 
 NAME runtime_error_check_delete
 RUN {{BPFTRACE}} -k -e 'i:ms:100 { @[1] = 1; delete(@[2]); exit(); }'
-EXPECT WARNING: Failed to map_delete_elem: No such file or directory \(-2\)
+EXPECT WARNING: Can't delete map element because it does not exist.
 TIMEOUT 1
 
 NAME runtime_error_check_lookup
 RUN {{BPFTRACE}} -kk -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
-EXPECT WARNING: Failed to map_lookup_elem: 0
+EXPECT WARNING: Can't lookup map element because it does not exist.
 TIMEOUT 1
