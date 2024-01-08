@@ -88,11 +88,6 @@ public:
     mock_probe_matcher = dynamic_cast<MockProbeMatcher *>(probe_matcher_.get());
   }
 
-  bool has_kprobe_multi(void)
-  {
-    return feature_->has_kprobe_multi();
-  }
-
   MockProbeMatcher *mock_probe_matcher;
 };
 
