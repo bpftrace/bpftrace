@@ -74,9 +74,14 @@ int BpfBytecode::create_maps()
   return failed_maps;
 }
 
-bool BpfBytecode::hasMap(MapManager::Type internal_type) const
+bool BpfBytecode::hasMap(MapType internal_type) const
 {
   return maps_.find(to_string(internal_type)) != maps_.end();
+}
+
+bool BpfBytecode::hasMap(const StackType &stack_type) const
+{
+  return maps_.find(stack_type.name()) != maps_.end();
 }
 
 const BpfMap &BpfBytecode::getMap(const std::string &name) const
@@ -88,9 +93,24 @@ const BpfMap &BpfBytecode::getMap(const std::string &name) const
   return map->second;
 }
 
-const BpfMap &BpfBytecode::getMap(MapManager::Type internal_type) const
+const BpfMap &BpfBytecode::getMap(MapType internal_type) const
 {
   return getMap(to_string(internal_type));
+}
+
+const std::map<std::string, BpfMap> &BpfBytecode::maps() const
+{
+  return maps_;
+}
+
+int BpfBytecode::countStackMaps() const
+{
+  int n = 0;
+  for (auto &map : maps_) {
+    if (map.second.is_stack_map())
+      n++;
+  }
+  return n;
 }
 
 // This is taken from libbpf (btf.c) and we need it to manually iterate BTF

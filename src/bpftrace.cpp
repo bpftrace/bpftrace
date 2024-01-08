@@ -30,6 +30,7 @@
 #include <bpf/libbpf.h>
 
 #include "ast/async_event_types.h"
+#include "bpfmap.h"
 #include "bpfprogram.h"
 #include "bpftrace.h"
 #include "log.h"
@@ -1121,8 +1122,8 @@ int BPFtrace::run(BpfBytecode bytecode)
     map->mapfd_ = bytecode.getMap(map->name_).fd;
   }
 
-  if (bytecode.hasMap(MapManager::Type::MappedPrintfData)) {
-    auto map = bytecode.getMap(MapManager::Type::MappedPrintfData);
+  if (bytecode.hasMap(MapType::MappedPrintfData)) {
+    const auto &map = bytecode.getMap(MapType::MappedPrintfData);
     uint32_t idx = 0;
     std::vector<uint8_t> formats(map.value_size(), 0);
     for (auto &arg : resources.mapped_printf_args) {
@@ -1147,16 +1148,14 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (err)
     return err;
 
-  if (maps.Has(MapManager::Type::Elapsed)) {
+  if (bytecode_.hasMap(MapType::Elapsed)) {
     struct timespec ts;
     clock_gettime(CLOCK_BOOTTIME, &ts);
     auto nsec = 1000000000ULL * ts.tv_sec + ts.tv_nsec;
     uint64_t key = 0;
 
-    if (bpf_update_elem(maps[MapManager::Type::Elapsed].value()->mapfd_,
-                        &key,
-                        &nsec,
-                        0) < 0) {
+    if (bpf_update_elem(bytecode_.getMap(MapType::Elapsed).fd, &key, &nsec, 0) <
+        0) {
       perror("Failed to write start time to elapsed map");
       return -1;
     }
@@ -1301,7 +1300,7 @@ int BPFtrace::setup_perf_events()
     int reader_fd = perf_reader_fd((perf_reader *)reader);
 
     bpf_update_elem(
-        maps[MapManager::Type::PerfEvent].value()->mapfd_, &cpu, &reader_fd, 0);
+        bytecode_.getMap(MapType::PerfEvent).fd, &cpu, &reader_fd, 0);
     if (epoll_ctl(epollfd_, EPOLL_CTL_ADD, reader_fd, &ev) == -1) {
       LOG(ERROR) << "Failed to add perf reader to epoll";
       return -1;
@@ -1312,16 +1311,12 @@ int BPFtrace::setup_perf_events()
 
 int BPFtrace::setup_ringbuf()
 {
-  ringbuf_ = static_cast<struct ring_buffer *>(
-      ring_buffer__new(maps[MapManager::Type::Ringbuf].value()->mapfd_,
-                       ringbuf_printer,
-                       this,
-                       nullptr));
-  if (bpf_update_elem(
-          maps[MapManager::Type::RingbufLossCounter].value()->mapfd_,
-          const_cast<uint32_t *>(&rb_loss_cnt_key_),
-          const_cast<uint64_t *>(&rb_loss_cnt_val_),
-          0)) {
+  ringbuf_ = static_cast<struct ring_buffer *>(ring_buffer__new(
+      bytecode_.getMap(MapType::Ringbuf).fd, ringbuf_printer, this, nullptr));
+  if (bpf_update_elem(bytecode_.getMap(MapType::RingbufLossCounter).fd,
+                      const_cast<uint32_t *>(&rb_loss_cnt_key_),
+                      const_cast<uint64_t *>(&rb_loss_cnt_val_),
+                      0)) {
     LOG(ERROR) << "fail to init ringbuf loss counter";
     return -1;
   }
@@ -1424,10 +1419,9 @@ int BPFtrace::poll_perf_events()
 void BPFtrace::handle_ringbuf_loss()
 {
   uint64_t current_value = 0;
-  if (bpf_lookup_elem(
-          maps[MapManager::Type::RingbufLossCounter].value()->mapfd_,
-          const_cast<uint32_t *>(&rb_loss_cnt_key_),
-          &current_value)) {
+  if (bpf_lookup_elem(bytecode_.getMap(MapType::RingbufLossCounter).fd,
+                      const_cast<uint32_t *>(&rb_loss_cnt_key_),
+                      &current_value)) {
     LOG(ERROR) << "fail to get ringbuf loss counter";
   }
   if (current_value) {
@@ -1796,7 +1790,7 @@ std::string BPFtrace::get_stack(int64_t stackid,
                                 int indent)
 {
   auto stack_trace = std::vector<uint64_t>(stack_type.limit);
-  int err = bpf_lookup_elem(maps[stack_type].value()->mapfd_,
+  int err = bpf_lookup_elem(bytecode_.getMap(stack_type.name()).fd,
                             &stackid,
                             stack_trace.data());
   if (err) {

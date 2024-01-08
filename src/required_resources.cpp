@@ -84,59 +84,6 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     bpftrace.maps.Set(stack_type, std::move(map));
   }
 
-  if (needs_join_map) {
-    // join uses map storage as we'd like to process data larger than can fit on
-    // the BPF stack.
-    int value_size = 8 + 8 + bpftrace.join_argnum_ * bpftrace.join_argsize_;
-    auto map = std::make_unique<T>(
-        "join", libbpf::BPF_MAP_TYPE_PERCPU_ARRAY, 4, value_size, 1, 0);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace.maps.Set(MapManager::Type::Join, std::move(map));
-  }
-  if (needs_elapsed_map) {
-    std::string map_ident = "elapsed";
-    SizedType type = CreateUInt64();
-    MapKey key;
-    auto map = std::make_unique<T>(map_ident, type, key, 1);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace.maps.Set(MapManager::Type::Elapsed, std::move(map));
-  }
-  if (needs_data_map) {
-    int ret;
-    auto map = prepareFormatStringDataMap<T>(mapped_printf_args, &ret);
-    if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
-      failed_maps += 1;
-    bpftrace.maps.Set(MapManager::Type::MappedPrintfData, std::move(map));
-  }
-  /*
-   * PERF_EVENT_ARRAY map is needed when:
-   * 1. ringbuf is unavailable for built-ins like printf, cat.
-   * 2. Or, built-in skboutput is used.
-   */
-  if (!bpftrace.feature_->has_map_ringbuf() || needs_perf_event_map) {
-    auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
-    failed_maps += is_invalid_map(map->mapfd_);
-    bpftrace.maps.Set(MapManager::Type::PerfEvent, std::move(map));
-  }
-  // When available, ringbuf is used for built-ins like printf, cat.
-  if (bpftrace.feature_->has_map_ringbuf()) {
-    auto rb = std::make_unique<T>(libbpf::BPF_MAP_TYPE_RINGBUF,
-                                  bpftrace.config_.get(
-                                      ConfigKeyInt::perf_rb_pages));
-    failed_maps += is_invalid_map(rb->mapfd_);
-    bpftrace.maps.Set(MapManager::Type::Ringbuf, std::move(rb));
-
-    auto rb_loss_cnt = std::make_unique<T>("ringbuf_loss_counter",
-                                           libbpf::BPF_MAP_TYPE_ARRAY,
-                                           sizeof(bpftrace.rb_loss_cnt_key_),
-                                           sizeof(bpftrace.rb_loss_cnt_val_),
-                                           1,
-                                           0);
-    failed_maps += is_invalid_map(rb_loss_cnt->mapfd_);
-    bpftrace.maps.Set(MapManager::Type::RingbufLossCounter,
-                      std::move(rb_loss_cnt));
-  }
-
   if (failed_maps > 0) {
     std::cerr << "Creation of the required BPF maps has failed." << std::endl;
     std::cerr << "Make sure you have all the required permissions and are not";

@@ -32,4 +32,28 @@ uint32_t BpfMap::max_entries() const
   return bpf_map__max_entries(bpf_map_);
 }
 
+bool BpfMap::is_stack_map() const
+{
+  return name().compare(0, 6, "stack_") == 0;
+}
+
+std::string to_string(MapType t)
+{
+  switch (t) {
+    case MapType::PerfEvent:
+      return "perf_event";
+    case MapType::Join:
+      return "join";
+    case MapType::Elapsed:
+      return "elapsed";
+    case MapType::MappedPrintfData:
+      return "mapped_printf_data";
+    case MapType::Ringbuf:
+      return "ringbuf";
+    case MapType::RingbufLossCounter:
+      return "ringbuf_loss_counter";
+  }
+  return {}; // unreached
+}
+
 } // namespace bpftrace

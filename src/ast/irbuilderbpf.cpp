@@ -9,6 +9,7 @@
 #include "arch/arch.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "bpfmap.h"
 #include "bpftrace.h"
 #include "log.h"
 #include "utils.h"
@@ -327,11 +328,8 @@ CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
 CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
                                          const location &loc)
 {
-  return createGetScratchMap(to_string(MapManager::Type::Join),
-                             "join",
-                             getInt8PtrTy(),
-                             loc,
-                             failure_callback);
+  return createGetScratchMap(
+      to_string(MapType::Join), "join", getInt8PtrTy(), loc, failure_callback);
 }
 
 // createGetScratchMap will jump to failure_callback if it cannot find the map
@@ -1413,7 +1411,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                        size_t size,
                                        const location *loc)
 {
-  Value *map_ptr = GetMapVar(to_string(MapManager::Type::Ringbuf));
+  Value *map_ptr = GetMapVar(to_string(MapType::Ringbuf));
 
   // long bpf_ringbuf_output(void *ringbuf, void *data, u64 size, u64 flags)
   FunctionType *ringbuf_output_func_type = FunctionType::get(
@@ -1438,7 +1436,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
   CreateCondBr(condition, loss_block, merge_block);
 
   SetInsertPoint(loss_block);
-  CreateAtomicIncCounter(to_string(MapManager::Type::RingbufLossCounter),
+  CreateAtomicIncCounter(to_string(MapType::RingbufLossCounter),
                          bpftrace_.rb_loss_cnt_key_);
   CreateBr(merge_block);
 
@@ -1549,7 +1547,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
                                          size_t size,
                                          const location *loc)
 {
-  Value *map_ptr = GetMapVar(to_string(MapManager::Type::PerfEvent));
+  Value *map_ptr = GetMapVar(to_string(MapType::PerfEvent));
 
   Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
@@ -1646,7 +1644,7 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 {
   Value *flags, *map_ptr, *size_val;
 
-  map_ptr = GetMapVar(to_string(MapManager::Type::PerfEvent));
+  map_ptr = GetMapVar(to_string(MapType::PerfEvent));
 
   flags = len;
   flags = CreateShl(flags, 32);

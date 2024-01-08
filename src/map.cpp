@@ -214,18 +214,6 @@ std::optional<IMap *> MapManager::Lookup(ssize_t id)
   return maps_by_id_[id].get();
 }
 
-void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
-{
-  auto id = maps_by_id_.size();
-  auto name = to_string(t);
-  map->id = id;
-  map->printable_ = false;
-  map->name_ = name;
-  maps_by_type_[t] = map.get();
-  maps_by_name_[name] = map.get();
-  maps_by_id_.emplace_back(std::move(map));
-}
-
 std::optional<IMap *> MapManager::Lookup(Type t)
 {
   auto search = maps_by_type_.find(t);
@@ -268,22 +256,4 @@ bool MapManager::Has(StackType t)
   return stackid_maps_.find(t) != stackid_maps_.end();
 }
 
-std::string to_string(MapManager::Type t)
-{
-  switch (t) {
-    case MapManager::Type::PerfEvent:
-      return "perf_event";
-    case MapManager::Type::Join:
-      return "join";
-    case MapManager::Type::Elapsed:
-      return "elapsed";
-    case MapManager::Type::MappedPrintfData:
-      return "mapped_printf_data";
-    case MapManager::Type::Ringbuf:
-      return "ringbuf";
-    case MapManager::Type::RingbufLossCounter:
-      return "ringbuf_loss_counter";
-  }
-  return {}; // unreached
-}
 } // namespace bpftrace
