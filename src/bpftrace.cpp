@@ -317,19 +317,16 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::uretprobe ||
                probetype(attach_point->provider) == ProbeType::kfunc ||
                probetype(attach_point->provider) == ProbeType::kretfunc)
-      {
-        // tracepoint, uprobe, and k(ret)func probes specify both a target and
-        // a function name.
-        // We extract the target from func_id so that a resolved target and a
-        // resolved function name are used in the probe.
-        target = erase_prefix(func_id);
-      }
-      else if ((probetype(attach_point->provider) == ProbeType::kprobe ||
-                probetype(attach_point->provider) == ProbeType::kretprobe) &&
-               !attach_point->target.empty())
-      {
-        target = erase_prefix(func_id);
-      }
+        ((probetype(attach_point->provider) == ProbeType::kprobe ||
+          probetype(attach_point->provider) == ProbeType::kretprobe) &&
+         !attach_point->target.empty())
+        {
+          // tracepoint, uprobe, and k(ret)func probes specify both a target and
+          // a function name.
+          // We extract the target from func_id so that a resolved target and a
+          // resolved function name are used in the probe.
+          target = erase_prefix(func_id);
+        }
       else if (probetype(attach_point->provider) == ProbeType::watchpoint ||
                probetype(attach_point->provider) == ProbeType::asyncwatchpoint)
       {

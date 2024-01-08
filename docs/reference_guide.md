@@ -1117,8 +1117,8 @@ open path: interrupts
 [...]
 ```
 
-If the traced function is in a kernel module, you can optionally specify it to use BTF data from that
-module's BTF file:
+You can optionally specify a kernel module, either to include BTF data from that
+module, or to specify that the traced function should come from that module.
 ```
 # cat kvm.bt
 
