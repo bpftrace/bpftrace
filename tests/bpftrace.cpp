@@ -222,34 +222,41 @@ TEST(bpftrace, add_probes_wildcard)
       "kprobe:sys_read,kprobe:my_*,kprobe:sys_write{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
       .Times(1);
 
-  if (bpftrace->has_kprobe_multi())
-  {
-    ASSERT_EQ(0, bpftrace->add_probe(*probe));
-    ASSERT_EQ(3U, bpftrace->get_probes().size());
-    ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(4U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
-    std::string probe_orig_name =
-        "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
-    check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
-    check_kprobe(bpftrace->get_probes().at(1), "my_*", probe_orig_name);
-    check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
-  }
-  else
-  {
-    ASSERT_EQ(0, bpftrace->add_probe(*probe));
-    ASSERT_EQ(4U, bpftrace->get_probes().size());
-    ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(3), "sys_write", probe_orig_name);
+}
 
-    std::string probe_orig_name =
-        "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
-    check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
-    check_kprobe(bpftrace->get_probes().at(1), "my_one", probe_orig_name);
-    check_kprobe(bpftrace->get_probes().at(2), "my_two", probe_orig_name);
-    check_kprobe(bpftrace->get_probes().at(3), "sys_write", probe_orig_name);
-  }
+TEST(bpftrace, add_probes_wildcard_kprobe_multi)
+{
+  ast::Probe *probe = parse_probe(
+      "kprobe:sys_read,kprobe:my_*,kprobe:sys_write{}");
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(3U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:sys_read,kprobe:my_*,kprobe:sys_write";
+  check_kprobe(bpftrace->get_probes().at(0), "sys_read", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(1), "my_*", probe_orig_name);
+  check_kprobe(bpftrace->get_probes().at(2), "sys_write", probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_wildcard_no_matches)
@@ -287,6 +294,8 @@ TEST(bpftrace, add_probes_kernel_module_wildcard)
 {
   ast::Probe *probe = parse_probe("kprobe:func_in_mo*{}");
   auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
+
   EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
       .Times(1);
 
@@ -295,14 +304,24 @@ TEST(bpftrace, add_probes_kernel_module_wildcard)
   ASSERT_EQ(0U, bpftrace->get_special_probes().size());
 
   std::string probe_orig_name = "kprobe:func_in_mo*";
-  if (bpftrace->has_kprobe_multi())
-  {
-    check_kprobe(bpftrace->get_probes().at(0), "func_in_mo*", probe_orig_name);
-  }
-  else
-  {
-    check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
-  }
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
+}
+
+TEST(bpftrace, add_probes_kernel_module_wildcard_kprobe_multi)
+{
+  ast::Probe *probe = parse_probe("kprobe:func_in_mo*{}");
+  auto bpftrace = get_strict_mock_bpftrace();
+  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
+
+  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
+      .Times(1);
+
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:func_in_mo*";
+  check_kprobe(bpftrace->get_probes().at(0), "func_in_mo*", probe_orig_name);
 }
 
 TEST(bpftrace, add_probes_offset)
