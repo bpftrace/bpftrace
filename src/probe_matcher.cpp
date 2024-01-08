@@ -568,7 +568,13 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
   switch (probetype(attach_point.provider))
   {
     case ProbeType::kprobe:
-    case ProbeType::kretprobe:
+    case ProbeType::kretprobe: {
+      if (!attach_point.target.empty())
+        search_input = attach_point.target + ":" + attach_point.func;
+      else
+        search_input = attach_point.func;
+      break;
+    }
     case ProbeType::iter:
     case ProbeType::rawtracepoint: {
       search_input = attach_point.func;
