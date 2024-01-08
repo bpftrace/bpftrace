@@ -50,19 +50,6 @@ public:
     return maps_by_id_.end();
   };
 
-  /**
-     Internal maps
-  */
-  enum class Type {
-    // Also update to_string
-    PerfEvent,
-    Join,
-    Elapsed,
-    MappedPrintfData,
-    Ringbuf,
-    RingbufLossCounter,
-  };
-
   void Set(Type t, std::unique_ptr<IMap> map);
   std::optional<IMap *> Lookup(Type t);
   std::optional<IMap *> operator[](Type t)
@@ -94,7 +81,5 @@ private:
   std::unordered_map<Type, IMap *> maps_by_type_;
   std::unordered_map<StackType, IMap *> stackid_maps_;
 };
-
-std::string to_string(MapManager::Type t);
 
 } // namespace bpftrace

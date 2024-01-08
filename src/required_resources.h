@@ -76,7 +76,7 @@ public:
   // mapped_printf_args stores seq_printf, debugf arguments
   std::vector<std::tuple<FormatString, std::vector<Field>>> mapped_printf_args;
   // mapped_printf_ids stores the starting indices and length of each format
-  // string in the data map of MapManager::Type::MappedPrintfData
+  // string in the data map of MapType::MappedPrintfData
   std::vector<std::tuple<int, int>> mapped_printf_ids;
   std::vector<std::string> join_args;
   std::vector<std::string> time_args;

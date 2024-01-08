@@ -27,9 +27,26 @@ public:
   uint32_t value_size() const;
   uint32_t max_entries() const;
 
+  bool is_stack_map() const;
+
 private:
   struct bpf_map *bpf_map_;
 };
+
+/**
+   Internal map types
+*/
+enum class MapType {
+  // Also update to_string
+  PerfEvent,
+  Join,
+  Elapsed,
+  MappedPrintfData,
+  Ringbuf,
+  RingbufLossCounter,
+};
+
+std::string to_string(MapType t);
 
 // BPF maps do not accept "@" in name so we replace it by "AT_".
 // The below two functions do the translations.

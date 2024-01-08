@@ -37,6 +37,7 @@
 #include "ast/codegen_helper.h"
 #include "ast/elf_parser.h"
 #include "ast/signal_bt.h"
+#include "bpfmap.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"
@@ -205,7 +206,7 @@ void CodegenLLVM::visit(Builtin &builtin)
 
     auto type = CreateUInt64();
     auto start = b_.CreateMapLookupElem(
-        ctx_, to_string(MapManager::Type::Elapsed), key, type, builtin.loc);
+        ctx_, to_string(MapType::Elapsed), key, type, builtin.loc);
     expr_ = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
@@ -913,8 +914,7 @@ void CodegenLLVM::visit(Call &call)
       auto size = std::get<1>(ids);
 
       // and load it from the map
-      Value *map_data = b_.GetMapVar(
-          to_string(MapManager::Type::MappedPrintfData));
+      Value *map_data = b_.GetMapVar(to_string(MapType::MappedPrintfData));
       Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
       // and finally the seq_printf call
@@ -939,8 +939,7 @@ void CodegenLLVM::visit(Call &call)
     auto idx = std::get<0>(ids);
     auto size = std::get<1>(ids);
 
-    Value *map_data = b_.GetMapVar(
-        to_string(MapManager::Type::MappedPrintfData));
+    Value *map_data = b_.GetMapVar(to_string(MapType::MappedPrintfData));
     Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
     std::vector<Value *> values;
@@ -3390,7 +3389,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
   if (resources.needs_join_map) {
     auto value_size = 8 + 8 + bpftrace_.join_argnum_ * bpftrace_.join_argsize_;
     SizedType value_type = CreateArray(value_size, CreateInt8());
-    createMapDefinition(to_string(MapManager::Type::Join),
+    createMapDefinition(to_string(MapType::Join),
                         libbpf::BPF_MAP_TYPE_PERCPU_ARRAY,
                         1,
                         MapKey({ CreateInt32() }),
@@ -3398,7 +3397,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
   }
 
   if (resources.needs_elapsed_map) {
-    createMapDefinition(to_string(MapManager::Type::Elapsed),
+    createMapDefinition(to_string(MapType::Elapsed),
                         libbpf::BPF_MAP_TYPE_HASH,
                         1,
                         MapKey(),
@@ -3413,7 +3412,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
     value_size = (value_size / ptr_size + 1) * ptr_size;
     SizedType value_type = CreateArray(value_size, CreateInt8());
 
-    createMapDefinition(to_string(MapManager::Type::MappedPrintfData),
+    createMapDefinition(to_string(MapType::MappedPrintfData),
                         libbpf::BPF_MAP_TYPE_ARRAY,
                         1,
                         MapKey({ CreateInt32() }),
@@ -3422,7 +3421,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
 
   if (!bpftrace_.feature_->has_map_ringbuf() ||
       resources.needs_perf_event_map) {
-    createMapDefinition(to_string(MapManager::Type::PerfEvent),
+    createMapDefinition(to_string(MapType::PerfEvent),
                         libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY,
                         get_online_cpus().size(),
                         MapKey({ CreateInt32() }),
@@ -3431,7 +3430,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
 
   if (bpftrace_.feature_->has_map_ringbuf()) {
     auto entries = bpftrace_.config_.get(ConfigKeyInt::perf_rb_pages) * 4096;
-    createMapDefinition(to_string(MapManager::Type::Ringbuf),
+    createMapDefinition(to_string(MapType::Ringbuf),
                         libbpf::BPF_MAP_TYPE_RINGBUF,
                         entries,
                         MapKey(),
@@ -3439,7 +3438,7 @@ void CodegenLLVM::generate_maps(const RequiredResources &resources)
 
     int loss_cnt_key_size = sizeof(bpftrace_.rb_loss_cnt_key_) * 8;
     int loss_cnt_val_size = sizeof(bpftrace_.rb_loss_cnt_val_) * 8;
-    createMapDefinition(to_string(MapManager::Type::RingbufLossCounter),
+    createMapDefinition(to_string(MapType::RingbufLossCounter),
                         libbpf::BPF_MAP_TYPE_ARRAY,
                         1,
                         MapKey({ CreateInt(loss_cnt_key_size) }),
