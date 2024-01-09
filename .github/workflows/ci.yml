@@ -125,22 +125,3 @@ jobs:
     - name: Build and test
       env: ${{matrix.env}}
       run: ./.github/include/ci.py
-
-  irc:
-    # Notify IRC of build failures on pushes only if we are running from
-    # the main repo. We don't want this rule to trigger from forked repos.
-    needs:
-      - build_test
-    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'"
-    runs-on: ubuntu-latest
-    steps:
-    - name: Message channel
-      uses: rectalogic/notify-irc@v1
-      with:
-        nickname: bpftrace-ci-bot
-        server: irc.oftc.net
-        port: 6667
-        tls: false
-        channel: "#bpftrace"
-        message: |
-          master is BROKEN at https://github.com/iovisor/bpftrace/commit/${{github.sha}}
