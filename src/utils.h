@@ -15,7 +15,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include "config.h"
 #include "filesystem.h"
 
 namespace bpftrace {
