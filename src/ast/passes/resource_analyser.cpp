@@ -226,11 +226,6 @@ Pass CreateResourcePass()
       return PassResult::Error("Resource", 1);
     ctx.b.resources = pass_result.value();
 
-    // Create fake maps so that codegen has access to map IDs
-    //
-    // At runtime we will replace the fake maps with real maps
-    ctx.b.resources.create_maps(ctx.b, true);
-
     return PassResult::Success();
   };
 

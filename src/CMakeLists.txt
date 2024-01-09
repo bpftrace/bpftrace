@@ -13,6 +13,9 @@ else()
   endif ()
 endif()
 
+add_library(required_resources required_resources.cpp)
+add_dependencies(required_resources parser)
+
 add_library(runtime
   attached_probe.cpp
   bpffeature.cpp
@@ -25,18 +28,14 @@ add_library(runtime
   config.cpp
   disasm.cpp
   dwarf_parser.cpp
-  fake_map.cpp
   format_string.cpp
-  imap.cpp
   log.cpp
-  map.cpp
   mapkey.cpp
   output.cpp
   probe_matcher.cpp
   procmon.cpp
   printf.cpp
   resolve_cgroupid.cpp
-  required_resources.cpp
   struct.cpp
   tracefs.cpp
   debugfs.cpp
@@ -110,6 +109,9 @@ add_custom_target(version_h DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/version.h)
 add_dependencies(${BPFTRACE} version_h)
 add_dependencies(libbpftrace version_h)
 
+target_include_directories(required_resources PRIVATE ${CMAKE_BINARY_DIR})
+target_include_directories(required_resources PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(required_resources PRIVATE ${BPFTRACE_FLAGS})
 target_include_directories(runtime PRIVATE ${CMAKE_BINARY_DIR})
 target_include_directories(runtime PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_compile_definitions(runtime PRIVATE ${BPFTRACE_FLAGS})

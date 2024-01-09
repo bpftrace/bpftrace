@@ -17,7 +17,6 @@
 #include "bpftrace.h"
 #include "format_string.h"
 #include "location.hh"
-#include "map.h"
 #include "required_resources.h"
 
 namespace bpftrace {

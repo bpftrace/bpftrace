@@ -13,7 +13,6 @@
 #include "format_string.h"
 #include "location.hh"
 #include "mapkey.h"
-#include "mapmanager.h"
 #include "struct.h"
 #include "types.h"
 
@@ -73,16 +72,6 @@ private:
 // script on another host.
 class RequiredResources {
 public:
-  // Create maps in `maps` based on stored metadata
-  //
-  // If `fake` is set, then `FakeMap`s will be created. This is useful for:
-  // * allocating map IDs for codegen, because there's no need to prematurely
-  //   create resources that may not get used (debug mode, AOT codepath, etc.)
-  // * unit tests, as unit tests should not make system state changes
-  //
-  // Returns 0 on success, number of maps that failed to be created otherwise
-  int create_maps(BPFtrace &bpftrace, bool fake);
-
   // `save_state()` serializes `RequiredResources` and writes results into
   // `out`. `load_state()` does the reverse: takes serialized data and loads it
   // into the current instance.
@@ -141,13 +130,6 @@ public:
   std::unordered_set<ast::Probe *> probes_using_usym;
 
 private:
-  template <typename T>
-  int create_maps_impl(BPFtrace &bpftrace, bool fake);
-  template <typename T>
-  std::unique_ptr<T> prepareFormatStringDataMap(
-      const std::vector<std::tuple<FormatString, std::vector<Field>>> &args,
-      int *ret);
-
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
