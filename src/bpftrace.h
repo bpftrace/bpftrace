@@ -113,9 +113,9 @@ public:
       const BpfBytecode &bytecode);
   int run_iter();
   int print_maps();
-  int clear_map(IMap &map);
-  int zero_map(IMap &map);
-  int print_map(IMap &map, uint32_t top, uint32_t div);
+  int clear_map(const BpfMap &map);
+  int zero_map(const BpfMap &map);
+  int print_map(const BpfMap &map, uint32_t top, uint32_t div);
   std::string get_stack(int64_t stackid,
                         int pid,
                         int probe_id,
@@ -260,10 +260,10 @@ private:
   void poll_output(bool drain = false);
   int poll_perf_events();
   void handle_ringbuf_loss();
-  int print_map_hist(IMap &map, uint32_t top, uint32_t div);
-  int print_map_stats(IMap &map, uint32_t top, uint32_t div);
+  int print_map_hist(const BpfMap &map, uint32_t top, uint32_t div);
+  int print_map_stats(const BpfMap &map, uint32_t top, uint32_t div);
   static uint64_t read_address_from_output(std::string output);
-  std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
+  std::vector<uint8_t> find_empty_key(const BpfMap &map) const;
   struct bcc_symbol_option &get_symbol_opts();
   bool has_iter_ = false;
   int epollfd_ = -1;

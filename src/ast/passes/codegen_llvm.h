@@ -263,6 +263,8 @@ private:
   int cgroup_path_id_ = 0;
   int skb_output_id_ = 0;
 
+  std::unordered_map<std::string, libbpf::bpf_map_type> map_types_;
+
   Function *linear_func_ = nullptr;
   Function *log2_func_ = nullptr;
   MDNode *loop_metadata_ = nullptr;
