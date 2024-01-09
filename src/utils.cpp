@@ -24,7 +24,6 @@
 #include <unordered_set>
 
 #include "bpftrace.h"
-#include "config.h"
 #include "debugfs.h"
 #include "filesystem.h"
 #include "log.h"
