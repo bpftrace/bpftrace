@@ -311,8 +311,6 @@ AttachedProbe::~AttachedProbe()
       LOG(FATAL) << "invalid attached probe type \""
                  << probetypeName(probe_.type) << "\" at destructor";
   }
-  if (btf_fd_ != -1)
-    close(btf_fd_);
 
   if (err)
     LOG(ERROR) << "failed to detach probe: " << probe_.name;
@@ -816,9 +814,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
                     .log_size = static_cast<__u32>(log_buf_size), );
 
         auto &btf = prog_.getBTF();
-        btf_fd_ = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
+        auto btf_fd = bpf_btf_load(btf.data(), btf.size(), &btf_opts);
 
-        opts.prog_btf_fd = btf_fd_;
+        opts.prog_btf_fd = btf_fd;
 
         if (!func_infos.empty())
         {
@@ -830,7 +828,8 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         // Don't attempt to load the program if the BTF load failed.
         // This will fall back to the error handling for failed program load,
         // which is more robust.
-        if (btf_fd_ >= 0)
+        if (btf_fd >= 0)
+        {
           progfd_ = bpf_prog_load(static_cast<::bpf_prog_type>(prog_type),
                                   name.c_str(),
                                   license,
@@ -838,10 +837,12 @@ void AttachedProbe::load_prog(BPFfeature &feature)
                                       insns.data()),
                                   insns.size() / sizeof(struct bpf_insn),
                                   &opts);
+          close(btf_fd);
+        }
       }
 
-      if (opts.attach_prog_fd > 0)
-        close(opts.attach_prog_fd);
+      if (opts.attach_btf_obj_fd > 0)
+        close(opts.attach_btf_obj_fd);
       if (progfd_ >= 0)
         break;
     }
