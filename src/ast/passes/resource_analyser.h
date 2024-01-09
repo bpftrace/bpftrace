@@ -46,6 +46,8 @@ private:
   std::ostringstream err_;
   // Current probe we're analysing
   Probe *probe_;
+
+  int next_map_id_ = 0;
 };
 
 Pass CreateResourcePass();

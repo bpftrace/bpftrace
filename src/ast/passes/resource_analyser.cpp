@@ -173,6 +173,16 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needs_perf_event_map = true;
   }
 
+  if (call.func == "print" || call.func == "clear" || call.func == "zero") {
+    auto &arg = *call.vargs->at(0);
+    if (arg.is_map) {
+      auto &name = static_cast<Map &>(arg).ident;
+      auto &map_info = resources_.maps_info[name];
+      if (map_info.id == -1)
+        map_info.id = next_map_id_++;
+    }
+  }
+
   if (uses_usym_table(call.func)) {
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time

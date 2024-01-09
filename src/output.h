@@ -5,10 +5,13 @@
 #include <map>
 #include <vector>
 
-#include "imap.h"
+#include "bpfmap.h"
 #include "location.hh"
+#include "types.h"
 
 namespace bpftrace {
+
+class BPFtrace;
 
 enum class MessageType {
   // don't forget to update std::ostream& operator<<(std::ostream& out,
@@ -54,7 +57,7 @@ public:
   // a string, format it properly, and print it to out_.
   virtual void map(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -64,7 +67,7 @@ public:
   // histogram into a string, format it properly, and print it to out_.
   virtual void map_hist(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
@@ -76,7 +79,7 @@ public:
   // statistics into a string, format it properly, and print it to out_.
   virtual void map_stats(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -130,7 +133,7 @@ protected:
   // methods and join them into a single string
   virtual std::string map_to_str(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -140,7 +143,7 @@ protected:
   // methods and join them into a single string
   virtual std::string map_hist_to_str(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
@@ -152,7 +155,7 @@ protected:
   // methods and join them into a single string
   virtual std::string map_stats_to_str(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -160,14 +163,15 @@ protected:
           &total_counts_by_key) const;
   // Convert map key to string
   virtual std::string map_key_to_str(BPFtrace &bpftrace,
-                                     IMap &map,
+                                     const BpfMap &map,
                                      const std::vector<uint8_t> &key) const = 0;
   // Properly join map key and value strings
-  virtual std::string map_keyval_to_str(IMap &map,
+  virtual std::string map_keyval_to_str(const SizedType &map_type,
                                         const std::string &key,
                                         const std::string &val) const = 0;
   // Delimiter to join (properly formatted) map elements into a single string
-  virtual std::string map_elem_delim_to_str(IMap &map) const = 0;
+  virtual std::string map_elem_delim_to_str(
+      const SizedType &map_type) const = 0;
   // Convert non-map value into string
   // This method should properly handle all non-map value types.
   // Aggregate types (array, struct, tuple) are formatted using output-specific
@@ -209,13 +213,13 @@ public:
 
   void map(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key) const override;
   void map_hist(BPFtrace &bpftrace,
-                IMap &map,
+                const BpfMap &map,
                 uint32_t top,
                 uint32_t div,
                 const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
@@ -224,7 +228,7 @@ public:
                     &total_counts_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -255,12 +259,12 @@ protected:
                                    int step) const override;
 
   std::string map_key_to_str(BPFtrace &bpftrace,
-                             IMap &map,
+                             const BpfMap &map,
                              const std::vector<uint8_t> &key) const override;
-  std::string map_keyval_to_str(IMap &map,
+  std::string map_keyval_to_str(const SizedType &map_type,
                                 const std::string &key,
                                 const std::string &val) const override;
-  std::string map_elem_delim_to_str(IMap &map) const override;
+  std::string map_elem_delim_to_str(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
   std::string tuple_to_str(
@@ -279,13 +283,13 @@ public:
 
   void map(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
           &values_by_key) const override;
   void map_hist(BPFtrace &bpftrace,
-                IMap &map,
+                const BpfMap &map,
                 uint32_t top,
                 uint32_t div,
                 const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
@@ -294,7 +298,7 @@ public:
                     &total_counts_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
-      IMap &map,
+      const BpfMap &map,
       uint32_t top,
       uint32_t div,
       const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -334,12 +338,12 @@ protected:
                            int step) const override;
 
   std::string map_key_to_str(BPFtrace &bpftrace,
-                             IMap &map,
+                             const BpfMap &map,
                              const std::vector<uint8_t> &key) const override;
-  std::string map_keyval_to_str(IMap &map,
+  std::string map_keyval_to_str(const SizedType &map_type,
                                 const std::string &key,
                                 const std::string &val) const override;
-  std::string map_elem_delim_to_str(IMap &map) const override;
+  std::string map_elem_delim_to_str(const SizedType &map_type) const override;
   std::string field_to_str(const std::string &name,
                            const std::string &value) const override;
   std::string tuple_to_str(

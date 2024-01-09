@@ -37,6 +37,23 @@ bool BpfMap::is_stack_map() const
   return name().compare(0, 6, "stack_") == 0;
 }
 
+bool BpfMap::is_per_cpu_type() const
+{
+  return type() == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||
+         type() == libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
+}
+
+bool BpfMap::is_clearable() const
+{
+  return is_bpf_map_clearable(type());
+}
+
+bool BpfMap::is_printable() const
+{
+  // Internal maps are not printable
+  return bpf_name().compare(0, 3, "AT_") == 0;
+}
+
 std::string to_string(MapType t)
 {
   switch (t) {

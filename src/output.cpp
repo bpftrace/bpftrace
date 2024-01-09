@@ -372,7 +372,7 @@ std::string Output::struct_to_str(const std::vector<std::string> &elems) const
 
 std::string Output::map_to_str(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -381,6 +381,7 @@ std::string Output::map_to_str(
   std::vector<std::string> elems;
   uint32_t i = 0;
   size_t total = values_by_key.size();
+  const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
   for (auto &pair : values_by_key) {
     auto key = pair.first;
     auto value = pair.second;
@@ -392,16 +393,16 @@ std::string Output::map_to_str(
 
     auto key_str = map_key_to_str(bpftrace, map, key);
     auto value_str = value_to_str(
-        bpftrace, map.type_, value, map.is_per_cpu_type(), div);
-    elems.push_back(map_keyval_to_str(map, key_str, value_str));
+        bpftrace, map_type, value, map.is_per_cpu_type(), div);
+    elems.push_back(map_keyval_to_str(map_type, key_str, value_str));
   }
 
-  return str_join(elems, map_elem_delim_to_str(map));
+  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
 std::string Output::map_hist_to_str(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
@@ -410,6 +411,8 @@ std::string Output::map_hist_to_str(
 {
   std::vector<std::string> elems;
   uint32_t i = 0;
+  const auto &map_info = bpftrace.resources.maps_info.at(map.name());
+  const auto &map_type = map_info.value_type;
   for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
@@ -418,18 +421,22 @@ std::string Output::map_hist_to_str(
       continue;
 
     auto key_str = map_key_to_str(bpftrace, map, key);
-    auto val_str = map.type_.IsHistTy()
-                       ? hist_to_str(value, div, map.bits())
-                       : lhist_to_str(value, map.lqmin, map.lqmax, map.lqstep);
+    std::string val_str;
+    if (map_type.IsHistTy()) {
+      val_str = hist_to_str(value, div, *map_info.hist_bits_arg);
+    } else {
+      auto &args = map_info.lhist_args;
+      val_str = lhist_to_str(value, args->min, args->max, args->step);
+    }
 
-    elems.push_back(map_keyval_to_str(map, key_str, val_str));
+    elems.push_back(map_keyval_to_str(map_type, key_str, val_str));
   }
-  return str_join(elems, map_elem_delim_to_str(map));
+  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
 std::string Output::map_stats_to_str(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -437,12 +444,13 @@ std::string Output::map_stats_to_str(
         &total_counts_by_key) const
 {
   std::vector<std::string> elems;
+  const auto &map_type = bpftrace.resources.maps_info.at(map.name()).value_type;
   uint32_t i = 0;
   for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
-    if (map.type_.IsAvgTy() && top && values_by_key.size() > top &&
+    if (map_type.IsAvgTy() && top && values_by_key.size() > top &&
         i++ < (values_by_key.size() - top))
       continue;
 
@@ -456,7 +464,7 @@ std::string Output::map_stats_to_str(
       average = total / count;
 
     std::string value_str;
-    if (map.type_.IsStatsTy()) {
+    if (map_type.IsStatsTy()) {
       std::vector<std::pair<std::string, int64_t>> stats = {
         { "count", count }, { "average", average }, { "total", total }
       };
@@ -464,15 +472,15 @@ std::string Output::map_stats_to_str(
     } else
       value_str = std::to_string(average / div);
 
-    elems.push_back(map_keyval_to_str(map, key_str, value_str));
+    elems.push_back(map_keyval_to_str(map_type, key_str, value_str));
   }
 
-  return str_join(elems, map_elem_delim_to_str(map));
+  return str_join(elems, map_elem_delim_to_str(map_type));
 }
 
 void TextOutput::map(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -572,7 +580,7 @@ std::string TextOutput::lhist_to_str(const std::vector<uint64_t> &values,
 
 void TextOutput::map_hist(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
@@ -586,7 +594,7 @@ void TextOutput::map_hist(
 
 void TextOutput::map_stats(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -650,27 +658,28 @@ std::string TextOutput::tuple_to_str(
 }
 
 std::string TextOutput::map_key_to_str(BPFtrace &bpftrace,
-                                       IMap &map,
+                                       const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  return map.name_ + map.key_.argument_value_list_str(bpftrace, key);
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+  return map.name() + map_key.argument_value_list_str(bpftrace, key);
 }
 
-std::string TextOutput::map_keyval_to_str(IMap &map,
+std::string TextOutput::map_keyval_to_str(const SizedType &map_type,
                                           const std::string &key,
                                           const std::string &val) const
 {
   std::string res = key + ": ";
-  if (map.type_.IsHistTy() || map.type_.IsLhistTy())
+  if (map_type.IsHistTy() || map_type.IsLhistTy())
     res += "\n";
   res += val;
   return res;
 }
 
-std::string TextOutput::map_elem_delim_to_str(IMap &map) const
+std::string TextOutput::map_elem_delim_to_str(const SizedType &map_type) const
 {
-  if (!map.type_.IsKstackTy() && !map.type_.IsUstackTy() &&
-      !map.type_.IsKsymTy() && !map.type_.IsUsymTy() && !map.type_.IsInetTy())
+  if (!map_type.IsKstackTy() && !map_type.IsUstackTy() &&
+      !map_type.IsKsymTy() && !map_type.IsUsymTy() && !map_type.IsInetTy())
     return "\n";
 
   return "";
@@ -725,7 +734,7 @@ std::string JsonOutput::json_escape(const std::string &str) const
 
 void JsonOutput::map(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
@@ -734,14 +743,16 @@ void JsonOutput::map(
   if (values_by_key.empty())
     return;
 
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+
   out_ << "{\"type\": \"" << MessageType::map << "\", \"data\": {";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
-  if (map.key_.size() > 0) // check if this map has keys
+  out_ << "\"" << json_escape(map.name()) << "\": ";
+  if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
   out_ << map_to_str(bpftrace, map, top, div, values_by_key);
 
-  if (map.key_.size() > 0)
+  if (map_key.size() > 0)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -832,7 +843,7 @@ std::string JsonOutput::lhist_to_str(const std::vector<uint64_t> &values,
 
 void JsonOutput::map_hist(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
@@ -842,22 +853,24 @@ void JsonOutput::map_hist(
   if (total_counts_by_key.empty())
     return;
 
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+
   out_ << "{\"type\": \"" << MessageType::hist << "\", \"data\": {";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
-  if (map.key_.size() > 0) // check if this map has keys
+  out_ << "\"" << json_escape(map.name()) << "\": ";
+  if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
   out_ << map_hist_to_str(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
-  if (map.key_.size() > 0)
+  if (map_key.size() > 0)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
 
 void JsonOutput::map_stats(
     BPFtrace &bpftrace,
-    IMap &map,
+    const BpfMap &map,
     uint32_t top,
     uint32_t div,
     const std::map<std::vector<uint8_t>, std::vector<int64_t>> &values_by_key,
@@ -867,15 +880,17 @@ void JsonOutput::map_stats(
   if (total_counts_by_key.empty())
     return;
 
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+
   out_ << "{\"type\": \"" << MessageType::stats << "\", \"data\": {";
-  out_ << "\"" << json_escape(map.name_) << "\": ";
-  if (map.key_.size() > 0) // check if this map has keys
+  out_ << "\"" << json_escape(map.name()) << "\": ";
+  if (map_key.size() > 0) // check if this map has keys
     out_ << "{";
 
   out_ << map_stats_to_str(
       bpftrace, map, top, div, values_by_key, total_counts_by_key);
 
-  if (map.key_.size() > 0)
+  if (map_key.size() > 0)
     out_ << "}";
   out_ << "}}" << std::endl;
 }
@@ -953,24 +968,26 @@ std::string JsonOutput::value_to_str(BPFtrace &bpftrace,
 }
 
 std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
-                                       IMap &map,
+                                       const BpfMap &map,
                                        const std::vector<uint8_t> &key) const
 {
-  std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
+  const auto &map_key = bpftrace.resources.maps_info.at(map.name()).key;
+  std::vector<std::string> args = map_key.argument_value_list(bpftrace, key);
   if (!args.empty()) {
     return "\"" + json_escape(str_join(args, ",")) + "\"";
   }
   return "";
 }
 
-std::string JsonOutput::map_keyval_to_str(IMap &map __attribute__((unused)),
+std::string JsonOutput::map_keyval_to_str(const SizedType &map_type
+                                          __attribute__((unused)),
                                           const std::string &key,
                                           const std::string &val) const
 {
   return key.empty() ? val : key + ": " + val;
 }
 
-std::string JsonOutput::map_elem_delim_to_str(IMap &map
+std::string JsonOutput::map_elem_delim_to_str(const SizedType &map
                                               __attribute__((unused))) const
 {
   return ", ";

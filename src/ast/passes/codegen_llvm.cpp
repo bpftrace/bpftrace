@@ -554,8 +554,7 @@ void CodegenLLVM::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map &>(arg);
     auto [key, scoped_key_deleter] = getMapKey(map);
-    auto imap = *bpftrace_.maps.Lookup(map.ident);
-    if (!imap->is_clearable()) {
+    if (!is_bpf_map_clearable(map_types_[map.ident])) {
       // store zero instead of calling bpf_map_delete_elem()
       AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
       b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
@@ -1036,7 +1035,10 @@ void CodegenLLVM::visit(Call &call)
                                        elements.at(0)),
                      aa_ptr);
 
-    auto id = bpftrace_.maps[map.ident].value()->id;
+    int id = bpftrace_.resources.maps_info.at(map.ident).id;
+    if (id == -1) {
+      LOG(FATAL) << "map id for map \"" << map.ident << "\" not found";
+    }
     auto *ident_ptr = b_.CreateGEP(event_struct,
                                    buf,
                                    { b_.getInt64(0), b_.getInt32(1) });
@@ -3186,7 +3188,10 @@ void CodegenLLVM::createPrintMapCall(Call &call)
       b_.getInt64(asyncactionint(AsyncAction::print)),
       b_.CreateGEP(print_struct, buf, { b_.getInt64(0), b_.getInt32(0) }));
 
-  auto id = bpftrace_.maps[map.ident].value()->id;
+  int id = bpftrace_.resources.maps_info.at(map.ident).id;
+  if (id == -1) {
+    LOG(FATAL) << "map id for map \"" << map.ident << "\" not found";
+  }
   auto *ident_ptr = b_.CreateGEP(print_struct,
                                  buf,
                                  { b_.getInt64(0), b_.getInt32(1) });
@@ -3279,6 +3284,7 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
                                       const MapKey &key,
                                       const SizedType &value_type)
 {
+  map_types_.emplace(name, map_type);
   auto var_name = bpf_map_name(name);
   auto debuginfo = debug_.createMapEntry(
       var_name, map_type, max_entries, key, value_type);

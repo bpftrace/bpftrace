@@ -28,6 +28,9 @@ public:
   uint32_t max_entries() const;
 
   bool is_stack_map() const;
+  bool is_per_cpu_type() const;
+  bool is_clearable() const;
+  bool is_printable() const;
 
 private:
   struct bpf_map *bpf_map_;
@@ -64,6 +67,12 @@ inline std::string bpftrace_map_name(const std::string &bpf_map_name)
   if (name.compare(0, 3, "AT_") == 0)
     name = "@" + name.substr(3);
   return name;
+}
+
+inline bool is_bpf_map_clearable(libbpf::bpf_map_type map_type)
+{
+  return map_type != libbpf::BPF_MAP_TYPE_ARRAY &&
+         map_type != libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
 }
 
 } // namespace bpftrace

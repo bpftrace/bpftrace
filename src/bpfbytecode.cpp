@@ -98,6 +98,15 @@ const BpfMap &BpfBytecode::getMap(MapType internal_type) const
   return getMap(to_string(internal_type));
 }
 
+const BpfMap &BpfBytecode::getMap(int map_id) const
+{
+  auto map = maps_by_id_.find(map_id);
+  if (map == maps_by_id_.end()) {
+    throw std::runtime_error("Unknown map id: " + std::to_string(map_id));
+  }
+  return *map->second;
+}
+
 const std::map<std::string, BpfMap> &BpfBytecode::maps() const
 {
   return maps_;
@@ -111,6 +120,15 @@ int BpfBytecode::countStackMaps() const
       n++;
   }
   return n;
+}
+
+void BpfBytecode::set_map_ids(RequiredResources &resources)
+{
+  for (auto &map : maps_) {
+    auto map_info = resources.maps_info.find(map.first);
+    if (map_info != resources.maps_info.end() && map_info->second.id != -1)
+      maps_by_id_.emplace(map_info->second.id, &map.second);
+  }
 }
 
 // This is taken from libbpf (btf.c) and we need it to manually iterate BTF

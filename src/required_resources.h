@@ -54,13 +54,14 @@ struct MapInfo {
   SizedType value_type;
   std::optional<LinearHistogramArgs> lhist_args;
   std::optional<int> hist_bits_arg;
+  int id = -1;
 
 private:
   friend class cereal::access;
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(key, value_type, lhist_args, hist_bits_arg);
+    archive(key, value_type, lhist_args, hist_bits_arg, id);
   }
 };
 

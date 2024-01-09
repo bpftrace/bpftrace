@@ -3,6 +3,7 @@
 #include "bpffeature.h"
 #include "bpfmap.h"
 #include "mapmanager.h"
+#include "required_resources.h"
 
 #include <bpf/libbpf.h>
 #include <cereal/access.hpp>
@@ -37,6 +38,8 @@ public:
   bool hasMap(const StackType &stack_type) const;
   const BpfMap &getMap(const std::string &name) const;
   const BpfMap &getMap(MapType internal_type) const;
+  const BpfMap &getMap(int map_id) const;
+  void set_map_ids(RequiredResources &resources);
 
   const std::map<std::string, BpfMap> &maps() const;
   int countStackMaps() const;
@@ -58,6 +61,7 @@ private:
   std::unique_ptr<struct bpf_object, bpf_object_deleter> bpf_object_;
 
   std::map<std::string, BpfMap> maps_;
+  std::map<int, BpfMap *> maps_by_id_;
 
   friend class cereal::access;
   template <typename Archive>
