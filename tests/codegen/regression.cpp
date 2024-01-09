@@ -22,9 +22,7 @@ TEST(codegen, regression_957)
   ast::ResourceAnalyser resource_analyser(driver.root.get());
   auto resources_optional = resource_analyser.analyse();
   ASSERT_TRUE(resources_optional.has_value());
-  auto resources = resources_optional.value();
-  ASSERT_EQ(resources.create_maps(*bpftrace, true), 0);
-  bpftrace->resources = resources;
+  bpftrace->resources = resources_optional.value();
 
   ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
   codegen.compile();

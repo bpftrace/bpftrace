@@ -1114,17 +1114,6 @@ int BPFtrace::run(BpfBytecode bytecode)
   if (bytecode.create_maps())
     return 1;
 
-  // Clear fake maps and replace with real maps
-  maps = {};
-  if (resources.create_maps(*this, false))
-    return 1;
-  // BPF maps are now created by BpfBytecode::create_maps and therefore
-  // we copy FDs to MapManager for compatibility. This code will go away once
-  // we get rid of MapManager.
-  for (auto &map : maps) {
-    map->mapfd_ = bytecode.getMap(map->name_).fd;
-  }
-
   if (bytecode.hasMap(MapType::MappedPrintfData)) {
     const auto &map = bytecode.getMap(MapType::MappedPrintfData);
     uint32_t idx = 0;

@@ -9,7 +9,6 @@
 #include "bpffeature.h"
 #include "bpftrace.h"
 #include "config.h"
-#include "map.h"
 #include "types.h"
 
 namespace bpftrace {

@@ -11,7 +11,6 @@
 #include "ast/ast.h"
 #include "ast/signal_bt.h"
 #include "config.h"
-#include "fake_map.h"
 #include "log.h"
 #include "printf.h"
 #include "probe_matcher.h"

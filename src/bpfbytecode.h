@@ -2,8 +2,8 @@
 
 #include "bpffeature.h"
 #include "bpfmap.h"
-#include "mapmanager.h"
 #include "required_resources.h"
+#include "types.h"
 
 #include <bpf/libbpf.h>
 #include <cereal/access.hpp>

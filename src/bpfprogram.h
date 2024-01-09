@@ -1,7 +1,6 @@
 #pragma once
 
 #include "bpfbytecode.h"
-#include "mapmanager.h"
 
 #include <cstdint>
 #include <optional>

@@ -19,8 +19,6 @@
 #include "child.h"
 #include "config.h"
 #include "dwarf_parser.h"
-#include "map.h"
-#include "mapmanager.h"
 #include "output.h"
 #include "pcap_writer.h"
 #include "printf.h"
@@ -174,7 +172,6 @@ public:
   static volatile sig_atomic_t sigusr1_recv;
 
   RequiredResources resources;
-  MapManager maps;
   BpfBytecode bytecode_;
   StructManager structs;
   std::map<std::string, std::string> macros_;
