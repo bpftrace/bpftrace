@@ -45,6 +45,16 @@ REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP nft delete table bpftrace
 
+NAME kernel_module_attach_wildcard
+RUN {{BPFTRACE}} -e 'kfunc:nf_table*:nft_trans_alloc_gfp { printf("hit\n"); exit(); }'
+AFTER /usr/sbin/nft add table bpftrace
+EXPECT hit
+TIMEOUT 5
+REQUIRES_FEATURE kfunc
+REQUIRES lsmod | grep '^nf_tables'
+REQUIRES /usr/sbin/nft --help
+CLEANUP nft delete table bpftrace
+
 NAME kernel_module_args
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args.size); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace

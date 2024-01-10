@@ -43,6 +43,8 @@ and this project adheres to
   - [#2869](https://github.com/iovisor/bpftrace/pull/2869)
 - Fix retval for kretfunc/fexit
   - [#2864](https://github.com/iovisor/bpftrace/pull/2864)
+- Fix attachment/listing of wildcarded module kfuncs
+  - [#2914](https://github.com/iovisor/bpftrace/pull/2914)
 #### Docs
 #### Tools
 - Add PPID field to `execsnoop.bt`
