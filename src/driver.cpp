@@ -95,8 +95,9 @@ std::set<std::string> Driver::list_modules() const
         {
           for (auto &match : bpftrace_.probe_matcher_->get_matches_for_ap(*ap))
           {
-            std::string mod = match;
-            auto match_modules = bpftrace_.get_func_modules(erase_prefix(mod));
+            std::string func = match;
+            erase_prefix(func);
+            auto match_modules = bpftrace_.get_func_modules(func);
             modules.insert(match_modules.begin(), match_modules.end());
           }
         }
