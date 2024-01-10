@@ -326,7 +326,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.
         target = erase_prefix(func_id);
-        }
+      }
       else if (probetype(attach_point->provider) == ProbeType::watchpoint ||
                probetype(attach_point->provider) == ProbeType::asyncwatchpoint)
       {

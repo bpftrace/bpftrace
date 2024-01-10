@@ -30,6 +30,7 @@
 #include "log.h"
 #include "probe_matcher.h"
 #include "usdt.h"
+#include "utils.h"
 
 namespace bpftrace {
 
@@ -964,9 +965,32 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
     return;
   }
 
+  // Construct a string containing "module:function."
+  // Also throw a warning or error if the module doesn't exist,
+  // before attempting to attach.
   std::string funcname = probe_.attach_point;
-  if (probe_.path.length() > 0)
-    funcname = probe_.path + ":" + funcname;
+  std::string modname = probe_.path;
+  if (modname.length() > 0)
+  {
+    if (!is_loaded_module(modname))
+    {
+      if (probe_.orig_name != probe_.name)
+      {
+        // Wildcard usage just gets a warning
+        LOG(WARNING) << "module " << modname << " in probe " << probe_.name
+                     << " doesn't exist.";
+      }
+      else
+      {
+        // Explicitly specified modules should fail
+        LOG(ERROR) << "specified module " << modname << " in probe "
+                   << probe_.name << " is not loaded.";
+        throw std::runtime_error("Error attaching probe: '" + probe_.name +
+                                 "'");
+      }
+    }
+    funcname = modname + ":" + funcname;
+  }
 
   resolve_offset_kprobe(safe_mode);
   int perf_event_fd = bpf_attach_kprobe(progfd_,

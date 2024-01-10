@@ -676,6 +676,27 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   return result;
 }
 
+bool is_loaded_module(const std::string &module)
+{
+  // Get all cgroup mounts and their type (cgroup/cgroup2) from /proc/mounts
+  std::ifstream modules_file("/proc/modules");
+
+  std::vector<std::string> tokens;
+  for (std::string line; std::getline(modules_file, line);)
+  {
+    tokens = split_string(line, ' ');
+    if (module.compare(tokens[0]) == 0)
+    {
+      modules_file.close();
+      return true;
+    }
+    tokens.clear();
+  }
+
+  modules_file.close();
+  return false;
+}
+
 bool is_dir(const std::string& path)
 {
   std::error_code ec;
