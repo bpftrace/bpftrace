@@ -678,7 +678,12 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
 
 bool is_loaded_module(const std::string &module)
 {
-  // Get all cgroup mounts and their type (cgroup/cgroup2) from /proc/mounts
+  if (module.compare("vmlinux") == 0)
+  {
+    return true;
+  }
+
+  // This file lists all loaded modules
   std::ifstream modules_file("/proc/modules");
 
   std::vector<std::string> tokens;

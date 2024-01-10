@@ -127,7 +127,6 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kretprobe:
     {
       symbol_stream = get_symbols_from_traceable_funcs();
-      ignore_trailing_module = true;
       break;
     }
     case ProbeType::uprobe:
@@ -254,13 +253,13 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
   std::string funcs;
   for (auto& func_mod : bpftrace_->get_traceable_funcs())
   {
-    if (func_mod.second.empty() || *func_mod.second.begin() == "vmlinux")
+    for (auto& mod : func_mod.second)
     {
+      if (!mod.empty())
+      {
+        funcs += mod + ":";
+      }
       funcs += func_mod.first + "\n";
-    }
-    else
-    {
-      funcs += func_mod.first + " [" + *func_mod.second.begin() + "]\n";
     }
   }
   return std::make_unique<std::istringstream>(funcs);

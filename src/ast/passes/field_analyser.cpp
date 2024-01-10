@@ -171,7 +171,8 @@ bool FieldAnalyser::resolve_args(Probe &probe)
   {
     auto probe_type = probetype(ap->provider);
     if (probe_type != ProbeType::kfunc && probe_type != ProbeType::kretfunc &&
-        probe_type != ProbeType::uprobe)
+        probe_type != ProbeType::uprobe && probe_type != ProbeType::kprobe &&
+        probe_type != ProbeType::kretprobe)
       continue;
 
     if (ap->need_expansion)
