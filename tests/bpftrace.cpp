@@ -224,7 +224,8 @@ TEST(bpftrace, add_probes_wildcard)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(false);
 
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -246,7 +247,8 @@ TEST(bpftrace, add_probes_wildcard_kprobe_multi)
   auto bpftrace = get_strict_mock_bpftrace();
   bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
 
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
@@ -265,7 +267,8 @@ TEST(bpftrace, add_probes_wildcard_no_matches)
       "kprobe:sys_read,kprobe:not_here_*,kprobe:sys_write{}");
 
   auto bpftrace = get_strict_mock_bpftrace();
-  EXPECT_CALL(*bpftrace->mock_probe_matcher, get_symbols_from_traceable_funcs())
+  EXPECT_CALL(*bpftrace->mock_probe_matcher,
+              get_symbols_from_traceable_funcs(false))
       .Times(1);
 
   ASSERT_EQ(0, bpftrace->add_probe(*probe));
