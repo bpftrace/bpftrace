@@ -1393,12 +1393,6 @@ bool symbol_has_module(const std::string &symbol)
   return !symbol.empty() && symbol[symbol.size() - 1] == ']';
 }
 
-std::string strip_symbol_module(const std::string &symbol)
-{
-  size_t idx = symbol.rfind(" [");
-  return idx != std::string::npos ? symbol.substr(0, idx) : symbol;
-}
-
 std::pair<std::string, std::string> split_symbol_module(
     const std::string &symbol)
 {
