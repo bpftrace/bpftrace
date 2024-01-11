@@ -19,9 +19,9 @@ directly targets the function, but we need to write some glue code to connect a 
 ## bpftrace options for fuzzing
 bpftrace has several options useful for fuzzing.
 
-### `BPFTRACE_NODE_MAX` environment variable
+### `BPFTRACE_MAX_AST_NODES` environment variable
 When doing fuzzing, it is important to limit the number of AST nodes because otherwise, a fuzzer might
-keep generating a very long program that causes a stack overflow.  `BPFTRACE_NODE_MAX` environment
+keep generating a very long program that causes a stack overflow.  `BPFTRACE_MAX_AST_NODES` environment
 variable controls the maximum number of AST nodes.
 
 ## Fuzzing with AFL
@@ -82,7 +82,7 @@ FUZZER=/path/to/AFLplusplus/afl-fuzz
 
 sudo AFL_NO_AFFINITY=1 \
      ASAN_OPTIONS=detect_leaks=0:abort_on_error=1:symbolize=0 \
-     BPFTRACE_NODE_MAX=200 \
+     BPFTRACE_MAX_AST_NODES=200 \
      taskset -c ${CPU} \
      $FUZZER -M 0 -m none -i ./input -o ./output -t 3000 -- \
      ./src/bpftrace_fuzz @@

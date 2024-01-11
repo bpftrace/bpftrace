@@ -30,6 +30,8 @@ and this project adheres to
 - New config block syntax
   - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
 #### Changed
+- Standardize config and env var names
+  - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
 #### Deprecated
 #### Removed
 - Remove snapcraft support

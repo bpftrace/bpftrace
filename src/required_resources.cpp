@@ -41,7 +41,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       LOG(FATAL) << "map key \"" << map_name << "\" not found";
 
     auto &key = search_args->second;
-    auto map_keys_max = bpftrace.config_.get(ConfigKeyInt::map_keys_max);
+    auto max_map_keys = bpftrace.config_.get(ConfigKeyInt::max_map_keys);
 
     if (type.IsLhistTy())
     {
@@ -53,7 +53,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
       auto max = args->second.max;
       auto step = args->second.step;
       auto map = std::make_unique<T>(
-          map_name, type, key, min, max, step, map_keys_max);
+          map_name, type, key, min, max, step, max_map_keys);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
@@ -70,13 +70,13 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
                                      0,
                                      args->second,
                                      bpftrace.config_.get(
-                                         ConfigKeyInt::map_keys_max));
+                                         ConfigKeyInt::max_map_keys));
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
     else
     {
-      auto map = std::make_unique<T>(map_name, type, key, map_keys_max);
+      auto map = std::make_unique<T>(map_name, type, key, max_map_keys);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }

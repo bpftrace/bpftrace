@@ -66,14 +66,14 @@ TIMEOUT 5
 
 NAME str_truncated
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
-ENV BPFTRACE_STRLEN=5
+ENV BPFTRACE_MAX_STRLEN=5
 AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
 EXPECT P: /...\.\.
 TIMEOUT 5
 
 NAME str_truncated_custom
 PROG t:syscalls:sys_enter_execve { printf("P: %s\n", str(args.filename)); exit();}
-ENV BPFTRACE_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
+ENV BPFTRACE_MAX_STRLEN=5 BPFTRACE_STR_TRUNC_TRAILER=_xxx
 AFTER ./testprogs/syscall execve /bin/ls &>/dev/null
 EXPECT P: /..._xxx
 TIMEOUT 5

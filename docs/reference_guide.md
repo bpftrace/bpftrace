@@ -171,19 +171,19 @@ OPTIONS:
 ENVIRONMENT:
     BPFTRACE_BTF                        [default: none] BTF file
     BPFTRACE_CACHE_USER_SYMBOLS         [default: (see docs)] enable user symbol cache
-    BPFTRACE_CAT_BYTES_MAX              [default: 10k] maximum bytes read by cat builtin
+    BPFTRACE_CPP_DEMANGLE               [default: 1] enable C++ symbol demangling
     BPFTRACE_DEBUG_OUTPUT               [default: 0] outputs bpftrace's runtime debug messages to the trace_pipe
     BPFTRACE_KERNEL_BUILD               [default: /lib/modules/$(uname -r)] kernel build directory
     BPFTRACE_KERNEL_SOURCE              [default: /lib/modules/$(uname -r)] kernel headers directory
     BPFTRACE_LOG_SIZE                   [default: 1000000] log size in bytes
     BPFTRACE_MAX_BPF_PROGS              [default: 512] max number of generated BPF programs
-    BPFTRACE_MAP_KEYS_MAX               [default: 4096] max keys in a map
+    BPFTRACE_MAX_CAT_BYTES              [default: 10k] maximum bytes read by cat builtin
+    BPFTRACE_MAX_MAP_KEYS               [default: 4096] max keys in a map
     BPFTRACE_MAX_PROBES                 [default: 512] max number of probes bpftrace can attach to
+    BPFTRACE_MAX_STRLEN                 [default: 64] bytes on BPF stack per str()
     BPFTRACE_MAX_TYPE_RES_ITERATIONS    [default: 0] number of levels of nested field accesses for tracepoint args
-    BPFTRACE_NO_CPP_DEMANGLE            [default: 0] disable C++ symbol demangling
     BPFTRACE_PERF_RB_PAGES              [default: 64] number of pages to allocate per CPU for perf ring buffer
     BPFTRACE_STACK_MODE                 [default: bpftrace] Output format for ustack and kstack builtins
-    BPFTRACE_STRLEN                     [default: 64] bytes on BPF stack per str()
     BPFTRACE_STR_TRUNC_TRAILER          [default: `..`] trailer to add to strings that were truncated
     BPFTRACE_VMLINUX                    [default: none] vmlinux path used for kernel symbol resolution
 
@@ -496,11 +496,13 @@ Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 -* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment time. If there are many processes running, it will consume a lot of a memory.
 -* NONE - caching disabled. This saves the most memory, but at the cost of speed.
 
-### 9.3 `BPFTRACE_CAT_BYTES_MAX`
+### 9.3 `BPFTRACE_CPP_DEMANGLE`
 
-Default: 10k
+Default: 1
 
-Maximum bytes read by cat builtin.
+C++ symbol demangling in userspace stack traces is enabled by default.
+
+This feature can be turned off by setting the value of this environment variable to `0`.
 
 ### 9.4 `BPFTRACE_DEBUG_OUTPUT`
 
@@ -535,7 +537,13 @@ This is the maximum number of BPF programs (functions) that bpftrace can generat
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
 takes a lot of resources (and it should not happen often).
 
-### 9.9 `BPFTRACE_MAP_KEYS_MAX`
+### 9.9 `BPFTRACE_MAX_CAT_BYTES`
+
+Default: 10k
+
+Maximum bytes read by cat builtin.
+
+### 9.10 `BPFTRACE_MAX_MAP_KEYS`
 
 Default: 4096
 
@@ -543,7 +551,7 @@ This is the maximum number of keys that can be stored in a map. Increasing the v
 memory and increase startup times. There are some cases where you will want to: for example, sampling
 stack traces, recording timestamps for each page, etc.
 
-### 9.10 `BPFTRACE_MAX_PROBES`
+### 9.11 `BPFTRACE_MAX_PROBES`
 
 Default: 512
 
@@ -551,38 +559,7 @@ This is the maximum number of probes that bpftrace can attach to. Increasing the
 memory, increase startup times and can incur high performance overhead or even freeze or crash the
 system.
 
-### 9.11 `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
-
-Default: 0
-
-Maximum should be the number of levels of nested field accesses for tracepoint args. 0 is unlimited.
-
-### 9.12 `BPFTRACE_NO_CPP_DEMANGLE`
-
-Default: 0
-
-C++ symbol demangling in userspace stack traces is enabled by default.
-
-This feature can be turned off by setting the value of this environment variable to `1`.
-
-### 9.13 `BPFTRACE_PERF_RB_PAGES`
-
-Default: 64
-
-Number of pages to allocate per CPU for perf ring buffer. The value must be a power of 2.
-
-If you're getting a lot of dropped events bpftrace may not be processing events in the ring buffer
-fast enough. It may be useful to bump the value higher so more events can be queued up. The tradeoff
-is that bpftrace will use more memory.
-
-### 9.14 `BPFTRACE_STACK_MODE`
-
-Default: bpftrace
-
-Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
-This can be overwritten at the call site.
-
-### 9.15 `BPFTRACE_STRLEN`
+### 9.12 `BPFTRACE_MAX_STRLEN`
 
 Default: 64
 
@@ -594,6 +571,29 @@ Beware that the BPF stack is small (512 bytes), and that you pay the toll again 
 it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
+
+### 9.13 `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
+
+Default: 0
+
+Maximum should be the number of levels of nested field accesses for tracepoint args. 0 is unlimited.
+
+### 9.14 `BPFTRACE_PERF_RB_PAGES`
+
+Default: 64
+
+Number of pages to allocate per CPU for perf ring buffer. The value must be a power of 2.
+
+If you're getting a lot of dropped events bpftrace may not be processing events in the ring buffer
+fast enough. It may be useful to bump the value higher so more events can be queued up. The tradeoff
+is that bpftrace will use more memory.
+
+### 9.15 `BPFTRACE_STACK_MODE`
+
+Default: bpftrace
+
+Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
+This can be overwritten at the call site.
 
 ### 9.16 `BPFTRACE_STR_TRUNC_TRAILER`
 
@@ -2363,7 +2363,7 @@ Syntax: `str(char *s [, int length])`
 
 Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
 a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
-`BPFTRACE_STRLEN`](#91-bpftrace_strlen)).
+`BPFTRACE_MAX_STRLEN`](#91-bpftrace_strlen)).
 
 Examples:
 
@@ -2389,10 +2389,10 @@ We can trace strings that are displayed in a bash shell. Some length tuning is e
 - sys_enter_write()'s `args.buf` does not point to null-terminated strings
   - we use the length parameter to limit how many bytes to read of the pointed-to string
 - sys_enter_write()'s `args.buf` contains messages larger than 64 bytes
-  - we increase BPFTRACE_STRLEN to accommodate the large messages
+  - we increase BPFTRACE_MAX_STRLEN to accommodate the large messages
 
 ```
-# BPFTRACE_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/
+# BPFTRACE_MAX_STRLEN=200 bpftrace -e 'tracepoint:syscalls:sys_enter_write /pid == 23506/
     { printf("<%s>\n", str(args.buf, args.count)); }'
 # type pwd into terminal 23506
 <p>
@@ -3008,7 +3008,7 @@ Syntax: `buf(void *d [, int length])`
 Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
-be tuned using the [`BPFTRACE_STRLEN`](#91-bpftrace_strlen) environment variable.
+be tuned using the [`BPFTRACE_MAX_STRLEN`](#91-bpftrace_strlen) environment variable.
 
 Bytes with values >=32 and <=126 are printed using their ASCII character, other
 bytes are printed in hex form (e.g. `\x00`).

@@ -11,18 +11,18 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
 {
   config_map_ = {
     // Maximum AST nodes allowed for fuzzing
-    { ConfigKeyInt::ast_max_nodes, { .value = (uint64_t)0 } },
-    { ConfigKeyInt::cat_bytes_max, { .value = (uint64_t)10240 } },
+    { ConfigKeyInt::max_ast_nodes, { .value = (uint64_t)0 } },
+    { ConfigKeyInt::max_cat_bytes, { .value = (uint64_t)10240 } },
     { ConfigKeyBool::debug_output, { .value = false } },
     { ConfigKeyInt::log_size, { .value = (uint64_t)1000000 } },
-    { ConfigKeyInt::map_keys_max, { .value = (uint64_t)4096 } },
+    { ConfigKeyInt::max_map_keys, { .value = (uint64_t)4096 } },
     { ConfigKeyInt::max_probes, { .value = (uint64_t)512 } },
     { ConfigKeyInt::max_bpf_progs, { .value = (uint64_t)512 } },
     { ConfigKeyInt::max_type_res_iterations, { .value = (uint64_t)0 } },
-    { ConfigKeyBool::no_cpp_demangle, { .value = false } },
+    { ConfigKeyBool::cpp_demangle, { .value = true } },
     { ConfigKeyInt::perf_rb_pages, { .value = (uint64_t)64 } },
     { ConfigKeyStackMode::default_, { .value = StackMode::bpftrace } },
-    { ConfigKeyInt::strlen, { .value = (uint64_t)64 } },
+    { ConfigKeyInt::max_strlen, { .value = (uint64_t)64 } },
     { ConfigKeyString::str_trunc_trailer, { .value = ".." } },
     // by default, cache user symbols per program if ASLR is disabled on system
     // or `-c` option is given

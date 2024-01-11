@@ -1981,7 +1981,7 @@ void IRBuilderBPF::CreatePath(Value *ctx,
   CallInst *call = CreateHelperCall(
       libbpf::bpf_func_id::BPF_FUNC_d_path,
       d_path_func_type,
-      { path, buf, getInt32(bpftrace_.config_.get(ConfigKeyInt::strlen)) },
+      { path, buf, getInt32(bpftrace_.config_.get(ConfigKeyInt::max_strlen)) },
       "d_path",
       &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);

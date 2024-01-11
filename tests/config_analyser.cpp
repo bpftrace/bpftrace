@@ -97,10 +97,10 @@ config = { BPFTRACE_MAX_PROBES="hello" } BEGIN { }
 )",
       false);
   test(
-      "config = { node_max=1 } BEGIN { }",
-      R"(stdin:1:12-21: ERROR: node_max can only be set as an environment variable.
-config = { node_max=1 } BEGIN { }
-           ~~~~~~~~~
+      "config = { max_ast_nodes=1 } BEGIN { }",
+      R"(stdin:1:12-26: ERROR: max_ast_nodes can only be set as an environment variable.
+config = { max_ast_nodes=1 } BEGIN { }
+           ~~~~~~~~~~~~~~
 )",
       false);
 }

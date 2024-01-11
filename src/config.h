@@ -25,22 +25,22 @@ enum class ConfigSource
 
 enum class ConfigKeyBool
 {
+  cpp_demangle,
   debug_output,
-  no_cpp_demangle,
   verify_llvm_ir,
 };
 
 enum class ConfigKeyInt
 {
-  ast_max_nodes,
-  cat_bytes_max,
   log_size,
-  map_keys_max,
-  max_probes,
+  max_ast_nodes,
   max_bpf_progs,
+  max_cat_bytes,
+  max_map_keys,
+  max_probes,
+  max_strlen,
   max_type_res_iterations,
   perf_rb_pages,
-  strlen,
 };
 
 enum class ConfigKeyString
@@ -67,25 +67,25 @@ typedef std::variant<ConfigKeyBool,
 
 // These strings match the env variables (minus the 'BPFTRACE_' prefix)
 const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
-  { "node_max", ConfigKeyInt::ast_max_nodes },
-  { "cat_bytes_max", ConfigKeyInt::cat_bytes_max },
+  { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
+  { "cpp_demangle", ConfigKeyBool::cpp_demangle },
   { "debug_output", ConfigKeyBool::debug_output },
   { "log_size", ConfigKeyInt::log_size },
-  { "map_keys_max", ConfigKeyInt::map_keys_max },
-  { "max_probes", ConfigKeyInt::max_probes },
+  { "max_ast_nodes", ConfigKeyInt::max_ast_nodes },
   { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
+  { "max_cat_bytes", ConfigKeyInt::max_cat_bytes },
+  { "max_map_keys", ConfigKeyInt::max_map_keys },
+  { "max_probes", ConfigKeyInt::max_probes },
+  { "max_strlen", ConfigKeyInt::max_strlen },
   { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
-  { "no_cpp_demangle", ConfigKeyBool::no_cpp_demangle },
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
   { "stack_mode", ConfigKeyStackMode::default_ },
-  { "strlen", ConfigKeyInt::strlen },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
-  { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
   { "verify_llvm_ir", ConfigKeyBool::verify_llvm_ir },
 };
 
 const std::set<ConfigKey> ENV_ONLY_CONFIGS = {
-  ConfigKeyInt::ast_max_nodes,
+  ConfigKeyInt::max_ast_nodes,
   ConfigKeyBool::debug_output,
   ConfigKeyBool::verify_llvm_ir,
 };
