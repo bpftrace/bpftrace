@@ -16,8 +16,7 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                         "sys_read\n"
                         "sys_write\n"
                         "my_one\n"
-                        "my_two\n"
-                        "func_in_mod [kernel_mod]\n";
+                        "my_two\n";
     auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
     return myval;
   });
