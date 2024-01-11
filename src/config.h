@@ -68,12 +68,6 @@ struct ConfigValue
       value;
 };
 
-const std::map<std::string, StackMode> STACK_MODE_MAP = {
-  { "bpftrace", StackMode::bpftrace },
-  { "perf", StackMode::perf },
-  { "raw", StackMode::raw },
-};
-
 class Config
 {
 public:
