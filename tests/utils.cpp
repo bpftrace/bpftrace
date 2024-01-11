@@ -4,19 +4,12 @@
 #include <cstring>
 #include <fcntl.h>
 #include <fstream>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace std_filesystem = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
-namespace std_filesystem = std::experimental::filesystem;
-#else
-#error "neither <filesystem> nor <experimental/filesystem> are present"
-#endif
+#include "filesystem.h"
 
 namespace bpftrace {
 namespace test {
@@ -279,6 +272,84 @@ TEST(utils, sanitiseBPFProgramName)
   ASSERT_EQ(long_sanitised,
             "uretprobe__this_is_a_very_long_path_to_a_binary_executable_this_"
             "is_a_very_long_function_name_which_exceeds_the_ba30ddc67a52bad2");
+}
+
+// Run a function with environment var set to specific value.
+// Does its best to clean up env var so it doesn't leak between tests.
+static void with_env(const std::string &key,
+                     const std::string &val,
+                     std::function<void()> fn)
+{
+  EXPECT_EQ(::setenv(key.c_str(), val.c_str(), 1), 0);
+  try
+  {
+    fn();
+  }
+  catch (const std::exception &ex)
+  {
+    EXPECT_EQ(::unsetenv(key.c_str()), 0);
+    throw ex;
+  }
+  EXPECT_EQ(::unsetenv(key.c_str()), 0);
+}
+
+TEST(utils, find_in_path)
+{
+  std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
+  ASSERT_TRUE(::mkdtemp(&tmpdir[0]));
+
+  // Create some directories
+  const std_filesystem::path path(tmpdir);
+  const std_filesystem::path usr_bin = path / "usr" / "bin";
+  const std_filesystem::path usr_local_bin = path / "usr" / "local" / "bin";
+  ASSERT_TRUE(std_filesystem::create_directories(usr_bin));
+  ASSERT_TRUE(std_filesystem::create_directories(usr_local_bin));
+
+  // Create some dummy binaries
+  const std_filesystem::path usr_bin_echo = usr_bin / "echo";
+  const std_filesystem::path usr_local_bin_echo = usr_local_bin / "echo";
+  const std_filesystem::path usr_bin_cat = usr_bin / "cat";
+  {
+    std::ofstream(usr_bin_echo) << "zz";
+    std::ofstream(usr_local_bin_echo) << "zz";
+    std::ofstream(usr_bin_cat) << "zz";
+  }
+
+  // Test basic find
+  with_env("PATH", usr_bin, [&]() {
+    auto f = find_in_path("echo");
+    ASSERT_TRUE(f.has_value());
+    EXPECT_TRUE(f->native().find("/usr/bin/echo") != std::string::npos);
+  });
+
+  // Test no entries found
+  with_env("PATH", usr_bin, [&]() {
+    auto f = find_in_path("echoz");
+    ASSERT_FALSE(f.has_value());
+  });
+
+  // Test precedence in find with two entries in $PATH
+  auto two_path = usr_local_bin.native() + ":" + usr_bin.native();
+  with_env("PATH", two_path, [&]() {
+    auto f = find_in_path("echo");
+    ASSERT_TRUE(f.has_value());
+    EXPECT_TRUE(f->native().find("/usr/local/bin/echo") != std::string::npos);
+  });
+
+  // Test no entries found with two entries in $PATH
+  with_env("PATH", two_path, [&]() {
+    auto f = find_in_path("echoz");
+    ASSERT_FALSE(f.has_value());
+  });
+
+  // Test empty $PATH
+  with_env("PATH", "", [&]() {
+    auto f = find_in_path("echo");
+    ASSERT_FALSE(f.has_value());
+  });
+
+  // Cleanup
+  EXPECT_TRUE(std_filesystem::remove_all(path));
 }
 
 } // namespace utils

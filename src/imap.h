@@ -55,6 +55,10 @@ public:
   int lqmax = 0;
   int lqstep = 0;
 
+  int bits() const
+  {
+    return lqstep;
+  } // used in "hist()"
   bool is_per_cpu_type()
   {
     return map_type_ == libbpf::BPF_MAP_TYPE_PERCPU_HASH ||

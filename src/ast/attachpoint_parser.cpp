@@ -76,7 +76,8 @@ int AttachPointParser::parse()
   {
     for (size_t i = 0; i < probe->attach_points->size(); ++i)
     {
-      auto &ap = *(*probe->attach_points)[i];
+      auto ap_ptr = (*probe->attach_points)[i];
+      auto &ap = *ap_ptr;
       new_attach_points.clear();
 
       State s = parse_attachpoint(ap);
@@ -88,6 +89,7 @@ int AttachPointParser::parse()
       else if (s == SKIP || s == NEW_APS)
       {
         // Remove the current attach point
+        delete ap_ptr;
         probe->attach_points->erase(probe->attach_points->begin() + i);
         i--;
         if (s == NEW_APS)

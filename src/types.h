@@ -64,17 +64,18 @@ enum class AddrSpace : uint8_t
 std::ostream &operator<<(std::ostream &os, Type type);
 std::ostream &operator<<(std::ostream &os, AddrSpace as);
 
+enum class UserSymbolCacheType
+{
+  per_pid,
+  per_program,
+  none,
+};
+
 enum class StackMode : uint8_t
 {
   bpftrace,
   perf,
   raw,
-};
-
-const std::map<std::string, StackMode> STACK_MODE_MAP = {
-  { "bpftrace", StackMode::bpftrace },
-  { "perf", StackMode::perf },
-  { "raw", StackMode::raw },
 };
 
 struct StackType

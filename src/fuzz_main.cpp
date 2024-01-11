@@ -108,7 +108,8 @@ int fuzz_main(const char* data, size_t sz)
 
   // Limit node size
   uint64_t node_max = DEFAULT_NODE_MAX;
-  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
+  if (!get_uint64_env_var("BPFTRACE_NODE_MAX",
+                          [&](uint64_t x) { node_max = x; }))
     return 1;
   uint64_t node_count = 0;
   ast::CallbackVisitor counter(

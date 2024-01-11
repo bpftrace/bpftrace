@@ -413,7 +413,7 @@ CallInst *IRBuilderBPF::createGetScratchMap(int mapid,
   CreateCondBr(condition, lookup_merge_block, lookup_failure_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (bpftrace_.debug_output_)
+  if (bpftrace_.config_.get(ConfigKeyBool::debug_output))
     CreateDebugOutput("unable to find the scratch map value for " + name,
                       std::vector<Value *>{},
                       loc);
@@ -1978,11 +1978,12 @@ void IRBuilderBPF::CreatePath(Value *ctx,
   // Return: 0 or error
   FunctionType *d_path_func_type = FunctionType::get(
       getInt64Ty(), { getInt8PtrTy(), buf->getType(), getInt32Ty() }, false);
-  CallInst *call = CreateHelperCall(libbpf::bpf_func_id::BPF_FUNC_d_path,
-                                    d_path_func_type,
-                                    { path, buf, getInt32(bpftrace_.strlen_) },
-                                    "d_path",
-                                    &loc);
+  CallInst *call = CreateHelperCall(
+      libbpf::bpf_func_id::BPF_FUNC_d_path,
+      d_path_func_type,
+      { path, buf, getInt32(bpftrace_.config_.get(ConfigKeyInt::strlen)) },
+      "d_path",
+      &loc);
   CreateHelperErrorCond(ctx, call, libbpf::BPF_FUNC_d_path, loc);
 }
 

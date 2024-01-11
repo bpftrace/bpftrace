@@ -1238,9 +1238,10 @@ k:dummy {
 === hist
 
 .variants
-* `hist(int64 n)`
+* `hist(int64 n[, int k])`
 
-Create a log2 histogram of `n`.
+Create a log2 histogram of `n` using $2^k$ buckets per power of 2,
+0 <= k <= 5, defaults to 0.
 
 ----
 kretprobe:vfs_read {

@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add log2 histograms with finer granularity
+  - [#2831](https://github.com/iovisor/bpftrace/pull/2831)
 - Add a `jiffies` builtin for advanced usages
   - [#2769](https://github.com/iovisor/bpftrace/pull/2769)
 - Emit better errors messages for invalid attachpoints
@@ -41,8 +43,12 @@ and this project adheres to
   - [#2851](https://github.com/iovisor/bpftrace/pull/2851)
 - Fix symbolication on for 32-bit userspcae and 64-bit kernel
   - [#2869](https://github.com/iovisor/bpftrace/pull/2869)
+- Fix retval for kretfunc/fexit
+  - [#2864](https://github.com/iovisor/bpftrace/pull/2864)
 #### Docs
 #### Tools
+- Add PPID field to `execsnoop.bt`
+  - [#2876](https://github.com/iovisor/bpftrace/pull/2876)
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include <climits>
 #include <cmath>
 #include <cstring>
 #include <errno.h>
@@ -24,6 +25,7 @@
 
 #include "bpftrace.h"
 #include "debugfs.h"
+#include "filesystem.h"
 #include "log.h"
 #include "probe_matcher.h"
 #include "tracefs.h"
@@ -35,16 +37,6 @@
 #include <zlib.h>
 
 #include <linux/version.h>
-
-#if __has_include(<filesystem>)
-#include <filesystem>
-namespace std_filesystem = std::filesystem;
-#elif __has_include(<experimental/filesystem>)
-#include <experimental/filesystem>
-namespace std_filesystem = std::experimental::filesystem;
-#else
-#error "neither <filesystem> nor <experimental/filesystem> are present"
-#endif
 
 namespace {
 
@@ -232,9 +224,11 @@ KConfig::KConfig()
   }
 }
 
-bool get_uint64_env_var(const std::string &str, uint64_t &dest)
+bool get_uint64_env_var(const ::std::string &str,
+                        const std::function<void(uint64_t)> &cb)
 {
-  if (const char* env_p = std::getenv(str.c_str()))
+  uint64_t dest;
+  if (const char *env_p = std::getenv(str.c_str()))
   {
     std::istringstream stringstream(env_p);
     if (!(stringstream >> dest))
@@ -243,19 +237,22 @@ bool get_uint64_env_var(const std::string &str, uint64_t &dest)
                  << "' did not contain a valid uint64_t, or was zero-valued.";
       return false;
     }
+    cb(dest);
   }
   return true;
 }
 
-bool get_bool_env_var(const std::string &str, bool &dest, bool neg)
+bool get_bool_env_var(const ::std::string &str,
+                      const std::function<void(bool)> &cb)
 {
   if (const char *env_p = std::getenv(str.c_str()))
   {
+    bool dest;
     std::string s(env_p);
     if (s == "1")
-      dest = !neg;
+      dest = true;
     else if (s == "0")
-      dest = neg;
+      dest = false;
     else
     {
       LOG(ERROR) << "Env var '" << str
@@ -263,8 +260,28 @@ bool get_bool_env_var(const std::string &str, bool &dest, bool neg)
                     "valid value (0 or 1).";
       return false;
     }
+    cb(dest);
   }
   return true;
+}
+
+std::optional<std_filesystem::path> find_in_path(const std::string &name)
+{
+  std::error_code ec;
+
+  const char *path_env = std::getenv("PATH");
+  if (!path_env)
+    return std::nullopt;
+
+  auto paths = split_string(path_env, ':', true);
+  for (const auto &path : paths)
+  {
+    auto fpath = std_filesystem::path(path) / name;
+    if (std_filesystem::exists(fpath, ec))
+      return fpath;
+  }
+
+  return std::nullopt;
 }
 
 std::string get_pid_exe(const std::string &pid)

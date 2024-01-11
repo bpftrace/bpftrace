@@ -29,6 +29,7 @@
 #include "build_info.h"
 #include "child.h"
 #include "clang_parser.h"
+#include "config.h"
 #include "driver.h"
 #include "lockdown.h"
 #include "log.h"
@@ -260,25 +261,26 @@ static std::optional<struct timespec> get_delta_taitime()
   return get_delta_with_boottime(CLOCK_TAI);
 }
 
-[[nodiscard]] static bool parse_env(BPFtrace& bpftrace, bool& verify_llvm_ir)
+[[nodiscard]] static bool parse_env(BPFtrace& bpftrace)
 {
-  if (!get_uint64_env_var("BPFTRACE_STRLEN", bpftrace.strlen_))
+  ConfigSetter config_setter(bpftrace.config_, ConfigSource::env_var);
+  if (!get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::strlen, x);
+      }))
     return false;
-
-  if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
-    bpftrace.str_trunc_trailer_ = env_p;
 
   // in practice, the largest buffer I've seen fit into the BPF stack was 240
   // bytes. I've set the bar lower, in case your program has a deeper stack than
   // the one from my tests, in the hope that you'll get this instructive error
   // instead of getting the BPF verifier's error.
-  if (bpftrace.strlen_ > 200)
+  uint64_t strlen = bpftrace.config_.get(ConfigKeyInt::strlen);
+  if (strlen > 200)
   {
     // the verifier errors you would encounter when attempting larger
     // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
     // is exceeded. Please move large on stack variables into BPF per-cpu array
     // map.> ~1024= <A call to built-in function 'memset' is not supported.>
-    LOG(ERROR) << "'BPFTRACE_STRLEN' " << bpftrace.strlen_
+    LOG(ERROR) << "'BPFTRACE_STRLEN' " << strlen
                << " exceeds the current maximum of 200 bytes.\n"
                << "This limitation is because strings are currently stored on "
                   "the 512 byte BPF stack.\n"
@@ -287,109 +289,77 @@ static std::optional<struct timespec> get_delta_taitime()
     return false;
   }
 
-  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE",
-                        bpftrace.demangle_cpp_symbols_,
-                        true))
+  if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
+    config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
+
+  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
+        config_setter.set(ConfigKeyBool::no_cpp_demangle, x);
+      }))
     return false;
 
-  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT", bpftrace.debug_output_, false))
+  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT", [&](bool x) {
+        config_setter.set(ConfigKeyBool::debug_output, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", bpftrace.mapmax_))
+  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::map_keys_max, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", bpftrace.max_probes_))
+  if (!get_uint64_env_var("BPFTRACE_MAX_PROBES", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_probes, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", bpftrace.max_programs_))
+  if (!get_uint64_env_var("BPFTRACE_MAX_BPF_PROGS", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_bpf_progs, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", bpftrace.log_size_))
+  if (!get_uint64_env_var("BPFTRACE_LOG_SIZE", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::log_size, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", bpftrace.perf_rb_pages_))
+  if (!get_uint64_env_var("BPFTRACE_PERF_RB_PAGES", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::perf_rb_pages, x);
+      }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS",
-                          bpftrace.max_type_res_iterations))
+  if (!get_uint64_env_var("BPFTRACE_MAX_TYPE_RES_ITERATIONS", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_type_res_iterations, x);
+      }))
     return false;
 
-  if (const char* env_p = std::getenv("BPFTRACE_CAT_BYTES_MAX"))
-  {
-    uint64_t proposed;
-    std::istringstream stringstream(env_p);
-    if (!(stringstream >> proposed))
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_CAT_BYTES_MAX' did not contain a valid "
-                    "uint64_t, or was zero-valued.";
-      return false;
-    }
-    bpftrace.cat_bytes_max_ = proposed;
-  }
+  if (!get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::cat_bytes_max, x);
+      }))
+    return false;
 
-  // by default, cache user symbols per program if ASLR is disabled on system
-  // or `-c` option is given, otherwise cache per PID
-  auto default_usym_cache_type =
-      (!bpftrace.cmd_.empty() || !bpftrace.is_aslr_enabled(-1))
-          ? BPFtrace::UserSymbolCacheType::per_program
-          : BPFtrace::UserSymbolCacheType::per_pid;
   if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
   {
-    std::string s(env_p);
-    // Note: options 0 and 1 are for compatibility with older versions of
-    // bpftrace
-    if (s == "PER_PID")
-    {
-      bpftrace.user_symbol_cache_type_ = BPFtrace::UserSymbolCacheType::per_pid;
-    }
-    else if (s == "PER_PROGRAM")
-    {
-      bpftrace.user_symbol_cache_type_ =
-          BPFtrace::UserSymbolCacheType::per_program;
-    }
-    else if (s == "1")
-    {
-      bpftrace.user_symbol_cache_type_ = default_usym_cache_type;
-    }
-    else if (s == "NONE" || s == "0")
-    {
-      bpftrace.user_symbol_cache_type_ = BPFtrace::UserSymbolCacheType::none;
-    }
-    else
-    {
-      LOG(ERROR)
-          << "Env var 'BPFTRACE_CACHE_USER_SYMBOLS' did not contain a valid "
-             "value: valid values are PER_PID, PER_PROGRAM, and NONE.";
+    const std::string s(env_p);
+    if (!config_setter.set_user_symbol_cache_type(s))
       return false;
-    }
-  }
-  else
-  {
-    bpftrace.user_symbol_cache_type_ = default_usym_cache_type;
   }
 
-  uint64_t node_max = std::numeric_limits<uint64_t>::max();
-  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", node_max))
+  config_setter.set(ConfigKeyInt::ast_max_nodes,
+                    std::numeric_limits<uint64_t>::max());
+  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::ast_max_nodes, x);
+      }))
     return false;
 
-  bpftrace.ast_max_nodes_ = node_max;
-
-  if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", verify_llvm_ir))
+  if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", [&](bool x) {
+        config_setter.set(ConfigKeyBool::verify_llvm_ir, x);
+      }))
     return false;
 
   if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE"))
   {
-    auto found = STACK_MODE_MAP.find(stack_mode);
-    if (found != STACK_MODE_MAP.end())
-    {
-      bpftrace.stack_mode_ = found->second;
-    }
-    else
-    {
-      LOG(ERROR) << "Env var 'BPFTRACE_STACK_MODE' did not contain a valid "
-                    "StackMode: "
-                 << stack_mode;
-    }
+    if (!config_setter.set_stack_mode(stack_mode))
+      return false;
   }
 
   return true;
@@ -810,13 +780,13 @@ int main(int argc, char* argv[])
 
   libbpf_set_print(libbpf_print);
 
-  BPFtrace bpftrace(std::move(output), args.no_feature);
-  bool verify_llvm_ir = false;
+  Config config = Config(!args.cmd_str.empty(), bt_verbose);
+  BPFtrace bpftrace(std::move(output), args.no_feature, config);
 
   if (!args.cmd_str.empty())
     bpftrace.cmd_ = args.cmd_str;
 
-  if (!parse_env(bpftrace, verify_llvm_ir))
+  if (!parse_env(bpftrace))
     return 1;
 
   bpftrace.usdt_file_activation_ = args.usdt_file_activation;
@@ -1008,7 +978,7 @@ int main(int argc, char* argv[])
     {
       llvm.DumpIR(args.output_llvm + ".original.ll");
     }
-    if (verify_llvm_ir && !llvm.verify())
+    if (bpftrace.config_.get(ConfigKeyBool::verify_llvm_ir) && !llvm.verify())
     {
       LOG(ERROR) << "Verification of generated LLVM IR failed";
       return 1;

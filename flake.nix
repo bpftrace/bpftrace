@@ -2,7 +2,7 @@
   description = "High-level tracing language for Linux eBPF";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-22.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/release-23.11";
     flake-utils.url = "github:numtide/flake-utils";
     nix-appimage = {
       # Use fork until following PRs are in:
@@ -98,6 +98,10 @@
                 cmakeFlags = [
                   "-DCMAKE_BUILD_TYPE=Release"
                 ];
+
+                # Technically not needed cuz package name matches mainProgram, but
+                # explicit is fine too.
+                meta.mainProgram = "bpftrace";
               };
 
           # Define lambda that returns a devShell derivation with extra test-required packages
@@ -128,9 +132,10 @@
           # Define package set
           packages = rec {
             # Default package is latest supported LLVM release
-            default = bpftrace-llvm16;
+            default = bpftrace-llvm17;
 
             # Support matrix of llvm versions
+            bpftrace-llvm17 = mkBpftrace pkgs.llvmPackages_17;
             bpftrace-llvm16 = mkBpftrace pkgs.llvmPackages_16;
             bpftrace-llvm15 = mkBpftrace pkgs.llvmPackages_15;
             bpftrace-llvm14 = mkBpftrace pkgs.llvmPackages_14;
@@ -176,8 +181,9 @@
           };
 
           devShells = rec {
-            default = bpftrace-llvm16;
+            default = bpftrace-llvm17;
 
+            bpftrace-llvm17 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm17;
             bpftrace-llvm16 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm16;
             bpftrace-llvm15 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm15;
             bpftrace-llvm14 = mkBpftraceDevShell self.packages.${system}.bpftrace-llvm14;

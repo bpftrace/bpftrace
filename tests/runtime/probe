@@ -68,6 +68,14 @@ REQUIRES_FEATURE get_func_ip
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+NAME kretfunc large args
+PROG kretfunc:__sys_bpf { if (args.cmd == 1111 && args.size == 2222 && (int64)retval == -7) { printf("SUCCESS %d\n", pid); exit(); }}
+EXPECT SUCCESS [0-9][0-9]*
+REQUIRES_FEATURE kfunc
+REQUIRES_FEATURE btf
+TIMEOUT 5
+AFTER ./testprogs/kfunc_args 1111 2222
+
 # Sanity check for fentry/fexit alias
 NAME fentry
 PROG fentry:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
@@ -159,18 +167,18 @@ NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x5 { printf("hit\n"); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
-ARCH x86_64|aarch64
+ARCH x86_64
 TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
 CLEANUP /usr/sbin/nft delete table bpftrace
 
-# Local entry point to nft_trans_alloc_gfp is located at offset of 8 bytes in ppc64.
+# Local entry point to nft_trans_alloc_gfp is located at offset of 8 bytes in ppc64 and aarch64.
 NAME kprobe_offset_module
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x8 { printf("hit\n"); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
 EXPECT hit
-ARCH ppc64|ppc64le
+ARCH ppc64|ppc64le|aarch64
 TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 REQUIRES /usr/sbin/nft --help
@@ -179,6 +187,15 @@ CLEANUP /usr/sbin/nft delete table bpftrace
 NAME kprobe_offset_module_error
 RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
 EXPECT Possible attachment attempt in the middle of an instruction, try a different offset.
+ARCH x86_64
+TIMEOUT 5
+REQUIRES lsmod | grep '^nf_tables'
+WILL_FAIL
+
+NAME kprobe_offset_module_error
+RUN {{BPFTRACE}} -e 'kprobe:nft_trans_alloc_gfp+0x1 { printf("hit\n"); exit(); }'
+EXPECT Invalid argument
+ARCH aarch64
 TIMEOUT 5
 REQUIRES lsmod | grep '^nf_tables'
 WILL_FAIL

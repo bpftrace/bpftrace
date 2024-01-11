@@ -626,8 +626,8 @@ void ClangParser::resolve_incomplete_types_from_btf(
     if (probe->tp_args_structs_level > (int)field_lvl)
       field_lvl = probe->tp_args_structs_level;
 
-  unsigned max_iterations = std::max(bpftrace.max_type_res_iterations,
-                                     field_lvl);
+  unsigned max_iterations = std::max(
+      bpftrace.config_.get(ConfigKeyInt::max_type_res_iterations), field_lvl);
 
   bool check_incomplete_types = true;
   for (unsigned i = 0; i < max_iterations && check_incomplete_types; i++)

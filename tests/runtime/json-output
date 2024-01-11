@@ -39,6 +39,12 @@ PROG BEGIN { @["bpftrace"] = hist(2); @["curl"] = hist(-1); @["curl"] = hist(0);
 EXPECT_JSON runtime/outputs/hist_multiple.json
 TIMEOUT 5
 
+NAME histogram-finegrain
+PROG i:us:100 { @ = hist(@n++,3); if (@n > 1023) { delete(@n); exit(); }}
+EXPECT_JSON runtime/outputs/hist_2args.json
+TIMEOUT 5
+
+
 NAME linear histogram
 PROG BEGIN { @h = lhist(2, 0, 100, 10); @h = lhist(50, 0, 100, 10); @h = lhist(1000, 0, 100, 10); exit(); }
 EXPECT_JSON runtime/outputs/lhist.json
