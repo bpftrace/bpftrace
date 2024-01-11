@@ -174,7 +174,7 @@ EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME cat limited output
-ENV BPFTRACE_CAT_BYTES_MAX=1
+ENV BPFTRACE_MAX_CAT_BYTES=1
 PROG i:ms:1 { cat("/proc/loadavg"); exit(); }
 EXPECT ^[0-9]$
 TIMEOUT 5

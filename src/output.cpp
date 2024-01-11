@@ -192,7 +192,7 @@ std::string Output::get_helper_error_msg(int func_id, int retcode) const
   std::string msg;
   if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG)
   {
-    msg = "Map full; can't update element. Try increasing MAP_KEYS_MAX.";
+    msg = "Map full; can't update element. Try increasing max_map_keys config";
   }
   else if (func_id == libbpf::BPF_FUNC_map_delete_elem && retcode == -ENOENT)
   {

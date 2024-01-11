@@ -2840,8 +2840,8 @@ BEGIN { nsecs(xxx); }
 
 TEST(semantic_analyser, config)
 {
-  test("config = { BPFTRACE_NODE_MAX=1 } BEGIN { $ns = nsecs(); }", 0);
-  test("config = { BPFTRACE_NODE_MAX=1; stack_mode=raw } BEGIN { $ns = "
+  test("config = { BPFTRACE_MAX_AST_NODES=1 } BEGIN { $ns = nsecs(); }", 0);
+  test("config = { BPFTRACE_MAX_AST_NODES=1; stack_mode=raw } BEGIN { $ns = "
        "nsecs(); }",
        0);
 }
