@@ -70,10 +70,21 @@ bool Config::is_aslr_enabled()
   return true;
 }
 
+std::map<std::string, StackMode> get_stack_mode_map()
+{
+  std::map<std::string, StackMode> result;
+  for (auto &mode : STACK_MODE_NAME_MAP)
+  {
+    result.emplace(mode.second, mode.first);
+  }
+  return result;
+}
+
 bool ConfigSetter::set_stack_mode(const std::string &s)
 {
-  auto found = STACK_MODE_MAP.find(s);
-  if (found != STACK_MODE_MAP.end())
+  static auto stack_mode_map = get_stack_mode_map();
+  auto found = stack_mode_map.find(s);
+  if (found != stack_mode_map.end())
   {
     return config_.set(ConfigKeyStackMode::default_, found->second, source_);
   }
