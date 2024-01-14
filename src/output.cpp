@@ -11,7 +11,8 @@ bool is_quoted_type(const SizedType &ty)
 {
   return ty.IsKstackTy() || ty.IsUstackTy() || ty.IsKsymTy() || ty.IsUsymTy() ||
          ty.IsInetTy() || ty.IsUsernameTy() || ty.IsStringTy() ||
-         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy();
+         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy() ||
+         ty.IsStrerrorTy();
 }
 } // namespace
 
