@@ -100,6 +100,11 @@ RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
 EXPECT ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 TIMEOUT 5
 
+NAME strerror
+RUN {{BPFTRACE}} -f json -e 'BEGIN { print((strerror(7))); exit(); }'
+EXPECT ^{"type": "value", "data": "Argument list too long"}$
+TIMEOUT 5
+
 # Careful with '[' and ']', they are read by the test engine as a regex
 # character class, so make sure to escape them.
 NAME tuple
