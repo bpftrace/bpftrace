@@ -411,7 +411,6 @@ class Runner(object):
                 print('\tCLEANUP error: %s' % e.stderr)
                 return Runner.FAIL
 
-        @staticmethod
         def to_utf8(s):
             return s.encode("unicode_escape").decode("utf-8")
 
