@@ -60,6 +60,7 @@ private:
 
   BPFtrace *bpftrace_;
   std::string file_path_;
+  mutable int anon_idx;
 };
 
 } // namespace bpftrace
