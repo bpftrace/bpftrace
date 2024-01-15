@@ -17,10 +17,41 @@ namespace bpftrace {
 namespace {
 bool is_quoted_type(const SizedType &ty)
 {
-  return ty.IsKstackTy() || ty.IsUstackTy() || ty.IsKsymTy() || ty.IsUsymTy() ||
-         ty.IsInetTy() || ty.IsUsernameTy() || ty.IsStringTy() ||
-         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy() ||
-         ty.IsStrerrorTy();
+  switch (ty.type)
+  {
+    case Type::buffer:
+    case Type::cgroup_path:
+    case Type::inet:
+    case Type::kstack:
+    case Type::ksym:
+    case Type::probe:
+    case Type::strerror:
+    case Type::string:
+    case Type::username:
+    case Type::ustack:
+    case Type::usym:
+      return true;
+    case Type::array:
+    case Type::avg:
+    case Type::count:
+    case Type::hist:
+    case Type::integer:
+    case Type::lhist:
+    case Type::mac_address:
+    case Type::max:
+    case Type::min:
+    case Type::none:
+    case Type::pointer:
+    case Type::record:
+    case Type::stack_mode:
+    case Type::stats:
+    case Type::sum:
+    case Type::timestamp:
+    case Type::timestamp_mode:
+    case Type::tuple:
+      return false;
+  }
+  return false;
 }
 } // namespace
 
