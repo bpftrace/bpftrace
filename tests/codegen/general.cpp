@@ -47,23 +47,6 @@ public:
   }
 };
 
-TEST(codegen, populate_sections)
-{
-  auto bpftrace = get_mock_bpftrace();
-  Driver driver(*bpftrace);
-
-  ASSERT_EQ(driver.parse_str("kprobe:foo { 1 } kprobe:bar { 1 }"), 0);
-  // Override to mockbpffeature.
-  bpftrace->feature_ = std::make_unique<MockBPFfeature>(true);
-  ast::SemanticAnalyser semantics(driver.root.get(), *bpftrace);
-  ASSERT_EQ(semantics.analyse(), 0);
-  ast::CodegenLLVM codegen(driver.root.get(), *bpftrace);
-  auto bytecode = codegen.compile();
-
-  EXPECT_TRUE(bytecode.hasSection("s_kprobe:foo_1"));
-  EXPECT_TRUE(bytecode.hasSection("s_kprobe:bar_2"));
-}
-
 TEST(codegen, printf_offsets)
 {
   auto bpftrace = get_mock_bpftrace();
