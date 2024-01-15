@@ -291,8 +291,10 @@ Attaching 1 probe...
 
 ```
 # cat path.bt
+#ifndef BPFTRACE_HAVE_BTF
 #include <linux/path.h>
 #include <linux/dcache.h>
+#endif
 
 kprobe:vfs_open
 {
@@ -313,8 +315,8 @@ open path: retrans_time_ms
 - kprobe: 如前面所述，这是内核动态跟踪kprobe探针类型，跟踪内核函数的调用(kretprobe探针类型跟踪内核函数返回值)。
 - `arg0` 是一个内建变量，表示探针的第一个参数，其含义由探针类型决定。对于`kprobe`类型探针，它表示函数的第一个参数。其它参数使用arg1,...,argN访问。
 - `((struct path *)arg0)->dentry->d_name.name`: 这里`arg0`作为`struct path *`并引用dentry。
-- #include: 包含必要的path和dentry类型声明的头文件。
+- #include: 在没有BTF (BPF Type Format) 的情况下,包含必要的path和dentry类型声明的头文件。
 
-bpftrace对内核结构跟踪的支持和bcc是一样的，允许使用内核头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidata的声明。倘若内核有提供BPF (BPF Type Format)数据，则所有结构都可用。
+bpftrace对内核结构跟踪的支持和bcc是一样的，允许使用内核头文件。这意味着大多数结构是可用的，但是并不是所有的，有时需要手动增加某些结构的声明。例如这个例子，见[dcsnoop tool](../tools/dcsnoop.bt)，包含struct nameidata的声明。倘若内核有提供BTF数据，则所有结构都可用。
 
 现在，你已经理解了bpftrace的大部分功能，你可以开始使用和编写强大的一行命令。查阅[参考手册](reference_guide.md)更多的功能。
