@@ -19,6 +19,7 @@ endif()
 
 add_executable(bpftrace_test
   ast.cpp
+  bpfbytecode.cpp
   bpftrace.cpp
   child.cpp
   clang_parser.cpp
