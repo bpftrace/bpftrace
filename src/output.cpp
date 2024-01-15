@@ -4,6 +4,14 @@
 #include "utils.h"
 #include <async_event_types.h>
 
+#include <bpf/libbpf.h>
+
+namespace libbpf {
+#define __BPF_NAME_FN(x) #x
+const char *bpf_func_name[] = { __BPF_FUNC_MAPPER(__BPF_NAME_FN) };
+#undef __BPF_NAME_FN
+} // namespace libbpf
+
 namespace bpftrace {
 
 namespace {
@@ -11,7 +19,8 @@ bool is_quoted_type(const SizedType &ty)
 {
   return ty.IsKstackTy() || ty.IsUstackTy() || ty.IsKsymTy() || ty.IsUsymTy() ||
          ty.IsInetTy() || ty.IsUsernameTy() || ty.IsStringTy() ||
-         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy();
+         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy() ||
+         ty.IsStrerrorTy();
 }
 } // namespace
 
@@ -145,6 +154,30 @@ void Output::lhist_prepare(const std::vector<uint64_t> &values, int min, int max
   if (start_value == -1) {
     start_value = 0;
   }
+}
+
+std::string Output::get_helper_error_msg(int func_id, int retcode) const
+{
+  std::string msg;
+  if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG)
+  {
+    msg = "Map full; can't update element. Try increasing MAP_KEYS_MAX.";
+  }
+  else if (func_id == libbpf::BPF_FUNC_map_delete_elem && retcode == -ENOENT)
+  {
+    msg = "Can't delete map element because it does not exist.";
+  }
+  // bpftrace sets the return code to 0 for map_lookup_elem failures
+  // which is why we're not also checking the retcode
+  else if (func_id == libbpf::BPF_FUNC_map_lookup_elem)
+  {
+    msg = "Can't lookup map element because it does not exist.";
+  }
+  else
+  {
+    msg = strerror(-retcode);
+  }
+  return msg;
 }
 
 std::string Output::value_to_str(BPFtrace &bpftrace,
@@ -565,17 +598,14 @@ void TextOutput::attached_probes(uint64_t num_probes) const
     out_ << "Attaching " << num_probes << " probes..." << std::endl;
 }
 
-void TextOutput::helper_error(const std::string &helper,
+void TextOutput::helper_error(int func_id,
                               int retcode,
                               const location &loc) const
 {
-  std::stringstream msg;
-  msg << "Failed to " << helper << ": ";
-  if (retcode < 0)
-    msg << strerror(-retcode) << " (" << retcode << ")";
-  else
-    msg << retcode;
-  LOG(WARNING, loc, out_) << msg.str();
+  LOG(WARNING, loc, out_) << get_helper_error_msg(func_id, retcode)
+                          << "\nAdditional Info - helper: "
+                          << libbpf::bpf_func_name[func_id]
+                          << ", retcode: " << retcode;
 }
 
 std::string TextOutput::field_to_str(const std::string &name,
@@ -855,13 +885,15 @@ void JsonOutput::attached_probes(uint64_t num_probes) const
   message(MessageType::attached_probes, "probes", num_probes);
 }
 
-void JsonOutput::helper_error(const std::string &helper,
+void JsonOutput::helper_error(int func_id,
                               int retcode,
                               const location &loc) const
 {
-  out_ << "{\"type\": \"helper_error\", \"helper\": \"" << helper
-       << "\", \"retcode\": " << retcode << ", \"line\": " << loc.begin.line
-       << ", \"col\": " << loc.begin.column << "}" << std::endl;
+  out_ << "{\"type\": \"helper_error\", \"msg\": \""
+       << get_helper_error_msg(func_id, retcode) << "\", \"helper\": \""
+       << libbpf::bpf_func_name[func_id] << "\", \"retcode\": " << retcode
+       << ", \"line\": " << loc.begin.line << ", \"col\": " << loc.begin.column
+       << "}" << std::endl;
 }
 
 std::string JsonOutput::field_to_str(const std::string &name,

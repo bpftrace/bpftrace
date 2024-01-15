@@ -25,6 +25,8 @@ and this project adheres to
   - [#2830](https://github.com/iovisor/bpftrace/pull/2830)
 - New builtin for getting the number of map elements
   - [#2840](https://github.com/iovisor/bpftrace/pull/2840)
+- Add more helpful error messages for map operations
+  - [#2905](https://github.com/iovisor/bpftrace/pull/2905)
 - Add support for kprobe:module:function
   - [#2897](https://github.com/iovisor/bpftrace/pull/2897)
 #### Changed
@@ -45,10 +47,14 @@ and this project adheres to
   - [#2869](https://github.com/iovisor/bpftrace/pull/2869)
 - Fix retval for kretfunc/fexit
   - [#2864](https://github.com/iovisor/bpftrace/pull/2864)
+- Fix attachment/listing of wildcarded module kfuncs
+  - [#2914](https://github.com/iovisor/bpftrace/pull/2914)
 #### Docs
 #### Tools
 - Add PPID field to `execsnoop.bt`
   - [#2876](https://github.com/iovisor/bpftrace/pull/2876)
+- Use `strftime` instead of `elapsed` in `execsnoop.bt`
+  - [#2904](https://github.com/iovisor/bpftrace/pull/2904)
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.

@@ -100,6 +100,11 @@ RUN {{BPFTRACE}} -f json -e 'BEGIN { cat("/proc/uptime"); exit(); }'
 EXPECT ^{"type": "cat", "data": "[0-9]*.[0-9]* [0-9]*.[0-9]*\\n"}$
 TIMEOUT 5
 
+NAME strerror
+RUN {{BPFTRACE}} -f json -e 'BEGIN { print((strerror(7))); exit(); }'
+EXPECT ^{"type": "value", "data": "Argument list too long"}$
+TIMEOUT 5
+
 # Careful with '[' and ']', they are read by the test engine as a regex
 # character class, so make sure to escape them.
 NAME tuple
@@ -167,7 +172,7 @@ TIMEOUT 1
 
 NAME helper_error
 RUN {{BPFTRACE}} -kk -q -f json -e 'struct foo {int a;}; BEGIN { $tmp = ((struct foo*) 0)->a; exit(); }'
-EXPECT {"type": "helper_error", "helper": "probe_read", "retcode": -14, "line": 1, "col": 37}
+EXPECT {"type": "helper_error", "msg": "Bad address", "helper": "probe_read", "retcode": -14, "line": 1, "col": 37}
 TIMEOUT 1
 
 NAME cgroup_path

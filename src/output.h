@@ -77,7 +77,7 @@ public:
   virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
-  virtual void helper_error(const std::string &helper,
+  virtual void helper_error(int func_id,
                             int retcode,
                             const location &loc) const = 0;
 
@@ -86,6 +86,7 @@ protected:
   std::ostream &err_;
   void hist_prepare(const std::vector<uint64_t> &values, int &min_index, int &max_index, int &max_value) const;
   void lhist_prepare(const std::vector<uint64_t> &values, int min, int max, int step, int &max_index, int &max_value, int &buckets, int &start_value, int &end_value) const;
+  std::string get_helper_error_msg(int func_id, int retcode) const;
   // Convert a log2 histogram into string
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
                                   uint32_t div,
@@ -194,7 +195,7 @@ public:
   void message(MessageType type, const std::string& msg, bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(const std::string &helper,
+  void helper_error(int func_id,
                     int retcode,
                     const location &loc) const override;
 
@@ -249,7 +250,7 @@ public:
   void message(MessageType type, const std::string& field, uint64_t value) const;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
-  void helper_error(const std::string &helper,
+  void helper_error(int func_id,
                     int retcode,
                     const location &loc) const override;
 
