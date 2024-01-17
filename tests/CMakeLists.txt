@@ -108,25 +108,7 @@ if(NOT STATIC_LINKING)
   target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 endif(NOT STATIC_LINKING)
 
-# Compile all testprograms, one per .c file for runtime testing
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
-file(GLOB testprogs testprogs/*.c)
-set(compiled_testprogs "")
-foreach(testprog ${testprogs})
-  get_filename_component(bin_name ${testprog} NAME_WE)
-  add_executable (${bin_name} ${testprog})
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  set_target_properties(${bin_name} PROPERTIES LINK_SEARCH_START_STATIC FALSE LINK_SEARCH_END_STATIC FALSE RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0" LINK_FLAGS "-no-pie")
-  list(APPEND compiled_testprogs ${CMAKE_CURRENT_BINARY_DIR}/testprogs/${bin_name})
-endforeach()
-add_custom_target(testprogs DEPENDS ${compiled_testprogs})
-
-target_include_directories(usdt_lib PUBLIC ${CMAKE_SOURCE_DIR}/tests/testlibs/)
-target_compile_options(usdt_lib PRIVATE -fPIC)
-target_link_libraries(usdt_lib usdt_tp)
-
+add_subdirectory(testprogs)
 add_subdirectory(testlibs)
 
 
@@ -138,7 +120,7 @@ add_custom_target(
   runtime_tests
   COMMAND ./runtime-tests.sh
   DEPENDS
-    ${compiled_testprogs}
+    testprogs
     testlibs
     ${CMAKE_BINARY_DIR}/src/bpftrace
 )
