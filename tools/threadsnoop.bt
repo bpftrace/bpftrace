@@ -15,12 +15,12 @@
 
 BEGIN
 {
-	printf("%-15s %-6s %-16s %s\n", "TIME", "PID", "COMM", "FUNC");
+	printf("%-15s %7s %-16s %s\n", "TIME", "PID", "COMM", "FUNC");
 }
 
 uprobe:libpthread:pthread_create,
 uprobe:libc:pthread_create
 {
-	printf("%15s %-6d %-16s %s\n", strftime("%H:%M:%S.%f", nsecs), pid, comm,
+	printf("%15s %7d %-16s %s\n", strftime("%H:%M:%S.%f", nsecs), pid, comm,
 	    usym(arg2));
 }
