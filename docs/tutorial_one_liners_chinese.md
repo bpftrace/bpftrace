@@ -1,6 +1,6 @@
 # bpftrace一行教程
 
-该教程通过12个简单小节帮助你了解bpftrace的使用。每一小节都是一行的命令，你可以尝试运行并立刻看到运行效果。该教程系列用来介绍bpftrace的概念。关于bpftrace的完整参考，见[bpftrace手册](man/adoc/bpftrace.adoc)。
+该教程通过12个简单小节帮助你了解bpftrace的使用。每一小节都是一行的命令，你可以尝试运行并立刻看到运行效果。该教程系列用来介绍bpftrace的概念。关于bpftrace的完整参考，见[bpftrace手册](../man/adoc/bpftrace.adoc)。
 
 该教程贡献者是Brendan Gregg, Netflix (2018), 基于他的FreeBSD DTrace教程系列[DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial)。
 
