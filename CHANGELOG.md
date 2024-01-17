@@ -50,6 +50,9 @@ and this project adheres to
 - Fix uprobe attachment across container boundary
   - [#2662](https://github.com/iovisor/bpftrace/pull/2662)
 #### Docs
+- Fix one-liner tutorial for systems with BTF
+  - [#2919](https://github.com/iovisor/bpftrace/pull/2919)
+  - [#2924](https://github.com/iovisor/bpftrace/pull/2924)
 #### Tools
 - Add PPID field to `execsnoop.bt`
   - [#2876](https://github.com/iovisor/bpftrace/pull/2876)
