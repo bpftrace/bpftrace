@@ -127,24 +127,7 @@ target_include_directories(usdt_lib PUBLIC ${CMAKE_SOURCE_DIR}/tests/testlibs/)
 target_compile_options(usdt_lib PRIVATE -fPIC)
 target_link_libraries(usdt_lib usdt_tp)
 
-# Similarly compile all test libs
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/)
-file(GLOB testlibs testlibs/*.c)
-set(compiled_testlibs "")
-foreach(testlib_source ${testlibs})
-  get_filename_component(testlib_name ${testlib_source} NAME_WE)
-  add_library(${testlib_name} SHARED ${testlib_source})
-  set_target_properties(${testlib_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/ COMPILE_FLAGS "-g -O0")
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${testlib_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  # clear the executable bit
-  add_custom_command(TARGET ${testlib_name}
-    POST_BUILD
-    COMMAND chmod -x ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
-  list(APPEND compiled_testlibs ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
-endforeach()
-add_custom_target(testlibs DEPENDS ${compiled_testlibs})
+add_subdirectory(testlibs)
 
 
 #
@@ -156,7 +139,7 @@ add_custom_target(
   COMMAND ./runtime-tests.sh
   DEPENDS
     ${compiled_testprogs}
-    ${compiled_testlibs}
+    testlibs
     ${CMAKE_BINARY_DIR}/src/bpftrace
 )
 add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
