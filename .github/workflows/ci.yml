@@ -9,9 +9,6 @@ concurrency:
 
 jobs:
   clang-format:
-    # Only run clang-format on pull requests. We want to allow people to
-    # ignore clang-format if they think it's not helpful.
-    if: "github.event_name == 'pull_request'"
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
