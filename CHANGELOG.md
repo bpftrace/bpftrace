@@ -61,7 +61,7 @@ and this project adheres to
 - Use `strftime` instead of `elapsed` in `threadsnoop.bt`
   - [#2917](https://github.com/iovisor/bpftrace/pull/2917)
 - Increase PID field width and align to the right in `threadsnoop.bt`
-  - [#2927](https://github.com/iovisor/bpftrace/pull/2927)
+  - [#2928](https://github.com/iovisor/bpftrace/pull/2928)
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.
