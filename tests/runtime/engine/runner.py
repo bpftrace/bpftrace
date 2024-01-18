@@ -12,7 +12,8 @@ from functools import lru_cache
 
 import cmake_vars
 
-BPF_PATH = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
+BPFTRACE_BIN = os.environ["BPFTRACE_RUNTIME_TEST_EXECUTABLE"]
+AOT_BIN = os.environ["BPFTRACE_AOT_RUNTIME_TEST_EXECUTABLE"]
 ATTACH_TIMEOUT = 10
 DEFAULT_TIMEOUT = 5
 
@@ -89,22 +90,19 @@ class Runner(object):
 
     @staticmethod
     def prepare_bpf_call(test, nsenter=[]):
-        bpftrace_path = os.path.abspath(f"{BPF_PATH}/bpftrace")
-        bpftrace_aotrt_path = os.path.abspath(f"{BPF_PATH}/aot/bpftrace-aotrt")
-
         nsenter_prefix = (" ".join(nsenter) + " ") if len(nsenter) > 0 else ""
 
         if test.run:
-            ret = re.sub("{{BPFTRACE}}", bpftrace_path, test.run)
-            ret = re.sub("{{BPFTRACE_AOTRT}}", bpftrace_aotrt_path, ret)
+            ret = re.sub("{{BPFTRACE}}", BPFTRACE_BIN, test.run)
+            ret = re.sub("{{BPFTRACE_AOTRT}}", AOT_BIN, ret)
 
             return nsenter_prefix + ret
         else:  # PROG
             use_json = "-q -f json" if test.expect_mode == "json" else ""
-            cmd = nsenter_prefix + "{} {} -e '{}'".format(bpftrace_path, use_json, test.prog)
+            cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, test.prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
-                return cmd + " --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(bpftrace_aotrt_path)
+                return cmd + " --aot /tmp/tmpprog.btaot && {} /tmp/tmpprog.btaot".format(AOT_BIN)
             else:
                 return cmd
 
@@ -116,7 +114,7 @@ class Runner(object):
     @lru_cache(maxsize=1)
     def __get_bpffeature():
         p = subprocess.Popen(
-            [os.path.abspath(f"{BPF_PATH}/bpftrace"), "--info"],
+            [BPFTRACE_BIN, "--info"],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,
