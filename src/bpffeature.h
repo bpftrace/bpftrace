@@ -92,6 +92,7 @@ public:
   int instruction_limit();
   bool has_loop();
   bool has_btf();
+  bool has_btf_func_global();
   bool has_map_batch();
   bool has_d_path();
   bool has_uprobe_refcnt();
@@ -142,6 +143,7 @@ protected:
   std::optional<bool> has_raw_tp_special_;
   std::optional<bool> has_prog_kfunc_;
   std::optional<bool> has_module_btf_;
+  std::optional<bool> has_btf_func_global_;
 
 private:
   bool detect_map(libbpf::bpf_map_type map_type);
@@ -159,6 +161,7 @@ private:
       const char* name = nullptr,
       std::optional<libbpf::bpf_attach_type> attach_type = std::nullopt,
       int* outfd = nullptr);
+  bool try_load_btf(const void* btf_data, size_t btf_size);
 
   BTF btf_ = BTF({ "vmlinux" });
 
