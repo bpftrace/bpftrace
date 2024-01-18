@@ -1,6 +1,5 @@
 #include "bpffeature.h"
 
-#include <bcc/bcc_syms.h>
 #include <bcc/libbpf.h>
 #include <bpf/bpf.h>
 #include <bpf/btf.h>
