@@ -66,7 +66,8 @@ and this project adheres to
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.
   - [#2849](https://github.com/iovisor/bpftrace/pull/2849)
-- Add milliseconds to timestamp in `threadsnoop.bt`
+- Add milliseconds to timestamp and align numbers to the right in `killsnoop.bt`
+  - [#2936](https://github.com/iovisor/bpftrace/pull/2936)
 
 ## [0.19.0] 2023-09-19
 
