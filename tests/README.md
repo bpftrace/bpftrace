@@ -47,9 +47,9 @@ Run `./tests/codegen-tests.sh -u`. This updates all the codegen tests.
 
 Runtime tests will call the bpftrace executable. These are located in `tests/runtime` and are managed by a custom framework.
 
-* Run: `sudo make runtime-tests` inside your build folder or `sudo <builddir>/tests/runtime-tests.sh`
-* By default, runtime-tests will look for the executable in the build folder. You can set a value to the environment variable `BPFTRACE_RUNTIME_TEST_EXECUTABLE` to customize it
+* Run: `sudo make runtime-tests` inside your build directory or `sudo <builddir>/tests/runtime-tests.sh`
 * Use the `TEST_FILTER` environment variable (or the `--filter` arg when running `runtime_tests.sh`) to only run a subset of the tests e.g. `TEST_FILTER="uprobe.*" sudo make runtime-tests`
+* There are environment variables to override paths for the bpftrace executables, if necessary. See runtime-tests.sh for details.
 
 Runtime tests are grouped into "suites". A suite is usually a single file. The
 name of the file is the name of the suite.

@@ -115,7 +115,7 @@ add_subdirectory(testlibs)
 #
 # Runtime Tests
 #
-configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
+configure_file(runtime-tests.sh runtime-tests.sh @ONLY)
 add_custom_target(
   runtime_tests
   COMMAND ./runtime-tests.sh
