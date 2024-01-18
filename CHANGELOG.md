@@ -49,6 +49,8 @@ and this project adheres to
   - [#2914](https://github.com/iovisor/bpftrace/pull/2914)
 - Fix uprobe attachment across container boundary
   - [#2662](https://github.com/iovisor/bpftrace/pull/2662)
+- Fix generated BTF for older kernels
+  - [#2934](https://github.com/iovisor/bpftrace/pull/2934)
 #### Docs
 - Fix one-liner tutorial for systems with BTF
   - [#2919](https://github.com/iovisor/bpftrace/pull/2919)

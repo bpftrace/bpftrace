@@ -1246,6 +1246,7 @@ int BPFtrace::run(BpfBytecode bytecode)
     return 1;
 
   bytecode_ = std::move(bytecode);
+  bytecode_.fixupBTF(*feature_);
 
   err = setup_output();
   if (err)
