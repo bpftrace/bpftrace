@@ -8,8 +8,6 @@
 #define PACKAGE "bpftrace"
 #include "bfd-disasm.h"
 #include "utils.h"
-#include <bcc/bcc_elf.h>
-#include <bcc/bcc_syms.h>
 #include <bfd.h>
 #include <dis-asm.h>
 
