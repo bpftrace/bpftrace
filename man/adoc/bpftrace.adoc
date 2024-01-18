@@ -418,7 +418,7 @@ which can only be placed at the top of the script before any probes (even `BEGIN
 ----
 config = {
     stack_mode=perf;
-    max_probes=2
+    max_map_keys=2
 }
 
 BEGIN { ... }

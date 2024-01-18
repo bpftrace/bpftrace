@@ -305,9 +305,8 @@ static std::optional<struct timespec> get_delta_taitime()
       }))
     return false;
 
-  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT", [&](bool x) {
-        config_setter.set(ConfigKeyBool::debug_output, x);
-      }))
+  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
+                        [&](bool x) { bpftrace.debug_output_ = x; }))
     return false;
 
   if (!get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
@@ -352,16 +351,9 @@ static std::optional<struct timespec> get_delta_taitime()
       return false;
   }
 
-  config_setter.set(ConfigKeyInt::max_ast_nodes,
-                    std::numeric_limits<uint64_t>::max());
-  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::max_ast_nodes, x);
-      }))
-    return false;
-
-  if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", [&](bool x) {
-        config_setter.set(ConfigKeyBool::verify_llvm_ir, x);
-      }))
+  bpftrace.max_ast_nodes_ = std::numeric_limits<uint64_t>::max();
+  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                          [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; }))
     return false;
 
   if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE"))
@@ -1008,7 +1000,12 @@ int main(int argc, char* argv[])
     {
       llvm.DumpIR(args.output_llvm + ".original.ll");
     }
-    if (bpftrace.config_.get(ConfigKeyBool::verify_llvm_ir) && !llvm.verify())
+
+    bool verify_llvm_ir = false;
+    if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
+                          [&](bool x) { verify_llvm_ir = x; }))
+      return 1;
+    if (verify_llvm_ir && !llvm.verify())
     {
       LOG(ERROR) << "Verification of generated LLVM IR failed";
       return 1;

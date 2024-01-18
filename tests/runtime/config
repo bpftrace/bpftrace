@@ -19,14 +19,14 @@ BEFORE ./testprogs/uprobe_test
 
 NAME bad config
 RUN {{BPFTRACE}} -e 'config = { bad_config=raw } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
-EXPECT ERROR: Unrecognized config variable
+EXPECT ERROR: Unrecognized config variable: bad_config
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 WILL_FAIL
 
 NAME env only config
 RUN {{BPFTRACE}} -e 'config = { debug_output=1 } uprobe:./testprogs/uprobe_test:uprobeFunction1 { printf("%s", ustack(1)); exit(); }' -p {{BEFORE_PID}}
-EXPECT ERROR: debug_output can only be set as an environment variable.
+EXPECT ERROR: debug_output can only be set as an environment variable
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 WILL_FAIL

@@ -68,12 +68,12 @@ void test(BPFtrace &bpftrace, const std::string &input)
 TEST(config_analyser, config)
 {
   test("config = { BAD_CONFIG=1 } BEGIN { }", false);
-  test("config = { BPFTRACE_MAX_PROBES=1 } BEGIN { }", true);
+  test("config = { BPFTRACE_MAX_MAP_KEYS=1 } BEGIN { }", true);
 
-  test("config = { BPFTRACE_MAX_PROBES=perf } BEGIN { }", false);
+  test("config = { BPFTRACE_MAX_MAP_KEYS=perf } BEGIN { }", false);
   test("config = { BPFTRACE_STACK_MODE=perf } BEGIN { }", true);
   test("config = { stack_mode=perf } BEGIN { }", true);
-  test("config = { BPFTRACE_MAX_PROBES=1; stack_mode=perf } BEGIN { $ns = "
+  test("config = { BPFTRACE_MAX_MAP_KEYS=1; stack_mode=perf } BEGIN { $ns = "
        "nsecs(); }",
        true);
   test("config = { BPFTRACE_CACHE_USER_SYMBOLS=\"PER_PROGRAM\" } BEGIN { $ns = "
@@ -98,7 +98,7 @@ config = { BPFTRACE_MAX_PROBES="hello" } BEGIN { }
       false);
   test(
       "config = { max_ast_nodes=1 } BEGIN { }",
-      R"(stdin:1:12-26: ERROR: max_ast_nodes can only be set as an environment variable.
+      R"(stdin:1:12-26: ERROR: max_ast_nodes can only be set as an environment variable
 config = { max_ast_nodes=1 } BEGIN { }
            ~~~~~~~~~~~~~~
 )",
@@ -109,9 +109,9 @@ TEST(config_analyser, config_setting)
 {
   auto bpftrace = get_mock_bpftrace();
 
-  EXPECT_NE(bpftrace->config_.get(ConfigKeyInt::max_probes), 9);
-  test(*bpftrace, "config = { BPFTRACE_MAX_PROBES=9 } BEGIN { }");
-  EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::max_probes), 9);
+  EXPECT_NE(bpftrace->config_.get(ConfigKeyInt::max_map_keys), 9);
+  test(*bpftrace, "config = { BPFTRACE_MAX_MAP_KEYS=9 } BEGIN { }");
+  EXPECT_EQ(bpftrace->config_.get(ConfigKeyInt::max_map_keys), 9);
 
   EXPECT_NE(bpftrace->config_.get(ConfigKeyStackMode::default_),
             StackMode::perf);

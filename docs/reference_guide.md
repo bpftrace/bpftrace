@@ -964,7 +964,7 @@ Example:
 ```
 config = {
     stack_mode=perf;
-    max_probes=2
+    max_map_keys=2
 }
 
 BEGIN { ... }

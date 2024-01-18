@@ -26,14 +26,11 @@ enum class ConfigSource
 enum class ConfigKeyBool
 {
   cpp_demangle,
-  debug_output,
-  verify_llvm_ir,
 };
 
 enum class ConfigKeyInt
 {
   log_size,
-  max_ast_nodes,
   max_bpf_progs,
   max_cat_bytes,
   max_map_keys,
@@ -65,13 +62,12 @@ typedef std::variant<ConfigKeyBool,
                      ConfigKeyUserSymbolCacheType>
     ConfigKey;
 
-// These strings match the env variables (minus the 'BPFTRACE_' prefix)
+// The strings in CONFIG_KEY_MAP AND ENV_ONLY match the env variables (minus the
+// 'BPFTRACE_' prefix)
 const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
   { "cpp_demangle", ConfigKeyBool::cpp_demangle },
-  { "debug_output", ConfigKeyBool::debug_output },
   { "log_size", ConfigKeyInt::log_size },
-  { "max_ast_nodes", ConfigKeyInt::max_ast_nodes },
   { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
   { "max_cat_bytes", ConfigKeyInt::max_cat_bytes },
   { "max_map_keys", ConfigKeyInt::max_map_keys },
@@ -81,13 +77,12 @@ const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
   { "stack_mode", ConfigKeyStackMode::default_ },
   { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
-  { "verify_llvm_ir", ConfigKeyBool::verify_llvm_ir },
 };
 
-const std::set<ConfigKey> ENV_ONLY_CONFIGS = {
-  ConfigKeyInt::max_ast_nodes,
-  ConfigKeyBool::debug_output,
-  ConfigKeyBool::verify_llvm_ir,
+// These are not tracked by the config class
+const std::set<std::string> ENV_ONLY = {
+  "btf",           "debug_output",   "kernel_build", "kernel_source",
+  "max_ast_nodes", "verify_llvm_ir", "vmlinux",
 };
 
 struct ConfigValue
@@ -128,7 +123,8 @@ public:
   }
 
   static std::optional<StackMode> get_stack_mode(const std::string &s);
-  std::optional<ConfigKey> get_config_key(const std::string &str);
+  std::optional<ConfigKey> get_config_key(const std::string &str,
+                                          std::string &err);
 
   friend class ConfigSetter;
 
@@ -211,7 +207,6 @@ public:
 
   bool set_stack_mode(const std::string &s);
   bool set_user_symbol_cache_type(const std::string &s);
-  bool valid_source(ConfigKey key);
 
   Config &config_;
 

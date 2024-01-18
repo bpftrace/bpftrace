@@ -413,7 +413,7 @@ CallInst *IRBuilderBPF::createGetScratchMap(int mapid,
   CreateCondBr(condition, lookup_merge_block, lookup_failure_block);
 
   SetInsertPoint(lookup_failure_block);
-  if (bpftrace_.config_.get(ConfigKeyBool::debug_output))
+  if (bpftrace_.debug_output_)
     CreateDebugOutput("unable to find the scratch map value for " + name,
                       std::vector<Value *>{},
                       loc);
