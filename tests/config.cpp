@@ -13,17 +13,8 @@ TEST(Config, get_and_set)
   auto config_setter = ConfigSetter(config, ConfigSource::env_var);
 
   // check all the keys
-  EXPECT_TRUE(config_setter.set(ConfigKeyBool::debug_output, true));
-  EXPECT_EQ(config.get(ConfigKeyBool::debug_output), true);
-
   EXPECT_TRUE(config_setter.set(ConfigKeyBool::cpp_demangle, true));
   EXPECT_EQ(config.get(ConfigKeyBool::cpp_demangle), true);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyBool::verify_llvm_ir, true));
-  EXPECT_EQ(config.get(ConfigKeyBool::verify_llvm_ir), true);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_ast_nodes, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_ast_nodes), 10);
 
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_cat_bytes, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::max_cat_bytes), 10);
@@ -63,11 +54,19 @@ TEST(Config, get_and_set)
 TEST(Config, get_config_key)
 {
   auto config = Config();
-  EXPECT_TRUE(config.get_config_key("debug_output").has_value());
-  EXPECT_TRUE(config.get_config_key("Debug_OutPut").has_value());
-  EXPECT_TRUE(config.get_config_key("bpftrace_Debug_OutPut").has_value());
-  EXPECT_TRUE(config.get_config_key("BPFTRACE_DEBUG_OUTPUT").has_value());
-  EXPECT_FALSE(config.get_config_key("debugoutput").has_value());
+  std::string err_msg;
+  EXPECT_TRUE(config.get_config_key("log_size", err_msg).has_value());
+  EXPECT_TRUE(config.get_config_key("Log_Size", err_msg).has_value());
+  EXPECT_TRUE(config.get_config_key("bpftrace_log_sIze", err_msg).has_value());
+  EXPECT_TRUE(config.get_config_key("BPFTRACE_LOG_SIZE", err_msg).has_value());
+
+  // check the error message
+  EXPECT_FALSE(config.get_config_key("logsize", err_msg).has_value());
+  EXPECT_EQ(err_msg, "Unrecognized config variable: logsize");
+
+  EXPECT_FALSE(config.get_config_key("max_ast_nodes", err_msg).has_value());
+  EXPECT_EQ(err_msg,
+            "max_ast_nodes can only be set as an environment variable");
 }
 
 TEST(ConfigSetter, set_stack_mode)
@@ -98,9 +97,9 @@ TEST(ConfigSetter, source_precedence)
   auto config_setter_script = ConfigSetter(config, ConfigSource::script);
 
   // env var takes precedence over script
-  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::max_ast_nodes, 10));
-  EXPECT_FALSE(config_setter_script.set(ConfigKeyInt::max_ast_nodes, 11));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_ast_nodes), 10);
+  EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::max_map_keys, 10));
+  EXPECT_FALSE(config_setter_script.set(ConfigKeyInt::max_map_keys, 11));
+  EXPECT_EQ(config.get(ConfigKeyInt::max_map_keys), 10);
 
   EXPECT_TRUE(config_setter_script.set(ConfigKeyInt::max_cat_bytes, 19));
   EXPECT_TRUE(config_setter_env.set(ConfigKeyInt::max_cat_bytes, 20));
@@ -111,21 +110,8 @@ TEST(ConfigSetter, same_source_cannot_set_twice)
 {
   auto config = Config();
   auto config_setter = ConfigSetter(config, ConfigSource::env_var);
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_ast_nodes, 10));
-  EXPECT_FALSE(config_setter.set(ConfigKeyInt::max_ast_nodes, 11));
-}
-
-TEST(ConfigSetter, valid_source)
-{
-  auto config = Config();
-  auto config_setter_env = ConfigSetter(config, ConfigSource::env_var);
-  auto config_setter_script = ConfigSetter(config, ConfigSource::script);
-
-  EXPECT_TRUE(config_setter_env.valid_source(ConfigKeyInt::max_ast_nodes));
-  EXPECT_FALSE(config_setter_script.valid_source(ConfigKeyInt::max_ast_nodes));
-
-  EXPECT_TRUE(config_setter_env.valid_source(ConfigKeyInt::max_map_keys));
-  EXPECT_TRUE(config_setter_script.valid_source(ConfigKeyInt::max_map_keys));
+  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_map_keys, 10));
+  EXPECT_FALSE(config_setter.set(ConfigKeyInt::max_map_keys, 11));
 }
 
 } // namespace test

@@ -137,12 +137,13 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   Visitor::visit(assignment);
   std::string &raw_ident = assignment.config_var;
 
-  const auto maybeConfigKey = bpftrace_.config_.get_config_key(raw_ident);
+  std::string err_msg;
+  const auto maybeConfigKey = bpftrace_.config_.get_config_key(raw_ident,
+                                                               err_msg);
 
   if (!maybeConfigKey.has_value())
   {
-    LOG(ERROR, assignment.loc, err_)
-        << "Unrecognized config variable: " << raw_ident;
+    LOG(ERROR, assignment.loc, err_) << err_msg;
     return;
   }
 
@@ -154,14 +155,6 @@ void ConfigAnalyser::visit(AssignConfigVarStatement &assignment)
   }
 
   auto configKey = maybeConfigKey.value();
-
-  if (!config_setter_.valid_source(configKey))
-  {
-    LOG(ERROR, assignment.loc, err_)
-        << assignment.config_var
-        << " can only be set as an environment variable.";
-    return;
-  }
 
   std::visit(
       overloaded{
