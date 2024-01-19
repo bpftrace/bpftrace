@@ -107,15 +107,15 @@ int fuzz_main(const char* data, size_t sz)
     return err;
 
   // Limit node size
-  uint64_t node_max = DEFAULT_NODE_MAX;
-  if (!get_uint64_env_var("BPFTRACE_NODE_MAX",
-                          [&](uint64_t x) { node_max = x; }))
+  uint64_t max_ast_nodes = DEFAULT_NODE_MAX;
+  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                          [&](uint64_t x) { max_ast_nodes = x; }))
     return 1;
   uint64_t node_count = 0;
   ast::CallbackVisitor counter(
       [&](ast::Node* node __attribute__((unused))) { node_count += 1; });
   driver.root->accept(counter);
-  if (node_count > node_max)
+  if (node_count > max_ast_nodes)
     return 1;
 
   // Field Analyzer

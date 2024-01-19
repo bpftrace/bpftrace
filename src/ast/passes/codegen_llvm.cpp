@@ -645,7 +645,7 @@ void CodegenLLVM::visit(Call &call)
       Value *proposed_strlen = b_.CreateAdd(expr_, b_.getInt64(1)); // add 1 to accommodate probe_read_str's null byte
 
       // largest read we'll allow = our global string buffer size
-      Value *max = b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::strlen));
+      Value *max = b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::max_strlen));
       // integer comparison: unsigned less-than-or-equal-to
       CmpInst::Predicate P = CmpInst::ICMP_ULE;
       // check whether proposed_strlen is less-than-or-equal-to maximum
@@ -654,13 +654,13 @@ void CodegenLLVM::visit(Call &call)
       Value *Select = b_.CreateSelect(Cmp, proposed_strlen, max, "str.min.select");
       b_.CreateStore(Select, strlen);
     } else {
-      b_.CreateStore(b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::strlen)),
-                     strlen);
+      b_.CreateStore(
+          b_.getInt64(bpftrace_.config_.get(ConfigKeyInt::max_strlen)), strlen);
     }
     AllocaInst *buf = b_.CreateAllocaBPF(
-        bpftrace_.config_.get(ConfigKeyInt::strlen), "str");
+        bpftrace_.config_.get(ConfigKeyInt::max_strlen), "str");
     b_.CREATE_MEMSET(
-        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::strlen), 1);
+        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::max_strlen), 1);
     auto arg0 = call.vargs->front();
     auto scoped_del = accept(call.vargs->front());
     b_.CreateProbeReadStr(ctx_,
@@ -677,8 +677,9 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "buf")
   {
     Value *max_length = b_.getInt64(
-        bpftrace_.config_.get(ConfigKeyInt::strlen));
-    size_t fixed_buffer_length = bpftrace_.config_.get(ConfigKeyInt::strlen);
+        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
+    size_t fixed_buffer_length = bpftrace_.config_.get(
+        ConfigKeyInt::max_strlen);
     Value *length;
 
     if (call.vargs->size() > 1)
@@ -749,9 +750,9 @@ void CodegenLLVM::visit(Call &call)
   else if (call.func == "path")
   {
     AllocaInst *buf = b_.CreateAllocaBPF(
-        bpftrace_.config_.get(ConfigKeyInt::strlen), "path");
+        bpftrace_.config_.get(ConfigKeyInt::max_strlen), "path");
     b_.CREATE_MEMSET(
-        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::strlen), 1);
+        buf, b_.getInt8(0), bpftrace_.config_.get(ConfigKeyInt::max_strlen), 1);
     call.vargs->front()->accept(*this);
     b_.CreatePath(ctx_,
                   buf,

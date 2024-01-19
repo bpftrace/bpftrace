@@ -8,6 +8,7 @@
 #include "ast/visitors.h"
 #include "bpffeature.h"
 #include "bpftrace.h"
+#include "config.h"
 #include "map.h"
 #include "types.h"
 
@@ -66,11 +67,13 @@ public:
   void visit(ExprStatement &expr) override;
   void visit(AssignMapStatement &assignment) override;
   void visit(AssignVarStatement &assignment) override;
+  void visit(AssignConfigVarStatement &assignment) override;
   void visit(If &if_block) override;
   void visit(Unroll &unroll) override;
   void visit(Predicate &pred) override;
   void visit(AttachPoint &ap) override;
   void visit(Probe &probe) override;
+  void visit(Config &config) override;
   void visit(Program &program) override;
 
   int analyse();

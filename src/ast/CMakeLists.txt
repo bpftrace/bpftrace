@@ -11,6 +11,7 @@ add_library(ast
   signal.cpp
   visitors.cpp
 
+  passes/config_analyser.cpp
   passes/field_analyser.cpp
   passes/portability_analyser.cpp
   passes/printer.cpp

@@ -17,10 +17,41 @@ namespace bpftrace {
 namespace {
 bool is_quoted_type(const SizedType &ty)
 {
-  return ty.IsKstackTy() || ty.IsUstackTy() || ty.IsKsymTy() || ty.IsUsymTy() ||
-         ty.IsInetTy() || ty.IsUsernameTy() || ty.IsStringTy() ||
-         ty.IsBufferTy() || ty.IsProbeTy() || ty.IsCgroupPathTy() ||
-         ty.IsStrerrorTy();
+  switch (ty.type)
+  {
+    case Type::buffer:
+    case Type::cgroup_path:
+    case Type::inet:
+    case Type::kstack:
+    case Type::ksym:
+    case Type::probe:
+    case Type::strerror:
+    case Type::string:
+    case Type::username:
+    case Type::ustack:
+    case Type::usym:
+      return true;
+    case Type::array:
+    case Type::avg:
+    case Type::count:
+    case Type::hist:
+    case Type::integer:
+    case Type::lhist:
+    case Type::mac_address:
+    case Type::max:
+    case Type::min:
+    case Type::none:
+    case Type::pointer:
+    case Type::record:
+    case Type::stack_mode:
+    case Type::stats:
+    case Type::sum:
+    case Type::timestamp:
+    case Type::timestamp_mode:
+    case Type::tuple:
+      return false;
+  }
+  return false;
 }
 } // namespace
 
@@ -161,7 +192,7 @@ std::string Output::get_helper_error_msg(int func_id, int retcode) const
   std::string msg;
   if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG)
   {
-    msg = "Map full; can't update element. Try increasing MAP_KEYS_MAX.";
+    msg = "Map full; can't update element. Try increasing max_map_keys config";
   }
   else if (func_id == libbpf::BPF_FUNC_map_delete_elem && retcode == -ENOENT)
   {
@@ -325,7 +356,10 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
     return res.str();
   }
   else
-    return std::to_string(read_data<int64_t>(value.data()) / div);
+  {
+    assert(type.IsNoneTy());
+    return "";
+  }
 }
 
 std::string Output::array_to_str(const std::vector<std::string> &elems) const

@@ -19,6 +19,7 @@ endif()
 
 add_executable(bpftrace_test
   ast.cpp
+  bpfbytecode.cpp
   bpftrace.cpp
   child.cpp
   clang_parser.cpp
@@ -31,6 +32,7 @@ add_executable(bpftrace_test
   portability_analyser.cpp
   procmon.cpp
   probe.cpp
+  config_analyser.cpp
   resource_analyser.cpp
   required_resources.cpp
   semantic_analyser.cpp
@@ -107,74 +109,52 @@ if(NOT STATIC_LINKING)
   target_link_libraries(bpftrace_test ${CMAKE_THREAD_LIBS_INIT})
 endif(NOT STATIC_LINKING)
 
-# Compile all testprograms, one per .c file for runtime testing
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/)
-file(GLOB testprogs testprogs/*.c)
-set(compiled_testprogs "")
-foreach(testprog ${testprogs})
-  get_filename_component(bin_name ${testprog} NAME_WE)
-  add_executable (${bin_name} ${testprog})
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${bin_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  set_target_properties(${bin_name} PROPERTIES LINK_SEARCH_START_STATIC FALSE LINK_SEARCH_END_STATIC FALSE RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testprogs/ COMPILE_FLAGS "-g -O0" LINK_FLAGS "-no-pie")
-  list(APPEND compiled_testprogs ${CMAKE_CURRENT_BINARY_DIR}/testprogs/${bin_name})
-endforeach()
-add_custom_target(testprogs DEPENDS ${compiled_testprogs})
+add_subdirectory(testprogs)
+add_subdirectory(testlibs)
 
-target_include_directories(usdt_lib PUBLIC ${CMAKE_SOURCE_DIR}/tests/testlibs/)
-target_compile_options(usdt_lib PRIVATE -fPIC)
-target_link_libraries(usdt_lib usdt_tp)
 
-# Similarly compile all test libs
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/)
-file(GLOB testlibs testlibs/*.c)
-set(compiled_testlibs "")
-foreach(testlib_source ${testlibs})
-  get_filename_component(testlib_name ${testlib_source} NAME_WE)
-  add_library(${testlib_name} SHARED ${testlib_source})
-  set_target_properties(${testlib_name} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testlibs/ COMPILE_FLAGS "-g -O0")
-  if(HAVE_SYSTEMTAP_SYS_SDT_H)
-    target_compile_definitions(${testlib_name} PRIVATE HAVE_SYSTEMTAP_SYS_SDT_H)
-  endif(HAVE_SYSTEMTAP_SYS_SDT_H)
-  # clear the executable bit
-  add_custom_command(TARGET ${testlib_name}
-    POST_BUILD
-    COMMAND chmod -x ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
-  list(APPEND compiled_testlibs ${CMAKE_CURRENT_BINARY_DIR}/testlibs/lib${testlib_name}.so)
-endforeach()
-add_custom_target(testlibs DEPENDS ${compiled_testlibs})
+#
+# Runtime Tests
+#
+configure_file(runtime-tests.sh runtime-tests.sh @ONLY)
+add_custom_target(
+  runtime_tests
+  COMMAND ./runtime-tests.sh
+  DEPENDS
+    testprogs
+    testlibs
+    ${CMAKE_BINARY_DIR}/src/bpftrace
+)
+add_test(NAME runtime_tests COMMAND ./runtime-tests.sh)
 
-configure_file(runtime-tests.sh runtime-tests.sh COPYONLY)
-file(GLOB runtime_tests runtime/*)
-list(REMOVE_ITEM runtime_tests ${CMAKE_CURRENT_SOURCE_DIR}/runtime/engine)
-list(REMOVE_ITEM runtime_tests ${CMAKE_CURRENT_SOURCE_DIR}/runtime/scripts)
-list(REMOVE_ITEM runtime_tests ${CMAKE_CURRENT_SOURCE_DIR}/runtime/outputs)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/)
-foreach(runtime_test ${runtime_tests})
-  configure_file(${runtime_test} ${CMAKE_CURRENT_BINARY_DIR}/runtime/ COPYONLY)
+file(GLOB_RECURSE runtime_test_files
+  RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+  CONFIGURE_DEPENDS
+  runtime/*
+)
+list(REMOVE_ITEM runtime_test_files ${CMAKE_CURRENT_SOURCE_DIR}/runtime/engine/*)
+
+foreach(runtime_test_file ${runtime_test_files})
+  add_custom_command(
+    OUTPUT
+      ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+    COMMAND ${CMAKE_COMMAND} -E copy
+      ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+      ${CMAKE_CURRENT_BINARY_DIR}/${runtime_test_file}
+    DEPENDS
+      ${CMAKE_CURRENT_SOURCE_DIR}/${runtime_test_file}
+  )
 endforeach()
+add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
+add_dependencies(runtime_tests runtime_test_files)
+
 file(GLOB runtime_engine_files runtime/engine/*)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
 foreach(runtime_engine_file ${runtime_engine_files})
   configure_file(${runtime_engine_file} ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
 endforeach()
-file(GLOB runtime_test_scripts runtime/scripts/*)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/scripts)
-foreach(runtime_test_script ${runtime_test_scripts})
-  configure_file(${runtime_test_script} ${CMAKE_CURRENT_BINARY_DIR}/runtime/scripts/ COPYONLY)
-endforeach()
-file(GLOB runtime_test_outputs runtime/outputs/*)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs)
-foreach(runtime_test_output ${runtime_test_outputs})
-  configure_file(${runtime_test_output} ${CMAKE_CURRENT_BINARY_DIR}/runtime/outputs/ COPYONLY)
-endforeach()
-add_custom_target(
-  runtime-tests
-  COMMAND ./runtime-tests.sh
-  DEPENDS ${compiled_testprogs} ${compiled_testlibs} ${CMAKE_BINARY_DIR}/src/bpftrace
-)
-add_test(NAME runtime_test COMMAND ./runtime-tests.sh)
+
+
 
 configure_file(tools-parsing-test.sh tools-parsing-test.sh COPYONLY)
 add_custom_target(tools-parsing-test COMMAND ./tools-parsing-test.sh)

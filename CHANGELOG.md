@@ -27,9 +27,13 @@ and this project adheres to
   - [#2840](https://github.com/iovisor/bpftrace/pull/2840)
 - Add more helpful error messages for map operations
   - [#2905](https://github.com/iovisor/bpftrace/pull/2905)
+- New config block syntax
+  - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
 - Add support for kprobe:module:function
   - [#2897](https://github.com/iovisor/bpftrace/pull/2897)
 #### Changed
+- Standardize config and env var names
+  - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
 #### Deprecated
 #### Removed
 - Remove snapcraft support
@@ -49,16 +53,27 @@ and this project adheres to
   - [#2864](https://github.com/iovisor/bpftrace/pull/2864)
 - Fix attachment/listing of wildcarded module kfuncs
   - [#2914](https://github.com/iovisor/bpftrace/pull/2914)
+- Fix uprobe attachment across container boundary
+  - [#2662](https://github.com/iovisor/bpftrace/pull/2662)
 #### Docs
+- Fix one-liner tutorial for systems with BTF
+  - [#2919](https://github.com/iovisor/bpftrace/pull/2919)
+  - [#2924](https://github.com/iovisor/bpftrace/pull/2924)
 #### Tools
 - Add PPID field to `execsnoop.bt`
   - [#2876](https://github.com/iovisor/bpftrace/pull/2876)
 - Use `strftime` instead of `elapsed` in `execsnoop.bt`
   - [#2904](https://github.com/iovisor/bpftrace/pull/2904)
+- Use `strftime` instead of `elapsed` in `threadsnoop.bt`
+  - [#2917](https://github.com/iovisor/bpftrace/pull/2917)
+- Increase PID field width and align to the right in `threadsnoop.bt`
+  - [#2928](https://github.com/iovisor/bpftrace/pull/2928)
 - Update runqlen.bt to remove `runnable_weight` field from cfs_rq struct.
   - [#2790](https://github.com/iovisor/bpftrace/pull/2790)
 - Update mdflush.bt to use blkdev.h instead of genhd.h for non-BTF builds.
   - [#2849](https://github.com/iovisor/bpftrace/pull/2849)
+- Add milliseconds to timestamp and align numbers to the right in `killsnoop.bt`
+  - [#2936](https://github.com/iovisor/bpftrace/pull/2936)
 
 ## [0.19.0] 2023-09-19
 

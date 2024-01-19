@@ -50,7 +50,7 @@ std::optional<BpfProgram> BpfProgram::CreateFromBytecode(
     const std::string &name,
     MapManager &maps)
 {
-  if (bytecode.find(name) != bytecode.end())
+  if (bytecode.hasSection(name))
   {
     return BpfProgram(bytecode, name, maps);
   }
@@ -71,7 +71,7 @@ const std::vector<uint8_t> &BpfProgram::getCode()
 
 const std::vector<uint8_t> &BpfProgram::getBTF()
 {
-  return bytecode_.at(".BTF");
+  return bytecode_.getSection(".BTF");
 }
 
 const std::vector<uint8_t> &BpfProgram::getFuncInfos()
@@ -84,7 +84,7 @@ void BpfProgram::assemble()
   if (!code_.empty())
     return;
 
-  code_ = bytecode_.at(name_);
+  code_ = bytecode_.getSection(name_);
 
   relocateInsns();
   relocateMaps();
@@ -103,7 +103,7 @@ void BpfProgram::assemble()
 void BpfProgram::relocateInsns()
 {
   std::string relsecname = std::string(".rel") + name_;
-  if (bytecode_.find(relsecname) != bytecode_.end())
+  if (bytecode_.hasSection(relsecname))
   {
     // There's a relocation section for our program.
     //
@@ -112,15 +112,14 @@ void BpfProgram::relocateInsns()
     //
     // In practice, we append the entire .text section and relocate against it.
 
-    auto seciter = bytecode_.find(".text");
-    if (seciter == bytecode_.end())
+    if (!bytecode_.hasSection(".text"))
     {
       throw std::logic_error(
           "Relocation section present but no .text, this is unsupported");
     }
-    auto &text = seciter->second;
-    auto &relsec = bytecode_.find(relsecname)->second;
-    auto &symtab = bytecode_.find(".symtab")->second;
+    auto &text = bytecode_.getSection(".text");
+    auto &relsec = bytecode_.getSection(relsecname);
+    auto &symtab = bytecode_.getSection(".symtab");
 
     // Step 1: append .text
     text_offset_ = code_.size();
@@ -176,8 +175,7 @@ void BpfProgram::relocateInsns()
     }
 
     // Step 3: relocate .text, if necessary. TODO.
-    bool need_text_rels = text_offset_ > 0 &&
-                          bytecode_.find(".rel.text") != bytecode_.end();
+    bool need_text_rels = text_offset_ > 0 && bytecode_.hasSection(".rel.text");
     if (need_text_rels)
       throw std::logic_error("Relocations in .text are not implemented yet");
   }
@@ -192,18 +190,17 @@ void BpfProgram::relocateInsns()
 // code_[text_offset_..code_.size()) - .text
 void BpfProgram::relocateFuncInfos()
 {
-  if (bytecode_.find(".BTF") == bytecode_.end() ||
-      bytecode_.find(".BTF.ext") == bytecode_.end())
+  if (!bytecode_.hasSection(".BTF") || !bytecode_.hasSection(".BTF.ext"))
   {
     throw std::logic_error("Missing a BTF section (.BTF or .BTF.ext), "
                            "cannot relocate function infos");
   }
 
-  const auto *btfsec = bytecode_.find(".BTF")->second.data();
+  const auto *btfsec = bytecode_.getSection(".BTF").data();
   auto *btfhdr = reinterpret_cast<const struct btf_header *>(btfsec);
   auto *btfstr = btfsec + btfhdr->hdr_len + btfhdr->str_off;
 
-  const auto *btfextsec = bytecode_.find(".BTF.ext")->second.data();
+  const auto *btfextsec = bytecode_.getSection(".BTF.ext").data();
 
   auto *exthdr = reinterpret_cast<const struct btf_ext_header *>(btfextsec);
   auto *exthdr_end = btfextsec + exthdr->hdr_len;

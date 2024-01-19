@@ -84,12 +84,10 @@ public:
   const BPFtrace *bpftrace_;
 
 private:
-  std::set<std::string> get_matches_in_stream(
-      const std::string &search_input,
-      std::istream &symbol_stream,
-      bool ignore_trailing_module = false,
-      bool demangle_symbols = true,
-      const char delim = '\n');
+  std::set<std::string> get_matches_in_stream(const std::string &search_input,
+                                              std::istream &symbol_stream,
+                                              bool demangle_symbols = true,
+                                              const char delim = '\n');
   std::set<std::string> get_matches_for_probetype(
       const ProbeType &probe_type,
       const std::string &target,
@@ -101,7 +99,7 @@ private:
   virtual std::unique_ptr<std::istream> get_symbols_from_file(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_traceable_funcs(
-      void) const;
+      bool with_modules = false) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_file_safe(
       const std::string &path) const;
   virtual std::unique_ptr<std::istream> get_func_symbols_from_file(
@@ -112,9 +110,6 @@ private:
       const std::string &target) const;
   virtual std::unique_ptr<std::istream> get_symbols_from_list(
       const std::vector<ProbeListItem> &probes_list) const;
-
-  virtual std::unique_ptr<std::istream> adjust_kernel_modules(
-      std::istream &symbol_list) const;
 
   virtual std::unique_ptr<std::istream> adjust_rawtracepoint(
       std::istream &symbol_list) const;

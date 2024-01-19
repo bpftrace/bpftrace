@@ -445,6 +445,24 @@ private:
   AssignVarStatement(const AssignVarStatement &other);
 };
 
+class AssignConfigVarStatement : public Statement
+{
+public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(AssignConfigVarStatement)
+
+  AssignConfigVarStatement(const std::string &config_var,
+                           Expression *expr,
+                           location loc = location());
+  ~AssignConfigVarStatement();
+
+  std::string config_var;
+  Expression *expr = nullptr;
+
+private:
+  AssignConfigVarStatement(const AssignConfigVarStatement &other);
+};
+
 class If : public Statement {
 public:
   DEFINE_ACCEPT
@@ -541,6 +559,23 @@ private:
   While(const While &other);
 };
 
+class Config : public Statement
+{
+public:
+  DEFINE_ACCEPT
+  DEFINE_LEAFCOPY(Config)
+
+  Config(StatementList *stmts) : stmts(stmts)
+  {
+  }
+  ~Config();
+
+  StatementList *stmts = nullptr;
+
+private:
+  Config(const Config &other);
+};
+
 class AttachPoint : public Node {
 public:
   DEFINE_ACCEPT
@@ -621,11 +656,12 @@ public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Program)
 
-  Program(const std::string &c_definitions, ProbeList *probes);
+  Program(const std::string &c_definitions, Config *config, ProbeList *probes);
 
   ~Program();
 
   std::string c_definitions;
+  Config *config = nullptr;
   ProbeList *probes = nullptr;
 
 private:

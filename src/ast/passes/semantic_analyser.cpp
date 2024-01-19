@@ -10,6 +10,7 @@
 #include "arch/arch.h"
 #include "ast/ast.h"
 #include "ast/signal_bt.h"
+#include "config.h"
 #include "fake_map.h"
 #include "log.h"
 #include "printf.h"
@@ -89,7 +90,7 @@ void SemanticAnalyser::visit(String &string)
   if (func_ == "printf" && func_arg_idx_ == 0)
     return;
 
-  auto str_len = bpftrace_.config_.get(ConfigKeyInt::strlen);
+  auto str_len = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
   if (!is_compile_time_func(func_) && string.str.size() > str_len - 1)
   {
     LOG(ERROR, string.loc, err_)
@@ -101,15 +102,11 @@ void SemanticAnalyser::visit(String &string)
 
 void SemanticAnalyser::visit(StackMode &mode)
 {
-  mode.type = CreateStackMode();
-  if (mode.mode == "bpftrace") {
-    mode.type.stack_type.mode = bpftrace::StackMode::bpftrace;
-  } else if (mode.mode == "perf") {
-    mode.type.stack_type.mode = bpftrace::StackMode::perf;
-  }
-  else if (mode.mode == "raw")
+  auto stack_mode = bpftrace::Config::get_stack_mode(mode.mode);
+  if (stack_mode.has_value())
   {
-    mode.type.stack_type.mode = bpftrace::StackMode::raw;
+    mode.type = CreateStackMode();
+    mode.type.stack_type.mode = stack_mode.value();
   }
   else
   {
@@ -708,7 +705,7 @@ void SemanticAnalyser::visit(Call &call)
             << call.func << "() expects an integer or a pointer type as first "
             << "argument (" << t << " provided)";
       }
-      call.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::strlen));
+      call.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::max_strlen));
       if (has_pos_param_)
       {
         if (dynamic_cast<PositionalParameter *>(arg))
@@ -761,7 +758,7 @@ void SemanticAnalyser::visit(Call &call)
           << typestr(arg.type.type);
     }
 
-    size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::strlen);
+    size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
     size_t buffer_size = max_buffer_size;
 
     if (call.vargs->size() == 1)
@@ -803,8 +800,8 @@ void SemanticAnalyser::visit(Call &call)
       if (is_final_pass())
         LOG(WARNING, call.loc, out_)
             << call.func << "() length is too long and will be shortened to "
-            << std::to_string(bpftrace_.config_.get(ConfigKeyInt::strlen))
-            << " bytes (see BPFTRACE_STRLEN)";
+            << std::to_string(bpftrace_.config_.get(ConfigKeyInt::max_strlen))
+            << " bytes (see BPFTRACE_MAX_STRLEN)";
 
       buffer_size = max_buffer_size;
     }
@@ -1266,7 +1263,7 @@ void SemanticAnalyser::visit(Call &call)
       }
 
       call.type = SizedType(Type::string,
-                            bpftrace_.config_.get(ConfigKeyInt::strlen));
+                            bpftrace_.config_.get(ConfigKeyInt::max_strlen));
     }
 
     for (auto &attach_point : *probe_->attach_points)
@@ -2137,7 +2134,8 @@ void SemanticAnalyser::visit(Ternary &ternary)
       LOG(ERROR, ternary.loc, err_) << "Invalid condition in ternary: " << cond;
   }
   if (lhs == Type::string)
-    ternary.type = CreateString(bpftrace_.config_.get(ConfigKeyInt::strlen));
+    ternary.type = CreateString(
+        bpftrace_.config_.get(ConfigKeyInt::max_strlen));
   else if (lhs == Type::integer)
     ternary.type = CreateInteger(64, ternary.left->type.IsSigned());
   else if (lhs == Type::none)
@@ -2685,6 +2683,11 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 }
 
+void SemanticAnalyser::visit(AssignConfigVarStatement &assignment)
+{
+  assignment.expr->accept(*this);
+}
+
 void SemanticAnalyser::visit(Predicate &pred)
 {
   pred.expr->accept(*this);
@@ -3048,10 +3051,18 @@ void SemanticAnalyser::visit(Probe &probe)
   }
 }
 
+void SemanticAnalyser::visit(Config &config)
+{
+  accept_statements(config.stmts);
+}
+
 void SemanticAnalyser::visit(Program &program)
 {
   for (Probe *probe : *program.probes)
     probe->accept(*this);
+
+  if (program.config)
+    program.config->accept(*this);
 }
 
 int SemanticAnalyser::analyse()

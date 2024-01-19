@@ -28,7 +28,7 @@ BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
   assert(strtable_shdr->sh_type == SHT_STRTAB);
   char *strtable = fileptr + strtable_shdr->sh_offset;
 
-  BpfBytecode result{};
+  BpfBytecode result;
 
   for (int i = 0; i < ehdr->e_shnum; ++i)
   {
@@ -45,7 +45,7 @@ BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
 
       std::memcpy(data.data(), fileptr + shdr->sh_offset, shdr->sh_size);
     }
-    result.emplace(name, std::move(data));
+    result.addSection(name, std::move(data));
   }
 
   return result;

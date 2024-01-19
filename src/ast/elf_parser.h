@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bpfbytecode.h"
 #include "bpftrace.h"
 
 namespace bpftrace {

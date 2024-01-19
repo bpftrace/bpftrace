@@ -506,7 +506,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
   }
   else if (printf_id == asyncactionint(AsyncAction::time))
   {
-    char timestr[64]; // not respecting config_.get(ConfigKeyInt::strlen)
+    char timestr[64]; // not respecting config_.get(ConfigKeyInt::max_strlen)
     time_t t;
     struct tm tmp;
     t = time(NULL);
@@ -687,7 +687,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
 
     std::stringstream buf;
     cat_file(fmt.format_str(arg_values).c_str(),
-             bpftrace->config_.get(ConfigKeyInt::cat_bytes_max),
+             bpftrace->config_.get(ConfigKeyInt::max_cat_bytes),
              buf);
     bpftrace->out_->message(MessageType::cat, buf.str(), false);
 
@@ -779,7 +779,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(const std::vec
         auto p = reinterpret_cast<char *>(arg_data + arg.offset);
         arg_values.push_back(std::make_unique<PrintableString>(
             std::string(p, strnlen(p, arg.type.GetSize())),
-            config_.get(ConfigKeyInt::strlen),
+            config_.get(ConfigKeyInt::max_strlen),
             config_.get(ConfigKeyString::str_trunc_trailer).c_str()));
         break;
       }
@@ -987,7 +987,7 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_usdt_probe(
 
 std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     Probe &probe,
-    BpfBytecode &bytecode)
+    const BpfBytecode &bytecode)
 {
   std::vector<std::unique_ptr<AttachedProbe>> ret;
   // use the single-probe program if it exists (as is the case with wildcards
@@ -1127,7 +1127,7 @@ bool attach_reverse(const Probe &p)
 }
 
 int BPFtrace::run_special_probe(std::string name,
-                                BpfBytecode &bytecode,
+                                const BpfBytecode &bytecode,
                                 trigger_fn_t trigger)
 {
   for (auto probe = resources.special_probes.rbegin();
@@ -2112,7 +2112,7 @@ std::string BPFtrace::resolve_timestamp(uint32_t mode,
   snprintf(usecs_buf, sizeof(usecs_buf), "%06" PRIu64, us);
   auto fmt = std::regex_replace(raw_fmt, usec_regex, usecs_buf);
 
-  char timestr[config_.get(ConfigKeyInt::strlen)];
+  char timestr[config_.get(ConfigKeyInt::max_strlen)];
   if (strftime(timestr, sizeof(timestr), fmt.c_str(), &tmp) == 0)
   {
     LOG(ERROR) << "strftime returned 0";
@@ -2411,10 +2411,10 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
 
   if (psyms && bcc_symcache_resolve(psyms, addr, &usym) == 0)
   {
-    if (config_.get(ConfigKeyBool::no_cpp_demangle))
-      symbol << usym.name;
-    else
+    if (config_.get(ConfigKeyBool::cpp_demangle))
       symbol << usym.demangle_name;
+    else
+      symbol << usym.name;
     if (show_offset)
       symbol << "+" << usym.offset;
     if (show_module)

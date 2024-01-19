@@ -99,6 +99,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
   STRUCT     "struct"
   UNION      "union"
   WHILE      "while"
+  CONFIG     "config"
   FOR        "for"
   RETURN     "return"
   CONTINUE   "continue"
@@ -143,10 +144,12 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %type <ast::Predicate *> pred
 %type <ast::Probe *> probe
 %type <ast::ProbeList *> probes
-%type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt
-%type <ast::StatementList *> block block_or_if stmt_list
+%type <ast::Config *> config
+%type <ast::Statement *> assign_stmt block_stmt expr_stmt if_stmt jump_stmt loop_stmt config_assign_stmt
+%type <ast::StatementList *> block block_or_if stmt_list config_block config_assign_stmt_list
 %type <SizedType> type int_type pointer_type struct_type
 %type <ast::Variable *> var
+
 
 %left COMMA
 %right ASSIGN LEFTASSIGN RIGHTASSIGN PLUSASSIGN MINUSASSIGN MULASSIGN DIVASSIGN MODASSIGN BANDASSIGN BORASSIGN BXORASSIGN
@@ -169,7 +172,7 @@ void yyerror(bpftrace::Driver &driver, const char *s);
 %%
 
 program:
-                c_definitions probes END { driver.root = std::make_unique<ast::Program>($1, $2); }
+                c_definitions config probes END { driver.root = std::make_unique<ast::Program>($1, $2, $3); }
                 ;
 
 c_definitions:
@@ -243,6 +246,11 @@ pointer_type:
                 ;
 struct_type:
                 STRUCT IDENT { $$ = ast::ident_to_record($2); }
+                ;
+                
+config:
+                CONFIG ASSIGN config_block     { $$ = new ast::Config($3); }
+        |        %empty                        { $$ = nullptr; }
                 ;
 
 probes:
@@ -336,6 +344,9 @@ param:
 block:
                 "{" stmt_list "}"     { $$ = $2; }
                 ;
+                
+config_block:   "{" config_assign_stmt_list "}"     { $$ = $2; }
+                ;
 
 stmt_list:
 /*
@@ -348,6 +359,11 @@ stmt_list:
  */
         |       block_stmt stmt_list    { $$ = $2; $2->insert($2->begin(), $1); }
         |       %empty                  { $$ = new ast::StatementList; }
+                ;
+                
+config_assign_stmt_list:
+                config_assign_stmt ";" config_assign_stmt_list { $$ = $3; $3->insert($3->begin(), $1); }
+        |       config_assign_stmt                             { $$ = new ast::StatementList; $$->push_back($1); }
                 ;
 
 block_stmt:
@@ -386,6 +402,9 @@ block_or_if:
                 block        { $$ = $1; }
         |       if_stmt      { $$ = new ast::StatementList; $$->emplace_back($1); }
                 ;
+                
+config_assign_stmt:
+                IDENT ASSIGN expr   { $$ = new ast::AssignConfigVarStatement($1, $3, @2); }
 
 assign_stmt:
                 tuple_access_expr ASSIGN expr

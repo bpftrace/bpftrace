@@ -17,6 +17,7 @@
 #include "ast/pass_manager.h"
 
 #include "ast/passes/codegen_llvm.h"
+#include "ast/passes/config_analyser.h"
 #include "ast/passes/field_analyser.h"
 #include "ast/passes/node_counter.h"
 #include "ast/passes/portability_analyser.h"
@@ -120,19 +121,19 @@ void usage()
   std::cerr << "ENVIRONMENT:" << std::endl;
   std::cerr << "    BPFTRACE_BTF                      [default: none] BTF file" << std::endl;
   std::cerr << "    BPFTRACE_CACHE_USER_SYMBOLS       [default: auto] enable user symbol cache" << std::endl;
-  std::cerr << "    BPFTRACE_CAT_BYTES_MAX            [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  std::cerr << "    BPFTRACE_CPP_DEMANGLE             [default: 1] enable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
   std::cerr << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
   std::cerr << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE                 [default: 1000000] log size in bytes" << std::endl;
   std::cerr << "    BPFTRACE_MAX_BPF_PROGS            [default: 512] max number of generated BPF programs" << std::endl;
-  std::cerr << "    BPFTRACE_MAP_KEYS_MAX             [default: 4096] max keys in a map" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_MAP_KEYS             [default: 4096] max keys in a map" << std::endl;
   std::cerr << "    BPFTRACE_MAX_PROBES               [default: 512] max number of probes" << std::endl;
+  std::cerr << "    BPFTRACE_MAX_STRLEN               [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_MAX_TYPE_RES_ITERATIONS  [default: 0] number of levels of nested field accesses for tracepoint args" << std::endl;
-  std::cerr << "    BPFTRACE_NO_CPP_DEMANGLE          [default: 0] disable C++ symbol demangling" << std::endl;
   std::cerr << "    BPFTRACE_PERF_RB_PAGES            [default: 64] pages per CPU to allocate for ring buffer" << std::endl;
   std::cerr << "    BPFTRACE_STACK_MODE               [default: bpftrace] Output format for ustack and kstack builtins" << std::endl;
-  std::cerr << "    BPFTRACE_STRLEN                   [default: 64] bytes on BPF stack per str()" << std::endl;
   std::cerr << "    BPFTRACE_STR_TRUNC_TRAILER        [default: '..'] string truncation trailer" << std::endl;
   std::cerr << "    BPFTRACE_VMLINUX                  [default: none] vmlinux path used for kernel symbol resolution" << std::endl;
   std::cerr << std::endl;
@@ -264,8 +265,15 @@ static std::optional<struct timespec> get_delta_taitime()
 [[nodiscard]] static bool parse_env(BPFtrace& bpftrace)
 {
   ConfigSetter config_setter(bpftrace.config_, ConfigSource::env_var);
+  if (!get_uint64_env_var("BPFTRACE_MAX_STRLEN", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_strlen, x);
+      }))
+    return false;
+
   if (!get_uint64_env_var("BPFTRACE_STRLEN", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::strlen, x);
+        LOG(WARNING) << "BPFTRACE_STRLEN is deprecated. Use "
+                        "BPFTRACE_MAX_STRLEN instead.";
+        config_setter.set(ConfigKeyInt::max_strlen, x);
       }))
     return false;
 
@@ -273,14 +281,14 @@ static std::optional<struct timespec> get_delta_taitime()
   // bytes. I've set the bar lower, in case your program has a deeper stack than
   // the one from my tests, in the hope that you'll get this instructive error
   // instead of getting the BPF verifier's error.
-  uint64_t strlen = bpftrace.config_.get(ConfigKeyInt::strlen);
-  if (strlen > 200)
+  uint64_t max_strlen = bpftrace.config_.get(ConfigKeyInt::max_strlen);
+  if (max_strlen > 200)
   {
     // the verifier errors you would encounter when attempting larger
     // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
     // is exceeded. Please move large on stack variables into BPF per-cpu array
     // map.> ~1024= <A call to built-in function 'memset' is not supported.>
-    LOG(ERROR) << "'BPFTRACE_STRLEN' " << strlen
+    LOG(ERROR) << "'BPFTRACE_MAX_STRLEN' " << max_strlen
                << " exceeds the current maximum of 200 bytes.\n"
                << "This limitation is because strings are currently stored on "
                   "the 512 byte BPF stack.\n"
@@ -292,18 +300,17 @@ static std::optional<struct timespec> get_delta_taitime()
   if (const char* env_p = std::getenv("BPFTRACE_STR_TRUNC_TRAILER"))
     config_setter.set(ConfigKeyString::str_trunc_trailer, std::string(env_p));
 
-  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
-        config_setter.set(ConfigKeyBool::no_cpp_demangle, x);
+  if (!get_bool_env_var("BPFTRACE_CPP_DEMANGLE", [&](bool x) {
+        config_setter.set(ConfigKeyBool::cpp_demangle, x);
       }))
     return false;
 
-  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT", [&](bool x) {
-        config_setter.set(ConfigKeyBool::debug_output, x);
-      }))
+  if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
+                        [&](bool x) { bpftrace.debug_output_ = x; }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::map_keys_max, x);
+  if (!get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_map_keys, x);
       }))
     return false;
 
@@ -332,8 +339,8 @@ static std::optional<struct timespec> get_delta_taitime()
       }))
     return false;
 
-  if (!get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::cat_bytes_max, x);
+  if (!get_uint64_env_var("BPFTRACE_MAX_CAT_BYTES", [&](uint64_t x) {
+        config_setter.set(ConfigKeyInt::max_cat_bytes, x);
       }))
     return false;
 
@@ -344,16 +351,9 @@ static std::optional<struct timespec> get_delta_taitime()
       return false;
   }
 
-  config_setter.set(ConfigKeyInt::ast_max_nodes,
-                    std::numeric_limits<uint64_t>::max());
-  if (!get_uint64_env_var("BPFTRACE_NODE_MAX", [&](uint64_t x) {
-        config_setter.set(ConfigKeyInt::ast_max_nodes, x);
-      }))
-    return false;
-
-  if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR", [&](bool x) {
-        config_setter.set(ConfigKeyBool::verify_llvm_ir, x);
-      }))
+  bpftrace.max_ast_nodes_ = std::numeric_limits<uint64_t>::max();
+  if (!get_uint64_env_var("BPFTRACE_MAX_AST_NODES",
+                          [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; }))
     return false;
 
   if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE"))
@@ -361,6 +361,27 @@ static std::optional<struct timespec> get_delta_taitime()
     if (!config_setter.set_stack_mode(stack_mode))
       return false;
   }
+
+  if (!get_bool_env_var("BPFTRACE_NO_CPP_DEMANGLE", [&](bool x) {
+        LOG(WARNING) << "BPFTRACE_NO_CPP_DEMANGLE is deprecated. Use "
+                        "BPFTRACE_CPP_DEMANGLE=0 instead.";
+        config_setter.set(ConfigKeyBool::cpp_demangle, !x);
+      }))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_CAT_BYTES_MAX", [&](uint64_t x) {
+        LOG(WARNING) << "BPFTRACE_CAT_BYTES_MAX is deprecated. Use "
+                        "BPFTRACE_MAX_CAT_BYTES instead.";
+        config_setter.set(ConfigKeyInt::max_cat_bytes, x);
+      }))
+    return false;
+
+  if (!get_uint64_env_var("BPFTRACE_MAP_KEYS_MAX", [&](uint64_t x) {
+        LOG(WARNING) << "BPFTRACE_MAP_KEYS_MAX is deprecated. Use "
+                        "BPFTRACE_MAX_MAP_KEYS instead.";
+        config_setter.set(ConfigKeyInt::max_map_keys, x);
+      }))
+    return false;
 
   return true;
 }
@@ -438,6 +459,7 @@ static std::optional<struct timespec> get_delta_taitime()
 ast::PassManager CreateDynamicPM()
 {
   ast::PassManager pm;
+  pm.AddPass(ast::CreateConfigPass());
   pm.AddPass(ast::CreateSemanticPass());
   pm.AddPass(ast::CreateCounterPass());
   pm.AddPass(ast::CreateResourcePass());
@@ -978,7 +1000,12 @@ int main(int argc, char* argv[])
     {
       llvm.DumpIR(args.output_llvm + ".original.ll");
     }
-    if (bpftrace.config_.get(ConfigKeyBool::verify_llvm_ir) && !llvm.verify())
+
+    bool verify_llvm_ir = false;
+    if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
+                          [&](bool x) { verify_llvm_ir = x; }))
+      return 1;
+    if (verify_llvm_ir && !llvm.verify())
     {
       LOG(ERROR) << "Verification of generated LLVM IR failed";
       return 1;
@@ -1032,7 +1059,7 @@ int main(int argc, char* argv[])
   act.sa_handler = [](int) { BPFtrace::sigusr1_recv = true; };
   sigaction(SIGUSR1, &act, NULL);
 
-  err = bpftrace.run(bytecode);
+  err = bpftrace.run(std::move(bytecode));
   if (err)
     return err;
 

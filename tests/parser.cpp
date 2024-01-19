@@ -1999,6 +1999,21 @@ uprobe:asdf:Stream {} tracepoint:only_one_arg {}
 )");
 }
 
+TEST(Parser, config_error)
+{
+  test_parse_failure("i:s:1 { exit(); } config = { BPFTRACE_STACK_MODE=perf }");
+  test_parse_failure("config = { exit(); } i:s:1 { exit(); }");
+  test_parse_failure("config = { @start = nsecs; } i:s:1 { exit(); }");
+  test_parse_failure("BEGIN { @start = nsecs; } config = { "
+                     "BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }");
+  test_parse_failure("config = { BPFTRACE_STACK_MODE=perf "
+                     "BPFTRACE_MAX_PROBES=2 } i:s:1 { exit(); }");
+  test_parse_failure("config = { BPFTRACE_STACK_MODE=perf } i:s:1 { "
+                     "BPFTRACE_MAX_PROBES=2; exit(); }");
+  test_parse_failure("config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }");
+  test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }");
+}
+
 } // namespace parser
 } // namespace test
 } // namespace bpftrace

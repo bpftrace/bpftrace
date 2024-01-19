@@ -11,16 +11,17 @@ using ::testing::StrictMock;
 
 void setup_mock_probe_matcher(MockProbeMatcher &matcher)
 {
-  ON_CALL(matcher, get_symbols_from_traceable_funcs()).WillByDefault([](void) {
-    std::string ksyms = "SyS_read\n"
-                        "sys_read\n"
-                        "sys_write\n"
-                        "my_one\n"
-                        "my_two\n"
-                        "func_in_mod [kernel_mod]\n";
-    auto myval = std::unique_ptr<std::istream>(new std::istringstream(ksyms));
-    return myval;
-  });
+  ON_CALL(matcher, get_symbols_from_traceable_funcs(false))
+      .WillByDefault([](void) {
+        std::string ksyms = "SyS_read\n"
+                            "sys_read\n"
+                            "sys_write\n"
+                            "my_one\n"
+                            "my_two\n";
+        auto myval = std::unique_ptr<std::istream>(
+            new std::istringstream(ksyms));
+        return myval;
+      });
 
   ON_CALL(matcher, get_symbols_from_file(tracefs::available_events()))
       .WillByDefault([](const std::string &) {

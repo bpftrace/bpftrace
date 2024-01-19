@@ -33,7 +33,7 @@ inline Pass CreateCounterPass()
     NodeCounter c;
     c.Visit(n);
     auto node_count = c.get_count();
-    auto max = ctx.b.config_.get(ConfigKeyInt::ast_max_nodes);
+    auto max = ctx.b.max_ast_nodes_;
     if (bt_verbose)
     {
       LOG(INFO) << "node count: " << node_count;

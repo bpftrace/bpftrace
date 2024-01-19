@@ -7,10 +7,10 @@ This traces signals sent via the kill() syscall. For example:
 # ./killsnoop.bt
 Attaching 3 probes...
 Tracing kill() signals... Hit Ctrl-C to end.
-TIME      PID    COMM             SIG  TPID   RESULT
-00:09:37  22485  bash             2    23856  0
-00:09:40  22485  bash             2    23856  -3
-00:09:31  22485  bash             15   23814  -3
+TIME                PID COMM              SIG   TPID RESULT
+00:09:37.345938   22485 bash                2  23856      0
+00:09:40.838452   22485 bash                2  23856     -3
+00:09:31.437104   22485 bash               15  23814     -3
 
 The first line showed a SIGINT (2) sent from PID 22485 (a bash shell) to
 PID 23856. The result, 0, means success. The next line shows the same signal

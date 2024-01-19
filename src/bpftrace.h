@@ -12,6 +12,7 @@
 
 #include "ast/ast.h"
 #include "attached_probe.h"
+#include "bpfbytecode.h"
 #include "bpffeature.h"
 #include "bpfprogram.h"
 #include "btf.h"
@@ -114,7 +115,7 @@ public:
   int run(BpfBytecode bytecode);
   std::vector<std::unique_ptr<AttachedProbe>> attach_probe(
       Probe &probe,
-      BpfBytecode &bytecode);
+      const BpfBytecode &bytecode);
   int run_iter();
   int print_maps();
   int clear_map(IMap &map);
@@ -197,6 +198,8 @@ public:
   bool has_usdt_ = false;
   bool usdt_file_activation_ = false;
   int helper_check_level_ = 0;
+  uint64_t max_ast_nodes_ = 0; // Maximum AST nodes allowed for fuzzing
+  bool debug_output_ = false;
   std::optional<struct timespec> boottime_;
   std::optional<struct timespec> delta_taitime_;
   static constexpr uint32_t rb_loss_cnt_key_ = 0;
@@ -223,7 +226,7 @@ public:
 
 private:
   int run_special_probe(std::string name,
-                        BpfBytecode &bytecode,
+                        const BpfBytecode &bytecode,
                         void (*trigger)(void));
   void* ksyms_{nullptr};
   // note: exe_sym_ is used when layout is same for all instances of program

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <iostream>
 #include <map>
+#include <optional>
+#include <set>
 #include <variant>
 
 #include "types.h"
@@ -17,26 +19,25 @@ enum class ConfigSource
   default_,
   // config set via environment variable
   env_var,
+  // config set via config script syntax
+  script,
 };
 
 enum class ConfigKeyBool
 {
-  debug_output,
-  no_cpp_demangle,
-  verify_llvm_ir,
+  cpp_demangle,
 };
 
 enum class ConfigKeyInt
 {
-  ast_max_nodes,
-  cat_bytes_max,
   log_size,
-  map_keys_max,
-  max_probes,
   max_bpf_progs,
+  max_cat_bytes,
+  max_map_keys,
+  max_probes,
+  max_strlen,
   max_type_res_iterations,
   perf_rb_pages,
-  strlen,
 };
 
 enum class ConfigKeyString
@@ -60,6 +61,29 @@ typedef std::variant<ConfigKeyBool,
                      ConfigKeyStackMode,
                      ConfigKeyUserSymbolCacheType>
     ConfigKey;
+
+// The strings in CONFIG_KEY_MAP AND ENV_ONLY match the env variables (minus the
+// 'BPFTRACE_' prefix)
+const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
+  { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
+  { "cpp_demangle", ConfigKeyBool::cpp_demangle },
+  { "log_size", ConfigKeyInt::log_size },
+  { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
+  { "max_cat_bytes", ConfigKeyInt::max_cat_bytes },
+  { "max_map_keys", ConfigKeyInt::max_map_keys },
+  { "max_probes", ConfigKeyInt::max_probes },
+  { "max_strlen", ConfigKeyInt::max_strlen },
+  { "max_type_res_iterations", ConfigKeyInt::max_type_res_iterations },
+  { "perf_rb_pages", ConfigKeyInt::perf_rb_pages },
+  { "stack_mode", ConfigKeyStackMode::default_ },
+  { "str_trunc_trailer", ConfigKeyString::str_trunc_trailer },
+};
+
+// These are not tracked by the config class
+const std::set<std::string> ENV_ONLY = {
+  "btf",           "debug_output",   "kernel_build", "kernel_source",
+  "max_ast_nodes", "verify_llvm_ir", "vmlinux",
+};
 
 struct ConfigValue
 {
@@ -97,6 +121,10 @@ public:
   {
     return get<UserSymbolCacheType>(key);
   }
+
+  static std::optional<StackMode> get_stack_mode(const std::string &s);
+  std::optional<ConfigKey> get_config_key(const std::string &str,
+                                          std::string &err);
 
   friend class ConfigSetter;
 
@@ -138,6 +166,7 @@ private:
     }
   }
 
+private:
   bool can_set(ConfigSource prevSource, ConfigSource);
   bool is_aslr_enabled();
   bool bt_verbose_ = false;
