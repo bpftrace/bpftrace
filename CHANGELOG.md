@@ -9,6 +9,16 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Docs
+#### Tools
+
+## [0.20.0] 2024-01-22
+
+#### Added
 - Add log2 histograms with finer granularity
   - [#2831](https://github.com/iovisor/bpftrace/pull/2831)
 - Add a `jiffies` builtin for advanced usages
