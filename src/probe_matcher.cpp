@@ -115,7 +115,10 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     {
-      symbol_stream = get_symbols_from_traceable_funcs();
+      if (!target.empty())
+        symbol_stream = get_symbols_from_traceable_funcs(true);
+      else
+        symbol_stream = get_symbols_from_traceable_funcs(false);
       break;
     }
     case ProbeType::uprobe:

@@ -761,7 +761,8 @@ void AttachedProbe::load_prog(BPFfeature &feature)
 
       if ((probe_.type == ProbeType::kprobe ||
            probe_.type == ProbeType::kretprobe) &&
-          feature.has_kprobe_multi() && !probe_.funcs.empty())
+          feature.has_kprobe_multi() && !probe_.funcs.empty() &&
+          probe_.path.empty())
         opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_KPROBE_MULTI);
 
@@ -964,9 +965,10 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
   // Construct a string containing "module:function."
   // Also throw a warning or error if the module doesn't exist,
   // before attempting to attach.
+  // Note that we do not pass vmlinux, if it is specified.
   std::string funcname = probe_.attach_point;
   std::string modname = probe_.path;
-  if (modname.length() > 0)
+  if ((modname.length() > 0) && (modname.compare("vmlinux") != 0))
   {
     if (!is_loaded_module(modname))
     {

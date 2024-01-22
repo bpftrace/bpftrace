@@ -133,6 +133,18 @@ EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
+NAME kprobe_module_missing
+PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+TIMEOUT 5
+WILL_FAIL
+
+NAME kprobe_func_missing
+PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT ERROR: Error attaching probe: 'kprobe:vmlinux:nonsense'
+TIMEOUT 5
+WILL_FAIL
+
 NAME kprobe_multi_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
 EXPECT link: 1
