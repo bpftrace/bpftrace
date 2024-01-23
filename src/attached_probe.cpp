@@ -970,7 +970,7 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
   // Note that we do not pass vmlinux, if it is specified.
   std::string funcname = probe_.attach_point;
   const std::string& modname = probe_.path;
-  if ((modname.length() > 0) && modname != "vmlinux"))
+  if ((modname.length() > 0) && modname != "vmlinux")
   {
     if (!is_loaded_module(modname))
     {
