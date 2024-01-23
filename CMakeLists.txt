@@ -151,10 +151,6 @@ message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}: ${LLVM_CMAKE_DIR}")
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
-add_definitions(-DLLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
-add_definitions(-DLLVM_VERSION_PATCH=${LLVM_VERSION_PATCH})
-
 find_package(Clang REQUIRED)
 include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
 
