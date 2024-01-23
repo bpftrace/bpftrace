@@ -71,29 +71,19 @@ endif()
 # Still need to support vendored gtest/gmock b/c old ubuntu versions (< focal)
 # only provide gtest/gmock sources -- no precompiled binaries
 if(VENDOR_GTEST)
-  # Ninja build system needs the byproducts set explicitly so it can
-  # check for missing dependencies.
-  # https://cmake.org/pipermail/cmake/2015-April/060234.html
-  set(gtest_byproducts
-    <BINARY_DIR>/googlemock/gtest/libgtest.a
-    <BINARY_DIR>/googlemock/gtest/libgtest_main.a
-    <BINARY_DIR>/googlemock/libgmock.a
-  )
-  include(ExternalProject)
-  ExternalProject_Add(gtest-git
+  include(FetchContent)
+  set(FETCHCONTENT_QUIET FALSE)
+  FetchContent_Declare(
+    gtest
     GIT_REPOSITORY https://github.com/google/googletest.git
     GIT_TAG release-1.11.0
-    STEP_TARGETS build update
-    EXCLUDE_FROM_ALL 1
-    BUILD_BYPRODUCTS ${gtest_byproducts}
   )
-  add_dependencies(bpftrace_test gtest-git-build)
-  ExternalProject_Get_Property(gtest-git source_dir binary_dir)
-  target_include_directories(bpftrace_test PUBLIC ${source_dir}/googletest/include)
-  target_include_directories(bpftrace_test PUBLIC ${source_dir}/googlemock/include)
-  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgtest.a)
-  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgtest_main.a)
-  target_link_libraries(bpftrace_test ${binary_dir}/lib/libgmock.a)
+  FetchContent_MakeAvailable(gtest)
+
+  target_include_directories(bpftrace_test PUBLIC ${gtest_SOURCE_DIR}/googletest/include)
+  target_include_directories(bpftrace_test PUBLIC ${gtest_SOURCE_DIR}/googlemock/include)
+  target_link_libraries(bpftrace_test gtest)
+  target_link_libraries(bpftrace_test gmock)
 else()
   # bpftrace tests require (at minimum) the vendored version (see above).
   # There's no great way to enforce a minimum version from cmake -- the cmake
