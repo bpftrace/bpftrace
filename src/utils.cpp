@@ -703,16 +703,14 @@ bool is_loaded_module(const std::string &module)
   // This file lists all loaded modules
   std::ifstream modules_file("/proc/modules");
 
-  std::vector<std::string> tokens;
   for (std::string line; std::getline(modules_file, line);)
   {
-    tokens = split_string(line, ' ');
-    if (module.compare(tokens[0]) == 0)
+    std::string first_token = line.substr(0, line.find(' '));
+    if (module == first_token)
     {
       modules_file.close();
       return true;
     }
-    tokens.clear();
   }
 
   modules_file.close();

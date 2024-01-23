@@ -759,6 +759,8 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_ITER);
 
+      // We want to avoid kprobe_multi here because the BPF_TRACE_KPROBE_MULTI
+      // link type does not currently support the `module:function` syntax.
       if ((probe_.type == ProbeType::kprobe ||
            probe_.type == ProbeType::kretprobe) &&
           feature.has_kprobe_multi() && !probe_.funcs.empty() &&
@@ -975,8 +977,8 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
       if (probe_.orig_name != probe_.name)
       {
         // Wildcard usage just gets a warning
-        LOG(WARNING) << "module " << modname << " in probe " << probe_.name
-                     << " doesn't exist.";
+        LOG(WARNING) << "specified module " << modname << " in probe "
+                     << probe_.name << " is not loaded.";
       }
       else
       {
