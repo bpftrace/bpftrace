@@ -113,7 +113,6 @@ add_definitions("-DBPFTRACE_VERSION=\"${BPFTRACE_VERSION}\"")
 
 target_include_directories(runtime PRIVATE ${CMAKE_BINARY_DIR})
 target_include_directories(runtime PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_include_directories(runtime PRIVATE ${CMAKE_SOURCE_DIR}/src/ast)
 target_compile_definitions(runtime PRIVATE ${BPFTRACE_FLAGS})
 target_include_directories(libbpftrace PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_definitions(libbpftrace PRIVATE ${BPFTRACE_FLAGS})
