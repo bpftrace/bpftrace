@@ -2368,7 +2368,7 @@ TEST(semantic_analyser, type_ctx)
   var = static_cast<ast::Variable *>(unop->expr);
   EXPECT_TRUE(var->type.IsPtrTy());
 
-#if ARCH_X86_64
+#ifdef ARCH_X86_64
   auto chartype = CreateInt8();
 #else
   auto chartype = CreateUInt8();
