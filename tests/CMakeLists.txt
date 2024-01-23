@@ -122,7 +122,7 @@ file(GLOB_RECURSE runtime_test_files
   CONFIGURE_DEPENDS
   runtime/*
 )
-list(REMOVE_ITEM runtime_test_files ${CMAKE_CURRENT_SOURCE_DIR}/runtime/engine/*)
+list(REMOVE_ITEM runtime_test_files runtime/engine/cmake_vars.py)
 
 foreach(runtime_test_file ${runtime_test_files})
   add_custom_command(
@@ -138,11 +138,8 @@ endforeach()
 add_custom_target(runtime_test_files ALL DEPENDS ${runtime_test_files})
 add_dependencies(runtime_tests runtime_test_files)
 
-file(GLOB runtime_engine_files runtime/engine/*)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine)
-foreach(runtime_engine_file ${runtime_engine_files})
-  configure_file(${runtime_engine_file} ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
-endforeach()
+configure_file(runtime/engine/cmake_vars.py ${CMAKE_CURRENT_BINARY_DIR}/runtime/engine/ @ONLY)
 
 
 
