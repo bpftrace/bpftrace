@@ -695,7 +695,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
 
 bool is_loaded_module(const std::string &module)
 {
-  if (module.compare("vmlinux") == 0)
+  if (module == "vmlinux")
   {
     return true;
   }
