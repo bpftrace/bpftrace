@@ -1,5 +1,6 @@
 #include "cxxdemangler.h"
 
+#include <llvm/Config/llvm-config.h>
 #include <llvm/Demangle/Demangle.h>
 
 namespace bpftrace {
