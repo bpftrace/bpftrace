@@ -3,6 +3,7 @@
 #include <bcc/bcc_syms.h>
 #include <bcc/libbpf.h>
 #include <bpf/bpf.h>
+#include <bpf/btf.h>
 #include <bpf/libbpf.h>
 #include <cstddef>
 #include <cstdio>
@@ -136,6 +137,25 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
                    outfd);
 }
 
+bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
+{
+  constexpr int log_size = 4096;
+  char log_buf[log_size] = {};
+  LIBBPF_OPTS(bpf_btf_load_opts,
+              btf_opts,
+              .log_buf = log_buf,
+              .log_level = 0,
+              .log_size = log_size, );
+
+  int fd = bpf_btf_load(btf_data, btf_size, &btf_opts);
+  if (fd >= 0)
+  {
+    close(fd);
+    return true;
+  }
+  return false;
+}
+
 bool BPFfeature::detect_helper(enum libbpf::bpf_func_id func_id,
                                enum libbpf::bpf_prog_type prog_type)
 {
@@ -247,6 +267,27 @@ bool BPFfeature::has_loop(void)
 bool BPFfeature::has_btf(void)
 {
   return btf_.has_data();
+}
+
+bool BPFfeature::has_btf_func_global()
+{
+  if (has_btf_func_global_.has_value())
+    return *has_btf_func_global_;
+
+  /* static void x(int a) {} */
+  __u32 types[] = {
+    /* int */
+    BTF_TYPE_INT_ENC(1, BTF_INT_SIGNED, 0, 32, 4), /* [1] */
+    /* FUNC_PROTO */                               /* [2] */
+    BTF_TYPE_ENC(0, BTF_INFO_ENC(BTF_KIND_FUNC_PROTO, 0, 1), 0),
+    BTF_PARAM_ENC(7, 1),
+    /* FUNC x BTF_FUNC_GLOBAL */ /* [3] */
+    BTF_TYPE_ENC(5, BTF_INFO_ENC(BTF_KIND_FUNC, 0, BTF_FUNC_GLOBAL), 2),
+  };
+
+  has_btf_func_global_ = std::make_optional<bool>(
+      try_load_btf(types, sizeof(types)));
+  return *has_btf_func_global_;
 }
 
 int BPFfeature::instruction_limit(void)

@@ -31,11 +31,11 @@
 #include <llvm/Support/TargetSelect.h>
 
 #include "arch/arch.h"
-#include "ast.h"
+#include "ast/ast.h"
 #include "ast/async_event_types.h"
 #include "ast/codegen_helper.h"
+#include "ast/elf_parser.h"
 #include "ast/signal_bt.h"
-#include "elf_parser.h"
 #include "log.h"
 #include "tracepoint_format_parser.h"
 #include "types.h"

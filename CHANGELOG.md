@@ -9,6 +9,16 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+#### Changed
+#### Deprecated
+#### Removed
+#### Fixed
+#### Docs
+#### Tools
+
+## [0.20.0] 2024-01-22
+
+#### Added
 - Add log2 histograms with finer granularity
   - [#2831](https://github.com/iovisor/bpftrace/pull/2831)
 - Add a `jiffies` builtin for advanced usages
@@ -55,6 +65,8 @@ and this project adheres to
   - [#2914](https://github.com/iovisor/bpftrace/pull/2914)
 - Fix uprobe attachment across container boundary
   - [#2662](https://github.com/iovisor/bpftrace/pull/2662)
+- Fix generated BTF for older kernels
+  - [#2934](https://github.com/iovisor/bpftrace/pull/2934)
 #### Docs
 - Fix one-liner tutorial for systems with BTF
   - [#2919](https://github.com/iovisor/bpftrace/pull/2919)

@@ -4,8 +4,7 @@
 
 FROM fedora:rawhide
 
-RUN dnf -y groupinstall "Development Tools" && \
-    dnf install -y \
+RUN dnf install -y \
         asciidoctor \
         bison \
         binutils-devel \
@@ -13,12 +12,16 @@ RUN dnf -y groupinstall "Development Tools" && \
         cereal-devel \
         clang-devel \
         cmake \
+        elfutils-devel \
         elfutils-libelf-devel \
         elfutils-libs \
         flex \
+        gcc \
+        gcc-c++ \
         libpcap-devel \
         libbpf-devel \
         llvm-devel \
+        make \
         systemtap-sdt-devel \
         zlib-devel
 

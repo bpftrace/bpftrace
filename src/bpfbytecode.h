@@ -1,5 +1,6 @@
 #pragma once
 
+#include "bpffeature.h"
 #include <cereal/access.hpp>
 #include <cstdint>
 #include <string>
@@ -25,6 +26,8 @@ public:
   void addSection(const std::string &name, std::vector<uint8_t> &&data);
   bool hasSection(const std::string &name) const;
   const std::vector<uint8_t> &getSection(const std::string &name) const;
+
+  void fixupBTF(BPFfeature &feature);
 
 private:
   SectionMap sections_;

@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
   glob("/lib*", GLOB_NOSORT, NULL, &globbuf);
   glob("/usr/lib*", GLOB_NOSORT | GLOB_APPEND, NULL, &globbuf);
   glob("/nix/store", GLOB_NOSORT | GLOB_APPEND, NULL, &globbuf);
-  for (int i = 0; i < globbuf.gl_pathc; i++)
+  for (size_t i = 0; i < globbuf.gl_pathc; i++)
   {
     const char *global_lib_dir = globbuf.gl_pathv[i];
     char shared_dir_mount[PATH_MAX];

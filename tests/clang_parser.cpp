@@ -5,6 +5,7 @@
 #include "struct.h"
 #include "gtest/gtest.h"
 #include <iostream>
+#include <llvm/Config/llvm-config.h>
 
 namespace bpftrace {
 namespace test {

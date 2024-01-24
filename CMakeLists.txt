@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.13.0)
+cmake_minimum_required(VERSION 3.14)
 project(bpftrace)
 
 cmake_policy(SET CMP0057 NEW)
 
 # bpftrace version number components.
 set(bpftrace_VERSION_MAJOR 0)
-set(bpftrace_VERSION_MINOR 19)
+set(bpftrace_VERSION_MINOR 20)
 set(bpftrace_VERSION_PATCH 0)
 
 include(GNUInstallDirs)
@@ -32,7 +32,7 @@ set (CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options("-Wall")
 add_compile_options("-Wextra")
-add_compile_options("-Wundef")
+add_compile_options("-Werror=undef")
 add_compile_options("-Wpointer-arith")
 add_compile_options("-Wcast-align")
 add_compile_options("-Wwrite-strings")
@@ -150,10 +150,6 @@ endif()
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}: ${LLVM_CMAKE_DIR}")
 include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-
-add_definitions(-DLLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR})
-add_definitions(-DLLVM_VERSION_MINOR=${LLVM_VERSION_MINOR})
-add_definitions(-DLLVM_VERSION_PATCH=${LLVM_VERSION_PATCH})
 
 find_package(Clang REQUIRED)
 include_directories(SYSTEM ${CLANG_INCLUDE_DIRS})
