@@ -693,7 +693,7 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   return result;
 }
 
-bool is_loaded_module(const std::string &module)
+bool is_module_loaded(const std::string &module)
 {
   if (module == "vmlinux")
   {
@@ -705,8 +705,7 @@ bool is_loaded_module(const std::string &module)
 
   for (std::string line; std::getline(modules_file, line);)
   {
-    std::string first_token = line.substr(0, line.find(' '));
-    if (module == first_token)
+    if (line.compare(0, module.size() + 1, module + " ") == 0)
     {
       modules_file.close();
       return true;

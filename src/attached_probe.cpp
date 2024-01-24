@@ -759,8 +759,9 @@ void AttachedProbe::load_prog(BPFfeature &feature)
         opts.expected_attach_type = static_cast<::bpf_attach_type>(
             libbpf::BPF_TRACE_ITER);
 
-      // We want to avoid kprobe_multi here because the BPF_TRACE_KPROBE_MULTI
-      // link type does not currently support the `module:function` syntax.
+      // We want to avoid kprobe_multi when a module is specified
+      // because the BPF_TRACE_KPROBE_MULTI link type does not
+      // currently support the `module:function` syntax.
       if ((probe_.type == ProbeType::kprobe ||
            probe_.type == ProbeType::kretprobe) &&
           feature.has_kprobe_multi() && !probe_.funcs.empty() &&
@@ -972,19 +973,19 @@ void AttachedProbe::attach_kprobe(bool safe_mode)
   const std::string &modname = probe_.path;
   if ((modname.length() > 0) && modname != "vmlinux")
   {
-    if (!is_loaded_module(modname))
+    if (!is_module_loaded(modname))
     {
+      std::string message = "specified module " + modname + " in probe " +
+                            probe_.name + " is not loaded.";
       if (probe_.orig_name != probe_.name)
       {
         // Wildcard usage just gets a warning
-        LOG(WARNING) << "specified module " << modname << " in probe "
-                     << probe_.name << " is not loaded.";
+        LOG(WARNING) << message;
       }
       else
       {
         // Explicitly specified modules should fail
-        LOG(ERROR) << "specified module " << modname << " in probe "
-                   << probe_.name << " is not loaded.";
+        LOG(ERROR) << message;
         throw std::runtime_error("Error attaching probe: '" + probe_.name +
                                  "'");
       }
