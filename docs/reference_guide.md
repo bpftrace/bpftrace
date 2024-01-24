@@ -28,7 +28,7 @@ discussion to other files in /docs, the /tools/\*\_examples.txt files, or blog p
     - [2. `/.../`: Filtering](#2--filtering)
     - [3. `//`, `/*`: Comments](#3---comments)
     - [4. Literals](#4-literals)
-    - [5. `.`, `->`: C Struct Navigation](#5---c-struct-navigation)
+    - [5. `.`, `->`: C Struct Navigation](#5----c-struct-navigation)
     - [6. `struct`: Struct Declaration](#6-struct-struct-declaration)
     - [7. `? :`: ternary operators](#7---ternary-operators)
     - [8. `if () {...} else {...}`: if-else statements](#8-if---else--if-else-statements)
@@ -2320,7 +2320,7 @@ If a format string is not provided, it defaults to "%H:%M:%S\n".
 Note that this builtin is asynchronous. The printed timestamp is the time at
 which userspace has processed the queued up event, _not_ the time at which the
 bpf prog calls `time()`. For a more precise timestamp, see
-[strftime()](#24-strftime-formatted-timestamp).
+[strftime()](#25-strftime-formatted-timestamp).
 
 ## 4. `join()`: Join
 
@@ -2363,7 +2363,7 @@ Syntax: `str(char *s [, int length])`
 
 Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
 a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
-`BPFTRACE_MAX_STRLEN`](#91-bpftrace_strlen)).
+`BPFTRACE_MAX_STRLEN`](#912-bpftrace_max_strlen)).
 
 Examples:
 
@@ -3008,7 +3008,7 @@ Syntax: `buf(void *d [, int length])`
 Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
-be tuned using the [`BPFTRACE_MAX_STRLEN`](#91-bpftrace_strlen) environment variable.
+be tuned using the [`BPFTRACE_MAX_STRLEN`](#912-bpftrace_max_strlen) environment variable.
 
 Bytes with values >=32 and <=126 are printed using their ASCII character, other
 bytes are printed in hex form (e.g. `\x00`).
@@ -3797,7 +3797,7 @@ when printing. Without this capability, should one try to divide to milliseconds
 it should.
 
 Note that printing maps is different than printing values. See the explanation
-in [`print()`: Print Value](#23-print-print-value).
+in [`print()`: Print Value](#24-print-print-value).
 
 # Output
 
@@ -3843,7 +3843,7 @@ opens/sec: 2
 ## 3. `hist()`, `print()`: Histogram Printing
 
 Declared histograms are automatically printed out on program termination. See [5.
-Histograms](#5-histograms) for declarations.
+Histograms](#5-hist-lhist-histograms) for declarations.
 
 Examples:
 
