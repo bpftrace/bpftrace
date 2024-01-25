@@ -482,14 +482,14 @@ bpftrace v0.8-90-g585e-dirty
 Most of these can also be set via the [config block](#17-config---config-block) directly in a script 
 (before any probes).
 
-### 9.1 `BPFTRACE_BTF`
+### `BPFTRACE_BTF`
 
 Default: None
 
 The path to a BTF file. By default, bpftrace searches several locations to find a BTF file.
 See src/btf.cpp for the details.
 
-### 9.2 `BPFTRACE_CACHE_USER_SYMBOLS`
+### `BPFTRACE_CACHE_USER_SYMBOLS`
 
 Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 
@@ -497,7 +497,7 @@ Default: PER_PROGRAM if ASLR disabled or `-c` option given, PER_PID otherwise.
 -* PER_PID - each process has its own cache. This is accurate for processes with ASLR enabled, and enables bpftrace to preload caches for processes running at probe attachment time. If there are many processes running, it will consume a lot of a memory.
 -* NONE - caching disabled. This saves the most memory, but at the cost of speed.
 
-### 9.3 `BPFTRACE_CPP_DEMANGLE`
+### `BPFTRACE_CPP_DEMANGLE`
 
 Default: 1
 
@@ -505,38 +505,38 @@ C++ symbol demangling in userspace stack traces is enabled by default.
 
 This feature can be turned off by setting the value of this environment variable to `0`.
 
-### 9.4 `BPFTRACE_DEBUG_OUTPUT`
+### `BPFTRACE_DEBUG_OUTPUT`
 
 Default: 0
 
 Outputs bpftrace's runtime debug messages to the trace_pipe. This feature can be turned on by setting
 the value of this environment variable to `1`.
 
-### 9.5 `BPFTRACE_KERNEL_BUILD`
+### `BPFTRACE_KERNEL_BUILD`
 
 Default: `/lib/modules/$(uname -r)`
 
 Only used with `BPFTRACE_KERNEL_SOURCE` if it is out-of-tree Linux kernel build.
 
-### 9.6 `BPFTRACE_KERNEL_SOURCE`
+### `BPFTRACE_KERNEL_SOURCE`
 
 Default: `/lib/modules/$(uname -r)`
 
 bpftrace requires kernel headers for certain features, which are searched for in this directory.
 
-### 9.7 `BPFTRACE_LAZY_SYMBOLICATION`
+### `BPFTRACE_LAZY_SYMBOLICATION`
 
 Default: 0
 
 For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
 
-### 9.8 `BPFTRACE_LOG_SIZE`
+### `BPFTRACE_LOG_SIZE`
 
 Default: 1000000
 
 Log size in bytes.
 
-### 9.9 `BPFTRACE_MAX_BPF_PROGS`
+### `BPFTRACE_MAX_BPF_PROGS`
 
 Default: 512
 
@@ -544,13 +544,13 @@ This is the maximum number of BPF programs (functions) that bpftrace can generat
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
 takes a lot of resources (and it should not happen often).
 
-### 9.10 `BPFTRACE_MAX_CAT_BYTES`
+### `BPFTRACE_MAX_CAT_BYTES`
 
 Default: 10k
 
 Maximum bytes read by cat builtin.
 
-### 9.11 `BPFTRACE_MAX_MAP_KEYS`
+### `BPFTRACE_MAX_MAP_KEYS`
 
 Default: 4096
 
@@ -558,7 +558,7 @@ This is the maximum number of keys that can be stored in a map. Increasing the v
 memory and increase startup times. There are some cases where you will want to: for example, sampling
 stack traces, recording timestamps for each page, etc.
 
-### 9.12 `BPFTRACE_MAX_PROBES`
+### `BPFTRACE_MAX_PROBES`
 
 Default: 512
 
@@ -566,7 +566,7 @@ This is the maximum number of probes that bpftrace can attach to. Increasing the
 memory, increase startup times and can incur high performance overhead or even freeze or crash the
 system.
 
-### 9.13 `BPFTRACE_MAX_STRLEN`
+### `BPFTRACE_MAX_STRLEN`
 
 Default: 64
 
@@ -579,13 +579,13 @@ it composes a perf event output buffer). So in practice you can only grow this t
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
-### 9.14 `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
+### `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
 
 Default: 0
 
 Maximum should be the number of levels of nested field accesses for tracepoint args. 0 is unlimited.
 
-### 9.15 `BPFTRACE_PERF_RB_PAGES`
+### `BPFTRACE_PERF_RB_PAGES`
 
 Default: 64
 
@@ -595,20 +595,20 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 fast enough. It may be useful to bump the value higher so more events can be queued up. The tradeoff
 is that bpftrace will use more memory.
 
-### 9.16 `BPFTRACE_STACK_MODE`
+### `BPFTRACE_STACK_MODE`
 
 Default: bpftrace
 
 Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
 This can be overwritten at the call site.
 
-### 9.17 `BPFTRACE_STR_TRUNC_TRAILER`
+### `BPFTRACE_STR_TRUNC_TRAILER`
 
 Default: `..`
 
 Trailer to add to strings that were truncated. Set to empty string to disable truncation trailers.
 
-### 9.18 `BPFTRACE_VMLINUX`
+### `BPFTRACE_VMLINUX`
 
 Default: None
 
@@ -2065,7 +2065,7 @@ bpftrace supports global & per-thread variables (via BPF maps), and scratch vari
 
 Examples:
 
-### 2.1. Global
+### Global
 
 Syntax: `@name`
 
@@ -2085,7 +2085,7 @@ at 1648 ms: sleep
 @start: 4064438886907216
 ```
 
-### 2.2. Per-Thread:
+### Per-Thread:
 
 These can be implemented as an associative array keyed on the thread ID. For example, `@start[tid]`:
 
@@ -2102,7 +2102,7 @@ slept for 2002 ms
 [...]
 ```
 
-### 2.3. Scratch:
+### Scratch:
 
 Syntax: `$name`
 
@@ -2370,7 +2370,7 @@ Syntax: `str(char *s [, int length])`
 
 Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
 a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
-`BPFTRACE_MAX_STRLEN`](#913-bpftrace_max_strlen)).
+`BPFTRACE_MAX_STRLEN`](#bpftrace_max_strlen)).
 
 Examples:
 
@@ -3015,7 +3015,7 @@ Syntax: `buf(void *d [, int length])`
 Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
-be tuned using the [`BPFTRACE_MAX_STRLEN`](#913-bpftrace_max_strlen) environment variable.
+be tuned using the [`BPFTRACE_MAX_STRLEN`](#bpftrace_max_strlen) environment variable.
 
 Bytes with values >=32 and <=126 are printed using their ASCII character, other
 bytes are printed in hex form (e.g. `\x00`).
@@ -3392,7 +3392,7 @@ sw_tai precision: -99ns
 
 Maps are special BPF data types that can be used to store counts, statistics, and histograms. They are
 also used for some variable types as discussed in the previous section, whenever `@` is used:
-[globals](#21-global), [per thread variables](#22-per-thread), and [associative
+[globals](#global), [per thread variables](#per-thread), and [associative
 arrays](#3--associative-arrays).
 
 When bpftrace exits, all maps are printed. For example (the `count()` function is covered in the sections
@@ -3628,7 +3628,7 @@ k can be 0..5, defaults to 0.
 
 Examples:
 
-### 8.1. Power-Of-2:
+### Power-Of-2:
 
 ```
 # bpftrace -e 'kretprobe:vfs_read { @bytes = hist(retval); }'
@@ -3652,7 +3652,7 @@ Attaching 1 probe...
 [2K, 4K)               2 |                                                    |
 ```
 
-### 8.2. Power-Of-2 By Key:
+### Power-Of-2 By Key:
 
 ```
 # bpftrace -e 'kretprobe:do_sys_open { @bytes[comm] = hist(retval); }'
@@ -3679,7 +3679,7 @@ Attaching 1 probe... ^C
 [4, 8)                21 |@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@|
 ```
 
-### 8.3 Fine-grained Power-Of-2
+### Fine-grained Power-Of-2
 
 Using a second argument $k=3$ we create $2^3 = 8$ buckets for each power of 2.
 This results in a finer grained subdivision such as the one below:
