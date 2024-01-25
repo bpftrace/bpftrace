@@ -46,12 +46,6 @@ bool bt_verbose = false;
 bool bt_verbose2 = false;
 volatile sig_atomic_t BPFtrace::exitsig_recv = false;
 volatile sig_atomic_t BPFtrace::sigusr1_recv = false;
-struct bcc_symbol_option symopts = {
-  .use_debug_file = 1,
-  .check_debug_file_crc = 1,
-  .lazy_symbolize = 0,
-  .use_symbol_type = BCC_SYM_ALL_TYPES,
-};
 
 BPFtrace::~BPFtrace()
 {
@@ -393,7 +387,7 @@ int BPFtrace::add_probe(ast::Probe &p)
         // attach time, but not at symbol resolution time, even with ASLR
         // enabled, since BCC symcache records the offsets
         for (int pid : get_pids_for_program(attach_point->target))
-          pid_sym_[pid] = bcc_symcache_new(pid, &symopts);
+          pid_sym_[pid] = bcc_symcache_new(pid, &get_symbol_opts());
     }
   }
 
@@ -2370,7 +2364,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
       if (exe_sym_.find(pid_exe) == exe_sym_.end())
       {
         // not cached, create new ProcSyms cache
-        psyms = bcc_symcache_new(pid, &symopts);
+        psyms = bcc_symcache_new(pid, &get_symbol_opts());
         exe_sym_[pid_exe] = std::make_pair(pid, psyms);
       }
       else
@@ -2384,7 +2378,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
       if (pid_sym_.find(pid) == pid_sym_.end())
       {
         // not cached, create new ProcSyms cache
-        psyms = bcc_symcache_new(pid, &symopts);
+        psyms = bcc_symcache_new(pid, &get_symbol_opts());
         pid_sym_[pid] = psyms;
       }
       else
@@ -2395,7 +2389,7 @@ std::string BPFtrace::resolve_usym(uint64_t addr,
     else
     {
       // no user symbol caching, create new bcc cache
-      psyms = bcc_symcache_new(pid, &symopts);
+      psyms = bcc_symcache_new(pid, &get_symbol_opts());
     }
   }
 
@@ -2646,6 +2640,18 @@ void BPFtrace::parse_btf(const std::set<std::string> &modules)
 bool BPFtrace::has_btf_data() const
 {
   return btf_ && btf_->has_data();
+}
+
+struct bcc_symbol_option &BPFtrace::get_symbol_opts()
+{
+  static struct bcc_symbol_option symopts = {
+    .use_debug_file = 1,
+    .check_debug_file_crc = 1,
+    .lazy_symbolize = config_.get(ConfigKeyBool::lazy_symbolication) ? 1 : 0,
+    .use_symbol_type = BCC_SYM_ALL_TYPES,
+  };
+
+  return symopts;
 }
 
 } // namespace bpftrace

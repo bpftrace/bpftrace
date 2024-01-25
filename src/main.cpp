@@ -125,6 +125,7 @@ void usage()
   std::cerr << "    BPFTRACE_DEBUG_OUTPUT             [default: 0] enable bpftrace's internal debugging outputs" << std::endl;
   std::cerr << "    BPFTRACE_KERNEL_BUILD             [default: /lib/modules/$(uname -r)] kernel build directory" << std::endl;
   std::cerr << "    BPFTRACE_KERNEL_SOURCE            [default: /lib/modules/$(uname -r)] kernel headers directory" << std::endl;
+  std::cerr << "    BPFTRACE_LAZY_SYMBOLICATION       [default: 0] symbolicate lazily/on-demand" << std::endl;
   std::cerr << "    BPFTRACE_LOG_SIZE                 [default: 1000000] log size in bytes" << std::endl;
   std::cerr << "    BPFTRACE_MAX_BPF_PROGS            [default: 512] max number of generated BPF programs" << std::endl;
   std::cerr << "    BPFTRACE_MAX_CAT_BYTES            [default: 10k] maximum bytes read by cat builtin" << std::endl;
@@ -307,6 +308,11 @@ static std::optional<struct timespec> get_delta_taitime()
 
   if (!get_bool_env_var("BPFTRACE_DEBUG_OUTPUT",
                         [&](bool x) { bpftrace.debug_output_ = x; }))
+    return false;
+
+  if (!get_bool_env_var("BPFTRACE_LAZY_SYMBOLICATION", [&](bool x) {
+        config_setter.set(ConfigKeyBool::lazy_symbolication, x);
+      }))
     return false;
 
   if (!get_uint64_env_var("BPFTRACE_MAX_MAP_KEYS", [&](uint64_t x) {

@@ -31,6 +31,8 @@
 #include "types.h"
 #include "utils.h"
 
+#include <bcc/bcc_syms.h>
+
 namespace bpftrace {
 
 const int timeout_ms = 100;
@@ -266,6 +268,7 @@ private:
   int print_map_stats(IMap &map, uint32_t top, uint32_t div);
   static uint64_t read_address_from_output(std::string output);
   std::vector<uint8_t> find_empty_key(IMap &map, size_t size) const;
+  struct bcc_symbol_option &get_symbol_opts();
   bool has_iter_ = false;
   int epollfd_ = -1;
   struct ring_buffer *ringbuf_ = nullptr;

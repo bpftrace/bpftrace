@@ -175,6 +175,7 @@ ENVIRONMENT:
     BPFTRACE_DEBUG_OUTPUT               [default: 0] outputs bpftrace's runtime debug messages to the trace_pipe
     BPFTRACE_KERNEL_BUILD               [default: /lib/modules/$(uname -r)] kernel build directory
     BPFTRACE_KERNEL_SOURCE              [default: /lib/modules/$(uname -r)] kernel headers directory
+    BPFTRACE_LAZY_SYMBOLICATION         [default: 0] symbolicate lazily/on-demand
     BPFTRACE_LOG_SIZE                   [default: 1000000] log size in bytes
     BPFTRACE_MAX_BPF_PROGS              [default: 512] max number of generated BPF programs
     BPFTRACE_MAX_CAT_BYTES              [default: 10k] maximum bytes read by cat builtin
@@ -523,13 +524,19 @@ Default: `/lib/modules/$(uname -r)`
 
 bpftrace requires kernel headers for certain features, which are searched for in this directory.
 
-### 9.7 `BPFTRACE_LOG_SIZE`
+### 9.7 `BPFTRACE_LAZY_SYMBOLICATION`
+
+Default: 0
+
+For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
+
+### 9.8 `BPFTRACE_LOG_SIZE`
 
 Default: 1000000
 
 Log size in bytes.
 
-### 9.8 `BPFTRACE_MAX_BPF_PROGS`
+### 9.9 `BPFTRACE_MAX_BPF_PROGS`
 
 Default: 512
 
@@ -537,13 +544,13 @@ This is the maximum number of BPF programs (functions) that bpftrace can generat
 The main purpose of this limit is to prevent bpftrace from hanging since generating a lot of probes
 takes a lot of resources (and it should not happen often).
 
-### 9.9 `BPFTRACE_MAX_CAT_BYTES`
+### 9.10 `BPFTRACE_MAX_CAT_BYTES`
 
 Default: 10k
 
 Maximum bytes read by cat builtin.
 
-### 9.10 `BPFTRACE_MAX_MAP_KEYS`
+### 9.11 `BPFTRACE_MAX_MAP_KEYS`
 
 Default: 4096
 
@@ -551,7 +558,7 @@ This is the maximum number of keys that can be stored in a map. Increasing the v
 memory and increase startup times. There are some cases where you will want to: for example, sampling
 stack traces, recording timestamps for each page, etc.
 
-### 9.11 `BPFTRACE_MAX_PROBES`
+### 9.12 `BPFTRACE_MAX_PROBES`
 
 Default: 512
 
@@ -559,7 +566,7 @@ This is the maximum number of probes that bpftrace can attach to. Increasing the
 memory, increase startup times and can incur high performance overhead or even freeze or crash the
 system.
 
-### 9.12 `BPFTRACE_MAX_STRLEN`
+### 9.13 `BPFTRACE_MAX_STRLEN`
 
 Default: 64
 
@@ -572,13 +579,13 @@ it composes a perf event output buffer). So in practice you can only grow this t
 
 Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
 
-### 9.13 `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
+### 9.14 `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
 
 Default: 0
 
 Maximum should be the number of levels of nested field accesses for tracepoint args. 0 is unlimited.
 
-### 9.14 `BPFTRACE_PERF_RB_PAGES`
+### 9.15 `BPFTRACE_PERF_RB_PAGES`
 
 Default: 64
 
@@ -588,20 +595,20 @@ If you're getting a lot of dropped events bpftrace may not be processing events 
 fast enough. It may be useful to bump the value higher so more events can be queued up. The tradeoff
 is that bpftrace will use more memory.
 
-### 9.15 `BPFTRACE_STACK_MODE`
+### 9.16 `BPFTRACE_STACK_MODE`
 
 Default: bpftrace
 
 Output format for ustack and kstack builtins. Available modes/formats: `bpftrace`, `perf`, and `raw`.
 This can be overwritten at the call site.
 
-### 9.16 `BPFTRACE_STR_TRUNC_TRAILER`
+### 9.17 `BPFTRACE_STR_TRUNC_TRAILER`
 
 Default: `..`
 
 Trailer to add to strings that were truncated. Set to empty string to disable truncation trailers.
 
-### 9.17 `BPFTRACE_VMLINUX`
+### 9.18 `BPFTRACE_VMLINUX`
 
 Default: None
 
@@ -2363,7 +2370,7 @@ Syntax: `str(char *s [, int length])`
 
 Returns the string pointed to by s. `length` can be used to limit the size of the read, and/or introduce
 a null-terminator. By default, the string will have size 64 bytes (tuneable using [env var
-`BPFTRACE_MAX_STRLEN`](#912-bpftrace_max_strlen)).
+`BPFTRACE_MAX_STRLEN`](#913-bpftrace_max_strlen)).
 
 Examples:
 
@@ -3008,7 +3015,7 @@ Syntax: `buf(void *d [, int length])`
 Returns a hex-formatted string of the data pointed to by `d` that is safe to print. Because the
 length of the buffer cannot always be inferred, the `length` parameter may be provided to
 limit the number of bytes that are read. By default, the maximum number of bytes is 64, but this can
-be tuned using the [`BPFTRACE_MAX_STRLEN`](#912-bpftrace_max_strlen) environment variable.
+be tuned using the [`BPFTRACE_MAX_STRLEN`](#913-bpftrace_max_strlen) environment variable.
 
 Bytes with values >=32 and <=126 are printed using their ASCII character, other
 bytes are printed in hex form (e.g. `\x00`).

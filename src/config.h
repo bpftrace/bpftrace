@@ -26,6 +26,7 @@ enum class ConfigSource
 enum class ConfigKeyBool
 {
   cpp_demangle,
+  lazy_symbolication,
 };
 
 enum class ConfigKeyInt
@@ -67,6 +68,7 @@ typedef std::variant<ConfigKeyBool,
 const std::map<std::string, ConfigKey> CONFIG_KEY_MAP = {
   { "cache_user_symbols", ConfigKeyUserSymbolCacheType::default_ },
   { "cpp_demangle", ConfigKeyBool::cpp_demangle },
+  { "lazy_symbolication", ConfigKeyBool::lazy_symbolication },
   { "log_size", ConfigKeyInt::log_size },
   { "max_bpf_progs", ConfigKeyInt::max_bpf_progs },
   { "max_cat_bytes", ConfigKeyInt::max_cat_bytes },

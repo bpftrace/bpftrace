@@ -222,6 +222,12 @@ Default: `/lib/modules/$(uname -r)`
 
 bpftrace requires kernel headers for certain features, which are searched for in this directory.
 
+=== BPFTRACE_LAZY_SYMBOLICATION
+
+Default: 0
+
+For user space symbols, symbolicate lazily/on-demand (1) or symbolicate everything ahead of time (0).
+
 === BPFTRACE_LOG_SIZE
 
 Default: 1000000
