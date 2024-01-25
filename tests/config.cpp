@@ -16,11 +16,14 @@ TEST(Config, get_and_set)
   EXPECT_TRUE(config_setter.set(ConfigKeyBool::cpp_demangle, true));
   EXPECT_EQ(config.get(ConfigKeyBool::cpp_demangle), true);
 
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_cat_bytes, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_cat_bytes), 10);
+  EXPECT_TRUE(config_setter.set(ConfigKeyBool::lazy_symbolication, true));
+  EXPECT_EQ(config.get(ConfigKeyBool::lazy_symbolication), true);
 
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::log_size, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::log_size), 10);
+
+  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_cat_bytes, 10));
+  EXPECT_EQ(config.get(ConfigKeyInt::max_cat_bytes), 10);
 
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_map_keys, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::max_map_keys), 10);
@@ -31,14 +34,14 @@ TEST(Config, get_and_set)
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_bpf_progs, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::max_bpf_progs), 10);
 
+  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_strlen, 10));
+  EXPECT_EQ(config.get(ConfigKeyInt::max_strlen), 10);
+
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_type_res_iterations, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::max_type_res_iterations), 10);
 
   EXPECT_TRUE(config_setter.set(ConfigKeyInt::perf_rb_pages, 10));
   EXPECT_EQ(config.get(ConfigKeyInt::perf_rb_pages), 10);
-
-  EXPECT_TRUE(config_setter.set(ConfigKeyInt::max_strlen, 10));
-  EXPECT_EQ(config.get(ConfigKeyInt::max_strlen), 10);
 
   EXPECT_TRUE(config_setter.set(ConfigKeyString::str_trunc_trailer, "str"));
   EXPECT_EQ(config.get(ConfigKeyString::str_trunc_trailer), "str");

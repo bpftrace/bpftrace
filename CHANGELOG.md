@@ -9,6 +9,8 @@ and this project adheres to
 ## Unreleased
 
 #### Added
+- Add 'lazy_symbolication' config
+  - [#2958](https://github.com/iovisor/bpftrace/pull/2958)
 #### Changed
 #### Deprecated
 #### Removed
