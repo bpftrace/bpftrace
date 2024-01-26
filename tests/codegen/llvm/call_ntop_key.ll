@@ -29,8 +29,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 1 %4, i8 0, i64 16, i1 false)
   %5 = bitcast [16 x i8]* %3 to i32*
   store i32 -1, i32* %5, align 4
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, %inet_t*)*)(i64 %pseudo, %inet_t* %inet)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, %inet_t*)*)(%"struct map_t"* @AT_x, %inet_t* %inet)
   %6 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
@@ -47,8 +46,7 @@ lookup_failure:                                   ; preds = %entry
   %9 = bitcast i64* %initial_value to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %9)
   store i64 1, i64* %initial_value, align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, %inet_t*, i64*, i64)*)(i64 %pseudo1, %inet_t* %inet, i64* %initial_value, i64 1)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, %inet_t*, i64*, i64)*)(%"struct map_t"* @AT_x, %inet_t* %inet, i64* %initial_value, i64 1)
   %10 = bitcast i64* %initial_value to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %10)
   br label %lookup_merge

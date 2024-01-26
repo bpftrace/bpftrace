@@ -70,10 +70,7 @@ public:
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
-  CallInst *CreateBpfPseudoCallId(int mapid);
-  CallInst *CreateBpfPseudoCallId(Map &map);
-  CallInst *CreateBpfPseudoCallValue(int mapid);
-  CallInst *CreateBpfPseudoCallValue(Map &map);
+  Value *GetMapVar(const std::string &map_name);
   CallInst *CreateMapLookup(Map &map,
                             Value *key,
                             const std::string &name = "lookup_elem");
@@ -82,7 +79,7 @@ public:
                              Value *key,
                              const location &loc);
   Value *CreateMapLookupElem(Value *ctx,
-                             int mapid,
+                             const std::string &map_name,
                              Value *key,
                              SizedType &type,
                              const location &loc);
@@ -205,7 +202,7 @@ public:
                     Value *data,
                     size_t size,
                     const location *loc = nullptr);
-  void CreateAtomicIncCounter(int mapfd, uint32_t idx);
+  void CreateAtomicIncCounter(const std::string &map_name, uint32_t idx);
   void CreateMapElemInit(Value *ctx,
                          Map &map,
                          Value *key,
@@ -289,14 +286,14 @@ private:
                                 Builtin &builtin,
                                 AddrSpace as,
                                 const location &loc);
-  CallInst *createMapLookup(int mapid,
+  CallInst *createMapLookup(const std::string &map_name,
                             Value *key,
                             const std::string &name = "lookup_elem");
-  CallInst *createMapLookup(int mapid,
+  CallInst *createMapLookup(const std::string &map_name,
                             Value *key,
                             PointerType *val_ptr_ty,
                             const std::string &name = "lookup_elem");
-  CallInst *createGetScratchMap(int mapid,
+  CallInst *createGetScratchMap(const std::string &map_name,
                                 const std::string &name,
                                 PointerType *val_ptr_ty,
                                 const location &loc,

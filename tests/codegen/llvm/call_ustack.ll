@@ -28,13 +28,12 @@ declare i64 @llvm.bpf.pseudo(i64 %0, i64 %1) #0
 define i64 @"kprobe:f"(i8* %0) section "s_kprobe:f_1" !dbg !91 {
 entry:
   %"@z_key" = alloca i64, align 8
-  %stack_args10 = alloca %stack_t, align 8
+  %stack_args6 = alloca %stack_t, align 8
   %"@y_key" = alloca i64, align 8
-  %stack_args4 = alloca %stack_t, align 8
+  %stack_args2 = alloca %stack_t, align 8
   %"@x_key" = alloca i64, align 8
   %stack_args = alloca %stack_t, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 5)
-  %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo, i64 256)
+  %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, %"struct map_t.4"*, i64)*)(i8* %0, %"struct map_t.4"* @stack_bpftrace_127, i64 256)
   %1 = bitcast %stack_t* %stack_args to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   %2 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 0
@@ -48,46 +47,41 @@ entry:
   %6 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
   store i64 0, i64* %"@x_key", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %stack_t*, i64)*)(i64 %pseudo1, i64* %"@x_key", %stack_t* %stack_args, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %stack_t*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", %stack_t* %stack_args, i64 0)
   %7 = bitcast i64* %"@x_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %7)
-  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 4)
-  %get_stackid3 = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo2, i64 256)
-  %8 = bitcast %stack_t* %stack_args4 to i8*
+  %get_stackid1 = call i64 inttoptr (i64 27 to i64 (i8*, %"struct map_t.3"*, i64)*)(i8* %0, %"struct map_t.3"* @stack_bpftrace_6, i64 256)
+  %8 = bitcast %stack_t* %stack_args2 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %8)
-  %9 = getelementptr %stack_t, %stack_t* %stack_args4, i64 0, i32 0
-  store i64 %get_stackid3, i64* %9, align 8
-  %10 = getelementptr %stack_t, %stack_t* %stack_args4, i64 0, i32 1
-  %get_pid_tgid5 = call i64 inttoptr (i64 14 to i64 ()*)()
-  %11 = trunc i64 %get_pid_tgid5 to i32
+  %9 = getelementptr %stack_t, %stack_t* %stack_args2, i64 0, i32 0
+  store i64 %get_stackid1, i64* %9, align 8
+  %10 = getelementptr %stack_t, %stack_t* %stack_args2, i64 0, i32 1
+  %get_pid_tgid3 = call i64 inttoptr (i64 14 to i64 ()*)()
+  %11 = trunc i64 %get_pid_tgid3 to i32
   store i32 %11, i32* %10, align 4
-  %12 = getelementptr %stack_t, %stack_t* %stack_args4, i64 0, i32 2
+  %12 = getelementptr %stack_t, %stack_t* %stack_args2, i64 0, i32 2
   store i32 0, i32* %12, align 4
   %13 = bitcast i64* %"@y_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %13)
   store i64 0, i64* %"@y_key", align 8
-  %pseudo6 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %update_elem7 = call i64 inttoptr (i64 2 to i64 (i64, i64*, %stack_t*, i64)*)(i64 %pseudo6, i64* %"@y_key", %stack_t* %stack_args4, i64 0)
+  %update_elem4 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.0"*, i64*, %stack_t*, i64)*)(%"struct map_t.0"* @AT_y, i64* %"@y_key", %stack_t* %stack_args2, i64 0)
   %14 = bitcast i64* %"@y_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %14)
-  %pseudo8 = call i64 @llvm.bpf.pseudo(i64 1, i64 3)
-  %get_stackid9 = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo8, i64 256)
-  %15 = bitcast %stack_t* %stack_args10 to i8*
+  %get_stackid5 = call i64 inttoptr (i64 27 to i64 (i8*, %"struct map_t.2"*, i64)*)(i8* %0, %"struct map_t.2"* @stack_perf_127, i64 256)
+  %15 = bitcast %stack_t* %stack_args6 to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
-  %16 = getelementptr %stack_t, %stack_t* %stack_args10, i64 0, i32 0
-  store i64 %get_stackid9, i64* %16, align 8
-  %17 = getelementptr %stack_t, %stack_t* %stack_args10, i64 0, i32 1
-  %get_pid_tgid11 = call i64 inttoptr (i64 14 to i64 ()*)()
-  %18 = trunc i64 %get_pid_tgid11 to i32
+  %16 = getelementptr %stack_t, %stack_t* %stack_args6, i64 0, i32 0
+  store i64 %get_stackid5, i64* %16, align 8
+  %17 = getelementptr %stack_t, %stack_t* %stack_args6, i64 0, i32 1
+  %get_pid_tgid7 = call i64 inttoptr (i64 14 to i64 ()*)()
+  %18 = trunc i64 %get_pid_tgid7 to i32
   store i32 %18, i32* %17, align 4
-  %19 = getelementptr %stack_t, %stack_t* %stack_args10, i64 0, i32 2
+  %19 = getelementptr %stack_t, %stack_t* %stack_args6, i64 0, i32 2
   store i32 0, i32* %19, align 4
   %20 = bitcast i64* %"@z_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %20)
   store i64 0, i64* %"@z_key", align 8
-  %pseudo12 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %update_elem13 = call i64 inttoptr (i64 2 to i64 (i64, i64*, %stack_t*, i64)*)(i64 %pseudo12, i64* %"@z_key", %stack_t* %stack_args10, i64 0)
+  %update_elem8 = call i64 inttoptr (i64 2 to i64 (%"struct map_t.1"*, i64*, %stack_t*, i64)*)(%"struct map_t.1"* @AT_z, i64* %"@z_key", %stack_t* %stack_args6, i64 0)
   %21 = bitcast i64* %"@z_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %21)
   ret i64 0

@@ -49,8 +49,7 @@ entry:
   %15 = bitcast i64* %"@t_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %15)
   store i64 0, i64* %"@t_key", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %"unsigned int8_usym_int64__tuple_t"*, i64)*)(i64 %pseudo, i64* %"@t_key", %"unsigned int8_usym_int64__tuple_t"* %tuple, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %"unsigned int8_usym_int64__tuple_t"*, i64)*)(%"struct map_t"* @AT_t, i64* %"@t_key", %"unsigned int8_usym_int64__tuple_t"* %tuple, i64 0)
   %16 = bitcast i64* %"@t_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %16)
   %17 = bitcast %"unsigned int8_usym_int64__tuple_t"* %tuple to i8*
