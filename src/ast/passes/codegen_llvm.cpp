@@ -203,9 +203,9 @@ void CodegenLLVM::visit(Builtin &builtin)
     AllocaInst *key = b_.CreateAllocaBPF(b_.getInt64Ty(), "elapsed_key");
     b_.CreateStore(b_.getInt64(0), key);
 
-    auto *map = bpftrace_.maps[MapManager::Type::Elapsed].value();
     auto type = CreateUInt64();
-    auto start = b_.CreateMapLookupElem(ctx_, map->id, key, type, builtin.loc);
+    auto start = b_.CreateMapLookupElem(
+        ctx_, to_string(MapManager::Type::Elapsed), key, type, builtin.loc);
     expr_ = b_.CreateGetNs(TimestampMode::boot, builtin.loc);
     expr_ = b_.CreateSub(expr_, start);
     // start won't be on stack, no need to LifeTimeEnd it
@@ -880,8 +880,6 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "printf") {
     // We overload printf call for iterator probe's seq_printf helper.
     if (probetype(current_attach_point_->provider) == ProbeType::iter) {
-      auto mapid =
-          bpftrace_.maps[MapManager::Type::MappedPrintfData].value()->id;
       auto nargs = call.vargs->size() - 1;
 
       int ptr_size = sizeof(unsigned long);
@@ -915,7 +913,8 @@ void CodegenLLVM::visit(Call &call)
       auto size = std::get<1>(ids);
 
       // and load it from the map
-      Value *map_data = b_.CreateBpfPseudoCallValue(mapid);
+      Value *map_data = b_.GetMapVar(
+          to_string(MapManager::Type::MappedPrintfData));
       Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
       // and finally the seq_printf call
@@ -936,12 +935,12 @@ void CodegenLLVM::visit(Call &call)
     }
   } else if (call.func == "debugf") {
     // format string was pre-saved in the map, referenced by mapped_printf_id_
-    auto mapid = bpftrace_.maps[MapManager::Type::MappedPrintfData].value()->id;
     auto ids = bpftrace_.resources.mapped_printf_ids.at(mapped_printf_id_);
     auto idx = std::get<0>(ids);
     auto size = std::get<1>(ids);
 
-    Value *map_data = b_.CreateBpfPseudoCallValue(mapid);
+    Value *map_data = b_.GetMapVar(
+        to_string(MapManager::Type::MappedPrintfData));
     Value *fmt = b_.CreateAdd(map_data, b_.getInt64(idx));
 
     std::vector<Value *> values;
@@ -3281,10 +3280,7 @@ void CodegenLLVM::createMapDefinition(const std::string &name,
                                       const MapKey &key,
                                       const SizedType &value_type)
 {
-  std::string var_name = name;
-  if (var_name[0] == '@')
-    var_name = "AT_" + var_name.substr(1);
-
+  auto var_name = bpf_map_name(name);
   auto debuginfo = debug_.createMapEntry(
       var_name, map_type, max_entries, key, value_type);
 

@@ -37,7 +37,6 @@ private:
                       MapManager &bpftrace);
 
   void relocateInsns();
-  void relocateMaps();
   void relocateFuncInfos();
   void appendFileFuncInfos(const struct btf_ext_info_sec *src,
                            size_t func_info_rec_size,

@@ -40,8 +40,7 @@ entry:
   %12 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
   store i64 0, i64* %"@_key", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"*, i64)*)(i64 %pseudo, i64* %"@_key", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", %"uprobe:/tmp/bpftrace-test-dwarf-data:func_1_args"* %args, i64 0)
   %13 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %13)
   ret i64 0

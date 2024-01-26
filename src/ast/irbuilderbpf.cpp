@@ -285,55 +285,31 @@ CallInst *IRBuilderBPF::createCall(FunctionType *callee_type,
 #endif
 }
 
-CallInst *IRBuilderBPF::CreateBpfPseudoCallId(int mapid)
+Value *IRBuilderBPF::GetMapVar(const std::string &map_name)
 {
-  Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
-  return CreateCall(pseudo_func,
-                    { getInt64(BPF_PSEUDO_MAP_FD), getInt64(mapid) },
-                    "pseudo");
-}
-
-CallInst *IRBuilderBPF::CreateBpfPseudoCallId(Map &map)
-{
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  return CreateBpfPseudoCallId(mapid);
-}
-
-CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(int mapid)
-{
-  Function *pseudo_func = module_.getFunction("llvm.bpf.pseudo");
-  return CreateCall(pseudo_func,
-                    { getInt64(BPF_PSEUDO_MAP_VALUE), getInt64(mapid) },
-                    "pseudo");
-}
-
-CallInst *IRBuilderBPF::CreateBpfPseudoCallValue(Map &map)
-{
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  return CreateBpfPseudoCallValue(mapid);
+  return module_.getGlobalVariable(bpf_map_name(map_name));
 }
 
 CallInst *IRBuilderBPF::CreateMapLookup(Map &map,
                                         Value *key,
                                         const std::string &name)
 {
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  return createMapLookup(mapid, key, name);
+  return createMapLookup(map.ident, key, name);
 }
 
-CallInst *IRBuilderBPF::createMapLookup(int mapid,
+CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
                                         Value *key,
                                         const std::string &name)
 {
-  return createMapLookup(mapid, key, getInt8PtrTy(), name);
+  return createMapLookup(map_name, key, getInt8PtrTy(), name);
 }
 
-CallInst *IRBuilderBPF::createMapLookup(int mapid,
+CallInst *IRBuilderBPF::createMapLookup(const std::string &map_name,
                                         Value *key,
                                         PointerType *val_ptr_ty,
                                         const std::string &name)
 {
-  Value *map_ptr = CreateBpfPseudoCallId(mapid);
+  Value *map_ptr = GetMapVar(map_name);
   // void *map_lookup_elem(struct bpf_map * map, void * key)
   // Return: Map value or NULL
 
@@ -351,7 +327,7 @@ CallInst *IRBuilderBPF::createMapLookup(int mapid,
 CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
                                          const location &loc)
 {
-  return createGetScratchMap(bpftrace_.maps[MapManager::Type::Join].value()->id,
+  return createGetScratchMap(to_string(MapManager::Type::Join),
                              "join",
                              getInt8PtrTy(),
                              loc,
@@ -360,7 +336,7 @@ CallInst *IRBuilderBPF::CreateGetJoinMap(BasicBlock *failure_callback,
 
 // createGetScratchMap will jump to failure_callback if it cannot find the map
 // value
-CallInst *IRBuilderBPF::createGetScratchMap(int mapid,
+CallInst *IRBuilderBPF::createGetScratchMap(const std::string &map_name,
                                             const std::string &name,
                                             PointerType *val_ptr_ty,
                                             const location &loc,
@@ -373,7 +349,7 @@ CallInst *IRBuilderBPF::createGetScratchMap(int mapid,
   CreateStore(getInt32(key), keyAlloc);
 
   CallInst *call = createMapLookup(
-      mapid, keyAlloc, val_ptr_ty, "lookup_" + name + "_map");
+      map_name, keyAlloc, val_ptr_ty, "lookup_" + name + "_map");
   CreateLifetimeEnd(keyAlloc);
 
   Function *parent = GetInsertBlock()->getParent();
@@ -404,18 +380,17 @@ Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
                                          const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  return CreateMapLookupElem(ctx, mapid, key, map.type, loc);
+  return CreateMapLookupElem(ctx, map.ident, key, map.type, loc);
 }
 
 Value *IRBuilderBPF::CreateMapLookupElem(Value *ctx,
-                                         int mapid,
+                                         const std::string &map_name,
                                          Value *key,
                                          SizedType &type,
                                          const location &loc)
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
-  CallInst *call = createMapLookup(mapid, key);
+  CallInst *call = createMapLookup(map_name, key);
 
   // Check if result == 0
   Function *parent = GetInsertBlock()->getParent();
@@ -472,7 +447,7 @@ void IRBuilderBPF::CreateMapUpdateElem(Value *ctx,
                                        const location &loc,
                                        int64_t flags)
 {
-  Value *map_ptr = CreateBpfPseudoCallId(map);
+  Value *map_ptr = GetMapVar(map.ident);
 
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(key->getType()->isPointerTy());
@@ -505,7 +480,7 @@ void IRBuilderBPF::CreateMapDeleteElem(Value *ctx,
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
   assert(key->getType()->isPointerTy());
-  Value *map_ptr = CreateBpfPseudoCallId(map);
+  Value *map_ptr = GetMapVar(map.ident);
 
   // long map_delete_elem(&map, &key)
   // Return: 0 on success or negative error
@@ -527,7 +502,7 @@ void IRBuilderBPF::CreateForEachMapElem(Value *ctx,
                                         Value *callback_ctx,
                                         const location &loc)
 {
-  Value *map_ptr = CreateBpfPseudoCallId(map);
+  Value *map_ptr = GetMapVar(map.ident);
 
   // long bpf_for_each_map_elem(struct bpf_map *map, void *callback_fn, void
   // *callback_ctx, u64 flags)
@@ -1364,8 +1339,7 @@ CallInst *IRBuilderBPF::CreateGetStackId(Value *ctx,
 {
   assert(ctx && ctx->getType() == getInt8PtrTy());
 
-  Value *map_ptr = CreateBpfPseudoCallId(
-      bpftrace_.maps[stack_type].value()->id);
+  Value *map_ptr = GetMapVar(stack_type.name());
 
   int flags = 0;
   if (ustack)
@@ -1439,8 +1413,7 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
                                        size_t size,
                                        const location *loc)
 {
-  Value *map_ptr = CreateBpfPseudoCallId(
-      bpftrace_.maps[MapManager::Type::Ringbuf].value()->id);
+  Value *map_ptr = GetMapVar(to_string(MapManager::Type::Ringbuf));
 
   // long bpf_ringbuf_output(void *ringbuf, void *data, u64 size, u64 flags)
   FunctionType *ringbuf_output_func_type = FunctionType::get(
@@ -1465,20 +1438,20 @@ void IRBuilderBPF::CreateRingbufOutput(Value *data,
   CreateCondBr(condition, loss_block, merge_block);
 
   SetInsertPoint(loss_block);
-  CreateAtomicIncCounter(
-      bpftrace_.maps[MapManager::Type::RingbufLossCounter].value()->id,
-      bpftrace_.rb_loss_cnt_key_);
+  CreateAtomicIncCounter(to_string(MapManager::Type::RingbufLossCounter),
+                         bpftrace_.rb_loss_cnt_key_);
   CreateBr(merge_block);
 
   SetInsertPoint(merge_block);
 }
 
-void IRBuilderBPF::CreateAtomicIncCounter(int mapid, uint32_t idx)
+void IRBuilderBPF::CreateAtomicIncCounter(const std::string &map_name,
+                                          uint32_t idx)
 {
   AllocaInst *key = CreateAllocaBPF(getInt32Ty(), "key");
   CreateStore(getInt32(idx), key);
 
-  CallInst *call = createMapLookup(mapid, key);
+  CallInst *call = createMapLookup(map_name, key);
   Function *parent = GetInsertBlock()->getParent();
   BasicBlock *lookup_success_block = BasicBlock::Create(module_.getContext(),
                                                         "lookup_success",
@@ -1532,8 +1505,7 @@ void IRBuilderBPF::CreateMapElemAdd(Value *ctx,
                                     Value *val,
                                     const location &loc)
 {
-  int mapid = bpftrace_.maps[map.ident].value()->id;
-  CallInst *call = createMapLookup(mapid, key);
+  CallInst *call = CreateMapLookup(map, key);
   SizedType &type = map.type;
 
   Function *parent = GetInsertBlock()->getParent();
@@ -1577,8 +1549,7 @@ void IRBuilderBPF::CreatePerfEventOutput(Value *ctx,
                                          size_t size,
                                          const location *loc)
 {
-  Value *map_ptr = CreateBpfPseudoCallId(
-      bpftrace_.maps[MapManager::Type::PerfEvent].value()->id);
+  Value *map_ptr = GetMapVar(to_string(MapManager::Type::PerfEvent));
 
   Value *flags_val = getInt64(BPF_F_CURRENT_CPU);
   Value *size_val = getInt64(size);
@@ -1675,8 +1646,7 @@ CallInst *IRBuilderBPF::CreateSkbOutput(Value *skb,
 {
   Value *flags, *map_ptr, *size_val;
 
-  map_ptr = CreateBpfPseudoCallId(
-      bpftrace_.maps[MapManager::Type::PerfEvent].value()->id);
+  map_ptr = GetMapVar(to_string(MapManager::Type::PerfEvent));
 
   flags = len;
   flags = CreateShl(flags, 32);

@@ -25,8 +25,7 @@ entry:
   %1 = bitcast i64* %"@_key" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %1)
   store i64 0, i64* %"@_key", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i64*)*)(i64 %pseudo, i64* %"@_key")
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t"*, i64*)*)(%"struct map_t"* @AT_, i64* %"@_key")
   %2 = bitcast i64* %lookup_elem_val to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
@@ -50,8 +49,7 @@ lookup_merge:                                     ; preds = %lookup_failure, %lo
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %6)
   %7 = add i64 %4, 1
   store i64 %7, i64* %"@_newval", align 8
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo1, i64* %"@_key", i64* %"@_newval", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_, i64* %"@_key", i64* %"@_newval", i64 0)
   %8 = trunc i64 %update_elem to i32
   %9 = icmp sge i32 %8, 0
   br i1 %9, label %helper_merge, label %helper_failure
@@ -65,8 +63,7 @@ helper_failure:                                   ; preds = %lookup_merge
   store i64 0, i64* %12, align 8
   %13 = getelementptr %helper_error_t, %helper_error_t* %helper_error_t, i64 0, i32 2
   store i32 %8, i32* %13, align 4
-  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (i64, %helper_error_t*, i64, i64)*)(i64 %pseudo2, %helper_error_t* %helper_error_t, i64 20, i64 0)
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, %helper_error_t*, i64, i64)*)(%"struct map_t.0"* @ringbuf, %helper_error_t* %helper_error_t, i64 20, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -81,25 +78,24 @@ event_loss_counter:                               ; preds = %helper_failure
   %16 = bitcast i32* %key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %16)
   store i32 0, i32* %key, align 4
-  %pseudo3 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %lookup_elem4 = call i8* inttoptr (i64 1 to i8* (i64, i32*)*)(i64 %pseudo3, i32* %key)
-  %map_lookup_cond8 = icmp ne i8* %lookup_elem4, null
-  br i1 %map_lookup_cond8, label %lookup_success5, label %lookup_failure6
+  %lookup_elem1 = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key)
+  %map_lookup_cond5 = icmp ne i8* %lookup_elem1, null
+  br i1 %map_lookup_cond5, label %lookup_success2, label %lookup_failure3
 
-counter_merge:                                    ; preds = %lookup_merge7, %helper_failure
+counter_merge:                                    ; preds = %lookup_merge4, %helper_failure
   %17 = bitcast %helper_error_t* %helper_error_t to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %17)
   br label %helper_merge
 
-lookup_success5:                                  ; preds = %event_loss_counter
-  %18 = bitcast i8* %lookup_elem4 to i64*
+lookup_success2:                                  ; preds = %event_loss_counter
+  %18 = bitcast i8* %lookup_elem1 to i64*
   %19 = atomicrmw add i64* %18, i64 1 seq_cst
-  br label %lookup_merge7
+  br label %lookup_merge4
 
-lookup_failure6:                                  ; preds = %event_loss_counter
-  br label %lookup_merge7
+lookup_failure3:                                  ; preds = %event_loss_counter
+  br label %lookup_merge4
 
-lookup_merge7:                                    ; preds = %lookup_failure6, %lookup_success5
+lookup_merge4:                                    ; preds = %lookup_failure3, %lookup_success2
   %20 = bitcast i32* %key to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %20)
   br label %counter_merge

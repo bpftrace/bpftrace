@@ -27,8 +27,7 @@ entry:
   call void @llvm.memset.p0i8.i64(i8* align 1 %2, i8 0, i64 24, i1 false)
   %3 = getelementptr %printf_t, %printf_t* %printf_args, i32 0, i32 0
   store i64 0, i64* %3, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, i64, i64)*)(i8* %0, i64 %pseudo, i64 256)
+  %get_stackid = call i64 inttoptr (i64 27 to i64 (i8*, %"struct map_t"*, i64)*)(i8* %0, %"struct map_t"* @stack_bpftrace_127, i64 256)
   %4 = bitcast %stack_t* %stack_args to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %4)
   %5 = getelementptr %stack_t, %stack_t* %stack_args, i64 0, i32 0
@@ -43,8 +42,7 @@ entry:
   %10 = bitcast [16 x i8]* %9 to i8*
   %11 = bitcast %stack_t* %stack_args to i8*
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %10, i8* align 1 %11, i64 16, i1 false)
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (i64, %printf_t*, i64, i64)*)(i64 %pseudo1, %printf_t* %printf_args, i64 24, i64 0)
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t.0"*, %printf_t*, i64, i64)*)(%"struct map_t.0"* @ringbuf, %printf_t* %printf_args, i64 24, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -52,8 +50,7 @@ event_loss_counter:                               ; preds = %entry
   %12 = bitcast i32* %key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %12)
   store i32 0, i32* %key, align 4
-  %pseudo2 = call i64 @llvm.bpf.pseudo(i64 1, i64 2)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i32*)*)(i64 %pseudo2, i32* %key)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t.1"*, i32*)*)(%"struct map_t.1"* @ringbuf_loss_counter, i32* %key)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 

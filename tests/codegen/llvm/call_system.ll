@@ -25,8 +25,7 @@ entry:
   store i64 10000, i64* %3, align 8
   %4 = getelementptr %system_t, %system_t* %system_args, i32 0, i32 1
   store i64 100, i64* %4, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (i64, %system_t*, i64, i64)*)(i64 %pseudo, %system_t* %system_args, i64 16, i64 0)
+  %ringbuf_output = call i64 inttoptr (i64 130 to i64 (%"struct map_t"*, %system_t*, i64, i64)*)(%"struct map_t"* @ringbuf, %system_t* %system_args, i64 16, i64 0)
   %ringbuf_loss = icmp slt i64 %ringbuf_output, 0
   br i1 %ringbuf_loss, label %event_loss_counter, label %counter_merge
 
@@ -34,8 +33,7 @@ event_loss_counter:                               ; preds = %entry
   %5 = bitcast i32* %key to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %5)
   store i32 0, i32* %key, align 4
-  %pseudo1 = call i64 @llvm.bpf.pseudo(i64 1, i64 1)
-  %lookup_elem = call i8* inttoptr (i64 1 to i8* (i64, i32*)*)(i64 %pseudo1, i32* %key)
+  %lookup_elem = call i8* inttoptr (i64 1 to i8* (%"struct map_t.0"*, i32*)*)(%"struct map_t.0"* @ringbuf_loss_counter, i32* %key)
   %map_lookup_cond = icmp ne i8* %lookup_elem, null
   br i1 %map_lookup_cond, label %lookup_success, label %lookup_failure
 

@@ -24,8 +24,7 @@ entry:
   %2 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store i64 1, i64* %"@x_val", align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
-  %update_elem = call i64 inttoptr (i64 2 to i64 (i64, i64*, i64*, i64)*)(i64 %pseudo, i64* %"@x_key", i64* %"@x_val", i64 0)
+  %update_elem = call i64 inttoptr (i64 2 to i64 (%"struct map_t"*, i64*, i64*, i64)*)(%"struct map_t"* @AT_x, i64* %"@x_key", i64* %"@x_val", i64 0)
   %3 = bitcast i64* %"@x_val" to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %3)
   %4 = bitcast i64* %"@x_key" to i8*
@@ -49,9 +48,8 @@ entry:
   %2 = bitcast i64* %len to i8*
   call void @llvm.lifetime.start.p0i8(i64 -1, i8* %2)
   store i64 0, i64* %len, align 8
-  %pseudo = call i64 @llvm.bpf.pseudo(i64 1, i64 0)
   %3 = bitcast i64* %len to i8*
-  %for_each_map_elem = call i64 inttoptr (i64 164 to i64 (i64, i64 (i8*, i8*, i8*, i8*)*, i8*, i64)*)(i64 %pseudo, i64 (i8*, i8*, i8*, i8*)* @map_len_cb, i8* %3, i64 0)
+  %for_each_map_elem = call i64 inttoptr (i64 164 to i64 (%"struct map_t"*, i64 (i8*, i8*, i8*, i8*)*, i8*, i64)*)(%"struct map_t"* @AT_x, i64 (i8*, i8*, i8*, i8*)* @map_len_cb, i8* %3, i64 0)
   %4 = load i64, i64* %len, align 8
   %5 = bitcast i64* %len to i8*
   call void @llvm.lifetime.end.p0i8(i64 -1, i8* %5)

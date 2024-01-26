@@ -219,6 +219,7 @@ void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
   map->id = id;
   map->printable_ = false;
   maps_by_type_[t] = map.get();
+  maps_by_name_[to_string(t)] = map.get();
   maps_by_id_.emplace_back(std::move(map));
 }
 
@@ -243,6 +244,7 @@ void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
   map->id = id;
   map->printable_ = false;
   stackid_maps_[t] = map.get();
+  maps_by_name_[t.name()] = map.get();
   maps_by_id_.emplace_back(std::move(map));
 }
 
