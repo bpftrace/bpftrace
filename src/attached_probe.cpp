@@ -1067,7 +1067,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
                                         const std::string &probe_name,
                                         const std::vector<std::string> &funcs,
                                         std::vector<std::string> &syms,
-                                        std::vector<uint64_t> &offsets)
+                                        std::vector<unsigned long> &offsets)
 {
   struct bcc_symbol_option option = {};
   int err;
@@ -1132,7 +1132,7 @@ static void resolve_offset_uprobe_multi(const std::string &path,
 void AttachedProbe::attach_multi_uprobe(int pid)
 {
   std::vector<std::string> syms;
-  std::vector<uint64_t> offsets;
+  std::vector<unsigned long> offsets;
   unsigned int i;
 
   // Resolve probe_.funcs into offsets and syms vector
