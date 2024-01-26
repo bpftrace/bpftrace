@@ -128,14 +128,14 @@ public:
                         StackType stack_type,
                         int indent = 0);
   std::string resolve_buf(char *buf, size_t size);
-  std::string resolve_ksym(uintptr_t addr, bool show_offset=false);
-  std::string resolve_usym(uintptr_t addr,
+  std::string resolve_ksym(uint64_t addr, bool show_offset = false);
+  std::string resolve_usym(uint64_t addr,
                            int pid,
                            int probe_id,
                            bool show_offset = false,
                            bool show_module = false);
-  std::string resolve_inet(int af, const uint8_t* inet) const;
-  std::string resolve_uid(uintptr_t addr) const;
+  std::string resolve_inet(int af, const uint8_t *inet) const;
+  std::string resolve_uid(uint64_t addr) const;
   std::string resolve_timestamp(uint32_t mode,
                                 uint32_t strftime_id,
                                 uint64_t nsecs);
