@@ -20,25 +20,10 @@ AlwaysBreakBeforeMultilineStrings: false
 AlwaysBreakTemplateDeclarations: true
 BinPackArguments: false
 BinPackParameters: false
-BraceWrapping:
-  # AfterCaseLabel was added in clang9
-  #AfterCaseLabel:        true
-  AfterClass:            true
-  AfterControlStatement: true
-  AfterEnum:             true
-  AfterFunction:         true
-  AfterNamespace:        false
-  AfterStruct:           true
-  AfterUnion:            true
-  AfterExternBlock:      true
-  BeforeCatch:           true
-  BeforeElse:            true
-  IndentBraces:          false
-  SplitEmptyFunction:    true
-  SplitEmptyRecord:      true
-  SplitEmptyNamespace:   true
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
 BreakBeforeInheritanceComma: false
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
