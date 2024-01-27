@@ -76,7 +76,7 @@ void FieldAnalyser::visit(Map &map)
     sized_type_ = it->second;
 }
 
-void FieldAnalyser::visit(Variable &var __attribute__((unused)))
+void FieldAnalyser::visit(Variable &var)
 {
   auto it = var_types_.find(var.ident);
   if (it != var_types_.end())
