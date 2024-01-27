@@ -256,6 +256,32 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(task_struct->GetField("d").bitfield->mask, 0xFFFFFU);
 }
 
+TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
+{
+  BPFtrace bpftrace;
+  bpftrace.parse_btf({});
+  test(bpftrace, "BEGIN { @ = (struct FirstFieldsAreAnonUnion *)0; }");
+
+  ASSERT_TRUE(bpftrace.structs.Has("struct FirstFieldsAreAnonUnion"));
+  auto record =
+      bpftrace.structs.Lookup("struct FirstFieldsAreAnonUnion").lock();
+
+  ASSERT_TRUE(record->HasField("a"));
+  EXPECT_EQ(record->GetField("a").type.type, Type::integer);
+  EXPECT_EQ(record->GetField("a").type.GetSize(), 4U);
+  EXPECT_EQ(record->GetField("a").offset, 0);
+
+  ASSERT_TRUE(record->HasField("b"));
+  EXPECT_EQ(record->GetField("b").type.type, Type::integer);
+  EXPECT_EQ(record->GetField("b").type.GetSize(), 4U);
+  EXPECT_EQ(record->GetField("b").offset, 0);
+
+  ASSERT_TRUE(record->HasField("c"));
+  EXPECT_EQ(record->GetField("c").type.type, Type::integer);
+  EXPECT_EQ(record->GetField("c").type.GetSize(), 4U);
+  EXPECT_EQ(record->GetField("c").offset, 4);
+}
+
 #ifdef HAVE_LIBDW
 
 #include "dwarf_common.h"

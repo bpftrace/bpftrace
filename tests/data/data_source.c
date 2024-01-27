@@ -36,6 +36,16 @@ struct Foo3 *func_3(int a, int *b, struct Foo1 *foo1)
   return 0;
 }
 
+struct FirstFieldsAreAnonUnion {
+  union {
+    int a;
+    int b;
+  };
+  int c;
+};
+
+struct FirstFieldsAreAnonUnion first_fields_anon_union;
+
 struct Arrays {
   int int_arr[4];
   char char_arr[8];

@@ -829,7 +829,7 @@ void BTF::resolve_fields(const BTFId &type_id,
     if (btf_is_composite(field_type) &&
         (field_name.empty() || field_name == "(anon)")) {
       resolve_fields(field_id, record, field_offset);
-      return;
+      continue;
     }
 
     record->AddField(field_name,
