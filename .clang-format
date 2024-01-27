@@ -53,10 +53,6 @@ Cpp11BracedListStyle: false
 DerivePointerAlignment: true
 DisableFormat: false
 FixNamespaceComments: true
-ForEachMacros:
-  - foreach
-  - Q_FOREACH
-  - BOOST_FOREACH
 IncludeBlocks:   Preserve
 IncludeCategories:
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
