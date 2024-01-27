@@ -43,7 +43,10 @@ add_executable(bpftrace_test
 )
 
 add_subdirectory(data)
-add_dependencies(bpftrace_test debuginfo_data)
+if(${LIBDW_FOUND})
+  add_dependencies(bpftrace_test debuginfo_dwarf_data)
+endif()
+add_dependencies(bpftrace_test debuginfo_btf_data)
 target_include_directories(bpftrace_test PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_compile_definitions(bpftrace_test PRIVATE TEST_CODEGEN_LOCATION="${CMAKE_SOURCE_DIR}/tests/codegen/llvm/")
