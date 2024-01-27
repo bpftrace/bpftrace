@@ -115,8 +115,11 @@
                   coreutils
                   findutils
                   gawk
+                  git
                   gnugrep
                   kmod
+                  # For git-clang-format
+                  libclang.python
                   nftables
                   procps
                   python3
