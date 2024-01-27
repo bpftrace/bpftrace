@@ -109,6 +109,15 @@ list of known such tests:
 What usually helps, is restarting the CI. This is simple on your own fork but
 requires one of the maintainers for pull requests.
 
+## Coding guidelines
+
+This is not about the formatting of the source code (we have `clang-format`
+for that). Rather, it's about the semantics of the code and what language
+features we try to use / avoid.
+
+Please see [coding_guidelines.md](./coding_guidelines.md) for a full treatment
+on the topic.
+
 ## Code style
 
 We use clang-format with our custom config for formatting code. This was
