@@ -15,6 +15,8 @@ and this project adheres to
 #### Deprecated
 #### Removed
 #### Fixed
+- Fix field resolution on structs with anon union as first field
+  - [#2964](https://github.com/iovisor/bpftrace/pull/2964)
 #### Docs
 #### Tools
 
