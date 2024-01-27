@@ -13,19 +13,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: recursive
-    - name: Install clang-format
-      run: sudo apt-get install clang-format
-    - name: Download git-clang-format
-      run: wget https://raw.githubusercontent.com/llvm-mirror/clang/master/tools/clang-format/git-clang-format
-    - name: Install git-clang-format
-      run: sudo install -t /bin git-clang-format
-    - name: Fetch origin master
-      run: git fetch --no-tags --prune --depth=1 origin master
+        fetch-depth: 0
+    - uses: DeterminateSystems/nix-installer-action@v4
+    - uses: DeterminateSystems/magic-nix-cache-action@v2
     - name: clang-format
-      run: git clang-format origin/master
-    - name: diff
-      run: git diff --exit-code
+      run: nix develop --command git clang-format --diff origin/master
 
   build_test:
     runs-on: ubuntu-latest
