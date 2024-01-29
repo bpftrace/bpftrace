@@ -945,6 +945,46 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
     return ret;
   }
 
+  // resolve return program
+  std::optional<BpfProgram> retprogram = std::nullopt;
+  if (probe.ret.index >= 0) {
+    name = get_section_name_for_probe(probe.ret.name,
+                                      probe.ret.index,
+                                      usdt_location_idx);
+
+    orig_name = get_section_name_for_probe(probe.ret.orig_name,
+                                           probe.ret.index,
+                                           usdt_location_idx);
+
+    auto rp = BpfProgram::CreateFromBytecode(bytecode, name, maps);
+    if (!rp) {
+      auto orig_program = BpfProgram::CreateFromBytecode(bytecode,
+                                                         orig_name,
+                                                         maps);
+      if (orig_program)
+        rp.emplace(std::move(*orig_program));
+    }
+
+    retprogram.emplace(std::move(*rp));
+
+    if (!retprogram) {
+      if (probe.ret.name != probe.ret.orig_name)
+        LOG(ERROR) << "Code not generated for probe: " << probe.name
+                   << " from: " << probe.orig_name;
+      else
+        LOG(ERROR) << "Code not generated for probe: " << probe.name;
+      return ret;
+    }
+
+    try {
+      retprogram->assemble();
+    } catch (const std::runtime_error &ex) {
+      LOG(ERROR) << "Failed to assemble program for probe: " << probe.ret.name
+                 << ", " << ex.what();
+      return ret;
+    }
+  }
+
   try {
     pid_t pid = child_ ? child_->pid() : this->pid();
 
@@ -966,8 +1006,12 @@ std::vector<std::unique_ptr<AttachedProbe>> BPFtrace::attach_probe(
           probe, std::move(*program), pid, *feature_, *btf_));
       return ret;
     } else {
-      ret.emplace_back(std::make_unique<AttachedProbe>(
-          probe, std::move(*program), safe_mode_, *feature_, *btf_));
+      ret.emplace_back(std::make_unique<AttachedProbe>(probe,
+                                                       std::move(*program),
+                                                       safe_mode_,
+                                                       *feature_,
+                                                       *btf_,
+                                                       std::move(retprogram)));
       return ret;
     }
   } catch (const EnospcException &e) {
@@ -1150,6 +1194,7 @@ void BPFtrace::merge_kprobes(void)
 
     kprobe.ret.index = kretprobe.index;
     kprobe.ret.name = kretprobe.name;
+    kprobe.ret.orig_name = kretprobe.orig_name;
 
     retkprobes.push_back(kretprobe);
   }
