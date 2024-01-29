@@ -78,6 +78,31 @@ Probe BPFtrace::generateWatchpointSetupProbe(const std::string &func,
   return setup_probe;
 }
 
+bool BPFtrace::need_expansion(ast::AttachPoint *attach_point,
+                              bool &underspecified_usdt_probe)
+{
+  // An underspecified usdt probe is a probe that has no wildcards and
+  // either an empty namespace or a specified PID.
+  // We try to find a unique match for such a probe.
+  underspecified_usdt_probe = probetype(attach_point->provider) ==
+                                  ProbeType::usdt &&
+                              !has_wildcard(attach_point->target) &&
+                              !has_wildcard(attach_point->ns) &&
+                              !has_wildcard(attach_point->func) &&
+                              (attach_point->ns.empty() || pid() > 0);
+
+  if (attach_point->need_expansion &&
+      (has_wildcard(attach_point->func) || has_wildcard(attach_point->target) ||
+       has_wildcard(attach_point->ns) || underspecified_usdt_probe))
+    return true;
+
+  // do expansion path for for single kprobe/kretprobe when
+  // kprobe_multi is supported
+  return (probetype(attach_point->provider) == ProbeType::kprobe ||
+          probetype(attach_point->provider) == ProbeType::kretprobe) &&
+         feature_->has_kprobe_multi();
+}
+
 int BPFtrace::add_probe(ast::Probe &p)
 {
   for (auto attach_point : *p.attach_points) {
@@ -96,20 +121,10 @@ int BPFtrace::add_probe(ast::Probe &p)
       continue;
     }
 
+    bool underspecified_usdt_probe;
+
     std::vector<std::string> attach_funcs;
-    // An underspecified usdt probe is a probe that has no wildcards and
-    // either an empty namespace or a specified PID.
-    // We try to find a unique match for such a probe.
-    bool underspecified_usdt_probe = probetype(attach_point->provider) ==
-                                         ProbeType::usdt &&
-                                     !has_wildcard(attach_point->target) &&
-                                     !has_wildcard(attach_point->ns) &&
-                                     !has_wildcard(attach_point->func) &&
-                                     (attach_point->ns.empty() || pid() > 0);
-    if (attach_point->need_expansion &&
-        (has_wildcard(attach_point->func) ||
-         has_wildcard(attach_point->target) || has_wildcard(attach_point->ns) ||
-         underspecified_usdt_probe)) {
+    if (need_expansion(attach_point, underspecified_usdt_probe)) {
       std::set<std::string> matches;
       try {
         matches = probe_matcher_->get_matches_for_ap(*attach_point);
@@ -128,8 +143,8 @@ int BPFtrace::add_probe(ast::Probe &p)
 
       attach_funcs.insert(attach_funcs.end(), matches.begin(), matches.end());
 
-      if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
-          !p.need_expansion && attach_funcs.size() &&
+      if (feature_->has_kprobe_multi() && !p.need_expansion &&
+          attach_funcs.size() &&
           (probetype(attach_point->provider) == ProbeType::kprobe ||
            probetype(attach_point->provider) == ProbeType::kretprobe) &&
           attach_point->target.empty()) {
