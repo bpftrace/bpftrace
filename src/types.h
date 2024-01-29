@@ -545,6 +545,12 @@ struct Probe {
   uint64_t func_offset = 0;
   std::vector<std::string> funcs;
 
+  struct {
+    int index = -1;
+    std::string name;
+    std::string orig_name;
+  } ret;
+
 private:
   friend class cereal::access;
   template <typename Archive>

@@ -1118,6 +1118,62 @@ int BPFtrace::prerun() const
   return 0;
 }
 
+void BPFtrace::merge_kprobes(void)
+{
+  std::vector<Probe> retkprobes;
+
+  for (auto &kprobe : resources.probes) {
+    // kprobes only
+    if (kprobe.type != ProbeType::kprobe)
+      continue;
+
+    // with kprobe_multi attach
+    if (!kprobe.funcs.size())
+      continue;
+
+    auto rit = std::find_if(
+        resources.probes.begin(), resources.probes.end(), [&](const auto &e) {
+          if (e.type != ProbeType::kretprobe)
+            return false;
+
+          if (e.attach_point == kprobe.attach_point)
+            return true;
+
+          return e.funcs.size() ==
+                 kprobe.funcs.size() /* && TODO match funcs */;
+        });
+
+    if (rit == resources.probes.end())
+      continue;
+
+    auto kretprobe = *rit;
+
+    kprobe.ret.index = kretprobe.index;
+    kprobe.ret.name = kretprobe.name;
+
+    retkprobes.push_back(kretprobe);
+  }
+
+  for (auto it = resources.probes.begin(); it != resources.probes.end();) {
+    auto kretprobe = *it;
+
+    if (kretprobe.type != ProbeType::kretprobe) {
+      it++;
+      continue;
+    }
+
+    auto found = std::any_of(
+        retkprobes.begin(), retkprobes.end(), [&](const auto &cand) {
+          return kretprobe.attach_point == cand.attach_point;
+        });
+
+    if (found)
+      it = resources.probes.erase(it);
+    else
+      it++;
+  }
+}
+
 int BPFtrace::run(BpfBytecode bytecode)
 {
   int err = prerun();
@@ -1167,6 +1223,8 @@ int BPFtrace::run(BpfBytecode bytecode)
       return -1;
     }
   }
+
+  merge_kprobes();
 
   // The kernel appears to fire some probes in the order that they were
   // attached and others in reverse order. In order to make sure that blocks

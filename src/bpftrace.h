@@ -225,6 +225,7 @@ public:
 private:
   bool need_expansion(ast::AttachPoint *attach_point,
                       bool &underspecified_usdt_probe);
+  void merge_kprobes(void);
   int run_special_probe(std::string name,
                         const BpfBytecode &bytecode,
                         void (*trigger)(void));
