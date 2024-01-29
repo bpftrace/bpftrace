@@ -24,7 +24,8 @@ public:
                 BpfProgram &&prog,
                 bool safe_mode,
                 BPFfeature &feature,
-                BTF &btf);
+                BTF &btf,
+                std::optional<BpfProgram> retprog = std::nullopt);
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
                 int pid,
@@ -84,9 +85,11 @@ private:
 
   Probe &probe_;
   BpfProgram prog_;
+  std::optional<BpfProgram> retprog_;
   std::vector<int> perf_event_fds_;
   bool close_progfd_ = true;
   int progfd_ = -1;
+  int retprogfd_ = -1;
   uint64_t offset_ = 0;
   int tracing_fd_ = -1;
   std::function<void()> usdt_destructor_;

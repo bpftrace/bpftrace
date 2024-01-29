@@ -176,8 +176,12 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BpfProgram &&prog,
                              bool safe_mode,
                              BPFfeature &feature,
-                             BTF &btf)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+                             BTF &btf,
+                             std::optional<BpfProgram> retprog)
+    : probe_(probe),
+      prog_(std::move(prog)),
+      retprog_(std::move(retprog)),
+      btf_(btf)
 {
   load_prog(feature);
   if (bt_verbose)
@@ -233,7 +237,7 @@ AttachedProbe::AttachedProbe(Probe &probe,
                              BPFfeature &feature,
                              BTF &btf,
                              bool safe_mode)
-    : probe_(probe), prog_(std::move(prog)), btf_(btf)
+    : probe_(probe), prog_(std::move(prog)), retprog_(std::nullopt), btf_(btf)
 {
   load_prog(feature);
   switch (probe_.type) {
@@ -880,6 +884,10 @@ void AttachedProbe::load_prog(BPFfeature &feature)
 
   progfd_ = load_prog_fd(feature, prog_);
 
+  if (retprog_ != std::nullopt) {
+    retprogfd_ = load_prog_fd(feature, *retprog_);
+  }
+
   cache_progfd();
 }
 
@@ -898,6 +906,13 @@ void AttachedProbe::attach_multi_kprobe(void)
   opts.kprobe_multi.flags = probe_.type == ProbeType::kretprobe
                                 ? BPF_F_KPROBE_MULTI_RETURN
                                 : 0;
+
+#ifdef HAVE_BPF_KPROBE_MULTI_RETURN_PROG
+  if (retprogfd_ >= 0) {
+    opts.kprobe_multi.return_prog_fd = retprogfd_;
+    opts.kprobe_multi.flags |= BPF_F_KPROBE_MULTI_RETURN_PROG;
+  }
+#endif
 
   if (bt_verbose) {
     std::cout << "Attaching to " << probe_.funcs.size() << " functions"
