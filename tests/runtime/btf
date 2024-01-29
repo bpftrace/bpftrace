@@ -91,3 +91,9 @@ EXPECT Attaching 1 probe...
 TIMEOUT 2
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^kvm'
+
+NAME kprobe_kernel_module_type_fwd
+PROG kprobe:kvm:x86_emulate_insn { $ctxt = (struct x86_emulate_ctxt *) arg0; printf("%d\n", $ctxt->mode); exit(); }
+EXPECT Attaching 1 probe...
+TIMEOUT 2
+REQUIRES lsmod | grep '^kvm'

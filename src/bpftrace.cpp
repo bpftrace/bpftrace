@@ -140,7 +140,8 @@ int BPFtrace::add_probe(ast::Probe &p)
       if (feature_->has_kprobe_multi() && has_wildcard(attach_point->func) &&
           !p.need_expansion && attach_funcs.size() &&
           (probetype(attach_point->provider) == ProbeType::kprobe ||
-           probetype(attach_point->provider) == ProbeType::kretprobe))
+           probetype(attach_point->provider) == ProbeType::kretprobe) &&
+          attach_point->target.empty())
       {
         Probe probe;
         probe.attach_point = attach_point->func;
@@ -250,8 +251,16 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::kfunc ||
                probetype(attach_point->provider) == ProbeType::kretfunc)
         attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
+      else if ((probetype(attach_point->provider) == ProbeType::kprobe ||
+                probetype(attach_point->provider) == ProbeType::kretprobe) &&
+               !attach_point->target.empty())
+      {
+        attach_funcs.push_back(attach_point->target + ":" + attach_point->func);
+      }
       else
+      {
         attach_funcs.push_back(attach_point->func);
+      }
     }
 
     // You may notice that the below loop is somewhat duplicated in
@@ -295,10 +304,13 @@ int BPFtrace::add_probe(ast::Probe &p)
                probetype(attach_point->provider) == ProbeType::uprobe ||
                probetype(attach_point->provider) == ProbeType::uretprobe ||
                probetype(attach_point->provider) == ProbeType::kfunc ||
-               probetype(attach_point->provider) == ProbeType::kretfunc)
+               probetype(attach_point->provider) == ProbeType::kretfunc ||
+               ((probetype(attach_point->provider) == ProbeType::kprobe ||
+                 probetype(attach_point->provider) == ProbeType::kretprobe) &&
+                !attach_point->target.empty()))
       {
-        // tracepoint, uprobe, and k(ret)func probes specify both a target and
-        // a function name.
+        // tracepoint, uprobe, k(ret)func, and k(ret)probes specify both a
+        // target and a function name.
         // We extract the target from func_id so that a resolved target and a
         // resolved function name are used in the probe.
         target = erase_prefix(func_id);

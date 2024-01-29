@@ -103,12 +103,6 @@ EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
-NAME kprobe_target
-PROG kprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT kprobe probe type requires 1 argument
-TIMEOUT 5
-WILL_FAIL
-
 NAME kprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kprobe_order.bt
 EXPECT first second
@@ -126,6 +120,30 @@ RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("progs: "); system("/usr/sb
 EXPECT progs: 1
 TIMEOUT 5
 REQUIRES /usr/sbin/bpftool
+
+NAME kprobe_module
+PROG kprobe:vmlinux:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME kprobe_module_wildcard
+PROG kprobe:vmlinu*:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT SUCCESS [0-9][0-9]*
+TIMEOUT 5
+AFTER ./testprogs/syscall read
+
+NAME kprobe_module_missing
+PROG kprobe:nonsense:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT ERROR: specified module nonsense in probe kprobe:nonsense:vfs_read is not loaded.
+TIMEOUT 5
+WILL_FAIL
+
+NAME kprobe_func_missing
+PROG kprobe:vmlinux:nonsense { printf("SUCCESS %d\n", pid); exit(); }
+EXPECT ERROR: Error attaching probe: 'kprobe:vmlinux:nonsense'
+TIMEOUT 5
+WILL_FAIL
 
 NAME kprobe_multi_wildcard
 RUN {{BPFTRACE}} --unsafe -e 'kprobe:ksys_* { printf("link: "); system("/usr/sbin/bpftool link | grep kprobe_multi | wc -l"); exit(); }'
@@ -205,12 +223,6 @@ PROG kr:vfs_read { printf("SUCCESS %d\n", pid); exit(); }
 EXPECT SUCCESS [0-9][0-9]*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
-
-NAME kretprobe_target
-PROG kretprobe:syscalls:sys_exit_nanosleep { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT kretprobe probe type requires 1 argument
-TIMEOUT 5
-WILL_FAIL
 
 NAME kretprobe_order
 RUN {{BPFTRACE}} runtime/scripts/kretprobe_order.bt

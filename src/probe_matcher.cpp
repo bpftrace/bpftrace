@@ -115,7 +115,10 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::kprobe:
     case ProbeType::kretprobe:
     {
-      symbol_stream = get_symbols_from_traceable_funcs();
+      if (!target.empty())
+        symbol_stream = get_symbols_from_traceable_funcs(true);
+      else
+        symbol_stream = get_symbols_from_traceable_funcs(false);
       break;
     }
     case ProbeType::uprobe:
@@ -556,7 +559,13 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
   switch (probetype(attach_point.provider))
   {
     case ProbeType::kprobe:
-    case ProbeType::kretprobe:
+    case ProbeType::kretprobe: {
+      if (!attach_point.target.empty())
+        search_input = attach_point.target + ":" + attach_point.func;
+      else
+        search_input = attach_point.func;
+      break;
+    }
     case ProbeType::iter:
     case ProbeType::rawtracepoint: {
       search_input = attach_point.func;

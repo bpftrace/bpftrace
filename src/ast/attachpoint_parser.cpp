@@ -327,16 +327,26 @@ AttachPointParser::State AttachPointParser::special_parser()
 
 AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
 {
-  if (parts_.size() != 2)
+  auto num_parts = parts_.size();
+  if (num_parts != 2 && num_parts != 3)
   {
     if (ap_->ignore_invalid)
       return SKIP;
 
-    return argument_count_error(1);
+    return argument_count_error(1, 2);
+  }
+
+  auto func_idx = 1;
+  if (num_parts == 3)
+  {
+    ap_->target = parts_[1];
+    func_idx = 2;
   }
 
   // Handle kprobe:func+0x100 case
-  auto plus_count = std::count(parts_[1].cbegin(), parts_[1].cend(), '+');
+  auto plus_count = std::count(parts_[func_idx].cbegin(),
+                               parts_[func_idx].cend(),
+                               '+');
   if (plus_count)
   {
     if (!allow_offset)
@@ -351,7 +361,7 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
       return INVALID;
     }
 
-    auto offset_parts = split_string(parts_[1], '+', true);
+    auto offset_parts = split_string(parts_[func_idx], '+', true);
     if (offset_parts.size() != 2)
     {
       errs_ << "Invalid offset" << std::endl;
@@ -371,10 +381,11 @@ AttachPointParser::State AttachPointParser::kprobe_parser(bool allow_offset)
   // Default case (eg kprobe:func)
   else
   {
-    ap_->func = parts_[1];
+    ap_->func = parts_[func_idx];
   }
 
-  if (ap_->func.find('*') != std::string::npos)
+  if (ap_->func.find('*') != std::string::npos ||
+      ap_->target.find('*') != std::string::npos)
     ap_->need_expansion = true;
 
   return OK;

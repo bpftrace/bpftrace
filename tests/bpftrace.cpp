@@ -19,21 +19,27 @@ using ::testing::StrictMock;
 static const int STRING_SIZE = 64;
 
 static const std::string kprobe_name(const std::string &attach_point,
+                                     const std::string &target,
                                      uint64_t func_offset)
 {
   auto str = func_offset ? "+" + std::to_string(func_offset) : "";
+  if (!target.empty())
+  {
+    return "kprobe:" + target + ":" + attach_point + str;
+  }
   return "kprobe:" + attach_point + str;
 }
 
 void check_kprobe(Probe &p,
                   const std::string &attach_point,
                   const std::string &orig_name,
-                  uint64_t func_offset = 0)
+                  uint64_t func_offset = 0,
+                  const std::string &target = "")
 {
   EXPECT_EQ(ProbeType::kprobe, p.type);
   EXPECT_EQ(attach_point, p.attach_point);
   EXPECT_EQ(orig_name, p.orig_name);
-  EXPECT_EQ(kprobe_name(attach_point, func_offset), p.name);
+  EXPECT_EQ(kprobe_name(attach_point, target, func_offset), p.name);
   EXPECT_EQ(func_offset, p.func_offset);
 }
 
@@ -291,6 +297,23 @@ TEST(bpftrace, add_probes_kernel_module)
 
   std::string probe_orig_name = "kprobe:func_in_mod";
   check_kprobe(bpftrace->get_probes().at(0), "func_in_mod", probe_orig_name);
+}
+
+TEST(bpftrace, add_probes_specify_kernel_module)
+{
+  ast::Probe *probe = parse_probe("kprobe:kernel_mod:func_in_mod{}");
+
+  auto bpftrace = get_strict_mock_bpftrace();
+  ASSERT_EQ(0, bpftrace->add_probe(*probe));
+  ASSERT_EQ(1U, bpftrace->get_probes().size());
+  ASSERT_EQ(0U, bpftrace->get_special_probes().size());
+
+  std::string probe_orig_name = "kprobe:kernel_mod:func_in_mod";
+  check_kprobe(bpftrace->get_probes().at(0),
+               "func_in_mod",
+               probe_orig_name,
+               0,
+               "kernel_mod");
 }
 
 TEST(bpftrace, add_probes_offset)
@@ -1131,6 +1154,25 @@ TEST_F(bpftrace_btf, add_probes_kfunc)
   check_probe(bpftrace.get_probes().at(1),
               ProbeType::kretfunc,
               "kretfunc:mock_vmlinux:func_1");
+}
+
+TEST_F(bpftrace_btf, add_probes_kprobe)
+{
+  ast::Probe *probe = parse_probe(
+      "kprobe:mock_vmlinux:func_1,kretprobe:mock_vmlinux:func_1 {}");
+
+  StrictMock<MockBPFtrace> bpftrace;
+
+  ASSERT_EQ(0, bpftrace.add_probe(*probe));
+  ASSERT_EQ(2U, bpftrace.get_probes().size());
+  ASSERT_EQ(0U, bpftrace.get_special_probes().size());
+
+  check_probe(bpftrace.get_probes().at(0),
+              ProbeType::kprobe,
+              "kprobe:mock_vmlinux:func_1");
+  check_probe(bpftrace.get_probes().at(1),
+              ProbeType::kretprobe,
+              "kretprobe:mock_vmlinux:func_1");
 }
 
 TEST_F(bpftrace_btf, add_probes_iter_task)

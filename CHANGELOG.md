@@ -41,6 +41,8 @@ and this project adheres to
   - [#2905](https://github.com/iovisor/bpftrace/pull/2905)
 - New config block syntax
   - [#2815](https://github.com/iovisor/bpftrace/pull/2815)
+- Add support for kprobe:module:function
+  - [#2897](https://github.com/iovisor/bpftrace/pull/2897)
 #### Changed
 - Standardize config and env var names
   - [#2815](https://github.com/iovisor/bpftrace/pull/2815)

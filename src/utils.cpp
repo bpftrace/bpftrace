@@ -693,6 +693,29 @@ std::vector<std::pair<std::string, std::string>> get_cgroup_paths(
   return result;
 }
 
+bool is_module_loaded(const std::string &module)
+{
+  if (module == "vmlinux")
+  {
+    return true;
+  }
+
+  // This file lists all loaded modules
+  std::ifstream modules_file("/proc/modules");
+
+  for (std::string line; std::getline(modules_file, line);)
+  {
+    if (line.compare(0, module.size() + 1, module + " ") == 0)
+    {
+      modules_file.close();
+      return true;
+    }
+  }
+
+  modules_file.close();
+  return false;
+}
+
 bool is_dir(const std::string& path)
 {
   std::error_code ec;

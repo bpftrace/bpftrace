@@ -1016,8 +1016,8 @@ characters in attach point definitions.
 Syntax:
 
 ```
-kprobe:function_name[+offset]
-kretprobe:function_name
+kprobe[:module]:function[+offset]
+kretprobe[:module]:function[+offset]
 ```
 
 These use kprobes (a Linux kernel capability). `kprobe` instruments the beginning of a function's
@@ -1150,6 +1150,18 @@ Attaching 1 probe...
 open path: cmdline
 open path: interrupts
 [...]
+```
+
+You can optionally specify a kernel module, either to include BTF data from that
+module, or to specify that the traced function should come from that module.
+```
+# cat kvm.bt
+
+kprobe:kvm:x86_emulate_insn
+{
+  $ctxt = (struct x86_emulate_ctxt *) arg0;
+  printf("eip = 0x%lx\n", $ctxt->eip);
+}
 ```
 
 See [BTF Support](#btf-support) for more details.
