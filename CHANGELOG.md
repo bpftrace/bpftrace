@@ -16,6 +16,11 @@ and this project adheres to
 #### Docs
 #### Tools
 
+## [0.20.1] 2024-01-29
+
+- Fix build failure on 32-bit ARM
+  - [#2960](https://github.com/iovisor/bpftrace/pull/2960)
+
 ## [0.20.0] 2024-01-22
 
 #### Added
