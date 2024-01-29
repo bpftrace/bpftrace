@@ -45,6 +45,7 @@ private:
   void resolve_offset_kprobe(bool safe_mode);
   bool resolve_offset_uprobe(bool safe_mode);
   void load_prog(BPFfeature &feature);
+  int load_prog_fd(BPFfeature &feature, BpfProgram &prog);
   void attach_multi_kprobe(void);
   void attach_multi_uprobe(int pid);
   void attach_kprobe(bool safe_mode);
