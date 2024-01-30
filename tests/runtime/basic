@@ -134,6 +134,22 @@ RUN {{BPFTRACE}} -l "rawtracepoint:*"
 EXPECT rawtracepoint:
 TIMEOUT 1
 
+NAME it only lists probes in the program
+RUN {{BPFTRACE}} -l -e 'kfunc:vmlinux:vfs_read { exit(); }' | grep kfunc | wc -l
+EXPECT 1
+TIMEOUT 5
+
+NAME it lists uprobes in the program
+RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' -p {{BEFORE_PID}}
+EXPECT uretprobe:[\S]+uprobe_test:uprobeFunction1
+TIMEOUT 5
+BEFORE ./testprogs/uprobe_test
+
+NAME it lists multiple probes in the program
+RUN {{BPFTRACE}} -l -e 'hardware:cache-misses:10 { exit(); } tracepoint:xdp:mem_connect { exit(); }'
+EXPECT hardware:cache-misses:\ntracepoint:xdp:mem_connect
+TIMEOUT 5
+
 NAME errors on invalid character in search expression
 RUN {{BPFTRACE}} -l '\n'
 EXPECT ERROR: invalid character
