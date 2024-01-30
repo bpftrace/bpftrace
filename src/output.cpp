@@ -325,7 +325,6 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
                    << type.GetIntBitWidth() << "provided";
         return {};
     }
-    // lgtm[cpp/missing-return]
   } else if (type.IsSumTy() || type.IsIntTy()) {
     if (type.IsSigned())
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);

@@ -60,7 +60,6 @@ bpf_probe_attach_type attachtype(ProbeType t)
       LOG(FATAL) << "invalid probe attachtype \"" << probetypeName(t) << "\"";
   }
   // clang-format on
-  // lgtm[cpp/missing-return]
 }
 
 libbpf::bpf_prog_type progtype(ProbeType t)
@@ -104,7 +103,6 @@ std::string progtypeName(libbpf::bpf_prog_type t)
     default:
       LOG(FATAL) << "invalid program type: " << t;
   }
-  // lgtm[cpp/missing-return]
 }
 
 void check_banned_kretprobes(std::string const &kprobe_name)
