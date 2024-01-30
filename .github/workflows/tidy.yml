@@ -1,0 +1,26 @@
+name: "Clang Tidy"
+
+on:
+  pull_request:
+    branches: [ "master" ]
+
+# Cancel previous run if a new one is started
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: DeterminateSystems/nix-installer-action@v4
+      - uses: DeterminateSystems/magic-nix-cache-action@v2
+      - name: Run clang-tidy
+        run: ./scripts/clang_tidy.sh
