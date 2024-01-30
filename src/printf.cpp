@@ -71,8 +71,7 @@ int PrintableInt::print(char *buf,
   // For example, an int64_t argument may be pushed onto the stack while an int
   // is stored in a register, in which case "%d" would print the wrong value if
   // we used value_ without an explicit cast.
-  switch (expected_type)
-  {
+  switch (expected_type) {
     case ArgumentType::CHAR:
       return snprintf(buf, size, fmt, static_cast<unsigned char>(value_));
     case ArgumentType::SHORT:
@@ -103,8 +102,7 @@ int PrintableSInt::print(char *buf,
                          const char *fmt,
                          ArgumentType expected_type)
 {
-  switch (expected_type)
-  {
+  switch (expected_type) {
     case ArgumentType::CHAR:
       return snprintf(buf, size, fmt, static_cast<char>(value_));
     case ArgumentType::SHORT:

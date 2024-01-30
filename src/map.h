@@ -4,8 +4,7 @@
 
 namespace bpftrace {
 
-class Map : public IMap
-{
+class Map : public IMap {
 public:
   Map(const std::string &name,
       const SizedType &type,

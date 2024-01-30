@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct Foo
-{
+struct Foo {
   char* a;
   char b[4];
   uint8_t c[4];

@@ -19,8 +19,7 @@ void test_parse_failure(BPFtrace &bpftrace,
   Driver driver(bpftrace, out);
   ASSERT_EQ(driver.parse_str(input), 1);
 
-  if (expected_error.data())
-  {
+  if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
     EXPECT_EQ(out.str(), expected_error);
@@ -175,92 +174,92 @@ TEST(Parser, comment)
 TEST(Parser, map_assign)
 {
   test("kprobe:sys_open { @x = 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   int: 1\n");
   test("kprobe:sys_open { @x = @y; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   map: @y\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   map: @y\n");
   test("kprobe:sys_open { @x = arg0; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   builtin: arg0\n");
   test("kprobe:sys_open { @x = count(); }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: count\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: count\n");
   test("kprobe:sys_read { @x = sum(arg2); }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: sum\n"
-      "    builtin: arg2\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: sum\n"
+       "    builtin: arg2\n");
   test("kprobe:sys_read { @x = min(arg2); }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: min\n"
-      "    builtin: arg2\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: min\n"
+       "    builtin: arg2\n");
   test("kprobe:sys_read { @x = max(arg2); }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: max\n"
-      "    builtin: arg2\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: max\n"
+       "    builtin: arg2\n");
   test("kprobe:sys_read { @x = avg(arg2); }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: avg\n"
-      "    builtin: arg2\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: avg\n"
+       "    builtin: arg2\n");
   test("kprobe:sys_read { @x = stats(arg2); }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: stats\n"
-      "    builtin: arg2\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: stats\n"
+       "    builtin: arg2\n");
   test("kprobe:sys_open { @x = \"mystring\" }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   string: mystring\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   string: mystring\n");
   test("kprobe:sys_open { @x = $myvar; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   variable: $myvar\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   variable: $myvar\n");
 }
 
 TEST(Parser, variable_assign)
 {
   test("kprobe:sys_open { $x = 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   int: 1\n");
   test("kprobe:sys_open { $x = -1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   int: -1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   int: -1\n");
 
   char in_cstr[128];
   char out_cstr[128];
@@ -509,162 +508,163 @@ TEST(Parser, compound_map_assignment_binary_expr)
 TEST(Parser, integer_sizes)
 {
   test("kprobe:do_nanosleep { $x = 0x12345678; }",
-      "Program\n"
-      " kprobe:do_nanosleep\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   int: 305419896\n");
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   int: 305419896\n");
   test("kprobe:do_nanosleep { $x = 0x4444444412345678; }",
-      "Program\n"
-      " kprobe:do_nanosleep\n"
-      "  =\n"
-      "   variable: $x\n"
-      "   int: 4919131752149309048\n");
+       "Program\n"
+       " kprobe:do_nanosleep\n"
+       "  =\n"
+       "   variable: $x\n"
+       "   int: 4919131752149309048\n");
 }
 
 TEST(Parser, map_key)
 {
   test("kprobe:sys_open { @x[0] = 1; @x[0,1,2] = 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "    int: 0\n"
-      "   int: 1\n"
-      "  =\n"
-      "   map: @x\n"
-      "    int: 0\n"
-      "    int: 1\n"
-      "    int: 2\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "    int: 0\n"
+       "   int: 1\n"
+       "  =\n"
+       "   map: @x\n"
+       "    int: 0\n"
+       "    int: 1\n"
+       "    int: 2\n"
+       "   int: 1\n");
 
   test("kprobe:sys_open { @x[@a] = 1; @x[@a,@b,@c] = 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "    map: @a\n"
-      "   int: 1\n"
-      "  =\n"
-      "   map: @x\n"
-      "    map: @a\n"
-      "    map: @b\n"
-      "    map: @c\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "    map: @a\n"
+       "   int: 1\n"
+       "  =\n"
+       "   map: @x\n"
+       "    map: @a\n"
+       "    map: @b\n"
+       "    map: @c\n"
+       "   int: 1\n");
 
   test("kprobe:sys_open { @x[pid] = 1; @x[tid,uid,arg9] = 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "    builtin: pid\n"
-      "   int: 1\n"
-      "  =\n"
-      "   map: @x\n"
-      "    builtin: tid\n"
-      "    builtin: uid\n"
-      "    builtin: arg9\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "    builtin: pid\n"
+       "   int: 1\n"
+       "  =\n"
+       "   map: @x\n"
+       "    builtin: tid\n"
+       "    builtin: uid\n"
+       "    builtin: arg9\n"
+       "   int: 1\n");
 }
 
 TEST(Parser, predicate)
 {
   test("kprobe:sys_open / @x / { 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  pred\n"
-      "   map: @x\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  pred\n"
+       "   map: @x\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, predicate_containing_division)
 {
   test("kprobe:sys_open /100/25/ { 1; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  pred\n"
-      "   /\n"
-      "    int: 100\n"
-      "    int: 25\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  pred\n"
+       "   /\n"
+       "    int: 100\n"
+       "    int: 25\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, expressions)
 {
-  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || comm == \"string\" /\n"
+  test("kprobe:sys_open / 1 <= 2 && (9 - 4 != 5*10 || ~0) || comm == "
+       "\"string\" /\n"
        "{\n"
        "  1;\n"
        "}",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  pred\n"
-      "   ||\n"
-      "    &&\n"
-      "     <=\n"
-      "      int: 1\n"
-      "      int: 2\n"
-      "     ||\n"
-      "      !=\n"
-      "       -\n"
-      "        int: 9\n"
-      "        int: 4\n"
-      "       *\n"
-      "        int: 5\n"
-      "        int: 10\n"
-      "      ~\n"
-      "       int: 0\n"
-      "    ==\n"
-      "     builtin: comm\n"
-      "     string: string\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  pred\n"
+       "   ||\n"
+       "    &&\n"
+       "     <=\n"
+       "      int: 1\n"
+       "      int: 2\n"
+       "     ||\n"
+       "      !=\n"
+       "       -\n"
+       "        int: 9\n"
+       "        int: 4\n"
+       "       *\n"
+       "        int: 5\n"
+       "        int: 10\n"
+       "      ~\n"
+       "       int: 0\n"
+       "    ==\n"
+       "     builtin: comm\n"
+       "     string: string\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, variable_post_increment_decrement)
 {
   test("kprobe:sys_open { $x++; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  variable: $x\n"
-      "   ++\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  variable: $x\n"
+       "   ++\n");
   test("kprobe:sys_open { ++$x; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  ++\n"
-      "   variable: $x\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  ++\n"
+       "   variable: $x\n");
   test("kprobe:sys_open { $x--; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  variable: $x\n"
-      "   --\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  variable: $x\n"
+       "   --\n");
   test("kprobe:sys_open { --$x; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  --\n"
-      "   variable: $x\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  --\n"
+       "   variable: $x\n");
 }
 
 TEST(Parser, map_increment_decrement)
 {
   test("kprobe:sys_open { @x++; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  map: @x\n"
-      "   ++\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  map: @x\n"
+       "   ++\n");
   test("kprobe:sys_open { ++@x; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  ++\n"
-      "   map: @x\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  ++\n"
+       "   map: @x\n");
   test("kprobe:sys_open { @x--; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  map: @x\n"
-      "   --\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  map: @x\n"
+       "   --\n");
   test("kprobe:sys_open { --@x; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  --\n"
-      "   map: @x\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  --\n"
+       "   map: @x\n");
 }
 
 TEST(Parser, bit_shifting)
@@ -699,7 +699,6 @@ TEST(Parser, bit_shifting)
        "   int: 1\n");
 }
 
-
 TEST(Parser, ternary_int)
 {
   test("kprobe:sys_open { @x = pid < 10000 ? 1 : 2 }",
@@ -717,7 +716,8 @@ TEST(Parser, ternary_int)
 
 TEST(Parser, if_block)
 {
-  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } }",
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } "
+       "}",
        "Program\n"
        " kprobe:sys_open\n"
        "  if\n"
@@ -732,7 +732,8 @@ TEST(Parser, if_block)
 
 TEST(Parser, if_stmt_if)
 {
-  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } @pid = pid; if (pid < 1000) { printf(\"%d is low\\n\", pid); } }",
+  test("kprobe:sys_open { if (pid > 10000) { printf(\"%d is high\\n\", pid); } "
+       "@pid = pid; if (pid < 1000) { printf(\"%d is low\\n\", pid); } }",
        "Program\n"
        " kprobe:sys_open\n"
        "  if\n"
@@ -773,7 +774,8 @@ TEST(Parser, if_block_variable)
 
 TEST(Parser, if_else)
 {
-  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; } printf(\"%d is high\\n\", pid, $s); }",
+  test("kprobe:sys_open { if (pid > 10000) { $s = \"a\"; } else { $s= \"b\"; } "
+       "printf(\"%d is high\\n\", pid, $s); }",
        "Program\n"
        " kprobe:sys_open\n"
        "  if\n"
@@ -946,19 +948,19 @@ TEST(Parser, ternary_nested)
 TEST(Parser, call)
 {
   test("kprobe:sys_open { @x = count(); @y = hist(1,2,3); delete(@x); }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  =\n"
-      "   map: @x\n"
-      "   call: count\n"
-      "  =\n"
-      "   map: @y\n"
-      "   call: hist\n"
-      "    int: 1\n"
-      "    int: 2\n"
-      "    int: 3\n"
-      "  call: delete\n"
-      "   map: @x\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  =\n"
+       "   map: @x\n"
+       "   call: count\n"
+       "  =\n"
+       "   map: @y\n"
+       "   call: hist\n"
+       "    int: 1\n"
+       "    int: 2\n"
+       "    int: 3\n"
+       "  call: delete\n"
+       "   map: @x\n");
 }
 
 TEST(Parser, call_unknown_function)
@@ -978,38 +980,38 @@ TEST(Parser, call_builtin)
 TEST(Parser, call_kaddr)
 {
   test("kprobe:f { @ = kaddr(\"avenrun\") }",
-      "Program\n"
-      " kprobe:f\n"
-      "  =\n"
-      "   map: @\n"
-      "   call: kaddr\n"
-      "    string: avenrun\n");
+       "Program\n"
+       " kprobe:f\n"
+       "  =\n"
+       "   map: @\n"
+       "   call: kaddr\n"
+       "    string: avenrun\n");
 }
 
 TEST(Parser, multiple_probes)
 {
   test("kprobe:sys_open { 1; } kretprobe:sys_open { 2; }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  int: 1\n"
-      " kretprobe:sys_open\n"
-      "  int: 2\n");
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  int: 1\n"
+       " kretprobe:sys_open\n"
+       "  int: 2\n");
 }
 
 TEST(Parser, uprobe)
 {
   test("uprobe:/my/program:func { 1; }",
-      "Program\n"
-      " uprobe:/my/program:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:/my/program:func\n"
+       "  int: 1\n");
   test("uprobe:/my/go/program:\"pkg.func\u2C51\" { 1; }",
-      "Program\n"
-      " uprobe:/my/go/program:pkg.func\u2C51\n"
-      "  int: 1\n");
-  test ("uprobe:/with#hash:asdf { 1 }",
-      "Program\n"
-      " uprobe:/with#hash:asdf\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:/my/go/program:pkg.func\u2C51\n"
+       "  int: 1\n");
+  test("uprobe:/with#hash:asdf { 1 }",
+       "Program\n"
+       " uprobe:/with#hash:asdf\n"
+       "  int: 1\n");
   test("uprobe:/my/program:1234 { 1; }",
        "Program\n"
        " uprobe:/my/program:1234\n"
@@ -1044,9 +1046,9 @@ TEST(Parser, uprobe)
 TEST(Parser, usdt)
 {
   test("usdt:/my/program:probe { 1; }",
-      "Program\n"
-      " usdt:/my/program:probe\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program:probe\n"
+       "  int: 1\n");
   // Without the escapes needed for C++ to compile:
   //    usdt:/my/program:"\"probe\"" { 1; }
   //
@@ -1061,37 +1063,39 @@ TEST(Parser, usdt)
 TEST(Parser, usdt_namespaced_probe)
 {
   test("usdt:/my/program:namespace:probe { 1; }",
-      "Program\n"
-      " usdt:/my/program:namespace:probe\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program:namespace:probe\n"
+       "  int: 1\n");
   test("usdt:/my/program*:namespace:probe { 1; }",
-      "Program\n"
-      " usdt:/my/program*:namespace:probe\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program*:namespace:probe\n"
+       "  int: 1\n");
   test("usdt:/my/*program:namespace:probe { 1; }",
-      "Program\n"
-      " usdt:/my/*program:namespace:probe\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/*program:namespace:probe\n"
+       "  int: 1\n");
   test("usdt:*my/program*:namespace:probe { 1; }",
-      "Program\n"
-      " usdt:*my/program*:namespace:probe\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:*my/program*:namespace:probe\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, escape_chars)
 {
-  test("kprobe:sys_open { \"newline\\nand tab\\tcr\\rbackslash\\\\quote\\\"here oct\\1009hex\\x309\" }",
-      "Program\n"
-      " kprobe:sys_open\n"
-      "  string: newline\\nand tab\\tcr\\rbackslash\\\\quote\\\"here oct@9hex09\n");
+  test("kprobe:sys_open { \"newline\\nand "
+       "tab\\tcr\\rbackslash\\\\quote\\\"here oct\\1009hex\\x309\" }",
+       "Program\n"
+       " kprobe:sys_open\n"
+       "  string: newline\\nand tab\\tcr\\rbackslash\\\\quote\\\"here "
+       "oct@9hex09\n");
 }
 
 TEST(Parser, begin_probe)
 {
   test("BEGIN { 1 }",
-      "Program\n"
-      " BEGIN\n"
-      "  int: 1\n");
+       "Program\n"
+       " BEGIN\n"
+       "  int: 1\n");
 
   test_parse_failure("BEGIN:f { 1 }");
   test_parse_failure("BEGIN:path:f { 1 }");
@@ -1111,9 +1115,9 @@ TEST(Parser, end_probe)
 TEST(Parser, tracepoint_probe)
 {
   test("tracepoint:sched:sched_switch { 1 }",
-      "Program\n"
-      " tracepoint:sched:sched_switch\n"
-      "  int: 1\n");
+       "Program\n"
+       " tracepoint:sched:sched_switch\n"
+       "  int: 1\n");
   test("tracepoint:* { 1 }",
        "Program\n"
        " tracepoint:*:*\n"
@@ -1126,9 +1130,9 @@ TEST(Parser, tracepoint_probe)
 TEST(Parser, profile_probe)
 {
   test("profile:ms:997 { 1 }",
-      "Program\n"
-      " profile:ms:997\n"
-      "  int: 1\n");
+       "Program\n"
+       " profile:ms:997\n"
+       "  int: 1\n");
 
   test_parse_failure("profile:ms:nan { 1 }");
   test_parse_failure("profile:f { 1 }");
@@ -1139,9 +1143,9 @@ TEST(Parser, profile_probe)
 TEST(Parser, interval_probe)
 {
   test("interval:s:1 { 1 }",
-      "Program\n"
-      " interval:s:1\n"
-      "  int: 1\n");
+       "Program\n"
+       " interval:s:1\n"
+       "  int: 1\n");
 
   test("interval:s:1e3 { 1 }",
        "Program\n"
@@ -1159,9 +1163,9 @@ TEST(Parser, interval_probe)
 TEST(Parser, software_probe)
 {
   test("software:faults:1000 { 1 }",
-      "Program\n"
-      " software:faults:1000\n"
-      "  int: 1\n");
+       "Program\n"
+       " software:faults:1000\n"
+       "  int: 1\n");
 
   test("software:faults:1e3 { 1 }",
        "Program\n"
@@ -1179,9 +1183,9 @@ TEST(Parser, software_probe)
 TEST(Parser, hardware_probe)
 {
   test("hardware:cache-references:1000000 { 1 }",
-      "Program\n"
-      " hardware:cache-references:1000000\n"
-      "  int: 1\n");
+       "Program\n"
+       " hardware:cache-references:1000000\n"
+       "  int: 1\n");
 
   test("hardware:cache-references:1e6 { 1 }",
        "Program\n"
@@ -1226,21 +1230,22 @@ TEST(Parser, asyncwatchpoint_probe)
 
 TEST(Parser, multiple_attach_points_kprobe)
 {
-  test("BEGIN,kprobe:sys_open,uprobe:/bin/sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",
-      "Program\n"
-      " BEGIN\n"
-      " kprobe:sys_open\n"
-      " uprobe:/bin/sh:foo\n"
-      " tracepoint:syscalls:sys_enter_*\n"
-      "  int: 1\n");
+  test("BEGIN,kprobe:sys_open,uprobe:/bin/"
+       "sh:foo,tracepoint:syscalls:sys_enter_* { 1 }",
+       "Program\n"
+       " BEGIN\n"
+       " kprobe:sys_open\n"
+       " uprobe:/bin/sh:foo\n"
+       " tracepoint:syscalls:sys_enter_*\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, character_class_attach_point)
 {
   test("kprobe:[Ss]y[Ss]_read { 1 }",
-      "Program\n"
-      " kprobe:[Ss]y[Ss]_read\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:[Ss]y[Ss]_read\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, wildcard_probetype)
@@ -1265,72 +1270,72 @@ TEST(Parser, wildcard_probetype)
 TEST(Parser, wildcard_attach_points)
 {
   test("kprobe:sys_* { 1 }",
-      "Program\n"
-      " kprobe:sys_*\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:sys_*\n"
+       "  int: 1\n");
   test("kprobe:*blah { 1 }",
-      "Program\n"
-      " kprobe:*blah\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:*blah\n"
+       "  int: 1\n");
   test("kprobe:sys*blah { 1 }",
-      "Program\n"
-      " kprobe:sys*blah\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:sys*blah\n"
+       "  int: 1\n");
   test("kprobe:* { 1 }",
-      "Program\n"
-      " kprobe:*\n"
-      "  int: 1\n");
+       "Program\n"
+       " kprobe:*\n"
+       "  int: 1\n");
   test("kprobe:sys_* { @x = cpu*retval }",
-      "Program\n"
-      " kprobe:sys_*\n"
-      "  =\n"
-      "   map: @x\n"
-      "   *\n"
-      "    builtin: cpu\n"
-      "    builtin: retval\n");
+       "Program\n"
+       " kprobe:sys_*\n"
+       "  =\n"
+       "   map: @x\n"
+       "   *\n"
+       "    builtin: cpu\n"
+       "    builtin: retval\n");
   test("kprobe:sys_* { @x = *arg0 }",
-      "Program\n"
-      " kprobe:sys_*\n"
-      "  =\n"
-      "   map: @x\n"
-      "   dereference\n"
-      "    builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_*\n"
+       "  =\n"
+       "   map: @x\n"
+       "   dereference\n"
+       "    builtin: arg0\n");
 }
 
 TEST(Parser, wildcard_path)
 {
   test("uprobe:/my/program*:* { 1; }",
-      "Program\n"
-      " uprobe:/my/program*:*\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:/my/program*:*\n"
+       "  int: 1\n");
   test("uprobe:/my/program*:func { 1; }",
-      "Program\n"
-      " uprobe:/my/program*:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:/my/program*:func\n"
+       "  int: 1\n");
   test("uprobe:*my/program*:func { 1; }",
-      "Program\n"
-      " uprobe:*my/program*:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:*my/program*:func\n"
+       "  int: 1\n");
   test("uprobe:/my/program*foo:func { 1; }",
-      "Program\n"
-      " uprobe:/my/program*foo:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " uprobe:/my/program*foo:func\n"
+       "  int: 1\n");
   test("usdt:/my/program*:* { 1; }",
-      "Program\n"
-      " usdt:/my/program*:*\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program*:*\n"
+       "  int: 1\n");
   test("usdt:/my/program*:func { 1; }",
-      "Program\n"
-      " usdt:/my/program*:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program*:func\n"
+       "  int: 1\n");
   test("usdt:*my/program*:func { 1; }",
-      "Program\n"
-      " usdt:*my/program*:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:*my/program*:func\n"
+       "  int: 1\n");
   test("usdt:/my/program*foo:func { 1; }",
-      "Program\n"
-      " usdt:/my/program*foo:func\n"
-      "  int: 1\n");
+       "Program\n"
+       " usdt:/my/program*foo:func\n"
+       "  int: 1\n");
   // Make sure calls or builtins don't cause issues
   test("usdt:/my/program*avg:func { 1; }",
        "Program\n"
@@ -1384,75 +1389,79 @@ TEST(Parser, wildcard_func)
     "uprobe",
     "kprobe",
   };
-  for(auto kw : keywords)
-  {
-    test("usdt:/my/program:"+ kw +"*c*d { 1; }",
+  for (auto kw : keywords) {
+    test("usdt:/my/program:" + kw + "*c*d { 1; }",
          "Program\n"
-         " usdt:/my/program:"+ kw + "*c*d\n"
-         "  int: 1\n");
-    test("usdt:/my/program:abc*"+ kw +"*c*d { 1; }",
+         " usdt:/my/program:" +
+             kw +
+             "*c*d\n"
+             "  int: 1\n");
+    test("usdt:/my/program:abc*" + kw + "*c*d { 1; }",
          "Program\n"
-         " usdt:/my/program:abc*"+ kw + "*c*d\n"
-         "  int: 1\n");
+         " usdt:/my/program:abc*" +
+             kw +
+             "*c*d\n"
+             "  int: 1\n");
   }
 }
 
 TEST(Parser, short_map_name)
 {
   test("kprobe:sys_read { @ = 1 }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @\n"
+       "   int: 1\n");
 }
 
 TEST(Parser, include)
 {
   test("#include <stdio.h>\nkprobe:sys_read { @x = 1 }",
-      "#include <stdio.h>\n"
-      "\n"
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   int: 1\n");
+       "#include <stdio.h>\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   int: 1\n");
 }
 
 TEST(Parser, include_quote)
 {
   test("#include \"stdio.h\"\nkprobe:sys_read { @x = 1 }",
-      "#include \"stdio.h\"\n"
-      "\n"
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   int: 1\n");
+       "#include \"stdio.h\"\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   int: 1\n");
 }
 
 TEST(Parser, include_multiple)
 {
-  test("#include <stdio.h>\n#include \"blah\"\n#include <foo.h>\nkprobe:sys_read { @x = 1 }",
-      "#include <stdio.h>\n"
-      "#include \"blah\"\n"
-      "#include <foo.h>\n"
-      "\n"
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   map: @x\n"
-      "   int: 1\n");
+  test("#include <stdio.h>\n#include \"blah\"\n#include "
+       "<foo.h>\nkprobe:sys_read { @x = 1 }",
+       "#include <stdio.h>\n"
+       "#include \"blah\"\n"
+       "#include <foo.h>\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   map: @x\n"
+       "   int: 1\n");
 }
 
 TEST(Parser, brackets)
 {
   test("kprobe:sys_read { (arg0*arg1) }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  *\n"
-      "   builtin: arg0\n"
-      "   builtin: arg1\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  *\n"
+       "   builtin: arg0\n"
+       "   builtin: arg1\n");
 }
 
 TEST(Parser, cast_simple_type)
@@ -1494,15 +1503,15 @@ TEST(Parser, cast_sized_type_pointer)
 TEST(Parser, cast_struct)
 {
   test("kprobe:sys_read { (struct mytype)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (struct mytype)\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (struct mytype)\n"
+       "   builtin: arg0\n");
   test("kprobe:sys_read { (union mytype)arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  (union mytype)\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  (union mytype)\n"
+       "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_struct_ptr)
@@ -1559,11 +1568,11 @@ TEST(Parser, cast_or_expr1)
 TEST(Parser, cast_or_expr2)
 {
   test("kprobe:sys_read { (arg1)*arg0; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  *\n"
-      "   builtin: arg1\n"
-      "   builtin: arg0\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  *\n"
+       "   builtin: arg1\n"
+       "   builtin: arg0\n");
 }
 
 TEST(Parser, cast_precedence)
@@ -1641,112 +1650,112 @@ TEST(Parser, offsetof_expression)
 TEST(Parser, dereference_precedence)
 {
   test("kprobe:sys_read { *@x+1 }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  +\n"
-      "   dereference\n"
-      "    map: @x\n"
-      "   int: 1\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  +\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   int: 1\n");
 
   test("kprobe:sys_read { *@x**@y }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  *\n"
-      "   dereference\n"
-      "    map: @x\n"
-      "   dereference\n"
-      "    map: @y\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  *\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   dereference\n"
+       "    map: @y\n");
 
   test("kprobe:sys_read { *@x*@y }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  *\n"
-      "   dereference\n"
-      "    map: @x\n"
-      "   map: @y\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  *\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   map: @y\n");
 
   test("kprobe:sys_read { *@x.myfield }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  dereference\n"
-      "   .\n"
-      "    map: @x\n"
-      "    myfield\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  dereference\n"
+       "   .\n"
+       "    map: @x\n"
+       "    myfield\n");
 }
 
 TEST(Parser, field_access)
 {
   test("kprobe:sys_read { @x.myfield; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  .\n"
-      "   map: @x\n"
-      "   myfield\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   map: @x\n"
+       "   myfield\n");
 
   test("kprobe:sys_read { @x->myfield; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  .\n"
-      "   dereference\n"
-      "    map: @x\n"
-      "   myfield\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   myfield\n");
 }
 
 TEST(Parser, field_access_builtin)
 {
   test("kprobe:sys_read { @x.count; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  .\n"
-      "   map: @x\n"
-      "   count\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   map: @x\n"
+       "   count\n");
 
   test("kprobe:sys_read { @x->count; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  .\n"
-      "   dereference\n"
-      "    map: @x\n"
-      "   count\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  .\n"
+       "   dereference\n"
+       "    map: @x\n"
+       "   count\n");
 }
 
 TEST(Parser, array_access)
 {
   test("kprobe:sys_read { x[index]; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  []\n"
-      "   identifier: x\n"
-      "   identifier: index\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  []\n"
+       "   identifier: x\n"
+       "   identifier: index\n");
 
   test("kprobe:sys_read { $val = x[index]; }",
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  =\n"
-      "   variable: $val\n"
-      "   []\n"
-      "    identifier: x\n"
-      "    identifier: index\n");
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  =\n"
+       "   variable: $val\n"
+       "   []\n"
+       "    identifier: x\n"
+       "    identifier: index\n");
 }
 
 TEST(Parser, cstruct)
 {
   test("struct Foo { int x, y; char *str; } kprobe:sys_read { 1; }",
-      "struct Foo { int x, y; char *str; };\n"
-      "\n"
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  int: 1\n");
+       "struct Foo { int x, y; char *str; };\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, cstruct_nested)
 {
   test("struct Foo { struct { int x; } bar; } kprobe:sys_read { 1; }",
-      "struct Foo { struct { int x; } bar; };\n"
-      "\n"
-      "Program\n"
-      " kprobe:sys_read\n"
-      "  int: 1\n");
+       "struct Foo { struct { int x; } bar; };\n"
+       "\n"
+       "Program\n"
+       " kprobe:sys_read\n"
+       "  int: 1\n");
 }
 
 TEST(Parser, unexpected_symbol)

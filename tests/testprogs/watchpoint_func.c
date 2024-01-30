@@ -10,8 +10,7 @@ __attribute__((noinline)) void increment(__attribute__((unused)) int _, int *i)
 int main()
 {
   int *i = malloc(sizeof(int));
-  while (1)
-  {
+  while (1) {
     increment(0, i);
     (*i)++;
     usleep(1000);

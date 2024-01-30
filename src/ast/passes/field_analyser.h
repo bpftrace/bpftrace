@@ -14,8 +14,7 @@ namespace libbpf {
 namespace bpftrace {
 namespace ast {
 
-class FieldAnalyser : public Visitor
-{
+class FieldAnalyser : public Visitor {
 public:
   explicit FieldAnalyser(Node *root,
                          BPFtrace &bpftrace,
@@ -24,7 +23,8 @@ public:
         bpftrace_(bpftrace),
         prog_type_(libbpf::BPF_PROG_TYPE_UNSPEC),
         out_(out)
-  { }
+  {
+  }
 
   void visit(Identifier &identifier) override;
   void visit(Builtin &builtin) override;
@@ -50,13 +50,13 @@ private:
   ProbeType probe_type_;
   std::string attach_func_;
   SizedType sized_type_;
-  BPFtrace      &bpftrace_;
+  BPFtrace &bpftrace_;
   libbpf::bpf_prog_type prog_type_;
-  bool           has_builtin_args_;
-  Probe         *probe_;
+  bool has_builtin_args_;
+  Probe *probe_;
 
-  std::ostream       &out_;
-  std::ostringstream  err_;
+  std::ostream &out_;
+  std::ostringstream err_;
 
   std::map<std::string, SizedType> var_types_;
 };

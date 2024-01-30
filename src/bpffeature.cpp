@@ -24,18 +24,12 @@ namespace bpftrace {
 
 int BPFnofeature::parse(const char* str)
 {
-  for (auto feat : split_string(str, ','))
-  {
-    if (feat == "kprobe_multi")
-    {
+  for (auto feat : split_string(str, ',')) {
+    if (feat == "kprobe_multi") {
       kprobe_multi_ = true;
-    }
-    else if (feat == "uprobe_multi")
-    {
+    } else if (feat == "uprobe_multi") {
       uprobe_multi_ = true;
-    }
-    else
-    {
+    } else {
       return -1;
     }
   }
@@ -53,11 +47,9 @@ static bool try_load_(const char* name,
                       size_t logbuf_size,
                       int* outfd = nullptr)
 {
-  for (int attempt = 0; attempt < 3; attempt++)
-  {
+  for (int attempt = 0; attempt < 3; attempt++) {
     auto version = kernel_version(attempt);
-    if (version == 0 && attempt > 0)
-    {
+    if (version == 0 && attempt > 0) {
       // Recent kernels don't check the version so we should try to call
       // bpf_prog_load during first iteration even if we failed to determine
       // the version. We should not do that in subsequent iterations to avoid
@@ -70,8 +62,7 @@ static bool try_load_(const char* name,
     opts.log_size = logbuf_size;
     opts.log_level = loglevel;
     opts.kern_version = version;
-    if (attach_type.has_value())
-    {
+    if (attach_type.has_value()) {
       opts.expected_attach_type = static_cast<::bpf_attach_type>(
           attach_type.value());
     }
@@ -84,8 +75,7 @@ static bool try_load_(const char* name,
                             insns,
                             insns_cnt,
                             &opts);
-    if (ret >= 0)
-    {
+    if (ret >= 0) {
       if (outfd)
         *outfd = ret;
       else
@@ -109,16 +99,14 @@ bool BPFfeature::try_load(enum libbpf::bpf_prog_type prog_type,
   char logbuf[log_size] = {};
 
   std::optional<unsigned> btf_id;
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf())
-  {
+  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING && has_btf()) {
     auto id_fd = btf_.get_btf_id_fd(name, "vmlinux");
     btf_id = id_fd.first;
     if (id_fd.second >= 0)
       close(id_fd.second);
   }
 
-  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING)
-  {
+  if (prog_type == libbpf::BPF_PROG_TYPE_TRACING) {
     // List of available functions must be readable
     std::ifstream traceable_funcs(tracefs::available_filter_functions());
     if (!traceable_funcs.good())
@@ -148,8 +136,7 @@ bool BPFfeature::try_load_btf(const void* btf_data, size_t btf_size)
               .log_size = log_size, );
 
   int fd = bpf_btf_load(btf_data, btf_size, &btf_opts);
-  if (fd >= 0)
-  {
+  if (fd >= 0) {
     close(fd);
     return true;
   }
@@ -214,8 +201,7 @@ bool BPFfeature::detect_map(enum libbpf::bpf_map_type map_type)
   int flags = 0;
   int map_fd = 0;
 
-  switch (map_type)
-  {
+  switch (map_type) {
     case libbpf::BPF_MAP_TYPE_STACK_TRACE:
       value_size = 8;
       break;
@@ -319,16 +305,14 @@ int BPFfeature::instruction_limit(void)
   // processed 2 insns (limit 131072), stack depth 0
   std::string log(logbuf, logsize);
   std::size_t line_start = log.find("processed 2 insns");
-  if (line_start == std::string::npos)
-  {
+  if (line_start == std::string::npos) {
     insns_limit_ = std::make_optional<int>(-1);
     return *insns_limit_;
   }
 
   // Old kernels don't have the instruction limit in the verifier output
   auto begin = log.find("limit", line_start);
-  if (begin == std::string::npos)
-  {
+  if (begin == std::string::npos) {
     insns_limit_ = std::make_optional<int>(-1);
     return *insns_limit_;
   }
@@ -419,8 +403,7 @@ bool BPFfeature::has_kprobe_multi()
   if (has_kprobe_multi_.has_value())
     return *has_kprobe_multi_;
 
-  if (no_feature_.kprobe_multi_)
-  {
+  if (no_feature_.kprobe_multi_) {
     has_kprobe_multi_ = false;
     return *has_kprobe_multi_;
   }
@@ -449,8 +432,7 @@ bool BPFfeature::has_kprobe_multi()
                          ARRAY_SIZE(insns),
                          &load_opts);
 
-  if (progfd >= 0)
-  {
+  if (progfd >= 0) {
     linkfd = bpf_link_create(progfd,
                              0,
                              static_cast<enum ::bpf_attach_type>(
@@ -460,12 +442,10 @@ bool BPFfeature::has_kprobe_multi()
 
   has_kprobe_multi_ = linkfd >= 0;
 
-  if (linkfd >= 0)
-  {
+  if (linkfd >= 0) {
     close(linkfd);
   }
-  if (progfd >= 0)
-  {
+  if (progfd >= 0) {
     close(progfd);
   }
   return *has_kprobe_multi_;
@@ -477,8 +457,7 @@ bool BPFfeature::has_uprobe_multi()
     return *has_uprobe_multi_;
 
 #if defined(HAVE_LIBBPF_UPROBE_MULTI)
-  if (no_feature_.uprobe_multi_)
-  {
+  if (no_feature_.uprobe_multi_) {
     has_uprobe_multi_ = false;
     return *has_uprobe_multi_;
   }
@@ -503,8 +482,7 @@ bool BPFfeature::has_uprobe_multi()
                          ARRAY_SIZE(insns),
                          &load_opts);
 
-  if (progfd >= 0)
-  {
+  if (progfd >= 0) {
     LIBBPF_OPTS(bpf_link_create_opts, link_opts);
     const unsigned long offset = 0;
 
@@ -522,12 +500,10 @@ bool BPFfeature::has_uprobe_multi()
 
   has_uprobe_multi_ = linkfd < 0 && err == -EBADF;
 
-  if (linkfd >= 0)
-  {
+  if (linkfd >= 0) {
     close(linkfd);
   }
-  if (progfd >= 0)
-  {
+  if (progfd >= 0) {
     close(progfd);
   }
 #else
@@ -599,14 +575,12 @@ bool BPFfeature::has_raw_tp_special()
                ARRAY_SIZE(insns),
                nullptr,
                std::nullopt,
-               &fd))
-  {
+               &fd)) {
     struct bpf_test_run_opts opts = {};
     opts.sz = sizeof(opts);
     has_raw_tp_special_ = !::bpf_prog_test_run_opts(fd, &opts);
     close(fd);
-  }
-  else
+  } else
     has_raw_tp_special_ = false;
 
   return *has_raw_tp_special_;
@@ -615,10 +589,7 @@ bool BPFfeature::has_raw_tp_special()
 std::string BPFfeature::report(void)
 {
   std::stringstream buf;
-  auto to_str = [](bool f) -> auto
-  {
-    return f ? "yes\n" : "no\n";
-  };
+  auto to_str = [](bool f) -> auto { return f ? "yes\n" : "no\n"; };
 
   buf << "Kernel helpers" << std::endl
       << "  probe_read: " << to_str(has_helper_probe_read())
@@ -674,8 +645,7 @@ std::string BPFfeature::report(void)
 
 bool BPFfeature::has_prog_kfunc()
 {
-  if (!has_prog_kfunc_.has_value())
-  {
+  if (!has_prog_kfunc_.has_value()) {
     int progfd;
     if (!detect_prog_type(libbpf::BPF_PROG_TYPE_TRACING,
                           "sched_fork",

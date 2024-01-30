@@ -4,8 +4,7 @@
 
 namespace bpftrace {
 
-class FakeMap : public IMap
-{
+class FakeMap : public IMap {
 public:
   FakeMap(const std::string &name,
           const SizedType &type,

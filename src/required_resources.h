@@ -21,14 +21,12 @@ namespace bpftrace {
 
 class BPFtrace;
 
-struct HelperErrorInfo
-{
+struct HelperErrorInfo {
   int func_id = -1;
   location loc;
 };
 
-struct LinearHistogramArgs
-{
+struct LinearHistogramArgs {
   long min = -1;
   long max = -1;
   long step = -1;
@@ -48,8 +46,7 @@ private:
 // needs such as maps, async printf argument metadata, etc. An instance of this
 // class plus the actual bpf bytecode should be all that's necessary to run a
 // script on another host.
-class RequiredResources
-{
+class RequiredResources {
 public:
   // Create maps in `maps` based on stored metadata
   //

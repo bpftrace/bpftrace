@@ -27,8 +27,7 @@ Bitfield::Bitfield(size_t bit_offset, size_t bit_width)
   //
   // `mask` tells codegen how to mask out the surrounding bitfields.
 
-  if (bit_width > BIFTIELD_BIT_WIDTH_MAX)
-  {
+  if (bit_width > BIFTIELD_BIT_WIDTH_MAX) {
     LOG(WARNING) << "bitfield bitwidth " << bit_width << "is not supported."
                  << " Use bitwidth " << BIFTIELD_BIT_WIDTH_MAX;
     bit_width = BIFTIELD_BIT_WIDTH_MAX;
@@ -46,13 +45,14 @@ Bitfield::Bitfield(size_t bit_offset, size_t bit_width)
 #endif
 }
 
-bool Bitfield::operator==(const Bitfield &other) const {
-  return read_bytes == other.read_bytes
-    && mask == other.mask
-    && access_rshift == other.access_rshift;
+bool Bitfield::operator==(const Bitfield &other) const
+{
+  return read_bytes == other.read_bytes && mask == other.mask &&
+         access_rshift == other.access_rshift;
 }
 
-bool Bitfield::operator!=(const Bitfield &other) const {
+bool Bitfield::operator!=(const Bitfield &other) const
+{
   return !(*this == other);
 }
 
@@ -63,8 +63,7 @@ std::unique_ptr<Struct> Struct::CreateTuple(std::vector<SizedType> fields)
   ssize_t offset = 0;
   ssize_t struct_align = 1;
 
-  for (auto &field : fields)
-  {
+  for (auto &field : fields) {
     auto align = field.GetInTupleAlignment();
     struct_align = std::max(align, struct_align);
     auto size = field.GetSize();
@@ -106,11 +105,9 @@ void Struct::Dump(std::ostream &os)
   };
 
   ssize_t offset = 0;
-  for (const auto &field : fields)
-  {
+  for (const auto &field : fields) {
     auto delta = field.offset - offset;
-    if (delta)
-    {
+    if (delta) {
       prefix(offset, os) << pad(delta) << std::endl;
     }
     prefix(offset + delta, os) << field.type << std::endl;
@@ -121,8 +118,7 @@ void Struct::Dump(std::ostream &os)
 
 bool Struct::HasField(const std::string &name) const
 {
-  for (auto &field : fields)
-  {
+  for (auto &field : fields) {
     if (field.name == name)
       return true;
   }
@@ -131,8 +127,7 @@ bool Struct::HasField(const std::string &name) const
 
 const Field &Struct::GetField(const std::string &name) const
 {
-  for (auto &field : fields)
-  {
+  for (auto &field : fields) {
     if (field.name == name)
       return field;
   }

@@ -29,42 +29,28 @@ std::ostream &operator<<(std::ostream &os, ProbeType type)
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type)
 {
-  if (type.IsRecordTy())
-  {
+  if (type.IsRecordTy()) {
     os << type.GetName();
-  }
-  else if (type.IsPtrTy())
-  {
+  } else if (type.IsPtrTy()) {
     if (type.IsCtxAccess())
       os << "(ctx) ";
     os << *type.GetPointeeTy() << " *";
-  }
-  else if (type.IsIntTy())
-  {
+  } else if (type.IsIntTy()) {
     os << (type.is_signed_ ? "" : "unsigned ") << "int" << 8 * type.GetSize();
-  }
-  else if (type.IsArrayTy())
-  {
+  } else if (type.IsArrayTy()) {
     os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
-  }
-  else if (type.IsStringTy() || type.IsBufferTy())
-  {
+  } else if (type.IsStringTy() || type.IsBufferTy()) {
     os << type.type << "[" << type.GetSize() << "]";
-  }
-  else if (type.IsTupleTy())
-  {
+  } else if (type.IsTupleTy()) {
     os << "(";
     size_t n = type.GetFieldCount();
-    for (size_t i = 0; i < n; ++i)
-    {
+    for (size_t i = 0; i < n; ++i) {
       os << type.GetField(i).type;
       if (i != n - 1)
         os << ",";
     }
     os << ")";
-  }
-  else
-  {
+  } else {
     os << type.type;
   }
 
@@ -137,8 +123,7 @@ bool SizedType::IsStack() const
 
 std::string addrspacestr(AddrSpace as)
 {
-  switch (as)
-  {
+  switch (as) {
     case AddrSpace::kernel:
       return "kernel";
       break;
@@ -155,8 +140,7 @@ std::string addrspacestr(AddrSpace as)
 
 std::string typestr(Type t)
 {
-  switch (t)
-  {
+  switch (t) {
     // clang-format off
     case Type::none:     return "none";     break;
     case Type::integer:  return "integer";  break;
@@ -205,7 +189,7 @@ ProbeType probetype(const std::string &probeName)
                         });
 
   if (v != PROBE_LIST.end())
-    retType =  v->type;
+    retType = v->type;
 
   return retType;
 }
@@ -562,13 +546,11 @@ bool SizedType::FitsInto(const SizedType &t) const
   if (IsStringTy() && t.IsStringTy())
     return GetSize() <= t.GetSize();
 
-  if (IsTupleTy() && t.IsTupleTy())
-  {
+  if (IsTupleTy() && t.IsTupleTy()) {
     if (GetFieldCount() != t.GetFieldCount())
       return false;
 
-    for (ssize_t i = 0; i < GetFieldCount(); i++)
-    {
+    for (ssize_t i = 0; i < GetFieldCount(); i++) {
       if (!GetField(i).type.FitsInto(t.GetField(i).type))
         return false;
     }
@@ -586,8 +568,7 @@ size_t hash<bpftrace::SizedType>::operator()(
   auto hash = std::hash<unsigned>()(static_cast<unsigned>(type.type));
   bpftrace::hash_combine(hash, type.GetSize());
 
-  switch (type.type)
-  {
+  switch (type.type) {
     case bpftrace::Type::integer:
       bpftrace::hash_combine(hash, type.IsSigned());
       break;

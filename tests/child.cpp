@@ -28,13 +28,10 @@ using ::testing::HasSubstr;
 
 TEST(childproc, exe_does_not_exist)
 {
-  try
-  {
+  try {
     ChildProc child("/does/not/exist/abc/fed");
     FAIL();
-  }
-  catch (const std::runtime_error &e)
-  {
+  } catch (const std::runtime_error &e) {
     EXPECT_THAT(e.what(), HasSubstr("does not exist or is not executable"));
   }
 }
@@ -46,13 +43,10 @@ TEST(childproc, too_many_arguments)
   for (int i = 0; i < 280; i++)
     cmd << " a";
 
-  try
-  {
+  try {
     ChildProc child(cmd.str());
     FAIL();
-  }
-  catch (const std::runtime_error &e)
-  {
+  } catch (const std::runtime_error &e) {
     EXPECT_THAT(e.what(), HasSubstr("Too many arguments"));
   }
 }

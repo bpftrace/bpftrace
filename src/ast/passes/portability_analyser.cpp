@@ -18,8 +18,7 @@ int PortabilityAnalyser::analyse()
   Visit(*root_);
 
   std::string errors = err_.str();
-  if (!errors.empty())
-  {
+  if (!errors.empty()) {
     out_ << errors;
     return 1;
   }
@@ -47,8 +46,7 @@ void PortabilityAnalyser::visit(Builtin &builtin)
   // `struct task_struct` is unstable across kernel versions and configurations.
   // This makes it inherently unportable. We must block it until we support
   // field access relocations.
-  if (builtin.ident == "curtask")
-  {
+  if (builtin.ident == "curtask") {
     LOG(ERROR, builtin.loc, err_)
         << "AOT does not yet support accessing `curtask`";
   }
@@ -56,8 +54,7 @@ void PortabilityAnalyser::visit(Builtin &builtin)
 
 void PortabilityAnalyser::visit(Call &call)
 {
-  if (call.vargs)
-  {
+  if (call.vargs) {
     for (Expression *expr : *call.vargs)
       Visit(*expr);
   }
@@ -71,8 +68,7 @@ void PortabilityAnalyser::visit(Call &call)
   // resolved during codegen and the value embedded into the bytecode.  For AOT
   // to support cgroupid(), the cgroupid must be resolved at runtime and fixed
   // up during load time.
-  if (call.func == "kaddr" || call.func == "uaddr" || call.func == "cgroupid")
-  {
+  if (call.func == "kaddr" || call.func == "uaddr" || call.func == "cgroupid") {
     LOG(ERROR, call.loc, err_)
         << "AOT does not yet support " << call.func << "()";
   }
@@ -99,8 +95,7 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
   // and offsets and type information is embedded into the bytecode. For AOT
   // support, this analyzing must be done during runtime and fixed up during
   // load time.
-  if (type == ProbeType::usdt)
-  {
+  if (type == ProbeType::usdt) {
     LOG(ERROR, ap.loc, err_) << "AOT does not yet support USDT probes";
   }
   // While userspace watchpoint probes are technically portable from codegen
@@ -109,8 +104,8 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
   // (see https://github.com/iovisor/bpftrace/issues/1683).
   //
   // So disable for now and re-evalulate at another point.
-  else if (type == ProbeType::watchpoint || type == ProbeType::asyncwatchpoint)
-  {
+  else if (type == ProbeType::watchpoint ||
+           type == ProbeType::asyncwatchpoint) {
     LOG(ERROR, ap.loc, err_) << "AOT does not yet support watchpoint probes";
   }
 }
@@ -119,8 +114,7 @@ Pass CreatePortabilityPass()
 {
   auto fn = [](Node &n, PassContext &__attribute__((unused))) {
     PortabilityAnalyser analyser{ &n };
-    if (analyser.analyse())
-    {
+    if (analyser.analyse()) {
       // Used by runtime test framework to know when to skip an AOT test
       if (std::getenv("__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED"))
         std::cout << "__BPFTRACE_NOTIFY_AOT_PORTABILITY_DISABLED" << std::endl;

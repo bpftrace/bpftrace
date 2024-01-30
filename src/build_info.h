@@ -4,8 +4,7 @@
 
 namespace bpftrace {
 
-class BuildInfo
-{
+class BuildInfo {
 public:
   static std::string report();
 };

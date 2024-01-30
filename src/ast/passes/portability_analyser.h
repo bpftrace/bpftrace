@@ -14,8 +14,7 @@ namespace ast {
 //
 // Over time, we expect to relax these restrictions as AOT supports more
 // features.
-class PortabilityAnalyser : public Visitor
-{
+class PortabilityAnalyser : public Visitor {
 public:
   PortabilityAnalyser(Node *root, std::ostream &out = std::cerr);
   int analyse();

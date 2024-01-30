@@ -37,8 +37,7 @@ static void report_status(int wstatus)
     msg << "Child stopped unexpectedly, signal: " << WSTOPSIG(wstatus);
   else if (WIFEXITED(wstatus))
     msg << "Child exited unexpectedly";
-  else if (WIFSIGNALED(wstatus))
-  {
+  else if (WIFSIGNALED(wstatus)) {
     if (WCOREDUMP(wstatus))
       msg << "Child core dumped";
     else
@@ -52,8 +51,7 @@ static int childfn(void* arg)
   struct child_args* args = static_cast<struct child_args*>(arg);
 
   // Receive SIGTERM if parent dies
-  if (prctl(PR_SET_PDEATHSIG, SIGTERM))
-  {
+  if (prctl(PR_SET_PDEATHSIG, SIGTERM)) {
     perror("child: prctl(PR_SET_PDEATHSIG)");
     return 10;
   }
@@ -61,24 +59,21 @@ static int childfn(void* arg)
   // Convert vector of strings into raw array of C-strings for execve(2)
   char* argv[maxargs];
   int idx = 0;
-  for (const auto& a : args->cmd)
-  {
+  for (const auto& a : args->cmd) {
     argv[idx++] = const_cast<char*>(a.c_str());
   }
   argv[idx] = nullptr; // must be null terminated
 
   uint64_t bf;
   int ret = read(args->event_fd, &bf, sizeof(bf));
-  if (ret < 0)
-  {
+  if (ret < 0) {
     perror("child: failed to read 'go' event fd");
     return 11;
   }
 
   close(args->event_fd);
 
-  if (bf == CHILD_PTRACE)
-  {
+  if (bf == CHILD_PTRACE) {
     if (ptrace(PTRACE_TRACEME, 0, NULL, NULL) < 0)
       perror("child: ptrace(traceme) failed");
     if (kill(getpid(), SIGSTOP))
@@ -95,8 +90,7 @@ static int childfn(void* arg)
 static void validate_cmd(std::vector<std::string>& cmd)
 {
   auto paths = resolve_binary_path(cmd[0]);
-  switch (paths.size())
-  {
+  switch (paths.size()) {
     case 0:
       throw std::runtime_error("path '" + cmd[0] +
                                "' does not exist or is not executable");
@@ -112,26 +106,21 @@ static void validate_cmd(std::vector<std::string>& cmd)
       // /usr/bin/ping
       // /usr/bin/ping
       std::unordered_set<std::string> uniq_abs_path;
-      for (unsigned int i = 0; i < paths.size(); i++)
-      {
+      for (unsigned int i = 0; i < paths.size(); i++) {
         uniq_abs_path.insert(abs_path(paths[i]).value());
       }
 
-      if (uniq_abs_path.size() == 1)
-      {
+      if (uniq_abs_path.size() == 1) {
         cmd[0] = paths.front().c_str();
         break;
-      }
-      else
-      {
+      } else {
         throw std::runtime_error(
             "path '" + cmd[0] + "' must refer to a unique binary but matched " +
             std::to_string(paths.size()) + " binaries");
       }
   }
 
-  if (cmd.size() >= (maxargs - 1))
-  {
+  if (cmd.size() >= (maxargs - 1)) {
     throw std::runtime_error("Too many arguments for command (" +
                              std::to_string(cmd.size()) + " > " +
                              std::to_string(maxargs - 1) + ")");
@@ -147,8 +136,7 @@ ChildProc::ChildProc(std::string cmd)
   validate_cmd(child_args->cmd);
 
   int event_fd = eventfd(0, EFD_CLOEXEC);
-  if (event_fd < 0)
-  {
+  if (event_fd < 0) {
     SYS_ERROR("Failed to create event fd");
   }
 
@@ -158,8 +146,7 @@ ChildProc::ChildProc(std::string cmd)
   pid_t cpid = clone(
       childfn, child_stack.get() + STACK_SIZE, SIGCHLD, child_args.get());
 
-  if (cpid <= 0)
-  {
+  if (cpid <= 0) {
     close(event_fd);
     throw SYS_ERROR("Failed to clone child");
   }
@@ -170,8 +157,7 @@ ChildProc::ChildProc(std::string cmd)
 
 ChildProc::~ChildProc()
 {
-  if (child_event_fd_ >= 0)
-  {
+  if (child_event_fd_ >= 0) {
     close(child_event_fd_);
   }
 
@@ -214,16 +200,14 @@ void ChildProc::resume(void)
 
 void ChildProc::run(bool pause)
 {
-  if (!is_alive())
-  {
+  if (!is_alive()) {
     throw std::runtime_error("Child died unexpectedly");
   }
 
   assert(state_ == State::FORKED);
 
   auto* data = pause ? &CHILD_PTRACE : &CHILD_GO;
-  if (write(child_event_fd_, data, sizeof(*data)) < 0)
-  {
+  if (write(child_event_fd_, data, sizeof(*data)) < 0) {
     close(child_event_fd_);
     terminate(true);
     throw SYS_ERROR("Failed to write 'go' event fd");
@@ -231,8 +215,7 @@ void ChildProc::run(bool pause)
 
   close(child_event_fd_);
 
-  if (!pause)
-  {
+  if (!pause) {
     state_ = State::RUNNING;
     return;
   }
@@ -244,8 +227,7 @@ void ChildProc::run(bool pause)
   // we can then setup ptrace to stop the child right after execve
   // and let the child run until that point
   int wstatus;
-  if (waitpid(child_pid_, &wstatus, 0) < 0)
-  {
+  if (waitpid(child_pid_, &wstatus, 0) < 0) {
     if (errno == ECHILD)
       throw std::runtime_error("Child died unexpectedly");
   }
@@ -253,8 +235,7 @@ void ChildProc::run(bool pause)
   if (!WIFSTOPPED(wstatus) || WSTOPSIG(wstatus) != SIGSTOP)
     report_status(wstatus);
 
-  try
-  {
+  try {
     if (ptrace(PTRACE_SETOPTIONS, child_pid_, nullptr, PTRACE_O_TRACEEXEC) < 0)
       throw SYS_ERROR("Failed to PTRACE_SETOPTIONS child");
 
@@ -269,9 +250,7 @@ void ChildProc::run(bool pause)
       return;
 
     report_status(wstatus);
-  }
-  catch (const std::runtime_error& e)
-  {
+  } catch (const std::runtime_error& e) {
     ptrace(PTRACE_DETACH, child_pid_, nullptr, 0);
     terminate(true);
     throw SYS_ERROR("Failed to write 'go' event fd");
@@ -304,12 +283,10 @@ void ChildProc::check_child(bool block)
   while ((ret = waitpid(child_pid_, &status, flags)) < 0 && errno == EINTR)
     ;
 
-  if (ret < 0)
-  {
+  if (ret < 0) {
     if (errno == EINVAL)
       LOG(BUG) << "waitpid() EINVAL";
-    else
-    {
+    else {
       LOG(ERROR) << "waitpid(" << child_pid_
                  << ") returned unexpected error: " << errno
                  << ". Marking the child as dead";

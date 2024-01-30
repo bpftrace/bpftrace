@@ -30,16 +30,14 @@ BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
 
   BpfBytecode result;
 
-  for (int i = 0; i < ehdr->e_shnum; ++i)
-  {
+  for (int i = 0; i < ehdr->e_shnum; ++i) {
     Elf64_Shdr *shdr = &shdrs[i];
 
     char *name = strtable + shdr->sh_name;
     std::vector<uint8_t> data;
     data.resize(shdr->sh_size);
 
-    if (shdr->sh_size && shdr->sh_type != SHT_NOBITS)
-    {
+    if (shdr->sh_size && shdr->sh_type != SHT_NOBITS) {
       // NOBITS sections occupy no size on disk but take up size in
       // memory. Copy the file data for all other sections.
 

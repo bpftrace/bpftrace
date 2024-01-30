@@ -18,8 +18,7 @@ namespace bpftrace {
 namespace {
 bool is_quoted_type(const SizedType &ty)
 {
-  switch (ty.type)
-  {
+  switch (ty.type) {
     case Type::buffer:
     case Type::cgroup_path:
     case Type::inet:
@@ -56,22 +55,44 @@ bool is_quoted_type(const SizedType &ty)
 }
 } // namespace
 
-std::ostream& operator<<(std::ostream& out, MessageType type) {
+std::ostream &operator<<(std::ostream &out, MessageType type)
+{
   switch (type) {
-    case MessageType::map: out << "map"; break;
+    case MessageType::map:
+      out << "map";
+      break;
     case MessageType::value:
       out << "value";
       break;
-    case MessageType::hist: out << "hist"; break;
-    case MessageType::stats: out << "stats"; break;
-    case MessageType::printf: out << "printf"; break;
-    case MessageType::time: out << "time"; break;
-    case MessageType::cat: out << "cat"; break;
-    case MessageType::join: out << "join"; break;
-    case MessageType::syscall: out << "syscall"; break;
-    case MessageType::attached_probes: out << "attached_probes"; break;
-    case MessageType::lost_events: out << "lost_events"; break;
-    default: out << "?";
+    case MessageType::hist:
+      out << "hist";
+      break;
+    case MessageType::stats:
+      out << "stats";
+      break;
+    case MessageType::printf:
+      out << "printf";
+      break;
+    case MessageType::time:
+      out << "time";
+      break;
+    case MessageType::cat:
+      out << "cat";
+      break;
+    case MessageType::join:
+      out << "join";
+      break;
+    case MessageType::syscall:
+      out << "syscall";
+      break;
+    case MessageType::attached_probes:
+      out << "attached_probes";
+      break;
+    case MessageType::lost_events:
+      out << "lost_events";
+      break;
+    default:
+      out << "?";
   }
   return out;
 }
@@ -112,34 +133,29 @@ std::string TextOutput::lhist_index_label(int number)
 
   std::ostringstream label;
 
-  if (number == 0)
-  {
+  if (number == 0) {
     label << number;
-  }
-  else if (number % mega == 0)
-  {
+  } else if (number % mega == 0) {
     label << number / mega << 'M';
-  }
-  else if (number % kilo == 0)
-  {
+  } else if (number % kilo == 0) {
     label << number / kilo << 'K';
-  }
-  else
-  {
+  } else {
     label << number;
   }
 
   return label.str();
 }
 
-void Output::hist_prepare(const std::vector<uint64_t> &values, int &min_index, int &max_index, int &max_value) const
+void Output::hist_prepare(const std::vector<uint64_t> &values,
+                          int &min_index,
+                          int &max_index,
+                          int &max_value) const
 {
   min_index = -1;
   max_index = -1;
   max_value = 0;
 
-  for (size_t i = 0; i < values.size(); i++)
-  {
+  for (size_t i = 0; i < values.size(); i++) {
     int v = values.at(i);
     if (v > 0) {
       if (min_index == -1)
@@ -151,14 +167,21 @@ void Output::hist_prepare(const std::vector<uint64_t> &values, int &min_index, i
   }
 }
 
-void Output::lhist_prepare(const std::vector<uint64_t> &values, int min, int max, int step, int &max_index, int &max_value, int &buckets, int &start_value, int &end_value) const
+void Output::lhist_prepare(const std::vector<uint64_t> &values,
+                           int min,
+                           int max,
+                           int step,
+                           int &max_index,
+                           int &max_value,
+                           int &buckets,
+                           int &start_value,
+                           int &end_value) const
 {
   max_index = -1;
   max_value = 0;
   buckets = (max - min) / step; // excluding lt and gt buckets
 
-  for (size_t i = 0; i < values.size(); i++)
-  {
+  for (size_t i = 0; i < values.size(); i++) {
     int v = values.at(i);
     if (v != 0)
       max_index = i;
@@ -173,8 +196,7 @@ void Output::lhist_prepare(const std::vector<uint64_t> &values, int min, int max
   start_value = -1;
   end_value = 0;
 
-  for (unsigned int i = 0; i <= static_cast<unsigned int>(buckets) + 1; i++)
-  {
+  for (unsigned int i = 0; i <= static_cast<unsigned int>(buckets) + 1; i++) {
     if (values.at(i) > 0) {
       if (start_value == -1) {
         start_value = i;
@@ -191,22 +213,17 @@ void Output::lhist_prepare(const std::vector<uint64_t> &values, int min, int max
 std::string Output::get_helper_error_msg(int func_id, int retcode) const
 {
   std::string msg;
-  if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG)
-  {
+  if (func_id == libbpf::BPF_FUNC_map_update_elem && retcode == -E2BIG) {
     msg = "Map full; can't update element. Try increasing max_map_keys config";
-  }
-  else if (func_id == libbpf::BPF_FUNC_map_delete_elem && retcode == -ENOENT)
-  {
+  } else if (func_id == libbpf::BPF_FUNC_map_delete_elem &&
+             retcode == -ENOENT) {
     msg = "Can't delete map element because it does not exist.";
   }
   // bpftrace sets the return code to 0 for map_lookup_elem failures
   // which is why we're not also checking the retcode
-  else if (func_id == libbpf::BPF_FUNC_map_lookup_elem)
-  {
+  else if (func_id == libbpf::BPF_FUNC_map_lookup_elem) {
     msg = "Can't lookup map element because it does not exist.";
-  }
-  else
-  {
+  } else {
     msg = strerror(-retcode);
   }
   return msg;
@@ -243,29 +260,22 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
   else if (type.IsBufferTy())
     return bpftrace.resolve_buf(reinterpret_cast<char *>(value.data() + 1),
                                 *reinterpret_cast<uint8_t *>(value.data()));
-  else if (type.IsStringTy())
-  {
+  else if (type.IsStringTy()) {
     auto p = reinterpret_cast<const char *>(value.data());
     return std::string(p, strnlen(p, type.GetSize()));
-  }
-  else if (type.IsArrayTy())
-  {
+  } else if (type.IsArrayTy()) {
     size_t elem_size = type.GetElementTy()->GetSize();
     std::vector<std::string> elems;
-    for (size_t i = 0; i < type.GetNumElements(); i++)
-    {
+    for (size_t i = 0; i < type.GetNumElements(); i++) {
       std::vector<uint8_t> elem_data(value.begin() + i * elem_size,
                                      value.begin() + (i + 1) * elem_size);
       elems.push_back(value_to_str(
           bpftrace, *type.GetElementTy(), elem_data, is_per_cpu, div));
     }
     return array_to_str(elems);
-  }
-  else if (type.IsRecordTy())
-  {
+  } else if (type.IsRecordTy()) {
     std::vector<std::string> elems;
-    for (auto &field : type.GetFields())
-    {
+    for (auto &field : type.GetFields()) {
       std::vector<uint8_t> elem_data(value.begin() + field.offset,
                                      value.begin() + field.offset +
                                          field.type.GetSize());
@@ -274,12 +284,9 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
           value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div)));
     }
     return struct_to_str(elems);
-  }
-  else if (type.IsTupleTy())
-  {
+  } else if (type.IsTupleTy()) {
     std::vector<std::string> elems;
-    for (auto &field : type.GetFields())
-    {
+    for (auto &field : type.GetFields()) {
       std::vector<uint8_t> elem_data(value.begin() + field.offset,
                                      value.begin() + field.offset +
                                          field.type.GetSize());
@@ -287,14 +294,11 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
           value_to_str(bpftrace, field.type, elem_data, is_per_cpu, div));
     }
     return tuple_to_str(elems);
-  }
-  else if (type.IsCountTy())
+  } else if (type.IsCountTy())
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  else if (type.IsIntTy())
-  {
+  else if (type.IsIntTy()) {
     auto sign = type.IsSigned();
-    switch (type.GetIntBitWidth())
-    {
+    switch (type.GetIntBitWidth()) {
       // clang-format off
       case 64:
         if (sign)
@@ -322,15 +326,12 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
         return {};
     }
     // lgtm[cpp/missing-return]
-  }
-  else if (type.IsSumTy() || type.IsIntTy())
-  {
+  } else if (type.IsSumTy() || type.IsIntTy()) {
     if (type.IsSigned())
       return std::to_string(reduce_value<int64_t>(value, nvalues) / div);
 
     return std::to_string(reduce_value<uint64_t>(value, nvalues) / div);
-  }
-  else if (type.IsMinTy())
+  } else if (type.IsMinTy())
     return std::to_string(min_value(value, nvalues) / div);
   else if (type.IsMaxTy())
     return std::to_string(max_value(value, nvalues) / div);
@@ -350,14 +351,11 @@ std::string Output::value_to_str(BPFtrace &bpftrace,
         reinterpret_cast<AsyncEvent::CgroupPath *>(value.data())->cgroup_id);
   else if (type.IsStrerrorTy())
     return strerror(read_data<uint64_t>(value.data()));
-  else if (type.IsPtrTy())
-  {
+  else if (type.IsPtrTy()) {
     std::ostringstream res;
     res << "0x" << std::hex << read_data<uint64_t>(value.data());
     return res.str();
-  }
-  else
-  {
+  } else {
     assert(type.IsNoneTy());
     return "";
   }
@@ -384,13 +382,11 @@ std::string Output::map_to_str(
   std::vector<std::string> elems;
   uint32_t i = 0;
   size_t total = values_by_key.size();
-  for (auto &pair : values_by_key)
-  {
+  for (auto &pair : values_by_key) {
     auto key = pair.first;
     auto value = pair.second;
 
-    if (top)
-    {
+    if (top) {
       if (total > top && i++ < (total - top))
         continue;
     }
@@ -415,8 +411,7 @@ std::string Output::map_hist_to_str(
 {
   std::vector<std::string> elems;
   uint32_t i = 0;
-  for (auto &key_count : total_counts_by_key)
-  {
+  for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
@@ -444,8 +439,7 @@ std::string Output::map_stats_to_str(
 {
   std::vector<std::string> elems;
   uint32_t i = 0;
-  for (auto &key_count : total_counts_by_key)
-  {
+  for (auto &key_count : total_counts_by_key) {
     auto &key = key_count.first;
     auto &value = values_by_key.at(key);
 
@@ -463,14 +457,12 @@ std::string Output::map_stats_to_str(
       average = total / count;
 
     std::string value_str;
-    if (map.type_.IsStatsTy())
-    {
+    if (map.type_.IsStatsTy()) {
       std::vector<std::pair<std::string, int64_t>> stats = {
         { "count", count }, { "average", average }, { "total", total }
       };
       value_str = key_value_pairs_to_str(stats);
-    }
-    else
+    } else
       value_str = std::to_string(average / div);
 
     elems.push_back(map_keyval_to_str(map, key_str, value_str));
@@ -501,8 +493,7 @@ std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
     return "";
 
   std::ostringstream res;
-  for (int i = min_index; i <= max_index; i++)
-  {
+  for (int i = min_index; i <= max_index; i++) {
     std::ostringstream header;
 
     // Index 0 is for negative values. Following that, each sequence
@@ -518,23 +509,18 @@ std::string TextOutput::hist_to_str(const std::vector<uint64_t> &values,
     // Higher indexes contain multiple values and we use helpers to print
     // the range as open intervals.
 
-    if (i == 0)
-    {
+    if (i == 0) {
       header << "(..., 0)";
-    }
-    else if (i <= (2 << k))
-    {
+    } else if (i <= (2 << k)) {
       header << "[" << (i - 1) << "]";
-    }
-    else
-    {
+    } else {
       // Use a helper function to print the interval boundaries.
       header << "[" << hist_index_label(i - 1, k);
       header << ", " << hist_index_label(i, k) << ")";
     }
 
     int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
+    int bar_width = values.at(i) / (float)max_value * max_width;
     std::string bar(bar_width, '@');
 
     res << std::setw(16) << std::left << header.str() << std::setw(8)
@@ -550,15 +536,22 @@ std::string TextOutput::lhist_to_str(const std::vector<uint64_t> &values,
                                      int step) const
 {
   int max_index, max_value, buckets, start_value, end_value;
-  lhist_prepare(values, min, max, step, max_index, max_value, buckets, start_value, end_value);
+  lhist_prepare(values,
+                min,
+                max,
+                step,
+                max_index,
+                max_value,
+                buckets,
+                start_value,
+                end_value);
   if (max_index == -1)
     return "";
 
   std::ostringstream res;
-  for (int i = start_value; i <= end_value; i++)
-  {
+  for (int i = start_value; i <= end_value; i++) {
     int max_width = 52;
-    int bar_width = values.at(i)/(float)max_value*max_width;
+    int bar_width = values.at(i) / (float)max_value * max_width;
     std::ostringstream header;
     if (i == 0) {
       header << "(..., " << lhist_index_label(min) << ")";
@@ -613,7 +606,9 @@ void TextOutput::value(BPFtrace &bpftrace,
   out_ << value_to_str(bpftrace, ty, value, false, 1) << std::endl;
 }
 
-void TextOutput::message(MessageType type __attribute__((unused)), const std::string& msg, bool nl) const
+void TextOutput::message(MessageType type __attribute__((unused)),
+                         const std::string &msg,
+                         bool nl) const
 {
   out_ << msg;
   if (nl)
@@ -695,10 +690,8 @@ std::string TextOutput::key_value_pairs_to_str(
 std::string JsonOutput::json_escape(const std::string &str) const
 {
   std::ostringstream escaped;
-  for (const char &c : str)
-  {
-    switch (c)
-    {
+  for (const char &c : str) {
+    switch (c) {
       case '"':
         escaped << "\\\"";
         break;
@@ -721,12 +714,10 @@ std::string JsonOutput::json_escape(const std::string &str) const
 
       default:
         // c always >= '\x00'
-        if (c <= '\x1f')
-        {
-          escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0') << (int)c;
-        }
-        else
-        {
+        if (c <= '\x1f') {
+          escaped << "\\u" << std::hex << std::setw(4) << std::setfill('0')
+                  << (int)c;
+        } else {
           escaped << c;
         }
     }
@@ -768,8 +759,7 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
 
   std::ostringstream res;
   res << "[";
-  for (int i = min_index; i <= max_index; i++)
-  {
+  for (int i = min_index; i <= max_index; i++) {
     if (i > min_index)
       res << ", ";
 
@@ -779,16 +769,11 @@ std::string JsonOutput::hist_to_str(const std::vector<uint64_t> &values,
     // N = 2^k indexes have one value each (equal to i -1)
     // and remaining sets of N indexes each cover one power of 2,
     // whose ranges are computed as described in hist_index_label()
-    if (i == 0)
-    {
+    if (i == 0) {
       res << "\"max\": -1, ";
-    }
-    else if (i <= (2 << k))
-    {
+    } else if (i <= (2 << k)) {
       res << "\"min\": " << i - 1 << ", \"max\": " << i - 1 << ", ";
-    }
-    else
-    {
+    } else {
       const uint32_t n = 1 << k;
       uint32_t power = ((i - 1) >> k) - 1, bucket = (i - 1) & (n - 1);
       const long low = (1ULL << power) * (n + bucket);
@@ -811,14 +796,21 @@ std::string JsonOutput::lhist_to_str(const std::vector<uint64_t> &values,
                                      int step) const
 {
   int max_index, max_value, buckets, start_value, end_value;
-  lhist_prepare(values, min, max, step, max_index, max_value, buckets, start_value, end_value);
+  lhist_prepare(values,
+                min,
+                max,
+                step,
+                max_index,
+                max_value,
+                buckets,
+                start_value,
+                end_value);
   if (max_index == -1)
     return "[]";
 
   std::ostringstream res;
   res << "[";
-  for (int i = start_value; i <= end_value; i++)
-  {
+  for (int i = start_value; i <= end_value; i++) {
     if (i > start_value)
       res << ", ";
 
@@ -899,15 +891,21 @@ void JsonOutput::value(BPFtrace &bpftrace,
        << std::endl;
 }
 
-void JsonOutput::message(MessageType type, const std::string& msg, bool nl __attribute__((unused))) const
+void JsonOutput::message(MessageType type,
+                         const std::string &msg,
+                         bool nl __attribute__((unused))) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"data\": \"" << json_escape(msg) << "\"}" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"data\": \"" << json_escape(msg)
+       << "\"}" << std::endl;
 }
 
-void JsonOutput::message(MessageType type, const std::string& field, uint64_t value) const
+void JsonOutput::message(MessageType type,
+                         const std::string &field,
+                         uint64_t value) const
 {
-  out_ << "{\"type\": \"" << type << "\", \"data\": " <<  "{\"" << field
-       << "\": " << value << "}" << "}" << std::endl;
+  out_ << "{\"type\": \"" << type << "\", \"data\": "
+       << "{\"" << field << "\": " << value << "}"
+       << "}" << std::endl;
 }
 
 void JsonOutput::lost_events(uint64_t lost) const
@@ -961,8 +959,7 @@ std::string JsonOutput::map_key_to_str(BPFtrace &bpftrace,
                                        const std::vector<uint8_t> &key) const
 {
   std::vector<std::string> args = map.key_.argument_value_list(bpftrace, key);
-  if (!args.empty())
-  {
+  if (!args.empty()) {
     return "\"" + json_escape(str_join(args, ",")) + "\"";
   }
   return "";

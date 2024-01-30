@@ -29,18 +29,15 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class BTF
-{
-  enum state
-  {
+class BTF {
+  enum state {
     NODATA,
     OK,
   };
 
   // BTF object for vmlinux or a kernel module.
   // We're currently storing its name and BTF id.
-  struct BTFObj
-  {
+  struct BTFObj {
     struct btf* btf;
     __u32 id;
     std::string name;
@@ -48,8 +45,7 @@ class BTF
 
   // It is often necessary to store a BTF id along with the BTF data containing
   // its definition.
-  struct BTFId
-  {
+  struct BTFId {
     struct btf* btf;
     __u32 id;
   };

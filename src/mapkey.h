@@ -11,8 +11,7 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class MapKey
-{
+class MapKey {
 public:
   std::vector<SizedType> args_;
 

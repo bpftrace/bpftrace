@@ -48,14 +48,11 @@ int main(int argc, char* argv[])
   // Read inputs
   std::stringstream buf;
   std::string line;
-  if (argc <= 1)
-  {
+  if (argc <= 1) {
     // Input from stdin (AFL's default)
     while (std::getline(std::cin, line))
       buf << line << std::endl;
-  }
-  else
-  {
+  } else {
     // Read from file
     std::string filename(argv[1]);
     std::ifstream file(filename);
@@ -168,18 +165,13 @@ int fuzz_main(const char* data, size_t sz)
   // Codegen
   ast::CodegenLLVM llvm(driver.root.get(), bpftrace);
   BpfBytecode bytecode;
-  try
-  {
+  try {
     llvm.generate_ir();
     llvm.optimize();
     bytecode = llvm.emit();
-  }
-  catch (const std::system_error& ex)
-  {
+  } catch (const std::system_error& ex) {
     return 1;
-  }
-  catch (const std::exception& ex)
-  {
+  } catch (const std::exception& ex) {
     // failed to compile
     return 1;
   }

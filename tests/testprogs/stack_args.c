@@ -1,4 +1,4 @@
-#define ARG(x) int (x) __attribute((unused))
+#define ARG(x) int(x) __attribute((unused))
 
 // Declare enough args that some are placed on the stack
 void too_many_args(ARG(a),

@@ -4,8 +4,7 @@ namespace bpftrace {
 
 std::string logtype_str(LogType t)
 {
-  switch (t)
-  {
+  switch (t) {
     // clang-format off
     case LogType::DEBUG   : return "DEBUG";
     case LogType::INFO    : return "INFO";
@@ -44,32 +43,22 @@ void Log::take_input(LogType type,
     out << logtype_str(type) << ": " << input << std::endl;
   };
 
-  if (loc)
-  {
-    if (src_.empty())
-    {
+  if (loc) {
+    if (src_.empty()) {
       std::cerr << "Log: cannot resolve location before calling set_source()."
                 << std::endl;
       print_out();
-    }
-    else if (loc->begin.line == 0)
-    {
+    } else if (loc->begin.line == 0) {
       std::cerr << "Log: invalid location." << std::endl;
       print_out();
-    }
-    else if (loc->begin.line > loc->end.line)
-    {
+    } else if (loc->begin.line > loc->end.line) {
       std::cerr << "Log: loc.begin > loc.end: " << loc->begin << ":" << loc->end
                 << std::endl;
       print_out();
-    }
-    else
-    {
+    } else {
       log_with_location(type, loc.value(), out, input);
     }
-  }
-  else
-  {
+  } else {
     print_out();
   }
 }
@@ -80,8 +69,7 @@ const std::string Log::get_source_line(unsigned int n)
   // doesn't exist
   std::string line;
   std::stringstream ss(src_);
-  for (unsigned int idx = 0; idx <= n; idx++)
-  {
+  for (unsigned int idx = 0; idx <= n; idx++) {
     std::getline(ss, line);
     if (ss.eof() && idx == n)
       return line;
@@ -96,24 +84,21 @@ void Log::log_with_location(LogType type,
                             std::ostream& out,
                             const std::string& m)
 {
-  if (filename_.size())
-  {
+  if (filename_.size()) {
     out << filename_ << ":";
   }
 
   std::string msg(m);
   const std::string& typestr = logtype_str(type);
 
-  if (!msg.empty() && msg.back() == '\n')
-  {
+  if (!msg.empty() && msg.back() == '\n') {
     msg.pop_back();
   }
 
   /* For a multi line error only the line range is printed:
      <filename>:<start_line>-<end_line>: ERROR: <message>
   */
-  if (l.begin.line < l.end.line)
-  {
+  if (l.begin.line < l.end.line) {
     out << l.begin.line << "-" << l.end.line << ": " << typestr << ": " << msg
         << std::endl;
     return;
@@ -142,8 +127,7 @@ void Log::log_with_location(LogType type,
     return;
 
   // To get consistent printing all tabs will be replaced with 4 spaces
-  for (auto c : srcline)
-  {
+  for (auto c : srcline) {
     if (c == '\t')
       out << "    ";
     else
@@ -153,16 +137,12 @@ void Log::log_with_location(LogType type,
 
   for (unsigned int x = 0;
        x < srcline.size() && x < (static_cast<unsigned int>(l.end.column) - 1);
-       x++)
-  {
+       x++) {
     char marker = (x < (static_cast<unsigned int>(l.begin.column) - 1)) ? ' '
                                                                         : '~';
-    if (srcline[x] == '\t')
-    {
+    if (srcline[x] == '\t') {
       out << std::string(4, marker);
-    }
-    else
-    {
+    } else {
       out << marker;
     }
   }

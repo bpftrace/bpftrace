@@ -7,8 +7,7 @@
 namespace bpftrace {
 namespace ast {
 
-class Printer : public Visitor
-{
+class Printer : public Visitor {
 public:
   explicit Printer(std::ostream &out, bool print_types = false)
       : out_(out), print_types(print_types)

@@ -11,8 +11,7 @@
 namespace bpftrace {
 namespace ast {
 
-class AttachPointParser
-{
+class AttachPointParser {
 public:
   AttachPointParser(Program *root,
                     BPFtrace &bpftrace,
@@ -22,13 +21,7 @@ public:
   int parse();
 
 private:
-  enum State
-  {
-    OK = 0,
-    INVALID,
-    NEW_APS,
-    SKIP
-  };
+  enum State { OK = 0, INVALID, NEW_APS, SKIP };
 
   State parse_attachpoint(AttachPoint &ap);
   /*

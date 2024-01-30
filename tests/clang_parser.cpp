@@ -13,8 +13,10 @@ namespace clang_parser {
 
 #include "btf_common.h"
 
-static void parse(const std::string &input, BPFtrace &bpftrace, bool result = true,
-                  const std::string& probe = "kprobe:sys_read { 1 }")
+static void parse(const std::string &input,
+                  BPFtrace &bpftrace,
+                  bool result = true,
+                  const std::string &probe = "kprobe:sys_read { 1 }")
 {
   auto extended_input = input + probe;
   Driver driver(bpftrace);
@@ -203,7 +205,8 @@ TEST(clang_parser, nested_struct_no_type)
   BPFtrace bpftrace;
   // bar and baz's struct/union do not have type names, but are not anonymous
   // since they are called bar and baz
-  parse("struct Foo { struct { int x; } bar; union { int y; } baz; }", bpftrace);
+  parse("struct Foo { struct { int x; } bar; union { int y; } baz; }",
+        bpftrace);
 
 #if LLVM_VERSION_MAJOR >= 13
   std::string bar_name = "struct Foo::(unnamed at definitions.h:2:14)";
@@ -519,9 +522,7 @@ TEST(clang_parser, parse_fail)
   parse("struct a { int a; struct b b; };", bpftrace, false);
 }
 
-class clang_parser_btf : public test_btf
-{
-};
+class clang_parser_btf : public test_btf {};
 
 TEST_F(clang_parser_btf, btf)
 {
@@ -666,7 +667,8 @@ TEST(clang_parser, struct_typedef)
   // "typedef struct {} max_align_t"
   BPFtrace bpftrace;
   parse("#include <__stddef_max_align_t.h>\n"
-        "struct max_align_t { int x; };", bpftrace);
+        "struct max_align_t { int x; };",
+        bpftrace);
 
   ASSERT_TRUE(bpftrace.structs.Has("struct max_align_t"));
   ASSERT_TRUE(bpftrace.structs.Has("max_align_t"));

@@ -6,12 +6,11 @@
 #include "ast/ast.h"
 #include "bpftrace.h"
 
-typedef void* yyscan_t;
+typedef void *yyscan_t;
 
 namespace bpftrace {
 
-class Driver
-{
+class Driver {
 public:
   explicit Driver(BPFtrace &bpftrace, std::ostream &o = std::cerr);
 

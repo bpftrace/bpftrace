@@ -11,7 +11,8 @@
 #include <linux/bpf.h>
 #include <seccomp.h>
 
-void help() {
+void help()
+{
   printf("Simulate bpf(2) syscall failures based on the bpf(2) command ");
   printf("executed\n");
   printf("\n");
@@ -36,40 +37,41 @@ struct entry {
   const char* name;
 };
 
-#define ENTRY(symbol, name) \
-  { symbol, #symbol, name }
+#define ENTRY(symbol, name)                                                    \
+  {                                                                            \
+    symbol, #symbol, name                                                      \
+  }
 
 static const struct entry bpf_commands[] = {
-    ENTRY(BPF_MAP_CREATE, "map_create"),
-    ENTRY(BPF_MAP_LOOKUP_ELEM, "map_lookup_elem"),
-    ENTRY(BPF_MAP_UPDATE_ELEM, "map_update_elem"),
-    ENTRY(BPF_MAP_DELETE_ELEM, "map_delete_elem"),
-    ENTRY(BPF_MAP_GET_NEXT_KEY, "map_get_next_key"),
-    ENTRY(BPF_PROG_LOAD, "prog_load"),
-    ENTRY(BPF_OBJ_PIN, "obj_pin"),
-    ENTRY(BPF_OBJ_GET, "obj_get"),
-    ENTRY(BPF_PROG_ATTACH, "prog_attach"),
-    ENTRY(BPF_PROG_DETACH, "prog_detach"),
-    ENTRY(BPF_PROG_TEST_RUN, "prog_test_run"),
-    ENTRY(BPF_PROG_GET_NEXT_ID, "prog_get_next_id"),
-    ENTRY(BPF_MAP_GET_NEXT_ID, "map_get_next_id"),
-    ENTRY(BPF_PROG_GET_FD_BY_ID, "prog_get_fd_by_id"),
-    ENTRY(BPF_MAP_GET_FD_BY_ID, "map_get_fd_by_id"),
-    ENTRY(
-        BPF_OBJ_GET_INFO_BY_FD,
-        "obj_get_info_by_fd"),
-    ENTRY(BPF_PROG_QUERY, "prog_query"),
-    ENTRY(BPF_RAW_TRACEPOINT_OPEN,
-          "raw_tracepoint_open"),
-    ENTRY(BPF_BTF_LOAD, "btf_load"),
-    ENTRY(BPF_BTF_GET_FD_BY_ID, "btf_get_fd_by_id"),
-    ENTRY(BPF_TASK_FD_QUERY, "task_fd_query"),
+  ENTRY(BPF_MAP_CREATE, "map_create"),
+  ENTRY(BPF_MAP_LOOKUP_ELEM, "map_lookup_elem"),
+  ENTRY(BPF_MAP_UPDATE_ELEM, "map_update_elem"),
+  ENTRY(BPF_MAP_DELETE_ELEM, "map_delete_elem"),
+  ENTRY(BPF_MAP_GET_NEXT_KEY, "map_get_next_key"),
+  ENTRY(BPF_PROG_LOAD, "prog_load"),
+  ENTRY(BPF_OBJ_PIN, "obj_pin"),
+  ENTRY(BPF_OBJ_GET, "obj_get"),
+  ENTRY(BPF_PROG_ATTACH, "prog_attach"),
+  ENTRY(BPF_PROG_DETACH, "prog_detach"),
+  ENTRY(BPF_PROG_TEST_RUN, "prog_test_run"),
+  ENTRY(BPF_PROG_GET_NEXT_ID, "prog_get_next_id"),
+  ENTRY(BPF_MAP_GET_NEXT_ID, "map_get_next_id"),
+  ENTRY(BPF_PROG_GET_FD_BY_ID, "prog_get_fd_by_id"),
+  ENTRY(BPF_MAP_GET_FD_BY_ID, "map_get_fd_by_id"),
+  ENTRY(BPF_OBJ_GET_INFO_BY_FD, "obj_get_info_by_fd"),
+  ENTRY(BPF_PROG_QUERY, "prog_query"),
+  ENTRY(BPF_RAW_TRACEPOINT_OPEN, "raw_tracepoint_open"),
+  ENTRY(BPF_BTF_LOAD, "btf_load"),
+  ENTRY(BPF_BTF_GET_FD_BY_ID, "btf_get_fd_by_id"),
+  ENTRY(BPF_TASK_FD_QUERY, "task_fd_query"),
 };
 
-void list(void) {
+void list(void)
+{
   for (int x = 0; x < sizeof(bpf_commands) / sizeof(struct entry); x++) {
-    printf(
-        "name: %s\tflag: %s\n", bpf_commands[x].name, bpf_commands[x].symbol);
+    printf("name: %s\tflag: %s\n",
+           bpf_commands[x].name,
+           bpf_commands[x].symbol);
   }
   exit(0);
 }
@@ -78,7 +80,8 @@ void list(void) {
 // the argument name
 //
 // Return the bpf command value or -1 if the lookup failed
-int lookup_cmd(char* name) {
+int lookup_cmd(char* name)
+{
   for (int x = 0; x < sizeof(bpf_commands) / sizeof(struct entry); x++) {
     if (strcmp(name, bpf_commands[x].name) == 0 ||
         strcmp(name, bpf_commands[x].symbol) == 0) {
@@ -89,7 +92,8 @@ int lookup_cmd(char* name) {
 }
 
 // Parse the errno string and add the required filter to seccomp
-int add_errno(scmp_filter_ctx* ctx, char* str) {
+int add_errno(scmp_filter_ctx* ctx, char* str)
+{
   assert(ctx != NULL);
   assert(str != NULL);
   char* substr = strchr(str, ':');
@@ -137,7 +141,8 @@ exit:
 }
 
 // Parse CLI args, setup seccomp and execve into the command
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   int index;
   int c;
 
@@ -151,35 +156,35 @@ int main(int argc, char** argv) {
 
   while ((c = getopt(argc, argv, "k:e:hl")) != -1) {
     switch (c) {
-    case 'h':
-      help();
-      break;
-    case 'l':
-      list();
-      break;
-    case 'k': {
-      int v = lookup_cmd(optarg);
-      if (v >= 0) {
-        int rc = seccomp_rule_add(
-            ctx, SCMP_ACT_KILL, SCMP_SYS(bpf), 1, SCMP_A0(SCMP_CMP_EQ, v));
-        if (rc < 0) {
-          printf("Failed to add KILL filter for command: %s: %s\n",
-                 optarg,
-                 strerror(-1 * rc));
+      case 'h':
+        help();
+        break;
+      case 'l':
+        list();
+        break;
+      case 'k': {
+        int v = lookup_cmd(optarg);
+        if (v >= 0) {
+          int rc = seccomp_rule_add(
+              ctx, SCMP_ACT_KILL, SCMP_SYS(bpf), 1, SCMP_A0(SCMP_CMP_EQ, v));
+          if (rc < 0) {
+            printf("Failed to add KILL filter for command: %s: %s\n",
+                   optarg,
+                   strerror(-1 * rc));
+          } else {
+            printf("Added KILL for command: %s\n", optarg);
+          }
         } else {
-          printf("Added KILL for command: %s\n", optarg);
+          printf("Unknown bpf command: %s\n", optarg);
         }
-      } else {
-        printf("Unknown bpf command: %s\n", optarg);
+        break;
       }
-      break;
-    }
-    case 'e':
-      add_errno(&ctx, optarg);
-      break;
-    default:
-      printf("Unknown option: %s\n", optarg);
-      break;
+      case 'e':
+        add_errno(&ctx, optarg);
+        break;
+      default:
+        printf("Unknown option: %s\n", optarg);
+        break;
     }
   }
 

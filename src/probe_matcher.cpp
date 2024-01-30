@@ -14,8 +14,8 @@
 #include "tracefs.h"
 #include "utils.h"
 
-#include <bcc/bcc_syms.h>
 #include <bcc/bcc_elf.h>
+#include <bcc/bcc_syms.h>
 #include <elf.h>
 
 namespace bpftrace {
@@ -44,18 +44,14 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
 
   std::string line;
   std::set<std::string> matches;
-  while (std::getline(symbol_stream, line, delim))
-  {
-    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard))
-    {
-      if (demangle_symbols)
-      {
+  while (std::getline(symbol_stream, line, delim)) {
+    if (!wildcard_match(line, tokens, start_wildcard, end_wildcard)) {
+      if (demangle_symbols) {
         auto fun_line = line;
         auto prefix = fun_line.find(':') != std::string::npos
                           ? erase_prefix(fun_line) + ":"
                           : "";
-        if (symbol_has_cpp_mangled_signature(fun_line))
-        {
+        if (symbol_has_cpp_mangled_signature(fun_line)) {
           char* demangled_name = cxxdemangle(fun_line.c_str());
           if (!demangled_name)
             continue;
@@ -69,17 +65,14 @@ std::set<std::string> ProbeMatcher::get_matches_in_stream(
                           tokens.end(),
                           [&](const std::string& token) {
                             return token.find("(") == std::string::npos;
-                          }))
-          {
+                          })) {
             match_line = match_line.substr(0, match_line.find_last_of("("));
           }
 
-          if (!wildcard_match(match_line, tokens, start_wildcard, end_wildcard))
-          {
+          if (!wildcard_match(
+                  match_line, tokens, start_wildcard, end_wildcard)) {
             free(demangled_name);
-          }
-          else
-          {
+          } else {
             free(demangled_name);
             goto out;
           }
@@ -110,11 +103,9 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
 {
   std::unique_ptr<std::istream> symbol_stream;
 
-  switch (probe_type)
-  {
+  switch (probe_type) {
     case ProbeType::kprobe:
-    case ProbeType::kretprobe:
-    {
+    case ProbeType::kretprobe: {
       if (!target.empty())
         symbol_stream = get_symbols_from_traceable_funcs(true);
       else
@@ -124,13 +115,11 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
     case ProbeType::uprobe:
     case ProbeType::uretprobe:
     case ProbeType::watchpoint:
-    case ProbeType::asyncwatchpoint:
-    {
+    case ProbeType::asyncwatchpoint: {
       symbol_stream = get_func_symbols_from_file(bpftrace_->pid(), target);
       break;
     }
-    case ProbeType::tracepoint:
-    {
+    case ProbeType::tracepoint: {
       symbol_stream = get_symbols_from_file_safe(tracefs::available_events());
       break;
     }
@@ -139,44 +128,37 @@ std::set<std::string> ProbeMatcher::get_matches_for_probetype(
       symbol_stream = adjust_rawtracepoint(*symbol_stream);
       break;
     }
-    case ProbeType::usdt:
-    {
+    case ProbeType::usdt: {
       symbol_stream = get_symbols_from_usdt(bpftrace_->pid(), target);
       break;
     }
-    case ProbeType::software:
-    {
+    case ProbeType::software: {
       symbol_stream = get_symbols_from_list(SW_PROBE_LIST);
       break;
     }
-    case ProbeType::hardware:
-    {
+    case ProbeType::hardware: {
       symbol_stream = get_symbols_from_list(HW_PROBE_LIST);
       break;
     }
     case ProbeType::kfunc:
-    case ProbeType::kretfunc:
-    {
+    case ProbeType::kretfunc: {
       // If BTF is not parsed, yet, read available_filter_functions instead.
       // This is useful as we will use the result to extract the list of
       // potentially used kernel modules and then only parse BTF for them.
       if (bpftrace_->has_btf_data())
         symbol_stream = bpftrace_->btf_->get_all_funcs();
-      else
-      {
+      else {
         symbol_stream = get_symbols_from_traceable_funcs(true);
       }
       break;
     }
-    case ProbeType::iter:
-    {
+    case ProbeType::iter: {
       if (!bpftrace_->has_btf_data())
         break;
 
       std::string ret;
       auto iters = bpftrace_->btf_->get_all_iters();
-      for (auto& iter : iters)
-      {
+      for (auto& iter : iters) {
         // second check
         if (bpftrace_->feature_->has_iter(iter))
           ret += iter + "\n";
@@ -229,8 +211,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file(
     const std::string& path) const
 {
   auto file = std::make_unique<std::ifstream>(path);
-  if (file->fail())
-  {
+  if (file->fail()) {
     throw std::runtime_error("Could not read symbols from " + path + ": " +
                              strerror(errno));
   }
@@ -242,15 +223,11 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
     bool with_modules) const
 {
   std::string funcs;
-  for (auto& func_mod : bpftrace_->get_traceable_funcs())
-  {
-    if (with_modules)
-    {
+  for (auto& func_mod : bpftrace_->get_traceable_funcs()) {
+    if (with_modules) {
       for (auto& mod : func_mod.second)
         funcs += mod + ":" + func_mod.first + "\n";
-    }
-    else
-    {
+    } else {
       funcs += func_mod.first + "\n";
     }
   }
@@ -260,12 +237,9 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_traceable_funcs(
 std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_file_safe(
     const std::string& path) const
 {
-  try
-  {
+  try {
     return get_symbols_from_file(path);
-  }
-  catch (const std::runtime_error& e)
-  {
+  } catch (const std::runtime_error& e) {
     LOG(WARNING) << e.what();
   }
   return NULL;
@@ -279,14 +253,12 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
     return std::make_unique<std::istringstream>("");
 
   std::vector<std::string> real_paths;
-  if (path == "*")
-  {
+  if (path == "*") {
     if (pid > 0)
       real_paths = get_mapped_paths_for_pid(pid);
     else
       real_paths = get_mapped_paths_for_running_pids();
-  }
-  else if (path.find('*') != std::string::npos)
+  } else if (path.find('*') != std::string::npos)
     real_paths = resolve_binary_path(path, pid);
   else
     real_paths.push_back(path);
@@ -297,8 +269,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
   symbol_option.use_symbol_type = (1 << STT_FUNC) | (1 << STT_GNU_IFUNC);
 
   std::string result;
-  for (auto& real_path : real_paths)
-  {
+  for (auto& real_path : real_paths) {
     std::set<std::string> syms;
     // Workaround: bcc_elf_foreach_sym() can return the same symbol twice if
     // it's also found in debug info (#1138), so a std::set is used here (and in
@@ -306,8 +277,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_func_symbols_from_file(
     // returned string.
     int err = bcc_elf_foreach_sym(
         real_path.c_str(), add_symbol, &symbol_option, &syms);
-    if (err)
-    {
+    if (err) {
       LOG(WARNING) << "Could not list function symbols: " + real_path;
     }
     for (auto& sym : syms)
@@ -327,16 +297,14 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
     usdt_probes = USDTHelper::probes_for_pid(pid);
   else if (target == "*")
     usdt_probes = USDTHelper::probes_for_all_pids();
-  else if (!target.empty())
-  {
+  else if (!target.empty()) {
     std::vector<std::string> real_paths;
     if (target.find('*') != std::string::npos)
       real_paths = resolve_binary_path(target);
     else
       real_paths.push_back(target);
 
-    for (auto& real_path : real_paths)
-    {
+    for (auto& real_path : real_paths) {
       auto target_usdt_probes = USDTHelper::probes_for_path(real_path);
       usdt_probes.insert(usdt_probes.end(),
                          target_usdt_probes.begin(),
@@ -344,8 +312,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_usdt(
     }
   }
 
-  for (auto const& usdt_probe : usdt_probes)
-  {
+  for (auto const& usdt_probe : usdt_probes) {
     std::string path = usdt_probe.path;
     std::string provider = usdt_probe.provider;
     std::string fname = usdt_probe.name;
@@ -359,8 +326,7 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
     const std::vector<ProbeListItem>& probes_list) const
 {
   std::string symbols;
-  for (auto& probe : probes_list)
-  {
+  for (auto& probe : probes_list) {
     symbols += probe.path + ":\n";
     if (!probe.alias.empty())
       symbols += probe.alias + ":\n";
@@ -375,20 +341,15 @@ std::unique_ptr<std::istream> ProbeMatcher::get_symbols_from_list(
 std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
 {
   std::string probes;
-  for (auto& p : PROBE_LIST)
-  {
-    if (!p.show_in_kernel_list)
-    {
+  for (auto& p : PROBE_LIST) {
+    if (!p.show_in_kernel_list) {
       continue;
     }
-    if (p.type == ProbeType::kfunc)
-    {
+    if (p.type == ProbeType::kfunc) {
       // kfunc must be available
       if (bpftrace_->feature_->has_kfunc())
         probes += p.name + "\n";
-    }
-    else
-    {
+    } else {
       probes += p.name + "\n";
     }
   }
@@ -403,10 +364,8 @@ std::unique_ptr<std::istream> ProbeMatcher::kernel_probe_list()
 std::unique_ptr<std::istream> ProbeMatcher::userspace_probe_list()
 {
   std::string probes;
-  for (auto& p : PROBE_LIST)
-  {
-    if (p.show_in_userspace_list)
-    {
+  for (auto& p : PROBE_LIST) {
+    if (p.show_in_userspace_list) {
       probes += p.name + "\n";
     }
   }
@@ -418,8 +377,7 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     const std::set<std::string>& tracepoints)
 {
   FuncParamLists params;
-  for (auto& tracepoint : tracepoints)
-  {
+  for (auto& tracepoint : tracepoints) {
     auto event = tracepoint;
     auto category = erase_prefix(event);
 
@@ -427,22 +385,18 @@ FuncParamLists ProbeMatcher::get_tracepoints_params(
     std::ifstream format_file(format_file_path.c_str());
     std::string line;
 
-    if (format_file.fail())
-    {
+    if (format_file.fail()) {
       LOG(ERROR) << "tracepoint format file not found: " << format_file_path;
       return {};
     }
 
     // Skip lines until the first empty line
-    do
-    {
+    do {
       getline(format_file, line);
     } while (line.length() > 0);
 
-    while (getline(format_file, line))
-    {
-      if (line.find("\tfield:") == 0)
-      {
+    while (getline(format_file, line)) {
+      if (line.find("\tfield:") == 0) {
         size_t col_pos = line.find(':') + 1;
         params[tracepoint].push_back(
             line.substr(col_pos, line.find(';') - col_pos));
@@ -463,8 +417,7 @@ FuncParamLists ProbeMatcher::get_iters_params(
     funcs.insert(prefix + iter);
 
   params = bpftrace_->btf_->get_params(funcs);
-  for (auto func : funcs)
-  {
+  for (auto func : funcs) {
     // delete `int retval`
     params[func].pop_back();
     // delete `struct bpf_iter_meta * meta`
@@ -483,15 +436,13 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
   FuncParamLists params;
   static std::set<std::string> warned_paths;
 
-  for (auto& match : uprobes)
-  {
+  for (auto& match : uprobes) {
     std::string fun = match;
     std::string path = erase_prefix(fun);
     auto dwarf = Dwarf::GetFromBinary(nullptr, path);
     if (dwarf)
       params.emplace(match, dwarf->get_function_params(fun));
-    else
-    {
+    else {
       if (warned_paths.insert(path).second)
         LOG(WARNING) << "No DWARF found for \"" << path << "\""
                      << ", cannot show parameter info";
@@ -503,15 +454,12 @@ FuncParamLists ProbeMatcher::get_uprobe_params(
 
 void ProbeMatcher::list_probes(ast::Program* prog)
 {
-  for (auto* probe : *prog->probes)
-  {
-    for (auto* ap : *probe->attach_points)
-    {
+  for (auto* probe : *prog->probes) {
+    for (auto* ap : *probe->attach_points) {
       auto matches = get_matches_for_ap(*ap);
       auto probe_type = probetype(ap->provider);
       FuncParamLists param_lists;
-      if (bt_verbose)
-      {
+      if (bt_verbose) {
         if (probe_type == ProbeType::tracepoint)
           param_lists = get_tracepoints_params(matches);
         else if (probe_type == ProbeType::kfunc ||
@@ -523,11 +471,9 @@ void ProbeMatcher::list_probes(ast::Program* prog)
           param_lists = get_uprobe_params(matches);
       }
 
-      for (auto& match : matches)
-      {
+      for (auto& match : matches) {
         std::string match_print = match;
-        if (ap->lang == "cpp")
-        {
+        if (ap->lang == "cpp") {
           std::string target = erase_prefix(match_print);
           char* demangled_name = cxxdemangle(match_print.c_str());
 
@@ -542,8 +488,7 @@ void ProbeMatcher::list_probes(ast::Program* prog)
 
         std::cout << probetypeName(probe_type) << ":" << match_print
                   << std::endl;
-        if (bt_verbose)
-        {
+        if (bt_verbose) {
           for (auto& param : param_lists[match])
             std::cout << "    " << param << std::endl;
         }
@@ -556,8 +501,7 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
     const ast::AttachPoint& attach_point)
 {
   std::string search_input;
-  switch (probetype(attach_point.provider))
-  {
+  switch (probetype(attach_point.provider)) {
     case ProbeType::kprobe:
     case ProbeType::kretprobe: {
       if (!attach_point.target.empty())
@@ -594,20 +538,16 @@ std::set<std::string> ProbeMatcher::get_matches_for_ap(
       search_input = attach_point.target + ":";
       break;
     }
-    case ProbeType::usdt:
-    {
+    case ProbeType::usdt: {
       auto target = attach_point.target;
       // If PID is specified, targets in symbol_stream will have the
       // "/proc/<PID>/root" prefix followed by an absolute path, so we make the
       // target absolute and add a leading wildcard.
-      if (bpftrace_->pid() > 0)
-      {
-        if (!target.empty())
-        {
+      if (bpftrace_->pid() > 0) {
+        if (!target.empty()) {
           if (auto abs_target = abs_path(target))
             target = "*" + abs_target.value();
-        }
-        else
+        } else
           target = "*";
       }
       auto ns = attach_point.ns.empty() ? "*" : attach_point.ns;
@@ -662,8 +602,7 @@ std::unique_ptr<std::istream> ProbeMatcher::adjust_rawtracepoint(
 {
   auto new_list = std::make_unique<std::stringstream>();
   std::string line;
-  while (std::getline(symbol_list, line, '\n'))
-  {
+  while (std::getline(symbol_list, line, '\n')) {
     if ((line.find("syscalls:sys_enter_") != std::string::npos) ||
         (line.find("syscalls:sys_exit_") != std::string::npos))
       continue;

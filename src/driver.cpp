@@ -7,7 +7,7 @@
 
 extern void *yy_scan_string(const char *yy_str, yyscan_t yyscanner);
 extern int yylex_init(yyscan_t *scanner);
-extern int yylex_destroy (yyscan_t yyscanner);
+extern int yylex_destroy(yyscan_t yyscanner);
 extern bpftrace::location loc;
 
 namespace bpftrace {
@@ -40,23 +40,20 @@ int Driver::parse()
   yyscan_t scanner;
   yylex_init(&scanner);
   Parser parser(*this, scanner);
-  if (debug_)
-  {
+  if (debug_) {
     parser.set_debug_level(1);
   }
   yy_scan_string(Log::get().get_source().c_str(), scanner);
   parser.parse();
   yylex_destroy(scanner);
 
-  if (!failed_)
-  {
+  if (!failed_) {
     ast::AttachPointParser ap_parser(root.get(), bpftrace_, out_, listing_);
     if (ap_parser.parse())
       failed_ = true;
   }
 
-  if (failed_)
-  {
+  if (failed_) {
     root.reset();
   }
 
@@ -84,31 +81,24 @@ void Driver::error(const std::string &m)
 std::set<std::string> Driver::list_modules() const
 {
   std::set<std::string> modules;
-  for (auto &probe : *root->probes)
-  {
-    for (auto &ap : *probe->attach_points)
-    {
+  for (auto &probe : *root->probes) {
+    for (auto &ap : *probe->attach_points) {
       auto probe_type = probetype(ap->provider);
       if (probe_type == ProbeType::kfunc || probe_type == ProbeType::kretfunc ||
           ((probe_type == ProbeType::kprobe ||
             probe_type == ProbeType::kretprobe) &&
-           !ap->target.empty()))
-      {
-        if (ap->need_expansion)
-        {
-          for (auto &match : bpftrace_.probe_matcher_->get_matches_for_ap(*ap))
-          {
+           !ap->target.empty())) {
+        if (ap->need_expansion) {
+          for (auto &match :
+               bpftrace_.probe_matcher_->get_matches_for_ap(*ap)) {
             std::string func = match;
             erase_prefix(func);
             auto match_modules = bpftrace_.get_func_modules(func);
             modules.insert(match_modules.begin(), match_modules.end());
           }
-        }
-        else
+        } else
           modules.insert(ap->target);
-      }
-      else if (probe_type == ProbeType::tracepoint)
-      {
+      } else if (probe_type == ProbeType::tracepoint) {
         // For now, we support this for a single target only since tracepoints
         // need dumping of C definitions BTF and that is not available for
         // multiple modules at once.

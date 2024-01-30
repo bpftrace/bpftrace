@@ -19,8 +19,7 @@ namespace ast {
 // TODO(danobi): Note that while complete resource collection in this pass is
 // the goal, there are still places where the goal is not yet realized. For
 // example the helper error metadata is still being collected during codegen.
-class ResourceAnalyser : public Visitor
-{
+class ResourceAnalyser : public Visitor {
 public:
   ResourceAnalyser(Node *root, std::ostream &out = std::cerr);
 

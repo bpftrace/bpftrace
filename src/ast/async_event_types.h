@@ -27,8 +27,7 @@ class IRBuilderBPF;
 namespace bpftrace {
 namespace AsyncEvent {
 
-struct Print
-{
+struct Print {
   uint64_t action_id;
   uint32_t mapid;
   uint32_t top;
@@ -37,8 +36,7 @@ struct Print
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct PrintNonMap
-{
+struct PrintNonMap {
   uint64_t action_id;
   uint64_t print_id;
   // See below why we don't use a flexible length array
@@ -47,24 +45,21 @@ struct PrintNonMap
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t size);
 } __attribute__((packed));
 
-struct MapEvent
-{
+struct MapEvent {
   uint64_t action_id;
   uint32_t mapid;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct Time
-{
+struct Time {
   uint64_t action_id;
   uint32_t time_id;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct Strftime
-{
+struct Strftime {
   uint32_t strftime_id;
   uint32_t mode;
   uint64_t nsecs;
@@ -72,8 +67,7 @@ struct Strftime
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct Buf
-{
+struct Buf {
   uint8_t length;
   // Seems like GCC 7.4.x can't handle `char content[]`. Work around by using
   // 0 sized array (a GCC extension that clang also accepts:
@@ -84,8 +78,7 @@ struct Buf
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b, size_t length);
 } __attribute__((packed));
 
-struct HelperError
-{
+struct HelperError {
   uint64_t action_id;
   uint64_t error_id;
   int32_t return_value;
@@ -93,8 +86,7 @@ struct HelperError
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct Watchpoint
-{
+struct Watchpoint {
   uint64_t action_id;
   uint64_t watchpoint_idx;
   uint64_t addr;
@@ -102,24 +94,21 @@ struct Watchpoint
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct WatchpointUnwatch
-{
+struct WatchpointUnwatch {
   uint64_t action_id;
   uint64_t addr;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct CgroupPath
-{
+struct CgroupPath {
   uint64_t cgroup_path_id;
   uint64_t cgroup_id;
 
   std::vector<llvm::Type*> asLLVMType(ast::IRBuilderBPF& b);
 } __attribute__((packed));
 
-struct SkbOutput
-{
+struct SkbOutput {
   uint64_t action_id;
   uint64_t skb_output_id;
   uint64_t nsecs_since_boot;

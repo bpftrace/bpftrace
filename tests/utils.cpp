@@ -18,13 +18,17 @@ namespace utils {
 TEST(utils, split_string)
 {
   std::vector<std::string> tokens_empty = {};
-  std::vector<std::string> tokens_one_empty = {""};
-  std::vector<std::string> tokens_two_empty = {"", ""};
-  std::vector<std::string> tokens_f = {"", "f"};
-  std::vector<std::string> tokens_foo_bar = {"foo", "bar"};
-  std::vector<std::string> tokens_empty_foo_bar = {"", "foo", "bar"};
-  std::vector<std::string> tokens_empty_foo_empty_bar = {"", "foo", "", "bar"};
-  std::vector<std::string> tokens_empty_foo_bar_biz = {"", "foo", "bar", "biz"};
+  std::vector<std::string> tokens_one_empty = { "" };
+  std::vector<std::string> tokens_two_empty = { "", "" };
+  std::vector<std::string> tokens_f = { "", "f" };
+  std::vector<std::string> tokens_foo_bar = { "foo", "bar" };
+  std::vector<std::string> tokens_empty_foo_bar = { "", "foo", "bar" };
+  std::vector<std::string> tokens_empty_foo_empty_bar = {
+    "", "foo", "", "bar"
+  };
+  std::vector<std::string> tokens_empty_foo_bar_biz = {
+    "", "foo", "bar", "biz"
+  };
 
   EXPECT_EQ(split_string("", '-'), tokens_empty);
   EXPECT_EQ(split_string("-", '-'), tokens_one_empty);
@@ -59,13 +63,12 @@ TEST(utils, split_addrrange_symbol_module)
 
 TEST(utils, wildcard_match)
 {
-  std::vector<std::string> tokens_not = {"not"};
-  std::vector<std::string> tokens_bar = {"bar"};
-  std::vector<std::string> tokens_bar_not = {"bar", "not"};
-  std::vector<std::string> tokens_foo = {"foo"};
-  std::vector<std::string> tokens_biz = {"biz"};
-  std::vector<std::string> tokens_foo_biz = {"foo", "biz"};
-
+  std::vector<std::string> tokens_not = { "not" };
+  std::vector<std::string> tokens_bar = { "bar" };
+  std::vector<std::string> tokens_bar_not = { "bar", "not" };
+  std::vector<std::string> tokens_foo = { "foo" };
+  std::vector<std::string> tokens_biz = { "biz" };
+  std::vector<std::string> tokens_foo_biz = { "foo", "biz" };
 
   // start: true, end: true
   EXPECT_EQ(wildcard_match("foobarbiz", tokens_not, true, true), false);
@@ -100,10 +103,9 @@ TEST(utils, wildcard_match)
   EXPECT_EQ(wildcard_match("foobarbiz", tokens_foo_biz, false, false), true);
 }
 
-static void symlink_test_binary(const std::string& destination)
+static void symlink_test_binary(const std::string &destination)
 {
-  if (symlink("/proc/self/exe", destination.c_str()))
-  {
+  if (symlink("/proc/self/exe", destination.c_str())) {
     throw std::runtime_error("Couldn't symlink /proc/self/exe to " +
                              destination + ": " + strerror(errno));
   }
@@ -112,8 +114,7 @@ static void symlink_test_binary(const std::string& destination)
 static std::string get_working_path()
 {
   char cwd_path[PATH_MAX];
-  if (::getcwd(cwd_path, PATH_MAX) == nullptr)
-  {
+  if (::getcwd(cwd_path, PATH_MAX) == nullptr) {
     throw std::runtime_error(
         "getting current working directory for tests failed");
   }
@@ -133,12 +134,15 @@ TEST(utils, resolve_binary_path)
   symlink_test_binary(path + "/executable2");
 
   int fd;
-  fd = open((path + "/nonexecutable").c_str(), O_CREAT, S_IRUSR); close(fd);
-  fd = open((path + "/nonexecutable2").c_str(), O_CREAT, S_IRUSR); close(fd);
+  fd = open((path + "/nonexecutable").c_str(), O_CREAT, S_IRUSR);
+  close(fd);
+  fd = open((path + "/nonexecutable2").c_str(), O_CREAT, S_IRUSR);
+  close(fd);
 
   std::vector<std::string> paths_empty = {};
-  std::vector<std::string> paths_one_executable = {path + "/executable"};
-  std::vector<std::string> paths_all_executables = {path + "/executable", path + "/executable2"};
+  std::vector<std::string> paths_one_executable = { path + "/executable" };
+  std::vector<std::string> paths_all_executables = { path + "/executable",
+                                                     path + "/executable2" };
 
   EXPECT_EQ(resolve_binary_path(path + "/does/not/exist"), paths_empty);
   EXPECT_EQ(resolve_binary_path(path + "/does/not/exist*"), paths_empty);
@@ -155,8 +159,7 @@ TEST(utils, abs_path)
 {
   std::string path = "/tmp/bpftrace-test-utils-XXXXXX";
   std::string rel_file = "bpftrace-test-utils-abs-path";
-  if (::mkdtemp(&path[0]) == nullptr)
-  {
+  if (::mkdtemp(&path[0]) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
@@ -186,8 +189,7 @@ TEST(utils, get_cgroup_hierarchy_roots)
   auto roots = get_cgroup_hierarchy_roots();
 
   // Check that each entry is a proper cgroup filesystem
-  for (auto root : roots)
-  {
+  for (auto root : roots) {
     EXPECT_TRUE(root.first == "cgroup" || root.first == "cgroup2");
     std_filesystem::path root_path(root.second);
     EXPECT_TRUE(std_filesystem::exists(root_path / "cgroup.procs"));
@@ -198,8 +200,7 @@ TEST(utils, get_cgroup_path_in_hierarchy)
 {
   std::string tmpdir = "/tmp/bpftrace-test-utils-XXXXXX";
 
-  if (::mkdtemp(&tmpdir[0]) == nullptr)
-  {
+  if (::mkdtemp(&tmpdir[0]) == nullptr) {
     throw std::runtime_error("creating temporary path for tests failed");
   }
 
@@ -210,8 +211,7 @@ TEST(utils, get_cgroup_path_in_hierarchy)
 
   // Make a few files in the directory to imitate cgroup files and get their
   // inodes
-  if (!std_filesystem::create_directory(subdir))
-  {
+  if (!std_filesystem::create_directory(subdir)) {
     throw std::runtime_error("creating subdirectory for tests failed");
   }
   static_cast<std::ofstream &&>(std::ofstream(file_1) << "File 1 content")
@@ -220,14 +220,12 @@ TEST(utils, get_cgroup_path_in_hierarchy)
       .close();
   struct stat file_1_st, file_2_st;
   if (stat(file_1.c_str(), &file_1_st) < 0 ||
-      stat(file_2.c_str(), &file_2_st) < 0)
-  {
+      stat(file_2.c_str(), &file_2_st) < 0) {
     throw std::runtime_error("stat on test files failed");
   }
 
   // Look for both "cgroup files" by their inode twice (to test caching)
-  for (int i = 0; i < 2; i++)
-  {
+  for (int i = 0; i < 2; i++) {
     EXPECT_EQ(get_cgroup_path_in_hierarchy(file_1_st.st_ino, tmpdir), "/file1");
     EXPECT_EQ(get_cgroup_path_in_hierarchy(file_2_st.st_ino, tmpdir),
               "/subdir/file2");
@@ -281,12 +279,9 @@ static void with_env(const std::string &key,
                      std::function<void()> fn)
 {
   EXPECT_EQ(::setenv(key.c_str(), val.c_str(), 1), 0);
-  try
-  {
+  try {
     fn();
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     EXPECT_EQ(::unsetenv(key.c_str()), 0);
     throw ex;
   }

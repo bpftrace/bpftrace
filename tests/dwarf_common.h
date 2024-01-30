@@ -8,8 +8,7 @@
 
 #include "data/dwarf_data.h"
 
-class test_dwarf : public ::testing::Test
-{
+class test_dwarf : public ::testing::Test {
 protected:
   static void SetUpTestSuite()
   {

@@ -11,8 +11,7 @@
 namespace bpftrace {
 namespace test {
 
-class MockProbeMatcher : public ProbeMatcher
-{
+class MockProbeMatcher : public ProbeMatcher {
 public:
   MockProbeMatcher(BPFtrace *bpftrace) : ProbeMatcher(bpftrace)
   {
@@ -34,8 +33,7 @@ public:
 #pragma GCC diagnostic pop
 };
 
-class MockBPFtrace : public BPFtrace
-{
+class MockBPFtrace : public BPFtrace {
 public:
   std::vector<Probe> get_probes()
   {
@@ -52,17 +50,12 @@ public:
   {
     (void)path;
     sym->name = name;
-    if (name == "cpp_mangled(int)")
-    {
+    if (name == "cpp_mangled(int)") {
       return -1;
-    }
-    else if (name[0] >= 'A' && name[0] <= 'z')
-    {
+    } else if (name[0] >= 'A' && name[0] <= 'z') {
       sym->address = 12345;
       sym->size = 4;
-    }
-    else
-    {
+    } else {
       auto fields = split_string(name, '_');
       sym->address = std::stoull(fields.at(0));
       sym->size = std::stoull(fields.at(1));
@@ -94,8 +87,7 @@ public:
 std::unique_ptr<MockBPFtrace> get_mock_bpftrace();
 std::unique_ptr<MockBPFtrace> get_strict_mock_bpftrace();
 
-class MockBPFfeature : public BPFfeature
-{
+class MockBPFfeature : public BPFfeature {
 public:
   MockBPFfeature(bool has_features = true)
   {
@@ -125,8 +117,7 @@ public:
   bool has_features_;
 };
 
-class MockChildProc : public ChildProcBase
-{
+class MockChildProc : public ChildProcBase {
 public:
   MockChildProc(std::string cmd __attribute__((unused)))
   {
@@ -147,8 +138,7 @@ public:
   };
 };
 
-class MockProcMon : public ProcMonBase
-{
+class MockProcMon : public ProcMonBase {
 public:
   MockProcMon(pid_t pid)
   {

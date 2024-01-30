@@ -1,16 +1,16 @@
 #ifndef _GNU_SOURCE
-# define _GNU_SOURCE
+#define _GNU_SOURCE
 #endif
 
 #ifdef HAVE_NAME_TO_HANDLE_AT
 
-# include <sys/types.h>
-# include <sys/stat.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #else
 
-# include <unistd.h>
-# include <sys/syscall.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #endif
 
@@ -23,23 +23,24 @@
 #include "act_helpers.h"
 #include "resolve_cgroupid.h"
 
-namespace
-{
+namespace {
 
 #ifndef HAVE_NAME_TO_HANDLE_AT
 
-struct file_handle
-{
+struct file_handle {
   unsigned int handle_bytes;
   int handle_type;
   char f_handle[0];
 };
 
-int name_to_handle_at(int dirfd, const char *pathname,
+int name_to_handle_at(int dirfd,
+                      const char *pathname,
                       struct file_handle *handle,
-                      int *mount_id, int flags)
+                      int *mount_id,
+                      int flags)
 {
-  return (int)syscall(SYS_name_to_handle_at, dirfd, pathname, handle, mount_id, flags);
+  return (int)syscall(
+      SYS_name_to_handle_at, dirfd, pathname, handle, mount_id, flags);
 }
 
 #endif
@@ -56,11 +57,10 @@ int name_to_handle_at(int dirfd, const char *pathname,
 //
 // Hence open coding the file_handle members directly in
 // cgid_file_handle and the static asserts following it.
-struct cgid_file_handle
-{
+struct cgid_file_handle {
   file_handle *as_file_handle_ptr()
   {
-    return reinterpret_cast<file_handle*>(this);
+    return reinterpret_cast<file_handle *>(this);
   }
 
   unsigned int handle_bytes = sizeof(std::uint64_t);
@@ -69,26 +69,33 @@ struct cgid_file_handle
 };
 
 ACTH_ASSERT_SAME_SIZE(cgid_file_handle, file_handle, std::uint64_t);
-ACTH_ASSERT_SAME_MEMBER(cgid_file_handle, handle_bytes, file_handle, handle_bytes);
-ACTH_ASSERT_SAME_MEMBER(cgid_file_handle, handle_type, file_handle, handle_type);
+ACTH_ASSERT_SAME_MEMBER(cgid_file_handle,
+                        handle_bytes,
+                        file_handle,
+                        handle_bytes);
+ACTH_ASSERT_SAME_MEMBER(cgid_file_handle,
+                        handle_type,
+                        file_handle,
+                        handle_type);
 ACTH_ASSERT_SAME_OFFSET(cgid_file_handle, cgid, file_handle, f_handle);
 
-}
+} // namespace
 
-namespace bpftrace_linux
-{
+namespace bpftrace_linux {
 
 std::uint64_t resolve_cgroupid(const std::string &path)
 {
   cgid_file_handle cfh;
   int mount_id;
-  int err = name_to_handle_at(AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
+  int err = name_to_handle_at(
+      AT_FDCWD, path.c_str(), cfh.as_file_handle_ptr(), &mount_id, 0);
   if (err < 0) {
     auto emsg = std::strerror(errno);
-    throw std::runtime_error("Failed to get `cgroupid` for path: \"" + path + "\": " + emsg);
+    throw std::runtime_error("Failed to get `cgroupid` for path: \"" + path +
+                             "\": " + emsg);
   }
 
   return cfh.cgid;
 }
 
-}
+} // namespace bpftrace_linux

@@ -19,15 +19,13 @@
 
 namespace bpftrace {
 
-struct vmlinux_location
-{
+struct vmlinux_location {
   const char *path; // path with possible "%s" format to be replaced current
                     // release
   bool raw;         // file is either as ELF (false) or raw BTF data (true)
 };
 extern const struct vmlinux_location vmlinux_locs[];
-class MountNSException : public std::exception
-{
+class MountNSException : public std::exception {
 public:
   MountNSException(const std::string &msg) : msg_(msg)
   {
@@ -42,8 +40,7 @@ private:
   std::string msg_;
 };
 
-class InvalidPIDException : public std::exception
-{
+class InvalidPIDException : public std::exception {
 public:
   InvalidPIDException(const std::string &pid, const std::string &msg)
   {
@@ -59,16 +56,14 @@ private:
   std::string msg_;
 };
 
-class EnospcException : public std::runtime_error
-{
+class EnospcException : public std::runtime_error {
 public:
   // C++11 feature: bring base class constructor into scope to automatically
   // forward constructor calls to base class
   using std::runtime_error::runtime_error;
 };
 
-class StdioSilencer
-{
+class StdioSilencer {
 public:
   StdioSilencer() = default;
   ~StdioSilencer();
@@ -81,8 +76,7 @@ private:
   int old_stdio_ = -1;
 };
 
-class StderrSilencer : public StdioSilencer
-{
+class StderrSilencer : public StdioSilencer {
 public:
   StderrSilencer()
   {
@@ -90,8 +84,7 @@ public:
   }
 };
 
-class StdoutSilencer : public StdioSilencer
-{
+class StdoutSilencer : public StdioSilencer {
 public:
   StdoutSilencer()
   {
@@ -100,8 +93,7 @@ public:
 };
 
 // Helper class to convert a pointer to an `std::istream`
-class Membuf : public std::streambuf
-{
+class Membuf : public std::streambuf {
 public:
   Membuf(uint8_t *begin, uint8_t *end)
   {
@@ -113,19 +105,19 @@ public:
 
 // Hack used to suppress build warning related to #474
 template <typename new_signature, typename old_signature>
-new_signature cast_signature(old_signature func) {
+new_signature cast_signature(old_signature func)
+{
 #if __GNUC__ >= 8
-_Pragma("GCC diagnostic push")
-_Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
+  _Pragma("GCC diagnostic push")
+      _Pragma("GCC diagnostic ignored \"-Wcast-function-type\"")
 #endif
-  return reinterpret_cast<new_signature>(func);
+          return reinterpret_cast<new_signature>(func);
 #if __GNUC__ >= 8
-_Pragma("GCC diagnostic pop")
+  _Pragma("GCC diagnostic pop")
 #endif
 }
 
-struct DeprecatedName
-{
+struct DeprecatedName {
   std::string old_name;
   std::string new_name;
   bool show_warning = true;
@@ -134,8 +126,7 @@ struct DeprecatedName
 typedef std::unordered_map<std::string, std::unordered_set<std::string>>
     FuncsModulesMap;
 
-struct KConfig
-{
+struct KConfig {
   KConfig();
   bool has_value(const std::string &name, const std::string &value) const
   {
@@ -146,9 +137,7 @@ struct KConfig
   std::unordered_map<std::string, std::string> config;
 };
 
-static std::vector<DeprecatedName> DEPRECATED_LIST =
-{
-};
+static std::vector<DeprecatedName> DEPRECATED_LIST = {};
 
 static std::vector<std::string> UNSAFE_BUILTIN_FUNCS = {
   "system",
@@ -227,8 +216,7 @@ std::tuple<std::string, std::string, std::string> split_addrrange_symbol_module(
 
 std::vector<std::string> get_mapped_paths_for_pid(pid_t pid);
 std::vector<std::string> get_mapped_paths_for_running_pids();
-struct elf_symbol
-{
+struct elf_symbol {
   std::string name;
   uintptr_t start;
   uintptr_t end;
@@ -307,8 +295,7 @@ template <typename T>
 T reduce_value(const std::vector<uint8_t> &value, int nvalues)
 {
   T sum = 0;
-  for (int i = 0; i < nvalues; i++)
-  {
+  for (int i = 0; i < nvalues; i++) {
     sum += read_data<T>(value.data() + i * sizeof(T));
   }
   return sum;

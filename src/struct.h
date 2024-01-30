@@ -12,8 +12,7 @@
 
 namespace bpftrace {
 
-struct Bitfield
-{
+struct Bitfield {
   Bitfield(size_t byte_offset, size_t bit_width);
   Bitfield(size_t read_bytes, size_t access_rshift, uint64_t mask)
       : read_bytes(read_bytes), access_rshift(access_rshift), mask(mask)
@@ -42,8 +41,7 @@ private:
   }
 };
 
-struct Field
-{
+struct Field {
   std::string name;
   SizedType type;
   ssize_t offset;
@@ -75,8 +73,7 @@ private:
 
 using Fields = std::vector<Field>;
 
-struct Struct
-{
+struct Struct {
   int size = -1; // in bytes
   int align = 1; // in bytes, used for tuples only
   bool padded = false;
@@ -128,8 +125,7 @@ std::ostream &operator<<(std::ostream &os, const Fields &t);
 
 namespace std {
 template <>
-struct hash<bpftrace::Struct>
-{
+struct hash<bpftrace::Struct> {
   size_t operator()(const bpftrace::Struct &s) const
   {
     size_t hash = std::hash<int>()(s.size);
@@ -140,8 +136,7 @@ struct hash<bpftrace::Struct>
 };
 
 template <>
-struct hash<shared_ptr<bpftrace::Struct>>
-{
+struct hash<shared_ptr<bpftrace::Struct>> {
   size_t operator()(const std::shared_ptr<bpftrace::Struct> &s_ptr) const
   {
     return std::hash<bpftrace::Struct>()(*s_ptr);
@@ -149,8 +144,7 @@ struct hash<shared_ptr<bpftrace::Struct>>
 };
 
 template <>
-struct equal_to<shared_ptr<bpftrace::Struct>>
-{
+struct equal_to<shared_ptr<bpftrace::Struct>> {
   bool operator()(const std::shared_ptr<bpftrace::Struct> &lhs,
                   const std::shared_ptr<bpftrace::Struct> &rhs) const
   {
@@ -161,8 +155,7 @@ struct equal_to<shared_ptr<bpftrace::Struct>>
 
 namespace bpftrace {
 
-class StructManager
-{
+class StructManager {
 public:
   // struct map manipulation
   void Add(const std::string &name, size_t size, bool allow_override = true);

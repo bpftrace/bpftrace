@@ -15,8 +15,7 @@
 namespace bpftrace {
 namespace ast {
 
-class ConfigAnalyser : public Visitor
-{
+class ConfigAnalyser : public Visitor {
 public:
   explicit ConfigAnalyser(Node *root,
                           BPFtrace &bpftrace,

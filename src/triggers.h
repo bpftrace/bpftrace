@@ -11,14 +11,13 @@
 
 using trigger_fn_t = void (*)();
 
-extern "C"
+extern "C" {
+void __attribute__((noinline)) __target_attr BEGIN_trigger()
 {
-  void __attribute__((noinline)) __target_attr BEGIN_trigger()
-  {
-    asm("");
-  }
-  void __attribute__((noinline)) __target_attr END_trigger()
-  {
-    asm("");
-  }
+  asm("");
+}
+void __attribute__((noinline)) __target_attr END_trigger()
+{
+  asm("");
+}
 }

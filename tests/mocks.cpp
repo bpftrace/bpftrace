@@ -32,7 +32,8 @@ void setup_mock_probe_matcher(MockProbeMatcher &matcher)
                                   "notsched:bar\n"
                                   "file:filename\n"
                                   "tcp:some_tcp_tp\n";
-        return std::unique_ptr<std::istream>(new std::istringstream(tracepoints));
+        return std::unique_ptr<std::istream>(
+            new std::istringstream(tracepoints));
       });
 
   std::string sh_usyms = "/bin/sh:first_open\n"

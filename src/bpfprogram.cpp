@@ -25,8 +25,7 @@ namespace bpftrace {
 #define BPF_PSEUDO_FUNC 4
 #endif
 
-struct btf_ext_header
-{
+struct btf_ext_header {
   __u16 magic;
   __u8 version;
   __u8 flags;
@@ -37,8 +36,7 @@ struct btf_ext_header
   __u32 func_info_len;
 };
 
-struct btf_ext_info_sec
-{
+struct btf_ext_info_sec {
   __u32 sec_name_off; /* offset to section name */
   __u32 num_info;
   /* Followed by num_info * record_size number of bytes */
@@ -50,8 +48,7 @@ std::optional<BpfProgram> BpfProgram::CreateFromBytecode(
     const std::string &name,
     MapManager &maps)
 {
-  if (bytecode.hasSection(name))
-  {
+  if (bytecode.hasSection(name)) {
     return BpfProgram(bytecode, name, maps);
   }
   return std::nullopt;
@@ -103,8 +100,7 @@ void BpfProgram::assemble()
 void BpfProgram::relocateInsns()
 {
   std::string relsecname = std::string(".rel") + name_;
-  if (bytecode_.hasSection(relsecname))
-  {
+  if (bytecode_.hasSection(relsecname)) {
     // There's a relocation section for our program.
     //
     // Relocation support is incomplete, only ld_imm64 + R_BPF_64_64 is
@@ -112,8 +108,7 @@ void BpfProgram::relocateInsns()
     //
     // In practice, we append the entire .text section and relocate against it.
 
-    if (!bytecode_.hasSection(".text"))
-    {
+    if (!bytecode_.hasSection(".text")) {
       throw std::logic_error(
           "Relocation section present but no .text, this is unsupported");
     }
@@ -128,8 +123,7 @@ void BpfProgram::relocateInsns()
     // Step 2: relocate our program
     auto *insns = reinterpret_cast<struct bpf_insn *>(code_.data());
     for (auto *ptr = relsec.data(); ptr < relsec.data() + relsec.size();
-         ptr += sizeof(Elf64_Rel))
-    {
+         ptr += sizeof(Elf64_Rel)) {
       auto *rel = reinterpret_cast<const Elf64_Rel *>(ptr);
       uint32_t reltype = rel->r_info & 0xFFFFFFFF;
       uint32_t relsym = rel->r_info >> 32;
@@ -141,8 +135,7 @@ void BpfProgram::relocateInsns()
       auto rel_offset = rel->r_offset;
       auto insn_offset = rel_offset / sizeof(struct bpf_insn);
       auto *insn = &insns[insn_offset];
-      if (insn->code != (BPF_LD | BPF_DW | BPF_IMM))
-      {
+      if (insn->code != (BPF_LD | BPF_DW | BPF_IMM)) {
         LOG(ERROR) << "Cannot relocate insn code " << insn->code << " ld "
                    << (insn->code & BPF_LD) << " dw " << (insn->code & BPF_DW)
                    << " imm " << (insn->code & BPF_IMM);
@@ -151,8 +144,7 @@ void BpfProgram::relocateInsns()
 
       auto *sym = &reinterpret_cast<const Elf64_Sym *>(symtab.data())[relsym];
       auto symtype = ELF64_ST_TYPE(sym->st_info);
-      if (symtype != STT_FUNC && symtype != STT_SECTION)
-      {
+      if (symtype != STT_FUNC && symtype != STT_SECTION) {
         LOG(ERROR) << "Relocation in " << relsecname << " type " << reltype
                    << " sym " << relsym << " type " << symtype;
         throw std::invalid_argument(
@@ -190,8 +182,7 @@ void BpfProgram::relocateInsns()
 // code_[text_offset_..code_.size()) - .text
 void BpfProgram::relocateFuncInfos()
 {
-  if (!bytecode_.hasSection(".BTF") || !bytecode_.hasSection(".BTF.ext"))
-  {
+  if (!bytecode_.hasSection(".BTF") || !bytecode_.hasSection(".BTF.ext")) {
     throw std::logic_error("Missing a BTF section (.BTF or .BTF.ext), "
                            "cannot relocate function infos");
   }
@@ -220,8 +211,7 @@ void BpfProgram::relocateFuncInfos()
   const btf_ext_info_sec *text_funcinfo_sec = nullptr;
   const btf_ext_info_sec *prog_funcinfo_sec = nullptr;
 
-  while (ptr < func_info_end)
-  {
+  while (ptr < func_info_end) {
     auto *info_sec = reinterpret_cast<const struct btf_ext_info_sec *>(ptr);
     std::string_view name = reinterpret_cast<const char *>(
         btfstr + info_sec->sec_name_off);
@@ -260,8 +250,7 @@ void BpfProgram::appendFileFuncInfos(const struct btf_ext_info_sec *src,
   func_infos_.resize(dstoff + cnt * sizeof(struct bpf_func_info));
 
   ptr = hdr_end;
-  while (ptr < hdr_end + cnt * func_info_rec_size)
-  {
+  while (ptr < hdr_end + cnt * func_info_rec_size) {
     auto *src_info = reinterpret_cast<const struct bpf_func_info *>(ptr);
     auto *dst_info = reinterpret_cast<struct bpf_func_info *>(
         func_infos_.data() + dstoff);
@@ -279,8 +268,7 @@ void BpfProgram::relocateMaps()
 {
   struct bpf_insn *insns = reinterpret_cast<struct bpf_insn *>(code_.data());
   size_t insn_cnt = code_.size() / sizeof(struct bpf_insn);
-  for (uintptr_t i = 0; i < insn_cnt; ++i)
-  {
+  for (uintptr_t i = 0; i < insn_cnt; ++i) {
     struct bpf_insn *insn = &insns[i];
 
     // Relocate mapid -> mapfd
@@ -289,8 +277,7 @@ void BpfProgram::relocateMaps()
     // numbers). This helps make codegen tests more reliable and enables
     // features such as AOT compilation.
     if (insn->code == BPF_DW && (insn->src_reg == BPF_PSEUDO_MAP_FD ||
-                                 insn->src_reg == BPF_PSEUDO_MAP_VALUE))
-    {
+                                 insn->src_reg == BPF_PSEUDO_MAP_VALUE)) {
       auto mapid = insn->imm;
       auto map = maps_[mapid];
       if (map)

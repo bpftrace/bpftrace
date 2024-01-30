@@ -1,5 +1,4 @@
-struct Foo
-{
+struct Foo {
   int m;
   int n;
 };

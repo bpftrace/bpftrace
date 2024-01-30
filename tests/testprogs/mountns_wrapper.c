@@ -14,8 +14,7 @@
 #include <unistd.h>
 
 #define errExit(msg)                                                           \
-  do                                                                           \
-  {                                                                            \
+  do {                                                                         \
     perror(msg);                                                               \
     exit(EXIT_FAILURE);                                                        \
   } while (0)
@@ -42,7 +41,6 @@ necessary yet.
 
 int main(int argc, char *argv[])
 {
-
   const char *private_mount = "/tmp/bpftrace-unshare-mountns-test";
   char dpath[PATH_MAX];
   char exe[PATH_MAX];

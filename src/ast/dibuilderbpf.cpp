@@ -37,8 +37,7 @@ void DIBuilderBPF::createFunctionDebugInfo(Function &func)
                                          flags);
 
   std::string prefix("var");
-  for (size_t i = 0; i < types.size(); ++i)
-  {
+  for (size_t i = 0; i < types.size(); ++i) {
     createParameterVariable(subprog,
                             prefix + std::to_string(i),
                             i,

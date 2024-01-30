@@ -14,8 +14,7 @@ namespace {
 // well formed.
 ProbeType single_provider_type_postsema(Probe *probe)
 {
-  if (!probe->attach_points->empty())
-  {
+  if (!probe->attach_points->empty()) {
     return probetype(probe->attach_points->at(0)->provider);
   }
 
@@ -40,8 +39,7 @@ std::optional<RequiredResources> ResourceAnalyser::analyse()
   Visit(*root_);
   prepare_mapped_printf_ids();
 
-  if (!err_.str().empty())
-  {
+  if (!err_.str().empty()) {
     out_ << err_.str();
     return std::nullopt;
   }
@@ -57,17 +55,13 @@ void ResourceAnalyser::visit(Probe &probe)
 
 void ResourceAnalyser::visit(Builtin &builtin)
 {
-  if (builtin.ident == "elapsed")
-  {
+  if (builtin.ident == "elapsed") {
     resources_.needs_elapsed_map = true;
-  }
-  else if (builtin.ident == "kstack" || builtin.ident == "ustack")
-  {
+  } else if (builtin.ident == "kstack" || builtin.ident == "ustack") {
     resources_.stackid_maps.insert(StackType{});
   }
 
-  if (uses_usym_table(builtin.ident))
-  {
+  if (uses_usym_table(builtin.ident)) {
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
@@ -79,12 +73,10 @@ void ResourceAnalyser::visit(Call &call)
   Visitor::visit(call);
 
   if (call.func == "printf" || call.func == "system" || call.func == "cat" ||
-      call.func == "debugf")
-  {
+      call.func == "debugf") {
     std::vector<Field> args;
     // NOTE: the same logic can be found in the semantic_analyser pass
-    for (auto it = call.vargs->begin() + 1; it != call.vargs->end(); it++)
-    {
+    for (auto it = call.vargs->begin() + 1; it != call.vargs->end(); it++) {
       // Promote to 64-bit if it's not an aggregate type
       SizedType ty = (*it)->type; // copy
       if (!ty.IsAggregate() && !ty.IsTimestampTy())
@@ -99,56 +91,37 @@ void ResourceAnalyser::visit(Call &call)
     }
 
     auto fmtstr = get_literal_string(*call.vargs->at(0));
-    if (call.func == "printf")
-    {
-      if (single_provider_type_postsema(probe_) == ProbeType::iter)
-      {
+    if (call.func == "printf") {
+      if (single_provider_type_postsema(probe_) == ProbeType::iter) {
         resources_.mapped_printf_args.emplace_back(fmtstr, args);
         resources_.needs_data_map = true;
-      }
-      else
-      {
+      } else {
         resources_.printf_args.emplace_back(fmtstr, args);
       }
-    }
-    else if (call.func == "debugf")
-    {
+    } else if (call.func == "debugf") {
       resources_.mapped_printf_args.emplace_back(fmtstr, args);
       resources_.needs_data_map = true;
-    }
-    else if (call.func == "system")
-    {
+    } else if (call.func == "system") {
       resources_.system_args.emplace_back(fmtstr, args);
-    }
-    else
-    {
+    } else {
       resources_.cat_args.emplace_back(fmtstr, args);
     }
-  }
-  else if (call.func == "join")
-  {
+  } else if (call.func == "join") {
     auto delim = call.vargs->size() > 1 ? get_literal_string(*call.vargs->at(1))
                                         : " ";
     resources_.join_args.push_back(delim);
     resources_.needs_join_map = true;
-  }
-  else if (call.func == "hist")
-  {
+  } else if (call.func == "hist") {
     auto &r = resources_.hist_bits_arg;
 
     int bits = static_cast<Integer *>(call.vargs->at(1))->n;
-    if (r.find(call.map->ident) != r.end() && (r[call.map->ident]) != bits)
-    {
+    if (r.find(call.map->ident) != r.end() && (r[call.map->ident]) != bits) {
       LOG(ERROR, call.loc, err_) << "Different bits in a single hist, had "
                                  << r[call.map->ident] << " now " << bits;
-    }
-    else
-    {
+    } else {
       r[call.map->ident] = bits;
     }
-  }
-  else if (call.func == "lhist")
-  {
+  } else if (call.func == "lhist") {
     Expression &min_arg = *call.vargs->at(1);
     Expression &max_arg = *call.vargs->at(2);
     Expression &step_arg = *call.vargs->at(3);
@@ -166,47 +139,32 @@ void ResourceAnalyser::visit(Call &call)
             resources_.lhist_args.end() &&
         (resources_.lhist_args[call.map->ident].min != args.min ||
          resources_.lhist_args[call.map->ident].max != args.max ||
-         resources_.lhist_args[call.map->ident].step != args.step))
-    {
+         resources_.lhist_args[call.map->ident].step != args.step)) {
       LOG(ERROR, call.loc, err_)
           << "Different lhist bounds in a single map unsupported";
-    }
-    else
-    {
+    } else {
       resources_.lhist_args[call.map->ident] = args;
     }
-  }
-  else if (call.func == "time")
-  {
+  } else if (call.func == "time") {
     if (call.vargs && call.vargs->size() > 0)
       resources_.time_args.push_back(get_literal_string(*call.vargs->at(0)));
     else
       resources_.time_args.push_back("%H:%M:%S\n");
-  }
-  else if (call.func == "strftime")
-  {
+  } else if (call.func == "strftime") {
     resources_.strftime_args.push_back(get_literal_string(*call.vargs->at(0)));
-  }
-  else if (call.func == "print")
-  {
+  } else if (call.func == "print") {
     auto &arg = *call.vargs->at(0);
     if (!arg.is_map)
       resources_.non_map_print_args.push_back(arg.type);
-  }
-  else if (call.func == "kstack" || call.func == "ustack")
-  {
+  } else if (call.func == "kstack" || call.func == "ustack") {
     resources_.stackid_maps.insert(call.type.stack_type);
-  }
-  else if (call.func == "cgroup_path")
-  {
+  } else if (call.func == "cgroup_path") {
     if (call.vargs->size() > 1)
       resources_.cgroup_path_args.push_back(
           get_literal_string(*call.vargs->at(1)));
     else
       resources_.cgroup_path_args.push_back("*");
-  }
-  else if (call.func == "skboutput")
-  {
+  } else if (call.func == "skboutput") {
     auto &file_arg = *call.vargs->at(0);
     String &file = static_cast<String &>(file_arg);
 
@@ -217,8 +175,7 @@ void ResourceAnalyser::visit(Call &call)
     resources_.needs_perf_event_map = true;
   }
 
-  if (uses_usym_table(call.func))
-  {
+  if (uses_usym_table(call.func)) {
     // mark probe as using usym, so that the symbol table can be pre-loaded
     // and symbols resolved even when unavailable at resolution time
     resources_.probes_using_usym.insert(probe_);
@@ -237,8 +194,7 @@ void ResourceAnalyser::prepare_mapped_printf_ids()
 {
   int idx = 0;
 
-  for (auto &arg : resources_.mapped_printf_args)
-  {
+  for (auto &arg : resources_.mapped_printf_args) {
     assert(resources_.needs_data_map);
     auto len = std::get<0>(arg).size();
     resources_.mapped_printf_ids.push_back({ idx, len + 1 });

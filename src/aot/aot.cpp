@@ -33,8 +33,7 @@ static constexpr auto AOT_SECDATA_TEMPFILE = ".temp_btaot";
 // be run with the corresponding runtime shim. We enforce it through the
 // `version` field, which is the "Robert Sedgwicks hash" of BPFTRACE_VERSION
 // macro defined in cmake.
-struct Header
-{
+struct Header {
   uint16_t magic;      // Header magic (can be useful to detect endianness)
   uint16_t unused;     // For future use
   uint32_t header_len; // Length of this struct
@@ -58,8 +57,7 @@ uint32_t rs_hash(const std::string &str)
   unsigned int a = 63689;
   unsigned int hash = 0;
 
-  for (char c : str)
-  {
+  for (char c : str) {
     hash = hash * a + c;
     a = a * b;
   }
@@ -75,12 +73,9 @@ void serialize_bytecode(const BpfBytecode &bytecode, std::ostream &out)
 
 int load_required_resources(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
 {
-  try
-  {
+  try {
     bpftrace.resources.load_state(ptr, len);
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     LOG(ERROR) << "Failed to deserialize metadata: " << ex.what();
     return 1;
   }
@@ -90,15 +85,12 @@ int load_required_resources(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
 
 int load_bytecode(BPFtrace &bpftrace, uint8_t *ptr, size_t len)
 {
-  try
-  {
+  try {
     Membuf mbuf(ptr, ptr + len);
     std::istream istream(&mbuf);
     cereal::BinaryInputArchive archive(istream);
     archive(bpftrace.bytecode_);
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     LOG(ERROR) << "Failed to deserialize metadata: " << ex.what();
     return 1;
   }
@@ -112,28 +104,22 @@ std::optional<std::vector<uint8_t>> generate_btaot_section(
 {
   // Serialize RuntimeResources
   std::string serialized_metadata;
-  try
-  {
+  try {
     std::ostringstream serialized(std::ios::binary);
     resources.save_state(serialized);
     serialized_metadata = serialized.str();
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     LOG(ERROR) << "Failed to serialize runtime metadata: " << ex.what();
     return std::nullopt;
   }
 
   // Serialize bytecode
   std::string serialized_bytecode;
-  try
-  {
+  try {
     std::ostringstream serialized(std::ios::binary);
     serialize_bytecode(bytecode, serialized);
     serialized_bytecode = serialized.str();
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     LOG(ERROR) << "Failed to serialize bytecode: " << ex.what();
     return std::nullopt;
   }
@@ -194,8 +180,7 @@ bool build_binary(const std_filesystem::path &shim,
 
   // Resolve objcopy binary to full path
   auto objcopy_full = find_in_path(objcopy);
-  if (!objcopy_full)
-  {
+  if (!objcopy_full) {
     LOG(ERROR) << "Failed to find " << objcopy << " in $PATH";
     goto out;
   }
@@ -207,14 +192,12 @@ bool build_binary(const std_filesystem::path &shim,
                      AOT_SECDATA_TEMPFILE,
                      shim.c_str(),
                      out.c_str());
-  if (written < 0 || written == sizeof(cmd))
-  {
+  if (written < 0 || written == sizeof(cmd)) {
     LOG(ERROR) << "Failed to construct objcopy command";
     goto out;
   }
 
-  if (std::system(cmd))
-  {
+  if (std::system(cmd)) {
     LOG(ERROR) << "Failed to execute: " << cmd;
     goto out;
   }
@@ -237,8 +220,7 @@ int generate(const RequiredResources &resources,
     return 1;
 
   auto shim = find_in_path(AOT_SHIM_NAME);
-  if (!shim)
-  {
+  if (!shim) {
     LOG(ERROR) << "Failed to locate " << AOT_SHIM_NAME
                << " shim binary. Is it in $PATH?";
     return 1;
@@ -255,16 +237,14 @@ int load(BPFtrace &bpftrace, const std::string &in)
   int err = 0;
 
   int infd = ::open(in.c_str(), O_RDONLY);
-  if (infd < 0)
-  {
+  if (infd < 0) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to open: " << in << ": " << std::strerror(saved_err);
     return 1;
   }
 
   struct stat sb;
-  if (fstat(infd, &sb))
-  {
+  if (fstat(infd, &sb)) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to stat: " << in << ": " << std::strerror(saved_err);
     return 1;
@@ -272,8 +252,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
 
   uint8_t *ptr = static_cast<uint8_t *>(
       ::mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, infd, 0));
-  if (ptr == MAP_FAILED)
-  {
+  if (ptr == MAP_FAILED) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to mmap: " << in << ": " << std::strerror(saved_err);
     return 1;
@@ -281,34 +260,29 @@ int load(BPFtrace &bpftrace, const std::string &in)
 
   // Validate header
   auto hdr = reinterpret_cast<const Header *>(ptr);
-  if (hdr->magic != AOT_MAGIC)
-  {
+  if (hdr->magic != AOT_MAGIC) {
     LOG(ERROR) << "Invalid magic in " << in << ": " << hdr->magic;
     err = 1;
     goto out;
   }
-  if (hdr->unused != 0)
-  {
+  if (hdr->unused != 0) {
     LOG(ERROR) << "Unused bytes are used: " << hdr->unused;
     err = 1;
     goto out;
   }
-  if (hdr->header_len != sizeof(Header))
-  {
+  if (hdr->header_len != sizeof(Header)) {
     LOG(ERROR) << "Invalid header len: " << hdr->header_len;
     err = 1;
     goto out;
   }
-  if (hdr->version != rs_hash(BPFTRACE_VERSION))
-  {
+  if (hdr->version != rs_hash(BPFTRACE_VERSION)) {
     LOG(ERROR) << "Build hash mismatch! "
                << "Did you build with a different bpftrace version?";
     err = 1;
     goto out;
   }
   if ((hdr->rr_off + hdr->rr_len) > static_cast<uint64_t>(sb.st_size) ||
-      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(sb.st_size))
-  {
+      (hdr->bc_off + hdr->bc_len) > static_cast<uint64_t>(sb.st_size)) {
     LOG(ERROR) << "Corrupted AOT bpftrace file: incomplete payload";
     err = 1;
     goto out;
@@ -324,8 +298,7 @@ int load(BPFtrace &bpftrace, const std::string &in)
     goto out;
 
 out:
-  if (::munmap(ptr, sb.st_size))
-  {
+  if (::munmap(ptr, sb.st_size)) {
     auto saved_err = errno;
     LOG(ERROR) << "Failed to munmap(): " << in << ": "
                << std::strerror(saved_err);

@@ -4,8 +4,7 @@
 
 namespace bpftrace {
 
-class BfdDisasm : public IDisasm
-{
+class BfdDisasm : public IDisasm {
 public:
   BfdDisasm(std::string &path);
   ~BfdDisasm();

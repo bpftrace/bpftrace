@@ -4,8 +4,7 @@
 
 namespace bpftrace {
 
-class ProcMonBase
-{
+class ProcMonBase {
 public:
   ProcMonBase() = default;
   virtual ~ProcMonBase() = default;
@@ -27,8 +26,7 @@ protected:
   int pid_ = -1;
 };
 
-class ProcMon : public ProcMonBase
-{
+class ProcMon : public ProcMonBase {
 public:
   ProcMon(pid_t pid);
   ProcMon(const std::string& pid);

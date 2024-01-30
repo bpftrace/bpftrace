@@ -60,8 +60,7 @@ static std::array<std::string, 8> arg_registers = {
 int offset(std::string reg_name)
 {
   auto it = find(registers.begin(), registers.end(), reg_name);
-  if (it == registers.end())
-  {
+  if (it == registers.end()) {
     return -1;
   }
   return distance(registers.begin(), it);

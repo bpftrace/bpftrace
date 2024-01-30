@@ -13,19 +13,14 @@ IMap::IMap(const std::string &name,
            int max_entries __attribute__((unused)))
     : name_(name), type_(type), key_(key), lqmin(min), lqmax(max), lqstep(step)
 {
-  if (type.IsCountTy() && !key.args_.size())
-  {
+  if (type.IsCountTy() && !key.args_.size()) {
     map_type_ = libbpf::BPF_MAP_TYPE_PERCPU_ARRAY;
-  }
-  else if ((type.IsHistTy() || type.IsLhistTy() || type.IsCountTy() ||
-            type.IsSumTy() || type.IsMinTy() || type.IsMaxTy() ||
-            type.IsAvgTy() || type.IsStatsTy()) &&
-           (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0)))
-  {
+  } else if ((type.IsHistTy() || type.IsLhistTy() || type.IsCountTy() ||
+              type.IsSumTy() || type.IsMinTy() || type.IsMaxTy() ||
+              type.IsAvgTy() || type.IsStatsTy()) &&
+             (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 6, 0))) {
     map_type_ = libbpf::BPF_MAP_TYPE_PERCPU_HASH;
-  }
-  else
-  {
+  } else {
     map_type_ = libbpf::BPF_MAP_TYPE_HASH;
   }
 }

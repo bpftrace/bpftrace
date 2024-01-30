@@ -1,11 +1,9 @@
 #include "gtest/gtest.h"
 
-class ThrowListener : public testing::EmptyTestEventListener
-{
-  void OnTestPartResult(const testing::TestPartResult& result) override
+class ThrowListener : public testing::EmptyTestEventListener {
+  void OnTestPartResult(const testing::TestPartResult &result) override
   {
-    if (result.type() == testing::TestPartResult::kFatalFailure)
-    {
+    if (result.type() == testing::TestPartResult::kFatalFailure) {
       throw testing::AssertionException(result);
     }
   }

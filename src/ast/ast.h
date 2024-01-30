@@ -28,16 +28,14 @@ class VisitorBase;
     return new T(*this);                                                       \
   };
 
-enum class JumpType
-{
+enum class JumpType {
   INVALID = 0,
   RETURN,
   CONTINUE,
   BREAK,
 };
 
-enum class Operator
-{
+enum class Operator {
   INVALID = 0,
   ASSIGN,
   EQ,
@@ -64,8 +62,7 @@ enum class Operator
   BNOT,
 };
 
-class Node
-{
+class Node {
 public:
   Node() = default;
   Node(location loc) : loc(loc){};
@@ -99,7 +96,7 @@ public:
 
   SizedType type;
   Map *key_for_map = nullptr;
-  Map *map = nullptr; // Only set when this expression is assigned to a map
+  Map *map = nullptr;      // Only set when this expression is assigned to a map
   Variable *var = nullptr; // Set when this expression is assigned to a variable
   bool is_literal = false;
   bool is_variable = false;
@@ -211,8 +208,7 @@ private:
   Call(const Call &other);
 };
 
-class Sizeof : public Expression
-{
+class Sizeof : public Expression {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Sizeof)
@@ -228,8 +224,7 @@ private:
   Sizeof(const Sizeof &other);
 };
 
-class Offsetof : public Expression
-{
+class Offsetof : public Expression {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Offsetof)
@@ -364,8 +359,7 @@ private:
   Cast(const Cast &other);
 };
 
-class Tuple : public Expression
-{
+class Tuple : public Expression {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Tuple)
@@ -445,8 +439,7 @@ private:
   AssignVarStatement(const AssignVarStatement &other);
 };
 
-class AssignConfigVarStatement : public Statement
-{
+class AssignConfigVarStatement : public Statement {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(AssignConfigVarStatement)
@@ -496,8 +489,7 @@ private:
   Unroll(const Unroll &other);
 };
 
-class Jump : public Statement
-{
+class Jump : public Statement {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Jump)
@@ -540,8 +532,7 @@ public:
   Expression *right = nullptr;
 };
 
-class While : public Statement
-{
+class While : public Statement {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(While)
@@ -559,8 +550,7 @@ private:
   While(const While &other);
 };
 
-class Config : public Statement
-{
+class Config : public Statement {
 public:
   DEFINE_ACCEPT
   DEFINE_LEAFCOPY(Config)
@@ -598,7 +588,8 @@ public:
   std::string ns;
   std::string func;
   std::string pin;
-  usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with wildcard matches
+  usdt_probe_entry usdt; // resolved USDT entry, used to support arguments with
+                         // wildcard matches
   int64_t freq = 0;
   uint64_t len = 0;   // for watchpoint probes, the width of watched addr
   std::string mode;   // for watchpoint probes, the watch mode
@@ -636,9 +627,9 @@ public:
 
   std::string name() const;
   std::string args_typename() const;
-  bool need_expansion = false;        // must build a BPF program per wildcard match
-  int tp_args_structs_level = -1;     // number of levels of structs that must
-                                      // be imported/resolved for tracepoints
+  bool need_expansion = false;    // must build a BPF program per wildcard match
+  int tp_args_structs_level = -1; // number of levels of structs that must
+                                  // be imported/resolved for tracepoints
 
   int index() const;
   void set_index(int index);
