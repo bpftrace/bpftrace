@@ -26,27 +26,39 @@ else
     NC=
 fi
 
-# Add new testcases here
-tests=(
-    'bpftrace -e "BEGIN { exit(); }"'
-    $'bpftrace -e "#include <linux/skbuff.h>\n BEGIN { \$x = ((struct sk_buff *)curtask)->data_len; exit(); }"'
-    'bpftrace -l "kprobe_seq_*"'
-    )
-
-echo "${GREEN}[==========]${NC} Running ${#tests[@]} tests"
-
 result=0
-for tst in "${tests[@]}"; do
-    echo "${GREEN}[ RUN      ]${NC} $tst"
 
-    export ASAN_OPTIONS="alloc_dealloc_mismatch=0"
-    if eval $BPFTRACE_ASAN -e "$tst" > /dev/null 2>&1 ; then
-        echo "${GREEN}[       OK ]"
-    else
-        echo "${RED}[  MEMLEAK ]"
-        result=1
-    fi
-done
+run_tests () {
+    local -n tests=$1
+    echo "${GREEN}[==========]${NC} Running ${#tests[@]} $3 tests"
+    for tst in "${tests[@]}"; do
+        echo "${GREEN}[ RUN      ]${NC} bpftrace "$2" $tst"
+
+        export ASAN_OPTIONS="alloc_dealloc_mismatch=0"
+        if eval $BPFTRACE_ASAN "$2" "$tst" > /dev/null 2>&1 ; then
+            echo "${GREEN}[       OK ]"
+        else
+            echo "${RED}[  MEMLEAK ]"
+            # re-run the command to output the leak information
+            eval $BPFTRACE_ASAN "$2" "$tst"
+            result=1
+        fi
+    done
+}
+
+
+# Add new testcases here
+program_tests=(
+    '"BEGIN { exit(); }"'
+    $'"#include <linux/skbuff.h>\n BEGIN { \$x = ((struct sk_buff *)curtask)->data_len; exit(); }"'
+)
+
+listing_tests=(
+    '"kprobe_seq_*"'
+)
+    
+run_tests program_tests "-e" "program"
+run_tests listing_tests "-l" "listing"
 
 echo "${GREEN}[==========]"
 
