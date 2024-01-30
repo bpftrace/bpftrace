@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Runs or updates codegen tests' expected LLVM IR
-# requires nix
+# Runs or updates codegen tests' expected LLVM IR.
+# Requires nix.
 #
 # Example usage:
 #
