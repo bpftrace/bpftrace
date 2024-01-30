@@ -94,7 +94,7 @@ void usage()
   std::cerr << "    -h, --help     show this help message" << std::endl;
   std::cerr << "    -I DIR         add the directory to the include search path" << std::endl;
   std::cerr << "    --include FILE add an #include file before preprocessing" << std::endl;
-  std::cerr << "    -l [search]    list probes" << std::endl;
+  std::cerr << "    -l [search]    list kernel probes or probes in a program" << std::endl;
   std::cerr << "    -p PID         enable USDT probes on PID" << std::endl;
   std::cerr << "    -c 'CMD'       run CMD and enable USDT probes on resulting process" << std::endl;
   std::cerr << "    --usdt-file-activation" << std::endl;
@@ -380,7 +380,7 @@ static std::optional<struct timespec> get_delta_taitime()
   return true;
 }
 
-[[nodiscard]] std::unique_ptr<ast::Node> parse(
+[[nodiscard]] std::unique_ptr<ast::Program> parse(
     BPFtrace& bpftrace,
     const std::string& name,
     const std::string& program,
@@ -799,8 +799,8 @@ int main(int argc, char* argv[])
     }
   }
 
-  // Listing probes
-  if (args.listing) {
+  // Listing probes when there is no program
+  if (args.listing && args.script.empty() && args.filename.empty()) {
     if (!is_root())
       return 1;
 
@@ -885,10 +885,15 @@ int main(int argc, char* argv[])
   // rlimit?
   enforce_infinite_rlimit();
 
-  auto ast_root = parse(
+  auto ast_prog = parse(
       bpftrace, filename, program, args.include_dirs, args.include_files);
-  if (!ast_root)
+  if (!ast_prog)
     return 1;
+
+  if (args.listing) {
+    bpftrace.probe_matcher_->list_probes(ast_prog.get());
+    return 0;
+  }
 
   ast::PassContext ctx(bpftrace);
   ast::PassManager pm;
@@ -901,11 +906,11 @@ int main(int argc, char* argv[])
       break;
   }
 
-  auto pmresult = pm.Run(std::move(ast_root), ctx);
+  auto pmresult = pm.Run(std::move(ast_prog), ctx);
   if (!pmresult.Ok())
     return 1;
 
-  ast_root = std::unique_ptr<ast::Node>(pmresult.Root());
+  auto ast_root = std::unique_ptr<ast::Node>(pmresult.Root());
 
   if (!bpftrace.cmd_.empty()) {
     try {

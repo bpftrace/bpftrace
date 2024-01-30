@@ -2755,13 +2755,15 @@ int main()
 == Listing Probes
 
 Probe listing is the method to discover which probes are supported by the current system.
-Listing supports the same syntax as normal attachment does:
+Listing supports the same syntax as normal attachment does and alternatively can be
+combined with `-e` or filename args to see all the probes that a program would attach to.
 
 ----
 # bpftrace -l 'kprobe:*'
 # bpftrace -l 't:syscalls:*openat*
 # bpftrace -l 'kprobe:tcp*,trace
 # bpftrace -l 'k:*socket*,tracepoint:syscalls:*tcp*'
+# bpftrace -l -e 'tracepoint:xdp:mem_* { exit(); }'
 ----
 
 The verbose flag (`-v`) can be specified to inspect arguments (`args`) for providers that support it:

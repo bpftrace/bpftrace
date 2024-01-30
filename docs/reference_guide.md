@@ -159,7 +159,7 @@ OPTIONS:
     -h             show this help message
     -I DIR         add the specified DIR to the search path for include files.
     --include FILE adds an implicit #include which is read before the source file is preprocessed.
-    -l [search]    list probes
+    -l [search]    list kernel probes or probes in a program
     -p PID         enable USDT probes or search for uprobes/uretprobes in PID address space
     -c 'CMD'       run CMD and enable USDT probes on resulting process
     -q             keep messages quiet
@@ -282,7 +282,9 @@ iscsid is sleeping.
 
 ## 4. `-l`: Listing Probes
 
-Probes from the tracepoint and kprobe libraries can be listed with `-l`.
+Probe listing is the method to discover which probes are supported by the current system.
+Listing supports the same syntax as normal attachment does and alternatively can be 
+combined with `-e` or filename args to see all the probes that a program would attach to.
 
 ```
 # bpftrace -l | more
@@ -309,6 +311,15 @@ tracepoint:syscalls:sys_exit_nanosleep
 kprobe:nanosleep_copyout
 kprobe:hrtimer_nanosleep
 [...]
+```
+
+Seeing the probes a program would attach to:
+```
+# bpftrace -l -e 'kprobe:xprt_switch_get { exit(); } tracepoint:xdp:mem_* { exit(); }'
+kprobe:xprt_switch_get
+tracepoint:xdp:mem_connect
+tracepoint:xdp:mem_disconnect
+tracepoint:xdp:mem_return_failed
 ```
 
 The `-v` option when listing tracepoints will show their arguments for use from the args builtin. For
