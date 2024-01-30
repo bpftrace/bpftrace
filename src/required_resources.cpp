@@ -31,8 +31,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
   auto is_invalid_map = [=](int a) -> uint8_t {
     return (!fake && a < 0) ? 1 : 0;
   };
-  for (auto &map_val : map_vals)
-  {
+  for (auto &map_val : map_vals) {
     std::string map_name = map_val.first;
     SizedType type = map_val.second;
 
@@ -43,8 +42,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     auto &key = search_args->second;
     auto max_map_keys = bpftrace.config_.get(ConfigKeyInt::max_map_keys);
 
-    if (type.IsLhistTy())
-    {
+    if (type.IsLhistTy()) {
       auto args = lhist_args.find(map_name);
       if (args == lhist_args.end())
         LOG(FATAL) << "map arg \"" << map_name << "\" not found";
@@ -56,9 +54,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
           map_name, type, key, min, max, step, max_map_keys);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
-    }
-    else if (type.IsHistTy())
-    {
+    } else if (type.IsHistTy()) {
       auto args = hist_bits_arg.find(map_name);
       if (args == hist_bits_arg.end())
         LOG(FATAL) << "map arg \"" << map_name << "\" not found";
@@ -73,17 +69,14 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
                                          ConfigKeyInt::max_map_keys));
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
-    }
-    else
-    {
+    } else {
       auto map = std::make_unique<T>(map_name, type, key, max_map_keys);
       failed_maps += is_invalid_map(map->mapfd_);
       bpftrace.maps.Add(std::move(map));
     }
   }
 
-  for (StackType stack_type : stackid_maps)
-  {
+  for (StackType stack_type : stackid_maps) {
     // The stack type doesn't matter here, so we use kstack to force SizedType
     // to set stack_size.
     auto map = std::make_unique<T>(CreateStack(true, stack_type));
@@ -91,8 +84,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     bpftrace.maps.Set(stack_type, std::move(map));
   }
 
-  if (needs_join_map)
-  {
+  if (needs_join_map) {
     // join uses map storage as we'd like to process data larger than can fit on
     // the BPF stack.
     int value_size = 8 + 8 + bpftrace.join_argnum_ * bpftrace.join_argsize_;
@@ -101,8 +93,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::Join, std::move(map));
   }
-  if (needs_elapsed_map)
-  {
+  if (needs_elapsed_map) {
     std::string map_ident = "elapsed";
     SizedType type = CreateUInt64();
     MapKey key;
@@ -110,8 +101,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::Elapsed, std::move(map));
   }
-  if (needs_data_map)
-  {
+  if (needs_data_map) {
     int ret;
     auto map = prepareFormatStringDataMap<T>(mapped_printf_args, &ret);
     if (is_invalid_map(map->mapfd_) || (!fake && ret == -1))
@@ -123,15 +113,13 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
    * 1. ringbuf is unavailable for built-ins like printf, cat.
    * 2. Or, built-in skboutput is used.
    */
-  if (!bpftrace.feature_->has_map_ringbuf() || needs_perf_event_map)
-  {
+  if (!bpftrace.feature_->has_map_ringbuf() || needs_perf_event_map) {
     auto map = std::make_unique<T>(libbpf::BPF_MAP_TYPE_PERF_EVENT_ARRAY);
     failed_maps += is_invalid_map(map->mapfd_);
     bpftrace.maps.Set(MapManager::Type::PerfEvent, std::move(map));
   }
   // When available, ringbuf is used for built-ins like printf, cat.
-  if (bpftrace.feature_->has_map_ringbuf())
-  {
+  if (bpftrace.feature_->has_map_ringbuf()) {
     auto rb = std::make_unique<T>(libbpf::BPF_MAP_TYPE_RINGBUF,
                                   bpftrace.config_.get(
                                       ConfigKeyInt::perf_rb_pages));
@@ -149,8 +137,7 @@ int RequiredResources::create_maps_impl(BPFtrace &bpftrace, bool fake)
                       std::move(rb_loss_cnt));
   }
 
-  if (failed_maps > 0)
-  {
+  if (failed_maps > 0) {
     std::cerr << "Creation of the required BPF maps has failed." << std::endl;
     std::cerr << "Make sure you have all the required permissions and are not";
     std::cerr << " confined (e.g. like" << std::endl;
@@ -180,8 +167,7 @@ std::unique_ptr<T> RequiredResources::prepareFormatStringDataMap(
   // copy all the format strings to buffer, head to tail
   uint32_t idx = 0;
   std::vector<uint8_t> formats(size, 0);
-  for (auto &arg : args)
-  {
+  for (auto &arg : args) {
     auto str = std::get<0>(arg).c_str();
     auto len = std::get<0>(arg).size();
     memcpy(&formats.data()[idx], str, len);

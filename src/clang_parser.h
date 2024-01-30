@@ -13,8 +13,7 @@ namespace ast {
 class Program;
 }
 
-class ClangParser
-{
+class ClangParser {
 public:
   bool parse(ast::Program *program,
              BPFtrace &bpftrace,
@@ -66,8 +65,7 @@ private:
   std::vector<CXUnsavedFile> input_files;
   std::string btf_cdef;
 
-  class ClangParserHandler
-  {
+  class ClangParserHandler {
   public:
     ClangParserHandler();
 

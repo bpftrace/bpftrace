@@ -5,8 +5,7 @@ int GLOBAL_B = 0x88888888;
 int GLOBAL_C = 0x33333333;
 char GLOBAL_D = 8;
 
-struct Foo
-{
+struct Foo {
   int a;
   char b[10];
   int c[3];

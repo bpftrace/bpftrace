@@ -47,8 +47,7 @@ class Node;
   \tparam V visitor type
 */
 template <typename R, typename D, typename V>
-class VTable
-{
+class VTable {
 private:
   typedef R (*FuncPtr)(D &, V *);
   std::unordered_map<std::type_index, FuncPtr> vtable_;

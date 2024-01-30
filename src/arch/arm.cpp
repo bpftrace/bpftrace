@@ -217,8 +217,7 @@ int get_kernel_ptr_width()
   // processes (e.g. "armv8l" instead of "aarch64"; see COMPAT_UTS_MACHINE), so
   // make sure this is taken into account.
   struct utsname utsname;
-  if (uname(&utsname) >= 0)
-  {
+  if (uname(&utsname) >= 0) {
     if (!strncmp(utsname.machine, "armv", 4) && utsname.machine[4] < '8')
       return 32;
   }

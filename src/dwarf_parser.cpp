@@ -10,8 +10,7 @@
 
 namespace bpftrace {
 
-struct FuncInfo
-{
+struct FuncInfo {
   std::string name;
   Dwarf_Die die;
 };
@@ -47,8 +46,7 @@ static int get_func_die_cb(Dwarf_Die *func_die, void *arg)
 {
   auto *func_info = static_cast<struct FuncInfo *>(arg);
   if (dwarf_hasattr(func_die, DW_AT_name) &&
-      dwarf_diename(func_die) == func_info->name)
-  {
+      dwarf_diename(func_die) == func_info->name) {
     func_info->die = *func_die;
     return DWARF_CB_ABORT;
   }
@@ -61,8 +59,7 @@ std::optional<Dwarf_Die> Dwarf::get_func_die(const std::string &function) const
 
   Dwarf_Die *cudie = nullptr;
   Dwarf_Addr cubias;
-  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr)
-  {
+  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr) {
     if (dwarf_getfuncs(cudie, get_func_die_cb, &func_info, 0) > 0)
       return func_info.die;
   }
@@ -91,14 +88,12 @@ std::vector<Dwarf_Die> Dwarf::function_param_dies(
 std::string Dwarf::get_type_name(Dwarf_Die &type_die) const
 {
   auto tag = dwarf_tag(&type_die);
-  switch (tag)
-  {
+  switch (tag) {
     case DW_TAG_base_type:
     case DW_TAG_typedef:
       return dwarf_diename(&type_die);
     case DW_TAG_pointer_type: {
-      if (dwarf_hasattr(&type_die, DW_AT_type))
-      {
+      if (dwarf_hasattr(&type_die, DW_AT_type)) {
         Dwarf_Die inner_type = type_of(type_die);
         return get_type_name(inner_type) + "*";
       }
@@ -151,12 +146,10 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
   auto bit_size = dwarf_hasattr(&type, DW_AT_bit_size)
                       ? dwarf_bitsize(&type)
                       : dwarf_bytesize(&type) * 8;
-  switch (tag)
-  {
+  switch (tag) {
     case DW_TAG_base_type: {
       Dwarf_Word encoding = get_type_encoding(type);
-      switch (encoding)
-      {
+      switch (encoding) {
         case DW_ATE_boolean:
         case DW_ATE_unsigned:
         case DW_ATE_unsigned_char:
@@ -171,8 +164,7 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
     case DW_TAG_enumeration_type:
       return CreateUInt(bit_size);
     case DW_TAG_pointer_type: {
-      if (dwarf_hasattr(&type, DW_AT_type))
-      {
+      if (dwarf_hasattr(&type, DW_AT_type)) {
         Dwarf_Die inner_type = type_of(type);
         return CreatePointer(get_stype(inner_type, false));
       }
@@ -194,8 +186,8 @@ SizedType Dwarf::get_stype(Dwarf_Die &type_die, bool resolve_structs) const
       Dwarf_Word inner_enc = get_type_encoding(inner_type_die);
       SizedType inner_type = get_stype(inner_type_die);
       SizedType result;
-      for (auto &d : get_all_children_with_tag(&type_die, DW_TAG_subrange_type))
-      {
+      for (auto &d :
+           get_all_children_with_tag(&type_die, DW_TAG_subrange_type)) {
         ssize_t size = get_array_size(d);
         if (dwarf_tag(&inner_type_die) == DW_TAG_base_type &&
             (inner_enc == DW_ATE_signed_char ||
@@ -232,17 +224,14 @@ std::optional<Bitfield> Dwarf::resolve_bitfield(Dwarf_Die &field_die) const
     return std::nullopt;
 
   ssize_t bit_offset = get_field_bit_offset(field_die);
-  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset))
-  {
+  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset)) {
     // DWARF >= 4
     // DW_AT_data_bit_offset is the offset in bits from the beginning of the
     // containing entity to the beginning of field. In this case, the byte
     // offset of the field is determined by (bit_offset / 8) so the bit offset
     // within the byte is given by (bit_offset % 8).
     return Bitfield(bit_offset % 8, bitfield_width);
-  }
-  else
-  {
+  } else {
     // DWARF < 4 (some implementations of DWARF 4 use this, too)
     // Bit offset is given by DW_AT_bit_offset which is the offset in bits of
     // the high order bit of the container type to the high order bit of the
@@ -272,8 +261,7 @@ void Dwarf::resolve_fields(const SizedType &type) const
     return;
 
   for (auto &field_die :
-       get_all_children_with_tag(&type_die.value(), DW_TAG_member))
-  {
+       get_all_children_with_tag(&type_die.value(), DW_TAG_member)) {
     Dwarf_Die field_type = type_of(field_die);
     str->AddField(dwarf_diename(&field_die),
                   get_stype(field_type),
@@ -287,8 +275,7 @@ std::vector<std::string> Dwarf::get_function_params(
     const std::string &function) const
 {
   std::vector<std::string> result;
-  for (auto &param_die : function_param_dies(function))
-  {
+  for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     const std::string type_name = get_type_name(type_die);
     if (dwarf_hasattr(&param_die, DW_AT_name))
@@ -303,8 +290,7 @@ Struct Dwarf::resolve_args(const std::string &function)
 {
   Struct result(0, false);
   int i = 0;
-  for (auto &param_die : function_param_dies(function))
-  {
+  for (auto &param_die : function_param_dies(function)) {
     Dwarf_Die type_die = type_of(param_die);
     SizedType arg_type = get_stype(type_die);
     arg_type.is_funcarg = true;
@@ -322,8 +308,7 @@ std::optional<Dwarf_Die> Dwarf::find_type(const std::string &name) const
 {
   Dwarf_Die *cudie = nullptr;
   Dwarf_Addr cubias;
-  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr)
-  {
+  while ((cudie = dwfl_nextcu(dwfl, cudie, &cubias)) != nullptr) {
     if (auto type_die = get_child_with_tagname(cudie,
                                                DW_TAG_structure_type,
                                                name))
@@ -341,8 +326,7 @@ std::optional<Dwarf_Die> Dwarf::get_child_with_tagname(Dwarf_Die *die,
   if (dwarf_child(die, &child_die) != 0)
     return std::nullopt;
 
-  do
-  {
+  do {
     if (dwarf_tag(&child_die) == tag && dwarf_hasattr(&child_die, DW_AT_name) &&
         dwarf_diename(&child_die) == name)
       return child_die;
@@ -359,8 +343,7 @@ std::vector<Dwarf_Die> Dwarf::get_all_children_with_tag(Dwarf_Die *die, int tag)
     return {};
 
   std::vector<Dwarf_Die> children;
-  do
-  {
+  do {
     if (dwarf_tag(&child_die) == tag)
       children.push_back(child_die);
   } while (dwarf_siblingof(child_iter, &child_die) == 0);
@@ -372,15 +355,13 @@ ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
 {
   Dwarf_Attribute size_attr;
   Dwarf_Word size;
-  if (dwarf_hasattr(&subrange_die, DW_AT_upper_bound))
-  {
+  if (dwarf_hasattr(&subrange_die, DW_AT_upper_bound)) {
     dwarf_formudata(
         dwarf_attr_integrate(&subrange_die, DW_AT_upper_bound, &size_attr),
         &size);
     return (ssize_t)size + 1;
   }
-  if (dwarf_hasattr(&subrange_die, DW_AT_count))
-  {
+  if (dwarf_hasattr(&subrange_die, DW_AT_count)) {
     dwarf_formudata(
         dwarf_attr_integrate(&subrange_die, DW_AT_count, &size_attr), &size);
     return (ssize_t)size;
@@ -390,8 +371,7 @@ ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
 
 ssize_t Dwarf::get_field_byte_offset(Dwarf_Die &field_die)
 {
-  if (dwarf_hasattr(&field_die, DW_AT_data_member_location))
-  {
+  if (dwarf_hasattr(&field_die, DW_AT_data_member_location)) {
     Dwarf_Attribute attr;
     Dwarf_Word value;
     if (dwarf_formudata(
@@ -406,15 +386,13 @@ ssize_t Dwarf::get_field_bit_offset(Dwarf_Die &field_die)
 {
   Dwarf_Attribute attr;
   Dwarf_Word value;
-  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset))
-  { // DWARF >= 4
+  if (dwarf_hasattr(&field_die, DW_AT_data_bit_offset)) { // DWARF >= 4
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_data_bit_offset, &attr),
             &value) >= 0)
       return (ssize_t)value;
   }
-  if (dwarf_hasattr(&field_die, DW_AT_bit_offset))
-  { // DWARF < 4
+  if (dwarf_hasattr(&field_die, DW_AT_bit_offset)) { // DWARF < 4
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_bit_offset, &attr),
             &value) >= 0)
@@ -428,8 +406,7 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
 {
   Dwarf_Attribute attr;
   Dwarf_Word value;
-  if (dwarf_hasattr(&field_die, DW_AT_bit_size))
-  {
+  if (dwarf_hasattr(&field_die, DW_AT_bit_size)) {
     if (dwarf_formudata(dwarf_attr_integrate(&field_die, DW_AT_bit_size, &attr),
                         &value) >= 0)
       return (ssize_t)value;

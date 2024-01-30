@@ -17,8 +17,7 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class Dwarf
-{
+class Dwarf {
 public:
   virtual ~Dwarf();
 
@@ -72,8 +71,7 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class Dwarf
-{
+class Dwarf {
 public:
   static std::unique_ptr<Dwarf> GetFromBinary(BPFtrace *bpftrace
                                               __attribute__((unused)),

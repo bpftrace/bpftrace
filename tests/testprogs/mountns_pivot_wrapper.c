@@ -16,8 +16,7 @@
 #include <unistd.h>
 
 #define errExit(msg)                                                           \
-  do                                                                           \
-  {                                                                            \
+  do {                                                                         \
     perror(msg);                                                               \
     exit(EXIT_FAILURE);                                                        \
   } while (0)
@@ -90,8 +89,7 @@ int main(int argc, char *argv[])
   glob("/lib*", GLOB_NOSORT, NULL, &globbuf);
   glob("/usr/lib*", GLOB_NOSORT | GLOB_APPEND, NULL, &globbuf);
   glob("/nix/store", GLOB_NOSORT | GLOB_APPEND, NULL, &globbuf);
-  for (size_t i = 0; i < globbuf.gl_pathc; i++)
-  {
+  for (size_t i = 0; i < globbuf.gl_pathc; i++) {
     const char *global_lib_dir = globbuf.gl_pathv[i];
     char shared_dir_mount[PATH_MAX];
     snprintf(
@@ -110,13 +108,11 @@ int main(int argc, char *argv[])
   if (mkdir(oldroot, 0770) != 0 && (errno != EEXIST))
     errExit("Failed to make old root directory for pivot_root");
 
-  if (syscall(SYS_pivot_root, private_mount, oldroot) != 0)
-  {
+  if (syscall(SYS_pivot_root, private_mount, oldroot) != 0) {
     errExit("Couldn't pivot to new root");
   }
 
-  if (chdir("/") != 0)
-  {
+  if (chdir("/") != 0) {
     errExit("Couldn't chdir to new root");
   }
 

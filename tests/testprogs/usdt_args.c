@@ -26,8 +26,7 @@
 #define test_value 0xf7f6f5f4f3f2f1f0
 volatile uint64_t one = 1;
 
-typedef union all_types
-{
+typedef union all_types {
   int8_t i_8;
   uint8_t i_u8;
   uint16_t i_u16;
@@ -87,8 +86,7 @@ int main()
 {
   volatile all_types_t array[10];
 
-  for (volatile size_t i = 0; i < sizeof(array) / sizeof(array[0]); i++)
-  {
+  for (volatile size_t i = 0; i < sizeof(array) / sizeof(array[0]); i++) {
     array[i].i_u64 = test_value;
   }
 
@@ -125,8 +123,7 @@ int main()
   PROBE_ADDRESS(, 8);
 
   /* Base address + offset + (index * scale) */
-  for (volatile int i = 7; i <= 7; i++)
-  {
+  for (volatile int i = 7; i <= 7; i++) {
     PROBE_INDEX(u, 64);
     PROBE_INDEX(, 64);
     PROBE_INDEX(u, 32);

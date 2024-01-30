@@ -11,7 +11,8 @@ int fn(short p1,
   return p1 + p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
 }
 
-int main() {
+int main()
+{
   fn(0x123,
      0x456,
      0x789,

@@ -34,8 +34,7 @@ static LockdownState read_security_lockdown(void)
 
   // Format: none [integrity] confidentiality
   // read one field at a time, if it starts with [ it's the one we want
-  while (!file.fail())
-  {
+  while (!file.fail()) {
     std::string field;
     file >> field;
     if (field[0] == '[')

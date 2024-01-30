@@ -24,8 +24,7 @@ int create_map(libbpf::bpf_map_type map_type,
 {
   std::string fixed_name;
   const std::string *name_ptr = &name;
-  if (!name.empty() && name[0] == '@')
-  {
+  if (!name.empty() && name[0] == '@') {
     fixed_name = "AT_" + name.substr(1);
     name_ptr = &fixed_name;
   }
@@ -56,8 +55,7 @@ Map::Map(const std::string &name,
     key_size += 8;
   if (key_size == 0)
     key_size = 8;
-  if (type.IsCountTy() && !key.args_.size())
-  {
+  if (type.IsCountTy() && !key.args_.size()) {
     max_entries = 1;
     key_size = 4;
   }
@@ -66,8 +64,7 @@ Map::Map(const std::string &name,
   int flags = 0;
   mapfd_ = create_map(
       map_type_, name, key_size, value_size, max_entries, flags);
-  if (mapfd_ < 0)
-  {
+  if (mapfd_ < 0) {
     LOG(ERROR) << "failed to create map: '" << name_
                << "': " << strerror(errno);
   }
@@ -83,8 +80,7 @@ Map::Map(const std::string &name,
 {
   mapfd_ = create_map(
       map_type_, name_, key_size, value_size, max_entries, flags);
-  if (mapfd_ < 0)
-  {
+  if (mapfd_ < 0) {
     LOG(ERROR) << "failed to create map: '" << name_
                << "': " << strerror(errno);
   }
@@ -125,8 +121,7 @@ Map::Map(const SizedType &type) : IMap(type)
                       value_size,
                       max_entries,
                       flags);
-  if (mapfd_ < 0)
-  {
+  if (mapfd_ < 0) {
     LOG(ERROR) << "failed to create stack id map: " << strerror(errno);
     if (errno == ENOMEM)
       LOG(ERROR) << "Tried to allocate " << max_entries << " entries of size "
@@ -154,8 +149,7 @@ Map::Map(libbpf::bpf_map_type map_type) : IMap(map_type)
 
   mapfd_ = create_map(
       map_type, "perf_event", key_size, value_size, max_entries, flags);
-  if (mapfd_ < 0)
-  {
+  if (mapfd_ < 0) {
     LOG(ERROR) << "failed to create " << name_ << " map: " << strerror(errno);
   }
 }
@@ -170,8 +164,7 @@ Map::Map(libbpf::bpf_map_type map_type, uint64_t perf_rb_pages) : IMap(map_type)
 
   mapfd_ = create_map(
       map_type, "ringbuf", key_size, value_size, max_entries, flags);
-  if (mapfd_ < 0)
-  {
+  if (mapfd_ < 0) {
     LOG(ERROR) << "failed to create " << name_ << " map: " << strerror(errno);
   }
 }
@@ -206,8 +199,7 @@ bool MapManager::Has(const std::string &name)
 std::optional<IMap *> MapManager::Lookup(const std::string &name)
 {
   auto search = maps_by_name_.find(name);
-  if (search == maps_by_name_.end())
-  {
+  if (search == maps_by_name_.end()) {
     return {};
   }
 
@@ -233,8 +225,7 @@ void MapManager::Set(MapManager::Type t, std::unique_ptr<IMap> map)
 std::optional<IMap *> MapManager::Lookup(Type t)
 {
   auto search = maps_by_type_.find(t);
-  if (search == maps_by_type_.end())
-  {
+  if (search == maps_by_type_.end()) {
     return {};
   }
 
@@ -258,8 +249,7 @@ void MapManager::Set(StackType t, std::unique_ptr<IMap> map)
 std::optional<IMap *> MapManager::Lookup(StackType t)
 {
   auto search = stackid_maps_.find(t);
-  if (search == stackid_maps_.end())
-  {
+  if (search == stackid_maps_.end()) {
     return {};
   }
 
@@ -273,8 +263,7 @@ bool MapManager::Has(StackType t)
 
 std::string to_string(MapManager::Type t)
 {
-  switch (t)
-  {
+  switch (t) {
     case MapManager::Type::PerfEvent:
       return "perf_event";
     case MapManager::Type::Join:

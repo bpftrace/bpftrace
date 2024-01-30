@@ -1,23 +1,19 @@
 #include <stdint.h>
 
-struct A
-{
+struct A {
   int x[4];
   uint8_t y[4];
 };
 
-struct B
-{
+struct B {
   int y[2][2];
 };
 
-struct C
-{
+struct C {
   int *z[4];
 };
 
-struct D
-{
+struct D {
   int x;
   int y[0];
   int z;
@@ -45,7 +41,7 @@ void test_variable_array(struct D *d __attribute__((unused)))
 {
 }
 
-int main(int argc __attribute__((unused)), char ** argv __attribute__((unused)))
+int main(int argc __attribute__((unused)), char **argv __attribute__((unused)))
 {
   struct A a;
   a.x[0] = 1;

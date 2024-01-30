@@ -7,8 +7,7 @@
 namespace bpftrace {
 namespace lockdown {
 
-enum class LockdownState
-{
+enum class LockdownState {
   None,
   Integrity,
   Confidentiality,

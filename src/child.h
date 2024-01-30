@@ -7,14 +7,12 @@
 
 namespace bpftrace {
 
-struct child_args
-{
+struct child_args {
   std::vector<std::string> cmd;
   int event_fd;
 };
 
-class ChildProcBase
-{
+class ChildProcBase {
 public:
   /**
      Parse command and fork a child process.
@@ -89,8 +87,7 @@ protected:
   int term_signal_ = -1;
 };
 
-class ChildProc : public ChildProcBase
-{
+class ChildProc : public ChildProcBase {
 public:
   /**
     Parse command and fork a child process. The child is run with the same
@@ -118,8 +115,7 @@ public:
   void resume(void) override;
 
 private:
-  enum class State
-  {
+  enum class State {
     INIT,
     FORKED,
     RUNNING,

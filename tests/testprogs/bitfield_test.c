@@ -1,14 +1,8 @@
-struct Foo
-{
-  unsigned int a:4,
-               b:8,
-               c:3,
-               d:1,
-               e:16;
+struct Foo {
+  unsigned int a : 4, b : 8, c : 3, d : 1, e : 16;
 };
 
-struct Bar
-{
+struct Bar {
   unsigned short a : 4, b : 8, c : 3, d : 1;
   unsigned int e : 9, f : 15, g : 1, h : 2, i : 5;
 };

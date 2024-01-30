@@ -30,9 +30,7 @@ void test(const std::string &input, int expected_result = 0)
   test(*bpftrace, input, expected_result);
 }
 
-class field_analyser_btf : public test_btf
-{
-};
+class field_analyser_btf : public test_btf {};
 
 TEST_F(field_analyser_btf, kfunc_args)
 {
@@ -262,9 +260,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
 
 #include "dwarf_common.h"
 
-class field_analyser_dwarf : public test_dwarf
-{
-};
+class field_analyser_dwarf : public test_dwarf {};
 
 TEST_F(field_analyser_dwarf, uprobe_args)
 {
@@ -340,14 +336,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
   EXPECT_TRUE(task_struct->GetField("a").offset == 8 ||
               task_struct->GetField("a").offset == 9);
-  if (task_struct->GetField("a").offset == 8)
-  { // DWARF < 4
+  if (task_struct->GetField("a").offset == 8) { // DWARF < 4
     EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x3U);
     EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 12U);
     EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
-  }
-  else
-  { // DWARF >= 4
+  } else { // DWARF >= 4
     EXPECT_EQ(task_struct->GetField("a").bitfield->read_bytes, 0x2U);
     EXPECT_EQ(task_struct->GetField("a").bitfield->access_rshift, 4U);
     EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
@@ -360,14 +353,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
 
   EXPECT_TRUE(task_struct->GetField("b").offset == 8 ||
               task_struct->GetField("b").offset == 10);
-  if (task_struct->GetField("b").offset == 8)
-  { // DWARF < 4
+  if (task_struct->GetField("b").offset == 8) { // DWARF < 4
     EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x3U);
     EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 20U);
     EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
-  }
-  else
-  { // DWARF >= 4
+  } else { // DWARF >= 4
     EXPECT_EQ(task_struct->GetField("b").bitfield->read_bytes, 0x1U);
     EXPECT_EQ(task_struct->GetField("b").bitfield->access_rshift, 4U);
     EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
@@ -381,14 +371,11 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   EXPECT_TRUE(task_struct->GetField("c").offset == 8 ||
               task_struct->GetField("c").offset == 10);
 
-  if (task_struct->GetField("c").offset == 8)
-  { // DWARF < 4
+  if (task_struct->GetField("c").offset == 8) { // DWARF < 4
     EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x3U);
     EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 21U);
     EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
-  }
-  else
-  { // DWARF >= 4
+  } else { // DWARF >= 4
     EXPECT_EQ(task_struct->GetField("c").bitfield->read_bytes, 0x1U);
     EXPECT_EQ(task_struct->GetField("c").bitfield->access_rshift, 5U);
     EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);

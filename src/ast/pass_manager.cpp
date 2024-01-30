@@ -29,14 +29,12 @@ PassResult PassManager::Run(std::unique_ptr<Node> node, PassContext &ctx)
   Node *root = node.release();
   if (bt_debug != DebugLevel::kNone)
     print(root, "parser", std::cout);
-  for (auto &pass : passes_)
-  {
+  for (auto &pass : passes_) {
     auto result = pass.Run(*root, ctx);
     if (!result.Ok())
       return result;
 
-    if (result.Root())
-    {
+    if (result.Root()) {
       delete root;
       root = result.Root();
     }

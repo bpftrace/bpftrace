@@ -9,8 +9,7 @@
 namespace bpftrace {
 namespace ast {
 
-class NodeCounter : public Visitor
-{
+class NodeCounter : public Visitor {
 public:
   void Visit(Node &node) override
   {
@@ -34,12 +33,10 @@ inline Pass CreateCounterPass()
     c.Visit(n);
     auto node_count = c.get_count();
     auto max = ctx.b.max_ast_nodes_;
-    if (bt_verbose)
-    {
+    if (bt_verbose) {
       LOG(INFO) << "node count: " << node_count;
     }
-    if (node_count >= max)
-    {
+    if (node_count >= max) {
       LOG(ERROR) << "node count (" << node_count << ") exceeds the limit ("
                  << max << ")";
       return PassResult::Error("NodeCounter", "node count exceeded");

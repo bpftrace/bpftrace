@@ -13,8 +13,7 @@ namespace bpftrace {
 
 class BPFtrace;
 
-class BpfProgram
-{
+class BpfProgram {
 public:
   static std::optional<BpfProgram> CreateFromBytecode(
       const BpfBytecode &bytecode,

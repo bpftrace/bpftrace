@@ -32,11 +32,9 @@ std::unique_ptr<Output> prepare_output(const std::string& output_file,
 {
   std::ostream* os = &std::cout;
   std::ofstream outputstream;
-  if (!output_file.empty())
-  {
+  if (!output_file.empty()) {
     outputstream.open(output_file);
-    if (outputstream.fail())
-    {
+    if (outputstream.fail()) {
       LOG(ERROR) << "Failed to open output file: \"" << output_file
                  << "\": " << strerror(errno);
       return nullptr;
@@ -45,16 +43,11 @@ std::unique_ptr<Output> prepare_output(const std::string& output_file,
   }
 
   std::unique_ptr<Output> output;
-  if (output_format.empty() || output_format == "text")
-  {
+  if (output_format.empty() || output_format == "text") {
     output = std::make_unique<TextOutput>(*os);
-  }
-  else if (output_format == "json")
-  {
+  } else if (output_format == "json") {
     output = std::make_unique<JsonOutput>(*os);
-  }
-  else
-  {
+  } else {
     LOG(ERROR) << "Invalid output format \"" << output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
     return nullptr;
@@ -76,10 +69,8 @@ int main(int argc, char* argv[])
     option{ nullptr, 0, nullptr, 0 }, // Must be last
   };
 
-  while ((c = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1)
-  {
-    switch (c)
-    {
+  while ((c = getopt_long(argc, argv, short_opts, long_opts, nullptr)) != -1) {
+    switch (c) {
       case 'o':
         output_file = optarg;
         break;
@@ -104,8 +95,7 @@ int main(int argc, char* argv[])
     }
   }
 
-  if (!argv[optind])
-  {
+  if (!argv[optind]) {
     usage();
     return 1;
   }
@@ -116,8 +106,7 @@ int main(int argc, char* argv[])
 
   BPFtrace bpftrace(std::move(output));
   int err = aot::load(bpftrace, argv[optind]);
-  if (err)
-  {
+  if (err) {
     LOG(ERROR) << "Failed to load AOT script";
     return err;
   }

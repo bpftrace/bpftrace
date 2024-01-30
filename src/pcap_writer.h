@@ -11,8 +11,7 @@ typedef struct pcap_dumper pcap_dumper_t;
 
 namespace bpftrace {
 
-class PCAPwriter
-{
+class PCAPwriter {
 public:
   PCAPwriter()
   {

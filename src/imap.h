@@ -13,8 +13,7 @@ namespace libbpf {
 
 namespace bpftrace {
 
-class IMap
-{
+class IMap {
 public:
   IMap(const std::string &name,
        const SizedType &type,

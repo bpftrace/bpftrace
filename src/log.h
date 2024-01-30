@@ -22,8 +22,7 @@ enum class LogType
 };
 // clang-format on
 
-class Log
-{
+class Log {
 public:
   static Log& get();
   void take_input(LogType type,
@@ -71,8 +70,7 @@ private:
   std::unordered_map<LogType, bool> enabled_map_;
 };
 
-class LogStream
-{
+class LogStream {
 public:
   LogStream(const std::string& file,
             int line,
@@ -102,8 +100,7 @@ protected:
   std::ostringstream buf_;
 };
 
-class LogStreamFatal : public LogStream
-{
+class LogStreamFatal : public LogStream {
 public:
   LogStreamFatal(const std::string& file,
                  int line,
@@ -119,8 +116,7 @@ public:
   [[noreturn]] ~LogStreamFatal();
 };
 
-class LogStreamBug : public LogStream
-{
+class LogStreamBug : public LogStream {
 public:
   LogStreamBug(const std::string& file,
                int line,

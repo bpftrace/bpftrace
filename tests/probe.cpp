@@ -70,14 +70,13 @@ TEST(probe, short_name)
   compare_bytecode("kretprobe:f { pid }", "kr:f { pid }");
   compare_bytecode("uprobe:sh:f { 1 }", "u:sh:f { 1 }");
   compare_bytecode("profile:hz:997 { 1 }", "p:hz:997 { 1 }");
-  compare_bytecode("hardware:cache-references:1000000 { 1 }", "h:cache-references:1000000 { 1 }");
+  compare_bytecode("hardware:cache-references:1000000 { 1 }",
+                   "h:cache-references:1000000 { 1 }");
   compare_bytecode("software:faults:1000 { 1 }", "s:faults:1000 { 1 }");
   compare_bytecode("interval:s:1 { 1 }", "i:s:1 { 1 }");
 }
 
-class probe_btf : public test_btf
-{
-};
+class probe_btf : public test_btf {};
 
 TEST_F(probe_btf, short_name)
 {

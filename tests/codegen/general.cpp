@@ -9,8 +9,7 @@ namespace codegen {
 
 using ::testing::_;
 
-class MockBPFtrace : public BPFtrace
-{
+class MockBPFtrace : public BPFtrace {
 public:
 #pragma GCC diagnostic push
 #ifdef __clang__

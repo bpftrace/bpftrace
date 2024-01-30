@@ -11,8 +11,7 @@ namespace bpftrace {
 
 using SectionMap = std::unordered_map<std::string, std::vector<uint8_t>>;
 
-class BpfBytecode
-{
+class BpfBytecode {
 public:
   BpfBytecode()
   {

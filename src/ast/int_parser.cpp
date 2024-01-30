@@ -36,13 +36,11 @@ std::variant<T, std::string> _parse_int(const std::string &num, int base)
 {
   // https://en.cppreference.com/w/cpp/language/integer_literal#The_type_of_the_literal
   static auto int_size_re = std::regex("^(u|u?l?l)$", std::regex::icase);
-  try
-  {
+  try {
     std::size_t idx;
     T ret = _parse_int<T>(num, &idx, base);
 
-    if (idx != num.size())
-    {
+    if (idx != num.size()) {
       auto trail = num.substr(idx, std::string::npos);
       auto match = std::regex_match(trail, int_size_re);
 
@@ -51,9 +49,7 @@ std::variant<T, std::string> _parse_int(const std::string &num, int base)
     }
 
     return ret;
-  }
-  catch (const std::exception &ex)
-  {
+  } catch (const std::exception &ex) {
     return ex.what();
   }
 }
@@ -74,16 +70,14 @@ std::variant<T, std::string> _parse_exp(const std::string &coeff,
 {
   std::stringstream errmsg;
   auto maybe_coeff = _parse_int<T>(coeff, 10);
-  if (std::string *err = std::get_if<std::string>(&maybe_coeff))
-  {
+  if (std::string *err = std::get_if<std::string>(&maybe_coeff)) {
     errmsg << "Coefficient part of scientific literal is not a valid number: "
            << coeff << ": " << *err;
     return errmsg.str();
   }
 
   auto maybe_exp = _parse_int<T>(exp, 10);
-  if (std::string *err = std::get_if<std::string>(&maybe_exp))
-  {
+  if (std::string *err = std::get_if<std::string>(&maybe_exp)) {
     errmsg << "Exponent part of scientific literal is not a valid number: "
            << exp << ": " << *err;
     return errmsg.str();
@@ -92,16 +86,14 @@ std::variant<T, std::string> _parse_exp(const std::string &coeff,
   auto c = std::get<T>(maybe_coeff);
   auto e = std::get<T>(maybe_exp);
 
-  if (c > 9)
-  {
+  if (c > 9) {
     errmsg << "Coefficient part of scientific literal must be in range (0,9), "
               "got: "
            << coeff;
     return errmsg.str();
   }
 
-  if (e > 16)
-  {
+  if (e > 16) {
     errmsg << "Exponent will overflow integer range: " << exp;
     return errmsg.str();
   }
@@ -124,20 +116,14 @@ T to_int(const std::string &num, int base)
   std::variant<T, std::string> res;
 
   // If hex
-  if ((n.rfind("0x", 0) == 0) || (n.rfind("0X", 0) == 0))
-  {
+  if ((n.rfind("0x", 0) == 0) || (n.rfind("0X", 0) == 0)) {
     res = _parse_int<T>(n, base);
-  }
-  else
-  {
+  } else {
     auto pos = n.find_first_of("eE");
-    if (pos != std::string::npos)
-    {
+    if (pos != std::string::npos) {
       res = _parse_exp<T>(n.substr(0, pos),
                           n.substr(pos + 1, std::string::npos));
-    }
-    else
-    {
+    } else {
       res = _parse_int<T>(n, base);
     }
   }

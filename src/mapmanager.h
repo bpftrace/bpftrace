@@ -12,8 +12,7 @@ namespace bpftrace {
    A container for all maps created during program execution.
 
 */
-class MapManager
-{
+class MapManager {
 public:
   MapManager() = default;
   MapManager &operator=(MapManager &&) = default;
@@ -54,8 +53,7 @@ public:
   /**
      Internal maps
   */
-  enum class Type
-  {
+  enum class Type {
     // Also update to_string
     PerfEvent,
     Join,

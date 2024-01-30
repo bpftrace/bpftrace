@@ -76,8 +76,7 @@ static std::array<std::string, ARG_REGISTERS> arg_registers = {
 
 int offset(std::string reg_name)
 {
-  for (unsigned int i = 0; i < registers.size(); i++)
-  {
+  for (unsigned int i = 0; i < registers.size(); i++) {
     if (registers[i].count(reg_name))
       return i;
   }

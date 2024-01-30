@@ -3,8 +3,7 @@
 
 namespace bpftrace {
 
-class DummyDisasm : public IDisasm
-{
+class DummyDisasm : public IDisasm {
   AlignState is_aligned(uint64_t offset __attribute__((unused)),
                         uint64_t pc __attribute__((unused))) override
   {

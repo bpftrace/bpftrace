@@ -19,8 +19,7 @@ const int MAX_STACK_SIZE = 1024;
 const int DEFAULT_STACK_SIZE = 127;
 const int COMM_SIZE = 16;
 
-enum class Type : uint8_t
-{
+enum class Type : uint8_t {
   // clang-format off
   none,
   integer,
@@ -54,8 +53,7 @@ enum class Type : uint8_t
   // clang-format on
 };
 
-enum class AddrSpace : uint8_t
-{
+enum class AddrSpace : uint8_t {
   none,
   kernel,
   user,
@@ -64,15 +62,13 @@ enum class AddrSpace : uint8_t
 std::ostream &operator<<(std::ostream &os, Type type);
 std::ostream &operator<<(std::ostream &os, AddrSpace as);
 
-enum class UserSymbolCacheType
-{
+enum class UserSymbolCacheType {
   per_pid,
   per_program,
   none,
 };
 
-enum class StackMode : uint8_t
-{
+enum class StackMode : uint8_t {
   bpftrace,
   perf,
   raw,
@@ -84,12 +80,12 @@ const std::map<StackMode, std::string> STACK_MODE_NAME_MAP = {
   { StackMode::raw, "raw" },
 };
 
-struct StackType
-{
+struct StackType {
   uint16_t limit = DEFAULT_STACK_SIZE;
   StackMode mode = StackMode::bpftrace;
 
-  bool operator ==(const StackType &obj) const {
+  bool operator==(const StackType &obj) const
+  {
     return limit == obj.limit && mode == obj.mode;
   }
 
@@ -108,8 +104,7 @@ private:
   }
 };
 
-enum class TimestampMode : uint8_t
-{
+enum class TimestampMode : uint8_t {
   monotonic,
   boot,
   tai,
@@ -119,8 +114,7 @@ enum class TimestampMode : uint8_t
 struct Struct;
 struct Field;
 
-class SizedType
-{
+class SizedType {
 public:
   SizedType() : type(Type::none)
   {
@@ -242,8 +236,7 @@ public:
   void SetSize(size_t size)
   {
     size_bits_ = size * 8;
-    if (IsIntTy())
-    {
+    if (IsIntTy()) {
       assert(size == 0 || size == 1 || size == 8 || size == 16 || size == 32 ||
              size == 64);
     }
@@ -467,8 +460,7 @@ SizedType CreateTimestampMode();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 
-enum class ProbeType
-{
+enum class ProbeType {
   invalid,
   special,
   kprobe,
@@ -491,8 +483,7 @@ enum class ProbeType
 
 std::ostream &operator<<(std::ostream &os, ProbeType type);
 
-struct ProbeItem
-{
+struct ProbeItem {
   std::string name;
   std::unordered_set<std::string> aliases;
   ProbeType type;
@@ -532,24 +523,23 @@ std::string typestr(Type t);
 std::string expand_probe_name(const std::string &orig_name);
 std::string probetypeName(ProbeType t);
 
-struct Probe
-{
+struct Probe {
   ProbeType type;
-  std::string path;             // file path if used
-  std::string attach_point;     // probe name (last component)
-  std::string orig_name;        // original full probe name,
-                                // before wildcard expansion
-  std::string name;             // full probe name
+  std::string path;         // file path if used
+  std::string attach_point; // probe name (last component)
+  std::string orig_name;    // original full probe name,
+                            // before wildcard expansion
+  std::string name;         // full probe name
   bool need_expansion;
-  std::string pin;              // pin file for iterator probes
-  std::string ns;               // for USDT probes, if provider namespace not from path
-  uint64_t loc = 0;             // for USDT probes
-  int usdt_location_idx = 0;    // to disambiguate duplicate USDT markers
+  std::string pin;  // pin file for iterator probes
+  std::string ns;   // for USDT probes, if provider namespace not from path
+  uint64_t loc = 0; // for USDT probes
+  int usdt_location_idx = 0; // to disambiguate duplicate USDT markers
   uint64_t log_size = 1000000;
   int index = 0;
   int freq = 0;
-  uint64_t len = 0;             // for watchpoint probes, size of region
-  std::string mode;             // for watchpoint probes, watch mode (rwx)
+  uint64_t len = 0;   // for watchpoint probes, size of region
+  std::string mode;   // for watchpoint probes, watch mode (rwx)
   bool async = false; // for watchpoint probes, if it's an async watchpoint
   uint64_t address = 0;
   uint64_t func_offset = 0;
@@ -583,8 +573,7 @@ private:
 
 const int RESERVED_IDS_PER_ASYNCACTION = 10000;
 
-enum class AsyncAction
-{
+enum class AsyncAction {
   // clang-format off
   printf  = 0,     // printf reserves 0-9999 for printf_ids
   syscall = 10000, // system reserves 10000-19999 for printf_ids
@@ -606,11 +595,7 @@ enum class AsyncAction
 
 uint64_t asyncactionint(AsyncAction a);
 
-enum class PositionalParameterType
-{
-  positional,
-  count
-};
+enum class PositionalParameterType { positional, count };
 
 } // namespace bpftrace
 
@@ -618,12 +603,10 @@ enum class PositionalParameterType
 // Allows to use SizedType in unordered_set/map.
 namespace std {
 template <>
-struct hash<bpftrace::StackType>
-{
+struct hash<bpftrace::StackType> {
   size_t operator()(const bpftrace::StackType &obj) const
   {
-    switch (obj.mode)
-    {
+    switch (obj.mode) {
       case bpftrace::StackMode::bpftrace:
         return std::hash<std::string>()("bpftrace#" + to_string(obj.limit));
       case bpftrace::StackMode::perf:
@@ -637,8 +620,7 @@ struct hash<bpftrace::StackType>
 };
 
 template <>
-struct hash<bpftrace::SizedType>
-{
+struct hash<bpftrace::SizedType> {
   size_t operator()(const bpftrace::SizedType &type) const;
 };
 

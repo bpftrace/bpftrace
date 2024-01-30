@@ -17,12 +17,11 @@ namespace semantic_analyser {
 using ::testing::_;
 using ::testing::HasSubstr;
 
-void test_for_warning(
-          BPFtrace &bpftrace,
-          const std::string &input,
-          const std::string &warning,
-          bool invert = false,
-          bool safe_mode = true)
+void test_for_warning(BPFtrace &bpftrace,
+                      const std::string &input,
+                      const std::string &warning,
+                      bool invert = false,
+                      bool safe_mode = true)
 {
   Driver driver(bpftrace);
   bpftrace.safe_mode_ = safe_mode;
@@ -43,8 +42,7 @@ void test_for_warning(
     EXPECT_THAT(out.str(), HasSubstr(warning));
 }
 
-void test_for_warning(
-                      const std::string &input,
+void test_for_warning(const std::string &input,
                       const std::string &warning,
                       bool invert = false,
                       bool safe_mode = true)
@@ -81,8 +79,7 @@ void test(BPFtrace &bpftrace,
   bpftrace.feature_ = std::make_unique<MockBPFfeature>(mock_has_features);
   ast::SemanticAnalyser semantics(driver.root.get(), bpftrace, out, has_child);
   ASSERT_EQ(expected_result, semantics.analyse()) << msg.str() + out.str();
-  if (expected_error.data())
-  {
+  if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
     EXPECT_EQ(out.str(), expected_error);
@@ -724,7 +721,8 @@ TEST(semantic_analyser, call_usym)
 
 TEST(semantic_analyser, call_ntop)
 {
-  std::string structs = "struct inet { unsigned char ipv4[4]; unsigned char ipv6[16]; unsigned char invalid[10]; } ";
+  std::string structs = "struct inet { unsigned char ipv4[4]; unsigned char "
+                        "ipv6[16]; unsigned char invalid[10]; } ";
 
   test("kprobe:f { ntop(2, arg0); }", 0);
   test("kprobe:f { ntop(arg0); }", 0);
@@ -786,7 +784,8 @@ TEST(semantic_analyser, call_kaddr)
 
 TEST(semantic_analyser, call_uaddr)
 {
-  test("u:/bin/bash:main { uaddr(\"github.com/golang/glog.severityName\"); }", 0);
+  test("u:/bin/bash:main { uaddr(\"github.com/golang/glog.severityName\"); }",
+       0);
   test("uprobe:/bin/bash:main { uaddr(\"glob_asciirange\"); }", 0);
   test("u:/bin/bash:main,u:/bin/bash:readline { uaddr(\"glob_asciirange\"); }",
        0);
@@ -816,8 +815,7 @@ TEST(semantic_analyser, call_uaddr)
 
   std::vector<int> sizes = { 8, 16, 32, 64, 64, 64 };
 
-  for (size_t i = 0; i < sizes.size(); i++)
-  {
+  for (size_t i = 0; i < sizes.size(); i++) {
     auto v = static_cast<ast::AssignVarStatement *>(
         driver.root->probes->at(0)->stmts->at(i));
     EXPECT_TRUE(v->var->type.IsPtrTy());
@@ -1030,7 +1028,8 @@ TEST(semantic_analyser, variables_are_local)
   test("kprobe:f { $x = 1 } kprobe:g { @y = $x }", 1);
 }
 
-TEST(semantic_analyser, array_access) {
+TEST(semantic_analyser, array_access)
+{
   test("kprobe:f { $s = arg0; @x = $s->y[0];}", 10);
   test("kprobe:f { $s = 0; @x = $s->y[0];}", 10);
   test("struct MyStruct { int y[4]; } kprobe:f { $s = (struct MyStruct *) "
@@ -1192,11 +1191,15 @@ TEST(semantic_analyser, variable_type)
 
 TEST(semantic_analyser, unroll)
 {
-  test("kprobe:f { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 0);
+  test("kprobe:f { $i = 0; unroll(5) { printf(\"i: %d\\n\", $i); $i = $i + 1; "
+       "} }",
+       0);
   test("kprobe:f { $i = 0; unroll(101) { printf(\"i: %d\\n\", $i); $i = $i + "
        "1; } }",
        1);
-  test("kprobe:f { $i = 0; unroll(0) { printf(\"i: %d\\n\", $i); $i = $i + 1; } }", 1);
+  test("kprobe:f { $i = 0; unroll(0) { printf(\"i: %d\\n\", $i); $i = $i + 1; "
+       "} }",
+       1);
 
   BPFtrace bpftrace;
   bpftrace.add_param("10");
@@ -1327,7 +1330,9 @@ TEST(semantic_analyser, system)
   test("kprobe:f { system(\"ls\") }", 0, false /* safe_mode */);
   test("kprobe:f { system(1234) }", 1, false /* safe_mode */);
   test("kprobe:f { system() }", 1, false /* safe_mode */);
-  test("kprobe:f { $fmt = \"mystring\"; system($fmt) }", 1, false /* safe_mode */);
+  test("kprobe:f { $fmt = \"mystring\"; system($fmt) }",
+       1,
+       false /* safe_mode */);
 }
 
 TEST(semantic_analyser, printf_format_int)
@@ -1636,7 +1641,8 @@ TEST(semantic_analyser, interval)
 
 TEST(semantic_analyser, variable_cast_types)
 {
-  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  std::string structs =
+      "struct type1 { int field; } struct type2 { int field; }";
   test(structs +
            "kprobe:f { $x = (struct type1*)cpu; $x = (struct type1*)cpu; }",
        0);
@@ -1647,7 +1653,8 @@ TEST(semantic_analyser, variable_cast_types)
 
 TEST(semantic_analyser, map_cast_types)
 {
-  std::string structs = "struct type1 { int field; } struct type2 { int field; }";
+  std::string structs =
+      "struct type1 { int field; } struct type2 { int field; }";
   test(structs +
            "kprobe:f { @x = *(struct type1*)cpu; @x = *(struct type1*)cpu; }",
        0);
@@ -1739,8 +1746,9 @@ TEST(semantic_analyser, field_access_pointer)
 
 TEST(semantic_analyser, field_access_sub_struct)
 {
-  std::string structs = "struct type2 { int field; } "
-                        "struct type1 { struct type2 *type2ptr; struct type2 type2; }";
+  std::string structs =
+      "struct type2 { int field; } "
+      "struct type1 { struct type2 *type2ptr; struct type2 type2; }";
 
   test(structs + "kprobe:f { (*(struct type1*)0).type2ptr->field }", 0);
   test(structs + "kprobe:f { (*(struct type1*)0).type2.field }", 0);
@@ -1979,10 +1987,10 @@ TEST(semantic_analyser, cast_sign)
   BPFtrace bpftrace;
   Driver driver(bpftrace);
   std::string prog =
-    "struct t { int s; unsigned int us; long l; unsigned long ul }; "
-    "kprobe:f { "
-    "  $t = ((struct t *)0xFF);"
-    "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
+      "struct t { int s; unsigned int us; long l; unsigned long ul }; "
+      "kprobe:f { "
+      "  $t = ((struct t *)0xFF);"
+      "  $s = $t->s; $us = $t->us; $l = $t->l; $lu = $t->ul; }";
   test(driver, prog, 0);
 
   auto s = static_cast<ast::AssignVarStatement *>(
@@ -2002,21 +2010,24 @@ TEST(semantic_analyser, cast_sign)
 TEST(semantic_analyser, binop_sign)
 {
   // Make sure types are correct
-  std::string prog_pre =
-    "struct t { long l; unsigned long ul }; "
-    "kprobe:f { "
-    "  $t = ((struct t *)0xFF); ";
+  std::string prog_pre = "struct t { long l; unsigned long ul }; "
+                         "kprobe:f { "
+                         "  $t = ((struct t *)0xFF); ";
 
-  std::string operators[] = { "==", "!=", "<", "<=", ">", ">=", "+", "-", "/", "*"};
-  for(std::string op : operators)
-  {
+  std::string operators[] = { "==", "!=", "<", "<=", ">",
+                              ">=", "+",  "-", "/",  "*" };
+  for (std::string op : operators) {
     BPFtrace bpftrace;
     Driver driver(bpftrace);
-    std::string prog = prog_pre +
-      "$varA = $t->l "  + op + " $t->l; "
-      "$varB = $t->ul " + op + " $t->l; "
-      "$varC = $t->ul " + op + " $t->ul;"
-      "}";
+    std::string prog = prog_pre + "$varA = $t->l " + op +
+                       " $t->l; "
+                       "$varB = $t->ul " +
+                       op +
+                       " $t->l; "
+                       "$varC = $t->ul " +
+                       op +
+                       " $t->ul;"
+                       "}";
 
     test(driver, prog, 0);
     auto varA = static_cast<ast::AssignVarStatement *>(
@@ -2270,8 +2281,7 @@ TEST(semantic_analyser, struct_member_keywords)
     "uprobe",
     "kprobe",
   };
-  for(auto kw : keywords)
-  {
+  for (auto kw : keywords) {
     test("struct S{ int " + kw + ";}; k:f { ((struct S*)arg0)->" + kw + "}", 0);
     test("struct S{ int " + kw + ";}; k:f { (*(struct S*)arg0)." + kw + "}", 0);
   }
@@ -2846,9 +2856,7 @@ TEST(semantic_analyser, config)
        0);
 }
 
-class semantic_analyser_btf : public test_btf
-{
-};
+class semantic_analyser_btf : public test_btf {};
 
 TEST_F(semantic_analyser_btf, kfunc)
 {

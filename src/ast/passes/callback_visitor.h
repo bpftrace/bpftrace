@@ -9,8 +9,7 @@ namespace ast {
 
 using callback = std::function<void(Node *)>;
 
-class CallbackVisitor : public Visitor
-{
+class CallbackVisitor : public Visitor {
 public:
   explicit CallbackVisitor(callback func) : func_(func)
   {

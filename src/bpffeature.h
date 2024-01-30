@@ -56,8 +56,7 @@ public:                                                                        \
 
 class BPFfeature;
 
-class BPFnofeature
-{
+class BPFnofeature {
 public:
   BPFnofeature() : kprobe_multi_(false), uprobe_multi_(false)
   {
@@ -70,8 +69,7 @@ protected:
   friend class BPFfeature;
 };
 
-class BPFfeature
-{
+class BPFfeature {
 public:
   BPFfeature(BPFnofeature& no_feature) : no_feature_(no_feature)
   {

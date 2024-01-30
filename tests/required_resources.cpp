@@ -138,8 +138,7 @@ TEST(required_resources, round_trip_set_stack_type)
     r.load_state(input);
 
     ASSERT_EQ(r.stackid_maps.size(), 1ul);
-    for (const auto &st : r.stackid_maps)
-    {
+    for (const auto &st : r.stackid_maps) {
       EXPECT_EQ(st.limit, 33ul);
       EXPECT_EQ(st.mode, StackMode::perf);
     }
@@ -196,8 +195,7 @@ TEST(required_resources, round_trip_multiple_members)
     ASSERT_EQ(r.join_args.size(), 1ul);
     EXPECT_EQ(r.join_args[0], "joinarg0");
     ASSERT_EQ(r.stackid_maps.size(), 1ul);
-    for (const auto &st : r.stackid_maps)
-    {
+    for (const auto &st : r.stackid_maps) {
       EXPECT_EQ(st.limit, 33ul);
       EXPECT_EQ(st.mode, StackMode::perf);
     }

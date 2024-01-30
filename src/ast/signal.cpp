@@ -20,8 +20,7 @@ static std::map<std::string, int> signals = {
 
 int signal_name_to_num(const std::string &signal)
 {
-  if (signal.empty())
-  {
+  if (signal.empty()) {
     return -1;
   }
 
@@ -29,8 +28,7 @@ int signal_name_to_num(const std::string &signal)
 
   std::for_each(sig.begin(), sig.end(), [](char &c) { c = ::toupper(c); });
 
-  if (sig[0] != 'S')
-  {
+  if (sig[0] != 'S') {
     sig.insert(0, "SIG");
   }
 

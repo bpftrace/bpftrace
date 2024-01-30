@@ -10,8 +10,7 @@
 
 namespace bpftrace {
 
-enum class MessageType
-{
+enum class MessageType {
   // don't forget to update std::ostream& operator<<(std::ostream& out,
   // MessageType type) in output.cpp
   map,
@@ -28,34 +27,50 @@ enum class MessageType
   helper_error,
 };
 
-std::ostream& operator<<(std::ostream& out, MessageType type);
+std::ostream &operator<<(std::ostream &out, MessageType type);
 
 // Abstract class (interface) for output
 // Provides default implementation of some methods for formatting map and
 // non-map values into strings.
 // All output formatters should extend this class and override (at least) pure
 // virtual methods.
-class Output
-{
+class Output {
 public:
-  explicit Output(std::ostream& out = std::cout, std::ostream& err = std::cerr) : out_(out),err_(err) { }
+  explicit Output(std::ostream &out = std::cout, std::ostream &err = std::cerr)
+      : out_(out), err_(err)
+  {
+  }
   Output(const Output &) = delete;
-  Output& operator=(const Output &) = delete;
+  Output &operator=(const Output &) = delete;
   virtual ~Output() = default;
 
-  virtual std::ostream& outputstream() const { return out_; };
+  virtual std::ostream &outputstream() const
+  {
+    return out_;
+  };
 
   // Write map to output
   // Ideally, the implementation should use map_to_str to convert a map into
   // a string, format it properly, and print it to out_.
-  virtual void map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                   const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const = 0;
+  virtual void map(
+      BPFtrace &bpftrace,
+      IMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const = 0;
   // Write map histogram to output
   // Ideally, the implementation should use map_hist_to_str to convert a map
   // histogram into a string, format it properly, and print it to out_.
-  virtual void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                        const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                        const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const = 0;
+  virtual void map_hist(
+      BPFtrace &bpftrace,
+      IMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
+          &values_by_key,
+      const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
+          &total_counts_by_key) const = 0;
   // Write map statistics to output
   // Ideally, the implementation should use map_stats_to_str to convert map
   // statistics into a string, format it properly, and print it to out_.
@@ -74,7 +89,9 @@ public:
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const = 0;
 
-  virtual void message(MessageType type, const std::string& msg, bool nl = true) const = 0;
+  virtual void message(MessageType type,
+                       const std::string &msg,
+                       bool nl = true) const = 0;
   virtual void lost_events(uint64_t lost) const = 0;
   virtual void attached_probes(uint64_t num_probes) const = 0;
   virtual void helper_error(int func_id,
@@ -84,8 +101,19 @@ public:
 protected:
   std::ostream &out_;
   std::ostream &err_;
-  void hist_prepare(const std::vector<uint64_t> &values, int &min_index, int &max_index, int &max_value) const;
-  void lhist_prepare(const std::vector<uint64_t> &values, int min, int max, int step, int &max_index, int &max_value, int &buckets, int &start_value, int &end_value) const;
+  void hist_prepare(const std::vector<uint64_t> &values,
+                    int &min_index,
+                    int &max_index,
+                    int &max_value) const;
+  void lhist_prepare(const std::vector<uint64_t> &values,
+                     int min,
+                     int max,
+                     int step,
+                     int &max_index,
+                     int &max_value,
+                     int &buckets,
+                     int &start_value,
+                     int &end_value) const;
   std::string get_helper_error_msg(int func_id, int retcode) const;
   // Convert a log2 histogram into string
   virtual std::string hist_to_str(const std::vector<uint64_t> &values,
@@ -173,13 +201,27 @@ protected:
 
 class TextOutput : public Output {
 public:
-  explicit TextOutput(std::ostream& out = std::cout, std::ostream& err = std::cerr) : Output(out, err) { }
+  explicit TextOutput(std::ostream &out = std::cout,
+                      std::ostream &err = std::cerr)
+      : Output(out, err)
+  {
+  }
 
-  void map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-           const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const override;
-  void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
+  void map(
+      BPFtrace &bpftrace,
+      IMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const override;
+  void map_hist(BPFtrace &bpftrace,
+                IMap &map,
+                uint32_t top,
+                uint32_t div,
+                const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
+                    &values_by_key,
+                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
+                    &total_counts_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
       IMap &map,
@@ -192,7 +234,9 @@ public:
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;
 
-  void message(MessageType type, const std::string& msg, bool nl = true) const override;
+  void message(MessageType type,
+               const std::string &msg,
+               bool nl = true) const override;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,
@@ -227,13 +271,27 @@ protected:
 
 class JsonOutput : public Output {
 public:
-  explicit JsonOutput(std::ostream& out = std::cout, std::ostream& err = std::cerr) : Output(out, err) { }
+  explicit JsonOutput(std::ostream &out = std::cout,
+                      std::ostream &err = std::cerr)
+      : Output(out, err)
+  {
+  }
 
-  void map(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-           const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>> &values_by_key) const override;
-  void map_hist(BPFtrace &bpftrace, IMap &map, uint32_t top, uint32_t div,
-                const std::map<std::vector<uint8_t>, std::vector<uint64_t>> &values_by_key,
-                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>> &total_counts_by_key) const override;
+  void map(
+      BPFtrace &bpftrace,
+      IMap &map,
+      uint32_t top,
+      uint32_t div,
+      const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+          &values_by_key) const override;
+  void map_hist(BPFtrace &bpftrace,
+                IMap &map,
+                uint32_t top,
+                uint32_t div,
+                const std::map<std::vector<uint8_t>, std::vector<uint64_t>>
+                    &values_by_key,
+                const std::vector<std::pair<std::vector<uint8_t>, uint64_t>>
+                    &total_counts_by_key) const override;
   void map_stats(
       BPFtrace &bpftrace,
       IMap &map,
@@ -246,8 +304,12 @@ public:
                      const SizedType &ty,
                      std::vector<uint8_t> &value) const override;
 
-  void message(MessageType type, const std::string& msg, bool nl = true) const override;
-  void message(MessageType type, const std::string& field, uint64_t value) const;
+  void message(MessageType type,
+               const std::string &msg,
+               bool nl = true) const override;
+  void message(MessageType type,
+               const std::string &field,
+               uint64_t value) const;
   void lost_events(uint64_t lost) const override;
   void attached_probes(uint64_t num_probes) const override;
   void helper_error(int func_id,

@@ -7,8 +7,7 @@ namespace ast {
 
 using namespace llvm;
 
-class DIBuilderBPF : public DIBuilder
-{
+class DIBuilderBPF : public DIBuilder {
 public:
   DIBuilderBPF(Module &module);
 
@@ -20,8 +19,7 @@ public:
   DIFile *file = nullptr;
 
 private:
-  struct
-  {
+  struct {
     DIType *int64 = nullptr;
     DIType *int8_ptr = nullptr;
   } types_;

@@ -16,13 +16,10 @@ using ::testing::HasSubstr;
 
 TEST(procmon, no_such_proc)
 {
-  try
-  {
+  try {
     ProcMon(1 << 21);
     FAIL();
-  }
-  catch (const std::runtime_error &e)
-  {
+  } catch (const std::runtime_error &e) {
     EXPECT_THAT(e.what(), HasSubstr("No such process"));
   }
 }

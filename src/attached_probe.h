@@ -18,8 +18,7 @@ bpf_probe_attach_type attachtype(ProbeType t);
 libbpf::bpf_prog_type progtype(ProbeType t);
 std::string progtypeName(libbpf::bpf_prog_type t);
 
-class AttachedProbe
-{
+class AttachedProbe {
 public:
   AttachedProbe(Probe &probe,
                 BpfProgram &&prog,
@@ -94,8 +93,7 @@ private:
   BTF &btf_;
 };
 
-class HelperVerifierError : public std::runtime_error
-{
+class HelperVerifierError : public std::runtime_error {
 public:
   const libbpf::bpf_func_id func_id_;
   const std::string helper_name_;

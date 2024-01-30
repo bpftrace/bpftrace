@@ -25,8 +25,7 @@ static void mywrapper()
 
 static void loop()
 {
-  while (1)
-  {
+  while (1) {
     myclock(999);
     mywrapper();
     sleep(1);

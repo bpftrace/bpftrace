@@ -35,8 +35,7 @@ Config::Config(bool has_cmd, bool bt_verbose) : bt_verbose_(bt_verbose)
 bool Config::can_set(ConfigSource prevSource, ConfigSource source)
 {
   if (prevSource == ConfigSource::default_ ||
-      (prevSource == ConfigSource::script && source == ConfigSource::env_var))
-  {
+      (prevSource == ConfigSource::script && source == ConfigSource::env_var)) {
     return true;
   }
   return false;
@@ -49,8 +48,7 @@ bool Config::is_aslr_enabled()
 
   {
     std::ifstream file(randomize_va_space_file);
-    if (file.fail())
-    {
+    if (file.fail()) {
       if (bt_verbose_)
         LOG(ERROR) << std::strerror(errno) << ": " << randomize_va_space_file;
       // conservatively return true
@@ -68,8 +66,7 @@ bool Config::is_aslr_enabled()
 std::map<std::string, StackMode> get_stack_mode_map()
 {
   std::map<std::string, StackMode> result;
-  for (auto &mode : STACK_MODE_NAME_MAP)
-  {
+  for (auto &mode : STACK_MODE_NAME_MAP) {
     result.emplace(mode.second, mode.first);
   }
   return result;
@@ -79,8 +76,7 @@ std::optional<StackMode> Config::get_stack_mode(const std::string &s)
 {
   static auto stack_mode_map = get_stack_mode_map();
   auto found = stack_mode_map.find(s);
-  if (found != stack_mode_map.end())
-  {
+  if (found != stack_mode_map.end()) {
     return std::make_optional(found->second);
   }
   return std::nullopt;
@@ -96,20 +92,17 @@ std::optional<ConfigKey> Config::get_config_key(const std::string &str,
                  maybe_key.begin(),
                  [](unsigned char c) { return std::tolower(c); });
 
-  if (maybe_key.rfind(prefix, 0) == 0)
-  {
+  if (maybe_key.rfind(prefix, 0) == 0) {
     maybe_key = maybe_key.substr(prefix.length());
   }
-  if (ENV_ONLY.find(maybe_key) != ENV_ONLY.end())
-  {
+  if (ENV_ONLY.find(maybe_key) != ENV_ONLY.end()) {
     err = maybe_key + " can only be set as an environment variable";
     return std::nullopt;
   }
 
   auto found = CONFIG_KEY_MAP.find(maybe_key);
 
-  if (found == CONFIG_KEY_MAP.end())
-  {
+  if (found == CONFIG_KEY_MAP.end()) {
     err = "Unrecognized config variable: " + str;
     return std::nullopt;
   }
@@ -133,25 +126,16 @@ bool ConfigSetter::set_stack_mode(const std::string &s)
 bool ConfigSetter::set_user_symbol_cache_type(const std::string &s)
 {
   UserSymbolCacheType usct;
-  if (s == "PER_PID")
-  {
+  if (s == "PER_PID") {
     usct = UserSymbolCacheType::per_pid;
-  }
-  else if (s == "PER_PROGRAM")
-  {
+  } else if (s == "PER_PROGRAM") {
     usct = UserSymbolCacheType::per_program;
-  }
-  else if (s == "1")
-  {
+  } else if (s == "1") {
     // use the default
     return true;
-  }
-  else if (s == "NONE" || s == "0")
-  {
+  } else if (s == "NONE" || s == "0") {
     usct = UserSymbolCacheType::none;
-  }
-  else
-  {
+  } else {
     LOG(ERROR) << "Invalid value for cache_user_symbols: valid values are "
                   "PER_PID, PER_PROGRAM, and NONE.";
     return false;

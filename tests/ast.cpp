@@ -87,7 +87,9 @@ TEST(ast, probe_name_uprobe)
   ap3->address = 1000;
   auto attach_points3 = APL({ ap1, ap2, ap3 });
   Probe uprobe3(attach_points3, nullptr, nullptr);
-  EXPECT_EQ(uprobe3.name(), "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/sh:1000");
+  EXPECT_EQ(
+      uprobe3.name(),
+      "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/sh:1000");
 
   auto ap4 = new AttachPoint("");
   ap4->provider = "uprobe";
@@ -96,7 +98,9 @@ TEST(ast, probe_name_uprobe)
   ap4->func_offset = 10;
   auto attach_points4 = APL({ ap1, ap2, ap3, ap4 });
   Probe uprobe4(attach_points4, nullptr, nullptr);
-  EXPECT_EQ(uprobe4.name(), "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/sh:1000,uprobe:/bin/sh:somefunc+10");
+  EXPECT_EQ(uprobe4.name(),
+            "uprobe:/bin/sh:readline,uprobe:/bin/sh:somefunc,uprobe:/bin/"
+            "sh:1000,uprobe:/bin/sh:somefunc+10");
 
   auto ap5 = new AttachPoint("");
   ap5->provider = "uprobe";

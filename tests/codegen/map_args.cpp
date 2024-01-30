@@ -7,9 +7,7 @@ namespace bpftrace {
 namespace test {
 namespace codegen {
 
-class codegen_dwarf : public test_dwarf
-{
-};
+class codegen_dwarf : public test_dwarf {};
 
 TEST_F(codegen_dwarf, map_args)
 {

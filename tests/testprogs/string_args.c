@@ -1,7 +1,7 @@
-void print(char * a, char * b)
+void print(char *a, char *b)
 {
-  (void) a;
-  (void) b;
+  (void)a;
+  (void)b;
 }
 
 int main(void)

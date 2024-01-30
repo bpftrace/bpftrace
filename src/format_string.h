@@ -19,8 +19,7 @@ struct Field;
 /*
 **
 */
-class FormatString
-{
+class FormatString {
 private:
   /**
    * Split the format string on format specifiers, e.g.

@@ -11,8 +11,7 @@ namespace ast {
 /**
    Base visitor for double dispatch based visitation
 */
-class VisitorBase
-{
+class VisitorBase {
 public:
   virtual ~VisitorBase() = default;
   virtual void visit(Integer &integer) = 0;
@@ -56,8 +55,7 @@ public:
 
    The individual visit() methods run on specific node types.
 */
-class Visitor : public VisitorBase
-{
+class Visitor : public VisitorBase {
 public:
   explicit Visitor() = default;
   ~Visitor() = default;
@@ -120,8 +118,7 @@ public:
    \tparam R return type for visitors
 */
 template <typename R>
-class Dispatcher
-{
+class Dispatcher {
 private:
   using tabletype = VTable<R, Node, Dispatcher>;
   using mytype = Dispatcher;
@@ -242,8 +239,7 @@ private:
 
 */
 
-class Mutator : public Dispatcher<Node *>
-{
+class Mutator : public Dispatcher<Node *> {
 public:
   Mutator(){};
 

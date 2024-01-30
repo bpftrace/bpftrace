@@ -49,22 +49,19 @@ enum class OutputBufferConfig {
   NONE,
 };
 
-enum class TestMode
-{
+enum class TestMode {
   UNSET = 0,
   CODEGEN,
 };
 
-enum class BuildMode
-{
+enum class BuildMode {
   // Compile script and run immediately
   DYNAMIC = 0,
   // Compile script into portable executable
   AHEAD_OF_TIME,
 };
 
-enum Options
-{
+enum Options {
   INFO = 2000,
   NO_WARNING,
   TEST,
@@ -148,7 +145,8 @@ void usage()
   // clang-format on
 }
 
-static void enforce_infinite_rlimit() {
+static void enforce_infinite_rlimit()
+{
   struct rlimit rl = {};
   int err;
 
@@ -163,12 +161,10 @@ static void enforce_infinite_rlimit() {
 
 bool is_root()
 {
-  if (geteuid() != 0)
-  {
+  if (geteuid() != 0) {
     LOG(ERROR) << "bpftrace currently only supports running as the root user.";
     return false;
-  }
-  else
+  } else
     return true;
 }
 
@@ -197,8 +193,7 @@ static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
   // Run the "triple vdso sandwich" 5 times, taking the result from the
   // iteration with the lowest delta between first and last clock_gettime()
   // calls.
-  for (int i = 0; i < 5; ++i)
-  {
+  for (int i = 0; i < 5; ++i) {
     struct timespec before, after, boottime;
     long delta;
 
@@ -225,17 +220,13 @@ static std::optional<struct timespec> get_delta_with_boottime(int clock_type)
       continue;
 
     // Lowest delta seen so far, compute boot realtime and store it
-    if (delta < lowest_delta)
-    {
+    if (delta < lowest_delta) {
       struct timespec delta_with_boottime;
       long nsec_avg = (before.tv_nsec + after.tv_nsec) / 2;
-      if (nsec_avg - boottime.tv_nsec < 0)
-      {
+      if (nsec_avg - boottime.tv_nsec < 0) {
         delta_with_boottime.tv_sec = after.tv_sec - boottime.tv_sec - 1;
         delta_with_boottime.tv_nsec = nsec_avg - boottime.tv_nsec + 1e9;
-      }
-      else
-      {
+      } else {
         delta_with_boottime.tv_sec = after.tv_sec - boottime.tv_sec;
         delta_with_boottime.tv_nsec = nsec_avg - boottime.tv_nsec;
       }
@@ -283,8 +274,7 @@ static std::optional<struct timespec> get_delta_taitime()
   // the one from my tests, in the hope that you'll get this instructive error
   // instead of getting the BPF verifier's error.
   uint64_t max_strlen = bpftrace.config_.get(ConfigKeyInt::max_strlen);
-  if (max_strlen > 200)
-  {
+  if (max_strlen > 200) {
     // the verifier errors you would encounter when attempting larger
     // allocations would be: >240=  <Looks like the BPF stack limit of 512 bytes
     // is exceeded. Please move large on stack variables into BPF per-cpu array
@@ -350,8 +340,7 @@ static std::optional<struct timespec> get_delta_taitime()
       }))
     return false;
 
-  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS"))
-  {
+  if (const char* env_p = std::getenv("BPFTRACE_CACHE_USER_SYMBOLS")) {
     const std::string s(env_p);
     if (!config_setter.set_user_symbol_cache_type(s))
       return false;
@@ -362,8 +351,7 @@ static std::optional<struct timespec> get_delta_taitime()
                           [&](uint64_t x) { bpftrace.max_ast_nodes_ = x; }))
     return false;
 
-  if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE"))
-  {
+  if (const char* stack_mode = std::getenv("BPFTRACE_STACK_MODE")) {
     if (!config_setter.set_stack_mode(stack_mode))
       return false;
   }
@@ -434,13 +422,11 @@ static std::optional<struct timespec> get_delta_taitime()
   extra_flags.push_back("-include");
   extra_flags.push_back(CLANG_WORKAROUNDS_H);
 
-  for (auto dir : include_dirs)
-  {
+  for (auto dir : include_dirs) {
     extra_flags.push_back("-I");
     extra_flags.push_back(dir);
   }
-  for (auto file : include_files)
-  {
+  for (auto file : include_files) {
     extra_flags.push_back("-include");
     extra_flags.push_back(file);
   }
@@ -483,8 +469,7 @@ ast::PassManager CreateAotPM()
   return pm;
 }
 
-struct Args
-{
+struct Args {
   std::string pid_str;
   std::string cmd_str;
   bool listing = false;
@@ -532,14 +517,11 @@ Args parse_args(int argc, char* argv[])
   };
 
   int c;
-  while ((c = getopt_long(
-              argc, argv, short_options, long_options, nullptr)) != -1)
-  {
-    switch (c)
-    {
+  while ((c = getopt_long(argc, argv, short_options, long_options, nullptr)) !=
+         -1) {
+    switch (c) {
       case Options::INFO: // --info
-        if (is_root())
-        {
+        if (is_root()) {
           info(args.no_feature);
           exit(0);
         }
@@ -557,8 +539,7 @@ Args parse_args(int argc, char* argv[])
       case Options::TEST: // --test
         if (std::strcmp(optarg, "codegen") == 0)
           args.test_mode = TestMode::CODEGEN;
-        else
-        {
+        else {
           LOG(ERROR) << "USAGE: --test can only be 'codegen'.";
           exit(1);
         }
@@ -568,8 +549,7 @@ Args parse_args(int argc, char* argv[])
         args.build_mode = BuildMode::AHEAD_OF_TIME;
         break;
       case Options::NO_FEATURE: // --no-feature
-        if (args.no_feature.parse(optarg))
-        {
+        if (args.no_feature.parse(optarg)) {
           LOG(ERROR) << "USAGE: --no-feature can only have values "
                         "'kprobe_multi,uprobe_multi'.";
           exit(1);
@@ -646,8 +626,7 @@ Args parse_args(int argc, char* argv[])
         exit(0);
       case 'k':
         args.helper_check_level++;
-        if (args.helper_check_level >= 3)
-        {
+        if (args.helper_check_level >= 3) {
           usage();
           exit(1);
         }
@@ -663,69 +642,54 @@ Args parse_args(int argc, char* argv[])
     exit(1);
   }
 
-  if (bt_verbose && (bt_debug != DebugLevel::kNone))
-  {
+  if (bt_verbose && (bt_debug != DebugLevel::kNone)) {
     // TODO: allow both
     LOG(ERROR) << "USAGE: Use either -v or -d.";
     exit(1);
   }
 
-  if (!args.cmd_str.empty() && !args.pid_str.empty())
-  {
+  if (!args.cmd_str.empty() && !args.pid_str.empty()) {
     LOG(ERROR) << "USAGE: Cannot use both -c and -p.";
     usage();
     exit(1);
   }
 
   // Difficult to serialize flex generated types
-  if (args.helper_check_level && args.build_mode == BuildMode::AHEAD_OF_TIME)
-  {
+  if (args.helper_check_level && args.build_mode == BuildMode::AHEAD_OF_TIME) {
     LOG(ERROR) << "Cannot use -k[k] with --aot";
     exit(1);
   }
 
-  if (args.listing)
-  {
+  if (args.listing) {
     // Expect zero or one positional arguments
-    if (optind == argc)
-    {
+    if (optind == argc) {
       args.search = "*:*";
-    }
-    else if (optind == argc - 1)
-    {
+    } else if (optind == argc - 1) {
       args.search = argv[optind];
-      if (args.search == "*")
-      {
+      if (args.search == "*") {
         args.search = "*:*";
       }
       optind++;
-    }
-    else
-    {
+    } else {
       usage();
       exit(1);
     }
-  }
-  else
-  {
+  } else {
     // Expect to find a script either through -e or filename
-    if (args.script.empty() && argv[optind] == nullptr)
-    {
+    if (args.script.empty() && argv[optind] == nullptr) {
       LOG(ERROR) << "USAGE: filename or -e 'program' required.";
       exit(1);
     }
 
     // If no script was specified with -e, then we expect to find a script file
-    if (args.script.empty())
-    {
+    if (args.script.empty()) {
       args.filename = argv[optind];
       optind++;
     }
 
     // Load positional parameters before driver runs so positional
     // parameters used inside attach point definitions can be resolved.
-    while (optind < argc)
-    {
+    while (optind < argc) {
       args.params.push_back(argv[optind]);
       optind++;
     }
@@ -736,8 +700,7 @@ Args parse_args(int argc, char* argv[])
 
 static const char* libbpf_print_level_string(enum libbpf_print_level level)
 {
-  switch (level)
-  {
+  switch (level) {
     case LIBBPF_WARN:
       return "WARN";
     case LIBBPF_INFO:
@@ -764,10 +727,9 @@ int main(int argc, char* argv[])
 
   const Args args = parse_args(argc, argv);
 
-  std::ostream * os = &std::cout;
+  std::ostream* os = &std::cout;
   std::ofstream outputstream;
-  if (!args.output_file.empty())
-  {
+  if (!args.output_file.empty()) {
     outputstream.open(args.output_file);
     if (outputstream.fail()) {
       LOG(ERROR) << "Failed to open output file: \"" << args.output_file
@@ -778,22 +740,17 @@ int main(int argc, char* argv[])
   }
 
   std::unique_ptr<Output> output;
-  if (args.output_format.empty() || args.output_format == "text")
-  {
+  if (args.output_format.empty() || args.output_format == "text") {
     output = std::make_unique<TextOutput>(*os);
-  }
-  else if (args.output_format == "json")
-  {
+  } else if (args.output_format == "json") {
     output = std::make_unique<JsonOutput>(*os);
-  }
-  else {
+  } else {
     LOG(ERROR) << "Invalid output format \"" << args.output_format << "\"\n"
                << "Valid formats: 'text', 'json'";
     return 1;
   }
 
-  switch (args.obc)
-  {
+  switch (args.obc) {
     case OutputBufferConfig::UNSET:
     case OutputBufferConfig::LINE:
       std::setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
@@ -823,43 +780,33 @@ int main(int argc, char* argv[])
   bpftrace.boottime_ = get_boottime();
   bpftrace.delta_taitime_ = get_delta_taitime();
 
-  if (!args.pid_str.empty())
-  {
-    try
-    {
+  if (!args.pid_str.empty()) {
+    try {
       bpftrace.procmon_ = std::make_unique<ProcMon>(args.pid_str);
-    }
-    catch (const std::exception& e)
-    {
+    } catch (const std::exception& e) {
       LOG(ERROR) << e.what();
       return 1;
     }
   }
 
-  if (!args.cmd_str.empty())
-  {
+  if (!args.cmd_str.empty()) {
     bpftrace.cmd_ = args.cmd_str;
-    try
-    {
+    try {
       bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
-    }
-    catch (const std::runtime_error& e)
-    {
+    } catch (const std::runtime_error& e) {
       LOG(ERROR) << "Failed to fork child: " << e.what();
       return -1;
     }
   }
 
   // Listing probes
-  if (args.listing)
-  {
+  if (args.listing) {
     if (!is_root())
       return 1;
 
     if (args.search.find(':') == std::string::npos &&
         (args.search.find("struct") == 0 || args.search.find("union") == 0 ||
-         args.search.find("enum") == 0))
-    {
+         args.search.find("enum") == 0)) {
       // Print structure definitions
       bpftrace.parse_btf({});
       bpftrace.probe_matcher_->list_structs(args.search);
@@ -888,15 +835,12 @@ int main(int argc, char* argv[])
   std::string filename;
   std::string program;
 
-  if (!args.filename.empty())
-  {
+  if (!args.filename.empty()) {
     std::stringstream buf;
 
-    if (args.filename == "-")
-    {
+    if (args.filename == "-") {
       std::string line;
-      while (std::getline(std::cin, line))
-      {
+      while (std::getline(std::cin, line)) {
         // Note we may add an extra newline if the input doesn't end in a new
         // line. This should not matter because bpftrace (the language) is not
         // whitespace sensitive.
@@ -905,12 +849,9 @@ int main(int argc, char* argv[])
 
       filename = "stdin";
       program = buf.str();
-    }
-    else
-    {
+    } else {
       std::ifstream file(args.filename);
-      if (file.fail())
-      {
+      if (file.fail()) {
         LOG(ERROR) << "failed to open file '" << args.filename
                    << "': " << std::strerror(errno);
         return -1;
@@ -921,16 +862,13 @@ int main(int argc, char* argv[])
       buf << file.rdbuf();
       program = buf.str();
     }
-  }
-  else
-  {
+  } else {
     // Script is provided as a command line argument
     filename = "stdin";
     program = args.script;
   }
 
-  for (const auto& param : args.params)
-  {
+  for (const auto& param : args.params) {
     bpftrace.add_param(param);
   }
 
@@ -938,8 +876,7 @@ int main(int argc, char* argv[])
     return 1;
 
   auto lockdown_state = lockdown::detect();
-  if (lockdown_state == lockdown::LockdownState::Confidentiality)
-  {
+  if (lockdown_state == lockdown::LockdownState::Confidentiality) {
     lockdown::emit_warning(std::cerr);
     return 1;
   }
@@ -955,8 +892,7 @@ int main(int argc, char* argv[])
 
   ast::PassContext ctx(bpftrace);
   ast::PassManager pm;
-  switch (args.build_mode)
-  {
+  switch (args.build_mode) {
     case BuildMode::DYNAMIC:
       pm = CreateDynamicPM();
       break;
@@ -971,39 +907,31 @@ int main(int argc, char* argv[])
 
   ast_root = std::unique_ptr<ast::Node>(pmresult.Root());
 
-  if (!bpftrace.cmd_.empty())
-  {
-    try
-    {
+  if (!bpftrace.cmd_.empty()) {
+    try {
       bpftrace.child_ = std::make_unique<ChildProc>(args.cmd_str);
-    }
-    catch (const std::runtime_error& e)
-    {
+    } catch (const std::runtime_error& e) {
       LOG(ERROR) << "Failed to fork child: " << e.what();
       return -1;
     }
   }
 
   err = bpftrace.create_pcaps();
-  if (err)
-  {
+  if (err) {
     LOG(ERROR) << "Failed to create pcap file";
     return err;
   }
 
   ast::CodegenLLVM llvm(&*ast_root, bpftrace);
   BpfBytecode bytecode;
-  try
-  {
+  try {
     llvm.generate_ir();
-    if (bt_debug == DebugLevel::kFullDebug)
-    {
+    if (bt_debug == DebugLevel::kFullDebug) {
       std::cout << "Before optimization\n";
       std::cout << "-------------------\n\n";
       llvm.DumpIR();
     }
-    if (!args.output_llvm.empty())
-    {
+    if (!args.output_llvm.empty()) {
       llvm.DumpIR(args.output_llvm + ".original.ll");
     }
 
@@ -1011,40 +939,31 @@ int main(int argc, char* argv[])
     if (!get_bool_env_var("BPFTRACE_VERIFY_LLVM_IR",
                           [&](bool x) { verify_llvm_ir = x; }))
       return 1;
-    if (verify_llvm_ir && !llvm.verify())
-    {
+    if (verify_llvm_ir && !llvm.verify()) {
       LOG(ERROR) << "Verification of generated LLVM IR failed";
       return 1;
     }
 
     llvm.optimize();
-    if (bt_debug != DebugLevel::kNone)
-    {
-      if (bt_debug == DebugLevel::kFullDebug)
-      {
+    if (bt_debug != DebugLevel::kNone) {
+      if (bt_debug == DebugLevel::kFullDebug) {
         std::cout << "\nAfter optimization\n";
         std::cout << "------------------\n\n";
       }
       llvm.DumpIR();
     }
-    if (!args.output_llvm.empty())
-    {
+    if (!args.output_llvm.empty()) {
       llvm.DumpIR(args.output_llvm + ".optimized.ll");
     }
-    if (!args.output_elf.empty())
-    {
+    if (!args.output_elf.empty()) {
       llvm.emit_elf(args.output_elf);
       return 0;
     }
     bytecode = llvm.emit();
-  }
-  catch (const std::system_error& ex)
-  {
+  } catch (const std::system_error& ex) {
     LOG(ERROR) << "failed to write elf: " << ex.what();
     return 1;
-  }
-  catch (const std::exception& ex)
-  {
+  } catch (const std::exception& ex) {
     LOG(ERROR) << "Failed to compile: " << ex.what();
     return 1;
   }
@@ -1078,8 +997,7 @@ int main(int argc, char* argv[])
 
   err = bpftrace.print_maps();
 
-  if (bt_verbose && bpftrace.child_)
-  {
+  if (bt_verbose && bpftrace.child_) {
     auto val = 0;
     if ((val = bpftrace.child_->term_signal()) > -1)
       std::cout << "Child terminated by signal: " << val << std::endl;

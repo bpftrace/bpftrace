@@ -20,8 +20,7 @@ class Pass;
 /**
    Result of a pass run
  */
-class PassResult
-{
+class PassResult {
 public:
   static PassResult Error(const std::string &pass);
   static PassResult Error(const std::string &pass, int code);
@@ -94,8 +93,7 @@ private:
    Note: Most state should end up in the BPFtrace class instead of here
 */
 
-struct PassContext
-{
+struct PassContext {
 public:
   PassContext(BPFtrace &b) : b(b){};
   BPFtrace &b;
@@ -106,8 +104,7 @@ using PassFPtr = std::function<PassResult(Node &, PassContext &)>;
 /*
   Base pass
 */
-class Pass
-{
+class Pass {
 public:
   Pass() = delete;
   Pass(std::string name, PassFPtr fn) : fn_(fn), name(name){};
@@ -126,8 +123,7 @@ public:
   std::string name;
 };
 
-class PassManager
-{
+class PassManager {
 public:
   PassManager() = default;
 

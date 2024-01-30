@@ -10,8 +10,7 @@ namespace bpftrace {
 
 namespace ast {
 
-class TracepointArgsVisitor : public Visitor
-{
+class TracepointArgsVisitor : public Visitor {
 public:
   void visit(Builtin &builtin) override
   {
@@ -27,7 +26,8 @@ public:
     if (probe_->tp_args_structs_level >= 0)
       probe_->tp_args_structs_level++;
   };
-  void visit(Probe &probe) override {
+  void visit(Probe &probe) override
+  {
     probe_ = &probe;
     Visitor::visit(probe);
   };
@@ -37,8 +37,7 @@ private:
 };
 } // namespace ast
 
-class TracepointFormatParser
-{
+class TracepointFormatParser {
 public:
   static bool parse(ast::Program *program, BPFtrace &bpftrace);
   static std::string get_struct_name(const std::string &category,

@@ -9,8 +9,7 @@
 
 namespace bpftrace {
 
-struct ProbeListItem
-{
+struct ProbeListItem {
   std::string path;
   std::string alias;
   uint32_t type;
@@ -52,8 +51,7 @@ class BPFtrace;
 
 typedef std::map<std::string, std::vector<std::string>> FuncParamLists;
 
-class ProbeMatcher
-{
+class ProbeMatcher {
 public:
   explicit ProbeMatcher(BPFtrace *bpftrace) : bpftrace_(bpftrace)
   {

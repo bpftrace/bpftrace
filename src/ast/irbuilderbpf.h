@@ -51,17 +51,22 @@ namespace ast {
 
 using namespace llvm;
 
-class IRBuilderBPF : public IRBuilder<>
-{
+class IRBuilderBPF : public IRBuilder<> {
 public:
   IRBuilderBPF(LLVMContext &context, Module &module, BPFtrace &bpftrace);
 
-  AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name="");
-  AllocaInst *CreateAllocaBPF(const SizedType &stype, const std::string &name="");
-  AllocaInst *CreateAllocaBPFInit(const SizedType &stype, const std::string &name);
-  AllocaInst *CreateAllocaBPF(llvm::Type *ty, llvm::Value *arraysize, const std::string &name="");
-  AllocaInst *CreateAllocaBPF(const SizedType &stype, llvm::Value *arraysize, const std::string &name="");
-  AllocaInst *CreateAllocaBPF(int bytes, const std::string &name="");
+  AllocaInst *CreateAllocaBPF(llvm::Type *ty, const std::string &name = "");
+  AllocaInst *CreateAllocaBPF(const SizedType &stype,
+                              const std::string &name = "");
+  AllocaInst *CreateAllocaBPFInit(const SizedType &stype,
+                                  const std::string &name);
+  AllocaInst *CreateAllocaBPF(llvm::Type *ty,
+                              llvm::Value *arraysize,
+                              const std::string &name = "");
+  AllocaInst *CreateAllocaBPF(const SizedType &stype,
+                              llvm::Value *arraysize,
+                              const std::string &name = "");
+  AllocaInst *CreateAllocaBPF(int bytes, const std::string &name = "");
   llvm::Type *GetType(const SizedType &stype);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Value *expr);
   llvm::ConstantInt *GetIntSameSize(uint64_t C, llvm::Type *ty);
@@ -177,7 +182,10 @@ public:
   CallInst *CreateGetCpuId(const location &loc);
   CallInst *CreateGetCurrentTask(const location &loc);
   CallInst *CreateGetRandom(const location &loc);
-  CallInst   *CreateGetStackId(Value *ctx, bool ustack, StackType stack_type, const location& loc);
+  CallInst *CreateGetStackId(Value *ctx,
+                             bool ustack,
+                             StackType stack_type,
+                             const location &loc);
   CallInst *CreateGetFuncIp(const location &loc);
   CallInst *CreateGetJoinMap(BasicBlock *failure_callback, const location &loc);
   CallInst *CreateHelperCall(libbpf::bpf_func_id func_id,
@@ -189,7 +197,10 @@ public:
                        Value *callee,
                        ArrayRef<Value *> args,
                        const Twine &Name);
-  void        CreateGetCurrentComm(Value *ctx, AllocaInst *buf, size_t size, const location& loc);
+  void CreateGetCurrentComm(Value *ctx,
+                            AllocaInst *buf,
+                            size_t size,
+                            const location &loc);
   void CreateOutput(Value *ctx,
                     Value *data,
                     size_t size,
@@ -212,15 +223,24 @@ public:
                          Value *fmt_size,
                          const std::vector<Value *> &values,
                          const location &loc);
-  void        CreateSignal(Value *ctx, Value *sig, const location &loc);
-  void        CreateOverrideReturn(Value *ctx, Value *rc);
-  void        CreateHelperError(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc);
-  void        CreateHelperErrorCond(Value *ctx, Value *return_value, libbpf::bpf_func_id func_id, const location& loc, bool compare_zero=false);
-  StructType *GetStructType(std::string name, const std::vector<llvm::Type *> & elements, bool packed = false);
+  void CreateSignal(Value *ctx, Value *sig, const location &loc);
+  void CreateOverrideReturn(Value *ctx, Value *rc);
+  void CreateHelperError(Value *ctx,
+                         Value *return_value,
+                         libbpf::bpf_func_id func_id,
+                         const location &loc);
+  void CreateHelperErrorCond(Value *ctx,
+                             Value *return_value,
+                             libbpf::bpf_func_id func_id,
+                             const location &loc,
+                             bool compare_zero = false);
+  StructType *GetStructType(std::string name,
+                            const std::vector<llvm::Type *> &elements,
+                            bool packed = false);
   AllocaInst *CreateUSym(llvm::Value *val, int probe_id, const location &loc);
   Value *CreateRegisterRead(Value *ctx, const std::string &builtin);
   Value *CreateRegisterRead(Value *ctx, int offset, const std::string &name);
-  Value      *CreatKFuncArg(Value *ctx, SizedType& type, std::string& name);
+  Value *CreatKFuncArg(Value *ctx, SizedType &type, std::string &name);
   Value *CreateRawTracepointArg(Value *ctx, const std::string &builtin);
   Value *CreateUprobeArgsRecord(Value *ctx, const SizedType &args_type);
   llvm::Type *UprobeArgsType(const SizedType &args_type);

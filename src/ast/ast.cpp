@@ -248,25 +248,21 @@ String::String(const std::string &str, location loc) : Expression(loc), str(str)
   is_literal = true;
 }
 
-
 StackMode::StackMode(const std::string &mode, location loc)
     : Expression(loc), mode(mode)
 {
   is_literal = true;
 }
 
-
 Builtin::Builtin(const std::string &ident, location loc)
     : Expression(loc), ident(is_deprecated(ident))
 {
 }
 
-
 Identifier::Identifier(const std::string &ident, location loc)
     : Expression(loc), ident(ident)
 {
 }
-
 
 PositionalParameter::PositionalParameter(PositionalParameterType ptype,
                                          long n,
@@ -275,7 +271,6 @@ PositionalParameter::PositionalParameter(PositionalParameterType ptype,
 {
   is_literal = true;
 }
-
 
 Call::Call(const std::string &func, location loc)
     : Expression(loc), func(is_deprecated(func)), vargs(nullptr)
@@ -316,8 +311,7 @@ Map::Map(const std::string &ident, ExpressionList *vargs, location loc)
     : Expression(loc), ident(ident), vargs(vargs)
 {
   is_map = true;
-  for (auto expr : *vargs)
-  {
+  for (auto expr : *vargs) {
     expr->key_for_map = this;
   }
 }
@@ -343,7 +337,6 @@ Unop::Unop(Operator op, Expression *expr, bool is_post_op, location loc)
 {
 }
 
-
 Ternary::Ternary(Expression *cond,
                  Expression *left,
                  Expression *right,
@@ -351,7 +344,6 @@ Ternary::Ternary(Expression *cond,
     : Expression(loc), cond(cond), left(left), right(right)
 {
 }
-
 
 FieldAccess::FieldAccess(Expression *expr,
                          const std::string &field,
@@ -365,7 +357,6 @@ FieldAccess::FieldAccess(Expression *expr, ssize_t index, location loc)
 {
 }
 
-
 ArrayAccess::ArrayAccess(Expression *expr, Expression *indexpr, location loc)
     : Expression(loc), expr(expr), indexpr(indexpr)
 {
@@ -377,12 +368,10 @@ Cast::Cast(SizedType cast_type, Expression *expr, location loc)
   type = cast_type;
 }
 
-
 Tuple::Tuple(ExpressionList *elems, location loc)
     : Expression(loc), elems(elems)
 {
 }
-
 
 ExprStatement::ExprStatement(Expression *expr, location loc)
     : Statement(loc), expr(expr)
@@ -419,12 +408,10 @@ Predicate::Predicate(Expression *expr, location loc) : Node(loc), expr(expr)
 {
 }
 
-
 AttachPoint::AttachPoint(const std::string &raw_input, location loc)
     : Node(loc), raw_input(raw_input)
 {
 }
-
 
 If::If(Expression *cond, StatementList *stmts) : cond(cond), stmts(stmts)
 {
@@ -434,7 +421,6 @@ If::If(Expression *cond, StatementList *stmts, StatementList *else_stmts)
     : cond(cond), stmts(stmts), else_stmts(else_stmts)
 {
 }
-
 
 Unroll::Unroll(Expression *expr, StatementList *stmts, location loc)
     : Statement(loc), expr(expr), stmts(stmts)
@@ -457,8 +443,7 @@ Program::Program(const std::string &c_definitions,
 
 std::string opstr(Jump &jump)
 {
-  switch (jump.ident)
-  {
+  switch (jump.ident) {
     case JumpType::RETURN:
       return "return";
     case JumpType::BREAK:
@@ -550,8 +535,7 @@ std::string AttachPoint::name(const std::string &attach_target,
     n += ":" + lang;
   if (ns != "")
     n += ":" + ns;
-  if (attach_point != "")
-  {
+  if (attach_point != "") {
     n += ":" + attach_point;
     if (func_offset != 0)
       n += "+" + std::to_string(func_offset);
@@ -585,8 +569,7 @@ void AttachPoint::set_index(int index)
 std::string Probe::name() const
 {
   std::string n;
-  for (auto &attach_point : *attach_points)
-  {
+  for (auto &attach_point : *attach_points) {
     if (!n.empty())
       n += ',';
     n += attach_point->provider;
@@ -594,8 +577,7 @@ std::string Probe::name() const
       n += ":" + attach_point->target;
     if (attach_point->ns != "")
       n += ":" + attach_point->ns;
-    if (attach_point->func != "")
-    {
+    if (attach_point->func != "") {
       n += ":" + attach_point->func;
       if (attach_point->func_offset != 0)
         n += "+" + std::to_string(attach_point->func_offset);
@@ -618,7 +600,8 @@ int Probe::index() const
   return index_;
 }
 
-void Probe::set_index(int index) {
+void Probe::set_index(int index)
+{
   index_ = index;
 }
 
@@ -697,8 +680,7 @@ bool Probe::has_ap_of_probetype(ProbeType probe_type)
 {
   if (!attach_points)
     return false;
-  for (auto ap : *attach_points)
-  {
+  for (auto ap : *attach_points) {
     if (probetype(ap->provider) == probe_type)
       return true;
   }

@@ -60,9 +60,7 @@ TEST(portability_analyser, tracepoint_field_access)
   test("tracepoint:sched:sched_one { args->common_field }", 0);
 }
 
-class portability_analyser_btf : public test_btf
-{
-};
+class portability_analyser_btf : public test_btf {};
 
 TEST_F(portability_analyser_btf, kfunc_field_access)
 {

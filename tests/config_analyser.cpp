@@ -36,8 +36,7 @@ void test(BPFtrace &bpftrace,
   ast::ConfigAnalyser config_analyser(driver.root.get(), bpftrace, out);
   EXPECT_EQ(config_analyser.analyse(), expected_result)
       << msg.str() << out.str();
-  if (expected_error.data())
-  {
+  if (expected_error.data()) {
     if (!expected_error.empty() && expected_error[0] == '\n')
       expected_error.remove_prefix(1); // Remove initial '\n'
     EXPECT_EQ(out.str(), expected_error);

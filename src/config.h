@@ -13,8 +13,7 @@ namespace bpftrace {
 
 // This is used to determine which source
 // takes precedence when a config key is set
-enum class ConfigSource
-{
+enum class ConfigSource {
   // the default config value
   default_,
   // config set via environment variable
@@ -23,14 +22,12 @@ enum class ConfigSource
   script,
 };
 
-enum class ConfigKeyBool
-{
+enum class ConfigKeyBool {
   cpp_demangle,
   lazy_symbolication,
 };
 
-enum class ConfigKeyInt
-{
+enum class ConfigKeyInt {
   log_size,
   max_bpf_progs,
   max_cat_bytes,
@@ -41,18 +38,15 @@ enum class ConfigKeyInt
   perf_rb_pages,
 };
 
-enum class ConfigKeyString
-{
+enum class ConfigKeyString {
   str_trunc_trailer,
 };
 
-enum class ConfigKeyStackMode
-{
+enum class ConfigKeyStackMode {
   default_,
 };
 
-enum class ConfigKeyUserSymbolCacheType
-{
+enum class ConfigKeyUserSymbolCacheType {
   default_,
 };
 
@@ -87,15 +81,13 @@ const std::set<std::string> ENV_ONLY = {
   "max_ast_nodes", "verify_llvm_ir", "vmlinux",
 };
 
-struct ConfigValue
-{
+struct ConfigValue {
   ConfigSource source = ConfigSource::default_;
   std::variant<bool, uint64_t, std::string, StackMode, UserSymbolCacheType>
       value;
 };
 
-class Config
-{
+class Config {
 public:
   explicit Config(bool has_cmd = false, bool bt_verbose = false);
 
@@ -135,12 +127,10 @@ private:
   bool set(ConfigKey key, T val, ConfigSource source)
   {
     auto it = config_map_.find(key);
-    if (it == config_map_.end())
-    {
+    if (it == config_map_.end()) {
       throw std::runtime_error("No default set for config key");
     }
-    if (!can_set(it->second.source, source))
-    {
+    if (!can_set(it->second.source, source)) {
       return false;
     }
 
@@ -153,16 +143,12 @@ private:
   T get(ConfigKey key) const
   {
     auto it = config_map_.find(key);
-    if (it == config_map_.end())
-    {
+    if (it == config_map_.end()) {
       throw std::runtime_error("Config key does not exist in map");
     }
-    try
-    {
+    try {
       return std::get<T>(it->second.value);
-    }
-    catch (std::bad_variant_access const &ex)
-    {
+    } catch (std::bad_variant_access const &ex) {
       // This shouldn't happen
       throw std::runtime_error("Type mismatch for config key");
     }
@@ -176,8 +162,7 @@ private:
   std::map<ConfigKey, ConfigValue> config_map_;
 };
 
-class ConfigSetter
-{
+class ConfigSetter {
 public:
   explicit ConfigSetter(Config &config, ConfigSource source)
       : config_(config), source_(source){};

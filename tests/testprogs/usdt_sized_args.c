@@ -14,8 +14,7 @@ int main()
   (void)b;
   (void)c;
 
-  while (1)
-  {
+  while (1) {
     DTRACE_PROBE1(test, probe1, a);
     DTRACE_PROBE1(test, probe2, b);
     DTRACE_PROBE1(test, probe3, c);

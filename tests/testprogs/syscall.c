@@ -34,10 +34,8 @@ int gen_nanosleep(int argc, char *argv[])
   const char *arg = argv[2];
   req.tv_sec = 0;
   req.tv_nsec = 100;
-  if (argc > 2)
-  {
-    if (!isdigit(*arg) || !isdigit(arg[strlen(arg) - 1]))
-    {
+  if (argc > 2) {
+    if (!isdigit(*arg) || !isdigit(arg[strlen(arg) - 1])) {
       printf("Invalid argument: %s; the argument should be a non-negative "
              "number with no sign\n",
              arg);
@@ -46,22 +44,19 @@ int gen_nanosleep(int argc, char *argv[])
     double time;
     char *endptr;
     time = strtod(arg, &endptr);
-    if (endptr != arg + strlen(arg))
-    {
+    if (endptr != arg + strlen(arg)) {
       printf("Argument '%s' should only contain numerial characters\n", arg);
       return 1;
     }
     // if time is less than 1 nsec, round up to 1 nsec, as with sleep command
-    if (time > 0 && time < 1)
-    {
+    if (time > 0 && time < 1) {
       time = 1;
     }
     req.tv_sec = (int)(time / 1e9);
     req.tv_nsec = (int)(time - req.tv_sec * 1e9);
   }
   int r = syscall(SYS_nanosleep, &req, NULL);
-  if (r)
-  {
+  if (r) {
     perror("Error in syscall nanosleep");
     return 1;
   }
@@ -73,8 +68,7 @@ int gen_nanosleep(int argc, char *argv[])
 char *get_tmp_file_path(const char *path_suffix)
 {
   const char *tmpdir = getenv("TMPDIR");
-  if (tmpdir == NULL)
-  {
+  if (tmpdir == NULL) {
     tmpdir = "/tmp";
   }
   int path_len = strlen(tmpdir) + strlen(path_suffix);
@@ -91,19 +85,15 @@ int gen_open_openat(bool is_sys_open)
       "/bpftrace_runtime_test_syscall_gen_open_temp");
   int fd = -1;
 
-  if (is_sys_open)
-  {
+  if (is_sys_open) {
 #if defined(SYS_open)
     fd = syscall(SYS_open, file_path, O_CREAT);
 #endif
-  }
-  else
-  {
+  } else {
     fd = syscall(SYS_openat, AT_FDCWD, file_path, O_CREAT);
   }
 
-  if (fd < 0)
-  {
+  if (fd < 0) {
     perror("Error in syscall open/openat");
     free(file_path);
     return 1;
@@ -119,8 +109,7 @@ int gen_read()
   char *file_path = get_tmp_file_path(
       "/bpftrace_runtime_test_syscall_gen_read_temp");
   int fd = open(file_path, O_CREAT, 0644);
-  if (fd < 0)
-  {
+  if (fd < 0) {
     perror("Error in syscall read when creating temp file");
     free(file_path);
     return 1;
@@ -130,8 +119,7 @@ int gen_read()
   close(fd);
   remove(file_path);
   free(file_path);
-  if (r < 0)
-  {
+  if (r < 0) {
     perror("Error in syscall read");
     return 1;
   }
@@ -140,8 +128,7 @@ int gen_read()
 
 int gen_execve(int argc, char *argv[])
 {
-  if (argc < 3)
-  {
+  if (argc < 3) {
     printf("Indicate which process to execute.\n");
     return 1;
   }
@@ -149,13 +136,11 @@ int gen_execve(int argc, char *argv[])
   char *newenv[] = { NULL };
   newargv[0] = argv[2];
   int arg_nm = argc - 3;
-  if (arg_nm > 128)
-  {
+  if (arg_nm > 128) {
     printf("Too many arguments: at most 128 arguments, %d given\n", arg_nm);
     return 1;
   }
-  for (int i = 0; i < argc; ++i)
-  {
+  for (int i = 0; i < argc; ++i) {
     newargv[1 + i] = argv[3 + i];
   }
   syscall(SYS_execve, argv[2], newargv, newenv);
@@ -166,8 +151,7 @@ int gen_execve(int argc, char *argv[])
 
 int gen_connect(int argc, char *argv[])
 {
-  if (argc < 3)
-  {
+  if (argc < 3) {
     printf("Indicate which host and port to connect.\n");
     return 1;
   }
@@ -177,20 +161,17 @@ int gen_connect(int argc, char *argv[])
 
   socket_desc = socket(AF_INET, SOCK_STREAM, 0);
 
-  if (socket_desc < 0)
-  {
+  if (socket_desc < 0) {
     printf("Unable to create socket\n");
     return 1;
   }
 
   int port;
-  if (sscanf(argv[3], "%d", &port) <= 0)
-  {
+  if (sscanf(argv[3], "%d", &port) <= 0) {
     printf("Argument invalid\n");
     return 1;
   }
-  if (port < 1 || port > 65535)
-  {
+  if (port < 1 || port > 65535) {
     printf("Argument '%s' is out of range, should be in [1, 65535]\n", argv[3]);
     return 1;
   }
@@ -207,46 +188,32 @@ int gen_connect(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-  if (argc < 2)
-  {
+  if (argc < 2) {
     usage();
     return 1;
   }
   const char *syscall_name = argv[1];
   int r = 0;
 
-  if (strcmp("--help", syscall_name) == 0 || strcmp("-h", syscall_name) == 0)
-  {
+  if (strcmp("--help", syscall_name) == 0 || strcmp("-h", syscall_name) == 0) {
     usage();
-  }
-  else if (strcmp("nanosleep", syscall_name) == 0)
-  {
+  } else if (strcmp("nanosleep", syscall_name) == 0) {
     r = gen_nanosleep(argc, argv);
-  }
-  else if (strcmp("openat", syscall_name) == 0)
-  {
+  } else if (strcmp("openat", syscall_name) == 0) {
     r = gen_open_openat(false);
   }
 #if defined(SYS_open)
-  else if (strcmp("open", syscall_name) == 0)
-  {
+  else if (strcmp("open", syscall_name) == 0) {
     r = gen_open_openat(true);
   }
 #endif
-  else if (strcmp("read", syscall_name) == 0)
-  {
+  else if (strcmp("read", syscall_name) == 0) {
     r = gen_read();
-  }
-  else if (strcmp("execve", syscall_name) == 0)
-  {
+  } else if (strcmp("execve", syscall_name) == 0) {
     r = gen_execve(argc, argv);
-  }
-  else if (strcmp("connect", syscall_name) == 0)
-  {
+  } else if (strcmp("connect", syscall_name) == 0) {
     r = gen_connect(argc, argv);
-  }
-  else
-  {
+  } else {
     printf("%s is not supported yet\n", syscall_name);
     usage();
     r = 1;

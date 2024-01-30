@@ -33,7 +33,9 @@ BfdDisasm::~BfdDisasm()
     close(fd_);
 }
 
-static int fprintf_nop(void *out __attribute__((unused)), const char *fmt __attribute__((unused)), ...)
+static int fprintf_nop(void *out __attribute__((unused)),
+                       const char *fmt __attribute__((unused)),
+                       ...)
 {
   return 0;
 }
@@ -59,8 +61,7 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
   if (bfdf == nullptr)
     return AlignState::Fail;
 
-  if (!bfd_check_format(bfdf, bfd_object))
-  {
+  if (!bfd_check_format(bfdf, bfd_object)) {
     bfd_close(bfdf);
     return AlignState::Fail;
   }
@@ -73,16 +74,13 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
 
   info.arch = bfd_get_arch(bfdf);
   info.mach = bfd_get_mach(bfdf);
-  info.buffer = static_cast<bfd_byte*>(buf);
+  info.buffer = static_cast<bfd_byte *>(buf);
   info.buffer_length = size;
 
   disassemble_init_for_target(&info);
 
 #ifdef LIBBFD_DISASM_FOUR_ARGS_SIGNATURE
-  disassemble = disassembler(info.arch,
-           bfd_big_endian(bfdf),
-           info.mach,
-           bfdf);
+  disassemble = disassembler(info.arch, bfd_big_endian(bfdf), info.mach, bfdf);
 #else
   disassemble = disassembler(bfdf);
 #endif
@@ -94,8 +92,7 @@ static AlignState is_aligned_buf(void *buf, uint64_t size, uint64_t offset)
     count = disassemble(pc, &info);
     pc += static_cast<uint64_t>(count);
 
-    if (pc == offset)
-    {
+    if (pc == offset) {
       bfd_close(bfdf);
       return AlignState::Ok;
     }

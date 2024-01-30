@@ -19,8 +19,7 @@ void Printer::print(Node *root)
 std::string Printer::type(const SizedType &ty)
 {
   std::stringstream buf;
-  if (print_types)
-  {
+  if (print_types) {
     buf << " :: type[" << ty << ", ctx: " << ty.IsCtxAccess();
     if (ty.GetAS() != AddrSpace::none)
       buf << ", AS(" << ty.GetAS() << ")";
@@ -56,21 +55,17 @@ void Printer::visit(String &string)
   std::string indent(depth_, ' ');
   std::stringstream ss;
 
-  for (char c: string.str)
-  {
+  for (char c : string.str) {
     // the argument of isprint() must be an unsigned char or EOF
     int code = static_cast<unsigned char>(c);
-    if (std::isprint(code))
-    {
+    if (std::isprint(code)) {
       if (c == '\\')
         ss << "\\\\";
       else if (c == '"')
         ss << "\\\"";
       else
         ss << c;
-    }
-    else
-    {
+    } else {
       if (c == '\n')
         ss << "\\n";
       else if (c == '\t')
@@ -78,8 +73,7 @@ void Printer::visit(String &string)
       else if (c == '\r')
         ss << "\\r";
       else
-        ss << "\\x" << std::setfill('0') << std::setw(2)
-           << std::hex << code;
+        ss << "\\x" << std::setfill('0') << std::setw(2) << std::hex << code;
     }
   }
 
@@ -175,15 +169,12 @@ void Printer::visit(Binop &binop)
 
 void Printer::visit(Unop &unop)
 {
-  if (unop.is_post_op)
-  {
+  if (unop.is_post_op) {
     std::string indent(depth_ + 1, ' ');
 
     unop.expr->accept(*this);
     out_ << indent << opstr(unop) << std::endl;
-  }
-  else
-  {
+  } else {
     std::string indent(depth_, ' ');
     out_ << indent << opstr(unop) << std::endl;
 
@@ -191,7 +182,6 @@ void Printer::visit(Unop &unop)
     unop.expr->accept(*this);
     --depth_;
   }
-
 }
 
 void Printer::visit(Ternary &ternary)
@@ -345,8 +335,7 @@ void Printer::visit(While &while_block)
   ++depth_;
   out_ << indent << " )" << std::endl;
 
-  for (Statement *stmt : *while_block.stmts)
-  {
+  for (Statement *stmt : *while_block.stmts) {
     stmt->accept(*this);
   }
 }
@@ -358,8 +347,7 @@ void Printer::visit(Config &config)
   out_ << indent << "config" << std::endl;
 
   ++depth_;
-  for (Statement *stmt : *config.stmts)
-  {
+  for (Statement *stmt : *config.stmts) {
     stmt->accept(*this);
   }
   --depth_;
@@ -411,8 +399,7 @@ void Printer::visit(Program &program)
   std::string indent(depth_, ' ');
   out_ << indent << "Program" << std::endl;
 
-  if (program.config)
-  {
+  if (program.config) {
     ++depth_;
     program.config->accept(*this);
     --depth_;

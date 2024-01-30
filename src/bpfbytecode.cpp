@@ -19,8 +19,7 @@ bool BpfBytecode::hasSection(const std::string &name) const
 const std::vector<uint8_t> &BpfBytecode::getSection(
     const std::string &name) const
 {
-  if (!hasSection(name))
-  {
+  if (!hasSection(name)) {
     throw std::runtime_error("Bytecode is missing section " + name);
   }
   return sections_.at(name);
@@ -34,8 +33,7 @@ static int btf_type_size(const struct btf_type *t)
   const int base_size = sizeof(struct btf_type);
   __u16 vlen = btf_vlen(t);
 
-  switch (btf_kind(t))
-  {
+  switch (btf_kind(t)) {
     case BTF_KIND_FWD:
     case BTF_KIND_CONST:
     case BTF_KIND_VOLATILE:
@@ -96,15 +94,13 @@ void BpfBytecode::fixupBTF(BPFfeature &feature)
   // Unfortunately, libbpf's btf__type_by_id returns a const pointer which
   // doesn't allow modification. So, we must iterate the types manually.
   auto *ptr = types_start;
-  while (ptr + sizeof(struct btf_type) <= types_end)
-  {
+  while (ptr + sizeof(struct btf_type) <= types_end) {
     auto *btf_type = reinterpret_cast<struct btf_type *>(ptr);
     ptr += btf_type_size(btf_type);
 
     // Change linkage type to 0 if the kernel doesn't support BTF_FUNC_GLOBAL.
     if (!feature.has_btf_func_global() &&
-        BTF_INFO_KIND(btf_type->info) == BTF_KIND_FUNC)
-    {
+        BTF_INFO_KIND(btf_type->info) == BTF_KIND_FUNC) {
       btf_type->info = BTF_INFO_ENC(BTF_KIND_FUNC, 0, 0);
     }
   }
