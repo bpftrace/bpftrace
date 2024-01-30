@@ -1,0 +1,8 @@
+Checks: |
+  -*
+  performance-unnecessary-copy-initialization
+  modernize-loop-convert
+  google-readability-casting
+
+WarningsAsErrors: "*"
+UseColor: true
