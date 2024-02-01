@@ -284,7 +284,7 @@ static std::optional<struct timespec> get_delta_taitime()
                << "This limitation is because strings are currently stored on "
                   "the 512 byte BPF stack.\n"
                << "Long strings will be pursued in: "
-                  "https://github.com/iovisor/bpftrace/issues/305";
+                  "https://github.com/bpftrace/bpftrace/issues/305";
     return false;
   }
 

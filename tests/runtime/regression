@@ -1,4 +1,4 @@
-# https://github.com/iovisor/bpftrace/pull/566#issuecomment-487295113
+# https://github.com/bpftrace/bpftrace/pull/566#issuecomment-487295113
 NAME codegen_struct_save_nested
 PROG struct Foo { int m; struct { int x; int y; } bar; int n; } BEGIN { @foo = (struct Foo *)0; @bar = @foo->bar; @x = @foo->bar.x; printf("_%s_\n", "done"); exit(); }
 EXPECT _done_
@@ -10,8 +10,8 @@ AFTER ./testprogs/simple_struct
 EXPECT 2 0 1 1 1
 TIMEOUT 5
 
-# https://github.com/iovisor/bpftrace/issues/759
-# Update test once https://github.com/iovisor/bpftrace/pull/781 lands
+# https://github.com/bpftrace/bpftrace/issues/759
+# Update test once https://github.com/bpftrace/bpftrace/pull/781 lands
 # NAME ntop_map_printf
 # RUN {{BPFTRACE}} -e 'union ip { char v4[4]; char v6[16]; } uprobe:./testprogs/ntop:test_ntop { @a = ntop(2, ((union ip*)arg0)->v4); printf("v4: %s; ", @a); @b = ntop(10, ((union ip*)arg1)->v6); exit() } END { printf("v6: %s", @b); clear(@a); clear(@b) }'
 # AFTER ./testprogs/ntop
@@ -28,7 +28,7 @@ RUN {{BPFTRACE}} -e 'struct Foo { int a; uint8_t b[10]; } uprobe:testprogs/uprob
 EXPECT h e l l o
 TIMEOUT 5
 
-# https://github.com/iovisor/bpftrace/issues/1773
+# https://github.com/bpftrace/bpftrace/issues/1773
 NAME single_arg_wildcard_listing
 RUN {{BPFTRACE}} -l "*do_nanosleep*"
 EXPECT kprobe:do_nanosleep
@@ -39,7 +39,7 @@ RUN {{BPFTRACE}} -l "*sched_switch*"
 EXPECT tracepoint:sched:sched_switch
 TIMEOUT 1
 
-# https://github.com/iovisor/bpftrace/issues/1952
+# https://github.com/bpftrace/bpftrace/issues/1952
 NAME async_id_invalid_probe_expansion
 PROG kprobe:zzzzz { probe; printf("asdf\n") } BEGIN { printf("_%s_\n", "success"); exit() }
 EXPECT _success_
@@ -77,7 +77,7 @@ PROG tracepoint:sched:sched_wakeup { if (args.comm == "asdf") { print(args.comm)
 EXPECT Attaching 1 probe
 TIMEOUT 1
 
-# https://github.com/iovisor/bpftrace/issues/2135
+# https://github.com/bpftrace/bpftrace/issues/2135
 NAME address_probe_invalid_expansion
 RUN {{BPFTRACE}} -e "uprobe:./testprogs/uprobe_test:0x$(nm ./testprogs/uprobe_test | awk '$3 == "uprobeFunction1" {print $1}') { @[probe] = count(); exit() }"
 EXPECT Attaching 1 probe

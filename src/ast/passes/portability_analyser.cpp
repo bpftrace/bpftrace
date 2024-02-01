@@ -101,7 +101,7 @@ void PortabilityAnalyser::visit(AttachPoint &ap)
   // While userspace watchpoint probes are technically portable from codegen
   // point of view, they require a PID or path via cmdline to resolve address.
   // watchpoint probes are also API-unstable and need a further change
-  // (see https://github.com/iovisor/bpftrace/issues/1683).
+  // (see https://github.com/bpftrace/bpftrace/issues/1683).
   //
   // So disable for now and re-evalulate at another point.
   else if (type == ProbeType::watchpoint ||

@@ -164,10 +164,10 @@ bpftrace currently ships AppImages in two locations:
 * as a CI artifact for every build on master
 
 To download the official release artifacts, see the
-[latest release](https://github.com/iovisor/bpftrace/releases/latest).
+[latest release](https://github.com/bpftrace/bpftrace/releases/latest).
 
 To download the bleeding edge AppImage, go to the
-[workflow page](https://github.com/iovisor/bpftrace/actions/workflows/binary.yml)
+[workflow page](https://github.com/bpftrace/bpftrace/actions/workflows/binary.yml)
 and select the latest run. You should find an uploaded artifact like below:
 
 <img src="./images/ci_appimage_artifact.png" width="40%" height="40%">
@@ -248,7 +248,7 @@ make install
 
 # bpftrace
 cd $builddir
-git clone https://github.com/iovisor/bpftrace
+git clone https://github.com/bpftrace/bpftrace
 cd bpftrace
 mkdir build; cd build
 cmake3 ..
@@ -286,7 +286,7 @@ Use specific OS build sections listed earlier if available.
 ### Compilation
 
 ```
-git clone https://github.com/iovisor/bpftrace
+git clone https://github.com/bpftrace/bpftrace
 mkdir -p bpftrace/build
 cd bpftrace/build
 cmake -DCMAKE_BUILD_TYPE=Release ../

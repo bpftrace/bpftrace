@@ -1990,7 +1990,7 @@ void IRBuilderBPF::CreateProbeRead(Value *ctx,
   // Pointers are internally always represented as 64-bit integers, matching the
   // BPF register size (BPF is a 64-bit ISA). This helps to avoid BPF codegen
   // issues such as truncating PTR_TO_STACK registers using shift operations,
-  // which is disallowed (see https://github.com/iovisor/bpftrace/pull/2361).
+  // which is disallowed (see https://github.com/bpftrace/bpftrace/pull/2361).
   // However, when reading pointers from kernel or user memory, we need to use
   // the appropriate size for the target system.
   const size_t ptr_size = getPointerStorageTy(as)->getIntegerBitWidth() / 8;

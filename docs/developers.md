@@ -104,7 +104,7 @@ $ NIX_TARGET=.#bpftrace-llvm11  \
 Some tests are known to be flaky and sometimes fail in the CI environment. The
 list of known such tests:
 - runtime test `usdt.usdt probes - file based semaphore activation multi
-  process` ([#2410](https://github.com/iovisor/bpftrace/issues/2402))
+  process` ([#2410](https://github.com/bpftrace/bpftrace/issues/2402))
 
 What usually helps, is restarting the CI. This is simple on your own fork but
 requires one of the maintainers for pull requests.
@@ -121,7 +121,7 @@ on the topic.
 ## Code style
 
 We use clang-format with our custom config for formatting code. This was
-[introduced](https://github.com/iovisor/bpftrace/pull/639) after a lot of code
+[introduced](https://github.com/bpftrace/bpftrace/pull/639) after a lot of code
 was already written. Instead of formatting the whole code base at once and
 breaking `git blame` we're taking an incremental approach, each new/modified bit
 of code needs to be formatted.

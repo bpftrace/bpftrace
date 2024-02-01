@@ -3,7 +3,7 @@
 12個の簡単なレッスンで Linux の bpftrace を学びましょう．各レッスンはワンライナーです．すぐに試すことができ，一連のワンライナーで bpftrace の要点が分かります．bpftrace の詳細は[リファレンスガイド](reference_guide.md)を参照して下さい．
 
 - 執筆：Brendan Gregg, Netflix (2018)．FreeBSD [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial)（Brendan Gregg 著）に基づく．
-- 原文：[The bpftrace One-Liner Tutorial](https://github.com/iovisor/bpftrace/blob/master/docs/tutorial_one_liners.md)
+- 原文：[The bpftrace One-Liner Tutorial](https://github.com/bpftrace/bpftrace/blob/master/docs/tutorial_one_liners.md)
 
 # レッスン 1. プローブの表示
 

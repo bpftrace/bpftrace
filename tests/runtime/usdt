@@ -113,8 +113,8 @@ TIMEOUT 5
 # USDT support, which means it will attach to 43 probes instead of 3. Before
 # re-enabling this test, we should:
 #  - Skip if bcc doesn't support multiple probes with the same name
-#  - Fix https://github.com/iovisor/bpftrace/issues/565#issuecomment-496731112
-#    and https://github.com/iovisor/bpftrace/issues/688
+#  - Fix https://github.com/bpftrace/bpftrace/issues/565#issuecomment-496731112
+#    and https://github.com/bpftrace/bpftrace/issues/688
 NAME usdt probes - all probes by wildcard and pid
 RUN {{BPFTRACE}} -e 'usdt:* { printf("here\n" ); exit(); }' -p {{BEFORE_PID}}
 EXPECT Attaching 3 probes...
