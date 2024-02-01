@@ -100,7 +100,7 @@ For example: if you've stack-allocated a buffer of 64 bytes for writing strings 
 
 BPF load and store instructions may be picky about what locations they're happy to read/write to. For example, probe_read_str() will only permit writes into a PTR_TO_STACK.
 
-I've documented some common errors you may encounter when the verifier bounds-checks your program. Most of this was learned during https://github.com/iovisor/bpftrace/pull/241.
+I've documented some common errors you may encounter when the verifier bounds-checks your program. Most of this was learned during https://github.com/bpftrace/bpftrace/pull/241.
 
 ### min value is negative
 
@@ -189,7 +189,7 @@ R2 unbounded memory access, use 'var &= const' or 'if (var < const)'
 
 You need to prove that you don't jump too far from your pointer. This re-uses techniques from "min value is negative"; you just need to tighten the range even further.
 
-How far is too far? You need to [stay below `BPF_MAX_VAR_SIZ`](https://github.com/iovisor/bpftrace/pull/241#issuecomment-440274294), `1ULL << 29`.
+How far is too far? You need to [stay below `BPF_MAX_VAR_SIZ`](https://github.com/bpftrace/bpftrace/pull/241#issuecomment-440274294), `1ULL << 29`.
 
 So, you could bitmask your variable with `(1ULL << 29) - 1` = `0x1FFFFFFF`:
 
@@ -211,7 +211,7 @@ But more likely, you have a fundamental problem: perhaps you're trying to alloca
 
 If indeed that's what you're trying to do: you'll have to change your architecture. The BPF stack (512 bytes) can only accommodate tiny allocations and jumps. You need to move towards storing your data in BPF maps.
 
-Consider this ongoing discussion on how to rearchitect to store stack data in a map: https://github.com/iovisor/bpftrace/issues/305
+Consider this ongoing discussion on how to rearchitect to store stack data in a map: https://github.com/bpftrace/bpftrace/issues/305
 
 ### expected=PTR_TO_STACK; actual=PTR_TO_MAP_VALUE
 
@@ -371,7 +371,7 @@ That's just my mental conversion. I haven't tested this and it may have a bug. B
 
 If you need to add support to a BPF kernel function that bpftrace does not yet call, this is a simple example. It adds a `curtask` builtin that calls BPF_FUNC_get_current_task. See [bcc Kernel Versions](https://github.com/iovisor/bcc/blob/master/docs/kernel-versions.md) for documentation on these BPF functions. The commit is:
 
-https://github.com/iovisor/bpftrace/commit/895ea46f2c800e2f283339d0c96b3c8209590498
+https://github.com/bpftrace/bpftrace/commit/895ea46f2c800e2f283339d0c96b3c8209590498
 
 The diff is as simple as such an addition gets, and shows the different files and locations that need to be updated:
 
@@ -541,7 +541,7 @@ index d6e26b8..d9b24e2 100644
 
 See the implementation of `lhist()` for an example of pulling in arguments. Commit:
 
-https://github.com/iovisor/bpftrace/commit/6bdd1198e04392aa468b12357a051816f2cc50e4
+https://github.com/bpftrace/bpftrace/commit/6bdd1198e04392aa468b12357a051816f2cc50e4
 
 You'll also notice that the builtins finish by setting `expr_` to the final result. This is taking the node in the AST and replacing it with the computed expression. Calls don't necessarily do this: for example, `reg()` sets `expr_` since it returns a value, but `printf()` sets `expr_` to `nullptr`, since it does not return a value.
 
@@ -549,7 +549,7 @@ You'll also notice that the builtins finish by setting `expr_` to the final resu
 
 These are examples of adding new map functions, and the required components. Since the functions themselves are simple, they are good examples of codegen. They were all added in a single commit:
 
-https://github.com/iovisor/bpftrace/commit/0746ff9c048ed503c606b736ad3a78e141c22890
+https://github.com/bpftrace/bpftrace/commit/0746ff9c048ed503c606b736ad3a78e141c22890
 
 This also shows the bpftrace components that were added to support these: `BPFtrace::print_map_stats()`, `BPFtrace::max_value()`, `BPFtrace::min_value()`.
 
@@ -561,7 +561,7 @@ Probes are reasonably straightforward. We use libbpf/libbcc, both from [bcc](htt
 
 The addition of the `interval` probe type is a simple example of adding a probe, and the components required:
 
-https://github.com/iovisor/bpftrace/commit/c1e7b05be917ad6fa23a210d047bf9387745bf32
+https://github.com/bpftrace/bpftrace/commit/c1e7b05be917ad6fa23a210d047bf9387745bf32
 
 diff:
 

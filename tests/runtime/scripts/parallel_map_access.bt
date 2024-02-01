@@ -3,7 +3,7 @@
 // while delete is called at the same time.
 //
 // For more information, please refer to:
-// https://github.com/iovisor/bpftrace/pull/2623
+// https://github.com/bpftrace/bpftrace/pull/2623
 
 i:us:1 {
     @data[rand % 100] = count();

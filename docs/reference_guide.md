@@ -577,7 +577,7 @@ Make this larger if you wish to read bigger strings with str().
 Beware that the BPF stack is small (512 bytes), and that you pay the toll again inside printf() (whilst
 it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
 
-Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
+Support for even larger strings is [being discussed](https://github.com/bpftrace/bpftrace/issues/305).
 
 ### `BPFTRACE_MAX_TYPE_RES_ITERATIONS`
 
@@ -1067,8 +1067,8 @@ In this case, linux kernel still checks instruction alignment.
 The default vmlinux path can be overridden using the environment variable `BPFTRACE_VMLINUX`.
 
 Examples in situ:
-[(kprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
-[(kretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
+[(kprobe) search /tools](https://github.com/bpftrace/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
+[(kretprobe) /tools](https://github.com/bpftrace/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
 
 ## 2. `kprobe`/`kretprobe`: Dynamic Tracing, Kernel-Level Arguments
 
@@ -1167,8 +1167,8 @@ kprobe:kvm:x86_emulate_insn
 See [BTF Support](#btf-support) for more details.
 
 Examples in situ:
-[(kprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
-[(kretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
+[(kprobe) search /tools](https://github.com/bpftrace/bpftrace/search?q=kprobe%3A+path%3Atools&type=Code)
+[(kretprobe) /tools](https://github.com/bpftrace/bpftrace/search?q=kretprobe%3A+path%3Atools&type=Code)
 
 ## 3. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level
 
@@ -1289,8 +1289,8 @@ adding probe
 ```
 
 Examples in situ:
-[(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
-[(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
+[(uprobe) search /tools](https://github.com/bpftrace/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
+[(uretprobe) /tools](https://github.com/bpftrace/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
 
 ## 4. `uprobe`/`uretprobe`: Dynamic Tracing, User-Level Arguments
 
@@ -1373,8 +1373,8 @@ prompt: [user@localhost ~]$
 ```
 
 Examples in situ:
-[(uprobe) search /tools](https://github.com/iovisor/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
-[(uretprobe) /tools](https://github.com/iovisor/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
+[(uprobe) search /tools](https://github.com/bpftrace/bpftrace/search?q=uprobe%3A+path%3Atools&type=Code)
+[(uretprobe) /tools](https://github.com/bpftrace/bpftrace/search?q=uretprobe%3A+path%3Atools&type=Code)
 
 ## 5. `tracepoint`: Static Tracing, Kernel-Level
 
@@ -1395,7 +1395,7 @@ block I/O created by 28941
 ```
 
 Examples in situ:
-[search /tools](https://github.com/iovisor/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
+[search /tools](https://github.com/bpftrace/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
 
 ## 6. `tracepoint`: Static Tracing, Kernel-Level Arguments
 
@@ -1438,7 +1438,7 @@ Apart from the `filename` member, we can also print `flags`, `mode`, and more. A
 listed first, the members are specific to the tracepoint.
 
 Examples in situ:
-[search /tools](https://github.com/iovisor/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
+[search /tools](https://github.com/bpftrace/bpftrace/search?q=tracepoint%3A+path%3Atools&type=Code)
 
 ## 7. `rawtracepoint`: Static Tracing, Kernel-Level
 
@@ -1631,7 +1631,7 @@ Attaching 2 probes...
 This prints the rate of syscalls per second.
 
 Examples in situ:
-[search /tools](https://github.com/iovisor/bpftrace/search?q=interval+extension%3Abt+path%3Atools&type=Code)
+[search /tools](https://github.com/bpftrace/bpftrace/search?q=interval+extension%3Abt+path%3Atools&type=Code)
 
 ## 13. `software`: Pre-defined Software Events
 
@@ -1735,8 +1735,8 @@ These are special built-in events provided by the bpftrace runtime. `BEGIN` is t
 probes are attached. `END` is triggered after all other probes are detached.
 
 Examples in situ:
-[(BEGIN) search /tools](https://github.com/iovisor/bpftrace/search?q=BEGIN+extension%3Abt+path%3Atools&type=Code)
-[(END) search /tools](https://github.com/iovisor/bpftrace/search?q=END+extension%3Abt+path%3Atools&type=Code)
+[(BEGIN) search /tools](https://github.com/bpftrace/bpftrace/search?q=BEGIN+extension%3Abt+path%3Atools&type=Code)
+[(END) search /tools](https://github.com/bpftrace/bpftrace/search?q=END+extension%3Abt+path%3Atools&type=Code)
 
 ## 16. `watchpoint`/`asyncwatchpoint`: Memory watchpoints
 
@@ -2485,7 +2485,7 @@ Supported Probe Types:
 - u(ret)probes
 - USDT
 
-**Does not work with ASLR, see issue [#75](https://github.com/iovisor/bpftrace/issues/75)**
+**Does not work with ASLR, see issue [#75](https://github.com/bpftrace/bpftrace/issues/75)**
 
 The `uaddr` function returns the address of the specified symbol. This lookup
 happens during program compilation and cannot be used dynamically.

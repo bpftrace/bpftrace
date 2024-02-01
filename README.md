@@ -1,8 +1,8 @@
 # bpftrace
 
-[![Build Status](https://github.com/iovisor/bpftrace/workflows/CI/badge.svg?branch=master)](https://github.com/iovisor/bpftrace/actions?query=workflow%3ACI+branch%3Amaster)
+[![Build Status](https://github.com/bpftrace/bpftrace/workflows/CI/badge.svg?branch=master)](https://github.com/bpftrace/bpftrace/actions?query=workflow%3ACI+branch%3Amaster)
 [![IRC#bpftrace](https://img.shields.io/badge/IRC-bpftrace-blue.svg)](https://webchat.oftc.net/?channels=bpftrace)
-[![CodeQL](https://github.com/iovisor/bpftrace/actions/workflows/codeql.yml/badge.svg)](https://github.com/iovisor/bpftrace/actions/workflows/codeql.yml)
+[![CodeQL](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml/badge.svg)](https://github.com/bpftrace/bpftrace/actions/workflows/codeql.yml)
 
 bpftrace is a high-level tracing language for Linux enhanced Berkeley Packet Filter (eBPF) available in recent Linux kernels (4.x). bpftrace uses LLVM as a backend to compile scripts to BPF-bytecode and makes use of [BCC](https://github.com/iovisor/bcc) for interacting with the Linux BPF system, as well as existing Linux tracing capabilities: kernel dynamic tracing (kprobes), user-level dynamic tracing (uprobes), and tracepoints. The bpftrace language is inspired by awk and C, and predecessor tracers such as DTrace and SystemTap. bpftrace was created by [Alastair Robertson](https://github.com/ajor).
 
@@ -113,13 +113,13 @@ bpftrace has several plugins/definitions, integrating the syntax into your edito
 
 ## Support
 
-For additional help / discussion, please use our [discussions](https://github.com/iovisor/bpftrace/discussions) page.
+For additional help / discussion, please use our [discussions](https://github.com/bpftrace/bpftrace/discussions) page.
 
 ## Contributing
 
 * Have ideas for new bpftrace tools? [CONTRIBUTING-TOOLS.md](CONTRIBUTING-TOOLS.md)
 
-* Bugs reports and feature requests: [Issue Tracker](https://github.com/iovisor/bpftrace/issues)
+* Bugs reports and feature requests: [Issue Tracker](https://github.com/bpftrace/bpftrace/issues)
 
 * bpftrace development IRC: #bpftrace at irc.oftc.net
 

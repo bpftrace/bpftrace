@@ -121,7 +121,7 @@ jobs:
     # the main repo. We don't want this rule to trigger from forked repos.
     needs:
       - build_test
-    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'iovisor/bpftrace'"
+    if: "failure() && github.event_name == 'push' && github.ref == 'refs/heads/master' && github.repository == 'bpftrace/bpftrace'"
     runs-on: ubuntu-latest
     steps:
     - name: Message channel
@@ -133,4 +133,4 @@ jobs:
         tls: false
         channel: "#bpftrace"
         message: |
-          master is BROKEN at https://github.com/iovisor/bpftrace/commit/${{github.sha}}
+          master is BROKEN at https://github.com/bpftrace/bpftrace/commit/${{github.sha}}

@@ -1282,7 +1282,7 @@ std::optional<std::string> abs_path(const std::string &rel_path)
 {
   // filesystem::canonical does not work very well with /proc/<pid>/root paths
   // of processes in a different mount namespace (than the one bpftrace is
-  // running in), failing during canonicalization. See iovisor:bpftrace#1595
+  // running in), failing during canonicalization. See bpftrace:bpftrace#1595
   static auto re = std::regex("^/proc/\\d+/root/.*");
   if (!std::regex_match(rel_path, re)) {
     try {

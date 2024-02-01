@@ -49,7 +49,7 @@ void emit_warning(std::ostream &out)
   // these lines are ~80 chars wide in terminal
   out << "Kernel lockdown is enabled and set to 'confidentiality'. Lockdown mode blocks" << std::endl
       << "parts of BPF which makes it impossible for bpftrace to function. Please see " << std::endl
-      << "https://github.com/iovisor/bpftrace/blob/master/INSTALL.md#disable-lockdown" << std::endl
+      << "https://github.com/bpftrace/bpftrace/blob/master/INSTALL.md#disable-lockdown" << std::endl
       << "for more details on lockdown and how to disable it." << std::endl;
   // clang-format on
 }

@@ -275,7 +275,7 @@ Make this larger if you wish to read bigger strings with str().
 Beware that the BPF stack is small (512 bytes), and that you pay the toll again inside printf() (whilst
 it composes a perf event output buffer). So in practice you can only grow this to about 200 bytes.
 
-Support for even larger strings is [being discussed](https://github.com/iovisor/bpftrace/issues/305).
+Support for even larger strings is [being discussed](https://github.com/bpftrace/bpftrace/issues/305).
 
 === BPFTRACE_MAX_TYPE_RES_ITERATIONS
 
@@ -1883,7 +1883,7 @@ bpftrace uses the `strftime(3)` function for formatting time and supports the sa
 * uretprobes
 * USDT
 
-**Does not work with ASLR, see issue link:https://github.com/iovisor/bpftrace/issues/75[#75]**
+**Does not work with ASLR, see issue link:https://github.com/bpftrace/bpftrace/issues/75[#75]**
 
 The `uaddr` function returns the address of the specified symbol.
 This lookup happens during program compilation and cannot be used dynamically.

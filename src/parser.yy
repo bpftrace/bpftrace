@@ -560,7 +560,7 @@ addi_expr:
 cast_expr:
                 unary_expr                                  { $$ = $1; }
         |       LPAREN type RPAREN cast_expr                { $$ = new ast::Cast($2, $4, @1 + @3); }
-/* workaround for typedef types, see https://github.com/iovisor/bpftrace/pull/2560#issuecomment-1521783935 */
+/* workaround for typedef types, see https://github.com/bpftrace/bpftrace/pull/2560#issuecomment-1521783935 */
         |       LPAREN IDENT RPAREN cast_expr               { $$ = new ast::Cast(ast::ident_to_record($2, 0), $4, @1 + @3); }
         |       LPAREN IDENT "*" RPAREN cast_expr           { $$ = new ast::Cast(ast::ident_to_record($2, 1), $5, @1 + @4); }
         |       LPAREN IDENT "*" "*" RPAREN cast_expr       { $$ = new ast::Cast(ast::ident_to_record($2, 2), $6, @1 + @5); }

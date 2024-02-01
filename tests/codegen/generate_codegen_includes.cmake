@@ -1,5 +1,5 @@
 # Combine all codegen tests into a single compilation unit to improve build
-# performance. https://github.com/iovisor/bpftrace/issues/229
+# performance. https://github.com/bpftrace/bpftrace/issues/229
 function(generate_codegen_includes output)
   file(REMOVE ${output})
   file(GLOB tests ${TEST_SRC_DIR}/*.cpp)
