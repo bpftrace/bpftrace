@@ -49,7 +49,16 @@ static int btf_type_size(const struct btf_type *t)
     case BTF_KIND_ENUM:
       return base_size + vlen * sizeof(struct btf_enum);
     case BTF_KIND_ENUM64:
-      return base_size + vlen * sizeof(struct btf_enum64);
+      /* struct btf_enum64 is not available in UAPI header until v6.0,
+       * calculate its size with array instead. Its definition is:
+       *
+       * struct btf_enum64 {
+       *	__u32	name_off;
+       *	__u32	val_lo32;
+       *	__u32	val_hi32;
+       * };
+       */
+      return base_size + vlen * sizeof(__u32[3]);
     case BTF_KIND_ARRAY:
       return base_size + sizeof(struct btf_array);
     case BTF_KIND_STRUCT:
@@ -62,7 +71,14 @@ static int btf_type_size(const struct btf_type *t)
     case BTF_KIND_DATASEC:
       return base_size + vlen * sizeof(struct btf_var_secinfo);
     case BTF_KIND_DECL_TAG:
-      return base_size + sizeof(struct btf_decl_tag);
+      /* struct btf_decl_tag is not available until v5.16. Use the same trick
+       * as btf_enum64 above. Its definition is:
+       *
+       * struct btf_decl_tag {
+       *  __s32   component_idx;
+       * };
+       */
+      return base_size + sizeof(__s32);
     default:
       return -EINVAL;
   }
