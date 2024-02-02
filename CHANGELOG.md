@@ -11,6 +11,8 @@ and this project adheres to
 #### Added
 - Add 'lazy_symbolication' config
   - [#2958](https://github.com/iovisor/bpftrace/pull/2958)
+- Add map wildcard support for delete()
+  - [#2922](https://github.com/iovisor/bpftrace/pull/2922)
 #### Changed
 #### Deprecated
 #### Removed

@@ -551,16 +551,61 @@ void CodegenLLVM::visit(Call &call)
   } else if (call.func == "delete") {
     auto &arg = *call.vargs->at(0);
     auto &map = static_cast<Map &>(arg);
-    auto [key, scoped_key_deleter] = getMapKey(map);
-    auto imap = *bpftrace_.maps.Lookup(map.ident);
-    if (!imap->is_clearable()) {
-      // store zero instead of calling bpf_map_delete_elem()
-      AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
-      b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
-      b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
-      b_.CreateLifetimeEnd(val);
+
+    if (!map.wildcards) {
+      // plain delete(@[1, 2, 3]);
+      auto [key, scoped_key_deleter] = getMapKey(map);
+      auto imap = *bpftrace_.maps.Lookup(map.ident);
+      if (!imap->is_clearable()) {
+        // store zero instead of calling bpf_map_delete_elem()
+        AllocaInst *val = b_.CreateAllocaBPF(map.type, map.ident + "_zero");
+        b_.CreateStore(Constant::getNullValue(b_.GetType(map.type)), val);
+        b_.CreateMapUpdateElem(ctx_, map, key, val, call.loc);
+        b_.CreateLifetimeEnd(val);
+      } else {
+        b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+      }
     } else {
-      b_.CreateMapDeleteElem(ctx_, map, key, call.loc);
+      // wildcard delete: delete(@[*, *, 3]);
+
+      // First, determine the level of the concrete value and the offset to it.
+      int key_offset = 0;
+      ssize_t concrete_level = -1;
+      for (size_t idx = 0; idx < map.vargs->size(); idx++) {
+        if (!map.vargs->at(idx)->type.IsMapWildcardTy()) {
+          concrete_level = idx;
+          break;
+        }
+        key_offset += map.key_type.args_.at(idx).GetSize();
+      }
+      assert(concrete_level >= 0);
+
+      // Second, get an llvm::Value to the concrete value we have
+      auto *key_value_node = map.vargs->at(concrete_level);
+      auto key_value_deleter = accept(key_value_node);
+      auto *key_value = expr_;
+      key_value->setName("key_value");
+
+      std::vector<llvm::Type *> ctx_elems = {
+        b_.getInt64Ty(), // key offset
+        b_.getInt64Ty(), // key value (integers in maps are always 64-bit)
+      };
+      StructType *ctx_type = b_.GetStructType("ctx_t", ctx_elems, false);
+      AllocaInst *cb_ctx = b_.CreateAllocaBPF(ctx_type, "ctx_stack");
+
+      b_.CreateStore(
+          b_.getInt64(key_offset),
+          b_.CreateGEP(ctx_type, cb_ctx, { b_.getInt64(0), b_.getInt32(0) }));
+      b_.CreateStore(
+          key_value,
+          b_.CreateGEP(ctx_type, cb_ctx, { b_.getInt64(0), b_.getInt32(1) }));
+
+      Function *map_delete_filtered_cb = createMapDeleteFilteredCallback(
+          call.loc);
+
+      b_.CreateForEachMapElem(
+          ctx_, map, map_delete_filtered_cb, cb_ctx, call.loc);
+      b_.CreateLifetimeEnd(cb_ctx);
     }
     expr_ = nullptr;
   } else if (call.func == "str") {
@@ -3627,6 +3672,156 @@ Function *CodegenLLVM::createMapLenCallback()
   b_.restoreIP(saved_ip);
 
   return callback;
+}
+
+Function *CodegenLLVM::createMapDeleteFilteredCallback(location loc)
+{
+  if (map_delete_filtered_cb_ != nullptr)
+    return map_delete_filtered_cb_;
+
+  /**
+   * The goal is to produce this code:
+   *
+   * struct ctx_t {
+   *   uint64_t offset;
+   *   uint64_t value;
+   * };
+   *
+   * int cb(struct bpf_map *map, void *key, void *value, void *ctx) {
+   *   if (map == NULL || key == NULL || value == NULL || ctx == NULL)
+   *      return 0;
+   *
+   *   auto key_offset = ((struct ctx_t*) ctx)->offset;
+   *   auto key_target_value = ((struct ctx_t *) ctx)->value;
+   *   if ( *((u64*) (key + key_offset)) == key_target_value) {
+   *      bpf_map_delete(map, key);
+   *   }
+   *   return 0;
+   * }
+   */
+
+  auto savedIP = b_.saveIP();
+
+  std::array<llvm::Type *, 4> cb_args = {
+    b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy(), b_.getInt8PtrTy()
+  };
+
+  FunctionType *callback_type = FunctionType::get(b_.getInt64Ty(),
+                                                  cb_args,
+                                                  false);
+
+  Function *delete_filtered_cb = Function::Create(
+      callback_type,
+      Function::LinkageTypes::InternalLinkage,
+      "delete_filtered_cb",
+      module_.get());
+  delete_filtered_cb->setDSOLocal(true);
+  delete_filtered_cb->setVisibility(llvm::GlobalValue::DefaultVisibility);
+  delete_filtered_cb->setSection(".text");
+  debug_.createFunctionDebugInfo(*delete_filtered_cb);
+
+  BasicBlock *param_check_bb = BasicBlock::Create(module_->getContext(),
+                                                  "param_check",
+                                                  delete_filtered_cb);
+
+  BasicBlock *null_param_bb = BasicBlock::Create(module_->getContext(),
+                                                 "null_param",
+                                                 delete_filtered_cb);
+
+  BasicBlock *entry_bb = BasicBlock::Create(module_->getContext(),
+                                            "entry",
+                                            delete_filtered_cb);
+  BasicBlock *retzero_bb = BasicBlock::Create(module_->getContext(),
+                                              "retzero",
+                                              delete_filtered_cb);
+
+  BasicBlock *eq_bb = BasicBlock::Create(module_->getContext(),
+                                         "eq",
+                                         delete_filtered_cb);
+
+  // Null check all params in one go.
+  b_.SetInsertPoint(param_check_bb);
+
+  // Equivalent to getArg(int n) but compatible with LLVM 9
+  Value *param_map = delete_filtered_cb->getArg(0);
+  Value *param_key = delete_filtered_cb->getArg(1);
+  Value *param_value = delete_filtered_cb->getArg(2);
+  Value *param_ctx = delete_filtered_cb->getArg(3);
+
+  Value *res = b_.CreateOr(
+      b_.CreateOr(b_.CreateIsNull(param_map), b_.CreateIsNull(param_key)),
+      b_.CreateOr(b_.CreateIsNull(param_value), b_.CreateIsNull(param_ctx)));
+
+  b_.CreateCondBr(b_.CreateICmpEQ(res, b_.getInt1(true)),
+                  null_param_bb,
+                  entry_bb);
+
+  b_.SetInsertPoint(null_param_bb);
+  b_.CreateRet(b_.getInt64(0));
+
+  b_.SetInsertPoint(entry_bb);
+
+  std::vector<llvm::Type *> ctx_elems = {
+    b_.getInt64Ty(), // key offset
+    b_.getInt64Ty(), // key value
+  };
+  StructType *ctx_type = b_.GetStructType("ctx_t", ctx_elems, false);
+
+  // Load key offset from context
+  Value *ctx_key_offset_ptr = b_.CreateGEP(
+      ctx_type,
+      b_.CreateBitCast(param_ctx, ctx_type->getPointerTo()),
+      { b_.getInt64(0), b_.getInt32(0) });
+  Value *ctx_key_offset = b_.CreateLoad(b_.getInt64Ty(),
+                                        ctx_key_offset_ptr,
+                                        "ctx_key_offset");
+
+  // Load expected key value from context
+  Value *context_key_value_ptr = b_.CreateGEP(
+      ctx_type,
+      b_.CreateBitCast(param_ctx, ctx_type->getPointerTo()),
+      { b_.getInt64(0), b_.getInt32(1) });
+  Value *context_key_value = b_.CreateLoad(b_.getInt64Ty(),
+                                           context_key_value_ptr,
+                                           "context_key_value");
+
+  // Load part of the actual key starting at key offset
+  Value *key_value_ptr = b_.CreateGEP(b_.getInt8Ty(),
+                                      b_.CreateBitCast(param_key,
+                                                       b_.getInt8PtrTy()),
+                                      ctx_key_offset);
+  Value *key_value = b_.CreateLoad(
+      b_.getInt64Ty(),
+      b_.CreateBitCast(key_value_ptr, b_.getInt64Ty()->getPointerTo()),
+      "key_value");
+
+  // Compare the actual key (part) with the expected value
+  Value *cond_eq = b_.CreateICmpEQ(key_value,
+                                   context_key_value,
+                                   "cmp_key_vs_ctx");
+  b_.CreateCondBr(cond_eq, eq_bb, retzero_bb);
+
+  b_.SetInsertPoint(eq_bb);
+  FunctionType *map_delete_elem_type = FunctionType::get(
+      b_.getInt64Ty(),
+      std::array<llvm::Type *, 2>{ b_.getInt8PtrTy(), b_.getInt8PtrTy() },
+      false);
+  Value *delete_res = b_.CreateHelperCall(libbpf::BPF_FUNC_map_delete_elem,
+                                          map_delete_elem_type,
+                                          std::array<Value *, 2>{ param_map,
+                                                                  param_key },
+                                          "delete_call");
+  b_.CreateHelperErrorCond(
+      ctx_, delete_res, libbpf::BPF_FUNC_map_delete_elem, loc);
+  b_.CreateBr(retzero_bb);
+
+  b_.SetInsertPoint(retzero_bb);
+  b_.CreateRet(b_.getInt64(0));
+
+  b_.restoreIP(savedIP);
+
+  map_delete_filtered_cb_ = delete_filtered_cb;
+  return delete_filtered_cb;
 }
 
 std::function<void()> CodegenLLVM::create_reset_ids()

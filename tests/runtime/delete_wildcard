@@ -1,0 +1,9 @@
+NAME delete_wildcard_idx_0
+PROG BEGIN { @map[10, 10] = 1; @map[2, 20] = 2; @map[10, 11] = 1; delete(@map[10, *]); print(@map); exit(); } END { clear(@map); }
+EXPECT_JSON runtime/outputs/delete_wildcard_idx_0.json
+TIMEOUT 5
+
+NAME delete_wildcard_idx_3
+PROG BEGIN { @map[10, 0, 1241, 0xcafe] = 1; @map[2, 20, 12, 0] = 2; @map[10, 192, 23, 0xcafe] = 1; delete(@map[*, *, *, 0xcafe]); print(@map); exit(); } END { clear(@map); }
+EXPECT_JSON runtime/outputs/delete_wildcard_idx_3.json
+TIMEOUT 5

@@ -171,6 +171,7 @@ std::string typestr(Type t)
     case Type::cgroup_path: return "cgroup_path"; break;
     case Type::strerror: return "strerror"; break;
     case Type::timestamp_mode: return "timestamp mode"; break;
+    case Type::map_wildcard: return "map_wildcard"; break;
       // clang-format on
   }
 
@@ -467,6 +468,11 @@ SizedType CreateTimestampMode()
   return SizedType(Type::timestamp_mode, 0);
 }
 
+SizedType CreateMapWildcard()
+{
+  return SizedType(Type::map_wildcard, 0);
+}
+
 bool SizedType::IsSigned(void) const
 {
   return is_signed_;
@@ -613,6 +619,7 @@ size_t hash<bpftrace::SizedType>::operator()(
     case bpftrace::Type::cgroup_path:
     case bpftrace::Type::strerror:
     case bpftrace::Type::timestamp_mode:
+    case bpftrace::Type::map_wildcard:
       break;
   }
 

@@ -49,6 +49,7 @@ bool is_quoted_type(const SizedType &ty)
     case Type::timestamp:
     case Type::timestamp_mode:
     case Type::tuple:
+    case Type::map_wildcard:
       return false;
   }
   return false;

@@ -50,6 +50,7 @@ enum class Type : uint8_t {
   cgroup_path,
   strerror,
   timestamp_mode,
+  map_wildcard,
   // clang-format on
 };
 
@@ -396,6 +397,10 @@ public:
   {
     return type == Type::timestamp_mode;
   }
+  bool IsMapWildcardTy(void) const
+  {
+    return type == Type::map_wildcard;
+  }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);
   friend std::ostream &operator<<(std::ostream &, Type);
@@ -457,6 +462,7 @@ SizedType CreateMacAddress();
 SizedType CreateCgroupPath();
 SizedType CreateStrerror();
 SizedType CreateTimestampMode();
+SizedType CreateMapWildcard();
 
 std::ostream &operator<<(std::ostream &os, const SizedType &type);
 

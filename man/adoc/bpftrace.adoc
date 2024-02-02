@@ -1248,20 +1248,24 @@ i:s:10 {
 === delete
 
 .variants
-* `delete(mapkey k)`
+* `delete(@x[key])`
+* `delete(@x[*, val])`
 
 Delete a single key from a map.
-For a single value map this deletes the only element.
-For an associative-array the key to delete has to be specified.
+For a single value map, the key may be omitted.
+For multi-key maps, wildcards can be used to delete multiple map elements. In such a case, a single concrete value must be always specified.
 
 ```
 k:dummy {
   @scalar = 1;
-  @associative[1,2] = 1;
+  @map[1,2] = 1;
+  @map[2,2] = 2;
+  @map[1,3] = 3;
   delete(@scalar);
-  delete(@associative[1,2]);
+  delete(@map[*,2]); // deletes @map[1,2] and @map[2,2]
+  delete(@map[1,3]);
 
-  delete(@associative); // error
+  delete(@map); // error
 }
 ```
 

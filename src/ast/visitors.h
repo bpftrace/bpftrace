@@ -24,6 +24,7 @@ public:
   virtual void visit(Sizeof &szof) = 0;
   virtual void visit(Offsetof &ofof) = 0;
   virtual void visit(Map &map) = 0;
+  virtual void visit(MapWildcard &wildcard) = 0;
   virtual void visit(Variable &var) = 0;
   virtual void visit(Binop &binop) = 0;
   virtual void visit(Unop &unop) = 0;
@@ -89,6 +90,7 @@ public:
   void visit(Sizeof &szof) override;
   void visit(Offsetof &ofof) override;
   void visit(Map &map) override;
+  void visit(MapWildcard &wildcard) override;
   void visit(Variable &var) override;
   void visit(Binop &binop) override;
   void visit(Unop &unop) override;
@@ -153,6 +155,7 @@ public:
   virtual R visit(Sizeof &node) DEFAULT_FN;
   virtual R visit(Offsetof &node) DEFAULT_FN;
   virtual R visit(Map &node) DEFAULT_FN;
+  virtual R visit(MapWildcard &node) DEFAULT_FN;
   virtual R visit(Variable &node) DEFAULT_FN;
   virtual R visit(Binop &node) DEFAULT_FN;
   virtual R visit(Unop &node) DEFAULT_FN;
@@ -202,6 +205,7 @@ private:
     DEFINE_DISPATCH(Sizeof);
     DEFINE_DISPATCH(Offsetof);
     DEFINE_DISPATCH(Map);
+    DEFINE_DISPATCH(MapWildcard);
     DEFINE_DISPATCH(Variable);
     DEFINE_DISPATCH(Binop);
     DEFINE_DISPATCH(Unop);
@@ -253,6 +257,7 @@ public:
   Node *visit(Sizeof &) override;
   Node *visit(Offsetof &) override;
   Node *visit(Map &) override;
+  Node *visit(MapWildcard &) override;
   Node *visit(Variable &) override;
   Node *visit(Binop &) override;
   Node *visit(Unop &) override;
