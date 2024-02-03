@@ -135,8 +135,9 @@ EXPECT rawtracepoint:
 TIMEOUT 1
 
 NAME it only lists probes in the program
-RUN {{BPFTRACE}} -l -e 'kfunc:vmlinux:vfs_read { exit(); }' | grep kfunc | wc -l
-EXPECT 1
+RUN {{BPFTRACE}} -l -e 'kfunc:vmlinux:vfs_read { exit(); }'
+EXPECT kfunc:vmlinux:vfs_read
+EXPECT_NONE kfunc:vmlinux:vfs_write
 TIMEOUT 5
 
 NAME it lists uprobes in the program
