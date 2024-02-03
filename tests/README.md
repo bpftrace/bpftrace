@@ -65,7 +65,8 @@ Each runtime testcase consists of multiple directives. In no particular order:
   `RUN` unless you must pass flags or create a shell pipeline.  This XOR the
   `RUN` field is required
 * `EXPECT`: The expected output. Python regular expressions are supported.
-   One of EXPECT, EXPECT_NONE, EXPECT_FILE or EXPECT_JSON is required.
+   One or more `EXPECT` and `EXPECT_NONE` or a single `EXPECT_FILE` or 
+   `EXPECT_JSON` is required.
 * `EXPECT_NONE`: The negation of `EXPECT`, which also supports Python regular 
    expressions.
 * `EXPECT_FILE`: A file containing the expected output, matched as plain

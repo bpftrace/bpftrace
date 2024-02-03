@@ -98,7 +98,7 @@ class Runner(object):
 
             return nsenter_prefix + ret
         else:  # PROG
-            use_json = "-q -f json" if test.expect_mode == "json" else ""
+            use_json = "-q -f json" if test.expects[0].mode == "json" else ""
             cmd = nsenter_prefix + "{} {} -e '{}'".format(BPFTRACE_BIN, use_json, test.prog)
             # We're only reusing PROG-directive tests for AOT tests
             if test.suite == 'aot':
@@ -197,24 +197,35 @@ class Runner(object):
         # the primary RUN or PROG command, and the AFTER.
         nsenter = []
         bpf_call = "[unknown]"
+        failed_expects = []
 
         def get_pid_ns_cmd(cmd):
             return nsenter + [os.path.abspath(x) for x in cmd.split()]
-
-        def check_result(output):
+            
+        def check_expect(expect, output):
             try:
-                if test.expect_mode == "regex":
-                    return re.search(test.expect, output, re.M)
-                elif test.expect_mode == "regex_none":
-                    return not re.search(test.expect, output, re.M)
-                elif test.expect_mode == "file":
-                    # remove leading and trailing empty lines
-                    return output.strip() == open(test.expect).read().strip()
+                if expect.mode == "regex":
+                    return re.search(expect.expect, output, re.M)
+                elif expect.mode == "regex_none":
+                    return not re.search(expect.expect, output, re.M)
+                elif expect.mode == "file":
+                    with open(expect.expect) as expect_file:
+                        # remove leading and trailing empty lines
+                        return output.strip() == expect_file.read().strip()
                 else:
-                    return json.loads(output) == json.load(open(test.expect))
+                    with open(expect.expect) as expect_file:
+                        return json.loads(output) == json.load(expect_file)
             except Exception as err:
                 print("ERROR in check_result: ", err)
                 return False
+
+        def check_result(output):
+            all_passed = True
+            for expect in test.expects:
+                if not check_expect(expect, output):
+                    all_passed = False
+                    failed_expects.append(expect)
+            return all_passed
 
         try:
             result = None
@@ -340,7 +351,7 @@ class Runner(object):
                 output += nextline
                 if not attached and nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
                     attached = True
-                    if test.expect_mode != "regex" and test.expect_mode != "regex_none":
+                    if test.has_exact_expect:
                         output = ""  # ignore earlier ouput
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
@@ -440,25 +451,26 @@ class Runner(object):
         else:
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
-            if test.expect_mode == "regex":
-                print('\tExpected REGEX: ' + test.expect)
-                print('\tFound:\n' + to_utf8(output))
-            elif test.expect_mode == "regex_none":
-                print('\tExpected no REGEX: ' + test.expect)
-                print('\tFound:\n' + to_utf8(output))
-            elif test.expect_mode == "json":
-                try:
-                    expected = json.dumps(json.loads(open(test.expect).read()), indent=2)
-                except json.decoder.JSONDecodeError as err:
-                    expected = "Could not parse JSON: " + str(err)
-                try:
-                    found = json.dumps(json.loads(output), indent=2)
-                except json.decoder.JSONDecodeError as err:
-                    found = "Could not parse JSON: " + str(err)
-                print('\tExpected JSON:\n' + expected)
-                print('\tFound:\n' + found)
-            else:
-                print('\tExpected FILE:\n\t\t' + to_utf8(open(test.expect).read()))
-                print('\tFound:\n\t\t' + to_utf8(output))
+            for failed_expect in failed_expects:
+                if failed_expect.mode == "regex":
+                    print('\tExpected REGEX: ' + failed_expect.expect)
+                    print('\tFound:\n' + to_utf8(output))
+                elif failed_expect.mode == "regex_none":
+                    print('\tExpected no REGEX: ' + failed_expect.expect)
+                    print('\tFound:\n' + to_utf8(output))
+                elif failed_expect.mode == "json":
+                    try:
+                        expected = json.dumps(json.loads(open(failed_expect.expect).read()), indent=2)
+                    except json.decoder.JSONDecodeError as err:
+                        expected = "Could not parse JSON: " + str(err)
+                    try:
+                        found = json.dumps(json.loads(output), indent=2)
+                    except json.decoder.JSONDecodeError as err:
+                        found = "Could not parse JSON: " + str(err)
+                    print('\tExpected JSON:\n' + expected)
+                    print('\tFound:\n' + found)
+                else:
+                    print('\tExpected FILE:\n\t\t' + to_utf8(open(failed_expect.expect).read()))
+                    print('\tFound:\n\t\t' + to_utf8(output))
             print_befores_and_after_output()
             return Runner.FAIL

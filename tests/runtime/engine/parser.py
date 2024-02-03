@@ -16,6 +16,10 @@ class UnknownFieldError(Exception):
 class InvalidFieldError(Exception):
     pass
 
+class Expect:
+  def __init__(self, expect, mode):
+    self.expect = expect
+    self.mode = mode
 
 TestStruct = namedtuple(
     'TestStruct',
@@ -23,8 +27,8 @@ TestStruct = namedtuple(
         'name',
         'run',
         'prog',
-        'expect',
-        'expect_mode', # regex, text, json ...
+        'expects',
+        'has_exact_expect',
         'timeout',
         'befores',
         'after',
@@ -102,8 +106,8 @@ class TestParser(object):
         name = ''
         run = ''
         prog = ''
-        expect = ''
-        expect_mode = ''
+        expects = []
+        has_exact_expect = False
         timeout = ''
         befores = []
         after = ''
@@ -130,17 +134,15 @@ class TestParser(object):
             elif item_name == "PROG":
                 prog = line
             elif item_name == 'EXPECT':
-                expect = line
-                expect_mode = 'regex'
+                expects.append(Expect(line, 'regex'))
             elif item_name == 'EXPECT_NONE':
-                expect = line
-                expect_mode = 'regex_none'
+                expects.append(Expect(line, 'regex_none'))
             elif item_name == 'EXPECT_FILE':
-                expect = line
-                expect_mode = 'file'
+                has_exact_expect = True
+                expects.append(Expect(line, 'file'))
             elif item_name == 'EXPECT_JSON':
-                expect = line
-                expect_mode = 'json'
+                has_exact_expect = True
+                expects.append(Expect(line, 'json'))
             elif item_name == 'TIMEOUT':
                 timeout = int(line.strip(' '))
             elif item_name == 'BEFORE':
@@ -207,8 +209,10 @@ class TestParser(object):
             raise RequiredFieldError('Test RUN or PROG is required. Suite: ' + test_suite)
         elif run != '' and prog != '':
             raise InvalidFieldError('Test RUN and PROG both specified. Suit: ' + test_suite)
-        elif expect == '':
-            raise RequiredFieldError('Test EXPECT is required. Suite: ' + test_suite)
+        elif len(expects) == 0:
+            raise RequiredFieldError('At leat one test EXPECT (or variation) is required. Suite: ' + test_suite)
+        elif len(expects) > 1 and has_exact_expect:
+            raise InvalidFieldError('EXPECT_JSON or EXPECT_FILE can not be used with other EXPECTs. Suite: ' + test_suite)
         elif timeout == '':
             raise RequiredFieldError('Test TIMEOUT is required. Suite: ' + test_suite)
 
@@ -216,8 +220,8 @@ class TestParser(object):
             name,
             run,
             prog,
-            expect,
-            expect_mode,
+            expects,
+            has_exact_expect,
             timeout,
             befores,
             after,
