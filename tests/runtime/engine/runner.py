@@ -205,6 +205,8 @@ class Runner(object):
             try:
                 if test.expect_mode == "regex":
                     return re.search(test.expect, output, re.M)
+                elif test.expect_mode == "regex_none":
+                    return not re.search(test.expect, output, re.M)
                 elif test.expect_mode == "file":
                     # remove leading and trailing empty lines
                     return output.strip() == open(test.expect).read().strip()
@@ -338,7 +340,7 @@ class Runner(object):
                 output += nextline
                 if not attached and nextline == "__BPFTRACE_NOTIFY_PROBES_ATTACHED\n":
                     attached = True
-                    if test.expect_mode != "regex":
+                    if test.expect_mode != "regex" and test.expect_mode != "regex_none":
                         output = ""  # ignore earlier ouput
                     signal.alarm(test.timeout or DEFAULT_TIMEOUT)
                     if test.after:
@@ -440,6 +442,9 @@ class Runner(object):
             print('\tCommand: ' + bpf_call)
             if test.expect_mode == "regex":
                 print('\tExpected REGEX: ' + test.expect)
+                print('\tFound:\n' + to_utf8(output))
+            elif test.expect_mode == "regex_none":
+                print('\tExpected no REGEX: ' + test.expect)
                 print('\tFound:\n' + to_utf8(output))
             elif test.expect_mode == "json":
                 try:

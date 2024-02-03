@@ -132,6 +132,9 @@ class TestParser(object):
             elif item_name == 'EXPECT':
                 expect = line
                 expect_mode = 'regex'
+            elif item_name == 'EXPECT_NONE':
+                expect = line
+                expect_mode = 'regex_none'
             elif item_name == 'EXPECT_FILE':
                 expect = line
                 expect_mode = 'file'
