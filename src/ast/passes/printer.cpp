@@ -18,13 +18,15 @@ void Printer::print(Node *root)
 
 std::string Printer::type(const SizedType &ty)
 {
+  if (ty.IsNoneTy())
+    return "";
   std::stringstream buf;
-  if (print_types) {
-    buf << " :: type[" << ty << ", ctx: " << ty.IsCtxAccess();
-    if (ty.GetAS() != AddrSpace::none)
-      buf << ", AS(" << ty.GetAS() << ")";
-    buf << "]";
-  }
+  buf << " :: [" << ty;
+  if (ty.IsCtxAccess())
+    buf << ", ctx: 1";
+  if (ty.GetAS() != AddrSpace::none)
+    buf << ", AS(" << ty.GetAS() << ")";
+  buf << "]";
   return buf.str();
 }
 
