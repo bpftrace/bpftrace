@@ -8,6 +8,6 @@ Useful contribution guidelines and tips are in docs/developers.md.
 
 ##### Checklist
 
-- [ ] Language changes are updated in `man/adoc/bpftrace.adoc` and if needed in `docs/reference_guide.md`
+- [ ] Language changes are updated in `man/adoc/bpftrace.adoc`
 - [ ] User-visible and non-trivial changes updated in `CHANGELOG.md`
 - [ ] The new behaviour is covered by tests

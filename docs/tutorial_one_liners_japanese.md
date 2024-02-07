@@ -1,6 +1,6 @@
 # bpftrace ワンライナーチュートリアル
 
-12個の簡単なレッスンで Linux の bpftrace を学びましょう．各レッスンはワンライナーです．すぐに試すことができ，一連のワンライナーで bpftrace の要点が分かります．bpftrace の詳細は[リファレンスガイド](reference_guide.md)を参照して下さい．
+12個の簡単なレッスンで Linux の bpftrace を学びましょう．各レッスンはワンライナーです．すぐに試すことができ，一連のワンライナーで bpftrace の要点が分かります．bpftrace の詳細は[インストラクションマニュアル](../man/adoc/bpftrace.adoc)を参照して下さい．
 
 - 執筆：Brendan Gregg, Netflix (2018)．FreeBSD [DTrace Tutorial](https://wiki.freebsd.org/DTrace/Tutorial)（Brendan Gregg 著）に基づく．
 - 原文：[The bpftrace One-Liner Tutorial](https://github.com/bpftrace/bpftrace/blob/master/docs/tutorial_one_liners.md)
@@ -324,5 +324,5 @@ open path: retrans_time_ms
 
 カーネル構造体のサポートは bcc と同様にカーネルヘッダを利用します．したがって多くの構造体が利用可能ですが，全てではありません．場合によっては手動で構造体を定義する必要があります．例えば [dcsnoop tool](../tools/dcsnoop.bt) では nameidata 構造体の一部を手動で定義しています．これはこの構造体がヘッダ内で定義されていないためです．LinuxカーネルのBTFデータがある場合，全ての構造体が利用可能です．
 
-ここまでで bpftrace の多くを理解し，強力なワンライナーを作成・利用することができます．bpftrace のその他の機能については [リファレンスガイド](reference_guide.md) を参照して下さい．
+ここまでで bpftrace の多くを理解し，強力なワンライナーを作成・利用することができます．bpftrace のその他の機能については [インストラクションマニュアル](../man/adoc/bpftrace.adoc) を参照して下さい．
 
