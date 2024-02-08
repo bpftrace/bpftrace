@@ -659,9 +659,9 @@ private:
   Program(const Program &other);
 };
 
-std::string opstr(Binop &binop);
-std::string opstr(Unop &unop);
-std::string opstr(Jump &jump);
+std::string opstr(const Binop &binop);
+std::string opstr(const Unop &unop);
+std::string opstr(const Jump &jump);
 
 SizedType ident_to_record(const std::string &ident, int pointer_level = 0);
 
