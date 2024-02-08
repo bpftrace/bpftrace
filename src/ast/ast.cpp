@@ -441,7 +441,7 @@ Program::Program(const std::string &c_definitions,
 {
 }
 
-std::string opstr(Jump &jump)
+std::string opstr(const Jump &jump)
 {
   switch (jump.ident) {
     case JumpType::RETURN:
@@ -457,7 +457,7 @@ std::string opstr(Jump &jump)
   return {}; // unreached
 }
 
-std::string opstr(Binop &binop)
+std::string opstr(const Binop &binop)
 {
   switch (binop.op) {
     case Operator::EQ:
@@ -503,7 +503,7 @@ std::string opstr(Binop &binop)
   return {}; // unreached
 }
 
-std::string opstr(Unop &unop)
+std::string opstr(const Unop &unop)
 {
   switch (unop.op) {
     case Operator::LNOT:
