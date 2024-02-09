@@ -6,13 +6,13 @@ TIMEOUT 5
 
 NAME list uprobe args - pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction1'
-EXPECT int\* n
+EXPECT int* n
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
 NAME list uprobe args - struct pointer type
 RUN {{BPFTRACE}} -lv 'uprobe:./testprogs/uprobe_test:uprobeFunction2'
-EXPECT struct Foo\* foo1
+EXPECT struct Foo* foo1
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 
@@ -54,7 +54,7 @@ BEFORE ./testprogs/uprobe_test
 
 NAME struct field array
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction2 { print(args.foo1->c); exit(); }
-EXPECT \[1,2,3\]
+EXPECT [1,2,3]
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test

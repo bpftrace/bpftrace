@@ -60,13 +60,17 @@ TIMEOUT 5
 
 NAME unroll_max_value
 PROG i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT unroll maximum value is 100
+EXPECT stdin:1:17-29: ERROR: unroll maximum value is 100
+EXPECT i:ms:1 {$a = 1; unroll (101) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
+EXPECT                 ~~~~~~~~~~~~
 TIMEOUT 5
 WILL_FAIL
 
 NAME unroll_min_value
 PROG i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
-EXPECT unroll minimum value is 1
+EXPECT stdin:1:17-27: ERROR: unroll minimum value is 1
+EXPECT i:ms:1 {$a = 1; unroll (0) { $a = $a + 2; } printf("a=%d\n", $a); exit();}
+EXPECT                 ~~~~~~~~~~
 TIMEOUT 5
 WILL_FAIL
 
@@ -77,7 +81,7 @@ TIMEOUT 5
 
 NAME unroll_printf
 PROG BEGIN { unroll (1) { printf("a"); } printf("b\n"); exit(); }
-EXPECT ab\n
+EXPECT ab
 TIMEOUT 5
 
 NAME if_compare_and_print_string
@@ -127,7 +131,7 @@ TIMEOUT 1
 
 NAME string compare map lookup
 RUN {{BPFTRACE}} -e 't:syscalls:sys_enter_openat /comm == "syscall"/ { @[comm] = 1; }' -c "./testprogs/syscall openat"
-EXPECT @\[syscall\]: 1
+EXPECT @[syscall]: 1
 TIMEOUT 5
 
 NAME struct partial string compare - pass
@@ -192,7 +196,7 @@ TIMEOUT 1
 
 NAME positional lhist
 RUN {{BPFTRACE}} -e 'BEGIN { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
-EXPECT @: *\n[\[(].*
+EXPECT_REGEX @: *\n[\[(].*
 TIMEOUT 5
 
 NAME positional buf
@@ -214,22 +218,22 @@ AFTER ./testprogs/syscall nanosleep  1e8
 
 NAME lhist can be cleared
 PROG BEGIN{ @[1] = lhist(3,0,10,1); clear(@); exit() }
-EXPECT .*
+EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME hist can be cleared
 PROG BEGIN{ @[1] = hist(1); clear(@); exit() }
-EXPECT .*
+EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME stats can be cleared
 PROG BEGIN{ @[1] = stats(1); clear(@); exit() }
-EXPECT .*
+EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME avg can be cleared
 PROG BEGIN{ @[1] = avg(1); clear(@); exit() }
-EXPECT .*
+EXPECT_REGEX .*
 TIMEOUT 1
 
 NAME sigint under heavy load
@@ -257,15 +261,21 @@ TIMEOUT 1
 
 NAME map_assign_map_ptr
 PROG i:ms:100 { @ = curtask; @a = @; printf("%p\n", @a); exit(); }
-EXPECT 0x[0-9a-f]+
+EXPECT_REGEX 0x[0-9a-f]+
 TIMEOUT 1
 
 NAME runtime_error_check_delete
 RUN {{BPFTRACE}} -k -e 'i:ms:100 { @[1] = 1; delete(@[2]); exit(); }'
-EXPECT WARNING: Can't delete map element because it does not exist.
+EXPECT stdin:1:22-34: WARNING: Can't delete map element because it does not exist.
+EXPECT Additional Info - helper: map_delete_elem, retcode: -2
+EXPECT i:ms:100 { @[1] = 1; delete(@[2]); exit(); }
+EXPECT                      ~~~~~~~~~~~~
 TIMEOUT 1
 
 NAME runtime_error_check_lookup
 RUN {{BPFTRACE}} -kk -e 'i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }'
-EXPECT WARNING: Can't lookup map element because it does not exist.
+EXPECT stdin:1:37-41: WARNING: Can't lookup map element because it does not exist.
+EXPECT Additional Info - helper: map_lookup_elem, retcode: 0
+EXPECT i:ms:100 { @[1] = 1; printf("%d\n", @[2]); exit(); }
+EXPECT                                     ~~~~
 TIMEOUT 1

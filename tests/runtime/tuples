@@ -10,22 +10,22 @@ TIMEOUT 5
 
 NAME mixed int tuple map
 PROG BEGIN { @ = ( (int32) -100, (int8) 10, 50 ); exit();}
-EXPECT @: \(-100, 10, 50\)
+EXPECT @: (-100, 10, 50)
 TIMEOUT 5
 
 NAME mixed int tuple map 2
 PROG BEGIN { @ = ( -100, (int8) 10, (int32) 50 ); exit();}
-EXPECT @: \(-100, 10, 50\)
+EXPECT @: (-100, 10, 50)
 TIMEOUT 5
 
 NAME mixed int tuple map 3
 PROG BEGIN { @ = ( -100, (int8) 10, (int32) 50, 100 ); exit();}
-EXPECT @: \(-100, 10, 50, 100\)
+EXPECT @: (-100, 10, 50, 100)
 TIMEOUT 5
 
 NAME complex tuple 1
 PROG BEGIN { print(((int8)-100, (int8) 100, "abcdef", 3, (int32) 1, (int64)-10, (int8)10, (int16)-555)); exit(); }
-EXPECT \(-100, 100, abcdef, 3, 1, -10, 10, -555\)
+EXPECT (-100, 100, abcdef, 3, 1, -10, 10, -555)
 TIMEOUT 5
 
 NAME tuple struct sizing 1
@@ -50,7 +50,7 @@ TIMEOUT 5
 
 NAME struct in tuple
 PROG struct Foo { int m; int n; } u:./testprogs/simple_struct:func { @t = (1, *((struct Foo *)arg0)); exit(); }
-EXPECT @t: \(1, \{ .m = 2, .n = 3 \}\)
+EXPECT @t: (1, { .m = 2, .n = 3 })
 TIMEOUT 5
 AFTER ./testprogs/simple_struct
 
@@ -62,7 +62,7 @@ AFTER ./testprogs/simple_struct
 
 NAME array in tuple
 PROG struct A { int x[4]; } u:./testprogs/array_access:test_struct { @t = (1, ((struct A *)arg0)->x); exit(); }
-EXPECT @t: \(1, \[1,2,3,4\]\)
+EXPECT @t: (1, [1,2,3,4])
 TIMEOUT 5
 AFTER ./testprogs/array_access
 
@@ -74,31 +74,31 @@ AFTER ./testprogs/array_access
 
 NAME nested tuple
 PROG BEGIN{ @ = ((int8)1, ((int8)-20, (int8)30)); exit(); }
-EXPECT @: \(1, \(-20, 30\)\)
+EXPECT @: (1, (-20, 30))
 TIMEOUT 5
 
 # Careful with '(' and ')', they are read by the test engine as a regex group,
 # so make sure to escape them.
 NAME tuple print
 PROG BEGIN { @ = (1, 2, "string", (4, 5)); exit(); }
-EXPECT ^@: \(1, 2, string, \(4, 5\)\)$
+EXPECT @: (1, 2, string, (4, 5))
 TIMEOUT 5
 
 NAME tuple strftime type is packed
 PROG BEGIN { @ = (nsecs, strftime("%M:%S", nsecs)); exit(); }
-EXPECT ^@: \(\d+, \d+:\d+\)$
+EXPECT_REGEX ^@: \(\d+, \d+:\d+\)$
 TIMEOUT 5
 
 NAME bytearray in tuple
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = ((int8)1, usym(reg("ip")), 10); exit(); }
-EXPECT ^@: \(1, 0x[0-9a-f]+, 10\)$
+EXPECT_REGEX ^@: \(1, 0x[0-9a-f]+, 10\)$
 TIMEOUT 5
 ARCH x86_64
 AFTER ./testprogs/uprobe_test
 
 NAME bytearray in tuple
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = ((int8)1, usym(reg("nip")), 10); exit(); }
-EXPECT ^@: \(1, 0x[0-9a-f]+, 10\)$
+EXPECT_REGEX ^@: \(1, 0x[0-9a-f]+, 10\)$
 TIMEOUT 5
 ARCH ppc64|ppc64le
 AFTER ./testprogs/uprobe_test

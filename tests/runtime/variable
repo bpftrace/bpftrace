@@ -1,6 +1,6 @@
 NAME global_int
 PROG i:ms:1 {@a = 10; printf("%d\n", @a); exit();}
-EXPECT \@a: 10
+EXPECT @a: 10
 TIMEOUT 5
 
 NAME global_string
@@ -66,15 +66,15 @@ TIMEOUT 2
 
 NAME map key string type resize
 PROG BEGIN { @["hello"] = 0; } i:ms:1 { @["hi"] = 1; exit(); }
-EXPECT @\[hi\]: 1
+EXPECT @[hi]: 1
 TIMEOUT 2
 
 NAME map multi-key string type resize
 PROG BEGIN { @["hello", 0] = 0; } i:ms:1 { @["hi", 1] = 1; exit(); }
-EXPECT @\[hi, 1\]: 1
+EXPECT @[hi, 1]: 1
 TIMEOUT 2
 
 NAME tuple string resize
 PROG BEGIN { @ = ("hello", 0); } i:ms:1 { @ = ("hi", 1); exit(); }
-EXPECT @: \(hi, 1\)
+EXPECT @: (hi, 1)
 TIMEOUT 2

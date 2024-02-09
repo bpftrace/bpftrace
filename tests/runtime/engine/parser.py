@@ -134,6 +134,8 @@ class TestParser(object):
             elif item_name == "PROG":
                 prog = line
             elif item_name == 'EXPECT':
+                expects.append(Expect(line, 'text'))
+            elif item_name == 'EXPECT_REGEX':
                 expects.append(Expect(line, 'regex'))
             elif item_name == 'EXPECT_NONE':
                 expects.append(Expect(line, 'regex_none'))
