@@ -39,22 +39,19 @@ EXPECT SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME comm
-PROG k:vfs_read { printf("SUCCESS %s\n", comm); exit(); }
-EXPECT SUCCESS .*
+PROG BEGIN { printf("SUCCESS %s\n", comm); exit(); }
+EXPECT SUCCESS bpftrace
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME kstack
-PROG k:vfs_read{ printf("%s\n", kstack); exit(); }
+PROG BEGIN { printf("%s\n", kstack); exit(); }
 EXPECT Attaching 1 probe
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME ustack
-PROG k:vfs_read { printf("%s\n", ustack); exit(); }
+PROG BEGIN { printf("%s\n", ustack); exit(); }
 EXPECT Attaching 1 probe
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME arg
 PROG k:vfs_read { printf("SUCCESS %p\n", arg0); exit(); }

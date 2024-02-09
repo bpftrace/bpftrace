@@ -191,10 +191,9 @@ EXPECT ok
 TIMEOUT 1
 
 NAME positional lhist
-RUN {{BPFTRACE}} -e 'kretprobe:vfs_read { @bytes = lhist(retval, $1, $2, $3); exit()}' 0 10000 1000
-EXPECT @bytes: *\n[\[(].*
+RUN {{BPFTRACE}} -e 'BEGIN { @ = lhist(0, $1, $2, $3); exit()}' 0 10000 1000
+EXPECT @: *\n[\[(].*
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME positional buf
 RUN {{BPFTRACE}} -e 'BEGIN { @ = buf("hello", $1); exit(); }' 5
