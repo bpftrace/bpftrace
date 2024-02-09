@@ -1,41 +1,41 @@
 NAME pid
 PROG i:ms:1 { printf("SUCCESS %d\n", pid); exit(); }
-EXPECT SUCCESS [0-9][0-9]*
+EXPECT_REGEX SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME tid
 PROG i:ms:1 { printf("SUCCESS %d\n", tid); exit(); }
-EXPECT SUCCESS [0-9][0-9]*
+EXPECT_REGEX SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME uid
 PROG i:ms:1 { printf("SUCCESS %d\n", uid); exit(); }
-EXPECT SUCCESS [0-9][0-9]*
+EXPECT_REGEX SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME gid
 PROG i:ms:1 { printf("SUCCESS %d\n", gid); exit(); }
-EXPECT SUCCESS [0-9][0-9]*
+EXPECT_REGEX SUCCESS [0-9][0-9]*
 TIMEOUT 5
 
 NAME nsecs
 PROG i:ms:1 { printf("SUCCESS %llu\n", nsecs); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME elapsed
 PROG i:ms:1 { printf("SUCCESS %llu\n", elapsed); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME numaid
 PROG i:ms:1 { printf("SUCCESS %lu\n", numaid); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cpu
 PROG i:ms:1 { printf("SUCCESS %lu\n", cpu); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME comm
@@ -45,17 +45,17 @@ TIMEOUT 5
 
 NAME kstack
 PROG BEGIN { printf("%s\n", kstack); exit(); }
-EXPECT Attaching 1 probe
+EXPECT Attaching 1 probe...
 TIMEOUT 5
 
 NAME ustack
 PROG BEGIN { printf("%s\n", ustack); exit(); }
-EXPECT Attaching 1 probe
+EXPECT Attaching 1 probe...
 TIMEOUT 5
 
 NAME arg
 PROG k:vfs_read { printf("SUCCESS %p\n", arg0); exit(); }
-EXPECT SUCCESS 0x[0-9a-f]+
+EXPECT_REGEX ^SUCCESS 0x[0-9a-f]+$
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
@@ -89,19 +89,19 @@ AFTER ./testprogs/stack_args
 
 NAME retval
 PROG kretprobe:vfs_read { printf("SUCCESS %d\n", retval); exit(); }
-EXPECT SUCCESS .*
+EXPECT_REGEX SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME func
 PROG k:vfs_read { printf("SUCCESS %s\n", func); exit(); }
-EXPECT SUCCESS .*
+EXPECT_REGEX SUCCESS .*
 TIMEOUT 5
 AFTER ./testprogs/syscall read
 
 NAME func_uprobe
 PROG uprobe:./testprogs/uprobe_negative_retval:function1 { printf("SUCCESS %s\n", func); exit(); }
-EXPECT SUCCESS .*
+EXPECT_REGEX SUCCESS .*
 AFTER ./testprogs/uprobe_negative_retval
 TIMEOUT 5
 
@@ -124,7 +124,7 @@ TIMEOUT 5
 
 NAME username
 PROG i:ms:1 { printf("SUCCESS %s\n", username); exit(); }
-EXPECT SUCCESS .*
+EXPECT_REGEX SUCCESS .*
 TIMEOUT 5
 
 NAME probe
@@ -135,127 +135,128 @@ AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME begin probe
 PROG BEGIN { printf("%s", probe);exit(); } END{printf("-%s\n", probe); }
-EXPECT ^BEGIN-END$
+EXPECT_REGEX ^BEGIN-END$
 TIMEOUT 5
 AFTER ./testprogs/syscall nanosleep 1e8
 
 NAME curtask
 PROG i:ms:1 { printf("SUCCESS %p\n", curtask); exit(); }
-EXPECT SUCCESS 0x[0-9a-f]+
+EXPECT_REGEX SUCCESS 0x[0-9a-f]+
 TIMEOUT 5
 
 NAME curtask_field
 PROG struct task_struct {int x;} i:ms:1 { printf("SUCCESS %d\n", curtask->x); exit(); }
-EXPECT SUCCESS -?[0-9][0-9]*
+EXPECT_REGEX SUCCESS -?[0-9][0-9]*
 TIMEOUT 5
 
 NAME rand
 PROG i:ms:1 { printf("SUCCESS %lu\n", rand); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cgroup
 PROG i:ms:1 { printf("SUCCESS %llu\n", cgroup); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 MIN_KERNEL 4.18
 
 NAME ctx
 PROG struct x {unsigned long x}; i:ms:1 { printf("SUCCESS %lu\n", ((struct x*)ctx)->x); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 TIMEOUT 5
 
 NAME cat
 PROG i:ms:1 { cat("/proc/loadavg"); exit(); }
-EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
+EXPECT_REGEX ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME cat limited output
 ENV BPFTRACE_MAX_CAT_BYTES=1
 PROG i:ms:1 { cat("/proc/loadavg"); exit(); }
-EXPECT ^[0-9]$
+EXPECT_REGEX ^[0-9]$
 TIMEOUT 5
 
 NAME cat format str
 PROG i:ms:1 { $s = "loadavg"; cat("/proc/%s", $s); exit(); }
-EXPECT ^([0-9]+\.[0-9]+ ?)+.*$
+EXPECT_REGEX ^([0-9]+\.[0-9]+ ?)+.*$
 TIMEOUT 5
 
 NAME log size too small
 ENV BPFTRACE_LOG_SIZE=0
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT Error loading program: BEGIN
+EXPECT ERROR: Error loading program: BEGIN (try -v)
 TIMEOUT 5
 WILL_FAIL
 
 NAME increase log size
+ENV BPFTRACE_LOG_SIZE=10000000
 RUN {{BPFTRACE}} -e 'BEGIN { if (str($1) == str($2)) { printf("%s\n", str($1)); exit() } }' "hello" "hello"
-EXPECT ^Attaching 1 probe
+EXPECT hello
 TIMEOUT 5
 
 NAME cat "no such file"
 PROG i:ms:1 { cat("/does/not/exist/file"); exit(); }
-EXPECT ^ERROR: failed to open file '/does/not/exist/file': No such file or directory$
+EXPECT ERROR: failed to open file '/does/not/exist/file': No such file or directory
 TIMEOUT 5
 
 NAME sizeof
 PROG struct Foo { int x; char c; } BEGIN { $x = 1; printf("%d %d %d %d %d\n", sizeof(struct Foo), sizeof((*(struct Foo*)0).x), sizeof((*(struct Foo*)0).c), sizeof(1 == 1), sizeof($x)); exit(); }
-EXPECT ^8 4 1 8 8$
+EXPECT 8 4 1 8 8
 TIMEOUT 5
 
 NAME sizeof_ints
 PROG BEGIN { printf("%d %d %d %d %d %d\n", sizeof(uint8), sizeof(int8), sizeof(uint16), sizeof(int16), sizeof(uint32), sizeof(int32)); exit(); }
-EXPECT ^1 1 2 2 4 4$
+EXPECT 1 1 2 2 4 4
 TIMEOUT 5
 
 # printf only takes 7 args
 NAME sizeof_ints_pt2
 PROG BEGIN { printf("%d %d\n", sizeof(uint64), sizeof(int64)); exit(); }
-EXPECT ^8 8$
+EXPECT 8 8
 TIMEOUT 5
 
 NAME sizeof_btf
 PROG BEGIN { printf("size=%d\n", sizeof(struct task_struct)); exit(); }
-EXPECT ^size=
+EXPECT_REGEX ^size=
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME offsetof
 PROG struct Foo { int x; long l; char c; } BEGIN { printf("%ld\n", offsetof(struct Foo, x)); exit(); }
-EXPECT ^0$
+EXPECT_REGEX ^0$
 TIMEOUT 5
 
 NAME print args in kfunc
 PROG kfunc:vfs_open { print(args); exit(); }
-EXPECT { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
+EXPECT_REGEX { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
 NAME args in kfunc store in map
 PROG kfunc:vfs_open { @= args; exit(); }
-EXPECT @: { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
+EXPECT_REGEX @: { .path = 0x[0-9a-f]+, .file = 0x[0-9a-f]+ }
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
 NAME args in kfunc as a map key
 PROG kfunc:vfs_open { @[args] = 1; exit(); }
-EXPECT @[{.path=0x[0-9a-f]+,.file=0x[0-9a-f]+}]: 1
+EXPECT_REGEX @[{.path=0x[0-9a-f]+,.file=0x[0-9a-f]+}]: 1
 REQUIRES_FEATURE kfunc
 TIMEOUT 5
 AFTER ./testprogs/syscall open
 
 NAME args in uprobe print
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { print(args); exit(); }
-EXPECT { .n = 0x[0-9a-f]+, .c = 120 }
+EXPECT_REGEX { .n = 0x[0-9a-f]+, .c = 120 }
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe store in map
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @ = args; exit(); }
-EXPECT @: { .n = 0x[0-9a-f]+, .c = 120 }
+EXPECT_REGEX @: { .n = 0x[0-9a-f]+, .c = 120 }
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
@@ -269,14 +270,14 @@ BEFORE ./testprogs/uprobe_test
 
 NAME args in uprobe as a map key
 PROG uprobe:./testprogs/uprobe_test:uprobeFunction1 { @[args] = 1; exit(); }
-EXPECT @[{.n=0x[0-9a-f]+,.c=120}]: 1
+EXPECT_REGEX @[{.n=0x[0-9a-f]+,.c=120}]: 1
 REQUIRES_FEATURE dwarf
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME jiffies
 PROG i:ms:1 { printf("SUCCESS %llu\n", jiffies); exit(); }
-EXPECT SUCCESS [0-9]+
+EXPECT_REGEX SUCCESS [0-9]+
 REQUIRES_FEATURE jiffies64
 TIMEOUT 5
 MIN_KERNEL 5.9

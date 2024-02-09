@@ -30,19 +30,19 @@ TIMEOUT 5
 
 NAME uprobes - list probes by pid
 RUN {{BPFTRACE}} -l -p {{BEFORE_PID}} | grep -e '^uprobe'
-EXPECT uprobe:.*/testprogs/uprobe_test:uprobeFunction1
+EXPECT_REGEX uprobe:.*/testprogs/uprobe_test:uprobeFunction1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobes - list probes by pid; uprobes only
 RUN {{BPFTRACE}} -l 'uprobe:*' -p {{BEFORE_PID}}
-EXPECT uprobe:.*/testprogs/uprobe_test:uprobeFunction1
+EXPECT_REGEX uprobe:.*/testprogs/uprobe_test:uprobeFunction1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME uprobes - list probes by pid in separate mount namespace
 RUN {{BPFTRACE}} -l -p {{BEFORE_PID}} | grep -e '^uprobe'
-EXPECT uprobe:.*/bpftrace-unshare-mountns-test/uprobe_test:uprobeFunction1
+EXPECT_REGEX uprobe:.*/bpftrace-unshare-mountns-test/uprobe_test:uprobeFunction1
 TIMEOUT 5
 BEFORE ./testprogs/mountns_wrapper uprobe_test
 
@@ -58,7 +58,7 @@ BEFORE ./testprogs/mountns_wrapper uprobe_test
 # pid namespace, not that of the docker container's namespace.
 NAME uprobes - attach to probe for executable in a pivot_root'd mount namespace
 RUN {{BPFTRACE}} -e 'uprobe:/proc/{{BEFORE_PID}}/root/uprobe_test:uprobeFunction1 { printf("func %s\n", func); exit(); }'
-EXPECT ^func (0x[0-9a-f]+|function1)$
+EXPECT_REGEX ^func (0x[0-9a-f]+|function1)$
 TIMEOUT 5
 BEFORE ./testprogs/mountns_pivot_wrapper uprobe_test
 

@@ -65,7 +65,7 @@ REQUIRES_FEATURE signal
 
 NAME unique_probe_bodies
 RUN {{BPFTRACE}} -e 'watchpoint:increment_*+arg0:4:w { printf("%s!\n", probe) }' -c ./testprogs/watchpoint_func_wildcard
-EXPECT .*increment_0:4:w!
+EXPECT_REGEX .*increment_0:4:w!
 ARCH aarch64|x86_64
 TIMEOUT 5
 REQUIRES_FEATURE signal

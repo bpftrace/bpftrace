@@ -201,10 +201,13 @@ class Runner(object):
 
         def get_pid_ns_cmd(cmd):
             return nsenter + [os.path.abspath(x) for x in cmd.split()]
-            
+
         def check_expect(expect, output):
             try:
-                if expect.mode == "regex":
+                if expect.mode == "text":
+                    # Raw text match on an entire line, ignoring leading/trailing whitespace
+                    return re.search(f"^\s*{re.escape(expect.expect)}\s*$", output, re.M)
+                elif expect.mode == "regex":
                     return re.search(expect.expect, output, re.M)
                 elif expect.mode == "regex_none":
                     return not re.search(expect.expect, output, re.M)
@@ -452,7 +455,10 @@ class Runner(object):
             print(fail("[  FAILED  ] ") + "%s.%s" % (test.suite, test.name))
             print('\tCommand: ' + bpf_call)
             for failed_expect in failed_expects:
-                if failed_expect.mode == "regex":
+                if failed_expect.mode == "text":
+                    print('\tExpected: ' + failed_expect.expect)
+                    print('\tFound:\n' + to_utf8(output))
+                elif failed_expect.mode == "regex":
                     print('\tExpected REGEX: ' + failed_expect.expect)
                     print('\tFound:\n' + to_utf8(output))
                 elif failed_expect.mode == "regex_none":

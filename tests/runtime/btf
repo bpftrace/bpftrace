@@ -18,19 +18,19 @@ REQUIRES_FEATURE btf
 
 NAME enum_value_reference
 PROG BEGIN { printf("%d\n", sizeof(BTF_VAR_STATIC)); exit(); }
-EXPECT ^8$
+EXPECT_REGEX ^8$
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type
 PROG struct task_struct { int x; } BEGIN { printf("%d\n", curtask->x); exit() }
-EXPECT -?[0-9][0-9]*
+EXPECT_REGEX -?[0-9][0-9]*
 TIMEOUT 5
 REQUIRES_FEATURE btf
 
 NAME redefine_btf_type_missing_def
 PROG struct task_struct { struct thread_info x; } BEGIN { printf("%d\n", curtask->x.status); }
-EXPECT error:.*'struct thread_info'
+EXPECT_REGEX error:.*'struct thread_info'
 TIMEOUT 5
 REQUIRES_FEATURE btf
 WILL_FAIL
@@ -58,7 +58,7 @@ CLEANUP nft delete table bpftrace
 NAME kernel_module_args
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("size: %d\n", args.size); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
-EXPECT size: [0-9]+
+EXPECT_REGEX size: [0-9]+
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'
@@ -68,7 +68,7 @@ CLEANUP nft delete table bpftrace
 NAME kernel_module_types
 RUN {{BPFTRACE}} -e 'kfunc:nft_trans_alloc_gfp { printf("portid: %d\n", args.ctx->portid); exit(); }'
 AFTER /usr/sbin/nft add table bpftrace
-EXPECT portid: [0-9]+
+EXPECT_REGEX portid: [0-9]+
 TIMEOUT 5
 REQUIRES_FEATURE kfunc
 REQUIRES lsmod | grep '^nf_tables'

@@ -1,16 +1,16 @@
 NAME it shows version
 RUN {{BPFTRACE}} --version
-EXPECT bpftrace v
+EXPECT_REGEX ^bpftrace v\d
 TIMEOUT 1
 
 NAME it shows usage with help flag
 RUN {{BPFTRACE}} -h
-EXPECT USAGE
+EXPECT USAGE:
 TIMEOUT 1
 
 NAME it shows usage with bad flag
 RUN {{BPFTRACE}} -idonotexist
-EXPECT USAGE
+EXPECT USAGE:
 TIMEOUT 1
 WILL_FAIL
 
@@ -27,61 +27,61 @@ TIMEOUT 1
 
 NAME it lists kprobes
 RUN {{BPFTRACE}} -l | grep kprobes
-EXPECT kprobe
+EXPECT_REGEX kprobe:.*
 TIMEOUT 1
 
 NAME it lists tracepoints
 RUN {{BPFTRACE}} -l | grep tracepoint
-EXPECT tracepoint
+EXPECT_REGEX tracepoint:.*
 TIMEOUT 1
 
 NAME it lists software events
 RUN {{BPFTRACE}} -l | grep software
-EXPECT software
+EXPECT_REGEX software:.*
 TIMEOUT 1
 
 NAME it lists hardware events
 RUN {{BPFTRACE}} -l | grep hardware
-EXPECT hardware
+EXPECT_REGEX hardware:.*
 TIMEOUT 1
 
 NAME it lists kfuncs
 RUN {{BPFTRACE}} -l | grep kfunc
-EXPECT kfunc
+EXPECT_REGEX kfunc:.*
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists rawtracepoints
 RUN {{BPFTRACE}} -l | grep rawtracepoint
-EXPECT rawtracepoint
+EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
 NAME it lists kfunc params
 RUN {{BPFTRACE}} -lv "kfunc:*"
-EXPECT [ ]+[a-zA-Z_\*\s]+
+EXPECT_REGEX [ ]+[a-zA-Z_\*\s]+
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kprobes with regex filter
 RUN {{BPFTRACE}} -l "kprobe:*"
-EXPECT kprobe:
+EXPECT_REGEX kprobe:.*
 TIMEOUT 1
 
 NAME it lists kretprobes with regex filter
 RUN {{BPFTRACE}} -l "kretprobe:*"
-EXPECT kretprobe:
+EXPECT_REGEX kretprobe:.*
 TIMEOUT 1
 
 NAME it lists uprobes with regex filter
 RUN {{BPFTRACE}} -l "uprobe:./testprogs/syscall:*"
-EXPECT uprobe:
+EXPECT_REGEX uprobe:.*
 TIMEOUT 1
 
 NAME it lists uretprobes with regex filter
 RUN {{BPFTRACE}} -l "uretprobe:./testprogs/syscall:*"
-EXPECT uretprobe:
+EXPECT_REGEX uretprobe:.*
 TIMEOUT 1
 
 NAME it lists tracepoints with regex filter
@@ -91,47 +91,53 @@ TIMEOUT 1
 
 NAME it lists software events with regex filter
 RUN {{BPFTRACE}} -l "software:*"
-EXPECT software:cpu
+EXPECT software:cpu:
 TIMEOUT 1
 
 NAME it lists hardware events with regex filter
 RUN {{BPFTRACE}} -l "hardware:*"
-EXPECT hardware:cpu
+EXPECT hardware:cpu-cycles:
 TIMEOUT 1
 
 NAME it lists kfuncs events with regex filter
 RUN {{BPFTRACE}} -l "kfunc:*"
-EXPECT kfunc
+EXPECT_REGEX kfunc:.*
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists kretfuncs events with regex filter
 RUN {{BPFTRACE}} -l "kretfunc:*"
-EXPECT kretfunc
+EXPECT_REGEX kretfunc:.*
 REQUIRES_FEATURE btf
 REQUIRES_FEATURE kfunc
 TIMEOUT 1
 
 NAME it lists interval probes with regex filter
 RUN {{BPFTRACE}} -l "interval:*"
-EXPECT interval:s
+EXPECT interval:hz:
+EXPECT interval:us:
+EXPECT interval:ms:
+EXPECT interval:s:
 TIMEOUT 1
 
 NAME it lists profile probes with regex filter
 RUN {{BPFTRACE}} -l "profile:*"
-EXPECT profile:*
+EXPECT profile:hz:
+EXPECT profile:us:
+EXPECT profile:ms:
+EXPECT profile:s:
 TIMEOUT 1
 
 NAME listing with wildcarded probe type
 RUN {{BPFTRACE}} -l "*ware:*"
-EXPECT hardware:
-EXPECT software:
+EXPECT_REGEX hardware:.*
+EXPECT_REGEX software:.*
 TIMEOUT 1
 
 NAME it lists rawtracepoint with regex filter
 RUN {{BPFTRACE}} -l "rawtracepoint:*"
-EXPECT rawtracepoint:
+EXPECT_REGEX rawtracepoint:.*
 TIMEOUT 1
 
 NAME it only lists probes in the program
@@ -142,18 +148,19 @@ TIMEOUT 5
 
 NAME it lists uprobes in the program
 RUN {{BPFTRACE}} -l -e 'uretprobe:*:uprobeFunction* { exit(); }' -p {{BEFORE_PID}}
-EXPECT uretprobe:[\S]+uprobe_test:uprobeFunction1
+EXPECT_REGEX uretprobe:[\S]+uprobe_test:uprobeFunction1
 TIMEOUT 5
 BEFORE ./testprogs/uprobe_test
 
 NAME it lists multiple probes in the program
 RUN {{BPFTRACE}} -l -e 'hardware:cache-misses:10 { exit(); } tracepoint:xdp:mem_connect { exit(); }'
-EXPECT hardware:cache-misses:\ntracepoint:xdp:mem_connect
+EXPECT hardware:cache-misses:
+EXPECT tracepoint:xdp:mem_connect
 TIMEOUT 5
 
 NAME errors on invalid character in search expression
 RUN {{BPFTRACE}} -l '\n'
-EXPECT ERROR: invalid character
+EXPECT stdin:1:1-2: ERROR: invalid character '\'
 TIMEOUT 1
 WILL_FAIL
 
@@ -177,24 +184,24 @@ WILL_FAIL
 
 NAME pid outside of valid pid range
 RUN {{BPFTRACE}} -p 5000000 file.bt
-EXPECT ERROR: pid '5000000' out of valid pid range \[1,4194304\]
+EXPECT ERROR: pid '5000000' out of valid pid range [1,4194304]
 TIMEOUT 1
 WILL_FAIL
 
 NAME libraries under /usr/include are in the search path
 RUN {{BPFTRACE}} -e "$(echo "#include <sys/xattr.h>"; echo "BEGIN { exit(); }")" 2>&1
-EXPECT ^((?!file not found).)*$
+EXPECT_NONE file not found
 REQUIRES ls /usr/include/sys/xattr.h
 TIMEOUT 1
 
 NAME non existent library include fails
 RUN {{BPFTRACE}} -e "$(echo "#include <lol/no.h>"; echo "BEGIN { exit(); }")" 2>&1
-EXPECT file not found
+EXPECT definitions.h:2:10: fatal error: 'lol/no.h' file not found
 TIMEOUT 1
 WILL_FAIL
 
 NAME defines work
-RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\\n", _UNDERSCORE); exit(); }')"
+RUN {{BPFTRACE}} -e "$(echo '#define _UNDERSCORE 314'; echo 'BEGIN { printf("%d\n", _UNDERSCORE); exit(); }')"
 EXPECT 314
 TIMEOUT 1
 
@@ -235,7 +242,7 @@ TIMEOUT 1
 
 NAME spawn child
 RUN {{BPFTRACE}} -e 'i:ms:500 { printf("%d\n", cpid); }' -c './testprogs/syscall nanosleep 1e9'
-EXPECT [0-9]+
+EXPECT_REGEX [0-9]+
 TIMEOUT 3
 
 NAME info flag
@@ -251,12 +258,12 @@ REQUIRES_FEATURE loop
 
 NAME disable warnings
 RUN {{BPFTRACE}} --no-warnings -e 'BEGIN { @x = stats(10); print(@x, 2); clear(@x); exit();}' 2>&1| grep -c -E "WARNING|invalid option"
-EXPECT ^0$
+EXPECT_REGEX ^0$
 TIMEOUT 1
 WILL_FAIL
 
 NAME kaddr fails
 PROG BEGIN { print(kaddr("asdfzzzzzzz")) }
-EXPECT Failed to resolve kernel symbol
+EXPECT ERROR: Failed to compile: Failed to resolve kernel symbol: asdfzzzzzzz
 TIMEOUT 1
 WILL_FAIL

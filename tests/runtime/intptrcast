@@ -1,41 +1,41 @@
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+8)); exit();}
-EXPECT ^@: 3258
+EXPECT @: 3258
 TIMEOUT 5
 ARCH x86_64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
-EXPECT ^@: 3258
+EXPECT @: 3258
 TIMEOUT 5
 ARCH aarch64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("sp")+0)); exit();}
-EXPECT ^@: 3567
+EXPECT @: 3567
 TIMEOUT 5
 ARCH armv7l
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+96)); exit();}
-EXPECT ^@: 3258
+EXPECT @: 3258
 TIMEOUT 5
 ARCH ppc64le
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r1")+112)); exit();}
-EXPECT ^@: 3258
+EXPECT @: 3258
 TIMEOUT 5
 ARCH ppc64
 AFTER ./testprogs/intptrcast
 
 NAME Sum casted value
 PROG uprobe:./testprogs/intptrcast:fn { @=sum(*(uint16*)(reg("r15")+160)); exit();}
-EXPECT ^@: 4660
+EXPECT @: 4660
 TIMEOUT 5
 ARCH s390x
 AFTER ./testprogs/intptrcast
