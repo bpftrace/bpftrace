@@ -34,16 +34,14 @@ EXPECT equal=1, unequal=1
 TIMEOUT 5
 
 NAME global_associative_arrays
-PROG k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { printf("slept for %d ms\n", (nsecs - @start[tid]) / 1000000); delete(@start[tid]); exit();}
-EXPECT slept for [0-9]+ ms
+PROG BEGIN { @map[123] = 456; } END { printf("val: %d\n", @map[123]); exit(); }
+EXPECT val: 456
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME scratch
-PROG k:vfs_read { @start[tid] = nsecs; } kretprobe:vfs_read /@start[tid] != 0/ { $delta = nsecs - @start[tid]; printf("slept for %d ms\n", $delta / 1000000); delete(@start[tid]); exit(); }
-EXPECT slept for [0-9]* ms
+PROG BEGIN { @map[123] = 456; } END { $val = @map[123]; printf("val: %d\n", $val); exit(); }
+EXPECT val: 456
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME 32-bit tracepoint arg
 PROG tracepoint:syscalls:sys_enter_openat /comm == "syscall"/ { $i = args.flags; printf("openflags: %d\n", $i); if ($i == 64) { exit() } }

@@ -164,40 +164,34 @@ EXPECT @:\s[0-9]+
 TIMEOUT 5
 
 NAME sum
-PROG kprobe:vfs_read { @bytes[comm] = sum(arg2); exit();}
-EXPECT @.*\[.*\]\:\s[0-9]*
+PROG BEGIN { @sum = sum(1); @sum = sum(2); @sum = sum(3); exit();}
+EXPECT @sum: 6
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME avg
-PROG kprobe:vfs_read { @bytes[comm] = avg(arg2); exit();}
-EXPECT @.*\[.*\]\:\s[0-9]*
+PROG BEGIN { @avg = avg(1); @avg = avg(2); @avg = avg(3); exit();}
+EXPECT @avg: 2
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME min
-PROG kprobe:vfs_read { @bytes[comm] = min(arg2); exit();}
-EXPECT @.*\[.*\]\:\s[0-9]*
+PROG BEGIN { @min = min(2); @min = min(1); @min = min(3); exit();}
+EXPECT @min: 1
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME max
-PROG kprobe:vfs_read { @bytes[comm] = max(arg2); exit();}
-EXPECT @.*\[.*\]\:\s[0-9]*
-AFTER ./testprogs/syscall read
+PROG BEGIN { @max = max(1); @max = max(3); @max = max(2); exit();}
+EXPECT @max: 3
 TIMEOUT 5
 
 NAME stats
-PROG kprobe:vfs_read { @bytes[comm] = stats(arg2); exit();}
-EXPECT @.*\[.*\]\:\scount\s[0-9]*\,\saverage\s[0-9]*\,\stotal\s[0-9]*
+PROG BEGIN { @stats = stats(1); @stats = stats(2); @stats = stats(3); exit();}
+EXPECT @stats: count 3, average 2, total 6
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME hist
-PROG kretprobe:vfs_read { @bytes = hist(retval); exit();}
-EXPECT @bytes: *\n[\[(].*
-AFTER ./testprogs/syscall read
-TIMEOUT 5
+PROG BEGIN { @=hist(-1); @=hist(2); @=hist(3); @=hist(7); @=hist(20); exit();}
+EXPECT_FILE runtime/outputs/hist.txt
+TIMEOUT 1
 
 NAME hist_2_values
 PROG BEGIN { @=hist(3);@=hist(20);exit();}
@@ -210,10 +204,9 @@ EXPECT_JSON runtime/outputs/hist_10g.json
 TIMEOUT 1
 
 NAME lhist
-PROG kretprobe:vfs_read { @bytes = lhist(retval, 0, 10000, 1000); exit()}
-EXPECT @bytes: *\n[\[(].*
+PROG BEGIN { @=lhist(2,0,10,2); @=lhist(3,0,10,2); @=lhist(7,0,10,2); @=lhist(-1,0,10,2); @=lhist(11,0,10,2); exit()}
+EXPECT_FILE runtime/outputs/lhist.txt
 TIMEOUT 5
-AFTER ./testprogs/syscall read
 
 NAME kstack
 PROG k:do_nanosleep { printf("%s\n%s\n", kstack(), kstack(1)); exit(); }
