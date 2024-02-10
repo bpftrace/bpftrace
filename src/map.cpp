@@ -208,7 +208,7 @@ std::optional<IMap *> MapManager::Lookup(const std::string &name)
 
 std::optional<IMap *> MapManager::Lookup(ssize_t id)
 {
-  if (id >= (ssize_t)maps_by_id_.size())
+  if (id >= static_cast<ssize_t>(maps_by_id_.size()))
     return {};
   return maps_by_id_[id].get();
 }

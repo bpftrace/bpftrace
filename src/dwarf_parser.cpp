@@ -359,12 +359,12 @@ ssize_t Dwarf::get_array_size(Dwarf_Die &subrange_die)
     dwarf_formudata(
         dwarf_attr_integrate(&subrange_die, DW_AT_upper_bound, &size_attr),
         &size);
-    return (ssize_t)size + 1;
+    return static_cast<ssize_t>(size) + 1;
   }
   if (dwarf_hasattr(&subrange_die, DW_AT_count)) {
     dwarf_formudata(
         dwarf_attr_integrate(&subrange_die, DW_AT_count, &size_attr), &size);
-    return (ssize_t)size;
+    return static_cast<ssize_t>(size);
   }
   return 0;
 }
@@ -377,7 +377,7 @@ ssize_t Dwarf::get_field_byte_offset(Dwarf_Die &field_die)
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_data_member_location, &attr),
             &value) >= 0)
-      return (ssize_t)value;
+      return static_cast<ssize_t>(value);
   }
   return get_field_bit_offset(field_die) / 8;
 }
@@ -390,13 +390,13 @@ ssize_t Dwarf::get_field_bit_offset(Dwarf_Die &field_die)
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_data_bit_offset, &attr),
             &value) >= 0)
-      return (ssize_t)value;
+      return static_cast<ssize_t>(value);
   }
   if (dwarf_hasattr(&field_die, DW_AT_bit_offset)) { // DWARF < 4
     if (dwarf_formudata(
             dwarf_attr_integrate(&field_die, DW_AT_bit_offset, &attr),
             &value) >= 0)
-      return (ssize_t)value;
+      return static_cast<ssize_t>(value);
   }
 
   return 0;
@@ -409,7 +409,7 @@ ssize_t Dwarf::get_bitfield_size(Dwarf_Die &field_die)
   if (dwarf_hasattr(&field_die, DW_AT_bit_size)) {
     if (dwarf_formudata(dwarf_attr_integrate(&field_die, DW_AT_bit_size, &attr),
                         &value) >= 0)
-      return (ssize_t)value;
+      return static_cast<ssize_t>(value);
   }
   return 0;
 }

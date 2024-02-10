@@ -228,7 +228,8 @@ bool FieldAnalyser::resolve_args(Probe &probe)
         else {
           LOG(ERROR, ap->loc, err_) << "No debuginfo found for " << ap->target;
         }
-        if ((int)probe_args.fields.size() > (arch::max_arg() + 1)) {
+        if (static_cast<int>(probe_args.fields.size()) >
+            (arch::max_arg() + 1)) {
           LOG(ERROR, ap->loc, err_) << "\'args\' builtin is not supported for "
                                        "probes with stack-passed arguments.";
         }

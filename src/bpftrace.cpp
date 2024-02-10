@@ -464,7 +464,7 @@ void perf_event_printer(void *cb_cookie, void *data, int size)
     bpftrace->out_->message(MessageType::time, timestr, false);
     return;
   } else if (printf_id == asyncactionint(AsyncAction::join)) {
-    uint64_t join_id = (uint64_t) * (static_cast<uint64_t *>(data) + 1);
+    uint64_t join_id = *(static_cast<uint64_t *>(data) + 1);
     auto delim = bpftrace->resources.join_args[join_id].c_str();
     std::stringstream joined;
     for (unsigned int i = 0; i < bpftrace->join_argnum_; i++) {
@@ -1159,10 +1159,9 @@ int BPFtrace::run(BpfBytecode bytecode)
   // twice: in the first pass iterate forward and attach the probes that will
   // be fired in the same order they were attached, and in the second pass
   // iterate in reverse and attach the rest.
-  for (auto probes = resources.probes.begin(); probes != resources.probes.end();
-       ++probes) {
-    if (!attach_reverse(*probes)) {
-      auto aps = attach_probe(*probes, bytecode_);
+  for (auto &probe : resources.probes) {
+    if (!attach_reverse(probe)) {
+      auto aps = attach_probe(probe, bytecode_);
 
       if (aps.empty())
         return -1;
@@ -1272,7 +1271,7 @@ int BPFtrace::setup_perf_events()
     struct epoll_event ev = {};
     ev.events = EPOLLIN;
     ev.data.ptr = reader;
-    int reader_fd = perf_reader_fd((perf_reader *)reader);
+    int reader_fd = perf_reader_fd(static_cast<perf_reader *>(reader));
 
     bpf_update_elem(
         maps[MapManager::Type::PerfEvent].value()->mapfd_, &cpu, &reader_fd, 0);
@@ -1390,7 +1389,7 @@ int BPFtrace::poll_perf_events()
     return ready;
   }
   for (int i = 0; i < ready; i++) {
-    perf_reader_event_read((perf_reader *)events[i].data.ptr);
+    perf_reader_event_read(static_cast<perf_reader *>(events[i].data.ptr));
   }
   return ready;
 }
@@ -1635,8 +1634,8 @@ int BPFtrace::print_map_hist(IMap &map, uint32_t top, uint32_t div)
   std::vector<std::pair<std::vector<uint8_t>, uint64_t>> total_counts_by_key;
   for (auto &map_elem : values_by_key) {
     int64_t sum = 0;
-    for (size_t i = 0; i < map_elem.second.size(); i++) {
-      sum += map_elem.second.at(i);
+    for (unsigned long i : map_elem.second) {
+      sum += i;
     }
     total_counts_by_key.push_back({ map_elem.first, sum });
   }
@@ -1949,7 +1948,7 @@ static int sym_resolve_callback(const char *name,
                                 uint64_t size,
                                 void *payload)
 {
-  struct symbol *sym = (struct symbol *)payload;
+  struct symbol *sym = static_cast<struct symbol *>(payload);
   if (!strcmp(name, sym->name.c_str())) {
     sym->address = addr;
     sym->size = size;
@@ -2270,7 +2269,7 @@ std::optional<int64_t> BPFtrace::get_int_literal(
           return std::nullopt;
         }
       } else
-        return (int64_t)num_params();
+        return static_cast<int64_t>(num_params());
     }
   }
 

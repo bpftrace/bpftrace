@@ -240,7 +240,7 @@ void BpfProgram::relocateFuncInfos()
       prog_funcinfo_sec = info_sec;
 
     ptr += sizeof(struct btf_ext_info_sec) +
-           (uintptr_t)info_sec->num_info * func_info_rec_size;
+           static_cast<uintptr_t>(info_sec->num_info) * func_info_rec_size;
   }
 
   if (prog_funcinfo_sec == nullptr)

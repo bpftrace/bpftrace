@@ -6,8 +6,8 @@ namespace elf {
 
 BpfBytecode parseBpfBytecodeFromElfObject(void *const elf)
 {
-  char *fileptr = (char *)elf;
-  Elf64_Ehdr *ehdr = (Elf64_Ehdr *)elf;
+  char *fileptr = static_cast<char *>(elf);
+  Elf64_Ehdr *ehdr = static_cast<Elf64_Ehdr *>(elf);
 
   assert(ehdr->e_ident[EI_MAG0] == ELFMAG0);
   assert(ehdr->e_ident[EI_MAG1] == ELFMAG1);
