@@ -110,7 +110,7 @@
             pkg:
               with pkgs;
               pkgs.mkShell {
-                buildInputs = pkg.nativeBuildInputs ++ pkg.buildInputs ++ [
+                buildInputs = [
                   binutils
                   coreutils
                   findutils
@@ -125,7 +125,7 @@
                   python3
                   strace
                   util-linux
-                ];
+                ] ++ pkg.nativeBuildInputs ++ pkg.buildInputs;
               };
         in
         {
