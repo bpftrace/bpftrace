@@ -385,7 +385,7 @@ SizedType BTF::get_stype(const BTFId &btf_id, bool resolve_structs)
     auto *array = btf_array(t);
     const auto &elem_type = get_stype(
         BTFId{ .btf = btf_id.btf, .id = array->type });
-    if (elem_type.type == Type::integer && elem_type.GetSize() == 1) {
+    if (elem_type.IsIntTy() && elem_type.GetSize() == 1) {
       stype = CreateString(array->nelems);
     } else {
       stype = CreateArray(array->nelems, elem_type);

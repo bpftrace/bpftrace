@@ -40,7 +40,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
   } else if (type.IsArrayTy()) {
     os << *type.GetElementTy() << "[" << type.GetNumElements() << "]";
   } else if (type.IsStringTy() || type.IsBufferTy()) {
-    os << type.type << "[" << type.GetSize() << "]";
+    os << type.GetTy() << "[" << type.GetSize() << "]";
   } else if (type.IsTupleTy()) {
     os << "(";
     size_t n = type.GetFieldCount();
@@ -51,7 +51,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
     }
     os << ")";
   } else {
-    os << type.type;
+    os << type.GetTy();
   }
 
   return os;
@@ -59,7 +59,7 @@ std::ostream &operator<<(std::ostream &os, const SizedType &type)
 
 bool SizedType::IsSameType(const SizedType &t) const
 {
-  if (t.type != type)
+  if (t.GetTy() != type_)
     return false;
 
   if (IsRecordTy())
@@ -68,12 +68,12 @@ bool SizedType::IsSameType(const SizedType &t) const
   if (IsPtrTy() && t.IsPtrTy())
     return GetPointeeTy()->IsSameType(*t.GetPointeeTy());
 
-  return type == t.type;
+  return type_ == t.GetTy();
 }
 
 bool SizedType::IsEqual(const SizedType &t) const
 {
-  if (t.type != type)
+  if (t.GetTy() != type_)
     return false;
 
   if (IsRecordTy())
@@ -89,7 +89,7 @@ bool SizedType::IsEqual(const SizedType &t) const
   if (IsTupleTy())
     return *t.GetStruct().lock() == *GetStruct().lock();
 
-  return type == t.type && GetSize() == t.GetSize() &&
+  return type_ == t.GetTy() && GetSize() == t.GetSize() &&
          is_signed_ == t.is_signed_;
 }
 
@@ -105,10 +105,10 @@ bool SizedType::operator==(const SizedType &t) const
 
 bool SizedType::IsByteArray() const
 {
-  return type == Type::string || type == Type::usym || type == Type::ustack ||
-         type == Type::inet || type == Type::buffer ||
-         type == Type::timestamp || type == Type::mac_address ||
-         type == Type::cgroup_path;
+  return type_ == Type::string || type_ == Type::usym ||
+         type_ == Type::ustack || type_ == Type::inet ||
+         type_ == Type::buffer || type_ == Type::timestamp ||
+         type_ == Type::mac_address || type_ == Type::cgroup_path;
 }
 
 bool SizedType::IsAggregate() const
@@ -118,7 +118,7 @@ bool SizedType::IsAggregate() const
 
 bool SizedType::IsStack() const
 {
-  return type == Type::ustack || type == Type::kstack;
+  return type_ == Type::ustack || type_ == Type::kstack;
 }
 
 std::string addrspacestr(AddrSpace as)
@@ -565,10 +565,10 @@ namespace std {
 size_t hash<bpftrace::SizedType>::operator()(
     const bpftrace::SizedType &type) const
 {
-  auto hash = std::hash<unsigned>()(static_cast<unsigned>(type.type));
+  auto hash = std::hash<unsigned>()(static_cast<unsigned>(type.GetTy()));
   bpftrace::hash_combine(hash, type.GetSize());
 
-  switch (type.type) {
+  switch (type.GetTy()) {
     case bpftrace::Type::integer:
       bpftrace::hash_combine(hash, type.IsSigned());
       break;

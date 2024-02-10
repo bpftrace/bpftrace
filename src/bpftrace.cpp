@@ -635,7 +635,7 @@ std::vector<std::unique_ptr<IPrintable>> BPFtrace::get_arg_values(
   std::vector<std::unique_ptr<IPrintable>> arg_values;
 
   for (auto arg : args) {
-    switch (arg.type.type) {
+    switch (arg.type.GetTy()) {
       case Type::integer:
         if (arg.type.IsSigned()) {
           int64_t val = 0;

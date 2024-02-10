@@ -73,7 +73,7 @@ std::string validate_format_string(const std::string &fmt,
 
   auto token_iter = tokens_begin;
   for (int i = 0; i < num_args; i++, token_iter++) {
-    Type arg_type = args.at(i).type.type;
+    Type arg_type = args.at(i).type.GetTy();
     if (arg_type == Type::ksym || arg_type == Type::usym ||
         arg_type == Type::probe || arg_type == Type::username ||
         arg_type == Type::kstack || arg_type == Type::ustack ||

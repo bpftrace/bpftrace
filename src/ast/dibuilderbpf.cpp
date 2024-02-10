@@ -166,7 +166,7 @@ DIType *DIBuilderBPF::GetType(const SizedType &stype)
       return getInt8Ty();
     default:
       LOG(FATAL) << "Cannot generate debug info for type "
-                 << typestr(stype.type) << " (" << stype.GetSize()
+                 << typestr(stype.GetTy()) << " (" << stype.GetSize()
                  << " is not a valid type size)";
       return nullptr;
   }

@@ -24,8 +24,8 @@ void ConfigAnalyser::log_type_error(SizedType &type,
                                     AssignConfigVarStatement &assignment)
 {
   LOG(ERROR, assignment.loc, err_)
-      << "Invalid type for " << assignment.config_var << ". Type: " << type.type
-      << ". Expected Type: " << expected_type;
+      << "Invalid type for " << assignment.config_var
+      << ". Type: " << type.GetTy() << ". Expected Type: " << expected_type;
 }
 
 void ConfigAnalyser::set_uint64_config(AssignConfigVarStatement &assignment,

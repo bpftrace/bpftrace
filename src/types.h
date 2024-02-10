@@ -116,20 +116,19 @@ struct Field;
 
 class SizedType {
 public:
-  SizedType() : type(Type::none)
+  SizedType() : type_(Type::none)
   {
   }
   SizedType(Type type, size_t size_, bool is_signed)
-      : type(type), size_bits_(size_ * 8), is_signed_(is_signed)
+      : type_(type), size_bits_(size_ * 8), is_signed_(is_signed)
   {
   }
-  SizedType(Type type, size_t size_) : type(type), size_bits_(size_ * 8)
+  SizedType(Type type, size_t size_) : type_(type), size_bits_(size_ * 8)
   {
   }
 
   StackType stack_type;
   int funcarg_idx = -1;
-  Type type;
   bool is_internal = false;
   bool is_tparg = false;
   bool is_funcarg = false;
@@ -137,6 +136,7 @@ public:
   TimestampMode ts_mode = TimestampMode::boot;
 
 private:
+  Type type_;
   size_t size_bits_ = 0;                    // size in bits
   std::shared_ptr<SizedType> element_type_; // for "container" and pointer
                                             // (like) types
@@ -152,7 +152,7 @@ private:
   template <typename Archive>
   void serialize(Archive &archive)
   {
-    archive(type,
+    archive(type_,
             stack_type,
             is_internal,
             is_tparg,
@@ -221,8 +221,8 @@ public:
 
   bool IsPrintableTy()
   {
-    return type != Type::none && type != Type::stack_mode &&
-           type != Type::timestamp_mode &&
+    return type_ != Type::none && type_ != Type::stack_mode &&
+           type_ != Type::timestamp_mode &&
            (!IsCtxAccess() || is_funcarg); // args builtin is printable
   }
 
@@ -260,6 +260,11 @@ public:
     return name_;
   }
 
+  Type GetTy() const
+  {
+    return type_;
+  }
+
   const SizedType *GetElementTy() const
   {
     assert(IsArrayTy());
@@ -274,127 +279,127 @@ public:
 
   bool IsBoolTy() const
   {
-    return type == Type::integer && size_bits_ == 1;
+    return type_ == Type::integer && size_bits_ == 1;
   };
   bool IsPtrTy() const
   {
-    return type == Type::pointer;
+    return type_ == Type::pointer;
   };
   bool IsIntTy() const
   {
-    return type == Type::integer;
+    return type_ == Type::integer;
   };
   bool IsNoneTy(void) const
   {
-    return type == Type::none;
+    return type_ == Type::none;
   };
   bool IsIntegerTy(void) const
   {
-    return type == Type::integer;
+    return type_ == Type::integer;
   };
   bool IsHistTy(void) const
   {
-    return type == Type::hist;
+    return type_ == Type::hist;
   };
   bool IsLhistTy(void) const
   {
-    return type == Type::lhist;
+    return type_ == Type::lhist;
   };
   bool IsCountTy(void) const
   {
-    return type == Type::count;
+    return type_ == Type::count;
   };
   bool IsSumTy(void) const
   {
-    return type == Type::sum;
+    return type_ == Type::sum;
   };
   bool IsMinTy(void) const
   {
-    return type == Type::min;
+    return type_ == Type::min;
   };
   bool IsMaxTy(void) const
   {
-    return type == Type::max;
+    return type_ == Type::max;
   };
   bool IsAvgTy(void) const
   {
-    return type == Type::avg;
+    return type_ == Type::avg;
   };
   bool IsStatsTy(void) const
   {
-    return type == Type::stats;
+    return type_ == Type::stats;
   };
   bool IsKstackTy(void) const
   {
-    return type == Type::kstack;
+    return type_ == Type::kstack;
   };
   bool IsUstackTy(void) const
   {
-    return type == Type::ustack;
+    return type_ == Type::ustack;
   };
   bool IsStringTy(void) const
   {
-    return type == Type::string;
+    return type_ == Type::string;
   };
   bool IsKsymTy(void) const
   {
-    return type == Type::ksym;
+    return type_ == Type::ksym;
   };
   bool IsUsymTy(void) const
   {
-    return type == Type::usym;
+    return type_ == Type::usym;
   };
   bool IsProbeTy(void) const
   {
-    return type == Type::probe;
+    return type_ == Type::probe;
   };
   bool IsUsernameTy(void) const
   {
-    return type == Type::username;
+    return type_ == Type::username;
   };
   bool IsInetTy(void) const
   {
-    return type == Type::inet;
+    return type_ == Type::inet;
   };
   bool IsStackModeTy(void) const
   {
-    return type == Type::stack_mode;
+    return type_ == Type::stack_mode;
   };
   bool IsArrayTy(void) const
   {
-    return type == Type::array;
+    return type_ == Type::array;
   };
   bool IsRecordTy(void) const
   {
-    return type == Type::record;
+    return type_ == Type::record;
   };
   bool IsBufferTy(void) const
   {
-    return type == Type::buffer;
+    return type_ == Type::buffer;
   };
   bool IsTupleTy(void) const
   {
-    return type == Type::tuple;
+    return type_ == Type::tuple;
   };
   bool IsTimestampTy(void) const
   {
-    return type == Type::timestamp;
+    return type_ == Type::timestamp;
   };
   bool IsMacAddressTy(void) const
   {
-    return type == Type::mac_address;
+    return type_ == Type::mac_address;
   };
   bool IsCgroupPathTy(void) const
   {
-    return type == Type::cgroup_path;
+    return type_ == Type::cgroup_path;
   };
   bool IsStrerrorTy(void) const
   {
-    return type == Type::strerror;
+    return type_ == Type::strerror;
   };
   bool IsTimestampModeTy(void) const
   {
-    return type == Type::timestamp_mode;
+    return type_ == Type::timestamp_mode;
   }
 
   friend std::ostream &operator<<(std::ostream &, const SizedType &);

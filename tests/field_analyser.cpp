@@ -79,15 +79,15 @@ TEST_F(field_analyser_btf, btf_types)
   ASSERT_TRUE(foo1->HasField("b"));
   ASSERT_TRUE(foo1->HasField("c"));
 
-  EXPECT_EQ(foo1->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo1->GetField("a").offset, 0);
 
-  EXPECT_EQ(foo1->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("b").type.GetSize(), 1U);
   EXPECT_EQ(foo1->GetField("b").offset, 4);
 
-  EXPECT_EQ(foo1->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("c").type.GetSize(), 8U);
   EXPECT_EQ(foo1->GetField("c").offset, 8);
 
@@ -97,15 +97,15 @@ TEST_F(field_analyser_btf, btf_types)
   ASSERT_TRUE(foo2->HasField("f"));
   ASSERT_TRUE(foo2->HasField("g"));
 
-  EXPECT_EQ(foo2->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo2->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo2->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
-  EXPECT_EQ(foo2->GetField("f").type.type, Type::record);
+  EXPECT_TRUE(foo2->GetField("f").type.IsRecordTy());
   EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
-  EXPECT_EQ(foo2->GetField("g").type.type, Type::integer);
+  EXPECT_TRUE(foo2->GetField("g").type.IsIntTy());
   EXPECT_EQ(foo2->GetField("g").type.GetSize(), 1U);
   EXPECT_EQ(foo2->GetField("g").offset, 8);
 
@@ -147,39 +147,37 @@ TEST_F(field_analyser_btf, btf_arrays)
   ASSERT_TRUE(arrs->HasField("zero"));
   ASSERT_TRUE(arrs->HasField("flexible"));
 
-  EXPECT_EQ(arrs->GetField("int_arr").type.type, Type::array);
+  EXPECT_TRUE(arrs->GetField("int_arr").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("int_arr").type.GetNumElements(), 4);
-  EXPECT_EQ(arrs->GetField("int_arr").type.GetElementTy()->type, Type::integer);
+  EXPECT_TRUE(arrs->GetField("int_arr").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("int_arr").type.GetSize(), 16U);
   EXPECT_EQ(arrs->GetField("int_arr").offset, 0);
 
-  EXPECT_EQ(arrs->GetField("char_arr").type.type, Type::string);
+  EXPECT_TRUE(arrs->GetField("char_arr").type.IsStringTy());
   EXPECT_EQ(arrs->GetField("char_arr").type.GetSize(), 8U);
   EXPECT_EQ(arrs->GetField("char_arr").offset, 16);
 
-  EXPECT_EQ(arrs->GetField("ptr_arr").type.type, Type::array);
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetNumElements(), 2);
-  EXPECT_EQ(arrs->GetField("ptr_arr").type.GetElementTy()->type, Type::pointer);
+  EXPECT_TRUE(arrs->GetField("ptr_arr").type.GetElementTy()->IsPtrTy());
   EXPECT_EQ(arrs->GetField("ptr_arr").type.GetSize(), 2 * sizeof(uintptr_t));
   EXPECT_EQ(arrs->GetField("ptr_arr").offset, 24);
 
-  EXPECT_EQ(arrs->GetField("multi_dim").type.type, Type::array);
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetNumElements(), 6);
-  EXPECT_EQ(arrs->GetField("multi_dim").type.GetElementTy()->type,
-            Type::integer);
+  EXPECT_TRUE(arrs->GetField("multi_dim").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("multi_dim").type.GetSize(), 24U);
   EXPECT_EQ(arrs->GetField("multi_dim").offset, 40);
 
-  EXPECT_EQ(arrs->GetField("zero").type.type, Type::array);
+  EXPECT_TRUE(arrs->GetField("zero").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetNumElements(), 0);
-  EXPECT_EQ(arrs->GetField("zero").type.GetElementTy()->type, Type::integer);
+  EXPECT_TRUE(arrs->GetField("zero").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("zero").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("zero").offset, 64);
 
-  EXPECT_EQ(arrs->GetField("flexible").type.type, Type::array);
+  EXPECT_TRUE(arrs->GetField("flexible").type.IsArrayTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetNumElements(), 0);
-  EXPECT_EQ(arrs->GetField("flexible").type.GetElementTy()->type,
-            Type::integer);
+  EXPECT_TRUE(arrs->GetField("flexible").type.GetElementTy()->IsIntTy());
   EXPECT_EQ(arrs->GetField("flexible").type.GetSize(), 0U);
   EXPECT_EQ(arrs->GetField("flexible").offset, 64);
 }
@@ -220,7 +218,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
 
   ASSERT_TRUE(task_struct->HasField("a"));
-  EXPECT_EQ(task_struct->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(task_struct->GetField("a").offset, 9);
   EXPECT_TRUE(task_struct->GetField("a").bitfield.has_value());
@@ -229,7 +227,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(task_struct->GetField("a").bitfield->mask, 0xFFU);
 
   ASSERT_TRUE(task_struct->HasField("b"));
-  EXPECT_EQ(task_struct->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("b").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(task_struct->GetField("b").offset, 10);
   EXPECT_TRUE(task_struct->GetField("b").bitfield.has_value());
@@ -238,7 +236,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(task_struct->GetField("b").bitfield->mask, 0x1U);
 
   ASSERT_TRUE(task_struct->HasField("c"));
-  EXPECT_EQ(task_struct->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("c").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(task_struct->GetField("c").offset, 10);
   EXPECT_TRUE(task_struct->GetField("c").bitfield.has_value());
@@ -247,7 +245,7 @@ TEST_F(field_analyser_btf, btf_types_bitfields)
   EXPECT_EQ(task_struct->GetField("c").bitfield->mask, 0x7U);
 
   ASSERT_TRUE(task_struct->HasField("d"));
-  EXPECT_EQ(task_struct->GetField("d").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("d").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
   EXPECT_EQ(task_struct->GetField("d").offset, 12);
   EXPECT_TRUE(task_struct->GetField("d").bitfield.has_value());
@@ -267,17 +265,17 @@ TEST_F(field_analyser_btf, btf_anon_union_first_in_struct)
       bpftrace.structs.Lookup("struct FirstFieldsAreAnonUnion").lock();
 
   ASSERT_TRUE(record->HasField("a"));
-  EXPECT_EQ(record->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(record->GetField("a").type.IsIntTy());
   EXPECT_EQ(record->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(record->GetField("a").offset, 0);
 
   ASSERT_TRUE(record->HasField("b"));
-  EXPECT_EQ(record->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(record->GetField("b").type.IsIntTy());
   EXPECT_EQ(record->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(record->GetField("b").offset, 0);
 
   ASSERT_TRUE(record->HasField("c"));
-  EXPECT_EQ(record->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(record->GetField("c").type.IsIntTy());
   EXPECT_EQ(record->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(record->GetField("c").offset, 4);
 }
@@ -356,7 +354,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   auto task_struct = bpftrace.structs.Lookup("struct task_struct").lock();
 
   ASSERT_TRUE(task_struct->HasField("a"));
-  EXPECT_EQ(task_struct->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("a").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("a").type.GetSize(), 4U);
   EXPECT_TRUE(task_struct->GetField("a").bitfield.has_value());
 
@@ -373,7 +371,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   }
 
   ASSERT_TRUE(task_struct->HasField("b"));
-  EXPECT_EQ(task_struct->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("b").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("b").type.GetSize(), 4U);
   EXPECT_TRUE(task_struct->GetField("b").bitfield.has_value());
 
@@ -390,7 +388,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   }
 
   ASSERT_TRUE(task_struct->HasField("c"));
-  EXPECT_EQ(task_struct->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("c").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("c").type.GetSize(), 4U);
   EXPECT_TRUE(task_struct->GetField("c").bitfield.has_value());
 
@@ -408,7 +406,7 @@ TEST_F(field_analyser_dwarf, dwarf_types_bitfields)
   }
 
   ASSERT_TRUE(task_struct->HasField("d"));
-  EXPECT_EQ(task_struct->GetField("d").type.type, Type::integer);
+  EXPECT_TRUE(task_struct->GetField("d").type.IsIntTy());
   EXPECT_EQ(task_struct->GetField("d").type.GetSize(), 4U);
   EXPECT_EQ(task_struct->GetField("d").offset, 12);
   EXPECT_TRUE(task_struct->GetField("d").bitfield.has_value());
