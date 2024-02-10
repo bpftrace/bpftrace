@@ -1630,7 +1630,7 @@ void CodegenLLVM::unop_int(Unop &unop)
     }
     case Operator::MUL: {
       // When dereferencing a 32-bit integer, only read in 32-bits, etc.
-      auto dst_type = SizedType(type.type, type.GetSize());
+      auto dst_type = SizedType(type.GetTy(), type.GetSize());
       AllocaInst *dst = b_.CreateAllocaBPF(dst_type, "deref");
       b_.CreateProbeRead(ctx_, dst, type, expr_, unop.loc);
       expr_ = b_.CreateIntCast(b_.CreateLoad(b_.GetType(dst_type), dst),
@@ -3225,8 +3225,8 @@ void CodegenLLVM::createPrintNonMapCall(Call &call, int &id)
 
   auto elements = AsyncEvent::PrintNonMap().asLLVMType(b_, arg.type.GetSize());
   std::ostringstream struct_name;
-  struct_name << call.func << "_" << arg.type.type << "_" << arg.type.GetSize()
-              << "_t";
+  struct_name << call.func << "_" << arg.type.GetTy() << "_"
+              << arg.type.GetSize() << "_t";
   StructType *print_struct = b_.GetStructType(struct_name.str(),
                                               elements,
                                               true);

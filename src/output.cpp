@@ -18,7 +18,7 @@ namespace bpftrace {
 namespace {
 bool is_quoted_type(const SizedType &ty)
 {
-  switch (ty.type) {
+  switch (ty.GetTy()) {
     case Type::buffer:
     case Type::cgroup_path:
     case Type::inet:
@@ -669,9 +669,8 @@ std::string TextOutput::map_keyval_to_str(IMap &map,
 
 std::string TextOutput::map_elem_delim_to_str(IMap &map) const
 {
-  if (map.type_.type != Type::kstack && map.type_.type != Type::ustack &&
-      map.type_.type != Type::ksym && map.type_.type != Type::usym &&
-      map.type_.type != Type::inet)
+  if (!map.type_.IsKstackTy() && !map.type_.IsUstackTy() &&
+      !map.type_.IsKsymTy() && !map.type_.IsUsymTy() && !map.type_.IsInetTy())
     return "\n";
 
   return "";

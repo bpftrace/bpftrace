@@ -650,7 +650,7 @@ void SemanticAnalyser::visit(Call &call)
       LOG(ERROR, call.loc, err_)
           << call.func
           << "() expects an integer, string, or array argument but saw "
-          << typestr(arg.type.type);
+          << typestr(arg.type.GetTy());
     }
 
     size_t max_buffer_size = bpftrace_.config_.get(ConfigKeyInt::max_strlen);
@@ -663,7 +663,7 @@ void SemanticAnalyser::visit(Call &call)
       else if (is_final_pass())
         LOG(ERROR, call.loc, err_)
             << call.func << "() expects a length argument for non-array type "
-            << typestr(arg.type.type);
+            << typestr(arg.type.GetTy());
     } else {
       if (is_final_pass())
         check_arg(call, Type::integer, 1, false);
@@ -726,7 +726,7 @@ void SemanticAnalyser::visit(Call &call)
         !arg->type.IsArrayTy())
       LOG(ERROR, call.loc, err_)
           << call.func << "() expects an integer or array argument, got "
-          << arg->type.type;
+          << arg->type.GetTy();
 
     // Kind of:
     //
@@ -791,7 +791,7 @@ void SemanticAnalyser::visit(Call &call)
     auto &arg = *call.vargs->at(0);
     if (!(arg.type.IsIntTy() || arg.type.IsPtrTy())) {
       LOG(ERROR, call.loc, err_) << "() only supports int or pointer arguments"
-                                 << " (" << arg.type.type << " provided)";
+                                 << " (" << arg.type.GetTy() << " provided)";
     }
 
     if (call.vargs && call.vargs->size() > 1)
@@ -1058,7 +1058,7 @@ void SemanticAnalyser::visit(Call &call)
             << std::to_string(*sig)
             << " is not a valid signal, allowed range: [1,64]";
       }
-    } else if (arg.type.type != Type::integer) {
+    } else if (!arg.type.IsIntTy()) {
       LOG(ERROR, call.loc, err_)
           << "signal only accepts string literals or integers";
     }
@@ -1080,7 +1080,7 @@ void SemanticAnalyser::visit(Call &call)
 
         LOG(ERROR, call.loc, err_)
             << "path() only supports pointer or record argument ("
-            << arg.type.type << " provided)";
+            << arg.type.GetTy() << " provided)";
       }
 
       call.type = SizedType(Type::string,
@@ -1142,10 +1142,10 @@ void SemanticAnalyser::visit(Call &call)
 
     // kptr should accept both integer or pointer. Consider case: kptr($1)
     auto &arg = *call.vargs->at(0);
-    if (arg.type.type != Type::integer && arg.type.type != Type::pointer) {
-      LOG(ERROR, call.loc, err_)
-          << call.func << "() only supports "
-          << "integer or pointer arguments (" << arg.type.type << " provided)";
+    if (!arg.type.IsIntTy() && !arg.type.IsPtrTy()) {
+      LOG(ERROR, call.loc, err_) << call.func << "() only supports "
+                                 << "integer or pointer arguments ("
+                                 << arg.type.GetTy() << " provided)";
       return;
     }
 
@@ -1162,7 +1162,7 @@ void SemanticAnalyser::visit(Call &call)
         !arg->type.IsByteArray() && !arg->type.IsPtrTy())
       LOG(ERROR, call.loc, err_)
           << call.func << "() only supports array or pointer arguments"
-          << " (" << arg->type.type << " provided)";
+          << " (" << arg->type.GetTy() << " provided)";
 
     auto type = arg->type;
     if ((type.IsArrayTy() || type.IsByteArray()) && type.GetSize() != 6)
@@ -1185,10 +1185,10 @@ void SemanticAnalyser::visit(Call &call)
       return;
 
     Expression *arg = call.vargs->at(0);
-    if (arg->type.type != Type::integer) {
+    if (!arg->type.IsIntTy()) {
       LOG(ERROR, call.loc, err_)
           << call.func << "() only supports integer arguments ("
-          << arg->type.type << " provided)";
+          << arg->type.GetTy() << " provided)";
       return;
     }
 
@@ -1354,7 +1354,7 @@ void SemanticAnalyser::visit(Map &map)
       } else if (expr->type.IsPtrTy() && expr->type.IsCtxAccess()) {
         // map functions only accepts a pointer to a element in the stack
         LOG(ERROR, map.loc, err_) << "context cannot be used as a map key";
-      } else if (expr->type.type == Type::tuple) {
+      } else if (expr->type.IsTupleTy()) {
         LOG(ERROR, map.loc, err_)
             << "tuple cannot be used as a map key. Try a multi-key associative"
                " array instead (eg `@map[$1, $2] = ...)`.";
@@ -1417,7 +1417,7 @@ void SemanticAnalyser::visit(ArrayAccess &arr)
     if (!type.IsArrayTy() && !type.IsPtrTy()) {
       LOG(ERROR, arr.loc, err_) << "The array index operator [] can only be "
                                    "used on arrays and pointers, found "
-                                << type.type << ".";
+                                << type.GetTy() << ".";
       return;
     }
 
@@ -1700,7 +1700,7 @@ void SemanticAnalyser::visit(Binop &binop)
   }
   // Compare type here, not the sized type as we it needs to work on strings of
   // different lengths
-  else if (lht.type != rht.type) {
+  else if (lht.GetTy() != rht.GetTy()) {
     LOG(ERROR, binop.left->loc + binop.right->loc, err_)
         << "Type mismatch for '" << opstr(binop) << "': comparing '" << lht
         << "' with '" << rht << "'";
@@ -1813,9 +1813,9 @@ void SemanticAnalyser::visit(Ternary &ternary)
   ternary.cond->accept(*this);
   ternary.left->accept(*this);
   ternary.right->accept(*this);
-  Type &cond = ternary.cond->type.type;
-  Type &lhs = ternary.left->type.type;
-  Type &rhs = ternary.right->type.type;
+  const Type &cond = ternary.cond->type.GetTy();
+  const Type &lhs = ternary.left->type.GetTy();
+  const Type &rhs = ternary.right->type.GetTy();
   if (is_final_pass()) {
     if (lhs != rhs) {
       LOG(ERROR, ternary.loc, err_)
@@ -1842,7 +1842,7 @@ void SemanticAnalyser::visit(If &if_block)
   if_block.cond->accept(*this);
 
   if (is_final_pass()) {
-    Type &cond = if_block.cond->type.type;
+    const Type &cond = if_block.cond->type.GetTy();
     if (cond != Type::integer)
       LOG(ERROR, if_block.loc, err_) << "Invalid condition in if(): " << cond;
   }
@@ -2283,7 +2283,7 @@ void SemanticAnalyser::visit(AssignVarStatement &assignment)
   }
 
   if (is_final_pass()) {
-    auto &ty = assignTy.type;
+    const auto &ty = assignTy.GetTy();
     if (ty == Type::none)
       LOG(ERROR, assignment.expr->loc, err_)
           << "Invalid expression for assignment: " << ty;
@@ -2302,7 +2302,7 @@ void SemanticAnalyser::visit(Predicate &pred)
     SizedType &ty = pred.expr->type;
     if (!ty.IsIntTy() && !ty.IsPtrTy()) {
       LOG(ERROR, pred.loc, err_)
-          << "Invalid type for predicate: " << pred.expr->type.type;
+          << "Invalid type for predicate: " << pred.expr->type.GetTy();
     }
   }
 }
@@ -2763,11 +2763,11 @@ bool SemanticAnalyser::check_arg(const Call &call,
     return false;
 
   auto &arg = *call.vargs->at(arg_num);
-  if (want_literal && (!arg.is_literal || arg.type.type != type)) {
+  if (want_literal && (!arg.is_literal || arg.type.GetTy() != type)) {
     if (fail) {
       LOG(ERROR, call.loc, err_)
           << call.func << "() expects a " << type << " literal ("
-          << arg.type.type << " provided)";
+          << arg.type.GetTy() << " provided)";
       if (type == Type::string) {
         // If the call requires a string literal and a positional parameter is
         // given, tell user to use str()
@@ -2778,11 +2778,11 @@ bool SemanticAnalyser::check_arg(const Call &call,
       }
     }
     return false;
-  } else if (is_final_pass() && arg.type.type != type) {
+  } else if (is_final_pass() && arg.type.GetTy() != type) {
     if (fail) {
       LOG(ERROR, call.loc, err_)
           << call.func << "() only supports " << type << " arguments ("
-          << arg.type.type << " provided)";
+          << arg.type.GetTy() << " provided)";
     }
     return false;
   }
@@ -2922,7 +2922,7 @@ void SemanticAnalyser::assign_map_type(const Map &map, const SizedType &type)
         LOG(ERROR, map.loc, err_) << "Undefined map: " + map_ident;
       else
         *maptype = type;
-    } else if (maptype->type != type.type) {
+    } else if (maptype->GetTy() != type.GetTy()) {
       LOG(ERROR, map.loc, err_)
           << "Type mismatch for " << map_ident << ": "
           << "trying to assign value of type '" << type

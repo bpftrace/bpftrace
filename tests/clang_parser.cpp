@@ -43,15 +43,15 @@ TEST(clang_parser, integers)
   ASSERT_EQ(foo->HasField("y"), true);
   ASSERT_EQ(foo->HasField("z"), true);
 
-  EXPECT_EQ(foo->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("x").offset, 0);
 
-  EXPECT_EQ(foo->GetField("y").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("y").type.IsIntTy());
   EXPECT_EQ(foo->GetField("y").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("y").offset, 4);
 
-  EXPECT_EQ(foo->GetField("z").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("z").type.IsIntTy());
   EXPECT_EQ(foo->GetField("z").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("z").offset, 8);
 }
@@ -71,19 +71,19 @@ TEST(clang_parser, c_union)
   ASSERT_TRUE(foo->HasField("i"));
   ASSERT_TRUE(foo->HasField("l"));
 
-  EXPECT_EQ(foo->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 1U);
   EXPECT_EQ(foo->GetField("c").offset, 0);
 
-  EXPECT_EQ(foo->GetField("s").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("s").type.IsIntTy());
   EXPECT_EQ(foo->GetField("s").type.GetSize(), 2U);
   EXPECT_EQ(foo->GetField("s").offset, 0);
 
-  EXPECT_EQ(foo->GetField("i").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("i").type.IsIntTy());
   EXPECT_EQ(foo->GetField("i").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("i").offset, 0);
 
-  EXPECT_EQ(foo->GetField("l").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("l").type.IsIntTy());
   EXPECT_EQ(foo->GetField("l").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("l").offset, 0);
 }
@@ -100,7 +100,7 @@ TEST(clang_parser, c_enum)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("e"));
 
-  EXPECT_EQ(foo->GetField("e").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("e").type.IsIntTy());
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 0);
 }
@@ -154,7 +154,7 @@ TEST(clang_parser, string_array)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("str"));
 
-  EXPECT_EQ(foo->GetField("str").type.type, Type::string);
+  EXPECT_TRUE(foo->GetField("str").type.IsStringTy());
   EXPECT_EQ(foo->GetField("str").type.GetSize(), 32U);
   EXPECT_EQ(foo->GetField("str").offset, 0);
 }
@@ -232,7 +232,7 @@ TEST(clang_parser, nested_struct_no_type)
   ASSERT_EQ(bar->fields.size(), 1U);
   ASSERT_TRUE(bar->HasField("x"));
 
-  EXPECT_EQ(bar->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(bar->GetField("x").type.IsIntTy());
   EXPECT_EQ(bar->GetField("x").type.GetSize(), 4U);
   EXPECT_EQ(bar->GetField("x").offset, 0);
 
@@ -240,7 +240,7 @@ TEST(clang_parser, nested_struct_no_type)
   ASSERT_EQ(baz->fields.size(), 1U);
   ASSERT_TRUE(baz->HasField("y"));
 
-  EXPECT_EQ(baz->GetField("y").type.type, Type::integer);
+  EXPECT_TRUE(baz->GetField("y").type.IsIntTy());
   EXPECT_EQ(baz->GetField("y").type.GetSize(), 4U);
   EXPECT_EQ(baz->GetField("y").offset, 0);
 
@@ -279,13 +279,13 @@ TEST(clang_parser, nested_struct_unnamed_fields)
   ASSERT_TRUE(foo->HasField("y"));
   ASSERT_TRUE(foo->HasField("a"));
 
-  EXPECT_EQ(foo->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("x").offset, 0);
-  EXPECT_EQ(foo->GetField("y").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("y").type.IsIntTy());
   EXPECT_EQ(foo->GetField("y").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("y").offset, 4);
-  EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 8);
 
@@ -293,7 +293,7 @@ TEST(clang_parser, nested_struct_unnamed_fields)
   EXPECT_EQ(bar->fields.size(), 1U);
   EXPECT_TRUE(bar->HasField("z"));
 
-  EXPECT_EQ(bar->GetField("z").type.type, Type::integer);
+  EXPECT_TRUE(bar->GetField("z").type.IsIntTy());
   EXPECT_EQ(bar->GetField("z").type.GetSize(), 4U);
   EXPECT_EQ(bar->GetField("z").offset, 0);
 }
@@ -324,23 +324,23 @@ TEST(clang_parser, nested_struct_anon_union_struct)
   ASSERT_TRUE(foo->HasField("a"));
   ASSERT_TRUE(foo->HasField("z"));
 
-  EXPECT_EQ(foo->GetField("_xy").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("_xy").type.IsIntTy());
   EXPECT_EQ(foo->GetField("_xy").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("_xy").offset, 0);
 
-  EXPECT_EQ(foo->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("x").offset, 0);
 
-  EXPECT_EQ(foo->GetField("y").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("y").type.IsIntTy());
   EXPECT_EQ(foo->GetField("y").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("y").offset, 4);
 
-  EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 8);
 
-  EXPECT_EQ(foo->GetField("z").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("z").type.IsIntTy());
   EXPECT_EQ(foo->GetField("z").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("z").offset, 12);
 }
@@ -359,7 +359,7 @@ TEST(clang_parser, bitfields)
   ASSERT_TRUE(foo->HasField("b"));
   ASSERT_TRUE(foo->HasField("c"));
 
-  EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
   EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
@@ -367,7 +367,7 @@ TEST(clang_parser, bitfields)
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFU);
 
-  EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 1);
   EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
@@ -375,7 +375,7 @@ TEST(clang_parser, bitfields)
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0xFFU);
 
-  EXPECT_EQ(foo->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("c").offset, 2);
   EXPECT_TRUE(foo->GetField("c").bitfield.has_value());
@@ -400,7 +400,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   ASSERT_TRUE(foo->HasField("d"));
   ASSERT_TRUE(foo->HasField("e"));
 
-  EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 0);
   EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
@@ -408,7 +408,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0x1U);
 
-  EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 0);
   EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
@@ -416,7 +416,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("b").bitfield->access_rshift, 1U);
   EXPECT_EQ(foo->GetField("b").bitfield->mask, 0x1U);
 
-  EXPECT_EQ(foo->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo->GetField("c").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("c").offset, 0);
   EXPECT_TRUE(foo->GetField("c").bitfield.has_value());
@@ -424,7 +424,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("c").bitfield->access_rshift, 2U);
   EXPECT_EQ(foo->GetField("c").bitfield->mask, 0x7U);
 
-  EXPECT_EQ(foo->GetField("d").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("d").type.IsIntTy());
   EXPECT_EQ(foo->GetField("d").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("d").offset, 0);
   EXPECT_TRUE(foo->GetField("d").bitfield.has_value());
@@ -432,7 +432,7 @@ TEST(clang_parser, bitfields_uneven_fields)
   EXPECT_EQ(foo->GetField("d").bitfield->access_rshift, 5U);
   EXPECT_EQ(foo->GetField("d").bitfield->mask, 0xFFFFFU);
 
-  EXPECT_EQ(foo->GetField("e").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("e").type.IsIntTy());
   EXPECT_EQ(foo->GetField("e").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("e").offset, 3);
   EXPECT_TRUE(foo->GetField("e").bitfield.has_value());
@@ -456,7 +456,7 @@ TEST(clang_parser, bitfields_with_padding)
   ASSERT_TRUE(foo->HasField("b"));
   ASSERT_TRUE(foo->HasField("end"));
 
-  EXPECT_EQ(foo->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("a").offset, 4);
   EXPECT_TRUE(foo->GetField("a").bitfield.has_value());
@@ -464,7 +464,7 @@ TEST(clang_parser, bitfields_with_padding)
   EXPECT_EQ(foo->GetField("a").bitfield->access_rshift, 0U);
   EXPECT_EQ(foo->GetField("a").bitfield->mask, 0xFFFFFFFU);
 
-  EXPECT_EQ(foo->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo->GetField("b").type.GetSize(), 4U);
   EXPECT_EQ(foo->GetField("b").offset, 7);
   EXPECT_TRUE(foo->GetField("b").bitfield.has_value());
@@ -488,15 +488,15 @@ TEST(clang_parser, builtin_headers)
   ASSERT_TRUE(foo->HasField("y"));
   ASSERT_TRUE(foo->HasField("z"));
 
-  EXPECT_EQ(foo->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("x").offset, 0);
 
-  EXPECT_EQ(foo->GetField("y").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("y").type.IsIntTy());
   EXPECT_EQ(foo->GetField("y").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("y").offset, 8);
 
-  EXPECT_EQ(foo->GetField("z").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("z").type.IsIntTy());
   EXPECT_EQ(foo->GetField("z").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("z").offset, 16);
 }
@@ -551,15 +551,15 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_TRUE(foo1->HasField("b"));
   ASSERT_TRUE(foo1->HasField("c"));
 
-  EXPECT_EQ(foo1->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo1->GetField("a").offset, 0);
 
-  EXPECT_EQ(foo1->GetField("b").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("b").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("b").type.GetSize(), 1U);
   EXPECT_EQ(foo1->GetField("b").offset, 4);
 
-  EXPECT_EQ(foo1->GetField("c").type.type, Type::integer);
+  EXPECT_TRUE(foo1->GetField("c").type.IsIntTy());
   EXPECT_EQ(foo1->GetField("c").type.GetSize(), 8U);
   EXPECT_EQ(foo1->GetField("c").offset, 8);
 
@@ -569,15 +569,15 @@ TEST_F(clang_parser_btf, btf)
   ASSERT_TRUE(foo2->HasField("f"));
   ASSERT_TRUE(foo2->HasField("g"));
 
-  EXPECT_EQ(foo2->GetField("a").type.type, Type::integer);
+  EXPECT_TRUE(foo2->GetField("a").type.IsIntTy());
   EXPECT_EQ(foo2->GetField("a").type.GetSize(), 4U);
   EXPECT_EQ(foo2->GetField("a").offset, 0);
 
-  EXPECT_EQ(foo2->GetField("f").type.type, Type::record);
+  EXPECT_TRUE(foo2->GetField("f").type.IsRecordTy());
   EXPECT_EQ(foo2->GetField("f").type.GetSize(), 16U);
   EXPECT_EQ(foo2->GetField("f").offset, 8);
 
-  EXPECT_EQ(foo2->GetField("g").type.type, Type::integer);
+  EXPECT_TRUE(foo2->GetField("g").type.IsIntTy());
   EXPECT_EQ(foo2->GetField("g").type.GetSize(), 1U);
   EXPECT_EQ(foo2->GetField("g").offset, 8);
 
@@ -624,7 +624,7 @@ TEST(clang_parser, btf_unresolved_typedef)
   ASSERT_EQ(foo->fields.size(), 1U);
   ASSERT_TRUE(foo->HasField("x"));
 
-  EXPECT_EQ(foo->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(foo->GetField("x").type.IsIntTy());
   EXPECT_EQ(foo->GetField("x").type.GetSize(), 8U);
   EXPECT_EQ(foo->GetField("x").offset, 0);
 }
@@ -680,7 +680,7 @@ TEST(clang_parser, struct_typedef)
   ASSERT_EQ(max_align_struct->fields.size(), 1U);
   ASSERT_TRUE(max_align_struct->HasField("x"));
 
-  EXPECT_EQ(max_align_struct->GetField("x").type.type, Type::integer);
+  EXPECT_TRUE(max_align_struct->GetField("x").type.IsIntTy());
   EXPECT_EQ(max_align_struct->GetField("x").type.GetSize(), 4U);
   EXPECT_EQ(max_align_struct->GetField("x").offset, 0);
 
@@ -690,16 +690,16 @@ TEST(clang_parser, struct_typedef)
   ASSERT_TRUE(max_align_typedef->HasField("__clang_max_align_nonce1"));
   ASSERT_TRUE(max_align_typedef->HasField("__clang_max_align_nonce2"));
 
-  EXPECT_EQ(max_align_typedef->GetField("__clang_max_align_nonce1").type.type,
-            Type::integer);
+  EXPECT_TRUE(
+      max_align_typedef->GetField("__clang_max_align_nonce1").type.IsIntTy());
   EXPECT_EQ(
       max_align_typedef->GetField("__clang_max_align_nonce1").type.GetSize(),
       8U);
   EXPECT_EQ(max_align_typedef->GetField("__clang_max_align_nonce1").offset, 0);
 
   // double are not parsed correctly yet so these fields are junk for now
-  EXPECT_EQ(max_align_typedef->GetField("__clang_max_align_nonce2").type.type,
-            Type::none);
+  EXPECT_TRUE(
+      max_align_typedef->GetField("__clang_max_align_nonce2").type.IsNoneTy());
   EXPECT_EQ(
       max_align_typedef->GetField("__clang_max_align_nonce2").type.GetSize(),
       0U);

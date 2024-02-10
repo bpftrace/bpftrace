@@ -62,7 +62,7 @@ std::string MapKey::argument_value(BPFtrace &bpftrace,
 {
   auto arg_data = static_cast<const uint8_t *>(data);
   std::ostringstream ptr;
-  switch (arg.type) {
+  switch (arg.GetTy()) {
     case Type::integer:
       switch (arg.GetSize()) {
         case 1:
