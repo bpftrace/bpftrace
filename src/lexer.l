@@ -73,6 +73,7 @@ oct_esc  [0-7]{1,3}
 }
 
 bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
+^{space}*config         { return Parser::make_CONFIG(loc); }
 {builtin}               { return Parser::make_BUILTIN(yytext, loc); }
 {call}                  { return Parser::make_CALL(yytext, loc); }
 {call_and_builtin}      { return Parser::make_CALL_BUILTIN(yytext, loc); }
@@ -143,7 +144,6 @@ bpftrace|perf|raw       { return Parser::make_STACK_MODE(yytext, loc); }
 "?"                     { return Parser::make_QUES(loc); }
 "unroll"                { return Parser::make_UNROLL(loc); }
 "while"                 { return Parser::make_WHILE(loc); }
-"config"                { return Parser::make_CONFIG(loc); }
 "for"                   { return Parser::make_FOR(loc); }
 "return"                { return Parser::make_RETURN(loc); }
 "continue"              { return Parser::make_CONTINUE(loc); }

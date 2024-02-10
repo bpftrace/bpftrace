@@ -2021,6 +2021,13 @@ TEST(Parser, config_error)
                      "BPFTRACE_MAX_PROBES=2; exit(); }");
   test_parse_failure("config { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }");
   test_parse_failure("BPFTRACE_STACK_MODE=perf; i:s:1 { exit(); }");
+
+  test("        config = { BPFTRACE_STACK_MODE=perf } i:s:1 { exit(); }",
+       "Program\n config\n  =\n   config var: BPFTRACE_STACK_MODE\n   "
+       "stack_mode: perf\n interval:s:1\n  call: exit\n");
+  test("BEGIN { $x = (struct Foo*)0; $x->config; }",
+       "Program\n BEGIN\n  =\n   variable: $x\n   (struct Foo *)\n    int: 0\n "
+       " .\n   dereference\n    variable: $x\n   config\n");
 }
 
 } // namespace parser
