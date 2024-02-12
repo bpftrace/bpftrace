@@ -610,6 +610,7 @@ std::string BPFfeature::report(void)
       << "  get_tai_ns: " << to_str(has_helper_ktime_get_tai_ns())
       << "  get_func_ip: " << to_str(has_helper_get_func_ip())
       << "  jiffies64: " << to_str(has_helper_jiffies64())
+      << "  for_each_map_elem: " << to_str(has_helper_for_each_map_elem())
 
       << std::endl;
 

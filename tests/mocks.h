@@ -108,6 +108,7 @@ public:
     has_ktime_get_tai_ns_ = std::make_optional<bool>(has_features);
     has_get_func_ip_ = std::make_optional<bool>(has_features);
     has_jiffies64_ = std::make_optional<bool>(has_features);
+    has_for_each_map_elem_ = std::make_optional<bool>(has_features);
   };
 
   void has_loop(bool has)
